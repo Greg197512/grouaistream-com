@@ -1,0 +1,183 @@
+import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import { Search as SearchIcon, Music, Mic } from "lucide-react";
+import { MainLayout } from "@/components/layout/MainLayout";
+import { Input } from "@/components/ui/input";
+import { TrackRow } from "@/components/cards/TrackRow";
+import { supabase } from "@/integrations/supabase/client";
+import { usePlayer, Track } from "@/contexts/PlayerContext";
+import { toast } from "sonner";
+
+const genres = [
+  { name: "Electronic", color: "from-purple-500 to-pink-500" },
+  { name: "Synthwave", color: "from-cyan-500 to-blue-500" },
+  { name: "Chill", color: "from-green-400 to-teal-500" },
+  { name: "Ambient", color: "from-indigo-500 to-purple-500" },
+  { name: "Lo-Fi", color: "from-orange-400 to-red-500" },
+  { name: "Dance", color: "from-yellow-400 to-orange-500" },
+  { name: "Hip-Hop", color: "from-red-500 to-pink-500" },
+  { name: "Acoustic", color: "from-emerald-400 to-cyan-500" },
+];
+
+const Search = () => {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<Track[]>([]);
+  const [allTracks, setAllTracks] = useState<Track[]>([]);
+  const [loading, setLoading] = useState(false);
+  const { playTrack, playPlaylist, currentTrack, isPlaying, togglePlay } = usePlayer();
+
+  useEffect(() => {
+    // Load all tracks initially
+    const loadTracks = async () => {
+      const { data, error } = await supabase
+        .from("tracks")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error("Error loading tracks:", error);
+        return;
+      }
+
+      setAllTracks(data || []);
+    };
+
+    loadTracks();
+  }, []);
+
+  useEffect(() => {
+    if (!query.trim()) {
+      setResults([]);
+      return;
+    }
+
+    const searchTracks = async () => {
+      setLoading(true);
+      const searchQuery = query.toLowerCase();
+      
+      const filtered = allTracks.filter(
+        (track) =>
+          track.title.toLowerCase().includes(searchQuery) ||
+          track.artist.toLowerCase().includes(searchQuery) ||
+          track.genre?.toLowerCase().includes(searchQuery) ||
+          track.album?.toLowerCase().includes(searchQuery)
+      );
+      
+      setResults(filtered);
+      setLoading(false);
+    };
+
+    const debounce = setTimeout(searchTracks, 300);
+    return () => clearTimeout(debounce);
+  }, [query, allTracks]);
+
+  const handleGenreClick = (genre: string) => {
+    setQuery(genre);
+  };
+
+  const handlePlayTrack = (track: Track, index: number) => {
+    if (currentTrack?.id === track.id) {
+      togglePlay();
+    } else if (results.length > 0) {
+      playPlaylist(results, index);
+    } else {
+      playTrack(track);
+    }
+  };
+
+  return (
+    <MainLayout>
+      <div className="px-6 py-8">
+        {/* Search Header */}
+        <div className="mb-8">
+          <div className="relative max-w-xl">
+            <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder="Search for songs, artists, or genres..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="pl-12 pr-12 h-14 text-lg rounded-full bg-secondary border-none"
+            />
+            <button className="absolute right-4 top-1/2 -translate-y-1/2 p-2 hover:bg-muted rounded-full transition-colors">
+              <Mic className="h-5 w-5 text-muted-foreground" />
+            </button>
+          </div>
+        </div>
+
+        {/* Results */}
+        {query.trim() ? (
+          <div>
+            <h2 className="font-display text-xl font-bold mb-4">
+              {loading ? "Searching..." : `Results for "${query}"`}
+            </h2>
+            {results.length > 0 ? (
+              <div className="space-y-2">
+                {results.map((track, index) => (
+                  <TrackRow
+                    key={track.id}
+                    index={index + 1}
+                    title={track.title}
+                    artist={track.artist}
+                    album={track.album || ""}
+                    duration={track.duration}
+                    isPlaying={currentTrack?.id === track.id && isPlaying}
+                    onPlay={() => handlePlayTrack(track, index)}
+                  />
+                ))}
+              </div>
+            ) : (
+              !loading && (
+                <p className="text-muted-foreground">No results found</p>
+              )
+            )}
+          </div>
+        ) : (
+          <>
+            {/* Browse Genres */}
+            <h2 className="font-display text-xl font-bold mb-4">Browse All</h2>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {genres.map((genre) => (
+                <motion.button
+                  key={genre.name}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => handleGenreClick(genre.name)}
+                  className={`relative h-32 rounded-xl bg-gradient-to-br ${genre.color} overflow-hidden group`}
+                >
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="font-display text-xl font-bold text-white">
+                      {genre.name}
+                    </span>
+                  </div>
+                  <Music className="absolute bottom-2 right-2 h-8 w-8 text-white/30 rotate-12" />
+                </motion.button>
+              ))}
+            </div>
+
+            {/* All Tracks */}
+            <h2 className="font-display text-xl font-bold mt-8 mb-4">
+              All Tracks
+            </h2>
+            <div className="space-y-2">
+              {allTracks.map((track, index) => (
+                <TrackRow
+                  key={track.id}
+                  index={index + 1}
+                  title={track.title}
+                  artist={track.artist}
+                  album={track.album || ""}
+                  duration={track.duration}
+                  isPlaying={currentTrack?.id === track.id && isPlaying}
+                  onPlay={() => handlePlayTrack(track, index)}
+                />
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+    </MainLayout>
+  );
+};
+
+export default Search;

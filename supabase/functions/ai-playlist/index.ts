@@ -1,0 +1,129 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const { mood, genre, context, action } = await req.json();
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+
+    if (!LOVABLE_API_KEY) {
+      throw new Error("LOVABLE_API_KEY is not configured");
+    }
+
+    let systemPrompt = "";
+    let userPrompt = "";
+
+    if (action === "generate_playlist") {
+      systemPrompt = `You are an AI DJ that creates personalized music playlists. You understand music genres, moods, and user preferences deeply. Generate playlist suggestions that feel authentic and personalized.`;
+      
+      userPrompt = `Create a playlist for someone feeling "${mood || 'relaxed'}" who enjoys "${genre || 'various'}" music. ${context || ''}
+
+Return a JSON response with this exact structure:
+{
+  "playlistName": "Creative playlist name",
+  "description": "Brief description of the playlist vibe",
+  "explanation": "Why this playlist fits the mood",
+  "suggestedGenres": ["genre1", "genre2"],
+  "energyLevel": "low/medium/high",
+  "tempo": "slow/medium/fast"
+}`;
+    } else if (action === "analyze_mood") {
+      systemPrompt = `You are an AI mood analyst for a music streaming platform. You analyze user behavior patterns and listening history to understand their current emotional state and music preferences.`;
+      
+      userPrompt = `Based on the following context, analyze the user's likely mood and music preferences:
+${context}
+
+Return a JSON response with this structure:
+{
+  "detectedMood": "mood name",
+  "confidence": 0.0 to 1.0,
+  "explanation": "brief explanation",
+  "suggestedMoods": ["alternative1", "alternative2"],
+  "musicRecommendation": "what type of music to play"
+}`;
+    } else if (action === "real_time_adaptation") {
+      systemPrompt = `You are an AI that adapts music recommendations in real-time based on user behavior signals like skips, volume changes, and listening patterns.`;
+      
+      userPrompt = `User behavior signals:
+${context}
+
+Analyze these signals and suggest how to adapt the current playlist. Return JSON:
+{
+  "action": "continue/change_mood/increase_energy/decrease_energy",
+  "reason": "explanation",
+  "suggestedChange": "what to do next"
+}`;
+    } else {
+      throw new Error("Invalid action specified");
+    }
+
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-3-flash-preview",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+        response_format: { type: "json_object" },
+      }),
+    });
+
+    if (!response.ok) {
+      if (response.status === 429) {
+        return new Response(
+          JSON.stringify({ error: "Rate limit exceeded. Please try again later." }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      if (response.status === 402) {
+        return new Response(
+          JSON.stringify({ error: "AI credits exhausted. Please add funds." }),
+          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      const errorText = await response.text();
+      console.error("AI Gateway error:", response.status, errorText);
+      throw new Error(`AI Gateway error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content;
+
+    if (!content) {
+      throw new Error("No content in AI response");
+    }
+
+    // Parse JSON from response
+    let parsedContent;
+    try {
+      parsedContent = JSON.parse(content);
+    } catch {
+      // If parsing fails, return raw content
+      parsedContent = { raw: content };
+    }
+
+    return new Response(
+      JSON.stringify({ success: true, data: parsedContent }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  } catch (error) {
+    console.error("AI Playlist error:", error);
+    return new Response(
+      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+});
