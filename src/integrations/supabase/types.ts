@@ -14,7 +14,244 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      liked_songs: {
+        Row: {
+          id: string
+          liked_at: string
+          track_id: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          liked_at?: string
+          track_id: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          liked_at?: string
+          track_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "liked_songs_track_id_fkey"
+            columns: ["track_id"]
+            isOneToOne: false
+            referencedRelation: "tracks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      listening_history: {
+        Row: {
+          duration_played: number | null
+          id: string
+          mood_detected: string | null
+          played_at: string
+          skipped: boolean | null
+          track_id: string
+          user_id: string
+        }
+        Insert: {
+          duration_played?: number | null
+          id?: string
+          mood_detected?: string | null
+          played_at?: string
+          skipped?: boolean | null
+          track_id: string
+          user_id: string
+        }
+        Update: {
+          duration_played?: number | null
+          id?: string
+          mood_detected?: string | null
+          played_at?: string
+          skipped?: boolean | null
+          track_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "listening_history_track_id_fkey"
+            columns: ["track_id"]
+            isOneToOne: false
+            referencedRelation: "tracks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mood_sessions: {
+        Row: {
+          confidence: number | null
+          detected_at: string
+          id: string
+          mood: string
+          source: string | null
+          user_id: string
+        }
+        Insert: {
+          confidence?: number | null
+          detected_at?: string
+          id?: string
+          mood: string
+          source?: string | null
+          user_id: string
+        }
+        Update: {
+          confidence?: number | null
+          detected_at?: string
+          id?: string
+          mood?: string
+          source?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      playlist_tracks: {
+        Row: {
+          added_at: string
+          id: string
+          playlist_id: string
+          position: number
+          track_id: string
+        }
+        Insert: {
+          added_at?: string
+          id?: string
+          playlist_id: string
+          position?: number
+          track_id: string
+        }
+        Update: {
+          added_at?: string
+          id?: string
+          playlist_id?: string
+          position?: number
+          track_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "playlist_tracks_playlist_id_fkey"
+            columns: ["playlist_id"]
+            isOneToOne: false
+            referencedRelation: "playlists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "playlist_tracks_track_id_fkey"
+            columns: ["track_id"]
+            isOneToOne: false
+            referencedRelation: "tracks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      playlists: {
+        Row: {
+          cover_url: string | null
+          created_at: string
+          description: string | null
+          gradient: string | null
+          id: string
+          is_ai_generated: boolean | null
+          is_public: boolean | null
+          title: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          cover_url?: string | null
+          created_at?: string
+          description?: string | null
+          gradient?: string | null
+          id?: string
+          is_ai_generated?: boolean | null
+          is_public?: boolean | null
+          title: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          cover_url?: string | null
+          created_at?: string
+          description?: string | null
+          gradient?: string | null
+          id?: string
+          is_ai_generated?: boolean | null
+          is_public?: boolean | null
+          title?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          display_name: string | null
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      tracks: {
+        Row: {
+          album: string | null
+          artist: string
+          audio_url: string | null
+          cover_url: string | null
+          created_at: string
+          duration: number
+          genre: string | null
+          id: string
+          mood: string | null
+          title: string
+        }
+        Insert: {
+          album?: string | null
+          artist: string
+          audio_url?: string | null
+          cover_url?: string | null
+          created_at?: string
+          duration?: number
+          genre?: string | null
+          id?: string
+          mood?: string | null
+          title: string
+        }
+        Update: {
+          album?: string | null
+          artist?: string
+          audio_url?: string | null
+          cover_url?: string | null
+          created_at?: string
+          duration?: number
+          genre?: string | null
+          id?: string
+          mood?: string | null
+          title?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
