@@ -1,0 +1,128 @@
+import { motion } from "framer-motion";
+import { PlaylistCard } from "@/components/cards/PlaylistCard";
+
+interface PlaylistGridProps {
+  title: string;
+  subtitle?: string;
+  showAll?: boolean;
+}
+
+const aiPlaylists = [
+  { 
+    id: "1", 
+    title: "Morning Energy", 
+    description: "AI curated based on your wake-up patterns",
+    isAI: true,
+    gradient: "from-yellow-400 via-orange-500 to-red-500"
+  },
+  { 
+    id: "2", 
+    title: "Focus Flow", 
+    description: "Deep work music adapted to your productivity peaks",
+    isAI: true,
+    gradient: "from-blue-400 via-indigo-500 to-purple-500"
+  },
+  { 
+    id: "3", 
+    title: "Evening Unwind", 
+    description: "Relaxing vibes learned from your wind-down sessions",
+    isAI: true,
+    gradient: "from-purple-400 via-pink-500 to-rose-500"
+  },
+  { 
+    id: "4", 
+    title: "Workout Beats", 
+    description: "High-energy tracks synced to your exercise routine",
+    isAI: true,
+    gradient: "from-green-400 via-cyan-500 to-blue-500"
+  },
+];
+
+const trendingPlaylists = [
+  { 
+    id: "5", 
+    title: "Global Top 50", 
+    description: "The most played tracks worldwide",
+    gradient: "from-groove-green to-groove-cyan"
+  },
+  { 
+    id: "6", 
+    title: "Viral Hits", 
+    description: "Trending songs from across the internet",
+    gradient: "from-groove-cyan to-groove-purple"
+  },
+  { 
+    id: "7", 
+    title: "New Releases Radar", 
+    description: "Fresh drops from your favorite artists",
+    gradient: "from-groove-purple to-pink-500"
+  },
+  { 
+    id: "8", 
+    title: "Indie Discoveries", 
+    description: "Underground gems you'll love",
+    gradient: "from-orange-400 to-red-500"
+  },
+  { 
+    id: "9", 
+    title: "Chill Vibes", 
+    description: "Laid-back beats for any moment",
+    gradient: "from-teal-400 to-blue-500"
+  },
+  { 
+    id: "10", 
+    title: "Late Night Sessions", 
+    description: "Music for the after hours",
+    gradient: "from-slate-500 to-slate-700"
+  },
+];
+
+export const PlaylistGrid = ({ title, subtitle, showAll = true }: PlaylistGridProps) => {
+  const playlists = title.toLowerCase().includes("ai") ? aiPlaylists : trendingPlaylists;
+
+  return (
+    <section className="px-6 py-8">
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h2 className="font-display text-2xl font-bold">{title}</h2>
+          {subtitle && <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>}
+        </div>
+        {showAll && (
+          <button className="text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors">
+            Show all
+          </button>
+        )}
+      </div>
+
+      <motion.div 
+        initial="hidden"
+        animate="visible"
+        variants={{
+          hidden: { opacity: 0 },
+          visible: {
+            opacity: 1,
+            transition: { staggerChildren: 0.1 }
+          }
+        }}
+        className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4"
+      >
+        {playlists.map((playlist) => (
+          <motion.div
+            key={playlist.id}
+            variants={{
+              hidden: { opacity: 0, y: 20 },
+              visible: { opacity: 1, y: 0 }
+            }}
+          >
+            <PlaylistCard
+              title={playlist.title}
+              description={playlist.description}
+              isAI={(playlist as any).isAI}
+              gradient={playlist.gradient}
+            />
+          </motion.div>
+        ))}
+      </motion.div>
+    </section>
+  );
+};

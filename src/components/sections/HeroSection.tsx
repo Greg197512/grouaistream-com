@@ -1,0 +1,104 @@
+import { motion } from "framer-motion";
+import { Play, Sparkles, Zap, Brain, Radio } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import heroBg from "@/assets/hero-bg.jpg";
+
+export const HeroSection = () => {
+  return (
+    <section className="relative overflow-hidden">
+      {/* Background */}
+      <div className="absolute inset-0">
+        <img 
+          src={heroBg} 
+          alt="Hero background" 
+          className="h-full w-full object-cover opacity-40"
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-background/60 via-background/80 to-background" />
+        <div className="absolute inset-0 bg-gradient-to-r from-background via-transparent to-background/60" />
+      </div>
+
+      {/* Content */}
+      <div className="relative px-6 py-16 md:py-24">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8 }}
+          className="max-w-3xl"
+        >
+          {/* Badge */}
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.2 }}
+            className="inline-flex items-center gap-2 rounded-full bg-accent/20 border border-accent/30 px-4 py-1.5 mb-6"
+          >
+            <Sparkles className="h-4 w-4 text-accent" />
+            <span className="text-sm font-medium text-accent">AI-Powered Music Experience</span>
+          </motion.div>
+
+          {/* Headline */}
+          <h1 className="font-display text-4xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight">
+            Music That{" "}
+            <span className="groove-gradient-text">Understands</span>
+            {" "}You
+          </h1>
+
+          {/* Subheadline */}
+          <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-xl">
+            Experience the future of music streaming with AI that learns your mood, 
+            adapts to your rhythm, and creates the perfect soundtrack for every moment.
+          </p>
+
+          {/* CTA Buttons */}
+          <div className="flex flex-wrap gap-4 mb-12">
+            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+              <Button size="lg" className="groove-gradient-bg text-primary-foreground hover:opacity-90 gap-2 rounded-full px-8 h-12 font-semibold">
+                <Play className="h-5 w-5 fill-current" />
+                Start Listening Free
+              </Button>
+            </motion.div>
+            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+              <Button 
+                size="lg" 
+                variant="outline" 
+                className="groove-gradient-border hover:bg-muted gap-2 rounded-full px-8 h-12"
+              >
+                <Radio className="h-5 w-5" />
+                Live Radio
+              </Button>
+            </motion.div>
+          </div>
+
+          {/* Features */}
+          <div className="flex flex-wrap gap-6">
+            {[
+              { icon: Brain, label: "Mood Detection" },
+              { icon: Zap, label: "Real-time Adaptation" },
+              { icon: Sparkles, label: "AI Playlists" },
+            ].map((feature, i) => (
+              <motion.div
+                key={feature.label}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 + i * 0.1 }}
+                className="flex items-center gap-2 text-sm text-muted-foreground"
+              >
+                <feature.icon className="h-4 w-4 text-primary" />
+                <span>{feature.label}</span>
+              </motion.div>
+            ))}
+          </div>
+        </motion.div>
+
+        {/* Floating Elements */}
+        <motion.div
+          animate={{ y: [0, -10, 0] }}
+          transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+          className="absolute right-10 top-20 hidden lg:block"
+        >
+          <div className="groove-gradient-bg h-32 w-32 rounded-2xl opacity-20 blur-2xl" />
+        </motion.div>
+      </div>
+    </section>
+  );
+};
