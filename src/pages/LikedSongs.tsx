@@ -9,6 +9,12 @@ import { useAuth } from "@/contexts/AuthContext";
 import { usePlayer, Track } from "@/contexts/PlayerContext";
 import { useNavigate } from "react-router-dom";
 
+const formatDuration = (seconds: number): string => {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins}:${secs.toString().padStart(2, "0")}`;
+};
+
 interface LikedSong {
   id: string;
   liked_at: string;
@@ -136,7 +142,7 @@ const LikedSongs = () => {
                 title={track.title}
                 artist={track.artist}
                 album={track.album || ""}
-                duration={track.duration}
+                duration={formatDuration(track.duration)}
                 isPlaying={currentTrack?.id === track.id && isPlaying}
                 onPlay={() => handlePlayTrack(track, index)}
               />
