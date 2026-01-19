@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import { Radio as RadioIcon, Play, Pause, Volume2, VolumeX, Sparkles, Users, Wifi } from "lucide-react";
+import { Radio as RadioIcon, Play, Pause, Volume2, VolumeX, Sparkles, Users, Wifi, ExternalLink } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
@@ -117,7 +117,7 @@ const Radio = () => {
           >
             <RadioIcon className="h-8 w-8 text-primary-foreground" />
           </motion.div>
-          <div>
+          <div className="flex-1">
             <div className="flex items-center gap-2">
               <h1 className="font-display text-3xl font-bold">GrouaRadio Live</h1>
               <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 text-xs font-medium animate-pulse">
@@ -129,6 +129,14 @@ const Radio = () => {
               AI-enhanced radio streaming • Powered by grouaradio.com
             </p>
           </div>
+          <Button
+            onClick={() => window.open("https://grouaradio.com/", "_blank")}
+            variant="outline"
+            className="gap-2 hover:bg-primary/10"
+          >
+            <ExternalLink className="h-4 w-4" />
+            Otwórz GrouaRadio.com
+          </Button>
         </div>
 
         {/* Current Playing */}
