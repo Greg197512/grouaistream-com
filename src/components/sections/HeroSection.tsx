@@ -1,9 +1,69 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
-import { Play, Sparkles, Zap, Brain, Radio } from "lucide-react";
+import { Play, Sparkles, Zap, Brain, Radio, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
+import { usePlayer } from "@/contexts/PlayerContext";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import heroBg from "@/assets/hero-bg.jpg";
 
 export const HeroSection = () => {
+  const navigate = useNavigate();
+  const { playPlaylist } = usePlayer();
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleStartListening = async () => {
+    setIsLoading(true);
+    try {
+      // Fetch random tracks from the database
+      const { data: tracks, error } = await supabase
+        .from("tracks")
+        .select("*")
+        .limit(20);
+
+      if (error) throw error;
+
+      if (tracks && tracks.length > 0) {
+        // Shuffle the tracks
+        const shuffled = [...tracks].sort(() => Math.random() - 0.5);
+        
+        // Play the shuffled playlist
+        playPlaylist(shuffled);
+
+        toast.success("Now playing your personalized mix!");
+      } else {
+        toast.info("No tracks available yet. Check back soon!");
+      }
+    } catch (error) {
+      console.error("Error starting playback:", error);
+      toast.error("Failed to load tracks. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleLiveRadio = () => {
+    navigate("/radio");
+  };
+
+  const handleFeatureClick = (feature: string) => {
+    switch (feature) {
+      case "Mood Detection":
+        navigate("/settings");
+        toast.info("Enable Mood Detection in Settings → AI & Privacy");
+        break;
+      case "Real-time Adaptation":
+        toast.success("Real-time adaptation is always active while you listen!");
+        break;
+      case "AI Playlists":
+        navigate("/create-playlist");
+        break;
+      default:
+        break;
+    }
+  };
+
   return (
     <section className="relative overflow-hidden">
       {/* Background */}
@@ -52,8 +112,17 @@ export const HeroSection = () => {
           {/* CTA Buttons */}
           <div className="flex flex-wrap gap-4 mb-12">
             <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-              <Button size="lg" className="groove-gradient-bg text-primary-foreground hover:opacity-90 gap-2 rounded-full px-8 h-12 font-semibold">
-                <Play className="h-5 w-5 fill-current" />
+              <Button 
+                size="lg" 
+                className="groove-gradient-bg text-primary-foreground hover:opacity-90 gap-2 rounded-full px-8 h-12 font-semibold"
+                onClick={handleStartListening}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  <Play className="h-5 w-5 fill-current" />
+                )}
                 Start Listening Free
               </Button>
             </motion.div>
@@ -62,6 +131,7 @@ export const HeroSection = () => {
                 size="lg" 
                 variant="outline" 
                 className="groove-gradient-border hover:bg-muted gap-2 rounded-full px-8 h-12"
+                onClick={handleLiveRadio}
               >
                 <Radio className="h-5 w-5" />
                 Live Radio
@@ -76,16 +146,19 @@ export const HeroSection = () => {
               { icon: Zap, label: "Real-time Adaptation" },
               { icon: Sparkles, label: "AI Playlists" },
             ].map((feature, i) => (
-              <motion.div
+              <motion.button
                 key={feature.label}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4 + i * 0.1 }}
-                className="flex items-center gap-2 text-sm text-muted-foreground"
+                whileHover={{ scale: 1.05, y: -2 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => handleFeatureClick(feature.label)}
+                className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
               >
                 <feature.icon className="h-4 w-4 text-primary" />
                 <span>{feature.label}</span>
-              </motion.div>
+              </motion.button>
             ))}
           </div>
         </motion.div>

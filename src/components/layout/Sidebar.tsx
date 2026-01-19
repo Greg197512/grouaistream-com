@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import { useNavigate, useLocation } from "react-router-dom";
 import { 
   Home, 
   Search, 
@@ -42,7 +43,18 @@ const aiFeatures = [
 ];
 
 export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
-  const [activeItem, setActiveItem] = useState("/");
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [activeItem, setActiveItem] = useState(location.pathname);
+
+  useEffect(() => {
+    setActiveItem(location.pathname);
+  }, [location.pathname]);
+
+  const handleNavClick = (href: string) => {
+    setActiveItem(href);
+    navigate(href);
+  };
 
   return (
     <motion.aside
@@ -54,8 +66,9 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
       {/* Logo */}
       <div className="flex h-20 items-center gap-3 px-6">
         <motion.div 
-          className="groove-gradient-bg flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl"
+          className="groove-gradient-bg flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl cursor-pointer"
           whileHover={{ scale: 1.05, rotate: 5 }}
+          onClick={() => handleNavClick("/")}
         >
           <Sparkles className="h-5 w-5 text-primary-foreground" />
         </motion.div>
@@ -64,6 +77,8 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
             initial={{ opacity: 0, x: -10 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -10 }}
+            className="cursor-pointer"
+            onClick={() => handleNavClick("/")}
           >
             <h1 className="font-display text-xl font-bold groove-gradient-text">
               GrooveAI
@@ -97,7 +112,7 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
               href={item.href}
               active={activeItem === item.href}
               collapsed={collapsed}
-              onClick={() => setActiveItem(item.href)}
+              onClick={() => handleNavClick(item.href)}
             />
           ))}
         </div>
@@ -115,7 +130,7 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
               href={item.href}
               active={activeItem === item.href}
               collapsed={collapsed}
-              onClick={() => setActiveItem(item.href)}
+              onClick={() => handleNavClick(item.href)}
               badge={item.badge}
             />
           ))}
@@ -143,7 +158,7 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
               href={item.href}
               active={activeItem === item.href}
               collapsed={collapsed}
-              onClick={() => setActiveItem(item.href)}
+              onClick={() => handleNavClick(item.href)}
               isAI
             />
           ))}
@@ -158,7 +173,7 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
           href="/settings"
           active={activeItem === "/settings"}
           collapsed={collapsed}
-          onClick={() => setActiveItem("/settings")}
+          onClick={() => handleNavClick("/settings")}
         />
       </div>
     </motion.aside>
