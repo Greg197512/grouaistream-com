@@ -1,6 +1,5 @@
 import { createContext, useContext, useState, useRef, useEffect, ReactNode, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "./AuthContext";
 import { toast } from "sonner";
 
 export interface Track {
@@ -49,7 +48,6 @@ export const usePlayer = () => {
 };
 
 export const PlayerProvider = ({ children }: { children: ReactNode }) => {
-  const { user } = useAuth();
   const audioRef = useRef<HTMLAudioElement | null>(null);
   
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
@@ -62,6 +60,20 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   const [queue, setQueue] = useState<Track[]>([]);
   const [queueIndex, setQueueIndex] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
+  const [userId, setUserId] = useState<string | null>(null);
+
+  // Get user ID from Supabase auth directly to avoid circular dependency
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUserId(session?.user?.id ?? null);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
+      setUserId(session?.user?.id ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   // Initialize audio element
   useEffect(() => {
@@ -142,9 +154,9 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
         setIsPlaying(true);
         
         // Log to listening history
-        if (user) {
+        if (userId) {
           supabase.from('listening_history').insert({
-            user_id: user.id,
+            user_id: userId,
             track_id: currentTrack.id,
           }).then(({ error }) => {
             if (error) console.error("Failed to log listening history:", error);
@@ -154,7 +166,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
         toast.error("No audio available for this track");
       }
     }
-  }, [currentTrack, user]);
+  }, [currentTrack, userId]);
 
   const playTrack = (track: Track) => {
     setCurrentTrack(track);
