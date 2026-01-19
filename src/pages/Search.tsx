@@ -8,6 +8,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { usePlayer, Track } from "@/contexts/PlayerContext";
 import { toast } from "sonner";
 
+const formatDuration = (seconds: number): string => {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins}:${secs.toString().padStart(2, "0")}`;
+};
+
 const genres = [
   { name: "Electronic", color: "from-purple-500 to-pink-500" },
   { name: "Synthwave", color: "from-cyan-500 to-blue-500" },
@@ -120,7 +126,7 @@ const Search = () => {
                     title={track.title}
                     artist={track.artist}
                     album={track.album || ""}
-                    duration={track.duration}
+                    duration={formatDuration(track.duration)}
                     isPlaying={currentTrack?.id === track.id && isPlaying}
                     onPlay={() => handlePlayTrack(track, index)}
                   />
@@ -167,7 +173,7 @@ const Search = () => {
                   title={track.title}
                   artist={track.artist}
                   album={track.album || ""}
-                  duration={track.duration}
+                  duration={formatDuration(track.duration)}
                   isPlaying={currentTrack?.id === track.id && isPlaying}
                   onPlay={() => handlePlayTrack(track, index)}
                 />
