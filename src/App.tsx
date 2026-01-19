@@ -3,26 +3,50 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { PlayerProvider } from "@/contexts/PlayerContext";
 import Index from "./pages/Index";
+import Auth from "./pages/Auth";
+import Search from "./pages/Search";
+import Library from "./pages/Library";
+import LikedSongs from "./pages/LikedSongs";
+import CreatePlaylist from "./pages/CreatePlaylist";
+import Radio from "./pages/Radio";
+import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <div className="dark">
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </div>
-    </TooltipProvider>
+    <AuthProvider>
+      <PlayerProvider>
+        <TooltipProvider>
+          <div className="dark">
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/search" element={<Search />} />
+                <Route path="/library" element={<Library />} />
+                <Route path="/liked" element={<LikedSongs />} />
+                <Route path="/create-playlist" element={<CreatePlaylist />} />
+                <Route path="/radio" element={<Radio />} />
+                <Route path="/settings" element={<Settings />} />
+                <Route path="/ai-dj" element={<Index />} />
+                <Route path="/mood" element={<Settings />} />
+                <Route path="/daily-mix" element={<Index />} />
+                <Route path="/social" element={<Index />} />
+                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </div>
+        </TooltipProvider>
+      </PlayerProvider>
+    </AuthProvider>
   </QueryClientProvider>
 );
 
