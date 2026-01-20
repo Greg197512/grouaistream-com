@@ -1,5 +1,4 @@
 import { motion } from "framer-motion";
-import { Play, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface PlaylistCardProps {
@@ -16,7 +15,7 @@ export const PlaylistCard = ({
   description, 
   imageUrl, 
   isAI,
-  gradient = "from-groove-green via-groove-cyan to-groove-purple",
+  gradient = "from-groove-orange via-groove-amber to-groove-fire",
   onClick 
 }: PlaylistCardProps) => {
   return (
@@ -40,7 +39,7 @@ export const PlaylistCard = ({
             gradient,
             "flex items-center justify-center"
           )}>
-            {isAI && <Sparkles className="h-12 w-12 text-white/80" />}
+            {isAI && <span className="material-icons text-white/80 text-5xl">smart_toy</span>}
           </div>
         )}
         
@@ -50,13 +49,13 @@ export const PlaylistCard = ({
           whileHover={{ scale: 1.1 }}
           className="absolute bottom-2 right-2 flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-xl opacity-0 group-hover:opacity-100 transition-all duration-300"
         >
-          <Play className="h-5 w-5 fill-current ml-0.5" />
+          <span className="material-icons">play_arrow</span>
         </motion.button>
 
         {/* AI Badge */}
         {isAI && (
           <div className="absolute top-2 left-2 flex items-center gap-1 rounded-full bg-accent/90 px-2 py-1">
-            <Sparkles className="h-3 w-3 text-accent-foreground" />
+            <span className="material-icons text-accent-foreground text-xs">smart_toy</span>
             <span className="text-[10px] font-semibold text-accent-foreground">AI</span>
           </div>
         )}

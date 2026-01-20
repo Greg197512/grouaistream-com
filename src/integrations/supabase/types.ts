@@ -225,6 +225,7 @@ export type Database = {
           id: string
           mood: string | null
           title: string
+          video_url: string | null
         }
         Insert: {
           album?: string | null
@@ -237,6 +238,7 @@ export type Database = {
           id?: string
           mood?: string | null
           title: string
+          video_url?: string | null
         }
         Update: {
           album?: string | null
@@ -249,6 +251,7 @@ export type Database = {
           id?: string
           mood?: string | null
           title?: string
+          video_url?: string | null
         }
         Relationships: []
       }
