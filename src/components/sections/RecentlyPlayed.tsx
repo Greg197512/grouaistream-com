@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Play, Clock, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { usePlayer } from "@/contexts/PlayerContext";
+import { usePlayer, Track } from "@/contexts/PlayerContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatDistanceToNow } from "date-fns";
 
@@ -14,6 +14,9 @@ interface RecentTrack {
   duration: number;
   cover_url: string | null;
   audio_url: string | null;
+  video_url: string | null;
+  genre: string | null;
+  mood: string | null;
   played_at: string;
 }
 
@@ -41,7 +44,10 @@ export const RecentlyPlayed = () => {
                 album,
                 duration,
                 cover_url,
-                audio_url
+                audio_url,
+                video_url,
+                genre,
+                mood
               )
             `)
             .eq("user_id", user.id)
@@ -61,6 +67,9 @@ export const RecentlyPlayed = () => {
                 duration: item.tracks!.duration,
                 cover_url: item.tracks!.cover_url,
                 audio_url: item.tracks!.audio_url,
+                video_url: item.tracks!.video_url,
+                genre: item.tracks!.genre,
+                mood: item.tracks!.mood,
                 played_at: item.played_at,
               }));
             setRecentTracks(tracks);
@@ -92,8 +101,8 @@ export const RecentlyPlayed = () => {
   }, [user]);
 
   const handlePlayTrack = (track: RecentTrack, index: number) => {
-    // Play the recent tracks as a playlist starting at the clicked index
-    const tracksForPlayer = recentTracks.map(t => ({
+    // Convert to Track type with all required fields
+    const tracksForPlayer: Track[] = recentTracks.map(t => ({
       id: t.id,
       title: t.title,
       artist: t.artist,
@@ -101,8 +110,9 @@ export const RecentlyPlayed = () => {
       duration: t.duration,
       cover_url: t.cover_url,
       audio_url: t.audio_url,
-      genre: null,
-      mood: null,
+      video_url: t.video_url,
+      genre: t.genre,
+      mood: t.mood,
     }));
     playPlaylist(tracksForPlayer, index);
   };
@@ -167,14 +177,14 @@ export const RecentlyPlayed = () => {
                     {[1, 2, 3].map((i) => (
                       <motion.div
                         key={i}
-                        className="w-0.5 bg-white rounded-full"
+                        className="w-0.5 bg-primary-foreground rounded-full"
                         animate={{ height: [4, 12, 4] }}
                         transition={{ duration: 0.5, repeat: Infinity, delay: i * 0.1 }}
                       />
                     ))}
                   </div>
                 ) : (
-                  <Play className="h-4 w-4 text-white fill-current" />
+                  <Play className="h-4 w-4 text-primary-foreground fill-current" />
                 )}
               </div>
             </div>

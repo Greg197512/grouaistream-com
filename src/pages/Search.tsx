@@ -15,14 +15,14 @@ const formatDuration = (seconds: number): string => {
 };
 
 const genres = [
-  { name: "Electronic", color: "from-purple-500 to-pink-500" },
-  { name: "Synthwave", color: "from-cyan-500 to-blue-500" },
-  { name: "Chill", color: "from-green-400 to-teal-500" },
-  { name: "Ambient", color: "from-indigo-500 to-purple-500" },
-  { name: "Lo-Fi", color: "from-orange-400 to-red-500" },
-  { name: "Dance", color: "from-yellow-400 to-orange-500" },
-  { name: "Hip-Hop", color: "from-red-500 to-pink-500" },
-  { name: "Acoustic", color: "from-emerald-400 to-cyan-500" },
+  { name: "Rock", color: "from-red-500 to-orange-500" },
+  { name: "Pop", color: "from-pink-500 to-purple-500" },
+  { name: "Punk", color: "from-gray-700 to-gray-900" },
+  { name: "Pop-Rock", color: "from-purple-500 to-pink-500" },
+  { name: "Pop-Punk", color: "from-green-400 to-teal-500" },
+  { name: "Punk-Rock", color: "from-orange-400 to-red-500" },
+  { name: "Electronic", color: "from-cyan-500 to-blue-500" },
+  { name: "Chill", color: "from-indigo-500 to-purple-500" },
 ];
 
 const Search = () => {
@@ -87,7 +87,9 @@ const Search = () => {
     } else if (results.length > 0) {
       playPlaylist(results, index);
     } else {
-      playTrack(track);
+      // Play from all tracks
+      const trackIndex = allTracks.findIndex(t => t.id === track.id);
+      playPlaylist(allTracks, trackIndex >= 0 ? trackIndex : 0);
     }
   };
 
@@ -115,7 +117,7 @@ const Search = () => {
         {query.trim() ? (
           <div>
             <h2 className="font-display text-xl font-bold mb-4">
-              {loading ? "Searching..." : `Results for "${query}"`}
+              {loading ? "Searching..." : `Results for "${query}" (${results.length})`}
             </h2>
             {results.length > 0 ? (
               <div className="space-y-2">
@@ -127,6 +129,7 @@ const Search = () => {
                     artist={track.artist}
                     album={track.album || ""}
                     duration={formatDuration(track.duration)}
+                    imageUrl={track.cover_url || undefined}
                     isPlaying={currentTrack?.id === track.id && isPlaying}
                     onPlay={() => handlePlayTrack(track, index)}
                   />
@@ -152,21 +155,21 @@ const Search = () => {
                   className={`relative h-32 rounded-xl bg-gradient-to-br ${genre.color} overflow-hidden group`}
                 >
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="font-display text-xl font-bold text-white">
+                    <span className="font-display text-xl font-bold text-primary-foreground">
                       {genre.name}
                     </span>
                   </div>
-                  <Music className="absolute bottom-2 right-2 h-8 w-8 text-white/30 rotate-12" />
+                  <Music className="absolute bottom-2 right-2 h-8 w-8 text-primary-foreground/30 rotate-12" />
                 </motion.button>
               ))}
             </div>
 
             {/* All Tracks */}
             <h2 className="font-display text-xl font-bold mt-8 mb-4">
-              All Tracks
+              All Tracks ({allTracks.length})
             </h2>
             <div className="space-y-2">
-              {allTracks.map((track, index) => (
+              {allTracks.slice(0, 50).map((track, index) => (
                 <TrackRow
                   key={track.id}
                   index={index + 1}
@@ -174,6 +177,7 @@ const Search = () => {
                   artist={track.artist}
                   album={track.album || ""}
                   duration={formatDuration(track.duration)}
+                  imageUrl={track.cover_url || undefined}
                   isPlaying={currentTrack?.id === track.id && isPlaying}
                   onPlay={() => handlePlayTrack(track, index)}
                 />

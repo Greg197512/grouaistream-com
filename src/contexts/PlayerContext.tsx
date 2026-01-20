@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useRef, useEffect, ReactNode, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { extractYouTubeId } from "@/components/player/YouTubePlayer";
 
 export interface Track {
   id: string;
@@ -9,6 +10,7 @@ export interface Track {
   album: string | null;
   duration: number;
   audio_url: string | null;
+  video_url?: string | null;
   cover_url: string | null;
   genre: string | null;
   mood: string | null;
@@ -35,6 +37,11 @@ interface PlayerContextType {
   toggleRepeat: () => void;
   addToQueue: (track: Track) => void;
   currentTime: number;
+  duration: number;
+  isVideoMode: boolean;
+  youtubeVideoId: string | null;
+  onYouTubeTimeUpdate: (time: number, dur: number) => void;
+  onYouTubeEnded: () => void;
 }
 
 const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
@@ -60,7 +67,10 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   const [queue, setQueue] = useState<Track[]>([]);
   const [queueIndex, setQueueIndex] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
   const [userId, setUserId] = useState<string | null>(null);
+  const [isVideoMode, setIsVideoMode] = useState(false);
+  const [youtubeVideoId, setYoutubeVideoId] = useState<string | null>(null);
 
   // Get user ID from Supabase auth directly to avoid circular dependency
   useEffect(() => {
@@ -83,9 +93,10 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     const audio = audioRef.current;
 
     const handleTimeUpdate = () => {
-      if (audio.duration) {
+      if (audio.duration && !isVideoMode) {
         setProgress((audio.currentTime / audio.duration) * 100);
         setCurrentTime(audio.currentTime);
+        setDuration(audio.duration);
       }
     };
 
@@ -100,9 +111,11 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
 
     const handleError = (e: Event) => {
       console.error("Audio error:", e);
-      toast.error("Failed to play track. Trying next...");
-      // Try next track on error
-      setTimeout(() => nextTrackInternal(), 1000);
+      // Don't show error for YouTube tracks
+      if (!isVideoMode) {
+        toast.error("Failed to play track. Trying next...");
+        setTimeout(() => nextTrackInternal(), 1000);
+      }
     };
 
     audio.addEventListener('timeupdate', handleTimeUpdate);
@@ -115,7 +128,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
       audio.removeEventListener('error', handleError);
       audio.pause();
     };
-  }, []);
+  }, [isVideoMode]);
 
   // Update volume when changed
   useEffect(() => {
@@ -147,26 +160,68 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
 
   // Play current track when it changes
   useEffect(() => {
-    if (currentTrack && audioRef.current) {
-      if (currentTrack.audio_url) {
+    if (!currentTrack) return;
+
+    // Check if track has YouTube video
+    const videoId = currentTrack.video_url ? extractYouTubeId(currentTrack.video_url) : null;
+    
+    if (videoId) {
+      // YouTube mode
+      setIsVideoMode(true);
+      setYoutubeVideoId(videoId);
+      setIsPlaying(true);
+      setDuration(currentTrack.duration || 0);
+      
+      // Pause audio if playing
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.src = '';
+      }
+    } else if (currentTrack.audio_url) {
+      // Audio mode
+      setIsVideoMode(false);
+      setYoutubeVideoId(null);
+      
+      if (audioRef.current) {
         audioRef.current.src = currentTrack.audio_url;
         audioRef.current.play().catch(console.error);
         setIsPlaying(true);
-        
-        // Log to listening history
-        if (userId) {
-          supabase.from('listening_history').insert({
-            user_id: userId,
-            track_id: currentTrack.id,
-          }).then(({ error }) => {
-            if (error) console.error("Failed to log listening history:", error);
-          });
-        }
-      } else {
-        toast.error("No audio available for this track");
       }
+    } else {
+      toast.error("No audio available for this track");
+      return;
+    }
+    
+    // Log to listening history
+    if (userId) {
+      supabase.from('listening_history').insert({
+        user_id: userId,
+        track_id: currentTrack.id,
+      }).then(({ error }) => {
+        if (error) console.error("Failed to log listening history:", error);
+      });
     }
   }, [currentTrack, userId]);
+
+  // YouTube time update handler
+  const onYouTubeTimeUpdate = useCallback((time: number, dur: number) => {
+    if (isVideoMode) {
+      setCurrentTime(time);
+      setDuration(dur);
+      if (dur > 0) {
+        setProgress((time / dur) * 100);
+      }
+    }
+  }, [isVideoMode]);
+
+  // YouTube ended handler
+  const onYouTubeEnded = useCallback(() => {
+    if (repeatMode === 'one') {
+      // Will be handled by YouTube player
+    } else {
+      nextTrackInternal();
+    }
+  }, [repeatMode, nextTrackInternal]);
 
   const playTrack = (track: Track) => {
     setCurrentTrack(track);
@@ -182,14 +237,17 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const togglePlay = () => {
-    if (!audioRef.current) return;
-    
-    if (isPlaying) {
-      audioRef.current.pause();
-    } else {
-      audioRef.current.play().catch(console.error);
+    if (isVideoMode) {
+      // YouTube playback is controlled via state change
+      setIsPlaying(!isPlaying);
+    } else if (audioRef.current) {
+      if (isPlaying) {
+        audioRef.current.pause();
+      } else {
+        audioRef.current.play().catch(console.error);
+      }
+      setIsPlaying(!isPlaying);
     }
-    setIsPlaying(!isPlaying);
   };
 
   const nextTrack = () => {
@@ -197,11 +255,14 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const prevTrack = () => {
-    if (!audioRef.current) return;
-    
     // If more than 3 seconds in, restart current track
-    if (audioRef.current.currentTime > 3) {
-      audioRef.current.currentTime = 0;
+    if (currentTime > 3) {
+      if (isVideoMode) {
+        setProgress(0);
+        setCurrentTime(0);
+      } else if (audioRef.current) {
+        audioRef.current.currentTime = 0;
+      }
       return;
     }
     
@@ -215,10 +276,19 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const seek = (position: number) => {
-    if (!audioRef.current || !currentTrack) return;
-    const time = (position / 100) * (currentTrack.duration);
-    audioRef.current.currentTime = time;
-    setProgress(position);
+    if (!currentTrack) return;
+    
+    const targetDuration = duration || currentTrack.duration;
+    const time = (position / 100) * targetDuration;
+    
+    if (isVideoMode) {
+      setProgress(position);
+      setCurrentTime(time);
+      // YouTube seek will be handled by the component
+    } else if (audioRef.current) {
+      audioRef.current.currentTime = time;
+      setProgress(position);
+    }
   };
 
   const setVolume = (vol: number) => {
@@ -268,6 +338,11 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
         toggleRepeat,
         addToQueue,
         currentTime,
+        duration,
+        isVideoMode,
+        youtubeVideoId,
+        onYouTubeTimeUpdate,
+        onYouTubeEnded,
       }}
     >
       {children}
