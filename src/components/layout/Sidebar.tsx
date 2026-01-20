@@ -1,21 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useNavigate, useLocation } from "react-router-dom";
-import { 
-  Home, 
-  Search, 
-  Library, 
-  PlusCircle, 
-  Heart, 
-  Radio, 
-  Sparkles,
-  TrendingUp,
-  Clock,
-  Users,
-  Settings,
-  ChevronLeft,
-  ChevronRight
-} from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface SidebarProps {
@@ -24,22 +10,22 @@ interface SidebarProps {
 }
 
 const navItems = [
-  { icon: Home, label: "Home", href: "/" },
-  { icon: Search, label: "Search", href: "/search" },
-  { icon: Library, label: "Your Library", href: "/library" },
+  { icon: "home", label: "Home", href: "/" },
+  { icon: "search", label: "Search", href: "/search" },
+  { icon: "library_music", label: "Your Library", href: "/library" },
 ];
 
 const playlistItems = [
-  { icon: PlusCircle, label: "Create Playlist", href: "/create-playlist" },
-  { icon: Heart, label: "Liked Songs", href: "/liked" },
-  { icon: Radio, label: "GrouaRadio Live", href: "/radio", badge: "LIVE" },
+  { icon: "add_circle", label: "Create Playlist", href: "/create-playlist" },
+  { icon: "favorite", label: "Liked Songs", href: "/liked" },
+  { icon: "radio", label: "GrouaRadio Live", href: "/radio", badge: "LIVE" },
 ];
 
 const aiFeatures = [
-  { icon: Sparkles, label: "AI DJ", href: "/ai-dj" },
-  { icon: TrendingUp, label: "Mood Analysis", href: "/mood" },
-  { icon: Clock, label: "Daily Mix", href: "/daily-mix" },
-  { icon: Users, label: "Social Hub", href: "/social" },
+  { icon: "smart_toy", label: "AI DJ", href: "/ai-dj" },
+  { icon: "face", label: "Mood Detection", href: "/mood" },
+  { icon: "autorenew", label: "Real-time Adaptation", href: "/daily-mix" },
+  { icon: "playlist_add", label: "AI Playlists", href: "/social" },
 ];
 
 export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
@@ -70,7 +56,7 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
           whileHover={{ scale: 1.05, rotate: 5 }}
           onClick={() => handleNavClick("/")}
         >
-          <Sparkles className="h-5 w-5 text-primary-foreground" />
+          <span className="material-icons text-primary-foreground text-xl">music_note</span>
         </motion.div>
         {!collapsed && (
           <motion.div
@@ -168,7 +154,7 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
       {/* Settings */}
       <div className="border-t border-border p-3">
         <NavItem
-          icon={Settings}
+          icon="settings"
           label="Settings"
           href="/settings"
           active={activeItem === "/settings"}
@@ -181,7 +167,7 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
 };
 
 interface NavItemProps {
-  icon: React.ComponentType<{ className?: string }>;
+  icon: string;
   label: string;
   href: string;
   active: boolean;
@@ -192,7 +178,7 @@ interface NavItemProps {
 }
 
 const NavItem = ({ 
-  icon: Icon, 
+  icon, 
   label, 
   active, 
   collapsed, 
@@ -213,11 +199,14 @@ const NavItem = ({
         collapsed && "justify-center px-2"
       )}
     >
-      <Icon className={cn(
-        "h-5 w-5 flex-shrink-0",
+      <span className={cn(
+        "material-icons-outlined text-xl flex-shrink-0",
         isAI && "text-accent",
-        active && isAI && "text-accent"
-      )} />
+        active && isAI && "text-accent",
+        active && !isAI && "text-primary"
+      )}>
+        {icon}
+      </span>
       {!collapsed && (
         <>
           <span className="flex-1 text-left truncate">{label}</span>

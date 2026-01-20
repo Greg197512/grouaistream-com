@@ -62,9 +62,9 @@ export default {
           ring: "hsl(var(--sidebar-ring))",
         },
         groove: {
-          green: "hsl(142, 76%, 50%)",
-          cyan: "hsl(180, 85%, 45%)",
-          purple: "hsl(270, 95%, 65%)",
+          orange: "hsl(14, 100%, 57%)",
+          amber: "hsl(38, 100%, 50%)",
+          fire: "hsl(25, 100%, 55%)",
           surface: "hsl(0, 0%, 8%)",
           "surface-hover": "hsl(0, 0%, 11%)",
         },

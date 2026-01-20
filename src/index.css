@@ -15,8 +15,8 @@
     --popover: 0 0% 7%;
     --popover-foreground: 0 0% 98%;
 
-    --primary: 142 76% 50%;
-    --primary-foreground: 0 0% 2%;
+    --primary: 14 100% 57%;
+    --primary-foreground: 0 0% 100%;
 
     --secondary: 0 0% 12%;
     --secondary-foreground: 0 0% 98%;
@@ -24,22 +24,22 @@
     --muted: 0 0% 15%;
     --muted-foreground: 0 0% 65%;
 
-    --accent: 270 95% 65%;
-    --accent-foreground: 0 0% 98%;
+    --accent: 38 100% 50%;
+    --accent-foreground: 0 0% 0%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
 
     --border: 0 0% 15%;
     --input: 0 0% 15%;
-    --ring: 142 76% 50%;
+    --ring: 14 100% 57%;
 
     --radius: 0.75rem;
 
-    /* Custom GrooveAI tokens */
-    --groove-gradient: linear-gradient(135deg, hsl(142, 76%, 50%) 0%, hsl(180, 85%, 45%) 50%, hsl(270, 95%, 65%) 100%);
-    --groove-gradient-hover: linear-gradient(135deg, hsl(142, 76%, 55%) 0%, hsl(180, 85%, 50%) 50%, hsl(270, 95%, 70%) 100%);
-    --groove-glow: 0 0 60px hsl(142, 76%, 50%, 0.3), 0 0 120px hsl(270, 95%, 65%, 0.2);
+    /* Custom GrooveAI tokens - Orange Theme */
+    --groove-gradient: linear-gradient(135deg, hsl(14, 100%, 57%) 0%, hsl(38, 100%, 50%) 50%, hsl(25, 100%, 55%) 100%);
+    --groove-gradient-hover: linear-gradient(135deg, hsl(14, 100%, 62%) 0%, hsl(38, 100%, 55%) 50%, hsl(25, 100%, 60%) 100%);
+    --groove-glow: 0 0 60px hsl(14, 100%, 57%, 0.4), 0 0 120px hsl(38, 100%, 50%, 0.3);
     --groove-surface: hsl(0, 0%, 8%);
     --groove-surface-hover: hsl(0, 0%, 11%);
     --groove-surface-active: hsl(0, 0%, 14%);
@@ -48,12 +48,12 @@
     
     --sidebar-background: 0 0% 5%;
     --sidebar-foreground: 0 0% 98%;
-    --sidebar-primary: 142 76% 50%;
-    --sidebar-primary-foreground: 0 0% 2%;
+    --sidebar-primary: 14 100% 57%;
+    --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 0 0% 12%;
     --sidebar-accent-foreground: 0 0% 98%;
     --sidebar-border: 0 0% 12%;
-    --sidebar-ring: 142 76% 50%;
+    --sidebar-ring: 14 100% 57%;
   }
 
   .dark {
