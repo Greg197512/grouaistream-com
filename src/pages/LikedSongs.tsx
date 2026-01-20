@@ -18,7 +18,18 @@ const formatDuration = (seconds: number): string => {
 interface LikedSong {
   id: string;
   liked_at: string;
-  tracks: Track;
+  tracks: {
+    id: string;
+    title: string;
+    artist: string;
+    album: string | null;
+    duration: number;
+    audio_url: string | null;
+    video_url: string | null;
+    cover_url: string | null;
+    genre: string | null;
+    mood: string | null;
+  };
 }
 
 const LikedSongs = () => {
@@ -41,7 +52,18 @@ const LikedSongs = () => {
         .select(`
           id,
           liked_at,
-          tracks (*)
+          tracks (
+            id,
+            title,
+            artist,
+            album,
+            duration,
+            audio_url,
+            video_url,
+            cover_url,
+            genre,
+            mood
+          )
         `)
         .eq("user_id", user.id)
         .order("liked_at", { ascending: false });
@@ -57,7 +79,20 @@ const LikedSongs = () => {
     loadLikedSongs();
   }, [user, navigate]);
 
-  const tracks = likedSongs.map(ls => ls.tracks);
+  const tracks: Track[] = likedSongs
+    .filter(ls => ls.tracks)
+    .map(ls => ({
+      id: ls.tracks.id,
+      title: ls.tracks.title,
+      artist: ls.tracks.artist,
+      album: ls.tracks.album,
+      duration: ls.tracks.duration,
+      audio_url: ls.tracks.audio_url,
+      video_url: ls.tracks.video_url,
+      cover_url: ls.tracks.cover_url,
+      genre: ls.tracks.genre,
+      mood: ls.tracks.mood,
+    }));
 
   const handlePlayAll = () => {
     if (tracks.length > 0) {
@@ -98,9 +133,9 @@ const LikedSongs = () => {
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="w-48 h-48 rounded-xl bg-gradient-to-br from-pink-500 to-rose-600 flex items-center justify-center shadow-2xl"
+            className="w-48 h-48 rounded-xl groove-gradient-bg flex items-center justify-center shadow-2xl"
           >
-            <Heart className="h-24 w-24 text-white fill-white" />
+            <Heart className="h-24 w-24 text-primary-foreground fill-primary-foreground" />
           </motion.div>
           <div className="flex-1">
             <p className="text-sm font-medium text-muted-foreground mb-2">Playlist</p>
@@ -143,6 +178,7 @@ const LikedSongs = () => {
                 artist={track.artist}
                 album={track.album || ""}
                 duration={formatDuration(track.duration)}
+                imageUrl={track.cover_url || undefined}
                 isPlaying={currentTrack?.id === track.id && isPlaying}
                 onPlay={() => handlePlayTrack(track, index)}
               />

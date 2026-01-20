@@ -13,7 +13,8 @@ import {
   ListMusic,
   Mic2,
   MonitorSpeaker,
-  Sparkles
+  Sparkles,
+  Youtube
 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
@@ -21,7 +22,8 @@ import { usePlayer } from "@/contexts/PlayerContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { YouTubePlayer, YouTubePlayerRef } from "@/components/player/YouTubePlayer";
 
 export const PlayerBar = () => {
   const { user } = useAuth();
@@ -41,10 +43,18 @@ export const PlayerBar = () => {
     toggleMute,
     toggleShuffle,
     toggleRepeat,
+    currentTime,
+    duration,
+    isVideoMode,
+    youtubeVideoId,
+    onYouTubeTimeUpdate,
+    onYouTubeEnded,
   } = usePlayer();
 
   const [isLiked, setIsLiked] = useState(false);
   const [showAIInsight, setShowAIInsight] = useState(true);
+  const youtubePlayerRef = useRef<YouTubePlayerRef>(null);
+  const [seekPosition, setSeekPosition] = useState<number | null>(null);
 
   // Check if current track is liked
   useEffect(() => {
@@ -59,13 +69,23 @@ export const PlayerBar = () => {
         .select("id")
         .eq("user_id", user.id)
         .eq("track_id", currentTrack.id)
-        .single();
+        .maybeSingle();
 
       setIsLiked(!!data);
     };
 
     checkLiked();
   }, [user, currentTrack]);
+
+  // Handle seeking for YouTube
+  useEffect(() => {
+    if (seekPosition !== null && youtubePlayerRef.current && isVideoMode) {
+      const targetDuration = duration || currentTrack?.duration || 0;
+      const time = (seekPosition / 100) * targetDuration;
+      youtubePlayerRef.current.seekTo(time);
+      setSeekPosition(null);
+    }
+  }, [seekPosition, isVideoMode, duration, currentTrack]);
 
   const handleLike = async () => {
     if (!user) {
@@ -103,11 +123,31 @@ export const PlayerBar = () => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const duration = currentTrack?.duration || 0;
-  const currentTime = (progress / 100) * duration;
+  const handleSeek = (value: number) => {
+    seek(value);
+    if (isVideoMode) {
+      setSeekPosition(value);
+    }
+  };
+
+  const displayDuration = duration || currentTrack?.duration || 0;
+  const displayCurrentTime = currentTime;
 
   return (
-    <div className="groove-player-bar h-24 px-4 flex items-center gap-4">
+    <div className="groove-player-bar h-24 px-4 flex items-center gap-4 relative">
+      {/* Hidden YouTube Player */}
+      {isVideoMode && youtubeVideoId && (
+        <YouTubePlayer
+          ref={youtubePlayerRef}
+          videoId={youtubeVideoId}
+          isPlaying={isPlaying}
+          volume={volume}
+          isMuted={isMuted}
+          onTimeUpdate={onYouTubeTimeUpdate}
+          onEnded={onYouTubeEnded}
+        />
+      )}
+
       {/* Track Info */}
       <div className="flex items-center gap-3 w-[280px] min-w-[180px]">
         <motion.div 
@@ -143,6 +183,12 @@ export const PlayerBar = () => {
                 />
               ))}
             </motion.div>
+          )}
+          {/* YouTube indicator */}
+          {isVideoMode && (
+            <div className="absolute top-1 right-1 p-0.5 rounded bg-red-600">
+              <Youtube className="h-2.5 w-2.5 text-white" />
+            </div>
           )}
         </motion.div>
         
@@ -222,15 +268,15 @@ export const PlayerBar = () => {
         </div>
 
         <div className="w-full flex items-center gap-2 text-xs text-muted-foreground">
-          <span className="w-10 text-right">{formatTime(currentTime)}</span>
+          <span className="w-10 text-right">{formatTime(displayCurrentTime)}</span>
           <Slider
             value={[progress]}
-            onValueChange={([value]) => seek(value)}
+            onValueChange={([value]) => handleSeek(value)}
             max={100}
             step={0.1}
             className="flex-1 cursor-pointer"
           />
-          <span className="w-10">{formatTime(duration)}</span>
+          <span className="w-10">{formatTime(displayDuration)}</span>
         </div>
       </div>
 
@@ -243,7 +289,9 @@ export const PlayerBar = () => {
             className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent/20 border border-accent/30"
           >
             <Sparkles className="h-3 w-3 text-accent" />
-            <span className="text-[10px] text-accent font-medium">AI Enhanced</span>
+            <span className="text-[10px] text-accent font-medium">
+              {isVideoMode ? 'YouTube' : 'AI Enhanced'}
+            </span>
           </motion.div>
         )}
 

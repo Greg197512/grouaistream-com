@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Library as LibraryIcon, Plus, Music, Clock, Heart } from "lucide-react";
+import { Library as LibraryIcon, Plus, Music, Clock, Heart, Upload } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { PlaylistCard } from "@/components/cards/PlaylistCard";
@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { ImportTrackModal } from "@/components/modals/ImportTrackModal";
 
 interface Playlist {
   id: string;
@@ -25,43 +26,46 @@ const Library = () => {
   const [likedCount, setLikedCount] = useState(0);
   const [historyCount, setHistoryCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [showImportModal, setShowImportModal] = useState(false);
+
+  const loadLibrary = async () => {
+    if (!user) return;
+    
+    setLoading(true);
+
+    // Load user playlists
+    const { data: playlistData } = await supabase
+      .from("playlists")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
+
+    setPlaylists(playlistData || []);
+
+    // Count liked songs
+    const { count: likedCountData } = await supabase
+      .from("liked_songs")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", user.id);
+
+    setLikedCount(likedCountData || 0);
+
+    // Count listening history
+    const { count: historyCountData } = await supabase
+      .from("listening_history")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", user.id);
+
+    setHistoryCount(historyCountData || 0);
+
+    setLoading(false);
+  };
 
   useEffect(() => {
     if (!user) {
       navigate("/auth");
       return;
     }
-
-    const loadLibrary = async () => {
-      setLoading(true);
-
-      // Load user playlists
-      const { data: playlistData } = await supabase
-        .from("playlists")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
-
-      setPlaylists(playlistData || []);
-
-      // Count liked songs
-      const { count: likedCountData } = await supabase
-        .from("liked_songs")
-        .select("*", { count: "exact", head: true })
-        .eq("user_id", user.id);
-
-      setLikedCount(likedCountData || 0);
-
-      // Count listening history
-      const { count: historyCountData } = await supabase
-        .from("listening_history")
-        .select("*", { count: "exact", head: true })
-        .eq("user_id", user.id);
-
-      setHistoryCount(historyCountData || 0);
-
-      setLoading(false);
-    };
 
     loadLibrary();
   }, [user, navigate]);
@@ -80,18 +84,28 @@ const Library = () => {
     <MainLayout>
       <div className="px-6 py-8">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
           <div className="flex items-center gap-3">
             <LibraryIcon className="h-8 w-8 text-primary" />
             <h1 className="font-display text-3xl font-bold">Your Library</h1>
           </div>
-          <Button
-            onClick={() => navigate("/create-playlist")}
-            className="groove-gradient-bg text-primary-foreground hover:opacity-90 gap-2"
-          >
-            <Plus className="h-4 w-4" />
-            Create Playlist
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              onClick={() => setShowImportModal(true)}
+              variant="outline"
+              className="gap-2"
+            >
+              <Upload className="h-4 w-4" />
+              Import Track
+            </Button>
+            <Button
+              onClick={() => navigate("/create-playlist")}
+              className="groove-gradient-bg text-primary-foreground hover:opacity-90 gap-2"
+            >
+              <Plus className="h-4 w-4" />
+              Create Playlist
+            </Button>
+          </div>
         </div>
 
         {/* Quick Access Cards */}
@@ -100,10 +114,10 @@ const Library = () => {
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={() => navigate("/liked")}
-            className="flex items-center gap-4 p-4 rounded-xl bg-gradient-to-r from-pink-500/20 to-rose-500/20 border border-pink-500/30 hover:border-pink-500/50 transition-colors"
+            className="flex items-center gap-4 p-4 rounded-xl bg-gradient-to-r from-primary/20 to-accent/20 border border-primary/30 hover:border-primary/50 transition-colors"
           >
-            <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-gradient-to-br from-pink-500 to-rose-500">
-              <Heart className="h-6 w-6 text-white fill-white" />
+            <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-accent">
+              <Heart className="h-6 w-6 text-primary-foreground fill-primary-foreground" />
             </div>
             <div className="text-left">
               <h3 className="font-semibold">Liked Songs</h3>
@@ -117,7 +131,7 @@ const Library = () => {
             className="flex items-center gap-4 p-4 rounded-xl bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border border-blue-500/30 hover:border-blue-500/50 transition-colors"
           >
             <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500">
-              <Clock className="h-6 w-6 text-white" />
+              <Clock className="h-6 w-6 text-primary-foreground" />
             </div>
             <div className="text-left">
               <h3 className="font-semibold">Recently Played</h3>
@@ -129,10 +143,10 @@ const Library = () => {
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={() => navigate("/radio")}
-            className="flex items-center gap-4 p-4 rounded-xl bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/30 hover:border-purple-500/50 transition-colors"
+            className="flex items-center gap-4 p-4 rounded-xl bg-gradient-to-r from-primary/20 to-accent/20 border border-primary/30 hover:border-primary/50 transition-colors"
           >
             <div className="flex h-14 w-14 items-center justify-center rounded-lg groove-gradient-bg">
-              <Music className="h-6 w-6 text-white" />
+              <Music className="h-6 w-6 text-primary-foreground" />
             </div>
             <div className="text-left">
               <h3 className="font-semibold">GrouaRadio</h3>
@@ -162,6 +176,13 @@ const Library = () => {
           </div>
         )}
       </div>
+
+      {/* Import Modal */}
+      <ImportTrackModal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        onSuccess={loadLibrary}
+      />
     </MainLayout>
   );
 };
