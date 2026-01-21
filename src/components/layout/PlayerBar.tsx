@@ -14,7 +14,8 @@ import {
   Mic2,
   MonitorSpeaker,
   Sparkles,
-  Youtube
+  Youtube,
+  Video
 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
@@ -24,6 +25,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useState, useEffect, useRef } from "react";
 import { YouTubePlayer, YouTubePlayerRef } from "@/components/player/YouTubePlayer";
+
+// Video visibility state - shared via window for simplicity
+declare global {
+  interface Window {
+    toggleVideoPlayer?: () => void;
+  }
+}
 
 export const PlayerBar = () => {
   const { user } = useAuth();
@@ -293,6 +301,19 @@ export const PlayerBar = () => {
               {isVideoMode ? 'YouTube' : 'AI Enhanced'}
             </span>
           </motion.div>
+        )}
+
+        {/* Video toggle button */}
+        {isVideoMode && (
+          <motion.button 
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => window.toggleVideoPlayer?.()}
+            className="p-1.5 text-primary hover:text-primary/80 transition-colors"
+            title="Show Video"
+          >
+            <Video className="h-4 w-4" />
+          </motion.button>
         )}
 
         <button className="p-1.5 text-muted-foreground hover:text-foreground transition-colors">

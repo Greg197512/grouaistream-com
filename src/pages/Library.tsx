@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Library as LibraryIcon, Plus, Music, Clock, Heart, Upload } from "lucide-react";
+import { Library as LibraryIcon, Plus, Music, Clock, Heart, Upload, Youtube, FileAudio } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { PlaylistCard } from "@/components/cards/PlaylistCard";
@@ -9,6 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { ImportTrackModal } from "@/components/modals/ImportTrackModal";
+import { FileUploadModal } from "@/components/modals/FileUploadModal";
 
 interface Playlist {
   id: string;
@@ -27,6 +28,7 @@ const Library = () => {
   const [historyCount, setHistoryCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [showUploadModal, setShowUploadModal] = useState(false);
 
   const loadLibrary = async () => {
     if (!user) return;
@@ -89,14 +91,22 @@ const Library = () => {
             <LibraryIcon className="h-8 w-8 text-primary" />
             <h1 className="font-display text-3xl font-bold">Your Library</h1>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
+            <Button
+              onClick={() => setShowUploadModal(true)}
+              variant="outline"
+              className="gap-2"
+            >
+              <FileAudio className="h-4 w-4" />
+              Upload File
+            </Button>
             <Button
               onClick={() => setShowImportModal(true)}
               variant="outline"
               className="gap-2"
             >
-              <Upload className="h-4 w-4" />
-              Import Track
+              <Youtube className="h-4 w-4" />
+              Import YouTube
             </Button>
             <Button
               onClick={() => navigate("/create-playlist")}
@@ -181,6 +191,13 @@ const Library = () => {
       <ImportTrackModal
         isOpen={showImportModal}
         onClose={() => setShowImportModal(false)}
+        onSuccess={loadLibrary}
+      />
+
+      {/* File Upload Modal */}
+      <FileUploadModal
+        isOpen={showUploadModal}
+        onClose={() => setShowUploadModal(false)}
         onSuccess={loadLibrary}
       />
     </MainLayout>
