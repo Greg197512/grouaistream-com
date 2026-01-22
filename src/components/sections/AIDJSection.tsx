@@ -1,7 +1,8 @@
-import { motion } from "framer-motion";
-import { Sparkles, Brain, Headphones, TrendingUp, Play, Pause } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Sparkles, Brain, Headphones, TrendingUp, Play, Pause, Camera } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { MoodDetector } from "@/components/mood/MoodDetector";
 
 interface MoodState {
   mood: string;
@@ -21,6 +22,7 @@ export const AIDJSection = () => {
   const [currentMood, setCurrentMood] = useState(moods[1]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [djActive, setDjActive] = useState(true);
+  const [showMoodDetector, setShowMoodDetector] = useState(false);
 
   const handleAnalyze = () => {
     setIsAnalyzing(true);
@@ -29,6 +31,16 @@ export const AIDJSection = () => {
       setCurrentMood(randomMood);
       setIsAnalyzing(false);
     }, 2000);
+  };
+
+  const handleMoodDetected = (detectedMood: { mood: string; confidence: number; emoji: string; color: string }) => {
+    const mappedMood: MoodState = {
+      mood: detectedMood.mood,
+      confidence: detectedMood.confidence,
+      icon: detectedMood.emoji,
+      color: detectedMood.color,
+    };
+    setCurrentMood(mappedMood);
   };
 
   return (
@@ -43,15 +55,42 @@ export const AIDJSection = () => {
             <p className="text-sm text-muted-foreground">Your personal music curator</p>
           </div>
         </div>
-        <Button 
-          onClick={() => setDjActive(!djActive)}
-          variant={djActive ? "default" : "outline"}
-          className="gap-2 rounded-full"
-        >
-          {djActive ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-          {djActive ? "Pause DJ" : "Start DJ"}
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            onClick={() => setShowMoodDetector(!showMoodDetector)}
+            variant="outline"
+            className="gap-2 rounded-full"
+          >
+            <Camera className="h-4 w-4" />
+            {showMoodDetector ? "Ukryj kamerę" : "Wykryj nastrój"}
+          </Button>
+          <Button 
+            onClick={() => setDjActive(!djActive)}
+            variant={djActive ? "default" : "outline"}
+            className="gap-2 rounded-full"
+          >
+            {djActive ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+            {djActive ? "Pause DJ" : "Start DJ"}
+          </Button>
+        </div>
       </div>
+
+      {/* Mood Detector Panel */}
+      <AnimatePresence>
+        {showMoodDetector && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="mb-6 overflow-hidden"
+          >
+            <MoodDetector 
+              onMoodDetected={handleMoodDetected}
+              onClose={() => setShowMoodDetector(false)}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Mood Card */}
