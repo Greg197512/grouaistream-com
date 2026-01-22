@@ -18,6 +18,7 @@ const navItems = [
 const playlistItems = [
   { icon: "add_circle", label: "Create Playlist", href: "/create-playlist" },
   { icon: "favorite", label: "Liked Songs", href: "/liked" },
+  { icon: "swap_horiz", label: "Manage Playlists", href: "/playlist-manager" },
   { icon: "radio", label: "GrouaRadio Live", href: "/radio", badge: "LIVE" },
 ];
 
