@@ -15,7 +15,9 @@ import {
   MonitorSpeaker,
   Sparkles,
   Youtube,
-  Video
+  Video,
+  Download,
+  Share2
 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
@@ -25,6 +27,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useState, useEffect, useRef } from "react";
 import { YouTubePlayer, YouTubePlayerRef } from "@/components/player/YouTubePlayer";
+import { TrackOptionsMenu } from "@/components/menus/TrackOptionsMenu";
 
 // Video visibility state - shared via window for simplicity
 declare global {
@@ -122,6 +125,46 @@ export const PlayerBar = () => {
     } catch (error) {
       console.error("Error toggling like:", error);
       toast.error("Failed to update liked songs");
+    }
+  };
+
+  const handleDownload = () => {
+    if (!currentTrack) return;
+    
+    const url = currentTrack.video_url || currentTrack.audio_url;
+    if (!url) {
+      toast.error("Download not available for this track");
+      return;
+    }
+
+    // GDPR consent popup
+    const confirmed = window.confirm(
+      "Download consent: By downloading, you confirm you have the right to download this content for personal use. Continue?"
+    );
+
+    if (confirmed) {
+      window.open(url, "_blank");
+      toast.success("Opening download link...");
+    }
+  };
+
+  const handleShare = async () => {
+    if (!currentTrack) return;
+    
+    const text = `🎵 Listening to "${currentTrack.title}" by ${currentTrack.artist} on GrooveAI Stream!`;
+    const url = currentTrack.video_url || window.location.origin;
+    
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: currentTrack.title, text, url });
+      } else {
+        window.open(
+          `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`,
+          "_blank"
+        );
+      }
+    } catch (error) {
+      // User cancelled or error
     }
   };
 
@@ -303,6 +346,30 @@ export const PlayerBar = () => {
           </motion.div>
         )}
 
+        {/* Download button */}
+        <motion.button 
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={handleDownload}
+          className="p-1.5 text-muted-foreground hover:text-foreground transition-colors"
+          title="Pobierz Utwór"
+          disabled={!currentTrack}
+        >
+          <Download className="h-4 w-4" />
+        </motion.button>
+
+        {/* Share button */}
+        <motion.button 
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={handleShare}
+          className="p-1.5 text-muted-foreground hover:text-foreground transition-colors"
+          title="Share"
+          disabled={!currentTrack}
+        >
+          <Share2 className="h-4 w-4" />
+        </motion.button>
+
         {/* Video toggle button */}
         {isVideoMode && (
           <motion.button 
@@ -314,6 +381,17 @@ export const PlayerBar = () => {
           >
             <Video className="h-4 w-4" />
           </motion.button>
+        )}
+
+        {/* Track options menu */}
+        {currentTrack && (
+          <TrackOptionsMenu
+            trackId={currentTrack.id}
+            trackTitle={currentTrack.title}
+            trackArtist={currentTrack.artist}
+            trackUrl={currentTrack.video_url || currentTrack.audio_url}
+            size="sm"
+          />
         )}
 
         <button className="p-1.5 text-muted-foreground hover:text-foreground transition-colors">

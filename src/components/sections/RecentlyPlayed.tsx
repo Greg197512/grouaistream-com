@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { usePlayer, Track } from "@/contexts/PlayerContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatDistanceToNow } from "date-fns";
+import { TrackOptionsMenu, LikeButton } from "@/components/menus/TrackOptionsMenu";
 
 interface RecentTrack {
   id: string;
@@ -192,9 +193,22 @@ export const RecentlyPlayed = () => {
               <p className="font-medium text-sm truncate">{track.title}</p>
               <p className="text-xs text-muted-foreground truncate">{track.artist}</p>
             </div>
-            <span className="text-xs text-muted-foreground flex-shrink-0">
-              {user ? formatDistanceToNow(new Date(track.played_at), { addSuffix: true }) : ""}
-            </span>
+            <div className="flex items-center gap-1 flex-shrink-0">
+              {user && (
+                <span className="text-xs text-muted-foreground mr-2">
+                  {formatDistanceToNow(new Date(track.played_at), { addSuffix: true })}
+                </span>
+              )}
+              <LikeButton trackId={track.id} className="opacity-0 group-hover:opacity-100" />
+              <TrackOptionsMenu
+                trackId={track.id}
+                trackTitle={track.title}
+                trackArtist={track.artist}
+                trackUrl={track.video_url || track.audio_url}
+                className="opacity-0 group-hover:opacity-100"
+                size="sm"
+              />
+            </div>
           </motion.div>
         ))}
       </div>

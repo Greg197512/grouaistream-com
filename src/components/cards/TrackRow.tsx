@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Play, Pause, Heart, MoreHorizontal, Clock } from "lucide-react";
+import { Play, Pause, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { TrackOptionsMenu, LikeButton } from "@/components/menus/TrackOptionsMenu";
 
 interface TrackRowProps {
+  id: string;
   index: number;
   title: string;
   artist: string;
@@ -12,10 +14,12 @@ interface TrackRowProps {
   plays?: string;
   isPlaying?: boolean;
   imageUrl?: string;
+  trackUrl?: string | null;
   onPlay?: () => void;
 }
 
 export const TrackRow = ({
+  id,
   index,
   title,
   artist,
@@ -24,10 +28,10 @@ export const TrackRow = ({
   plays,
   isPlaying = false,
   imageUrl,
+  trackUrl,
   onPlay
 }: TrackRowProps) => {
   const [isHovered, setIsHovered] = useState(false);
-  const [isLiked, setIsLiked] = useState(false);
 
   return (
     <motion.div
@@ -92,23 +96,17 @@ export const TrackRow = ({
       )}
 
       {/* Actions & Duration */}
-      <div className="flex items-center justify-end gap-3">
-        <button 
-          onClick={() => setIsLiked(!isLiked)}
-          className={cn(
-            "opacity-0 group-hover:opacity-100 transition-opacity",
-            isLiked && "opacity-100"
-          )}
-        >
-          <Heart className={cn(
-            "h-4 w-4",
-            isLiked ? "fill-primary text-primary" : "text-muted-foreground hover:text-foreground"
-          )} />
-        </button>
+      <div className="flex items-center justify-end gap-2">
+        <LikeButton trackId={id} className="opacity-0 group-hover:opacity-100" />
         <span className="text-sm text-muted-foreground w-12 text-right">{duration}</span>
-        <button className="opacity-0 group-hover:opacity-100 transition-opacity">
-          <MoreHorizontal className="h-4 w-4 text-muted-foreground hover:text-foreground" />
-        </button>
+        <TrackOptionsMenu
+          trackId={id}
+          trackTitle={title}
+          trackArtist={artist}
+          trackUrl={trackUrl}
+          className="opacity-0 group-hover:opacity-100"
+          size="sm"
+        />
       </div>
     </motion.div>
   );

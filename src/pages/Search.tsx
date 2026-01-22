@@ -124,12 +124,14 @@ const Search = () => {
                 {results.map((track, index) => (
                   <TrackRow
                     key={track.id}
+                    id={track.id}
                     index={index + 1}
                     title={track.title}
                     artist={track.artist}
                     album={track.album || ""}
                     duration={formatDuration(track.duration)}
                     imageUrl={track.cover_url || undefined}
+                    trackUrl={track.video_url || track.audio_url}
                     isPlaying={currentTrack?.id === track.id && isPlaying}
                     onPlay={() => handlePlayTrack(track, index)}
                   />
@@ -172,12 +174,14 @@ const Search = () => {
               {allTracks.slice(0, 50).map((track, index) => (
                 <TrackRow
                   key={track.id}
+                  id={track.id}
                   index={index + 1}
                   title={track.title}
                   artist={track.artist}
                   album={track.album || ""}
                   duration={formatDuration(track.duration)}
                   imageUrl={track.cover_url || undefined}
+                  trackUrl={track.video_url || track.audio_url}
                   isPlaying={currentTrack?.id === track.id && isPlaying}
                   onPlay={() => handlePlayTrack(track, index)}
                 />
