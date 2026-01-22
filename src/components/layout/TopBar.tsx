@@ -6,7 +6,13 @@ import {
   Search, 
   Bell, 
   User,
-  Crown
+  Crown,
+  LogOut,
+  Settings,
+  Sparkles,
+  UserCircle,
+  Heart,
+  Library
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -18,25 +24,64 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export const TopBar = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [hasNotifications, setHasNotifications] = useState(true);
+  const { user, signOut, loading } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      toast.success("Signed out successfully");
+      navigate("/");
+    } catch (error) {
+      toast.error("Failed to sign out");
+    }
+  };
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/search?q=${encodeURIComponent(searchQuery)}`);
+    }
+  };
+
+  // Get user initials for avatar
+  const getUserInitials = () => {
+    if (!user?.email) return "U";
+    return user.email.charAt(0).toUpperCase();
+  };
+
+  const getUserDisplayName = () => {
+    return user?.user_metadata?.display_name || user?.email?.split("@")[0] || "User";
+  };
 
   return (
     <header className="sticky top-0 z-40 flex h-16 items-center justify-between gap-4 border-b border-border bg-background/80 backdrop-blur-groove px-6">
       {/* Navigation */}
       <div className="flex items-center gap-2">
-        <button className="flex h-8 w-8 items-center justify-center rounded-full bg-secondary/80 text-muted-foreground hover:text-foreground transition-colors">
+        <button 
+          onClick={() => window.history.back()}
+          className="flex h-8 w-8 items-center justify-center rounded-full bg-secondary/80 text-muted-foreground hover:text-foreground transition-colors"
+        >
           <ChevronLeft className="h-4 w-4" />
         </button>
-        <button className="flex h-8 w-8 items-center justify-center rounded-full bg-secondary/80 text-muted-foreground hover:text-foreground transition-colors">
+        <button 
+          onClick={() => window.history.forward()}
+          className="flex h-8 w-8 items-center justify-center rounded-full bg-secondary/80 text-muted-foreground hover:text-foreground transition-colors"
+        >
           <ChevronRight className="h-4 w-4" />
         </button>
       </div>
 
       {/* Search */}
-      <div className="flex-1 max-w-md">
+      <form onSubmit={handleSearch} className="flex-1 max-w-md">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -46,10 +91,22 @@ export const TopBar = () => {
             className="pl-10 bg-secondary border-0 focus-visible:ring-1 focus-visible:ring-primary rounded-full h-10"
           />
         </div>
-      </div>
+      </form>
 
       {/* Right Actions */}
       <div className="flex items-center gap-3">
+        {!user && !loading && (
+          <Button 
+            onClick={() => navigate("/auth")}
+            variant="outline"
+            size="sm"
+            className="gap-2 rounded-full px-4"
+          >
+            <User className="h-4 w-4" />
+            Sign In
+          </Button>
+        )}
+
         <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
           <Button 
             variant="outline" 
@@ -74,13 +131,16 @@ export const TopBar = () => {
           <DropdownMenuContent align="end" className="w-80">
             <DropdownMenuLabel>Notifications</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="flex flex-col items-start gap-1 py-3">
+            <DropdownMenuItem 
+              className="flex flex-col items-start gap-1 py-3 cursor-pointer"
+              onClick={() => setHasNotifications(false)}
+            >
               <p className="font-medium">Your AI DJ is ready!</p>
               <p className="text-xs text-muted-foreground">Based on your mood, we've created a personalized playlist</p>
             </DropdownMenuItem>
-            <DropdownMenuItem className="flex flex-col items-start gap-1 py-3">
-              <p className="font-medium">New release from Aurora Beats</p>
-              <p className="text-xs text-muted-foreground">Check out their latest album "Neon Horizons"</p>
+            <DropdownMenuItem className="flex flex-col items-start gap-1 py-3 cursor-pointer">
+              <p className="font-medium">New tracks added!</p>
+              <p className="text-xs text-muted-foreground">Check out new Rock, Punk, and Pop hits</p>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -88,18 +148,76 @@ export const TopBar = () => {
         {/* User Menu */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="flex h-10 w-10 items-center justify-center rounded-full groove-gradient-bg hover:opacity-90 transition-opacity">
-              <User className="h-5 w-5 text-primary-foreground" />
+            <button className="flex h-10 w-10 items-center justify-center rounded-full overflow-hidden groove-gradient-bg hover:opacity-90 transition-opacity">
+              {user ? (
+                <Avatar className="h-10 w-10">
+                  <AvatarImage src={user.user_metadata?.avatar_url} />
+                  <AvatarFallback className="groove-gradient-bg text-primary-foreground font-semibold">
+                    {getUserInitials()}
+                  </AvatarFallback>
+                </Avatar>
+              ) : (
+                <User className="h-5 w-5 text-primary-foreground" />
+              )}
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuLabel>My Account</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem>Profile</DropdownMenuItem>
-            <DropdownMenuItem>Settings</DropdownMenuItem>
-            <DropdownMenuItem>AI Preferences</DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem>Sign In</DropdownMenuItem>
+            {user ? (
+              <>
+                <DropdownMenuLabel className="font-normal">
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-medium leading-none">{getUserDisplayName()}</p>
+                    <p className="text-xs text-muted-foreground">{user.email}</p>
+                    <p className="text-xs flex items-center gap-1 mt-1 text-emerald-600 dark:text-emerald-500">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-600 dark:bg-emerald-500" />
+                      Zalogowany
+                    </p>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => navigate("/settings")} className="cursor-pointer">
+                  <UserCircle className="mr-2 h-4 w-4" />
+                  Profile
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/library")} className="cursor-pointer">
+                  <Library className="mr-2 h-4 w-4" />
+                  Your Library
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/liked")} className="cursor-pointer">
+                  <Heart className="mr-2 h-4 w-4" />
+                  Liked Songs
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/settings")} className="cursor-pointer">
+                  <Settings className="mr-2 h-4 w-4" />
+                  Settings
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/ai-dj")} className="cursor-pointer">
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  AI Preferences
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem 
+                  onClick={handleSignOut} 
+                  className="cursor-pointer text-destructive focus:text-destructive"
+                >
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Sign Out
+                </DropdownMenuItem>
+              </>
+            ) : (
+              <>
+                <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => navigate("/auth")} className="cursor-pointer">
+                  <User className="mr-2 h-4 w-4" />
+                  Sign In
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/auth")} className="cursor-pointer">
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  Create Account
+                </DropdownMenuItem>
+              </>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

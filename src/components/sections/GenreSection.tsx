@@ -4,6 +4,7 @@ import { Play, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePlayer, Track } from "@/contexts/PlayerContext";
 import { cn } from "@/lib/utils";
+import { TrackOptionsMenu, LikeButton } from "@/components/menus/TrackOptionsMenu";
 
 interface GenreSectionProps {
   genre: string;
@@ -173,8 +174,22 @@ export const GenreSection = ({ genre, title, icon, color, limit = 8 }: GenreSect
 
             {/* Info */}
             <div className="p-3">
-              <p className="font-medium text-sm truncate">{track.title}</p>
-              <p className="text-xs text-muted-foreground truncate">{track.artist}</p>
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium text-sm truncate">{track.title}</p>
+                  <p className="text-xs text-muted-foreground truncate">{track.artist}</p>
+                </div>
+                <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                  <LikeButton trackId={track.id} />
+                  <TrackOptionsMenu
+                    trackId={track.id}
+                    trackTitle={track.title}
+                    trackArtist={track.artist}
+                    trackUrl={track.video_url || track.audio_url}
+                    size="sm"
+                  />
+                </div>
+              </div>
             </div>
           </motion.div>
         ))}
