@@ -35,6 +35,30 @@ const Index = () => {
       
       {/* Genre Sections */}
       <GenreSection 
+        genre="EDM" 
+        title="🎧 EDM & Electronic Hits" 
+        icon="headphones"
+        color="text-primary"
+        limit={8}
+      />
+      
+      <GenreSection 
+        genre="Disco" 
+        title="🪩 Disco Classics & Grooves" 
+        icon="nightlife"
+        color="text-accent"
+        limit={8}
+      />
+      
+      <GenreSection 
+        genre="House" 
+        title="🏠 House Music Essentials" 
+        icon="music_note"
+        color="text-primary"
+        limit={8}
+      />
+      
+      <GenreSection 
         genre="Rock" 
         title="🎸 Rock Hits 2026" 
         icon="electric_bolt"
@@ -54,6 +78,22 @@ const Index = () => {
         genre="Pop" 
         title="🎤 Pop Favorites" 
         icon="star"
+        color="text-accent"
+        limit={8}
+      />
+      
+      <GenreSection 
+        genre="Hip-Hop" 
+        title="🎤 Hip-Hop & Rap" 
+        icon="mic"
+        color="text-primary"
+        limit={8}
+      />
+      
+      <GenreSection 
+        genre="R&B" 
+        title="💜 R&B & Soul" 
+        icon="favorite"
         color="text-accent"
         limit={8}
       />
