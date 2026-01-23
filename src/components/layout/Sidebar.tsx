@@ -72,9 +72,9 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
             onClick={() => handleNavClick("/")}
           >
             <h1 className="font-display text-xl font-bold groove-gradient-text">
-              GrooveAI
+              GrooveAI Stream
             </h1>
-            <p className="text-xs text-muted-foreground">Stream <span className="text-accent">by Groa</span></p>
+            <p className="text-xs text-muted-foreground"><span className="text-accent">by Groua</span></p>
           </motion.div>
         )}
       </div>
