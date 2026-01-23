@@ -19,7 +19,7 @@ const playlistItems = [
   { icon: "add_circle", label: "Create Playlist", href: "/create-playlist" },
   { icon: "favorite", label: "Liked Songs", href: "/liked" },
   { icon: "swap_horiz", label: "Manage Playlists", href: "/playlist-manager" },
-  { icon: "radio", label: "GrouaRadio Live", href: "/radio", badge: "LIVE" },
+  { icon: "radio", label: "GrouaRadio Live", href: "https://play.radioking.io/grouaradio", badge: "LIVE", external: true },
 ];
 
 const aiFeatures = [
@@ -38,7 +38,11 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
     setActiveItem(location.pathname);
   }, [location.pathname]);
 
-  const handleNavClick = (href: string) => {
+  const handleNavClick = (href: string, external?: boolean) => {
+    if (external) {
+      window.open(href, "_blank");
+      return;
+    }
     setActiveItem(href);
     navigate(href);
   };
@@ -115,9 +119,9 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
               icon={item.icon}
               label={item.label}
               href={item.href}
-              active={activeItem === item.href}
+              active={!item.external && activeItem === item.href}
               collapsed={collapsed}
-              onClick={() => handleNavClick(item.href)}
+              onClick={() => handleNavClick(item.href, item.external)}
               badge={item.badge}
             />
           ))}
