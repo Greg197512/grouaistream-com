@@ -93,7 +93,7 @@ export const HeroSection = () => {
             className="inline-flex items-center gap-2 rounded-full bg-accent/20 border border-accent/30 px-4 py-1.5 mb-6"
           >
             <Sparkles className="h-4 w-4 text-accent" />
-            <span className="text-sm font-medium text-accent">AI-Powered Music Experience <span className="font-bold">by Groa</span></span>
+            <span className="text-sm font-medium text-accent">AI-Powered Music Experience <span className="font-bold">by Groua</span></span>
           </motion.div>
 
           {/* Headline */}
