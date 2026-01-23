@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useRef, useEffect, ReactNode, useC
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { extractYouTubeId } from "@/components/player/YouTubePlayer";
+import { useSkipAdaptation } from "@/hooks/useSkipAdaptation";
 
 export interface Track {
   id: string;
@@ -42,6 +43,8 @@ interface PlayerContextType {
   youtubeVideoId: string | null;
   onYouTubeTimeUpdate: (time: number, dur: number) => void;
   onYouTubeEnded: () => void;
+  skipAnalysis: { avoidGenres: string[]; avoidMoods: string[]; recentSkipCount: number; consecutiveSkips: number };
+  onSkipTriggered: () => void;
 }
 
 const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
@@ -56,6 +59,7 @@ export const usePlayer = () => {
 
 export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const trackStartTime = useRef<number>(0);
   
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -71,6 +75,9 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   const [userId, setUserId] = useState<string | null>(null);
   const [isVideoMode, setIsVideoMode] = useState(false);
   const [youtubeVideoId, setYoutubeVideoId] = useState<string | null>(null);
+  const [skipAnalysis, setSkipAnalysis] = useState({ avoidGenres: [] as string[], avoidMoods: [] as string[], recentSkipCount: 0, consecutiveSkips: 0 });
+
+  const { recordSkip, getSkipAnalysis, triggerAIAdaptation } = useSkipAdaptation();
 
   // Get user ID from Supabase auth directly to avoid circular dependency
   useEffect(() => {
@@ -137,8 +144,31 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [volume, isMuted]);
 
-  const nextTrackInternal = useCallback(() => {
+  const nextTrackInternal = useCallback(async (isUserSkip = false) => {
     if (queue.length === 0) return;
+
+    // Track skip behavior for AI adaptation
+    if (isUserSkip && currentTrack) {
+      const playDuration = currentTime;
+      const trackDuration = duration || currentTrack.duration || 180;
+      
+      const { wasSkipped, shouldAdapt, consecutiveSkips: skips } = await recordSkip(
+        currentTrack,
+        playDuration,
+        trackDuration
+      );
+
+      if (wasSkipped) {
+        setSkipAnalysis(getSkipAnalysis());
+        
+        if (shouldAdapt) {
+          toast.info(`🤖 AI adapting to your preferences...`, { duration: 2000 });
+          triggerAIAdaptation();
+        } else if (skips && skips >= 2) {
+          toast.info(`Skip ${skips}/3 - AI will adapt soon`, { duration: 1500 });
+        }
+      }
+    }
     
     let nextIndex = queueIndex + 1;
     if (nextIndex >= queue.length) {
@@ -156,7 +186,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     
     setQueueIndex(nextIndex);
     setCurrentTrack(queue[nextIndex]);
-  }, [queue, queueIndex, repeatMode, isShuffled]);
+  }, [queue, queueIndex, repeatMode, isShuffled, currentTrack, currentTime, duration, recordSkip, getSkipAnalysis, triggerAIAdaptation]);
 
   // Play current track when it changes
   useEffect(() => {
@@ -251,8 +281,12 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const nextTrack = () => {
-    nextTrackInternal();
+    nextTrackInternal(true); // User-initiated skip
   };
+
+  const onSkipTriggered = useCallback(() => {
+    setSkipAnalysis(getSkipAnalysis());
+  }, [getSkipAnalysis]);
 
   const prevTrack = () => {
     // If more than 3 seconds in, restart current track
@@ -315,6 +349,11 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     toast.success(`Added "${track.title}" to queue`);
   };
 
+  // Reset track start time when track changes
+  useEffect(() => {
+    trackStartTime.current = Date.now();
+  }, [currentTrack?.id]);
+
   return (
     <PlayerContext.Provider
       value={{
@@ -343,6 +382,8 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
         youtubeVideoId,
         onYouTubeTimeUpdate,
         onYouTubeEnded,
+        skipAnalysis,
+        onSkipTriggered,
       }}
     >
       {children}
