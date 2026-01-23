@@ -12,7 +12,8 @@ import {
   Sparkles,
   UserCircle,
   Heart,
-  Library
+  Library,
+  Power
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -148,14 +149,20 @@ export const TopBar = () => {
         {/* User Menu */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="flex h-10 w-10 items-center justify-center rounded-full overflow-hidden groove-gradient-bg hover:opacity-90 transition-opacity">
+            <button className="relative flex h-10 w-10 items-center justify-center rounded-full overflow-visible groove-gradient-bg hover:opacity-90 transition-opacity">
               {user ? (
-                <Avatar className="h-10 w-10">
-                  <AvatarImage src={user.user_metadata?.avatar_url} />
-                  <AvatarFallback className="groove-gradient-bg text-primary-foreground font-semibold">
-                    {getUserInitials()}
-                  </AvatarFallback>
-                </Avatar>
+                <>
+                  <Avatar className="h-10 w-10">
+                    <AvatarImage src={user.user_metadata?.avatar_url} />
+                    <AvatarFallback className="groove-gradient-bg text-primary-foreground font-semibold">
+                      {getUserInitials()}
+                    </AvatarFallback>
+                  </Avatar>
+                  {/* Green dot with power icon */}
+                  <span className="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500 border-2 border-background">
+                    <Power className="h-2.5 w-2.5 text-white" />
+                  </span>
+                </>
               ) : (
                 <User className="h-5 w-5 text-primary-foreground" />
               )}
