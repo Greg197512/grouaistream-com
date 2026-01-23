@@ -1,12 +1,14 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Search as SearchIcon, Music, Mic } from "lucide-react";
+import { Search as SearchIcon, Music, Mic, Download } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Input } from "@/components/ui/input";
 import { TrackRow } from "@/components/cards/TrackRow";
 import { supabase } from "@/integrations/supabase/client";
 import { usePlayer, Track } from "@/contexts/PlayerContext";
 import { toast } from "sonner";
+import { CCMixterSection } from "@/components/sections/CCMixterSection";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const formatDuration = (seconds: number): string => {
   const mins = Math.floor(seconds / 60);
@@ -144,50 +146,77 @@ const Search = () => {
             )}
           </div>
         ) : (
-          <>
-            {/* Browse Genres */}
-            <h2 className="font-display text-xl font-bold mb-4">Browse All</h2>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {genres.map((genre) => (
-                <motion.button
-                  key={genre.name}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => handleGenreClick(genre.name)}
-                  className={`relative h-32 rounded-xl bg-gradient-to-br ${genre.color} overflow-hidden group`}
-                >
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="font-display text-xl font-bold text-primary-foreground">
-                      {genre.name}
-                    </span>
-                  </div>
-                  <Music className="absolute bottom-2 right-2 h-8 w-8 text-primary-foreground/30 rotate-12" />
-                </motion.button>
-              ))}
-            </div>
+          <Tabs defaultValue="library" className="w-full">
+            <TabsList className="mb-6">
+              <TabsTrigger value="library">My Library</TabsTrigger>
+              <TabsTrigger value="ccmixter" className="flex items-center gap-1">
+                <Download className="h-3.5 w-3.5" />
+                CC Mixter (Free)
+              </TabsTrigger>
+            </TabsList>
 
-            {/* All Tracks */}
-            <h2 className="font-display text-xl font-bold mt-8 mb-4">
-              All Tracks ({allTracks.length})
-            </h2>
-            <div className="space-y-2">
-              {allTracks.slice(0, 50).map((track, index) => (
-                <TrackRow
-                  key={track.id}
-                  id={track.id}
-                  index={index + 1}
-                  title={track.title}
-                  artist={track.artist}
-                  album={track.album || ""}
-                  duration={formatDuration(track.duration)}
-                  imageUrl={track.cover_url || undefined}
-                  trackUrl={track.video_url || track.audio_url}
-                  isPlaying={currentTrack?.id === track.id && isPlaying}
-                  onPlay={() => handlePlayTrack(track, index)}
-                />
-              ))}
-            </div>
-          </>
+            <TabsContent value="library">
+              {/* Browse Genres */}
+              <h2 className="font-display text-xl font-bold mb-4">Browse All</h2>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {genres.map((genre) => (
+                  <motion.button
+                    key={genre.name}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => handleGenreClick(genre.name)}
+                    className={`relative h-32 rounded-xl bg-gradient-to-br ${genre.color} overflow-hidden group`}
+                  >
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <span className="font-display text-xl font-bold text-primary-foreground">
+                        {genre.name}
+                      </span>
+                    </div>
+                    <Music className="absolute bottom-2 right-2 h-8 w-8 text-primary-foreground/30 rotate-12" />
+                  </motion.button>
+                ))}
+              </div>
+
+              {/* All Tracks */}
+              <h2 className="font-display text-xl font-bold mt-8 mb-4">
+                All Tracks ({allTracks.length})
+              </h2>
+              <div className="space-y-2">
+                {allTracks.slice(0, 50).map((track, index) => (
+                  <TrackRow
+                    key={track.id}
+                    id={track.id}
+                    index={index + 1}
+                    title={track.title}
+                    artist={track.artist}
+                    album={track.album || ""}
+                    duration={formatDuration(track.duration)}
+                    imageUrl={track.cover_url || undefined}
+                    trackUrl={track.video_url || track.audio_url}
+                    isPlaying={currentTrack?.id === track.id && isPlaying}
+                    onPlay={() => handlePlayTrack(track, index)}
+                  />
+                ))}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="ccmixter" className="space-y-0">
+              <div className="mb-6 p-4 rounded-lg bg-primary/10 border border-primary/20">
+                <h3 className="font-semibold text-sm flex items-center gap-2">
+                  <Download className="h-4 w-4 text-primary" />
+                  Free Legal Downloads
+                </h3>
+                <p className="text-xs text-muted-foreground mt-1">
+                  All tracks below are licensed under Creative Commons. Download legally with proper attribution.
+                </p>
+              </div>
+              
+              <CCMixterSection genre="rock" title="Rock Discoveries" limit={8} />
+              <CCMixterSection genre="punk" title="Punk Underground" limit={8} />
+              <CCMixterSection genre="pop" title="Pop Gems" limit={8} />
+              <CCMixterSection genre="electronic" title="Electronic Beats" limit={8} />
+            </TabsContent>
+          </Tabs>
         )}
       </div>
     </MainLayout>
