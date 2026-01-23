@@ -1,10 +1,10 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Camera, CameraOff, Sparkles, RefreshCw, X } from "lucide-react";
+import { Camera, CameraOff, Sparkles, RefreshCw, X, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAI } from "@/contexts/AIContext";
+import { DetectedMood } from "@/hooks/useAIOrchestrator";
 
 interface MoodResult {
   mood: string;
@@ -30,7 +30,7 @@ interface MoodDetectorProps {
 }
 
 export const MoodDetector = ({ onMoodDetected, onClose }: MoodDetectorProps) => {
-  const { user } = useAuth();
+  const { handleMoodDetected, isProcessing } = useAI();
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isActive, setIsActive] = useState(false);
@@ -101,20 +101,20 @@ export const MoodDetector = ({ onMoodDetected, onClose }: MoodDetectorProps) => 
     setCurrentMood(null);
   };
 
-  const saveMoodSession = async () => {
-    if (!user || !currentMood) return;
+  const playMoodPlaylist = async () => {
+    if (!currentMood) return;
     
-    try {
-      await supabase.from("mood_sessions").insert({
-        user_id: user.id,
-        mood: currentMood.mood,
-        confidence: currentMood.confidence,
-        source: "webcam",
-      });
-      toast.success(`Nastrój "${currentMood.mood}" zapisany!`);
-    } catch (error) {
-      console.error("Failed to save mood:", error);
-    }
+    const detectedMood: DetectedMood = {
+      mood: currentMood.mood,
+      confidence: currentMood.confidence,
+      emoji: currentMood.emoji,
+      color: currentMood.color,
+      genre: currentMood.genre,
+      source: "webcam",
+    };
+    
+    await handleMoodDetected(detectedMood, true);
+    onMoodDetected?.(currentMood);
   };
 
   useEffect(() => {
@@ -221,10 +221,11 @@ export const MoodDetector = ({ onMoodDetected, onClose }: MoodDetectorProps) => 
                     size="sm"
                     variant="secondary"
                     className="flex-1 bg-white/20 hover:bg-white/30 text-white border-0"
-                    onClick={saveMoodSession}
+                    onClick={playMoodPlaylist}
+                    disabled={isProcessing}
                   >
-                    <Sparkles className="h-4 w-4 mr-1" />
-                    Zapisz nastrój
+                    <Play className="h-4 w-4 mr-1" />
+                    {isProcessing ? "Generuję..." : "Odtwórz muzykę"}
                   </Button>
                 </div>
               </motion.div>
