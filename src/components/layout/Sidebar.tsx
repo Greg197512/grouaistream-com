@@ -70,7 +70,7 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
             <h1 className="font-display text-xl font-bold groove-gradient-text">
               GrooveAI
             </h1>
-            <p className="text-xs text-muted-foreground">Stream</p>
+            <p className="text-xs text-muted-foreground">Stream <span className="text-accent">by Groa</span></p>
           </motion.div>
         )}
       </div>
