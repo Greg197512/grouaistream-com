@@ -25,7 +25,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { motion, AnimatePresence } from "framer-motion";
+
 
 interface TrackOptionsMenuProps {
   trackId: string;
@@ -336,21 +336,14 @@ const LikeButtonComponent = (
         className
       )}
     >
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={isLiked ? "liked" : "unliked"}
-          initial={{ scale: 0.8 }}
-          animate={{ scale: 1 }}
-          exit={{ scale: 0.8 }}
-        >
-          <Heart
-            className={cn(
-              "h-4 w-4 transition-colors",
-              isLiked ? "fill-primary text-primary" : "text-muted-foreground hover:text-foreground"
-            )}
-          />
-        </motion.div>
-      </AnimatePresence>
+      <Heart
+        className={cn(
+          "h-4 w-4 transition-all duration-200",
+          isLiked 
+            ? "fill-primary text-primary scale-110" 
+            : "text-muted-foreground hover:text-foreground scale-100"
+        )}
+      />
       {showCount && likeCount > 0 && (
         <span className="text-xs text-muted-foreground">{likeCount}</span>
       )}
