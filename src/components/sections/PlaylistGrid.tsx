@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { PlaylistCard } from "@/components/cards/PlaylistCard";
-import { supabase } from "@/integrations/supabase/client";
 import { usePlayer } from "@/contexts/PlayerContext";
+import { useAI } from "@/contexts/AIContext";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, Sparkles } from "lucide-react";
 
 interface PlaylistGridProps {
   title: string;
@@ -104,95 +105,42 @@ export const PlaylistGrid = ({ title, subtitle, showAll = true }: PlaylistGridPr
   const isAISection = title.toLowerCase().includes("ai");
   const playlists = isAISection ? aiPlaylists : trendingPlaylists;
   const { playPlaylist } = usePlayer();
+  const { generateAIPlaylist, isProcessing, lastRecommendation } = useAI();
   const [generatingId, setGeneratingId] = useState<string | null>(null);
 
   const handleAIPlaylistClick = async (playlist: AIPlaylist) => {
-    if (generatingId) return;
+    if (generatingId || isProcessing) return;
     
     setGeneratingId(playlist.id);
     toast.loading(`🤖 AI DJ generating "${playlist.title}"...`, { id: "ai-playlist" });
 
     try {
-      // Call AI to generate playlist recommendations
-      const { data: aiData, error: aiError } = await supabase.functions.invoke("ai-playlist", {
-        body: {
-          action: "generate_playlist",
-          mood: playlist.mood,
-          genre: playlist.genre,
-          context: `User wants a ${playlist.title} playlist. Mood: ${playlist.mood}, preferred genre: ${playlist.genre}`
-        }
-      });
-
-      if (aiError) throw aiError;
-
-      // Fetch tracks matching the mood/genre
-      const { data: tracks, error: tracksError } = await supabase
-        .from("tracks")
-        .select("*")
-        .or(`genre.ilike.%${playlist.genre}%,mood.ilike.%${playlist.mood}%`)
-        .limit(20);
-
-      if (tracksError) throw tracksError;
-
-      if (!tracks || tracks.length === 0) {
-        // Fallback: get any tracks
-        const { data: fallbackTracks } = await supabase
-          .from("tracks")
-          .select("*")
-          .limit(20);
-        
-        if (fallbackTracks && fallbackTracks.length > 0) {
-          // Shuffle for variety
-          const shuffled = fallbackTracks.sort(() => Math.random() - 0.5);
-          playPlaylist(shuffled);
-          
-          toast.success(
-            `🎵 "${playlist.title}" ready! ${shuffled.length} tracks curated by AI`,
-            { id: "ai-playlist" }
-          );
-        } else {
-          toast.error("No tracks available. Add some tracks first!", { id: "ai-playlist" });
-        }
-        return;
-      }
-
-      // Shuffle tracks for variety
-      const shuffledTracks = tracks.sort(() => Math.random() - 0.5);
-      
-      // Play the generated playlist
-      playPlaylist(shuffledTracks);
-
-      const aiInsight = aiData?.data?.explanation || "Personalized for your listening style";
-      toast.success(
-        `🎵 "${playlist.title}" ready! ${shuffledTracks.length} tracks • ${aiInsight}`,
-        { id: "ai-playlist", duration: 4000 }
+      const tracks = await generateAIPlaylist(
+        playlist.mood,
+        playlist.genre,
+        `User clicked on "${playlist.title}" playlist card`
       );
 
+      if (tracks && tracks.length > 0) {
+        playPlaylist(tracks);
+        
+        const aiInsight = lastRecommendation?.explanation || "Personalized for your listening style";
+        toast.success(
+          `🎵 "${playlist.title}" ready! ${tracks.length} tracks • ${aiInsight}`,
+          { id: "ai-playlist", duration: 4000 }
+        );
+      } else {
+        toast.error("No tracks found for this mood", { id: "ai-playlist" });
+      }
     } catch (error) {
       console.error("AI playlist generation error:", error);
-      toast.error("Failed to generate playlist. Trying fallback...", { id: "ai-playlist" });
-      
-      // Fallback: just play random tracks
-      try {
-        const { data: fallbackTracks } = await supabase
-          .from("tracks")
-          .select("*")
-          .limit(15);
-        
-        if (fallbackTracks && fallbackTracks.length > 0) {
-          const shuffled = fallbackTracks.sort(() => Math.random() - 0.5);
-          playPlaylist(shuffled);
-          toast.success(`Playing ${shuffled.length} tracks`, { id: "ai-playlist" });
-        }
-      } catch {
-        toast.error("Could not load tracks", { id: "ai-playlist" });
-      }
+      toast.error("Failed to generate playlist", { id: "ai-playlist" });
     } finally {
       setGeneratingId(null);
     }
   };
 
-  const handleTrendingClick = async (playlistId: string) => {
+  const handleTrendingClick = async () => {
     toast.loading("Loading playlist...", { id: "trending-playlist" });
     
     try {
@@ -202,7 +150,7 @@ export const PlaylistGrid = ({ title, subtitle, showAll = true }: PlaylistGridPr
         .limit(20);
       
       if (tracks && tracks.length > 0) {
-        const shuffled = tracks.sort(() => Math.random() - 0.5);
+        const shuffled = [...tracks].sort(() => Math.random() - 0.5);
         playPlaylist(shuffled);
         toast.success(`Playing ${shuffled.length} tracks`, { id: "trending-playlist" });
       } else {
@@ -216,9 +164,16 @@ export const PlaylistGrid = ({ title, subtitle, showAll = true }: PlaylistGridPr
   return (
     <section className="px-6 py-8">
       <div className="flex items-center justify-between mb-6">
-        <div>
-          <h2 className="font-display text-2xl font-bold">{title}</h2>
-          {subtitle && <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>}
+        <div className="flex items-center gap-3">
+          {isAISection && (
+            <div className="groove-gradient-bg h-8 w-8 rounded-lg flex items-center justify-center">
+              <Sparkles className="h-4 w-4 text-primary-foreground" />
+            </div>
+          )}
+          <div>
+            <h2 className="font-display text-2xl font-bold">{title}</h2>
+            {subtitle && <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>}
+          </div>
         </div>
         {showAll && (
           <button className="text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors">
@@ -263,7 +218,7 @@ export const PlaylistGrid = ({ title, subtitle, showAll = true }: PlaylistGridPr
               onClick={() => 
                 isAISection 
                   ? handleAIPlaylistClick(playlist as AIPlaylist)
-                  : handleTrendingClick(playlist.id)
+                  : handleTrendingClick()
               }
             />
           </motion.div>

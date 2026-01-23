@@ -1,8 +1,10 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Brain, Headphones, TrendingUp, Play, Pause, Camera } from "lucide-react";
-import { useState } from "react";
+import { Sparkles, Brain, Headphones, TrendingUp, Play, Pause, Camera, Zap } from "lucide-react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { MoodDetector } from "@/components/mood/MoodDetector";
+import { useAI } from "@/contexts/AIContext";
+import { usePlayer } from "@/contexts/PlayerContext";
 
 interface MoodState {
   mood: string;
@@ -18,29 +20,87 @@ const moods: MoodState[] = [
   { mood: "Happy", confidence: 88, icon: "☀️", color: "from-green-400 to-emerald-500" },
 ];
 
+const moodToGenre: Record<string, string> = {
+  "Energetic": "Rock",
+  "Relaxed": "Pop",
+  "Focused": "Electronic",
+  "Happy": "Pop",
+  "Melancholic": "Rock",
+  "Intense": "Punk",
+  "Anxious": "Rock",
+  "Rebellious": "Punk",
+  "Excited": "Pop",
+};
+
 export const AIDJSection = () => {
-  const [currentMood, setCurrentMood] = useState(moods[1]);
+  const { 
+    currentMood: aiCurrentMood, 
+    handleMoodDetected, 
+    listeningStats, 
+    isProcessing,
+    isAIEnabled,
+    toggleAI,
+    generateAIPlaylist 
+  } = useAI();
+  const { playPlaylist, isPlaying: playerIsPlaying } = usePlayer();
+  
+  const [displayMood, setDisplayMood] = useState(moods[1]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [djActive, setDjActive] = useState(true);
   const [showMoodDetector, setShowMoodDetector] = useState(false);
 
-  const handleAnalyze = () => {
+  // Sync with AI context mood
+  useEffect(() => {
+    if (aiCurrentMood) {
+      const matchingMood = moods.find(m => 
+        m.mood.toLowerCase() === aiCurrentMood.mood.toLowerCase()
+      );
+      if (matchingMood) {
+        setDisplayMood({
+          ...matchingMood,
+          confidence: aiCurrentMood.confidence,
+        });
+      } else {
+        // Map unknown moods
+        setDisplayMood({
+          mood: aiCurrentMood.mood,
+          confidence: aiCurrentMood.confidence,
+          icon: aiCurrentMood.emoji,
+          color: aiCurrentMood.color,
+        });
+      }
+    }
+  }, [aiCurrentMood]);
+
+  const handleAnalyze = async () => {
     setIsAnalyzing(true);
-    setTimeout(() => {
-      const randomMood = moods[Math.floor(Math.random() * moods.length)];
-      setCurrentMood(randomMood);
-      setIsAnalyzing(false);
-    }, 2000);
+    
+    // Quick random mood for demo, but then generate playlist
+    const randomMood = moods[Math.floor(Math.random() * moods.length)];
+    setDisplayMood(randomMood);
+    
+    try {
+      const genre = moodToGenre[randomMood.mood] || "Pop";
+      const tracks = await generateAIPlaylist(randomMood.mood.toLowerCase(), genre);
+      
+      if (tracks.length > 0) {
+        playPlaylist(tracks);
+      }
+    } catch (error) {
+      console.error("Failed to generate playlist:", error);
+    }
+    
+    setIsAnalyzing(false);
   };
 
-  const handleMoodDetected = (detectedMood: { mood: string; confidence: number; emoji: string; color: string }) => {
+  const handleMoodDetectorResult = (detectedMood: { mood: string; confidence: number; emoji: string; color: string }) => {
     const mappedMood: MoodState = {
       mood: detectedMood.mood,
       confidence: detectedMood.confidence,
       icon: detectedMood.emoji,
       color: detectedMood.color,
     };
-    setCurrentMood(mappedMood);
+    setDisplayMood(mappedMood);
   };
 
   return (
@@ -85,7 +145,7 @@ export const AIDJSection = () => {
             className="mb-6 overflow-hidden"
           >
             <MoodDetector 
-              onMoodDetected={handleMoodDetected}
+              onMoodDetected={handleMoodDetectorResult}
               onClose={() => setShowMoodDetector(false)}
             />
           </motion.div>
@@ -116,23 +176,23 @@ export const AIDJSection = () => {
             <motion.div 
               animate={isAnalyzing ? { rotate: 360 } : {}}
               transition={{ duration: 1, repeat: isAnalyzing ? Infinity : 0, ease: "linear" }}
-              className={`h-24 w-24 rounded-2xl bg-gradient-to-br ${currentMood.color} flex items-center justify-center text-4xl shadow-lg`}
+              className={`h-24 w-24 rounded-2xl bg-gradient-to-br ${displayMood.color} flex items-center justify-center text-4xl shadow-lg`}
             >
-              {currentMood.icon}
+              {displayMood.icon}
             </motion.div>
             
             <div className="flex-1">
-              <h3 className="font-display text-3xl font-bold mb-2">{currentMood.mood}</h3>
+              <h3 className="font-display text-3xl font-bold mb-2">{displayMood.mood}</h3>
               <div className="flex items-center gap-2 mb-3">
                 <div className="flex-1 h-2 bg-secondary rounded-full overflow-hidden">
                   <motion.div 
                     initial={{ width: 0 }}
-                    animate={{ width: `${currentMood.confidence}%` }}
+                    animate={{ width: `${displayMood.confidence}%` }}
                     transition={{ duration: 0.5 }}
-                    className={`h-full bg-gradient-to-r ${currentMood.color}`}
+                    className={`h-full bg-gradient-to-r ${displayMood.color}`}
                   />
                 </div>
-                <span className="text-sm text-muted-foreground">{currentMood.confidence}% confidence</span>
+                <span className="text-sm text-muted-foreground">{displayMood.confidence}% confidence</span>
               </div>
               <p className="text-sm text-muted-foreground">
                 Based on your listening patterns, time of day, and behavioral signals.
@@ -145,9 +205,9 @@ export const AIDJSection = () => {
             {moods.map((mood) => (
               <button
                 key={mood.mood}
-                onClick={() => setCurrentMood(mood)}
+                onClick={() => setDisplayMood(mood)}
                 className={`px-4 py-2 rounded-full text-sm transition-all ${
-                  currentMood.mood === mood.mood 
+                  displayMood.mood === mood.mood 
                     ? "bg-primary text-primary-foreground" 
                     : "bg-secondary hover:bg-muted"
                 }`}

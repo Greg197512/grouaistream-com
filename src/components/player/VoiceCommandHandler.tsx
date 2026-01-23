@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Mic, MicOff, Loader2 } from "lucide-react";
+import { Mic, MicOff, Loader2, Sparkles } from "lucide-react";
 import { usePlayer } from "@/contexts/PlayerContext";
-import { supabase } from "@/integrations/supabase/client";
+import { useAI } from "@/contexts/AIContext";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -46,6 +46,7 @@ declare global {
 
 export const VoiceCommandHandler = ({ isOpen, onClose }: VoiceCommandHandlerProps) => {
   const { playPlaylist, togglePlay, nextTrack, prevTrack, setVolume } = usePlayer();
+  const { processVoiceCommand, isProcessing: aiProcessing, currentMood, isAIEnabled } = useAI();
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState("");
   const [processing, setProcessing] = useState(false);
@@ -126,55 +127,50 @@ export const VoiceCommandHandler = ({ isOpen, onClose }: VoiceCommandHandlerProp
     setProcessing(true);
     
     try {
-      // Analyze emotional tone
-      const mood = analyzeMood(command);
-      setDetectedMood(mood);
+      if (isAIEnabled) {
+        // Use AI-powered command processing
+        const result = await processVoiceCommand(command);
+        setDetectedMood(result.mood || null);
 
-      // Command patterns
-      if (command.includes("play") || command.includes("start")) {
-        // Genre commands
-        if (command.includes("rock")) {
-          await playGenre("Rock");
-        } else if (command.includes("punk")) {
-          await playGenre("Punk");
-        } else if (command.includes("pop")) {
-          await playGenre("Pop");
-        } else {
-          // Play based on detected mood
-          const genre = moodToGenre(mood);
-          await playGenre(genre);
-          toast.success(`Playing ${genre} based on your mood: ${mood}`);
+        if (result.action === "play" && result.tracks && result.tracks.length > 0) {
+          playPlaylist(result.tracks, 0);
+          toast.success(`🎵 Playing ${result.genre} based on your mood: ${result.mood}`, { duration: 3000 });
+        } else if (result.action === "pause") {
+          togglePlay();
+          toast.success("Paused playback");
+        } else if (result.action === "next") {
+          nextTrack();
+          toast.success("Playing next track");
+        } else if (result.action === "previous") {
+          prevTrack();
+          toast.success("Playing previous track");
+        } else if (result.action === "volume") {
+          if (command.includes("up") || command.includes("louder")) {
+            setVolume(80);
+            toast.success("Volume increased");
+          } else if (command.includes("down") || command.includes("quiet")) {
+            setVolume(30);
+            toast.success("Volume decreased");
+          } else if (command.includes("mute")) {
+            setVolume(0);
+            toast.success("Volume muted");
+          } else if (command.includes("max")) {
+            setVolume(100);
+            toast.success("Volume maximized");
+          }
         }
-      } else if (command.includes("pause") || command.includes("stop")) {
-        togglePlay();
-        toast.success("Paused playback");
-      } else if (command.includes("next") || command.includes("skip")) {
-        nextTrack();
-        toast.success("Playing next track");
-      } else if (command.includes("previous") || command.includes("back")) {
-        prevTrack();
-        toast.success("Playing previous track");
-      } else if (command.includes("volume")) {
-        if (command.includes("up") || command.includes("louder")) {
-          setVolume(80);
-          toast.success("Volume increased");
-        } else if (command.includes("down") || command.includes("quiet") || command.includes("lower")) {
-          setVolume(30);
-          toast.success("Volume decreased");
-        } else if (command.includes("mute") || command.includes("off")) {
-          setVolume(0);
-          toast.success("Volume muted");
-        } else if (command.includes("max") || command.includes("full")) {
-          setVolume(100);
-          toast.success("Volume maximized");
-        }
-      } else if (command.includes("shuffle")) {
-        toast.success("Shuffle toggled");
       } else {
-        // Default: play music based on mood
-        const genre = moodToGenre(mood);
-        await playGenre(genre);
-        toast.info(`Detected mood: ${mood}. Playing ${genre} music.`);
+        // Fallback to basic command processing
+        if (command.includes("play")) {
+          togglePlay();
+        } else if (command.includes("pause") || command.includes("stop")) {
+          togglePlay();
+        } else if (command.includes("next") || command.includes("skip")) {
+          nextTrack();
+        } else if (command.includes("previous") || command.includes("back")) {
+          prevTrack();
+        }
+        toast.info("AI is disabled. Using basic commands only.");
       }
     } catch (error) {
       console.error("Command processing error:", error);
@@ -183,32 +179,9 @@ export const VoiceCommandHandler = ({ isOpen, onClose }: VoiceCommandHandlerProp
       setProcessing(false);
       setTimeout(() => onClose(), 1500);
     }
-  }, [togglePlay, nextTrack, prevTrack, setVolume, onClose]);
+  }, [isAIEnabled, processVoiceCommand, playPlaylist, togglePlay, nextTrack, prevTrack, setVolume, onClose]);
 
-  const playGenre = async (genre: string) => {
-    const { data: tracks, error } = await supabase
-      .from("tracks")
-      .select("*")
-      .ilike("genre", `%${genre}%`)
-      .limit(20);
-
-    if (error) {
-      throw error;
-    }
-
-    if (tracks && tracks.length > 0) {
-      // Shuffle tracks
-      const shuffled = [...tracks].sort(() => Math.random() - 0.5);
-      playPlaylist(shuffled, 0);
-      toast.success(`Playing ${genre} music (${tracks.length} tracks)`);
-    } else {
-      toast.info(`No ${genre} tracks found. Playing all music.`);
-      const { data: allTracks } = await supabase.from("tracks").select("*").limit(20);
-      if (allTracks && allTracks.length > 0) {
-        playPlaylist(allTracks, 0);
-      }
-    }
-  };
+  // playGenre is now handled by useAI.processVoiceCommand
 
   const toggleListening = () => {
     if (!recognition) {
