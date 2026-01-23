@@ -2,6 +2,7 @@ import { useState, ReactNode } from "react";
 import { Sidebar } from "./Sidebar";
 import { PlayerBar } from "./PlayerBar";
 import { TopBar } from "./TopBar";
+import { AIAssistant } from "@/components/assistant/AIAssistant";
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -12,6 +13,9 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-background">
+      {/* Player Bar - at top for higher position */}
+      <PlayerBar />
+      
       {/* Main Content Area */}
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar */}
@@ -29,8 +33,8 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
         </div>
       </div>
 
-      {/* Player Bar */}
-      <PlayerBar />
+      {/* AI Assistant Floating Button */}
+      <AIAssistant />
     </div>
   );
 };
