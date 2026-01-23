@@ -98,6 +98,14 @@ const Index = () => {
         limit={8}
       />
       
+      <GenreSection 
+        genre="Trance" 
+        title="🌌 Trance & Progressive" 
+        icon="waves"
+        color="text-primary"
+        limit={8}
+      />
+      
       <LiveRadioCard />
       <AIDJSection />
       <PlaylistGrid 
