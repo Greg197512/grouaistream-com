@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Send, Loader2, ExternalLink, Music } from "lucide-react";
+import { X, Send, Loader2, ExternalLink, Music, Power } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -95,41 +95,47 @@ export const AIAssistant = () => {
 
   return (
     <>
-      {/* Floating Avatar Button */}
-      <motion.button
-        onClick={() => setIsOpen(true)}
-        className="fixed bottom-36 right-6 z-50 w-16 h-16 rounded-full overflow-hidden shadow-lg border-2 border-primary/50 hover:border-primary transition-all"
-        whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.95 }}
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.5 }}
-      >
-        <img 
-          src={aiAssistantAvatar} 
-          alt="AI Assistant"
-          className="w-full h-full object-cover"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-primary/30 to-transparent" />
-        <motion.div
-          className="absolute bottom-1 right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-background"
-          animate={{ scale: [1, 1.2, 1] }}
-          transition={{ duration: 2, repeat: Infinity }}
-        />
-      </motion.button>
+      {/* Tiny Floating Bubble Button - doesn't interfere with anything */}
+      <AnimatePresence>
+        {!isOpen && (
+          <motion.button
+            onClick={() => setIsOpen(true)}
+            className="fixed bottom-40 right-4 z-40 w-10 h-10 rounded-full overflow-hidden shadow-lg border border-primary/30 hover:border-primary transition-all bg-background/80 backdrop-blur-sm"
+            whileHover={{ scale: 1.15 }}
+            whileTap={{ scale: 0.9 }}
+            initial={{ opacity: 0, scale: 0 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0 }}
+            transition={{ type: "spring", stiffness: 300, damping: 20 }}
+          >
+            <img 
+              src={aiAssistantAvatar} 
+              alt="AI Assistant"
+              className="w-full h-full object-cover"
+            />
+            {/* Online indicator */}
+            <motion.div
+              className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 rounded-full border-2 border-background"
+              animate={{ scale: [1, 1.2, 1] }}
+              transition={{ duration: 2, repeat: Infinity }}
+            />
+          </motion.button>
+        )}
+      </AnimatePresence>
 
       {/* Chat Modal */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={{ opacity: 0, y: 20, scale: 0.95 }}
+            initial={{ opacity: 0, y: 20, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            className="fixed bottom-36 right-6 z-50 w-[380px] h-[520px] bg-card border border-border rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+            exit={{ opacity: 0, y: 20, scale: 0.9 }}
+            transition={{ type: "spring", stiffness: 300, damping: 25 }}
+            className="fixed bottom-40 right-4 z-50 w-[360px] h-[480px] bg-card/95 backdrop-blur-xl border border-border/50 rounded-2xl shadow-2xl flex flex-col overflow-hidden"
           >
-            {/* Header */}
-            <div className="flex items-center gap-3 p-4 border-b border-border bg-card/95 backdrop-blur">
-              <div className="w-10 h-10 rounded-full overflow-hidden border border-primary/30">
+            {/* Header with avatar and power off button */}
+            <div className="flex items-center gap-3 p-3 border-b border-border/50 bg-gradient-to-r from-primary/10 to-accent/10">
+              <div className="relative w-9 h-9 rounded-full overflow-hidden border border-primary/30">
                 <img 
                   src={aiAssistantAvatar} 
                   alt="AI Assistant"
@@ -138,21 +144,22 @@ export const AIAssistant = () => {
               </div>
               <div className="flex-1">
                 <h3 className="font-semibold text-sm">GrooveAI Assistant</h3>
-                <p className="text-xs text-muted-foreground">Twój przewodnik muzyczny</p>
+                <p className="text-[10px] text-muted-foreground">by Groua • Online</p>
               </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
+              {/* Power off button */}
+              <motion.button
+                whileHover={{ scale: 1.1, rotate: 180 }}
+                whileTap={{ scale: 0.9 }}
                 onClick={() => setIsOpen(false)}
+                className="w-8 h-8 rounded-full bg-destructive/20 hover:bg-destructive/40 flex items-center justify-center transition-colors"
               >
-                <X className="h-4 w-4" />
-              </Button>
+                <Power className="h-4 w-4 text-destructive" />
+              </motion.button>
             </div>
 
             {/* Messages */}
-            <ScrollArea className="flex-1 p-4" ref={scrollRef}>
-              <div className="space-y-4">
+            <ScrollArea className="flex-1 p-3" ref={scrollRef}>
+              <div className="space-y-3">
                 {messages.map((msg, i) => (
                   <motion.div
                     key={i}
@@ -161,13 +168,13 @@ export const AIAssistant = () => {
                     className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
                   >
                     <div
-                      className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm ${
+                      className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm ${
                         msg.role === "user"
                           ? "bg-primary text-primary-foreground rounded-br-sm"
-                          : "bg-secondary text-secondary-foreground rounded-bl-sm"
+                          : "bg-secondary/80 text-secondary-foreground rounded-bl-sm"
                       }`}
                     >
-                      <p className="whitespace-pre-wrap">{msg.content}</p>
+                      <p className="whitespace-pre-wrap text-xs">{msg.content}</p>
                       
                       {/* Track Play Link */}
                       {msg.trackLink && (
@@ -177,12 +184,12 @@ export const AIAssistant = () => {
                           whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.98 }}
                         >
-                          <Music className="h-4 w-4 text-primary" />
+                          <Music className="h-3 w-3 text-primary" />
                           <div className="text-left flex-1 min-w-0">
-                            <p className="font-medium text-xs truncate">{msg.trackLink.title}</p>
-                            <p className="text-[10px] text-muted-foreground truncate">{msg.trackLink.artist}</p>
+                            <p className="font-medium text-[10px] truncate">{msg.trackLink.title}</p>
+                            <p className="text-[9px] text-muted-foreground truncate">{msg.trackLink.artist}</p>
                           </div>
-                          <ExternalLink className="h-3 w-3 text-primary" />
+                          <ExternalLink className="h-2.5 w-2.5 text-primary" />
                         </motion.button>
                       )}
                     </div>
@@ -195,8 +202,8 @@ export const AIAssistant = () => {
                     animate={{ opacity: 1 }}
                     className="flex justify-start"
                   >
-                    <div className="bg-secondary rounded-2xl rounded-bl-sm px-4 py-3">
-                      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                    <div className="bg-secondary/80 rounded-2xl rounded-bl-sm px-3 py-2">
+                      <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
                     </div>
                   </motion.div>
                 )}
@@ -204,7 +211,7 @@ export const AIAssistant = () => {
             </ScrollArea>
 
             {/* Input */}
-            <div className="p-4 border-t border-border bg-card/95 backdrop-blur">
+            <div className="p-3 border-t border-border/50 bg-card/50">
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
@@ -215,17 +222,17 @@ export const AIAssistant = () => {
                 <Input
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
-                  placeholder="Zapytaj o piosenkę, vinyl, współpracę..."
-                  className="flex-1 bg-secondary/50 border-0"
+                  placeholder="Zapytaj..."
+                  className="flex-1 bg-secondary/50 border-0 h-8 text-xs"
                   disabled={isLoading}
                 />
                 <Button
                   type="submit"
                   size="icon"
                   disabled={!input.trim() || isLoading}
-                  className="shrink-0"
+                  className="shrink-0 h-8 w-8"
                 >
-                  <Send className="h-4 w-4" />
+                  <Send className="h-3 w-3" />
                 </Button>
               </form>
             </div>

@@ -1,4 +1,4 @@
-import { motion } from "framer-motion";
+import { motion, useDragControls, PanInfo } from "framer-motion";
 import {
   Play,
   Pause,
@@ -17,7 +17,8 @@ import {
   Youtube,
   Video,
   Download,
-  Share2
+  Share2,
+  GripHorizontal
 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
@@ -69,6 +70,12 @@ export const PlayerBar = () => {
   const [showAIInsight, setShowAIInsight] = useState(true);
   const youtubePlayerRef = useRef<YouTubePlayerRef>(null);
   const [seekPosition, setSeekPosition] = useState<number | null>(null);
+  
+  // Drag state for movable player
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragControls = useDragControls();
+  const constraintsRef = useRef<HTMLDivElement>(null);
   
   // New state for modals/sidebars
   const [showQueue, setShowQueue] = useState(false);
@@ -189,12 +196,61 @@ export const PlayerBar = () => {
     }
   };
 
+  const handleDragEnd = (event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+    setIsDragging(false);
+    setPosition(prev => ({
+      x: prev.x + info.offset.x,
+      y: prev.y + info.offset.y
+    }));
+  };
+
   const displayDuration = duration || currentTrack?.duration || 0;
   const displayCurrentTime = currentTime;
 
   return (
     <>
-      <div className="groove-player-bar h-28 px-6 flex items-center gap-4 relative">
+      {/* Drag constraints container (full viewport) */}
+      <div 
+        ref={constraintsRef} 
+        className="fixed inset-0 pointer-events-none z-40"
+      />
+      
+      {/* Draggable Glass Player */}
+      <motion.div
+        drag
+        dragControls={dragControls}
+        dragMomentum={false}
+        dragElastic={0.1}
+        dragConstraints={constraintsRef}
+        onDragStart={() => setIsDragging(true)}
+        onDragEnd={handleDragEnd}
+        initial={{ x: 0, y: 0 }}
+        animate={{ x: position.x, y: position.y }}
+        whileDrag={{ scale: 1.02, cursor: "grabbing" }}
+        className={cn(
+          "fixed bottom-0 left-0 right-0 z-50",
+          "h-24 px-4 flex items-center gap-3",
+          // Glass transparency effect
+          "bg-background/20 backdrop-blur-[40px] backdrop-saturate-[200%]",
+          "border-t border-white/10",
+          "shadow-[0_-10px_40px_rgba(0,0,0,0.3)]",
+          isDragging && "cursor-grabbing"
+        )}
+        style={{
+          background: "linear-gradient(to top, rgba(0,0,0,0.4), rgba(0,0,0,0.2))",
+          WebkitBackdropFilter: "blur(40px) saturate(200%)",
+        }}
+      >
+        {/* Drag Handle */}
+        <motion.div
+          onPointerDown={(e) => dragControls.start(e)}
+          className="absolute top-0 left-1/2 -translate-x-1/2 px-8 py-1 cursor-grab active:cursor-grabbing touch-none"
+          whileHover={{ opacity: 1 }}
+          initial={{ opacity: 0.3 }}
+        >
+          <GripHorizontal className="h-4 w-4 text-white/40" />
+        </motion.div>
+
         {/* Hidden YouTube Player */}
         {isVideoMode && youtubeVideoId && (
           <YouTubePlayer
@@ -209,9 +265,9 @@ export const PlayerBar = () => {
         )}
 
         {/* Track Info */}
-        <div className="flex items-center gap-3 w-[280px] min-w-[180px]">
+        <div className="flex items-center gap-3 w-[240px] min-w-[160px]">
           <motion.div 
-            className="relative h-14 w-14 rounded-md overflow-hidden bg-secondary flex-shrink-0"
+            className="relative h-12 w-12 rounded-lg overflow-hidden bg-white/10 flex-shrink-0 backdrop-blur-sm"
             whileHover={{ scale: 1.05 }}
           >
             {currentTrack?.cover_url ? (
@@ -224,21 +280,21 @@ export const PlayerBar = () => {
               <>
                 <div className="absolute inset-0 groove-gradient-bg opacity-60" />
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <MonitorSpeaker className="h-6 w-6 text-primary-foreground" />
+                  <MonitorSpeaker className="h-5 w-5 text-white/70" />
                 </div>
               </>
             )}
             {isPlaying && (
               <motion.div 
-                className="absolute bottom-1 left-1/2 -translate-x-1/2 flex gap-0.5"
+                className="absolute bottom-0.5 left-1/2 -translate-x-1/2 flex gap-0.5"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
               >
                 {[1, 2, 3].map((i) => (
                   <motion.div
                     key={i}
-                    className="w-0.5 bg-primary-foreground rounded-full"
-                    animate={{ height: [4, 12, 4] }}
+                    className="w-0.5 bg-white rounded-full"
+                    animate={{ height: [3, 10, 3] }}
                     transition={{ duration: 0.5, repeat: Infinity, delay: i * 0.1 }}
                   />
                 ))}
@@ -246,89 +302,89 @@ export const PlayerBar = () => {
             )}
             {/* YouTube indicator */}
             {isVideoMode && (
-              <div className="absolute top-1 right-1 p-0.5 rounded bg-red-600">
-                <Youtube className="h-2.5 w-2.5 text-white" />
+              <div className="absolute top-0.5 right-0.5 p-0.5 rounded bg-red-600/80">
+                <Youtube className="h-2 w-2 text-white" />
               </div>
             )}
           </motion.div>
           
           <div className="min-w-0">
-            <p className="font-medium text-sm truncate hover:underline cursor-pointer">
+            <p className="font-medium text-xs truncate text-white/90 hover:text-white cursor-pointer">
               {currentTrack?.title || "No track playing"}
             </p>
-            <p className="text-xs text-muted-foreground truncate hover:underline cursor-pointer">
-              {currentTrack?.artist || "Select a track to play"}
+            <p className="text-[10px] text-white/50 truncate hover:text-white/70 cursor-pointer">
+              {currentTrack?.artist || "Select a track"}
             </p>
           </div>
 
           <button 
             onClick={handleLike}
-            className="flex-shrink-0 p-1.5 hover:scale-110 transition-transform"
+            className="flex-shrink-0 p-1 hover:scale-110 transition-transform"
             disabled={!currentTrack}
           >
             <Heart className={cn(
-              "h-4 w-4 transition-colors",
-              isLiked ? "fill-primary text-primary" : "text-muted-foreground hover:text-foreground"
+              "h-3.5 w-3.5 transition-colors",
+              isLiked ? "fill-primary text-primary" : "text-white/40 hover:text-white/70"
             )} />
           </button>
         </div>
 
         {/* Player Controls */}
-        <div className="flex-1 flex flex-col items-center gap-2 max-w-[722px]">
-          <div className="flex items-center gap-4">
+        <div className="flex-1 flex flex-col items-center gap-1.5 max-w-[600px]">
+          <div className="flex items-center gap-3">
             <button 
               onClick={toggleShuffle}
               className={cn(
-                "p-1.5 transition-colors",
-                isShuffled ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                "p-1 transition-colors",
+                isShuffled ? "text-primary" : "text-white/40 hover:text-white/70"
               )}
             >
-              <Shuffle className="h-4 w-4" />
+              <Shuffle className="h-3.5 w-3.5" />
             </button>
 
             <button 
               onClick={prevTrack}
-              className="p-1.5 text-muted-foreground hover:text-foreground transition-colors"
+              className="p-1 text-white/50 hover:text-white transition-colors"
             >
-              <SkipBack className="h-5 w-5" />
+              <SkipBack className="h-4 w-4" />
             </button>
 
             <motion.button
               onClick={togglePlay}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="flex h-9 w-9 items-center justify-center rounded-full bg-foreground text-background hover:scale-105 transition-transform"
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              className="flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-background hover:bg-white transition-colors"
             >
               {isPlaying ? (
-                <Pause className="h-4 w-4 fill-current" />
+                <Pause className="h-3.5 w-3.5 fill-current" />
               ) : (
-                <Play className="h-4 w-4 fill-current ml-0.5" />
+                <Play className="h-3.5 w-3.5 fill-current ml-0.5" />
               )}
             </motion.button>
 
             <button 
               onClick={nextTrack}
-              className="p-1.5 text-muted-foreground hover:text-foreground transition-colors"
+              className="p-1 text-white/50 hover:text-white transition-colors"
             >
-              <SkipForward className="h-5 w-5" />
+              <SkipForward className="h-4 w-4" />
             </button>
 
             <button 
               onClick={toggleRepeat}
               className={cn(
-                "relative p-1.5 transition-colors",
-                repeatMode !== 'off' ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                "relative p-1 transition-colors",
+                repeatMode !== 'off' ? "text-primary" : "text-white/40 hover:text-white/70"
               )}
             >
-              <Repeat className="h-4 w-4" />
+              <Repeat className="h-3.5 w-3.5" />
               {repeatMode === 'one' && (
-                <span className="absolute -top-1 -right-1 text-[8px] font-bold">1</span>
+                <span className="absolute -top-1 -right-1 text-[7px] font-bold text-primary">1</span>
               )}
             </button>
           </div>
 
-          <div className="w-full flex items-center gap-2 text-xs text-muted-foreground">
-            <span className="w-10 text-right">{formatTime(displayCurrentTime)}</span>
+          <div className="w-full flex items-center gap-2 text-[10px] text-white/40">
+            <span className="w-8 text-right">{formatTime(displayCurrentTime)}</span>
             <Slider
               value={[progress]}
               onValueChange={([value]) => handleSeek(value)}
@@ -336,21 +392,21 @@ export const PlayerBar = () => {
               step={0.1}
               className="flex-1 cursor-pointer"
             />
-            <span className="w-10">{formatTime(displayDuration)}</span>
+            <span className="w-8">{formatTime(displayDuration)}</span>
           </div>
         </div>
 
         {/* Right Controls */}
-        <div className="flex items-center gap-2 w-[280px] min-w-[180px] justify-end">
+        <div className="flex items-center gap-1.5 w-[240px] min-w-[160px] justify-end">
           {showAIInsight && currentTrack && (
             <motion.div 
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
-              className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent/20 border border-accent/30"
+              className="hidden lg:flex items-center gap-1.5 px-2 py-1 rounded-full bg-white/10 border border-white/10"
             >
-              <Sparkles className="h-3 w-3 text-accent" />
-              <span className="text-[10px] text-accent font-medium">
-                {isVideoMode ? 'YouTube' : 'AI Enhanced'}
+              <Sparkles className="h-2.5 w-2.5 text-accent" />
+              <span className="text-[9px] text-white/60 font-medium">
+                {isVideoMode ? 'YouTube' : 'AI'}
               </span>
             </motion.div>
           )}
@@ -358,37 +414,37 @@ export const PlayerBar = () => {
           {/* Download button */}
           <motion.button 
             whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.95 }}
+            whileTap={{ scale: 0.9 }}
             onClick={handleDownload}
-            className="p-1.5 text-muted-foreground hover:text-foreground transition-colors"
-            title="Pobierz Utwór"
+            className="p-1 text-white/40 hover:text-white/70 transition-colors"
+            title="Pobierz"
             disabled={!currentTrack}
           >
-            <Download className="h-4 w-4" />
+            <Download className="h-3.5 w-3.5" />
           </motion.button>
 
           {/* Share button */}
           <motion.button 
             whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.95 }}
+            whileTap={{ scale: 0.9 }}
             onClick={handleShare}
-            className="p-1.5 text-muted-foreground hover:text-foreground transition-colors"
+            className="p-1 text-white/40 hover:text-white/70 transition-colors"
             title="Share"
             disabled={!currentTrack}
           >
-            <Share2 className="h-4 w-4" />
+            <Share2 className="h-3.5 w-3.5" />
           </motion.button>
 
           {/* Video toggle button */}
           {isVideoMode && (
             <motion.button 
               whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.95 }}
+              whileTap={{ scale: 0.9 }}
               onClick={() => window.toggleVideoPlayer?.()}
-              className="p-1.5 text-primary hover:text-primary/80 transition-colors"
+              className="p-1 text-primary hover:text-primary/80 transition-colors"
               title="Show Video"
             >
-              <Video className="h-4 w-4" />
+              <Video className="h-3.5 w-3.5" />
             </motion.button>
           )}
 
@@ -406,37 +462,37 @@ export const PlayerBar = () => {
           {/* Voice Commands (Mic) */}
           <motion.button 
             whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.95 }}
+            whileTap={{ scale: 0.9 }}
             onClick={() => setShowVoiceCommand(true)}
-            className="p-1.5 text-muted-foreground hover:text-foreground transition-colors"
+            className="p-1 text-white/40 hover:text-white/70 transition-colors"
             title="Voice Commands"
           >
-            <Mic2 className="h-4 w-4" />
+            <Mic2 className="h-3.5 w-3.5" />
           </motion.button>
 
           {/* Queue */}
           <motion.button 
             whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.95 }}
+            whileTap={{ scale: 0.9 }}
             onClick={() => setShowQueue(true)}
             className={cn(
-              "p-1.5 transition-colors",
-              showQueue ? "text-primary" : "text-muted-foreground hover:text-foreground"
+              "p-1 transition-colors",
+              showQueue ? "text-primary" : "text-white/40 hover:text-white/70"
             )}
             title="Queue"
           >
-            <ListMusic className="h-4 w-4" />
+            <ListMusic className="h-3.5 w-3.5" />
           </motion.button>
 
-          <div className="flex items-center gap-1.5 w-32">
+          <div className="flex items-center gap-1 w-24">
             <button 
               onClick={toggleMute}
-              className="p-1.5 text-muted-foreground hover:text-foreground transition-colors"
+              className="p-1 text-white/40 hover:text-white/70 transition-colors"
             >
               {isMuted || volume === 0 ? (
-                <VolumeX className="h-4 w-4" />
+                <VolumeX className="h-3.5 w-3.5" />
               ) : (
-                <Volume2 className="h-4 w-4" />
+                <Volume2 className="h-3.5 w-3.5" />
               )}
             </button>
             <Slider
@@ -444,22 +500,22 @@ export const PlayerBar = () => {
               onValueChange={([value]) => setPlayerVolume(value)}
               max={100}
               step={1}
-              className="w-24 cursor-pointer"
+              className="w-20 cursor-pointer"
             />
           </div>
 
           {/* Fullscreen */}
           <motion.button 
             whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.95 }}
+            whileTap={{ scale: 0.9 }}
             onClick={() => setShowFullscreen(true)}
-            className="p-1.5 text-muted-foreground hover:text-foreground transition-colors"
-            title="Fullscreen Player"
+            className="p-1 text-white/40 hover:text-white/70 transition-colors"
+            title="Fullscreen"
           >
-            <Maximize2 className="h-4 w-4" />
+            <Maximize2 className="h-3.5 w-3.5" />
           </motion.button>
         </div>
-      </div>
+      </motion.div>
 
       {/* Queue Sidebar */}
       <QueueSidebar isOpen={showQueue} onClose={() => setShowQueue(false)} />
