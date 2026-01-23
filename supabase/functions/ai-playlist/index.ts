@@ -61,6 +61,21 @@ Analyze these signals and suggest how to adapt the current playlist. Return JSON
   "reason": "explanation",
   "suggestedChange": "what to do next"
 }`;
+    } else if (action === "adapt_to_skips") {
+      systemPrompt = `You are an intelligent music recommendation AI that learns from user skip patterns. When users skip tracks frequently, you adapt recommendations to better match their preferences.`;
+      
+      userPrompt = `The user has been skipping tracks frequently. Here's the context:
+${context}
+
+Based on this skip behavior, analyze what the user probably wants and suggest adjustments. Return JSON:
+{
+  "analysis": "brief analysis of skip patterns",
+  "suggestedGenre": "recommended genre to switch to",
+  "suggestedMood": "recommended mood",
+  "avoidPatterns": ["pattern1", "pattern2"],
+  "confidence": 0.0 to 1.0,
+  "recommendedAction": "specific action to take"
+}`;
     } else {
       throw new Error("Invalid action specified");
     }
