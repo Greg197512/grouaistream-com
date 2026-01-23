@@ -185,7 +185,7 @@ export const PlayerBar = () => {
   const displayCurrentTime = currentTime;
 
   return (
-    <div className="groove-player-bar h-24 px-4 flex items-center gap-4 relative">
+    <div className="groove-player-bar h-28 px-6 flex items-center gap-4 relative">
       {/* Hidden YouTube Player */}
       {isVideoMode && youtubeVideoId && (
         <YouTubePlayer

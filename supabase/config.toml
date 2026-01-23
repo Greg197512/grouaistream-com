@@ -1,1 +1,10 @@
 project_id = "bvstvawnigyczvofzhps"
+
+[functions.ccmixter-proxy]
+verify_jwt = false
+
+[functions.ai-playlist]
+verify_jwt = false
+
+[functions.daily-cc-fetch]
+verify_jwt = false
