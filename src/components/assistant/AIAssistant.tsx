@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { X, Send, Loader2, ExternalLink, Music, Power } from "lucide-react";
+import { motion, AnimatePresence, useDragControls } from "framer-motion";
+import { Send, Loader2, ExternalLink, Music, Power, GripHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -26,6 +26,7 @@ export const AIAssistant = () => {
   const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const { playTrack } = usePlayer();
+  const dragControls = useDragControls();
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -115,7 +116,7 @@ export const AIAssistant = () => {
             />
             {/* Online indicator */}
             <motion.div
-              className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 rounded-full border-2 border-background"
+              className="absolute bottom-0 right-0 w-3 h-3 bg-primary rounded-full border-2 border-background"
               animate={{ scale: [1, 1.2, 1] }}
               transition={{ duration: 2, repeat: Infinity }}
             />
@@ -125,16 +126,35 @@ export const AIAssistant = () => {
 
       {/* Chat Modal */}
       <AnimatePresence>
-        {isOpen && (
+      {isOpen && (
           <motion.div
+            drag
+            dragControls={dragControls}
+            dragMomentum={false}
+            dragElastic={0}
+            dragConstraints={{ left: -window.innerWidth + 380, right: 0, top: -window.innerHeight + 520, bottom: 0 }}
             initial={{ opacity: 0, y: 20, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.9 }}
             transition={{ type: "spring", stiffness: 300, damping: 25 }}
-            className="fixed bottom-40 right-4 z-50 w-[360px] h-[480px] bg-card/95 backdrop-blur-xl border border-border/50 rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+            className="fixed bottom-40 right-4 z-50 w-[360px] h-[480px] rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+            style={{
+              background: 'rgba(0, 0, 0, 0.3)',
+              backdropFilter: 'blur(40px) saturate(200%)',
+              WebkitBackdropFilter: 'blur(40px) saturate(200%)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+            }}
           >
+            {/* Drag Handle */}
+            <motion.div
+              onPointerDown={(e) => dragControls.start(e)}
+              className="absolute top-0 left-0 right-0 h-6 flex items-center justify-center cursor-grab active:cursor-grabbing z-10"
+            >
+              <GripHorizontal className="h-4 w-4 text-muted-foreground/50" />
+            </motion.div>
+
             {/* Header with avatar and power off button */}
-            <div className="flex items-center gap-3 p-3 border-b border-border/50 bg-gradient-to-r from-primary/10 to-accent/10">
+            <div className="flex items-center gap-3 p-3 pt-6 border-b border-border/30 bg-gradient-to-r from-primary/10 to-accent/10">
               <div className="relative w-9 h-9 rounded-full overflow-hidden border border-primary/30">
                 <img 
                   src={aiAssistantAvatar} 
