@@ -39,16 +39,19 @@ interface TrackOptionsMenuProps {
 }
 
 export const TrackOptionsMenu = forwardRef<HTMLDivElement, TrackOptionsMenuProps>(
-  function TrackOptionsMenu({
-    trackId,
-    trackTitle,
-    trackArtist,
-    trackUrl,
-    className,
-    showLikeCount = false,
-    size = "md",
-    onLikeChange
-  }, ref) {
+  (
+    {
+      trackId,
+      trackTitle,
+      trackArtist,
+      trackUrl,
+      className,
+      showLikeCount = false,
+      size = "md",
+      onLikeChange
+    },
+    ref
+  ) => {
     const { user } = useAuth();
     const [isLiked, setIsLiked] = useState(false);
     const [likeCount, setLikeCount] = useState(0);
@@ -257,7 +260,7 @@ interface LikeButtonProps {
 }
 
 export const LikeButton = forwardRef<HTMLButtonElement, LikeButtonProps>(
-  function LikeButton({ trackId, className, showCount = false }, ref) {
+  ({ trackId, className, showCount = false }, ref) => {
     const { user } = useAuth();
     const [isLiked, setIsLiked] = useState(false);
     const [likeCount, setLikeCount] = useState(0);
