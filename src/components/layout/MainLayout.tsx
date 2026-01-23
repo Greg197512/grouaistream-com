@@ -13,9 +13,6 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-background">
-      {/* Player Bar - at top for higher position */}
-      <PlayerBar />
-      
       {/* Main Content Area */}
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar */}
@@ -27,13 +24,16 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
         {/* Content */}
         <div className="flex flex-1 flex-col overflow-hidden">
           <TopBar />
-          <main className="flex-1 overflow-y-auto groove-scrollbar">
+          <main className="flex-1 overflow-y-auto groove-scrollbar pb-28">
             {children}
           </main>
         </div>
       </div>
 
-      {/* AI Assistant Floating Button */}
+      {/* Floating Draggable Player Bar */}
+      <PlayerBar />
+
+      {/* AI Assistant Floating Bubble */}
       <AIAssistant />
     </div>
   );
