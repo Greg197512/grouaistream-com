@@ -18,7 +18,8 @@ import {
   Video,
   Download,
   Share2,
-  GripHorizontal
+  GripHorizontal,
+  ScanFace
 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
@@ -32,6 +33,7 @@ import { TrackOptionsMenu } from "@/components/menus/TrackOptionsMenu";
 import { QueueSidebar } from "@/components/player/QueueSidebar";
 import { VoiceCommandHandler } from "@/components/player/VoiceCommandHandler";
 import { FullscreenPlayer } from "@/components/player/FullscreenPlayer";
+import { QuickMoodDetector } from "@/components/mood/QuickMoodDetector";
 
 // Video visibility state - shared via window for simplicity
 declare global {
@@ -81,6 +83,7 @@ export const PlayerBar = () => {
   const [showQueue, setShowQueue] = useState(false);
   const [showVoiceCommand, setShowVoiceCommand] = useState(false);
   const [showFullscreen, setShowFullscreen] = useState(false);
+  const [showMoodDetector, setShowMoodDetector] = useState(false);
 
   // Check if current track is liked
   useEffect(() => {
@@ -327,6 +330,17 @@ export const PlayerBar = () => {
               isLiked ? "fill-primary text-primary" : "text-white/40 hover:text-white/70"
             )} />
           </button>
+
+          {/* Face Recognition / Mood Detection Button */}
+          <motion.button 
+            whileHover={{ scale: 1.15 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={() => setShowMoodDetector(true)}
+            className="flex-shrink-0 p-1.5 rounded-full bg-gradient-to-br from-primary/80 to-accent/80 hover:from-primary hover:to-accent transition-all shadow-lg"
+            title="Rozpoznawanie nastroju (Kamera)"
+          >
+            <ScanFace className="h-3.5 w-3.5 text-white" />
+          </motion.button>
         </div>
 
         {/* Player Controls */}
@@ -525,6 +539,9 @@ export const PlayerBar = () => {
 
       {/* Fullscreen Player */}
       <FullscreenPlayer isOpen={showFullscreen} onClose={() => setShowFullscreen(false)} />
+
+      {/* Mood Detector Modal */}
+      <QuickMoodDetector isOpen={showMoodDetector} onClose={() => setShowMoodDetector(false)} />
     </>
   );
 };
