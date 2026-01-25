@@ -3,6 +3,8 @@ import { Sidebar } from "./Sidebar";
 import { PlayerBar } from "./PlayerBar";
 import { TopBar } from "./TopBar";
 import { AIAssistant } from "@/components/assistant/AIAssistant";
+import { DragDropProvider } from "@/contexts/DragDropContext";
+import { FloatingPlaylistDropZones } from "@/components/dnd/FloatingPlaylistDropZones";
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -12,29 +14,34 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-background">
-      {/* Main Content Area */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar */}
-        <Sidebar 
-          collapsed={sidebarCollapsed} 
-          onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} 
-        />
+    <DragDropProvider>
+      <div className="flex h-screen flex-col overflow-hidden bg-background">
+        {/* Main Content Area */}
+        <div className="flex flex-1 overflow-hidden">
+          {/* Sidebar */}
+          <Sidebar 
+            collapsed={sidebarCollapsed} 
+            onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} 
+          />
 
-        {/* Content */}
-        <div className="flex flex-1 flex-col overflow-hidden">
-          <TopBar />
-          <main className="flex-1 overflow-y-auto groove-scrollbar pb-28">
-            {children}
-          </main>
+          {/* Content */}
+          <div className="flex flex-1 flex-col overflow-hidden">
+            <TopBar />
+            <main className="flex-1 overflow-y-auto groove-scrollbar pb-28">
+              {children}
+            </main>
+          </div>
         </div>
+
+        {/* Floating Playlist Drop Zones */}
+        <FloatingPlaylistDropZones />
+
+        {/* Floating Draggable Player Bar */}
+        <PlayerBar />
+
+        {/* AI Assistant Floating Bubble */}
+        <AIAssistant />
       </div>
-
-      {/* Floating Draggable Player Bar */}
-      <PlayerBar />
-
-      {/* AI Assistant Floating Bubble */}
-      <AIAssistant />
-    </div>
+    </DragDropProvider>
   );
 };
