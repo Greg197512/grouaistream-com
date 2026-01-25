@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Play, Loader2 } from "lucide-react";
+import { Droppable } from "@hello-pangea/dnd";
 import { supabase } from "@/integrations/supabase/client";
 import { usePlayer, Track } from "@/contexts/PlayerContext";
 import { cn } from "@/lib/utils";
-import { TrackOptionsMenu, LikeButton } from "@/components/menus/TrackOptionsMenu";
+import { DraggableTrackCard } from "@/components/dnd/DraggableTrackCard";
 
 interface GenreSectionProps {
   genre: string;
@@ -51,10 +52,6 @@ export const GenreSection = ({ genre, title, icon, color, limit = 8 }: GenreSect
 
     fetchTracks();
   }, [genre, limit]);
-
-  const handlePlayTrack = (track: Track, index: number) => {
-    playPlaylist(tracks, index);
-  };
 
   const handlePlayAll = () => {
     if (tracks.length > 0) {
@@ -109,91 +106,28 @@ export const GenreSection = ({ genre, title, icon, color, limit = 8 }: GenreSect
         </motion.button>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-        {tracks.map((track, index) => (
-          <motion.div
-            key={track.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.05 }}
-            whileHover={{ scale: 1.02 }}
-            onClick={() => handlePlayTrack(track, index)}
+      <Droppable droppableId={`genre-${genre}`} direction="horizontal">
+        {(provided, snapshot) => (
+          <div
+            ref={provided.innerRef}
+            {...provided.droppableProps}
             className={cn(
-              "relative group cursor-pointer rounded-lg overflow-hidden bg-secondary/50 hover:bg-secondary transition-all",
-              currentTrack?.id === track.id && "ring-2 ring-primary"
+              "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 rounded-xl transition-colors p-1",
+              snapshot.isDraggingOver && "bg-accent/10 ring-2 ring-accent/20"
             )}
           >
-            {/* Cover */}
-            <div className="relative aspect-square">
-              {track.cover_url ? (
-                <img
-                  src={track.cover_url}
-                  alt={track.title}
-                  className="w-full h-full object-cover"
-                  loading="lazy"
-                />
-              ) : (
-                <div className="w-full h-full groove-gradient-bg opacity-60" />
-              )}
-
-              {/* Play overlay */}
-              <div className={cn(
-                "absolute inset-0 flex items-center justify-center bg-black/40 transition-opacity",
-                currentTrack?.id === track.id && isPlaying 
-                  ? "opacity-100" 
-                  : "opacity-0 group-hover:opacity-100"
-              )}>
-                {currentTrack?.id === track.id && isPlaying ? (
-                  <div className="flex gap-1">
-                    {[1, 2, 3].map((i) => (
-                      <motion.div
-                        key={i}
-                        className="w-1 bg-primary rounded-full"
-                        animate={{ height: [8, 24, 8] }}
-                        transition={{ duration: 0.5, repeat: Infinity, delay: i * 0.1 }}
-                      />
-                    ))}
-                  </div>
-                ) : (
-                  <motion.div
-                    whileHover={{ scale: 1.1 }}
-                    className="p-3 rounded-full bg-primary text-primary-foreground"
-                  >
-                    <Play className="h-6 w-6 fill-current" />
-                  </motion.div>
-                )}
-              </div>
-
-              {/* YouTube badge */}
-              {track.video_url && (
-                <div className="absolute top-2 right-2 px-1.5 py-0.5 rounded bg-red-600 text-[10px] text-white font-bold">
-                  YT
-                </div>
-              )}
-            </div>
-
-            {/* Info */}
-            <div className="p-3">
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0 flex-1">
-                  <p className="font-medium text-sm truncate">{track.title}</p>
-                  <p className="text-xs text-muted-foreground truncate">{track.artist}</p>
-                </div>
-                <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
-                  <LikeButton trackId={track.id} />
-                  <TrackOptionsMenu
-                    trackId={track.id}
-                    trackTitle={track.title}
-                    trackArtist={track.artist}
-                    trackUrl={track.video_url || track.audio_url}
-                    size="sm"
-                  />
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        ))}
-      </div>
+            {tracks.map((track, index) => (
+              <DraggableTrackCard
+                key={track.id}
+                track={track}
+                index={index}
+                tracks={tracks}
+              />
+            ))}
+            {provided.placeholder}
+          </div>
+        )}
+      </Droppable>
     </section>
   );
 };
