@@ -107,12 +107,12 @@ export const QuickMoodDetector = ({ isOpen, onClose }: QuickMoodDetectorProps) =
     if (!currentMood) return;
     
     try {
-      // Get tracks matching the detected mood's genre
+      // Get tracks matching the detected mood OR genre
       const { data: tracks, error } = await supabase
         .from("tracks")
         .select("*")
-        .ilike("genre", `%${currentMood.genre}%`)
-        .limit(25);
+        .or(`genre.ilike.%${currentMood.genre}%,mood.ilike.%${currentMood.mood}%`)
+        .limit(30);
       
       if (error) throw error;
       
