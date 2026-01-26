@@ -17,6 +17,7 @@ import Settings from "./pages/Settings";
 import PlaylistManager from "./pages/PlaylistManager";
 import PlaylistDetail from "./pages/PlaylistDetail";
 import MoodHistory from "./pages/MoodHistory";
+import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -47,6 +48,7 @@ const App = () => (
                   <Route path="/mood" element={<MoodHistory />} />
                   <Route path="/daily-mix" element={<Index />} />
                   <Route path="/social" element={<Index />} />
+                  <Route path="/admin" element={<Admin />} />
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>

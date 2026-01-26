@@ -27,6 +27,7 @@ const aiFeatures = [
   { icon: "face", label: "Mood Detection", href: "/" },
   { icon: "history", label: "Mood History", href: "/mood-history" },
   { icon: "autorenew", label: "Real-time Adaptation", href: "/daily-mix" },
+  { icon: "admin_panel_settings", label: "Admin Panel", href: "/admin", adminOnly: true },
 ];
 
 export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
