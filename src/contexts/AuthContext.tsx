@@ -34,6 +34,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
+
+        // Handle first login - mark profile as first_login_completed
+        if (event === "SIGNED_IN" && session?.user) {
+          setTimeout(async () => {
+            try {
+              const { data: profile } = await supabase
+                .from("profiles")
+                .select("first_login_completed")
+                .eq("user_id", session.user.id)
+                .maybeSingle();
+
+              if (profile && !profile.first_login_completed) {
+                // This will trigger the handle_first_login function which resets mood history
+                await supabase
+                  .from("profiles")
+                  .update({ first_login_completed: true })
+                  .eq("user_id", session.user.id);
+                console.log("First login completed - mood history reset");
+              }
+            } catch (err) {
+              console.error("Error checking first login:", err);
+            }
+          }, 100);
+        }
       }
     );
 

@@ -71,7 +71,7 @@ const Auth = () => {
             </div>
             <div>
               <h1 className="font-display text-2xl font-bold groove-gradient-text">
-                GrooveAI
+                GrouAI Stream
               </h1>
               <p className="text-sm text-muted-foreground">
                 {isLogin ? "Welcome back" : "Create your account"} <span className="text-accent">by Groua</span>

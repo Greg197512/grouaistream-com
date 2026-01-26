@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { 
   Brain, Calendar, TrendingUp, Music, Sparkles, 
   AlertCircle, CheckCircle2, RefreshCw, Play, 
-  BarChart3, HeartPulse, Loader2, Lock
+  BarChart3, HeartPulse, Loader2, Lock, LineChart
 } from "lucide-react";
 import einsteinIcon from "@/assets/einstein-headphones-icon.png";
 import { MainLayout } from "@/components/layout/MainLayout";
@@ -18,6 +18,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { generatePsychologistReport } from "@/utils/generatePsychologistReport";
+import { MoodTrendChart } from "@/components/charts/MoodTrendChart";
 
 interface MoodSession {
   id: string;
@@ -519,6 +520,19 @@ export default function MoodHistory() {
                       </CardContent>
                     </Card>
                   </motion.div>
+
+                  {/* Mood Trend Chart */}
+                  <Card className="groove-card">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="flex items-center gap-2">
+                        <LineChart className="h-5 w-5 text-primary" />
+                        Trend nastrojów w czasie
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <MoodTrendChart sessions={moodSessions} height={280} />
+                    </CardContent>
+                  </Card>
 
                   {/* Mood Distribution */}
                   <Card className="groove-card">
