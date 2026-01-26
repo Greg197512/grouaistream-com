@@ -24,9 +24,9 @@ const playlistItems = [
 
 const aiFeatures = [
   { icon: "smart_toy", label: "AI DJ", href: "/ai-dj" },
-  { icon: "face", label: "Mood Detection", href: "/mood" },
+  { icon: "face", label: "Mood Detection", href: "/" },
+  { icon: "history", label: "Mood History", href: "/mood-history" },
   { icon: "autorenew", label: "Real-time Adaptation", href: "/daily-mix" },
-  { icon: "playlist_add", label: "AI Playlists", href: "/social" },
 ];
 
 export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
