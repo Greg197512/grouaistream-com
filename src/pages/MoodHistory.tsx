@@ -384,14 +384,39 @@ export default function MoodHistory() {
               
               {analysis && (
                 <Button 
-                  onClick={() => {
-                    generatePsychologistReport(analysis, moodSessions, selectedDays, user?.user_metadata?.display_name);
-                    toast.success("📄 Raport psychologiczny został wygenerowany!");
+                  onClick={async () => {
+                    toast.loading("🧠 AI analizuje stan emocjonalny...", { id: "ai-report" });
+                    try {
+                      const { data, error } = await supabase.functions.invoke("ai-psychologist", {
+                        body: {
+                          analysis,
+                          sessions: moodSessions,
+                          selectedDays,
+                          userName: user?.user_metadata?.display_name,
+                        },
+                      });
+                      
+                      if (error) throw error;
+                      
+                      generatePsychologistReport(
+                        analysis, 
+                        moodSessions, 
+                        selectedDays, 
+                        user?.user_metadata?.display_name,
+                        data?.opinion
+                      );
+                      toast.success("📄 Pełna opinia psychologiczna AI została wygenerowana!", { id: "ai-report" });
+                    } catch (err) {
+                      console.error("AI report error:", err);
+                      // Fallback to basic report without AI
+                      generatePsychologistReport(analysis, moodSessions, selectedDays, user?.user_metadata?.display_name);
+                      toast.error("AI niedostępne - wygenerowano podstawowy raport", { id: "ai-report" });
+                    }
                   }}
-                  className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
+                  className="bg-background hover:bg-muted border-2 border-primary p-1"
                   size="sm"
                 >
-                  <img src={einsteinIcon} alt="Psycholog" className="h-5 w-5 rounded-full object-cover" />
+                  <img src={einsteinIcon} alt="Psycholog AI" className="h-8 w-8 rounded-full object-cover" />
                 </Button>
               )}
               
