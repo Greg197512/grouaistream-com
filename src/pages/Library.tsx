@@ -172,6 +172,7 @@ const Library = () => {
             {playlists.map((playlist) => (
               <PlaylistCard
                 key={playlist.id}
+                id={playlist.id}
                 title={playlist.title}
                 description={playlist.description || ""}
                 isAI={playlist.is_ai_generated}

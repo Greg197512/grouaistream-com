@@ -8,7 +8,9 @@ import {
   Download, 
   ListPlus,
   ExternalLink,
-  Twitter
+  Twitter,
+  Trash2,
+  Scissors
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -36,6 +38,9 @@ interface TrackOptionsMenuProps {
   showLikeCount?: boolean;
   size?: "sm" | "md" | "lg";
   onLikeChange?: (liked: boolean) => void;
+  onDelete?: () => void;
+  showDelete?: boolean;
+  playlistId?: string;
 }
 
 const TrackOptionsMenuComponent = (
@@ -47,7 +52,10 @@ const TrackOptionsMenuComponent = (
     className,
     showLikeCount = false,
     size = "md",
-    onLikeChange
+    onLikeChange,
+    onDelete,
+    showDelete = true,
+    playlistId
   }: TrackOptionsMenuProps,
   ref: React.ForwardedRef<HTMLDivElement>
 ) => {
@@ -55,6 +63,7 @@ const TrackOptionsMenuComponent = (
   const [isLiked, setIsLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   // Fetch initial like status and count
   useEffect(() => {
@@ -156,6 +165,65 @@ const TrackOptionsMenuComponent = (
     }
   };
 
+  const handleCutTrack = async () => {
+    // Store track data in clipboard for cut/paste functionality
+    const trackData = JSON.stringify({ trackId, trackTitle, trackArtist, playlistId });
+    try {
+      await navigator.clipboard.writeText(`GROOVEAI_TRACK:${trackData}`);
+      toast.success(`"${trackTitle}" skopiowany - wklej do innej playlisty`);
+    } catch (error) {
+      toast.error("Failed to cut track");
+    }
+  };
+
+  const handleDeleteTrack = async () => {
+    if (!user) {
+      toast.error("Sign in to delete tracks");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Delete "${trackTitle}" from library? This will remove it from all playlists.`
+    );
+
+    if (!confirmed) return;
+
+    setDeleteLoading(true);
+    try {
+      // Remove from all playlists first
+      await supabase
+        .from("playlist_tracks")
+        .delete()
+        .eq("track_id", trackId);
+
+      // Remove from liked songs
+      await supabase
+        .from("liked_songs")
+        .delete()
+        .eq("track_id", trackId);
+
+      // Remove from listening history
+      await supabase
+        .from("listening_history")
+        .delete()
+        .eq("track_id", trackId);
+
+      // Finally delete the track
+      await supabase
+        .from("tracks")
+        .delete()
+        .eq("id", trackId);
+
+      toast.success(`"${trackTitle}" deleted`);
+      onDelete?.();
+    } catch (error) {
+      console.error("Error deleting track:", error);
+      toast.error("Failed to delete track - you may not have permission");
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
   const iconSize = {
     sm: "h-4 w-4",
     md: "h-5 w-5",
@@ -200,6 +268,12 @@ const TrackOptionsMenuComponent = (
             Add to Playlist
           </DropdownMenuItem>
 
+          {/* Cut/Copy for moving */}
+          <DropdownMenuItem onClick={handleCutTrack} className="cursor-pointer">
+            <Scissors className="mr-2 h-4 w-4" />
+            Cut (to paste elsewhere)
+          </DropdownMenuItem>
+
           <DropdownMenuSeparator />
 
           {/* Share submenu */}
@@ -241,6 +315,21 @@ const TrackOptionsMenuComponent = (
               <ExternalLink className="mr-2 h-4 w-4" />
               Open Original
             </DropdownMenuItem>
+          )}
+
+          {/* Delete track */}
+          {showDelete && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem 
+                onClick={handleDeleteTrack} 
+                disabled={deleteLoading}
+                className="cursor-pointer text-destructive focus:text-destructive"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete from Library
+              </DropdownMenuItem>
+            </>
           )}
         </DropdownMenuContent>
       </DropdownMenu>
