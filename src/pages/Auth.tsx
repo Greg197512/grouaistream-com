@@ -160,6 +160,10 @@ const Auth = () => {
                 : "Already have an account? Sign in"}
             </button>
           </div>
+
+          <p className="mt-4 text-center text-[10px] text-muted-foreground/60 tracking-wide">
+            by GrouaRock
+          </p>
         </div>
       </motion.div>
     </div>
