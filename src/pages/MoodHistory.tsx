@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { 
   Brain, Calendar, TrendingUp, Music, Sparkles, 
   AlertCircle, CheckCircle2, RefreshCw, Play, 
-  BarChart3, HeartPulse, Loader2, Lock
+  BarChart3, HeartPulse, Loader2, Lock, FileText
 } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,7 @@ import { usePlayer } from "@/contexts/PlayerContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import { generatePsychologistReport } from "@/utils/generatePsychologistReport";
 
 interface MoodSession {
   id: string;
@@ -365,20 +366,33 @@ export default function MoodHistory() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Tabs value={String(selectedDays)} onValueChange={(v) => setSelectedDays(Number(v) as 2 | 4 | 6)}>
                 <TabsList className="groove-card">
-                  <TabsTrigger value="2" className="data-[state=active]:groove-gradient-bg">
-                    <Calendar className="h-4 w-4 mr-1" /> 2 dni
+                  <TabsTrigger value="2" className="data-[state=active]:groove-gradient-bg text-xs md:text-sm">
+                    <Calendar className="h-3 w-3 md:h-4 md:w-4 mr-1" /> 2 dni
                   </TabsTrigger>
-                  <TabsTrigger value="4" className="data-[state=active]:groove-gradient-bg">
-                    <Calendar className="h-4 w-4 mr-1" /> 4 dni
+                  <TabsTrigger value="4" className="data-[state=active]:groove-gradient-bg text-xs md:text-sm">
+                    <Calendar className="h-3 w-3 md:h-4 md:w-4 mr-1" /> 4 dni
                   </TabsTrigger>
-                  <TabsTrigger value="6" className="data-[state=active]:groove-gradient-bg">
-                    <Calendar className="h-4 w-4 mr-1" /> 6 dni
+                  <TabsTrigger value="6" className="data-[state=active]:groove-gradient-bg text-xs md:text-sm">
+                    <Calendar className="h-3 w-3 md:h-4 md:w-4 mr-1" /> 6 dni
                   </TabsTrigger>
                 </TabsList>
               </Tabs>
+              
+              {analysis && (
+                <Button 
+                  onClick={() => {
+                    generatePsychologistReport(analysis, moodSessions, selectedDays, user?.user_metadata?.display_name);
+                    toast.success("📄 Raport psychologiczny został wygenerowany!");
+                  }}
+                  className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
+                  size="sm"
+                >
+                  <FileText className="h-4 w-4 mr-1" /> Psycholog PDF
+                </Button>
+              )}
               
               <Button 
                 variant="outline" 
@@ -482,14 +496,14 @@ export default function MoodHistory() {
 
                   {/* Mood Distribution */}
                   <Card className="groove-card">
-                    <CardHeader>
+                    <CardHeader className="pb-3">
                       <CardTitle className="flex items-center gap-2">
                         <TrendingUp className="h-5 w-5 text-primary" />
                         Rozkład nastrojów
                       </CardTitle>
                     </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                    <CardContent className="pt-0">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
                         {Object.entries(analysis.moodDistribution).map(([mood, count]) => {
                           const percentage = Math.round((count / analysis.sessionsCount) * 100);
                           return (
@@ -497,14 +511,14 @@ export default function MoodHistory() {
                               key={mood}
                               initial={{ scale: 0.9, opacity: 0 }}
                               animate={{ scale: 1, opacity: 1 }}
-                              className={`p-3 rounded-xl bg-gradient-to-br ${moodColors[mood] || moodColors.Relaxed} text-white`}
+                              className={`p-2 sm:p-3 rounded-lg bg-gradient-to-br ${moodColors[mood] || moodColors.Relaxed} text-white min-w-0`}
                             >
-                              <div className="flex items-center gap-2 mb-1">
-                                <span className="text-xl">{moodEmojis[mood] || "😌"}</span>
-                                <span className="font-medium text-sm">{mood}</span>
+                              <div className="flex items-center gap-1 sm:gap-2 mb-1">
+                                <span className="text-base sm:text-xl flex-shrink-0">{moodEmojis[mood] || "😌"}</span>
+                                <span className="font-medium text-xs sm:text-sm truncate">{mood}</span>
                               </div>
-                              <div className="text-2xl font-bold">{percentage}%</div>
-                              <div className="text-xs opacity-80">{count} skanów</div>
+                              <div className="text-lg sm:text-2xl font-bold">{percentage}%</div>
+                              <div className="text-[10px] sm:text-xs opacity-80">{count} skanów</div>
                             </motion.div>
                           );
                         })}
