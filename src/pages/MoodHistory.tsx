@@ -3,8 +3,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { 
   Brain, Calendar, TrendingUp, Music, Sparkles, 
   AlertCircle, CheckCircle2, RefreshCw, Play, 
-  BarChart3, HeartPulse, Loader2, Lock, FileText
+  BarChart3, HeartPulse, Loader2, Lock
 } from "lucide-react";
+import einsteinIcon from "@/assets/einstein-headphones-icon.png";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -390,7 +391,7 @@ export default function MoodHistory() {
                   className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
                   size="sm"
                 >
-                  <FileText className="h-4 w-4 mr-1" /> Psycholog PDF
+                  <img src={einsteinIcon} alt="Psycholog" className="h-5 w-5 rounded-full object-cover" />
                 </Button>
               )}
               
