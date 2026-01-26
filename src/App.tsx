@@ -16,6 +16,7 @@ import Radio from "./pages/Radio";
 import Settings from "./pages/Settings";
 import PlaylistManager from "./pages/PlaylistManager";
 import PlaylistDetail from "./pages/PlaylistDetail";
+import MoodHistory from "./pages/MoodHistory";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -41,8 +42,9 @@ const App = () => (
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/playlist-manager" element={<PlaylistManager />} />
                   <Route path="/playlist/:id" element={<PlaylistDetail />} />
+                  <Route path="/mood-history" element={<MoodHistory />} />
                   <Route path="/ai-dj" element={<Index />} />
-                  <Route path="/mood" element={<Settings />} />
+                  <Route path="/mood" element={<MoodHistory />} />
                   <Route path="/daily-mix" element={<Index />} />
                   <Route path="/social" element={<Index />} />
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
