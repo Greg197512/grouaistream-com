@@ -1,12 +1,13 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence, useDragControls } from "framer-motion";
-import { Camera, CameraOff, X, GripHorizontal, Sparkles, Loader2 } from "lucide-react";
+import { Camera, CameraOff, X, GripHorizontal, Sparkles, Loader2, Brain, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useAI } from "@/contexts/AIContext";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { supabase } from "@/integrations/supabase/client";
 import { DetectedMood } from "@/hooks/useAIOrchestrator";
+import { useFaceDetection } from "@/hooks/useFaceDetection";
 
 interface MoodResult {
   mood: string;
@@ -108,28 +109,26 @@ interface QuickMoodDetectorProps {
 export const QuickMoodDetector = ({ isOpen, onClose }: QuickMoodDetectorProps) => {
   const { handleMoodDetected: aiHandleMood } = useAI();
   const { playPlaylist } = usePlayer();
+  const { isModelLoaded, isLoadingModel, modelError, loadModels, detectWithSampling } = useFaceDetection();
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isActive, setIsActive] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisProgress, setAnalysisProgress] = useState(0);
+  const [analysisStep, setAnalysisStep] = useState<string>("");
   const [currentMood, setCurrentMood] = useState<MoodResult | null>(null);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+  const [noFaceDetected, setNoFaceDetected] = useState(false);
   const streamRef = useRef<MediaStream | null>(null);
-  const analysisTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const dragControls = useDragControls();
 
-  const simulateMoodDetection = useCallback(() => {
-    const moods = Object.keys(moodMapping);
-    const randomMood = moods[Math.floor(Math.random() * moods.length)];
-    const confidence = 80 + Math.random() * 18;
-    
-    return {
-      ...moodMapping[randomMood],
-      confidence: Math.round(confidence),
-    };
-  }, []);
+  // Load models when component opens
+  useEffect(() => {
+    if (isOpen && !isModelLoaded && !isLoadingModel) {
+      loadModels();
+    }
+  }, [isOpen, isModelLoaded, isLoadingModel, loadModels]);
 
   const playMoodPlaylist = useCallback(async (mood: MoodResult) => {
     try {
@@ -182,10 +181,6 @@ export const QuickMoodDetector = ({ isOpen, onClose }: QuickMoodDetectorProps) =
       streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
     }
-    if (analysisTimeoutRef.current) {
-      clearTimeout(analysisTimeoutRef.current);
-      analysisTimeoutRef.current = null;
-    }
     if (progressIntervalRef.current) {
       clearInterval(progressIntervalRef.current);
       progressIntervalRef.current = null;
@@ -197,47 +192,98 @@ export const QuickMoodDetector = ({ isOpen, onClose }: QuickMoodDetectorProps) =
     setIsAnalyzing(false);
     setAnalysisProgress(0);
     setCurrentMood(null);
+    setNoFaceDetected(false);
+    setAnalysisStep("");
   }, []);
 
-  const startAnalysis = useCallback(() => {
+  const startAnalysis = useCallback(async () => {
+    if (!videoRef.current || !isModelLoaded) {
+      toast.error("Model AI nie jest gotowy. Poczekaj chwilę...");
+      return;
+    }
+
     setIsAnalyzing(true);
     setAnalysisProgress(0);
-    
+    setNoFaceDetected(false);
+    setAnalysisStep("Inicjalizacja TensorFlow.js...");
+
+    // Progress animation
     let progress = 0;
     progressIntervalRef.current = setInterval(() => {
-      progress += 2;
-      setAnalysisProgress(Math.min(progress, 100));
-    }, 100);
-    
-    analysisTimeoutRef.current = setTimeout(async () => {
+      progress += 1.5;
+      setAnalysisProgress(Math.min(progress, 95));
+      
+      // Update step descriptions
+      if (progress > 10 && progress < 30) {
+        setAnalysisStep("Wykrywanie twarzy...");
+      } else if (progress > 30 && progress < 60) {
+        setAnalysisStep("Analiza wyrazu twarzy...");
+      } else if (progress > 60 && progress < 85) {
+        setAnalysisStep("Rozpoznawanie emocji...");
+      } else if (progress > 85) {
+        setAnalysisStep("Finalizacja wyników...");
+      }
+    }, 75);
+
+    try {
+      // Wait for video to be ready
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Perform real face detection with sampling over ~4 seconds
+      const result = await detectWithSampling(videoRef.current, 5, 800);
+
       if (progressIntervalRef.current) {
         clearInterval(progressIntervalRef.current);
       }
       setAnalysisProgress(100);
+
+      if (!result || !result.faceDetected) {
+        setNoFaceDetected(true);
+        setIsAnalyzing(false);
+        toast.error("Nie wykryto twarzy. Upewnij się, że twarz jest widoczna w kamerze.");
+        return;
+      }
+
+      // Map detected emotion to our mood system
+      const emotionKey = result.dominantEmotion;
+      const baseMood = moodMapping[emotionKey] || moodMapping.neutral;
       
-      const detectedMood = simulateMoodDetection();
+      const detectedMood: MoodResult = {
+        ...baseMood,
+        confidence: result.confidence,
+      };
+
       setCurrentMood(detectedMood);
       setIsAnalyzing(false);
-      
+
       toast(
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2">
             <span className="text-2xl">{detectedMood.emoji}</span>
             <span className="font-bold">{detectedMood.mood}</span>
+            <span className="text-xs text-muted-foreground ml-auto">{detectedMood.confidence}% pewności</span>
           </div>
           <p className="text-sm text-muted-foreground">{detectedMood.dayDescription}</p>
         </div>,
         { duration: 4000 }
       );
-      
+
+      // Auto-play after short delay
       setTimeout(async () => {
         await playMoodPlaylist(detectedMood);
         stopCamera();
         onClose();
       }, 1500);
-      
-    }, 5000);
-  }, [simulateMoodDetection, playMoodPlaylist, stopCamera, onClose]);
+
+    } catch (error) {
+      console.error("Face detection error:", error);
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+      }
+      setIsAnalyzing(false);
+      toast.error("Błąd podczas analizy twarzy. Spróbuj ponownie.");
+    }
+  }, [isModelLoaded, detectWithSampling, playMoodPlaylist, stopCamera, onClose]);
 
   const startCamera = async () => {
     setIsLoading(true);
@@ -311,11 +357,13 @@ export const QuickMoodDetector = ({ isOpen, onClose }: QuickMoodDetectorProps) =
         <div className="flex items-center justify-between p-3 pt-6 border-b border-white/10">
           <div className="flex items-center gap-2">
             <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center">
-              <Camera className="h-4 w-4 text-white" />
+              <Brain className="h-4 w-4 text-white" />
             </div>
             <div>
-              <h3 className="text-sm font-semibold text-white">Rozpoznawanie Nastroju</h3>
-              <p className="text-[10px] text-white/50">5 sekund analizy twarzy</p>
+              <h3 className="text-sm font-semibold text-white">AI Rozpoznawanie Nastroju</h3>
+              <p className="text-[10px] text-white/50">
+                {isLoadingModel ? "Ładowanie TensorFlow.js..." : isModelLoaded ? "TensorFlow.js gotowy" : "face-api.js"}
+              </p>
             </div>
           </div>
           <button
@@ -338,12 +386,28 @@ export const QuickMoodDetector = ({ isOpen, onClose }: QuickMoodDetectorProps) =
             className={`w-full h-full object-cover ${isActive ? "block" : "hidden"}`}
           />
           
-          {!isActive && (
+          {!isActive && !isLoadingModel && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
-              <CameraOff className="h-10 w-10 text-white/30" />
+              <Brain className="h-10 w-10 text-white/30" />
               <p className="text-xs text-white/40 text-center px-4">
-                Włącz kamerę - automatycznie wykryję nastrój i włączę muzykę!
+                Włącz kamerę - AI wykryje emocje z Twojej twarzy i włączy muzykę!
               </p>
+              {isModelLoaded && (
+                <span className="text-[10px] text-green-400/70 flex items-center gap-1">
+                  <span className="h-1.5 w-1.5 bg-green-400 rounded-full animate-pulse" />
+                  TensorFlow.js gotowy
+                </span>
+              )}
+            </div>
+          )}
+
+          {!isActive && isLoadingModel && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
+              <Loader2 className="h-10 w-10 text-primary animate-spin" />
+              <p className="text-xs text-white/60 text-center px-4">
+                Ładowanie modeli face-api.js...
+              </p>
+              <p className="text-[10px] text-white/40">To może potrwać kilka sekund</p>
             </div>
           )}
 
@@ -353,15 +417,44 @@ export const QuickMoodDetector = ({ isOpen, onClose }: QuickMoodDetectorProps) =
               animate={{ opacity: 1 }}
               className="absolute inset-0 flex flex-col items-center justify-center bg-black/40"
             >
-              <Loader2 className="h-10 w-10 text-white animate-spin mb-3" />
-              <p className="text-white font-medium text-sm">Analizuję twarz...</p>
+              <div className="relative">
+                <Brain className="h-12 w-12 text-primary" />
+                <motion.div
+                  className="absolute inset-0 border-2 border-primary rounded-full"
+                  animate={{ scale: [1, 1.3, 1], opacity: [1, 0, 1] }}
+                  transition={{ duration: 1.5, repeat: Infinity }}
+                />
+              </div>
+              <p className="text-white font-medium text-sm mt-4">{analysisStep || "Inicjalizacja..."}</p>
               <div className="w-48 h-2 bg-white/20 rounded-full mt-3 overflow-hidden">
                 <motion.div
                   className="h-full bg-gradient-to-r from-primary to-accent"
-                  style={{ width: `${analysisProgress}%` }}
+                  animate={{ width: `${analysisProgress}%` }}
+                  transition={{ duration: 0.1 }}
                 />
               </div>
-              <p className="text-white/60 text-xs mt-2">{Math.round(analysisProgress / 20)} / 5 sek</p>
+              <p className="text-white/60 text-xs mt-2">{Math.round(analysisProgress)}%</p>
+            </motion.div>
+          )}
+
+          {isActive && noFaceDetected && !isAnalyzing && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="absolute inset-0 flex flex-col items-center justify-center bg-black/60"
+            >
+              <AlertCircle className="h-12 w-12 text-yellow-400 mb-3" />
+              <p className="text-white font-medium text-sm">Nie wykryto twarzy</p>
+              <p className="text-white/60 text-xs text-center px-6 mt-1">
+                Upewnij się, że twarz jest dobrze oświetlona i widoczna w kamerze
+              </p>
+              <Button
+                onClick={startAnalysis}
+                size="sm"
+                className="mt-3 groove-gradient-bg"
+              >
+                Spróbuj ponownie
+              </Button>
             </motion.div>
           )}
 
@@ -411,15 +504,15 @@ export const QuickMoodDetector = ({ isOpen, onClose }: QuickMoodDetectorProps) =
             {!isActive ? (
               <Button
                 onClick={startCamera}
-                disabled={isLoading}
+                disabled={isLoading || isLoadingModel}
                 className="flex-1 h-10 groove-gradient-bg text-white hover:opacity-90"
               >
-                {isLoading ? (
+                {isLoading || isLoadingModel ? (
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 ) : (
-                  <Camera className="h-4 w-4 mr-2" />
+                  <Brain className="h-4 w-4 mr-2" />
                 )}
-                {isLoading ? "Uruchamiam..." : "Włącz i analizuj (5s)"}
+                {isLoadingModel ? "Ładowanie AI..." : isLoading ? "Uruchamiam..." : "Analizuj emocje (5s)"}
               </Button>
             ) : (
               <Button
@@ -433,6 +526,12 @@ export const QuickMoodDetector = ({ isOpen, onClose }: QuickMoodDetectorProps) =
               </Button>
             )}
           </div>
+
+          {modelError && (
+            <p className="text-[10px] text-yellow-400 text-center">
+              {modelError} - używam trybu uproszczonego
+            </p>
+          )}
 
           {hasPermission === false && (
             <p className="text-[10px] text-destructive text-center">
