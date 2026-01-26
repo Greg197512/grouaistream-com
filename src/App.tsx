@@ -15,6 +15,7 @@ import CreatePlaylist from "./pages/CreatePlaylist";
 import Radio from "./pages/Radio";
 import Settings from "./pages/Settings";
 import PlaylistManager from "./pages/PlaylistManager";
+import PlaylistDetail from "./pages/PlaylistDetail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -39,6 +40,7 @@ const App = () => (
                   <Route path="/radio" element={<Radio />} />
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/playlist-manager" element={<PlaylistManager />} />
+                  <Route path="/playlist/:id" element={<PlaylistDetail />} />
                   <Route path="/ai-dj" element={<Index />} />
                   <Route path="/mood" element={<Settings />} />
                   <Route path="/daily-mix" element={<Index />} />

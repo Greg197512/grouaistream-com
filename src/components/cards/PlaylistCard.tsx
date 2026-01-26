@@ -1,7 +1,9 @@
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
 interface PlaylistCardProps {
+  id?: string;
   title: string;
   description: string;
   imageUrl?: string;
@@ -11,6 +13,7 @@ interface PlaylistCardProps {
 }
 
 export const PlaylistCard = ({ 
+  id,
   title, 
   description, 
   imageUrl, 
@@ -18,9 +21,19 @@ export const PlaylistCard = ({
   gradient = "from-groove-orange via-groove-amber to-groove-fire",
   onClick 
 }: PlaylistCardProps) => {
+  const navigate = useNavigate();
+
+  const handleClick = () => {
+    if (onClick) {
+      onClick();
+    } else if (id) {
+      navigate(`/playlist/${id}`);
+    }
+  };
+
   return (
     <motion.div
-      onClick={onClick}
+      onClick={handleClick}
       whileHover={{ scale: 1.02 }}
       whileTap={{ scale: 0.98 }}
       className="groove-card group cursor-pointer p-4"
