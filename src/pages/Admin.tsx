@@ -114,6 +114,11 @@ export default function Admin() {
   const [generatingEmail, setGeneratingEmail] = useState(false);
   const [generatedEmail, setGeneratedEmail] = useState<GeneratedEmail | null>(null);
   const [emailHistory, setEmailHistory] = useState<GeneratedEmail[]>([]);
+  
+  // Verification state
+  const [verifyingTracks, setVerifyingTracks] = useState(false);
+  const [brokenTracks, setBrokenTracks] = useState<TrackData[]>([]);
+  const [deletingBroken, setDeletingBroken] = useState(false);
 
   useEffect(() => {
     if (!loading && !isAdmin) {
@@ -260,6 +265,109 @@ export default function Admin() {
     
     setTestingTrack(null);
     toast.success(`Przetestowano ${toTest.length} utworów!`);
+  };
+
+  const verifyBrokenTracks = async () => {
+    setVerifyingTracks(true);
+    setBrokenTracks([]);
+    
+    try {
+      // Find tracks without valid video_url or audio_url
+      const { data: allTracksData } = await supabase
+        .from("tracks")
+        .select("id, title, artist, genre, video_url, audio_url, created_at")
+        .order("created_at", { ascending: false });
+      
+      const broken: TrackData[] = [];
+      
+      for (const track of allTracksData || []) {
+        // Check if track has no URL at all
+        if (!track.video_url && !track.audio_url) {
+          broken.push(track);
+          continue;
+        }
+        
+        // For YouTube URLs, try to verify thumbnail exists
+        if (track.video_url && track.video_url.includes("youtube")) {
+          const videoId = extractVideoId(track.video_url);
+          if (!videoId) {
+            broken.push(track);
+          }
+        }
+      }
+      
+      setBrokenTracks(broken);
+      
+      if (broken.length > 0) {
+        toast.warning(`Znaleziono ${broken.length} utworów bez działających linków`);
+      } else {
+        toast.success("Wszystkie utwory mają poprawne linki!");
+      }
+    } catch (error) {
+      console.error("Error verifying tracks:", error);
+      toast.error("Błąd weryfikacji utworów");
+    } finally {
+      setVerifyingTracks(false);
+    }
+  };
+
+  const extractVideoId = (url: string): string | null => {
+    if (!url) return null;
+    const patterns = [
+      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
+      /^([a-zA-Z0-9_-]{11})$/
+    ];
+    for (const pattern of patterns) {
+      const match = url.match(pattern);
+      if (match) return match[1];
+    }
+    return null;
+  };
+
+  const deleteAllBroken = async () => {
+    if (!confirm(`Czy na pewno chcesz usunąć ${brokenTracks.length} niedziałających utworów? Ta operacja jest nieodwracalna!`)) {
+      return;
+    }
+    
+    setDeletingBroken(true);
+    try {
+      const trackIds = brokenTracks.map(t => t.id);
+      
+      // Delete from playlist_tracks first
+      await supabase
+        .from("playlist_tracks")
+        .delete()
+        .in("track_id", trackIds);
+      
+      // Delete from liked_songs
+      await supabase
+        .from("liked_songs")
+        .delete()
+        .in("track_id", trackIds);
+      
+      // Delete from listening_history
+      await supabase
+        .from("listening_history")
+        .delete()
+        .in("track_id", trackIds);
+      
+      // Delete tracks
+      const { error } = await supabase
+        .from("tracks")
+        .delete()
+        .in("id", trackIds);
+      
+      if (error) throw error;
+      
+      toast.success(`Usunięto ${brokenTracks.length} niedziałających utworów`);
+      setBrokenTracks([]);
+      fetchAdminData();
+    } catch (error) {
+      console.error("Error deleting broken tracks:", error);
+      toast.error("Błąd usuwania utworów");
+    } finally {
+      setDeletingBroken(false);
+    }
   };
 
   const exportStats = () => {
@@ -643,6 +751,20 @@ export default function Admin() {
                         <Button 
                           variant="outline" 
                           size="sm"
+                          onClick={verifyBrokenTracks}
+                          disabled={verifyingTracks}
+                          className="gap-2"
+                        >
+                          {verifyingTracks ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <RefreshCw className="h-4 w-4" />
+                          )}
+                          Znajdź zepsute
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
                           onClick={testRandomTracks}
                           className="gap-2"
                         >
@@ -652,7 +774,62 @@ export default function Admin() {
                       </div>
                     </div>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="space-y-4">
+                    {/* Broken Tracks Section */}
+                    {brokenTracks.length > 0 && (
+                      <div className="p-4 bg-destructive/10 border border-destructive/30 rounded-lg space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 text-destructive">
+                            <AlertTriangle className="h-5 w-5" />
+                            <span className="font-semibold">
+                              Znaleziono {brokenTracks.length} niedziałających utworów
+                            </span>
+                          </div>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={deleteAllBroken}
+                            disabled={deletingBroken}
+                            className="gap-2"
+                          >
+                            {deletingBroken ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-4 w-4" />
+                            )}
+                            Usuń wszystkie ({brokenTracks.length})
+                          </Button>
+                        </div>
+                        <ScrollArea className="h-[150px]">
+                          <div className="space-y-1">
+                            {brokenTracks.slice(0, 20).map(track => (
+                              <div key={track.id} className="flex items-center justify-between text-sm py-1 px-2 bg-background/50 rounded">
+                                <span className="truncate flex-1">{track.title} - {track.artist}</span>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6 text-destructive hover:bg-destructive/10"
+                                  onClick={() => deleteTrack(track.id, track.title)}
+                                  disabled={deletingTrack === track.id}
+                                >
+                                  {deletingTrack === track.id ? (
+                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                  ) : (
+                                    <XCircle className="h-4 w-4" />
+                                  )}
+                                </Button>
+                              </div>
+                            ))}
+                            {brokenTracks.length > 20 && (
+                              <p className="text-xs text-muted-foreground text-center py-2">
+                                ... i {brokenTracks.length - 20} więcej
+                              </p>
+                            )}
+                          </div>
+                        </ScrollArea>
+                      </div>
+                    )}
+                    
                     <ScrollArea className="h-[400px]">
                       <Table>
                         <TableHeader>

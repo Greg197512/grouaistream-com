@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, forwardRef } from "react";
 import { motion } from "framer-motion";
 import { Play, Pause, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -18,7 +18,7 @@ interface TrackRowProps {
   onPlay?: () => void;
 }
 
-export const TrackRow = ({
+const TrackRowComponent = forwardRef<HTMLDivElement, TrackRowProps>(({
   id,
   index,
   title,
@@ -30,11 +30,12 @@ export const TrackRow = ({
   imageUrl,
   trackUrl,
   onPlay
-}: TrackRowProps) => {
+}, ref) => {
   const [isHovered, setIsHovered] = useState(false);
 
   return (
     <motion.div
+      ref={ref}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       className={cn(
@@ -110,7 +111,10 @@ export const TrackRow = ({
       </div>
     </motion.div>
   );
-};
+});
+
+TrackRowComponent.displayName = "TrackRow";
+export const TrackRow = TrackRowComponent;
 
 export const TrackRowHeader = () => (
   <div className="grid grid-cols-[16px_4fr_3fr_1fr] md:grid-cols-[16px_4fr_3fr_2fr_1fr] gap-4 px-4 py-2 border-b border-border text-xs text-muted-foreground uppercase tracking-wider">
