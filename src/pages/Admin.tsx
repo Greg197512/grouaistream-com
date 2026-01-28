@@ -19,7 +19,13 @@ import {
   Download,
   Trash2,
   CheckCircle,
-  XCircle
+  XCircle,
+  Send,
+  Sparkles,
+  Eye,
+  Trophy,
+  UserPlus,
+  Newspaper
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -28,6 +34,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
@@ -36,6 +45,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Track, usePlayer } from "@/contexts/PlayerContext";
 
 interface UserStats {
@@ -68,6 +84,14 @@ interface TrackData {
   created_at: string;
 }
 
+interface GeneratedEmail {
+  subject: string;
+  body: string;
+  preview: string;
+  type: string;
+  generatedAt: string;
+}
+
 export default function Admin() {
   const { isAdmin, loading, user } = useAdminAuth();
   const navigate = useNavigate();
@@ -82,6 +106,14 @@ export default function Admin() {
   const [loadingData, setLoadingData] = useState(true);
   const [testingTrack, setTestingTrack] = useState<string | null>(null);
   const [testedTracks, setTestedTracks] = useState<Map<string, boolean>>(new Map());
+  
+  // Email state
+  const [emailType, setEmailType] = useState<"invitation" | "challenge" | "newsletter" | "weekly_digest">("invitation");
+  const [recipientName, setRecipientName] = useState("");
+  const [customMessage, setCustomMessage] = useState("");
+  const [generatingEmail, setGeneratingEmail] = useState(false);
+  const [generatedEmail, setGeneratedEmail] = useState<GeneratedEmail | null>(null);
+  const [emailHistory, setEmailHistory] = useState<GeneratedEmail[]>([]);
 
   useEffect(() => {
     if (!loading && !isAdmin) {
@@ -246,6 +278,39 @@ export default function Admin() {
     a.click();
     URL.revokeObjectURL(url);
     toast.success("Statystyki wyeksportowane!");
+  };
+
+  const generateEmail = async () => {
+    setGeneratingEmail(true);
+    try {
+      const topGenres = genreStats.slice(0, 5).map(g => g.genre);
+      
+      const { data, error } = await supabase.functions.invoke('generate-email', {
+        body: {
+          type: emailType,
+          recipientName: recipientName || undefined,
+          customMessage: customMessage || undefined,
+          stats: {
+            totalTracks: stats?.totalTracks || 0,
+            totalUsers: stats?.totalUsers || 0,
+            topGenres
+          }
+        }
+      });
+
+      if (error) throw error;
+
+      if (data?.email) {
+        setGeneratedEmail(data.email);
+        setEmailHistory(prev => [data.email, ...prev.slice(0, 9)]);
+        toast.success("E-mail wygenerowany przez AI!");
+      }
+    } catch (error) {
+      console.error("Error generating email:", error);
+      toast.error("Błąd generowania e-maila");
+    } finally {
+      setGeneratingEmail(false);
+    }
   };
 
   const deleteGenre = async (genre: string) => {
@@ -492,6 +557,10 @@ export default function Admin() {
                   <Users className="h-4 w-4" />
                   Użytkownicy
                 </TabsTrigger>
+                <TabsTrigger value="email" className="gap-2">
+                  <Mail className="h-4 w-4" />
+                  E-mail AI
+                </TabsTrigger>
               </TabsList>
 
               {/* Genres Tab */}
@@ -602,9 +671,9 @@ export default function Admin() {
                               <TableCell>
                                 {testedTracks.has(track.id) ? (
                                   testedTracks.get(track.id) ? (
-                                    <CheckCircle className="h-4 w-4 text-green-500" />
+                                    <CheckCircle className="h-4 w-4 text-accent" />
                                   ) : (
-                                    <XCircle className="h-4 w-4 text-red-500" />
+                                    <XCircle className="h-4 w-4 text-destructive" />
                                   )
                                 ) : (
                                   <div className="h-4 w-4 rounded-full border border-muted-foreground/30" />
@@ -623,7 +692,7 @@ export default function Admin() {
                               </TableCell>
                               <TableCell>
                                 {track.video_url ? (
-                                  <Badge className="bg-red-600 text-xs">YT</Badge>
+                                  <Badge variant="destructive" className="text-xs">YT</Badge>
                                 ) : track.audio_url ? (
                                   <Badge variant="secondary" className="text-xs">Audio</Badge>
                                 ) : (
@@ -722,6 +791,203 @@ export default function Admin() {
                   </CardContent>
                 </Card>
               </TabsContent>
+
+              {/* Email Tab */}
+              <TabsContent value="email">
+                <div className="grid gap-6 lg:grid-cols-2">
+                  {/* Email Generator */}
+                  <Card className="border-border/50 bg-card/50 backdrop-blur">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Sparkles className="h-5 w-5 text-primary" />
+                        Generator E-maili AI
+                      </CardTitle>
+                      <CardDescription>
+                        Generuj e-maile zaproszenia, wyzwania i newslettery
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="space-y-2">
+                        <Label>Typ e-maila</Label>
+                        <Select value={emailType} onValueChange={(v: typeof emailType) => setEmailType(v)}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="invitation">
+                              <div className="flex items-center gap-2">
+                                <UserPlus className="h-4 w-4" />
+                                Zaproszenie
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="challenge">
+                              <div className="flex items-center gap-2">
+                                <Trophy className="h-4 w-4" />
+                                Wyzwanie muzyczne
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="newsletter">
+                              <div className="flex items-center gap-2">
+                                <Newspaper className="h-4 w-4" />
+                                Newsletter
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="weekly_digest">
+                              <div className="flex items-center gap-2">
+                                <Mail className="h-4 w-4" />
+                                Podsumowanie tygodnia
+                              </div>
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Imię odbiorcy (opcjonalne)</Label>
+                        <Input 
+                          placeholder="np. Jan"
+                          value={recipientName}
+                          onChange={(e) => setRecipientName(e.target.value)}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Dodatkowy kontekst (opcjonalne)</Label>
+                        <Textarea 
+                          placeholder="np. Promuj nowy gatunek K-pop..."
+                          value={customMessage}
+                          onChange={(e) => setCustomMessage(e.target.value)}
+                          rows={3}
+                        />
+                      </div>
+
+                      <Button 
+                        className="w-full gap-2"
+                        onClick={generateEmail}
+                        disabled={generatingEmail}
+                      >
+                        {generatingEmail ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Generowanie...
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="h-4 w-4" />
+                            Wygeneruj e-mail
+                          </>
+                        )}
+                      </Button>
+
+                      <p className="text-xs text-muted-foreground text-center">
+                        ✨ Używa Lovable AI - bez potrzeby zewnętrznego API
+                      </p>
+                    </CardContent>
+                  </Card>
+
+                  {/* Email Preview */}
+                  <Card className="border-border/50 bg-card/50 backdrop-blur">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Eye className="h-5 w-5" />
+                        Podgląd e-maila
+                      </CardTitle>
+                      <CardDescription>
+                        {generatedEmail ? (
+                          <Badge variant="secondary" className="mt-1">
+                            {emailType === "invitation" && "Zaproszenie"}
+                            {emailType === "challenge" && "Wyzwanie"}
+                            {emailType === "newsletter" && "Newsletter"}
+                            {emailType === "weekly_digest" && "Podsumowanie"}
+                          </Badge>
+                        ) : (
+                          "Wygeneruj e-mail aby zobaczyć podgląd"
+                        )}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      {generatedEmail ? (
+                        <div className="space-y-4">
+                          <div className="p-4 rounded-lg bg-background border">
+                            <div className="text-sm text-muted-foreground mb-1">Temat:</div>
+                            <div className="font-semibold">{generatedEmail.subject}</div>
+                          </div>
+                          
+                          <div className="p-4 rounded-lg bg-background border">
+                            <div className="text-sm text-muted-foreground mb-2">Treść:</div>
+                            <div 
+                              className="prose prose-sm dark:prose-invert max-w-none"
+                              dangerouslySetInnerHTML={{ __html: generatedEmail.body }}
+                            />
+                          </div>
+
+                          <div className="flex gap-2">
+                            <Button 
+                              variant="outline" 
+                              className="flex-1 gap-2"
+                              onClick={() => {
+                                navigator.clipboard.writeText(generatedEmail.body);
+                                toast.success("Skopiowano do schowka!");
+                              }}
+                            >
+                              <Download className="h-4 w-4" />
+                              Kopiuj treść
+                            </Button>
+                            <Button 
+                              variant="default" 
+                              className="flex-1 gap-2"
+                              disabled
+                              title="Dodaj RESEND_API_KEY aby wysyłać e-maile"
+                            >
+                              <Send className="h-4 w-4" />
+                              Wyślij (wymaga Resend)
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                          <Mail className="h-12 w-12 mb-4 opacity-30" />
+                          <p>Brak wygenerowanego e-maila</p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Email History */}
+                {emailHistory.length > 0 && (
+                  <Card className="border-border/50 bg-card/50 backdrop-blur mt-6">
+                    <CardHeader>
+                      <CardTitle className="text-base">Historia generowanych e-maili</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <ScrollArea className="h-[200px]">
+                        <div className="space-y-2">
+                          {emailHistory.map((email, i) => (
+                            <div 
+                              key={i}
+                              className="p-3 rounded-lg bg-background/50 border cursor-pointer hover:bg-background/80 transition-colors"
+                              onClick={() => setGeneratedEmail(email)}
+                            >
+                              <div className="flex items-center justify-between">
+                                <span className="font-medium truncate max-w-[300px]">
+                                  {email.subject}
+                                </span>
+                                <Badge variant="outline" className="text-xs">
+                                  {email.type}
+                                </Badge>
+                              </div>
+                              <div className="text-xs text-muted-foreground mt-1">
+                                {new Date(email.generatedAt).toLocaleString("pl-PL")}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </ScrollArea>
+                    </CardContent>
+                  </Card>
+                )}
+              </TabsContent>
             </Tabs>
 
             {/* Quick Actions */}
@@ -735,10 +1001,6 @@ export default function Admin() {
                   <CardTitle>Szybkie akcje</CardTitle>
                 </CardHeader>
                 <CardContent className="flex flex-wrap gap-3">
-                  <Button variant="outline" className="gap-2" disabled>
-                    <Mail className="h-4 w-4" />
-                    Wyślij newsletter (wkrótce)
-                  </Button>
                   <Button 
                     variant="outline" 
                     className="gap-2"

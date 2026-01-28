@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.daily-cc-fetch]
 verify_jwt = false
+
+[functions.generate-email]
+verify_jwt = false
