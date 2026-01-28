@@ -73,6 +73,8 @@ export default function Admin() {
   const navigate = useNavigate();
   const { playTrack } = usePlayer();
   const [stats, setStats] = useState<UserStats | null>(null);
+  const [deletingGenre, setDeletingGenre] = useState<string | null>(null);
+  const [deletingTrack, setDeletingTrack] = useState<string | null>(null);
   const [genreStats, setGenreStats] = useState<GenreStats[]>([]);
   const [users, setUsers] = useState<UserData[]>([]);
   const [tracks, setTracks] = useState<TrackData[]>([]);
@@ -244,6 +246,103 @@ export default function Admin() {
     a.click();
     URL.revokeObjectURL(url);
     toast.success("Statystyki wyeksportowane!");
+  };
+
+  const deleteGenre = async (genre: string) => {
+    if (!confirm(`Czy na pewno chcesz usunąć wszystkie utwory z gatunku "${genre}"? Ta operacja jest nieodwracalna!`)) {
+      return;
+    }
+    
+    setDeletingGenre(genre);
+    try {
+      // First get all track IDs for this genre
+      const { data: tracksToDelete } = await supabase
+        .from("tracks")
+        .select("id")
+        .eq("genre", genre);
+      
+      if (tracksToDelete && tracksToDelete.length > 0) {
+        const trackIds = tracksToDelete.map(t => t.id);
+        
+        // Delete from playlist_tracks first (foreign key)
+        await supabase
+          .from("playlist_tracks")
+          .delete()
+          .in("track_id", trackIds);
+        
+        // Delete from liked_songs
+        await supabase
+          .from("liked_songs")
+          .delete()
+          .in("track_id", trackIds);
+        
+        // Delete from listening_history
+        await supabase
+          .from("listening_history")
+          .delete()
+          .in("track_id", trackIds);
+        
+        // Finally delete tracks
+        const { error } = await supabase
+          .from("tracks")
+          .delete()
+          .eq("genre", genre);
+        
+        if (error) throw error;
+        
+        toast.success(`Usunięto ${tracksToDelete.length} utworów z gatunku "${genre}"`);
+        fetchAdminData();
+      }
+    } catch (error) {
+      console.error("Error deleting genre:", error);
+      toast.error("Błąd usuwania gatunku");
+    } finally {
+      setDeletingGenre(null);
+    }
+  };
+
+  const deleteTrack = async (trackId: string, trackTitle: string) => {
+    if (!confirm(`Czy na pewno chcesz usunąć "${trackTitle}"?`)) {
+      return;
+    }
+    
+    setDeletingTrack(trackId);
+    try {
+      // Delete from playlist_tracks first
+      await supabase
+        .from("playlist_tracks")
+        .delete()
+        .eq("track_id", trackId);
+      
+      // Delete from liked_songs
+      await supabase
+        .from("liked_songs")
+        .delete()
+        .eq("track_id", trackId);
+      
+      // Delete from listening_history
+      await supabase
+        .from("listening_history")
+        .delete()
+        .eq("track_id", trackId);
+      
+      // Finally delete track
+      const { error } = await supabase
+        .from("tracks")
+        .delete()
+        .eq("id", trackId);
+      
+      if (error) throw error;
+      
+      toast.success(`Usunięto "${trackTitle}"`);
+      setTracks(prev => prev.filter(t => t.id !== trackId));
+      setRecentTracks(prev => prev.filter(t => t.id !== trackId));
+    } catch (error) {
+      console.error("Error deleting track:", error);
+      toast.error("Błąd usuwania utworu");
+    } finally {
+      setDeletingTrack(null);
+    }
   };
 
   const maxGenreCount = genreStats[0]?.count || 1;
@@ -425,9 +524,25 @@ export default function Admin() {
                                 </Badge>
                                 <span className="font-medium">{g.genre}</span>
                               </div>
-                              <span className="text-sm text-muted-foreground">
-                                {g.count} utworów ({((g.count / (stats?.totalTracks || 1)) * 100).toFixed(1)}%)
-                              </span>
+                              <div className="flex items-center gap-3">
+                                <span className="text-sm text-muted-foreground">
+                                  {g.count} utworów ({((g.count / (stats?.totalTracks || 1)) * 100).toFixed(1)}%)
+                                </span>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                  onClick={() => deleteGenre(g.genre)}
+                                  disabled={deletingGenre === g.genre}
+                                  title={`Usuń wszystkie utwory z gatunku ${g.genre}`}
+                                >
+                                  {deletingGenre === g.genre ? (
+                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                  ) : (
+                                    <XCircle className="h-4 w-4" />
+                                  )}
+                                </Button>
+                              </div>
                             </div>
                             <Progress 
                               value={(g.count / maxGenreCount) * 100} 
@@ -516,20 +631,36 @@ export default function Admin() {
                                 )}
                               </TableCell>
                               <TableCell>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => testTrack(recentTracks.find(t => t.id === track.id)!)}
-                                  disabled={testingTrack === track.id}
-                                  className="gap-1"
-                                >
-                                  {testingTrack === track.id ? (
-                                    <Loader2 className="h-3 w-3 animate-spin" />
-                                  ) : (
-                                    <Play className="h-3 w-3" />
-                                  )}
-                                  Test
-                                </Button>
+                                <div className="flex items-center gap-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => testTrack(recentTracks.find(t => t.id === track.id)!)}
+                                    disabled={testingTrack === track.id}
+                                    className="gap-1"
+                                  >
+                                    {testingTrack === track.id ? (
+                                      <Loader2 className="h-3 w-3 animate-spin" />
+                                    ) : (
+                                      <Play className="h-3 w-3" />
+                                    )}
+                                    Test
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                    onClick={() => deleteTrack(track.id, track.title)}
+                                    disabled={deletingTrack === track.id}
+                                    title="Usuń utwór"
+                                  >
+                                    {deletingTrack === track.id ? (
+                                      <Loader2 className="h-3 w-3 animate-spin" />
+                                    ) : (
+                                      <Trash2 className="h-3 w-3" />
+                                    )}
+                                  </Button>
+                                </div>
                               </TableCell>
                             </TableRow>
                           ))}
