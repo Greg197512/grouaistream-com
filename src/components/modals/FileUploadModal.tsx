@@ -154,7 +154,17 @@ export const FileUploadModal = ({ isOpen, onClose, onSuccess }: FileUploadModalP
       if (insertError) throw insertError;
       setUploadProgress(100);
 
-      toast.success("Utwór przesłany!");
+      // Auto-download after upload
+      try {
+        const downloadLink = document.createElement('a');
+        downloadLink.href = publicUrl;
+        downloadLink.download = `${title.trim()} - ${artist.trim() || 'Unknown'}.${ext}`;
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        document.body.removeChild(downloadLink);
+      } catch {}
+
+      toast.success("Utwór przesłany i pobrany!");
       onSuccess?.();
       handleClose();
     } catch (err: any) {
@@ -186,7 +196,7 @@ export const FileUploadModal = ({ isOpen, onClose, onSuccess }: FileUploadModalP
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
         onClick={handleClose}
       >
         <motion.div
@@ -194,30 +204,23 @@ export const FileUploadModal = ({ isOpen, onClose, onSuccess }: FileUploadModalP
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
           onClick={(e) => e.stopPropagation()}
-          className="w-full max-w-lg mx-4 bg-card border border-border rounded-2xl shadow-2xl overflow-hidden"
+          className="w-full max-w-md bg-card border border-border rounded-xl shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto"
         >
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-border">
-            <div className="flex items-center gap-3">
-              <motion.div 
-                className="p-2 rounded-lg bg-primary/10"
-                animate={{ rotate: [0, 10, -10, 0] }}
-                transition={{ duration: 2, repeat: Infinity }}
-              >
-                <Upload className="h-5 w-5 text-primary" />
-              </motion.div>
-              <h2 className="text-xl font-bold">Upload Music</h2>
+          <div className="flex items-center justify-between p-4 border-b border-border">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-primary/10">
+                <Upload className="h-4 w-4 text-primary" />
+              </div>
+              <h2 className="text-lg font-bold">Upload Music</h2>
             </div>
-            <button
-              onClick={handleClose}
-              className="p-2 rounded-lg hover:bg-secondary transition-colors"
-            >
-              <X className="h-5 w-5" />
+            <button onClick={handleClose} className="p-1.5 rounded-lg hover:bg-secondary transition-colors">
+              <X className="h-4 w-4" />
             </button>
           </div>
 
           {/* Content */}
-          <div className="p-6 space-y-4">
+          <div className="p-4 space-y-3">
             {/* Drop Zone */}
             <div
               onDragEnter={handleDrag}
@@ -356,7 +359,7 @@ export const FileUploadModal = ({ isOpen, onClose, onSuccess }: FileUploadModalP
           </div>
 
           {/* Footer */}
-          <div className="flex justify-end gap-3 p-6 border-t border-border bg-secondary/30">
+          <div className="flex justify-end gap-2 p-4 border-t border-border bg-secondary/30">
             <Button variant="outline" onClick={handleClose} disabled={uploading}>
               Cancel
             </Button>
