@@ -69,22 +69,22 @@ const Radio = () => {
           </div>
 
           {/* Info bar above iframe */}
-          <div className="flex items-center justify-between px-5 py-3 bg-card/80 backdrop-blur-sm border-b border-border/30">
-            <div className="flex items-center gap-3">
-              <Headphones className="h-5 w-5 text-primary" />
-              <span className="text-sm font-medium text-foreground">GrouaRock Radio Player</span>
-              <div className="flex gap-1 ml-2">
-                {[1, 2, 3, 4].map((i) => (
+          <div className="flex items-center justify-between px-5 py-2 bg-card/80 backdrop-blur-sm border-b border-border/30">
+            <div className="flex items-center gap-2">
+              <div className="h-8 w-8 rounded-full groove-gradient-bg flex items-center justify-center">
+                <Headphones className="h-4 w-4 text-primary-foreground" />
+              </div>
+              <div className="flex gap-0.5 ml-1">
+                {[1, 2, 3].map((i) => (
                   <motion.div
                     key={i}
                     className="w-0.5 bg-primary rounded-full"
-                    animate={{ height: [4, 12, 4] }}
+                    animate={{ height: [3, 10, 3] }}
                     transition={{ duration: 0.5, repeat: Infinity, delay: i * 0.12 }}
                   />
                 ))}
               </div>
             </div>
-            <span className="text-xs text-muted-foreground">play.radioking.io</span>
           </div>
 
           {/* Iframe */}
