@@ -105,12 +105,12 @@ export const FileUploadModal = ({ isOpen, onClose, onSuccess }: FileUploadModalP
 
   const handleUpload = async () => {
     if (!user) {
-      toast.error("Please sign in to upload files");
+      toast.error("Zaloguj się, aby przesyłać pliki");
       return;
     }
 
     if (!file || !title.trim()) {
-      toast.error("Please select a file and enter a title");
+      toast.error("Wybierz plik i wpisz tytuł");
       return;
     }
 
@@ -118,37 +118,48 @@ export const FileUploadModal = ({ isOpen, onClose, onSuccess }: FileUploadModalP
     setUploadProgress(0);
 
     try {
-      // Simulate upload progress (in real implementation, use proper upload with progress)
-      const progressInterval = setInterval(() => {
-        setUploadProgress(prev => Math.min(prev + 10, 90));
-      }, 200);
-
-      // For now, we'll store the file metadata without actual file upload
-      // In production, you would upload to storage bucket
       const isVideo = ALLOWED_VIDEO.includes(file.type);
-      
+      const ext = file.name.split('.').pop();
+      const filePath = `${user.id}/${Date.now()}-${crypto.randomUUID()}.${ext}`;
+
+      // Upload to storage
+      setUploadProgress(20);
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from("music")
+        .upload(filePath, file, { contentType: file.type });
+
+      if (uploadError) throw uploadError;
+      setUploadProgress(70);
+
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from("music")
+        .getPublicUrl(filePath);
+
+      const publicUrl = urlData.publicUrl;
+      setUploadProgress(85);
+
+      // Insert track record
       const { error: insertError } = await supabase.from("tracks").insert({
         title: title.trim(),
         artist: artist.trim() || "Unknown Artist",
         genre: genre || null,
-        duration: 180, // Default, would be extracted from file in real implementation
-        audio_url: isVideo ? null : `local://${file.name}`,
-        video_url: isVideo ? `local://${file.name}` : null,
+        duration: 180,
+        audio_url: isVideo ? null : publicUrl,
+        video_url: isVideo ? publicUrl : null,
         cover_url: null,
         mood: null,
       });
 
-      clearInterval(progressInterval);
+      if (insertError) throw insertError;
       setUploadProgress(100);
 
-      if (insertError) throw insertError;
-
-      toast.success("Track uploaded successfully!");
+      toast.success("Utwór przesłany!");
       onSuccess?.();
       handleClose();
     } catch (err: any) {
       console.error("Upload error:", err);
-      toast.error(err.message || "Failed to upload track");
+      toast.error(err.message || "Błąd przesyłania");
     } finally {
       setUploading(false);
     }

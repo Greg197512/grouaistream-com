@@ -158,11 +158,9 @@ export const ImportTrackModal = ({ isOpen, onClose, onSuccess }: ImportTrackModa
               variant={mode === 'file' ? 'default' : 'outline'}
               onClick={() => setMode('file')}
               className="flex-1 gap-2"
-              disabled
             >
               <Upload className="h-4 w-4" />
               Upload File
-              <span className="text-xs opacity-60">(Soon)</span>
             </Button>
           </div>
 
