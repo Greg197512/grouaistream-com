@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Link, Loader2, Youtube, CheckCircle, Download, Music } from "lucide-react";
+import { X, Link, Loader2, Youtube, CheckCircle, Download, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,18 +15,30 @@ interface ImportTrackModalProps {
   onSuccess?: () => void;
 }
 
+type Status = "idle" | "fetching" | "downloading" | "uploading" | "saving" | "done" | "error";
+
+const STATUS_LABELS: Record<Status, string> = {
+  idle: "",
+  fetching: "Pobieram dane z YouTube...",
+  downloading: "Pobieram muzykę z YouTube...",
+  uploading: "Zapisuję plik...",
+  saving: "Zapisuję utwór w bibliotece...",
+  done: "Gotowe!",
+  error: "Błąd",
+};
+
 export const ImportTrackModal = ({ isOpen, onClose, onSuccess }: ImportTrackModalProps) => {
   const { user } = useAuth();
   const [youtubeUrl, setYoutubeUrl] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [status, setStatus] = useState<"idle" | "fetching" | "saving" | "downloading" | "done">("idle");
+  const [status, setStatus] = useState<Status>("idle");
+  const [errorMsg, setErrorMsg] = useState("");
 
   const handleYouTubeUrlChange = async (url: string) => {
     setYoutubeUrl(url);
+    setErrorMsg("");
     const videoId = extractYouTubeId(url);
     if (!videoId || !user) return;
 
-    // Auto-import flow
     setStatus("fetching");
     try {
       let title = "";
@@ -49,58 +61,71 @@ export const ImportTrackModal = ({ isOpen, onClose, onSuccess }: ImportTrackModa
         artist = "Unknown Artist";
       }
 
+      // Download audio via edge function
+      setStatus("downloading");
+      const { data: fnData, error: fnError } = await supabase.functions.invoke('youtube-download', {
+        body: { videoId, title, artist },
+      });
+
+      if (fnError) throw new Error(fnError.message || 'Błąd pobierania');
+
+      if (fnData?.error) throw new Error(fnData.error);
+
+      const audioUrl = fnData?.url;
+      if (!audioUrl) throw new Error('Nie otrzymano URL audio');
+
       // Save to DB
       setStatus("saving");
       const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
       const coverUrl = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
 
-      const { error } = await supabase.from("tracks").insert({
+      const { error: dbError } = await supabase.from("tracks").insert({
         title,
         artist,
         genre: null,
+        audio_url: audioUrl,
         video_url: videoUrl,
         cover_url: coverUrl,
         duration: 180,
         mood: null,
       });
 
-      if (error) throw error;
+      if (dbError) throw dbError;
 
-      // Auto-download cover
-      setStatus("downloading");
+      // Trigger browser download of the audio file
       try {
-        const coverLink = document.createElement('a');
-        coverLink.href = coverUrl;
-        coverLink.download = `${title} - ${artist}.jpg`;
-        coverLink.target = '_blank';
-        document.body.appendChild(coverLink);
-        coverLink.click();
-        document.body.removeChild(coverLink);
+        const link = document.createElement('a');
+        link.href = audioUrl;
+        link.download = fnData.fileName || `${title} - ${artist}.mp3`;
+        link.target = '_blank';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
       } catch {}
 
       setStatus("done");
-      toast.success(`Zaimportowano: ${title}`);
+      toast.success(`Pobrano i zaimportowano: ${title}`);
       onSuccess?.();
 
-      // Auto-close after short delay
-      setTimeout(() => {
-        handleClose();
-      }, 1200);
+      setTimeout(() => handleClose(), 1500);
     } catch (error: any) {
-      console.error("Error importing track:", error);
+      console.error("Import error:", error);
+      setErrorMsg(error.message || "Błąd importu");
+      setStatus("error");
       toast.error(error.message || "Błąd importu");
-      setStatus("idle");
     }
   };
 
   const handleClose = () => {
     setYoutubeUrl("");
     setStatus("idle");
-    setLoading(false);
+    setErrorMsg("");
     onClose();
   };
 
   if (!isOpen) return null;
+
+  const isProcessing = !["idle", "done", "error"].includes(status);
 
   return (
     <AnimatePresence>
@@ -124,7 +149,7 @@ export const ImportTrackModal = ({ isOpen, onClose, onSuccess }: ImportTrackModa
               <div className="p-1.5 rounded-lg bg-primary/10">
                 <Youtube className="h-4 w-4 text-primary" />
               </div>
-              <h2 className="text-sm font-bold">Import YouTube</h2>
+              <h2 className="text-sm font-bold">Import YouTube + Pobierz MP3</h2>
             </div>
             <button onClick={handleClose} className="p-1 rounded-lg hover:bg-secondary transition-colors">
               <X className="h-4 w-4" />
@@ -143,35 +168,42 @@ export const ImportTrackModal = ({ isOpen, onClose, onSuccess }: ImportTrackModa
                   value={youtubeUrl}
                   onChange={(e) => handleYouTubeUrlChange(e.target.value)}
                   className="pl-9 h-8 text-xs"
-                  disabled={status !== "idle"}
+                  disabled={isProcessing}
                 />
               </div>
             </div>
 
-            {/* Status indicator */}
+            {/* Status */}
             {status !== "idle" && (
               <motion.div
                 initial={{ opacity: 0, y: -5 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="flex items-center gap-2 p-2 rounded-lg bg-secondary/50 text-xs"
+                className={`flex items-center gap-2 p-2 rounded-lg text-xs ${
+                  status === "error" ? "bg-destructive/10 text-destructive" : "bg-secondary/50"
+                }`}
               >
-                {status === "fetching" && (
-                  <><Loader2 className="h-3.5 w-3.5 animate-spin text-primary" /><span>Pobieram dane...</span></>
-                )}
-                {status === "saving" && (
-                  <><Loader2 className="h-3.5 w-3.5 animate-spin text-primary" /><span>Zapisuję utwór...</span></>
-                )}
-                {status === "downloading" && (
-                  <><Download className="h-3.5 w-3.5 animate-bounce text-primary" /><span>Pobieram na dysk...</span></>
-                )}
-                {status === "done" && (
-                  <><CheckCircle className="h-3.5 w-3.5 text-green-500" /><span className="text-green-500 font-medium">Gotowe!</span></>
-                )}
+                {isProcessing && <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />}
+                {status === "done" && <CheckCircle className="h-3.5 w-3.5 text-green-500" />}
+                {status === "error" && <AlertCircle className="h-3.5 w-3.5" />}
+                <span className={status === "done" ? "text-green-500 font-medium" : ""}>
+                  {status === "error" ? errorMsg : STATUS_LABELS[status]}
+                </span>
               </motion.div>
             )}
 
+            {status === "error" && (
+              <Button 
+                size="sm" 
+                variant="outline" 
+                className="w-full text-xs"
+                onClick={() => { setStatus("idle"); setYoutubeUrl(""); setErrorMsg(""); }}
+              >
+                Spróbuj ponownie
+              </Button>
+            )}
+
             <p className="text-[10px] text-muted-foreground text-center">
-              Wklej link — automatycznie zaimportuję i pobiorę na dysk
+              Wklej link → automatycznie pobiorę MP3 na dysk i dodam do biblioteki
             </p>
           </div>
         </motion.div>
