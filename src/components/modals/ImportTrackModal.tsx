@@ -65,6 +65,7 @@ export const ImportTrackModal = ({ isOpen, onClose, onSuccess }: ImportTrackModa
       setStatus("downloading");
       let audioUrl: string | null = null;
       let downloadFileName = `${title} - ${artist}.m4a`;
+      let trackDuration = 180;
 
       try {
         const { data: fnData, error: fnError } = await supabase.functions.invoke('youtube-download', {
@@ -76,8 +77,8 @@ export const ImportTrackModal = ({ isOpen, onClose, onSuccess }: ImportTrackModa
         if (fnData?.url) {
           audioUrl = fnData.url;
           downloadFileName = fnData.fileName || downloadFileName;
+          if (fnData.duration) trackDuration = fnData.duration;
         } else if (fnData?.fallback) {
-          // Fallback - save without audio file
           console.log('Audio download failed, saving YouTube link only');
         } else if (fnData?.error) {
           console.log('Download error:', fnData.error);
@@ -98,7 +99,7 @@ export const ImportTrackModal = ({ isOpen, onClose, onSuccess }: ImportTrackModa
         audio_url: audioUrl,
         video_url: videoUrl,
         cover_url: coverUrl,
-        duration: 180,
+        duration: trackDuration,
         mood: null,
       });
 
