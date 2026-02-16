@@ -63,16 +63,28 @@ export const ImportTrackModal = ({ isOpen, onClose, onSuccess }: ImportTrackModa
 
       // Download audio via edge function
       setStatus("downloading");
-      const { data: fnData, error: fnError } = await supabase.functions.invoke('youtube-download', {
-        body: { videoId, title, artist },
-      });
+      let audioUrl: string | null = null;
+      let downloadFileName = `${title} - ${artist}.m4a`;
 
-      if (fnError) throw new Error(fnError.message || 'Błąd pobierania');
+      try {
+        const { data: fnData, error: fnError } = await supabase.functions.invoke('youtube-download', {
+          body: { videoId, title, artist },
+        });
 
-      if (fnData?.error) throw new Error(fnData.error);
+        if (fnError) throw new Error(fnError.message);
 
-      const audioUrl = fnData?.url;
-      if (!audioUrl) throw new Error('Nie otrzymano URL audio');
+        if (fnData?.url) {
+          audioUrl = fnData.url;
+          downloadFileName = fnData.fileName || downloadFileName;
+        } else if (fnData?.fallback) {
+          // Fallback - save without audio file
+          console.log('Audio download failed, saving YouTube link only');
+        } else if (fnData?.error) {
+          console.log('Download error:', fnData.error);
+        }
+      } catch (err: any) {
+        console.log('Edge function error, saving YouTube link:', err.message);
+      }
 
       // Save to DB
       setStatus("saving");
@@ -92,19 +104,24 @@ export const ImportTrackModal = ({ isOpen, onClose, onSuccess }: ImportTrackModa
 
       if (dbError) throw dbError;
 
-      // Trigger browser download of the audio file
-      try {
-        const link = document.createElement('a');
-        link.href = audioUrl;
-        link.download = fnData.fileName || `${title} - ${artist}.mp3`;
-        link.target = '_blank';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      } catch {}
+      // Trigger browser download if we have audio
+      if (audioUrl) {
+        try {
+          const link = document.createElement('a');
+          link.href = audioUrl;
+          link.download = downloadFileName;
+          link.target = '_blank';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        } catch {}
+      }
 
       setStatus("done");
-      toast.success(`Pobrano i zaimportowano: ${title}`);
+      const msg = audioUrl 
+        ? `Pobrano i zaimportowano: ${title}`
+        : `Zaimportowano: ${title} (odtwarzanie przez YouTube)`;
+      toast.success(msg);
       onSuccess?.();
 
       setTimeout(() => handleClose(), 1500);
