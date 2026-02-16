@@ -204,7 +204,7 @@ export const FileUploadModal = ({ isOpen, onClose, onSuccess }: FileUploadModalP
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
           onClick={(e) => e.stopPropagation()}
-          className="w-full max-w-md bg-card border border-border rounded-xl shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto"
+          className="w-full max-w-sm bg-card border border-border rounded-xl shadow-2xl overflow-hidden max-h-[80vh] overflow-y-auto"
         >
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-border">
