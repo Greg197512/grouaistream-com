@@ -13,6 +13,7 @@ import Library from "./pages/Library";
 import LikedSongs from "./pages/LikedSongs";
 import CreatePlaylist from "./pages/CreatePlaylist";
 import Radio from "./pages/Radio";
+import ImportYouTube from "./pages/ImportYouTube";
 import Settings from "./pages/Settings";
 import PlaylistManager from "./pages/PlaylistManager";
 import PlaylistDetail from "./pages/PlaylistDetail";
@@ -40,6 +41,7 @@ const App = () => (
                   <Route path="/liked" element={<LikedSongs />} />
                   <Route path="/create-playlist" element={<CreatePlaylist />} />
                   <Route path="/radio" element={<Radio />} />
+                  <Route path="/import-youtube" element={<ImportYouTube />} />
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/playlist-manager" element={<PlaylistManager />} />
                   <Route path="/playlist/:id" element={<PlaylistDetail />} />

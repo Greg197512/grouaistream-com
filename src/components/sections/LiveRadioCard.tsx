@@ -1,8 +1,10 @@
 import { motion } from "framer-motion";
 import { Radio, Sparkles, Wifi } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
 
 export const LiveRadioCard = () => {
+  const navigate = useNavigate();
   return (
     <section className="px-6 py-8">
       <motion.div 
@@ -70,7 +72,7 @@ export const LiveRadioCard = () => {
               <span className="text-xs text-accent font-medium">AI Enhanced</span>
             </div>
             <Button 
-              onClick={() => window.open("https://play.radioking.io/grouarock-radio1", "_blank")}
+              onClick={() => navigate("/radio")}
               className="groove-gradient-bg hover:opacity-90 gap-2 rounded-full"
             >
               <Radio className="h-4 w-4" />
