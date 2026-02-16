@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Radio as RadioIcon, Wifi, ExternalLink, Sparkles, Headphones } from "lucide-react";
+import { Radio as RadioIcon, Wifi, ExternalLink, Headphones } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 
@@ -8,104 +8,60 @@ const PLAYER_URL = "https://play.radioking.io/grouarock-radio1";
 const Radio = () => {
   return (
     <MainLayout>
-      <div className="px-6 py-8 space-y-6">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
-          <motion.div
-            animate={{ scale: [1, 1.08, 1] }}
-            transition={{ duration: 2, repeat: Infinity }}
-            className="groove-gradient-bg h-16 w-16 rounded-2xl flex items-center justify-center shadow-lg"
-            style={{ boxShadow: "var(--groove-glow)" }}
-          >
-            <RadioIcon className="h-8 w-8 text-primary-foreground" />
-          </motion.div>
-          <div className="flex-1">
-            <div className="flex items-center gap-3">
-              <h1 className="font-display text-3xl font-bold">GrouaRadio Live</h1>
-              <span className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-destructive/20 text-destructive text-xs font-semibold animate-pulse">
-                <Wifi className="h-3 w-3" />
-                LIVE
-              </span>
-            </div>
-            <p className="text-muted-foreground mt-1">
-              AI-enhanced radio streaming • Powered by GrouaRock Radio
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent/20 border border-accent/30">
-              <Sparkles className="h-3 w-3 text-accent" />
-              <span className="text-xs text-accent font-medium">AI Enhanced</span>
-            </div>
-            <Button
-              onClick={() => window.open(PLAYER_URL, "_blank")}
-              variant="outline"
-              className="gap-2 hover:bg-primary/10"
-            >
-              <ExternalLink className="h-4 w-4" />
-              Nowa karta
-            </Button>
-          </div>
-        </div>
-
-        {/* Player Container */}
+      <div className="px-6 py-8 flex flex-col items-center justify-center min-h-[60vh]">
+        {/* Compact Radio Widget */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="relative rounded-2xl overflow-hidden border border-border/50"
-          style={{ boxShadow: "0 0 40px hsl(14 100% 57% / 0.08), 0 0 80px hsl(38 100% 50% / 0.05)" }}
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="w-full max-w-sm"
         >
-          {/* Decorative top bar */}
-          <div className="relative h-2 w-full groove-gradient-bg">
+          {/* Header */}
+          <div className="flex items-center justify-center gap-3 mb-6">
             <motion.div
-              className="absolute inset-0 opacity-50"
-              animate={{ backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"] }}
-              transition={{ duration: 5, repeat: Infinity, ease: "linear" }}
-              style={{
-                background: "linear-gradient(90deg, transparent, hsl(38 100% 50% / 0.6), transparent)",
-                backgroundSize: "200% 100%",
-              }}
-            />
-          </div>
-
-          {/* Info bar above iframe */}
-          <div className="flex items-center justify-between px-5 py-2 bg-card/80 backdrop-blur-sm border-b border-border/30">
-            <div className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-full groove-gradient-bg flex items-center justify-center">
-                <Headphones className="h-4 w-4 text-primary-foreground" />
+              animate={{ scale: [1, 1.1, 1] }}
+              transition={{ duration: 2, repeat: Infinity }}
+              className="groove-gradient-bg h-12 w-12 rounded-full flex items-center justify-center shadow-lg"
+              style={{ boxShadow: "var(--groove-glow)" }}
+            >
+              <RadioIcon className="h-6 w-6 text-primary-foreground" />
+            </motion.div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="font-display text-lg font-bold">GrouaRadio</h2>
+                <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-destructive/20 text-destructive text-[10px] font-semibold animate-pulse">
+                  <Wifi className="h-2.5 w-2.5" />
+                  LIVE
+                </span>
               </div>
-              <div className="flex gap-0.5 ml-1">
-                {[1, 2, 3].map((i) => (
-                  <motion.div
-                    key={i}
-                    className="w-0.5 bg-primary rounded-full"
-                    animate={{ height: [3, 10, 3] }}
-                    transition={{ duration: 0.5, repeat: Infinity, delay: i * 0.12 }}
-                  />
-                ))}
-              </div>
+              <p className="text-xs text-muted-foreground">GrouaRock Radio</p>
             </div>
           </div>
 
-          {/* Iframe */}
-          <div className="bg-card">
+          {/* Mini Player iframe */}
+          <div className="rounded-2xl overflow-hidden border border-border/50 bg-card" style={{ boxShadow: "0 0 30px hsl(14 100% 57% / 0.06)" }}>
+            <div className="h-1 w-full groove-gradient-bg" />
             <iframe
               src={PLAYER_URL}
               className="w-full border-0"
-              style={{ height: "calc(100vh - 300px)", minHeight: "480px" }}
+              style={{ height: "160px" }}
               allow="autoplay; encrypted-media"
               title="GrouaRadio Player"
             />
           </div>
 
-          {/* Decorative bottom bar */}
-          <div className="h-1 w-full groove-gradient-bg opacity-50" />
+          {/* Open in new tab */}
+          <div className="flex justify-center mt-4">
+            <Button
+              onClick={() => window.open(PLAYER_URL, "_blank")}
+              variant="ghost"
+              size="sm"
+              className="gap-2 text-xs text-muted-foreground hover:text-foreground"
+            >
+              <ExternalLink className="h-3 w-3" />
+              Otwórz pełny player
+            </Button>
+          </div>
         </motion.div>
-
-        {/* Bottom hint */}
-        <p className="text-center text-xs text-muted-foreground">
-          Naciśnij Play w playerze powyżej, aby rozpocząć słuchanie • Używaj kontrolek głośności w playerze
-        </p>
       </div>
     </MainLayout>
   );

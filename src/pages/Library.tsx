@@ -152,7 +152,7 @@ const Library = () => {
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            onClick={() => window.open("https://play.radioking.io/grouarock-radio1", "_blank")}
+            onClick={() => navigate("/radio")}
             className="flex items-center gap-4 p-4 rounded-xl bg-gradient-to-r from-primary/20 to-accent/20 border border-primary/30 hover:border-primary/50 transition-colors"
           >
             <div className="flex h-14 w-14 items-center justify-center rounded-lg groove-gradient-bg">
