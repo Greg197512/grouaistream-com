@@ -19,7 +19,7 @@ const playlistItems = [
   { icon: "add_circle", label: "Create Playlist", href: "/create-playlist" },
   { icon: "favorite", label: "Liked Songs", href: "/liked" },
   { icon: "swap_horiz", label: "Manage Playlists", href: "/playlist-manager" },
-  { icon: "radio", label: "GrouaRadio Live", href: "https://play.radioking.io/grouaradio", badge: "LIVE", external: true },
+  { icon: "radio", label: "GrouaRadio Live", href: "https://play.radioking.io/grouarock-radio1", badge: "LIVE", external: true },
 ];
 
 const aiFeatures = [

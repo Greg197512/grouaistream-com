@@ -130,7 +130,7 @@ const Radio = () => {
             </p>
           </div>
           <Button
-            onClick={() => window.open("https://grouaradio.com/", "_blank")}
+            onClick={() => window.open("https://play.radioking.io/grouarock-radio1", "_blank")}
             variant="outline"
             className="gap-2 hover:bg-primary/10"
           >

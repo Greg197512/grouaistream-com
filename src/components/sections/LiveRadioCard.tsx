@@ -69,7 +69,10 @@ export const LiveRadioCard = () => {
               <Sparkles className="h-3 w-3 text-accent" />
               <span className="text-xs text-accent font-medium">AI Enhanced</span>
             </div>
-            <Button className="groove-gradient-bg hover:opacity-90 gap-2 rounded-full">
+            <Button 
+              onClick={() => window.open("https://play.radioking.io/grouarock-radio1", "_blank")}
+              className="groove-gradient-bg hover:opacity-90 gap-2 rounded-full"
+            >
               <Radio className="h-4 w-4" />
               Tune In
             </Button>
