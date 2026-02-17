@@ -108,6 +108,60 @@ export type Database = {
         }
         Relationships: []
       }
+      movies: {
+        Row: {
+          category: string
+          country: string | null
+          created_at: string
+          description: string | null
+          director: string
+          duration_minutes: number | null
+          genre: string | null
+          id: string
+          language: string | null
+          original_title: string | null
+          poster_url: string | null
+          rating: number | null
+          title: string
+          video_url: string | null
+          year: number | null
+        }
+        Insert: {
+          category?: string
+          country?: string | null
+          created_at?: string
+          description?: string | null
+          director: string
+          duration_minutes?: number | null
+          genre?: string | null
+          id?: string
+          language?: string | null
+          original_title?: string | null
+          poster_url?: string | null
+          rating?: number | null
+          title: string
+          video_url?: string | null
+          year?: number | null
+        }
+        Update: {
+          category?: string
+          country?: string | null
+          created_at?: string
+          description?: string | null
+          director?: string
+          duration_minutes?: number | null
+          genre?: string | null
+          id?: string
+          language?: string | null
+          original_title?: string | null
+          poster_url?: string | null
+          rating?: number | null
+          title?: string
+          video_url?: string | null
+          year?: number | null
+        }
+        Relationships: []
+      }
       playlist_tracks: {
         Row: {
           added_at: string
