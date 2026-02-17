@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
-import { Library as LibraryIcon, Plus, Music, Clock, Heart, Upload, Youtube, FileAudio } from "lucide-react";
+import { Library as LibraryIcon, Plus, Music, Clock, Heart, Upload, Youtube, FileAudio, Loader2, Database } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { PlaylistCard } from "@/components/cards/PlaylistCard";
@@ -29,6 +30,53 @@ const Library = () => {
   const [loading, setLoading] = useState(true);
   const [showImportModal, setShowImportModal] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [populating, setPopulating] = useState(false);
+  const [populateProgress, setPopulateProgress] = useState(0);
+  const [populateMsg, setPopulateMsg] = useState("");
+
+  const runBulkPopulate = useCallback(async () => {
+    if (populating) return;
+    setPopulating(true);
+    setPopulateProgress(0);
+    setPopulateMsg("Rozpoczynam wypełnianie biblioteki...");
+
+    try {
+      for (let batch = 0; batch < 40; batch++) {
+        setPopulateMsg(`Batch ${batch + 1}/40 — pobieram utwory...`);
+        
+        const { data, error } = await supabase.functions.invoke('bulk-populate', {
+          body: { batch, batchSize: 500, source: 'all' },
+        });
+
+        if (error) {
+          console.error('Batch error:', error);
+          continue;
+        }
+
+        const progress = data?.progress || Math.round(((batch + 1) / 40) * 100);
+        setPopulateProgress(Math.min(progress, 100));
+        setPopulateMsg(`Batch ${batch + 1}/40 — dodano ${data?.added || 0} utworów (${data?.totalLibrary || '?'} łącznie)`);
+
+        if ((data?.totalLibrary || 0) >= 20000) {
+          setPopulateMsg(`Cel osiągnięty! ${data.totalLibrary} utworów w bibliotece.`);
+          break;
+        }
+
+        // Small delay between batches
+        await new Promise(r => setTimeout(r, 500));
+      }
+
+      setPopulateProgress(100);
+      setPopulateMsg("Gotowe! Biblioteka wypełniona.");
+      toast.success("Biblioteka wypełniona!");
+      loadLibrary();
+    } catch (err: any) {
+      console.error('Populate error:', err);
+      toast.error("Błąd podczas wypełniania: " + (err.message || "Unknown"));
+    } finally {
+      setTimeout(() => setPopulating(false), 3000);
+    }
+  }, [populating]);
 
   const loadLibrary = async () => {
     if (!user) return;
@@ -93,6 +141,15 @@ const Library = () => {
           </div>
           <div className="flex gap-2 flex-wrap">
             <Button
+              onClick={runBulkPopulate}
+              variant="outline"
+              className="gap-2"
+              disabled={populating}
+            >
+              {populating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Database className="h-4 w-4" />}
+              {populating ? "Wypełniam..." : "Wypełnij 20k"}
+            </Button>
+            <Button
               onClick={() => setShowUploadModal(true)}
               variant="outline"
               className="gap-2"
@@ -117,6 +174,17 @@ const Library = () => {
             </Button>
           </div>
         </div>
+
+        {/* Populate progress */}
+        {populating && (
+          <div className="mb-6 p-4 rounded-xl border border-border bg-card space-y-2">
+            <div className="flex items-center justify-between text-sm">
+              <span className="font-medium">{populateMsg}</span>
+              <span className="text-muted-foreground">{populateProgress}%</span>
+            </div>
+            <Progress value={populateProgress} className="h-2" />
+          </div>
+        )}
 
         {/* Quick Access Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
