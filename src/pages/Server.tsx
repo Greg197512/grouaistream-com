@@ -1,11 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { HardDrive, Upload, Music, FileAudio, FileVideo, Play, Pause, Search, Loader2, CheckCircle, AlertCircle, X, Film, Download } from "lucide-react";
+import { HardDrive, Upload, Music, FileAudio, FileVideo, Play, Pause, Search, Loader2, CheckCircle, AlertCircle, X, Film, Download, Trash2 } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -15,7 +13,25 @@ import { cn } from "@/lib/utils";
 
 const ALLOWED_AUDIO = ["audio/mpeg", "audio/wav", "audio/mp3", "audio/x-wav"];
 const ALLOWED_VIDEO = ["video/mp4", "video/webm"];
-const MAX_SIZE = 500 * 1024 * 1024; // 500MB for full songs/videos
+const ALL_ALLOWED = [...ALLOWED_AUDIO, ...ALLOWED_VIDEO];
+const MAX_SIZE = 500 * 1024 * 1024;
+
+interface QueuedFile {
+  id: string;
+  file: File;
+  title: string;
+  artist: string;
+  status: "pending" | "uploading" | "done" | "error";
+  progress: number;
+  error?: string;
+}
+
+const parseFileName = (name: string) => {
+  const clean = name.replace(/\.[^/.]+$/, "");
+  const parts = clean.split(" - ");
+  if (parts.length >= 2) return { artist: parts[0].trim(), title: parts.slice(1).join(" - ").trim() };
+  return { artist: "", title: clean };
+};
 
 const Server = () => {
   const { user } = useAuth();
@@ -25,17 +41,12 @@ const Server = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [filter, setFilter] = useState<"all" | "audio" | "video">("all");
   const [showUpload, setShowUpload] = useState(false);
-  
-  // Upload state
+
+  // Multi-upload state
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [file, setFile] = useState<File | null>(null);
-  const [title, setTitle] = useState("");
-  const [artist, setArtist] = useState("");
-  const [genre, setGenre] = useState("");
-  const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadQueue, setUploadQueue] = useState<QueuedFile[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const loadTracks = useCallback(async () => {
     setLoading(true);
@@ -68,66 +79,87 @@ const Server = () => {
   });
 
   const validateFile = (f: File): string | null => {
-    if (![...ALLOWED_AUDIO, ...ALLOWED_VIDEO].includes(f.type)) return "Dozwolone formaty: MP3, WAV, MP4, WebM";
+    if (!ALL_ALLOWED.includes(f.type)) return "Dozwolone formaty: MP3, WAV, MP4, WebM";
     if (f.size > MAX_SIZE) return "Max rozmiar: 500MB";
     return null;
   };
 
-  const handleFileSelect = (f: File) => {
-    setError(null);
-    const err = validateFile(f);
-    if (err) { setError(err); return; }
-    setFile(f);
-    const name = f.name.replace(/\.[^/.]+$/, "");
-    const parts = name.split(" - ");
-    if (parts.length >= 2) { setArtist(parts[0].trim()); setTitle(parts.slice(1).join(" - ").trim()); }
-    else setTitle(name);
+  const addFilesToQueue = (files: FileList | File[]) => {
+    const newItems: QueuedFile[] = [];
+    for (const f of Array.from(files)) {
+      const err = validateFile(f);
+      if (err) { toast.error(`${f.name}: ${err}`); continue; }
+      const { artist, title } = parseFileName(f.name);
+      newItems.push({
+        id: crypto.randomUUID(),
+        file: f,
+        title,
+        artist: artist || "Unknown Artist",
+        status: "pending",
+        progress: 0,
+      });
+    }
+    if (newItems.length > 0) {
+      setUploadQueue(prev => [...prev, ...newItems]);
+      setShowUpload(true);
+    }
   };
 
-  const handleUpload = async () => {
+  const removeFromQueue = (id: string) => {
+    setUploadQueue(prev => prev.filter(q => q.id !== id));
+  };
+
+  const updateQueueItem = (id: string, updates: Partial<QueuedFile>) => {
+    setUploadQueue(prev => prev.map(q => q.id === id ? { ...q, ...updates } : q));
+  };
+
+  const uploadAll = async () => {
     if (!user) { toast.error("Zaloguj się, aby przesyłać pliki"); return; }
-    if (!file || !title.trim()) { toast.error("Wybierz plik i wpisz tytuł"); return; }
+    const pending = uploadQueue.filter(q => q.status === "pending");
+    if (pending.length === 0) return;
 
-    setUploading(true);
-    setUploadProgress(0);
-    try {
-      const isVideo = ALLOWED_VIDEO.includes(file.type);
-      const ext = file.name.split('.').pop();
-      const safeName = title.replace(/[^a-zA-Z0-9\-_ ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]/g, '').substring(0, 80);
-      const filePath = `shared/${Date.now()}-${safeName}.${ext}`;
+    setIsUploading(true);
 
-      setUploadProgress(10);
-      const { error: uploadError } = await supabase.storage
-        .from("music")
-        .upload(filePath, file, { contentType: file.type });
-      if (uploadError) throw uploadError;
-      setUploadProgress(60);
+    for (const item of pending) {
+      updateQueueItem(item.id, { status: "uploading", progress: 10 });
+      try {
+        const isVideo = ALLOWED_VIDEO.includes(item.file.type);
+        const ext = item.file.name.split('.').pop();
+        const safeName = item.title.replace(/[^a-zA-Z0-9\-_ ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]/g, '').substring(0, 80);
+        const filePath = `shared/${Date.now()}-${safeName}.${ext}`;
 
-      const { data: urlData } = supabase.storage.from("music").getPublicUrl(filePath);
-      setUploadProgress(80);
+        updateQueueItem(item.id, { progress: 30 });
+        const { error: uploadError } = await supabase.storage
+          .from("music")
+          .upload(filePath, item.file, { contentType: item.file.type });
+        if (uploadError) throw uploadError;
 
-      const { error: insertError } = await supabase.from("tracks").insert({
-        title: title.trim(),
-        artist: artist.trim() || "Unknown Artist",
-        genre: genre || null,
-        duration: 0,
-        audio_url: isVideo ? null : urlData.publicUrl,
-        video_url: isVideo ? urlData.publicUrl : null,
-        cover_url: null,
-        mood: null,
-      });
-      if (insertError) throw insertError;
-      setUploadProgress(100);
+        updateQueueItem(item.id, { progress: 70 });
+        const { data: urlData } = supabase.storage.from("music").getPublicUrl(filePath);
 
-      toast.success(`"${title}" przesłany na serwer!`);
-      setFile(null); setTitle(""); setArtist(""); setGenre(""); setError(null); setShowUpload(false);
-      loadTracks();
-    } catch (err: any) {
-      toast.error(err.message || "Błąd przesyłania");
-    } finally {
-      setUploading(false);
-      setUploadProgress(0);
+        const { error: insertError } = await supabase.from("tracks").insert({
+          title: item.title,
+          artist: item.artist,
+          duration: 0,
+          audio_url: isVideo ? null : urlData.publicUrl,
+          video_url: isVideo ? urlData.publicUrl : null,
+        });
+        if (insertError) throw insertError;
+
+        updateQueueItem(item.id, { status: "done", progress: 100 });
+      } catch (err: any) {
+        updateQueueItem(item.id, { status: "error", error: err.message || "Błąd", progress: 0 });
+      }
     }
+
+    setIsUploading(false);
+    const doneCount = uploadQueue.filter(q => q.status === "done" || pending.find(p => p.id === q.id)).length;
+    toast.success(`Przesłano ${pending.length} plików na serwer!`);
+    loadTracks();
+  };
+
+  const clearDone = () => {
+    setUploadQueue(prev => prev.filter(q => q.status !== "done"));
   };
 
   const handleDownload = (track: Track) => {
@@ -154,6 +186,12 @@ const Server = () => {
     const sec = Math.floor(s % 60);
     return `${m}:${sec.toString().padStart(2, "0")}`;
   };
+
+  const totalPending = uploadQueue.filter(q => q.status === "pending").length;
+  const totalDone = uploadQueue.filter(q => q.status === "done").length;
+  const overallProgress = uploadQueue.length > 0
+    ? Math.round(uploadQueue.reduce((sum, q) => sum + q.progress, 0) / uploadQueue.length)
+    : 0;
 
   return (
     <MainLayout>
@@ -190,7 +228,7 @@ const Server = () => {
                 <div className="flex items-center justify-between">
                   <h3 className="font-semibold flex items-center gap-2">
                     <Upload className="h-4 w-4 text-primary" />
-                    Wrzuć plik na wspólny serwer
+                    Masowy upload — przeciągnij wiele plików naraz
                   </h3>
                   <button onClick={() => setShowUpload(false)} className="p-1 rounded hover:bg-secondary">
                     <X className="h-4 w-4" />
@@ -202,78 +240,87 @@ const Server = () => {
                   onDragEnter={(e) => { e.preventDefault(); setDragActive(true); }}
                   onDragLeave={(e) => { e.preventDefault(); setDragActive(false); }}
                   onDragOver={(e) => e.preventDefault()}
-                  onDrop={(e) => { e.preventDefault(); setDragActive(false); if (e.dataTransfer.files[0]) handleFileSelect(e.dataTransfer.files[0]); }}
+                  onDrop={(e) => { e.preventDefault(); setDragActive(false); addFilesToQueue(e.dataTransfer.files); }}
                   onClick={() => fileInputRef.current?.click()}
                   className={cn(
                     "border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all",
-                    dragActive ? "border-primary bg-primary/10" : "border-border hover:border-primary/50",
-                    file && "border-green-500 bg-green-500/10"
+                    dragActive ? "border-primary bg-primary/10" : "border-border hover:border-primary/50"
                   )}
                 >
-                  <input ref={fileInputRef} type="file" accept=".mp3,.wav,.mp4,.webm" onChange={(e) => { if (e.target.files?.[0]) handleFileSelect(e.target.files[0]); }} className="hidden" />
-                  {file ? (
-                    <div className="flex items-center justify-center gap-3">
-                      {ALLOWED_VIDEO.includes(file.type) ? <FileVideo className="h-8 w-8 text-primary" /> : <FileAudio className="h-8 w-8 text-primary" />}
-                      <div className="text-left">
-                        <p className="font-medium text-sm">{file.name}</p>
-                        <p className="text-xs text-muted-foreground">{formatSize(file.size)}</p>
-                      </div>
-                      <CheckCircle className="h-5 w-5 text-green-500" />
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center gap-2">
-                      <Music className="h-10 w-10 text-muted-foreground" />
-                      <p className="font-medium text-sm">Przeciągnij plik MP3, WAV, MP4 lub WebM</p>
-                      <p className="text-xs text-muted-foreground">Max 500MB — pełne piosenki i teledyski</p>
-                    </div>
-                  )}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".mp3,.wav,.mp4,.webm"
+                    multiple
+                    onChange={(e) => { if (e.target.files) addFilesToQueue(e.target.files); e.target.value = ""; }}
+                    className="hidden"
+                  />
+                  <div className="flex flex-col items-center gap-2">
+                    <Upload className="h-10 w-10 text-muted-foreground" />
+                    <p className="font-medium text-sm">Przeciągnij pliki MP3, WAV, MP4, WebM</p>
+                    <p className="text-xs text-muted-foreground">Możesz wybrać wiele plików naraz — max 500MB każdy</p>
+                  </div>
                 </div>
 
-                {error && (
-                  <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
-                    <AlertCircle className="h-4 w-4" /> {error}
+                {/* Queue list */}
+                {uploadQueue.length > 0 && (
+                  <div className="space-y-2 max-h-60 overflow-y-auto">
+                    {uploadQueue.map(item => (
+                      <div key={item.id} className="flex items-center gap-3 p-2 rounded-lg bg-secondary/50 text-sm">
+                        {ALLOWED_VIDEO.includes(item.file.type)
+                          ? <FileVideo className="h-4 w-4 text-accent flex-shrink-0" />
+                          : <FileAudio className="h-4 w-4 text-primary flex-shrink-0" />
+                        }
+                        <div className="flex-1 min-w-0">
+                          <p className="truncate font-medium text-xs">
+                            {item.artist !== "Unknown Artist" ? `${item.artist} — ` : ""}{item.title}
+                          </p>
+                          <p className="text-[10px] text-muted-foreground">{formatSize(item.file.size)}</p>
+                          {item.status === "uploading" && <Progress value={item.progress} className="h-1 mt-1" />}
+                        </div>
+                        {item.status === "done" && <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />}
+                        {item.status === "error" && (
+                          <span className="text-[10px] text-destructive flex-shrink-0">{item.error}</span>
+                        )}
+                        {item.status === "uploading" && <Loader2 className="h-4 w-4 animate-spin text-primary flex-shrink-0" />}
+                        {item.status === "pending" && (
+                          <button onClick={() => removeFromQueue(item.id)} className="p-1 rounded hover:bg-secondary">
+                            <Trash2 className="h-3 w-3 text-muted-foreground" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 )}
 
-                {file && (
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div className="space-y-1">
-                      <Label className="text-xs">Tytuł *</Label>
-                      <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Tytuł utworu" />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs">Artysta</Label>
-                      <Input value={artist} onChange={(e) => setArtist(e.target.value)} placeholder="Nazwa artysty" />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs">Gatunek</Label>
-                      <Select value={genre} onValueChange={setGenre}>
-                        <SelectTrigger><SelectValue placeholder="Wybierz" /></SelectTrigger>
-                        <SelectContent>
-                          {["Rock", "Pop", "Punk", "Metal", "Electronic", "Hip-Hop", "Jazz", "Classical", "Reggae", "R&B", "Country", "Folk", "Other"].map(g => (
-                            <SelectItem key={g} value={g}>{g}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                )}
-
-                {uploading && (
+                {/* Overall progress */}
+                {isUploading && (
                   <div className="space-y-1">
                     <div className="flex justify-between text-xs">
-                      <span>Przesyłanie na serwer...</span>
-                      <span>{uploadProgress}%</span>
+                      <span>Przesyłanie {totalDone}/{uploadQueue.length}...</span>
+                      <span>{overallProgress}%</span>
                     </div>
-                    <Progress value={uploadProgress} className="h-2" />
+                    <Progress value={overallProgress} className="h-2" />
                   </div>
                 )}
 
-                {file && (
-                  <Button onClick={handleUpload} disabled={uploading || !title.trim()} className="w-full gap-2">
-                    {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                    {uploading ? "Przesyłam..." : "Wrzuć na serwer"}
-                  </Button>
+                {/* Actions */}
+                {uploadQueue.length > 0 && (
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={uploadAll}
+                      disabled={isUploading || totalPending === 0}
+                      className="flex-1 gap-2"
+                    >
+                      {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                      {isUploading ? "Przesyłam..." : `Wrzuć ${totalPending} ${totalPending === 1 ? "plik" : "plików"}`}
+                    </Button>
+                    {totalDone > 0 && (
+                      <Button variant="outline" onClick={clearDone} className="gap-1">
+                        <CheckCircle className="h-4 w-4" /> Wyczyść gotowe
+                      </Button>
+                    )}
+                  </div>
                 )}
               </div>
             </motion.div>
