@@ -120,7 +120,7 @@ export const FileUploadModal = ({ isOpen, onClose, onSuccess }: FileUploadModalP
     try {
       const isVideo = ALLOWED_VIDEO.includes(file.type);
       const ext = file.name.split('.').pop();
-      const filePath = `${user.id}/${Date.now()}-${crypto.randomUUID()}.${ext}`;
+      const filePath = `shared/${Date.now()}-${crypto.randomUUID()}.${ext}`;
 
       // Upload to storage
       setUploadProgress(20);

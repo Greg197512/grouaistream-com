@@ -20,6 +20,7 @@ import PlaylistDetail from "./pages/PlaylistDetail";
 import MoodHistory from "./pages/MoodHistory";
 import Admin from "./pages/Admin";
 import Movies from "./pages/Movies";
+import Server from "./pages/Server";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -52,6 +53,7 @@ const App = () => (
                   <Route path="/daily-mix" element={<Index />} />
                   <Route path="/social" element={<Index />} />
                   <Route path="/movies" element={<Movies />} />
+                  <Route path="/server" element={<Server />} />
                   <Route path="/admin" element={<Admin />} />
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />
