@@ -1,0 +1,1 @@
+ALTER TABLE public.liked_songs ADD CONSTRAINT liked_songs_user_track_unique UNIQUE (user_id, track_id);
