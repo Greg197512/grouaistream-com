@@ -35,11 +35,12 @@ const Search = () => {
   const { playTrack, playPlaylist, currentTrack, isPlaying, togglePlay } = usePlayer();
 
   useEffect(() => {
-    // Load all tracks initially
+    // Load only playable tracks
     const loadTracks = async () => {
       const { data, error } = await supabase
         .from("tracks")
         .select("*")
+        .or("audio_url.not.is.null,video_url.not.is.null")
         .order("created_at", { ascending: false });
 
       if (error) {
