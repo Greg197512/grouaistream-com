@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.ai-cover]
 verify_jwt = false
+
+[functions.spotify-import]
+verify_jwt = false
