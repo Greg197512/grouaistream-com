@@ -253,17 +253,34 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [repeatMode, nextTrackInternal]);
 
+  const hasPlayableSource = (track: Track) => Boolean(track.video_url || track.audio_url);
+
   const playTrack = (track: Track) => {
+    if (!hasPlayableSource(track)) {
+      toast.error("Ten utwór nie ma dostępnego źródła audio/video");
+      return;
+    }
+
     setCurrentTrack(track);
     setQueue([track]);
     setQueueIndex(0);
   };
 
   const playPlaylist = (tracks: Track[], startIndex = 0) => {
-    if (tracks.length === 0) return;
-    setQueue(tracks);
-    setQueueIndex(startIndex);
-    setCurrentTrack(tracks[startIndex]);
+    const playableTracks = tracks.filter(hasPlayableSource);
+    if (playableTracks.length === 0) {
+      toast.error("Brak odtwarzalnych utworów w tej liście");
+      return;
+    }
+
+    const requestedTrack = tracks[startIndex];
+    const playableStartIndex = requestedTrack
+      ? playableTracks.findIndex((track) => track.id === requestedTrack.id)
+      : 0;
+
+    setQueue(playableTracks);
+    setQueueIndex(playableStartIndex >= 0 ? playableStartIndex : 0);
+    setCurrentTrack(playableTracks[playableStartIndex >= 0 ? playableStartIndex : 0]);
   };
 
   const togglePlay = () => {
