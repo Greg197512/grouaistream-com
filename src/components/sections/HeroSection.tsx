@@ -68,7 +68,6 @@ export const HeroSection = () => {
           <h1 className="font-display text-4xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight">
             {t("hero.title1")}
             <span className="groove-gradient-text">{t("hero.titleHighlight")}</span>
-            {t("hero.title2")}
           </h1>
 
           <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-xl">{t("hero.subtitle")}</p>
