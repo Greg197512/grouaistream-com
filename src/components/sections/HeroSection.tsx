@@ -90,10 +90,10 @@ export const HeroSection = () => {
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.2 }}
-            className="inline-flex items-center gap-2 rounded-full bg-accent/20 border border-accent/30 px-4 py-1.5 mb-6"
+            className="inline-flex items-center gap-3 rounded-full bg-accent/20 border border-accent/30 px-4 py-2 mb-6"
           >
-            <Sparkles className="h-4 w-4 text-accent" />
-            <span className="text-sm font-medium text-accent">GrouAI Stream <span className="font-bold">by Groua</span></span>
+            <img src="/logo-icon.png" alt="GrouAI" className="h-6 w-6" />
+            <span className="text-sm font-medium text-accent">GrouAI Stream <span className="font-bold">by GrouaRock</span></span>
           </motion.div>
 
           {/* Headline */}

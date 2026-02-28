@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { useNavigate, useLocation } from "react-router-dom";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import logoIcon from "@/assets/logo-full.png";
 
 interface SidebarProps {
   collapsed: boolean;
@@ -59,26 +60,24 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
       className="relative flex h-full flex-col bg-sidebar border-r border-sidebar-border"
     >
       {/* Logo */}
-      <div className="flex h-20 items-center gap-3 px-6">
-        <motion.div 
-          className="groove-gradient-bg flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl cursor-pointer"
-          whileHover={{ scale: 1.05, rotate: 5 }}
-          onClick={() => handleNavClick("/")}
-        >
-          <span className="material-icons text-primary-foreground text-xl">music_note</span>
-        </motion.div>
-        {!collapsed && (
+      <div className="flex h-20 items-center gap-3 px-4">
+        {collapsed ? (
+          <motion.div 
+            className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl cursor-pointer overflow-hidden mx-auto"
+            whileHover={{ scale: 1.05 }}
+            onClick={() => handleNavClick("/")}
+          >
+            <img src="/logo-icon.png" alt="GrouAI Stream" className="h-10 w-10 object-contain" />
+          </motion.div>
+        ) : (
           <motion.div
             initial={{ opacity: 0, x: -10 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -10 }}
-            className="cursor-pointer"
+            className="cursor-pointer flex items-center"
             onClick={() => handleNavClick("/")}
           >
-            <h1 className="font-display text-xl font-bold groove-gradient-text">
-              GrouAI Stream
-            </h1>
-            <p className="text-xs text-muted-foreground"><span className="text-accent">by Groua</span></p>
+            <img src={logoIcon} alt="GrouAI Stream by GrouaRock" className="h-12 object-contain" />
           </motion.div>
         )}
       </div>
