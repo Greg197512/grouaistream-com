@@ -1,4 +1,3 @@
-import { useState, useEffect } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { HeroSection } from "@/components/sections/HeroSection";
 import { AIDJSection } from "@/components/sections/AIDJSection";
@@ -7,26 +6,7 @@ import { PlaylistGrid } from "@/components/sections/PlaylistGrid";
 import { LiveRadioCard } from "@/components/sections/LiveRadioCard";
 import { TopArtists } from "@/components/sections/TopArtists";
 import { GenreSection } from "@/components/sections/GenreSection";
-import { VideoPlayer } from "@/components/player/VideoPlayer";
-
-declare global {
-  interface Window {
-    toggleVideoPlayer?: () => void;
-  }
-}
-
 const Index = () => {
-  const [showVideoPlayer, setShowVideoPlayer] = useState(true);
-
-  // Expose toggle function globally for PlayerBar to access
-  useEffect(() => {
-    window.toggleVideoPlayer = () => {
-      setShowVideoPlayer(prev => !prev);
-    };
-    return () => {
-      window.toggleVideoPlayer = undefined;
-    };
-  }, []);
 
   return (
     <MainLayout>
@@ -118,11 +98,7 @@ const Index = () => {
         subtitle="What the world is listening to"
       />
 
-      {/* Video Player (floating) */}
-      <VideoPlayer
-        isVisible={showVideoPlayer}
-        onClose={() => setShowVideoPlayer(false)}
-      />
+
     </MainLayout>
   );
 };
