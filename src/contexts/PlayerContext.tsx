@@ -188,41 +188,68 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     setCurrentTrack(queue[nextIndex]);
   }, [queue, queueIndex, repeatMode, isShuffled, currentTrack, currentTime, duration, recordSkip, getSkipAnalysis, triggerAIAdaptation]);
 
+  const isHttpUrl = (value?: string | null) => Boolean(value && /^https?:\/\//i.test(value));
+
+  const isBlockedStreamUrl = (value: string) =>
+    value.includes("open.spotify.com") || value.startsWith("spotify:");
+
+  const getPlayableYouTubeId = (track: Track): string | null =>
+    track.video_url ? extractYouTubeId(track.video_url) : null;
+
+  const getPlayableAudioUrl = (track: Track): string | null => {
+    const candidates = [track.audio_url, track.video_url];
+
+    for (const candidate of candidates) {
+      if (!candidate || !isHttpUrl(candidate) || isBlockedStreamUrl(candidate)) continue;
+      if (extractYouTubeId(candidate)) continue;
+      return candidate;
+    }
+
+    return null;
+  };
+
+  const hasPlayableSource = (track: Track) =>
+    Boolean(getPlayableYouTubeId(track) || getPlayableAudioUrl(track));
+
   // Play current track when it changes
   useEffect(() => {
     if (!currentTrack) return;
 
-    // Check if track has YouTube video
-    const videoId = currentTrack.video_url ? extractYouTubeId(currentTrack.video_url) : null;
-    
+    const videoId = getPlayableYouTubeId(currentTrack);
+
     if (videoId) {
-      // YouTube mode
       setIsVideoMode(true);
       setYoutubeVideoId(videoId);
       setIsPlaying(true);
       setDuration(currentTrack.duration || 0);
-      
-      // Pause audio if playing
+
       if (audioRef.current) {
         audioRef.current.pause();
-        audioRef.current.src = '';
-      }
-    } else if (currentTrack.audio_url) {
-      // Audio mode
-      setIsVideoMode(false);
-      setYoutubeVideoId(null);
-      
-      if (audioRef.current) {
-        audioRef.current.src = currentTrack.audio_url;
-        audioRef.current.play().catch(console.error);
-        setIsPlaying(true);
+        audioRef.current.src = "";
       }
     } else {
-      toast.error("No audio available for this track");
-      return;
+      const audioUrl = getPlayableAudioUrl(currentTrack);
+
+      if (!audioUrl) {
+        toast.error("Ten utwór nie ma działającego źródła audio/video");
+        nextTrackInternal();
+        return;
+      }
+
+      setIsVideoMode(false);
+      setYoutubeVideoId(null);
+
+      if (audioRef.current) {
+        audioRef.current.src = audioUrl;
+        audioRef.current.play().then(() => {
+          setIsPlaying(true);
+        }).catch(() => {
+          toast.error("Nie udało się odtworzyć utworu. Przechodzę do następnego...");
+          nextTrackInternal();
+        });
+      }
     }
-    
-    // Log to listening history
+
     if (userId) {
       supabase.from('listening_history').insert({
         user_id: userId,
@@ -231,7 +258,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
         if (error) console.error("Failed to log listening history:", error);
       });
     }
-  }, [currentTrack, userId]);
+  }, [currentTrack, userId, nextTrackInternal]);
 
   // YouTube time update handler
   const onYouTubeTimeUpdate = useCallback((time: number, dur: number) => {
@@ -252,8 +279,6 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
       nextTrackInternal();
     }
   }, [repeatMode, nextTrackInternal]);
-
-  const hasPlayableSource = (track: Track) => Boolean(track.video_url || track.audio_url);
 
   const playTrack = (track: Track) => {
     if (!hasPlayableSource(track)) {
