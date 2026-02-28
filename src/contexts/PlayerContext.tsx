@@ -258,7 +258,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
         if (error) console.error("Failed to log listening history:", error);
       });
     }
-  }, [currentTrack, userId, nextTrackInternal]);
+  }, [currentTrack, userId]);
 
   // YouTube time update handler
   const onYouTubeTimeUpdate = useCallback((time: number, dur: number) => {
