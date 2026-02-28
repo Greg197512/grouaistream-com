@@ -60,6 +60,8 @@ export const usePlayer = () => {
 export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const trackStartTime = useRef<number>(0);
+  const isVideoModeRef = useRef(false);
+  const nextTrackRef = useRef<(isUserSkip?: boolean) => void>(() => {});
   
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -79,6 +81,9 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
 
   const { recordSkip, getSkipAnalysis, triggerAIAdaptation } = useSkipAdaptation();
 
+  // Keep refs in sync
+  useEffect(() => { isVideoModeRef.current = isVideoMode; }, [isVideoMode]);
+
   // Get user ID from Supabase auth directly to avoid circular dependency
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -92,15 +97,14 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Initialize audio element
+  // Initialize audio element ONCE — use refs to avoid stale closures
   useEffect(() => {
-    audioRef.current = new Audio();
-    audioRef.current.volume = volume / 100;
-
-    const audio = audioRef.current;
+    const audio = new Audio();
+    audio.volume = volume / 100;
+    audioRef.current = audio;
 
     const handleTimeUpdate = () => {
-      if (audio.duration && !isVideoMode) {
+      if (audio.duration && !isVideoModeRef.current) {
         setProgress((audio.currentTime / audio.duration) * 100);
         setCurrentTime(audio.currentTime);
         setDuration(audio.duration);
@@ -108,20 +112,15 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     };
 
     const handleEnded = () => {
-      if (repeatMode === 'one') {
-        audio.currentTime = 0;
-        audio.play();
-      } else {
-        nextTrackInternal();
-      }
+      nextTrackRef.current();
     };
 
-    const handleError = (e: Event) => {
-      console.error("Audio error:", e);
-      // Don't show error for YouTube tracks
-      if (!isVideoMode) {
-        toast.error("Failed to play track. Trying next...");
-        setTimeout(() => nextTrackInternal(), 1000);
+    const handleError = () => {
+      // Always check the CURRENT video mode via ref, not stale closure
+      if (!isVideoModeRef.current && audio.src && audio.src !== window.location.href) {
+        console.error("Audio playback error for:", audio.src);
+        toast.error("Nie udało się odtworzyć — przechodzę dalej...");
+        setTimeout(() => nextTrackRef.current(), 500);
       }
     };
 
@@ -135,7 +134,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
       audio.removeEventListener('error', handleError);
       audio.pause();
     };
-  }, [isVideoMode]);
+  }, []); // ONCE — no dependencies
 
   // Update volume when changed
   useEffect(() => {
@@ -187,6 +186,9 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     setQueueIndex(nextIndex);
     setCurrentTrack(queue[nextIndex]);
   }, [queue, queueIndex, repeatMode, isShuffled, currentTrack, currentTime, duration, recordSkip, getSkipAnalysis, triggerAIAdaptation]);
+
+  // Keep ref in sync so audio error/ended handlers use latest function
+  useEffect(() => { nextTrackRef.current = nextTrackInternal; }, [nextTrackInternal]);
 
   const isHttpUrl = (value?: string | null) => Boolean(value && /^https?:\/\//i.test(value));
 
