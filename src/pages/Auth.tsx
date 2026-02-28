@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { Sparkles, Mail, Lock, User, ArrowLeft, Eye, EyeOff } from "lucide-react";
+import { Mail, Lock, User, ArrowLeft, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -65,18 +65,14 @@ const Auth = () => {
           </button>
 
           {/* Logo */}
-          <div className="flex items-center gap-3 mb-8">
-            <div className="groove-gradient-bg flex h-12 w-12 items-center justify-center rounded-xl">
-              <Sparkles className="h-6 w-6 text-primary-foreground" />
-            </div>
-            <div>
-              <h1 className="font-display text-2xl font-bold groove-gradient-text">
-                GrouAI Stream
-              </h1>
-              <p className="text-sm text-muted-foreground">
-                {isLogin ? "Welcome back" : "Create your account"} <span className="text-accent">by Groua</span>
-              </p>
-            </div>
+          <div className="flex flex-col items-center mb-8">
+            <img src="/logo-icon.png" alt="GrouAI Stream" className="h-16 w-16 mb-4" />
+            <h1 className="font-display text-2xl font-bold groove-gradient-text">
+              GrouAI Stream
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              {isLogin ? "Welcome back" : "Create your account"}
+            </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
