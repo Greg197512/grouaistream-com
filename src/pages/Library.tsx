@@ -4,6 +4,7 @@ import { Library as LibraryIcon, Plus, Music, Clock, Heart, Upload, Youtube, Fil
 import { Progress } from "@/components/ui/progress";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { PlaylistCard } from "@/components/cards/PlaylistCard";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -30,6 +31,10 @@ const Library = () => {
   const [loading, setLoading] = useState(true);
   const [showImportModal, setShowImportModal] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [spotifyToken, setSpotifyToken] = useState("");
+  const [spotifyImporting, setSpotifyImporting] = useState(false);
+  const [spotifyMsg, setSpotifyMsg] = useState("");
+  const [showSpotifyInput, setShowSpotifyInput] = useState(false);
   const [populating, setPopulating] = useState(false);
   const [populateProgress, setPopulateProgress] = useState(0);
   const [populateMsg, setPopulateMsg] = useState("");
@@ -77,6 +82,33 @@ const Library = () => {
       setTimeout(() => setPopulating(false), 3000);
     }
   }, [populating]);
+
+  const runSpotifyImport = useCallback(async () => {
+    if (!spotifyToken.trim()) {
+      toast.error("Wklej token Spotify!");
+      return;
+    }
+    setSpotifyImporting(true);
+    setSpotifyMsg("Pobieram utwory ze Spotify...");
+    try {
+      const { data, error } = await supabase.functions.invoke('spotify-import', {
+        body: { spotifyToken: spotifyToken.trim() },
+      });
+      if (error) throw error;
+      setSpotifyMsg(`Gotowe! Pobrano ${data.fetched} utworów, dodano ${data.inserted} nowych.`);
+      toast.success(`Dodano ${data.inserted} utworów ze Spotify!`);
+      loadLibrary();
+    } catch (err: any) {
+      console.error('Spotify import error:', err);
+      toast.error("Błąd importu: " + (err.message || "Unknown"));
+      setSpotifyMsg("Błąd importu ze Spotify.");
+    } finally {
+      setTimeout(() => {
+        setSpotifyImporting(false);
+        setSpotifyMsg("");
+      }, 3000);
+    }
+  }, [spotifyToken]);
 
   const loadLibrary = async () => {
     if (!user) return;
@@ -150,6 +182,15 @@ const Library = () => {
               {populating ? "Wypełniam..." : "Wypełnij 20k"}
             </Button>
             <Button
+              onClick={() => setShowSpotifyInput(!showSpotifyInput)}
+              variant="outline"
+              className="gap-2 border-green-500/50 text-green-400 hover:bg-green-500/10"
+              disabled={spotifyImporting}
+            >
+              {spotifyImporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Music className="h-4 w-4" />}
+              Spotify Import
+            </Button>
+            <Button
               onClick={() => setShowUploadModal(true)}
               variant="outline"
               className="gap-2"
@@ -186,7 +227,38 @@ const Library = () => {
           </div>
         )}
 
-        {/* Quick Access Cards */}
+        {/* Spotify Import Section */}
+        {showSpotifyInput && (
+          <div className="mb-6 p-4 rounded-xl border border-green-500/30 bg-green-500/5 space-y-3">
+            <h3 className="font-semibold text-green-400 flex items-center gap-2">
+              <Music className="h-4 w-4" /> Import ze Spotify
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              Wklej swój token Spotify Bearer. Pobierzemy Twoje top tracks, polubione, playlisty i popularne utwory.
+            </p>
+            <div className="flex gap-2">
+              <Input
+                placeholder="Wklej token Spotify (Bearer token)..."
+                value={spotifyToken}
+                onChange={e => setSpotifyToken(e.target.value)}
+                className="flex-1 bg-background/50"
+              />
+              <Button
+                onClick={runSpotifyImport}
+                disabled={spotifyImporting || !spotifyToken.trim()}
+                className="bg-green-600 hover:bg-green-700 text-white gap-2"
+              >
+                {spotifyImporting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                {spotifyImporting ? "Importuję..." : "Importuj"}
+              </Button>
+            </div>
+            {spotifyMsg && (
+              <p className="text-sm text-green-400">{spotifyMsg}</p>
+            )}
+          </div>
+        )}
+
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
           <motion.button
             whileHover={{ scale: 1.02 }}
