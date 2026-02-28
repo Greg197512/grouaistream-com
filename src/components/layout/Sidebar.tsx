@@ -160,8 +160,8 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
         </div>
       </nav>
 
-      {/* Settings */}
-      <div className="border-t border-border p-3">
+      {/* Settings & Legal */}
+      <div className="border-t border-border p-3 space-y-1">
         <NavItem
           icon="settings"
           label="Settings"
@@ -169,6 +169,14 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
           active={activeItem === "/settings"}
           collapsed={collapsed}
           onClick={() => handleNavClick("/settings")}
+        />
+        <NavItem
+          icon="gavel"
+          label="Dokumenty prawne"
+          href="/legal"
+          active={activeItem === "/legal"}
+          collapsed={collapsed}
+          onClick={() => handleNavClick("/legal")}
         />
       </div>
     </motion.aside>

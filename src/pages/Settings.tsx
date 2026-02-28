@@ -269,6 +269,33 @@ const Settings = () => {
           </div>
         </section>
 
+        {/* Legal & Compliance */}
+        <section className="groove-card p-6 mb-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Shield className="h-5 w-5 text-primary" />
+            <h2 className="font-semibold">Legalność i zgodność z prawem</h2>
+          </div>
+          <div className="p-4 rounded-lg bg-primary/10 border border-primary/20 mb-4">
+            <p className="font-semibold text-primary text-sm flex items-center gap-2">
+              <Shield className="h-4 w-4" />
+              ✅ Wszystkie treści w GrouAI Stream są w pełni legalne
+            </p>
+            <p className="text-xs text-muted-foreground mt-2">
+              Muzyka pochodzi z legalnych źródeł: Creative Commons (CC Mixter), oficjalne YouTube Embed API, 
+              oraz treści przesłane przez użytkowników z odpowiednimi prawami. Działamy zgodnie z RODO, 
+              Dyrektywą DSM 2019/790 oraz YouTube/Spotify API Terms of Service.
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            onClick={() => navigate("/legal")}
+            className="gap-2 w-full"
+          >
+            <Shield className="h-4 w-4" />
+            Regulamin, Polityka Prywatności, RODO i prawa autorskie
+          </Button>
+        </section>
+
         {/* Sign Out */}
         <Button
           variant="outline"
