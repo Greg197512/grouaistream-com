@@ -74,6 +74,7 @@ const Server = () => {
   // AI state
   const [isCategorizing, setIsCategorizing] = useState(false);
   const [selectedTracks, setSelectedTracks] = useState<Set<string>>(new Set());
+  const [coverGenProgress, setCoverGenProgress] = useState<{ current: number; total: number } | null>(null);
 
   const loadTracks = useCallback(async () => {
     setLoading(true);
@@ -259,26 +260,71 @@ const Server = () => {
 
   const categorizeWithAI = async (trackIds?: string[]) => {
     setIsCategorizing(true);
-    toast.loading("🤖 AI kategoryzuje i generuje okładki...", { id: "ai-cat" });
+    toast.loading("🤖 AI kategoryzuje utwory...", { id: "ai-cat" });
     
     try {
+      const ids = trackIds || Array.from(selectedTracks);
       const { data, error } = await supabase.functions.invoke("ai-categorize", {
-        body: { trackIds: trackIds || Array.from(selectedTracks) },
+        body: { trackIds: ids },
       });
 
       if (error) throw error;
       
       toast.success(
         `✨ AI zaktualizowało ${data.categorized}/${data.total} utworów!`, 
-        { id: "ai-cat", duration: 4000 }
+        { id: "ai-cat", duration: 3000 }
       );
       loadTracks();
       setSelectedTracks(new Set());
+
+      // Now generate covers one-by-one in background
+      generateCoversInBackground(ids);
     } catch (err: any) {
       toast.error(err.message || "Błąd AI", { id: "ai-cat" });
     } finally {
       setIsCategorizing(false);
     }
+  };
+
+
+  const generateCoversInBackground = async (trackIds: string[]) => {
+    // Fetch tracks that need covers
+    const { data: tracksNeedingCovers } = await supabase
+      .from("tracks")
+      .select("id, cover_url")
+      .in("id", trackIds);
+
+    const needCover = (tracksNeedingCovers || []).filter(
+      t => !t.cover_url || t.cover_url.includes("picsum.photos")
+    );
+
+    if (needCover.length === 0) return;
+
+    setCoverGenProgress({ current: 0, total: needCover.length });
+    toast.loading(`🎨 Generuję okładki AI: 0/${needCover.length}...`, { id: "ai-covers" });
+
+    let done = 0;
+    for (const t of needCover) {
+      try {
+        await supabase.functions.invoke("ai-cover", {
+          body: { trackId: t.id },
+        });
+        done++;
+        setCoverGenProgress({ current: done, total: needCover.length });
+        toast.loading(`🎨 Generuję okładki AI: ${done}/${needCover.length}...`, { id: "ai-covers" });
+        
+        // Refresh list periodically
+        if (done % 3 === 0 || done === needCover.length) {
+          loadTracks();
+        }
+      } catch (err) {
+        console.error("Cover gen failed for", t.id, err);
+      }
+    }
+
+    setCoverGenProgress(null);
+    toast.success(`🎨 Wygenerowano ${done} okładek AI!`, { id: "ai-covers", duration: 4000 });
+    loadTracks();
   };
 
   const clearDone = () => {
@@ -608,7 +654,12 @@ const Server = () => {
           )}
           {isCategorizing && (
             <span className="flex items-center gap-1 text-accent">
-              <Loader2 className="h-4 w-4 animate-spin" /> AI pracuje...
+              <Loader2 className="h-4 w-4 animate-spin" /> AI kategoryzuje...
+            </span>
+          )}
+          {coverGenProgress && (
+            <span className="flex items-center gap-1 text-accent">
+              <ImageIcon className="h-4 w-4 animate-pulse" /> Okładki: {coverGenProgress.current}/{coverGenProgress.total}
             </span>
           )}
         </div>
