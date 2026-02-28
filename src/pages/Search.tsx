@@ -16,15 +16,44 @@ const formatDuration = (seconds: number): string => {
   return `${mins}:${secs.toString().padStart(2, "0")}`;
 };
 
+const isPlayableTrack = (track: Track): boolean => {
+  const youtubePattern = /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|^[a-zA-Z0-9_-]{11}$)/;
+  const hasValidYouTube = Boolean(track.video_url && youtubePattern.test(track.video_url));
+
+  const hasValidAudio = Boolean(
+    track.audio_url &&
+      /^https?:\/\//i.test(track.audio_url) &&
+      !track.audio_url.includes("open.spotify.com") &&
+      !track.audio_url.startsWith("spotify:")
+  );
+
+  const hasValidDirectVideo = Boolean(
+    track.video_url &&
+      /^https?:\/\//i.test(track.video_url) &&
+      !track.video_url.includes("open.spotify.com") &&
+      !track.video_url.startsWith("spotify:")
+  );
+
+  return hasValidYouTube || hasValidAudio || hasValidDirectVideo;
+};
+
 const genres = [
   { name: "Rock", color: "from-red-500 to-orange-500" },
-  { name: "Pop", color: "from-pink-500 to-purple-500" },
   { name: "Punk", color: "from-gray-700 to-gray-900" },
-  { name: "Pop-Rock", color: "from-purple-500 to-pink-500" },
-  { name: "Pop-Punk", color: "from-green-400 to-teal-500" },
-  { name: "Punk-Rock", color: "from-orange-400 to-red-500" },
+  { name: "Pop", color: "from-pink-500 to-purple-500" },
+  { name: "Hip-Hop", color: "from-amber-500 to-orange-600" },
+  { name: "Rap", color: "from-slate-600 to-slate-900" },
+  { name: "R&B", color: "from-violet-500 to-fuchsia-500" },
   { name: "Electronic", color: "from-cyan-500 to-blue-500" },
-  { name: "Chill", color: "from-indigo-500 to-purple-500" },
+  { name: "House", color: "from-sky-500 to-indigo-500" },
+  { name: "Techno", color: "from-blue-600 to-purple-700" },
+  { name: "Metal", color: "from-zinc-700 to-zinc-900" },
+  { name: "Indie", color: "from-emerald-500 to-teal-500" },
+  { name: "Alternative", color: "from-lime-500 to-green-600" },
+  { name: "Jazz", color: "from-yellow-500 to-amber-600" },
+  { name: "Classical", color: "from-rose-400 to-orange-400" },
+  { name: "Country", color: "from-orange-500 to-yellow-600" },
+  { name: "Reggae", color: "from-green-500 to-yellow-500" },
 ];
 
 const Search = () => {
@@ -48,7 +77,8 @@ const Search = () => {
         return;
       }
 
-      setAllTracks(data || []);
+      const playableTracks = (data || []).filter(isPlayableTrack);
+      setAllTracks(playableTracks);
     };
 
     loadTracks();
