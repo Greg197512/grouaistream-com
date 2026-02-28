@@ -34,37 +34,57 @@ const Legal = () => {
 
               <Section title="§1. Postanowienia ogólne">
                 <p>1. Niniejszy Regulamin określa zasady korzystania z platformy muzycznej GrouAI Stream (dalej: „Serwis").</p>
-                <p>2. Serwis jest prowadzony przez GrouaRock z siedzibą w Holandii, zarejestrowaną zgodnie z prawem holenderskim (KvK).</p>
+                <p>2. Serwis jest prowadzony przez GrouaRock — projekt w fazie przedrejestracyjnej, z planowaną siedzibą w Holandii. Rejestracja w Izbie Handlowej (Kamer van Koophandel, KvK) nastąpi po osiągnięciu wystarczającej bazy użytkowników. Do tego momentu Serwis działa jako projekt indywidualny na zasadach eenmanszaak (jednoosobowa działalność gospodarcza wg prawa holenderskiego).</p>
                 <p>3. Korzystanie z Serwisu oznacza akceptację niniejszego Regulaminu oraz Polityki Prywatności.</p>
               </Section>
 
-              <Section title="§2. Usługi">
+              <Section title="§2. Status prawny i rejestracja">
+                <div className="p-4 rounded-lg bg-accent/10 border border-accent/20 mb-3">
+                  <p className="font-semibold text-accent text-sm">📋 Informacja o statusie rejestracyjnym</p>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    GrouaRock znajduje się obecnie w fazie rozwojowej (pre-launch). Formalna rejestracja w KvK 
+                    oraz uzyskanie numeru BTW (VAT) nastąpi zgodnie z holenderskim prawem handlowym po spełnieniu 
+                    progów rejestracyjnych, uzależnionych od liczby aktywnych użytkowników i obrotów.
+                  </p>
+                </div>
+                <p>1. Niniejszy Regulamin stanowi wiążącą umowę pomiędzy użytkownikiem a operatorem Serwisu, niezależnie od statusu rejestracyjnego podmiotu.</p>
+                <p>2. Operator zobowiązuje się do formalnej rejestracji działalności gospodarczej w KvK po osiągnięciu progu 500 aktywnych użytkowników lub 10 000 EUR rocznego obrotu — zgodnie z wymogami prawa holenderskiego.</p>
+                <p>3. Regulamin, Polityka Prywatności oraz pozostałe dokumenty prawne będą aktualizowane wraz z postępem rejestracji. O każdej istotnej zmianie użytkownicy zostaną poinformowani z co najmniej 14-dniowym wyprzedzeniem drogą mailową.</p>
+                <p>4. Do momentu formalnej rejestracji, operator ponosi pełną odpowiedzialność osobistą za działanie Serwisu zgodnie z art. 6:162 Burgerlijk Wetboek (holenderski kodeks cywilny).</p>
+              </Section>
+
+              <Section title="§3. Usługi">
                 <p>1. Serwis umożliwia: odtwarzanie muzyki z legalnych źródeł, tworzenie playlist, korzystanie z rekomendacji AI, import metadanych muzycznych.</p>
                 <p>2. Wszystkie treści udostępniane w Serwisie pochodzą z legalnych źródeł, w tym: utwory na licencji Creative Commons (CC Mixter), materiały przesłane przez użytkowników z odpowiednimi prawami, oraz osadzone treści z YouTube zgodnie z YouTube API Terms of Service.</p>
                 <p>3. Serwis nie przechowuje ani nie dystrybuuje nielegalnych kopii utworów chronionych prawem autorskim.</p>
               </Section>
 
-              <Section title="§3. Konto użytkownika">
+              <Section title="§4. Konto użytkownika">
                 <p>1. Rejestracja wymaga podania adresu e-mail i hasła.</p>
                 <p>2. Użytkownik jest odpowiedzialny za bezpieczeństwo swojego konta.</p>
                 <p>3. Konta mogą zostać zawieszone w przypadku naruszenia Regulaminu.</p>
               </Section>
 
-              <Section title="§4. Licencje i prawa autorskie">
+              <Section title="§5. Licencje i prawa autorskie">
                 <p>1. Utwory z CC Mixter są udostępniane na licencjach Creative Commons (CC BY, CC BY-NC, CC BY-SA itp.). Atrybucja jest wyświetlana przy każdym utworze.</p>
                 <p>2. Osadzanie filmów z YouTube odbywa się zgodnie z oficjalnym YouTube IFrame API i nie stanowi naruszenia praw autorskich (art. 5 Dyrektywy 2001/29/WE).</p>
                 <p>3. Użytkownicy przesyłający własne utwory gwarantują, że posiadają do nich prawa lub odpowiednią licencję.</p>
               </Section>
 
-              <Section title="§5. Ograniczenie odpowiedzialności">
+              <Section title="§6. Ograniczenie odpowiedzialności">
                 <p>1. Serwis jest udostępniany „tak jak jest" (as-is). Nie gwarantujemy nieprzerwanej dostępności.</p>
                 <p>2. Nie ponosimy odpowiedzialności za treści przesłane przez użytkowników.</p>
                 <p>3. Zastrzegamy prawo do usunięcia treści naruszających prawa autorskie na podstawie zgłoszeń DMCA/NTD.</p>
               </Section>
 
-              <Section title="§6. Prawo właściwe">
+              <Section title="§7. Prawo właściwe">
                 <p>1. Regulamin podlega prawu holenderskiemu.</p>
-                <p>2. Spory rozstrzygane są przez sąd właściwy dla siedziby operatora.</p>
+                <p>2. Spory rozstrzygane są przez sąd właściwy dla siedziby operatora lub jego miejsca zamieszkania (do czasu formalnej rejestracji).</p>
+              </Section>
+
+              <Section title="§8. Zmiany Regulaminu">
+                <p>1. Operator zastrzega sobie prawo do zmiany niniejszego Regulaminu w związku ze zmianą statusu rejestracyjnego, rozwojem funkcjonalności Serwisu lub zmianami prawnymi.</p>
+                <p>2. O zmianach użytkownicy zostaną powiadomieni z 14-dniowym wyprzedzeniem. Dalsze korzystanie z Serwisu po tym terminie oznacza akceptację zmian.</p>
               </Section>
             </div>
           </TabsContent>
