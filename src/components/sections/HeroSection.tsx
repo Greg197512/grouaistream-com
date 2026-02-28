@@ -90,10 +90,16 @@ export const HeroSection = () => {
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.2 }}
-            className="inline-flex items-center gap-3 rounded-full bg-accent/20 border border-accent/30 px-4 py-2 mb-6"
+            className="inline-flex items-center gap-3 rounded-full bg-accent/20 border border-accent/30 px-5 py-2.5 mb-6"
           >
-            <img src="/logo-icon.png" alt="GrouAI" className="h-6 w-6" />
-            <span className="text-sm font-medium text-accent">GrouAI Stream <span className="font-bold">by GrouaRock</span></span>
+            <motion.img 
+              src="/logo-icon.png" 
+              alt="GrouAI" 
+              className="h-10 w-10 drop-shadow-[0_0_8px_hsl(var(--primary)/0.6)]"
+              animate={{ rotate: [0, 5, -5, 0] }}
+              transition={{ duration: 4, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
+            />
+            <span className="text-base font-medium text-accent">GrouAI Stream <span className="font-bold">by GrouaRock</span></span>
           </motion.div>
 
           {/* Headline */}

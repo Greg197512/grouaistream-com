@@ -29,10 +29,12 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { UpgradeModal } from "@/components/modals/UpgradeModal";
 
 export const TopBar = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [hasNotifications, setHasNotifications] = useState(true);
+  const [showUpgrade, setShowUpgrade] = useState(false);
   const { user, signOut, loading } = useAuth();
   const navigate = useNavigate();
 
@@ -113,6 +115,7 @@ export const TopBar = () => {
             variant="outline" 
             size="sm"
             className="groove-gradient-border hover:bg-muted gap-2 rounded-full px-4"
+            onClick={() => setShowUpgrade(true)}
           >
             <Crown className="h-4 w-4 text-primary" />
             <span className="groove-gradient-text font-semibold">Upgrade</span>
@@ -228,6 +231,9 @@ export const TopBar = () => {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+
+      {/* Upgrade Modal */}
+      <UpgradeModal open={showUpgrade} onOpenChange={setShowUpgrade} />
     </header>
   );
 };
