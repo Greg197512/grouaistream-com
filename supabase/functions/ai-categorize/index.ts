@@ -89,7 +89,7 @@ serve(async (req) => {
       );
     }
 
-    // Now generate cover images for tracks without them
+    // Update tracks with categorization results (no image generation to avoid CPU timeout)
     let updated = 0;
     for (const track of tracks) {
       const cat = categorizations.find(
@@ -101,50 +101,7 @@ serve(async (req) => {
       const updates: Record<string, any> = {};
       if (!track.genre && cat.genre) updates.genre = cat.genre;
       if (!track.mood && cat.mood) updates.mood = cat.mood;
-
-      // Generate cover image using AI
-      if (!track.cover_url) {
-        try {
-          const imgResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${LOVABLE_API_KEY}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              model: "google/gemini-2.5-flash-image",
-              messages: [{
-                role: "user",
-                content: `Create a beautiful album cover art for a ${cat.genre || "music"} song titled "${track.title}" by ${track.artist}. Style: modern, artistic, vibrant colors, professional album art. Square format.`
-              }],
-              modalities: ["image", "text"],
-            }),
-          });
-
-          if (imgResponse.ok) {
-            const imgData = await imgResponse.json();
-            const imageUrl = imgData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-
-            if (imageUrl) {
-              // Upload base64 image to storage
-              const base64Data = imageUrl.replace(/^data:image\/\w+;base64,/, "");
-              const imageBytes = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
-              const imagePath = `covers/${track.id}.png`;
-
-              const { error: uploadErr } = await supabase.storage
-                .from("music")
-                .upload(imagePath, imageBytes, { contentType: "image/png", upsert: true });
-
-              if (!uploadErr) {
-                const { data: urlData } = supabase.storage.from("music").getPublicUrl(imagePath);
-                updates.cover_url = urlData.publicUrl;
-              }
-            }
-          }
-        } catch (imgErr) {
-          console.error("Cover generation failed for", track.title, imgErr);
-        }
-      }
+      if (!track.cover_url && cat.cover_query) updates.cover_url = `https://picsum.photos/seed/${encodeURIComponent(track.title)}/300/300`;
 
       if (Object.keys(updates).length > 0) {
         const { error: updateErr } = await supabase
