@@ -9,6 +9,7 @@ import { PlaylistCard } from "@/components/cards/PlaylistCard";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "sonner";
 import { ImportTrackModal } from "@/components/modals/ImportTrackModal";
 import { FileUploadModal } from "@/components/modals/FileUploadModal";
@@ -25,6 +26,7 @@ interface Playlist {
 const Library = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [likedCount, setLikedCount] = useState(0);
   const [historyCount, setHistoryCount] = useState(0);
@@ -169,7 +171,7 @@ const Library = () => {
         <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
           <div className="flex items-center gap-3">
             <LibraryIcon className="h-8 w-8 text-primary" />
-            <h1 className="font-display text-3xl font-bold">Your Library</h1>
+            <h1 className="font-display text-3xl font-bold">{t("library.title")}</h1>
           </div>
           <div className="flex gap-2 flex-wrap">
             <Button
@@ -179,7 +181,7 @@ const Library = () => {
               disabled={populating}
             >
               {populating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Database className="h-4 w-4" />}
-              {populating ? "Wypełniam..." : "Wypełnij 20k"}
+              {populating ? t("library.populating") : t("library.populate20k")}
             </Button>
             <Button
               onClick={() => setShowSpotifyInput(!showSpotifyInput)}
@@ -188,7 +190,7 @@ const Library = () => {
               disabled={spotifyImporting}
             >
               {spotifyImporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Music className="h-4 w-4" />}
-              Spotify Import
+              {t("library.spotifyImport")}
             </Button>
             <Button
               onClick={() => setShowUploadModal(true)}
@@ -211,7 +213,7 @@ const Library = () => {
               className="groove-gradient-bg text-primary-foreground hover:opacity-90 gap-2"
             >
               <Plus className="h-4 w-4" />
-              Create Playlist
+              {t("library.createPlaylist")}
             </Button>
           </div>
         </div>
@@ -231,14 +233,14 @@ const Library = () => {
         {showSpotifyInput && (
           <div className="mb-6 p-4 rounded-xl border border-green-500/30 bg-green-500/5 space-y-3">
             <h3 className="font-semibold text-green-400 flex items-center gap-2">
-              <Music className="h-4 w-4" /> Import ze Spotify
+              <Music className="h-4 w-4" /> {t("library.spotifyImportTitle")}
             </h3>
             <p className="text-sm text-muted-foreground">
-              Wklej swój token Spotify Bearer. Pobierzemy Twoje top tracks, polubione, playlisty i popularne utwory.
+              {t("library.spotifyImportDesc")}
             </p>
             <div className="flex gap-2">
               <Input
-                placeholder="Wklej token Spotify (Bearer token)..."
+                placeholder={t("library.pasteToken")}
                 value={spotifyToken}
                 onChange={e => setSpotifyToken(e.target.value)}
                 className="flex-1 bg-background/50"
@@ -249,7 +251,7 @@ const Library = () => {
                 className="bg-green-600 hover:bg-green-700 text-white gap-2"
               >
                 {spotifyImporting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                {spotifyImporting ? "Importuję..." : "Importuj"}
+                {spotifyImporting ? t("library.importing") : t("library.import")}
               </Button>
             </div>
             {spotifyMsg && (
@@ -270,8 +272,8 @@ const Library = () => {
               <Heart className="h-6 w-6 text-primary-foreground fill-primary-foreground" />
             </div>
             <div className="text-left">
-              <h3 className="font-semibold">Liked Songs</h3>
-              <p className="text-sm text-muted-foreground">{likedCount} songs</p>
+              <h3 className="font-semibold">{t("library.likedSongs")}</h3>
+              <p className="text-sm text-muted-foreground">{likedCount} {t("library.songs")}</p>
             </div>
           </motion.button>
 
@@ -284,8 +286,8 @@ const Library = () => {
               <Clock className="h-6 w-6 text-primary-foreground" />
             </div>
             <div className="text-left">
-              <h3 className="font-semibold">Recently Played</h3>
-              <p className="text-sm text-muted-foreground">{historyCount} plays</p>
+              <h3 className="font-semibold">{t("library.recentlyPlayed")}</h3>
+              <p className="text-sm text-muted-foreground">{historyCount} {t("library.plays")}</p>
             </div>
           </motion.button>
 
@@ -300,13 +302,13 @@ const Library = () => {
             </div>
             <div className="text-left">
               <h3 className="font-semibold">GrouaRadio</h3>
-              <p className="text-sm text-muted-foreground">Live streaming</p>
+              <p className="text-sm text-muted-foreground">{t("library.liveStreaming")}</p>
             </div>
           </motion.button>
         </div>
 
         {/* Playlists */}
-        <h2 className="font-display text-xl font-bold mb-4">Your Playlists</h2>
+        <h2 className="font-display text-xl font-bold mb-4">{t("library.yourPlaylists")}</h2>
         {playlists.length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
             {playlists.map((playlist) => (
@@ -323,7 +325,7 @@ const Library = () => {
         ) : (
           <div className="text-center py-12 text-muted-foreground">
             <Music className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>No playlists yet. Create your first playlist!</p>
+            <p>{t("library.noPlaylists")}</p>
           </div>
         )}
       </div>

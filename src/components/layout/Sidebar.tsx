@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { useNavigate, useLocation } from "react-router-dom";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/contexts/LanguageContext";
 import logoIcon from "@/assets/logo-full.png";
 
 interface SidebarProps {
@@ -10,44 +11,41 @@ interface SidebarProps {
   onToggle: () => void;
 }
 
-const navItems = [
-  { icon: "home", label: "Home", href: "/" },
-  { icon: "search", label: "Search", href: "/search" },
-  { icon: "library_music", label: "Your Library", href: "/library" },
-];
-
-const playlistItems = [
-  { icon: "add_circle", label: "Create Playlist", href: "/create-playlist" },
-  { icon: "favorite", label: "Liked Songs", href: "/liked" },
-  { icon: "swap_horiz", label: "Manage Playlists", href: "/playlist-manager" },
-  { icon: "dns", label: "Serwer Mediów", href: "/server" },
-  { icon: "movie", label: "Filmy", href: "/movies" },
-  { icon: "radio", label: "GrouaRadio Live", href: "/radio", badge: "LIVE" },
-  { icon: "download", label: "Import YouTube", href: "/import-youtube" },
-];
-
-const aiFeatures = [
-  { icon: "smart_toy", label: "AI DJ", href: "/ai-dj" },
-  { icon: "face", label: "Mood Detection", href: "/" },
-  { icon: "history", label: "Mood History", href: "/mood-history" },
-  { icon: "autorenew", label: "Real-time Adaptation", href: "/daily-mix" },
-  { icon: "admin_panel_settings", label: "Admin Panel", href: "/admin", adminOnly: true },
-];
-
 export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useLanguage();
   const [activeItem, setActiveItem] = useState(location.pathname);
 
   useEffect(() => {
     setActiveItem(location.pathname);
   }, [location.pathname]);
 
-  const handleNavClick = (href: string, external?: boolean) => {
-    if (external) {
-      window.open(href, "_blank");
-      return;
-    }
+  const navItems = [
+    { icon: "home", labelKey: "nav.home", href: "/" },
+    { icon: "search", labelKey: "nav.search", href: "/search" },
+    { icon: "library_music", labelKey: "nav.library", href: "/library" },
+  ];
+
+  const playlistItems = [
+    { icon: "add_circle", labelKey: "nav.createPlaylist", href: "/create-playlist" },
+    { icon: "favorite", labelKey: "nav.likedSongs", href: "/liked" },
+    { icon: "swap_horiz", labelKey: "nav.managePlaylists", href: "/playlist-manager" },
+    { icon: "dns", labelKey: "nav.mediaServer", href: "/server" },
+    { icon: "movie", labelKey: "nav.movies", href: "/movies" },
+    { icon: "radio", labelKey: "nav.radioLive", href: "/radio", badge: "LIVE" },
+    { icon: "download", labelKey: "nav.importYoutube", href: "/import-youtube" },
+  ];
+
+  const aiFeatures = [
+    { icon: "smart_toy", labelKey: "nav.aiDj", href: "/ai-dj" },
+    { icon: "face", labelKey: "nav.moodDetection", href: "/" },
+    { icon: "history", labelKey: "nav.moodHistory", href: "/mood-history" },
+    { icon: "autorenew", labelKey: "nav.realtimeAdaptation", href: "/daily-mix" },
+    { icon: "admin_panel_settings", labelKey: "nav.adminPanel", href: "/admin", adminOnly: true },
+  ];
+
+  const handleNavClick = (href: string) => {
     setActiveItem(href);
     navigate(href);
   };
@@ -88,96 +86,43 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
         onClick={onToggle}
         className="absolute -right-3 top-24 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-secondary border border-border hover:bg-muted transition-colors"
       >
-        {collapsed ? (
-          <ChevronRight className="h-3 w-3" />
-        ) : (
-          <ChevronLeft className="h-3 w-3" />
-        )}
+        {collapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronLeft className="h-3 w-3" />}
       </button>
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto groove-scrollbar px-3 py-4">
-        {/* Main Nav */}
         <div className="space-y-1">
           {navItems.map((item) => (
-            <NavItem
-              key={item.href}
-              icon={item.icon}
-              label={item.label}
-              href={item.href}
-              active={activeItem === item.href}
-              collapsed={collapsed}
-              onClick={() => handleNavClick(item.href)}
-            />
+            <NavItem key={item.href} icon={item.icon} label={t(item.labelKey)} active={activeItem === item.href} collapsed={collapsed} onClick={() => handleNavClick(item.href)} />
           ))}
         </div>
 
-        {/* Divider */}
         <div className="my-4 h-px bg-border" />
 
-        {/* Playlists */}
         <div className="space-y-1">
           {playlistItems.map((item) => (
-            <NavItem
-              key={item.href}
-              icon={item.icon}
-              label={item.label}
-              href={item.href}
-              active={activeItem === item.href}
-              collapsed={collapsed}
-              onClick={() => handleNavClick(item.href)}
-              badge={item.badge}
-            />
+            <NavItem key={item.href} icon={item.icon} label={t(item.labelKey)} active={activeItem === item.href} collapsed={collapsed} onClick={() => handleNavClick(item.href)} badge={item.badge} />
           ))}
         </div>
 
-        {/* Divider */}
         <div className="my-4 h-px bg-border" />
 
-        {/* AI Features */}
         {!collapsed && (
-          <motion.p 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground"
-          >
-            AI Features
+          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            {t("nav.aiFeatures")}
           </motion.p>
         )}
         <div className="space-y-1">
           {aiFeatures.map((item) => (
-            <NavItem
-              key={item.href}
-              icon={item.icon}
-              label={item.label}
-              href={item.href}
-              active={activeItem === item.href}
-              collapsed={collapsed}
-              onClick={() => handleNavClick(item.href)}
-              isAI
-            />
+            <NavItem key={item.href + item.labelKey} icon={item.icon} label={t(item.labelKey)} active={activeItem === item.href} collapsed={collapsed} onClick={() => handleNavClick(item.href)} isAI />
           ))}
         </div>
       </nav>
 
       {/* Settings & Legal */}
       <div className="border-t border-border p-3 space-y-1">
-        <NavItem
-          icon="settings"
-          label="Settings"
-          href="/settings"
-          active={activeItem === "/settings"}
-          collapsed={collapsed}
-          onClick={() => handleNavClick("/settings")}
-        />
-        <NavItem
-          icon="gavel"
-          label="Dokumenty prawne"
-          href="/legal"
-          active={activeItem === "/legal"}
-          collapsed={collapsed}
-          onClick={() => handleNavClick("/legal")}
-        />
+        <NavItem icon="settings" label={t("nav.settings")} active={activeItem === "/settings"} collapsed={collapsed} onClick={() => handleNavClick("/settings")} />
+        <NavItem icon="gavel" label={t("nav.legalDocs")} active={activeItem === "/legal"} collapsed={collapsed} onClick={() => handleNavClick("/legal")} />
       </div>
     </motion.aside>
   );
@@ -186,7 +131,6 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
 interface NavItemProps {
   icon: string;
   label: string;
-  href: string;
   active: boolean;
   collapsed: boolean;
   onClick: () => void;
@@ -194,46 +138,29 @@ interface NavItemProps {
   isAI?: boolean;
 }
 
-const NavItem = ({ 
-  icon, 
-  label, 
-  active, 
-  collapsed, 
-  onClick, 
-  badge,
-  isAI 
-}: NavItemProps) => {
-  return (
-    <motion.button
-      onClick={onClick}
-      whileHover={{ x: 2 }}
-      whileTap={{ scale: 0.98 }}
-      className={cn(
-        "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all",
-        active
-          ? "bg-sidebar-accent text-sidebar-foreground"
-          : "text-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent/50",
-        collapsed && "justify-center px-2"
-      )}
-    >
-      <span className={cn(
-        "material-icons-outlined text-xl flex-shrink-0",
-        isAI && "text-accent",
-        active && isAI && "text-accent",
-        active && !isAI && "text-primary"
-      )}>
-        {icon}
-      </span>
-      {!collapsed && (
-        <>
-          <span className="flex-1 text-left truncate">{label}</span>
-          {badge && (
-            <span className="groove-gradient-bg px-2 py-0.5 rounded-full text-[10px] font-bold text-primary-foreground animate-pulse">
-              {badge}
-            </span>
-          )}
-        </>
-      )}
-    </motion.button>
-  );
-};
+const NavItem = ({ icon, label, active, collapsed, onClick, badge, isAI }: NavItemProps) => (
+  <motion.button
+    onClick={onClick}
+    whileHover={{ x: 2 }}
+    whileTap={{ scale: 0.98 }}
+    className={cn(
+      "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all",
+      active ? "bg-sidebar-accent text-sidebar-foreground" : "text-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent/50",
+      collapsed && "justify-center px-2"
+    )}
+  >
+    <span className={cn("material-icons-outlined text-xl flex-shrink-0", isAI && "text-accent", active && isAI && "text-accent", active && !isAI && "text-primary")}>
+      {icon}
+    </span>
+    {!collapsed && (
+      <>
+        <span className="flex-1 text-left truncate">{label}</span>
+        {badge && (
+          <span className="groove-gradient-bg px-2 py-0.5 rounded-full text-[10px] font-bold text-primary-foreground animate-pulse">
+            {badge}
+          </span>
+        )}
+      </>
+    )}
+  </motion.button>
+);
