@@ -65,10 +65,16 @@ const Legal = () => {
                 <p>3. Konta mogą zostać zawieszone w przypadku naruszenia Regulaminu.</p>
               </Section>
 
-              <Section title="§5. Licencje i prawa autorskie">
-                <p>1. Utwory z CC Mixter są udostępniane na licencjach Creative Commons (CC BY, CC BY-NC, CC BY-SA itp.). Atrybucja jest wyświetlana przy każdym utworze.</p>
-                <p>2. Osadzanie filmów z YouTube odbywa się zgodnie z oficjalnym YouTube IFrame API i nie stanowi naruszenia praw autorskich (art. 5 Dyrektywy 2001/29/WE).</p>
-                <p>3. Użytkownicy przesyłający własne utwory gwarantują, że posiadają do nich prawa lub odpowiednią licencję.</p>
+              <Section title="§5. Utwory generowane przez AI (Suno i inne)">
+                <p>1. GrouAI Stream umożliwia wprowadzanie utworów wygenerowanych za pomocą narzędzi AI, takich jak Suno, Udio, AIVA i inne platformy generatywne.</p>
+                <p>2. Użytkownik przesyłający utwór wygenerowany przez AI oświadcza, że:</p>
+                <p className="pl-4">a) utwór został stworzony indywidualnie na jego koncie w danym serwisie AI,</p>
+                <p className="pl-4">b) posiada prawo do dystrybucji utworu zgodnie z warunkami licencji platformy generatywnej (np. Suno Pro/Premier umożliwia komercyjne wykorzystanie),</p>
+                <p className="pl-4">c) udziela GrouAI Stream niewyłącznej, bezterminowej licencji na odtwarzanie, udostępnianie i przetwarzanie utworu w ramach Serwisu,</p>
+                <p className="pl-4">d) utwór nie narusza praw autorskich osób trzecich, nie jest plagiatem ani kopią istniejącego chronionego utworu.</p>
+                <p>3. Zgodnie z obecnym stanem prawnym UE (stanowisko EUIPO oraz Dyrektywa DSM 2019/790), utwory w pełni wygenerowane przez AI nie podlegają ochronie prawnoautorskiej w tradycyjnym rozumieniu, gdyż brak jest ludzkiego twórcy. Jednakże użytkownik, który dokonał twórczego wkładu (prompt engineering, aranżacja, selekcja, modyfikacja), może posiadać prawa pokrewne do rezultatu.</p>
+                <p>4. GrouAI Stream nie rości sobie praw autorskich do utworów wygenerowanych przez AI — prawa pozostają po stronie osoby, która je przesłała i udzieliła licencji.</p>
+                <p>5. W przypadku sporu dotyczącego praw do utworu AI, stosuje się procedurę DMCA/NTD opisaną w §6.</p>
               </Section>
 
               <Section title="§6. Ograniczenie odpowiedzialności">
@@ -157,6 +163,7 @@ const Legal = () => {
                 <p><strong>2. YouTube Embed (IFrame API)</strong> — Osadzanie treści z YouTube odbywa się wyłącznie poprzez oficjalne YouTube IFrame Player API. Jest to zgodne z YouTube Terms of Service (Sekcja 6.B). Nie pobieramy, nie kopiujemy ani nie przechowujemy treści wideo/audio z YouTube.</p>
                 <p><strong>3. Treści przesłane przez użytkowników</strong> — Użytkownicy mogą przesyłać wyłącznie utwory, do których posiadają prawa autorskie lub odpowiednią licencję. W przypadku zgłoszenia naruszenia stosujemy procedurę DMCA/Notice-and-Takedown.</p>
                 <p><strong>4. Import metadanych (Spotify API)</strong> — Importujemy wyłącznie metadane (tytuł, artysta, album, okładka) za pośrednictwem oficjalnego Spotify Web API. Nie pobieramy ani nie odtwarzamy plików audio ze Spotify. Import odbywa się za zgodą użytkownika poprzez OAuth 2.0.</p>
+                <p><strong>5. Utwory AI (Suno, Udio, AIVA i inne)</strong> — Utwory wygenerowane przez platformy AI i przesłane przez użytkowników z odpowiednią licencją (np. Suno Pro/Premier). Użytkownik udziela GrouAI Stream niewyłącznej licencji na odtwarzanie i udostępnianie. Utwory AI nie naruszają praw autorskich osób trzecich, gdyż są generowane algorytmicznie na indywidualne zamówienie użytkownika. Zgodnie ze stanowiskiem EUIPO i holenderskim Auteurswet, twórczy wkład użytkownika (prompt, selekcja, modyfikacja) może stanowić podstawę praw pokrewnych.</p>
               </Section>
 
               <Section title="Procedura zgłaszania naruszeń (DMCA/NTD)">
@@ -172,6 +179,8 @@ const Legal = () => {
                 <p>• Ustawa o prawie autorskim i prawach pokrewnych (Auteurswet, Holandia)</p>
                 <p>• YouTube API Terms of Service — zasady osadzania</p>
                 <p>• Spotify Developer Terms of Service — zasady korzystania z API</p>
+                <p>• Suno Terms of Service — licencja na komercyjne użycie utworów AI (plany Pro/Premier)</p>
+                <p>• Stanowisko EUIPO ws. AI-generated content — status prawnoautorski treści generowanych przez AI</p>
               </Section>
             </div>
           </TabsContent>
