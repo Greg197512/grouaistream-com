@@ -6,99 +6,37 @@ import { PlaylistGrid } from "@/components/sections/PlaylistGrid";
 import { LiveRadioCard } from "@/components/sections/LiveRadioCard";
 import { TopArtists } from "@/components/sections/TopArtists";
 import { GenreSection } from "@/components/sections/GenreSection";
+import { useLanguage } from "@/contexts/LanguageContext";
+
 const Index = () => {
+  const { t } = useLanguage();
 
   return (
     <MainLayout>
       <HeroSection />
       <RecentlyPlayed />
       
-      {/* Genre Sections */}
-      <GenreSection 
-        genre="EDM" 
-        title="🎧 EDM & Electronic Hits" 
-        icon="headphones"
-        color="text-primary"
-        limit={8}
-      />
-      
-      <GenreSection 
-        genre="Disco" 
-        title="🪩 Disco Classics & Grooves" 
-        icon="nightlife"
-        color="text-accent"
-        limit={8}
-      />
-      
-      <GenreSection 
-        genre="House" 
-        title="🏠 House Music Essentials" 
-        icon="music_note"
-        color="text-primary"
-        limit={8}
-      />
-      
-      <GenreSection 
-        genre="Rock" 
-        title="🎸 Rock Hits 2026" 
-        icon="electric_bolt"
-        color="text-primary"
-        limit={8}
-      />
-      
-      <GenreSection 
-        genre="Punk" 
-        title="🤘 Punk & Punk-Rock" 
-        icon="whatshot"
-        color="text-destructive"
-        limit={8}
-      />
-      
-      <GenreSection 
-        genre="Pop" 
-        title="🎤 Pop Favorites" 
-        icon="star"
-        color="text-accent"
-        limit={8}
-      />
-      
-      <GenreSection 
-        genre="Hip-Hop" 
-        title="🎤 Hip-Hop & Rap" 
-        icon="mic"
-        color="text-primary"
-        limit={8}
-      />
-      
-      <GenreSection 
-        genre="R&B" 
-        title="💜 R&B & Soul" 
-        icon="favorite"
-        color="text-accent"
-        limit={8}
-      />
-      
-      <GenreSection 
-        genre="Trance" 
-        title="🌌 Trance & Progressive" 
-        icon="waves"
-        color="text-primary"
-        limit={8}
-      />
+      <GenreSection genre="EDM" title="🎧 EDM & Electronic Hits" icon="headphones" color="text-primary" limit={8} />
+      <GenreSection genre="Disco" title="🪩 Disco Classics & Grooves" icon="nightlife" color="text-accent" limit={8} />
+      <GenreSection genre="House" title="🏠 House Music Essentials" icon="music_note" color="text-primary" limit={8} />
+      <GenreSection genre="Rock" title="🎸 Rock Hits 2026" icon="electric_bolt" color="text-primary" limit={8} />
+      <GenreSection genre="Punk" title="🤘 Punk & Punk-Rock" icon="whatshot" color="text-destructive" limit={8} />
+      <GenreSection genre="Pop" title="🎤 Pop Favorites" icon="star" color="text-accent" limit={8} />
+      <GenreSection genre="Hip-Hop" title="🎤 Hip-Hop & Rap" icon="mic" color="text-primary" limit={8} />
+      <GenreSection genre="R&B" title="💜 R&B & Soul" icon="favorite" color="text-accent" limit={8} />
+      <GenreSection genre="Trance" title="🌌 Trance & Progressive" icon="waves" color="text-primary" limit={8} />
       
       <LiveRadioCard />
       <AIDJSection />
       <PlaylistGrid 
-        title="Made For You by AI" 
-        subtitle="Playlists curated based on your mood and listening patterns"
+        title={t("section.madeForYou")} 
+        subtitle={t("section.madeForYouDesc")}
       />
       <TopArtists />
       <PlaylistGrid 
-        title="Trending Now" 
-        subtitle="What the world is listening to"
+        title={t("section.trendingNow")} 
+        subtitle={t("section.trendingNowDesc")}
       />
-
-
     </MainLayout>
   );
 };

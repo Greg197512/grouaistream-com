@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "sonner";
 
 interface Movie {
@@ -29,6 +30,7 @@ interface Movie {
 const Movies = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [movies, setMovies] = useState<Movie[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("all");
@@ -186,8 +188,8 @@ const Movies = () => {
           <div className="flex items-center gap-3">
             <Film className="h-8 w-8 text-primary" />
             <div>
-              <h1 className="font-display text-3xl font-bold">Filmy</h1>
-              <p className="text-sm text-muted-foreground">{totalCount} filmów w bazie</p>
+              <h1 className="font-display text-3xl font-bold">{t("movies.title")}</h1>
+              <p className="text-sm text-muted-foreground">{totalCount} {t("movies.moviesInDb")}</p>
             </div>
           </div>
           <div className="flex gap-2 flex-wrap">
@@ -198,7 +200,7 @@ const Movies = () => {
               disabled={batchSearching}
             >
               {batchSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-              {batchSearching ? "Szukam..." : "Szukaj na YouTube"}
+              {batchSearching ? t("movies.searching") : t("movies.searchYoutube")}
             </Button>
             <Button
               onClick={runBulkPopulate}
@@ -207,7 +209,7 @@ const Movies = () => {
               disabled={populating}
             >
               {populating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Database className="h-4 w-4" />}
-              {populating ? "Wypełniam..." : "Wypełnij 20k"}
+              {populating ? t("movies.populating") : t("movies.populate20k")}
             </Button>
           </div>
         </div>
@@ -227,13 +229,13 @@ const Movies = () => {
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
           <TabsList>
             <TabsTrigger value="all" className="gap-2">
-              <Film className="h-4 w-4" /> Wszystkie
+              <Film className="h-4 w-4" /> {t("movies.all")}
             </TabsTrigger>
             <TabsTrigger value="polish" className="gap-2">
-              <Flag className="h-4 w-4" /> Polskie
+              <Flag className="h-4 w-4" /> {t("movies.polish")}
             </TabsTrigger>
             <TabsTrigger value="foreign" className="gap-2">
-              <Globe className="h-4 w-4" /> Zagraniczne
+              <Globe className="h-4 w-4" /> {t("movies.foreign")}
             </TabsTrigger>
           </TabsList>
         </Tabs>
@@ -298,7 +300,7 @@ const Movies = () => {
         ) : (
           <div className="text-center py-12 text-muted-foreground">
             <Film className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>Brak filmów. Kliknij "Wypełnij 20k" aby dodać filmy!</p>
+            <p>{ t("movies.empty") }</p>
           </div>
         )}
       </div>

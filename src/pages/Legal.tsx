@@ -1,26 +1,27 @@
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Shield, FileText, Scale, Cookie, Copyright, Globe } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const Legal = () => {
+  const { t } = useLanguage();
+
   return (
     <MainLayout>
       <div className="px-6 py-8 max-w-4xl mx-auto">
         <div className="flex items-center gap-3 mb-2">
           <Scale className="h-8 w-8 text-primary" />
-          <h1 className="font-display text-3xl font-bold">Dokumenty prawne</h1>
+          <h1 className="font-display text-3xl font-bold">{t("legal.title")}</h1>
         </div>
-        <p className="text-muted-foreground mb-8">
-          GrouAI Stream działa w pełni legalnie i zgodnie z obowiązującym prawem UE, RODO oraz międzynarodowymi regulacjami dotyczącymi praw autorskich.
-        </p>
+        <p className="text-muted-foreground mb-8">{t("legal.subtitle")}</p>
 
         <Tabs defaultValue="terms" className="w-full">
           <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 mb-6">
-            <TabsTrigger value="terms" className="gap-1 text-xs"><FileText className="h-3 w-3" />Regulamin</TabsTrigger>
-            <TabsTrigger value="privacy" className="gap-1 text-xs"><Shield className="h-3 w-3" />Prywatność</TabsTrigger>
-            <TabsTrigger value="copyright" className="gap-1 text-xs"><Copyright className="h-3 w-3" />Prawa autorskie</TabsTrigger>
-            <TabsTrigger value="cookies" className="gap-1 text-xs"><Cookie className="h-3 w-3" />Cookies</TabsTrigger>
-            <TabsTrigger value="gdpr" className="gap-1 text-xs"><Globe className="h-3 w-3" />RODO</TabsTrigger>
+            <TabsTrigger value="terms" className="gap-1 text-xs"><FileText className="h-3 w-3" />{t("legal.terms")}</TabsTrigger>
+            <TabsTrigger value="privacy" className="gap-1 text-xs"><Shield className="h-3 w-3" />{t("legal.privacy")}</TabsTrigger>
+            <TabsTrigger value="copyright" className="gap-1 text-xs"><Copyright className="h-3 w-3" />{t("legal.copyright")}</TabsTrigger>
+            <TabsTrigger value="cookies" className="gap-1 text-xs"><Cookie className="h-3 w-3" />{t("legal.cookies")}</TabsTrigger>
+            <TabsTrigger value="gdpr" className="gap-1 text-xs"><Globe className="h-3 w-3" />{t("legal.gdpr")}</TabsTrigger>
           </TabsList>
 
           {/* REGULAMIN */}

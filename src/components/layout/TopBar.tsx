@@ -1,47 +1,35 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { 
-  ChevronLeft, 
-  ChevronRight, 
-  Search, 
-  Bell, 
-  User,
-  Crown,
-  LogOut,
-  Settings,
-  Sparkles,
-  UserCircle,
-  Heart,
-  Library,
-  Power
+  ChevronLeft, ChevronRight, Search, Bell, User, Crown, LogOut,
+  Settings, Sparkles, UserCircle, Heart, Library, Power, Globe
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
+  DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { UpgradeModal } from "@/components/modals/UpgradeModal";
+import { Language } from "@/i18n/translations";
 
 export const TopBar = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [hasNotifications, setHasNotifications] = useState(true);
   const [showUpgrade, setShowUpgrade] = useState(false);
   const { user, signOut, loading } = useAuth();
+  const { language, setLanguage, t, languageNames, languageFlags } = useLanguage();
   const navigate = useNavigate();
 
   const handleSignOut = async () => {
     try {
       await signOut();
-      toast.success("Signed out successfully");
+      toast.success(t("settings.signOutSuccess"));
       navigate("/");
     } catch (error) {
       toast.error("Failed to sign out");
@@ -55,7 +43,6 @@ export const TopBar = () => {
     }
   };
 
-  // Get user initials for avatar
   const getUserInitials = () => {
     if (!user?.email) return "U";
     return user.email.charAt(0).toUpperCase();
@@ -90,7 +77,7 @@ export const TopBar = () => {
           <Input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="What do you want to listen to?"
+            placeholder={t("topbar.searchPlaceholder")}
             className="pl-10 bg-secondary border-0 focus-visible:ring-1 focus-visible:ring-primary rounded-full h-10"
           />
         </div>
@@ -106,9 +93,42 @@ export const TopBar = () => {
             className="gap-2 rounded-full px-4"
           >
             <User className="h-4 w-4" />
-            Sign In
+            {t("topbar.signIn")}
           </Button>
         )}
+
+        {/* Language Switcher */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <motion.button 
+              whileHover={{ scale: 1.05 }} 
+              whileTap={{ scale: 0.95 }}
+              className="flex h-9 items-center gap-1.5 rounded-full bg-secondary/80 border border-border px-3 hover:bg-muted transition-colors text-sm font-medium"
+            >
+              <Globe className="h-3.5 w-3.5 text-primary" />
+              <span className="text-base leading-none">{languageFlags[language]}</span>
+              <span className="hidden sm:inline text-xs text-muted-foreground">{language.toUpperCase()}</span>
+            </motion.button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuLabel className="text-xs text-muted-foreground">
+              <Globe className="h-3 w-3 inline mr-1" />
+              Language / Język
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            {(Object.keys(languageNames) as Language[]).map((lang) => (
+              <DropdownMenuItem
+                key={lang}
+                onClick={() => setLanguage(lang)}
+                className={`cursor-pointer gap-3 ${language === lang ? "bg-primary/10 text-primary font-semibold" : ""}`}
+              >
+                <span className="text-lg">{languageFlags[lang]}</span>
+                <span>{languageNames[lang]}</span>
+                {language === lang && <span className="ml-auto text-primary">✓</span>}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
 
         <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
           <Button 
@@ -118,7 +138,7 @@ export const TopBar = () => {
             onClick={() => setShowUpgrade(true)}
           >
             <Crown className="h-4 w-4 text-primary" />
-            <span className="groove-gradient-text font-semibold">Upgrade</span>
+            <span className="groove-gradient-text font-semibold">{t("topbar.upgrade")}</span>
           </Button>
         </motion.div>
 
@@ -133,18 +153,18 @@ export const TopBar = () => {
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-80">
-            <DropdownMenuLabel>Notifications</DropdownMenuLabel>
+            <DropdownMenuLabel>{t("topbar.notifications")}</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem 
               className="flex flex-col items-start gap-1 py-3 cursor-pointer"
               onClick={() => setHasNotifications(false)}
             >
-              <p className="font-medium">Your AI DJ is ready!</p>
-              <p className="text-xs text-muted-foreground">Based on your mood, we've created a personalized playlist</p>
+              <p className="font-medium">{t("topbar.aiDjReady")}</p>
+              <p className="text-xs text-muted-foreground">{t("topbar.aiDjReadyDesc")}</p>
             </DropdownMenuItem>
             <DropdownMenuItem className="flex flex-col items-start gap-1 py-3 cursor-pointer">
-              <p className="font-medium">New tracks added!</p>
-              <p className="text-xs text-muted-foreground">Check out new Rock, Punk, and Pop hits</p>
+              <p className="font-medium">{t("topbar.newTracks")}</p>
+              <p className="text-xs text-muted-foreground">{t("topbar.newTracksDesc")}</p>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -161,7 +181,6 @@ export const TopBar = () => {
                       {getUserInitials()}
                     </AvatarFallback>
                   </Avatar>
-                  {/* Green dot with power icon */}
                   <span className="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500 border-2 border-background">
                     <Power className="h-2.5 w-2.5 text-white" />
                   </span>
@@ -180,30 +199,30 @@ export const TopBar = () => {
                     <p className="text-xs text-muted-foreground">{user.email}</p>
                     <p className="text-xs flex items-center gap-1 mt-1 text-emerald-600 dark:text-emerald-500">
                       <span className="h-1.5 w-1.5 rounded-full bg-emerald-600 dark:bg-emerald-500" />
-                      Zalogowany
+                      {t("topbar.loggedIn")}
                     </p>
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => navigate("/settings")} className="cursor-pointer">
                   <UserCircle className="mr-2 h-4 w-4" />
-                  Profile
+                  {t("topbar.profile")}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => navigate("/library")} className="cursor-pointer">
                   <Library className="mr-2 h-4 w-4" />
-                  Your Library
+                  {t("topbar.yourLibrary")}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => navigate("/liked")} className="cursor-pointer">
                   <Heart className="mr-2 h-4 w-4" />
-                  Liked Songs
+                  {t("topbar.likedSongs")}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => navigate("/settings")} className="cursor-pointer">
                   <Settings className="mr-2 h-4 w-4" />
-                  Settings
+                  {t("topbar.settings")}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => navigate("/ai-dj")} className="cursor-pointer">
                   <Sparkles className="mr-2 h-4 w-4" />
-                  AI Preferences
+                  {t("topbar.aiPreferences")}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem 
@@ -211,20 +230,20 @@ export const TopBar = () => {
                   className="cursor-pointer text-destructive focus:text-destructive"
                 >
                   <LogOut className="mr-2 h-4 w-4" />
-                  Sign Out
+                  {t("topbar.signOut")}
                 </DropdownMenuItem>
               </>
             ) : (
               <>
-                <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                <DropdownMenuLabel>{t("topbar.myAccount")}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => navigate("/auth")} className="cursor-pointer">
                   <User className="mr-2 h-4 w-4" />
-                  Sign In
+                  {t("topbar.signIn")}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => navigate("/auth")} className="cursor-pointer">
                   <Sparkles className="mr-2 h-4 w-4" />
-                  Create Account
+                  {t("topbar.createAccount")}
                 </DropdownMenuItem>
               </>
             )}
@@ -232,7 +251,6 @@ export const TopBar = () => {
         </DropdownMenu>
       </div>
 
-      {/* Upgrade Modal */}
       <UpgradeModal open={showUpgrade} onOpenChange={setShowUpgrade} />
     </header>
   );

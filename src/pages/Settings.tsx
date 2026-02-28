@@ -1,18 +1,7 @@
-import { useState } from "react";
-import { motion } from "framer-motion";
+import { useState, useRef } from "react";
 import {
-  Settings as SettingsIcon,
-  User,
-  Bell,
-  Shield,
-  Palette,
-  LogOut,
-  Camera,
-  Brain,
-  Eye,
-  Mic,
-  Heart,
-  Trash2,
+  Settings as SettingsIcon, User, Bell, Shield, LogOut, Camera,
+  Brain, Eye, Mic, Heart, Trash2, Loader2
 } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -20,45 +9,110 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
 const Settings = () => {
   const { user, signOut } = useAuth();
+  const { t } = useLanguage();
   const navigate = useNavigate();
-  const [displayName, setDisplayName] = useState(
-    user?.user_metadata?.display_name || ""
-  );
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [displayName, setDisplayName] = useState(user?.user_metadata?.display_name || "");
+  const [avatarUrl, setAvatarUrl] = useState(user?.user_metadata?.avatar_url || "");
   const [saving, setSaving] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   // Privacy settings
   const [moodDetection, setMoodDetection] = useState(true);
   const [webcamAccess, setWebcamAccess] = useState(false);
   const [voiceAnalysis, setVoiceAnalysis] = useState(false);
   const [listeningHistory, setListeningHistory] = useState(true);
-  const [personalizedAds, setPersonalizedAds] = useState(false);
 
   // Notification settings
   const [newReleases, setNewReleases] = useState(true);
   const [playlistUpdates, setPlaylistUpdates] = useState(true);
   const [aiRecommendations, setAiRecommendations] = useState(true);
 
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file");
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("Image must be less than 2MB");
+      return;
+    }
+
+    setUploadingAvatar(true);
+    try {
+      const ext = file.name.split(".").pop();
+      const filePath = `${user.id}/avatar.${ext}`;
+
+      // Upload to storage
+      const { error: uploadError } = await supabase.storage
+        .from("avatars")
+        .upload(filePath, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from("avatars")
+        .getPublicUrl(filePath);
+
+      // Add cache buster
+      const urlWithCacheBust = `${publicUrl}?t=${Date.now()}`;
+
+      // Update user metadata
+      const { error: updateError } = await supabase.auth.updateUser({
+        data: { avatar_url: urlWithCacheBust }
+      });
+
+      if (updateError) throw updateError;
+
+      // Update profiles table
+      await supabase
+        .from("profiles")
+        .update({ avatar_url: urlWithCacheBust })
+        .eq("user_id", user.id);
+
+      setAvatarUrl(urlWithCacheBust);
+      toast.success(t("settings.avatarUpdated"));
+    } catch (error) {
+      console.error("Avatar upload error:", error);
+      toast.error(t("settings.avatarError"));
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
   const handleSaveProfile = async () => {
     if (!user) return;
 
     setSaving(true);
     try {
+      // Update auth metadata
+      const { error: authError } = await supabase.auth.updateUser({
+        data: { display_name: displayName }
+      });
+      if (authError) throw authError;
+
+      // Update profiles table
       const { error } = await supabase
         .from("profiles")
         .update({ display_name: displayName })
         .eq("user_id", user.id);
 
       if (error) throw error;
-      toast.success("Profile updated!");
+      toast.success(t("settings.profileUpdated"));
     } catch (error) {
       console.error("Update error:", error);
-      toast.error("Failed to update profile");
+      toast.error(t("settings.profileError"));
     } finally {
       setSaving(false);
     }
@@ -66,16 +120,13 @@ const Settings = () => {
 
   const handleSignOut = async () => {
     await signOut();
-    toast.success("Signed out successfully");
+    toast.success(t("settings.signOutSuccess"));
     navigate("/");
   };
 
   const handleDeleteHistory = async () => {
     if (!user) return;
-
-    const confirmed = window.confirm(
-      "Are you sure you want to delete all your listening history? This cannot be undone."
-    );
+    const confirmed = window.confirm(t("settings.deleteHistoryConfirm"));
     if (!confirmed) return;
 
     try {
@@ -83,11 +134,10 @@ const Settings = () => {
         .from("listening_history")
         .delete()
         .eq("user_id", user.id);
-
       if (error) throw error;
-      toast.success("Listening history deleted");
+      toast.success(t("settings.deleteHistorySuccess"));
     } catch (error) {
-      toast.error("Failed to delete history");
+      toast.error(t("settings.deleteHistoryError"));
     }
   };
 
@@ -101,34 +151,60 @@ const Settings = () => {
       <div className="px-6 py-8 max-w-3xl mx-auto">
         <div className="flex items-center gap-3 mb-8">
           <SettingsIcon className="h-8 w-8 text-primary" />
-          <h1 className="font-display text-3xl font-bold">Settings</h1>
+          <h1 className="font-display text-3xl font-bold">{t("settings.title")}</h1>
         </div>
 
         {/* Profile Section */}
         <section className="groove-card p-6 mb-6">
           <div className="flex items-center gap-2 mb-4">
             <User className="h-5 w-5 text-primary" />
-            <h2 className="font-semibold">Profile</h2>
+            <h2 className="font-semibold">{t("settings.profile")}</h2>
           </div>
 
           <div className="flex items-center gap-6 mb-6">
             <div className="relative">
-              <div className="w-20 h-20 rounded-full groove-gradient-bg flex items-center justify-center text-2xl font-bold text-primary-foreground">
-                {displayName?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase()}
+              <div className="w-20 h-20 rounded-full groove-gradient-bg flex items-center justify-center text-2xl font-bold text-primary-foreground overflow-hidden">
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                ) : (
+                  displayName?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase()
+                )}
               </div>
-              <button className="absolute bottom-0 right-0 p-1.5 rounded-full bg-secondary border border-border hover:bg-muted transition-colors">
-                <Camera className="h-3 w-3" />
+              <button 
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploadingAvatar}
+                className="absolute bottom-0 right-0 p-1.5 rounded-full bg-secondary border border-border hover:bg-muted transition-colors"
+              >
+                {uploadingAvatar ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <Camera className="h-3 w-3" />
+                )}
               </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleAvatarUpload}
+                className="hidden"
+              />
             </div>
             <div>
               <p className="font-medium">{displayName || "User"}</p>
               <p className="text-sm text-muted-foreground">{user.email}</p>
+              <button 
+                onClick={() => fileInputRef.current?.click()}
+                className="text-xs text-primary hover:underline mt-1"
+                disabled={uploadingAvatar}
+              >
+                {t("settings.changeAvatar")}
+              </button>
             </div>
           </div>
 
           <div className="space-y-4">
             <div>
-              <Label htmlFor="displayName">Display Name</Label>
+              <Label htmlFor="displayName">{t("settings.displayName")}</Label>
               <Input
                 id="displayName"
                 value={displayName}
@@ -137,7 +213,7 @@ const Settings = () => {
               />
             </div>
             <Button onClick={handleSaveProfile} disabled={saving}>
-              {saving ? "Saving..." : "Save Changes"}
+              {saving ? t("settings.saving") : t("settings.saveChanges")}
             </Button>
           </div>
         </section>
@@ -146,64 +222,15 @@ const Settings = () => {
         <section className="groove-card p-6 mb-6">
           <div className="flex items-center gap-2 mb-4">
             <Brain className="h-5 w-5 text-primary" />
-            <h2 className="font-semibold">AI & Privacy</h2>
+            <h2 className="font-semibold">{t("settings.aiPrivacy")}</h2>
           </div>
-          <p className="text-sm text-muted-foreground mb-4">
-            Control how GrooveAI learns from your behavior. All data is anonymized and processed securely.
-          </p>
+          <p className="text-sm text-muted-foreground mb-4">{t("settings.aiPrivacyDesc")}</p>
 
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Brain className="h-4 w-4 text-muted-foreground" />
-                <div>
-                  <p className="font-medium">Mood Detection</p>
-                  <p className="text-sm text-muted-foreground">
-                    AI analyzes listening patterns to detect mood
-                  </p>
-                </div>
-              </div>
-              <Switch checked={moodDetection} onCheckedChange={setMoodDetection} />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Eye className="h-4 w-4 text-muted-foreground" />
-                <div>
-                  <p className="font-medium">Webcam Mood Analysis</p>
-                  <p className="text-sm text-muted-foreground">
-                    Use facial expressions for mood detection
-                  </p>
-                </div>
-              </div>
-              <Switch checked={webcamAccess} onCheckedChange={setWebcamAccess} />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Mic className="h-4 w-4 text-muted-foreground" />
-                <div>
-                  <p className="font-medium">Voice Emotion Analysis</p>
-                  <p className="text-sm text-muted-foreground">
-                    Analyze voice for better recommendations
-                  </p>
-                </div>
-              </div>
-              <Switch checked={voiceAnalysis} onCheckedChange={setVoiceAnalysis} />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Heart className="h-4 w-4 text-muted-foreground" />
-                <div>
-                  <p className="font-medium">Listening History</p>
-                  <p className="text-sm text-muted-foreground">
-                    Track listening for personalization
-                  </p>
-                </div>
-              </div>
-              <Switch checked={listeningHistory} onCheckedChange={setListeningHistory} />
-            </div>
+            <SettingRow icon={Brain} title={t("settings.moodDetection")} desc={t("settings.moodDetectionDesc")} checked={moodDetection} onChange={setMoodDetection} />
+            <SettingRow icon={Eye} title={t("settings.webcamMood")} desc={t("settings.webcamMoodDesc")} checked={webcamAccess} onChange={setWebcamAccess} />
+            <SettingRow icon={Mic} title={t("settings.voiceEmotion")} desc={t("settings.voiceEmotionDesc")} checked={voiceAnalysis} onChange={setVoiceAnalysis} />
+            <SettingRow icon={Heart} title={t("settings.listeningHistory")} desc={t("settings.listeningHistoryDesc")} checked={listeningHistory} onChange={setListeningHistory} />
           </div>
         </section>
 
@@ -211,39 +238,12 @@ const Settings = () => {
         <section className="groove-card p-6 mb-6">
           <div className="flex items-center gap-2 mb-4">
             <Bell className="h-5 w-5 text-primary" />
-            <h2 className="font-semibold">Notifications</h2>
+            <h2 className="font-semibold">{t("settings.notifications")}</h2>
           </div>
-
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">New Releases</p>
-                <p className="text-sm text-muted-foreground">
-                  From artists you follow
-                </p>
-              </div>
-              <Switch checked={newReleases} onCheckedChange={setNewReleases} />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">Playlist Updates</p>
-                <p className="text-sm text-muted-foreground">
-                  AI playlist changes and updates
-                </p>
-              </div>
-              <Switch checked={playlistUpdates} onCheckedChange={setPlaylistUpdates} />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">AI Recommendations</p>
-                <p className="text-sm text-muted-foreground">
-                  Personalized music suggestions
-                </p>
-              </div>
-              <Switch checked={aiRecommendations} onCheckedChange={setAiRecommendations} />
-            </div>
+            <NotifRow title={t("settings.newReleases")} desc={t("settings.newReleasesDesc")} checked={newReleases} onChange={setNewReleases} />
+            <NotifRow title={t("settings.playlistUpdates")} desc={t("settings.playlistUpdatesDesc")} checked={playlistUpdates} onChange={setPlaylistUpdates} />
+            <NotifRow title={t("settings.aiRecommendations")} desc={t("settings.aiRecommendationsDesc")} checked={aiRecommendations} onChange={setAiRecommendations} />
           </div>
         </section>
 
@@ -251,21 +251,14 @@ const Settings = () => {
         <section className="groove-card p-6 mb-6">
           <div className="flex items-center gap-2 mb-4">
             <Shield className="h-5 w-5 text-primary" />
-            <h2 className="font-semibold">Data Management</h2>
+            <h2 className="font-semibold">{t("settings.dataManagement")}</h2>
           </div>
-
           <div className="space-y-4">
-            <Button
-              variant="outline"
-              onClick={handleDeleteHistory}
-              className="gap-2 text-destructive hover:text-destructive"
-            >
+            <Button variant="outline" onClick={handleDeleteHistory} className="gap-2 text-destructive hover:text-destructive">
               <Trash2 className="h-4 w-4" />
-              Delete Listening History
+              {t("settings.deleteHistory")}
             </Button>
-            <p className="text-sm text-muted-foreground">
-              GDPR compliant. Request full data export via email: privacy@grooveai.stream
-            </p>
+            <p className="text-sm text-muted-foreground">{t("settings.gdprCompliant")}</p>
           </div>
         </section>
 
@@ -273,41 +266,52 @@ const Settings = () => {
         <section className="groove-card p-6 mb-6">
           <div className="flex items-center gap-2 mb-4">
             <Shield className="h-5 w-5 text-primary" />
-            <h2 className="font-semibold">Legalność i zgodność z prawem</h2>
+            <h2 className="font-semibold">{t("settings.legalCompliance")}</h2>
           </div>
           <div className="p-4 rounded-lg bg-primary/10 border border-primary/20 mb-4">
             <p className="font-semibold text-primary text-sm flex items-center gap-2">
               <Shield className="h-4 w-4" />
-              ✅ Wszystkie treści w GrouAI Stream są w pełni legalne
+              {t("settings.legalBadge")}
             </p>
-            <p className="text-xs text-muted-foreground mt-2">
-              Muzyka pochodzi z legalnych źródeł: Creative Commons (CC Mixter), oficjalne YouTube Embed API, 
-              oraz treści przesłane przez użytkowników z odpowiednimi prawami. Działamy zgodnie z RODO, 
-              Dyrektywą DSM 2019/790 oraz YouTube/Spotify API Terms of Service.
-            </p>
+            <p className="text-xs text-muted-foreground mt-2">{t("settings.legalBadgeDesc")}</p>
           </div>
-          <Button
-            variant="outline"
-            onClick={() => navigate("/legal")}
-            className="gap-2 w-full"
-          >
+          <Button variant="outline" onClick={() => navigate("/legal")} className="gap-2 w-full">
             <Shield className="h-4 w-4" />
-            Regulamin, Polityka Prywatności, RODO i prawa autorskie
+            {t("settings.legalButton")}
           </Button>
         </section>
 
         {/* Sign Out */}
-        <Button
-          variant="outline"
-          onClick={handleSignOut}
-          className="w-full gap-2"
-        >
+        <Button variant="outline" onClick={handleSignOut} className="w-full gap-2">
           <LogOut className="h-4 w-4" />
-          Sign Out
+          {t("settings.signOut")}
         </Button>
       </div>
     </MainLayout>
   );
 };
+
+const SettingRow = ({ icon: Icon, title, desc, checked, onChange }: { icon: any; title: string; desc: string; checked: boolean; onChange: (v: boolean) => void }) => (
+  <div className="flex items-center justify-between">
+    <div className="flex items-center gap-3">
+      <Icon className="h-4 w-4 text-muted-foreground" />
+      <div>
+        <p className="font-medium">{title}</p>
+        <p className="text-sm text-muted-foreground">{desc}</p>
+      </div>
+    </div>
+    <Switch checked={checked} onCheckedChange={onChange} />
+  </div>
+);
+
+const NotifRow = ({ title, desc, checked, onChange }: { title: string; desc: string; checked: boolean; onChange: (v: boolean) => void }) => (
+  <div className="flex items-center justify-between">
+    <div>
+      <p className="font-medium">{title}</p>
+      <p className="text-sm text-muted-foreground">{desc}</p>
+    </div>
+    <Switch checked={checked} onCheckedChange={onChange} />
+  </div>
+);
 
 export default Settings;
