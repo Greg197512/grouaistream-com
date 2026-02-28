@@ -11,3 +11,9 @@ verify_jwt = false
 
 [functions.generate-email]
 verify_jwt = false
+
+[functions.ai-categorize]
+verify_jwt = false
+
+[functions.ai-cover]
+verify_jwt = false
