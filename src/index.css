@@ -46,7 +46,7 @@
     --groove-text-dim: hsl(0, 0%, 50%);
     --groove-border-subtle: hsl(0, 0%, 18%);
     
-    --sidebar-background: 0 0% 5%;
+    --sidebar-background: 0 0% 0%;
     --sidebar-foreground: 0 0% 98%;
     --sidebar-primary: 14 100% 57%;
     --sidebar-primary-foreground: 0 0% 100%;
