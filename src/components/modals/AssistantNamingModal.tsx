@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Mic, Sparkles, Music } from "lucide-react";
+import { Mic, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -24,76 +24,77 @@ export const AssistantNamingModal = ({ open, onSubmit }: Props) => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm"
+          className="fixed inset-0 z-[100] flex items-center justify-center"
+          style={{ background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(12px)' }}
         >
           <motion.div
-            initial={{ scale: 0.8, opacity: 0, y: 40 }}
+            initial={{ scale: 0.85, opacity: 0, y: 30 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ scale: 0.8, opacity: 0, y: 40 }}
-            transition={{ type: "spring", damping: 20, stiffness: 300 }}
-            className="relative w-full max-w-md mx-4 rounded-2xl border border-primary/30 bg-gradient-to-br from-card via-card to-primary/5 p-8 shadow-2xl"
+            exit={{ scale: 0.85, opacity: 0, y: 30 }}
+            transition={{ type: "spring", damping: 25, stiffness: 350 }}
+            className="relative w-full max-w-[280px] mx-4 rounded-2xl p-5 shadow-2xl"
+            style={{
+              background: 'rgba(255,255,255,0.06)',
+              backdropFilter: 'blur(60px) saturate(180%)',
+              WebkitBackdropFilter: 'blur(60px) saturate(180%)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.1)',
+            }}
           >
-            {/* Decorative elements */}
-            <div className="absolute -top-6 left-1/2 -translate-x-1/2">
+            {/* Subtle glow accent */}
+            <div className="absolute -top-px left-1/2 -translate-x-1/2 w-24 h-px bg-gradient-to-r from-transparent via-primary/60 to-transparent" />
+            
+            {/* Icon */}
+            <div className="flex justify-center mb-3">
               <motion.div
                 animate={{ rotate: [0, 360] }}
-                transition={{ repeat: Infinity, duration: 8, ease: "linear" }}
-                className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg shadow-primary/40"
+                transition={{ repeat: Infinity, duration: 10, ease: "linear" }}
+                className="w-8 h-8 rounded-full flex items-center justify-center"
+                style={{
+                  background: 'linear-gradient(135deg, hsl(var(--primary) / 0.6), hsl(var(--accent) / 0.4))',
+                  boxShadow: '0 0 20px hsl(var(--primary) / 0.3)',
+                }}
               >
-                <Mic className="h-6 w-6 text-primary-foreground" />
+                <Mic className="h-4 w-4 text-primary-foreground" />
               </motion.div>
             </div>
 
-            <div className="text-center mt-4 mb-6">
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-              >
-                <div className="flex items-center justify-center gap-2 mb-2">
-                  <Sparkles className="h-5 w-5 text-accent" />
-                  <h2 className="text-xl font-bold text-foreground">Twój Asystent AI</h2>
-                  <Music className="h-5 w-5 text-accent" />
-                </div>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  Nadaj imię swojemu asystentowi muzycznemu.<br />
-                  Będzie Cię słuchać, uczyć się i reagować na Twój głos.
-                </p>
-              </motion.div>
+            <div className="text-center mb-4">
+              <div className="flex items-center justify-center gap-1.5 mb-1">
+                <Sparkles className="h-3 w-3 text-primary/70" />
+                <h2 className="text-sm font-semibold text-foreground/90">Nadaj imię asystentowi</h2>
+              </div>
+              <p className="text-[10px] text-muted-foreground/70 leading-relaxed">
+                Wpisz imię — będzie Cię słuchać i reagować na głos
+              </p>
             </div>
 
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 }}
-              className="space-y-4"
-            >
+            <div className="space-y-3">
               <Input
                 placeholder="np. Rocco, Luna, Max..."
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
-                className="text-center text-lg font-semibold bg-background/50 border-primary/20 focus:border-primary h-12"
+                className="text-center text-sm font-medium h-9 border-0 rounded-xl"
+                style={{
+                  background: 'rgba(255,255,255,0.06)',
+                  color: 'hsl(var(--foreground))',
+                }}
                 autoFocus
               />
               <Button
                 onClick={handleSubmit}
-                className="w-full h-12 text-base font-bold groove-glow"
-                size="lg"
+                className="w-full h-9 text-xs font-semibold rounded-xl"
+                style={{
+                  background: 'linear-gradient(135deg, hsl(var(--primary) / 0.7), hsl(var(--accent) / 0.5))',
+                  backdropFilter: 'blur(20px)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                }}
               >
-                <Mic className="mr-2 h-5 w-5" />
-                {name.trim() ? `Aktywuj "${name.trim()}"` : "Aktywuj asystenta"}
+                <Mic className="mr-1.5 h-3 w-3" />
+                {name.trim() ? `Aktywuj „${name.trim()}"` : "Aktywuj"}
               </Button>
-            </motion.div>
-
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 0.6 }}
-              transition={{ delay: 0.6 }}
-              className="text-xs text-muted-foreground text-center mt-4"
-            >
-              Powiedz imię asystenta, żeby go przywołać 🎤
-            </motion.p>
+            </div>
           </motion.div>
         </motion.div>
       )}
