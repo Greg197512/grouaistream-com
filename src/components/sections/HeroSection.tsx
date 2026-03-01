@@ -10,17 +10,40 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import heroBg from "@/assets/hero-bg.jpg";
 
+// Gentle idle equalizer frequencies
+function generateIdleFrequencies(barCount: number): number[] {
+  const t = Date.now() / 1000;
+  const freqs: number[] = [];
+  for (let i = 0; i < barCount; i++) {
+    const base = 0.08 + Math.sin(t * 0.8 + i * 0.4) * 0.04 + Math.sin(t * 1.3 + i * 0.7) * 0.03;
+    freqs.push(Math.max(0.03, Math.min(0.2, base)));
+  }
+  return freqs;
+}
+
 export const HeroSection = () => {
   const navigate = useNavigate();
   const { playPlaylist, isPlaying, audioElement, isVideoMode } = usePlayer();
   const { t } = useLanguage();
   const [isLoading, setIsLoading] = useState(false);
   const levels = useAudioAnalyser(audioElement, isPlaying, isVideoMode);
+  const [idleFrequencies, setIdleFrequencies] = useState(() => generateIdleFrequencies(18));
+
+  // Animate idle equalizer
+  useEffect(() => {
+    if (isPlaying) return;
+    const id = setInterval(() => setIdleFrequencies(generateIdleFrequencies(18)), 100);
+    return () => clearInterval(id);
+  }, [isPlaying]);
 
   const handleStartListening = async () => {
     setIsLoading(true);
     try {
-      const { data: tracks, error } = await supabase.from("tracks").select("*").limit(20);
+      const { data: tracks, error } = await supabase
+        .from("tracks")
+        .select("id,title,artist,album,cover_url,audio_url,video_url,duration,genre,mood")
+        .not("audio_url", "is", null)
+        .limit(10);
       if (error) throw error;
       if (tracks && tracks.length > 0) {
         const shuffled = [...tracks].sort(() => Math.random() - 0.5);
@@ -173,14 +196,15 @@ export const HeroSection = () => {
               </span>
 
               {/* Real-data equalizer */}
-              {isPlaying && (
-                <div 
+              <div 
                   className="flex items-end gap-[2.5px] h-7 mt-0.5 w-full relative"
                   style={{
-                    filter: `drop-shadow(0 0 ${8 + levels.overall * 14}px hsl(25 90% 50% / ${0.3 + levels.overall * 0.4})) drop-shadow(0 4px 16px hsl(var(--primary) / ${0.15 + levels.bass * 0.25}))`,
+                    filter: isPlaying 
+                      ? `drop-shadow(0 0 ${8 + levels.overall * 14}px hsl(25 90% 50% / ${0.3 + levels.overall * 0.4})) drop-shadow(0 4px 16px hsl(var(--primary) / ${0.15 + levels.bass * 0.25}))`
+                      : 'drop-shadow(0 0 4px hsl(25 90% 50% / 0.15))',
                   }}
                 >
-                  {levels.frequencies.map((freq, i) => {
+                  {(isPlaying ? levels.frequencies : idleFrequencies).map((freq, i) => {
                     const isBass = i < 6;
                     const isMid = i >= 6 && i < 12;
                     const height = Math.max(8, freq * 100);
@@ -229,11 +253,10 @@ export const HeroSection = () => {
                   <div 
                     className="absolute inset-0 pointer-events-none"
                     style={{ 
-                      background: `radial-gradient(ellipse at 30% 50%, hsl(25 95% 50% / ${0.1 + levels.bass * 0.25}) 0%, transparent 65%)`,
+                      background: `radial-gradient(ellipse at 30% 50%, hsl(25 95% 50% / ${isPlaying ? 0.1 + levels.bass * 0.25 : 0.05}) 0%, transparent 65%)`,
                     }}
                   />
                 </div>
-              )}
             </div>
           </motion.div>
 
