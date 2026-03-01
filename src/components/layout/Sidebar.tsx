@@ -76,7 +76,7 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
             onClick={() => handleNavClick("/")}
             whileHover={{ scale: 1.03 }}
           >
-            <img src={logoIcon} alt="GrouAI Stream by GrouaRock" className="h-16 object-contain drop-shadow-[0_0_16px_hsl(var(--primary)/0.4)]" />
+            <img src={logoIcon} alt="GrouAI Stream by GrouaRock" className="h-24 object-contain" />
           </motion.div>
         )}
       </div>
