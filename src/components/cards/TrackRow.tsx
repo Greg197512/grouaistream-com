@@ -38,8 +38,19 @@ const TrackRowComponent = forwardRef<HTMLDivElement, TrackRowProps>(({
       ref={ref}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
+      onClick={onPlay}
+      role={onPlay ? "button" : undefined}
+      tabIndex={onPlay ? 0 : undefined}
+      onKeyDown={(e) => {
+        if (!onPlay) return;
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onPlay();
+        }
+      }}
       className={cn(
         "grid grid-cols-[16px_4fr_3fr_1fr] md:grid-cols-[16px_4fr_3fr_2fr_1fr] gap-4 px-4 py-2 rounded-md items-center group",
+        onPlay && "cursor-pointer",
         isHovered && "bg-secondary/50",
         isPlaying && "bg-secondary"
       )}
@@ -47,7 +58,13 @@ const TrackRowComponent = forwardRef<HTMLDivElement, TrackRowProps>(({
       {/* Index / Play */}
       <div className="flex items-center justify-center w-4">
         {isHovered || isPlaying ? (
-          <button onClick={onPlay} className="text-foreground">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onPlay?.();
+            }}
+            className="text-foreground"
+          >
             {isPlaying ? (
               <Pause className="h-4 w-4 fill-current" />
             ) : (
@@ -97,7 +114,7 @@ const TrackRowComponent = forwardRef<HTMLDivElement, TrackRowProps>(({
       )}
 
       {/* Actions & Duration */}
-      <div className="flex items-center justify-end gap-2">
+      <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
         <LikeButton trackId={id} className="opacity-0 group-hover:opacity-100" />
         <span className="text-sm text-muted-foreground w-12 text-right">{duration}</span>
         <TrackOptionsMenu
