@@ -331,12 +331,12 @@ export const PlayerBar = () => {
             )} />
           </button>
 
-          {/* Face Recognition / Mood Detection Button - desktop only */}
+          {/* Face Recognition / Mood Detection Button */}
           <motion.button 
             whileHover={{ scale: 1.15 }}
             whileTap={{ scale: 0.9 }}
             onClick={() => setShowMoodDetector(true)}
-            className="hidden md:flex flex-shrink-0 p-1.5 rounded-full bg-gradient-to-br from-primary/80 to-accent/80 hover:from-primary hover:to-accent transition-all shadow-lg"
+            className="flex-shrink-0 p-1.5 rounded-full bg-gradient-to-br from-primary/80 to-accent/80 hover:from-primary hover:to-accent transition-all shadow-lg"
             title="Rozpoznawanie nastroju (Kamera)"
           >
             <ScanFace className="h-3.5 w-3.5 text-white" />
@@ -543,24 +543,6 @@ export const PlayerBar = () => {
       {/* Mood Detector Modal */}
       <QuickMoodDetector isOpen={showMoodDetector} onClose={() => setShowMoodDetector(false)} />
 
-      {/* Mobile Floating Mood Button - centered bottom, above player */}
-      <motion.button
-        onClick={() => setShowMoodDetector(true)}
-        className="md:hidden fixed bottom-28 left-1/2 -translate-x-1/2 z-[60] h-14 w-14 rounded-full flex items-center justify-center bg-gradient-to-br from-primary to-accent shadow-[0_0_24px_rgba(var(--primary),0.5)] border-2 border-white/20"
-        whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.9 }}
-        initial={{ y: 20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ type: "spring", stiffness: 300, damping: 20 }}
-        title="Rozpoznawanie nastroju"
-      >
-        <ScanFace className="h-6 w-6 text-white" />
-        <motion.div
-          className="absolute inset-0 rounded-full bg-white/20"
-          animate={{ scale: [1, 1.4, 1], opacity: [0.3, 0, 0.3] }}
-          transition={{ duration: 2, repeat: Infinity }}
-        />
-      </motion.button>
     </>
   );
 };
