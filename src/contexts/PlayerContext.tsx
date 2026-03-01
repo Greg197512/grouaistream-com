@@ -45,6 +45,7 @@ interface PlayerContextType {
   onYouTubeEnded: () => void;
   skipAnalysis: { avoidGenres: string[]; avoidMoods: string[]; recentSkipCount: number; consecutiveSkips: number };
   onSkipTriggered: () => void;
+  audioElement: HTMLAudioElement | null;
 }
 
 const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
@@ -428,6 +429,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
         onYouTubeEnded,
         skipAnalysis,
         onSkipTriggered,
+        audioElement: audioRef.current,
       }}
     >
       {children}
