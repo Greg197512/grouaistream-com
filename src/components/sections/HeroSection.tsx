@@ -28,13 +28,28 @@ export const HeroSection = () => {
   const [isLoading, setIsLoading] = useState(false);
   const levels = useAudioAnalyser(audioElement, isPlaying, isVideoMode);
   const [idleFrequencies, setIdleFrequencies] = useState(() => generateIdleFrequencies(18));
+  const [blendedFrequencies, setBlendedFrequencies] = useState(() => generateIdleFrequencies(18));
+  const transitionRef = useRef(0); // 0 = idle, 1 = playing
 
-  // Animate idle equalizer
+  // Animate idle equalizer + smooth blend
   useEffect(() => {
-    if (isPlaying) return;
-    const id = setInterval(() => setIdleFrequencies(generateIdleFrequencies(18)), 100);
+    const id = setInterval(() => {
+      // Smoothly transition the blend factor
+      const target = isPlaying ? 1 : 0;
+      transitionRef.current += (target - transitionRef.current) * 0.12;
+      
+      const idle = generateIdleFrequencies(18);
+      setIdleFrequencies(idle);
+      
+      const t = transitionRef.current;
+      const blended = idle.map((idleVal, i) => {
+        const activeVal = levels.frequencies[i] ?? idleVal;
+        return idleVal * (1 - t) + activeVal * t;
+      });
+      setBlendedFrequencies(blended);
+    }, 60);
     return () => clearInterval(id);
-  }, [isPlaying]);
+  }, [isPlaying, levels.frequencies]);
 
   const handleStartListening = async () => {
     setIsLoading(true);
@@ -204,7 +219,7 @@ export const HeroSection = () => {
                       : 'drop-shadow(0 0 4px hsl(25 90% 50% / 0.15))',
                   }}
                 >
-                  {(isPlaying ? levels.frequencies : idleFrequencies).map((freq, i) => {
+                  {blendedFrequencies.map((freq, i) => {
                     const isBass = i < 6;
                     const isMid = i >= 6 && i < 12;
                     const height = Math.max(8, freq * 100);
