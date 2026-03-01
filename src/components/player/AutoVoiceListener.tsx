@@ -66,6 +66,9 @@ export const AutoVoiceListener = () => {
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const restartTimeoutRef = useRef<number | null>(null);
   const silenceTimerRef = useRef<number | null>(null);
+  const isPlayingRef = useRef(isPlaying);
+
+  useEffect(() => { isPlayingRef.current = isPlaying; }, [isPlaying]);
 
   useEffect(() => {
     const stored = localStorage.getItem("auto-voice-listen");
@@ -203,14 +206,14 @@ export const AutoVoiceListener = () => {
       return;
     }
 
-    // STOP command - always force pause/stop the player
+    // STOP command - always force pause/stop the player (use ref to avoid stale closure)
     if (lower.includes("stop") || lower.includes("zatrzymaj") || lower.includes("pauza")) {
-      if (isPlaying) togglePlay();
+      if (isPlayingRef.current) togglePlay();
       speak("Zatrzymuję odtwarzanie");
       toast.info("⏹️ Player zatrzymany");
       return;
     }
-    if (lower.includes("graj") && !lower.includes("następ") && !lower.includes("odtwarz") && lower.split(" ").length <= 2) { if (!isPlaying) togglePlay(); speak("Odtwarzam"); return; }
+    if (lower.includes("graj") && !lower.includes("następ") && !lower.includes("odtwarz") && lower.split(" ").length <= 2) { if (!isPlayingRef.current) togglePlay(); speak("Odtwarzam"); return; }
     if (lower.includes("następn") || lower.includes("dalej") || lower.includes("skip")) { nextTrack(); speak("Następny utwór"); return; }
     if (lower.includes("poprzedni") || lower.includes("cofnij") || lower.includes("wstecz")) { prevTrack(); speak("Poprzedni utwór"); return; }
     if (lower.includes("głośniej") || lower.includes("louder")) { setVolume(85); speak("Głośniej"); return; }
@@ -259,7 +262,7 @@ export const AutoVoiceListener = () => {
         toast.error("Nie udało się przetworzyć komendy", { id: "voice-cmd" });
       }
     }
-  }, [isAIEnabled, isPlaying, processVoiceCommand, playPlaylist, togglePlay, nextTrack, prevTrack, setVolume, tryNavigate, searchAndPlay, resetSilenceTimer, assistantName, fetchAISuggestions, shutdownMic, showSuggestions, aiSuggestions]);
+  }, [isAIEnabled, processVoiceCommand, playPlaylist, togglePlay, nextTrack, prevTrack, setVolume, tryNavigate, searchAndPlay, resetSilenceTimer, assistantName, fetchAISuggestions, shutdownMic, showSuggestions, aiSuggestions]);
 
   const startListening = useCallback(() => {
     if (!user) return;
