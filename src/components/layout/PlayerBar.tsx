@@ -368,16 +368,33 @@ export const PlayerBar = () => {
               className="relative z-10 flex items-center justify-center h-9 w-9 rounded-full bg-gradient-to-br from-primary to-accent border border-white/30 shadow-[0_0_12px_rgba(var(--primary),0.5)]"
               title="Rozpoznawanie nastroju (Kamera)"
             >
-              {/* Camera sitting on top of circle */}
-              <Camera className="absolute -top-1.5 left-1/2 -translate-x-1/2 h-3 w-3 text-white drop-shadow-md" />
-              {/* Face: eyes + smile */}
-              <div className="flex flex-col items-center gap-0.5 mt-1">
-                <div className="flex gap-1.5">
-                  <div className="w-1 h-1 rounded-full bg-white" />
-                  <div className="w-1 h-1 rounded-full bg-white" />
+              {/* Animated face that fades out, then camera fades in, loop */}
+              <motion.div
+                className="absolute inset-0 flex flex-col items-center justify-center"
+                animate={{ opacity: [1, 1, 0, 0, 1] }}
+                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+              >
+                {/* Face: eyes + smile */}
+                <div className="flex flex-col items-center gap-0.5">
+                  <div className="flex gap-1.5">
+                    <div className="w-1 h-1 rounded-full bg-white" />
+                    <div className="w-1 h-1 rounded-full bg-white" />
+                  </div>
+                  <div className="w-3.5 h-1.5 border-b-[1.5px] border-white rounded-b-full" />
                 </div>
-                <div className="w-3.5 h-1.5 border-b-[1.5px] border-white rounded-b-full" />
-              </div>
+              </motion.div>
+              <motion.div
+                className="absolute inset-0 flex items-center justify-center"
+                animate={{ opacity: [0, 0, 1, 1, 0] }}
+                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+              >
+                <motion.div
+                  animate={{ scale: [0.8, 1, 0.8], rotate: [0, 5, -5, 0] }}
+                  transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                >
+                  <Camera className="h-5 w-5 text-white" />
+                </motion.div>
+              </motion.div>
             </motion.button>
           </motion.div>
         </div>
