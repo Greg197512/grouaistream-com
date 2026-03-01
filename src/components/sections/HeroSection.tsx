@@ -6,6 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAudioAnalyser } from "@/hooks/useAudioAnalyser";
+import { useTimeRotation } from "@/hooks/useTimeRotation";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import heroBg from "@/assets/hero-bg.jpg";
@@ -27,6 +28,7 @@ export const HeroSection = () => {
   const { t } = useLanguage();
   const [isLoading, setIsLoading] = useState(false);
   const levels = useAudioAnalyser(audioElement, isPlaying, isVideoMode);
+  const timeTheme = useTimeRotation();
   const [idleFrequencies, setIdleFrequencies] = useState(() => generateIdleFrequencies(18));
   const [blendedFrequencies, setBlendedFrequencies] = useState(() => generateIdleFrequencies(18));
   const transitionRef = useRef(0); // 0 = idle, 1 = playing
@@ -93,9 +95,11 @@ export const HeroSection = () => {
   return (
     <section className="relative overflow-hidden">
       <div className="absolute inset-0">
-        <img src={heroBg} alt="Hero background" className="h-full w-full object-cover opacity-40" />
+        <img src={heroBg} alt="Hero background" className="h-full w-full object-cover opacity-40" style={{ filter: `hue-rotate(${timeTheme.accentHue - 25}deg)` }} />
         <div className="absolute inset-0 bg-gradient-to-b from-background/60 via-background/80 to-background" />
         <div className="absolute inset-0 bg-gradient-to-r from-background via-transparent to-background/60" />
+        {/* Time-based rotating accent overlay */}
+        <div className="absolute inset-0 transition-all duration-[3000ms]" style={{ background: timeTheme.bgOverlay }} />
         
         {/* Audio-reactive wave layers */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
