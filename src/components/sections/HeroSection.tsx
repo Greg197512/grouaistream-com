@@ -137,13 +137,23 @@ export const HeroSection = () => {
 
             {/* Text with bouncing letters + equalizer underneath */}
             <div className="relative flex flex-col items-start">
-              {/* Bouncing letters - high jump with slow gravity fall */}
+              {/* Bouncing letters with floating shadow */}
               <span className="text-base font-medium text-accent relative z-10 flex">
                 {(t("hero.badge") + " ").split("").map((char, i) => (
                   <motion.span
                     key={`badge-${i}`}
                     animate={isPlaying ? { 
-                      y: [0, -8, -7, -5, -2, 0, 0, 0],
+                      y: [0, -10, -9, -6, -3, 0, 0, 0],
+                      textShadow: [
+                        '0 0px 0px transparent',
+                        '0 10px 8px hsl(var(--primary) / 0.4)',
+                        '0 9px 7px hsl(var(--primary) / 0.35)',
+                        '0 6px 5px hsl(var(--primary) / 0.25)',
+                        '0 3px 3px hsl(var(--primary) / 0.15)',
+                        '0 0px 0px transparent',
+                        '0 0px 0px transparent',
+                        '0 0px 0px transparent',
+                      ],
                     } : {}}
                     transition={isPlaying ? { 
                       duration: 1.2, 
@@ -163,7 +173,17 @@ export const HeroSection = () => {
                     <motion.span
                       key={`rock-${i}`}
                       animate={isPlaying ? { 
-                        y: [0, -10, -9, -6, -3, 0, 0, 0],
+                        y: [0, -12, -11, -7, -3, 0, 0, 0],
+                        textShadow: [
+                          '0 0px 0px transparent',
+                          '0 12px 10px hsl(25 95% 55% / 0.45)',
+                          '0 11px 8px hsl(25 95% 55% / 0.35)',
+                          '0 7px 6px hsl(25 95% 55% / 0.25)',
+                          '0 3px 3px hsl(25 95% 55% / 0.12)',
+                          '0 0px 0px transparent',
+                          '0 0px 0px transparent',
+                          '0 0px 0px transparent',
+                        ],
                       } : {}}
                       transition={isPlaying ? { 
                         duration: 1.0, 
@@ -181,77 +201,88 @@ export const HeroSection = () => {
                 </span>
               </span>
 
-              {/* Glass equalizer with reflection + bass hits */}
+              {/* Glass equalizer - taller, richer colors */}
               {isPlaying && (
                 <motion.div 
-                  className="flex items-end gap-[2px] h-5 mt-0.5 w-full relative"
+                  className="flex items-end gap-[2.5px] h-7 mt-0.5 w-full relative"
                   initial={{ opacity: 0, scaleX: 0.5 }}
                   animate={{ 
                     opacity: 1, 
-                    scaleX: [1, 1.06, 1, 1.04, 1],
+                    scaleX: [1, 1.05, 1, 1.03, 1],
                   }}
                   transition={{ 
                     opacity: { duration: 0.3 },
-                    scaleX: { duration: 0.45, repeat: Infinity, ease: "easeInOut" }
+                    scaleX: { duration: 0.5, repeat: Infinity, ease: "easeInOut" }
                   }}
                   style={{
-                    filter: 'drop-shadow(0 0 10px hsl(25 95% 55% / 0.5)) drop-shadow(0 2px 14px hsl(var(--primary) / 0.35))'
+                    filter: 'drop-shadow(0 0 12px hsl(25 90% 50% / 0.55)) drop-shadow(0 4px 16px hsl(var(--primary) / 0.3))'
                   }}
                 >
                   {Array.from({ length: 18 }, (_, i) => {
-                    // Bass bars (center-left) hit higher
                     const isBass = i >= 2 && i <= 7;
-                    const maxH = isBass ? 100 : 70;
-                    const minH = isBass ? 25 : 10;
+                    const isMid = i >= 8 && i <= 12;
+                    const maxH = isBass ? 100 : isMid ? 85 : 60;
+                    const minH = isBass ? 30 : isMid ? 15 : 8;
+                    // Richer color per frequency range
+                    const bg = isBass
+                      ? 'linear-gradient(to top, hsl(15 90% 45% / 0.6), hsl(25 95% 55% / 0.5), hsl(35 100% 60% / 0.35))'
+                      : isMid
+                      ? 'linear-gradient(to top, hsl(25 90% 50% / 0.5), hsl(30 95% 58% / 0.4), hsl(40 100% 65% / 0.25))'
+                      : 'linear-gradient(to top, hsl(35 85% 55% / 0.45), hsl(40 90% 62% / 0.35), hsl(45 100% 70% / 0.2))';
+                    const borderColor = isBass
+                      ? 'hsl(20 90% 50% / 0.4)'
+                      : isMid
+                      ? 'hsl(30 85% 55% / 0.3)'
+                      : 'hsl(40 80% 60% / 0.25)';
                     return (
                       <motion.div
                         key={`eq-${i}`}
                         className="flex-1 min-w-[2px] rounded-sm relative overflow-hidden"
                         style={{ 
-                          background: `linear-gradient(to top, hsl(var(--primary) / 0.45), hsl(25 95% 55% / 0.35), hsl(35 100% 65% / 0.2))`,
-                          backdropFilter: 'blur(6px)',
-                          border: '1px solid hsl(25 95% 55% / 0.25)',
-                          boxShadow: `inset 0 1px 0 hsl(0 0% 100% / 0.25), inset 0 0 4px hsl(25 95% 55% / 0.1), 0 0 4px hsl(var(--primary) / 0.15)`,
+                          background: bg,
+                          backdropFilter: 'blur(8px)',
+                          border: `1px solid ${borderColor}`,
+                          boxShadow: `inset 0 1px 0 hsl(0 0% 100% / 0.3), inset 0 -1px 3px hsl(25 90% 50% / 0.15), 0 0 6px hsl(var(--primary) / 0.12)`,
                         }}
                         animate={{ 
                           height: [
-                            `${minH + Math.random() * 20}%`, 
-                            `${maxH - Math.random() * 15}%`, 
                             `${minH + Math.random() * 15}%`, 
-                            `${maxH - Math.random() * 25}%`, 
-                            `${minH + Math.random() * 20}%`
+                            `${maxH - Math.random() * 10}%`, 
+                            `${minH + Math.random() * 10}%`, 
+                            `${maxH - Math.random() * 20}%`, 
+                            `${minH + Math.random() * 15}%`
                           ],
-                          opacity: [0.55, 0.95, 0.45, 0.9, 0.55]
+                          opacity: [0.5, 1, 0.4, 0.95, 0.5]
                         }}
                         transition={{
-                          duration: isBass ? 0.2 + Math.random() * 0.15 : 0.3 + Math.random() * 0.25,
+                          duration: isBass ? 0.18 + Math.random() * 0.12 : 0.28 + Math.random() * 0.22,
                           repeat: Infinity,
                           ease: "easeInOut",
-                          delay: i * 0.02,
+                          delay: i * 0.018,
                         }}
                       >
-                        {/* Glass reflection shine */}
+                        {/* Glass reflection */}
                         <div 
                           className="absolute inset-0 pointer-events-none"
                           style={{
-                            background: 'linear-gradient(135deg, hsl(0 0% 100% / 0.3) 0%, transparent 40%, transparent 60%, hsl(0 0% 100% / 0.08) 100%)',
+                            background: 'linear-gradient(135deg, hsl(0 0% 100% / 0.35) 0%, transparent 35%, transparent 65%, hsl(0 0% 100% / 0.1) 100%)',
                           }}
                         />
-                        {/* Top highlight edge */}
+                        {/* Top highlight */}
                         <div 
                           className="absolute top-0 left-0 right-0 h-[1px] pointer-events-none"
                           style={{
-                            background: 'linear-gradient(to right, transparent, hsl(0 0% 100% / 0.4), transparent)',
+                            background: 'linear-gradient(to right, transparent, hsl(0 0% 100% / 0.5), transparent)',
                           }}
                         />
                       </motion.div>
                     );
                   })}
-                  {/* Glow overlay */}
+                  {/* Warm glow */}
                   <div 
-                    className="absolute inset-0 rounded-full pointer-events-none"
+                    className="absolute inset-0 pointer-events-none"
                     style={{ 
-                      background: 'radial-gradient(ellipse at center, hsl(25 95% 55% / 0.2) 0%, transparent 70%)',
+                      background: 'radial-gradient(ellipse at 35% 50%, hsl(25 95% 50% / 0.2) 0%, transparent 65%)',
                     }}
                   />
                 </motion.div>
