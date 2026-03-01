@@ -145,22 +145,25 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // On first batch, clear old non-music movies and insert curated list
+    // On first batch, insert curated list (skip duplicates)
     if (batch === 0) {
-      // Delete all existing movies to start fresh with music-only content
-      await supabase.from('movies').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-      
-      const { error } = await supabase.from('movies').insert(MUSIC_FILMS);
+      const { error } = await supabase.from('movies').upsert(MUSIC_FILMS, { 
+        onConflict: 'title,director',
+        ignoreDuplicates: true 
+      });
       if (error) console.error('Music films insert error:', error);
     }
 
-    let totalAdded = MUSIC_FILMS.length;
+    let totalAdded = 0;
 
-    // Generate more music movies
+    // Generate more music movies (skip duplicates)
     const musicBatch = generateMusicMovieBatch(batch, batchSize);
     for (let i = 0; i < musicBatch.length; i += 100) {
       const chunk = musicBatch.slice(i, i + 100);
-      const { error } = await supabase.from('movies').insert(chunk);
+      const { error, count } = await supabase.from('movies').upsert(chunk, {
+        onConflict: 'title,director',
+        ignoreDuplicates: true
+      });
       if (!error) totalAdded += chunk.length;
       else console.error('Batch insert error:', error);
     }
