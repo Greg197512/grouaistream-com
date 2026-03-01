@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Play, Sparkles, Zap, Brain, Radio, Loader2, Volume2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -65,57 +65,56 @@ export const HeroSection = () => {
             animate={{ opacity: 1, scale: 1 }} 
             transition={{ delay: 0.2 }} 
             className="inline-flex items-center gap-3 rounded-full bg-accent/20 border border-accent/30 px-5 py-2.5 mb-6 relative overflow-visible"
+            style={isPlaying ? { filter: 'drop-shadow(0 0 12px hsl(var(--primary) / 0.3))' } : {}}
           >
             {/* Logo container with speaker behind */}
-            <div className="relative flex items-center justify-center">
-              {/* Speaker beating behind logo like a real subwoofer */}
+            <div className="relative flex items-center justify-center" style={{ width: 40, height: 40 }}>
               {isPlaying && (
                 <>
-                  {/* Bass speaker membrane pulsing */}
+                  {/* Bass speaker membrane pulsing behind logo */}
                   <motion.div
                     className="absolute inset-0 flex items-center justify-center"
-                    style={{ width: 44, height: 44, left: -2, top: -2 }}
+                    animate={{ 
+                      scale: [1, 1.3, 0.9, 1.25, 1],
+                      rotate: [0, 2, -3, 1, 0]
+                    }}
+                    transition={{ duration: 0.35, repeat: Infinity, ease: "easeInOut" }}
                   >
-                    <motion.div
-                      animate={{ 
-                        scale: [1, 1.25, 0.95, 1.2, 1],
-                        rotate: [0, 2, -2, 1, 0]
-                      }}
-                      transition={{ duration: 0.4, repeat: Infinity, ease: "easeInOut" }}
-                    >
-                      <Volume2 className="h-8 w-8 text-primary/70" />
-                    </motion.div>
+                    <Volume2 className="h-9 w-9 text-primary/60" />
                   </motion.div>
 
-                  {/* Echo sonar rings expanding outward */}
+                  {/* Echo sonar rings that vibrate like equalizer */}
                   {[0, 1, 2, 3].map((i) => (
                     <motion.div
                       key={`ring-${i}`}
-                      className="absolute rounded-full border-2 border-primary/40"
-                      style={{ width: 40, height: 40, left: 0, top: 0 }}
+                      className="absolute rounded-full"
+                      style={{ 
+                        width: 40, height: 40, left: 0, top: 0,
+                        border: '2px solid hsl(var(--primary) / 0.35)',
+                        boxShadow: '0 0 6px hsl(var(--primary) / 0.2)'
+                      }}
                       animate={{ 
-                        scale: [1, 2 + i * 0.5], 
-                        opacity: [0.6, 0],
-                        borderWidth: ['2px', '0.5px']
+                        scale: [1, 1.8 + i * 0.4, 1.5 + i * 0.3, 2 + i * 0.5], 
+                        opacity: [0.5, 0.3, 0.4, 0],
+                        borderWidth: ['2px', '1.5px', '2px', '0.5px'],
                       }}
                       transition={{ 
-                        duration: 1.2, 
+                        duration: 1.4, 
                         repeat: Infinity, 
-                        delay: i * 0.25, 
+                        delay: i * 0.2, 
                         ease: "easeOut" 
                       }}
                     />
                   ))}
 
-                  {/* Vibration shake on the speaker */}
+                  {/* Speaker vibration shake */}
                   <motion.div
-                    className="absolute"
-                    style={{ width: 40, height: 40, left: 0, top: 0 }}
+                    className="absolute inset-0"
                     animate={{ 
-                      x: [0, -1.5, 2, -2, 1.5, 0],
-                      y: [0, 1, -1.5, 1, -0.5, 0]
+                      x: [0, -2, 2.5, -2.5, 2, 0],
+                      y: [0, 1.5, -2, 1.5, -1, 0]
                     }}
-                    transition={{ duration: 0.15, repeat: Infinity, ease: "linear" }}
+                    transition={{ duration: 0.12, repeat: Infinity, ease: "linear" }}
                   />
                 </>
               )}
@@ -123,67 +122,112 @@ export const HeroSection = () => {
               <motion.img
                 src="/logo-icon.png"
                 alt="GrouAI"
-                className="h-10 w-10 drop-shadow-[0_0_12px_hsl(var(--primary)/0.7)] relative z-10"
+                className="h-10 w-10 relative z-10"
+                style={{ filter: isPlaying ? 'drop-shadow(0 0 14px hsl(var(--primary) / 0.8))' : 'drop-shadow(0 0 8px hsl(var(--primary) / 0.6))' }}
                 animate={isPlaying
-                  ? { rotate: [0, 3, -3, 0], scale: [1, 1.06, 0.97, 1.06, 1] }
+                  ? { rotate: [0, 3, -3, 0], scale: [1, 1.08, 0.95, 1.08, 1] }
                   : { rotate: [0, 5, -5, 0] }
                 }
                 transition={isPlaying
-                  ? { duration: 0.35, repeat: Infinity, ease: "easeInOut" }
+                  ? { duration: 0.3, repeat: Infinity, ease: "easeInOut" }
                   : { duration: 4, repeat: Infinity, ease: "easeInOut" }
                 }
               />
             </div>
 
-            {/* Text with equalizer underneath */}
+            {/* Text with bouncing letters + equalizer underneath */}
             <div className="relative flex flex-col items-start">
-              <motion.span 
-                className="text-base font-medium text-accent relative z-10"
-                animate={isPlaying ? { x: [0, 0.5, -0.5, 0] } : {}}
-                transition={isPlaying ? { duration: 0.3, repeat: Infinity, ease: "easeInOut" } : {}}
-              >
-                {t("hero.badge")} <span className="font-bold">by GrouaRock</span>
-              </motion.span>
+              {/* Bouncing letters */}
+              <span className="text-base font-medium text-accent relative z-10 flex">
+                {(t("hero.badge") + " ").split("").map((char, i) => (
+                  <motion.span
+                    key={`badge-${i}`}
+                    animate={isPlaying ? { 
+                      y: [0, -3, 0, -1.5, 0],
+                    } : {}}
+                    transition={isPlaying ? { 
+                      duration: 0.6, 
+                      repeat: Infinity, 
+                      ease: "easeInOut",
+                      delay: i * 0.05,
+                    } : {}}
+                    className="inline-block"
+                    style={{ minWidth: char === ' ' ? '0.25em' : undefined }}
+                  >
+                    {char === ' ' ? '\u00A0' : char}
+                  </motion.span>
+                ))}
+                <span className="font-bold flex">
+                  {"by GrouaRock".split("").map((char, i) => (
+                    <motion.span
+                      key={`rock-${i}`}
+                      animate={isPlaying ? { 
+                        y: [0, -4, 0, -2, 0],
+                      } : {}}
+                      transition={isPlaying ? { 
+                        duration: 0.5, 
+                        repeat: Infinity, 
+                        ease: "easeInOut",
+                        delay: 0.4 + i * 0.04,
+                      } : {}}
+                      className="inline-block"
+                      style={{ minWidth: char === ' ' ? '0.25em' : undefined }}
+                    >
+                      {char === ' ' ? '\u00A0' : char}
+                    </motion.span>
+                  ))}
+                </span>
+              </span>
 
-              {/* Orange equalizer bars under the text */}
+              {/* Orange equalizer with glow under text */}
               {isPlaying && (
                 <motion.div 
-                  className="flex items-end gap-[2px] h-3 mt-0.5 w-full"
+                  className="flex items-end gap-[2px] h-4 mt-0.5 w-full relative"
                   initial={{ opacity: 0, scaleX: 0.5 }}
                   animate={{ 
                     opacity: 1, 
-                    scaleX: [1, 1.08, 1, 1.05, 1],
+                    scaleX: [1, 1.06, 1, 1.04, 1],
                   }}
                   transition={{ 
                     opacity: { duration: 0.3 },
-                    scaleX: { duration: 0.5, repeat: Infinity, ease: "easeInOut" }
+                    scaleX: { duration: 0.45, repeat: Infinity, ease: "easeInOut" }
+                  }}
+                  style={{
+                    filter: 'drop-shadow(0 0 8px hsl(25 95% 55% / 0.6)) drop-shadow(0 2px 12px hsl(var(--primary) / 0.4))'
                   }}
                 >
-                  {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14].map((i) => (
+                  {Array.from({ length: 18 }, (_, i) => (
                     <motion.div
                       key={`eq-${i}`}
                       className="flex-1 min-w-[2px] rounded-full"
                       style={{ 
-                        background: `linear-gradient(to top, hsl(var(--primary)), hsl(25 95% 60%))`,
+                        background: `linear-gradient(to top, hsl(var(--primary)), hsl(25 95% 55%), hsl(35 100% 65%))`,
                       }}
                       animate={{ 
                         height: [
-                          `${20 + Math.random() * 30}%`, 
-                          `${60 + Math.random() * 40}%`, 
                           `${15 + Math.random() * 25}%`, 
-                          `${50 + Math.random() * 50}%`, 
-                          `${20 + Math.random() * 30}%`
+                          `${65 + Math.random() * 35}%`, 
+                          `${10 + Math.random() * 20}%`, 
+                          `${55 + Math.random() * 45}%`, 
+                          `${15 + Math.random() * 25}%`
                         ],
-                        opacity: [0.7, 1, 0.6, 1, 0.7]
+                        opacity: [0.75, 1, 0.65, 1, 0.75]
                       }}
                       transition={{
-                        duration: 0.3 + Math.random() * 0.3,
+                        duration: 0.25 + Math.random() * 0.25,
                         repeat: Infinity,
                         ease: "easeInOut",
-                        delay: i * 0.03,
+                        delay: i * 0.025,
                       }}
                     />
                   ))}
+                  {/* Glow overlay */}
+                  <div 
+                    className="absolute inset-0 rounded-full pointer-events-none"
+                    style={{ 
+                      background: 'radial-gradient(ellipse at center, hsl(25 95% 55% / 0.25) 0%, transparent 70%)',
+                    }}
+                  />
                 </motion.div>
               )}
             </div>
