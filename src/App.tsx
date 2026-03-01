@@ -7,6 +7,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { PlayerProvider } from "@/contexts/PlayerContext";
 import { AIProvider } from "@/contexts/AIContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
+import { AutoVoiceListener } from "@/components/player/AutoVoiceListener";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Search from "./pages/Search";
@@ -37,6 +38,7 @@ const App = () => (
             <div className="dark">
               <Toaster />
               <Sonner />
+              <AutoVoiceListener />
               <BrowserRouter>
                 <Routes>
                   <Route path="/" element={<Index />} />

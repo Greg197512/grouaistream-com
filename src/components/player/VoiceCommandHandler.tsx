@@ -61,7 +61,7 @@ export const VoiceCommandHandler = ({ isOpen, onClose }: VoiceCommandHandlerProp
         const recognitionInstance = new SpeechRecognitionAPI();
         recognitionInstance.continuous = false;
         recognitionInstance.interimResults = true;
-        recognitionInstance.lang = "en-US";
+        recognitionInstance.lang = "pl-PL";
 
         recognitionInstance.onresult = (event: SpeechRecognitionEvent) => {
           const current = event.resultIndex;
