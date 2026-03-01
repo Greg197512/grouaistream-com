@@ -11,6 +11,7 @@ import { speak } from "@/utils/tts";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useClapControl } from "@/hooks/useClapControl";
 
 interface SpeechRecognitionEvent extends Event {
   resultIndex: number;
@@ -47,10 +48,20 @@ const NAV_MAP: Record<string, string> = {
   "admin": "/admin",
 };
 
+const normalizeCommand = (text: string) =>
+  text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+
+const includesAny = (text: string, phrases: string[]) =>
+  phrases.some((phrase) => text.includes(phrase));
+
 export const AutoVoiceListener = () => {
   const { user } = useAuth();
   const { processVoiceCommand, isAIEnabled, isProcessing } = useAI();
-  const { playPlaylist, togglePlay, nextTrack, prevTrack, setVolume, isPlaying } = usePlayer();
+  const { playPlaylist, nextTrack, prevTrack, setVolume, pausePlayback, resumePlayback, restartCurrentTrack } = usePlayer();
   const navigate = useNavigate();
   const { assistantName, needsNaming, saveAssistantName } = useAssistantConfig();
 
@@ -66,9 +77,6 @@ export const AutoVoiceListener = () => {
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const restartTimeoutRef = useRef<number | null>(null);
   const silenceTimerRef = useRef<number | null>(null);
-  const isPlayingRef = useRef(isPlaying);
-
-  useEffect(() => { isPlayingRef.current = isPlaying; }, [isPlaying]);
 
   useEffect(() => {
     const stored = localStorage.getItem("auto-voice-listen");
@@ -132,6 +140,22 @@ export const AutoVoiceListener = () => {
     setShowSuggestions(false);
   }, []);
 
+  const handleSingleClap = useCallback(() => {
+    resumePlayback();
+    toast.success("👏 Wznawiam odtwarzanie");
+  }, [resumePlayback]);
+
+  const handleDoubleClap = useCallback(() => {
+    pausePlayback();
+    toast.info("👏👏 Zatrzymuję odtwarzanie");
+  }, [pausePlayback]);
+
+  useClapControl({
+    enabled: autoListenEnabled && !!user,
+    onSingleClap: handleSingleClap,
+    onDoubleClap: handleDoubleClap,
+  });
+
   const tryNavigate = useCallback((lower: string): boolean => {
     for (const [keyword, route] of Object.entries(NAV_MAP)) {
       if (lower.includes(keyword)) {
@@ -174,7 +198,8 @@ export const AutoVoiceListener = () => {
 
   const processCommand = useCallback(async (command: string) => {
     const lower = command.toLowerCase().trim();
-    if (lower.length < 3) return;
+    const normalized = normalizeCommand(command);
+    if (normalized.length < 3) return;
     setLastTranscript(command);
     setShowIndicator(true);
     resetSilenceTimer();
@@ -206,14 +231,37 @@ export const AutoVoiceListener = () => {
       return;
     }
 
-    // STOP command - always force pause/stop the player (use ref to avoid stale closure)
-    if (lower.includes("stop") || lower.includes("zatrzymaj") || lower.includes("pauza")) {
-      if (isPlayingRef.current) togglePlay();
+    // STOP command - always force pause/stop the player
+    const stopRequested = includesAny(normalized, [
+      "stop",
+      "zatrzymaj",
+      "pauza",
+      "pauze",
+      "wstrzymaj",
+      "wylacz player",
+      "wylacz muzyke",
+    ]);
+
+    if (stopRequested) {
+      pausePlayback();
       speak("Zatrzymuję odtwarzanie");
       toast.info("⏹️ Player zatrzymany");
       return;
     }
-    if (lower.includes("graj") && !lower.includes("następ") && !lower.includes("odtwarz") && lower.split(" ").length <= 2) { if (!isPlayingRef.current) togglePlay(); speak("Odtwarzam"); return; }
+
+    if (includesAny(normalized, ["wznow", "kontynuuj", "graj dalej", "resume"])) {
+      resumePlayback();
+      speak("Wznawiam odtwarzanie");
+      return;
+    }
+
+    if (includesAny(normalized, ["od poczatku", "zacznij od poczatku", "od nowa"])) {
+      restartCurrentTrack();
+      speak("Uruchamiam od początku");
+      return;
+    }
+
+    if (lower.includes("graj") && !lower.includes("następ") && !lower.includes("odtwarz") && lower.split(" ").length <= 2) { resumePlayback(); speak("Odtwarzam"); return; }
     if (lower.includes("następn") || lower.includes("dalej") || lower.includes("skip")) { nextTrack(); speak("Następny utwór"); return; }
     if (lower.includes("poprzedni") || lower.includes("cofnij") || lower.includes("wstecz")) { prevTrack(); speak("Poprzedni utwór"); return; }
     if (lower.includes("głośniej") || lower.includes("louder")) { setVolume(85); speak("Głośniej"); return; }
@@ -255,14 +303,14 @@ export const AutoVoiceListener = () => {
           toast.success(`🎵 Odtwarzam ${result.tracks.length} utworów`, { id: "voice-cmd", duration: 4000 });
           speak(`Odtwarzam ${result.tracks.length} utworów`);
         } else if (result.action === "pause") {
-          togglePlay(); speak("Pauza");
+          pausePlayback(); speak("Pauza");
           toast.success("⏸️ Pauza", { id: "voice-cmd" });
         }
       } catch {
         toast.error("Nie udało się przetworzyć komendy", { id: "voice-cmd" });
       }
     }
-  }, [isAIEnabled, processVoiceCommand, playPlaylist, togglePlay, nextTrack, prevTrack, setVolume, tryNavigate, searchAndPlay, resetSilenceTimer, assistantName, fetchAISuggestions, shutdownMic, showSuggestions, aiSuggestions]);
+  }, [isAIEnabled, processVoiceCommand, playPlaylist, nextTrack, prevTrack, setVolume, tryNavigate, searchAndPlay, resetSilenceTimer, assistantName, fetchAISuggestions, shutdownMic, showSuggestions, aiSuggestions, pausePlayback, resumePlayback, restartCurrentTrack]);
 
   const startListening = useCallback(() => {
     if (!user) return;
