@@ -45,11 +45,11 @@ const Library = () => {
     if (populating) return;
     setPopulating(true);
     setPopulateProgress(0);
-    setPopulateMsg("Rozpoczynam wypełnianie biblioteki...");
+    setPopulateMsg(t("library.startingPopulate"));
 
     try {
       for (let batch = 0; batch < 40; batch++) {
-        setPopulateMsg(`Batch ${batch + 1}/40 — pobieram utwory...`);
+        setPopulateMsg(`Batch ${batch + 1}/40 — ${t("library.batchFetching")}`);
         
         const { data, error } = await supabase.functions.invoke('bulk-populate', {
           body: { batch, batchSize: 500, source: 'all' },
@@ -62,10 +62,10 @@ const Library = () => {
 
         const progress = data?.progress || Math.round(((batch + 1) / 40) * 100);
         setPopulateProgress(Math.min(progress, 100));
-        setPopulateMsg(`Batch ${batch + 1}/40 — dodano ${data?.added || 0} utworów (${data?.totalLibrary || '?'} łącznie)`);
+        setPopulateMsg(`Batch ${batch + 1}/40 — ${t("library.batchAdded")} ${data?.added || 0} (${data?.totalLibrary || '?'})`);
 
         if ((data?.totalLibrary || 0) >= 20000) {
-          setPopulateMsg(`Cel osiągnięty! ${data.totalLibrary} utworów w bibliotece.`);
+          setPopulateMsg(`${t("library.goalReached")} ${data.totalLibrary}`);
           break;
         }
 
@@ -74,12 +74,12 @@ const Library = () => {
       }
 
       setPopulateProgress(100);
-      setPopulateMsg("Gotowe! Biblioteka wypełniona.");
-      toast.success("Biblioteka wypełniona!");
+      setPopulateMsg(t("library.donePopulated"));
+      toast.success(t("library.populatedSuccess"));
       loadLibrary();
     } catch (err: any) {
       console.error('Populate error:', err);
-      toast.error("Błąd podczas wypełniania: " + (err.message || "Unknown"));
+      toast.error(t("library.populateError") + ": " + (err.message || "Unknown"));
     } finally {
       setTimeout(() => setPopulating(false), 3000);
     }
@@ -87,23 +87,23 @@ const Library = () => {
 
   const runSpotifyImport = useCallback(async () => {
     if (!spotifyToken.trim()) {
-      toast.error("Wklej token Spotify!");
+      toast.error(t("library.pasteTokenError"));
       return;
     }
     setSpotifyImporting(true);
-    setSpotifyMsg("Pobieram utwory ze Spotify...");
+    setSpotifyMsg(t("library.fetchingSpotify"));
     try {
       const { data, error } = await supabase.functions.invoke('spotify-import', {
         body: { spotifyToken: spotifyToken.trim() },
       });
       if (error) throw error;
-      setSpotifyMsg(`Gotowe! Pobrano ${data.fetched} utworów, dodano ${data.inserted} nowych.`);
-      toast.success(`Dodano ${data.inserted} utworów ze Spotify!`);
+      setSpotifyMsg(`${t("library.spotifyDone")} ${data.fetched}, ${t("library.batchAdded")} ${data.inserted}`);
+      toast.success(`${data.inserted} ${t("library.spotifyAddedSuccess")}`);
       loadLibrary();
     } catch (err: any) {
       console.error('Spotify import error:', err);
-      toast.error("Błąd importu: " + (err.message || "Unknown"));
-      setSpotifyMsg("Błąd importu ze Spotify.");
+      toast.error(t("library.spotifyImportError") + ": " + (err.message || "Unknown"));
+      setSpotifyMsg(t("library.spotifyImportErrorMsg"));
     } finally {
       setTimeout(() => {
         setSpotifyImporting(false);
@@ -198,7 +198,7 @@ const Library = () => {
               className="gap-2"
             >
               <FileAudio className="h-4 w-4" />
-              Upload File
+              {t("library.uploadFile")}
             </Button>
             <Button
               onClick={() => setShowImportModal(true)}
@@ -206,7 +206,7 @@ const Library = () => {
               className="gap-2"
             >
               <Youtube className="h-4 w-4" />
-              Import YouTube
+              {t("library.importYoutube")}
             </Button>
             <Button
               onClick={() => navigate("/create-playlist")}
