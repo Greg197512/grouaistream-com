@@ -3,7 +3,7 @@ import { Sidebar } from "./Sidebar";
 import { PlayerBar } from "./PlayerBar";
 import { TopBar } from "./TopBar";
 import { AIAssistant } from "@/components/assistant/AIAssistant";
-import { StickmanAvatar } from "@/components/avatar/StickmanAvatar";
+
 import { DragDropProvider } from "@/contexts/DragDropContext";
 import { FloatingPlaylistDropZones } from "@/components/dnd/FloatingPlaylistDropZones";
 import { AuroraBackground } from "@/components/effects/AuroraBackground";
@@ -46,7 +46,7 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
 
         {/* AI Assistant Floating Bubble */}
         <AIAssistant />
-        <StickmanAvatar />
+        
       </div>
     </DragDropProvider>
   );
