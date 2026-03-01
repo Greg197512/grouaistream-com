@@ -65,32 +65,32 @@ const TrackOptionsMenuComponent = (
   const [loading, setLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
-  // Fetch initial like status and count
   useEffect(() => {
     const fetchLikeData = async () => {
-      // Get like count
-      const { count } = await supabase
-        .from("liked_songs")
-        .select("*", { count: "exact", head: true })
-        .eq("track_id", trackId);
-      
-      setLikeCount(count || 0);
+      if (showLikeCount) {
+        const { count } = await supabase
+          .from("liked_songs")
+          .select("*", { count: "exact", head: true })
+          .eq("track_id", trackId);
+        setLikeCount(count || 0);
+      }
 
-      // Check if user liked this track
-      if (user) {
+      if (user?.id) {
         const { data } = await supabase
           .from("liked_songs")
           .select("id")
           .eq("user_id", user.id)
           .eq("track_id", trackId)
           .maybeSingle();
-        
+
         setIsLiked(!!data);
+      } else {
+        setIsLiked(false);
       }
     };
 
     fetchLikeData();
-  }, [trackId, user]);
+  }, [trackId, user?.id, showLikeCount]);
 
   const handleLike = async () => {
     if (!user) {
@@ -358,27 +358,31 @@ const LikeButtonComponent = (
 
   useEffect(() => {
     const fetchData = async () => {
-      const { count } = await supabase
-        .from("liked_songs")
-        .select("*", { count: "exact", head: true })
-        .eq("track_id", trackId);
-      
-      setLikeCount(count || 0);
+      if (showCount) {
+        const { count } = await supabase
+          .from("liked_songs")
+          .select("*", { count: "exact", head: true })
+          .eq("track_id", trackId);
 
-      if (user) {
+        setLikeCount(count || 0);
+      }
+
+      if (user?.id) {
         const { data } = await supabase
           .from("liked_songs")
           .select("id")
           .eq("user_id", user.id)
           .eq("track_id", trackId)
           .maybeSingle();
-        
+
         setIsLiked(!!data);
+      } else {
+        setIsLiked(false);
       }
     };
 
     fetchData();
-  }, [trackId, user]);
+  }, [trackId, user?.id, showCount]);
 
   const handleLike = async (e: React.MouseEvent) => {
     e.stopPropagation();
