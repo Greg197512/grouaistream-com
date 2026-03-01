@@ -105,9 +105,7 @@ export const TopBar = () => {
               whileTap={{ scale: 0.95 }}
               className="flex h-9 items-center gap-1.5 rounded-full bg-secondary/80 border border-border px-3 hover:bg-muted transition-colors text-sm font-medium"
             >
-              <Globe className="h-3.5 w-3.5 text-primary" />
-              <span className="text-base leading-none">{languageFlags[language]}</span>
-              <span className="hidden sm:inline text-xs text-muted-foreground">{language.toUpperCase()}</span>
+              <span className="text-lg leading-none">{languageFlags[language]}</span>
             </motion.button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
