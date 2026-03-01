@@ -275,10 +275,107 @@ export const HeroSection = () => {
             </div>
           </motion.div>
 
-          <h1 className="font-display text-4xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight">
-            {t("hero.title1")}
-            <span className="groove-gradient-text">{t("hero.titleHighlight")}</span>
-          </h1>
+          {/* === MAIN TITLE with equalizer bars under each letter === */}
+          <div className="mb-6">
+            <h1 className="font-display text-4xl md:text-6xl lg:text-7xl font-bold leading-tight">
+              {/* Line 1: regular text */}
+              <span className="flex flex-wrap">
+                {(t("hero.title1")).split("").map((char, i) => {
+                  const freqIndex = i % blendedFrequencies.length;
+                  const freq = blendedFrequencies[freqIndex];
+                  const bounce = isPlaying ? freq * 18 * Math.max(0, Math.sin(Date.now() / 140 + i * 0.7)) : 0;
+                  const glowIntensity = isPlaying ? freq * 0.6 : 0;
+                  return (
+                    <span
+                      key={`t1-${i}`}
+                      className="inline-flex flex-col items-center relative"
+                      style={{ minWidth: char === ' ' ? '0.35em' : undefined }}
+                    >
+                      <span
+                        className="inline-block relative z-10"
+                        style={{
+                          transform: `translateY(${-bounce}px)`,
+                          textShadow: isPlaying 
+                            ? `0 ${2 + bounce * 0.5}px ${4 + bounce}px hsl(var(--primary) / ${glowIntensity}), 0 0 ${8 + freq * 20}px hsl(var(--primary) / ${glowIntensity * 0.4})`
+                            : undefined,
+                          transition: 'transform 0.06s ease-out, text-shadow 0.06s ease-out',
+                        }}
+                      >
+                        {char === ' ' ? '\u00A0' : char}
+                      </span>
+                      {char !== ' ' && (
+                        <span
+                          className="block rounded-t-sm mt-[-2px] relative overflow-hidden"
+                          style={{
+                            width: '70%',
+                            height: `${Math.max(2, freq * 28)}px`,
+                            background: `linear-gradient(to top, hsl(15 90% 45% / ${0.3 + freq * 0.5}), hsl(25 95% 55% / ${0.2 + freq * 0.4}), hsl(35 100% 65% / ${0.1 + freq * 0.3}))`,
+                            boxShadow: `0 0 ${4 + freq * 10}px hsl(25 90% 50% / ${freq * 0.4}), inset 0 1px 0 hsl(0 0% 100% / ${0.2 + freq * 0.2})`,
+                            opacity: 0.5 + freq * 0.5,
+                            transition: 'height 0.06s ease-out, opacity 0.06s ease-out',
+                          }}
+                        >
+                          <span className="absolute inset-0" style={{ background: 'linear-gradient(135deg, hsl(0 0% 100% / 0.3) 0%, transparent 40%)' }} />
+                        </span>
+                      )}
+                    </span>
+                  );
+                })}
+              </span>
+              {/* Line 2: highlighted gradient text */}
+              <span className="flex flex-wrap">
+                {(t("hero.titleHighlight")).split("").map((char, i) => {
+                  const freqIndex = (i + 7) % blendedFrequencies.length;
+                  const freq = blendedFrequencies[freqIndex];
+                  const bounce = isPlaying ? freq * 22 * Math.max(0, Math.sin(Date.now() / 120 + i * 0.6 + 3)) : 0;
+                  const glowIntensity = isPlaying ? freq * 0.7 : 0;
+                  return (
+                    <span
+                      key={`t2-${i}`}
+                      className="inline-flex flex-col items-center relative"
+                      style={{ minWidth: char === ' ' ? '0.35em' : undefined }}
+                    >
+                      <span
+                        className="inline-block relative z-10 groove-gradient-text"
+                        style={{
+                          transform: `translateY(${-bounce}px) scale(${1 + (isPlaying ? freq * 0.08 : 0)})`,
+                          filter: isPlaying 
+                            ? `drop-shadow(0 ${2 + bounce * 0.4}px ${3 + bounce * 0.8}px hsl(25 95% 55% / ${glowIntensity}))`
+                            : undefined,
+                          transition: 'transform 0.06s ease-out, filter 0.06s ease-out',
+                        }}
+                      >
+                        {char === ' ' ? '\u00A0' : char}
+                      </span>
+                      {char !== ' ' && (
+                        <span
+                          className="block rounded-t-sm mt-[-2px] relative overflow-hidden"
+                          style={{
+                            width: '70%',
+                            height: `${Math.max(3, freq * 36)}px`,
+                            background: `linear-gradient(to top, hsl(var(--primary) / ${0.4 + freq * 0.4}), hsl(25 95% 55% / ${0.3 + freq * 0.4}), hsl(40 100% 65% / ${0.15 + freq * 0.3}))`,
+                            boxShadow: `0 0 ${6 + freq * 14}px hsl(var(--primary) / ${freq * 0.5}), inset 0 1px 0 hsl(0 0% 100% / ${0.25 + freq * 0.2})`,
+                            opacity: 0.6 + freq * 0.4,
+                            transition: 'height 0.06s ease-out, opacity 0.06s ease-out',
+                          }}
+                        >
+                          <span className="absolute inset-0" style={{ background: 'linear-gradient(135deg, hsl(0 0% 100% / 0.35) 0%, transparent 40%)' }} />
+                        </span>
+                      )}
+                    </span>
+                  );
+                })}
+              </span>
+            </h1>
+            <div
+              className="h-2 mt-1 rounded-full mx-auto max-w-lg"
+              style={{
+                background: isPlaying 
+                  ? `radial-gradient(ellipse at 50% 0%, hsl(25 95% 50% / ${0.15 + levels.bass * 0.35}) 0%, transparent 80%)`
+                  : 'transparent',
+              }}
+            />
+          </div>
 
           <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-xl">{t("hero.subtitle")}</p>
 
