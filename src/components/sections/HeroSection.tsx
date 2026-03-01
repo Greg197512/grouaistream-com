@@ -199,9 +199,12 @@ export const HeroSection = () => {
                   {Array.from({ length: 18 }, (_, i) => (
                     <motion.div
                       key={`eq-${i}`}
-                      className="flex-1 min-w-[2px] rounded-full"
+                      className="flex-1 min-w-[2px] rounded-sm relative"
                       style={{ 
-                        background: `linear-gradient(to top, hsl(var(--primary)), hsl(25 95% 55%), hsl(35 100% 65%))`,
+                        background: `linear-gradient(to top, hsl(var(--primary) / 0.5), hsl(25 95% 55% / 0.4), hsl(35 100% 65% / 0.25))`,
+                        backdropFilter: 'blur(4px)',
+                        border: '1px solid hsl(25 95% 55% / 0.3)',
+                        boxShadow: 'inset 0 0 4px hsl(25 95% 55% / 0.15), 0 0 3px hsl(var(--primary) / 0.2)',
                       }}
                       animate={{ 
                         height: [
@@ -211,7 +214,7 @@ export const HeroSection = () => {
                           `${55 + Math.random() * 45}%`, 
                           `${15 + Math.random() * 25}%`
                         ],
-                        opacity: [0.75, 1, 0.65, 1, 0.75]
+                        opacity: [0.6, 0.9, 0.5, 0.85, 0.6]
                       }}
                       transition={{
                         duration: 0.25 + Math.random() * 0.25,
