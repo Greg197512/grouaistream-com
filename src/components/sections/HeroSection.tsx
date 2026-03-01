@@ -1,19 +1,21 @@
-import { useState, useMemo } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Play, Sparkles, Zap, Brain, Radio, Loader2, Volume2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useAudioAnalyser } from "@/hooks/useAudioAnalyser";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import heroBg from "@/assets/hero-bg.jpg";
 
 export const HeroSection = () => {
   const navigate = useNavigate();
-  const { playPlaylist, isPlaying } = usePlayer();
+  const { playPlaylist, isPlaying, audioElement } = usePlayer();
   const { t } = useLanguage();
   const [isLoading, setIsLoading] = useState(false);
+  const levels = useAudioAnalyser(audioElement, isPlaying);
 
   const handleStartListening = async () => {
     setIsLoading(true);
@@ -65,56 +67,45 @@ export const HeroSection = () => {
             animate={{ opacity: 1, scale: 1 }} 
             transition={{ delay: 0.2 }} 
             className="inline-flex items-center gap-3 rounded-full bg-accent/20 border border-accent/30 px-5 py-2.5 mb-6 relative overflow-visible"
-            style={isPlaying ? { filter: 'drop-shadow(0 0 12px hsl(var(--primary) / 0.3))' } : {}}
+            style={isPlaying ? { filter: `drop-shadow(0 0 ${8 + levels.overall * 16}px hsl(var(--primary) / ${0.2 + levels.overall * 0.3}))` } : {}}
           >
-            {/* Logo container with speaker behind */}
+            {/* Logo + speaker */}
             <div className="relative flex items-center justify-center" style={{ width: 40, height: 40 }}>
               {isPlaying && (
                 <>
-                  {/* Bass speaker membrane pulsing behind logo */}
+                  {/* Speaker pulsing to real bass */}
                   <motion.div
                     className="absolute inset-0 flex items-center justify-center"
-                    animate={{ 
-                      scale: [1, 1.3, 0.9, 1.25, 1],
-                      rotate: [0, 2, -3, 1, 0]
+                    style={{ 
+                      transform: `scale(${1 + levels.bass * 0.4}) rotate(${(levels.bass - 0.5) * 4}deg)`,
+                      transition: 'transform 0.05s ease-out',
                     }}
-                    transition={{ duration: 0.35, repeat: Infinity, ease: "easeInOut" }}
                   >
                     <Volume2 className="h-9 w-9 text-primary/60" />
                   </motion.div>
 
-                  {/* Echo sonar rings that vibrate like equalizer */}
+                  {/* Echo rings reacting to bass */}
                   {[0, 1, 2, 3].map((i) => (
                     <motion.div
                       key={`ring-${i}`}
                       className="absolute rounded-full"
                       style={{ 
                         width: 40, height: 40, left: 0, top: 0,
-                        border: '2px solid hsl(var(--primary) / 0.35)',
-                        boxShadow: '0 0 6px hsl(var(--primary) / 0.2)'
-                      }}
-                      animate={{ 
-                        scale: [1, 1.8 + i * 0.4, 1.5 + i * 0.3, 2 + i * 0.5], 
-                        opacity: [0.5, 0.3, 0.4, 0],
-                        borderWidth: ['2px', '1.5px', '2px', '0.5px'],
-                      }}
-                      transition={{ 
-                        duration: 1.4, 
-                        repeat: Infinity, 
-                        delay: i * 0.2, 
-                        ease: "easeOut" 
+                        border: `${1.5 + levels.bass * 1.5}px solid hsl(var(--primary) / ${0.15 + levels.bass * 0.25})`,
+                        boxShadow: `0 0 ${4 + levels.bass * 8}px hsl(var(--primary) / ${0.1 + levels.bass * 0.2})`,
+                        transform: `scale(${1.2 + i * 0.35 + levels.bass * 0.5})`,
+                        opacity: Math.max(0, 0.5 - i * 0.12 - (1 - levels.bass) * 0.2),
+                        transition: 'all 0.08s ease-out',
                       }}
                     />
                   ))}
 
-                  {/* Speaker vibration shake */}
-                  <motion.div
+                  {/* Vibration from bass */}
+                  <div
                     className="absolute inset-0"
-                    animate={{ 
-                      x: [0, -2, 2.5, -2.5, 2, 0],
-                      y: [0, 1.5, -2, 1.5, -1, 0]
+                    style={{
+                      transform: `translate(${(Math.random() - 0.5) * levels.bass * 4}px, ${(Math.random() - 0.5) * levels.bass * 3}px)`,
                     }}
-                    transition={{ duration: 0.12, repeat: Infinity, ease: "linear" }}
                   />
                 </>
               )}
@@ -123,142 +114,96 @@ export const HeroSection = () => {
                 src="/logo-icon.png"
                 alt="GrouAI"
                 className="h-10 w-10 relative z-10"
-                style={{ filter: isPlaying ? 'drop-shadow(0 0 14px hsl(var(--primary) / 0.8))' : 'drop-shadow(0 0 8px hsl(var(--primary) / 0.6))' }}
-                animate={isPlaying
-                  ? { rotate: [0, 3, -3, 0], scale: [1, 1.08, 0.95, 1.08, 1] }
-                  : { rotate: [0, 5, -5, 0] }
-                }
-                transition={isPlaying
-                  ? { duration: 0.3, repeat: Infinity, ease: "easeInOut" }
-                  : { duration: 4, repeat: Infinity, ease: "easeInOut" }
-                }
+                style={{ 
+                  filter: isPlaying 
+                    ? `drop-shadow(0 0 ${10 + levels.bass * 12}px hsl(var(--primary) / ${0.5 + levels.bass * 0.4}))` 
+                    : 'drop-shadow(0 0 8px hsl(var(--primary) / 0.6))',
+                  transform: isPlaying 
+                    ? `scale(${1 + levels.bass * 0.1}) rotate(${(levels.mid - 0.5) * 6}deg)` 
+                    : undefined,
+                  transition: 'filter 0.05s, transform 0.05s',
+                }}
+                animate={!isPlaying ? { rotate: [0, 5, -5, 0] } : undefined}
+                transition={!isPlaying ? { duration: 4, repeat: Infinity, ease: "easeInOut" } : undefined}
               />
             </div>
 
-            {/* Text with bouncing letters + equalizer underneath */}
+            {/* Text + equalizer */}
             <div className="relative flex flex-col items-start">
-              {/* Bouncing letters with floating shadow */}
+              {/* Letters bouncing to bass with shadow */}
               <span className="text-base font-medium text-accent relative z-10 flex">
-                {(t("hero.badge") + " ").split("").map((char, i) => (
-                  <motion.span
-                    key={`badge-${i}`}
-                    animate={isPlaying ? { 
-                      y: [0, -10, -9, -6, -3, 0, 0, 0],
-                      textShadow: [
-                        '0 0px 0px transparent',
-                        '0 10px 8px hsl(var(--primary) / 0.4)',
-                        '0 9px 7px hsl(var(--primary) / 0.35)',
-                        '0 6px 5px hsl(var(--primary) / 0.25)',
-                        '0 3px 3px hsl(var(--primary) / 0.15)',
-                        '0 0px 0px transparent',
-                        '0 0px 0px transparent',
-                        '0 0px 0px transparent',
-                      ],
-                    } : {}}
-                    transition={isPlaying ? { 
-                      duration: 1.2, 
-                      repeat: Infinity, 
-                      ease: [0.22, 1, 0.36, 1],
-                      times: [0, 0.15, 0.25, 0.4, 0.6, 0.75, 0.9, 1],
-                      delay: i * 0.06,
-                    } : {}}
-                    className="inline-block"
-                    style={{ minWidth: char === ' ' ? '0.25em' : undefined }}
-                  >
-                    {char === ' ' ? '\u00A0' : char}
-                  </motion.span>
-                ))}
-                <span className="font-bold flex">
-                  {"by GrouaRock".split("").map((char, i) => (
-                    <motion.span
-                      key={`rock-${i}`}
-                      animate={isPlaying ? { 
-                        y: [0, -12, -11, -7, -3, 0, 0, 0],
-                        textShadow: [
-                          '0 0px 0px transparent',
-                          '0 12px 10px hsl(25 95% 55% / 0.45)',
-                          '0 11px 8px hsl(25 95% 55% / 0.35)',
-                          '0 7px 6px hsl(25 95% 55% / 0.25)',
-                          '0 3px 3px hsl(25 95% 55% / 0.12)',
-                          '0 0px 0px transparent',
-                          '0 0px 0px transparent',
-                          '0 0px 0px transparent',
-                        ],
-                      } : {}}
-                      transition={isPlaying ? { 
-                        duration: 1.0, 
-                        repeat: Infinity, 
-                        ease: [0.22, 1, 0.36, 1],
-                        times: [0, 0.12, 0.22, 0.38, 0.55, 0.7, 0.85, 1],
-                        delay: 0.5 + i * 0.05,
-                      } : {}}
+                {(t("hero.badge") + " ").split("").map((char, i) => {
+                  const bounce = levels.bass * 12 * Math.max(0, Math.sin(Date.now() / 150 + i * 0.5));
+                  return (
+                    <span
+                      key={`badge-${i}`}
                       className="inline-block"
-                      style={{ minWidth: char === ' ' ? '0.25em' : undefined }}
+                      style={{ 
+                        transform: isPlaying ? `translateY(${-bounce}px)` : undefined,
+                        textShadow: isPlaying ? `0 ${bounce}px ${bounce * 0.8}px hsl(var(--primary) / ${bounce / 30})` : undefined,
+                        transition: 'transform 0.06s ease-out, text-shadow 0.06s ease-out',
+                        minWidth: char === ' ' ? '0.25em' : undefined,
+                      }}
                     >
                       {char === ' ' ? '\u00A0' : char}
-                    </motion.span>
-                  ))}
+                    </span>
+                  );
+                })}
+                <span className="font-bold flex">
+                  {"by GrouaRock".split("").map((char, i) => {
+                    const bounce = levels.bass * 14 * Math.max(0, Math.sin(Date.now() / 130 + i * 0.6 + 2));
+                    return (
+                      <span
+                        key={`rock-${i}`}
+                        className="inline-block"
+                        style={{ 
+                          transform: isPlaying ? `translateY(${-bounce}px)` : undefined,
+                          textShadow: isPlaying ? `0 ${bounce}px ${bounce * 0.7}px hsl(25 95% 55% / ${bounce / 35})` : undefined,
+                          transition: 'transform 0.06s ease-out, text-shadow 0.06s ease-out',
+                          minWidth: char === ' ' ? '0.25em' : undefined,
+                        }}
+                      >
+                        {char === ' ' ? '\u00A0' : char}
+                      </span>
+                    );
+                  })}
                 </span>
               </span>
 
-              {/* Glass equalizer - taller, richer colors */}
+              {/* Real-data equalizer */}
               {isPlaying && (
-                <motion.div 
+                <div 
                   className="flex items-end gap-[2.5px] h-7 mt-0.5 w-full relative"
-                  initial={{ opacity: 0, scaleX: 0.5 }}
-                  animate={{ 
-                    opacity: 1, 
-                    scaleX: [1, 1.05, 1, 1.03, 1],
-                  }}
-                  transition={{ 
-                    opacity: { duration: 0.3 },
-                    scaleX: { duration: 0.5, repeat: Infinity, ease: "easeInOut" }
-                  }}
                   style={{
-                    filter: 'drop-shadow(0 0 12px hsl(25 90% 50% / 0.55)) drop-shadow(0 4px 16px hsl(var(--primary) / 0.3))'
+                    filter: `drop-shadow(0 0 ${8 + levels.overall * 14}px hsl(25 90% 50% / ${0.3 + levels.overall * 0.4})) drop-shadow(0 4px 16px hsl(var(--primary) / ${0.15 + levels.bass * 0.25}))`,
                   }}
                 >
-                  {Array.from({ length: 18 }, (_, i) => {
-                    const isBass = i >= 2 && i <= 7;
-                    const isMid = i >= 8 && i <= 12;
-                    const maxH = isBass ? 100 : isMid ? 85 : 60;
-                    const minH = isBass ? 30 : isMid ? 15 : 8;
-                    // Richer color per frequency range
+                  {levels.frequencies.map((freq, i) => {
+                    const isBass = i < 6;
+                    const isMid = i >= 6 && i < 12;
+                    const height = Math.max(8, freq * 100);
                     const bg = isBass
-                      ? 'linear-gradient(to top, hsl(15 90% 45% / 0.6), hsl(25 95% 55% / 0.5), hsl(35 100% 60% / 0.35))'
+                      ? `linear-gradient(to top, hsl(15 90% 45% / ${0.4 + freq * 0.4}), hsl(25 95% 55% / ${0.3 + freq * 0.35}), hsl(35 100% 60% / ${0.15 + freq * 0.25}))`
                       : isMid
-                      ? 'linear-gradient(to top, hsl(25 90% 50% / 0.5), hsl(30 95% 58% / 0.4), hsl(40 100% 65% / 0.25))'
-                      : 'linear-gradient(to top, hsl(35 85% 55% / 0.45), hsl(40 90% 62% / 0.35), hsl(45 100% 70% / 0.2))';
+                      ? `linear-gradient(to top, hsl(25 90% 50% / ${0.35 + freq * 0.35}), hsl(30 95% 58% / ${0.25 + freq * 0.3}), hsl(40 100% 65% / ${0.1 + freq * 0.2}))`
+                      : `linear-gradient(to top, hsl(35 85% 55% / ${0.3 + freq * 0.3}), hsl(40 90% 62% / ${0.2 + freq * 0.25}), hsl(45 100% 70% / ${0.1 + freq * 0.15}))`;
                     const borderColor = isBass
-                      ? 'hsl(20 90% 50% / 0.4)'
+                      ? `hsl(20 90% 50% / ${0.2 + freq * 0.3})`
                       : isMid
-                      ? 'hsl(30 85% 55% / 0.3)'
-                      : 'hsl(40 80% 60% / 0.25)';
+                      ? `hsl(30 85% 55% / ${0.15 + freq * 0.25})`
+                      : `hsl(40 80% 60% / ${0.1 + freq * 0.2})`;
                     return (
-                      <motion.div
+                      <div
                         key={`eq-${i}`}
                         className="flex-1 min-w-[2px] rounded-sm relative overflow-hidden"
                         style={{ 
+                          height: `${height}%`,
                           background: bg,
                           backdropFilter: 'blur(8px)',
                           border: `1px solid ${borderColor}`,
-                          boxShadow: `inset 0 1px 0 hsl(0 0% 100% / 0.3), inset 0 -1px 3px hsl(25 90% 50% / 0.15), 0 0 6px hsl(var(--primary) / 0.12)`,
-                        }}
-                        animate={{ 
-                          height: [
-                            `${minH + Math.random() * 15}%`, 
-                            `${maxH - Math.random() * 10}%`, 
-                            `${minH + Math.random() * 10}%`, 
-                            `${maxH - Math.random() * 20}%`, 
-                            `${minH + Math.random() * 15}%`
-                          ],
-                          opacity: [0.5, 1, 0.4, 0.95, 0.5]
-                        }}
-                        transition={{
-                          duration: isBass ? 0.18 + Math.random() * 0.12 : 0.28 + Math.random() * 0.22,
-                          repeat: Infinity,
-                          ease: "easeInOut",
-                          delay: i * 0.018,
+                          boxShadow: `inset 0 1px 0 hsl(0 0% 100% / ${0.2 + freq * 0.2}), inset 0 -1px 3px hsl(25 90% 50% / ${freq * 0.2}), 0 0 ${4 + freq * 6}px hsl(var(--primary) / ${freq * 0.15})`,
+                          opacity: 0.4 + freq * 0.6,
+                          transition: 'height 0.06s ease-out, opacity 0.06s ease-out',
                         }}
                       >
                         {/* Glass reflection */}
@@ -275,17 +220,17 @@ export const HeroSection = () => {
                             background: 'linear-gradient(to right, transparent, hsl(0 0% 100% / 0.5), transparent)',
                           }}
                         />
-                      </motion.div>
+                      </div>
                     );
                   })}
-                  {/* Warm glow */}
+                  {/* Warm glow reactive */}
                   <div 
                     className="absolute inset-0 pointer-events-none"
                     style={{ 
-                      background: 'radial-gradient(ellipse at 35% 50%, hsl(25 95% 50% / 0.2) 0%, transparent 65%)',
+                      background: `radial-gradient(ellipse at 30% 50%, hsl(25 95% 50% / ${0.1 + levels.bass * 0.25}) 0%, transparent 65%)`,
                     }}
                   />
-                </motion.div>
+                </div>
               )}
             </div>
           </motion.div>
