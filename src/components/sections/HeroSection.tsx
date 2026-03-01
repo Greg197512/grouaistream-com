@@ -113,7 +113,7 @@ export const HeroSection = () => {
               <motion.img
                 src="/logo-icon.png"
                 alt="GrouAI"
-                className="h-10 w-10 relative z-10"
+                className="h-10 w-10 relative z-10 rounded-full"
                 style={{ 
                   filter: isPlaying 
                     ? `drop-shadow(0 0 ${10 + levels.bass * 12}px hsl(var(--primary) / ${0.5 + levels.bass * 0.4}))` 
@@ -122,6 +122,8 @@ export const HeroSection = () => {
                     ? `scale(${1 + levels.bass * 0.1}) rotate(${(levels.mid - 0.5) * 6}deg)` 
                     : undefined,
                   transition: 'filter 0.05s, transform 0.05s',
+                  boxShadow: 'inset -3px -3px 6px hsl(0 0% 0% / 0.4), inset 3px 3px 6px hsl(0 0% 100% / 0.15), 0 4px 10px hsl(0 0% 0% / 0.3)',
+                  border: '2px solid hsl(0 0% 100% / 0.1)',
                 }}
                 animate={!isPlaying ? { rotate: [0, 5, -5, 0] } : undefined}
                 transition={!isPlaying ? { duration: 4, repeat: Infinity, ease: "easeInOut" } : undefined}
