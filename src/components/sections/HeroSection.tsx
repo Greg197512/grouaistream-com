@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { motion } from "framer-motion";
-import { Play, Sparkles, Zap, Brain, Radio, Loader2 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Play, Sparkles, Zap, Brain, Radio, Loader2, Volume2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { usePlayer } from "@/contexts/PlayerContext";
@@ -11,7 +11,7 @@ import heroBg from "@/assets/hero-bg.jpg";
 
 export const HeroSection = () => {
   const navigate = useNavigate();
-  const { playPlaylist } = usePlayer();
+  const { playPlaylist, isPlaying } = usePlayer();
   const { t } = useLanguage();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -60,8 +60,63 @@ export const HeroSection = () => {
 
       <div className="relative px-6 py-16 md:py-24">
         <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }} className="max-w-3xl">
-          <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2 }} className="inline-flex items-center gap-3 rounded-full bg-accent/20 border border-accent/30 px-5 py-2.5 mb-6">
-            <motion.img src="/logo-icon.png" alt="GrouAI" className="h-10 w-10 drop-shadow-[0_0_8px_hsl(var(--primary)/0.6)]" animate={{ rotate: [0, 5, -5, 0] }} transition={{ duration: 4, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }} />
+          <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2 }} className="inline-flex items-center gap-3 rounded-full bg-accent/20 border border-accent/30 px-5 py-2.5 mb-6 relative">
+            
+            {/* Speaker pulsing behind logo when playing */}
+            {isPlaying && (
+              <>
+                {/* Speaker icon beating */}
+                <motion.div
+                  className="absolute -left-2 top-1/2 -translate-y-1/2"
+                  animate={{ scale: [1, 1.3, 1], opacity: [0.6, 1, 0.6] }}
+                  transition={{ duration: 0.5, repeat: Infinity, ease: "easeInOut" }}
+                >
+                  <Volume2 className="h-5 w-5 text-primary" />
+                </motion.div>
+
+                {/* Sound wave parabolas / equalizer bars */}
+                <div className="absolute -right-10 top-1/2 -translate-y-1/2 flex items-end gap-[2px] h-8">
+                  {[0, 1, 2, 3, 4].map((i) => (
+                    <motion.div
+                      key={i}
+                      className="w-[3px] rounded-full bg-primary"
+                      animate={{ height: ["30%", `${50 + Math.random() * 50}%`, "20%", `${40 + Math.random() * 60}%`, "30%"] }}
+                      transition={{
+                        duration: 0.6 + i * 0.08,
+                        repeat: Infinity,
+                        ease: "easeInOut",
+                        delay: i * 0.07,
+                      }}
+                    />
+                  ))}
+                </div>
+
+                {/* Pulse rings behind logo */}
+                {[0, 1, 2].map((i) => (
+                  <motion.div
+                    key={i}
+                    className="absolute inset-0 rounded-full border border-primary/30"
+                    animate={{ scale: [1, 1.6 + i * 0.3], opacity: [0.4, 0] }}
+                    transition={{ duration: 1, repeat: Infinity, delay: i * 0.3, ease: "easeOut" }}
+                    style={{ left: -4, top: -4, right: -4, bottom: -4 }}
+                  />
+                ))}
+              </>
+            )}
+
+            <motion.img
+              src="/logo-icon.png"
+              alt="GrouAI"
+              className="h-10 w-10 drop-shadow-[0_0_8px_hsl(var(--primary)/0.6)]"
+              animate={isPlaying
+                ? { rotate: [0, 5, -5, 0], scale: [1, 1.08, 1, 1.08, 1] }
+                : { rotate: [0, 5, -5, 0] }
+              }
+              transition={isPlaying
+                ? { duration: 0.6, repeat: Infinity, ease: "easeInOut" }
+                : { duration: 4, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }
+              }
+            />
             <span className="text-base font-medium text-accent">{t("hero.badge")} <span className="font-bold">by GrouaRock</span></span>
           </motion.div>
 
