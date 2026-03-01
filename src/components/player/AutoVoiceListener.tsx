@@ -111,8 +111,16 @@ export const AutoVoiceListener = () => {
   }, [user]);
 
   const shutdownMic = useCallback(() => {
-    if (recognitionRef.current) { try { recognitionRef.current.abort(); } catch {} }
-    if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+    // Fully destroy recognition instance
+    if (recognitionRef.current) {
+      recognitionRef.current.onresult = null;
+      recognitionRef.current.onerror = null;
+      recognitionRef.current.onend = null;
+      try { recognitionRef.current.abort(); } catch {}
+      recognitionRef.current = null;
+    }
+    if (silenceTimerRef.current) { clearTimeout(silenceTimerRef.current); silenceTimerRef.current = null; }
+    if (restartTimeoutRef.current) { clearTimeout(restartTimeoutRef.current); restartTimeoutRef.current = null; }
     setIsListening(false);
     setAutoListenEnabled(false);
     localStorage.setItem("auto-voice-listen", "false");
