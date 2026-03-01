@@ -102,6 +102,8 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const audio = new Audio();
     audio.volume = volume / 100;
+    audio.preload = "auto";
+    audio.crossOrigin = "anonymous";
     audioRef.current = audio;
 
     const handleTimeUpdate = () => {
