@@ -317,72 +317,10 @@ export const HeroSection = () => {
           {/* === MAIN TITLE with equalizer bars under each letter === */}
           <div className="mb-6">
             <h1 className="font-display text-4xl md:text-6xl lg:text-7xl font-bold leading-tight">
-              {/* Line 1: static text with reactive equalizer bars */}
-              <span className="flex flex-wrap">
-                {(t("hero.title1")).split("").map((char, i) => {
-                  const freqIndex = i % blendedFrequencies.length;
-                  const freq = blendedFrequencies[freqIndex];
-                  return (
-                    <span
-                      key={`t1-${i}`}
-                      className="inline-flex flex-col items-center relative"
-                      style={{ minWidth: char === ' ' ? '0.35em' : undefined }}
-                    >
-                      <span className="inline-block relative z-10">
-                        {char === ' ' ? '\u00A0' : char}
-                      </span>
-                      {char !== ' ' && (
-                        <span
-                          className="block rounded-t-sm mt-[-2px] relative overflow-hidden"
-                          style={{
-                            width: '70%',
-                            height: `${Math.max(2, freq * 28)}px`,
-                            background: `linear-gradient(to top, hsl(15 90% 45% / ${0.3 + freq * 0.5}), hsl(25 95% 55% / ${0.2 + freq * 0.4}), hsl(35 100% 65% / ${0.1 + freq * 0.3}))`,
-                            boxShadow: `0 0 ${4 + freq * 10}px hsl(25 90% 50% / ${freq * 0.4}), inset 0 1px 0 hsl(0 0% 100% / ${0.2 + freq * 0.2})`,
-                            opacity: 0.5 + freq * 0.5,
-                            transition: 'height 0.06s ease-out, opacity 0.06s ease-out',
-                          }}
-                        >
-                          <span className="absolute inset-0" style={{ background: 'linear-gradient(135deg, hsl(0 0% 100% / 0.3) 0%, transparent 40%)' }} />
-                        </span>
-                      )}
-                    </span>
-                  );
-                })}
-              </span>
-              {/* Line 2: static gradient text with reactive equalizer bars */}
-              <span className="flex flex-wrap">
-                {(t("hero.titleHighlight")).split("").map((char, i) => {
-                  const freqIndex = (i + 7) % blendedFrequencies.length;
-                  const freq = blendedFrequencies[freqIndex];
-                  return (
-                    <span
-                      key={`t2-${i}`}
-                      className="inline-flex flex-col items-center relative"
-                      style={{ minWidth: char === ' ' ? '0.35em' : undefined }}
-                    >
-                      <span className="inline-block relative z-10 groove-gradient-text">
-                        {char === ' ' ? '\u00A0' : char}
-                      </span>
-                      {char !== ' ' && (
-                        <span
-                          className="block rounded-t-sm mt-[-2px] relative overflow-hidden"
-                          style={{
-                            width: '70%',
-                            height: `${Math.max(3, freq * 36)}px`,
-                            background: `linear-gradient(to top, hsl(var(--primary) / ${0.4 + freq * 0.4}), hsl(25 95% 55% / ${0.3 + freq * 0.4}), hsl(40 100% 65% / ${0.15 + freq * 0.3}))`,
-                            boxShadow: `0 0 ${6 + freq * 14}px hsl(var(--primary) / ${freq * 0.5}), inset 0 1px 0 hsl(0 0% 100% / ${0.25 + freq * 0.2})`,
-                            opacity: 0.6 + freq * 0.4,
-                            transition: 'height 0.06s ease-out, opacity 0.06s ease-out',
-                          }}
-                        >
-                          <span className="absolute inset-0" style={{ background: 'linear-gradient(135deg, hsl(0 0% 100% / 0.35) 0%, transparent 40%)' }} />
-                        </span>
-                      )}
-                    </span>
-                  );
-                })}
-              </span>
+              {/* Line 1: fully static text */}
+              <span className="block">{t("hero.title1")}</span>
+              {/* Line 2: fully static gradient text */}
+              <span className="groove-gradient-text block">{t("hero.titleHighlight")}</span>
             </h1>
             <div
               className="h-2 mt-1 rounded-full mx-auto max-w-lg"
