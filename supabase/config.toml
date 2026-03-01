@@ -20,3 +20,9 @@ verify_jwt = false
 
 [functions.spotify-import]
 verify_jwt = false
+
+[functions.ai-suggest-tracks]
+verify_jwt = false
+
+[functions.ai-assistant]
+verify_jwt = false

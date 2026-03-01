@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Mic, MicOff, Sparkles } from "lucide-react";
+import { Mic, MicOff, Sparkles, Music } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAI } from "@/contexts/AIContext";
@@ -33,29 +33,16 @@ interface SpeechRecognitionInstance extends EventTarget {
 
 const SILENCE_TIMEOUT_MS = 30_000;
 
-// Navigation map: Polish keywords → routes
 const NAV_MAP: Record<string, string> = {
-  "stron": "/",
-  "główn": "/",
-  "home": "/",
-  "szukaj": "/search",
-  "wyszuk": "/search",
-  "search": "/search",
-  "bibliotek": "/library",
-  "library": "/library",
-  "polubionych": "/liked",
-  "polubion": "/liked",
-  "liked": "/liked",
-  "serwer": "/server",
-  "server": "/server",
-  "medi": "/server",
-  "film": "/movies",
-  "movie": "/movies",
+  "stron": "/", "główn": "/", "home": "/",
+  "szukaj": "/search", "wyszuk": "/search", "search": "/search",
+  "bibliotek": "/library", "library": "/library",
+  "polubionych": "/liked", "polubion": "/liked", "liked": "/liked",
+  "serwer": "/server", "server": "/server", "medi": "/server",
+  "film": "/movies", "movie": "/movies",
   "radio": "/radio",
-  "ustawien": "/settings",
-  "settings": "/settings",
-  "nastro": "/mood-history",
-  "mood": "/mood-history",
+  "ustawien": "/settings", "settings": "/settings",
+  "nastro": "/mood-history", "mood": "/mood-history",
   "playlist": "/playlist-manager",
   "admin": "/admin",
 };
@@ -73,32 +60,28 @@ export const AutoVoiceListener = () => {
   const [autoListenEnabled, setAutoListenEnabled] = useState(false);
   const [showNamingModal, setShowNamingModal] = useState(false);
   const [greeted, setGreeted] = useState(false);
+  const [aiSuggestions, setAiSuggestions] = useState<any[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
 
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const restartTimeoutRef = useRef<number | null>(null);
   const silenceTimerRef = useRef<number | null>(null);
 
-  // Load preference
   useEffect(() => {
     const stored = localStorage.getItem("auto-voice-listen");
     if (stored === "true") setAutoListenEnabled(true);
   }, []);
 
-  // Show naming modal on first login
   useEffect(() => {
     if (user && needsNaming) {
       setShowNamingModal(true);
     }
   }, [user, needsNaming]);
 
-  // Reset silence timer on any speech
   const resetSilenceTimer = useCallback(() => {
     if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
     silenceTimerRef.current = window.setTimeout(() => {
-      // Auto-stop after 30s of silence
-      if (recognitionRef.current) {
-        try { recognitionRef.current.abort(); } catch {}
-      }
+      if (recognitionRef.current) { try { recognitionRef.current.abort(); } catch {} }
       setIsListening(false);
       setAutoListenEnabled(false);
       localStorage.setItem("auto-voice-listen", "false");
@@ -106,9 +89,39 @@ export const AutoVoiceListener = () => {
     }, SILENCE_TIMEOUT_MS);
   }, []);
 
-  // Handle navigation command
+  const fetchAISuggestions = useCallback(async () => {
+    if (!user) return;
+    try {
+      const { data, error } = await supabase.functions.invoke("ai-suggest-tracks", {
+        body: { user_id: user.id }
+      });
+      if (error) throw error;
+      if (data?.suggestions?.length > 0) {
+        setAiSuggestions(data.suggestions);
+        setShowSuggestions(true);
+        const names = data.suggestions.slice(0, 3).map((s: any) => s.title).join(", ");
+        speak(`Proponuję na dziś: ${names}. Powiedz puść, żeby odtworzyć.`);
+      } else {
+        speak("Nie mam jeszcze dość danych o Twoich preferencjach. Posłuchaj trochę muzyki, a nauczę się Twoich gustów!");
+      }
+    } catch (e) {
+      console.error("AI suggestions error:", e);
+      speak("Przepraszam, nie udało mi się przygotować propozycji.");
+    }
+  }, [user]);
+
+  const shutdownMic = useCallback(() => {
+    if (recognitionRef.current) { try { recognitionRef.current.abort(); } catch {} }
+    if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+    setIsListening(false);
+    setAutoListenEnabled(false);
+    localStorage.setItem("auto-voice-listen", "false");
+    speak("Wyłączam się. Do zobaczenia!");
+    toast.info("🔇 Asystent wyłączony");
+    setShowSuggestions(false);
+  }, []);
+
   const tryNavigate = useCallback((lower: string): boolean => {
-    // "otwórz/włącz/pokaż [page]"
     for (const [keyword, route] of Object.entries(NAV_MAP)) {
       if (lower.includes(keyword)) {
         navigate(route);
@@ -118,16 +131,14 @@ export const AutoVoiceListener = () => {
           "/radio": "Radio", "/settings": "Ustawienia", "/mood-history": "Historia nastroju",
           "/playlist-manager": "Playlisty", "/admin": "Admin"
         };
-        const pageName = pageNames[route] || route;
-        toast.success(`📂 Otwieram: ${pageName}`);
-        speak(`Otwieram ${pageName}`);
+        toast.success(`📂 Otwieram: ${pageNames[route] || route}`);
+        speak(`Otwieram ${pageNames[route] || route}`);
         return true;
       }
     }
     return false;
   }, [navigate]);
 
-  // Search and play tracks by title/artist
   const searchAndPlay = useCallback(async (query: string, count?: number) => {
     try {
       toast.loading(`🔍 Szukam: "${query}"...`, { id: "voice-search" });
@@ -136,11 +147,10 @@ export const AutoVoiceListener = () => {
         .select("*")
         .or(`title.ilike.%${query}%,artist.ilike.%${query}%`)
         .limit(count || 10);
-
       if (tracks && tracks.length > 0) {
         const toPlay = count ? tracks.slice(0, count) : tracks;
         playPlaylist(toPlay, 0);
-        toast.success(`🎵 Odtwarzam ${toPlay.length} ${toPlay.length === 1 ? 'utwór' : 'utworów'}: ${toPlay[0].title}`, { id: "voice-search", duration: 4000 });
+        toast.success(`🎵 Odtwarzam ${toPlay.length} utworów: ${toPlay[0].title}`, { id: "voice-search", duration: 4000 });
         speak(`Odtwarzam ${toPlay[0].title} ${toPlay[0].artist}`);
       } else {
         toast.error(`Nie znaleziono: "${query}"`, { id: "voice-search" });
@@ -154,68 +164,56 @@ export const AutoVoiceListener = () => {
   const processCommand = useCallback(async (command: string) => {
     const lower = command.toLowerCase().trim();
     if (lower.length < 3) return;
-
     setLastTranscript(command);
     setShowIndicator(true);
     resetSilenceTimer();
 
-    // Check if user called assistant by name
+    // Shutdown commands
+    if (lower.includes("wyłącz się") || lower.includes("wyłącz") && lower.includes("asystent") || lower.includes("zamknij się")) {
+      shutdownMic();
+      return;
+    }
+
+    // Check if user called assistant by name -> AI suggestions
     if (assistantName && lower.includes(assistantName.toLowerCase())) {
-      speak(`Cześć! Fajnie że znów jesteśmy tu razem. Co proponujesz na dzisiaj? Jaki utwór?`);
-      toast.success(`🎤 ${assistantName}: Słucham Cię!`);
+      speak(`Cześć! Fajnie że znów jesteśmy tu razem. Sprawdzam co mam dla Ciebie na dziś...`);
+      toast.success(`🎤 ${assistantName}: Analizuję Twoje preferencje...`);
+      await fetchAISuggestions();
       return;
     }
 
-    // Basic player commands (PL)
-    if (lower.includes("pauza") || lower.includes("stop") || lower.includes("zatrzymaj")) {
-      togglePlay();
-      speak("Pauza");
-      return;
-    }
-    if (lower.includes("graj") && !lower.includes("następ") && !lower.includes("odtwarz") && lower.split(" ").length <= 2) {
-      togglePlay();
-      speak("Odtwarzam");
-      return;
-    }
-    if (lower.includes("następn") || lower.includes("dalej") || lower.includes("skip")) {
-      nextTrack();
-      speak("Następny utwór");
-      return;
-    }
-    if (lower.includes("poprzedni") || lower.includes("cofnij") || lower.includes("wstecz")) {
-      prevTrack();
-      speak("Poprzedni utwór");
-      return;
-    }
-    if (lower.includes("głośniej") || lower.includes("louder")) {
-      setVolume(85);
-      speak("Głośniej");
-      return;
-    }
-    if (lower.includes("ciszej") || lower.includes("cicho")) {
-      setVolume(25);
-      speak("Ciszej");
-      return;
-    }
-    if (lower.includes("wycisz") || lower.includes("mute")) {
-      setVolume(0);
-      speak("Wyciszono");
+    // Play suggested tracks
+    if (showSuggestions && aiSuggestions.length > 0 && (lower.includes("puść") || lower.includes("graj") || lower.includes("odtwórz") || lower.includes("tak"))) {
+      const tracks = aiSuggestions.map((s: any) => ({
+        id: s.id, title: s.title, artist: s.artist,
+        album: null, audio_url: null, cover_url: null,
+        genre: s.genre, mood: s.mood, duration: 180,
+      }));
+      playPlaylist(tracks, 0);
+      speak(`Odtwarzam moje propozycje dla Ciebie!`);
+      setShowSuggestions(false);
       return;
     }
 
-    // Navigation commands: "otwórz/włącz/pokaż [page]"
+    // Player commands
+    if (lower.includes("pauza") || lower.includes("stop") || lower.includes("zatrzymaj")) { togglePlay(); speak("Pauza"); return; }
+    if (lower.includes("graj") && !lower.includes("następ") && !lower.includes("odtwarz") && lower.split(" ").length <= 2) { togglePlay(); speak("Odtwarzam"); return; }
+    if (lower.includes("następn") || lower.includes("dalej") || lower.includes("skip")) { nextTrack(); speak("Następny utwór"); return; }
+    if (lower.includes("poprzedni") || lower.includes("cofnij") || lower.includes("wstecz")) { prevTrack(); speak("Poprzedni utwór"); return; }
+    if (lower.includes("głośniej") || lower.includes("louder")) { setVolume(85); speak("Głośniej"); return; }
+    if (lower.includes("ciszej") || lower.includes("cicho")) { setVolume(25); speak("Ciszej"); return; }
+    if (lower.includes("wycisz") || lower.includes("mute")) { setVolume(0); speak("Wyciszono"); return; }
+
+    // Navigation
     if (lower.includes("otwórz") || lower.includes("włącz") || lower.includes("pokaż") || lower.includes("przejdź") || lower.includes("idź")) {
       if (tryNavigate(lower)) return;
     }
-
-    // Direct navigation (just page name)
     if (tryNavigate(lower)) return;
 
-    // Search & play specific track: "włącz [title]" / "puść [title]" / "zagraj [title]"
+    // Search & play
     const playMatch = lower.match(/(?:włącz|puść|zagraj|odtwórz|graj|play)\s+(.+)/i);
     if (playMatch) {
       const query = playMatch[1].replace(/w\s+playerze/i, "").trim();
-      // Check for count: "wybierz 4 utwory metallica"
       const countMatch = query.match(/(\d+)\s*(?:utw|piosen|track|song)/i);
       const count = countMatch ? parseInt(countMatch[1]) : undefined;
       const cleanQuery = query.replace(/\d+\s*(?:utw|piosen|track|song)\w*/i, "").trim();
@@ -223,7 +221,6 @@ export const AutoVoiceListener = () => {
       return;
     }
 
-    // "wybierz X utworów Y"
     const selectMatch = lower.match(/wybierz\s+(\d+)\s+(?:utw|piosen)\w*\s+(.+)/i);
     if (selectMatch) {
       const count = parseInt(selectMatch[1]);
@@ -232,94 +229,67 @@ export const AutoVoiceListener = () => {
       return;
     }
 
-    // AI-powered command for complex requests
+    // AI fallback
     if (isAIEnabled) {
       try {
-        toast.loading(`🎙️ AI analizuje: "${command}"...`, { id: "voice-cmd" });
+        toast.loading(`🎙️ AI analizuje...`, { id: "voice-cmd" });
         const result = await processVoiceCommand(command);
-        
-        if (result.action === "play" && result.tracks && result.tracks.length > 0) {
+        if (result.action === "play" && result.tracks?.length) {
           playPlaylist(result.tracks, 0);
-          toast.success(`🎵 Odtwarzam ${result.tracks.length} utworów — ${result.genre || ""} (${result.mood || ""})`, { id: "voice-cmd", duration: 4000 });
-          speak(`Odtwarzam ${result.tracks.length} utworów ${result.genre || ""}`);
+          toast.success(`🎵 Odtwarzam ${result.tracks.length} utworów`, { id: "voice-cmd", duration: 4000 });
+          speak(`Odtwarzam ${result.tracks.length} utworów`);
         } else if (result.action === "pause") {
-          togglePlay();
-          speak("Pauza");
+          togglePlay(); speak("Pauza");
           toast.success("⏸️ Pauza", { id: "voice-cmd" });
         }
       } catch {
         toast.error("Nie udało się przetworzyć komendy", { id: "voice-cmd" });
       }
     }
-  }, [isAIEnabled, processVoiceCommand, playPlaylist, togglePlay, nextTrack, prevTrack, setVolume, tryNavigate, searchAndPlay, resetSilenceTimer, assistantName]);
+  }, [isAIEnabled, processVoiceCommand, playPlaylist, togglePlay, nextTrack, prevTrack, setVolume, tryNavigate, searchAndPlay, resetSilenceTimer, assistantName, fetchAISuggestions, shutdownMic, showSuggestions, aiSuggestions]);
 
   const startListening = useCallback(() => {
     if (!user) return;
-    
     const SpeechAPI = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechAPI) {
-      toast.error("Twoja przeglądarka nie wspiera rozpoznawania mowy");
-      return;
-    }
-
-    if (recognitionRef.current) {
-      try { recognitionRef.current.abort(); } catch {}
-      recognitionRef.current = null;
-    }
+    if (!SpeechAPI) { toast.error("Brak wsparcia mowy w przeglądarce"); return; }
+    if (recognitionRef.current) { try { recognitionRef.current.abort(); } catch {} recognitionRef.current = null; }
 
     try {
       const rec = new SpeechAPI() as SpeechRecognitionInstance;
       rec.continuous = true;
       rec.interimResults = false;
       rec.lang = "pl-PL";
-
       rec.onresult = (event: SpeechRecognitionEvent) => {
         const last = event.results[event.results.length - 1];
-        if (last.isFinal) {
-          processCommand(last[0].transcript);
-        }
+        if (last.isFinal) processCommand(last[0].transcript);
       };
-
       rec.onerror = (event: SpeechRecognitionErrorEvent) => {
-        console.warn("Speech recognition error:", event.error);
         if (event.error === "not-allowed" || event.error === "service-not-allowed") {
-          setAutoListenEnabled(false);
-          localStorage.setItem("auto-voice-listen", "false");
-          setIsListening(false);
-          toast.error("🎙️ Brak dostępu do mikrofonu");
-          return;
+          setAutoListenEnabled(false); localStorage.setItem("auto-voice-listen", "false");
+          setIsListening(false); toast.error("🎙️ Brak dostępu do mikrofonu"); return;
         }
         if (event.error === "aborted") return;
         setIsListening(false);
       };
-
       rec.onend = () => {
         setIsListening(false);
         if (autoListenEnabled) {
           restartTimeoutRef.current = window.setTimeout(() => {
             if (autoListenEnabled && recognitionRef.current) {
-              try {
-                rec.start();
-                setIsListening(true);
-              } catch (e) {
-                console.warn("Mic restart failed:", e);
-              }
+              try { rec.start(); setIsListening(true); } catch {}
             }
           }, 1500);
         }
       };
-
       rec.start();
       recognitionRef.current = rec;
       setIsListening(true);
       resetSilenceTimer();
-    } catch (e) {
-      console.error("Voice recognition init failed:", e);
+    } catch {
       toast.error("Nie udało się uruchomić mikrofonu");
     }
   }, [user, processCommand, autoListenEnabled, resetSilenceTimer]);
 
-  // Cleanup
   useEffect(() => {
     return () => {
       if (recognitionRef.current) { try { recognitionRef.current.abort(); } catch {} }
@@ -328,7 +298,6 @@ export const AutoVoiceListener = () => {
     };
   }, []);
 
-  // Hide indicator after delay
   useEffect(() => {
     if (showIndicator) {
       const t = setTimeout(() => setShowIndicator(false), 4000);
@@ -339,14 +308,10 @@ export const AutoVoiceListener = () => {
   const handleNameSubmit = useCallback(async (name: string) => {
     setShowNamingModal(false);
     await saveAssistantName(name);
-    
-    // Greeting with TTS
     setTimeout(() => {
       speak(`Cześć! Miło mi że mnie tak nazwałeś — ${name}. Jestem Twoim asystentem muzycznym. Powiedz moje imię kiedy będziesz mnie potrzebować!`);
       toast.success(`🎤 ${name} aktywowany!`, { duration: 5000 });
     }, 500);
-
-    // Auto-enable mic after naming
     setAutoListenEnabled(true);
     localStorage.setItem("auto-voice-listen", "true");
     setTimeout(() => startListening(), 1000);
@@ -358,49 +323,144 @@ export const AutoVoiceListener = () => {
     localStorage.setItem("auto-voice-listen", String(next));
     if (next) {
       startListening();
-      const nameMsg = assistantName ? ` Jestem ${assistantName}.` : "";
-      speak(`Mikrofon włączony.${nameMsg} Słucham.`);
-      toast.success("🎙️ Mikrofon AI włączony — mów do aplikacji!");
+      speak(`Mikrofon włączony.${assistantName ? ` Jestem ${assistantName}.` : ""} Słucham.`);
+      toast.success("🎙️ Mikrofon AI włączony");
     } else {
-      if (recognitionRef.current) { try { recognitionRef.current.abort(); } catch {} }
-      if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
-      setIsListening(false);
-      toast.info("🔇 Mikrofon AI wyłączony");
+      shutdownMic();
     }
+  };
+
+  const playSuggestion = async (track: any) => {
+    playPlaylist([{ id: track.id, title: track.title, artist: track.artist, album: null, audio_url: null, cover_url: null, genre: track.genre, mood: track.mood, duration: 180 }], 0);
+    speak(`Odtwarzam ${track.title}`);
+    setShowSuggestions(false);
   };
 
   if (!user) return null;
 
   return (
     <>
-      {/* Naming modal */}
       <AssistantNamingModal open={showNamingModal} onSubmit={handleNameSubmit} />
 
-      {/* Floating mic button */}
+      {/* Iridescent mic button */}
       <motion.button
         onClick={toggleAutoListen}
         className={cn(
-          "fixed bottom-24 right-4 z-40 w-12 h-12 rounded-full flex items-center justify-center shadow-lg transition-colors",
-          isListening ? "bg-primary groove-glow" : "bg-secondary/80 hover:bg-secondary"
+          "fixed bottom-24 right-4 z-40 w-11 h-11 rounded-full flex items-center justify-center transition-all",
+          isListening ? "shadow-[0_0_20px_hsl(var(--primary)/0.5)]" : ""
         )}
-        whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.9 }}
-        title={autoListenEnabled ? "Wyłącz nasłuchiwanie" : "Włącz nasłuchiwanie głosowe AI"}
+        style={{
+          background: isListening
+            ? 'linear-gradient(135deg, hsl(var(--primary) / 0.7), hsl(var(--accent) / 0.5), hsl(var(--primary) / 0.6))'
+            : 'rgba(255,255,255,0.08)',
+          backdropFilter: 'blur(30px) saturate(200%)',
+          WebkitBackdropFilter: 'blur(30px) saturate(200%)',
+          border: isListening ? '1px solid hsl(var(--primary) / 0.4)' : '1px solid rgba(255,255,255,0.1)',
+        }}
+        whileHover={{ scale: 1.12 }}
+        whileTap={{ scale: 0.88 }}
+        title={autoListenEnabled ? "Wyłącz" : "Włącz asystenta głosowego"}
       >
         {isListening ? (
-          <motion.div animate={{ scale: [1, 1.15, 1] }} transition={{ repeat: Infinity, duration: 1.5 }}>
-            <Mic className="h-5 w-5 text-primary-foreground" />
+          <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 1.2 }}>
+            <Mic className="h-4 w-4 text-primary-foreground" />
           </motion.div>
         ) : (
-          <MicOff className="h-5 w-5 text-muted-foreground" />
+          <MicOff className="h-4 w-4 text-muted-foreground/70" />
         )}
-        {/* Assistant name badge */}
+        {/* Shimmer ring when listening */}
+        {isListening && (
+          <>
+            <motion.div
+              className="absolute inset-0 rounded-full"
+              style={{ border: '1px solid hsl(var(--primary) / 0.3)' }}
+              animate={{ scale: [1, 1.6], opacity: [0.6, 0] }}
+              transition={{ repeat: Infinity, duration: 2, ease: "easeOut" }}
+            />
+            <motion.div
+              className="absolute inset-0 rounded-full"
+              style={{ border: '1px solid hsl(var(--accent) / 0.2)' }}
+              animate={{ scale: [1, 2], opacity: [0.4, 0] }}
+              transition={{ repeat: Infinity, duration: 2.5, ease: "easeOut", delay: 0.3 }}
+            />
+          </>
+        )}
         {assistantName && (
-          <span className="absolute -top-1 -right-1 text-[8px] bg-accent text-accent-foreground rounded-full px-1.5 py-0.5 font-bold">
+          <span className="absolute -top-1 -right-1 text-[7px] rounded-full px-1 py-0.5 font-bold"
+            style={{
+              background: 'linear-gradient(135deg, hsl(var(--primary) / 0.6), hsl(var(--accent) / 0.4))',
+              color: 'hsl(var(--primary-foreground))',
+              backdropFilter: 'blur(10px)',
+            }}
+          >
             {assistantName.slice(0, 3)}
           </span>
         )}
       </motion.button>
+
+      {/* AI Suggestions Panel */}
+      <AnimatePresence>
+        {showSuggestions && aiSuggestions.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.9 }}
+            className="fixed bottom-40 right-4 z-50 w-[280px] rounded-2xl p-3 space-y-2"
+            style={{
+              background: 'rgba(0,0,0,0.3)',
+              backdropFilter: 'blur(40px) saturate(200%)',
+              WebkitBackdropFilter: 'blur(40px) saturate(200%)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              boxShadow: '0 12px 40px rgba(0,0,0,0.4)',
+            }}
+          >
+            <div className="flex items-center gap-2 mb-1">
+              <Sparkles className="h-3 w-3 text-primary" />
+              <span className="text-[10px] font-semibold text-foreground/80">
+                {assistantName || "AI"} proponuje na dziś
+              </span>
+            </div>
+            {aiSuggestions.map((s: any, i: number) => (
+              <motion.button
+                key={s.id}
+                initial={{ opacity: 0, x: 10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.1 }}
+                onClick={() => playSuggestion(s)}
+                className="w-full flex items-center gap-2 p-2 rounded-xl transition-colors text-left"
+                style={{
+                  background: 'rgba(255,255,255,0.04)',
+                  border: '1px solid rgba(255,255,255,0.05)',
+                }}
+                whileHover={{ scale: 1.02, backgroundColor: 'rgba(255,255,255,0.08)' }}
+              >
+                <Music className="h-3 w-3 text-primary/70 shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-[10px] font-medium text-foreground/90 truncate">{s.title}</p>
+                  <p className="text-[9px] text-muted-foreground/60 truncate">{s.artist} · {s.reason}</p>
+                </div>
+              </motion.button>
+            ))}
+            <motion.button
+              onClick={() => {
+                const tracks = aiSuggestions.map((s: any) => ({ id: s.id, title: s.title, artist: s.artist, album: null, audio_url: null, cover_url: null, genre: s.genre, mood: s.mood, duration: 180 }));
+                playPlaylist(tracks, 0);
+                speak("Odtwarzam wszystkie propozycje!");
+                setShowSuggestions(false);
+              }}
+              className="w-full py-1.5 rounded-xl text-[10px] font-semibold text-primary-foreground"
+              style={{
+                background: 'linear-gradient(135deg, hsl(var(--primary) / 0.5), hsl(var(--accent) / 0.3))',
+                border: '1px solid rgba(255,255,255,0.1)',
+              }}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              ▶ Puść wszystkie
+            </motion.button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Voice feedback popup */}
       <AnimatePresence>
@@ -409,18 +469,19 @@ export const AutoVoiceListener = () => {
             initial={{ opacity: 0, y: 20, x: 20 }}
             animate={{ opacity: 1, y: 0, x: 0 }}
             exit={{ opacity: 0, y: 20 }}
-            className="fixed bottom-40 right-4 z-40 max-w-xs bg-card border border-border rounded-xl p-3 shadow-xl"
+            className="fixed bottom-40 right-4 z-40 max-w-[240px] rounded-xl p-2.5"
+            style={{
+              background: 'rgba(0,0,0,0.25)',
+              backdropFilter: 'blur(30px)',
+              border: '1px solid rgba(255,255,255,0.08)',
+            }}
           >
-            <div className="flex items-center gap-2 mb-1">
-              <Sparkles className="h-4 w-4 text-accent" />
-              <span className="text-xs font-semibold text-accent">
-                {assistantName || "AI"} słyszy
-              </span>
+            <div className="flex items-center gap-1.5 mb-0.5">
+              <Sparkles className="h-3 w-3 text-primary/70" />
+              <span className="text-[9px] font-semibold text-primary/80">{assistantName || "AI"}</span>
             </div>
-            <p className="text-sm text-foreground">"{lastTranscript}"</p>
-            {isProcessing && (
-              <p className="text-xs text-muted-foreground mt-1 animate-pulse">Przetwarzam...</p>
-            )}
+            <p className="text-[10px] text-foreground/80">"{lastTranscript}"</p>
+            {isProcessing && <p className="text-[9px] text-muted-foreground/60 mt-0.5 animate-pulse">Przetwarzam...</p>}
           </motion.div>
         )}
       </AnimatePresence>
