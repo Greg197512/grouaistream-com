@@ -47,6 +47,7 @@ const Movies = () => {
     let query = supabase
       .from("movies")
       .select("*")
+      .gte("duration_minutes", 60)
       .order("rating", { ascending: false, nullsFirst: false })
       .limit(100);
 
