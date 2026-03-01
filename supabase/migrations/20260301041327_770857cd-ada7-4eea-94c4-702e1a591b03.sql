@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX IF NOT EXISTS movies_title_director_unique ON public.movies (title, director);
