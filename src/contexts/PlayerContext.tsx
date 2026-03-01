@@ -250,19 +250,28 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
       setYoutubeVideoId(null);
 
       if (audioRef.current) {
+        console.log("[Player] Setting audio src:", audioUrl);
         audioRef.current.src = audioUrl;
-        audioRef.current.play().then(() => {
-          setIsPlaying(true);
-        }).catch((error) => {
-          if (isAutoplayBlockedError(error)) {
-            setIsPlaying(false);
-            toast.info("Na telefonie naciśnij Play, aby rozpocząć odtwarzanie");
-            return;
-          }
+        const playPromise = audioRef.current.play();
+        console.log("[Player] play() called, promise:", !!playPromise);
+        if (playPromise) {
+          playPromise.then(() => {
+            console.log("[Player] play() success");
+            setIsPlaying(true);
+          }).catch((error) => {
+            console.error("[Player] play() error:", error.name, error.message);
+            if (isAutoplayBlockedError(error)) {
+              setIsPlaying(false);
+              toast.info("Na telefonie naciśnij Play, aby rozpocząć odtwarzanie");
+              return;
+            }
 
-          toast.error("Nie udało się odtworzyć utworu. Przechodzę do następnego...");
-          nextTrackInternal();
-        });
+            toast.error("Nie udało się odtworzyć utworu. Przechodzę do następnego...");
+            nextTrackInternal();
+          });
+        }
+      } else {
+        console.error("[Player] audioRef.current is null!");
       }
     }
 
