@@ -433,6 +433,30 @@ const Server = () => {
         </div>
 
         {/* Selected tracks actions */}
+        {/* Select All bar */}
+        <div className="mb-4 flex items-center gap-3">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              if (selectedTracks.size === filtered.length) {
+                setSelectedTracks(new Set());
+              } else {
+                setSelectedTracks(new Set(filtered.map(t => t.id)));
+              }
+            }}
+            className="gap-1"
+          >
+            <CheckCircle className="h-3.5 w-3.5" />
+            {selectedTracks.size === filtered.length && filtered.length > 0 ? "Odznacz wszystkie" : "Zaznacz wszystkie"}
+          </Button>
+          {filtered.length > 0 && (
+            <span className="text-xs text-muted-foreground">
+              {selectedTracks.size}/{filtered.length} zaznaczono
+            </span>
+          )}
+        </div>
+
         <AnimatePresence>
           {selectedTracks.size > 0 && (
             <motion.div
@@ -446,7 +470,7 @@ const Server = () => {
               </span>
               <div className="flex gap-2">
                 <Button size="sm" variant="outline" onClick={() => addToLibrary(Array.from(selectedTracks))} className="gap-1">
-                  <Library className="h-3.5 w-3.5" /> Dodaj do biblioteki
+                  <Library className="h-3.5 w-3.5" /> Przenieś do biblioteki
                 </Button>
                 <Button size="sm" variant="outline" onClick={() => categorizeWithAI(Array.from(selectedTracks))} disabled={isCategorizing} className="gap-1">
                   <Sparkles className="h-3.5 w-3.5" /> AI Kategoryzuj

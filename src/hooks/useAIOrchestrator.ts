@@ -232,21 +232,38 @@ export const useAIOrchestrator = () => {
       const detectedMood = aiResponse?.data?.detectedMood || "neutral";
       const suggestedGenre = aiResponse?.data?.musicRecommendation || "Pop";
 
-      // Parse command for explicit genre requests
+      // Parse command for explicit genre requests (PL + EN)
       let targetGenre = suggestedGenre;
-      if (command.includes("rock")) targetGenre = "Rock";
-      else if (command.includes("punk")) targetGenre = "Punk";
-      else if (command.includes("pop")) targetGenre = "Pop";
+      const lower = command.toLowerCase();
+      if (lower.includes("rock")) targetGenre = "Rock";
+      else if (lower.includes("punk")) targetGenre = "Punk";
+      else if (lower.includes("pop")) targetGenre = "Pop";
+      else if (lower.includes("metal")) targetGenre = "Metal";
+      else if (lower.includes("hip-hop") || lower.includes("hip hop") || lower.includes("hiphop")) targetGenre = "Hip-Hop";
+      else if (lower.includes("rap")) targetGenre = "Rap";
+      else if (lower.includes("jazz")) targetGenre = "Jazz";
+      else if (lower.includes("elektron") || lower.includes("electronic") || lower.includes("techno")) targetGenre = "Electronic";
+      else if (lower.includes("klasycz") || lower.includes("classical")) targetGenre = "Classical";
+      else if (lower.includes("indie")) targetGenre = "Indie";
+      else if (lower.includes("blues")) targetGenre = "Blues";
+      else if (lower.includes("reggae")) targetGenre = "Reggae";
 
-      // Determine action
+      // Parse number of tracks requested (e.g. "daj mi 6 utworów")
+      const numMatch = command.match(/(\d+)\s*(utw|piosen|track|song)/i);
+      const requestedCount = numMatch ? parseInt(numMatch[1]) : undefined;
+
+      // Determine action (PL + EN)
       let action = "play";
-      if (command.includes("pause") || command.includes("stop")) action = "pause";
-      else if (command.includes("next") || command.includes("skip")) action = "next";
-      else if (command.includes("previous") || command.includes("back")) action = "previous";
-      else if (command.includes("volume")) action = "volume";
+      if (lower.includes("pauza") || lower.includes("pause") || lower.includes("stop") || lower.includes("zatrzymaj")) action = "pause";
+      else if (lower.includes("następn") || lower.includes("next") || lower.includes("skip") || lower.includes("dalej")) action = "next";
+      else if (lower.includes("poprzedni") || lower.includes("previous") || lower.includes("back") || lower.includes("wstecz")) action = "previous";
+      else if (lower.includes("głośn") || lower.includes("cisz") || lower.includes("volume")) action = "volume";
 
       if (action === "play") {
-        const tracks = await generateAIPlaylist(detectedMood, targetGenre, `Voice command: ${command}`);
+        let tracks = await generateAIPlaylist(detectedMood, targetGenre, `Voice command: ${command}`);
+        if (requestedCount && requestedCount > 0) {
+          tracks = tracks.slice(0, requestedCount);
+        }
         return { action, genre: targetGenre, mood: detectedMood, tracks };
       }
 
