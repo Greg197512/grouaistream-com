@@ -73,9 +73,31 @@ export function useAudioAnalyser(audioElement: HTMLAudioElement | null, isPlayin
   const hasRealAnalyserRef = useRef(false);
   const [levels, setLevels] = useState<AudioLevels>(EMPTY_LEVELS);
 
+  const isCrossOriginMedia = useCallback((element: HTMLAudioElement | null) => {
+    if (!element) return true;
+
+    const sourceUrl = element.currentSrc || element.src;
+    if (!sourceUrl) return false;
+
+    try {
+      const parsedUrl = new URL(sourceUrl, window.location.href);
+      return parsedUrl.origin !== window.location.origin;
+    } catch {
+      return true;
+    }
+  }, []);
+
   // Connect audio element to analyser (only once per element)
   const connect = useCallback(() => {
     if (!audioElement || connectedElementRef.current === audioElement) return;
+
+    // Cross-origin media can become silent when routed through MediaElementAudioSourceNode.
+    // Keep native playback and use simulated analyser values instead.
+    if (isCrossOriginMedia(audioElement)) {
+      hasRealAnalyserRef.current = false;
+      connectedElementRef.current = audioElement;
+      return;
+    }
 
     try {
       if (!ctxRef.current) {
@@ -98,7 +120,7 @@ export function useAudioAnalyser(audioElement: HTMLAudioElement | null, isPlayin
       console.warn("AudioAnalyser connect failed:", e);
       hasRealAnalyserRef.current = false;
     }
-  }, [audioElement]);
+  }, [audioElement, isCrossOriginMedia]);
 
   useEffect(() => {
     if (!isPlaying) {
@@ -106,8 +128,8 @@ export function useAudioAnalyser(audioElement: HTMLAudioElement | null, isPlayin
       return;
     }
 
-    // Video mode or no audio element → simulated fallback
-    const useSimulated = isVideoMode || !audioElement;
+    // Video mode, no audio element, or cross-origin audio -> simulated fallback
+    const useSimulated = isVideoMode || !audioElement || isCrossOriginMedia(audioElement);
 
     if (!useSimulated) {
       connect();
