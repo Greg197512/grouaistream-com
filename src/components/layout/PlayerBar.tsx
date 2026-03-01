@@ -365,20 +365,18 @@ export const PlayerBar = () => {
               whileHover={{ scale: 1.2 }}
               whileTap={{ scale: 0.9 }}
               onClick={() => setShowMoodDetector(true)}
-              className="relative z-10 flex items-center justify-center h-9 w-9 rounded-full bg-gradient-to-br from-primary to-accent border border-white/30 shadow-[0_0_12px_rgba(var(--primary),0.5)] overflow-hidden"
+              className="relative z-10 flex items-center justify-center h-9 w-9 rounded-full bg-gradient-to-br from-primary to-accent border border-white/30 shadow-[0_0_12px_rgba(var(--primary),0.5)]"
               title="Rozpoznawanie nastroju (Kamera)"
             >
-              {/* Face layout: eyes top, camera nose center, smile bottom */}
-              <div className="flex flex-col items-center gap-0 leading-none">
-                {/* Eyes */}
-                <div className="flex gap-1.5 -mb-0.5">
+              {/* Camera sitting on top of circle */}
+              <Camera className="absolute -top-1.5 left-1/2 -translate-x-1/2 h-3 w-3 text-white drop-shadow-md" />
+              {/* Face: eyes + smile */}
+              <div className="flex flex-col items-center gap-0.5 mt-1">
+                <div className="flex gap-1.5">
                   <div className="w-1 h-1 rounded-full bg-white" />
                   <div className="w-1 h-1 rounded-full bg-white" />
                 </div>
-                {/* Nose - camera */}
-                <Camera className="h-2.5 w-2.5 text-white/90" />
-                {/* Smile */}
-                <div className="w-3.5 h-1.5 border-b-[1.5px] border-white rounded-b-full -mt-0.5" />
+                <div className="w-3.5 h-1.5 border-b-[1.5px] border-white rounded-b-full" />
               </div>
             </motion.button>
           </motion.div>
