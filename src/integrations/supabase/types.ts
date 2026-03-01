@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_assistant_config: {
+        Row: {
+          assistant_name: string
+          created_at: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          assistant_name?: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          assistant_name?: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       liked_songs: {
         Row: {
           id: string

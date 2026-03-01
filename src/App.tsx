@@ -38,8 +38,8 @@ const App = () => (
             <div className="dark">
               <Toaster />
               <Sonner />
-              <AutoVoiceListener />
               <BrowserRouter>
+                <AutoVoiceListener />
                 <Routes>
                   <Route path="/" element={<Index />} />
                   <Route path="/auth" element={<Auth />} />

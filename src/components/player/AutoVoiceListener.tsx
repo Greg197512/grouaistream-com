@@ -1,9 +1,14 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Mic, MicOff, Sparkles } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAI } from "@/contexts/AIContext";
 import { usePlayer } from "@/contexts/PlayerContext";
+import { useAssistantConfig } from "@/hooks/useAssistantConfig";
+import { AssistantNamingModal } from "@/components/modals/AssistantNamingModal";
+import { speak } from "@/utils/tts";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -26,20 +31,52 @@ interface SpeechRecognitionInstance extends EventTarget {
   abort: () => void;
 }
 
-/**
- * Floating mic indicator that auto-starts after login.
- * Always listens in the background, processes Polish voice commands via AI.
- */
+const SILENCE_TIMEOUT_MS = 30_000;
+
+// Navigation map: Polish keywords → routes
+const NAV_MAP: Record<string, string> = {
+  "stron": "/",
+  "główn": "/",
+  "home": "/",
+  "szukaj": "/search",
+  "wyszuk": "/search",
+  "search": "/search",
+  "bibliotek": "/library",
+  "library": "/library",
+  "polubionych": "/liked",
+  "polubion": "/liked",
+  "liked": "/liked",
+  "serwer": "/server",
+  "server": "/server",
+  "medi": "/server",
+  "film": "/movies",
+  "movie": "/movies",
+  "radio": "/radio",
+  "ustawien": "/settings",
+  "settings": "/settings",
+  "nastro": "/mood-history",
+  "mood": "/mood-history",
+  "playlist": "/playlist-manager",
+  "admin": "/admin",
+};
+
 export const AutoVoiceListener = () => {
   const { user } = useAuth();
   const { processVoiceCommand, isAIEnabled, isProcessing } = useAI();
   const { playPlaylist, togglePlay, nextTrack, prevTrack, setVolume } = usePlayer();
+  const navigate = useNavigate();
+  const { assistantName, needsNaming, saveAssistantName } = useAssistantConfig();
+
   const [isListening, setIsListening] = useState(false);
   const [lastTranscript, setLastTranscript] = useState("");
   const [showIndicator, setShowIndicator] = useState(false);
+  const [autoListenEnabled, setAutoListenEnabled] = useState(false);
+  const [showNamingModal, setShowNamingModal] = useState(false);
+  const [greeted, setGreeted] = useState(false);
+
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const restartTimeoutRef = useRef<number | null>(null);
-  const [autoListenEnabled, setAutoListenEnabled] = useState(false);
+  const silenceTimerRef = useRef<number | null>(null);
 
   // Load preference
   useEffect(() => {
@@ -47,7 +84,72 @@ export const AutoVoiceListener = () => {
     if (stored === "true") setAutoListenEnabled(true);
   }, []);
 
-  // Don't auto-enable — require explicit user click due to browser permissions
+  // Show naming modal on first login
+  useEffect(() => {
+    if (user && needsNaming) {
+      setShowNamingModal(true);
+    }
+  }, [user, needsNaming]);
+
+  // Reset silence timer on any speech
+  const resetSilenceTimer = useCallback(() => {
+    if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+    silenceTimerRef.current = window.setTimeout(() => {
+      // Auto-stop after 30s of silence
+      if (recognitionRef.current) {
+        try { recognitionRef.current.abort(); } catch {}
+      }
+      setIsListening(false);
+      setAutoListenEnabled(false);
+      localStorage.setItem("auto-voice-listen", "false");
+      toast.info("🎙️ Mikrofon wyłączony po 30s ciszy");
+    }, SILENCE_TIMEOUT_MS);
+  }, []);
+
+  // Handle navigation command
+  const tryNavigate = useCallback((lower: string): boolean => {
+    // "otwórz/włącz/pokaż [page]"
+    for (const [keyword, route] of Object.entries(NAV_MAP)) {
+      if (lower.includes(keyword)) {
+        navigate(route);
+        const pageNames: Record<string, string> = {
+          "/": "Strona główna", "/search": "Szukaj", "/library": "Biblioteka",
+          "/liked": "Polubione utwory", "/server": "Serwer mediów", "/movies": "Filmy",
+          "/radio": "Radio", "/settings": "Ustawienia", "/mood-history": "Historia nastroju",
+          "/playlist-manager": "Playlisty", "/admin": "Admin"
+        };
+        const pageName = pageNames[route] || route;
+        toast.success(`📂 Otwieram: ${pageName}`);
+        speak(`Otwieram ${pageName}`);
+        return true;
+      }
+    }
+    return false;
+  }, [navigate]);
+
+  // Search and play tracks by title/artist
+  const searchAndPlay = useCallback(async (query: string, count?: number) => {
+    try {
+      toast.loading(`🔍 Szukam: "${query}"...`, { id: "voice-search" });
+      const { data: tracks } = await supabase
+        .from("tracks")
+        .select("*")
+        .or(`title.ilike.%${query}%,artist.ilike.%${query}%`)
+        .limit(count || 10);
+
+      if (tracks && tracks.length > 0) {
+        const toPlay = count ? tracks.slice(0, count) : tracks;
+        playPlaylist(toPlay, 0);
+        toast.success(`🎵 Odtwarzam ${toPlay.length} ${toPlay.length === 1 ? 'utwór' : 'utworów'}: ${toPlay[0].title}`, { id: "voice-search", duration: 4000 });
+        speak(`Odtwarzam ${toPlay[0].title} ${toPlay[0].artist}`);
+      } else {
+        toast.error(`Nie znaleziono: "${query}"`, { id: "voice-search" });
+        speak(`Nie znalazłam utworu ${query}`);
+      }
+    } catch {
+      toast.error("Błąd wyszukiwania", { id: "voice-search" });
+    }
+  }, [playPlaylist]);
 
   const processCommand = useCallback(async (command: string) => {
     const lower = command.toLowerCase().trim();
@@ -55,40 +157,82 @@ export const AutoVoiceListener = () => {
 
     setLastTranscript(command);
     setShowIndicator(true);
+    resetSilenceTimer();
 
-    // Check for basic Polish commands first
+    // Check if user called assistant by name
+    if (assistantName && lower.includes(assistantName.toLowerCase())) {
+      speak(`Cześć! Fajnie że znów jesteśmy tu razem. Co proponujesz na dzisiaj? Jaki utwór?`);
+      toast.success(`🎤 ${assistantName}: Słucham Cię!`);
+      return;
+    }
+
+    // Basic player commands (PL)
     if (lower.includes("pauza") || lower.includes("stop") || lower.includes("zatrzymaj")) {
       togglePlay();
-      toast.success("⏸️ Pauza");
+      speak("Pauza");
+      return;
+    }
+    if (lower.includes("graj") && !lower.includes("następ") && !lower.includes("odtwarz") && lower.split(" ").length <= 2) {
+      togglePlay();
+      speak("Odtwarzam");
       return;
     }
     if (lower.includes("następn") || lower.includes("dalej") || lower.includes("skip")) {
       nextTrack();
-      toast.success("⏭️ Następny utwór");
+      speak("Następny utwór");
       return;
     }
     if (lower.includes("poprzedni") || lower.includes("cofnij") || lower.includes("wstecz")) {
       prevTrack();
-      toast.success("⏮️ Poprzedni utwór");
+      speak("Poprzedni utwór");
       return;
     }
     if (lower.includes("głośniej") || lower.includes("louder")) {
       setVolume(85);
-      toast.success("🔊 Głośniej");
+      speak("Głośniej");
       return;
     }
     if (lower.includes("ciszej") || lower.includes("cicho")) {
       setVolume(25);
-      toast.success("🔉 Ciszej");
+      speak("Ciszej");
       return;
     }
     if (lower.includes("wycisz") || lower.includes("mute")) {
       setVolume(0);
-      toast.success("🔇 Wyciszono");
+      speak("Wyciszono");
       return;
     }
 
-    // AI-powered command for complex requests like "daj mi 6 utworów do pobudzenia"
+    // Navigation commands: "otwórz/włącz/pokaż [page]"
+    if (lower.includes("otwórz") || lower.includes("włącz") || lower.includes("pokaż") || lower.includes("przejdź") || lower.includes("idź")) {
+      if (tryNavigate(lower)) return;
+    }
+
+    // Direct navigation (just page name)
+    if (tryNavigate(lower)) return;
+
+    // Search & play specific track: "włącz [title]" / "puść [title]" / "zagraj [title]"
+    const playMatch = lower.match(/(?:włącz|puść|zagraj|odtwórz|graj|play)\s+(.+)/i);
+    if (playMatch) {
+      const query = playMatch[1].replace(/w\s+playerze/i, "").trim();
+      // Check for count: "wybierz 4 utwory metallica"
+      const countMatch = query.match(/(\d+)\s*(?:utw|piosen|track|song)/i);
+      const count = countMatch ? parseInt(countMatch[1]) : undefined;
+      const cleanQuery = query.replace(/\d+\s*(?:utw|piosen|track|song)\w*/i, "").trim();
+      await searchAndPlay(cleanQuery || query, count);
+      return;
+    }
+
+    // "wybierz X utworów Y"
+    const selectMatch = lower.match(/wybierz\s+(\d+)\s+(?:utw|piosen)\w*\s+(.+)/i);
+    if (selectMatch) {
+      const count = parseInt(selectMatch[1]);
+      const query = selectMatch[2].replace(/i\s+włącz.*/i, "").replace(/w\s+playerze/i, "").trim();
+      await searchAndPlay(query, count);
+      return;
+    }
+
+    // AI-powered command for complex requests
     if (isAIEnabled) {
       try {
         toast.loading(`🎙️ AI analizuje: "${command}"...`, { id: "voice-cmd" });
@@ -97,15 +241,17 @@ export const AutoVoiceListener = () => {
         if (result.action === "play" && result.tracks && result.tracks.length > 0) {
           playPlaylist(result.tracks, 0);
           toast.success(`🎵 Odtwarzam ${result.tracks.length} utworów — ${result.genre || ""} (${result.mood || ""})`, { id: "voice-cmd", duration: 4000 });
+          speak(`Odtwarzam ${result.tracks.length} utworów ${result.genre || ""}`);
         } else if (result.action === "pause") {
           togglePlay();
+          speak("Pauza");
           toast.success("⏸️ Pauza", { id: "voice-cmd" });
         }
       } catch {
         toast.error("Nie udało się przetworzyć komendy", { id: "voice-cmd" });
       }
     }
-  }, [isAIEnabled, processVoiceCommand, playPlaylist, togglePlay, nextTrack, prevTrack, setVolume]);
+  }, [isAIEnabled, processVoiceCommand, playPlaylist, togglePlay, nextTrack, prevTrack, setVolume, tryNavigate, searchAndPlay, resetSilenceTimer, assistantName]);
 
   const startListening = useCallback(() => {
     if (!user) return;
@@ -116,7 +262,6 @@ export const AutoVoiceListener = () => {
       return;
     }
 
-    // Stop existing instance
     if (recognitionRef.current) {
       try { recognitionRef.current.abort(); } catch {}
       recognitionRef.current = null;
@@ -131,8 +276,7 @@ export const AutoVoiceListener = () => {
       rec.onresult = (event: SpeechRecognitionEvent) => {
         const last = event.results[event.results.length - 1];
         if (last.isFinal) {
-          const text = last[0].transcript;
-          processCommand(text);
+          processCommand(last[0].transcript);
         }
       };
 
@@ -142,7 +286,7 @@ export const AutoVoiceListener = () => {
           setAutoListenEnabled(false);
           localStorage.setItem("auto-voice-listen", "false");
           setIsListening(false);
-          toast.error("🎙️ Brak dostępu do mikrofonu — sprawdź uprawnienia przeglądarki");
+          toast.error("🎙️ Brak dostępu do mikrofonu");
           return;
         }
         if (event.error === "aborted") return;
@@ -151,7 +295,6 @@ export const AutoVoiceListener = () => {
 
       rec.onend = () => {
         setIsListening(false);
-        // Auto-restart only if still enabled
         if (autoListenEnabled) {
           restartTimeoutRef.current = window.setTimeout(() => {
             if (autoListenEnabled && recognitionRef.current) {
@@ -169,21 +312,19 @@ export const AutoVoiceListener = () => {
       rec.start();
       recognitionRef.current = rec;
       setIsListening(true);
+      resetSilenceTimer();
     } catch (e) {
       console.error("Voice recognition init failed:", e);
       toast.error("Nie udało się uruchomić mikrofonu");
     }
-  }, [user, processCommand, autoListenEnabled]);
+  }, [user, processCommand, autoListenEnabled, resetSilenceTimer]);
 
-  // Cleanup on unmount
+  // Cleanup
   useEffect(() => {
     return () => {
-      if (recognitionRef.current) {
-        try { recognitionRef.current.abort(); } catch {}
-      }
-      if (restartTimeoutRef.current) {
-        clearTimeout(restartTimeoutRef.current);
-      }
+      if (recognitionRef.current) { try { recognitionRef.current.abort(); } catch {} }
+      if (restartTimeoutRef.current) clearTimeout(restartTimeoutRef.current);
+      if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
     };
   }, []);
 
@@ -195,17 +336,34 @@ export const AutoVoiceListener = () => {
     }
   }, [showIndicator, lastTranscript]);
 
+  const handleNameSubmit = useCallback(async (name: string) => {
+    setShowNamingModal(false);
+    await saveAssistantName(name);
+    
+    // Greeting with TTS
+    setTimeout(() => {
+      speak(`Cześć! Miło mi że mnie tak nazwałeś — ${name}. Jestem Twoim asystentem muzycznym. Powiedz moje imię kiedy będziesz mnie potrzebować!`);
+      toast.success(`🎤 ${name} aktywowany!`, { duration: 5000 });
+    }, 500);
+
+    // Auto-enable mic after naming
+    setAutoListenEnabled(true);
+    localStorage.setItem("auto-voice-listen", "true");
+    setTimeout(() => startListening(), 1000);
+  }, [saveAssistantName, startListening]);
+
   const toggleAutoListen = () => {
     const next = !autoListenEnabled;
     setAutoListenEnabled(next);
     localStorage.setItem("auto-voice-listen", String(next));
     if (next) {
       startListening();
+      const nameMsg = assistantName ? ` Jestem ${assistantName}.` : "";
+      speak(`Mikrofon włączony.${nameMsg} Słucham.`);
       toast.success("🎙️ Mikrofon AI włączony — mów do aplikacji!");
     } else {
-      if (recognitionRef.current) {
-        try { recognitionRef.current.abort(); } catch {}
-      }
+      if (recognitionRef.current) { try { recognitionRef.current.abort(); } catch {} }
+      if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
       setIsListening(false);
       toast.info("🔇 Mikrofon AI wyłączony");
     }
@@ -215,6 +373,9 @@ export const AutoVoiceListener = () => {
 
   return (
     <>
+      {/* Naming modal */}
+      <AssistantNamingModal open={showNamingModal} onSubmit={handleNameSubmit} />
+
       {/* Floating mic button */}
       <motion.button
         onClick={toggleAutoListen}
@@ -233,6 +394,12 @@ export const AutoVoiceListener = () => {
         ) : (
           <MicOff className="h-5 w-5 text-muted-foreground" />
         )}
+        {/* Assistant name badge */}
+        {assistantName && (
+          <span className="absolute -top-1 -right-1 text-[8px] bg-accent text-accent-foreground rounded-full px-1.5 py-0.5 font-bold">
+            {assistantName.slice(0, 3)}
+          </span>
+        )}
       </motion.button>
 
       {/* Voice feedback popup */}
@@ -246,7 +413,9 @@ export const AutoVoiceListener = () => {
           >
             <div className="flex items-center gap-2 mb-1">
               <Sparkles className="h-4 w-4 text-accent" />
-              <span className="text-xs font-semibold text-accent">AI Słyszę</span>
+              <span className="text-xs font-semibold text-accent">
+                {assistantName || "AI"} słyszy
+              </span>
             </div>
             <p className="text-sm text-foreground">"{lastTranscript}"</p>
             {isProcessing && (
