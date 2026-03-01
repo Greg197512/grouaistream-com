@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Play, Sparkles, Zap, Brain, Radio, Loader2 } from "lucide-react";
-import { StickmanAvatar } from "@/components/avatar/StickmanAvatar";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { usePlayer } from "@/contexts/PlayerContext";
@@ -61,8 +60,7 @@ export const HeroSection = () => {
 
       <div className="relative px-6 py-16 md:py-24">
         <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }} className="max-w-3xl">
-          <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2 }} className="relative inline-flex items-center gap-3 rounded-full bg-accent/20 border border-accent/30 px-5 py-2.5 mb-6">
-            <StickmanAvatar />
+          <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2 }} className="inline-flex items-center gap-3 rounded-full bg-accent/20 border border-accent/30 px-5 py-2.5 mb-6">
             <motion.img src="/logo-icon.png" alt="GrouAI" className="h-10 w-10 drop-shadow-[0_0_8px_hsl(var(--primary)/0.6)]" animate={{ rotate: [0, 5, -5, 0] }} transition={{ duration: 4, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }} />
             <span className="text-base font-medium text-accent">{t("hero.badge")} <span className="font-bold">by GrouaRock</span></span>
           </motion.div>
