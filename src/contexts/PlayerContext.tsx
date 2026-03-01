@@ -29,6 +29,9 @@ interface PlayerContextType {
   playTrack: (track: Track) => void;
   playPlaylist: (tracks: Track[], startIndex?: number) => void;
   togglePlay: () => void;
+  pausePlayback: () => void;
+  resumePlayback: () => void;
+  restartCurrentTrack: () => void;
   nextTrack: () => void;
   prevTrack: () => void;
   seek: (position: number) => void;
@@ -337,7 +340,6 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
 
   const togglePlay = () => {
     if (isVideoMode) {
-      // YouTube playback is controlled via state change
       setIsPlaying(!isPlaying);
     } else if (audioRef.current) {
       if (isPlaying) {
@@ -354,6 +356,71 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
             }
             console.error(error);
           });
+      }
+    }
+  };
+
+  const pausePlayback = () => {
+    if (isVideoMode) {
+      setIsPlaying(false);
+      return;
+    }
+
+    if (audioRef.current) {
+      audioRef.current.pause();
+    }
+    setIsPlaying(false);
+  };
+
+  const resumePlayback = () => {
+    if (!currentTrack) return;
+
+    if (isVideoMode) {
+      setIsPlaying(true);
+      return;
+    }
+
+    if (audioRef.current) {
+      audioRef.current.play()
+        .then(() => setIsPlaying(true))
+        .catch((error) => {
+          if (isAutoplayBlockedError(error)) {
+            toast.info("Dotknij Play, aby wznowić odtwarzanie");
+            setIsPlaying(false);
+            return;
+          }
+          console.error(error);
+        });
+    }
+  };
+
+  const restartCurrentTrack = () => {
+    if (!currentTrack) return;
+
+    if (isVideoMode) {
+      setProgress(0);
+      setCurrentTime(0);
+      setIsPlaying(true);
+      return;
+    }
+
+    if (audioRef.current) {
+      audioRef.current.currentTime = 0;
+      setProgress(0);
+      setCurrentTime(0);
+
+      if (audioRef.current.paused) {
+        audioRef.current.play()
+          .then(() => setIsPlaying(true))
+          .catch((error) => {
+            if (isAutoplayBlockedError(error)) {
+              setIsPlaying(false);
+              return;
+            }
+            console.error(error);
+          });
+      } else {
+        setIsPlaying(true);
       }
     }
   };
@@ -446,6 +513,9 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
         playTrack,
         playPlaylist,
         togglePlay,
+        pausePlayback,
+        resumePlayback,
+        restartCurrentTrack,
         nextTrack,
         prevTrack,
         seek,
