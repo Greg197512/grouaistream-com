@@ -193,6 +193,13 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
 
   const isHttpUrl = (value?: string | null) => Boolean(value && /^https?:\/\//i.test(value));
 
+  const isAutoplayBlockedError = (error: unknown) => {
+    if (!error) return false;
+    if (error instanceof DOMException) return error.name === "NotAllowedError";
+    if (error instanceof Error) return error.name === "NotAllowedError";
+    return false;
+  };
+
   const isBlockedStreamUrl = (value: string) =>
     value.includes("open.spotify.com") || value.startsWith("spotify:");
 
@@ -246,7 +253,13 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
         audioRef.current.src = audioUrl;
         audioRef.current.play().then(() => {
           setIsPlaying(true);
-        }).catch(() => {
+        }).catch((error) => {
+          if (isAutoplayBlockedError(error)) {
+            setIsPlaying(false);
+            toast.info("Na telefonie naciśnij Play, aby rozpocząć odtwarzanie");
+            return;
+          }
+
           toast.error("Nie udało się odtworzyć utworu. Przechodzę do następnego...");
           nextTrackInternal();
         });
@@ -318,10 +331,19 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     } else if (audioRef.current) {
       if (isPlaying) {
         audioRef.current.pause();
+        setIsPlaying(false);
       } else {
-        audioRef.current.play().catch(console.error);
+        audioRef.current.play()
+          .then(() => setIsPlaying(true))
+          .catch((error) => {
+            if (isAutoplayBlockedError(error)) {
+              toast.info("Dotknij Play ponownie, aby odblokować odtwarzanie na telefonie");
+              setIsPlaying(false);
+              return;
+            }
+            console.error(error);
+          });
       }
-      setIsPlaying(!isPlaying);
     }
   };
 
