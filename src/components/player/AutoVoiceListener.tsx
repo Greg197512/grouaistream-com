@@ -47,13 +47,7 @@ export const AutoVoiceListener = () => {
     if (stored === "true") setAutoListenEnabled(true);
   }, []);
 
-  // Auto-enable after first login
-  useEffect(() => {
-    if (user && !localStorage.getItem("auto-voice-listen")) {
-      localStorage.setItem("auto-voice-listen", "true");
-      setAutoListenEnabled(true);
-    }
-  }, [user]);
+  // Don't auto-enable — require explicit user click due to browser permissions
 
   const processCommand = useCallback(async (command: string) => {
     const lower = command.toLowerCase().trim();
@@ -114,10 +108,19 @@ export const AutoVoiceListener = () => {
   }, [isAIEnabled, processVoiceCommand, playPlaylist, togglePlay, nextTrack, prevTrack, setVolume]);
 
   const startListening = useCallback(() => {
-    if (!autoListenEnabled || !user) return;
+    if (!user) return;
     
     const SpeechAPI = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechAPI) return;
+    if (!SpeechAPI) {
+      toast.error("Twoja przeglądarka nie wspiera rozpoznawania mowy");
+      return;
+    }
+
+    // Stop existing instance
+    if (recognitionRef.current) {
+      try { recognitionRef.current.abort(); } catch {}
+      recognitionRef.current = null;
+    }
 
     try {
       const rec = new SpeechAPI() as SpeechRecognitionInstance;
@@ -134,22 +137,32 @@ export const AutoVoiceListener = () => {
       };
 
       rec.onerror = (event: SpeechRecognitionErrorEvent) => {
+        console.warn("Speech recognition error:", event.error);
         if (event.error === "not-allowed" || event.error === "service-not-allowed") {
           setAutoListenEnabled(false);
           localStorage.setItem("auto-voice-listen", "false");
+          setIsListening(false);
+          toast.error("🎙️ Brak dostępu do mikrofonu — sprawdź uprawnienia przeglądarki");
           return;
         }
-        // Restart on other errors
+        if (event.error === "aborted") return;
         setIsListening(false);
       };
 
       rec.onend = () => {
         setIsListening(false);
-        // Auto-restart after a brief pause
+        // Auto-restart only if still enabled
         if (autoListenEnabled) {
           restartTimeoutRef.current = window.setTimeout(() => {
-            startListening();
-          }, 1000);
+            if (autoListenEnabled && recognitionRef.current) {
+              try {
+                rec.start();
+                setIsListening(true);
+              } catch (e) {
+                console.warn("Mic restart failed:", e);
+              }
+            }
+          }, 1500);
         }
       };
 
@@ -158,14 +171,12 @@ export const AutoVoiceListener = () => {
       setIsListening(true);
     } catch (e) {
       console.error("Voice recognition init failed:", e);
+      toast.error("Nie udało się uruchomić mikrofonu");
     }
-  }, [autoListenEnabled, user, processCommand]);
+  }, [user, processCommand, autoListenEnabled]);
 
-  // Start listening when user is logged in and auto-listen is enabled
+  // Cleanup on unmount
   useEffect(() => {
-    if (user && autoListenEnabled) {
-      startListening();
-    }
     return () => {
       if (recognitionRef.current) {
         try { recognitionRef.current.abort(); } catch {}
@@ -174,7 +185,7 @@ export const AutoVoiceListener = () => {
         clearTimeout(restartTimeoutRef.current);
       }
     };
-  }, [user, autoListenEnabled, startListening]);
+  }, []);
 
   // Hide indicator after delay
   useEffect(() => {
