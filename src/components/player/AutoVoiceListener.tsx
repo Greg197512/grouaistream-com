@@ -50,7 +50,7 @@ const NAV_MAP: Record<string, string> = {
 export const AutoVoiceListener = () => {
   const { user } = useAuth();
   const { processVoiceCommand, isAIEnabled, isProcessing } = useAI();
-  const { playPlaylist, togglePlay, nextTrack, prevTrack, setVolume } = usePlayer();
+  const { playPlaylist, togglePlay, nextTrack, prevTrack, setVolume, isPlaying } = usePlayer();
   const navigate = useNavigate();
   const { assistantName, needsNaming, saveAssistantName } = useAssistantConfig();
 
@@ -182,16 +182,16 @@ export const AutoVoiceListener = () => {
       return;
     }
 
-    // Check if user called assistant by name -> AI suggestions
+    // Check if user called assistant by name -> AI suggestions (only suggest, don't auto-play)
     if (assistantName && lower.includes(assistantName.toLowerCase())) {
-      speak(`Cześć! Fajnie że znów jesteśmy tu razem. Sprawdzam co mam dla Ciebie na dziś...`);
+      speak(`Cześć! Sprawdzam co mam dla Ciebie na dziś. Powiedz "puść" żeby odtworzyć.`);
       toast.success(`🎤 ${assistantName}: Analizuję Twoje preferencje...`);
       await fetchAISuggestions();
       return;
     }
 
-    // Play suggested tracks
-    if (showSuggestions && aiSuggestions.length > 0 && (lower.includes("puść") || lower.includes("graj") || lower.includes("odtwórz") || lower.includes("tak"))) {
+    // Play suggested tracks ONLY when user explicitly says to
+    if (showSuggestions && aiSuggestions.length > 0 && (lower.includes("puść") || lower.includes("graj") || lower.includes("odtwórz") || lower.includes("tak") || lower.includes("play"))) {
       const tracks = aiSuggestions.map((s: any) => ({
         id: s.id, title: s.title, artist: s.artist,
         album: null, audio_url: null, cover_url: null,
@@ -203,9 +203,14 @@ export const AutoVoiceListener = () => {
       return;
     }
 
-    // Player commands
-    if (lower.includes("pauza") || lower.includes("stop") || lower.includes("zatrzymaj")) { togglePlay(); speak("Pauza"); return; }
-    if (lower.includes("graj") && !lower.includes("następ") && !lower.includes("odtwarz") && lower.split(" ").length <= 2) { togglePlay(); speak("Odtwarzam"); return; }
+    // STOP command - always force pause/stop the player
+    if (lower.includes("stop") || lower.includes("zatrzymaj") || lower.includes("pauza")) {
+      if (isPlaying) togglePlay();
+      speak("Zatrzymuję odtwarzanie");
+      toast.info("⏹️ Player zatrzymany");
+      return;
+    }
+    if (lower.includes("graj") && !lower.includes("następ") && !lower.includes("odtwarz") && lower.split(" ").length <= 2) { if (!isPlaying) togglePlay(); speak("Odtwarzam"); return; }
     if (lower.includes("następn") || lower.includes("dalej") || lower.includes("skip")) { nextTrack(); speak("Następny utwór"); return; }
     if (lower.includes("poprzedni") || lower.includes("cofnij") || lower.includes("wstecz")) { prevTrack(); speak("Poprzedni utwór"); return; }
     if (lower.includes("głośniej") || lower.includes("louder")) { setVolume(85); speak("Głośniej"); return; }
@@ -254,7 +259,7 @@ export const AutoVoiceListener = () => {
         toast.error("Nie udało się przetworzyć komendy", { id: "voice-cmd" });
       }
     }
-  }, [isAIEnabled, processVoiceCommand, playPlaylist, togglePlay, nextTrack, prevTrack, setVolume, tryNavigate, searchAndPlay, resetSilenceTimer, assistantName, fetchAISuggestions, shutdownMic, showSuggestions, aiSuggestions]);
+  }, [isAIEnabled, isPlaying, processVoiceCommand, playPlaylist, togglePlay, nextTrack, prevTrack, setVolume, tryNavigate, searchAndPlay, resetSilenceTimer, assistantName, fetchAISuggestions, shutdownMic, showSuggestions, aiSuggestions]);
 
   const startListening = useCallback(() => {
     if (!user) return;
