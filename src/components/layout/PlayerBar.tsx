@@ -19,7 +19,9 @@ import {
   Download,
   Share2,
   GripHorizontal,
-  ScanFace
+  ScanFace,
+  Smile,
+  Camera
 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
@@ -332,15 +334,44 @@ export const PlayerBar = () => {
           </button>
 
           {/* Face Recognition / Mood Detection Button */}
-          <motion.button 
-            whileHover={{ scale: 1.15 }}
-            whileTap={{ scale: 0.9 }}
-            onClick={() => setShowMoodDetector(true)}
-            className="flex-shrink-0 p-1.5 rounded-full bg-gradient-to-br from-primary/80 to-accent/80 hover:from-primary hover:to-accent transition-all shadow-lg"
-            title="Rozpoznawanie nastroju (Kamera)"
-          >
-            <ScanFace className="h-3.5 w-3.5 text-white" />
-          </motion.button>
+          <motion.div className="relative flex-shrink-0">
+            {/* Glow ring */}
+            <motion.div
+              className="absolute -inset-1 rounded-full bg-gradient-to-t from-primary via-accent to-primary opacity-60 blur-md"
+              animate={{ opacity: [0.4, 0.8, 0.4], scale: [1, 1.1, 1] }}
+              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+            />
+            {/* Sparkle particles going up */}
+            {[...Array(5)].map((_, i) => (
+              <motion.div
+                key={i}
+                className="absolute w-1 h-1 rounded-full bg-accent"
+                style={{ left: `${20 + i * 15}%`, bottom: '50%' }}
+                animate={{
+                  y: [-2, -18, -28],
+                  x: [0, (i % 2 === 0 ? 4 : -4), (i % 2 === 0 ? 6 : -6)],
+                  opacity: [0.9, 0.6, 0],
+                  scale: [1, 0.7, 0.3],
+                }}
+                transition={{
+                  duration: 1.2 + i * 0.2,
+                  repeat: Infinity,
+                  delay: i * 0.3,
+                  ease: "easeOut",
+                }}
+              />
+            ))}
+            <motion.button
+              whileHover={{ scale: 1.2 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={() => setShowMoodDetector(true)}
+              className="relative z-10 flex items-center justify-center gap-0.5 h-9 w-9 rounded-full bg-gradient-to-br from-primary to-accent border border-white/30 shadow-[0_0_12px_rgba(var(--primary),0.5)]"
+              title="Rozpoznawanie nastroju (Kamera)"
+            >
+              <Smile className="h-3 w-3 text-white" />
+              <Camera className="h-3 w-3 text-white" />
+            </motion.button>
+          </motion.div>
         </div>
 
         {/* Player Controls */}
