@@ -144,6 +144,19 @@ type TranslationKeys = {
   "library.pasteToken": string;
   "library.import": string;
   "library.importing": string;
+  "library.startingPopulate": string;
+  "library.batchFetching": string;
+  "library.batchAdded": string;
+  "library.goalReached": string;
+  "library.donePopulated": string;
+  "library.populatedSuccess": string;
+  "library.populateError": string;
+  "library.pasteTokenError": string;
+  "library.fetchingSpotify": string;
+  "library.spotifyDone": string;
+  "library.spotifyAddedSuccess": string;
+  "library.spotifyImportError": string;
+  "library.spotifyImportErrorMsg": string;
 
   // Liked Songs
   "liked.title": string;
@@ -461,6 +474,19 @@ const pl: TranslationKeys = {
   "library.pasteToken": "Wklej token Spotify (Bearer token)...",
   "library.import": "Importuj",
   "library.importing": "Importuję...",
+  "library.startingPopulate": "Rozpoczynam wypełnianie biblioteki...",
+  "library.batchFetching": "pobieram utwory...",
+  "library.batchAdded": "dodano",
+  "library.goalReached": "Cel osiągnięty!",
+  "library.donePopulated": "Gotowe! Biblioteka wypełniona.",
+  "library.populatedSuccess": "Biblioteka wypełniona!",
+  "library.populateError": "Błąd podczas wypełniania",
+  "library.pasteTokenError": "Wklej token Spotify!",
+  "library.fetchingSpotify": "Pobieram utwory ze Spotify...",
+  "library.spotifyDone": "Gotowe! Pobrano",
+  "library.spotifyAddedSuccess": "Dodano utworów ze Spotify",
+  "library.spotifyImportError": "Błąd importu",
+  "library.spotifyImportErrorMsg": "Błąd importu ze Spotify.",
 
   "liked.title": "Polubione Utwory",
   "liked.playlist": "Playlista",
@@ -771,6 +797,19 @@ const en: TranslationKeys = {
   "library.pasteToken": "Paste Spotify token (Bearer token)...",
   "library.import": "Import",
   "library.importing": "Importing...",
+  "library.startingPopulate": "Starting library population...",
+  "library.batchFetching": "fetching tracks...",
+  "library.batchAdded": "added",
+  "library.goalReached": "Goal reached!",
+  "library.donePopulated": "Done! Library populated.",
+  "library.populatedSuccess": "Library populated!",
+  "library.populateError": "Error during population",
+  "library.pasteTokenError": "Paste Spotify token!",
+  "library.fetchingSpotify": "Fetching tracks from Spotify...",
+  "library.spotifyDone": "Done! Fetched",
+  "library.spotifyAddedSuccess": "tracks added from Spotify",
+  "library.spotifyImportError": "Import error",
+  "library.spotifyImportErrorMsg": "Spotify import error.",
 
   "liked.title": "Liked Songs",
   "liked.playlist": "Playlist",
@@ -1081,6 +1120,19 @@ const nl: TranslationKeys = {
   "library.pasteToken": "Plak Spotify token (Bearer token)...",
   "library.import": "Importeren",
   "library.importing": "Importeren...",
+  "library.startingPopulate": "Bibliotheek vullen gestart...",
+  "library.batchFetching": "nummers ophalen...",
+  "library.batchAdded": "toegevoegd",
+  "library.goalReached": "Doel bereikt!",
+  "library.donePopulated": "Klaar! Bibliotheek gevuld.",
+  "library.populatedSuccess": "Bibliotheek gevuld!",
+  "library.populateError": "Fout bij vullen",
+  "library.pasteTokenError": "Plak Spotify token!",
+  "library.fetchingSpotify": "Nummers ophalen van Spotify...",
+  "library.spotifyDone": "Klaar! Opgehaald",
+  "library.spotifyAddedSuccess": "nummers toegevoegd van Spotify",
+  "library.spotifyImportError": "Importfout",
+  "library.spotifyImportErrorMsg": "Spotify importfout.",
 
   "liked.title": "Favoriete Nummers",
   "liked.playlist": "Afspeellijst",
@@ -1391,6 +1443,19 @@ const ua: TranslationKeys = {
   "library.pasteToken": "Вставте Spotify token (Bearer token)...",
   "library.import": "Імпортувати",
   "library.importing": "Імпортування...",
+  "library.startingPopulate": "Починаю заповнення бібліотеки...",
+  "library.batchFetching": "завантажую треки...",
+  "library.batchAdded": "додано",
+  "library.goalReached": "Мету досягнуто!",
+  "library.donePopulated": "Готово! Бібліотеку заповнено.",
+  "library.populatedSuccess": "Бібліотеку заповнено!",
+  "library.populateError": "Помилка заповнення",
+  "library.pasteTokenError": "Вставте токен Spotify!",
+  "library.fetchingSpotify": "Завантажую треки зі Spotify...",
+  "library.spotifyDone": "Готово! Завантажено",
+  "library.spotifyAddedSuccess": "треків додано зі Spotify",
+  "library.spotifyImportError": "Помилка імпорту",
+  "library.spotifyImportErrorMsg": "Помилка імпорту Spotify.",
 
   "liked.title": "Вподобані Пісні",
   "liked.playlist": "Плейлист",
