@@ -12,10 +12,10 @@ import heroBg from "@/assets/hero-bg.jpg";
 
 export const HeroSection = () => {
   const navigate = useNavigate();
-  const { playPlaylist, isPlaying, audioElement } = usePlayer();
+  const { playPlaylist, isPlaying, audioElement, isVideoMode } = usePlayer();
   const { t } = useLanguage();
   const [isLoading, setIsLoading] = useState(false);
-  const levels = useAudioAnalyser(audioElement, isPlaying);
+  const levels = useAudioAnalyser(audioElement, isPlaying, isVideoMode);
 
   const handleStartListening = async () => {
     setIsLoading(true);
