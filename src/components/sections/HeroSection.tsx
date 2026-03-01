@@ -96,6 +96,45 @@ export const HeroSection = () => {
         <img src={heroBg} alt="Hero background" className="h-full w-full object-cover opacity-40" />
         <div className="absolute inset-0 bg-gradient-to-b from-background/60 via-background/80 to-background" />
         <div className="absolute inset-0 bg-gradient-to-r from-background via-transparent to-background/60" />
+        
+        {/* Audio-reactive wave layers */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          {/* Bass wave - large, slow */}
+          <div
+            className="absolute inset-0"
+            style={{
+              background: `radial-gradient(ellipse 120% 80% at ${50 + (isPlaying ? Math.sin(Date.now() / 800) * 15 * levels.bass : 0)}% ${60 + (isPlaying ? Math.cos(Date.now() / 1000) * 10 * levels.bass : 0)}%, hsl(15 90% 45% / ${isPlaying ? 0.06 + levels.bass * 0.18 : 0.03}) 0%, transparent 70%)`,
+              transition: 'background 0.15s ease-out',
+            }}
+          />
+          {/* Mid wave - medium, undulating */}
+          <div
+            className="absolute inset-0"
+            style={{
+              background: `radial-gradient(ellipse 90% 60% at ${35 + (isPlaying ? Math.sin(Date.now() / 600 + 2) * 20 * levels.mid : 0)}% ${40 + (isPlaying ? Math.cos(Date.now() / 700 + 1) * 12 * levels.mid : 0)}%, hsl(25 95% 55% / ${isPlaying ? 0.04 + levels.mid * 0.14 : 0.02}) 0%, transparent 60%)`,
+              transition: 'background 0.12s ease-out',
+            }}
+          />
+          {/* Treble shimmer - small, fast */}
+          <div
+            className="absolute inset-0"
+            style={{
+              background: `radial-gradient(ellipse 60% 40% at ${65 + (isPlaying ? Math.sin(Date.now() / 400 + 4) * 18 * levels.treble : 0)}% ${30 + (isPlaying ? Math.cos(Date.now() / 500 + 3) * 15 * levels.treble : 0)}%, hsl(40 100% 65% / ${isPlaying ? 0.03 + levels.treble * 0.1 : 0.01}) 0%, transparent 50%)`,
+              transition: 'background 0.08s ease-out',
+            }}
+          />
+          {/* Horizontal wave band reacting to overall */}
+          <div
+            className="absolute left-0 right-0"
+            style={{
+              top: `${55 + (isPlaying ? Math.sin(Date.now() / 900) * 8 * levels.overall : 0)}%`,
+              height: `${isPlaying ? 20 + levels.bass * 30 : 15}%`,
+              background: `linear-gradient(to bottom, transparent, hsl(var(--primary) / ${isPlaying ? 0.03 + levels.overall * 0.08 : 0.015}), transparent)`,
+              filter: `blur(${30 + (isPlaying ? levels.bass * 20 : 0)}px)`,
+              transition: 'top 0.2s ease-out, height 0.15s ease-out',
+            }}
+          />
+        </div>
       </div>
 
       <div className="relative px-6 py-16 md:py-24">
@@ -278,29 +317,18 @@ export const HeroSection = () => {
           {/* === MAIN TITLE with equalizer bars under each letter === */}
           <div className="mb-6">
             <h1 className="font-display text-4xl md:text-6xl lg:text-7xl font-bold leading-tight">
-              {/* Line 1: regular text */}
+              {/* Line 1: static text with reactive equalizer bars */}
               <span className="flex flex-wrap">
                 {(t("hero.title1")).split("").map((char, i) => {
                   const freqIndex = i % blendedFrequencies.length;
                   const freq = blendedFrequencies[freqIndex];
-                  const bounce = isPlaying ? freq * 18 * Math.max(0, Math.sin(Date.now() / 140 + i * 0.7)) : 0;
-                  const glowIntensity = isPlaying ? freq * 0.6 : 0;
                   return (
                     <span
                       key={`t1-${i}`}
                       className="inline-flex flex-col items-center relative"
                       style={{ minWidth: char === ' ' ? '0.35em' : undefined }}
                     >
-                      <span
-                        className="inline-block relative z-10"
-                        style={{
-                          transform: `translateY(${-bounce}px)`,
-                          textShadow: isPlaying 
-                            ? `0 ${2 + bounce * 0.5}px ${4 + bounce}px hsl(var(--primary) / ${glowIntensity}), 0 0 ${8 + freq * 20}px hsl(var(--primary) / ${glowIntensity * 0.4})`
-                            : undefined,
-                          transition: 'transform 0.06s ease-out, text-shadow 0.06s ease-out',
-                        }}
-                      >
+                      <span className="inline-block relative z-10">
                         {char === ' ' ? '\u00A0' : char}
                       </span>
                       {char !== ' ' && (
@@ -322,29 +350,18 @@ export const HeroSection = () => {
                   );
                 })}
               </span>
-              {/* Line 2: highlighted gradient text */}
+              {/* Line 2: static gradient text with reactive equalizer bars */}
               <span className="flex flex-wrap">
                 {(t("hero.titleHighlight")).split("").map((char, i) => {
                   const freqIndex = (i + 7) % blendedFrequencies.length;
                   const freq = blendedFrequencies[freqIndex];
-                  const bounce = isPlaying ? freq * 22 * Math.max(0, Math.sin(Date.now() / 120 + i * 0.6 + 3)) : 0;
-                  const glowIntensity = isPlaying ? freq * 0.7 : 0;
                   return (
                     <span
                       key={`t2-${i}`}
                       className="inline-flex flex-col items-center relative"
                       style={{ minWidth: char === ' ' ? '0.35em' : undefined }}
                     >
-                      <span
-                        className="inline-block relative z-10 groove-gradient-text"
-                        style={{
-                          transform: `translateY(${-bounce}px) scale(${1 + (isPlaying ? freq * 0.08 : 0)})`,
-                          filter: isPlaying 
-                            ? `drop-shadow(0 ${2 + bounce * 0.4}px ${3 + bounce * 0.8}px hsl(25 95% 55% / ${glowIntensity}))`
-                            : undefined,
-                          transition: 'transform 0.06s ease-out, filter 0.06s ease-out',
-                        }}
-                      >
+                      <span className="inline-block relative z-10 groove-gradient-text">
                         {char === ' ' ? '\u00A0' : char}
                       </span>
                       {char !== ' ' && (
