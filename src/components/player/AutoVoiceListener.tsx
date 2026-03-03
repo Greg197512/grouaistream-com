@@ -198,12 +198,12 @@ export const AutoVoiceListener = () => {
           "/playlist-manager": "Playlisty", "/admin": "Admin"
         };
         toast.success(`📂 Otwieram: ${pageNames[route] || route}`);
-        speak(`Otwieram ${pageNames[route] || route}`);
+        safeSpeakAndResume(`Otwieram ${pageNames[route] || route}`);
         return true;
       }
     }
     return false;
-  }, [navigate]);
+  }, [navigate, safeSpeakAndResume]);
 
   const handlePlayFromAI = useCallback(async (trackId: string) => {
     try {
