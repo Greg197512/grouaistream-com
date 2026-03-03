@@ -77,6 +77,7 @@ export const AutoVoiceListener = () => {
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const restartTimeoutRef = useRef<number | null>(null);
   const silenceTimerRef = useRef<number | null>(null);
+  const startListeningRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     const stored = localStorage.getItem("auto-voice-listen");
