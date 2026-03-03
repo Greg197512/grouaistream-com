@@ -112,13 +112,13 @@ export const AutoVoiceListener = () => {
         setAiSuggestions(data.suggestions);
         setShowSuggestions(true);
         const names = data.suggestions.slice(0, 3).map((s: any) => s.title).join(", ");
-        speak(`Proponuję na dziś: ${names}. Powiedz puść, żeby odtworzyć.`);
+        await safeSpeakAndResume(`Proponuję na dziś: ${names}. Powiedz puść, żeby odtworzyć.`);
       } else {
-        speak("Nie mam jeszcze dość danych o Twoich preferencjach. Posłuchaj trochę muzyki, a nauczę się Twoich gustów!");
+        await safeSpeakAndResume("Nie mam jeszcze dość danych o Twoich preferencjach. Posłuchaj trochę muzyki, a nauczę się Twoich gustów!");
       }
     } catch (e) {
       console.error("AI suggestions error:", e);
-      speak("Przepraszam, nie udało mi się przygotować propozycji.");
+      await safeSpeakAndResume("Przepraszam, nie udało mi się przygotować propozycji.");
     }
   }, [user]);
 
