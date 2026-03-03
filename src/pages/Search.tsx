@@ -51,6 +51,7 @@ const Search = () => {
   const [results, setResults] = useState<Track[]>([]);
   const [allTracks, setAllTracks] = useState<Track[]>([]);
   const [loading, setLoading] = useState(false);
+  const [youtubeLoading, setYoutubeLoading] = useState(false);
   const { playTrack, playPlaylist, currentTrack, isPlaying, togglePlay } = usePlayer();
   const { filterTracks } = useUnlock();
   const { t } = useLanguage();
@@ -79,6 +80,73 @@ const Search = () => {
     const debounce = setTimeout(searchTracks, 300);
     return () => clearTimeout(debounce);
   }, [query, allTracks]);
+
+  const handleYouTubeSearch = useCallback(async () => {
+    if (!query.trim() || youtubeLoading) return;
+    setYoutubeLoading(true);
+    const toastId = toast.loading(`🔍 Szukam "${query}" na YouTube...`);
+
+    try {
+      const { data: aiData, error: aiError } = await supabase.functions.invoke("ai-assistant", {
+        body: {
+          message: `Znajdź na YouTube dokładny videoId (11 znaków) dla: "${query}". Odpowiedz TYLKO samym videoId, nic więcej.`,
+          history: []
+        }
+      });
+
+      if (aiError) throw aiError;
+
+      const responseText = aiData?.response || "";
+      const videoIdMatch = responseText.match(/[a-zA-Z0-9_-]{11}/);
+      
+      if (!videoIdMatch) {
+        toast.dismiss(toastId);
+        toast.error("Nie znaleziono utworu na YouTube");
+        setYoutubeLoading(false);
+        return;
+      }
+
+      const videoId = videoIdMatch[0];
+      toast.loading(`⬇️ Pobieram z YouTube...`, { id: toastId });
+
+      const { data: dlData, error: dlError } = await supabase.functions.invoke("youtube-download", {
+        body: { videoId }
+      });
+
+      if (!dlError && dlData?.audioUrl) {
+        const newTrack: Track = {
+          id: dlData.trackId || crypto.randomUUID(),
+          title: dlData.title || query,
+          artist: dlData.artist || "YouTube",
+          duration: dlData.duration || 240,
+          audio_url: dlData.audioUrl,
+          cover_url: dlData.coverUrl || undefined,
+          video_url: `https://www.youtube.com/watch?v=${videoId}`,
+        };
+        toast.dismiss(toastId);
+        toast.success(`✅ Znaleziono: ${newTrack.title}`);
+        playTrack(newTrack);
+        setAllTracks(prev => [newTrack, ...prev]);
+      } else {
+        const newTrack: Track = {
+          id: crypto.randomUUID(),
+          title: query,
+          artist: "YouTube",
+          duration: 240,
+          video_url: `https://www.youtube.com/watch?v=${videoId}`,
+        };
+        toast.dismiss(toastId);
+        toast.success(`▶️ Odtwarzam z YouTube: ${query}`);
+        playTrack(newTrack);
+      }
+    } catch (error) {
+      console.error("YouTube search error:", error);
+      toast.dismiss(toastId);
+      toast.error("Błąd wyszukiwania YouTube");
+    } finally {
+      setYoutubeLoading(false);
+    }
+  }, [query, youtubeLoading, playTrack]);
 
   const handleGenreClick = (genre: string) => setQuery(genre);
 
