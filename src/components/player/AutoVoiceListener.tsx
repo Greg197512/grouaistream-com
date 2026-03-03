@@ -190,6 +190,33 @@ export const AutoVoiceListener = () => {
     "country", "r&b", "rnb", "indie", "alternative", "ambient", "latin", "folk",
   ];
 
+  const POLISH_NUMBERS: Record<string, number> = {
+    "jeden": 1, "jedną": 1, "jedno": 1,
+    "dwa": 2, "dwie": 2, "dwóch": 2, "dwoch": 2,
+    "trzy": 3, "trzech": 3,
+    "cztery": 4, "czterech": 4,
+    "pięć": 5, "piec": 5, "pieciu": 5, "pięciu": 5,
+    "sześć": 6, "szesc": 6, "sześciu": 6, "szesciu": 6,
+    "siedem": 7, "siedmiu": 7,
+    "osiem": 8, "ośmiu": 8, "osmiu": 8,
+    "dziewięć": 9, "dziewiec": 9, "dziewięciu": 9,
+    "dziesięć": 10, "dziesiec": 10, "dziesięciu": 10,
+    "piętnaście": 15, "pietnascie": 15,
+    "dwadzieścia": 20, "dwadziescia": 20,
+  };
+
+  const parsePolishNumber = useCallback((text: string): number | undefined => {
+    // Try digit first
+    const digitMatch = text.match(/(\d+)/);
+    if (digitMatch) return parseInt(digitMatch[1]);
+    // Try Polish word
+    const normalized = normalizeCommand(text);
+    for (const [word, num] of Object.entries(POLISH_NUMBERS)) {
+      if (normalized.includes(normalizeCommand(word))) return num;
+    }
+    return undefined;
+  }, []);
+
   const searchAndPlay = useCallback(async (query: string, count?: number) => {
     try {
       toast.loading(`🔍 Szukam: "${query}"...`, { id: "voice-search" });
@@ -376,31 +403,78 @@ export const AutoVoiceListener = () => {
     }
     if (tryNavigate(lower)) return;
 
-    // Search & play
+    // Search & play - "puść/zagraj X" or "puść 5 rock"
     const playMatch = lower.match(/(?:włącz|puść|zagraj|odtwórz|graj|play)\s+(.+)/i);
     if (playMatch) {
       const query = playMatch[1].replace(/w\s+playerze/i, "").trim();
-      const countMatch = query.match(/(\d+)\s*(?:utw|piosen|track|song)/i);
-      const count = countMatch ? parseInt(countMatch[1]) : undefined;
-      const cleanQuery = query.replace(/\d+\s*(?:utw|piosen|track|song)\w*/i, "").trim();
+      const count = parsePolishNumber(query);
+      const cleanQuery = query
+        .replace(/\d+/g, "")
+        .replace(/(?:jeden|jedną|jedno|dwa|dwie|dwóch|dwoch|trzy|trzech|cztery|czterech|pięć|piec|pieciu|pięciu|sześć|szesc|sześciu|szesciu|siedem|siedmiu|osiem|ośmiu|osmiu|dziewięć|dziewiec|dziewięciu|dziesięć|dziesiec|dziesięciu|piętnaście|pietnascie|dwadzieścia|dwadziescia)\s*/gi, "")
+        .replace(/\s*(utw\w*|piosen\w*|track\w*|song\w*)\s*/gi, "")
+        .trim();
       await searchAndPlay(cleanQuery || query, count);
       return;
     }
 
-    // "wybierz X rock/pop/etc" - genre-based selection (number + genre)
-    const selectGenreMatch = lower.match(/wybierz\s+(\d+)\s+(.+)/i);
-    if (selectGenreMatch) {
-      const count = parseInt(selectGenreMatch[1]);
-      const query = selectGenreMatch[2].replace(/i\s+włącz.*/i, "").replace(/w\s+playerze/i, "").replace(/utw\w*/i, "").replace(/piosen\w*/i, "").trim();
-      await searchAndPlay(query, count);
-      return;
+    // "wybierz X rock/pop/etc" - genre-based selection (number + genre words)
+    const selectMatch = lower.match(/wybierz\s+(.+)/i);
+    if (selectMatch) {
+      const rest = selectMatch[1].replace(/i\s+włącz.*/i, "").replace(/w\s+playerze/i, "").trim();
+      const count = parsePolishNumber(rest);
+      const cleanQuery = rest
+        .replace(/\d+/g, "")
+        .replace(/(?:jeden|jedną|jedno|dwa|dwie|dwóch|dwoch|trzy|trzech|cztery|czterech|pięć|piec|pieciu|pięciu|sześć|szesc|sześciu|szesciu|siedem|siedmiu|osiem|ośmiu|osmiu|dziewięć|dziewiec|dziewięciu|dziesięć|dziesiec|dziesięciu|piętnaście|pietnascie|dwadzieścia|dwadziescia)\s*/gi, "")
+        .replace(/\s*(utw\w*|piosen\w*|track\w*|song\w*)\s*/gi, "")
+        .trim();
+      if (cleanQuery) {
+        await searchAndPlay(cleanQuery, count || 5);
+        return;
+      }
+    }
+
+    // Mood-based requests: "mam zły dzień", "popraw mi humor", "jest mi smutno" etc.
+    const MOOD_PHRASES: Record<string, string> = {
+      "zly dzien": "happy",
+      "zle sie czuje": "chill",
+      "smutno": "happy",
+      "popraw": "happy",
+      "humor": "happy",
+      "wesolo": "happy",
+      "energi": "energetic",
+      "spokojn": "chill",
+      "relaks": "chill",
+      "imprez": "energetic",
+      "tanc": "energetic",
+      "romantycz": "romantic",
+      "milosc": "romantic",
+    };
+
+    const detectedMood = Object.entries(MOOD_PHRASES).find(([phrase]) => normalized.includes(normalizeCommand(phrase)));
+    if (detectedMood) {
+      const [, moodValue] = detectedMood;
+      toast.loading(`🎵 Szukam muzyki na poprawę nastroju...`, { id: "voice-cmd" });
+      const { data: moodTracks } = await supabase
+        .from("tracks")
+        .select("*")
+        .ilike("mood", `%${moodValue}%`)
+        .limit(10);
+      
+      if (moodTracks && moodTracks.length > 0) {
+        // Shuffle for variety
+        const shuffled = moodTracks.sort(() => Math.random() - 0.5);
+        playPlaylist(shuffled, 0);
+        speak(`Rozumiem, puszczam muzykę żeby poprawić Ci nastrój! Oto ${shuffled.length} utworów dla Ciebie.`);
+        toast.success(`🎵 Odtwarzam ${shuffled.length} utworów na poprawę humoru`, { id: "voice-cmd", duration: 4000 });
+        return;
+      }
+      // If no mood tracks, fall through to AI
     }
 
     // AI fallback - route ALL other questions to the AI assistant
     try {
       toast.loading(`🎙️ AI analizuje...`, { id: "voice-cmd" });
       
-      // First try music-specific AI command
       if (isAIEnabled) {
         const result = await processVoiceCommand(command);
         if (result.action === "play" && result.tracks?.length) {
@@ -415,26 +489,28 @@ export const AutoVoiceListener = () => {
         }
       }
 
-      // General AI assistant fallback - answers weather, song info, any question
+      // General AI assistant fallback
       const { data: aiData, error: aiError } = await supabase.functions.invoke("ai-assistant", {
         body: { message: command, history: [] }
       });
       if (!aiError && aiData?.response) {
         const response = aiData.response;
-        speak(response.slice(0, 300)); // TTS limit
+        speak(response.slice(0, 300));
         toast.success(`🤖 ${response.slice(0, 120)}...`, { id: "voice-cmd", duration: 6000 });
         
-        // If AI found a track link, play it
         if (aiData.trackLink) {
           await handlePlayFromAI(aiData.trackLink.id);
         }
       } else {
-        toast.dismiss("voice-cmd");
+        // AI didn't respond - say "nie rozumiem"
+        speak("Przepraszam, nie rozumiem. Możesz powtórzyć?");
+        toast.info("🤖 Przepraszam, nie rozumiem. Możesz powtórzyć?", { id: "voice-cmd" });
       }
     } catch {
-      toast.error("Nie udało się przetworzyć komendy", { id: "voice-cmd" });
+      speak("Przepraszam, nie rozumiem. Możesz powtórzyć?");
+      toast.error("Przepraszam, nie rozumiem. Możesz powtórzyć?", { id: "voice-cmd" });
     }
-  }, [isAIEnabled, processVoiceCommand, playPlaylist, nextTrack, prevTrack, setVolume, tryNavigate, searchAndPlay, resetSilenceTimer, assistantName, fetchAISuggestions, shutdownMic, showSuggestions, aiSuggestions, pausePlayback, resumePlayback, restartCurrentTrack]);
+  }, [isAIEnabled, processVoiceCommand, playPlaylist, nextTrack, prevTrack, setVolume, tryNavigate, searchAndPlay, resetSilenceTimer, assistantName, fetchAISuggestions, shutdownMic, showSuggestions, aiSuggestions, pausePlayback, resumePlayback, restartCurrentTrack, parsePolishNumber, handlePlayFromAI]);
 
   const startListening = useCallback(() => {
     if (!user) return;
