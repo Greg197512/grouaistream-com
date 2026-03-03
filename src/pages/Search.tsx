@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
-import { Search as SearchIcon, Music, Mic, Download } from "lucide-react";
+import { Search as SearchIcon, Music, Mic, Download, Loader2, Youtube, Sparkles } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { TrackRow } from "@/components/cards/TrackRow";
 import { supabase } from "@/integrations/supabase/client";
 import { usePlayer, Track } from "@/contexts/PlayerContext";
@@ -50,6 +51,7 @@ const Search = () => {
   const [results, setResults] = useState<Track[]>([]);
   const [allTracks, setAllTracks] = useState<Track[]>([]);
   const [loading, setLoading] = useState(false);
+  const [youtubeLoading, setYoutubeLoading] = useState(false);
   const { playTrack, playPlaylist, currentTrack, isPlaying, togglePlay } = usePlayer();
   const { filterTracks } = useUnlock();
   const { t } = useLanguage();
@@ -78,6 +80,81 @@ const Search = () => {
     const debounce = setTimeout(searchTracks, 300);
     return () => clearTimeout(debounce);
   }, [query, allTracks]);
+
+  const handleYouTubeSearch = useCallback(async () => {
+    if (!query.trim() || youtubeLoading) return;
+    setYoutubeLoading(true);
+    const toastId = toast.loading(`🔍 Szukam "${query}" na YouTube...`);
+
+    try {
+      const { data: aiData, error: aiError } = await supabase.functions.invoke("ai-assistant", {
+        body: {
+          message: `Znajdź na YouTube dokładny videoId (11 znaków) dla: "${query}". Odpowiedz TYLKO samym videoId, nic więcej.`,
+          history: []
+        }
+      });
+
+      if (aiError) throw aiError;
+
+      const responseText = aiData?.response || "";
+      const videoIdMatch = responseText.match(/[a-zA-Z0-9_-]{11}/);
+      
+      if (!videoIdMatch) {
+        toast.dismiss(toastId);
+        toast.error("Nie znaleziono utworu na YouTube");
+        setYoutubeLoading(false);
+        return;
+      }
+
+      const videoId = videoIdMatch[0];
+      toast.loading(`⬇️ Pobieram z YouTube...`, { id: toastId });
+
+      const { data: dlData, error: dlError } = await supabase.functions.invoke("youtube-download", {
+        body: { videoId }
+      });
+
+      if (!dlError && dlData?.audioUrl) {
+        const newTrack: Track = {
+          id: dlData.trackId || crypto.randomUUID(),
+          title: dlData.title || query,
+          artist: dlData.artist || "YouTube",
+          album: dlData.album || undefined,
+          duration: dlData.duration || 240,
+          audio_url: dlData.audioUrl,
+          cover_url: dlData.coverUrl || undefined,
+          video_url: `https://www.youtube.com/watch?v=${videoId}`,
+          genre: undefined,
+          mood: undefined,
+        };
+        toast.dismiss(toastId);
+        toast.success(`✅ Znaleziono: ${newTrack.title}`);
+        playTrack(newTrack);
+        setAllTracks(prev => [newTrack, ...prev]);
+      } else {
+        const newTrack: Track = {
+          id: crypto.randomUUID(),
+          title: query,
+          artist: "YouTube",
+          album: undefined,
+          duration: 240,
+          audio_url: undefined,
+          cover_url: undefined,
+          video_url: `https://www.youtube.com/watch?v=${videoId}`,
+          genre: undefined,
+          mood: undefined,
+        };
+        toast.dismiss(toastId);
+        toast.success(`▶️ Odtwarzam z YouTube: ${query}`);
+        playTrack(newTrack);
+      }
+    } catch (error) {
+      console.error("YouTube search error:", error);
+      toast.dismiss(toastId);
+      toast.error("Błąd wyszukiwania YouTube");
+    } finally {
+      setYoutubeLoading(false);
+    }
+  }, [query, youtubeLoading, playTrack]);
 
   const handleGenreClick = (genre: string) => setQuery(genre);
 
@@ -111,7 +188,32 @@ const Search = () => {
                   <TrackRow key={track.id} id={track.id} index={index + 1} title={track.title} artist={track.artist} album={track.album || ""} duration={formatDuration(track.duration)} imageUrl={track.cover_url || undefined} trackUrl={track.video_url || track.audio_url} isPlaying={currentTrack?.id === track.id && isPlaying} onPlay={() => handlePlayTrack(track, index)} />
                 ))}
               </div>
-            ) : (!loading && <p className="text-muted-foreground">{t("search.noResults")}</p>)}
+            ) : (!loading && (
+              <div className="flex flex-col items-center gap-4 py-12">
+                <p className="text-muted-foreground">{t("search.noResults")}</p>
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex flex-col items-center gap-3"
+                >
+                  <Sparkles className="h-8 w-8 text-primary animate-pulse" />
+                  <p className="text-sm text-muted-foreground">AI znajdzie to na YouTube</p>
+                  <Button
+                    onClick={handleYouTubeSearch}
+                    disabled={youtubeLoading}
+                    className="gap-2 bg-red-600 hover:bg-red-700 text-white"
+                    size="lg"
+                  >
+                    {youtubeLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Youtube className="h-5 w-5" />
+                    )}
+                    {youtubeLoading ? "Szukam..." : `Wyszukaj "${query}" na YouTube`}
+                  </Button>
+                </motion.div>
+              </div>
+            ))}
           </div>
         ) : (
           <Tabs defaultValue="library" className="w-full">
