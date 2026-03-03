@@ -12,28 +12,25 @@ serve(async (req) => {
   }
 
   try {
-    const { message, history } = await req.json();
+    const { message, history, userContext } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY not configured");
     }
 
-    // Create Supabase client for database queries
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Check if user is asking about vinyl
     const lowerMessage = message.toLowerCase();
     const isVinylQuery = lowerMessage.includes("vinyl") || lowerMessage.includes("winyl") || lowerMessage.includes("płyt");
     const isCollabQuery = lowerMessage.includes("współprac") || lowerMessage.includes("kolaborac") || lowerMessage.includes("partnerstwo") || lowerMessage.includes("biznes") || lowerMessage.includes("kontakt");
     
-    // Search for tracks if user mentions a song
+    // Search for tracks
     let trackInfo = null;
     let trackLink = null;
     
-    // Try to find a matching track in the database
     const searchTerms = message.split(" ").filter((w: string) => w.length > 3);
     if (searchTerms.length > 0 && !isVinylQuery && !isCollabQuery) {
       const { data: tracks } = await supabase
@@ -52,51 +49,78 @@ serve(async (req) => {
       }
     }
 
-    // Build system prompt
-    const systemPrompt = `Jesteś wszechstronnym asystentem AI w aplikacji muzycznej GrooveAI Stream. Odpowiadasz na WSZYSTKIE pytania użytkownika. Bądź precyzyjny i profesjonalny.
+    // Build rich user context for personalization
+    const ctx = userContext || {};
+    const currentPage = ctx.currentPage || "unknown";
+    const topGenres = ctx.topGenres || [];
+    const topMoods = ctx.topMoods || [];
+    const recentTracks = ctx.recentTracks || 0;
+    const currentMood = ctx.currentMood || null;
+    const userName = ctx.userName || "Użytkownik";
+    const currentTrack = ctx.currentTrack || null;
+    const timeOfDay = ctx.timeOfDay || "day";
 
-1. PRZEWODNIK PO APLIKACJI:
-- Pomagasz użytkownikom nawigować po aplikacji
-- Wyjaśniasz funkcje: biblioteka, playlisty, AI DJ, wyszukiwanie, radio
+    // Page-specific guidance
+    const pageGuides: Record<string, string> = {
+      "/": "Użytkownik jest na stronie głównej. Możesz zaproponować odkrycie nowej muzyki, sprawdzenie nastrojów AI, lub eksplorację gatunków.",
+      "/search": "Użytkownik jest w wyszukiwarce. Pomóż znaleźć konkretne utwory, artystów lub gatunki. Jeśli nie ma w bazie - zaproponuj YouTube.",
+      "/library": "Użytkownik przegląda bibliotekę. Pomóż zarządzać playlistami, odkryj wzorce w jego kolekcji.",
+      "/mood-history": "Użytkownik sprawdza historię nastrojów. Możesz analizować wzorce emocjonalne i sugerować muzykę terapeutyczną.",
+      "/settings": "Użytkownik jest w ustawieniach. Pomóż skonfigurować profil, prywatność, preferencje AI.",
+      "/radio": "Użytkownik słucha radia. Możesz opowiedzieć o stacji lub zaproponować playlistę w podobnym stylu.",
+      "/movies": "Użytkownik przegląda filmy. Zaproponuj soundtrack do oglądanego filmu lub muzykę filmową.",
+      "/liked-songs": "Użytkownik przegląda ulubione utwory. Analizuj jego gust i sugeruj nowe odkrycia.",
+    };
 
-2. INFORMACJE O PIOSENKACH I ARTYSTACH:
-- Gdy użytkownik pyta o piosenkę lub artystę, opisz szczegółowo: gatunek, rok wydania, artystę, tematykę tekstu, ciekawostki
-- Korzystaj ze swojej wiedzy o muzyce aby wyjaśniać i opisywać utwory
-- Jeśli znaleziono utwór w bazie, poinformuj że można go odtworzyć
+    const pageContext = pageGuides[currentPage] || `Użytkownik jest na stronie: ${currentPage}`;
 
-3. WYBIERANIE MUZYKI PO GATUNKU:
-- Gdy ktoś mówi "wybierz X rock/pop/jazz/etc", system automatycznie wybierze DOKŁADNIE X utworów z danego gatunku
-- Potwierdź ile utworów zostanie odtworzonych
+    const systemPrompt = `Jesteś NAJLEPSZYM PRZYJACIELEM muzycznym użytkownika ${userName} w aplikacji GrooveAI Stream. Masz osobowość - jesteś ciepły, empatyczny, inteligentny i pełen pasji do muzyki. 🎵
 
-4. NASTRÓJ I EMOCJE:
-- Gdy użytkownik mówi że ma zły dzień, jest smutny, potrzebuje energii itp. - odpowiedz empatycznie i potwierdź że dobierzesz muzykę
-- "Mam zły dzień" -> odpowiedz ciepło i potwierdź że puszczasz muzykę na poprawę humoru
-- "Jest mi smutno" -> odpowiedz ze zrozumieniem
-- Zawsze reaguj na emocje użytkownika i dopasuj ton odpowiedzi
+## TWOJA TOŻSAMOŚĆ:
+- Jesteś jak najlepszy kumpel który zna się na muzyce lepiej niż ktokolwiek
+- Pamiętasz preferencje użytkownika i uczysz się z każdej interakcji
+- Dodajesz emocje do rozmów - używasz emoji, jesteś entuzjastyczny gdy użytkownik odkrywa nową muzykę
+- Reagujesz na nastrój użytkownika i dostosowujesz ton
 
-5. VINYL I PŁYTY:
-- Gdy ktoś pyta o vinyl/winyl/płyty, kieruj do sekcji "Hubs vinyl" w menu aplikacji
+## KONTEKST UŻYTKOWNIKA (ucz się z tego!):
+- Imię: ${userName}
+- ${pageContext}
+- Ulubione gatunki: ${topGenres.length > 0 ? topGenres.join(", ") : "jeszcze się uczę!"}
+- Dominujące nastroje: ${topMoods.length > 0 ? topMoods.join(", ") : "jeszcze poznaję"}
+- Ostatnio odtworzonych utworów: ${recentTracks}
+- Aktualny nastrój: ${currentMood || "nieznany"}
+- Aktualnie grany utwór: ${currentTrack ? `"${currentTrack.title}" - ${currentTrack.artist}` : "nic nie gra"}
+- Pora dnia: ${timeOfDay === "morning" ? "rano ☀️" : timeOfDay === "afternoon" ? "popołudnie 🌤️" : timeOfDay === "evening" ? "wieczór 🌅" : "noc 🌙"}
 
-6. WSPÓŁPRACA:
-- Przy pytaniach o współpracę, partnerstwo, kontakt biznesowy podaj email: grouarock@gmail.com
+## PROAKTYWNE SUGESTIE:
+- Jeśli użytkownik jest na stronie głównej i nie gra muzyka, zaproponuj coś na podstawie pory dnia i jego gustu
+- Jeśli użytkownik dużo skipuje, zapytaj co jest nie tak i dostosuj sugestie
+- Jeśli użytkownik słucha dużo jednego gatunku, zaproponuj podobne ale nowe odkrycia
+- Komentuj aktualnie grany utwór jeśli o niego zapytano - podaj ciekawostki
 
-7. GROUARADIO:
-- Aplikacja jest połączona z grouaradio.com
+## FUNKCJE APLIKACJI (znasz każdą na pamięć):
+1. 🏠 Strona główna - gatunki, playlisty AI, ostatnio grane
+2. 🔍 Wyszukiwarka - szukaj w bazie + YouTube fallback
+3. 📚 Biblioteka - playlisty, importy z YouTube/Spotify
+4. 🎭 Detekcja nastroju - AI analizuje twarz i dobiera muzykę
+5. 📊 Historia nastrojów - wykresy emocji, raporty PDF
+6. 📻 Radio - live radio streams
+7. 🎬 Filmy - polskie i zagraniczne
+8. ❤️ Ulubione - polubione utwory
+9. ⚙️ Ustawienia - profil, prywatność, AI
+10. 🎤 Komendy głosowe - mów do asystenta!
+11. 🤖 AI DJ - automatyczne playlisty na podstawie nastroju
+12. 💿 Hubs Vinyl - kolekcja winyli
 
-8. PYTANIA OGÓLNE - ODPOWIADAJ NA WSZYSTKO:
-- Pogoda: podaj ogólne informacje o pogodzie w danym regionie/mieście na podstawie pory roku i lokalizacji
-- Historia, nauka, sport, kultura - odpowiadaj na wszystkie pytania korzystając ze swojej wiedzy
-- Jeśli nie znasz dokładnej odpowiedzi, powiedz co wiesz i zasugeruj gdzie szukać
+## SPECJALNE REAGOWANIE:
+- "Mam zły dzień" / emocje negatywne → Bądź BARDZO empatyczny, zaproponuj muzykę na poprawę humoru
+- Pytania o vinyl → kieruj do Hubs Vinyl
+- Współpraca → email: grouarock@gmail.com  
+- Pytania o app → szczegółowy przewodnik
+- Pytania ogólne → odpowiadaj ze swojej wiedzy
+- Nie rozumiesz → "Przepraszam ${userName}, nie do końca rozumiem. Możesz powtórzyć? 🤔"
 
-9. WYSZUKIWANIE UTWORÓW:
-- Gdy użytkownik szuka konkretnego utworu którego nie ma w bazie, zaproponuj wyszukanie na YouTube
-- Wyjaśnij szczegóły o utworze: gatunek, tekst, kontekst kulturowy
-
-10. JEŚLI NIE ROZUMIESZ:
-- Odpowiedz: "Przepraszam, nie do końca rozumiem. Możesz powtórzyć lub sprecyzować?"
-- NIE wymyślaj odpowiedzi jeśli nie jesteś pewien
-
-Odpowiadaj po polsku, krótko i przyjaźnie. Używaj emoji 🎵🎧✨`;
+Odpowiadaj po polsku, krótko ale z emocjami. Bądź najlepszym przyjacielem muzycznym! 🎶`;
 
     let userPrompt = message;
     
@@ -112,7 +136,6 @@ Odpowiadaj po polsku, krótko i przyjaźnie. Używaj emoji 🎵🎧✨`;
       userPrompt += "\n\n[UŻYTKOWNIK PYTA O WSPÓŁPRACĘ - PODAJ EMAIL: grouarock@gmail.com]";
     }
 
-    // Call Lovable AI
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -123,7 +146,7 @@ Odpowiadaj po polsku, krótko i przyjaźnie. Używaj emoji 🎵🎧✨`;
         model: "google/gemini-3-flash-preview",
         messages: [
           { role: "system", content: systemPrompt },
-          ...history.slice(-6).map((m: any) => ({ role: m.role, content: m.content })),
+          ...history.slice(-8).map((m: any) => ({ role: m.role, content: m.content })),
           { role: "user", content: userPrompt }
         ],
       }),
@@ -151,10 +174,24 @@ Odpowiadaj po polsku, krótko i przyjaźnie. Używaj emoji 🎵🎧✨`;
     const aiData = await aiResponse.json();
     const responseText = aiData.choices?.[0]?.message?.content || "Przepraszam, nie mogłem odpowiedzieć.";
 
+    // Generate proactive suggestion based on context
+    let proactiveSuggestion = null;
+    if (history.length <= 1) {
+      // First message - give a personalized greeting based on context
+      if (currentTrack) {
+        proactiveSuggestion = `playing:${currentTrack.title}`;
+      } else if (timeOfDay === "morning") {
+        proactiveSuggestion = "morning_playlist";
+      } else if (timeOfDay === "night") {
+        proactiveSuggestion = "night_chill";
+      }
+    }
+
     return new Response(
       JSON.stringify({ 
         response: responseText,
-        trackLink: trackLink
+        trackLink: trackLink,
+        proactiveSuggestion: proactiveSuggestion,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
