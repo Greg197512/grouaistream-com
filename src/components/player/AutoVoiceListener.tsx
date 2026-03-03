@@ -121,6 +121,35 @@ export const AutoVoiceListener = () => {
     }
   }, [user]);
 
+  // Flag to prevent recognition from processing input while TTS is active
+  const isSpeakingRef = useRef(false);
+
+  /**
+   * Pause recognition → speak → resume recognition.
+   * This prevents the mic from picking up what the assistant says.
+   */
+  const safeSpeakAndResume = useCallback(async (text: string) => {
+    isSpeakingRef.current = true;
+    // Pause recognition while speaking
+    if (recognitionRef.current) {
+      try { recognitionRef.current.abort(); } catch {}
+    }
+    setIsListening(false);
+
+    await speak(text);
+
+    // Small extra gap to let echo fade
+    await new Promise(r => setTimeout(r, 600));
+    isSpeakingRef.current = false;
+
+    // Restart recognition if auto-listen is still on
+    if (autoListenEnabled) {
+      restartTimeoutRef.current = window.setTimeout(() => {
+        startListeningRef.current?.();
+      }, 300);
+    }
+  }, [autoListenEnabled]);
+
   const shutdownMic = useCallback(() => {
     // Fully destroy recognition instance
     if (recognitionRef.current) {
@@ -135,7 +164,8 @@ export const AutoVoiceListener = () => {
     setIsListening(false);
     setAutoListenEnabled(false);
     localStorage.setItem("auto-voice-listen", "false");
-    speak("Wyłączam się. Do zobaczenia!");
+    isSpeakingRef.current = true;
+    speak("Wyłączam się. Do zobaczenia!").then(() => { isSpeakingRef.current = false; });
     toast.info("🔇 Asystent wyłączony");
     setShowSuggestions(false);
   }, []);
