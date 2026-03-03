@@ -174,6 +174,16 @@ export const AutoVoiceListener = () => {
     return false;
   }, [navigate]);
 
+  const handlePlayFromAI = useCallback(async (trackId: string) => {
+    try {
+      const { data: track } = await supabase.from("tracks").select("*").eq("id", trackId).single();
+      if (track) {
+        playPlaylist([track], 0);
+        speak(`Odtwarzam ${track.title}`);
+      }
+    } catch {}
+  }, [playPlaylist]);
+
   const GENRE_KEYWORDS = [
     "rock", "pop", "punk", "disco", "jazz", "blues", "metal", "hip-hop", "hip hop",
     "rap", "electronic", "techno", "house", "classical", "reggae", "soul", "funk",
