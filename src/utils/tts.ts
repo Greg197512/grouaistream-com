@@ -23,16 +23,18 @@ export const speak = (text: string, opts?: { rate?: number; pitch?: number }): P
   return new Promise<void>((resolve) => {
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = "pl-PL";
-    utterance.rate = opts?.rate ?? 0.95;
-    utterance.pitch = opts?.pitch ?? 1.1;
+    utterance.rate = opts?.rate ?? 1.0;
+    utterance.pitch = opts?.pitch ?? 0.85;
 
-    // Try to find a Polish voice
+    // Find a male Polish voice
     const voices = window.speechSynthesis.getVoices();
-    const plVoice = voices.find(v => v.lang.startsWith("pl"))
-      || voices.find(v => v.lang.startsWith("en") && v.name.toLowerCase().includes("female"))
+    const plMaleVoice = voices.find(v => v.lang.startsWith("pl") && /male|męs|adam|jacek|jan|krzyszt|łukasz|marcin|paweł/i.test(v.name))
+      || voices.find(v => v.lang.startsWith("pl") && !/female|kobieta|żeń|ewa|anna|agnieszk|magda|monika/i.test(v.name))
+      || voices.find(v => v.lang.startsWith("pl"))
+      || voices.find(v => v.lang.startsWith("en") && /male|daniel|george|james|david/i.test(v.name))
       || voices[0];
 
-    if (plVoice) utterance.voice = plVoice;
+    if (plMaleVoice) utterance.voice = plMaleVoice;
 
     _isSpeaking = true;
 
