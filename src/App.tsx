@@ -7,6 +7,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { PlayerProvider } from "@/contexts/PlayerContext";
 import { AIProvider } from "@/contexts/AIContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
+import { UnlockProvider } from "@/contexts/UnlockContext";
 import { AutoVoiceListener } from "@/components/player/AutoVoiceListener";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
@@ -31,6 +32,7 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <LanguageProvider>
+    <UnlockProvider>
     <AuthProvider>
       <PlayerProvider>
         <AIProvider>
@@ -70,6 +72,7 @@ const App = () => (
         </AIProvider>
       </PlayerProvider>
     </AuthProvider>
+    </UnlockProvider>
     </LanguageProvider>
   </QueryClientProvider>
 );
