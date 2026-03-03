@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { TrackRow } from "@/components/cards/TrackRow";
 import { supabase } from "@/integrations/supabase/client";
 import { usePlayer, Track } from "@/contexts/PlayerContext";
+import { useUnlock } from "@/contexts/UnlockContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "sonner";
 import { CCMixterSection } from "@/components/sections/CCMixterSection";
@@ -50,13 +51,14 @@ const Search = () => {
   const [allTracks, setAllTracks] = useState<Track[]>([]);
   const [loading, setLoading] = useState(false);
   const { playTrack, playPlaylist, currentTrack, isPlaying, togglePlay } = usePlayer();
+  const { filterTracks } = useUnlock();
   const { t } = useLanguage();
 
   useEffect(() => {
     const loadTracks = async () => {
       const { data, error } = await supabase.from("tracks").select("*").or("audio_url.not.is.null,video_url.not.is.null").order("created_at", { ascending: false });
       if (error) { console.error("Error loading tracks:", error); return; }
-      const playableTracks = (data || []).filter(isPlayableTrack);
+      const playableTracks = filterTracks((data || []).filter(isPlayableTrack));
       setAllTracks(playableTracks);
     };
     loadTracks();

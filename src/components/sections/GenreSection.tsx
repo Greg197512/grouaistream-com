@@ -4,6 +4,7 @@ import { Play, Loader2 } from "lucide-react";
 import { Droppable } from "@hello-pangea/dnd";
 import { supabase } from "@/integrations/supabase/client";
 import { usePlayer, Track } from "@/contexts/PlayerContext";
+import { useUnlock } from "@/contexts/UnlockContext";
 import { cn } from "@/lib/utils";
 import { DraggableTrackCard } from "@/components/dnd/DraggableTrackCard";
 
@@ -19,6 +20,7 @@ export const GenreSection = ({ genre, title, icon, color, limit = 8 }: GenreSect
   const [tracks, setTracks] = useState<Track[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { playPlaylist, currentTrack, isPlaying } = usePlayer();
+  const { filterTracks } = useUnlock();
 
   useEffect(() => {
     const fetchTracks = async () => {
@@ -53,9 +55,11 @@ export const GenreSection = ({ genre, title, icon, color, limit = 8 }: GenreSect
     fetchTracks();
   }, [genre, limit]);
 
+  const visibleTracks = filterTracks(tracks);
+
   const handlePlayAll = () => {
-    if (tracks.length > 0) {
-      playPlaylist(tracks, 0);
+    if (visibleTracks.length > 0) {
+      playPlaylist(visibleTracks, 0);
     }
   };
 
@@ -73,7 +77,7 @@ export const GenreSection = ({ genre, title, icon, color, limit = 8 }: GenreSect
     );
   }
 
-  if (tracks.length === 0) {
+  if (visibleTracks.length === 0) {
     return null;
   }
 
@@ -89,7 +93,7 @@ export const GenreSection = ({ genre, title, icon, color, limit = 8 }: GenreSect
           </motion.span>
           <h2 className="font-display text-xl font-bold">{title}</h2>
           <span className="text-xs text-muted-foreground bg-secondary px-2 py-1 rounded-full">
-            {tracks.length} tracks
+            {visibleTracks.length} tracks
           </span>
         </div>
         <motion.button
@@ -116,12 +120,12 @@ export const GenreSection = ({ genre, title, icon, color, limit = 8 }: GenreSect
               snapshot.isDraggingOver && "bg-accent/10 ring-2 ring-accent/20"
             )}
           >
-            {tracks.map((track, index) => (
+            {visibleTracks.map((track, index) => (
               <DraggableTrackCard
                 key={track.id}
                 track={track}
                 index={index}
-                tracks={tracks}
+                tracks={visibleTracks}
               />
             ))}
             {provided.placeholder}

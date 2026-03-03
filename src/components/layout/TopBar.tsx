@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { 
   ChevronLeft, ChevronRight, Search, Bell, User, Crown, LogOut,
-  Settings, Sparkles, UserCircle, Heart, Library, Power, Globe
+  Settings, Sparkles, UserCircle, Heart, Library, Power, Globe, Lock, LockOpen
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { useUnlock } from "@/contexts/UnlockContext";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
@@ -22,8 +23,10 @@ export const TopBar = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [hasNotifications, setHasNotifications] = useState(true);
   const [showUpgrade, setShowUpgrade] = useState(false);
+  const [passwordInput, setPasswordInput] = useState("");
   const { user, signOut, loading } = useAuth();
   const { language, setLanguage, t, languageNames, languageFlags } = useLanguage();
+  const { isUnlocked, unlock } = useUnlock();
   const navigate = useNavigate();
 
   const handleSignOut = async () => {
@@ -69,6 +72,49 @@ export const TopBar = () => {
           <ChevronRight className="h-4 w-4" />
         </button>
       </div>
+
+      {/* Password Unlock */}
+      <AnimatePresence>
+        {!isUnlocked && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="flex items-center gap-2"
+          >
+            <Lock className="h-4 w-4 text-muted-foreground" />
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (unlock(passwordInput)) {
+                  toast.success("Odblokowano pełną bibliotekę!");
+                } else {
+                  toast.error("Nieprawidłowe hasło");
+                  setPasswordInput("");
+                }
+              }}
+              className="flex items-center gap-1"
+            >
+              <Input
+                type="password"
+                placeholder="Hasło..."
+                value={passwordInput}
+                onChange={(e) => setPasswordInput(e.target.value)}
+                className="w-28 h-8 text-xs bg-secondary border-0 rounded-full"
+              />
+            </form>
+          </motion.div>
+        )}
+        {isUnlocked && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="flex items-center gap-1 text-xs text-emerald-500"
+          >
+            <LockOpen className="h-3.5 w-3.5" />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Search */}
       <form onSubmit={handleSearch} className="flex-1 max-w-md">
