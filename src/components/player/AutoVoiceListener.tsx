@@ -7,7 +7,7 @@ import { useAI } from "@/contexts/AIContext";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { useAssistantConfig } from "@/hooks/useAssistantConfig";
 import { AssistantNamingModal } from "@/components/modals/AssistantNamingModal";
-import { speak } from "@/utils/tts";
+import { speak, isTTSSpeaking } from "@/utils/tts";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -77,6 +77,7 @@ export const AutoVoiceListener = () => {
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const restartTimeoutRef = useRef<number | null>(null);
   const silenceTimerRef = useRef<number | null>(null);
+  const startListeningRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     const stored = localStorage.getItem("auto-voice-listen");
@@ -111,15 +112,44 @@ export const AutoVoiceListener = () => {
         setAiSuggestions(data.suggestions);
         setShowSuggestions(true);
         const names = data.suggestions.slice(0, 3).map((s: any) => s.title).join(", ");
-        speak(`Proponuję na dziś: ${names}. Powiedz puść, żeby odtworzyć.`);
+        await safeSpeakAndResume(`Proponuję na dziś: ${names}. Powiedz puść, żeby odtworzyć.`);
       } else {
-        speak("Nie mam jeszcze dość danych o Twoich preferencjach. Posłuchaj trochę muzyki, a nauczę się Twoich gustów!");
+        await safeSpeakAndResume("Nie mam jeszcze dość danych o Twoich preferencjach. Posłuchaj trochę muzyki, a nauczę się Twoich gustów!");
       }
     } catch (e) {
       console.error("AI suggestions error:", e);
-      speak("Przepraszam, nie udało mi się przygotować propozycji.");
+      await safeSpeakAndResume("Przepraszam, nie udało mi się przygotować propozycji.");
     }
   }, [user]);
+
+  // Flag to prevent recognition from processing input while TTS is active
+  const isSpeakingRef = useRef(false);
+
+  /**
+   * Pause recognition → speak → resume recognition.
+   * This prevents the mic from picking up what the assistant says.
+   */
+  const safeSpeakAndResume = useCallback(async (text: string) => {
+    isSpeakingRef.current = true;
+    // Pause recognition while speaking
+    if (recognitionRef.current) {
+      try { recognitionRef.current.abort(); } catch {}
+    }
+    setIsListening(false);
+
+    await speak(text);
+
+    // Small extra gap to let echo fade
+    await new Promise(r => setTimeout(r, 600));
+    isSpeakingRef.current = false;
+
+    // Restart recognition if auto-listen is still on
+    if (autoListenEnabled) {
+      restartTimeoutRef.current = window.setTimeout(() => {
+        startListeningRef.current?.();
+      }, 300);
+    }
+  }, [autoListenEnabled]);
 
   const shutdownMic = useCallback(() => {
     // Fully destroy recognition instance
@@ -135,7 +165,8 @@ export const AutoVoiceListener = () => {
     setIsListening(false);
     setAutoListenEnabled(false);
     localStorage.setItem("auto-voice-listen", "false");
-    speak("Wyłączam się. Do zobaczenia!");
+    isSpeakingRef.current = true;
+    speak("Wyłączam się. Do zobaczenia!").then(() => { isSpeakingRef.current = false; });
     toast.info("🔇 Asystent wyłączony");
     setShowSuggestions(false);
   }, []);
@@ -167,22 +198,22 @@ export const AutoVoiceListener = () => {
           "/playlist-manager": "Playlisty", "/admin": "Admin"
         };
         toast.success(`📂 Otwieram: ${pageNames[route] || route}`);
-        speak(`Otwieram ${pageNames[route] || route}`);
+        safeSpeakAndResume(`Otwieram ${pageNames[route] || route}`);
         return true;
       }
     }
     return false;
-  }, [navigate]);
+  }, [navigate, safeSpeakAndResume]);
 
   const handlePlayFromAI = useCallback(async (trackId: string) => {
     try {
       const { data: track } = await supabase.from("tracks").select("*").eq("id", trackId).single();
       if (track) {
         playPlaylist([track], 0);
-        speak(`Odtwarzam ${track.title}`);
+        safeSpeakAndResume(`Odtwarzam ${track.title}`);
       }
     } catch {}
-  }, [playPlaylist]);
+  }, [playPlaylist, safeSpeakAndResume]);
 
   const GENRE_KEYWORDS = [
     "rock", "pop", "punk", "disco", "jazz", "blues", "metal", "hip-hop", "hip hop",
@@ -221,14 +252,12 @@ export const AutoVoiceListener = () => {
     try {
       toast.loading(`🔍 Szukam: "${query}"...`, { id: "voice-search" });
 
-      // Check if query is a genre name
       const lowerQuery = query.toLowerCase().trim();
       const matchedGenre = GENRE_KEYWORDS.find(g => lowerQuery.includes(g));
 
       let tracks: any[] | null = null;
 
       if (matchedGenre) {
-        // Search by genre field
         const { data } = await supabase
           .from("tracks")
           .select("*")
@@ -237,7 +266,6 @@ export const AutoVoiceListener = () => {
         tracks = data;
       }
 
-      // If no genre match or no results, search by title/artist
       if (!tracks || tracks.length === 0) {
         const { data } = await supabase
           .from("tracks")
@@ -251,9 +279,8 @@ export const AutoVoiceListener = () => {
         const toPlay = count ? tracks.slice(0, count) : tracks;
         playPlaylist(toPlay, 0);
         toast.success(`🎵 Odtwarzam ${toPlay.length} utworów: ${toPlay[0].title}`, { id: "voice-search", duration: 4000 });
-        speak(`Odtwarzam ${toPlay.length} utworów ${matchedGenre || ""}, ${toPlay[0].title}`);
+        await safeSpeakAndResume(`Odtwarzam ${toPlay.length} utworów ${matchedGenre || ""}, ${toPlay[0].title}`);
       } else {
-        // Track not found locally - ask AI to find YouTube video ID
         toast.loading(`🌐 Szukam w sieci: "${query}"...`, { id: "voice-search" });
         try {
           const { data: aiData, error: aiError } = await supabase.functions.invoke("ai-assistant", {
@@ -267,14 +294,12 @@ export const AutoVoiceListener = () => {
             const videoIdMatch = aiData.response.match(/VIDEOID:([a-zA-Z0-9_-]{11})/);
             if (videoIdMatch) {
               const videoId = videoIdMatch[1];
-              // Try to download via youtube-download
               toast.loading(`⬇️ Pobieram z YouTube...`, { id: "voice-search" });
               const { data: dlData, error: dlError } = await supabase.functions.invoke("youtube-download", {
                 body: { videoId, title: query, artist: "YouTube" }
               });
               
               if (!dlError && dlData?.url) {
-                // Save track to DB and play
                 const { data: newTrack } = await supabase.from("tracks").insert({
                   title: query,
                   artist: "YouTube",
@@ -287,48 +312,47 @@ export const AutoVoiceListener = () => {
                 if (newTrack) {
                   playPlaylist([newTrack], 0);
                   toast.success(`🎵 Pobrano i odtwarzam: ${query}`, { id: "voice-search", duration: 4000 });
-                  speak(`Pobrałem i odtwarzam ${query}`);
+                  await safeSpeakAndResume(`Pobrałem i odtwarzam ${query}`);
                 }
               } else {
-                // Fallback: play via YouTube embed
                 const fallbackTrack = {
                   id: crypto.randomUUID(),
-                  title: query,
-                  artist: "YouTube",
-                  album: null,
+                  title: query, artist: "YouTube", album: null,
                   audio_url: null,
                   video_url: `https://www.youtube.com/watch?v=${videoId}`,
                   cover_url: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
-                  genre: null,
-                  mood: null,
-                  duration: 180,
+                  genre: null, mood: null, duration: 180,
                 };
                 playPlaylist([fallbackTrack], 0);
                 toast.success(`🎵 Odtwarzam z YouTube: ${query}`, { id: "voice-search", duration: 4000 });
-                speak(`Odtwarzam z YouTube: ${query}`);
+                await safeSpeakAndResume(`Odtwarzam z YouTube: ${query}`);
               }
             } else {
               toast.error(`Nie znaleziono: "${query}"`, { id: "voice-search" });
-              speak(`Nie znalazłam utworu ${query}`);
+              await safeSpeakAndResume(`Nie znalazłam utworu ${query}`);
             }
           } else {
             toast.error(`Nie znaleziono: "${query}"`, { id: "voice-search" });
-            speak(`Nie znalazłam utworu ${query}`);
+            await safeSpeakAndResume(`Nie znalazłam utworu ${query}`);
           }
         } catch {
           toast.error(`Nie znaleziono: "${query}"`, { id: "voice-search" });
-          speak(`Nie znalazłam utworu ${query}`);
+          await safeSpeakAndResume(`Nie znalazłam utworu ${query}`);
         }
       }
     } catch {
       toast.error("Błąd wyszukiwania", { id: "voice-search" });
     }
-  }, [playPlaylist]);
+  }, [playPlaylist, safeSpeakAndResume]);
 
   const processCommand = useCallback(async (command: string) => {
     const lower = command.toLowerCase().trim();
     const normalized = normalizeCommand(command);
     if (normalized.length < 3) return;
+
+    // Guard: ignore if TTS is still speaking (mic echo protection)
+    if (isSpeakingRef.current) return;
+
     setLastTranscript(command);
     setShowIndicator(true);
     resetSilenceTimer();
@@ -341,7 +365,7 @@ export const AutoVoiceListener = () => {
 
     // Check if user called assistant by name -> AI suggestions (only suggest, don't auto-play)
     if (assistantName && lower.includes(assistantName.toLowerCase())) {
-      speak(`Cześć! Sprawdzam co mam dla Ciebie na dziś. Powiedz "puść" żeby odtworzyć.`);
+      await safeSpeakAndResume(`Cześć! Sprawdzam co mam dla Ciebie na dziś. Powiedz "puść" żeby odtworzyć.`);
       toast.success(`🎤 ${assistantName}: Analizuję Twoje preferencje...`);
       await fetchAISuggestions();
       return;
@@ -355,7 +379,7 @@ export const AutoVoiceListener = () => {
         genre: s.genre, mood: s.mood, duration: 180,
       }));
       playPlaylist(tracks, 0);
-      speak(`Odtwarzam moje propozycje dla Ciebie!`);
+      await safeSpeakAndResume(`Odtwarzam moje propozycje dla Ciebie!`);
       setShowSuggestions(false);
       return;
     }
@@ -373,29 +397,29 @@ export const AutoVoiceListener = () => {
 
     if (stopRequested) {
       pausePlayback();
-      speak("Zatrzymuję odtwarzanie");
+      await safeSpeakAndResume("Zatrzymuję odtwarzanie");
       toast.info("⏹️ Player zatrzymany");
       return;
     }
 
     if (includesAny(normalized, ["wznow", "kontynuuj", "graj dalej", "resume"])) {
       resumePlayback();
-      speak("Wznawiam odtwarzanie");
+      await safeSpeakAndResume("Wznawiam odtwarzanie");
       return;
     }
 
     if (includesAny(normalized, ["od poczatku", "zacznij od poczatku", "od nowa"])) {
       restartCurrentTrack();
-      speak("Uruchamiam od początku");
+      await safeSpeakAndResume("Uruchamiam od początku");
       return;
     }
 
-    if (lower.includes("graj") && !lower.includes("następ") && !lower.includes("odtwarz") && lower.split(" ").length <= 2) { resumePlayback(); speak("Odtwarzam"); return; }
-    if (lower.includes("następn") || lower.includes("dalej") || lower.includes("skip")) { nextTrack(); speak("Następny utwór"); return; }
-    if (lower.includes("poprzedni") || lower.includes("cofnij") || lower.includes("wstecz")) { prevTrack(); speak("Poprzedni utwór"); return; }
-    if (lower.includes("głośniej") || lower.includes("louder")) { setVolume(85); speak("Głośniej"); return; }
-    if (lower.includes("ciszej") || lower.includes("cicho")) { setVolume(25); speak("Ciszej"); return; }
-    if (lower.includes("wycisz") || lower.includes("mute")) { setVolume(0); speak("Wyciszono"); return; }
+    if (lower.includes("graj") && !lower.includes("następ") && !lower.includes("odtwarz") && lower.split(" ").length <= 2) { resumePlayback(); await safeSpeakAndResume("Odtwarzam"); return; }
+    if (lower.includes("następn") || lower.includes("dalej") || lower.includes("skip")) { nextTrack(); await safeSpeakAndResume("Następny utwór"); return; }
+    if (lower.includes("poprzedni") || lower.includes("cofnij") || lower.includes("wstecz")) { prevTrack(); await safeSpeakAndResume("Poprzedni utwór"); return; }
+    if (lower.includes("głośniej") || lower.includes("louder")) { setVolume(85); await safeSpeakAndResume("Głośniej"); return; }
+    if (lower.includes("ciszej") || lower.includes("cicho")) { setVolume(25); await safeSpeakAndResume("Ciszej"); return; }
+    if (lower.includes("wycisz") || lower.includes("mute")) { setVolume(0); await safeSpeakAndResume("Wyciszono"); return; }
 
     // Navigation
     if (lower.includes("otwórz") || lower.includes("włącz") || lower.includes("pokaż") || lower.includes("przejdź") || lower.includes("idź")) {
@@ -433,7 +457,7 @@ export const AutoVoiceListener = () => {
       }
     }
 
-    // Mood-based requests: "mam zły dzień", "popraw mi humor", "jest mi smutno" etc.
+    // Mood-based requests
     const MOOD_PHRASES: Record<string, string> = {
       "zly dzien": "happy",
       "zle sie czuje": "chill",
@@ -461,17 +485,15 @@ export const AutoVoiceListener = () => {
         .limit(10);
       
       if (moodTracks && moodTracks.length > 0) {
-        // Shuffle for variety
         const shuffled = moodTracks.sort(() => Math.random() - 0.5);
         playPlaylist(shuffled, 0);
-        speak(`Rozumiem, puszczam muzykę żeby poprawić Ci nastrój! Oto ${shuffled.length} utworów dla Ciebie.`);
+        await safeSpeakAndResume(`Rozumiem, puszczam muzykę żeby poprawić Ci nastrój! Oto ${shuffled.length} utworów dla Ciebie.`);
         toast.success(`🎵 Odtwarzam ${shuffled.length} utworów na poprawę humoru`, { id: "voice-cmd", duration: 4000 });
         return;
       }
-      // If no mood tracks, fall through to AI
     }
 
-    // AI fallback - route ALL other questions to the AI assistant
+    // AI fallback
     try {
       toast.loading(`🎙️ AI analizuje...`, { id: "voice-cmd" });
       
@@ -480,10 +502,10 @@ export const AutoVoiceListener = () => {
         if (result.action === "play" && result.tracks?.length) {
           playPlaylist(result.tracks, 0);
           toast.success(`🎵 Odtwarzam ${result.tracks.length} utworów`, { id: "voice-cmd", duration: 4000 });
-          speak(`Odtwarzam ${result.tracks.length} utworów`);
+          await safeSpeakAndResume(`Odtwarzam ${result.tracks.length} utworów`);
           return;
         } else if (result.action === "pause") {
-          pausePlayback(); speak("Pauza");
+          pausePlayback(); await safeSpeakAndResume("Pauza");
           toast.success("⏸️ Pauza", { id: "voice-cmd" });
           return;
         }
@@ -495,22 +517,21 @@ export const AutoVoiceListener = () => {
       });
       if (!aiError && aiData?.response) {
         const response = aiData.response;
-        speak(response.slice(0, 300));
+        await safeSpeakAndResume(response.slice(0, 300));
         toast.success(`🤖 ${response.slice(0, 120)}...`, { id: "voice-cmd", duration: 6000 });
         
         if (aiData.trackLink) {
           await handlePlayFromAI(aiData.trackLink.id);
         }
       } else {
-        // AI didn't respond - say "nie rozumiem"
-        speak("Przepraszam, nie rozumiem. Możesz powtórzyć?");
+        await safeSpeakAndResume("Przepraszam, nie rozumiem. Możesz powtórzyć?");
         toast.info("🤖 Przepraszam, nie rozumiem. Możesz powtórzyć?", { id: "voice-cmd" });
       }
     } catch {
-      speak("Przepraszam, nie rozumiem. Możesz powtórzyć?");
+      await safeSpeakAndResume("Przepraszam, nie rozumiem. Możesz powtórzyć?");
       toast.error("Przepraszam, nie rozumiem. Możesz powtórzyć?", { id: "voice-cmd" });
     }
-  }, [isAIEnabled, processVoiceCommand, playPlaylist, nextTrack, prevTrack, setVolume, tryNavigate, searchAndPlay, resetSilenceTimer, assistantName, fetchAISuggestions, shutdownMic, showSuggestions, aiSuggestions, pausePlayback, resumePlayback, restartCurrentTrack, parsePolishNumber, handlePlayFromAI]);
+  }, [isAIEnabled, processVoiceCommand, playPlaylist, nextTrack, prevTrack, setVolume, tryNavigate, searchAndPlay, resetSilenceTimer, assistantName, fetchAISuggestions, shutdownMic, showSuggestions, aiSuggestions, pausePlayback, resumePlayback, restartCurrentTrack, parsePolishNumber, handlePlayFromAI, safeSpeakAndResume]);
 
   const startListening = useCallback(() => {
     if (!user) return;
@@ -524,6 +545,8 @@ export const AutoVoiceListener = () => {
       rec.interimResults = false;
       rec.lang = "pl-PL";
       rec.onresult = (event: SpeechRecognitionEvent) => {
+        // Guard: ignore anything picked up while TTS is speaking
+        if (isSpeakingRef.current) return;
         const last = event.results[event.results.length - 1];
         if (last.isFinal) processCommand(last[0].transcript);
       };
@@ -553,6 +576,9 @@ export const AutoVoiceListener = () => {
       toast.error("Nie udało się uruchomić mikrofonu");
     }
   }, [user, processCommand, autoListenEnabled, resetSilenceTimer]);
+
+  // Keep ref in sync so safeSpeakAndResume can restart listening
+  useEffect(() => { startListeningRef.current = startListening; }, [startListening]);
 
   useEffect(() => {
     return () => {
