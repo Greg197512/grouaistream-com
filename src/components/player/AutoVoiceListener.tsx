@@ -226,43 +226,67 @@ export const AutoVoiceListener = () => {
         toast.success(`🎵 Odtwarzam ${toPlay.length} utworów: ${toPlay[0].title}`, { id: "voice-search", duration: 4000 });
         speak(`Odtwarzam ${toPlay.length} utworów ${matchedGenre || ""}, ${toPlay[0].title}`);
       } else {
-        // Track not found locally - try YouTube fallback
-        toast.loading(`🌐 Szukam w YouTube: "${query}"...`, { id: "voice-search" });
+        // Track not found locally - ask AI to find YouTube video ID
+        toast.loading(`🌐 Szukam w sieci: "${query}"...`, { id: "voice-search" });
         try {
-          const { data: ytData, error: ytError } = await supabase.functions.invoke("youtube-download", {
-            body: { query: query, searchOnly: true }
+          const { data: aiData, error: aiError } = await supabase.functions.invoke("ai-assistant", {
+            body: { 
+              message: `Znajdź YouTube video ID (11 znaków) dla utworu: "${query}". Odpowiedz TYLKO w formacie: VIDEOID:xxxxxxxxxxx albo NOTFOUND jeśli nie znasz.`,
+              history: [] 
+            }
           });
-          if (!ytError && ytData?.videoId) {
-            // Download and add to library
-            toast.loading(`⬇️ Pobieram: "${ytData.title}"...`, { id: "voice-search" });
-            const { data: dlData, error: dlError } = await supabase.functions.invoke("youtube-download", {
-              body: { url: `https://www.youtube.com/watch?v=${ytData.videoId}` }
-            });
-            if (!dlError && dlData?.track) {
-              playPlaylist([dlData.track], 0);
-              toast.success(`🎵 Pobrano i odtwarzam: ${dlData.track.title}`, { id: "voice-search", duration: 4000 });
-              speak(`Znalazłem i odtwarzam ${dlData.track.title}`);
+          
+          if (!aiError && aiData?.response) {
+            const videoIdMatch = aiData.response.match(/VIDEOID:([a-zA-Z0-9_-]{11})/);
+            if (videoIdMatch) {
+              const videoId = videoIdMatch[1];
+              // Try to download via youtube-download
+              toast.loading(`⬇️ Pobieram z YouTube...`, { id: "voice-search" });
+              const { data: dlData, error: dlError } = await supabase.functions.invoke("youtube-download", {
+                body: { videoId, title: query, artist: "YouTube" }
+              });
+              
+              if (!dlError && dlData?.url) {
+                // Save track to DB and play
+                const { data: newTrack } = await supabase.from("tracks").insert({
+                  title: query,
+                  artist: "YouTube",
+                  audio_url: dlData.url,
+                  video_url: `https://www.youtube.com/watch?v=${videoId}`,
+                  cover_url: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
+                  duration: dlData.duration || 180,
+                }).select().single();
+                
+                if (newTrack) {
+                  playPlaylist([newTrack], 0);
+                  toast.success(`🎵 Pobrano i odtwarzam: ${query}`, { id: "voice-search", duration: 4000 });
+                  speak(`Pobrałem i odtwarzam ${query}`);
+                }
+              } else {
+                // Fallback: play via YouTube embed
+                const fallbackTrack = {
+                  id: crypto.randomUUID(),
+                  title: query,
+                  artist: "YouTube",
+                  album: null,
+                  audio_url: null,
+                  video_url: `https://www.youtube.com/watch?v=${videoId}`,
+                  cover_url: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
+                  genre: null,
+                  mood: null,
+                  duration: 180,
+                };
+                playPlaylist([fallbackTrack], 0);
+                toast.success(`🎵 Odtwarzam z YouTube: ${query}`, { id: "voice-search", duration: 4000 });
+                speak(`Odtwarzam z YouTube: ${query}`);
+              }
             } else {
-              // Fallback: play via YouTube video URL
-              const fallbackTrack = {
-                id: crypto.randomUUID(),
-                title: ytData.title || query,
-                artist: ytData.artist || "YouTube",
-                album: null,
-                audio_url: null,
-                video_url: `https://www.youtube.com/watch?v=${ytData.videoId}`,
-                cover_url: ytData.thumbnail || null,
-                genre: null,
-                mood: null,
-                duration: ytData.duration || 180,
-              };
-              playPlaylist([fallbackTrack], 0);
-              toast.success(`🎵 Odtwarzam z YouTube: ${fallbackTrack.title}`, { id: "voice-search", duration: 4000 });
-              speak(`Odtwarzam z YouTube: ${fallbackTrack.title}`);
+              toast.error(`Nie znaleziono: "${query}"`, { id: "voice-search" });
+              speak(`Nie znalazłam utworu ${query}`);
             }
           } else {
             toast.error(`Nie znaleziono: "${query}"`, { id: "voice-search" });
-            speak(`Nie znalazłam utworu ${query} ani w bibliotece, ani na YouTube`);
+            speak(`Nie znalazłam utworu ${query}`);
           }
         } catch {
           toast.error(`Nie znaleziono: "${query}"`, { id: "voice-search" });
