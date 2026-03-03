@@ -487,11 +487,13 @@ export const AutoVoiceListener = () => {
       toast.loading(`🎙️ AI analizuje...`, { id: "voice-cmd" });
       
       if (isAIEnabled) {
+        const requestedCount = parsePolishNumber(command);
         const result = await processVoiceCommand(command);
         if (result.action === "play" && result.tracks?.length) {
-          playPlaylist(result.tracks, 0);
-          toast.success(`🎵 Odtwarzam ${result.tracks.length} utworów`, { id: "voice-cmd", duration: 4000 });
-          await safeSpeakAndResume(`Odtwarzam ${result.tracks.length} utworów`);
+          const limitedTracks = requestedCount ? result.tracks.slice(0, requestedCount) : result.tracks.slice(0, 10);
+          playPlaylist(limitedTracks, 0);
+          toast.success(`🎵 Odtwarzam ${limitedTracks.length} utworów`, { id: "voice-cmd", duration: 4000 });
+          await safeSpeakAndResume(`Odtwarzam ${limitedTracks.length} utworów`);
           return;
         } else if (result.action === "pause") {
           pausePlayback(); await safeSpeakAndResume("Pauza");
