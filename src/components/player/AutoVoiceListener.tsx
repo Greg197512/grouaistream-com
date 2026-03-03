@@ -210,10 +210,10 @@ export const AutoVoiceListener = () => {
       const { data: track } = await supabase.from("tracks").select("*").eq("id", trackId).single();
       if (track) {
         playPlaylist([track], 0);
-        speak(`Odtwarzam ${track.title}`);
+        safeSpeakAndResume(`Odtwarzam ${track.title}`);
       }
     } catch {}
-  }, [playPlaylist]);
+  }, [playPlaylist, safeSpeakAndResume]);
 
   const GENRE_KEYWORDS = [
     "rock", "pop", "punk", "disco", "jazz", "blues", "metal", "hip-hop", "hip hop",
