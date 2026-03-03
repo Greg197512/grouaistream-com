@@ -555,6 +555,8 @@ export const AutoVoiceListener = () => {
       rec.interimResults = false;
       rec.lang = "pl-PL";
       rec.onresult = (event: SpeechRecognitionEvent) => {
+        // Guard: ignore anything picked up while TTS is speaking
+        if (isSpeakingRef.current) return;
         const last = event.results[event.results.length - 1];
         if (last.isFinal) processCommand(last[0].transcript);
       };
