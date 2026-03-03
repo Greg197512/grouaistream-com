@@ -520,6 +520,9 @@ export const AutoVoiceListener = () => {
       await safeSpeakAndResume("Przepraszam, nie rozumiem. Możesz powtórzyć?");
       toast.error("Przepraszam, nie rozumiem. Możesz powtórzyć?", { id: "voice-cmd" });
     }
+    } finally {
+      isProcessingCommandRef.current = false;
+    }
   }, [isAIEnabled, processVoiceCommand, playPlaylist, nextTrack, prevTrack, setVolume, tryNavigate, searchAndPlay, resetSilenceTimer, assistantName, fetchAISuggestions, shutdownMic, showSuggestions, aiSuggestions, pausePlayback, resumePlayback, restartCurrentTrack, parsePolishNumber, handlePlayFromAI, safeSpeakAndResume]);
 
   const startListening = useCallback(() => {
