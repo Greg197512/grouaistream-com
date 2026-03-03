@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { 
   ChevronLeft, ChevronRight, Search, Bell, User, Crown, LogOut,
-  Settings, Sparkles, UserCircle, Heart, Library, Power, Globe
+  Settings, Sparkles, UserCircle, Heart, Library, Power, Globe, Lock, LockOpen
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { useUnlock } from "@/contexts/UnlockContext";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
@@ -22,8 +23,10 @@ export const TopBar = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [hasNotifications, setHasNotifications] = useState(true);
   const [showUpgrade, setShowUpgrade] = useState(false);
+  const [passwordInput, setPasswordInput] = useState("");
   const { user, signOut, loading } = useAuth();
   const { language, setLanguage, t, languageNames, languageFlags } = useLanguage();
+  const { isUnlocked, unlock } = useUnlock();
   const navigate = useNavigate();
 
   const handleSignOut = async () => {
