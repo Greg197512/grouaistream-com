@@ -367,48 +367,27 @@ export const AutoVoiceListener = () => {
     setShowIndicator(true);
     resetSilenceTimer();
 
-    // Shutdown commands
-    if (lower.includes("wyłącz się") || lower.includes("wyłącz") && lower.includes("asystent") || lower.includes("zamknij się")) {
-      shutdownMic();
-      return;
-    }
-
-    // Check if user called assistant by name -> AI suggestions (only suggest, don't auto-play)
-    if (assistantName && lower.includes(assistantName.toLowerCase())) {
-      await safeSpeakAndResume(`Cześć! Sprawdzam co mam dla Ciebie na dziś. Powiedz "puść" żeby odtworzyć.`);
-      toast.success(`🎤 ${assistantName}: Analizuję Twoje preferencje...`);
-      await fetchAISuggestions();
-      return;
-    }
-
-    // Play suggested tracks ONLY when user explicitly says to
-    if (showSuggestions && aiSuggestions.length > 0 && (lower.includes("puść") || lower.includes("graj") || lower.includes("odtwórz") || lower.includes("tak") || lower.includes("play"))) {
-      const tracks = aiSuggestions.map((s: any) => ({
-        id: s.id, title: s.title, artist: s.artist,
-        album: null, audio_url: null, cover_url: null,
-        genre: s.genre, mood: s.mood, duration: 180,
-      }));
-      playPlaylist(tracks, 0);
-      await safeSpeakAndResume(`Odtwarzam moje propozycje dla Ciebie!`);
-      setShowSuggestions(false);
-      return;
-    }
-
-    // STOP command - always force pause/stop the player
+    try {
+    // STOP command - HIGHEST PRIORITY - check first before anything else
     const stopRequested = includesAny(normalized, [
-      "stop",
+      "stop", "stopp", "stup", "stap",
       "zatrzymaj",
-      "pauza",
-      "pauze",
+      "pauza", "pauze", "pause",
       "wstrzymaj",
-      "wylacz player",
-      "wylacz muzyke",
-    ]);
+      "wylacz player", "wylacz muzyk",
+      "cisza", "ucisz",
+    ]) || includesAny(lower, ["stop", "pauza", "zatrzymaj", "wstrzymaj", "pause"]);
 
     if (stopRequested) {
       pausePlayback();
-      await safeSpeakAndResume("Zatrzymuję odtwarzanie");
-      toast.info("⏹️ Player zatrzymany");
+      await safeSpeakAndResume("Zatrzymuję");
+      toast.info("⏹️ Zatrzymano");
+      return;
+    }
+
+    // Shutdown commands
+    if (lower.includes("wyłącz się") || (lower.includes("wyłącz") && lower.includes("asystent")) || lower.includes("zamknij się")) {
+      shutdownMic();
       return;
     }
 
