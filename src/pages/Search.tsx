@@ -188,7 +188,32 @@ const Search = () => {
                   <TrackRow key={track.id} id={track.id} index={index + 1} title={track.title} artist={track.artist} album={track.album || ""} duration={formatDuration(track.duration)} imageUrl={track.cover_url || undefined} trackUrl={track.video_url || track.audio_url} isPlaying={currentTrack?.id === track.id && isPlaying} onPlay={() => handlePlayTrack(track, index)} />
                 ))}
               </div>
-            ) : (!loading && <p className="text-muted-foreground">{t("search.noResults")}</p>)}
+            ) : (!loading && (
+              <div className="flex flex-col items-center gap-4 py-12">
+                <p className="text-muted-foreground">{t("search.noResults")}</p>
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex flex-col items-center gap-3"
+                >
+                  <Sparkles className="h-8 w-8 text-primary animate-pulse" />
+                  <p className="text-sm text-muted-foreground">AI znajdzie to na YouTube</p>
+                  <Button
+                    onClick={handleYouTubeSearch}
+                    disabled={youtubeLoading}
+                    className="gap-2 bg-red-600 hover:bg-red-700 text-white"
+                    size="lg"
+                  >
+                    {youtubeLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Youtube className="h-5 w-5" />
+                    )}
+                    {youtubeLoading ? "Szukam..." : `Wyszukaj "${query}" na YouTube`}
+                  </Button>
+                </motion.div>
+              </div>
+            ))}
           </div>
         ) : (
           <Tabs defaultValue="library" className="w-full">
