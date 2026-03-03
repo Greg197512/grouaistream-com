@@ -32,7 +32,7 @@ interface SpeechRecognitionInstance extends EventTarget {
   abort: () => void;
 }
 
-const SILENCE_TIMEOUT_MS = 30_000;
+const SILENCE_TIMEOUT_MS = 120_000;
 
 const NAV_MAP: Record<string, string> = {
   "stron": "/", "główn": "/", "home": "/",
@@ -57,6 +57,66 @@ const normalizeCommand = (text: string) =>
 
 const includesAny = (text: string, phrases: string[]) =>
   phrases.some((phrase) => text.includes(phrase));
+
+const WEATHER_CODE_MAP: Record<number, string> = {
+  0: "bezchmurnie",
+  1: "prawie bezchmurnie",
+  2: "częściowe zachmurzenie",
+  3: "duże zachmurzenie",
+  45: "mgliście",
+  48: "osadzający się szron",
+  51: "lekka mżawka",
+  53: "mżawka",
+  55: "intensywna mżawka",
+  61: "lekki deszcz",
+  63: "deszcz",
+  65: "mocny deszcz",
+  71: "lekki śnieg",
+  73: "śnieg",
+  75: "intensywny śnieg",
+  80: "przelotne opady",
+  81: "przelotny deszcz",
+  82: "silne przelotne opady",
+  95: "burza",
+};
+
+const extractCityFromWeatherCommand = (command: string): string | null => {
+  const cityMatch = command.match(/(?:w|dla|na)\s+([a-zA-ZąćęłńóśźżĄĆĘŁŃÓŚŹŻ\-\s]{2,})/i);
+  if (!cityMatch?.[1]) return null;
+
+  return cityMatch[1]
+    .replace(/\b(jutro|dzisiaj|dziś|teraz|pogoda|prognoza)\b/gi, "")
+    .trim() || null;
+};
+
+const getWeatherSummary = async (command: string) => {
+  const requestedCity = extractCityFromWeatherCommand(command) || "Warszawa";
+
+  const geoResp = await fetch(
+    `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(requestedCity)}&count=1&language=pl&format=json`
+  );
+
+  if (!geoResp.ok) throw new Error("Geocoding failed");
+  const geoData = await geoResp.json();
+  const place = geoData?.results?.[0];
+  if (!place) throw new Error("City not found");
+
+  const weatherResp = await fetch(
+    `https://api.open-meteo.com/v1/forecast?latitude=${place.latitude}&longitude=${place.longitude}&current=temperature_2m,weather_code,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min,weather_code&timezone=auto`
+  );
+
+  if (!weatherResp.ok) throw new Error("Weather fetch failed");
+  const weatherData = await weatherResp.json();
+
+  const currentTemp = Math.round(weatherData?.current?.temperature_2m ?? 0);
+  const currentWind = Math.round(weatherData?.current?.wind_speed_10m ?? 0);
+  const currentCode = weatherData?.current?.weather_code ?? 3;
+  const todayMax = Math.round(weatherData?.daily?.temperature_2m_max?.[0] ?? currentTemp);
+  const todayMin = Math.round(weatherData?.daily?.temperature_2m_min?.[0] ?? currentTemp);
+  const description = WEATHER_CODE_MAP[currentCode] ?? "zmienna pogoda";
+
+  return `Pogoda dla ${place.name}: teraz ${currentTemp} stopni, ${description}. Wiatr około ${currentWind} kilometrów na godzinę. Dzisiaj od ${todayMin} do ${todayMax} stopni.`;
+};
 
 export const AutoVoiceListener = () => {
   const { user } = useAuth();
@@ -97,7 +157,7 @@ export const AutoVoiceListener = () => {
       setIsListening(false);
       setAutoListenEnabled(false);
       localStorage.setItem("auto-voice-listen", "false");
-      toast.info("🎙️ Mikrofon wyłączony po 30s ciszy");
+      toast.info("🎙️ Mikrofon wyłączony po 2 minutach ciszy");
     }, SILENCE_TIMEOUT_MS);
   }, []);
 
@@ -391,6 +451,20 @@ export const AutoVoiceListener = () => {
       return;
     }
 
+    // Weather command (online)
+    if (includesAny(normalized, ["pogoda", "prognoza", "jaka pogoda", "sprawdz pogode"])) {
+      toast.loading("🌤️ Sprawdzam pogodę w sieci...", { id: "voice-weather" });
+      try {
+        const weatherSummary = await getWeatherSummary(command);
+        toast.success(`🌤️ ${weatherSummary.slice(0, 80)}...`, { id: "voice-weather", duration: 4500 });
+        await safeSpeakAndResume(weatherSummary);
+      } catch {
+        toast.error("Nie udało się pobrać pogody", { id: "voice-weather" });
+        await safeSpeakAndResume("Nie udało mi się sprawdzić pogody. Spróbuj ponownie za chwilę.");
+      }
+      return;
+    }
+
     if (includesAny(normalized, ["wznow", "kontynuuj", "graj dalej", "resume"])) {
       resumePlayback();
       await safeSpeakAndResume("Wznawiam odtwarzanie");
@@ -536,13 +610,17 @@ export const AutoVoiceListener = () => {
     try {
       const rec = new SpeechAPI() as SpeechRecognitionInstance;
       rec.continuous = true;
-      rec.interimResults = false;
+      rec.interimResults = true;
       rec.lang = "pl-PL";
       rec.onresult = (event: SpeechRecognitionEvent) => {
         // Guard: ignore anything picked up while TTS is speaking
         if (isSpeakingRef.current) return;
+
+        // Keep microphone session alive while user is speaking
+        resetSilenceTimer();
+
         const last = event.results[event.results.length - 1];
-        if (last.isFinal) processCommand(last[0].transcript);
+        if (last?.isFinal) processCommand(last[0].transcript);
       };
       rec.onerror = (event: SpeechRecognitionErrorEvent) => {
         if (event.error === "not-allowed" || event.error === "service-not-allowed") {
@@ -550,6 +628,14 @@ export const AutoVoiceListener = () => {
           setIsListening(false); toast.error("🎙️ Brak dostępu do mikrofonu"); return;
         }
         if (event.error === "aborted") return;
+        if (event.error === "no-speech") {
+          if (autoListenEnabled) {
+            restartTimeoutRef.current = window.setTimeout(() => {
+              try { rec.start(); setIsListening(true); } catch {}
+            }, 300);
+          }
+          return;
+        }
         setIsListening(false);
       };
       rec.onend = () => {
@@ -559,7 +645,7 @@ export const AutoVoiceListener = () => {
             if (autoListenEnabled && recognitionRef.current) {
               try { rec.start(); setIsListening(true); } catch {}
             }
-          }, 1500);
+          }, 500);
         }
       };
       rec.start();
