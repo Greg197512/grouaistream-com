@@ -585,6 +585,8 @@ export const AutoVoiceListener = () => {
     } catch {
       toast.error("Nie udało się uruchomić mikrofonu");
     }
+  }, [user, processCommand, autoListenEnabled, resetSilenceTimer]);
+
   // Keep ref in sync so safeSpeakAndResume can restart listening
   useEffect(() => { startListeningRef.current = startListening; }, [startListening]);
 
