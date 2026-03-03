@@ -73,6 +73,49 @@ export const TopBar = () => {
         </button>
       </div>
 
+      {/* Password Unlock */}
+      <AnimatePresence>
+        {!isUnlocked && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="flex items-center gap-2"
+          >
+            <Lock className="h-4 w-4 text-muted-foreground" />
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (unlock(passwordInput)) {
+                  toast.success("Odblokowano pełną bibliotekę!");
+                } else {
+                  toast.error("Nieprawidłowe hasło");
+                  setPasswordInput("");
+                }
+              }}
+              className="flex items-center gap-1"
+            >
+              <Input
+                type="password"
+                placeholder="Hasło..."
+                value={passwordInput}
+                onChange={(e) => setPasswordInput(e.target.value)}
+                className="w-28 h-8 text-xs bg-secondary border-0 rounded-full"
+              />
+            </form>
+          </motion.div>
+        )}
+        {isUnlocked && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="flex items-center gap-1 text-xs text-emerald-500"
+          >
+            <LockOpen className="h-3.5 w-3.5" />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Search */}
       <form onSubmit={handleSearch} className="flex-1 max-w-md">
         <div className="relative">
