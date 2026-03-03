@@ -252,14 +252,12 @@ export const AutoVoiceListener = () => {
     try {
       toast.loading(`🔍 Szukam: "${query}"...`, { id: "voice-search" });
 
-      // Check if query is a genre name
       const lowerQuery = query.toLowerCase().trim();
       const matchedGenre = GENRE_KEYWORDS.find(g => lowerQuery.includes(g));
 
       let tracks: any[] | null = null;
 
       if (matchedGenre) {
-        // Search by genre field
         const { data } = await supabase
           .from("tracks")
           .select("*")
@@ -268,7 +266,6 @@ export const AutoVoiceListener = () => {
         tracks = data;
       }
 
-      // If no genre match or no results, search by title/artist
       if (!tracks || tracks.length === 0) {
         const { data } = await supabase
           .from("tracks")
@@ -282,9 +279,8 @@ export const AutoVoiceListener = () => {
         const toPlay = count ? tracks.slice(0, count) : tracks;
         playPlaylist(toPlay, 0);
         toast.success(`🎵 Odtwarzam ${toPlay.length} utworów: ${toPlay[0].title}`, { id: "voice-search", duration: 4000 });
-        speak(`Odtwarzam ${toPlay.length} utworów ${matchedGenre || ""}, ${toPlay[0].title}`);
+        await safeSpeakAndResume(`Odtwarzam ${toPlay.length} utworów ${matchedGenre || ""}, ${toPlay[0].title}`);
       } else {
-        // Track not found locally - ask AI to find YouTube video ID
         toast.loading(`🌐 Szukam w sieci: "${query}"...`, { id: "voice-search" });
         try {
           const { data: aiData, error: aiError } = await supabase.functions.invoke("ai-assistant", {
@@ -298,14 +294,12 @@ export const AutoVoiceListener = () => {
             const videoIdMatch = aiData.response.match(/VIDEOID:([a-zA-Z0-9_-]{11})/);
             if (videoIdMatch) {
               const videoId = videoIdMatch[1];
-              // Try to download via youtube-download
               toast.loading(`⬇️ Pobieram z YouTube...`, { id: "voice-search" });
               const { data: dlData, error: dlError } = await supabase.functions.invoke("youtube-download", {
                 body: { videoId, title: query, artist: "YouTube" }
               });
               
               if (!dlError && dlData?.url) {
-                // Save track to DB and play
                 const { data: newTrack } = await supabase.from("tracks").insert({
                   title: query,
                   artist: "YouTube",
@@ -318,43 +312,38 @@ export const AutoVoiceListener = () => {
                 if (newTrack) {
                   playPlaylist([newTrack], 0);
                   toast.success(`🎵 Pobrano i odtwarzam: ${query}`, { id: "voice-search", duration: 4000 });
-                  speak(`Pobrałem i odtwarzam ${query}`);
+                  await safeSpeakAndResume(`Pobrałem i odtwarzam ${query}`);
                 }
               } else {
-                // Fallback: play via YouTube embed
                 const fallbackTrack = {
                   id: crypto.randomUUID(),
-                  title: query,
-                  artist: "YouTube",
-                  album: null,
+                  title: query, artist: "YouTube", album: null,
                   audio_url: null,
                   video_url: `https://www.youtube.com/watch?v=${videoId}`,
                   cover_url: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
-                  genre: null,
-                  mood: null,
-                  duration: 180,
+                  genre: null, mood: null, duration: 180,
                 };
                 playPlaylist([fallbackTrack], 0);
                 toast.success(`🎵 Odtwarzam z YouTube: ${query}`, { id: "voice-search", duration: 4000 });
-                speak(`Odtwarzam z YouTube: ${query}`);
+                await safeSpeakAndResume(`Odtwarzam z YouTube: ${query}`);
               }
             } else {
               toast.error(`Nie znaleziono: "${query}"`, { id: "voice-search" });
-              speak(`Nie znalazłam utworu ${query}`);
+              await safeSpeakAndResume(`Nie znalazłam utworu ${query}`);
             }
           } else {
             toast.error(`Nie znaleziono: "${query}"`, { id: "voice-search" });
-            speak(`Nie znalazłam utworu ${query}`);
+            await safeSpeakAndResume(`Nie znalazłam utworu ${query}`);
           }
         } catch {
           toast.error(`Nie znaleziono: "${query}"`, { id: "voice-search" });
-          speak(`Nie znalazłam utworu ${query}`);
+          await safeSpeakAndResume(`Nie znalazłam utworu ${query}`);
         }
       }
     } catch {
       toast.error("Błąd wyszukiwania", { id: "voice-search" });
     }
-  }, [playPlaylist]);
+  }, [playPlaylist, safeSpeakAndResume]);
 
   const processCommand = useCallback(async (command: string) => {
     const lower = command.toLowerCase().trim();
