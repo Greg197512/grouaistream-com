@@ -7,7 +7,7 @@ import { useAI } from "@/contexts/AIContext";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { useAssistantConfig } from "@/hooks/useAssistantConfig";
 import { AssistantNamingModal } from "@/components/modals/AssistantNamingModal";
-import { speak } from "@/utils/tts";
+import { speak, isTTSSpeaking } from "@/utils/tts";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
