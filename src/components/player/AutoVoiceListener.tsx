@@ -345,6 +345,9 @@ export const AutoVoiceListener = () => {
     }
   }, [playPlaylist, safeSpeakAndResume]);
 
+  // Guard against concurrent command processing
+  const isProcessingCommandRef = useRef(false);
+
   const processCommand = useCallback(async (command: string) => {
     const lower = command.toLowerCase().trim();
     const normalized = normalizeCommand(command);
@@ -353,52 +356,38 @@ export const AutoVoiceListener = () => {
     // Guard: ignore if TTS is still speaking (mic echo protection)
     if (isSpeakingRef.current) return;
 
+    // Guard: ignore if already processing a command
+    if (isProcessingCommandRef.current) {
+      console.log("[Voice] Ignoring command, already processing:", command);
+      return;
+    }
+    isProcessingCommandRef.current = true;
+
     setLastTranscript(command);
     setShowIndicator(true);
     resetSilenceTimer();
 
-    // Shutdown commands
-    if (lower.includes("wyłącz się") || lower.includes("wyłącz") && lower.includes("asystent") || lower.includes("zamknij się")) {
-      shutdownMic();
-      return;
-    }
-
-    // Check if user called assistant by name -> AI suggestions (only suggest, don't auto-play)
-    if (assistantName && lower.includes(assistantName.toLowerCase())) {
-      await safeSpeakAndResume(`Cześć! Sprawdzam co mam dla Ciebie na dziś. Powiedz "puść" żeby odtworzyć.`);
-      toast.success(`🎤 ${assistantName}: Analizuję Twoje preferencje...`);
-      await fetchAISuggestions();
-      return;
-    }
-
-    // Play suggested tracks ONLY when user explicitly says to
-    if (showSuggestions && aiSuggestions.length > 0 && (lower.includes("puść") || lower.includes("graj") || lower.includes("odtwórz") || lower.includes("tak") || lower.includes("play"))) {
-      const tracks = aiSuggestions.map((s: any) => ({
-        id: s.id, title: s.title, artist: s.artist,
-        album: null, audio_url: null, cover_url: null,
-        genre: s.genre, mood: s.mood, duration: 180,
-      }));
-      playPlaylist(tracks, 0);
-      await safeSpeakAndResume(`Odtwarzam moje propozycje dla Ciebie!`);
-      setShowSuggestions(false);
-      return;
-    }
-
-    // STOP command - always force pause/stop the player
+    try {
+    // STOP command - HIGHEST PRIORITY - check first before anything else
     const stopRequested = includesAny(normalized, [
-      "stop",
+      "stop", "stopp", "stup", "stap",
       "zatrzymaj",
-      "pauza",
-      "pauze",
+      "pauza", "pauze", "pause",
       "wstrzymaj",
-      "wylacz player",
-      "wylacz muzyke",
-    ]);
+      "wylacz player", "wylacz muzyk",
+      "cisza", "ucisz",
+    ]) || includesAny(lower, ["stop", "pauza", "zatrzymaj", "wstrzymaj", "pause"]);
 
     if (stopRequested) {
       pausePlayback();
-      await safeSpeakAndResume("Zatrzymuję odtwarzanie");
-      toast.info("⏹️ Player zatrzymany");
+      await safeSpeakAndResume("Zatrzymuję");
+      toast.info("⏹️ Zatrzymano");
+      return;
+    }
+
+    // Shutdown commands
+    if (lower.includes("wyłącz się") || (lower.includes("wyłącz") && lower.includes("asystent")) || lower.includes("zamknij się")) {
+      shutdownMic();
       return;
     }
 
@@ -498,11 +487,13 @@ export const AutoVoiceListener = () => {
       toast.loading(`🎙️ AI analizuje...`, { id: "voice-cmd" });
       
       if (isAIEnabled) {
+        const requestedCount = parsePolishNumber(command);
         const result = await processVoiceCommand(command);
         if (result.action === "play" && result.tracks?.length) {
-          playPlaylist(result.tracks, 0);
-          toast.success(`🎵 Odtwarzam ${result.tracks.length} utworów`, { id: "voice-cmd", duration: 4000 });
-          await safeSpeakAndResume(`Odtwarzam ${result.tracks.length} utworów`);
+          const limitedTracks = requestedCount ? result.tracks.slice(0, requestedCount) : result.tracks.slice(0, 10);
+          playPlaylist(limitedTracks, 0);
+          toast.success(`🎵 Odtwarzam ${limitedTracks.length} utworów`, { id: "voice-cmd", duration: 4000 });
+          await safeSpeakAndResume(`Odtwarzam ${limitedTracks.length} utworów`);
           return;
         } else if (result.action === "pause") {
           pausePlayback(); await safeSpeakAndResume("Pauza");
@@ -530,6 +521,9 @@ export const AutoVoiceListener = () => {
     } catch {
       await safeSpeakAndResume("Przepraszam, nie rozumiem. Możesz powtórzyć?");
       toast.error("Przepraszam, nie rozumiem. Możesz powtórzyć?", { id: "voice-cmd" });
+    }
+    } finally {
+      isProcessingCommandRef.current = false;
     }
   }, [isAIEnabled, processVoiceCommand, playPlaylist, nextTrack, prevTrack, setVolume, tryNavigate, searchAndPlay, resetSilenceTimer, assistantName, fetchAISuggestions, shutdownMic, showSuggestions, aiSuggestions, pausePlayback, resumePlayback, restartCurrentTrack, parsePolishNumber, handlePlayFromAI, safeSpeakAndResume]);
 
