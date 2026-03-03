@@ -118,10 +118,13 @@ const Search = () => {
           id: dlData.trackId || crypto.randomUUID(),
           title: dlData.title || query,
           artist: dlData.artist || "YouTube",
+          album: dlData.album || undefined,
           duration: dlData.duration || 240,
           audio_url: dlData.audioUrl,
           cover_url: dlData.coverUrl || undefined,
           video_url: `https://www.youtube.com/watch?v=${videoId}`,
+          genre: undefined,
+          mood: undefined,
         };
         toast.dismiss(toastId);
         toast.success(`✅ Znaleziono: ${newTrack.title}`);
@@ -132,8 +135,13 @@ const Search = () => {
           id: crypto.randomUUID(),
           title: query,
           artist: "YouTube",
+          album: undefined,
           duration: 240,
+          audio_url: undefined,
+          cover_url: undefined,
           video_url: `https://www.youtube.com/watch?v=${videoId}`,
+          genre: undefined,
+          mood: undefined,
         };
         toast.dismiss(toastId);
         toast.success(`▶️ Odtwarzam z YouTube: ${query}`);
