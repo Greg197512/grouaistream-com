@@ -318,22 +318,117 @@ export const HeroSection = () => {
             </div>
           </motion.div>
 
-          {/* === MAIN TITLE with equalizer bars under each letter === */}
+          {/* === MAIN TITLE with equalizer bars hitting letters === */}
           <div className="mb-6">
             <h1 className="font-display text-4xl md:text-6xl lg:text-7xl font-bold leading-tight">
-              {/* Line 1: fully static text */}
-              <span className="block">{t("hero.title1")}</span>
-              {/* Line 2: fully static gradient text */}
-              <span className="groove-gradient-text block">{t("hero.titleHighlight")}</span>
+              {/* Line 1: letters with eq bars */}
+              <span className="flex flex-wrap">
+                {t("hero.title1").split("").map((char, i) => {
+                  const freqIndex = i % blendedFrequencies.length;
+                  const freq = blendedFrequencies[freqIndex] ?? 0;
+                  const barHeight = isPlaying ? Math.max(4, freq * 28) : 4;
+                  const letterLift = isPlaying ? freq * 18 : 0;
+                  const hueShift = isPlaying ? (Date.now() / 40 + i * 12) % 360 : 0;
+                  const barHue = isPlaying ? (15 + hueShift * 0.3 + freq * 40) % 60 : 25;
+                  const barSat = 85 + freq * 15;
+                  const barLight = 45 + freq * 20;
+                  return (
+                    <span
+                      key={`t1-${i}`}
+                      className="inline-flex flex-col items-center relative"
+                      style={{ minWidth: char === ' ' ? '0.35em' : undefined }}
+                    >
+                      <span
+                        className="inline-block"
+                        style={{
+                          transform: `translateY(${-letterLift}px) scale(${1 + (isPlaying ? freq * 0.08 : 0)})`,
+                          transition: 'transform 0.07s ease-out',
+                          textShadow: isPlaying && freq > 0.3
+                            ? `0 0 ${freq * 16}px hsl(${barHue} ${barSat}% ${barLight}% / ${freq * 0.6}), 0 ${letterLift * 0.5}px ${letterLift}px hsl(${barHue} 90% 50% / ${freq * 0.3})`
+                            : undefined,
+                          color: isPlaying && freq > 0.4
+                            ? `hsl(${barHue} ${barSat}% ${barLight + 15}%)`
+                            : undefined,
+                        }}
+                      >
+                        {char === ' ' ? '\u00A0' : char}
+                      </span>
+                      {char !== ' ' && (
+                        <span
+                          className="block rounded-full mt-[-2px]"
+                          style={{
+                            width: '70%',
+                            height: `${barHeight}px`,
+                            background: `linear-gradient(to top, hsl(${barHue} ${barSat}% ${barLight}%), hsl(${barHue + 15} 100% ${barLight + 15}%))`,
+                            boxShadow: isPlaying
+                              ? `0 0 ${freq * 10}px hsl(${barHue} 90% 50% / ${freq * 0.5}), 0 0 ${freq * 20}px hsl(${barHue} 80% 50% / ${freq * 0.2})`
+                              : 'none',
+                            opacity: isPlaying ? 0.5 + freq * 0.5 : 0.2,
+                            transition: 'height 0.07s ease-out, opacity 0.07s ease-out',
+                            borderRadius: '2px',
+                          }}
+                        />
+                      )}
+                    </span>
+                  );
+                })}
+              </span>
+              {/* Line 2: gradient letters with eq bars */}
+              <span className="flex flex-wrap mt-1">
+                {t("hero.titleHighlight").split("").map((char, i) => {
+                  const freqIndex = (i + 7) % blendedFrequencies.length;
+                  const freq = blendedFrequencies[freqIndex] ?? 0;
+                  const barHeight = isPlaying ? Math.max(4, freq * 32) : 4;
+                  const letterLift = isPlaying ? freq * 22 : 0;
+                  const hueShift = isPlaying ? (Date.now() / 35 + i * 15) % 360 : 0;
+                  const barHue = isPlaying ? (10 + hueShift * 0.25 + freq * 50) % 60 : 20;
+                  const barSat = 90 + freq * 10;
+                  const barLight = 48 + freq * 18;
+                  return (
+                    <span
+                      key={`t2-${i}`}
+                      className="inline-flex flex-col items-center relative"
+                      style={{ minWidth: char === ' ' ? '0.35em' : undefined }}
+                    >
+                      <span
+                        className={`inline-block ${!isPlaying || freq <= 0.4 ? 'groove-gradient-text' : ''}`}
+                        style={{
+                          transform: `translateY(${-letterLift}px) scale(${1 + (isPlaying ? freq * 0.1 : 0)})`,
+                          transition: 'transform 0.07s ease-out',
+                          textShadow: isPlaying && freq > 0.3
+                            ? `0 0 ${freq * 20}px hsl(${barHue} ${barSat}% ${barLight}% / ${freq * 0.7}), 0 ${letterLift * 0.6}px ${letterLift * 1.2}px hsl(${barHue} 95% 55% / ${freq * 0.35})`
+                            : undefined,
+                          color: isPlaying && freq > 0.4
+                            ? `hsl(${barHue} ${barSat}% ${barLight + 12}%)`
+                            : undefined,
+                          WebkitBackgroundClip: isPlaying && freq > 0.4 ? 'unset' : undefined,
+                          backgroundClip: isPlaying && freq > 0.4 ? 'unset' : undefined,
+                          background: isPlaying && freq > 0.4 ? 'none' : undefined,
+                        }}
+                      >
+                        {char === ' ' ? '\u00A0' : char}
+                      </span>
+                      {char !== ' ' && (
+                        <span
+                          className="block rounded-full mt-[-2px]"
+                          style={{
+                            width: '75%',
+                            height: `${barHeight}px`,
+                            background: `linear-gradient(to top, hsl(${barHue} ${barSat}% ${barLight - 5}%), hsl(${barHue + 20} 100% ${barLight + 10}%), hsl(${barHue + 30} 100% ${barLight + 20}%))`,
+                            boxShadow: isPlaying
+                              ? `0 0 ${freq * 12}px hsl(${barHue} 95% 55% / ${freq * 0.6}), 0 0 ${freq * 24}px hsl(${barHue + 10} 85% 50% / ${freq * 0.25})`
+                              : 'none',
+                            opacity: isPlaying ? 0.6 + freq * 0.4 : 0.2,
+                            transition: 'height 0.07s ease-out, opacity 0.07s ease-out',
+                            borderRadius: '2px',
+                          }}
+                        />
+                      )}
+                    </span>
+                  );
+                })}
+              </span>
             </h1>
-            <div
-              className="h-2 mt-1 rounded-full mx-auto max-w-lg"
-              style={{
-                background: isPlaying 
-                  ? `radial-gradient(ellipse at 50% 0%, hsl(25 95% 50% / ${0.15 + levels.bass * 0.35}) 0%, transparent 80%)`
-                  : 'transparent',
-              }}
-            />
           </div>
 
           <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-xl">{t("hero.subtitle")}</p>
