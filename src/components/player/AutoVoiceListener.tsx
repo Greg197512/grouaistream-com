@@ -174,22 +174,100 @@ export const AutoVoiceListener = () => {
     return false;
   }, [navigate]);
 
+  const handlePlayFromAI = useCallback(async (trackId: string) => {
+    try {
+      const { data: track } = await supabase.from("tracks").select("*").eq("id", trackId).single();
+      if (track) {
+        playPlaylist([track], 0);
+        speak(`Odtwarzam ${track.title}`);
+      }
+    } catch {}
+  }, [playPlaylist]);
+
+  const GENRE_KEYWORDS = [
+    "rock", "pop", "punk", "disco", "jazz", "blues", "metal", "hip-hop", "hip hop",
+    "rap", "electronic", "techno", "house", "classical", "reggae", "soul", "funk",
+    "country", "r&b", "rnb", "indie", "alternative", "ambient", "latin", "folk",
+  ];
+
   const searchAndPlay = useCallback(async (query: string, count?: number) => {
     try {
       toast.loading(`🔍 Szukam: "${query}"...`, { id: "voice-search" });
-      const { data: tracks } = await supabase
-        .from("tracks")
-        .select("*")
-        .or(`title.ilike.%${query}%,artist.ilike.%${query}%`)
-        .limit(count || 10);
+
+      // Check if query is a genre name
+      const lowerQuery = query.toLowerCase().trim();
+      const matchedGenre = GENRE_KEYWORDS.find(g => lowerQuery.includes(g));
+
+      let tracks: any[] | null = null;
+
+      if (matchedGenre) {
+        // Search by genre field
+        const { data } = await supabase
+          .from("tracks")
+          .select("*")
+          .ilike("genre", `%${matchedGenre}%`)
+          .limit(count || 10);
+        tracks = data;
+      }
+
+      // If no genre match or no results, search by title/artist
+      if (!tracks || tracks.length === 0) {
+        const { data } = await supabase
+          .from("tracks")
+          .select("*")
+          .or(`title.ilike.%${query}%,artist.ilike.%${query}%`)
+          .limit(count || 10);
+        tracks = data;
+      }
+
       if (tracks && tracks.length > 0) {
         const toPlay = count ? tracks.slice(0, count) : tracks;
         playPlaylist(toPlay, 0);
         toast.success(`🎵 Odtwarzam ${toPlay.length} utworów: ${toPlay[0].title}`, { id: "voice-search", duration: 4000 });
-        speak(`Odtwarzam ${toPlay[0].title} ${toPlay[0].artist}`);
+        speak(`Odtwarzam ${toPlay.length} utworów ${matchedGenre || ""}, ${toPlay[0].title}`);
       } else {
-        toast.error(`Nie znaleziono: "${query}"`, { id: "voice-search" });
-        speak(`Nie znalazłam utworu ${query}`);
+        // Track not found locally - try YouTube fallback
+        toast.loading(`🌐 Szukam w YouTube: "${query}"...`, { id: "voice-search" });
+        try {
+          const { data: ytData, error: ytError } = await supabase.functions.invoke("youtube-download", {
+            body: { query: query, searchOnly: true }
+          });
+          if (!ytError && ytData?.videoId) {
+            // Download and add to library
+            toast.loading(`⬇️ Pobieram: "${ytData.title}"...`, { id: "voice-search" });
+            const { data: dlData, error: dlError } = await supabase.functions.invoke("youtube-download", {
+              body: { url: `https://www.youtube.com/watch?v=${ytData.videoId}` }
+            });
+            if (!dlError && dlData?.track) {
+              playPlaylist([dlData.track], 0);
+              toast.success(`🎵 Pobrano i odtwarzam: ${dlData.track.title}`, { id: "voice-search", duration: 4000 });
+              speak(`Znalazłem i odtwarzam ${dlData.track.title}`);
+            } else {
+              // Fallback: play via YouTube video URL
+              const fallbackTrack = {
+                id: crypto.randomUUID(),
+                title: ytData.title || query,
+                artist: ytData.artist || "YouTube",
+                album: null,
+                audio_url: null,
+                video_url: `https://www.youtube.com/watch?v=${ytData.videoId}`,
+                cover_url: ytData.thumbnail || null,
+                genre: null,
+                mood: null,
+                duration: ytData.duration || 180,
+              };
+              playPlaylist([fallbackTrack], 0);
+              toast.success(`🎵 Odtwarzam z YouTube: ${fallbackTrack.title}`, { id: "voice-search", duration: 4000 });
+              speak(`Odtwarzam z YouTube: ${fallbackTrack.title}`);
+            }
+          } else {
+            toast.error(`Nie znaleziono: "${query}"`, { id: "voice-search" });
+            speak(`Nie znalazłam utworu ${query} ani w bibliotece, ani na YouTube`);
+          }
+        } catch {
+          toast.error(`Nie znaleziono: "${query}"`, { id: "voice-search" });
+          speak(`Nie znalazłam utworu ${query}`);
+        }
       }
     } catch {
       toast.error("Błąd wyszukiwania", { id: "voice-search" });
@@ -285,30 +363,52 @@ export const AutoVoiceListener = () => {
       return;
     }
 
-    const selectMatch = lower.match(/wybierz\s+(\d+)\s+(?:utw|piosen)\w*\s+(.+)/i);
-    if (selectMatch) {
-      const count = parseInt(selectMatch[1]);
-      const query = selectMatch[2].replace(/i\s+włącz.*/i, "").replace(/w\s+playerze/i, "").trim();
+    // "wybierz X rock/pop/etc" - genre-based selection (number + genre)
+    const selectGenreMatch = lower.match(/wybierz\s+(\d+)\s+(.+)/i);
+    if (selectGenreMatch) {
+      const count = parseInt(selectGenreMatch[1]);
+      const query = selectGenreMatch[2].replace(/i\s+włącz.*/i, "").replace(/w\s+playerze/i, "").replace(/utw\w*/i, "").replace(/piosen\w*/i, "").trim();
       await searchAndPlay(query, count);
       return;
     }
 
-    // AI fallback
-    if (isAIEnabled) {
-      try {
-        toast.loading(`🎙️ AI analizuje...`, { id: "voice-cmd" });
+    // AI fallback - route ALL other questions to the AI assistant
+    try {
+      toast.loading(`🎙️ AI analizuje...`, { id: "voice-cmd" });
+      
+      // First try music-specific AI command
+      if (isAIEnabled) {
         const result = await processVoiceCommand(command);
         if (result.action === "play" && result.tracks?.length) {
           playPlaylist(result.tracks, 0);
           toast.success(`🎵 Odtwarzam ${result.tracks.length} utworów`, { id: "voice-cmd", duration: 4000 });
           speak(`Odtwarzam ${result.tracks.length} utworów`);
+          return;
         } else if (result.action === "pause") {
           pausePlayback(); speak("Pauza");
           toast.success("⏸️ Pauza", { id: "voice-cmd" });
+          return;
         }
-      } catch {
-        toast.error("Nie udało się przetworzyć komendy", { id: "voice-cmd" });
       }
+
+      // General AI assistant fallback - answers weather, song info, any question
+      const { data: aiData, error: aiError } = await supabase.functions.invoke("ai-assistant", {
+        body: { message: command, history: [] }
+      });
+      if (!aiError && aiData?.response) {
+        const response = aiData.response;
+        speak(response.slice(0, 300)); // TTS limit
+        toast.success(`🤖 ${response.slice(0, 120)}...`, { id: "voice-cmd", duration: 6000 });
+        
+        // If AI found a track link, play it
+        if (aiData.trackLink) {
+          await handlePlayFromAI(aiData.trackLink.id);
+        }
+      } else {
+        toast.dismiss("voice-cmd");
+      }
+    } catch {
+      toast.error("Nie udało się przetworzyć komendy", { id: "voice-cmd" });
     }
   }, [isAIEnabled, processVoiceCommand, playPlaylist, nextTrack, prevTrack, setVolume, tryNavigate, searchAndPlay, resetSilenceTimer, assistantName, fetchAISuggestions, shutdownMic, showSuggestions, aiSuggestions, pausePlayback, resumePlayback, restartCurrentTrack]);
 
