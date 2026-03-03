@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
-import { Search as SearchIcon, Music, Mic, Download } from "lucide-react";
+import { Search as SearchIcon, Music, Mic, Download, Loader2, Youtube, Sparkles } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { TrackRow } from "@/components/cards/TrackRow";
 import { supabase } from "@/integrations/supabase/client";
 import { usePlayer, Track } from "@/contexts/PlayerContext";
