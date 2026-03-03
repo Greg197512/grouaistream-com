@@ -345,6 +345,9 @@ export const AutoVoiceListener = () => {
     }
   }, [playPlaylist, safeSpeakAndResume]);
 
+  // Guard against concurrent command processing
+  const isProcessingCommandRef = useRef(false);
+
   const processCommand = useCallback(async (command: string) => {
     const lower = command.toLowerCase().trim();
     const normalized = normalizeCommand(command);
@@ -352,6 +355,13 @@ export const AutoVoiceListener = () => {
 
     // Guard: ignore if TTS is still speaking (mic echo protection)
     if (isSpeakingRef.current) return;
+
+    // Guard: ignore if already processing a command
+    if (isProcessingCommandRef.current) {
+      console.log("[Voice] Ignoring command, already processing:", command);
+      return;
+    }
+    isProcessingCommandRef.current = true;
 
     setLastTranscript(command);
     setShowIndicator(true);
