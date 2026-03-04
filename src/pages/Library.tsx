@@ -193,10 +193,10 @@ const Library = () => {
 
     if (idsToDelete.length > 0) {
       await supabase.from("liked_songs").delete().in("id", idsToDelete);
-      toast.success(`Usunięto katalog ${genre} (${idsToDelete.length} utworów)`);
+      toast.success(`${t("library.catalogDeleted")} ${genre} (${idsToDelete.length} ${t("library.tracks")})`);
       loadLibrary();
     } else {
-      toast.info(`Katalog ${genre} jest już pusty`);
+      toast.info(`${t("library.catalogEmpty")} — ${genre}`);
     }
   };
 
@@ -344,9 +344,9 @@ const Library = () => {
         <div className="mb-8">
           <div className="flex items-center gap-2 mb-4">
             <FolderOpen className="h-5 w-5 text-primary" />
-            <h2 className="font-display text-xl font-bold">Katalogi gatunków</h2>
+            <h2 className="font-display text-xl font-bold">{t("library.genreCatalogs")}</h2>
             <Badge variant="secondary" className="text-xs">
-              <Sparkles className="h-3 w-3 mr-1" /> AI sortuje automatycznie
+              <Sparkles className="h-3 w-3 mr-1" /> {t("library.aiSortsAuto")}
             </Badge>
           </div>
           
@@ -371,7 +371,7 @@ const Library = () => {
                     <span className="text-2xl">{cat.emoji}</span>
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-sm truncate">{cat.genre}</p>
-                      <p className="text-xs text-muted-foreground">{count} utworów</p>
+                      <p className="text-xs text-muted-foreground">{count} {t("library.tracks")}</p>
                     </div>
                     <ChevronRight className={cn("h-4 w-4 transition-transform", isOpen && "rotate-90")} />
                   </motion.button>
@@ -391,13 +391,13 @@ const Library = () => {
                               if (genreTracks.length) playPlaylist(genreTracks);
                             });
                           }}>
-                            <Play className="h-4 w-4 mr-2" /> Odtwórz wszystkie
+                            <Play className="h-4 w-4 mr-2" /> {t("library.playAll")}
                           </DropdownMenuItem>
                           <DropdownMenuItem 
                             onClick={() => deleteGenreCatalog(cat.genre)}
                             className="text-destructive focus:text-destructive"
                           >
-                            <Trash2 className="h-4 w-4 mr-2" /> Usuń katalog
+                            <Trash2 className="h-4 w-4 mr-2" /> {t("library.deleteCatalog")}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -421,12 +421,12 @@ const Library = () => {
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="font-semibold flex items-center gap-2">
                       <FolderOpen className="h-4 w-4 text-primary" />
-                      {openGenre} — {genreTracks.length} utworów
+                      {openGenre} — {genreTracks.length} {t("library.tracks")}
                     </h3>
                     <div className="flex gap-2">
                       {genreTracks.length > 0 && (
                         <Button size="sm" variant="outline" onClick={() => playPlaylist(genreTracks)} className="gap-1">
-                          <Play className="h-3.5 w-3.5" /> Odtwórz
+                          <Play className="h-3.5 w-3.5" /> {t("library.play")}
                         </Button>
                       )}
                       <Button size="sm" variant="ghost" onClick={() => setOpenGenre(null)}>
@@ -440,7 +440,7 @@ const Library = () => {
                       <Loader2 className="h-6 w-6 animate-spin text-primary" />
                     </div>
                   ) : genreTracks.length === 0 ? (
-                    <p className="text-center py-6 text-muted-foreground text-sm">Brak utworów w tym katalogu</p>
+                    <p className="text-center py-6 text-muted-foreground text-sm">{t("library.noTracksInCatalog")}</p>
                   ) : (
                     <div className="space-y-1 max-h-80 overflow-y-auto">
                       {genreTracks.map((track) => {
