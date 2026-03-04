@@ -10,6 +10,7 @@ import { useTimeRotation } from "@/hooks/useTimeRotation";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import heroBg from "@/assets/hero-bg.jpg";
+import { BassParticles } from "@/components/effects/BassParticles";
 
 // Gentle idle equalizer frequencies
 function generateIdleFrequencies(barCount: number): number[] {
@@ -318,8 +319,9 @@ export const HeroSection = () => {
           </motion.div>
 
           {/* === MAIN TITLE with equalizer bars hitting letters === */}
-          <div className="mb-6">
-            <h1 className="font-display text-4xl md:text-6xl lg:text-7xl font-bold leading-tight">
+          <div className="mb-6 relative">
+            <BassParticles bass={levels.bass} overall={levels.overall} isPlaying={isPlaying} />
+            <h1 className="font-display text-4xl md:text-6xl lg:text-7xl font-bold leading-tight relative z-10">
               {/* Line 1: letters with eq bars */}
               <span className="flex flex-wrap">
                 {t("hero.title1").split("").map((char, i) => {
