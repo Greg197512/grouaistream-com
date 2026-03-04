@@ -26,14 +26,15 @@ function generateIdleFrequencies(barCount: number): number[] {
 
 export const HeroSection = () => {
   const navigate = useNavigate();
-  const { playPlaylist, isPlaying, audioElement, isVideoMode } = usePlayer();
+  const { playPlaylist, isPlaying, audioElement, isVideoMode, currentTrack } = usePlayer();
   const { t } = useLanguage();
   const [isLoading, setIsLoading] = useState(false);
   const levels = useAudioAnalyser(audioElement, isPlaying, isVideoMode);
   const timeTheme = useTimeRotation();
   const [idleFrequencies, setIdleFrequencies] = useState(() => generateIdleFrequencies(18));
   const [blendedFrequencies, setBlendedFrequencies] = useState(() => generateIdleFrequencies(18));
-  const transitionRef = useRef(0); // 0 = idle, 1 = playing
+  const transitionRef = useRef(0);
+  const genrePalette = getGenrePalette(currentTrack?.genre);
 
   // Animate idle equalizer + smooth blend
   useEffect(() => {
