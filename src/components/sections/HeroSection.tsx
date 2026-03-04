@@ -324,7 +324,7 @@ export const HeroSection = () => {
 
           {/* === MAIN TITLE === */}
           <div className="mb-6 relative">
-            <BassParticles bass={levels.bass} overall={levels.overall} isPlaying={isPlaying} />
+            <BassParticles bass={levels.bass} overall={levels.overall} isPlaying={isPlaying} palette={genrePalette} />
             <h1 className="font-display text-4xl md:text-6xl lg:text-7xl font-bold leading-tight relative z-10">
               <span className="block">{t("hero.title1")}</span>
               <span className="block groove-gradient-text mt-1">{t("hero.titleHighlight")}</span>
