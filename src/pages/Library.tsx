@@ -27,6 +27,23 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+// Genre cover images
+import genreRock from "@/assets/genres/rock.jpg";
+import genrePop from "@/assets/genres/pop.jpg";
+import genreHiphop from "@/assets/genres/hiphop.jpg";
+import genreRap from "@/assets/genres/rap.jpg";
+import genreMetal from "@/assets/genres/metal.jpg";
+import genrePunk from "@/assets/genres/punk.jpg";
+import genreElectronic from "@/assets/genres/electronic.jpg";
+import genreJazz from "@/assets/genres/jazz.jpg";
+import genreClassical from "@/assets/genres/classical.jpg";
+import genreRnb from "@/assets/genres/rnb.jpg";
+import genreIndie from "@/assets/genres/indie.jpg";
+import genreAlternative from "@/assets/genres/alternative.jpg";
+import genreReggae from "@/assets/genres/reggae.jpg";
+import genreBlues from "@/assets/genres/blues.jpg";
+import genreCountry from "@/assets/genres/country.jpg";
+
 interface Playlist {
   id: string;
   title: string;
@@ -37,21 +54,21 @@ interface Playlist {
 }
 
 const GENRE_CATALOGS = [
-  { genre: "Rock", emoji: "🎸", gradient: "from-red-500/20 to-orange-500/20", border: "border-red-500/30" },
-  { genre: "Pop", emoji: "🎤", gradient: "from-pink-500/20 to-rose-500/20", border: "border-pink-500/30" },
-  { genre: "Hip-Hop", emoji: "🎧", gradient: "from-purple-500/20 to-violet-500/20", border: "border-purple-500/30" },
-  { genre: "Rap", emoji: "🎙️", gradient: "from-violet-500/20 to-indigo-500/20", border: "border-violet-500/30" },
-  { genre: "Metal", emoji: "🤘", gradient: "from-zinc-500/20 to-gray-500/20", border: "border-zinc-500/30" },
-  { genre: "Punk", emoji: "⚡", gradient: "from-orange-500/20 to-yellow-500/20", border: "border-orange-500/30" },
-  { genre: "Electronic", emoji: "🎹", gradient: "from-cyan-500/20 to-blue-500/20", border: "border-cyan-500/30" },
-  { genre: "Jazz", emoji: "🎷", gradient: "from-yellow-500/20 to-amber-500/20", border: "border-yellow-500/30" },
-  { genre: "Classical", emoji: "🎻", gradient: "from-emerald-500/20 to-green-500/20", border: "border-emerald-500/30" },
-  { genre: "R&B", emoji: "💜", gradient: "from-rose-500/20 to-pink-500/20", border: "border-rose-500/30" },
-  { genre: "Indie", emoji: "🌿", gradient: "from-teal-500/20 to-emerald-500/20", border: "border-teal-500/30" },
-  { genre: "Alternative", emoji: "🔮", gradient: "from-sky-500/20 to-indigo-500/20", border: "border-sky-500/30" },
-  { genre: "Reggae", emoji: "🌴", gradient: "from-green-500/20 to-yellow-500/20", border: "border-green-500/30" },
-  { genre: "Blues", emoji: "🎺", gradient: "from-blue-500/20 to-indigo-500/20", border: "border-blue-500/30" },
-  { genre: "Country", emoji: "🤠", gradient: "from-amber-500/20 to-orange-500/20", border: "border-amber-500/30" },
+  { genre: "Rock", emoji: "🎸", gradient: "from-red-500/20 to-orange-500/20", border: "border-red-500/30", image: genreRock },
+  { genre: "Pop", emoji: "🎤", gradient: "from-pink-500/20 to-rose-500/20", border: "border-pink-500/30", image: genrePop },
+  { genre: "Hip-Hop", emoji: "🎧", gradient: "from-purple-500/20 to-violet-500/20", border: "border-purple-500/30", image: genreHiphop },
+  { genre: "Rap", emoji: "🎙️", gradient: "from-violet-500/20 to-indigo-500/20", border: "border-violet-500/30", image: genreRap },
+  { genre: "Metal", emoji: "🤘", gradient: "from-zinc-500/20 to-gray-500/20", border: "border-zinc-500/30", image: genreMetal },
+  { genre: "Punk", emoji: "⚡", gradient: "from-orange-500/20 to-yellow-500/20", border: "border-orange-500/30", image: genrePunk },
+  { genre: "Electronic", emoji: "🎹", gradient: "from-cyan-500/20 to-blue-500/20", border: "border-cyan-500/30", image: genreElectronic },
+  { genre: "Jazz", emoji: "🎷", gradient: "from-yellow-500/20 to-amber-500/20", border: "border-yellow-500/30", image: genreJazz },
+  { genre: "Classical", emoji: "🎻", gradient: "from-emerald-500/20 to-green-500/20", border: "border-emerald-500/30", image: genreClassical },
+  { genre: "R&B", emoji: "💜", gradient: "from-rose-500/20 to-pink-500/20", border: "border-rose-500/30", image: genreRnb },
+  { genre: "Indie", emoji: "🌿", gradient: "from-teal-500/20 to-emerald-500/20", border: "border-teal-500/30", image: genreIndie },
+  { genre: "Alternative", emoji: "🔮", gradient: "from-sky-500/20 to-indigo-500/20", border: "border-sky-500/30", image: genreAlternative },
+  { genre: "Reggae", emoji: "🌴", gradient: "from-green-500/20 to-yellow-500/20", border: "border-green-500/30", image: genreReggae },
+  { genre: "Blues", emoji: "🎺", gradient: "from-blue-500/20 to-indigo-500/20", border: "border-blue-500/30", image: genreBlues },
+  { genre: "Country", emoji: "🤠", gradient: "from-amber-500/20 to-orange-500/20", border: "border-amber-500/30", image: genreCountry },
 ];
 
 const Library = () => {
@@ -193,10 +210,10 @@ const Library = () => {
 
     if (idsToDelete.length > 0) {
       await supabase.from("liked_songs").delete().in("id", idsToDelete);
-      toast.success(`Usunięto katalog ${genre} (${idsToDelete.length} utworów)`);
+      toast.success(`${t("library.catalogDeleted")} ${genre} (${idsToDelete.length} ${t("library.tracks")})`);
       loadLibrary();
     } else {
-      toast.info(`Katalog ${genre} jest już pusty`);
+      toast.info(`${t("library.catalogEmpty")} — ${genre}`);
     }
   };
 
@@ -344,9 +361,9 @@ const Library = () => {
         <div className="mb-8">
           <div className="flex items-center gap-2 mb-4">
             <FolderOpen className="h-5 w-5 text-primary" />
-            <h2 className="font-display text-xl font-bold">Katalogi gatunków</h2>
+            <h2 className="font-display text-xl font-bold">{t("library.genreCatalogs")}</h2>
             <Badge variant="secondary" className="text-xs">
-              <Sparkles className="h-3 w-3 mr-1" /> AI sortuje automatycznie
+              <Sparkles className="h-3 w-3 mr-1" /> {t("library.aiSortsAuto")}
             </Badge>
           </div>
           
@@ -362,18 +379,23 @@ const Library = () => {
                     whileTap={{ scale: 0.97 }}
                     onClick={() => openGenreCatalog(cat.genre)}
                     className={cn(
-                      "w-full flex items-center gap-3 p-3 rounded-xl border transition-all text-left",
-                      `bg-gradient-to-r ${cat.gradient} ${cat.border}`,
+                      "w-full rounded-xl border transition-all text-left overflow-hidden",
+                      cat.border,
                       isOpen && "ring-2 ring-primary/50",
                       count === 0 && "opacity-40"
                     )}
                   >
-                    <span className="text-2xl">{cat.emoji}</span>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-sm truncate">{cat.genre}</p>
-                      <p className="text-xs text-muted-foreground">{count} utworów</p>
+                    <div className="relative h-24 w-full">
+                      <img src={cat.image} alt={cat.genre} className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+                      <div className="absolute bottom-2 left-3 right-3 flex items-end justify-between">
+                        <div>
+                          <p className="font-bold text-sm text-white drop-shadow-lg">{cat.genre}</p>
+                          <p className="text-xs text-white/70">{count} {t("library.tracks")}</p>
+                        </div>
+                        <ChevronRight className={cn("h-4 w-4 text-white/70 transition-transform", isOpen && "rotate-90")} />
+                      </div>
                     </div>
-                    <ChevronRight className={cn("h-4 w-4 transition-transform", isOpen && "rotate-90")} />
                   </motion.button>
                   
                   {/* Actions on hover */}
@@ -391,13 +413,13 @@ const Library = () => {
                               if (genreTracks.length) playPlaylist(genreTracks);
                             });
                           }}>
-                            <Play className="h-4 w-4 mr-2" /> Odtwórz wszystkie
+                            <Play className="h-4 w-4 mr-2" /> {t("library.playAll")}
                           </DropdownMenuItem>
                           <DropdownMenuItem 
                             onClick={() => deleteGenreCatalog(cat.genre)}
                             className="text-destructive focus:text-destructive"
                           >
-                            <Trash2 className="h-4 w-4 mr-2" /> Usuń katalog
+                            <Trash2 className="h-4 w-4 mr-2" /> {t("library.deleteCatalog")}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -421,12 +443,12 @@ const Library = () => {
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="font-semibold flex items-center gap-2">
                       <FolderOpen className="h-4 w-4 text-primary" />
-                      {openGenre} — {genreTracks.length} utworów
+                      {openGenre} — {genreTracks.length} {t("library.tracks")}
                     </h3>
                     <div className="flex gap-2">
                       {genreTracks.length > 0 && (
                         <Button size="sm" variant="outline" onClick={() => playPlaylist(genreTracks)} className="gap-1">
-                          <Play className="h-3.5 w-3.5" /> Odtwórz
+                          <Play className="h-3.5 w-3.5" /> {t("library.play")}
                         </Button>
                       )}
                       <Button size="sm" variant="ghost" onClick={() => setOpenGenre(null)}>
@@ -440,7 +462,7 @@ const Library = () => {
                       <Loader2 className="h-6 w-6 animate-spin text-primary" />
                     </div>
                   ) : genreTracks.length === 0 ? (
-                    <p className="text-center py-6 text-muted-foreground text-sm">Brak utworów w tym katalogu</p>
+                    <p className="text-center py-6 text-muted-foreground text-sm">{t("library.noTracksInCatalog")}</p>
                   ) : (
                     <div className="space-y-1 max-h-80 overflow-y-auto">
                       {genreTracks.map((track) => {

@@ -157,6 +157,15 @@ type TranslationKeys = {
   "library.spotifyAddedSuccess": string;
   "library.spotifyImportError": string;
   "library.spotifyImportErrorMsg": string;
+  "library.genreCatalogs": string;
+  "library.aiSortsAuto": string;
+  "library.tracks": string;
+  "library.playAll": string;
+  "library.deleteCatalog": string;
+  "library.play": string;
+  "library.noTracksInCatalog": string;
+  "library.catalogDeleted": string;
+  "library.catalogEmpty": string;
 
   // Liked Songs
   "liked.title": string;
@@ -487,6 +496,15 @@ const pl: TranslationKeys = {
   "library.spotifyAddedSuccess": "Dodano utworów ze Spotify",
   "library.spotifyImportError": "Błąd importu",
   "library.spotifyImportErrorMsg": "Błąd importu ze Spotify.",
+  "library.genreCatalogs": "Katalogi gatunków",
+  "library.aiSortsAuto": "AI sortuje automatycznie",
+  "library.tracks": "utworów",
+  "library.playAll": "Odtwórz wszystkie",
+  "library.deleteCatalog": "Usuń katalog",
+  "library.play": "Odtwórz",
+  "library.noTracksInCatalog": "Brak utworów w tym katalogu",
+  "library.catalogDeleted": "Usunięto katalog",
+  "library.catalogEmpty": "Katalog jest już pusty",
 
   "liked.title": "Polubione Utwory",
   "liked.playlist": "Playlista",
@@ -810,6 +828,15 @@ const en: TranslationKeys = {
   "library.spotifyAddedSuccess": "tracks added from Spotify",
   "library.spotifyImportError": "Import error",
   "library.spotifyImportErrorMsg": "Spotify import error.",
+  "library.genreCatalogs": "Genre Catalogs",
+  "library.aiSortsAuto": "AI sorts automatically",
+  "library.tracks": "tracks",
+  "library.playAll": "Play all",
+  "library.deleteCatalog": "Delete catalog",
+  "library.play": "Play",
+  "library.noTracksInCatalog": "No tracks in this catalog",
+  "library.catalogDeleted": "Catalog deleted",
+  "library.catalogEmpty": "Catalog is already empty",
 
   "liked.title": "Liked Songs",
   "liked.playlist": "Playlist",
@@ -1133,6 +1160,15 @@ const nl: TranslationKeys = {
   "library.spotifyAddedSuccess": "nummers toegevoegd van Spotify",
   "library.spotifyImportError": "Importfout",
   "library.spotifyImportErrorMsg": "Spotify importfout.",
+  "library.genreCatalogs": "Genre Catalogi",
+  "library.aiSortsAuto": "AI sorteert automatisch",
+  "library.tracks": "nummers",
+  "library.playAll": "Alles afspelen",
+  "library.deleteCatalog": "Catalogus verwijderen",
+  "library.play": "Afspelen",
+  "library.noTracksInCatalog": "Geen nummers in deze catalogus",
+  "library.catalogDeleted": "Catalogus verwijderd",
+  "library.catalogEmpty": "Catalogus is al leeg",
 
   "liked.title": "Favoriete Nummers",
   "liked.playlist": "Afspeellijst",
@@ -1456,6 +1492,15 @@ const ua: TranslationKeys = {
   "library.spotifyAddedSuccess": "треків додано зі Spotify",
   "library.spotifyImportError": "Помилка імпорту",
   "library.spotifyImportErrorMsg": "Помилка імпорту Spotify.",
+  "library.genreCatalogs": "Каталоги жанрів",
+  "library.aiSortsAuto": "AI сортує автоматично",
+  "library.tracks": "треків",
+  "library.playAll": "Відтворити все",
+  "library.deleteCatalog": "Видалити каталог",
+  "library.play": "Відтворити",
+  "library.noTracksInCatalog": "Немає треків у цьому каталозі",
+  "library.catalogDeleted": "Каталог видалено",
+  "library.catalogEmpty": "Каталог вже порожній",
 
   "liked.title": "Вподобані Пісні",
   "liked.playlist": "Плейлист",
