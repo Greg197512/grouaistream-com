@@ -379,18 +379,23 @@ const Library = () => {
                     whileTap={{ scale: 0.97 }}
                     onClick={() => openGenreCatalog(cat.genre)}
                     className={cn(
-                      "w-full flex items-center gap-3 p-3 rounded-xl border transition-all text-left",
-                      `bg-gradient-to-r ${cat.gradient} ${cat.border}`,
+                      "w-full rounded-xl border transition-all text-left overflow-hidden",
+                      cat.border,
                       isOpen && "ring-2 ring-primary/50",
                       count === 0 && "opacity-40"
                     )}
                   >
-                    <span className="text-2xl">{cat.emoji}</span>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-sm truncate">{cat.genre}</p>
-                      <p className="text-xs text-muted-foreground">{count} {t("library.tracks")}</p>
+                    <div className="relative h-24 w-full">
+                      <img src={cat.image} alt={cat.genre} className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+                      <div className="absolute bottom-2 left-3 right-3 flex items-end justify-between">
+                        <div>
+                          <p className="font-bold text-sm text-white drop-shadow-lg">{cat.genre}</p>
+                          <p className="text-xs text-white/70">{count} {t("library.tracks")}</p>
+                        </div>
+                        <ChevronRight className={cn("h-4 w-4 text-white/70 transition-transform", isOpen && "rotate-90")} />
+                      </div>
                     </div>
-                    <ChevronRight className={cn("h-4 w-4 transition-transform", isOpen && "rotate-90")} />
                   </motion.button>
                   
                   {/* Actions on hover */}
