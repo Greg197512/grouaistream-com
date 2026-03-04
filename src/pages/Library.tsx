@@ -43,11 +43,6 @@ import genreAlternative from "@/assets/genres/alternative.jpg";
 import genreReggae from "@/assets/genres/reggae.jpg";
 import genreBlues from "@/assets/genres/blues.jpg";
 import genreCountry from "@/assets/genres/country.jpg";
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 interface Playlist {
   id: string;
