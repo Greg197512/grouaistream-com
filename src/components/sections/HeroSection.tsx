@@ -310,7 +310,7 @@ export const HeroSection = () => {
                   <div 
                     className="absolute inset-0 pointer-events-none"
                     style={{ 
-                      background: `radial-gradient(ellipse at ${30 + (isPlaying ? Math.sin(Date.now() / 400) * 20 : 0)}% 50%, hsl(${isPlaying ? (Date.now() / 40) % 50 + 10 : 25} 95% 50% / ${isPlaying ? 0.15 + levels.bass * 0.35 : 0.05}) 0%, transparent 65%)`,
+                      background: `radial-gradient(ellipse at ${30 + (isPlaying ? Math.sin(Date.now() / 400) * 20 : 0)}% 50%, hsl(25 95% 50% / ${isPlaying ? 0.15 + levels.bass * 0.35 : 0.05}) 0%, transparent 65%)`,
                     }}
                   />
                 </div>
