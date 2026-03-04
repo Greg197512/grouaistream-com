@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import heroBg from "@/assets/hero-bg.jpg";
 import { BassParticles } from "@/components/effects/BassParticles";
+import { getGenrePalette } from "@/utils/genreColors";
 
 // Gentle idle equalizer frequencies
 function generateIdleFrequencies(barCount: number): number[] {
@@ -25,14 +26,15 @@ function generateIdleFrequencies(barCount: number): number[] {
 
 export const HeroSection = () => {
   const navigate = useNavigate();
-  const { playPlaylist, isPlaying, audioElement, isVideoMode } = usePlayer();
+  const { playPlaylist, isPlaying, audioElement, isVideoMode, currentTrack } = usePlayer();
   const { t } = useLanguage();
   const [isLoading, setIsLoading] = useState(false);
   const levels = useAudioAnalyser(audioElement, isPlaying, isVideoMode);
   const timeTheme = useTimeRotation();
   const [idleFrequencies, setIdleFrequencies] = useState(() => generateIdleFrequencies(18));
   const [blendedFrequencies, setBlendedFrequencies] = useState(() => generateIdleFrequencies(18));
-  const transitionRef = useRef(0); // 0 = idle, 1 = playing
+  const transitionRef = useRef(0);
+  const genrePalette = getGenrePalette(currentTrack?.genre);
 
   // Animate idle equalizer + smooth blend
   useEffect(() => {
@@ -259,8 +261,8 @@ export const HeroSection = () => {
                   className="flex items-end gap-[2px] h-10 mt-0.5 w-full relative"
                   style={{
                     filter: isPlaying 
-                      ? `drop-shadow(0 0 ${12 + levels.overall * 20}px hsl(25 95% 50% / ${0.4 + levels.overall * 0.5})) drop-shadow(0 4px 20px hsl(25 90% 45% / ${0.2 + levels.bass * 0.35}))`
-                      : 'drop-shadow(0 0 4px hsl(25 90% 50% / 0.15))',
+                      ? `drop-shadow(0 0 ${12 + levels.overall * 20}px hsl(${genrePalette.glowHue} ${genrePalette.saturation}% ${genrePalette.brightness}% / ${0.4 + levels.overall * 0.5})) drop-shadow(0 4px 20px hsl(${genrePalette.glowHue} ${genrePalette.saturation - 5}% ${genrePalette.brightness - 5}% / ${0.2 + levels.bass * 0.35}))`
+                      : `drop-shadow(0 0 4px hsl(${genrePalette.glowHue} ${genrePalette.saturation - 5}% ${genrePalette.brightness}% / 0.15))`,
                   }}
                 >
                   {blendedFrequencies.map((freq, i) => {
@@ -268,13 +270,16 @@ export const HeroSection = () => {
                     const isMid = i >= 6 && i < 12;
                     const boosted = Math.min(1, freq * 1.4);
                     const height = Math.max(10, boosted * 100);
-                    const hBase = isBass ? 15 : isMid ? 25 : 35;
+                    const hBase = isBass ? genrePalette.bassHue : isMid ? genrePalette.midHue : genrePalette.trebleHue;
+                    const sat = genrePalette.saturation;
+                    const bri = genrePalette.brightness;
+                    const darkFactor = 1 - genrePalette.darkness * 0.3;
                     const bg = isBass
-                      ? `linear-gradient(to top, hsl(${hBase} 95% 38% / ${0.5 + boosted * 0.5}), hsl(${hBase + 5} 100% 48% / ${0.4 + boosted * 0.45}), hsl(${hBase + 10} 100% 58% / ${0.25 + boosted * 0.35}))`
+                      ? `linear-gradient(to top, hsl(${hBase} ${sat}% ${(bri - 12) * darkFactor}% / ${0.5 + boosted * 0.5}), hsl(${hBase + 5} ${sat + 5}% ${(bri - 2) * darkFactor}% / ${0.4 + boosted * 0.45}), hsl(${hBase + 10} ${sat + 5}% ${(bri + 8) * darkFactor}% / ${0.25 + boosted * 0.35}))`
                       : isMid
-                      ? `linear-gradient(to top, hsl(${hBase} 92% 42% / ${0.45 + boosted * 0.45}), hsl(${hBase + 5} 98% 52% / ${0.35 + boosted * 0.4}), hsl(${hBase + 10} 100% 62% / ${0.2 + boosted * 0.3}))`
-                      : `linear-gradient(to top, hsl(${hBase} 88% 45% / ${0.4 + boosted * 0.4}), hsl(${hBase + 5} 95% 55% / ${0.3 + boosted * 0.35}), hsl(${hBase + 8} 100% 65% / ${0.15 + boosted * 0.25}))`;
-                    const borderColor = `hsl(${hBase + 5} 90% 50% / ${0.25 + boosted * 0.35})`;
+                      ? `linear-gradient(to top, hsl(${hBase} ${sat - 3}% ${(bri - 8) * darkFactor}% / ${0.45 + boosted * 0.45}), hsl(${hBase + 5} ${sat + 3}% ${(bri + 2) * darkFactor}% / ${0.35 + boosted * 0.4}), hsl(${hBase + 10} ${sat + 5}% ${(bri + 12) * darkFactor}% / ${0.2 + boosted * 0.3}))`
+                      : `linear-gradient(to top, hsl(${hBase} ${sat - 7}% ${(bri - 5) * darkFactor}% / ${0.4 + boosted * 0.4}), hsl(${hBase + 5} ${sat}% ${(bri + 5) * darkFactor}% / ${0.3 + boosted * 0.35}), hsl(${hBase + 8} ${sat + 5}% ${(bri + 15) * darkFactor}% / ${0.15 + boosted * 0.25}))`;
+                    const borderColor = `hsl(${hBase + 5} ${sat - 5}% ${bri}% / ${0.25 + boosted * 0.35})`;
                     return (
                       <div
                         key={`eq-${i}`}
@@ -284,7 +289,7 @@ export const HeroSection = () => {
                           background: bg,
                           backdropFilter: 'blur(8px)',
                           border: `1px solid ${borderColor}`,
-                          boxShadow: `inset 0 1px 0 hsl(0 0% 100% / ${0.25 + boosted * 0.25}), inset 0 -1px 3px hsl(${hBase} 90% 45% / ${boosted * 0.3}), 0 0 ${6 + boosted * 12}px hsl(${hBase} 95% 50% / ${boosted * 0.3}), 0 0 ${boosted * 20}px hsl(${hBase + 5} 90% 50% / ${boosted * 0.15})`,
+                          boxShadow: `inset 0 1px 0 hsl(0 0% 100% / ${0.25 + boosted * 0.25}), inset 0 -1px 3px hsl(${hBase} ${sat - 5}% ${(bri - 5) * darkFactor}% / ${boosted * 0.3}), 0 0 ${6 + boosted * 12}px hsl(${hBase} ${sat}% ${bri * darkFactor}% / ${boosted * 0.3}), 0 0 ${boosted * 20}px hsl(${hBase + 5} ${sat - 5}% ${bri * darkFactor}% / ${boosted * 0.15})`,
                           opacity: 0.5 + boosted * 0.5,
                           transition: 'height 0.04s ease-out, opacity 0.04s ease-out',
                         }}
@@ -306,11 +311,11 @@ export const HeroSection = () => {
                       </div>
                     );
                   })}
-                  {/* Warm glow reactive */}
+                  {/* Genre-reactive glow */}
                   <div 
                     className="absolute inset-0 pointer-events-none"
                     style={{ 
-                      background: `radial-gradient(ellipse at ${30 + (isPlaying ? Math.sin(Date.now() / 400) * 20 : 0)}% 50%, hsl(25 95% 50% / ${isPlaying ? 0.15 + levels.bass * 0.35 : 0.05}) 0%, transparent 65%)`,
+                      background: `radial-gradient(ellipse at ${30 + (isPlaying ? Math.sin(Date.now() / 400) * 20 : 0)}% 50%, hsl(${genrePalette.glowHue} ${genrePalette.saturation}% ${genrePalette.brightness}% / ${isPlaying ? 0.15 + levels.bass * 0.35 : 0.05}) 0%, transparent 65%)`,
                     }}
                   />
                 </div>
@@ -319,7 +324,7 @@ export const HeroSection = () => {
 
           {/* === MAIN TITLE === */}
           <div className="mb-6 relative">
-            <BassParticles bass={levels.bass} overall={levels.overall} isPlaying={isPlaying} />
+            <BassParticles bass={levels.bass} overall={levels.overall} isPlaying={isPlaying} palette={genrePalette} />
             <h1 className="font-display text-4xl md:text-6xl lg:text-7xl font-bold leading-tight relative z-10">
               <span className="block">{t("hero.title1")}</span>
               <span className="block groove-gradient-text mt-1">{t("hero.titleHighlight")}</span>
