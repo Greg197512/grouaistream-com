@@ -20,14 +20,14 @@ function generateSimulatedLevels(time: number, barCount: number): AudioLevels {
   
   // Simulate bass hits ~120 BPM
   const beatPhase = (t * 2) % 1;
-  const bassHit = Math.pow(Math.max(0, 1 - beatPhase * 3), 2);
-  const bass = 0.3 + bassHit * 0.5 + Math.sin(t * 1.7) * 0.1;
+  const bassHit = Math.pow(Math.max(0, 1 - beatPhase * 2.5), 1.5);
+  const bass = 0.4 + bassHit * 0.55 + Math.sin(t * 1.7) * 0.12;
   
   // Mid with melody-like variation
-  const mid = 0.25 + Math.sin(t * 3.1) * 0.15 + Math.sin(t * 5.3) * 0.1 + bassHit * 0.15;
+  const mid = 0.35 + Math.sin(t * 3.1) * 0.18 + Math.sin(t * 5.3) * 0.12 + bassHit * 0.2;
   
   // Treble with shimmer
-  const treble = 0.15 + Math.sin(t * 7.7) * 0.12 + Math.sin(t * 11.3) * 0.08 + bassHit * 0.1;
+  const treble = 0.25 + Math.sin(t * 7.7) * 0.15 + Math.sin(t * 11.3) * 0.1 + bassHit * 0.15;
   
   const overall = bass * 0.5 + mid * 0.35 + treble * 0.15;
 
@@ -39,18 +39,18 @@ function generateSimulatedLevels(time: number, barCount: number): AudioLevels {
     
     if (normalizedPos < 0.33) {
       // Bass range - strong hits
-      base = bass * (0.7 + Math.sin(t * 2.3 + i * 0.8) * 0.3);
+      base = bass * (0.8 + Math.sin(t * 2.3 + i * 0.8) * 0.25);
     } else if (normalizedPos < 0.66) {
       // Mid range
-      base = mid * (0.6 + Math.sin(t * 4.1 + i * 1.2) * 0.35);
+      base = mid * (0.7 + Math.sin(t * 4.1 + i * 1.2) * 0.3);
     } else {
       // Treble range
-      base = treble * (0.5 + Math.sin(t * 6.7 + i * 1.5) * 0.4);
+      base = treble * (0.6 + Math.sin(t * 6.7 + i * 1.5) * 0.35);
     }
     
     // Add per-bar variation
-    base += Math.sin(t * (3 + i * 0.7)) * 0.08;
-    frequencies.push(Math.max(0.05, Math.min(1, base)));
+    base += Math.sin(t * (3 + i * 0.7)) * 0.1;
+    frequencies.push(Math.max(0.08, Math.min(1, base)));
   }
 
   return {
