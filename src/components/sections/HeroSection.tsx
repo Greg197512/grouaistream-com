@@ -16,8 +16,8 @@ function generateIdleFrequencies(barCount: number): number[] {
   const t = Date.now() / 1000;
   const freqs: number[] = [];
   for (let i = 0; i < barCount; i++) {
-    const base = 0.08 + Math.sin(t * 0.8 + i * 0.4) * 0.04 + Math.sin(t * 1.3 + i * 0.7) * 0.03;
-    freqs.push(Math.max(0.03, Math.min(0.2, base)));
+    const base = 0.12 + Math.sin(t * 1.2 + i * 0.5) * 0.06 + Math.sin(t * 1.8 + i * 0.9) * 0.05;
+    freqs.push(Math.max(0.05, Math.min(0.3, base)));
   }
   return freqs;
 }
@@ -45,11 +45,11 @@ export const HeroSection = () => {
       
       const t = transitionRef.current;
       const blended = idle.map((idleVal, i) => {
-        const activeVal = levels.frequencies[i] ?? idleVal;
+        const activeVal = Math.min(1, (levels.frequencies[i] ?? idleVal) * 1.6); // boost decibels
         return idleVal * (1 - t) + activeVal * t;
       });
       setBlendedFrequencies(blended);
-    }, 60);
+    }, 35); // faster refresh = more alive
     return () => clearInterval(id);
   }, [isPlaying, levels.frequencies]);
 
@@ -255,27 +255,26 @@ export const HeroSection = () => {
 
               {/* Real-data equalizer */}
               <div 
-                  className="flex items-end gap-[2.5px] h-7 mt-0.5 w-full relative"
+                  className="flex items-end gap-[2px] h-10 mt-0.5 w-full relative"
                   style={{
                     filter: isPlaying 
-                      ? `drop-shadow(0 0 ${8 + levels.overall * 14}px hsl(25 90% 50% / ${0.3 + levels.overall * 0.4})) drop-shadow(0 4px 16px hsl(var(--primary) / ${0.15 + levels.bass * 0.25}))`
+                      ? `drop-shadow(0 0 ${12 + levels.overall * 20}px hsl(${(Date.now() / 50) % 60} 95% 50% / ${0.4 + levels.overall * 0.5})) drop-shadow(0 4px 20px hsl(var(--primary) / ${0.2 + levels.bass * 0.35}))`
                       : 'drop-shadow(0 0 4px hsl(25 90% 50% / 0.15))',
                   }}
                 >
                   {blendedFrequencies.map((freq, i) => {
                     const isBass = i < 6;
                     const isMid = i >= 6 && i < 12;
-                    const height = Math.max(8, freq * 100);
+                    const boosted = Math.min(1, freq * 1.4);
+                    const height = Math.max(10, boosted * 100);
+                    const dynamicHue = isPlaying ? (Date.now() / 30 + i * 18) % 60 : 0;
+                    const hBase = isBass ? 10 + dynamicHue : isMid ? 20 + dynamicHue : 35 + dynamicHue;
                     const bg = isBass
-                      ? `linear-gradient(to top, hsl(15 90% 45% / ${0.4 + freq * 0.4}), hsl(25 95% 55% / ${0.3 + freq * 0.35}), hsl(35 100% 60% / ${0.15 + freq * 0.25}))`
+                      ? `linear-gradient(to top, hsl(${hBase} 95% 42% / ${0.5 + boosted * 0.5}), hsl(${hBase + 10} 100% 55% / ${0.4 + boosted * 0.45}), hsl(${hBase + 20} 100% 65% / ${0.25 + boosted * 0.35}))`
                       : isMid
-                      ? `linear-gradient(to top, hsl(25 90% 50% / ${0.35 + freq * 0.35}), hsl(30 95% 58% / ${0.25 + freq * 0.3}), hsl(40 100% 65% / ${0.1 + freq * 0.2}))`
-                      : `linear-gradient(to top, hsl(35 85% 55% / ${0.3 + freq * 0.3}), hsl(40 90% 62% / ${0.2 + freq * 0.25}), hsl(45 100% 70% / ${0.1 + freq * 0.15}))`;
-                    const borderColor = isBass
-                      ? `hsl(20 90% 50% / ${0.2 + freq * 0.3})`
-                      : isMid
-                      ? `hsl(30 85% 55% / ${0.15 + freq * 0.25})`
-                      : `hsl(40 80% 60% / ${0.1 + freq * 0.2})`;
+                      ? `linear-gradient(to top, hsl(${hBase} 92% 48% / ${0.45 + boosted * 0.45}), hsl(${hBase + 8} 98% 58% / ${0.35 + boosted * 0.4}), hsl(${hBase + 18} 100% 68% / ${0.2 + boosted * 0.3}))`
+                      : `linear-gradient(to top, hsl(${hBase} 88% 52% / ${0.4 + boosted * 0.4}), hsl(${hBase + 6} 95% 62% / ${0.3 + boosted * 0.35}), hsl(${hBase + 15} 100% 72% / ${0.15 + boosted * 0.25}))`;
+                    const borderColor = `hsl(${hBase + 5} 90% 55% / ${0.25 + boosted * 0.35})`;
                     return (
                       <div
                         key={`eq-${i}`}
@@ -285,9 +284,9 @@ export const HeroSection = () => {
                           background: bg,
                           backdropFilter: 'blur(8px)',
                           border: `1px solid ${borderColor}`,
-                          boxShadow: `inset 0 1px 0 hsl(0 0% 100% / ${0.2 + freq * 0.2}), inset 0 -1px 3px hsl(25 90% 50% / ${freq * 0.2}), 0 0 ${4 + freq * 6}px hsl(var(--primary) / ${freq * 0.15})`,
-                          opacity: 0.4 + freq * 0.6,
-                          transition: 'height 0.06s ease-out, opacity 0.06s ease-out',
+                          boxShadow: `inset 0 1px 0 hsl(0 0% 100% / ${0.25 + boosted * 0.25}), inset 0 -1px 3px hsl(${hBase} 90% 50% / ${boosted * 0.3}), 0 0 ${6 + boosted * 12}px hsl(${hBase} 95% 50% / ${boosted * 0.3}), 0 0 ${boosted * 20}px hsl(${hBase + 10} 90% 55% / ${boosted * 0.15})`,
+                          opacity: 0.5 + boosted * 0.5,
+                          transition: 'height 0.04s ease-out, opacity 0.04s ease-out',
                         }}
                       >
                         {/* Glass reflection */}
@@ -311,7 +310,7 @@ export const HeroSection = () => {
                   <div 
                     className="absolute inset-0 pointer-events-none"
                     style={{ 
-                      background: `radial-gradient(ellipse at 30% 50%, hsl(25 95% 50% / ${isPlaying ? 0.1 + levels.bass * 0.25 : 0.05}) 0%, transparent 65%)`,
+                      background: `radial-gradient(ellipse at ${30 + (isPlaying ? Math.sin(Date.now() / 400) * 20 : 0)}% 50%, hsl(${isPlaying ? (Date.now() / 40) % 50 + 10 : 25} 95% 50% / ${isPlaying ? 0.15 + levels.bass * 0.35 : 0.05}) 0%, transparent 65%)`,
                     }}
                   />
                 </div>
@@ -326,12 +325,13 @@ export const HeroSection = () => {
                 {t("hero.title1").split("").map((char, i) => {
                   const freqIndex = i % blendedFrequencies.length;
                   const freq = blendedFrequencies[freqIndex] ?? 0;
-                  const barHeight = isPlaying ? Math.max(4, freq * 28) : 4;
-                  const letterLift = isPlaying ? freq * 18 : 0;
-                  const hueShift = isPlaying ? (Date.now() / 40 + i * 12) % 360 : 0;
-                  const barHue = isPlaying ? (15 + hueShift * 0.3 + freq * 40) % 60 : 25;
-                  const barSat = 85 + freq * 15;
-                  const barLight = 45 + freq * 20;
+                  const boostedFreq = Math.min(1, freq * 1.5);
+                  const barHeight = isPlaying ? Math.max(5, boostedFreq * 40) : 4;
+                  const letterLift = isPlaying ? boostedFreq * 26 : 0;
+                  const hueShift = isPlaying ? (Date.now() / 25 + i * 15) % 360 : 0;
+                  const barHue = isPlaying ? (10 + hueShift * 0.35 + boostedFreq * 50) % 60 : 25;
+                  const barSat = 88 + boostedFreq * 12;
+                  const barLight = 42 + boostedFreq * 25;
                   return (
                     <span
                       key={`t1-${i}`}
@@ -341,12 +341,12 @@ export const HeroSection = () => {
                       <span
                         className="inline-block"
                         style={{
-                          transform: `translateY(${-letterLift}px) scale(${1 + (isPlaying ? freq * 0.08 : 0)})`,
-                          transition: 'transform 0.07s ease-out',
-                          textShadow: isPlaying && freq > 0.3
-                            ? `0 0 ${freq * 16}px hsl(${barHue} ${barSat}% ${barLight}% / ${freq * 0.6}), 0 ${letterLift * 0.5}px ${letterLift}px hsl(${barHue} 90% 50% / ${freq * 0.3})`
+                          transform: `translateY(${-letterLift}px) scale(${1 + (isPlaying ? boostedFreq * 0.12 : 0)})`,
+                          transition: 'transform 0.04s ease-out',
+                          textShadow: isPlaying && boostedFreq > 0.2
+                            ? `0 0 ${boostedFreq * 22}px hsl(${barHue} ${barSat}% ${barLight}% / ${boostedFreq * 0.7}), 0 ${letterLift * 0.6}px ${letterLift * 1.2}px hsl(${barHue} 95% 50% / ${boostedFreq * 0.4})`
                             : undefined,
-                          color: isPlaying && freq > 0.4
+                          color: isPlaying && boostedFreq > 0.25
                             ? `hsl(${barHue} ${barSat}% ${barLight + 15}%)`
                             : undefined,
                         }}
@@ -357,14 +357,14 @@ export const HeroSection = () => {
                         <span
                           className="block rounded-full mt-[-2px]"
                           style={{
-                            width: '70%',
+                            width: '75%',
                             height: `${barHeight}px`,
-                            background: `linear-gradient(to top, hsl(${barHue} ${barSat}% ${barLight}%), hsl(${barHue + 15} 100% ${barLight + 15}%))`,
+                            background: `linear-gradient(to top, hsl(${barHue} ${barSat}% ${barLight}%), hsl(${barHue + 15} 100% ${barLight + 12}%), hsl(${barHue + 25} 100% ${barLight + 22}%))`,
                             boxShadow: isPlaying
-                              ? `0 0 ${freq * 10}px hsl(${barHue} 90% 50% / ${freq * 0.5}), 0 0 ${freq * 20}px hsl(${barHue} 80% 50% / ${freq * 0.2})`
+                              ? `0 0 ${boostedFreq * 14}px hsl(${barHue} 95% 50% / ${boostedFreq * 0.6}), 0 0 ${boostedFreq * 28}px hsl(${barHue} 85% 55% / ${boostedFreq * 0.25})`
                               : 'none',
-                            opacity: isPlaying ? 0.5 + freq * 0.5 : 0.2,
-                            transition: 'height 0.07s ease-out, opacity 0.07s ease-out',
+                            opacity: isPlaying ? 0.6 + boostedFreq * 0.4 : 0.2,
+                            transition: 'height 0.04s ease-out, opacity 0.04s ease-out',
                             borderRadius: '2px',
                           }}
                         />
@@ -378,12 +378,13 @@ export const HeroSection = () => {
                 {t("hero.titleHighlight").split("").map((char, i) => {
                   const freqIndex = (i + 7) % blendedFrequencies.length;
                   const freq = blendedFrequencies[freqIndex] ?? 0;
-                  const barHeight = isPlaying ? Math.max(4, freq * 32) : 4;
-                  const letterLift = isPlaying ? freq * 22 : 0;
-                  const hueShift = isPlaying ? (Date.now() / 35 + i * 15) % 360 : 0;
-                  const barHue = isPlaying ? (10 + hueShift * 0.25 + freq * 50) % 60 : 20;
-                  const barSat = 90 + freq * 10;
-                  const barLight = 48 + freq * 18;
+                  const boostedFreq = Math.min(1, freq * 1.6);
+                  const barHeight = isPlaying ? Math.max(5, boostedFreq * 45) : 4;
+                  const letterLift = isPlaying ? boostedFreq * 30 : 0;
+                  const hueShift = isPlaying ? (Date.now() / 20 + i * 18) % 360 : 0;
+                  const barHue = isPlaying ? (8 + hueShift * 0.3 + boostedFreq * 55) % 60 : 20;
+                  const barSat = 92 + boostedFreq * 8;
+                  const barLight = 44 + boostedFreq * 24;
                   return (
                     <span
                       key={`t2-${i}`}
@@ -393,13 +394,13 @@ export const HeroSection = () => {
                       <span
                         className={`inline-block ${!isPlaying || freq <= 0.4 ? 'groove-gradient-text' : ''}`}
                         style={{
-                          transform: `translateY(${-letterLift}px) scale(${1 + (isPlaying ? freq * 0.1 : 0)})`,
-                          transition: 'transform 0.07s ease-out',
-                          textShadow: isPlaying && freq > 0.3
-                            ? `0 0 ${freq * 20}px hsl(${barHue} ${barSat}% ${barLight}% / ${freq * 0.7}), 0 ${letterLift * 0.6}px ${letterLift * 1.2}px hsl(${barHue} 95% 55% / ${freq * 0.35})`
+                          transform: `translateY(${-letterLift}px) scale(${1 + (isPlaying ? boostedFreq * 0.14 : 0)})`,
+                          transition: 'transform 0.04s ease-out',
+                          textShadow: isPlaying && boostedFreq > 0.2
+                            ? `0 0 ${boostedFreq * 25}px hsl(${barHue} ${barSat}% ${barLight}% / ${boostedFreq * 0.8}), 0 ${letterLift * 0.7}px ${letterLift * 1.4}px hsl(${barHue} 98% 55% / ${boostedFreq * 0.4})`
                             : undefined,
-                          color: isPlaying && freq > 0.4
-                            ? `hsl(${barHue} ${barSat}% ${barLight + 12}%)`
+                          color: isPlaying && boostedFreq > 0.2
+                            ? `hsl(${barHue} ${barSat}% ${barLight + 14}%)`
                             : undefined,
                           WebkitBackgroundClip: isPlaying && freq > 0.4 ? 'unset' : undefined,
                           backgroundClip: isPlaying && freq > 0.4 ? 'unset' : undefined,
@@ -412,14 +413,14 @@ export const HeroSection = () => {
                         <span
                           className="block rounded-full mt-[-2px]"
                           style={{
-                            width: '75%',
+                            width: '80%',
                             height: `${barHeight}px`,
-                            background: `linear-gradient(to top, hsl(${barHue} ${barSat}% ${barLight - 5}%), hsl(${barHue + 20} 100% ${barLight + 10}%), hsl(${barHue + 30} 100% ${barLight + 20}%))`,
+                            background: `linear-gradient(to top, hsl(${barHue} ${barSat}% ${barLight - 5}%), hsl(${barHue + 15} 100% ${barLight + 10}%), hsl(${barHue + 25} 100% ${barLight + 22}%))`,
                             boxShadow: isPlaying
-                              ? `0 0 ${freq * 12}px hsl(${barHue} 95% 55% / ${freq * 0.6}), 0 0 ${freq * 24}px hsl(${barHue + 10} 85% 50% / ${freq * 0.25})`
+                              ? `0 0 ${boostedFreq * 16}px hsl(${barHue} 98% 55% / ${boostedFreq * 0.7}), 0 0 ${boostedFreq * 30}px hsl(${barHue + 10} 90% 55% / ${boostedFreq * 0.3})`
                               : 'none',
-                            opacity: isPlaying ? 0.6 + freq * 0.4 : 0.2,
-                            transition: 'height 0.07s ease-out, opacity 0.07s ease-out',
+                            opacity: isPlaying ? 0.65 + boostedFreq * 0.35 : 0.2,
+                            transition: 'height 0.04s ease-out, opacity 0.04s ease-out',
                             borderRadius: '2px',
                           }}
                         />
