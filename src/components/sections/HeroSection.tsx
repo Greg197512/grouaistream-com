@@ -284,7 +284,7 @@ export const HeroSection = () => {
                           background: bg,
                           backdropFilter: 'blur(8px)',
                           border: `1px solid ${borderColor}`,
-                          boxShadow: `inset 0 1px 0 hsl(0 0% 100% / ${0.25 + boosted * 0.25}), inset 0 -1px 3px hsl(${hBase} 90% 50% / ${boosted * 0.3}), 0 0 ${6 + boosted * 12}px hsl(${hBase} 95% 50% / ${boosted * 0.3}), 0 0 ${boosted * 20}px hsl(${hBase + 10} 90% 55% / ${boosted * 0.15})`,
+                          boxShadow: `inset 0 1px 0 hsl(0 0% 100% / ${0.25 + boosted * 0.25}), inset 0 -1px 3px hsl(${hBase} 90% 45% / ${boosted * 0.3}), 0 0 ${6 + boosted * 12}px hsl(${hBase} 95% 50% / ${boosted * 0.3}), 0 0 ${boosted * 20}px hsl(${hBase + 5} 90% 50% / ${boosted * 0.15})`,
                           opacity: 0.5 + boosted * 0.5,
                           transition: 'height 0.04s ease-out, opacity 0.04s ease-out',
                         }}
