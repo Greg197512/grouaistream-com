@@ -259,7 +259,7 @@ export const HeroSection = () => {
                   className="flex items-end gap-[2px] h-10 mt-0.5 w-full relative"
                   style={{
                     filter: isPlaying 
-                      ? `drop-shadow(0 0 ${12 + levels.overall * 20}px hsl(${(Date.now() / 50) % 60} 95% 50% / ${0.4 + levels.overall * 0.5})) drop-shadow(0 4px 20px hsl(var(--primary) / ${0.2 + levels.bass * 0.35}))`
+                      ? `drop-shadow(0 0 ${12 + levels.overall * 20}px hsl(25 95% 50% / ${0.4 + levels.overall * 0.5})) drop-shadow(0 4px 20px hsl(25 90% 45% / ${0.2 + levels.bass * 0.35}))`
                       : 'drop-shadow(0 0 4px hsl(25 90% 50% / 0.15))',
                   }}
                 >
@@ -268,14 +268,13 @@ export const HeroSection = () => {
                     const isMid = i >= 6 && i < 12;
                     const boosted = Math.min(1, freq * 1.4);
                     const height = Math.max(10, boosted * 100);
-                    const dynamicHue = isPlaying ? (Date.now() / 30 + i * 18) % 60 : 0;
-                    const hBase = isBass ? 10 + dynamicHue : isMid ? 20 + dynamicHue : 35 + dynamicHue;
+                    const hBase = isBass ? 15 : isMid ? 25 : 35;
                     const bg = isBass
-                      ? `linear-gradient(to top, hsl(${hBase} 95% 42% / ${0.5 + boosted * 0.5}), hsl(${hBase + 10} 100% 55% / ${0.4 + boosted * 0.45}), hsl(${hBase + 20} 100% 65% / ${0.25 + boosted * 0.35}))`
+                      ? `linear-gradient(to top, hsl(${hBase} 95% 38% / ${0.5 + boosted * 0.5}), hsl(${hBase + 5} 100% 48% / ${0.4 + boosted * 0.45}), hsl(${hBase + 10} 100% 58% / ${0.25 + boosted * 0.35}))`
                       : isMid
-                      ? `linear-gradient(to top, hsl(${hBase} 92% 48% / ${0.45 + boosted * 0.45}), hsl(${hBase + 8} 98% 58% / ${0.35 + boosted * 0.4}), hsl(${hBase + 18} 100% 68% / ${0.2 + boosted * 0.3}))`
-                      : `linear-gradient(to top, hsl(${hBase} 88% 52% / ${0.4 + boosted * 0.4}), hsl(${hBase + 6} 95% 62% / ${0.3 + boosted * 0.35}), hsl(${hBase + 15} 100% 72% / ${0.15 + boosted * 0.25}))`;
-                    const borderColor = `hsl(${hBase + 5} 90% 55% / ${0.25 + boosted * 0.35})`;
+                      ? `linear-gradient(to top, hsl(${hBase} 92% 42% / ${0.45 + boosted * 0.45}), hsl(${hBase + 5} 98% 52% / ${0.35 + boosted * 0.4}), hsl(${hBase + 10} 100% 62% / ${0.2 + boosted * 0.3}))`
+                      : `linear-gradient(to top, hsl(${hBase} 88% 45% / ${0.4 + boosted * 0.4}), hsl(${hBase + 5} 95% 55% / ${0.3 + boosted * 0.35}), hsl(${hBase + 8} 100% 65% / ${0.15 + boosted * 0.25}))`;
+                    const borderColor = `hsl(${hBase + 5} 90% 50% / ${0.25 + boosted * 0.35})`;
                     return (
                       <div
                         key={`eq-${i}`}
