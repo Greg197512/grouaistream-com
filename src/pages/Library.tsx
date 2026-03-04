@@ -27,6 +27,28 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+// Genre cover images
+import genreRock from "@/assets/genres/rock.jpg";
+import genrePop from "@/assets/genres/pop.jpg";
+import genreHiphop from "@/assets/genres/hiphop.jpg";
+import genreRap from "@/assets/genres/rap.jpg";
+import genreMetal from "@/assets/genres/metal.jpg";
+import genrePunk from "@/assets/genres/punk.jpg";
+import genreElectronic from "@/assets/genres/electronic.jpg";
+import genreJazz from "@/assets/genres/jazz.jpg";
+import genreClassical from "@/assets/genres/classical.jpg";
+import genreRnb from "@/assets/genres/rnb.jpg";
+import genreIndie from "@/assets/genres/indie.jpg";
+import genreAlternative from "@/assets/genres/alternative.jpg";
+import genreReggae from "@/assets/genres/reggae.jpg";
+import genreBlues from "@/assets/genres/blues.jpg";
+import genreCountry from "@/assets/genres/country.jpg";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
 interface Playlist {
   id: string;
   title: string;
@@ -37,21 +59,21 @@ interface Playlist {
 }
 
 const GENRE_CATALOGS = [
-  { genre: "Rock", emoji: "🎸", gradient: "from-red-500/20 to-orange-500/20", border: "border-red-500/30" },
-  { genre: "Pop", emoji: "🎤", gradient: "from-pink-500/20 to-rose-500/20", border: "border-pink-500/30" },
-  { genre: "Hip-Hop", emoji: "🎧", gradient: "from-purple-500/20 to-violet-500/20", border: "border-purple-500/30" },
-  { genre: "Rap", emoji: "🎙️", gradient: "from-violet-500/20 to-indigo-500/20", border: "border-violet-500/30" },
-  { genre: "Metal", emoji: "🤘", gradient: "from-zinc-500/20 to-gray-500/20", border: "border-zinc-500/30" },
-  { genre: "Punk", emoji: "⚡", gradient: "from-orange-500/20 to-yellow-500/20", border: "border-orange-500/30" },
-  { genre: "Electronic", emoji: "🎹", gradient: "from-cyan-500/20 to-blue-500/20", border: "border-cyan-500/30" },
-  { genre: "Jazz", emoji: "🎷", gradient: "from-yellow-500/20 to-amber-500/20", border: "border-yellow-500/30" },
-  { genre: "Classical", emoji: "🎻", gradient: "from-emerald-500/20 to-green-500/20", border: "border-emerald-500/30" },
-  { genre: "R&B", emoji: "💜", gradient: "from-rose-500/20 to-pink-500/20", border: "border-rose-500/30" },
-  { genre: "Indie", emoji: "🌿", gradient: "from-teal-500/20 to-emerald-500/20", border: "border-teal-500/30" },
-  { genre: "Alternative", emoji: "🔮", gradient: "from-sky-500/20 to-indigo-500/20", border: "border-sky-500/30" },
-  { genre: "Reggae", emoji: "🌴", gradient: "from-green-500/20 to-yellow-500/20", border: "border-green-500/30" },
-  { genre: "Blues", emoji: "🎺", gradient: "from-blue-500/20 to-indigo-500/20", border: "border-blue-500/30" },
-  { genre: "Country", emoji: "🤠", gradient: "from-amber-500/20 to-orange-500/20", border: "border-amber-500/30" },
+  { genre: "Rock", emoji: "🎸", gradient: "from-red-500/20 to-orange-500/20", border: "border-red-500/30", image: genreRock },
+  { genre: "Pop", emoji: "🎤", gradient: "from-pink-500/20 to-rose-500/20", border: "border-pink-500/30", image: genrePop },
+  { genre: "Hip-Hop", emoji: "🎧", gradient: "from-purple-500/20 to-violet-500/20", border: "border-purple-500/30", image: genreHiphop },
+  { genre: "Rap", emoji: "🎙️", gradient: "from-violet-500/20 to-indigo-500/20", border: "border-violet-500/30", image: genreRap },
+  { genre: "Metal", emoji: "🤘", gradient: "from-zinc-500/20 to-gray-500/20", border: "border-zinc-500/30", image: genreMetal },
+  { genre: "Punk", emoji: "⚡", gradient: "from-orange-500/20 to-yellow-500/20", border: "border-orange-500/30", image: genrePunk },
+  { genre: "Electronic", emoji: "🎹", gradient: "from-cyan-500/20 to-blue-500/20", border: "border-cyan-500/30", image: genreElectronic },
+  { genre: "Jazz", emoji: "🎷", gradient: "from-yellow-500/20 to-amber-500/20", border: "border-yellow-500/30", image: genreJazz },
+  { genre: "Classical", emoji: "🎻", gradient: "from-emerald-500/20 to-green-500/20", border: "border-emerald-500/30", image: genreClassical },
+  { genre: "R&B", emoji: "💜", gradient: "from-rose-500/20 to-pink-500/20", border: "border-rose-500/30", image: genreRnb },
+  { genre: "Indie", emoji: "🌿", gradient: "from-teal-500/20 to-emerald-500/20", border: "border-teal-500/30", image: genreIndie },
+  { genre: "Alternative", emoji: "🔮", gradient: "from-sky-500/20 to-indigo-500/20", border: "border-sky-500/30", image: genreAlternative },
+  { genre: "Reggae", emoji: "🌴", gradient: "from-green-500/20 to-yellow-500/20", border: "border-green-500/30", image: genreReggae },
+  { genre: "Blues", emoji: "🎺", gradient: "from-blue-500/20 to-indigo-500/20", border: "border-blue-500/30", image: genreBlues },
+  { genre: "Country", emoji: "🤠", gradient: "from-amber-500/20 to-orange-500/20", border: "border-amber-500/30", image: genreCountry },
 ];
 
 const Library = () => {
