@@ -138,6 +138,7 @@ export default function Admin() {
   useEffect(() => {
     if (isAdmin) {
       fetchAdminData();
+      fetchUnlockCodes();
     }
   }, [isAdmin]);
 
