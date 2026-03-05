@@ -231,7 +231,33 @@ export default function Admin() {
     }
   };
 
-  const testTrack = async (track: Track) => {
+  const fetchUnlockCodes = async () => {
+    const { data } = await supabase.from("unlock_codes").select("*").order("created_at", { ascending: false });
+    setUnlockCodes(data || []);
+  };
+
+  const addUnlockCode = async () => {
+    if (!newCode.trim()) { toast.error("Podaj kod"); return; }
+    const { error } = await supabase.from("unlock_codes").insert({ code: newCode.trim(), label: newCodeLabel.trim() || "Nowy kod" });
+    if (error) { toast.error("Błąd: " + error.message); return; }
+    toast.success("Dodano kod: " + newCode);
+    setNewCode(""); setNewCodeLabel("");
+    fetchUnlockCodes();
+  };
+
+  const toggleCodeActive = async (id: string, currentActive: boolean) => {
+    await supabase.from("unlock_codes").update({ is_active: !currentActive }).eq("id", id);
+    fetchUnlockCodes();
+  };
+
+  const deleteUnlockCode = async (id: string) => {
+    if (!confirm("Usunąć ten kod?")) return;
+    await supabase.from("unlock_codes").delete().eq("id", id);
+    toast.success("Kod usunięty");
+    fetchUnlockCodes();
+  };
+
+
     setTestingTrack(track.id);
     try {
       // Try to play the track
