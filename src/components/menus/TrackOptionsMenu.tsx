@@ -1,4 +1,5 @@
 import { useState, useEffect, forwardRef } from "react";
+import { motion } from "framer-motion";
 import { 
   MoreHorizontal, 
   Heart, 
@@ -148,20 +149,48 @@ const TrackOptionsMenuComponent = (
     );
   };
 
-  const handleDownload = () => {
+  const [downloading, setDownloading] = useState(false);
+
+  const handleDownload = async () => {
     if (!trackUrl) {
       toast.error("Download not available for this track");
       return;
     }
 
-    // GDPR consent popup
     const confirmed = window.confirm(
       "Download consent: By downloading, you confirm you have the right to download this content for personal use. Continue?"
     );
 
-    if (confirmed) {
-      window.open(trackUrl, "_blank");
+    if (!confirmed) return;
+
+    setDownloading(true);
+    toast.info("💿 Wypalanie...", { duration: 3000 });
+
+    try {
+      const response = await fetch(trackUrl);
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const ext = trackUrl.includes(".mp4") ? "mp4" : "mp3";
+      a.download = `${trackArtist} - ${trackTitle}.${ext}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success("✅ Pobrano na dysk!");
+    } catch {
+      // Fallback: direct link download
+      const a = document.createElement("a");
+      a.href = trackUrl;
+      a.download = `${trackArtist} - ${trackTitle}.mp3`;
+      a.target = "_self";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
       toast.success("Download started");
+    } finally {
+      setDownloading(false);
     }
   };
 
@@ -301,9 +330,15 @@ const TrackOptionsMenuComponent = (
           </DropdownMenuItem>
 
           {/* Download */}
-          <DropdownMenuItem onClick={handleDownload} className="cursor-pointer">
-            <Download className="mr-2 h-4 w-4" />
-            Pobierz Utwór
+          <DropdownMenuItem onClick={handleDownload} disabled={downloading} className="cursor-pointer">
+            {downloading ? (
+              <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }} className="mr-2">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+              </motion.div>
+            ) : (
+              <Download className="mr-2 h-4 w-4" />
+            )}
+            {downloading ? "Wypalanie..." : "Pobierz Utwór"}
           </DropdownMenuItem>
 
           {/* Open original */}

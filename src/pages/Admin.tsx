@@ -25,7 +25,11 @@ import {
   Eye,
   Trophy,
   UserPlus,
-  Newspaper
+  Newspaper,
+  Lock,
+  Plus,
+  ToggleLeft,
+  ToggleRight
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -120,6 +124,10 @@ export default function Admin() {
   const [brokenTracks, setBrokenTracks] = useState<TrackData[]>([]);
   const [deletingBroken, setDeletingBroken] = useState(false);
 
+  // Unlock codes state
+  const [unlockCodes, setUnlockCodes] = useState<{ id: string; code: string; label: string; is_active: boolean; created_at: string }[]>([]);
+  const [newCode, setNewCode] = useState("");
+  const [newCodeLabel, setNewCodeLabel] = useState("");
   useEffect(() => {
     if (!loading && !isAdmin) {
       toast.error("Brak uprawnień administratora");
@@ -130,6 +138,7 @@ export default function Admin() {
   useEffect(() => {
     if (isAdmin) {
       fetchAdminData();
+      fetchUnlockCodes();
     }
   }, [isAdmin]);
 
@@ -220,6 +229,32 @@ export default function Admin() {
     } finally {
       setLoadingData(false);
     }
+  };
+
+  const fetchUnlockCodes = async () => {
+    const { data } = await supabase.from("unlock_codes").select("*").order("created_at", { ascending: false });
+    setUnlockCodes(data || []);
+  };
+
+  const addUnlockCode = async () => {
+    if (!newCode.trim()) { toast.error("Podaj kod"); return; }
+    const { error } = await supabase.from("unlock_codes").insert({ code: newCode.trim(), label: newCodeLabel.trim() || "Nowy kod" });
+    if (error) { toast.error("Błąd: " + error.message); return; }
+    toast.success("Dodano kod: " + newCode);
+    setNewCode(""); setNewCodeLabel("");
+    fetchUnlockCodes();
+  };
+
+  const toggleCodeActive = async (id: string, currentActive: boolean) => {
+    await supabase.from("unlock_codes").update({ is_active: !currentActive }).eq("id", id);
+    fetchUnlockCodes();
+  };
+
+  const deleteUnlockCode = async (id: string) => {
+    if (!confirm("Usunąć ten kod?")) return;
+    await supabase.from("unlock_codes").delete().eq("id", id);
+    toast.success("Kod usunięty");
+    fetchUnlockCodes();
   };
 
   const testTrack = async (track: Track) => {
@@ -668,6 +703,10 @@ export default function Admin() {
                 <TabsTrigger value="email" className="gap-2">
                   <Mail className="h-4 w-4" />
                   E-mail AI
+                </TabsTrigger>
+                <TabsTrigger value="codes" className="gap-2">
+                  <Lock className="h-4 w-4" />
+                  Kody dostępu
                 </TabsTrigger>
               </TabsList>
 
@@ -1164,6 +1203,81 @@ export default function Admin() {
                     </CardContent>
                   </Card>
                 )}
+              </TabsContent>
+
+              {/* Unlock Codes Tab */}
+              <TabsContent value="codes">
+                <Card className="border-border/50 bg-card/50 backdrop-blur">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Lock className="h-5 w-5" />
+                      Zarządzanie kodami dostępu
+                    </CardTitle>
+                    <CardDescription>
+                      Kody odblokowujące pełną bibliotekę muzyczną
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {/* Add new code */}
+                    <div className="flex gap-2 items-end">
+                      <div className="flex-1">
+                        <Label className="text-xs">Kod</Label>
+                        <Input value={newCode} onChange={e => setNewCode(e.target.value)} placeholder="Nowy kod..." className="bg-background/50" />
+                      </div>
+                      <div className="flex-1">
+                        <Label className="text-xs">Etykieta</Label>
+                        <Input value={newCodeLabel} onChange={e => setNewCodeLabel(e.target.value)} placeholder="np. VIP, Tester..." className="bg-background/50" />
+                      </div>
+                      <Button onClick={addUnlockCode} className="gap-1">
+                        <Plus className="h-4 w-4" /> Dodaj
+                      </Button>
+                    </div>
+
+                    {/* Codes list */}
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Kod</TableHead>
+                          <TableHead>Etykieta</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Utworzony</TableHead>
+                          <TableHead className="text-right">Akcje</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {unlockCodes.map(uc => (
+                          <TableRow key={uc.id}>
+                            <TableCell className="font-mono font-bold">{uc.code}</TableCell>
+                            <TableCell>{uc.label}</TableCell>
+                            <TableCell>
+                              <Badge variant={uc.is_active ? "default" : "secondary"}>
+                                {uc.is_active ? "Aktywny" : "Wyłączony"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-xs text-muted-foreground">
+                              {new Date(uc.created_at).toLocaleDateString("pl")}
+                            </TableCell>
+                            <TableCell className="text-right flex gap-1 justify-end">
+                              <Button size="sm" variant="ghost" onClick={() => toggleCodeActive(uc.id, uc.is_active)}>
+                                {uc.is_active ? <ToggleRight className="h-4 w-4 text-emerald-500" /> : <ToggleLeft className="h-4 w-4 text-muted-foreground" />}
+                              </Button>
+                              <Button size="sm" variant="ghost" onClick={() => deleteUnlockCode(uc.id)} className="text-destructive hover:text-destructive">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                        {unlockCodes.length === 0 && (
+                          <TableRow>
+                            <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                              Brak kodów dostępu
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
               </TabsContent>
             </Tabs>
 

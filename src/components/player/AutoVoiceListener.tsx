@@ -32,7 +32,7 @@ interface SpeechRecognitionInstance extends EventTarget {
   abort: () => void;
 }
 
-const SILENCE_TIMEOUT_MS = 120_000;
+const SILENCE_TIMEOUT_MS = 300_000; // 5 minutes
 
 const NAV_MAP: Record<string, string> = {
   "stron": "/", "główn": "/", "home": "/",
