@@ -704,6 +704,10 @@ export default function Admin() {
                   <Mail className="h-4 w-4" />
                   E-mail AI
                 </TabsTrigger>
+                <TabsTrigger value="codes" className="gap-2">
+                  <Lock className="h-4 w-4" />
+                  Kody dostępu
+                </TabsTrigger>
               </TabsList>
 
               {/* Genres Tab */}
