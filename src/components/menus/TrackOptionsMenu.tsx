@@ -1,4 +1,5 @@
 import { useState, useEffect, forwardRef } from "react";
+import { motion } from "framer-motion";
 import { 
   MoreHorizontal, 
   Heart, 
