@@ -25,7 +25,11 @@ import {
   Eye,
   Trophy,
   UserPlus,
-  Newspaper
+  Newspaper,
+  Lock,
+  Plus,
+  ToggleLeft,
+  ToggleRight
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
