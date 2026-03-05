@@ -124,6 +124,10 @@ export default function Admin() {
   const [brokenTracks, setBrokenTracks] = useState<TrackData[]>([]);
   const [deletingBroken, setDeletingBroken] = useState(false);
 
+  // Unlock codes state
+  const [unlockCodes, setUnlockCodes] = useState<{ id: string; code: string; label: string; is_active: boolean; created_at: string }[]>([]);
+  const [newCode, setNewCode] = useState("");
+  const [newCodeLabel, setNewCodeLabel] = useState("");
   useEffect(() => {
     if (!loading && !isAdmin) {
       toast.error("Brak uprawnień administratora");
