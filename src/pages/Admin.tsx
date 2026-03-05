@@ -1204,6 +1204,81 @@ export default function Admin() {
                   </Card>
                 )}
               </TabsContent>
+
+              {/* Unlock Codes Tab */}
+              <TabsContent value="codes">
+                <Card className="border-border/50 bg-card/50 backdrop-blur">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Lock className="h-5 w-5" />
+                      Zarządzanie kodami dostępu
+                    </CardTitle>
+                    <CardDescription>
+                      Kody odblokowujące pełną bibliotekę muzyczną
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {/* Add new code */}
+                    <div className="flex gap-2 items-end">
+                      <div className="flex-1">
+                        <Label className="text-xs">Kod</Label>
+                        <Input value={newCode} onChange={e => setNewCode(e.target.value)} placeholder="Nowy kod..." className="bg-background/50" />
+                      </div>
+                      <div className="flex-1">
+                        <Label className="text-xs">Etykieta</Label>
+                        <Input value={newCodeLabel} onChange={e => setNewCodeLabel(e.target.value)} placeholder="np. VIP, Tester..." className="bg-background/50" />
+                      </div>
+                      <Button onClick={addUnlockCode} className="gap-1">
+                        <Plus className="h-4 w-4" /> Dodaj
+                      </Button>
+                    </div>
+
+                    {/* Codes list */}
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Kod</TableHead>
+                          <TableHead>Etykieta</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Utworzony</TableHead>
+                          <TableHead className="text-right">Akcje</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {unlockCodes.map(uc => (
+                          <TableRow key={uc.id}>
+                            <TableCell className="font-mono font-bold">{uc.code}</TableCell>
+                            <TableCell>{uc.label}</TableCell>
+                            <TableCell>
+                              <Badge variant={uc.is_active ? "default" : "secondary"}>
+                                {uc.is_active ? "Aktywny" : "Wyłączony"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-xs text-muted-foreground">
+                              {new Date(uc.created_at).toLocaleDateString("pl")}
+                            </TableCell>
+                            <TableCell className="text-right flex gap-1 justify-end">
+                              <Button size="sm" variant="ghost" onClick={() => toggleCodeActive(uc.id, uc.is_active)}>
+                                {uc.is_active ? <ToggleRight className="h-4 w-4 text-emerald-500" /> : <ToggleLeft className="h-4 w-4 text-muted-foreground" />}
+                              </Button>
+                              <Button size="sm" variant="ghost" onClick={() => deleteUnlockCode(uc.id)} className="text-destructive hover:text-destructive">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                        {unlockCodes.length === 0 && (
+                          <TableRow>
+                            <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                              Brak kodów dostępu
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              </TabsContent>
             </Tabs>
 
             {/* Quick Actions */}
