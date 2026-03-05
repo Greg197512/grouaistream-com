@@ -257,7 +257,7 @@ export default function Admin() {
     fetchUnlockCodes();
   };
 
-
+  const testTrack = async (track: Track) => {
     setTestingTrack(track.id);
     try {
       // Try to play the track
