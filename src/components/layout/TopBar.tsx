@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   ChevronLeft, ChevronRight, Search, Bell, User, Crown, LogOut,
@@ -24,6 +24,9 @@ export const TopBar = () => {
   const [hasNotifications, setHasNotifications] = useState(true);
   const [showUpgrade, setShowUpgrade] = useState(false);
   const [passwordInput, setPasswordInput] = useState("");
+  const [showPasswordField, setShowPasswordField] = useState(false);
+  const [unlocking, setUnlocking] = useState(false);
+  const hideTimeoutRef = useRef<number | null>(null);
   const { user, signOut, loading } = useAuth();
   const { language, setLanguage, t, languageNames, languageFlags } = useLanguage();
   const { isUnlocked, unlock } = useUnlock();
@@ -55,6 +58,31 @@ export const TopBar = () => {
     return user?.user_metadata?.display_name || user?.email?.split("@")[0] || "User";
   };
 
+  const handleLockMouseEnter = () => {
+    if (hideTimeoutRef.current) clearTimeout(hideTimeoutRef.current);
+    setShowPasswordField(true);
+  };
+
+  const handleLockMouseLeave = () => {
+    hideTimeoutRef.current = window.setTimeout(() => {
+      if (!passwordInput) setShowPasswordField(false);
+    }, 1500);
+  };
+
+  const handleUnlockSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setUnlocking(true);
+    const success = await unlock(passwordInput);
+    setUnlocking(false);
+    if (success) {
+      toast.success(t("topbar.unlocked") || "Odblokowano pełną bibliotekę!");
+      setShowPasswordField(false);
+    } else {
+      toast.error(t("topbar.wrongPassword") || "Nieprawidłowe hasło");
+      setPasswordInput("");
+    }
+  };
+
   return (
     <header className="sticky top-0 z-40 flex h-16 items-center justify-between gap-4 border-b border-border bg-background/80 backdrop-blur-groove px-6">
       {/* Navigation */}
@@ -73,39 +101,13 @@ export const TopBar = () => {
         </button>
       </div>
 
-      {/* Password Unlock */}
-      <AnimatePresence>
-        {!isUnlocked && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9 }}
-            className="flex items-center gap-2"
-          >
-            <Lock className="h-4 w-4 text-muted-foreground" />
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (unlock(passwordInput)) {
-                  toast.success("Odblokowano pełną bibliotekę!");
-                } else {
-                  toast.error("Nieprawidłowe hasło");
-                  setPasswordInput("");
-                }
-              }}
-              className="flex items-center gap-1"
-            >
-              <Input
-                type="password"
-                placeholder="Hasło..."
-                value={passwordInput}
-                onChange={(e) => setPasswordInput(e.target.value)}
-                className="w-28 h-8 text-xs bg-secondary border-0 rounded-full"
-              />
-            </form>
-          </motion.div>
-        )}
-        {isUnlocked && (
+      {/* Password Unlock - hover to reveal */}
+      <div
+        className="relative flex items-center"
+        onMouseEnter={handleLockMouseEnter}
+        onMouseLeave={handleLockMouseLeave}
+      >
+        {isUnlocked ? (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -113,8 +115,34 @@ export const TopBar = () => {
           >
             <LockOpen className="h-3.5 w-3.5" />
           </motion.div>
+        ) : (
+          <>
+            <Lock className="h-4 w-4 text-muted-foreground cursor-pointer hover:text-foreground transition-colors" />
+            <AnimatePresence>
+              {showPasswordField && (
+                <motion.form
+                  initial={{ opacity: 0, width: 0, marginLeft: 0 }}
+                  animate={{ opacity: 1, width: 120, marginLeft: 8 }}
+                  exit={{ opacity: 0, width: 0, marginLeft: 0 }}
+                  transition={{ duration: 0.2 }}
+                  onSubmit={handleUnlockSubmit}
+                  className="overflow-hidden"
+                >
+                  <Input
+                    type="password"
+                    placeholder="••••••"
+                    value={passwordInput}
+                    onChange={(e) => setPasswordInput(e.target.value)}
+                    className="w-28 h-7 text-xs bg-secondary border-0 rounded-full"
+                    autoFocus
+                    disabled={unlocking}
+                  />
+                </motion.form>
+              )}
+            </AnimatePresence>
+          </>
         )}
-      </AnimatePresence>
+      </div>
 
       {/* Search */}
       <form onSubmit={handleSearch} className="flex-1 max-w-md">

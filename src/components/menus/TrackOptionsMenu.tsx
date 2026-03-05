@@ -148,20 +148,48 @@ const TrackOptionsMenuComponent = (
     );
   };
 
-  const handleDownload = () => {
+  const [downloading, setDownloading] = useState(false);
+
+  const handleDownload = async () => {
     if (!trackUrl) {
       toast.error("Download not available for this track");
       return;
     }
 
-    // GDPR consent popup
     const confirmed = window.confirm(
       "Download consent: By downloading, you confirm you have the right to download this content for personal use. Continue?"
     );
 
-    if (confirmed) {
-      window.open(trackUrl, "_blank");
+    if (!confirmed) return;
+
+    setDownloading(true);
+    toast.info("💿 Wypalanie...", { duration: 3000 });
+
+    try {
+      const response = await fetch(trackUrl);
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const ext = trackUrl.includes(".mp4") ? "mp4" : "mp3";
+      a.download = `${trackArtist} - ${trackTitle}.${ext}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success("✅ Pobrano na dysk!");
+    } catch {
+      // Fallback: direct link download
+      const a = document.createElement("a");
+      a.href = trackUrl;
+      a.download = `${trackArtist} - ${trackTitle}.mp3`;
+      a.target = "_self";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
       toast.success("Download started");
+    } finally {
+      setDownloading(false);
     }
   };
 

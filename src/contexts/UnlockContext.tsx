@@ -1,18 +1,18 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface UnlockContextType {
   isUnlocked: boolean;
-  unlock: (password: string) => boolean;
+  unlock: (password: string) => Promise<boolean>;
   filterTracks: <T extends { artist?: string }>(tracks: T[]) => T[];
 }
 
 const UnlockContext = createContext<UnlockContextType>({
   isUnlocked: false,
-  unlock: () => false,
+  unlock: async () => false,
   filterTracks: (t) => t,
 });
 
-const UNLOCK_PASSWORD = "222005";
 const STORAGE_KEY = "grouai_unlocked";
 
 export const UnlockProvider = ({ children }: { children: ReactNode }) => {
@@ -20,8 +20,16 @@ export const UnlockProvider = ({ children }: { children: ReactNode }) => {
     return sessionStorage.getItem(STORAGE_KEY) === "true";
   });
 
-  const unlock = (password: string): boolean => {
-    if (password === UNLOCK_PASSWORD) {
+  const unlock = async (password: string): Promise<boolean> => {
+    // Check against database codes
+    const { data } = await supabase
+      .from("unlock_codes")
+      .select("id")
+      .eq("code", password)
+      .eq("is_active", true)
+      .maybeSingle();
+
+    if (data) {
       setIsUnlocked(true);
       sessionStorage.setItem(STORAGE_KEY, "true");
       return true;
