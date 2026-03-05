@@ -336,6 +336,30 @@ export type Database = {
         }
         Relationships: []
       }
+      unlock_codes: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          is_active: boolean
+          label: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label?: string | null
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
