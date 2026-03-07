@@ -54,28 +54,46 @@ const RadioLive = () => {
     fetchData();
   }, []);
 
-  // Calculate which track should be playing based on started_at
+  const getItemDuration = (item: ScheduleTrack) => {
+    if (item.item_type === "track" || !item.item_type) return item.track?.duration || 180;
+    return item.custom_duration || 30;
+  };
+
+  const getItemAudioUrl = (item: ScheduleTrack) => {
+    if (item.item_type === "track" || !item.item_type) return item.track?.audio_url || null;
+    return item.custom_audio_url || null;
+  };
+
+  const getItemTitle = (item: ScheduleTrack) => {
+    if (item.item_type === "track" || !item.item_type) return item.track?.title || "Nieznany";
+    return item.custom_title || item.item_type;
+  };
+
+  const getItemArtist = (item: ScheduleTrack) => {
+    if (item.item_type === "track" || !item.item_type) return item.track?.artist || "";
+    const labels: Record<string, string> = { jingle: "🎵 Jingiel", ad: "📢 Reklama", talk: "🎙️ Rozmowa" };
+    return labels[item.item_type] || item.item_type;
+  };
+
   useEffect(() => {
     if (!config?.is_active || !config.started_at || schedule.length === 0) return;
 
     const startedAt = new Date(config.started_at).getTime();
     const now = Date.now();
-    let elapsed = (now - startedAt) / 1000; // seconds
+    let elapsed = (now - startedAt) / 1000;
 
-    const totalDuration = schedule.reduce((s, t) => s + (t.track?.duration || 180), 0);
+    const totalDuration = schedule.reduce((s, t) => s + getItemDuration(t), 0);
     if (totalDuration <= 0) return;
 
-    // Loop if 24h mode
     if (config.mode === "24h") {
       elapsed = elapsed % totalDuration;
     }
 
     let cumulative = 0;
     for (let i = 0; i < schedule.length; i++) {
-      const dur = schedule[i].track?.duration || 180;
+      const dur = getItemDuration(schedule[i]);
       if (cumulative + dur > elapsed) {
         setCurrentIndex(i);
-        // Start playback at the right offset
         const offset = elapsed - cumulative;
         startPlayback(i, offset);
         return;
@@ -83,7 +101,6 @@ const RadioLive = () => {
       cumulative += dur;
     }
 
-    // Past end (non-24h mode)
     setCurrentIndex(0);
   }, [config, schedule]);
 
