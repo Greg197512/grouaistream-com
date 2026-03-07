@@ -57,6 +57,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Track, usePlayer } from "@/contexts/PlayerContext";
+import { RadioStationManager } from "@/components/admin/RadioStationManager";
+import { StorageStats } from "@/components/admin/StorageStats";
+import { Radio as RadioIcon, HardDrive } from "lucide-react";
 
 interface UserStats {
   totalUsers: number;
@@ -707,6 +710,14 @@ export default function Admin() {
                 <TabsTrigger value="codes" className="gap-2">
                   <Lock className="h-4 w-4" />
                   Kody dostępu
+                </TabsTrigger>
+                <TabsTrigger value="radio" className="gap-2">
+                  <RadioIcon className="h-4 w-4" />
+                  Rozgłośnia
+                </TabsTrigger>
+                <TabsTrigger value="storage" className="gap-2">
+                  <HardDrive className="h-4 w-4" />
+                  Dysk
                 </TabsTrigger>
               </TabsList>
 
