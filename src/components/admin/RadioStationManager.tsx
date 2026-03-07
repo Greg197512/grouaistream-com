@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Radio,
   Plus,
@@ -19,6 +20,9 @@ import {
   Search,
   Loader2,
   Copy,
+  Mic,
+  Megaphone,
+  MessageSquare,
 } from "lucide-react";
 import { RadioTimeline } from "./RadioTimeline";
 import {
