@@ -294,6 +294,68 @@ export type Database = {
         }
         Relationships: []
       }
+      radio_config: {
+        Row: {
+          end_time: string | null
+          id: string
+          is_active: boolean
+          mode: string
+          start_time: string | null
+          started_at: string | null
+          station_name: string
+          updated_at: string
+        }
+        Insert: {
+          end_time?: string | null
+          id?: string
+          is_active?: boolean
+          mode?: string
+          start_time?: string | null
+          started_at?: string | null
+          station_name?: string
+          updated_at?: string
+        }
+        Update: {
+          end_time?: string | null
+          id?: string
+          is_active?: boolean
+          mode?: string
+          start_time?: string | null
+          started_at?: string | null
+          station_name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      radio_schedule: {
+        Row: {
+          added_at: string
+          id: string
+          position: number
+          track_id: string
+        }
+        Insert: {
+          added_at?: string
+          id?: string
+          position?: number
+          track_id: string
+        }
+        Update: {
+          added_at?: string
+          id?: string
+          position?: number
+          track_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "radio_schedule_track_id_fkey"
+            columns: ["track_id"]
+            isOneToOne: false
+            referencedRelation: "tracks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tracks: {
         Row: {
           album: string | null
