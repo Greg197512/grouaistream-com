@@ -106,14 +106,27 @@ const RadioLive = () => {
 
   const startPlayback = useCallback(
     (index: number, offset = 0) => {
-      const track = schedule[index]?.track;
-      if (!track?.audio_url) return;
+      const item = schedule[index];
+      if (!item) return;
+      const audioUrl = getItemAudioUrl(item);
 
       if (audioRef.current) {
         audioRef.current.pause();
       }
 
-      const audio = new Audio(track.audio_url);
+      if (!audioUrl) {
+        // No audio (silent break) - just wait for duration then skip
+        setIsPlaying(true);
+        const remaining = getItemDuration(item) - offset;
+        const timer = setTimeout(() => {
+          const nextIndex = (index + 1) % schedule.length;
+          setCurrentIndex(nextIndex);
+          startPlayback(nextIndex);
+        }, remaining * 1000);
+        return () => clearTimeout(timer);
+      }
+
+      const audio = new Audio(audioUrl);
       audio.crossOrigin = "anonymous";
       audio.preload = "auto";
       audio.volume = muted ? 0 : volume / 100;
