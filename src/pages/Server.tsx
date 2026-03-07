@@ -530,39 +530,44 @@ const Server = () => {
                         MP3, WAV, MP4, WebM — max 500MB każdy
                       </p>
                     </div>
-                    <div className="flex gap-2 mt-2">
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept=".mp3,.wav,.mp4,.webm"
-                        multiple
-                        onChange={(e) => { if (e.target.files) addFilesToQueue(e.target.files); e.target.value = ""; }}
-                        className="hidden"
-                      />
-                      <input
-                        ref={folderInputRef}
-                        type="file"
-                        // @ts-ignore
-                        webkitdirectory=""
-                        // @ts-ignore
-                        directory=""
-                        multiple
-                        onChange={(e) => {
-                          if (e.target.files) {
-                            const files = Array.from(e.target.files).filter(f => ALL_ALLOWED.includes(f.type));
-                            const paths = files.map(f => (f as any).webkitRelativePath || f.name);
-                            addFilesToQueue(files as any, paths);
-                          }
-                          e.target.value = "";
-                        }}
-                        className="hidden"
-                      />
-                      <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }} className="gap-1">
-                        <Music className="h-4 w-4" /> Wybierz pliki
-                      </Button>
-                      <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); folderInputRef.current?.click(); }} className="gap-1">
-                        <FolderOpen className="h-4 w-4" /> Wybierz katalog
-                      </Button>
+                    <div className="flex flex-col items-center gap-2 mt-2">
+                      <div className="flex gap-2">
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept=".mp3,.wav,.mp4,.webm"
+                          multiple
+                          onChange={(e) => { if (e.target.files) addFilesToQueue(e.target.files); e.target.value = ""; }}
+                          className="hidden"
+                        />
+                        <input
+                          ref={folderInputRef}
+                          type="file"
+                          // @ts-ignore
+                          webkitdirectory=""
+                          // @ts-ignore
+                          directory=""
+                          multiple
+                          onChange={(e) => {
+                            if (e.target.files) {
+                              const files = Array.from(e.target.files).filter(f => ALL_ALLOWED.includes(f.type));
+                              const paths = files.map(f => (f as any).webkitRelativePath || f.name);
+                              addFilesToQueue(files as any, paths);
+                            }
+                            e.target.value = "";
+                          }}
+                          className="hidden"
+                        />
+                        <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }} className="gap-1">
+                          <Music className="h-4 w-4" /> Wybierz pliki
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); folderInputRef.current?.click(); }} className="gap-1">
+                          <FolderOpen className="h-4 w-4" /> + Dodaj katalog
+                        </Button>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Klikaj „+ Dodaj katalog" wielokrotnie — pliki z każdego katalogu trafią do kolejki
+                      </p>
                     </div>
                   </div>
                 </div>
