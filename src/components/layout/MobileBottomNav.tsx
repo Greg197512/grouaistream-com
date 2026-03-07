@@ -6,7 +6,7 @@ const navItems = [
   { icon: "home", labelKey: "nav.home", href: "/" },
   { icon: "search", labelKey: "nav.search", href: "/search" },
   { icon: "library_music", labelKey: "nav.library", href: "/library" },
-  { icon: "radio", labelKey: "nav.radioLive", href: "/radio" },
+  { icon: "radio", labelKey: "nav.radioLive", href: "/radio-live" },
   { icon: "settings", labelKey: "nav.settings", href: "/settings" },
 ];
 
