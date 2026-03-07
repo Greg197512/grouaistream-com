@@ -153,6 +153,19 @@ export const RadioStationManager = () => {
     fetchData();
   };
 
+  const reorderTrack = async (fromIndex: number, toIndex: number) => {
+    const newSchedule = [...schedule];
+    const [moved] = newSchedule.splice(fromIndex, 1);
+    newSchedule.splice(toIndex, 0, moved);
+
+    // Update all positions
+    const updates = newSchedule.map((item, i) =>
+      supabase.from("radio_schedule").update({ position: i } as any).eq("id", item.id)
+    );
+    await Promise.all(updates);
+    fetchData();
+  };
+
   const formatDuration = (sec: number) => {
     const m = Math.floor(sec / 60);
     const s = sec % 60;
