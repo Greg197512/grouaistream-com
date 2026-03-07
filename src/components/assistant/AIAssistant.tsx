@@ -223,8 +223,8 @@ export const AIAssistant = () => {
     }
   }, [input, isLoading, messages, userContext]);
 
-  const chatWidth = isExpanded ? "w-[600px]" : "w-[400px]";
-  const chatHeight = isExpanded ? "h-[700px]" : "h-[520px]";
+  const chatWidth = isExpanded ? "w-[calc(100vw-2rem)] sm:w-[600px]" : "w-[calc(100vw-2rem)] sm:w-[400px]";
+  const chatHeight = isExpanded ? "h-[calc(100vh-8rem)] sm:h-[700px]" : "h-[calc(100vh-8rem)] sm:h-[520px]";
 
   return (
     <>
@@ -256,7 +256,7 @@ export const AIAssistant = () => {
         {isOpen && (
           <motion.div
             drag dragControls={dragControls} dragMomentum={false} dragElastic={0}
-            dragConstraints={{ left: -window.innerWidth + 420, right: 0, top: -window.innerHeight + 540, bottom: 0 }}
+            dragConstraints={{ left: -(window.innerWidth - 60), right: 0, top: -(window.innerHeight - 100), bottom: 0 }}
             initial={{ opacity: 0, y: 20, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.9 }}

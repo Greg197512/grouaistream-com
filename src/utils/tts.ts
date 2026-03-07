@@ -20,41 +20,74 @@ export const speak = (text: string, opts?: { rate?: number; pitch?: number }): P
   // Cancel any ongoing speech
   window.speechSynthesis.cancel();
 
-  return new Promise<void>((resolve) => {
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = "pl-PL";
-    utterance.rate = opts?.rate ?? 1.0;
-    utterance.pitch = opts?.pitch ?? 0.85;
+  const trySpeak = (voices: SpeechSynthesisVoice[]) => {
+    return new Promise<void>((resolve) => {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = "pl-PL";
+      utterance.rate = opts?.rate ?? 1.0;
+      utterance.pitch = opts?.pitch ?? 0.85;
 
-    // Find a male Polish voice
-    const voices = window.speechSynthesis.getVoices();
-    const plMaleVoice = voices.find(v => v.lang.startsWith("pl") && /male|męs|adam|jacek|jan|krzyszt|łukasz|marcin|paweł/i.test(v.name))
-      || voices.find(v => v.lang.startsWith("pl") && !/female|kobieta|żeń|ewa|anna|agnieszk|magda|monika/i.test(v.name))
-      || voices.find(v => v.lang.startsWith("pl"))
-      || voices.find(v => v.lang.startsWith("en") && /male|daniel|george|james|david/i.test(v.name))
-      || voices[0];
+      // Prefer male Polish voice; on mobile devices voices are limited so we
+      // lower the pitch to sound more masculine when only a female voice exists.
+      const maleKeywords = /male|męs|adam|jacek|jan|krzyszt|łukasz|marcin|paweł|piotr|tomasz|mateusz/i;
+      const femaleKeywords = /female|kobieta|żeń|ewa|anna|agnieszk|magda|monika|zofia|paulina|google.*pl.*female/i;
 
-    if (plMaleVoice) utterance.voice = plMaleVoice;
+      const plMaleVoice = voices.find(v => v.lang.startsWith("pl") && maleKeywords.test(v.name));
+      const plNonFemaleVoice = voices.find(v => v.lang.startsWith("pl") && !femaleKeywords.test(v.name));
+      const plAnyVoice = voices.find(v => v.lang.startsWith("pl"));
+      const enMaleVoice = voices.find(v => v.lang.startsWith("en") && /male|daniel|george|james|david/i.test(v.name));
 
-    _isSpeaking = true;
+      const selectedVoice = plMaleVoice || plNonFemaleVoice || plAnyVoice || enMaleVoice || voices[0];
 
-    utterance.onend = () => {
-      _isSpeaking = false;
-      resolve();
-    };
-    utterance.onerror = () => {
-      _isSpeaking = false;
-      resolve();
-    };
+      if (selectedVoice) {
+        utterance.voice = selectedVoice;
+        // If we ended up with a female voice, lower pitch to sound more masculine
+        const isFemale = femaleKeywords.test(selectedVoice.name);
+        if (isFemale || (!plMaleVoice && !plNonFemaleVoice && plAnyVoice === selectedVoice)) {
+          utterance.pitch = Math.min(opts?.pitch ?? 0.55, 0.55);
+          utterance.rate = opts?.rate ?? 0.92;
+        }
+      }
 
-    window.speechSynthesis.speak(utterance);
+      _isSpeaking = true;
 
-    // Safety timeout – some browsers never fire onend for short utterances
-    setTimeout(() => {
-      if (_isSpeaking) {
+      utterance.onend = () => {
         _isSpeaking = false;
         resolve();
-      }
-    }, Math.max(text.length * 120, 3000));
+      };
+      utterance.onerror = () => {
+        _isSpeaking = false;
+        resolve();
+      };
+
+      window.speechSynthesis.speak(utterance);
+
+      // Safety timeout
+      setTimeout(() => {
+        if (_isSpeaking) {
+          _isSpeaking = false;
+          resolve();
+        }
+      }, Math.max(text.length * 120, 3000));
+    });
+  };
+
+  // Voices may load asynchronously on mobile — wait for them if empty
+  const voices = window.speechSynthesis.getVoices();
+  if (voices.length > 0) {
+    return trySpeak(voices);
+  }
+
+  return new Promise<void>((resolve) => {
+    const onVoices = () => {
+      window.speechSynthesis.removeEventListener("voiceschanged", onVoices);
+      trySpeak(window.speechSynthesis.getVoices()).then(resolve);
+    };
+    window.speechSynthesis.addEventListener("voiceschanged", onVoices);
+    // Fallback if voiceschanged never fires
+    setTimeout(() => {
+      window.speechSynthesis.removeEventListener("voiceschanged", onVoices);
+      trySpeak(window.speechSynthesis.getVoices()).then(resolve);
+    }, 1000);
   });
 };
