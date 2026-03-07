@@ -329,69 +329,137 @@ export const RadioStationManager = () => {
         </CardContent>
       </Card>
 
-      {/* Add Tracks */}
+      {/* Add Content */}
       <Card className="border-border/50 bg-card/50 backdrop-blur">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <Plus className="h-4 w-4" />
-            Dodaj utwory do programu
+            Dodaj do programu
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="flex gap-2">
-            <Input
-              placeholder="Szukaj utworu lub artysty..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && searchTracks()}
-            />
-            <Button onClick={searchTracks} disabled={searching} className="gap-1 shrink-0">
-              {searching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-              Szukaj
-            </Button>
-          </div>
+        <CardContent>
+          <Tabs defaultValue="tracks" className="space-y-3">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="tracks" className="gap-1">
+                <Music className="h-3 w-3" /> Utwory
+              </TabsTrigger>
+              <TabsTrigger value="custom" className="gap-1">
+                <Mic className="h-3 w-3" /> Jingle / Reklama / Rozmowa
+              </TabsTrigger>
+            </TabsList>
 
-          {searchResults.length > 0 && (
-            <ScrollArea className="h-48 rounded border border-border/30">
-              <div className="space-y-1 p-2">
-                {searchResults.map((track) => (
-                  <div
-                    key={track.id}
-                    className="flex items-center justify-between rounded-md px-3 py-2 hover:bg-muted/50 transition-colors"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium truncate">{track.title}</p>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {track.artist} • {formatDuration(track.duration)} • {track.genre || "—"}
-                      </p>
-                    </div>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => addTrackToSchedule(track)}
-                      className="shrink-0"
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
+            <TabsContent value="tracks" className="space-y-3">
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Szukaj utworu lub artysty..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && searchTracks()}
+                />
+                <Button onClick={searchTracks} disabled={searching} className="gap-1 shrink-0">
+                  {searching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                  Szukaj
+                </Button>
+              </div>
+              {searchResults.length > 0 && (
+                <ScrollArea className="h-48 rounded border border-border/30">
+                  <div className="space-y-1 p-2">
+                    {searchResults.map((track) => (
+                      <div
+                        key={track.id}
+                        className="flex items-center justify-between rounded-md px-3 py-2 hover:bg-muted/50 transition-colors"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium truncate">{track.title}</p>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {track.artist} • {formatDuration(track.duration)} • {track.genre || "—"}
+                          </p>
+                        </div>
+                        <Button size="sm" variant="ghost" onClick={() => addTrackToSchedule(track)} className="shrink-0">
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
                   </div>
+                </ScrollArea>
+              )}
+            </TabsContent>
+
+            <TabsContent value="custom" className="space-y-4">
+              {/* Type selector */}
+              <div className="flex gap-2">
+                {([
+                  { type: "jingle" as const, label: "Jingiel", icon: Music, color: "text-yellow-500" },
+                  { type: "ad" as const, label: "Reklama", icon: Megaphone, color: "text-red-400" },
+                  { type: "talk" as const, label: "Rozmowa", icon: MessageSquare, color: "text-blue-400" },
+                ]).map(({ type, label, icon: Icon, color }) => (
+                  <Button
+                    key={type}
+                    variant={customType === type ? "default" : "outline"}
+                    size="sm"
+                    className="gap-1 flex-1"
+                    onClick={() => setCustomType(type)}
+                  >
+                    <Icon className={`h-3 w-3 ${customType === type ? "" : color}`} />
+                    {label}
+                  </Button>
                 ))}
               </div>
-            </ScrollArea>
-          )}
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <Label>Nazwa</Label>
+                  <Input
+                    placeholder={customType === "jingle" ? "np. Jingiel stacji" : customType === "ad" ? "np. Reklama - Sponsor" : "np. Wywiad z artystą"}
+                    value={customTitle}
+                    onChange={(e) => setCustomTitle(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label>Czas trwania (sekundy)</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={7200}
+                    value={customDuration}
+                    onChange={(e) => setCustomDuration(parseInt(e.target.value) || 30)}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label>URL audio (opcjonalnie)</Label>
+                <Input
+                  placeholder="https://... link do pliku mp3"
+                  value={customAudioUrl}
+                  onChange={(e) => setCustomAudioUrl(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Jeśli nie podasz URL, element będzie odliczany jako przerwa (cisza).
+                </p>
+              </div>
+
+              <Button onClick={addCustomItem} className="w-full gap-2">
+                <Plus className="h-4 w-4" />
+                Dodaj {customType === "jingle" ? "jingiel" : customType === "ad" ? "reklamę" : "rozmowę"}
+              </Button>
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
 
+      {/* Schedule Timeline */}
       <Card className="border-border/50 bg-card/50 backdrop-blur">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <Music className="h-4 w-4" />
-            Program radiowy ({schedule.length} utworów)
+            Program radiowy ({schedule.length} elementów)
           </CardTitle>
         </CardHeader>
         <CardContent>
           {schedule.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-8">
-              Brak utworów w programie. Dodaj utwory powyżej.
+              Brak elementów w programie. Dodaj utwory lub przerwy powyżej.
             </p>
           ) : (
             <RadioTimeline
