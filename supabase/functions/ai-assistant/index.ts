@@ -124,11 +124,7 @@ Znasz DOKŁADNIE każdą funkcję aplikacji:
 7. Możesz prowadzić naturalną konwersację na DOWOLNY temat
 8. ZAWSZE znaj zawartość biblioteki muzycznej — jeśli użytkownik pyta o utwór, sprawdź czy jest w katalogu powyżej`;
 
-    let userPrompt = message;
-    if (trackInfo && trackInfo.length > 0) {
-      const trackList = trackInfo.map((t: any) => `- "${t.title}" — ${t.artist} (${t.genre || "?"}, ${t.mood || "?"})`).join("\n");
-      userPrompt += `\n\n[ZNALEZIONE UTWORY W BAZIE:\n${trackList}]`;
-    }
+    const userPrompt = message;
 
     // Stream the response
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
