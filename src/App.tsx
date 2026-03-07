@@ -17,6 +17,7 @@ import LikedSongs from "./pages/LikedSongs";
 import CreatePlaylist from "./pages/CreatePlaylist";
 import Radio from "./pages/Radio";
 import RadioLive from "./pages/RadioLive";
+import RadioEmbed from "./pages/RadioEmbed";
 import ImportYouTube from "./pages/ImportYouTube";
 import Settings from "./pages/Settings";
 import PlaylistManager from "./pages/PlaylistManager";
@@ -52,6 +53,7 @@ const App = () => (
                   <Route path="/create-playlist" element={<CreatePlaylist />} />
                   <Route path="/radio" element={<Radio />} />
                   <Route path="/radio-live" element={<RadioLive />} />
+                  <Route path="/radio-live/embed" element={<RadioEmbed />} />
                   <Route path="/import-youtube" element={<ImportYouTube />} />
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/playlist-manager" element={<PlaylistManager />} />
