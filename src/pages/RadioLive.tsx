@@ -15,6 +15,10 @@ interface RadioConfig {
 
 interface ScheduleTrack {
   position: number;
+  item_type: string;
+  custom_title: string | null;
+  custom_duration: number;
+  custom_audio_url: string | null;
   track: {
     id: string;
     title: string;
@@ -22,7 +26,7 @@ interface ScheduleTrack {
     duration: number;
     audio_url: string | null;
     cover_url: string | null;
-  };
+  } | null;
 }
 
 const RadioLive = () => {
