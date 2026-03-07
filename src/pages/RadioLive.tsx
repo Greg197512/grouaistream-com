@@ -167,7 +167,10 @@ const RadioLive = () => {
     };
   }, []);
 
-  const currentTrack = schedule[currentIndex]?.track;
+  const currentItem = schedule[currentIndex];
+  const currentTitle = currentItem ? getItemTitle(currentItem) : "";
+  const currentArtist = currentItem ? getItemArtist(currentItem) : "";
+  const currentCover = currentItem?.track?.cover_url || null;
   const isOffAir = !config?.is_active || schedule.length === 0;
 
   // Scheduled mode check
