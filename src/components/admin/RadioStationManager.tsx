@@ -171,7 +171,6 @@ export const RadioStationManager = () => {
     setCustomDuration(30);
     fetchData();
   };
-  };
 
   const removeFromSchedule = async (id: string) => {
     await supabase.from("radio_schedule").delete().eq("id", id);
