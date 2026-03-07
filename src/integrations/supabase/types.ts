@@ -330,21 +330,33 @@ export type Database = {
       radio_schedule: {
         Row: {
           added_at: string
+          custom_audio_url: string | null
+          custom_duration: number
+          custom_title: string | null
           id: string
+          item_type: string
           position: number
-          track_id: string
+          track_id: string | null
         }
         Insert: {
           added_at?: string
+          custom_audio_url?: string | null
+          custom_duration?: number
+          custom_title?: string | null
           id?: string
+          item_type?: string
           position?: number
-          track_id: string
+          track_id?: string | null
         }
         Update: {
           added_at?: string
+          custom_audio_url?: string | null
+          custom_duration?: number
+          custom_title?: string | null
           id?: string
+          item_type?: string
           position?: number
-          track_id?: string
+          track_id?: string | null
         }
         Relationships: [
           {
