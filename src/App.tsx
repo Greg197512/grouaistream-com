@@ -53,6 +53,7 @@ const App = () => (
                   <Route path="/create-playlist" element={<CreatePlaylist />} />
                   <Route path="/radio" element={<Radio />} />
                   <Route path="/radio-live" element={<RadioLive />} />
+                  <Route path="/radio-live/embed" element={<RadioEmbed />} />
                   <Route path="/import-youtube" element={<ImportYouTube />} />
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/playlist-manager" element={<PlaylistManager />} />
