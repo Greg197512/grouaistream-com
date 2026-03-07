@@ -22,21 +22,32 @@ serve(async (req) => {
 
     const lowerMessage = message.toLowerCase();
 
-    // Search for tracks in DB
-    let trackInfo = null;
+    // Fetch ALL tracks from the database so the assistant knows the full library
+    const { data: allTracks } = await supabase
+      .from("tracks")
+      .select("id,title,artist,genre,mood,album")
+      .order("title")
+      .limit(1000);
+
+    // Search for specific tracks matching the user's query
     let trackLink = null;
     const searchTerms = message.split(" ").filter((w: string) => w.length > 3);
-    if (searchTerms.length > 0) {
-      const { data: tracks } = await supabase
-        .from("tracks")
-        .select("*")
-        .or(searchTerms.map((term: string) => `title.ilike.%${term}%,artist.ilike.%${term}%`).join(","))
-        .limit(3);
-      if (tracks && tracks.length > 0) {
-        trackInfo = tracks;
-        trackLink = { id: tracks[0].id, title: tracks[0].title, artist: tracks[0].artist };
+    if (searchTerms.length > 0 && allTracks) {
+      const matching = allTracks.filter((t: any) => 
+        searchTerms.some((term: string) => 
+          t.title?.toLowerCase().includes(term.toLowerCase()) || 
+          t.artist?.toLowerCase().includes(term.toLowerCase())
+        )
+      ).slice(0, 3);
+      if (matching.length > 0) {
+        trackLink = { id: matching[0].id, title: matching[0].title, artist: matching[0].artist };
       }
     }
+
+    // Build compact track catalog for the AI context
+    const trackCatalog = allTracks && allTracks.length > 0
+      ? allTracks.map((t: any) => `${t.title} — ${t.artist} [${t.genre || '?'}/${t.mood || '?'}]`).join("\n")
+      : "Brak utworów w bazie";
 
     // Build context
     const ctx = userContext || {};
@@ -74,10 +85,34 @@ serve(async (req) => {
 - Dominujące nastroje: ${topMoods.length > 0 ? topMoods.join(", ") : "jeszcze nieznane"}
 - Aktualnie grany utwór: ${currentTrack ? `"${currentTrack.title}" — ${currentTrack.artist}` : "nic nie gra"}
 
+## PEŁNA BIBLIOTEKA MUZYCZNA (ZNASZ WSZYSTKIE TE UTWORY):
+${trackCatalog}
+
+## WIEDZA O APLIKACJI GrooveAI Stream:
+Znasz DOKŁADNIE każdą funkcję aplikacji:
+- **Strona główna (/)**: Sekcje gatunkowe (EDM, Disco, House, Rock, Punk, Pop, Hip-Hop, R&B, Trance), Radio na żywo, AI DJ, Playlisty
+- **Wyszukiwarka (/search)**: Wyszukiwanie utworów po tytule, artyście, gatunku
+- **Biblioteka (/library)**: Osobista kolekcja użytkownika
+- **Polubione (/liked)**: Lista ulubionych utworów
+- **Tworzenie playlist (/create-playlist)**: Tworzenie playlist AI lub ręcznych
+- **Menedżer playlist (/playlist-manager)**: Zarządzanie, edycja, usuwanie playlist
+- **Radio (/radio)**: Radio na żywo z różnymi stacjami
+- **Import YouTube (/import-youtube)**: Importowanie muzyki z YouTube
+- **Filmy (/movies)**: Sekcja filmowa
+- **Serwer mediów (/server)**: Zarządzanie plikami multimedialnymi
+- **Historia nastroju (/mood-history)**: Analiza historii nastrojów z wykresami
+- **Ustawienia (/settings)**: Konfiguracja konta, język, motyw
+- **Panel admina (/admin)**: Zarządzanie dla administratorów
+- **Detekcja nastroju**: Rozpoznawanie emocji przez kamerę w czasie rzeczywistym
+- **Komendy głosowe**: Asystent głosowy reagujący na polecenia (puść, zatrzymaj, następny, itp.)
+- **Drag & Drop**: Przeciąganie utworów między playlistami
+- **AI DJ**: Automatyczny DJ dobierający muzykę na podstawie nastroju
+
 ## SPECJALNE KONTEKSTY:
 - Pytania o vinyl/winyl → kieruj do sekcji **Hubs Vinyl** w aplikacji
 - Współpraca/biznes/kontakt → email: **grouarock@gmail.com**
-- Pytania o aplikację → szczegółowy przewodnik po funkcjach (strona główna, wyszukiwarka, biblioteka, detekcja nastroju, radio, filmy, AI DJ, komendy głosowe)
+- Gdy użytkownik pyta o konkretny utwór z biblioteki — podaj szczegóły (gatunek, nastrój, artysta) i zaproponuj odtworzenie
+- Gdy pyta "co masz?", "jakie utwory?", "co mogę posłuchać?" — pokaż przegląd gatunków i przykłady z biblioteki
 
 ## ZASADY:
 1. Odpowiadaj w języku użytkownika (domyślnie po polsku)
@@ -86,13 +121,10 @@ serve(async (req) => {
 4. Przy pytaniach muzycznych — podawaj ciekawostki, kontekst historyczny, porównania
 5. Przy pytaniach technicznych — wyjaśniaj krok po kroku
 6. Przy emocjach użytkownika — bądź empatyczny i wspierający
-7. Możesz prowadzić naturalną konwersację na DOWOLNY temat`;
+7. Możesz prowadzić naturalną konwersację na DOWOLNY temat
+8. ZAWSZE znaj zawartość biblioteki muzycznej — jeśli użytkownik pyta o utwór, sprawdź czy jest w katalogu powyżej`;
 
-    let userPrompt = message;
-    if (trackInfo && trackInfo.length > 0) {
-      const trackList = trackInfo.map((t: any) => `- "${t.title}" — ${t.artist} (${t.genre || "?"}, ${t.mood || "?"})`).join("\n");
-      userPrompt += `\n\n[ZNALEZIONE UTWORY W BAZIE:\n${trackList}]`;
-    }
+    const userPrompt = message;
 
     // Stream the response
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {

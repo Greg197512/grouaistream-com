@@ -233,9 +233,9 @@ export const PlayerBar = () => {
         animate={{ x: position.x, y: position.y }}
         whileDrag={{ scale: 1.02, cursor: "grabbing" }}
         className={cn(
-          "fixed bottom-0 left-0 right-0 z-50",
-          "h-24 px-4 flex items-center gap-3",
-          // Glass transparency effect
+          "fixed left-0 right-0 z-50",
+          "md:bottom-0 bottom-14",
+          "md:h-24 h-16 px-2 md:px-4 flex items-center gap-2 md:gap-3",
           "bg-background/20 backdrop-blur-[40px] backdrop-saturate-[200%]",
           "border-t border-white/10",
           "shadow-[0_-10px_40px_rgba(0,0,0,0.3)]",
@@ -270,9 +270,9 @@ export const PlayerBar = () => {
         )}
 
         {/* Track Info */}
-        <div className="flex items-center gap-3 w-[240px] min-w-[160px]">
+        <div className="flex items-center gap-2 md:gap-3 md:w-[240px] md:min-w-[160px] min-w-0 flex-shrink-0">
           <motion.div 
-            className="relative h-12 w-12 rounded-lg overflow-hidden bg-white/10 flex-shrink-0 backdrop-blur-sm"
+            className="relative h-10 w-10 md:h-12 md:w-12 rounded-lg overflow-hidden bg-white/10 flex-shrink-0 backdrop-blur-sm"
             whileHover={{ scale: 1.05 }}
           >
             {currentTrack?.cover_url ? (
@@ -333,8 +333,8 @@ export const PlayerBar = () => {
             )} />
           </button>
 
-          {/* Face Recognition / Mood Detection Button */}
-          <motion.div className="relative flex-shrink-0">
+          {/* Face Recognition / Mood Detection Button - hidden on mobile */}
+          <motion.div className="relative flex-shrink-0 hidden md:block">
             {/* Glow ring */}
             <motion.div
               className="absolute -inset-1 rounded-full bg-gradient-to-t from-primary via-accent to-primary opacity-60 blur-md"
@@ -368,13 +368,11 @@ export const PlayerBar = () => {
               className="relative z-10 flex items-center justify-center h-9 w-9 rounded-full bg-gradient-to-br from-primary to-accent border border-white/30 shadow-[0_0_12px_rgba(var(--primary),0.5)]"
               title="Rozpoznawanie nastroju (Kamera)"
             >
-              {/* Animated face that fades out, then camera fades in, loop */}
               <motion.div
                 className="absolute inset-0 flex flex-col items-center justify-center"
                 animate={{ opacity: [1, 1, 0, 0, 1] }}
                 transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
               >
-                {/* Face: eyes + smile */}
                 <div className="flex flex-col items-center gap-0.5">
                   <div className="flex gap-1.5">
                     <div className="w-1 h-1 rounded-full bg-white" />
@@ -400,7 +398,7 @@ export const PlayerBar = () => {
         </div>
 
         {/* Player Controls */}
-        <div className="flex-1 flex flex-col items-center gap-1.5 max-w-[600px]">
+        <div className="flex-1 flex flex-col items-center gap-0.5 md:gap-1.5 max-w-[600px] min-w-0">
           <div className="flex items-center gap-3">
             <button 
               onClick={toggleShuffle}
@@ -453,8 +451,8 @@ export const PlayerBar = () => {
             </button>
           </div>
 
-          <div className="w-full flex items-center gap-2 text-[10px] text-white/40">
-            <span className="w-8 text-right">{formatTime(displayCurrentTime)}</span>
+          <div className="w-full flex items-center gap-1 md:gap-2 text-[10px] text-white/40">
+            <span className="w-8 text-right hidden md:inline">{formatTime(displayCurrentTime)}</span>
             <Slider
               value={[progress]}
               onValueChange={([value]) => handleSeek(value)}
@@ -462,12 +460,12 @@ export const PlayerBar = () => {
               step={0.1}
               className="flex-1 cursor-pointer"
             />
-            <span className="w-8">{formatTime(displayDuration)}</span>
+            <span className="w-8 hidden md:inline">{formatTime(displayDuration)}</span>
           </div>
         </div>
 
-        {/* Right Controls */}
-        <div className="flex items-center gap-1.5 w-[240px] min-w-[160px] justify-end">
+        {/* Right Controls - hidden on mobile, shown on md+ */}
+        <div className="hidden md:flex items-center gap-1.5 w-[240px] min-w-[160px] justify-end">
           {showAIInsight && currentTrack && (
             <motion.div 
               initial={{ opacity: 0, x: 20 }}
