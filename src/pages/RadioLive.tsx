@@ -232,21 +232,21 @@ const RadioLive = () => {
         </div>
 
         {/* Now Playing */}
-        {currentTrack && (
+        {currentItem && (
           <div className="rounded-2xl overflow-hidden border border-border/50 bg-card">
             <div className="h-1 w-full groove-gradient-bg" />
-            {currentTrack.cover_url && (
+            {currentCover && (
               <img
-                src={currentTrack.cover_url}
-                alt={currentTrack.title}
+                src={currentCover}
+                alt={currentTitle}
                 className="w-full h-48 object-cover"
               />
             )}
             <div className="p-4 space-y-3">
               <div>
                 <p className="text-xs text-muted-foreground uppercase tracking-wider">Teraz gra</p>
-                <h2 className="font-bold text-lg truncate">{currentTrack.title}</h2>
-                <p className="text-sm text-muted-foreground truncate">{currentTrack.artist}</p>
+                <h2 className="font-bold text-lg truncate">{currentTitle}</h2>
+                <p className="text-sm text-muted-foreground truncate">{currentArtist}</p>
               </div>
 
               {/* Progress */}
