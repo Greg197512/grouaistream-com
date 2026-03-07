@@ -339,7 +339,6 @@ export const RadioStationManager = () => {
         </CardContent>
       </Card>
 
-      {/* Schedule / Queue */}
       <Card className="border-border/50 bg-card/50 backdrop-blur">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
@@ -353,57 +352,12 @@ export const RadioStationManager = () => {
               Brak utworów w programie. Dodaj utwory powyżej.
             </p>
           ) : (
-            <ScrollArea className="h-[400px]">
-              <div className="space-y-1">
-                {schedule.map((item, index) => (
-                  <div
-                    key={item.id}
-                    className="flex items-center gap-2 rounded-md px-3 py-2 hover:bg-muted/30 transition-colors group"
-                  >
-                    <GripVertical className="h-4 w-4 text-muted-foreground/40 shrink-0" />
-                    <span className="text-xs text-muted-foreground w-6 text-right shrink-0">
-                      {index + 1}.
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium truncate">
-                        {item.track?.title || "Nieznany"}
-                      </p>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {item.track?.artist || "—"} • {formatDuration(item.track?.duration || 0)}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-7 w-7"
-                        onClick={() => moveTrack(index, "up")}
-                        disabled={index === 0}
-                      >
-                        <ArrowUp className="h-3 w-3" />
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-7 w-7"
-                        onClick={() => moveTrack(index, "down")}
-                        disabled={index === schedule.length - 1}
-                      >
-                        <ArrowDown className="h-3 w-3" />
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-7 w-7 text-destructive"
-                        onClick={() => removeFromSchedule(item.id)}
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </ScrollArea>
+            <RadioTimeline
+              schedule={schedule}
+              onMove={moveTrack}
+              onRemove={removeFromSchedule}
+              onReorder={reorderTrack}
+            />
           )}
         </CardContent>
       </Card>
