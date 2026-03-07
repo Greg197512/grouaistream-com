@@ -45,8 +45,12 @@ interface RadioConfig {
 
 interface ScheduleTrack {
   id: string;
-  track_id: string;
+  track_id: string | null;
   position: number;
+  item_type: string;
+  custom_title: string | null;
+  custom_duration: number;
+  custom_audio_url: string | null;
   track?: {
     id: string;
     title: string;
@@ -65,6 +69,12 @@ export const RadioStationManager = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searching, setSearching] = useState(false);
+
+  // Custom item form
+  const [customTitle, setCustomTitle] = useState("");
+  const [customDuration, setCustomDuration] = useState(30);
+  const [customAudioUrl, setCustomAudioUrl] = useState("");
+  const [customType, setCustomType] = useState<"jingle" | "ad" | "talk">("jingle");
 
   const radioUrl = `${window.location.origin}/radio-live`;
 
