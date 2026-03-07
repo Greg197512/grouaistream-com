@@ -72,7 +72,7 @@ export const LiveRadioCard = () => {
               <span className="text-xs text-accent font-medium">AI Enhanced</span>
             </div>
             <Button 
-              onClick={() => navigate("/radio")}
+              onClick={() => navigate("/radio-live")}
               className="groove-gradient-bg hover:opacity-90 gap-2 rounded-full"
             >
               <Radio className="h-4 w-4" />
