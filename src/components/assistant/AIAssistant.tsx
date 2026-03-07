@@ -233,7 +233,7 @@ export const AIAssistant = () => {
         {!isOpen && (
           <motion.button
             onClick={() => setIsOpen(true)}
-            className="fixed bottom-40 right-4 z-40 w-12 h-12 rounded-full overflow-hidden shadow-lg shadow-primary/20 border-2 border-primary/40 hover:border-primary transition-all bg-background/80 backdrop-blur-sm"
+            className="fixed bottom-32 md:bottom-40 right-4 z-40 w-12 h-12 rounded-full overflow-hidden shadow-lg shadow-primary/20 border-2 border-primary/40 hover:border-primary transition-all bg-background/80 backdrop-blur-sm"
             whileHover={{ scale: 1.15 }}
             whileTap={{ scale: 0.9 }}
             initial={{ opacity: 0, scale: 0 }}
@@ -261,7 +261,7 @@ export const AIAssistant = () => {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.9 }}
             transition={{ type: "spring", stiffness: 300, damping: 25 }}
-            className={`fixed bottom-24 right-4 z-50 ${chatWidth} ${chatHeight} rounded-2xl shadow-2xl shadow-black/40 flex flex-col overflow-hidden transition-all duration-300`}
+            className={`fixed bottom-20 md:bottom-24 right-2 md:right-4 z-50 ${chatWidth} ${chatHeight} rounded-2xl shadow-2xl shadow-black/40 flex flex-col overflow-hidden transition-all duration-300`}
             style={{
               background: 'rgba(10, 10, 15, 0.85)',
               backdropFilter: 'blur(40px) saturate(200%)',
