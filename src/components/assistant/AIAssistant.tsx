@@ -1,6 +1,6 @@
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { motion, AnimatePresence, useDragControls } from "framer-motion";
-import { Send, Loader2, ExternalLink, Music, Power, GripHorizontal, Sparkles } from "lucide-react";
+import { Send, Loader2, ExternalLink, Music, Power, GripHorizontal, Sparkles, Maximize2, Minimize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLocation } from "react-router-dom";
+import ReactMarkdown from "react-markdown";
 import aiAssistantAvatar from "@/assets/ai-assistant-avatar.jpg";
 
 interface Message {
@@ -26,6 +27,7 @@ const getTimeOfDay = () => {
 
 export const AIAssistant = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -71,16 +73,16 @@ export const AIAssistant = () => {
       hasGreeted.current = true;
       const time = getTimeOfDay();
       const greetings: Record<string, string> = {
-        morning: `Dzień dobry ${userName}! ☀️ Gotowy na poranną dawkę muzyki? `,
-        afternoon: `Hej ${userName}! 🌤️ Co chcesz dziś posłuchać? `,
-        evening: `Dobry wieczór ${userName}! 🌅 Czas na wieczorny chill? `,
-        night: `Hej ${userName}! 🌙 Nocna sesja muzyczna? `,
+        morning: `Dzień dobry **${userName}**! ☀️ Gotowy na poranną dawkę muzyki?`,
+        afternoon: `Hej **${userName}**! 🌤️ Co chcesz dziś posłuchać?`,
+        evening: `Dobry wieczór **${userName}**! 🌅 Czas na wieczorny chill?`,
+        night: `Hej **${userName}**! 🌙 Nocna sesja muzyczna?`,
       };
-      let greeting = greetings[time] || `Hej ${userName}! 🎵 `;
+      let greeting = greetings[time] || `Hej **${userName}**! 🎵 `;
       if (listeningStats?.topGenres?.length) {
-        greeting += `Widzę, że lubisz ${listeningStats.topGenres.join(", ")} - mam dla Ciebie propozycje! `;
+        greeting += `\n\nWidzę, że lubisz **${listeningStats.topGenres.join(", ")}** — mam dla Ciebie propozycje!`;
       }
-      greeting += "Jestem Twoim muzycznym przewodnikiem - zapytaj o cokolwiek! 🎶";
+      greeting += "\n\nJestem Twoim asystentem AI — mogę rozmawiać o **muzyce, technologii, nauce, kulturze** i wszystkim innym. Zapytaj o cokolwiek! 🎶";
       setMessages([{ role: "assistant", content: greeting }]);
     }
   }, [isOpen, userName, listeningStats]);
@@ -119,23 +121,97 @@ export const AIAssistant = () => {
     }
   };
 
-  const handleSend = async () => {
+  const handleSend = useCallback(async () => {
     if (!input.trim() || isLoading) return;
     const userMessage = input.trim();
     setInput("");
     setMessages(prev => [...prev, { role: "user", content: userMessage }]);
     setIsLoading(true);
 
+    let assistantContent = "";
+    let currentTrackLink: Message["trackLink"] = undefined;
+
     try {
-      const { data, error } = await supabase.functions.invoke("ai-assistant", {
-        body: { message: userMessage, history: messages, userContext }
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-assistant`;
+      const resp = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({ message: userMessage, history: messages, userContext }),
       });
-      if (error) throw error;
-      setMessages(prev => [...prev, {
-        role: "assistant",
-        content: data.response,
-        trackLink: data.trackLink
-      }]);
+
+      if (!resp.ok) {
+        throw new Error(`Error ${resp.status}`);
+      }
+
+      if (!resp.body) throw new Error("No response body");
+
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        let newlineIndex: number;
+        while ((newlineIndex = buffer.indexOf("\n")) !== -1) {
+          let line = buffer.slice(0, newlineIndex);
+          buffer = buffer.slice(newlineIndex + 1);
+          if (line.endsWith("\r")) line = line.slice(0, -1);
+          if (line.startsWith(":") || line.trim() === "") continue;
+          if (!line.startsWith("data: ")) continue;
+
+          const jsonStr = line.slice(6).trim();
+          if (jsonStr === "[DONE]") continue;
+
+          try {
+            const parsed = JSON.parse(jsonStr);
+            
+            // Handle custom track_link event
+            if (parsed.type === "track_link") {
+              currentTrackLink = parsed.data;
+              continue;
+            }
+
+            const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+            if (content) {
+              assistantContent += content;
+              setMessages(prev => {
+                const last = prev[prev.length - 1];
+                if (last?.role === "assistant" && prev.length > 1 && prev[prev.length - 2]?.role === "user") {
+                  return prev.map((m, i) => i === prev.length - 1 ? { ...m, content: assistantContent, trackLink: currentTrackLink } : m);
+                }
+                return [...prev, { role: "assistant", content: assistantContent, trackLink: currentTrackLink }];
+              });
+            }
+          } catch {
+            buffer = line + "\n" + buffer;
+            break;
+          }
+        }
+      }
+
+      // Final flush
+      if (buffer.trim()) {
+        for (let raw of buffer.split("\n")) {
+          if (!raw || !raw.startsWith("data: ")) continue;
+          const jsonStr = raw.slice(6).trim();
+          if (jsonStr === "[DONE]") continue;
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const content = parsed.choices?.[0]?.delta?.content;
+            if (content) {
+              assistantContent += content;
+              setMessages(prev => prev.map((m, i) => i === prev.length - 1 ? { ...m, content: assistantContent } : m));
+            }
+          } catch { /* ignore */ }
+        }
+      }
+
     } catch (error) {
       console.error("AI Assistant error:", error);
       setMessages(prev => [...prev, {
@@ -145,7 +221,10 @@ export const AIAssistant = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [input, isLoading, messages, userContext]);
+
+  const chatWidth = isExpanded ? "w-[600px]" : "w-[400px]";
+  const chatHeight = isExpanded ? "h-[700px]" : "h-[520px]";
 
   return (
     <>
@@ -154,7 +233,7 @@ export const AIAssistant = () => {
         {!isOpen && (
           <motion.button
             onClick={() => setIsOpen(true)}
-            className="fixed bottom-40 right-4 z-40 w-10 h-10 rounded-full overflow-hidden shadow-lg border border-primary/30 hover:border-primary transition-all bg-background/80 backdrop-blur-sm"
+            className="fixed bottom-40 right-4 z-40 w-12 h-12 rounded-full overflow-hidden shadow-lg shadow-primary/20 border-2 border-primary/40 hover:border-primary transition-all bg-background/80 backdrop-blur-sm"
             whileHover={{ scale: 1.15 }}
             whileTap={{ scale: 0.9 }}
             initial={{ opacity: 0, scale: 0 }}
@@ -164,8 +243,8 @@ export const AIAssistant = () => {
           >
             <img src={aiAssistantAvatar} alt="AI Assistant" className="w-full h-full object-cover" />
             <motion.div
-              className="absolute bottom-0 right-0 w-3 h-3 bg-primary rounded-full border-2 border-background"
-              animate={{ scale: [1, 1.2, 1] }}
+              className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-background"
+              animate={{ scale: [1, 1.3, 1] }}
               transition={{ duration: 2, repeat: Infinity }}
             />
           </motion.button>
@@ -177,17 +256,17 @@ export const AIAssistant = () => {
         {isOpen && (
           <motion.div
             drag dragControls={dragControls} dragMomentum={false} dragElastic={0}
-            dragConstraints={{ left: -window.innerWidth + 380, right: 0, top: -window.innerHeight + 520, bottom: 0 }}
+            dragConstraints={{ left: -window.innerWidth + 420, right: 0, top: -window.innerHeight + 540, bottom: 0 }}
             initial={{ opacity: 0, y: 20, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.9 }}
             transition={{ type: "spring", stiffness: 300, damping: 25 }}
-            className="fixed bottom-40 right-4 z-50 w-[360px] h-[480px] rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+            className={`fixed bottom-24 right-4 z-50 ${chatWidth} ${chatHeight} rounded-2xl shadow-2xl shadow-black/40 flex flex-col overflow-hidden transition-all duration-300`}
             style={{
-              background: 'rgba(0, 0, 0, 0.3)',
+              background: 'rgba(10, 10, 15, 0.85)',
               backdropFilter: 'blur(40px) saturate(200%)',
               WebkitBackdropFilter: 'blur(40px) saturate(200%)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
             }}
           >
             {/* Drag Handle */}
@@ -195,70 +274,102 @@ export const AIAssistant = () => {
               onPointerDown={(e) => dragControls.start(e)}
               className="absolute top-0 left-0 right-0 h-6 flex items-center justify-center cursor-grab active:cursor-grabbing z-10"
             >
-              <GripHorizontal className="h-4 w-4 text-muted-foreground/50" />
+              <GripHorizontal className="h-4 w-4 text-muted-foreground/30" />
             </motion.div>
 
             {/* Header */}
-            <div className="flex items-center gap-3 p-3 pt-6 border-b border-border/30 bg-gradient-to-r from-primary/10 to-accent/10">
-              <div className="relative w-9 h-9 rounded-full overflow-hidden border border-primary/30">
+            <div className="flex items-center gap-3 p-3 pt-6 border-b border-white/5 bg-gradient-to-r from-primary/5 to-accent/5">
+              <div className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-primary/30 shadow-lg shadow-primary/20">
                 <img src={aiAssistantAvatar} alt="AI" className="w-full h-full object-cover" />
+                <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-background" />
               </div>
-              <div className="flex-1">
-                <h3 className="font-semibold text-sm flex items-center gap-1">
-                  GrooveAI <Sparkles className="h-3 w-3 text-primary" />
+              <div className="flex-1 min-w-0">
+                <h3 className="font-bold text-sm flex items-center gap-1.5">
+                  GrooveAI <Sparkles className="h-3.5 w-3.5 text-primary" />
                 </h3>
-                <p className="text-[10px] text-muted-foreground">
-                  {currentTrack ? `🎵 ${currentTrack.title}` : "Twój muzyczny przyjaciel • Online"}
+                <p className="text-[10px] text-muted-foreground truncate">
+                  {currentTrack ? `🎵 ${currentTrack.title}` : "Zaawansowany asystent AI • Online"}
                 </p>
               </div>
-              <motion.button
-                whileHover={{ scale: 1.1, rotate: 180 }}
-                whileTap={{ scale: 0.9 }}
-                onClick={() => setIsOpen(false)}
-                className="w-8 h-8 rounded-full bg-destructive/20 hover:bg-destructive/40 flex items-center justify-center transition-colors"
-              >
-                <Power className="h-4 w-4 text-destructive" />
-              </motion.button>
+              <div className="flex items-center gap-1">
+                <motion.button
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() => setIsExpanded(!isExpanded)}
+                  className="w-7 h-7 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors"
+                >
+                  {isExpanded ? <Minimize2 className="h-3.5 w-3.5 text-muted-foreground" /> : <Maximize2 className="h-3.5 w-3.5 text-muted-foreground" />}
+                </motion.button>
+                <motion.button
+                  whileHover={{ scale: 1.1, rotate: 180 }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() => setIsOpen(false)}
+                  className="w-7 h-7 rounded-full bg-destructive/20 hover:bg-destructive/40 flex items-center justify-center transition-colors"
+                >
+                  <Power className="h-3.5 w-3.5 text-destructive" />
+                </motion.button>
+              </div>
             </div>
 
             {/* Messages */}
-            <ScrollArea className="flex-1 p-3" ref={scrollRef}>
-              <div className="space-y-3">
+            <ScrollArea className="flex-1 p-4" ref={scrollRef}>
+              <div className="space-y-4">
                 {messages.map((msg, i) => (
                   <motion.div
                     key={i}
-                    initial={{ opacity: 0, y: 10 }}
+                    initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.2 }}
                     className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
                   >
-                    <div className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm ${
+                    {msg.role === "assistant" && (
+                      <div className="w-6 h-6 rounded-full overflow-hidden mr-2 mt-1 shrink-0 border border-primary/20">
+                        <img src={aiAssistantAvatar} alt="" className="w-full h-full object-cover" />
+                      </div>
+                    )}
+                    <div className={`max-w-[88%] rounded-2xl px-4 py-3 ${
                       msg.role === "user"
                         ? "bg-primary text-primary-foreground rounded-br-sm"
-                        : "bg-secondary/80 text-secondary-foreground rounded-bl-sm"
+                        : "bg-white/5 text-foreground rounded-bl-sm border border-white/5"
                     }`}>
-                      <p className="whitespace-pre-wrap text-xs">{msg.content}</p>
+                      {msg.role === "assistant" ? (
+                        <div className="prose prose-sm prose-invert max-w-none text-[13px] leading-relaxed [&_p]:mb-2 [&_ul]:mb-2 [&_ol]:mb-2 [&_h3]:text-sm [&_h3]:font-bold [&_h3]:mt-3 [&_h3]:mb-1 [&_code]:bg-white/10 [&_code]:px-1 [&_code]:rounded [&_blockquote]:border-primary/30 [&_blockquote]:text-muted-foreground [&_a]:text-primary">
+                          <ReactMarkdown>{msg.content}</ReactMarkdown>
+                        </div>
+                      ) : (
+                        <p className="whitespace-pre-wrap text-[13px]">{msg.content}</p>
+                      )}
                       {msg.trackLink && (
                         <motion.button
                           onClick={() => handlePlayTrack(msg.trackLink!.id)}
-                          className="mt-2 flex items-center gap-2 w-full p-2 rounded-lg bg-primary/20 hover:bg-primary/30 transition-colors"
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
+                          className="mt-2 flex items-center gap-2 w-full p-2.5 rounded-xl bg-primary/10 hover:bg-primary/20 transition-colors border border-primary/20"
+                          whileHover={{ scale: 1.01 }}
+                          whileTap={{ scale: 0.99 }}
                         >
-                          <Music className="h-3 w-3 text-primary" />
-                          <div className="text-left flex-1 min-w-0">
-                            <p className="font-medium text-[10px] truncate">{msg.trackLink.title}</p>
-                            <p className="text-[9px] text-muted-foreground truncate">{msg.trackLink.artist}</p>
+                          <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
+                            <Music className="h-4 w-4 text-primary" />
                           </div>
-                          <ExternalLink className="h-2.5 w-2.5 text-primary" />
+                          <div className="text-left flex-1 min-w-0">
+                            <p className="font-medium text-xs truncate">{msg.trackLink.title}</p>
+                            <p className="text-[10px] text-muted-foreground truncate">{msg.trackLink.artist}</p>
+                          </div>
+                          <ExternalLink className="h-3 w-3 text-primary shrink-0" />
                         </motion.button>
                       )}
                     </div>
                   </motion.div>
                 ))}
-                {isLoading && (
+                {isLoading && messages[messages.length - 1]?.role !== "assistant" && (
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex justify-start">
-                    <div className="bg-secondary/80 rounded-2xl rounded-bl-sm px-3 py-2">
-                      <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+                    <div className="w-6 h-6 rounded-full overflow-hidden mr-2 mt-1 shrink-0 border border-primary/20">
+                      <img src={aiAssistantAvatar} alt="" className="w-full h-full object-cover" />
+                    </div>
+                    <div className="bg-white/5 rounded-2xl rounded-bl-sm px-4 py-3 border border-white/5">
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                        <div className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                        <div className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                      </div>
                     </div>
                   </motion.div>
                 )}
@@ -266,17 +377,17 @@ export const AIAssistant = () => {
             </ScrollArea>
 
             {/* Input */}
-            <div className="p-3 border-t border-border/50 bg-card/50">
+            <div className="p-3 border-t border-white/5 bg-black/20">
               <form onSubmit={(e) => { e.preventDefault(); handleSend(); }} className="flex gap-2">
                 <Input
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
-                  placeholder={`Zapytaj mnie, ${userName}...`}
-                  className="flex-1 bg-secondary/50 border-0 h-8 text-xs"
+                  placeholder={`Zapytaj mnie o cokolwiek, ${userName}...`}
+                  className="flex-1 bg-white/5 border-white/10 focus:border-primary/50 h-10 text-sm rounded-xl"
                   disabled={isLoading}
                 />
-                <Button type="submit" size="icon" disabled={!input.trim() || isLoading} className="shrink-0 h-8 w-8">
-                  <Send className="h-3 w-3" />
+                <Button type="submit" size="icon" disabled={!input.trim() || isLoading} className="shrink-0 h-10 w-10 rounded-xl">
+                  <Send className="h-4 w-4" />
                 </Button>
               </form>
             </div>
