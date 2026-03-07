@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +14,9 @@ import {
   GripVertical,
   Clock,
   Music,
+  Mic,
+  Megaphone,
+  MessageSquare,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -25,8 +28,12 @@ import {
 
 interface TrackItem {
   id: string;
-  track_id: string;
+  track_id: string | null;
   position: number;
+  item_type: string;
+  custom_title: string | null;
+  custom_duration: number;
+  custom_audio_url: string | null;
   track?: {
     id: string;
     title: string;
@@ -44,6 +51,13 @@ interface Props {
   onRemove: (id: string) => void;
   onReorder: (fromIndex: number, toIndex: number) => void;
 }
+
+const TYPE_CONFIG: Record<string, { label: string; icon: typeof Music; color: string; bgColor: string }> = {
+  track: { label: "Utwór", icon: Music, color: "text-primary", bgColor: "" },
+  jingle: { label: "Jingiel", icon: Mic, color: "text-yellow-500", bgColor: "bg-yellow-500/5" },
+  ad: { label: "Reklama", icon: Megaphone, color: "text-red-400", bgColor: "bg-red-500/5" },
+  talk: { label: "Rozmowa", icon: MessageSquare, color: "text-blue-400", bgColor: "bg-blue-500/5" },
+};
 
 export const RadioTimeline = ({ schedule, onMove, onRemove, onReorder }: Props) => {
   const [clipboard, setClipboard] = useState<{ item: TrackItem; mode: "cut" | "copy" } | null>(null);
@@ -64,99 +78,95 @@ export const RadioTimeline = ({ schedule, onMove, onRemove, onReorder }: Props) 
     return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
   };
 
-  // Calculate cumulative start times for each track
+  const getItemDuration = (item: TrackItem) => {
+    if (item.item_type === "track") return item.track?.duration || 180;
+    return item.custom_duration || 30;
+  };
+
+  const getItemTitle = (item: TrackItem) => {
+    if (item.item_type === "track") return item.track?.title || "Nieznany";
+    return item.custom_title || TYPE_CONFIG[item.item_type]?.label || "Element";
+  };
+
+  const getItemSubtitle = (item: TrackItem) => {
+    if (item.item_type === "track") return item.track?.artist || "—";
+    return TYPE_CONFIG[item.item_type]?.label || item.item_type;
+  };
+
   const timelineData = useMemo(() => {
     let cumulative = 0;
     return schedule.map((item, index) => {
       const startTime = cumulative;
-      const duration = item.track?.duration || 180;
+      const duration = getItemDuration(item);
       cumulative += duration;
-      return {
-        ...item,
-        startTime,
-        endTime: cumulative,
-        index,
-      };
+      return { ...item, startTime, endTime: cumulative, index };
     });
   }, [schedule]);
 
-  const totalDuration = schedule.reduce((sum, s) => sum + (s.track?.duration || 0), 0);
+  const totalDuration = schedule.reduce((sum, s) => sum + getItemDuration(s), 0);
 
   const handleCut = (item: TrackItem) => {
     setClipboard({ item, mode: "cut" });
     setCutItemId(item.id);
-    toast.info(`✂️ Wycięto "${item.track?.title}"`);
+    toast.info(`✂️ Wycięto "${getItemTitle(item)}"`);
   };
 
   const handleCopy = (item: TrackItem) => {
     setClipboard({ item, mode: "copy" });
     setCutItemId(null);
-    toast.info(`📋 Skopiowano "${item.track?.title}"`);
+    toast.info(`📋 Skopiowano "${getItemTitle(item)}"`);
   };
 
   const handlePaste = (targetIndex: number) => {
-    if (!clipboard) {
-      toast.error("Schowek jest pusty");
-      return;
-    }
-
+    if (!clipboard) { toast.error("Schowek jest pusty"); return; }
     const sourceIndex = schedule.findIndex((s) => s.id === clipboard.item.id);
     if (sourceIndex === -1 && clipboard.mode === "cut") {
-      toast.error("Element nie istnieje");
-      setClipboard(null);
-      setCutItemId(null);
-      return;
+      setClipboard(null); setCutItemId(null); return;
     }
-
     if (clipboard.mode === "cut") {
       onReorder(sourceIndex, targetIndex);
       setCutItemId(null);
-      toast.success(`📌 Wklejono "${clipboard.item.track?.title}" na pozycję ${targetIndex + 1}`);
-    } else {
-      // Copy mode - just notify, actual duplication would need DB insert
-      toast.info(`Kopiowanie utworów wymaga dodania nowego wpisu`);
+      toast.success(`📌 Wklejono na pozycję ${targetIndex + 1}`);
     }
-
     setClipboard(null);
   };
 
-  // Drag handlers
-  const handleDragStart = (index: number) => {
-    setDragIndex(index);
-  };
-
-  const handleDragOver = (e: React.DragEvent, index: number) => {
-    e.preventDefault();
-    setDragOverIndex(index);
-  };
-
+  const handleDragStart = (index: number) => setDragIndex(index);
+  const handleDragOver = (e: React.DragEvent, index: number) => { e.preventDefault(); setDragOverIndex(index); };
   const handleDrop = (index: number) => {
     if (dragIndex !== null && dragIndex !== index) {
       onReorder(dragIndex, index);
-      toast.success("Zmieniono kolejność");
     }
     setDragIndex(null);
     setDragOverIndex(null);
   };
-
-  const handleDragEnd = () => {
-    setDragIndex(null);
-    setDragOverIndex(null);
-  };
+  const handleDragEnd = () => { setDragIndex(null); setDragOverIndex(null); };
 
   return (
     <div className="space-y-3">
       {/* Header */}
-      <div className="flex items-center justify-between px-1">
+      <div className="flex items-center justify-between px-1 flex-wrap gap-2">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Clock className="h-4 w-4" />
           <span>Łącznie: {formatTime24h(totalDuration)}</span>
-          <span className="text-xs">({schedule.length} utworów)</span>
+          <span className="text-xs">({schedule.length} el.)</span>
+        </div>
+        <div className="flex gap-1">
+          {["track", "jingle", "ad", "talk"].map((type) => {
+            const count = schedule.filter((s) => (s.item_type || "track") === type).length;
+            if (count === 0) return null;
+            const cfg = TYPE_CONFIG[type];
+            return (
+              <Badge key={type} variant="outline" className={`text-[10px] gap-0.5 ${cfg.color}`}>
+                {count} {cfg.label}
+              </Badge>
+            );
+          })}
         </div>
         {clipboard && (
           <Badge variant="secondary" className="gap-1 text-xs">
             {clipboard.mode === "cut" ? <Scissors className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-            {clipboard.item.track?.title?.slice(0, 20)}...
+            {getItemTitle(clipboard.item).slice(0, 20)}...
           </Badge>
         )}
       </div>
@@ -164,111 +174,85 @@ export const RadioTimeline = ({ schedule, onMove, onRemove, onReorder }: Props) 
       {/* Timeline Table */}
       <ScrollArea className="h-[500px] rounded-lg border border-border/50">
         <div className="min-w-full">
-          {/* Table Header */}
-          <div className="sticky top-0 z-10 grid grid-cols-[40px_80px_80px_1fr_160px_60px_40px] gap-1 bg-muted/80 backdrop-blur px-2 py-2 text-xs font-medium text-muted-foreground border-b border-border/50">
+          <div className="sticky top-0 z-10 grid grid-cols-[32px_70px_55px_24px_1fr_130px_40px] gap-1 bg-muted/80 backdrop-blur px-2 py-2 text-xs font-medium text-muted-foreground border-b border-border/50">
             <span>#</span>
             <span>Start</span>
             <span>Czas</span>
-            <span>Utwór</span>
-            <span>Artysta</span>
-            <span>Gatunek</span>
+            <span></span>
+            <span>Nazwa</span>
+            <span>Opis</span>
             <span></span>
           </div>
 
-          {/* Table Body */}
           <div className="divide-y divide-border/20">
-            {timelineData.map((item) => (
-              <div
-                key={item.id}
-                draggable
-                onDragStart={() => handleDragStart(item.index)}
-                onDragOver={(e) => handleDragOver(e, item.index)}
-                onDrop={() => handleDrop(item.index)}
-                onDragEnd={handleDragEnd}
-                className={`grid grid-cols-[40px_80px_80px_1fr_160px_60px_40px] gap-1 items-center px-2 py-1.5 text-sm transition-all cursor-grab active:cursor-grabbing group
-                  ${cutItemId === item.id ? "opacity-40 bg-destructive/10" : "hover:bg-muted/30"}
-                  ${dragOverIndex === item.index ? "bg-primary/10 border-l-2 border-primary" : ""}
-                  ${dragIndex === item.index ? "opacity-50" : ""}
-                `}
-              >
-                {/* Position */}
-                <span className="flex items-center gap-0.5">
-                  <GripVertical className="h-3 w-3 text-muted-foreground/30 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  <span className="text-xs text-muted-foreground">{item.index + 1}</span>
-                </span>
+            {timelineData.map((item) => {
+              const itemType = item.item_type || "track";
+              const cfg = TYPE_CONFIG[itemType] || TYPE_CONFIG.track;
+              const Icon = cfg.icon;
 
-                {/* Start Time */}
-                <span className="text-xs font-mono text-primary/80">
-                  {formatTime24h(item.startTime)}
-                </span>
+              return (
+                <div
+                  key={item.id}
+                  draggable
+                  onDragStart={() => handleDragStart(item.index)}
+                  onDragOver={(e) => handleDragOver(e, item.index)}
+                  onDrop={() => handleDrop(item.index)}
+                  onDragEnd={handleDragEnd}
+                  className={`grid grid-cols-[32px_70px_55px_24px_1fr_130px_40px] gap-1 items-center px-2 py-1.5 text-sm transition-all cursor-grab active:cursor-grabbing group
+                    ${cutItemId === item.id ? "opacity-40 bg-destructive/10" : `hover:bg-muted/30 ${cfg.bgColor}`}
+                    ${dragOverIndex === item.index ? "bg-primary/10 border-l-2 border-primary" : ""}
+                    ${dragIndex === item.index ? "opacity-50" : ""}
+                  `}
+                >
+                  <span className="flex items-center gap-0.5">
+                    <GripVertical className="h-3 w-3 text-muted-foreground/30 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <span className="text-xs text-muted-foreground">{item.index + 1}</span>
+                  </span>
 
-                {/* Duration */}
-                <span className="text-xs font-mono text-muted-foreground">
-                  {formatDuration(item.track?.duration || 0)}
-                </span>
+                  <span className="text-xs font-mono text-primary/80">{formatTime24h(item.startTime)}</span>
 
-                {/* Title */}
-                <div className="min-w-0">
-                  <p className="text-sm font-medium truncate">{item.track?.title || "Nieznany"}</p>
-                </div>
+                  <span className="text-xs font-mono text-muted-foreground">{formatDuration(getItemDuration(item))}</span>
 
-                {/* Artist */}
-                <p className="text-xs text-muted-foreground truncate">{item.track?.artist || "—"}</p>
+                  <Icon className={`h-3.5 w-3.5 ${cfg.color} shrink-0`} />
 
-                {/* Genre */}
-                <span className="text-[10px] text-muted-foreground/60 truncate">
-                  {item.track?.genre || "—"}
-                </span>
+                  <p className="text-sm font-medium truncate">{getItemTitle(item)}</p>
 
-                {/* Context Menu */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-48">
-                    <DropdownMenuItem onClick={() => handleCut(item)} className="gap-2">
-                      <Scissors className="h-4 w-4" /> Wytnij
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleCopy(item)} className="gap-2">
-                      <Copy className="h-4 w-4" /> Kopiuj
-                    </DropdownMenuItem>
-                    {clipboard && (
-                      <DropdownMenuItem onClick={() => handlePaste(item.index)} className="gap-2">
-                        <ClipboardPaste className="h-4 w-4" /> Wklej tutaj
+                  <p className="text-xs text-muted-foreground truncate">{getItemSubtitle(item)}</p>
+
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button size="icon" variant="ghost" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                      <DropdownMenuItem onClick={() => handleCut(item)} className="gap-2">
+                        <Scissors className="h-4 w-4" /> Wytnij
                       </DropdownMenuItem>
-                    )}
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      onClick={() => onMove(item.index, "up")}
-                      disabled={item.index === 0}
-                      className="gap-2"
-                    >
-                      <ArrowUp className="h-4 w-4" /> Przesuń w górę
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => onMove(item.index, "down")}
-                      disabled={item.index === schedule.length - 1}
-                      className="gap-2"
-                    >
-                      <ArrowDown className="h-4 w-4" /> Przesuń w dół
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      onClick={() => onRemove(item.id)}
-                      className="gap-2 text-destructive focus:text-destructive"
-                    >
-                      <Trash2 className="h-4 w-4" /> Usuń z programu
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            ))}
+                      <DropdownMenuItem onClick={() => handleCopy(item)} className="gap-2">
+                        <Copy className="h-4 w-4" /> Kopiuj
+                      </DropdownMenuItem>
+                      {clipboard && (
+                        <DropdownMenuItem onClick={() => handlePaste(item.index)} className="gap-2">
+                          <ClipboardPaste className="h-4 w-4" /> Wklej tutaj
+                        </DropdownMenuItem>
+                      )}
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => onMove(item.index, "up")} disabled={item.index === 0} className="gap-2">
+                        <ArrowUp className="h-4 w-4" /> Przesuń w górę
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => onMove(item.index, "down")} disabled={item.index === schedule.length - 1} className="gap-2">
+                        <ArrowDown className="h-4 w-4" /> Przesuń w dół
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => onRemove(item.id)} className="gap-2 text-destructive focus:text-destructive">
+                        <Trash2 className="h-4 w-4" /> Usuń
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              );
+            })}
           </div>
         </div>
       </ScrollArea>
@@ -283,18 +267,12 @@ export const RadioTimeline = ({ schedule, onMove, onRemove, onReorder }: Props) 
           <span>24:00</span>
         </div>
         <div className="h-3 w-full rounded-full bg-muted/50 overflow-hidden relative">
-          {/* Fill based on total duration vs 24h */}
           <div
             className="h-full groove-gradient-bg transition-all duration-500"
             style={{ width: `${Math.min((totalDuration / 86400) * 100, 100)}%` }}
           />
-          {/* Hour markers */}
           {[6, 12, 18].map((h) => (
-            <div
-              key={h}
-              className="absolute top-0 bottom-0 w-px bg-foreground/10"
-              style={{ left: `${(h / 24) * 100}%` }}
-            />
+            <div key={h} className="absolute top-0 bottom-0 w-px bg-foreground/10" style={{ left: `${(h / 24) * 100}%` }} />
           ))}
         </div>
         <p className="text-[10px] text-muted-foreground text-center">

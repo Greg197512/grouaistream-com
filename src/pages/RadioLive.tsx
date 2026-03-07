@@ -15,6 +15,10 @@ interface RadioConfig {
 
 interface ScheduleTrack {
   position: number;
+  item_type: string;
+  custom_title: string | null;
+  custom_duration: number;
+  custom_audio_url: string | null;
   track: {
     id: string;
     title: string;
@@ -22,7 +26,7 @@ interface ScheduleTrack {
     duration: number;
     audio_url: string | null;
     cover_url: string | null;
-  };
+  } | null;
 }
 
 const RadioLive = () => {
@@ -41,7 +45,7 @@ const RadioLive = () => {
         supabase.from("radio_config").select("*").limit(1).single(),
         supabase
           .from("radio_schedule")
-          .select("position, track:tracks(id, title, artist, duration, audio_url, cover_url)")
+          .select("position, item_type, custom_title, custom_duration, custom_audio_url, track:tracks(id, title, artist, duration, audio_url, cover_url)")
           .order("position", { ascending: true }),
       ]);
       if (configRes.data) setConfig(configRes.data as any);
@@ -50,28 +54,46 @@ const RadioLive = () => {
     fetchData();
   }, []);
 
-  // Calculate which track should be playing based on started_at
+  const getItemDuration = (item: ScheduleTrack) => {
+    if (item.item_type === "track" || !item.item_type) return item.track?.duration || 180;
+    return item.custom_duration || 30;
+  };
+
+  const getItemAudioUrl = (item: ScheduleTrack) => {
+    if (item.item_type === "track" || !item.item_type) return item.track?.audio_url || null;
+    return item.custom_audio_url || null;
+  };
+
+  const getItemTitle = (item: ScheduleTrack) => {
+    if (item.item_type === "track" || !item.item_type) return item.track?.title || "Nieznany";
+    return item.custom_title || item.item_type;
+  };
+
+  const getItemArtist = (item: ScheduleTrack) => {
+    if (item.item_type === "track" || !item.item_type) return item.track?.artist || "";
+    const labels: Record<string, string> = { jingle: "🎵 Jingiel", ad: "📢 Reklama", talk: "🎙️ Rozmowa" };
+    return labels[item.item_type] || item.item_type;
+  };
+
   useEffect(() => {
     if (!config?.is_active || !config.started_at || schedule.length === 0) return;
 
     const startedAt = new Date(config.started_at).getTime();
     const now = Date.now();
-    let elapsed = (now - startedAt) / 1000; // seconds
+    let elapsed = (now - startedAt) / 1000;
 
-    const totalDuration = schedule.reduce((s, t) => s + (t.track?.duration || 180), 0);
+    const totalDuration = schedule.reduce((s, t) => s + getItemDuration(t), 0);
     if (totalDuration <= 0) return;
 
-    // Loop if 24h mode
     if (config.mode === "24h") {
       elapsed = elapsed % totalDuration;
     }
 
     let cumulative = 0;
     for (let i = 0; i < schedule.length; i++) {
-      const dur = schedule[i].track?.duration || 180;
+      const dur = getItemDuration(schedule[i]);
       if (cumulative + dur > elapsed) {
         setCurrentIndex(i);
-        // Start playback at the right offset
         const offset = elapsed - cumulative;
         startPlayback(i, offset);
         return;
@@ -79,20 +101,32 @@ const RadioLive = () => {
       cumulative += dur;
     }
 
-    // Past end (non-24h mode)
     setCurrentIndex(0);
   }, [config, schedule]);
 
   const startPlayback = useCallback(
     (index: number, offset = 0) => {
-      const track = schedule[index]?.track;
-      if (!track?.audio_url) return;
+      const item = schedule[index];
+      if (!item) return;
+      const audioUrl = getItemAudioUrl(item);
 
       if (audioRef.current) {
         audioRef.current.pause();
       }
 
-      const audio = new Audio(track.audio_url);
+      if (!audioUrl) {
+        // No audio (silent break) - just wait for duration then skip
+        setIsPlaying(true);
+        const remaining = getItemDuration(item) - offset;
+        const timer = setTimeout(() => {
+          const nextIndex = (index + 1) % schedule.length;
+          setCurrentIndex(nextIndex);
+          startPlayback(nextIndex);
+        }, remaining * 1000);
+        return () => clearTimeout(timer);
+      }
+
+      const audio = new Audio(audioUrl);
       audio.crossOrigin = "anonymous";
       audio.preload = "auto";
       audio.volume = muted ? 0 : volume / 100;
@@ -133,7 +167,10 @@ const RadioLive = () => {
     };
   }, []);
 
-  const currentTrack = schedule[currentIndex]?.track;
+  const currentItem = schedule[currentIndex];
+  const currentTitle = currentItem ? getItemTitle(currentItem) : "";
+  const currentArtist = currentItem ? getItemArtist(currentItem) : "";
+  const currentCover = currentItem?.track?.cover_url || null;
   const isOffAir = !config?.is_active || schedule.length === 0;
 
   // Scheduled mode check
@@ -195,21 +232,21 @@ const RadioLive = () => {
         </div>
 
         {/* Now Playing */}
-        {currentTrack && (
+        {currentItem && (
           <div className="rounded-2xl overflow-hidden border border-border/50 bg-card">
             <div className="h-1 w-full groove-gradient-bg" />
-            {currentTrack.cover_url && (
+            {currentCover && (
               <img
-                src={currentTrack.cover_url}
-                alt={currentTrack.title}
+                src={currentCover}
+                alt={currentTitle}
                 className="w-full h-48 object-cover"
               />
             )}
             <div className="p-4 space-y-3">
               <div>
                 <p className="text-xs text-muted-foreground uppercase tracking-wider">Teraz gra</p>
-                <h2 className="font-bold text-lg truncate">{currentTrack.title}</h2>
-                <p className="text-sm text-muted-foreground truncate">{currentTrack.artist}</p>
+                <h2 className="font-bold text-lg truncate">{currentTitle}</h2>
+                <p className="text-sm text-muted-foreground truncate">{currentArtist}</p>
               </div>
 
               {/* Progress */}
@@ -253,13 +290,13 @@ const RadioLive = () => {
                 .slice(0, 3)
                 .map((item, i) => (
                   <div
-                    key={item.track?.id + "-" + i}
+                    key={(item.track?.id || item.custom_title || "") + "-" + i}
                     className="flex items-center gap-3 rounded-lg px-3 py-2 bg-card/50 border border-border/30"
                   >
                     <Music className="h-3 w-3 text-muted-foreground shrink-0" />
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm truncate">{item.track?.title}</p>
-                      <p className="text-xs text-muted-foreground truncate">{item.track?.artist}</p>
+                      <p className="text-sm truncate">{getItemTitle(item)}</p>
+                      <p className="text-xs text-muted-foreground truncate">{getItemArtist(item)}</p>
                     </div>
                   </div>
                 ))}
