@@ -1290,6 +1290,16 @@ export default function Admin() {
                   </CardContent>
                 </Card>
               </TabsContent>
+
+              {/* Radio Station Tab */}
+              <TabsContent value="radio">
+                <RadioStationManager />
+              </TabsContent>
+
+              {/* Storage Tab */}
+              <TabsContent value="storage">
+                <StorageStats />
+              </TabsContent>
             </Tabs>
 
             {/* Quick Actions */}

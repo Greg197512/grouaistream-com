@@ -16,6 +16,7 @@ import Library from "./pages/Library";
 import LikedSongs from "./pages/LikedSongs";
 import CreatePlaylist from "./pages/CreatePlaylist";
 import Radio from "./pages/Radio";
+import RadioLive from "./pages/RadioLive";
 import ImportYouTube from "./pages/ImportYouTube";
 import Settings from "./pages/Settings";
 import PlaylistManager from "./pages/PlaylistManager";
