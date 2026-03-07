@@ -451,8 +451,8 @@ export const PlayerBar = () => {
             </button>
           </div>
 
-          <div className="w-full flex items-center gap-2 text-[10px] text-white/40">
-            <span className="w-8 text-right">{formatTime(displayCurrentTime)}</span>
+          <div className="w-full flex items-center gap-1 md:gap-2 text-[10px] text-white/40">
+            <span className="w-8 text-right hidden md:inline">{formatTime(displayCurrentTime)}</span>
             <Slider
               value={[progress]}
               onValueChange={([value]) => handleSeek(value)}
@@ -460,7 +460,7 @@ export const PlayerBar = () => {
               step={0.1}
               className="flex-1 cursor-pointer"
             />
-            <span className="w-8">{formatTime(displayDuration)}</span>
+            <span className="w-8 hidden md:inline">{formatTime(displayDuration)}</span>
           </div>
         </div>
 
