@@ -136,6 +136,7 @@ export const RadioStationManager = () => {
     const { error } = await supabase.from("radio_schedule").insert({
       track_id: track.id,
       position: maxPos,
+      item_type: "track",
     } as any);
     if (error) {
       toast.error("Błąd dodawania: " + error.message);
@@ -143,6 +144,33 @@ export const RadioStationManager = () => {
     }
     toast.success(`Dodano "${track.title}" do programu`);
     fetchData();
+  };
+
+  const addCustomItem = async () => {
+    if (!customTitle.trim()) {
+      toast.error("Podaj nazwę elementu");
+      return;
+    }
+    const maxPos = schedule.length > 0 ? Math.max(...schedule.map((s) => s.position)) + 1 : 0;
+    const { error } = await supabase.from("radio_schedule").insert({
+      position: maxPos,
+      item_type: customType,
+      custom_title: customTitle.trim(),
+      custom_duration: customDuration,
+      custom_audio_url: customAudioUrl.trim() || null,
+      track_id: null,
+    } as any);
+    if (error) {
+      toast.error("Błąd: " + error.message);
+      return;
+    }
+    const typeLabels: Record<string, string> = { jingle: "Jingiel", ad: "Reklamę", talk: "Rozmowę" };
+    toast.success(`Dodano ${typeLabels[customType]}: "${customTitle}"`);
+    setCustomTitle("");
+    setCustomAudioUrl("");
+    setCustomDuration(30);
+    fetchData();
+  };
   };
 
   const removeFromSchedule = async (id: string) => {
