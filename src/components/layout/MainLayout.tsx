@@ -2,7 +2,9 @@ import { useState, ReactNode } from "react";
 import { Sidebar } from "./Sidebar";
 import { PlayerBar } from "./PlayerBar";
 import { TopBar } from "./TopBar";
+import { MobileBottomNav } from "./MobileBottomNav";
 import { AIAssistant } from "@/components/assistant/AIAssistant";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 import { DragDropProvider } from "@/contexts/DragDropContext";
 import { FloatingPlaylistDropZones } from "@/components/dnd/FloatingPlaylistDropZones";
@@ -14,6 +16,7 @@ interface MainLayoutProps {
 
 export const MainLayout = ({ children }: MainLayoutProps) => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const isMobile = useIsMobile();
 
   return (
     <DragDropProvider>
@@ -23,16 +26,18 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
         
         {/* Main Content Area */}
         <div className="flex flex-1 overflow-hidden">
-          {/* Sidebar */}
-          <Sidebar 
-            collapsed={sidebarCollapsed} 
-            onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} 
-          />
+          {/* Sidebar - hidden on mobile */}
+          {!isMobile && (
+            <Sidebar 
+              collapsed={sidebarCollapsed} 
+              onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} 
+            />
+          )}
 
           {/* Content */}
           <div className="flex flex-1 flex-col overflow-hidden">
             <TopBar />
-            <main className="flex-1 overflow-y-auto groove-scrollbar pb-28">
+            <main className={`flex-1 overflow-y-auto groove-scrollbar ${isMobile ? 'pb-40' : 'pb-28'}`}>
               {children}
             </main>
           </div>
@@ -43,6 +48,9 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
 
         {/* Floating Draggable Player Bar */}
         <PlayerBar />
+
+        {/* Mobile Bottom Navigation */}
+        {isMobile && <MobileBottomNav />}
 
         {/* AI Assistant Floating Bubble */}
         <AIAssistant />
