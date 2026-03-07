@@ -33,7 +33,7 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
     { icon: "swap_horiz", labelKey: "nav.managePlaylists", href: "/playlist-manager" },
     { icon: "dns", labelKey: "nav.mediaServer", href: "/server" },
     { icon: "movie", labelKey: "nav.movies", href: "/movies" },
-    { icon: "radio", labelKey: "nav.radioLive", href: "/radio", badge: "LIVE" },
+    { icon: "radio", labelKey: "nav.radioLive", href: "/radio-live", badge: "LIVE" },
     { icon: "download", labelKey: "nav.importYoutube", href: "/import-youtube" },
   ];
 
