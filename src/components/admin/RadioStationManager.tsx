@@ -11,9 +11,6 @@ import { toast } from "sonner";
 import {
   Radio,
   Plus,
-  Trash2,
-  ArrowUp,
-  ArrowDown,
   Play,
   Square,
   Clock,
@@ -22,8 +19,8 @@ import {
   Search,
   Loader2,
   Copy,
-  GripVertical,
 } from "lucide-react";
+import { RadioTimeline } from "./RadioTimeline";
 import {
   Select,
   SelectContent,
