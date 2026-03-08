@@ -45,10 +45,13 @@ interface FloatingHeart {
 
 interface RadioMessage {
   id: string;
+  user_id?: string;
   display_name: string;
   message: string;
   created_at: string;
 }
+
+const EMOJI_LIST = ["❤️", "🔥", "🎵", "🎶", "👏", "🙌", "💃", "🕺", "🎧", "🎤", "✨", "💫", "🌟", "😍", "🥰", "😎", "🤩", "🎉", "🎊", "👍", "💯", "🫶", "🎸", "🎹"];
 
 const HEART_COLORS = [
   "hsl(var(--primary))",
