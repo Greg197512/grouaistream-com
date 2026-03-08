@@ -1214,6 +1214,18 @@ const nl: TranslationKeys = {
   "liked.empty": "Nog geen favoriete nummers. Begin met ontdekken en like een paar nummers!",
 
   "radio.openFullPlayer": "Open volledige speler",
+  "radio.backHome": "Startpagina",
+  "radio.nowPlaying": "Nu speelt",
+  "radio.live": "LIVE",
+  "radio.stationOff": "Station is momenteel offline",
+  "radio.broadcasting": "Uitzending",
+  "radio.upNext": "Hierna",
+  "radio.poweredBy": "Powered by GrouAI Stream",
+  "radio.loginToLike": "Inloggen",
+  "radio.loginToLikeDesc": "Je moet inloggen om een nummer leuk te vinden.",
+  "radio.unliked": "💔 Verwijderd uit favorieten",
+  "radio.liked": "❤️ Leuk gevonden!",
+  "radio.likedDesc": "toegevoegd aan AI-geheugen",
 
   "movies.title": "Films",
   "movies.moviesInDb": "films in database",
