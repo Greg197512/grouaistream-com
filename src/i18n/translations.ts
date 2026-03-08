@@ -914,6 +914,9 @@ const en: TranslationKeys = {
   "radio.deleteWish": "Delete wish",
   "radio.noWishes": "Be first! Write a wish 🎵",
 
+  "widget.micTooltip": "Voice assistant — talk to AI",
+  "widget.chatTooltip": "AI Chat — write and ask anything",
+
   "movies.title": "Movies",
   "movies.moviesInDb": "movies in database",
   "movies.searchYoutube": "Search on YouTube",
