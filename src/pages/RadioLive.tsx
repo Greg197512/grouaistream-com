@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
-import { Radio, Wifi, Music, Volume2, VolumeX, ArrowLeft, Heart, Sparkles, MessageCircle, Send, X } from "lucide-react";
+import { Radio, Wifi, Music, Volume2, VolumeX, ArrowLeft, Heart, Sparkles, MessageCircle, Send, X, Trash2, Smile } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -45,10 +45,13 @@ interface FloatingHeart {
 
 interface RadioMessage {
   id: string;
+  user_id?: string;
   display_name: string;
   message: string;
   created_at: string;
 }
+
+const EMOJI_LIST = ["❤️", "🔥", "🎵", "🎶", "👏", "🙌", "💃", "🕺", "🎧", "🎤", "✨", "💫", "🌟", "😍", "🥰", "😎", "🤩", "🎉", "🎊", "👍", "💯", "🫶", "🎸", "🎹"];
 
 const HEART_COLORS = [
   "hsl(var(--primary))",
@@ -85,6 +88,8 @@ const RadioLive = () => {
   const [messages, setMessages] = useState<RadioMessage[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [sendingMessage, setSendingMessage] = useState(false);
+  const [showEmojis, setShowEmojis] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const heartIdRef = useRef(0);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
@@ -95,12 +100,12 @@ const RadioLive = () => {
       const uid = data.user?.id || null;
       setUserId(uid);
       if (uid) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("display_name")
-          .eq("user_id", uid)
-          .maybeSingle();
-        if (profile?.display_name) setDisplayName(profile.display_name);
+        const [profileRes, roleRes] = await Promise.all([
+          supabase.from("profiles").select("display_name").eq("user_id", uid).maybeSingle(),
+          supabase.rpc("has_role", { _user_id: uid, _role: "admin" }),
+        ]);
+        if (profileRes.data?.display_name) setDisplayName(profileRes.data.display_name);
+        if (roleRes.data) setIsAdmin(true);
       }
     });
   }, []);
@@ -152,7 +157,7 @@ const RadioLive = () => {
     const fetchMessages = async () => {
       const { data } = await supabase
         .from("radio_messages")
-        .select("id, display_name, message, created_at")
+        .select("id, user_id, display_name, message, created_at")
         .order("created_at", { ascending: false })
         .limit(50);
       if (data) setMessages(data.reverse());
@@ -164,6 +169,10 @@ const RadioLive = () => {
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "radio_messages" }, (payload) => {
         const newMsg = payload.new as RadioMessage;
         setMessages((prev) => [...prev.slice(-49), newMsg]);
+      })
+      .on("postgres_changes", { event: "DELETE", schema: "public", table: "radio_messages" }, (payload) => {
+        const deletedId = (payload.old as any).id;
+        setMessages((prev) => prev.filter((m) => m.id !== deletedId));
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
@@ -283,10 +292,20 @@ const RadioLive = () => {
         message: newMessage.trim(),
       });
       setNewMessage("");
+      setShowEmojis(false);
     } catch (e) {
       console.error("Message error:", e);
     } finally {
       setSendingMessage(false);
+    }
+  };
+
+  const handleDeleteMessage = async (msgId: string) => {
+    try {
+      await supabase.from("radio_messages").delete().eq("id", msgId);
+      setMessages((prev) => prev.filter((m) => m.id !== msgId));
+    } catch (e) {
+      console.error("Delete message error:", e);
     }
   };
 
@@ -482,11 +501,22 @@ const RadioLive = () => {
                   key={msg.id}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="rounded-xl bg-muted/30 border border-border/30 p-3"
+                  className="rounded-xl bg-muted/30 border border-border/30 p-3 group"
                 >
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-xs font-semibold text-primary">{msg.display_name}</span>
-                    <span className="text-[10px] text-muted-foreground">{formatTime(msg.created_at)}</span>
+                    <div className="flex items-center gap-1">
+                      <span className="text-[10px] text-muted-foreground">{formatTime(msg.created_at)}</span>
+                      {(msg.user_id === userId || isAdmin) && (
+                        <button
+                          onClick={() => handleDeleteMessage(msg.id)}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive"
+                          title={t("radio.deleteWish")}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      )}
+                    </div>
                   </div>
                   <p className="text-sm">{msg.message}</p>
                 </motion.div>
@@ -497,24 +527,53 @@ const RadioLive = () => {
             {/* Input */}
             <div className="p-4 border-t border-border/50">
               {userId ? (
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
-                    placeholder={t("radio.wishPlaceholder")}
-                    maxLength={200}
-                    className="flex-1 rounded-full bg-muted/50 border border-border/50 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                  />
-                  <Button
-                    size="sm"
-                    onClick={handleSendMessage}
-                    disabled={!newMessage.trim() || sendingMessage}
-                    className="rounded-full groove-gradient-bg h-9 w-9 p-0"
-                  >
-                    <Send className="h-4 w-4" />
-                  </Button>
+                <div className="space-y-2">
+                  {/* Emoji picker */}
+                  <AnimatePresence>
+                    {showEmojis && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="flex flex-wrap gap-1 overflow-hidden"
+                      >
+                        {EMOJI_LIST.map((emoji) => (
+                          <button
+                            key={emoji}
+                            onClick={() => setNewMessage((prev) => prev + emoji)}
+                            className="text-lg hover:scale-125 transition-transform p-0.5 rounded hover:bg-muted/50"
+                          >
+                            {emoji}
+                          </button>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setShowEmojis(!showEmojis)}
+                      className={`p-2 rounded-full transition-colors ${showEmojis ? "bg-primary/20 text-primary" : "text-muted-foreground hover:text-foreground hover:bg-muted/50"}`}
+                    >
+                      <Smile className="h-5 w-5" />
+                    </button>
+                    <input
+                      type="text"
+                      value={newMessage}
+                      onChange={(e) => setNewMessage(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
+                      placeholder={t("radio.wishPlaceholder")}
+                      maxLength={200}
+                      className="flex-1 rounded-full bg-muted/50 border border-border/50 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    />
+                    <Button
+                      size="sm"
+                      onClick={handleSendMessage}
+                      disabled={!newMessage.trim() || sendingMessage}
+                      className="rounded-full groove-gradient-bg h-9 w-9 p-0"
+                    >
+                      <Send className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               ) : (
                 <p className="text-center text-sm text-muted-foreground">{t("radio.loginToChat")}</p>

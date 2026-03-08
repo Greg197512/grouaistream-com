@@ -195,6 +195,7 @@ type TranslationKeys = {
   "radio.wishPlaceholder": string;
   "radio.sendWish": string;
   "radio.loginToChat": string;
+  "radio.deleteWish": string;
   "radio.noWishes": string;
 
   // Movies
@@ -551,6 +552,7 @@ const pl: TranslationKeys = {
   "radio.wishPlaceholder": "Napisz życzenie, pozdrowienie...",
   "radio.sendWish": "Wyślij",
   "radio.loginToChat": "Zaloguj się aby pisać życzenia",
+  "radio.deleteWish": "Usuń życzenie",
   "radio.noWishes": "Bądź pierwszy! Napisz życzenie 🎵",
 
   "movies.title": "Filmy",
@@ -902,6 +904,7 @@ const en: TranslationKeys = {
   "radio.wishPlaceholder": "Write a wish, greeting...",
   "radio.sendWish": "Send",
   "radio.loginToChat": "Log in to write wishes",
+  "radio.deleteWish": "Delete wish",
   "radio.noWishes": "Be first! Write a wish 🎵",
 
   "movies.title": "Movies",
@@ -1253,6 +1256,7 @@ const nl: TranslationKeys = {
   "radio.wishPlaceholder": "Schrijf een wens, groet...",
   "radio.sendWish": "Verstuur",
   "radio.loginToChat": "Log in om wensen te schrijven",
+  "radio.deleteWish": "Wens verwijderen",
   "radio.noWishes": "Wees de eerste! Schrijf een wens 🎵",
 
   "movies.title": "Films",
@@ -1604,6 +1608,7 @@ const ua: TranslationKeys = {
   "radio.wishPlaceholder": "Напишіть побажання, привітання...",
   "radio.sendWish": "Надіслати",
   "radio.loginToChat": "Увійдіть щоб писати побажання",
+  "radio.deleteWish": "Видалити побажання",
   "radio.noWishes": "Будьте першим! Напишіть побажання 🎵",
 
   "movies.title": "Фільми",
