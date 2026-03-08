@@ -896,6 +896,13 @@ const en: TranslationKeys = {
   "radio.unliked": "💔 Removed from liked",
   "radio.liked": "❤️ Liked!",
   "radio.likedDesc": "added to AI memory",
+  "radio.likesCount": "likes",
+  "radio.wishes": "Wishes",
+  "radio.wishesTitle": "💬 Listener wishes",
+  "radio.wishPlaceholder": "Write a wish, greeting...",
+  "radio.sendWish": "Send",
+  "radio.loginToChat": "Log in to write wishes",
+  "radio.noWishes": "Be first! Write a wish 🎵",
 
   "movies.title": "Movies",
   "movies.moviesInDb": "movies in database",
