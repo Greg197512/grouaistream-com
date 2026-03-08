@@ -1,8 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { motion } from "framer-motion";
-import { Radio, Wifi, Music, SkipForward, Volume2, VolumeX } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Radio, Wifi, Music, Volume2, VolumeX, ArrowLeft, Heart } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 
 interface RadioConfig {
   is_active: boolean;
@@ -29,7 +32,27 @@ interface ScheduleTrack {
   } | null;
 }
 
+interface FloatingHeart {
+  id: number;
+  x: number;
+  size: number;
+  color: string;
+}
+
+const HEART_COLORS = [
+  "hsl(var(--primary))",
+  "hsl(var(--destructive))",
+  "hsl(var(--accent))",
+  "#ff6b81",
+  "#ff4757",
+  "#ff6348",
+  "#ffa502",
+  "#ff4081",
+];
+
 const RadioLive = () => {
+  const navigate = useNavigate();
+  const { toast } = useToast();
   const [config, setConfig] = useState<RadioConfig | null>(null);
   const [schedule, setSchedule] = useState<ScheduleTrack[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -37,7 +60,18 @@ const RadioLive = () => {
   const [volume, setVolume] = useState(80);
   const [muted, setMuted] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [isLiked, setIsLiked] = useState(false);
+  const [floatingHearts, setFloatingHearts] = useState<FloatingHeart[]>([]);
+  const [userId, setUserId] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const heartIdRef = useRef(0);
+
+  // Check auth
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      setUserId(data.user?.id || null);
+    });
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -53,6 +87,24 @@ const RadioLive = () => {
     };
     fetchData();
   }, []);
+
+  // Check if current track is liked
+  useEffect(() => {
+    const checkLiked = async () => {
+      if (!userId || !schedule[currentIndex]?.track?.id) {
+        setIsLiked(false);
+        return;
+      }
+      const { data } = await supabase
+        .from("liked_songs")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("track_id", schedule[currentIndex].track!.id)
+        .maybeSingle();
+      setIsLiked(!!data);
+    };
+    checkLiked();
+  }, [userId, currentIndex, schedule]);
 
   const getItemDuration = (item: ScheduleTrack) => {
     if (item.item_type === "track" || !item.item_type) return item.track?.duration || 180;
@@ -73,6 +125,74 @@ const RadioLive = () => {
     if (item.item_type === "track" || !item.item_type) return item.track?.artist || "";
     const labels: Record<string, string> = { jingle: "🎵 Jingiel", ad: "📢 Reklama", talk: "🎙️ Rozmowa" };
     return labels[item.item_type] || item.item_type;
+  };
+
+  // Spawn floating hearts
+  const spawnHearts = () => {
+    const newHearts: FloatingHeart[] = [];
+    const count = 8 + Math.floor(Math.random() * 8); // 8-15 hearts
+    for (let i = 0; i < count; i++) {
+      newHearts.push({
+        id: heartIdRef.current++,
+        x: 30 + Math.random() * 40, // 30-70% horizontal spread
+        size: 14 + Math.random() * 20, // 14-34px
+        color: HEART_COLORS[Math.floor(Math.random() * HEART_COLORS.length)],
+      });
+    }
+    setFloatingHearts((prev) => [...prev, ...newHearts]);
+    // Clean up after animation
+    setTimeout(() => {
+      setFloatingHearts((prev) => prev.filter((h) => !newHearts.find((nh) => nh.id === h.id)));
+    }, 2500);
+  };
+
+  const handleLike = async () => {
+    const currentTrack = schedule[currentIndex]?.track;
+    
+    // Always spawn hearts for everyone
+    spawnHearts();
+
+    if (!currentTrack?.id) return;
+
+    if (!userId) {
+      toast({ title: "Zaloguj się", description: "Aby polubić utwór, musisz się zalogować.", variant: "destructive" });
+      return;
+    }
+
+    try {
+      if (isLiked) {
+        // Unlike
+        await supabase.from("liked_songs").delete().eq("user_id", userId).eq("track_id", currentTrack.id);
+        setIsLiked(false);
+        toast({ title: "💔 Usunięto z polubionych" });
+      } else {
+        // Like - save to liked_songs
+        const { data: existing } = await supabase
+          .from("liked_songs")
+          .select("id")
+          .eq("user_id", userId)
+          .eq("track_id", currentTrack.id)
+          .maybeSingle();
+
+        if (!existing) {
+          await supabase.from("liked_songs").insert({ user_id: userId, track_id: currentTrack.id });
+        }
+
+        // Save to listening history for AI memory
+        await supabase.from("listening_history").insert({
+          user_id: userId,
+          track_id: currentTrack.id,
+          duration_played: Math.floor((progress / 100) * getItemDuration(schedule[currentIndex])),
+          mood_detected: "radio_like",
+          skipped: false,
+        });
+
+        setIsLiked(true);
+        toast({ title: "❤️ Polubiono!", description: `${currentTrack.title} dodano do pamięci AI` });
+      }
+    } catch (e) {
+      console.error("Like error:", e);
+    }
   };
 
   useEffect(() => {
@@ -115,7 +235,6 @@ const RadioLive = () => {
       }
 
       if (!audioUrl) {
-        // No audio (silent break) - just wait for duration then skip
         setIsPlaying(true);
         const remaining = getItemDuration(item) - offset;
         const timer = setTimeout(() => {
@@ -172,8 +291,8 @@ const RadioLive = () => {
   const currentArtist = currentItem ? getItemArtist(currentItem) : "";
   const currentCover = currentItem?.track?.cover_url || null;
   const isOffAir = !config?.is_active || schedule.length === 0;
+  const isTrack = currentItem?.item_type === "track" || !currentItem?.item_type;
 
-  // Scheduled mode check
   const isInSchedule = () => {
     if (!config || config.mode !== "scheduled" || !config.start_time || !config.end_time) return true;
     const now = new Date();
@@ -185,12 +304,11 @@ const RadioLive = () => {
 
   if (isOffAir || !isInSchedule()) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="text-center space-y-4"
-        >
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
+        <Button variant="ghost" size="sm" className="absolute top-4 left-4 gap-2" onClick={() => navigate("/")}>
+          <ArrowLeft className="h-4 w-4" /> Strona główna
+        </Button>
+        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="text-center space-y-4">
           <div className="h-20 w-20 rounded-full bg-muted/50 flex items-center justify-center mx-auto">
             <Radio className="h-10 w-10 text-muted-foreground" />
           </div>
@@ -207,12 +325,41 @@ const RadioLive = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-sm space-y-6"
-      >
+    <div className="min-h-screen bg-background flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Back button */}
+      <Button variant="ghost" size="sm" className="absolute top-4 left-4 gap-2 z-20" onClick={() => navigate("/")}>
+        <ArrowLeft className="h-4 w-4" /> Strona główna
+      </Button>
+
+      {/* Floating Hearts Layer */}
+      <div className="fixed inset-0 pointer-events-none z-30">
+        <AnimatePresence>
+          {floatingHearts.map((heart) => (
+            <motion.div
+              key={heart.id}
+              initial={{ opacity: 1, y: 0, x: `${heart.x}%`, scale: 0.5 }}
+              animate={{
+                opacity: [1, 1, 0.8, 0],
+                y: [0, -150, -400, -700],
+                x: `${heart.x + (Math.random() - 0.5) * 20}%`,
+                scale: [0.5, 1.2, 1, 0.6],
+                rotate: [0, (Math.random() - 0.5) * 40, (Math.random() - 0.5) * 60],
+              }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 2 + Math.random() * 0.8, ease: "easeOut" }}
+              className="absolute bottom-32"
+              style={{ left: 0 }}
+            >
+              <Heart
+                className="fill-current"
+                style={{ width: heart.size, height: heart.size, color: heart.color }}
+              />
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
+
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-sm space-y-6">
         {/* Station Header */}
         <div className="text-center space-y-2">
           <motion.div
@@ -236,25 +383,34 @@ const RadioLive = () => {
           <div className="rounded-2xl overflow-hidden border border-border/50 bg-card">
             <div className="h-1 w-full groove-gradient-bg" />
             {currentCover && (
-              <img
-                src={currentCover}
-                alt={currentTitle}
-                className="w-full h-48 object-cover"
-              />
+              <img src={currentCover} alt={currentTitle} className="w-full h-48 object-cover" />
             )}
             <div className="p-4 space-y-3">
-              <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wider">Teraz gra</p>
-                <h2 className="font-bold text-lg truncate">{currentTitle}</h2>
-                <p className="text-sm text-muted-foreground truncate">{currentArtist}</p>
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider">Teraz gra</p>
+                  <h2 className="font-bold text-lg truncate">{currentTitle}</h2>
+                  <p className="text-sm text-muted-foreground truncate">{currentArtist}</p>
+                </div>
+                {/* Like button - only for tracks */}
+                {isTrack && currentItem.track?.id && (
+                  <motion.button
+                    whileTap={{ scale: 1.4 }}
+                    onClick={handleLike}
+                    className="flex-shrink-0 p-2 rounded-full hover:bg-muted/50 transition-colors"
+                  >
+                    <Heart
+                      className={`h-6 w-6 transition-colors ${
+                        isLiked ? "fill-destructive text-destructive" : "text-muted-foreground hover:text-destructive"
+                      }`}
+                    />
+                  </motion.button>
+                )}
               </div>
 
               {/* Progress */}
               <div className="h-1 w-full rounded-full bg-muted overflow-hidden">
-                <motion.div
-                  className="h-full groove-gradient-bg"
-                  style={{ width: `${progress}%` }}
-                />
+                <motion.div className="h-full groove-gradient-bg" style={{ width: `${progress}%` }} />
               </div>
 
               {/* Volume */}
@@ -280,9 +436,7 @@ const RadioLive = () => {
         {/* Up Next */}
         {schedule.length > 1 && (
           <div className="space-y-2">
-            <p className="text-xs text-muted-foreground uppercase tracking-wider px-1">
-              Następne w programie
-            </p>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider px-1">Następne w programie</p>
             <div className="space-y-1">
               {schedule
                 .slice(currentIndex + 1, currentIndex + 4)
@@ -304,9 +458,7 @@ const RadioLive = () => {
           </div>
         )}
 
-        <p className="text-center text-xs text-muted-foreground">
-          Powered by GrouAI Stream
-        </p>
+        <p className="text-center text-xs text-muted-foreground">Powered by GrouAI Stream</p>
       </motion.div>
     </div>
   );
