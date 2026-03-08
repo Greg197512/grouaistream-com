@@ -8,7 +8,7 @@ import aiAssistantAvatar from "@/assets/ai-assistant-avatar.jpg";
 
 const TOOLTIP_KEY = "grouai_widget_tooltips_shown";
 
-const CloudTooltip = ({ children, visible }: { children: string; visible: boolean }) => (
+const CloudTooltip = ({ children, visible }: { children: React.ReactNode; visible: boolean }) => (
   <AnimatePresence>
     {visible && (
       <motion.div
