@@ -292,10 +292,20 @@ const RadioLive = () => {
         message: newMessage.trim(),
       });
       setNewMessage("");
+      setShowEmojis(false);
     } catch (e) {
       console.error("Message error:", e);
     } finally {
       setSendingMessage(false);
+    }
+  };
+
+  const handleDeleteMessage = async (msgId: string) => {
+    try {
+      await supabase.from("radio_messages").delete().eq("id", msgId);
+      setMessages((prev) => prev.filter((m) => m.id !== msgId));
+    } catch (e) {
+      console.error("Delete message error:", e);
     }
   };
 
