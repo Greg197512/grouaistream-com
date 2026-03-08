@@ -552,6 +552,7 @@ const pl: TranslationKeys = {
   "radio.wishPlaceholder": "Napisz życzenie, pozdrowienie...",
   "radio.sendWish": "Wyślij",
   "radio.loginToChat": "Zaloguj się aby pisać życzenia",
+  "radio.deleteWish": "Usuń życzenie",
   "radio.noWishes": "Bądź pierwszy! Napisz życzenie 🎵",
 
   "movies.title": "Filmy",
