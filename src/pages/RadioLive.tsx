@@ -157,7 +157,7 @@ const RadioLive = () => {
     const fetchMessages = async () => {
       const { data } = await supabase
         .from("radio_messages")
-        .select("id, display_name, message, created_at")
+        .select("id, user_id, display_name, message, created_at")
         .order("created_at", { ascending: false })
         .limit(50);
       if (data) setMessages(data.reverse());
