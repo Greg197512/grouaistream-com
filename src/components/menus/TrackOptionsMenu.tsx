@@ -1,5 +1,6 @@
 import { useState, useEffect, forwardRef } from "react";
 import { motion } from "framer-motion";
+import { useFloatingHearts, FloatingHeartsOverlay } from "@/components/effects/FloatingHearts";
 import { 
   MoreHorizontal, 
   Heart, 
@@ -390,6 +391,7 @@ const LikeButtonComponent = (
   const [isLiked, setIsLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
   const [loading, setLoading] = useState(false);
+  const { hearts, spawnHearts } = useFloatingHearts();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -438,6 +440,8 @@ const LikeButtonComponent = (
         setIsLiked(false);
         setLikeCount(prev => Math.max(0, prev - 1));
       } else {
+        // Spawn hearts on like
+        spawnHearts(e);
         await supabase
           .from("liked_songs")
           .insert({ user_id: user.id, track_id: trackId });
@@ -453,29 +457,32 @@ const LikeButtonComponent = (
   };
 
   return (
-    <button
-      ref={ref}
-      onClick={handleLike}
-      disabled={loading}
-      className={cn(
-        "flex items-center gap-1 p-1.5 rounded-full transition-all",
-        "hover:bg-secondary/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary",
-        "active:scale-95",
-        className
-      )}
-    >
-      <Heart
+    <>
+      <button
+        ref={ref}
+        onClick={handleLike}
+        disabled={loading}
         className={cn(
-          "h-4 w-4 transition-all duration-200",
-          isLiked 
-            ? "fill-primary text-primary scale-110" 
-            : "text-muted-foreground hover:text-foreground scale-100"
+          "flex items-center gap-1 p-1.5 rounded-full transition-all",
+          "hover:bg-secondary/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+          "active:scale-95",
+          className
         )}
-      />
-      {showCount && likeCount > 0 && (
-        <span className="text-xs text-muted-foreground">{likeCount}</span>
-      )}
-    </button>
+      >
+        <Heart
+          className={cn(
+            "h-4 w-4 transition-all duration-200",
+            isLiked 
+              ? "fill-primary text-primary scale-110" 
+              : "text-muted-foreground hover:text-foreground scale-100"
+          )}
+        />
+        {showCount && likeCount > 0 && (
+          <span className="text-xs text-muted-foreground">{likeCount}</span>
+        )}
+      </button>
+      <FloatingHeartsOverlay hearts={hearts} />
+    </>
   );
 };
 
