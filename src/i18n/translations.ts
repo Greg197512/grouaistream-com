@@ -559,6 +559,9 @@ const pl: TranslationKeys = {
   "radio.deleteWish": "Usuń życzenie",
   "radio.noWishes": "Bądź pierwszy! Napisz życzenie 🎵",
 
+  "widget.micTooltip": "Asystent głosowy — mów do AI",
+  "widget.chatTooltip": "Czat z AI — pisz i pytaj o wszystko",
+
   "movies.title": "Filmy",
   "movies.moviesInDb": "filmów w bazie",
   "movies.searchYoutube": "Szukaj na YouTube",
