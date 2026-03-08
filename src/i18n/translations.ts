@@ -189,6 +189,13 @@ type TranslationKeys = {
   "radio.unliked": string;
   "radio.liked": string;
   "radio.likedDesc": string;
+  "radio.likesCount": string;
+  "radio.wishes": string;
+  "radio.wishesTitle": string;
+  "radio.wishPlaceholder": string;
+  "radio.sendWish": string;
+  "radio.loginToChat": string;
+  "radio.noWishes": string;
 
   // Movies
   "movies.title": string;
@@ -538,6 +545,13 @@ const pl: TranslationKeys = {
   "radio.unliked": "💔 Usunięto z polubionych",
   "radio.liked": "❤️ Polubiono!",
   "radio.likedDesc": "dodano do pamięci AI",
+  "radio.likesCount": "polubień",
+  "radio.wishes": "Życzenia",
+  "radio.wishesTitle": "💬 Życzenia słuchaczy",
+  "radio.wishPlaceholder": "Napisz życzenie, pozdrowienie...",
+  "radio.sendWish": "Wyślij",
+  "radio.loginToChat": "Zaloguj się aby pisać życzenia",
+  "radio.noWishes": "Bądź pierwszy! Napisz życzenie 🎵",
 
   "movies.title": "Filmy",
   "movies.moviesInDb": "filmów w bazie",
@@ -882,6 +896,13 @@ const en: TranslationKeys = {
   "radio.unliked": "💔 Removed from liked",
   "radio.liked": "❤️ Liked!",
   "radio.likedDesc": "added to AI memory",
+  "radio.likesCount": "likes",
+  "radio.wishes": "Wishes",
+  "radio.wishesTitle": "💬 Listener wishes",
+  "radio.wishPlaceholder": "Write a wish, greeting...",
+  "radio.sendWish": "Send",
+  "radio.loginToChat": "Log in to write wishes",
+  "radio.noWishes": "Be first! Write a wish 🎵",
 
   "movies.title": "Movies",
   "movies.moviesInDb": "movies in database",
@@ -1226,6 +1247,13 @@ const nl: TranslationKeys = {
   "radio.unliked": "💔 Verwijderd uit favorieten",
   "radio.liked": "❤️ Leuk gevonden!",
   "radio.likedDesc": "toegevoegd aan AI-geheugen",
+  "radio.likesCount": "likes",
+  "radio.wishes": "Wensen",
+  "radio.wishesTitle": "💬 Luisteraarswensen",
+  "radio.wishPlaceholder": "Schrijf een wens, groet...",
+  "radio.sendWish": "Verstuur",
+  "radio.loginToChat": "Log in om wensen te schrijven",
+  "radio.noWishes": "Wees de eerste! Schrijf een wens 🎵",
 
   "movies.title": "Films",
   "movies.moviesInDb": "films in database",
@@ -1570,6 +1598,13 @@ const ua: TranslationKeys = {
   "radio.unliked": "💔 Видалено з вподобаних",
   "radio.liked": "❤️ Вподобано!",
   "radio.likedDesc": "додано до пам'яті AI",
+  "radio.likesCount": "вподобань",
+  "radio.wishes": "Побажання",
+  "radio.wishesTitle": "💬 Побажання слухачів",
+  "radio.wishPlaceholder": "Напишіть побажання, привітання...",
+  "radio.sendWish": "Надіслати",
+  "radio.loginToChat": "Увійдіть щоб писати побажання",
+  "radio.noWishes": "Будьте першим! Напишіть побажання 🎵",
 
   "movies.title": "Фільми",
   "movies.moviesInDb": "фільмів у базі",
