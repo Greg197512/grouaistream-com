@@ -1247,6 +1247,13 @@ const nl: TranslationKeys = {
   "radio.unliked": "💔 Verwijderd uit favorieten",
   "radio.liked": "❤️ Leuk gevonden!",
   "radio.likedDesc": "toegevoegd aan AI-geheugen",
+  "radio.likesCount": "likes",
+  "radio.wishes": "Wensen",
+  "radio.wishesTitle": "💬 Luisteraarswensen",
+  "radio.wishPlaceholder": "Schrijf een wens, groet...",
+  "radio.sendWish": "Verstuur",
+  "radio.loginToChat": "Log in om wensen te schrijven",
+  "radio.noWishes": "Wees de eerste! Schrijf een wens 🎵",
 
   "movies.title": "Films",
   "movies.moviesInDb": "films in database",
