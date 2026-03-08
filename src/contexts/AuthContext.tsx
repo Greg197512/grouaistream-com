@@ -6,6 +6,8 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
+  isFirstLogin: boolean;
+  clearFirstLogin: () => void;
   signUp: (email: string, password: string, displayName?: string) => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
@@ -25,6 +27,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isFirstLogin, setIsFirstLogin] = useState(false);
+
+  const clearFirstLogin = () => setIsFirstLogin(false);
 
   useEffect(() => {
     // Set up auth state listener FIRST
@@ -46,7 +51,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 .maybeSingle();
 
               if (profile && !profile.first_login_completed) {
-                // This will trigger the handle_first_login function which resets mood history
+                setIsFirstLogin(true);
                 await supabase
                   .from("profiles")
                   .update({ first_login_completed: true })
@@ -106,7 +111,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, signUp, signIn, signOut }}>
+    <AuthContext.Provider value={{ user, session, loading, isFirstLogin, clearFirstLogin, signUp, signIn, signOut }}>
       {children}
     </AuthContext.Provider>
   );

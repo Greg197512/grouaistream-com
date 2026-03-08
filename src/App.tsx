@@ -3,7 +3,8 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { AuthProvider } from "@/contexts/AuthContext";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { WelcomeConfetti } from "@/components/effects/WelcomeConfetti";
 import { PlayerProvider } from "@/contexts/PlayerContext";
 import { AIProvider } from "@/contexts/AIContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
@@ -31,6 +32,11 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
+const WelcomeOverlay = () => {
+  const { isFirstLogin, clearFirstLogin } = useAuth();
+  return <WelcomeConfetti show={isFirstLogin} onComplete={clearFirstLogin} />;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <LanguageProvider>
@@ -42,6 +48,7 @@ const App = () => (
             <div className="dark">
               <Toaster />
               <Sonner />
+              <WelcomeOverlay />
               <BrowserRouter>
                 <AutoVoiceListener />
                 <Routes>
