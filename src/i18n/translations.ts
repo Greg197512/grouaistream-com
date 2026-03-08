@@ -1598,6 +1598,13 @@ const ua: TranslationKeys = {
   "radio.unliked": "💔 Видалено з вподобаних",
   "radio.liked": "❤️ Вподобано!",
   "radio.likedDesc": "додано до пам'яті AI",
+  "radio.likesCount": "вподобань",
+  "radio.wishes": "Побажання",
+  "radio.wishesTitle": "💬 Побажання слухачів",
+  "radio.wishPlaceholder": "Напишіть побажання, привітання...",
+  "radio.sendWish": "Надіслати",
+  "radio.loginToChat": "Увійдіть щоб писати побажання",
+  "radio.noWishes": "Будьте першим! Напишіть побажання 🎵",
 
   "movies.title": "Фільми",
   "movies.moviesInDb": "фільмів у базі",
