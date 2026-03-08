@@ -189,6 +189,13 @@ type TranslationKeys = {
   "radio.unliked": string;
   "radio.liked": string;
   "radio.likedDesc": string;
+  "radio.likesCount": string;
+  "radio.wishes": string;
+  "radio.wishesTitle": string;
+  "radio.wishPlaceholder": string;
+  "radio.sendWish": string;
+  "radio.loginToChat": string;
+  "radio.noWishes": string;
 
   // Movies
   "movies.title": string;
