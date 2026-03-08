@@ -46,7 +46,7 @@ export const WelcomeConfetti = ({ show, onComplete }: { show: boolean; onComplet
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.5, exit: { duration: 1 } }}
+          transition={{ duration: 0.5 }}
           className="fixed inset-0 z-[200] pointer-events-none flex items-center justify-center"
         >
           {/* Glow background */}
