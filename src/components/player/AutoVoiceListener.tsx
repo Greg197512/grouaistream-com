@@ -687,7 +687,7 @@ export const AutoVoiceListener = () => {
     setTimeout(() => startListening(), 1000);
   }, [saveAssistantName, startListening]);
 
-  const toggleAutoListen = () => {
+  const toggleAutoListen = useCallback(() => {
     const next = !autoListenEnabled;
     setAutoListenEnabled(next);
     localStorage.setItem("auto-voice-listen", String(next));
@@ -698,7 +698,19 @@ export const AutoVoiceListener = () => {
     } else {
       shutdownMic();
     }
-  };
+  }, [autoListenEnabled, startListening, assistantName]);
+
+  // Listen for toggle from InfinityWidget
+  useEffect(() => {
+    const handler = () => toggleAutoListen();
+    window.addEventListener("toggle-voice-mic", handler);
+    return () => window.removeEventListener("toggle-voice-mic", handler);
+  }, [toggleAutoListen]);
+
+  // Broadcast mic state to InfinityWidget
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent("voice-mic-state", { detail: isListening }));
+  }, [isListening]);
 
   const playSuggestion = async (track: any) => {
     playPlaylist([{ id: track.id, title: track.title, artist: track.artist, album: null, audio_url: null, cover_url: null, genre: track.genre, mood: track.mood, duration: 180 }], 0);
@@ -712,61 +724,7 @@ export const AutoVoiceListener = () => {
     <>
       <AssistantNamingModal open={showNamingModal} onSubmit={handleNameSubmit} />
 
-      {/* Iridescent mic button */}
-      <motion.button
-        onClick={toggleAutoListen}
-        className={cn(
-          "fixed bottom-20 md:bottom-24 right-4 z-40 w-11 h-11 rounded-full flex items-center justify-center transition-all",
-          isListening ? "shadow-[0_0_20px_hsl(var(--primary)/0.5)]" : ""
-        )}
-        style={{
-          background: isListening
-            ? 'linear-gradient(135deg, hsl(var(--primary) / 0.7), hsl(var(--accent) / 0.5), hsl(var(--primary) / 0.6))'
-            : 'rgba(255,255,255,0.08)',
-          backdropFilter: 'blur(30px) saturate(200%)',
-          WebkitBackdropFilter: 'blur(30px) saturate(200%)',
-          border: isListening ? '1px solid hsl(var(--primary) / 0.4)' : '1px solid rgba(255,255,255,0.1)',
-        }}
-        whileHover={{ scale: 1.12 }}
-        whileTap={{ scale: 0.88 }}
-        title={autoListenEnabled ? "Wyłącz" : "Włącz asystenta głosowego"}
-      >
-        {isListening ? (
-          <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 1.2 }}>
-            <Mic className="h-4 w-4 text-primary-foreground" />
-          </motion.div>
-        ) : (
-          <MicOff className="h-4 w-4 text-muted-foreground/70" />
-        )}
-        {/* Shimmer ring when listening */}
-        {isListening && (
-          <>
-            <motion.div
-              className="absolute inset-0 rounded-full"
-              style={{ border: '1px solid hsl(var(--primary) / 0.3)' }}
-              animate={{ scale: [1, 1.6], opacity: [0.6, 0] }}
-              transition={{ repeat: Infinity, duration: 2, ease: "easeOut" }}
-            />
-            <motion.div
-              className="absolute inset-0 rounded-full"
-              style={{ border: '1px solid hsl(var(--accent) / 0.2)' }}
-              animate={{ scale: [1, 2], opacity: [0.4, 0] }}
-              transition={{ repeat: Infinity, duration: 2.5, ease: "easeOut", delay: 0.3 }}
-            />
-          </>
-        )}
-        {assistantName && (
-          <span className="absolute -top-1 -right-1 text-[7px] rounded-full px-1 py-0.5 font-bold"
-            style={{
-              background: 'linear-gradient(135deg, hsl(var(--primary) / 0.6), hsl(var(--accent) / 0.4))',
-              color: 'hsl(var(--primary-foreground))',
-              backdropFilter: 'blur(10px)',
-            }}
-          >
-            {assistantName.slice(0, 3)}
-          </span>
-        )}
-      </motion.button>
+      {/* Mic button removed - now in InfinityAssistantWidget */}
 
       {/* AI Suggestions Panel */}
       <AnimatePresence>
