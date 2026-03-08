@@ -41,7 +41,7 @@ const NAV_MAP: Record<string, string> = {
   "polubionych": "/liked", "polubion": "/liked", "liked": "/liked",
   "serwer": "/server", "server": "/server", "medi": "/server",
   "film": "/movies", "movie": "/movies",
-  "radio": "/radio",
+  "radio": "/radio-live",
   "ustawien": "/settings", "settings": "/settings",
   "nastro": "/mood-history", "mood": "/mood-history",
   "playlist": "/playlist-manager",
