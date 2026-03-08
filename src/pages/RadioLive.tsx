@@ -527,24 +527,53 @@ const RadioLive = () => {
             {/* Input */}
             <div className="p-4 border-t border-border/50">
               {userId ? (
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
-                    placeholder={t("radio.wishPlaceholder")}
-                    maxLength={200}
-                    className="flex-1 rounded-full bg-muted/50 border border-border/50 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                  />
-                  <Button
-                    size="sm"
-                    onClick={handleSendMessage}
-                    disabled={!newMessage.trim() || sendingMessage}
-                    className="rounded-full groove-gradient-bg h-9 w-9 p-0"
-                  >
-                    <Send className="h-4 w-4" />
-                  </Button>
+                <div className="space-y-2">
+                  {/* Emoji picker */}
+                  <AnimatePresence>
+                    {showEmojis && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="flex flex-wrap gap-1 overflow-hidden"
+                      >
+                        {EMOJI_LIST.map((emoji) => (
+                          <button
+                            key={emoji}
+                            onClick={() => setNewMessage((prev) => prev + emoji)}
+                            className="text-lg hover:scale-125 transition-transform p-0.5 rounded hover:bg-muted/50"
+                          >
+                            {emoji}
+                          </button>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setShowEmojis(!showEmojis)}
+                      className={`p-2 rounded-full transition-colors ${showEmojis ? "bg-primary/20 text-primary" : "text-muted-foreground hover:text-foreground hover:bg-muted/50"}`}
+                    >
+                      <Smile className="h-5 w-5" />
+                    </button>
+                    <input
+                      type="text"
+                      value={newMessage}
+                      onChange={(e) => setNewMessage(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
+                      placeholder={t("radio.wishPlaceholder")}
+                      maxLength={200}
+                      className="flex-1 rounded-full bg-muted/50 border border-border/50 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    />
+                    <Button
+                      size="sm"
+                      onClick={handleSendMessage}
+                      disabled={!newMessage.trim() || sendingMessage}
+                      className="rounded-full groove-gradient-bg h-9 w-9 p-0"
+                    >
+                      <Send className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               ) : (
                 <p className="text-center text-sm text-muted-foreground">{t("radio.loginToChat")}</p>
