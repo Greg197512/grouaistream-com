@@ -687,7 +687,7 @@ export const AutoVoiceListener = () => {
     setTimeout(() => startListening(), 1000);
   }, [saveAssistantName, startListening]);
 
-  const toggleAutoListen = () => {
+  const toggleAutoListen = useCallback(() => {
     const next = !autoListenEnabled;
     setAutoListenEnabled(next);
     localStorage.setItem("auto-voice-listen", String(next));
@@ -698,7 +698,19 @@ export const AutoVoiceListener = () => {
     } else {
       shutdownMic();
     }
-  };
+  }, [autoListenEnabled, startListening, assistantName]);
+
+  // Listen for toggle from InfinityWidget
+  useEffect(() => {
+    const handler = () => toggleAutoListen();
+    window.addEventListener("toggle-voice-mic", handler);
+    return () => window.removeEventListener("toggle-voice-mic", handler);
+  }, [toggleAutoListen]);
+
+  // Broadcast mic state to InfinityWidget
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent("voice-mic-state", { detail: isListening }));
+  }, [isListening]);
 
   const playSuggestion = async (track: any) => {
     playPlaylist([{ id: track.id, title: track.title, artist: track.artist, album: null, audio_url: null, cover_url: null, genre: track.genre, mood: track.mood, duration: 180 }], 0);
