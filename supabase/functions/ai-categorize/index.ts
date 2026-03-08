@@ -87,16 +87,28 @@ IMPORTANT: Always categorize even Polish punk, street punk, oi punk bands correc
     }
 
     const aiData = await response.json();
-    const content = aiData.choices?.[0]?.message?.content;
+    const content = aiData.choices?.[0]?.message?.content || "";
+    
+    if (!content || content.trim().length === 0) {
+      console.error("AI returned empty content:", JSON.stringify(aiData).substring(0, 500));
+      return new Response(
+        JSON.stringify({ success: false, error: "AI returned empty response", categorized: 0, total: tracks.length }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     let categorizations: any[];
 
     try {
-      const parsed = JSON.parse(content);
+      // Strip markdown code fences if present
+      const cleaned = content.replace(/^```json?\s*\n?/i, "").replace(/\n?```\s*$/i, "").trim();
+      const parsed = JSON.parse(cleaned);
       categorizations = Array.isArray(parsed) ? parsed : parsed.tracks || parsed.results || parsed.categorizations || Object.values(parsed)[0];
       if (!Array.isArray(categorizations)) categorizations = [parsed];
-    } catch {
+    } catch (parseErr) {
+      console.error("JSON parse error:", parseErr, "Content preview:", content.substring(0, 300));
       return new Response(
-        JSON.stringify({ success: false, error: "Failed to parse AI response", raw: content?.substring(0, 200) }),
+        JSON.stringify({ success: false, error: "Failed to parse AI response", raw: content.substring(0, 200) }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
