@@ -501,11 +501,22 @@ const RadioLive = () => {
                   key={msg.id}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="rounded-xl bg-muted/30 border border-border/30 p-3"
+                  className="rounded-xl bg-muted/30 border border-border/30 p-3 group"
                 >
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-xs font-semibold text-primary">{msg.display_name}</span>
-                    <span className="text-[10px] text-muted-foreground">{formatTime(msg.created_at)}</span>
+                    <div className="flex items-center gap-1">
+                      <span className="text-[10px] text-muted-foreground">{formatTime(msg.created_at)}</span>
+                      {(msg.user_id === userId || isAdmin) && (
+                        <button
+                          onClick={() => handleDeleteMessage(msg.id)}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive"
+                          title={t("radio.deleteWish")}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      )}
+                    </div>
                   </div>
                   <p className="text-sm">{msg.message}</p>
                 </motion.div>
