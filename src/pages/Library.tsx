@@ -345,7 +345,7 @@ const Library = () => {
             </div>
           </motion.button>
 
-          <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={() => navigate("/radio")}
+          <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={() => navigate("/radio-live")}
             className="flex items-center gap-4 p-4 rounded-xl bg-gradient-to-r from-primary/20 to-accent/20 border border-primary/30 hover:border-primary/50 transition-colors">
             <div className="flex h-14 w-14 items-center justify-center rounded-lg groove-gradient-bg">
               <Music className="h-6 w-6 text-primary-foreground" />

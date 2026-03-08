@@ -41,7 +41,7 @@ const NAV_MAP: Record<string, string> = {
   "polubionych": "/liked", "polubion": "/liked", "liked": "/liked",
   "serwer": "/server", "server": "/server", "medi": "/server",
   "film": "/movies", "movie": "/movies",
-  "radio": "/radio",
+  "radio": "/radio-live",
   "ustawien": "/settings", "settings": "/settings",
   "nastro": "/mood-history", "mood": "/mood-history",
   "playlist": "/playlist-manager",
@@ -254,7 +254,7 @@ export const AutoVoiceListener = () => {
         const pageNames: Record<string, string> = {
           "/": "Strona główna", "/search": "Szukaj", "/library": "Biblioteka",
           "/liked": "Polubione utwory", "/server": "Serwer mediów", "/movies": "Filmy",
-          "/radio": "Radio", "/settings": "Ustawienia", "/mood-history": "Historia nastroju",
+          "/radio-live": "Radio", "/settings": "Ustawienia", "/mood-history": "Historia nastroju",
           "/playlist-manager": "Playlisty", "/admin": "Admin"
         };
         toast.success(`📂 Otwieram: ${pageNames[route] || route}`);
