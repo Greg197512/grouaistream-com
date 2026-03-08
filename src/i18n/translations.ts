@@ -904,6 +904,7 @@ const en: TranslationKeys = {
   "radio.wishPlaceholder": "Write a wish, greeting...",
   "radio.sendWish": "Send",
   "radio.loginToChat": "Log in to write wishes",
+  "radio.deleteWish": "Delete wish",
   "radio.noWishes": "Be first! Write a wish 🎵",
 
   "movies.title": "Movies",
