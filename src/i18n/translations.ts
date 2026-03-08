@@ -177,6 +177,18 @@ type TranslationKeys = {
 
   // Radio
   "radio.openFullPlayer": string;
+  "radio.backHome": string;
+  "radio.nowPlaying": string;
+  "radio.live": string;
+  "radio.stationOff": string;
+  "radio.broadcasting": string;
+  "radio.upNext": string;
+  "radio.poweredBy": string;
+  "radio.loginToLike": string;
+  "radio.loginToLikeDesc": string;
+  "radio.unliked": string;
+  "radio.liked": string;
+  "radio.likedDesc": string;
 
   // Movies
   "movies.title": string;
@@ -514,6 +526,18 @@ const pl: TranslationKeys = {
   "liked.empty": "Brak polubionych utworów. Zacznij przeglądać i polub kilka utworów!",
 
   "radio.openFullPlayer": "Otwórz pełny player",
+  "radio.backHome": "Strona główna",
+  "radio.nowPlaying": "Teraz gra",
+  "radio.live": "NA ŻYWO",
+  "radio.stationOff": "Stacja jest obecnie wyłączona",
+  "radio.broadcasting": "Nadawanie",
+  "radio.upNext": "Następne w programie",
+  "radio.poweredBy": "Powered by GrouAI Stream",
+  "radio.loginToLike": "Zaloguj się",
+  "radio.loginToLikeDesc": "Aby polubić utwór, musisz się zalogować.",
+  "radio.unliked": "💔 Usunięto z polubionych",
+  "radio.liked": "❤️ Polubiono!",
+  "radio.likedDesc": "dodano do pamięci AI",
 
   "movies.title": "Filmy",
   "movies.moviesInDb": "filmów w bazie",
@@ -846,6 +870,18 @@ const en: TranslationKeys = {
   "liked.empty": "No liked songs yet. Start exploring and like some tracks!",
 
   "radio.openFullPlayer": "Open full player",
+  "radio.backHome": "Home",
+  "radio.nowPlaying": "Now playing",
+  "radio.live": "LIVE",
+  "radio.stationOff": "Station is currently off air",
+  "radio.broadcasting": "Broadcasting",
+  "radio.upNext": "Up next",
+  "radio.poweredBy": "Powered by GrouAI Stream",
+  "radio.loginToLike": "Log in",
+  "radio.loginToLikeDesc": "You need to log in to like a track.",
+  "radio.unliked": "💔 Removed from liked",
+  "radio.liked": "❤️ Liked!",
+  "radio.likedDesc": "added to AI memory",
 
   "movies.title": "Movies",
   "movies.moviesInDb": "movies in database",
@@ -1178,6 +1214,18 @@ const nl: TranslationKeys = {
   "liked.empty": "Nog geen favoriete nummers. Begin met ontdekken en like een paar nummers!",
 
   "radio.openFullPlayer": "Open volledige speler",
+  "radio.backHome": "Startpagina",
+  "radio.nowPlaying": "Nu speelt",
+  "radio.live": "LIVE",
+  "radio.stationOff": "Station is momenteel offline",
+  "radio.broadcasting": "Uitzending",
+  "radio.upNext": "Hierna",
+  "radio.poweredBy": "Powered by GrouAI Stream",
+  "radio.loginToLike": "Inloggen",
+  "radio.loginToLikeDesc": "Je moet inloggen om een nummer leuk te vinden.",
+  "radio.unliked": "💔 Verwijderd uit favorieten",
+  "radio.liked": "❤️ Leuk gevonden!",
+  "radio.likedDesc": "toegevoegd aan AI-geheugen",
 
   "movies.title": "Films",
   "movies.moviesInDb": "films in database",
@@ -1510,6 +1558,18 @@ const ua: TranslationKeys = {
   "liked.empty": "Поки немає вподобаних пісень. Почніть досліджувати та вподобайте декілька треків!",
 
   "radio.openFullPlayer": "Відкрити повний плеєр",
+  "radio.backHome": "Головна",
+  "radio.nowPlaying": "Зараз грає",
+  "radio.live": "НАЖИВО",
+  "radio.stationOff": "Станція наразі не працює",
+  "radio.broadcasting": "Трансляція",
+  "radio.upNext": "Далі в програмі",
+  "radio.poweredBy": "Powered by GrouAI Stream",
+  "radio.loginToLike": "Увійти",
+  "radio.loginToLikeDesc": "Щоб вподобати трек, потрібно увійти.",
+  "radio.unliked": "💔 Видалено з вподобаних",
+  "radio.liked": "❤️ Вподобано!",
+  "radio.likedDesc": "додано до пам'яті AI",
 
   "movies.title": "Фільми",
   "movies.moviesInDb": "фільмів у базі",

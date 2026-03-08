@@ -2,10 +2,11 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
-import { Radio, Wifi, Music, Volume2, VolumeX, ArrowLeft, Heart } from "lucide-react";
+import { Radio, Wifi, Music, Volume2, VolumeX, ArrowLeft, Heart, Sparkles } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface RadioConfig {
   is_active: boolean;
@@ -37,6 +38,9 @@ interface FloatingHeart {
   x: number;
   size: number;
   color: string;
+  delay: number;
+  drift: number;
+  sparkle: boolean;
 }
 
 const HEART_COLORS = [
@@ -48,11 +52,16 @@ const HEART_COLORS = [
   "#ff6348",
   "#ffa502",
   "#ff4081",
+  "#e84393",
+  "#fd79a8",
+  "#e17055",
+  "#fab1a0",
 ];
 
 const RadioLive = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { t } = useLanguage();
   const [config, setConfig] = useState<RadioConfig | null>(null);
   const [schedule, setSchedule] = useState<ScheduleTrack[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -66,7 +75,6 @@ const RadioLive = () => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const heartIdRef = useRef(0);
 
-  // Check auth
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       setUserId(data.user?.id || null);
@@ -88,7 +96,6 @@ const RadioLive = () => {
     fetchData();
   }, []);
 
-  // Check if current track is liked
   useEffect(() => {
     const checkLiked = async () => {
       if (!userId || !schedule[currentIndex]?.track?.id) {
@@ -127,46 +134,44 @@ const RadioLive = () => {
     return labels[item.item_type] || item.item_type;
   };
 
-  // Spawn floating hearts
+  // Spawn many floating hearts with sparkle effect
   const spawnHearts = () => {
     const newHearts: FloatingHeart[] = [];
-    const count = 8 + Math.floor(Math.random() * 8); // 8-15 hearts
+    const count = 18 + Math.floor(Math.random() * 15); // 18-32 hearts
     for (let i = 0; i < count; i++) {
       newHearts.push({
         id: heartIdRef.current++,
-        x: 30 + Math.random() * 40, // 30-70% horizontal spread
-        size: 14 + Math.random() * 20, // 14-34px
+        x: 15 + Math.random() * 70, // wider spread 15-85%
+        size: 12 + Math.random() * 28, // 12-40px
         color: HEART_COLORS[Math.floor(Math.random() * HEART_COLORS.length)],
+        delay: Math.random() * 0.6, // stagger spawn
+        drift: (Math.random() - 0.5) * 60, // horizontal drift
+        sparkle: Math.random() > 0.5, // 50% chance of sparkle
       });
     }
     setFloatingHearts((prev) => [...prev, ...newHearts]);
-    // Clean up after animation
     setTimeout(() => {
       setFloatingHearts((prev) => prev.filter((h) => !newHearts.find((nh) => nh.id === h.id)));
-    }, 2500);
+    }, 4500);
   };
 
   const handleLike = async () => {
     const currentTrack = schedule[currentIndex]?.track;
-    
-    // Always spawn hearts for everyone
     spawnHearts();
 
     if (!currentTrack?.id) return;
 
     if (!userId) {
-      toast({ title: "Zaloguj się", description: "Aby polubić utwór, musisz się zalogować.", variant: "destructive" });
+      toast({ title: t("radio.loginToLike"), description: t("radio.loginToLikeDesc"), variant: "destructive" });
       return;
     }
 
     try {
       if (isLiked) {
-        // Unlike
         await supabase.from("liked_songs").delete().eq("user_id", userId).eq("track_id", currentTrack.id);
         setIsLiked(false);
-        toast({ title: "💔 Usunięto z polubionych" });
+        toast({ title: t("radio.unliked") });
       } else {
-        // Like - save to liked_songs
         const { data: existing } = await supabase
           .from("liked_songs")
           .select("id")
@@ -178,7 +183,6 @@ const RadioLive = () => {
           await supabase.from("liked_songs").insert({ user_id: userId, track_id: currentTrack.id });
         }
 
-        // Save to listening history for AI memory
         await supabase.from("listening_history").insert({
           user_id: userId,
           track_id: currentTrack.id,
@@ -188,7 +192,7 @@ const RadioLive = () => {
         });
 
         setIsLiked(true);
-        toast({ title: "❤️ Polubiono!", description: `${currentTrack.title} dodano do pamięci AI` });
+        toast({ title: t("radio.liked"), description: `${currentTrack.title} — ${t("radio.likedDesc")}` });
       }
     } catch (e) {
       console.error("Like error:", e);
@@ -306,17 +310,17 @@ const RadioLive = () => {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
         <Button variant="ghost" size="sm" className="absolute top-4 left-4 gap-2" onClick={() => navigate("/")}>
-          <ArrowLeft className="h-4 w-4" /> Strona główna
+          <ArrowLeft className="h-4 w-4" /> {t("radio.backHome")}
         </Button>
         <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="text-center space-y-4">
           <div className="h-20 w-20 rounded-full bg-muted/50 flex items-center justify-center mx-auto">
             <Radio className="h-10 w-10 text-muted-foreground" />
           </div>
           <h1 className="text-2xl font-bold">{config?.station_name || "GrouaRadio"}</h1>
-          <p className="text-muted-foreground">Stacja jest obecnie wyłączona</p>
+          <p className="text-muted-foreground">{t("radio.stationOff")}</p>
           {config?.mode === "scheduled" && config.start_time && (
             <p className="text-sm text-muted-foreground">
-              Nadawanie: {config.start_time} – {config.end_time}
+              {t("radio.broadcasting")}: {config.start_time} – {config.end_time}
             </p>
           )}
         </motion.div>
@@ -328,7 +332,7 @@ const RadioLive = () => {
     <div className="min-h-screen bg-background flex items-center justify-center p-4 relative overflow-hidden">
       {/* Back button */}
       <Button variant="ghost" size="sm" className="absolute top-4 left-4 gap-2 z-20" onClick={() => navigate("/")}>
-        <ArrowLeft className="h-4 w-4" /> Strona główna
+        <ArrowLeft className="h-4 w-4" /> {t("radio.backHome")}
       </Button>
 
       {/* Floating Hearts Layer */}
@@ -337,23 +341,40 @@ const RadioLive = () => {
           {floatingHearts.map((heart) => (
             <motion.div
               key={heart.id}
-              initial={{ opacity: 1, y: 0, x: `${heart.x}%`, scale: 0.5 }}
+              initial={{ opacity: 0, y: 0, scale: 0.2 }}
               animate={{
-                opacity: [1, 1, 0.8, 0],
-                y: [0, -150, -400, -700],
-                x: `${heart.x + (Math.random() - 0.5) * 20}%`,
-                scale: [0.5, 1.2, 1, 0.6],
-                rotate: [0, (Math.random() - 0.5) * 40, (Math.random() - 0.5) * 60],
+                opacity: [0, 1, 1, 0.9, 0.6, 0],
+                y: [0, -80, -200, -400, -600, -900],
+                x: [0, heart.drift * 0.3, heart.drift * 0.6, heart.drift, heart.drift * 1.2],
+                scale: [0.2, 0.8, 1.3, 1.1, 0.8, 0.4],
+                rotate: [0, (Math.random() - 0.5) * 30, (Math.random() - 0.5) * 50, (Math.random() - 0.5) * 70],
               }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 2 + Math.random() * 0.8, ease: "easeOut" }}
+              transition={{
+                duration: 3.5 + Math.random() * 1.5,
+                ease: "easeOut",
+                delay: heart.delay,
+              }}
               className="absolute bottom-32"
-              style={{ left: 0 }}
+              style={{ left: `${heart.x}%` }}
             >
-              <Heart
-                className="fill-current"
-                style={{ width: heart.size, height: heart.size, color: heart.color }}
-              />
+              {heart.sparkle ? (
+                <div className="relative">
+                  <Heart
+                    className="fill-current drop-shadow-lg"
+                    style={{ width: heart.size, height: heart.size, color: heart.color, filter: `drop-shadow(0 0 6px ${heart.color})` }}
+                  />
+                  <Sparkles
+                    className="absolute -top-1 -right-1 text-yellow-300"
+                    style={{ width: heart.size * 0.5, height: heart.size * 0.5 }}
+                  />
+                </div>
+              ) : (
+                <Heart
+                  className="fill-current drop-shadow-lg"
+                  style={{ width: heart.size, height: heart.size, color: heart.color, filter: `drop-shadow(0 0 4px ${heart.color})` }}
+                />
+              )}
             </motion.div>
           ))}
         </AnimatePresence>
@@ -373,7 +394,7 @@ const RadioLive = () => {
           <h1 className="text-xl font-bold">{config?.station_name}</h1>
           <div className="flex items-center justify-center gap-1">
             <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-destructive/20 text-destructive text-xs font-semibold animate-pulse">
-              <Wifi className="h-3 w-3" /> NA ŻYWO
+              <Wifi className="h-3 w-3" /> {t("radio.live")}
             </span>
           </div>
         </div>
@@ -388,20 +409,21 @@ const RadioLive = () => {
             <div className="p-4 space-y-3">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider">Teraz gra</p>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider">{t("radio.nowPlaying")}</p>
                   <h2 className="font-bold text-lg truncate">{currentTitle}</h2>
                   <p className="text-sm text-muted-foreground truncate">{currentArtist}</p>
                 </div>
-                {/* Like button - only for tracks */}
                 {isTrack && currentItem.track?.id && (
                   <motion.button
-                    whileTap={{ scale: 1.4 }}
+                    whileTap={{ scale: 1.5 }}
                     onClick={handleLike}
-                    className="flex-shrink-0 p-2 rounded-full hover:bg-muted/50 transition-colors"
+                    className="flex-shrink-0 p-2 rounded-full hover:bg-muted/50 transition-colors relative"
                   >
                     <Heart
-                      className={`h-6 w-6 transition-colors ${
-                        isLiked ? "fill-destructive text-destructive" : "text-muted-foreground hover:text-destructive"
+                      className={`h-7 w-7 transition-all duration-300 ${
+                        isLiked
+                          ? "fill-destructive text-destructive drop-shadow-[0_0_8px_hsl(var(--destructive))]"
+                          : "text-muted-foreground hover:text-destructive"
                       }`}
                     />
                   </motion.button>
@@ -436,7 +458,7 @@ const RadioLive = () => {
         {/* Up Next */}
         {schedule.length > 1 && (
           <div className="space-y-2">
-            <p className="text-xs text-muted-foreground uppercase tracking-wider px-1">Następne w programie</p>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider px-1">{t("radio.upNext")}</p>
             <div className="space-y-1">
               {schedule
                 .slice(currentIndex + 1, currentIndex + 4)
@@ -458,7 +480,7 @@ const RadioLive = () => {
           </div>
         )}
 
-        <p className="text-center text-xs text-muted-foreground">Powered by GrouAI Stream</p>
+        <p className="text-center text-xs text-muted-foreground">{t("radio.poweredBy")}</p>
       </motion.div>
     </div>
   );
