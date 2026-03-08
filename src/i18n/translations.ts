@@ -177,6 +177,18 @@ type TranslationKeys = {
 
   // Radio
   "radio.openFullPlayer": string;
+  "radio.backHome": string;
+  "radio.nowPlaying": string;
+  "radio.live": string;
+  "radio.stationOff": string;
+  "radio.broadcasting": string;
+  "radio.upNext": string;
+  "radio.poweredBy": string;
+  "radio.loginToLike": string;
+  "radio.loginToLikeDesc": string;
+  "radio.unliked": string;
+  "radio.liked": string;
+  "radio.likedDesc": string;
 
   // Movies
   "movies.title": string;
