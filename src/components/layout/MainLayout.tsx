@@ -53,8 +53,9 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
         {/* Mobile Bottom Navigation */}
         {isMobile && <MobileBottomNav />}
 
-        {/* AI Assistant Floating Bubble */}
+        {/* AI Assistant Chat + Infinity Widget */}
         <AIAssistant />
+        <InfinityAssistantWidget />
         
       </div>
     </DragDropProvider>
