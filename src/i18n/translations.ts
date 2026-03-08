@@ -1558,6 +1558,18 @@ const ua: TranslationKeys = {
   "liked.empty": "Поки немає вподобаних пісень. Почніть досліджувати та вподобайте декілька треків!",
 
   "radio.openFullPlayer": "Відкрити повний плеєр",
+  "radio.backHome": "Головна",
+  "radio.nowPlaying": "Зараз грає",
+  "radio.live": "НАЖИВО",
+  "radio.stationOff": "Станція наразі не працює",
+  "radio.broadcasting": "Трансляція",
+  "radio.upNext": "Далі в програмі",
+  "radio.poweredBy": "Powered by GrouAI Stream",
+  "radio.loginToLike": "Увійти",
+  "radio.loginToLikeDesc": "Щоб вподобати трек, потрібно увійти.",
+  "radio.unliked": "💔 Видалено з вподобаних",
+  "radio.liked": "❤️ Вподобано!",
+  "radio.likedDesc": "додано до пам'яті AI",
 
   "movies.title": "Фільми",
   "movies.moviesInDb": "фільмів у базі",
