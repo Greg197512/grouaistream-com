@@ -147,6 +147,9 @@ export default function Admin() {
 
   const fetchAdminData = async () => {
     try {
+      // Fetch real stats via security definer function
+      const { data: adminStats } = await supabase.rpc("get_admin_stats");
+
       // Fetch profiles with user data
       const { data: profiles, error: profilesError } = await supabase
         .from("profiles")
@@ -154,16 +157,6 @@ export default function Admin() {
         .order("created_at", { ascending: false });
 
       if (profilesError) throw profilesError;
-
-      // Fetch mood sessions count
-      const { count: moodCount } = await supabase
-        .from("mood_sessions")
-        .select("*", { count: "exact", head: true });
-
-      // Fetch tracks count
-      const { count: tracksCount } = await supabase
-        .from("tracks")
-        .select("*", { count: "exact", head: true });
 
       // Fetch genre breakdown
       const { data: allTracks } = await supabase
@@ -200,20 +193,14 @@ export default function Admin() {
         created_at: t.created_at
       })));
 
-      // Calculate active users today
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
+      // Use real stats from DB function
+      const realStats = adminStats as { total_mood_sessions: number; active_today: number; total_tracks: number; total_users: number } | null;
       
-      const { count: activeCount } = await supabase
-        .from("listening_history")
-        .select("user_id", { count: "exact", head: true })
-        .gte("played_at", today.toISOString());
-
       setStats({
-        totalUsers: profiles?.length || 0,
-        activeToday: activeCount || 0,
-        totalMoodSessions: moodCount || 0,
-        totalTracks: tracksCount || 0,
+        totalUsers: realStats?.total_users || profiles?.length || 0,
+        activeToday: realStats?.active_today || 0,
+        totalMoodSessions: realStats?.total_mood_sessions || 0,
+        totalTracks: realStats?.total_tracks || 0,
       });
 
       // Map profiles to user data format

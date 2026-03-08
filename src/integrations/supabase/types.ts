@@ -513,6 +513,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_admin_stats: { Args: never; Returns: Json }
       get_user_id_by_email: { Args: { _email: string }; Returns: string }
       has_role: {
         Args: {
