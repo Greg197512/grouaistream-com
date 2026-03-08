@@ -240,30 +240,7 @@ export const AIAssistant = () => {
 
   return (
     <>
-      {/* Floating Bubble */}
-      <AnimatePresence>
-        {!isOpen && (
-          <motion.button
-            onClick={() => setIsOpen(true)}
-            className="fixed bottom-32 md:bottom-40 right-4 z-40 w-12 h-12 rounded-full overflow-hidden shadow-lg shadow-primary/20 border-2 border-primary/40 hover:border-primary transition-all bg-background/80 backdrop-blur-sm"
-            whileHover={{ scale: 1.15 }}
-            whileTap={{ scale: 0.9 }}
-            initial={{ opacity: 0, scale: 0 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0 }}
-            transition={{ type: "spring", stiffness: 300, damping: 20 }}
-          >
-            <img src={aiAssistantAvatar} alt="AI Assistant" className="w-full h-full object-cover" />
-            <motion.div
-              className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-background"
-              animate={{ scale: [1, 1.3, 1] }}
-              transition={{ duration: 2, repeat: Infinity }}
-            />
-          </motion.button>
-        )}
-      </AnimatePresence>
-
-      {/* Chat Modal */}
+      {/* Chat Modal - triggered by InfinityWidget */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
