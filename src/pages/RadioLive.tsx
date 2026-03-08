@@ -524,7 +524,26 @@ const RadioLive = () => {
         )}
       </AnimatePresence>
 
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-sm space-y-6">
+      {/* Scrolling wishes ticker */}
+      {messages.length > 0 && (
+        <div className="fixed bottom-0 left-0 right-0 z-20 bg-card/80 backdrop-blur-md border-t border-border/30 py-2 overflow-hidden">
+          <motion.div
+            className="flex gap-8 whitespace-nowrap"
+            animate={{ x: ["0%", "-50%"] }}
+            transition={{ duration: Math.max(20, messages.length * 5), repeat: Infinity, ease: "linear" }}
+          >
+            {[...messages.slice(-20), ...messages.slice(-20)].map((msg, i) => (
+              <span key={`${msg.id}-${i}`} className="inline-flex items-center gap-2 text-sm">
+                <span className="text-primary font-semibold">{msg.display_name}:</span>
+                <span className="text-foreground/80">{msg.message}</span>
+                <Sparkles className="h-3 w-3 text-yellow-400/60 shrink-0" />
+              </span>
+            ))}
+          </motion.div>
+        </div>
+      )}
+
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-sm space-y-6 pb-12">
         {/* Station Header */}
         <div className="text-center space-y-2">
           <motion.div
