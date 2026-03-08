@@ -96,7 +96,7 @@ Znasz DOKŁADNIE każdą funkcję aplikacji:
 - **Polubione (/liked)**: Lista ulubionych utworów
 - **Tworzenie playlist (/create-playlist)**: Tworzenie playlist AI lub ręcznych
 - **Menedżer playlist (/playlist-manager)**: Zarządzanie, edycja, usuwanie playlist
-- **Radio (/radio)**: Radio na żywo z różnymi stacjami
+- **Radio (/radio-live)**: Radio na żywo z różnymi stacjami
 - **Import YouTube (/import-youtube)**: Importowanie muzyki z YouTube
 - **Filmy (/movies)**: Sekcja filmowa
 - **Serwer mediów (/server)**: Zarządzanie plikami multimedialnymi
