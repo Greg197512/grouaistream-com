@@ -198,6 +198,10 @@ type TranslationKeys = {
   "radio.deleteWish": string;
   "radio.noWishes": string;
 
+  // Widget tooltips
+  "widget.micTooltip": string;
+  "widget.chatTooltip": string;
+
   // Movies
   "movies.title": string;
   "movies.moviesInDb": string;
@@ -555,6 +559,9 @@ const pl: TranslationKeys = {
   "radio.deleteWish": "Usuń życzenie",
   "radio.noWishes": "Bądź pierwszy! Napisz życzenie 🎵",
 
+  "widget.micTooltip": "Asystent głosowy — mów do AI",
+  "widget.chatTooltip": "Czat z AI — pisz i pytaj o wszystko",
+
   "movies.title": "Filmy",
   "movies.moviesInDb": "filmów w bazie",
   "movies.searchYoutube": "Szukaj na YouTube",
@@ -906,6 +913,9 @@ const en: TranslationKeys = {
   "radio.loginToChat": "Log in to write wishes",
   "radio.deleteWish": "Delete wish",
   "radio.noWishes": "Be first! Write a wish 🎵",
+
+  "widget.micTooltip": "Voice assistant — talk to AI",
+  "widget.chatTooltip": "AI Chat — write and ask anything",
 
   "movies.title": "Movies",
   "movies.moviesInDb": "movies in database",
@@ -1259,6 +1269,9 @@ const nl: TranslationKeys = {
   "radio.deleteWish": "Wens verwijderen",
   "radio.noWishes": "Wees de eerste! Schrijf een wens 🎵",
 
+  "widget.micTooltip": "Stemassistent — praat met AI",
+  "widget.chatTooltip": "AI Chat — schrijf en vraag alles",
+
   "movies.title": "Films",
   "movies.moviesInDb": "films in database",
   "movies.searchYoutube": "Zoeken op YouTube",
@@ -1610,6 +1623,9 @@ const ua: TranslationKeys = {
   "radio.loginToChat": "Увійдіть щоб писати побажання",
   "radio.deleteWish": "Видалити побажання",
   "radio.noWishes": "Будьте першим! Напишіть побажання 🎵",
+
+  "widget.micTooltip": "Голосовий асистент — говоріть з AI",
+  "widget.chatTooltip": "Чат з AI — пишіть і питайте про все",
 
   "movies.title": "Фільми",
   "movies.moviesInDb": "фільмів у базі",
