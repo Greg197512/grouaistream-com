@@ -1624,6 +1624,9 @@ const ua: TranslationKeys = {
   "radio.deleteWish": "Видалити побажання",
   "radio.noWishes": "Будьте першим! Напишіть побажання 🎵",
 
+  "widget.micTooltip": "Голосовий асистент — говоріть з AI",
+  "widget.chatTooltip": "Чат з AI — пишіть і питайте про все",
+
   "movies.title": "Фільми",
   "movies.moviesInDb": "фільмів у базі",
   "movies.searchYoutube": "Шукати на YouTube",
