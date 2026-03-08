@@ -355,18 +355,45 @@ const Server = () => {
   const addToLibrary = async (trackIds: string[]) => {
     if (!user) { toast.error("Zaloguj się"); return; }
     
-    // Create a "Moja Biblioteka" playlist if not exists, or add to liked songs
     try {
+      let added = 0;
+      let skipped = 0;
+      
       for (const trackId of trackIds) {
-        await supabase.from("liked_songs").upsert({
+        // Check if already liked
+        const { data: existing } = await supabase
+          .from("liked_songs")
+          .select("id")
+          .eq("user_id", user.id)
+          .eq("track_id", trackId)
+          .maybeSingle();
+        
+        if (existing) {
+          skipped++;
+          continue;
+        }
+        
+        const { error } = await supabase.from("liked_songs").insert({
           user_id: user.id,
           track_id: trackId,
-        }, { onConflict: "user_id,track_id" });
+        });
+        
+        if (error) {
+          console.error("Error adding track to library:", error);
+          continue;
+        }
+        added++;
       }
-      toast.success(`❤️ Dodano ${trackIds.length} utworów do Twojej biblioteki!`);
+      
+      if (added > 0) {
+        toast.success(`❤️ Dodano ${added} utworów do biblioteki!`);
+      }
+      if (skipped > 0) {
+        toast.info(`${skipped} utworów już było w bibliotece`);
+      }
       setSelectedTracks(new Set());
     } catch (err: any) {
-      toast.error(err.message || "Błąd");
+      toast.error(err.message || "Błąd dodawania do biblioteki");
     }
   };
 
