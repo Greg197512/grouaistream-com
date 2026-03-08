@@ -198,6 +198,10 @@ type TranslationKeys = {
   "radio.deleteWish": string;
   "radio.noWishes": string;
 
+  // Widget tooltips
+  "widget.micTooltip": string;
+  "widget.chatTooltip": string;
+
   // Movies
   "movies.title": string;
   "movies.moviesInDb": string;
