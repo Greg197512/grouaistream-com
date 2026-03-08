@@ -1608,6 +1608,7 @@ const ua: TranslationKeys = {
   "radio.wishPlaceholder": "Напишіть побажання, привітання...",
   "radio.sendWish": "Надіслати",
   "radio.loginToChat": "Увійдіть щоб писати побажання",
+  "radio.deleteWish": "Видалити побажання",
   "radio.noWishes": "Будьте першим! Напишіть побажання 🎵",
 
   "movies.title": "Фільми",
