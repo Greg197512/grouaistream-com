@@ -870,6 +870,18 @@ const en: TranslationKeys = {
   "liked.empty": "No liked songs yet. Start exploring and like some tracks!",
 
   "radio.openFullPlayer": "Open full player",
+  "radio.backHome": "Home",
+  "radio.nowPlaying": "Now playing",
+  "radio.live": "LIVE",
+  "radio.stationOff": "Station is currently off air",
+  "radio.broadcasting": "Broadcasting",
+  "radio.upNext": "Up next",
+  "radio.poweredBy": "Powered by GrouAI Stream",
+  "radio.loginToLike": "Log in",
+  "radio.loginToLikeDesc": "You need to log in to like a track.",
+  "radio.unliked": "💔 Removed from liked",
+  "radio.liked": "❤️ Liked!",
+  "radio.likedDesc": "added to AI memory",
 
   "movies.title": "Movies",
   "movies.moviesInDb": "movies in database",
