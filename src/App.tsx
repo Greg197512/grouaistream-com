@@ -32,6 +32,11 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
+const WelcomeOverlay = () => {
+  const { isFirstLogin, clearFirstLogin } = useAuth();
+  return <WelcomeConfetti show={isFirstLogin} onComplete={clearFirstLogin} />;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <LanguageProvider>
@@ -43,6 +48,7 @@ const App = () => (
             <div className="dark">
               <Toaster />
               <Sonner />
+              <WelcomeOverlay />
               <BrowserRouter>
                 <AutoVoiceListener />
                 <Routes>
