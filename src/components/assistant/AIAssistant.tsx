@@ -40,6 +40,18 @@ export const AIAssistant = () => {
   const dragControls = useDragControls();
   const hasGreeted = useRef(false);
 
+  // Listen for toggle from InfinityWidget
+  useEffect(() => {
+    const handler = () => setIsOpen(prev => !prev);
+    window.addEventListener("toggle-chat-assistant", handler);
+    return () => window.removeEventListener("toggle-chat-assistant", handler);
+  }, []);
+
+  // Broadcast open state
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent("chat-open-state", { detail: isOpen }));
+  }, [isOpen]);
+
   // Fetch user profile and stats
   useEffect(() => {
     if (!user) return;
