@@ -526,6 +526,18 @@ const pl: TranslationKeys = {
   "liked.empty": "Brak polubionych utworów. Zacznij przeglądać i polub kilka utworów!",
 
   "radio.openFullPlayer": "Otwórz pełny player",
+  "radio.backHome": "Strona główna",
+  "radio.nowPlaying": "Teraz gra",
+  "radio.live": "NA ŻYWO",
+  "radio.stationOff": "Stacja jest obecnie wyłączona",
+  "radio.broadcasting": "Nadawanie",
+  "radio.upNext": "Następne w programie",
+  "radio.poweredBy": "Powered by GrouAI Stream",
+  "radio.loginToLike": "Zaloguj się",
+  "radio.loginToLikeDesc": "Aby polubić utwór, musisz się zalogować.",
+  "radio.unliked": "💔 Usunięto z polubionych",
+  "radio.liked": "❤️ Polubiono!",
+  "radio.likedDesc": "dodano do pamięci AI",
 
   "movies.title": "Filmy",
   "movies.moviesInDb": "filmów w bazie",
