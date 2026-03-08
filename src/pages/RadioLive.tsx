@@ -170,6 +170,10 @@ const RadioLive = () => {
         const newMsg = payload.new as RadioMessage;
         setMessages((prev) => [...prev.slice(-49), newMsg]);
       })
+      .on("postgres_changes", { event: "DELETE", schema: "public", table: "radio_messages" }, (payload) => {
+        const deletedId = (payload.old as any).id;
+        setMessages((prev) => prev.filter((m) => m.id !== deletedId));
+      })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, []);
