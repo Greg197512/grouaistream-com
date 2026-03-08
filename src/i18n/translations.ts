@@ -1269,6 +1269,9 @@ const nl: TranslationKeys = {
   "radio.deleteWish": "Wens verwijderen",
   "radio.noWishes": "Wees de eerste! Schrijf een wens 🎵",
 
+  "widget.micTooltip": "Stemassistent — praat met AI",
+  "widget.chatTooltip": "AI Chat — schrijf en vraag alles",
+
   "movies.title": "Films",
   "movies.moviesInDb": "films in database",
   "movies.searchYoutube": "Zoeken op YouTube",
