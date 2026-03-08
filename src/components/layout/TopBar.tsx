@@ -133,7 +133,7 @@ export const TopBar = () => {
                     placeholder="••••••"
                     value={passwordInput}
                     onChange={(e) => setPasswordInput(e.target.value)}
-                    className="w-28 h-7 text-xs bg-secondary border-0 rounded-full"
+                    className="w-28 h-7 text-xs bg-secondary/40 border border-white/[0.06] rounded-full focus-visible:ring-1 focus-visible:ring-primary/30"
                     autoFocus
                     disabled={unlocking}
                   />
