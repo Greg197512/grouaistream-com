@@ -1256,6 +1256,7 @@ const nl: TranslationKeys = {
   "radio.wishPlaceholder": "Schrijf een wens, groet...",
   "radio.sendWish": "Verstuur",
   "radio.loginToChat": "Log in om wensen te schrijven",
+  "radio.deleteWish": "Wens verwijderen",
   "radio.noWishes": "Wees de eerste! Schrijf een wens 🎵",
 
   "movies.title": "Films",
