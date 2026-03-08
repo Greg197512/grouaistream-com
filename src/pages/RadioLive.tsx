@@ -100,12 +100,12 @@ const RadioLive = () => {
       const uid = data.user?.id || null;
       setUserId(uid);
       if (uid) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("display_name")
-          .eq("user_id", uid)
-          .maybeSingle();
-        if (profile?.display_name) setDisplayName(profile.display_name);
+        const [profileRes, roleRes] = await Promise.all([
+          supabase.from("profiles").select("display_name").eq("user_id", uid).maybeSingle(),
+          supabase.rpc("has_role", { _user_id: uid, _role: "admin" }),
+        ]);
+        if (profileRes.data?.display_name) setDisplayName(profileRes.data.display_name);
+        if (roleRes.data) setIsAdmin(true);
       }
     });
   }, []);
