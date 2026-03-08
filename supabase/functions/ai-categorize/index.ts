@@ -68,8 +68,8 @@ IMPORTANT: Always categorize even Polish punk, street punk, oi punk bands correc
             content: `Categorize ALL these tracks. Return JSON array:\n${trackList}\n\nFormat: [{"title": "...", "genre": "Punk", "mood": "aggressive", "estimated_duration": 180, "cover_prompt": "punk album art..."}]`
           }
         ],
-        response_format: { type: "json_object" },
       }),
+    });
     });
 
     if (!response.ok) {
