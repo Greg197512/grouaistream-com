@@ -195,6 +195,7 @@ type TranslationKeys = {
   "radio.wishPlaceholder": string;
   "radio.sendWish": string;
   "radio.loginToChat": string;
+  "radio.deleteWish": string;
   "radio.noWishes": string;
 
   // Movies
