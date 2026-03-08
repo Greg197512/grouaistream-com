@@ -545,6 +545,13 @@ const pl: TranslationKeys = {
   "radio.unliked": "💔 Usunięto z polubionych",
   "radio.liked": "❤️ Polubiono!",
   "radio.likedDesc": "dodano do pamięci AI",
+  "radio.likesCount": "polubień",
+  "radio.wishes": "Życzenia",
+  "radio.wishesTitle": "💬 Życzenia słuchaczy",
+  "radio.wishPlaceholder": "Napisz życzenie, pozdrowienie...",
+  "radio.sendWish": "Wyślij",
+  "radio.loginToChat": "Zaloguj się aby pisać życzenia",
+  "radio.noWishes": "Bądź pierwszy! Napisz życzenie 🎵",
 
   "movies.title": "Filmy",
   "movies.moviesInDb": "filmów w bazie",
