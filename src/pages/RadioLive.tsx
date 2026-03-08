@@ -88,6 +88,8 @@ const RadioLive = () => {
   const [messages, setMessages] = useState<RadioMessage[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [sendingMessage, setSendingMessage] = useState(false);
+  const [showEmojis, setShowEmojis] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const heartIdRef = useRef(0);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
