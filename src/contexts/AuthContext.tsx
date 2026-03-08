@@ -51,7 +51,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 .maybeSingle();
 
               if (profile && !profile.first_login_completed) {
-                // This will trigger the handle_first_login function which resets mood history
+                setIsFirstLogin(true);
                 await supabase
                   .from("profiles")
                   .update({ first_login_completed: true })
