@@ -1,20 +1,15 @@
 import { ReactNode, useState } from "react";
 import { motion } from "framer-motion";
-import { Lock, Crown } from "lucide-react";
+import { Lock, Crown, Clock } from "lucide-react";
 import { useSubscription, SubscriptionPlan } from "@/contexts/SubscriptionContext";
 import { UpgradeModal } from "@/components/modals/UpgradeModal";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 interface FeatureGateProps {
-  /** Minimum plan required */
   requiredPlan: SubscriptionPlan;
-  /** Feature name for display */
   featureName?: string;
-  /** Children to render if access granted */
   children: ReactNode;
-  /** Render a locked overlay instead of hiding content */
   mode?: "overlay" | "hide" | "disable";
-  /** Custom fallback */
   fallback?: ReactNode;
 }
 
@@ -25,12 +20,22 @@ export const FeatureGate = ({
   mode = "overlay",
   fallback,
 }: FeatureGateProps) => {
-  const { hasAccess } = useSubscription();
+  const { hasAccess, isTrialActive, trialDaysLeft } = useSubscription();
   const { t } = useLanguage();
   const [showUpgrade, setShowUpgrade] = useState(false);
 
   if (hasAccess(requiredPlan)) {
-    return <>{children}</>;
+    return (
+      <>
+        {isTrialActive && requiredPlan === "pro" && (
+          <div className="mb-2 px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/20 flex items-center gap-2 text-xs text-primary">
+            <Clock className="h-3.5 w-3.5" />
+            <span>Okres próbny — {trialDaysLeft} {trialDaysLeft === 1 ? "dzień" : "dni"} pozostało</span>
+          </div>
+        )}
+        {children}
+      </>
+    );
   }
 
   if (mode === "hide") {
@@ -48,7 +53,6 @@ export const FeatureGate = ({
     );
   }
 
-  // overlay mode
   return (
     <>
       <div className="relative">
@@ -60,14 +64,14 @@ export const FeatureGate = ({
           animate={{ opacity: 1 }}
           className="absolute inset-0 flex flex-col items-center justify-center bg-background/60 backdrop-blur-sm rounded-xl"
         >
-          <div className="flex flex-col items-center gap-3 p-6 text-center">
-            <div className="h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center">
-              <Lock className="h-6 w-6 text-primary" />
+          <div className="flex flex-col items-center gap-3 p-4 sm:p-6 text-center">
+            <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-full bg-primary/10 flex items-center justify-center">
+              <Lock className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
             </div>
-            <h3 className="font-display font-bold text-lg">
+            <h3 className="font-display font-bold text-base sm:text-lg">
               {featureName || "Premium Feature"}
             </h3>
-            <p className="text-sm text-muted-foreground max-w-xs">
+            <p className="text-xs sm:text-sm text-muted-foreground max-w-xs">
               {requiredPlan === "ultimate"
                 ? t("upgrade.ultimate.name")
                 : t("upgrade.pro.name")}{" "}
@@ -75,7 +79,7 @@ export const FeatureGate = ({
             </p>
             <button
               onClick={() => setShowUpgrade(true)}
-              className="mt-2 flex items-center gap-2 px-5 py-2.5 rounded-full groove-gradient-bg text-primary-foreground font-semibold text-sm hover:opacity-90 transition-opacity"
+              className="mt-2 flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 rounded-full groove-gradient-bg text-primary-foreground font-semibold text-xs sm:text-sm hover:opacity-90 transition-opacity"
             >
               <Crown className="h-4 w-4" />
               {t("upgrade.upgradeTo")} {requiredPlan === "ultimate" ? t("upgrade.ultimate.name") : t("upgrade.pro.name")}
