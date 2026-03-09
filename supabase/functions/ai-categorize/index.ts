@@ -70,7 +70,6 @@ IMPORTANT: Always categorize even Polish punk, street punk, oi punk bands correc
         ],
       }),
     });
-    });
 
     if (!response.ok) {
       if (response.status === 429) {
