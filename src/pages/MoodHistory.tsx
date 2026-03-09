@@ -19,6 +19,9 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { generatePsychologistReport } from "@/utils/generatePsychologistReport";
 import { MoodTrendChart } from "@/components/charts/MoodTrendChart";
+import { FeatureGate } from "@/components/ui/FeatureGate";
+import { useSubscription } from "@/contexts/SubscriptionContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface MoodSession {
   id: string;
