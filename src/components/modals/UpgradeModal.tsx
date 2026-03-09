@@ -55,6 +55,7 @@ const planConfigs = [
 export const UpgradeModal = ({ open, onOpenChange }: UpgradeModalProps) => {
   const [selectedPlan, setSelectedPlan] = useState("pro");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [paymentPlan, setPaymentPlan] = useState<"pro" | "ultimate" | null>(null);
   const { t } = useLanguage();
   const { plan: currentPlan, refreshSubscription } = useSubscription();
 
