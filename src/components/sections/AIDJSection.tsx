@@ -274,5 +274,6 @@ export const AIDJSection = () => {
         </motion.div>
       </div>
     </section>
+    </FeatureGate>
   );
 };
