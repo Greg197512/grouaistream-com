@@ -494,6 +494,29 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     toast.success(`Added "${track.title}" to queue`);
   };
 
+  // Auto-play "Drop Chant Stream" on app start
+  const hasAutoPlayed = useRef(false);
+  useEffect(() => {
+    if (hasAutoPlayed.current || currentTrack) return;
+    hasAutoPlayed.current = true;
+    
+    supabase
+      .from('tracks')
+      .select('*')
+      .ilike('title', '%Drop Chant Stream%')
+      .limit(1)
+      .then(({ data }) => {
+        if (data && data.length > 0) {
+          const track = data[0] as Track;
+          if (track.audio_url || track.video_url) {
+            setCurrentTrack(track);
+            setQueue([track]);
+            setQueueIndex(0);
+          }
+        }
+      });
+  }, []);
+
   // Reset track start time when track changes
   useEffect(() => {
     trackStartTime.current = Date.now();
