@@ -65,6 +65,21 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
 
+      // Check if user is admin — admins always get ultimate
+      const { data: roleData } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", session.user.id)
+        .eq("role", "admin")
+        .maybeSingle();
+
+      if (roleData) {
+        setPlan("ultimate");
+        localStorage.setItem("grooveai-current-plan", "ultimate");
+        setIsLoading(false);
+        return;
+      }
+
       const { data, error } = await supabase
         .from("user_subscriptions")
         .select("plan, status, trial_ends_at")
@@ -81,7 +96,6 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
         setTrialEndsAt((data as any).trial_ends_at || null);
         localStorage.setItem("grooveai-current-plan", data.plan as string);
       } else {
-        // No subscription row yet — create free one with 7-day trial
         const trialEnd = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
         await supabase.from("user_subscriptions").insert({
           user_id: session.user.id,
