@@ -387,41 +387,51 @@ export default function MoodHistory() {
               </Tabs>
               
               {analysis && (
-                <Button 
-                  onClick={async () => {
-                    toast.loading("🧠 AI analizuje stan emocjonalny...", { id: "ai-report" });
-                    try {
-                      const { data, error } = await supabase.functions.invoke("ai-psychologist", {
-                        body: {
-                          analysis,
-                          sessions: moodSessions,
-                          selectedDays,
-                          userName: user?.user_metadata?.display_name,
-                        },
-                      });
-                      
-                      if (error) throw error;
-                      
-                      generatePsychologistReport(
-                        analysis, 
-                        moodSessions, 
-                        selectedDays, 
-                        user?.user_metadata?.display_name,
-                        data?.opinion
-                      );
-                      toast.success("📄 Pełna opinia psychologiczna AI została wygenerowana!", { id: "ai-report" });
-                    } catch (err) {
-                      console.error("AI report error:", err);
-                      // Fallback to basic report without AI
-                      generatePsychologistReport(analysis, moodSessions, selectedDays, user?.user_metadata?.display_name);
-                      toast.error("AI niedostępne - wygenerowano podstawowy raport", { id: "ai-report" });
-                    }
-                  }}
-                  className="bg-background hover:bg-muted border-2 border-primary p-1"
-                  size="sm"
-                >
-                  <img src={einsteinIcon} alt="Psycholog AI" className="h-8 w-8 rounded-full object-cover" />
-                </Button>
+                <FeatureGate requiredPlan="ultimate" featureName="AI Psychologist Reports" mode="hide" fallback={
+                  <Button 
+                    onClick={() => {}}
+                    className="bg-background hover:bg-muted border-2 border-muted p-1 opacity-50"
+                    size="sm"
+                    title="Ultimate plan required"
+                  >
+                    <Lock className="h-5 w-5 text-muted-foreground" />
+                  </Button>
+                }>
+                  <Button 
+                    onClick={async () => {
+                      toast.loading("🧠 AI analizuje stan emocjonalny...", { id: "ai-report" });
+                      try {
+                        const { data, error } = await supabase.functions.invoke("ai-psychologist", {
+                          body: {
+                            analysis,
+                            sessions: moodSessions,
+                            selectedDays,
+                            userName: user?.user_metadata?.display_name,
+                          },
+                        });
+                        
+                        if (error) throw error;
+                        
+                        generatePsychologistReport(
+                          analysis, 
+                          moodSessions, 
+                          selectedDays, 
+                          user?.user_metadata?.display_name,
+                          data?.opinion
+                        );
+                        toast.success("📄 Pełna opinia psychologiczna AI została wygenerowana!", { id: "ai-report" });
+                      } catch (err) {
+                        console.error("AI report error:", err);
+                        generatePsychologistReport(analysis, moodSessions, selectedDays, user?.user_metadata?.display_name);
+                        toast.error("AI niedostępne - wygenerowano podstawowy raport", { id: "ai-report" });
+                      }
+                    }}
+                    className="bg-background hover:bg-muted border-2 border-primary p-1"
+                    size="sm"
+                  >
+                    <img src={einsteinIcon} alt="Psycholog AI" className="h-8 w-8 rounded-full object-cover" />
+                  </Button>
+                </FeatureGate>
               )}
               
               <Button 
