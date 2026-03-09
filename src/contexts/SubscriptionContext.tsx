@@ -52,6 +52,7 @@ export const useSubscription = () => {
 export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
   const [plan, setPlan] = useState<SubscriptionPlan>("free");
   const [isLoading, setIsLoading] = useState(true);
+  const [trialEndsAt, setTrialEndsAt] = useState<string | null>(null);
   const [dailyAIPlaylistsUsed, setDailyAIPlaylistsUsed] = useState(0);
   const [upgradePromptFeature, setUpgradePromptFeature] = useState<string | null>(null);
 
