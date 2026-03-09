@@ -108,15 +108,35 @@ export const QuickMoodDetector = ({ isOpen, onClose }: QuickMoodDetectorProps) =
     return null;
   }, []);
 
+  // Mood-boosting genre mapping: always pick UPLIFTING genres opposite to negative moods
+  const moodBoostGenres: Record<string, string[]> = {
+    sad: ["Pop", "Dance", "Funk", "EDM", "Reggae"],
+    angry: ["Chill", "R&B", "Soul", "Jazz", "Ambient"],
+    fearful: ["Rock", "Hip-Hop", "Indie", "Pop", "Funk"],
+    disgusted: ["Pop", "Dance", "Funk", "Electronic", "Reggae"],
+    neutral: ["Electronic", "Dance", "Funk", "Pop", "EDM"],
+    happy: ["Pop", "Dance", "Funk", "Reggae", "EDM"],
+    surprised: ["Pop", "Electronic", "Dance", "Indie", "Funk"],
+    energetic: ["EDM", "Rock", "Hip-Hop", "Dance", "Electronic"],
+    romantic: ["R&B", "Pop", "Soul", "Jazz", "Chill"],
+    focused: ["Electronic", "House", "Ambient", "Chill", "Lo-Fi"],
+  };
+
   const playMoodPlaylist = useCallback(async (mood: MoodResult, analysis: DeepAnalysis | null) => {
     try {
-      // Use AI-suggested genres if available
-      const genres = analysis?.suggestedGenres || [mood.genre];
-      const moods = analysis?.suggestedMoods || [mood.mood];
+      // Priority: AI-suggested genres (already mood-boosting from prompt), then our boost map
+      const genres = analysis?.suggestedGenres?.length 
+        ? analysis.suggestedGenres 
+        : moodBoostGenres[detectedEmotion] || ["Pop", "Dance", "Funk"];
       
-      // Build OR query for multiple genres/moods
+      // Always target positive moods for track selection
+      const targetMoods = analysis?.suggestedMoods?.length
+        ? analysis.suggestedMoods
+        : ["Happy", "Energetic", "Excited"];
+      
+      // Build OR query for uplifting genres/moods
       const genreFilters = genres.map(g => `genre.ilike.%${g}%`).join(",");
-      const moodFilters = moods.map(m => `mood.ilike.%${m}%`).join(",");
+      const moodFilters = targetMoods.map(m => `mood.ilike.%${m}%`).join(",");
       
       const { data: tracks, error } = await supabase
         .from("tracks")
@@ -143,7 +163,7 @@ export const QuickMoodDetector = ({ isOpen, onClose }: QuickMoodDetectorProps) =
         playPlaylist(shuffled);
         setTracksPlaying(true);
 
-        const detectedMood: DetectedMood = {
+        const detectedMoodObj: DetectedMood = {
           mood: mood.mood,
           confidence: mood.confidence,
           emoji: mood.emoji,
@@ -151,9 +171,12 @@ export const QuickMoodDetector = ({ isOpen, onClose }: QuickMoodDetectorProps) =
           genre: mood.genre,
           source: "webcam",
         };
-        await aiHandleMood(detectedMood, false);
+        await aiHandleMood(detectedMoodObj, false);
 
-        toast.success(`${mood.emoji} Gram 5 utworów dobranych przez AI Profesora!`);
+        const boostMsg = analysis?.targetEmotion 
+          ? `Cel: ${analysis.targetEmotion} — humor +100%!` 
+          : "Humor +100% gwarantowany!";
+        toast.success(`${mood.emoji} ${boostMsg} Gram 5 terapeutycznych utworów!`);
       } else {
         toast.error("Brak utworów w bazie.");
       }
@@ -161,7 +184,7 @@ export const QuickMoodDetector = ({ isOpen, onClose }: QuickMoodDetectorProps) =
       console.error("Error playing mood playlist:", error);
       toast.error("Błąd podczas ładowania utworów.");
     }
-  }, [playPlaylist, aiHandleMood]);
+  }, [playPlaylist, aiHandleMood, detectedEmotion]);
 
   const stopCamera = useCallback(() => {
     if (streamRef.current) {
