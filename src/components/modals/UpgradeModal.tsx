@@ -10,90 +10,62 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface UpgradeModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-const plans: {
-  id: string;
-  name: string;
-  price: string;
-  period: string;
-  icon: React.ComponentType<{ className?: string }>;
-  color: string;
-  features: string[];
-  current?: boolean;
-  popular?: boolean;
-}[] = [
+const planConfigs = [
   {
     id: "free",
-    name: "Free",
+    nameKey: "upgrade.free.name",
     price: "0",
-    period: "forever",
+    periodKey: "upgrade.forever",
     icon: Music,
     color: "text-muted-foreground",
-    features: [
-      "Basic streaming",
-      "Limited skips",
-      "Ads between songs",
-      "Standard quality",
-    ],
+    featureKeys: ["upgrade.free.f1", "upgrade.free.f2", "upgrade.free.f3", "upgrade.free.f4"],
     current: true,
   },
   {
     id: "pro",
-    name: "Pro",
+    nameKey: "upgrade.pro.name",
     price: "9.99",
-    period: "/month",
+    periodKey: "upgrade.perMonth",
     icon: Zap,
     color: "text-primary",
     popular: true,
-    features: [
-      "Unlimited streaming",
-      "No ads",
-      "HQ Audio (320kbps)",
-      "AI DJ & Mood Detection",
-      "Offline downloads",
-      "5 AI playlists/day",
-    ],
+    featureKeys: ["upgrade.pro.f1", "upgrade.pro.f2", "upgrade.pro.f3", "upgrade.pro.f4", "upgrade.pro.f5", "upgrade.pro.f6"],
   },
   {
     id: "ultimate",
-    name: "Ultimate",
+    nameKey: "upgrade.ultimate.name",
     price: "19.99",
-    period: "/month",
+    periodKey: "upgrade.perMonth",
     icon: Crown,
     color: "text-accent",
-    features: [
-      "Everything in Pro",
-      "Lossless Audio (FLAC)",
-      "Unlimited AI playlists",
-      "AI Psychologist reports",
-      "Priority support",
-      "Early access to features",
-      "Custom AI DJ personality",
-    ],
+    featureKeys: ["upgrade.ultimate.f1", "upgrade.ultimate.f2", "upgrade.ultimate.f3", "upgrade.ultimate.f4", "upgrade.ultimate.f5", "upgrade.ultimate.f6", "upgrade.ultimate.f7"],
   },
 ];
 
 export const UpgradeModal = ({ open, onOpenChange }: UpgradeModalProps) => {
   const [selectedPlan, setSelectedPlan] = useState("pro");
   const [isProcessing, setIsProcessing] = useState(false);
+  const { t } = useLanguage();
 
   const handleUpgrade = async () => {
     if (selectedPlan === "free") {
-      toast.info("You're already on the Free plan!");
+      toast.info(t("upgrade.alreadyFree"));
       return;
     }
     
     setIsProcessing(true);
-    // Simulate processing
     await new Promise(resolve => setTimeout(resolve, 2000));
     setIsProcessing(false);
     
-    toast.success(`🎉 Welcome to GrouAI ${selectedPlan === "pro" ? "Pro" : "Ultimate"}! Enjoy premium features.`);
+    const planName = selectedPlan === "pro" ? "Pro" : "Ultimate";
+    toast.success(t("upgrade.welcomeMsg").replace("{plan}", planName));
     onOpenChange(false);
   };
 
@@ -117,11 +89,11 @@ export const UpgradeModal = ({ open, onOpenChange }: UpgradeModalProps) => {
                 <Crown className="h-8 w-8 text-accent" />
               </motion.div>
               <DialogTitle className="text-2xl font-display groove-gradient-text">
-                Upgrade GrouAI Stream
+                {t("upgrade.title")}
               </DialogTitle>
             </div>
             <p className="text-muted-foreground text-sm">
-              Odblokuj pełen potencjał AI muzyki
+              {t("upgrade.subtitle")}
             </p>
           </DialogHeader>
         </div>
@@ -129,7 +101,7 @@ export const UpgradeModal = ({ open, onOpenChange }: UpgradeModalProps) => {
         {/* Plans */}
         <div className="px-6 pb-8">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            {plans.map((plan) => (
+            {planConfigs.map((plan) => (
               <motion.button
                 key={plan.id}
                 whileHover={{ scale: 1.02, y: -2 }}
@@ -144,25 +116,25 @@ export const UpgradeModal = ({ open, onOpenChange }: UpgradeModalProps) => {
               >
                 {plan.popular && (
                   <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 groove-gradient-bg text-primary-foreground text-[10px] font-bold px-3 py-0.5 rounded-full">
-                    POPULAR
+                    {t("upgrade.popular")}
                   </span>
                 )}
                 
                 <div className="flex items-center gap-2 mb-3">
                   <plan.icon className={cn("h-5 w-5", plan.color)} />
-                  <span className="font-display font-semibold">{plan.name}</span>
+                  <span className="font-display font-semibold">{t(plan.nameKey)}</span>
                 </div>
                 
                 <div className="mb-4">
                   <span className="text-3xl font-bold font-display">${plan.price}</span>
-                  <span className="text-sm text-muted-foreground">{plan.period}</span>
+                  <span className="text-sm text-muted-foreground">{t(plan.periodKey)}</span>
                 </div>
                 
                 <ul className="space-y-2 flex-1">
-                  {plan.features.map((feature) => (
-                    <li key={feature} className="flex items-start gap-2 text-xs">
+                  {plan.featureKeys.map((featureKey) => (
+                    <li key={featureKey} className="flex items-start gap-2 text-xs">
                       <Check className={cn("h-3.5 w-3.5 mt-0.5 flex-shrink-0", plan.color)} />
-                      <span className="text-muted-foreground">{feature}</span>
+                      <span className="text-muted-foreground">{t(featureKey)}</span>
                     </li>
                   ))}
                 </ul>
@@ -192,21 +164,21 @@ export const UpgradeModal = ({ open, onOpenChange }: UpgradeModalProps) => {
                   >
                     <Sparkles className="h-5 w-5" />
                   </motion.div>
-                  Processing...
+                  {t("upgrade.processing")}
                 </>
               ) : selectedPlan === "free" ? (
-                "Current Plan"
+                t("upgrade.currentPlan")
               ) : (
                 <>
                   <Crown className="h-5 w-5" />
-                  Upgrade to {plans.find(p => p.id === selectedPlan)?.name}
+                  {t("upgrade.upgradeTo")} {t(planConfigs.find(p => p.id === selectedPlan)?.nameKey || "")}
                 </>
               )}
             </Button>
           </motion.div>
           
           <p className="text-center text-xs text-muted-foreground mt-3">
-            Cancel anytime • 7-day free trial • No credit card required
+            {t("upgrade.footer")}
           </p>
         </div>
       </DialogContent>
