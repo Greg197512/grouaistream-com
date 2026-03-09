@@ -27,10 +27,12 @@ interface DeepAnalysis {
   riskNote: string;
   therapeuticAdvice: string;
   musicTherapy: string;
+  moodBoostStrategy?: string;
   healingFrequency: string;
   personalMessage: string;
   suggestedGenres: string[];
   suggestedMoods: string[];
+  targetEmotion?: string;
 }
 
 const moodMapping: Record<string, MoodResult> = {
