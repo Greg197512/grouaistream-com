@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Crown, Check, Zap, Star, Sparkles, X, Infinity, Music, Radio, Brain } from "lucide-react";
+import { PaymentQRModal } from "./PaymentQRModal";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -54,49 +55,16 @@ const planConfigs = [
 export const UpgradeModal = ({ open, onOpenChange }: UpgradeModalProps) => {
   const [selectedPlan, setSelectedPlan] = useState("pro");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [paymentPlan, setPaymentPlan] = useState<"pro" | "ultimate" | null>(null);
   const { t } = useLanguage();
   const { plan: currentPlan, refreshSubscription } = useSubscription();
 
-  const handleUpgrade = async () => {
+  const handleUpgrade = () => {
     if (selectedPlan === "free") {
       toast.info(t("upgrade.alreadyFree"));
       return;
     }
-    
-    setIsProcessing(true);
-    
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) {
-        toast.error("Zaloguj się, aby zmienić plan");
-        setIsProcessing(false);
-        return;
-      }
-
-      // Upsert subscription
-      const { error } = await supabase
-        .from("user_subscriptions")
-        .upsert({
-          user_id: session.user.id,
-          plan: selectedPlan as any,
-          status: "active",
-          current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-          updated_at: new Date().toISOString(),
-        }, { onConflict: "user_id" });
-
-      if (error) throw error;
-
-      await refreshSubscription();
-      
-      const planName = selectedPlan === "pro" ? "Pro" : "Ultimate";
-      toast.success(t("upgrade.welcomeMsg").replace("{plan}", planName));
-      onOpenChange(false);
-    } catch (err) {
-      console.error("Upgrade error:", err);
-      toast.error("Nie udało się zmienić planu. Spróbuj ponownie.");
-    } finally {
-      setIsProcessing(false);
-    }
+    setPaymentPlan(selectedPlan as "pro" | "ultimate");
   };
 
   return (
@@ -229,6 +197,20 @@ export const UpgradeModal = ({ open, onOpenChange }: UpgradeModalProps) => {
           </div>
         </div>
       </DialogContent>
+
+      {/* Payment QR Modal */}
+      {paymentPlan && (
+        <PaymentQRModal
+          open={!!paymentPlan}
+          onOpenChange={(open) => {
+            if (!open) {
+              setPaymentPlan(null);
+              onOpenChange(false);
+            }
+          }}
+          plan={paymentPlan}
+        />
+      )}
     </Dialog>
   );
 };
