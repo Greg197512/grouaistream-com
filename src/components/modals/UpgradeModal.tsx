@@ -11,6 +11,8 @@ import {
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { supabase } from "@/integrations/supabase/client";
+import { useSubscription } from "@/contexts/SubscriptionContext";
 
 interface UpgradeModalProps {
   open: boolean;
@@ -53,6 +55,7 @@ export const UpgradeModal = ({ open, onOpenChange }: UpgradeModalProps) => {
   const [selectedPlan, setSelectedPlan] = useState("pro");
   const [isProcessing, setIsProcessing] = useState(false);
   const { t } = useLanguage();
+  const { plan: currentPlan, refreshSubscription } = useSubscription();
 
   const handleUpgrade = async () => {
     if (selectedPlan === "free") {
@@ -61,12 +64,39 @@ export const UpgradeModal = ({ open, onOpenChange }: UpgradeModalProps) => {
     }
     
     setIsProcessing(true);
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    setIsProcessing(false);
     
-    const planName = selectedPlan === "pro" ? "Pro" : "Ultimate";
-    toast.success(t("upgrade.welcomeMsg").replace("{plan}", planName));
-    onOpenChange(false);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
+        toast.error("Zaloguj się, aby zmienić plan");
+        setIsProcessing(false);
+        return;
+      }
+
+      // Upsert subscription
+      const { error } = await supabase
+        .from("user_subscriptions")
+        .upsert({
+          user_id: session.user.id,
+          plan: selectedPlan as any,
+          status: "active",
+          current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+          updated_at: new Date().toISOString(),
+        }, { onConflict: "user_id" });
+
+      if (error) throw error;
+
+      await refreshSubscription();
+      
+      const planName = selectedPlan === "pro" ? "Pro" : "Ultimate";
+      toast.success(t("upgrade.welcomeMsg").replace("{plan}", planName));
+      onOpenChange(false);
+    } catch (err) {
+      console.error("Upgrade error:", err);
+      toast.error("Nie udało się zmienić planu. Spróbuj ponownie.");
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (
