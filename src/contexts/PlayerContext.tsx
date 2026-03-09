@@ -528,6 +528,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
         pl: '%Holenderski Club Peak%',
         en: '%Drop Chant Stream%',
         nl: '%Drop Chant Stream%',
+        ua: '%Kyiv Club Signal%',
       };
 
       const pattern = langTrackMap[lang];
