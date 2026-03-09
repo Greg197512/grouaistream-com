@@ -43,6 +43,7 @@ const App = () => (
     <LanguageProvider>
     <UnlockProvider>
     <AuthProvider>
+      <SubscriptionProvider>
       <PlayerProvider>
         <AIProvider>
           <TooltipProvider>
