@@ -9,6 +9,7 @@ import { PlayerProvider } from "@/contexts/PlayerContext";
 import { AIProvider } from "@/contexts/AIContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { UnlockProvider } from "@/contexts/UnlockContext";
+import { SubscriptionProvider } from "@/contexts/SubscriptionContext";
 import { AutoVoiceListener } from "@/components/player/AutoVoiceListener";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
@@ -42,6 +43,7 @@ const App = () => (
     <LanguageProvider>
     <UnlockProvider>
     <AuthProvider>
+      <SubscriptionProvider>
       <PlayerProvider>
         <AIProvider>
           <TooltipProvider>
@@ -82,6 +84,7 @@ const App = () => (
           </TooltipProvider>
         </AIProvider>
       </PlayerProvider>
+      </SubscriptionProvider>
     </AuthProvider>
     </UnlockProvider>
     </LanguageProvider>

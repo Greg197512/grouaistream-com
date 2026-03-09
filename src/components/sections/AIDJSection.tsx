@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { MoodDetector } from "@/components/mood/MoodDetector";
 import { useAI } from "@/contexts/AIContext";
 import { usePlayer } from "@/contexts/PlayerContext";
+import { FeatureGate } from "@/components/ui/FeatureGate";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface MoodState {
   mood: string;
@@ -103,7 +105,10 @@ export const AIDJSection = () => {
     setDisplayMood(mappedMood);
   };
 
+  const { t } = useLanguage();
+
   return (
+    <FeatureGate requiredPlan="pro" featureName={t("upgrade.pro.f4")}>
     <section className="px-6 py-12">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
@@ -270,5 +275,6 @@ export const AIDJSection = () => {
         </motion.div>
       </div>
     </section>
+    </FeatureGate>
   );
 };
