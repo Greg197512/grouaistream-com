@@ -83,7 +83,7 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
           status: "active",
         });
         setPlan("free");
-      }
+        localStorage.setItem("grooveai-current-plan", "free");
     } catch (err) {
       console.error("Subscription fetch error:", err);
       setPlan("free");
