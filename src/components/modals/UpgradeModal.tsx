@@ -197,6 +197,20 @@ export const UpgradeModal = ({ open, onOpenChange }: UpgradeModalProps) => {
           </div>
         </div>
       </DialogContent>
+
+      {/* Payment QR Modal */}
+      {paymentPlan && (
+        <PaymentQRModal
+          open={!!paymentPlan}
+          onOpenChange={(open) => {
+            if (!open) {
+              setPaymentPlan(null);
+              onOpenChange(false);
+            }
+          }}
+          plan={paymentPlan}
+        />
+      )}
     </Dialog>
   );
 };
