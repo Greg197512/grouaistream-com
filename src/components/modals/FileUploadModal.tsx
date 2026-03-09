@@ -1,10 +1,7 @@
 import { useState, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Upload, Music, FileAudio, FileVideo, Loader2, CheckCircle, AlertCircle } from "lucide-react";
+import { X, Upload, Music, Loader2, CheckCircle, AlertCircle, FolderOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -16,179 +13,180 @@ interface FileUploadModalProps {
   onSuccess?: () => void;
 }
 
-const ALLOWED_AUDIO = ["audio/mpeg", "audio/wav", "audio/mp3", "audio/x-wav"];
-const ALLOWED_VIDEO = ["video/mp4", "video/webm"];
-const MAX_SIZE = 100 * 1024 * 1024; // 100MB
+const ALLOWED_EXTENSIONS = [".mp3", ".wav", ".m4a", ".ogg", ".flac", ".mp4", ".webm", ".aac"];
+const ALLOWED_TYPES = [
+  "audio/mpeg", "audio/wav", "audio/mp3", "audio/x-wav", "audio/mp4",
+  "audio/ogg", "audio/flac", "audio/aac", "audio/x-m4a",
+  "video/mp4", "video/webm",
+];
+const MAX_SIZE = 100 * 1024 * 1024;
+
+interface UploadItem {
+  file: File;
+  title: string;
+  artist: string;
+  status: "pending" | "uploading" | "done" | "error";
+  error?: string;
+}
+
+function parseFilename(file: File): { title: string; artist: string } {
+  const name = file.name.replace(/\.[^/.]+$/, "");
+  const parts = name.split(" - ");
+  if (parts.length >= 2) {
+    return { artist: parts[0].trim(), title: parts.slice(1).join(" - ").trim() };
+  }
+  return { title: name, artist: "Unknown Artist" };
+}
+
+function isAllowedFile(file: File): boolean {
+  if (ALLOWED_TYPES.includes(file.type)) return true;
+  const ext = "." + file.name.split(".").pop()?.toLowerCase();
+  return ALLOWED_EXTENSIONS.includes(ext);
+}
 
 export const FileUploadModal = ({ isOpen, onClose, onSuccess }: FileUploadModalProps) => {
   const { user } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
-  const [file, setFile] = useState<File | null>(null);
-  const [title, setTitle] = useState("");
-  const [artist, setArtist] = useState("");
-  const [genre, setGenre] = useState("");
+  const folderInputRef = useRef<HTMLInputElement>(null);
+
+  const [items, setItems] = useState<UploadItem[]>([]);
   const [uploading, setUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [error, setError] = useState<string | null>(null);
+  const [uploadedCount, setUploadedCount] = useState(0);
+
+  const addFiles = useCallback((files: FileList | File[]) => {
+    const newItems: UploadItem[] = [];
+    for (const file of Array.from(files)) {
+      if (!isAllowedFile(file)) continue;
+      if (file.size > MAX_SIZE) continue;
+      if (file.size < 1000) continue; // skip tiny/empty files
+      const { title, artist } = parseFilename(file);
+      newItems.push({ file, title, artist, status: "pending" });
+    }
+    if (newItems.length === 0) {
+      toast.error("Brak obsługiwanych plików audio (MP3, WAV, M4A, OGG, FLAC, MP4)");
+      return;
+    }
+    setItems(prev => [...prev, ...newItems]);
+  }, []);
 
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (e.type === "dragenter" || e.type === "dragover") {
-      setDragActive(true);
-    } else if (e.type === "dragleave") {
-      setDragActive(false);
-    }
+    setDragActive(e.type === "dragenter" || e.type === "dragover");
   }, []);
-
-  const validateFile = (file: File): string | null => {
-    if (!ALLOWED_AUDIO.includes(file.type) && !ALLOWED_VIDEO.includes(file.type)) {
-      return "Please upload MP3, WAV, or MP4 files only";
-    }
-    if (file.size > MAX_SIZE) {
-      return "File size must be under 100MB";
-    }
-    return null;
-  };
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
-    setError(null);
 
-    const droppedFile = e.dataTransfer.files[0];
-    if (droppedFile) {
-      const validationError = validateFile(droppedFile);
-      if (validationError) {
-        setError(validationError);
-        return;
-      }
-      setFile(droppedFile);
-      
-      // Auto-fill title from filename
-      const fileName = droppedFile.name.replace(/\.[^/.]+$/, "");
-      const parts = fileName.split(" - ");
-      if (parts.length >= 2) {
-        setArtist(parts[0].trim());
-        setTitle(parts.slice(1).join(" - ").trim());
-      } else {
-        setTitle(fileName);
+    const fileList: File[] = [];
+    if (e.dataTransfer.items) {
+      for (const item of Array.from(e.dataTransfer.items)) {
+        const entry = item.webkitGetAsEntry?.();
+        if (entry) {
+          // For drag-drop folders we collect files from dataTransfer.files
+          // webkitGetAsEntry doesn't easily give us files recursively in sync
+        }
+        const f = item.getAsFile();
+        if (f) fileList.push(f);
       }
     }
-  }, []);
+    if (fileList.length === 0 && e.dataTransfer.files.length > 0) {
+      addFiles(e.dataTransfer.files);
+    } else if (fileList.length > 0) {
+      addFiles(fileList);
+    }
+  }, [addFiles]);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setError(null);
-    const selectedFile = e.target.files?.[0];
-    if (selectedFile) {
-      const validationError = validateFile(selectedFile);
-      if (validationError) {
-        setError(validationError);
-        return;
-      }
-      setFile(selectedFile);
-      
-      // Auto-fill title from filename
-      const fileName = selectedFile.name.replace(/\.[^/.]+$/, "");
-      const parts = fileName.split(" - ");
-      if (parts.length >= 2) {
-        setArtist(parts[0].trim());
-        setTitle(parts.slice(1).join(" - ").trim());
-      } else {
-        setTitle(fileName);
-      }
+    if (e.target.files && e.target.files.length > 0) {
+      addFiles(e.target.files);
     }
+    e.target.value = "";
   };
 
-  const handleUpload = async () => {
+  const removeItem = (index: number) => {
+    setItems(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleUploadAll = async () => {
     if (!user) {
       toast.error("Zaloguj się, aby przesyłać pliki");
       return;
     }
-
-    if (!file || !title.trim()) {
-      toast.error("Wybierz plik i wpisz tytuł");
-      return;
-    }
+    if (items.length === 0) return;
 
     setUploading(true);
-    setUploadProgress(0);
+    setUploadedCount(0);
+    let successCount = 0;
 
-    try {
-      const isVideo = ALLOWED_VIDEO.includes(file.type);
-      const ext = file.name.split('.').pop();
-      const filePath = `shared/${Date.now()}-${crypto.randomUUID()}.${ext}`;
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.status === "done") { successCount++; continue; }
 
-      // Upload to storage
-      setUploadProgress(20);
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from("music")
-        .upload(filePath, file, { contentType: file.type });
+      setItems(prev => prev.map((it, idx) => idx === i ? { ...it, status: "uploading" } : it));
 
-      if (uploadError) throw uploadError;
-      setUploadProgress(70);
-
-      // Get public URL
-      const { data: urlData } = supabase.storage
-        .from("music")
-        .getPublicUrl(filePath);
-
-      const publicUrl = urlData.publicUrl;
-      setUploadProgress(85);
-
-      // Insert track record
-      const { error: insertError } = await supabase.from("tracks").insert({
-        title: title.trim(),
-        artist: artist.trim() || "Unknown Artist",
-        genre: genre || null,
-        duration: 180,
-        audio_url: isVideo ? null : publicUrl,
-        video_url: isVideo ? publicUrl : null,
-        cover_url: null,
-        mood: null,
-      });
-
-      if (insertError) throw insertError;
-      setUploadProgress(100);
-
-      // Auto-download after upload
       try {
-        const downloadLink = document.createElement('a');
-        downloadLink.href = publicUrl;
-        downloadLink.download = `${title.trim()} - ${artist.trim() || 'Unknown'}.${ext}`;
-        document.body.appendChild(downloadLink);
-        downloadLink.click();
-        document.body.removeChild(downloadLink);
-      } catch {}
+        const ext = item.file.name.split(".").pop()?.toLowerCase() || "mp3";
+        const filePath = `shared/${Date.now()}-${crypto.randomUUID()}.${ext}`;
 
-      toast.success("Utwór przesłany i pobrany!");
+        const { error: uploadError } = await supabase.storage
+          .from("music")
+          .upload(filePath, item.file, { contentType: item.file.type || "audio/mpeg" });
+
+        if (uploadError) throw uploadError;
+
+        const { data: urlData } = supabase.storage.from("music").getPublicUrl(filePath);
+        const publicUrl = urlData.publicUrl;
+
+        const isVideo = item.file.type.startsWith("video/");
+        const { error: insertError } = await supabase.from("tracks").insert({
+          title: item.title,
+          artist: item.artist,
+          genre: null,
+          duration: 180,
+          audio_url: isVideo ? null : publicUrl,
+          video_url: isVideo ? publicUrl : null,
+          cover_url: null,
+          mood: null,
+        });
+
+        if (insertError) throw insertError;
+
+        setItems(prev => prev.map((it, idx) => idx === i ? { ...it, status: "done" } : it));
+        successCount++;
+        setUploadedCount(successCount);
+      } catch (err: any) {
+        console.error("Upload error for", item.file.name, err);
+        setItems(prev => prev.map((it, idx) => idx === i 
+          ? { ...it, status: "error", error: err.message || "Błąd" } : it));
+      }
+    }
+
+    setUploading(false);
+    if (successCount > 0) {
+      toast.success(`Przesłano ${successCount} ${successCount === 1 ? "utwór" : "utworów"} do biblioteki!`);
       onSuccess?.();
-      handleClose();
-    } catch (err: any) {
-      console.error("Upload error:", err);
-      toast.error(err.message || "Błąd przesyłania");
-    } finally {
-      setUploading(false);
+    }
+    if (successCount === items.length) {
+      setTimeout(() => handleClose(), 1200);
     }
   };
 
   const handleClose = () => {
-    setFile(null);
-    setTitle("");
-    setArtist("");
-    setGenre("");
-    setError(null);
-    setUploadProgress(0);
+    if (uploading) return;
+    setItems([]);
+    setUploadedCount(0);
     onClose();
   };
 
-  const isAudio = file && ALLOWED_AUDIO.includes(file.type);
-  const isVideo = file && ALLOWED_VIDEO.includes(file.type);
-
   if (!isOpen) return null;
+
+  const pendingCount = items.filter(i => i.status === "pending" || i.status === "error").length;
+  const doneCount = items.filter(i => i.status === "done").length;
+  const totalProgress = items.length > 0 ? Math.round((doneCount / items.length) * 100) : 0;
 
   return (
     <AnimatePresence>
@@ -204,179 +202,164 @@ export const FileUploadModal = ({ isOpen, onClose, onSuccess }: FileUploadModalP
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
           onClick={(e) => e.stopPropagation()}
-          className="w-full max-w-sm bg-card border border-border rounded-xl shadow-2xl overflow-hidden max-h-[80vh] overflow-y-auto"
+          className="w-full max-w-md bg-card border border-border rounded-xl shadow-2xl overflow-hidden max-h-[85vh] flex flex-col"
         >
           {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-border">
+          <div className="flex items-center justify-between p-4 border-b border-border shrink-0">
             <div className="flex items-center gap-2">
               <div className="p-1.5 rounded-lg bg-primary/10">
                 <Upload className="h-4 w-4 text-primary" />
               </div>
-              <h2 className="text-lg font-bold">Upload Music</h2>
+              <h2 className="text-lg font-bold">Prześlij muzykę</h2>
             </div>
-            <button onClick={handleClose} className="p-1.5 rounded-lg hover:bg-secondary transition-colors">
+            <button onClick={handleClose} disabled={uploading} className="p-1.5 rounded-lg hover:bg-secondary transition-colors">
               <X className="h-4 w-4" />
             </button>
           </div>
 
           {/* Content */}
-          <div className="p-4 space-y-3">
+          <div className="p-4 space-y-3 overflow-y-auto flex-1 min-h-0">
             {/* Drop Zone */}
             <div
               onDragEnter={handleDrag}
               onDragLeave={handleDrag}
               onDragOver={handleDrag}
               onDrop={handleDrop}
-              onClick={() => fileInputRef.current?.click()}
               className={cn(
-                "relative border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all",
-                dragActive 
-                  ? "border-primary bg-primary/10" 
+                "relative border-2 border-dashed rounded-xl p-6 text-center transition-all",
+                dragActive
+                  ? "border-primary bg-primary/10"
                   : "border-border hover:border-primary/50 hover:bg-secondary/50",
-                file && "border-green-500 bg-green-500/10"
               )}
             >
+              <div className="flex flex-col items-center gap-3">
+                <motion.div animate={{ y: [0, -5, 0] }} transition={{ duration: 1.5, repeat: Infinity }}>
+                  <Music className="h-10 w-10 text-muted-foreground" />
+                </motion.div>
+                <div>
+                  <p className="font-medium text-sm">Przeciągnij pliki lub katalogi tutaj</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    MP3, WAV, M4A, OGG, FLAC, MP4 — do 100MB/plik
+                  </p>
+                </div>
+                <div className="flex gap-2 mt-1">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-1.5 text-xs"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <Upload className="h-3.5 w-3.5" />
+                    Wybierz pliki
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-1.5 text-xs"
+                    onClick={() => folderInputRef.current?.click()}
+                  >
+                    <FolderOpen className="h-3.5 w-3.5" />
+                    Wybierz katalog
+                  </Button>
+                </div>
+              </div>
+
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".mp3,.wav,.mp4,.webm"
+                accept=".mp3,.wav,.m4a,.ogg,.flac,.mp4,.webm,.aac"
+                multiple
                 onChange={handleFileSelect}
                 className="hidden"
               />
-              
-              {file ? (
-                <div className="flex flex-col items-center gap-3">
-                  {isAudio ? (
-                    <FileAudio className="h-12 w-12 text-primary" />
-                  ) : (
-                    <FileVideo className="h-12 w-12 text-primary" />
-                  )}
-                  <div>
-                    <p className="font-medium text-sm">{file.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {(file.size / 1024 / 1024).toFixed(2)} MB
-                    </p>
-                  </div>
-                  <CheckCircle className="h-5 w-5 text-green-500" />
-                </div>
-              ) : (
-                <div className="flex flex-col items-center gap-3">
-                  <motion.div
-                    animate={{ y: [0, -5, 0] }}
-                    transition={{ duration: 1.5, repeat: Infinity }}
-                  >
-                    <Music className="h-12 w-12 text-muted-foreground" />
-                  </motion.div>
-                  <div>
-                    <p className="font-medium">Drop your music file here</p>
-                    <p className="text-sm text-muted-foreground">
-                      or click to browse (MP3, WAV, MP4)
-                    </p>
-                  </div>
-                </div>
-              )}
+              <input
+                ref={folderInputRef}
+                type="file"
+                // @ts-ignore - webkitdirectory is not in types
+                webkitdirectory=""
+                // @ts-ignore
+                directory=""
+                multiple
+                onChange={handleFileSelect}
+                className="hidden"
+              />
             </div>
 
-            {/* Error */}
-            {error && (
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 text-destructive text-sm"
-              >
-                <AlertCircle className="h-4 w-4" />
-                {error}
-              </motion.div>
+            {/* File list */}
+            {items.length > 0 && (
+              <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                <p className="text-xs font-medium text-muted-foreground">
+                  {items.length} {items.length === 1 ? "plik" : "plików"} • {doneCount} gotowe
+                </p>
+                {items.map((item, idx) => (
+                  <div
+                    key={idx}
+                    className={cn(
+                      "flex items-center gap-2 p-2 rounded-lg text-xs",
+                      item.status === "done" && "bg-green-500/10",
+                      item.status === "error" && "bg-destructive/10",
+                      item.status === "uploading" && "bg-primary/10",
+                      item.status === "pending" && "bg-secondary/50",
+                    )}
+                  >
+                    {item.status === "uploading" && <Loader2 className="h-3.5 w-3.5 animate-spin text-primary shrink-0" />}
+                    {item.status === "done" && <CheckCircle className="h-3.5 w-3.5 text-green-500 shrink-0" />}
+                    {item.status === "error" && <AlertCircle className="h-3.5 w-3.5 text-destructive shrink-0" />}
+                    {item.status === "pending" && <Music className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
+                    <span className="truncate flex-1">
+                      {item.artist !== "Unknown Artist" ? `${item.artist} — ${item.title}` : item.title}
+                    </span>
+                    <span className="text-muted-foreground shrink-0">
+                      {(item.file.size / 1024 / 1024).toFixed(1)}MB
+                    </span>
+                    {!uploading && item.status !== "uploading" && (
+                      <button onClick={() => removeItem(idx)} className="shrink-0 hover:text-destructive">
+                        <X className="h-3 w-3" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
             )}
 
-            {/* Metadata */}
-            {file && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                className="space-y-4"
-              >
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="title">Title *</Label>
-                    <Input
-                      id="title"
-                      placeholder="Track title"
-                      value={title}
-                      onChange={(e) => setTitle(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="artist">Artist</Label>
-                    <Input
-                      id="artist"
-                      placeholder="Artist name"
-                      value={artist}
-                      onChange={(e) => setArtist(e.target.value)}
-                    />
-                  </div>
+            {/* Progress */}
+            {uploading && (
+              <div className="space-y-1">
+                <div className="flex justify-between text-xs">
+                  <span>Przesyłanie... {uploadedCount}/{items.length}</span>
+                  <span>{totalProgress}%</span>
                 </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="genre">Genre</Label>
-                  <Select value={genre} onValueChange={setGenre}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select genre" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Rock">Rock</SelectItem>
-                      <SelectItem value="Pop">Pop</SelectItem>
-                      <SelectItem value="Punk">Punk</SelectItem>
-                      <SelectItem value="Pop-Punk">Pop-Punk</SelectItem>
-                      <SelectItem value="Pop-Rock">Pop-Rock</SelectItem>
-                      <SelectItem value="Punk-Rock">Punk-Rock</SelectItem>
-                      <SelectItem value="Metal">Metal</SelectItem>
-                      <SelectItem value="Electronic">Electronic</SelectItem>
-                      <SelectItem value="Hip-Hop">Hip-Hop</SelectItem>
-                      <SelectItem value="Other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div className="h-2 bg-secondary rounded-full overflow-hidden">
+                  <motion.div
+                    className="h-full bg-primary"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${totalProgress}%` }}
+                  />
                 </div>
-
-                {/* Upload Progress */}
-                {uploading && (
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span>Uploading...</span>
-                      <span>{uploadProgress}%</span>
-                    </div>
-                    <div className="h-2 bg-secondary rounded-full overflow-hidden">
-                      <motion.div
-                        className="h-full groove-gradient-bg"
-                        initial={{ width: 0 }}
-                        animate={{ width: `${uploadProgress}%` }}
-                      />
-                    </div>
-                  </div>
-                )}
-              </motion.div>
+              </div>
             )}
           </div>
 
           {/* Footer */}
-          <div className="flex justify-end gap-2 p-4 border-t border-border bg-secondary/30">
-            <Button variant="outline" onClick={handleClose} disabled={uploading}>
-              Cancel
+          <div className="flex justify-between gap-2 p-4 border-t border-border bg-secondary/30 shrink-0">
+            <Button variant="outline" size="sm" onClick={handleClose} disabled={uploading}>
+              Anuluj
             </Button>
             <Button
-              onClick={handleUpload}
-              disabled={uploading || !file || !title.trim()}
+              size="sm"
+              onClick={handleUploadAll}
+              disabled={uploading || pendingCount === 0}
               className="gap-2"
             >
               {uploading ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Uploading...
+                  Przesyłanie...
                 </>
               ) : (
                 <>
                   <Upload className="h-4 w-4" />
-                  Upload Track
+                  Prześlij {pendingCount > 0 ? `(${pendingCount})` : ""}
                 </>
               )}
             </Button>
