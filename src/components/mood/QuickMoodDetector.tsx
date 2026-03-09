@@ -143,23 +143,25 @@ export const QuickMoodDetector = ({ isOpen, onClose }: QuickMoodDetectorProps) =
       const genreFilters = genres.map(g => `genre.ilike.%${g}%`).join(",");
       const moodFilters = targetMoods.map(m => `mood.ilike.%${m}%`).join(",");
       
-      const { data: tracks, error } = await supabase
+      // First try filtered by genre/mood
+      const { data: tracks } = await supabase
         .from("tracks")
         .select("*")
+        .not("audio_url", "is", null)
         .or(`${genreFilters},${moodFilters}`)
         .limit(50);
 
-      if (error) throw error;
-
-      let selectedTracks = tracks || [];
+      let selectedTracks = (tracks || []).filter(t => t.audio_url);
       
-      // Fallback: if not enough tracks, get ALL tracks from the entire library
+      // Fallback: get ALL playable tracks from the entire library
       if (selectedTracks.length < 5) {
         const { data: allTracks } = await supabase
           .from("tracks")
           .select("*")
+          .not("audio_url", "is", null)
+          .order("created_at", { ascending: false })
           .limit(200);
-        selectedTracks = allTracks || [];
+        selectedTracks = (allTracks || []).filter(t => t.audio_url);
       }
 
       if (selectedTracks.length > 0) {
