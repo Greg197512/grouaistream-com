@@ -295,27 +295,27 @@ const Search = () => {
 
   return (
     <MainLayout>
-      <div className="px-4 sm:px-6 py-6 sm:py-8">
-        <div className="mb-6 sm:mb-8">
-          <div className="relative max-w-xl">
-            <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+      <div className="px-3 sm:px-6 py-4 sm:py-8 pb-24 sm:pb-8">
+        <div className="mb-4 sm:mb-8">
+          <div className="relative max-w-xl mx-auto sm:mx-0">
+            <SearchIcon className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
             <Input
               type="text"
               placeholder={t("search.placeholder")}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="pl-12 pr-12 h-14 text-lg rounded-full bg-secondary border-none"
+              className="pl-10 sm:pl-12 pr-10 sm:pr-12 h-11 sm:h-14 text-base sm:text-lg rounded-full bg-secondary border-none"
             />
             <button
               onClick={toggleVoiceSearch}
               className={cn(
-                "absolute right-4 top-1/2 -translate-y-1/2 p-2 rounded-full transition-colors",
+                "absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 p-1.5 sm:p-2 rounded-full transition-colors",
                 isListening
                   ? "bg-destructive/20 text-destructive animate-pulse"
                   : "hover:bg-muted text-muted-foreground"
               )}
             >
-              {isListening ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
+              {isListening ? <MicOff className="h-4 w-4 sm:h-5 sm:w-5" /> : <Mic className="h-4 w-4 sm:h-5 sm:w-5" />}
             </button>
           </div>
           {isListening && (
@@ -333,7 +333,7 @@ const Search = () => {
         {query.trim() ? (
           <div>
             {/* Results header */}
-            <h2 className="font-display text-xl font-bold mb-4">
+            <h2 className="font-display text-base sm:text-xl font-bold mb-3 sm:mb-4">
               {totalLoading ? t("search.searching") : `${t("search.resultsFor")} "${query}" (${allResults.length})`}
             </h2>
 
@@ -360,7 +360,7 @@ const Search = () => {
 
             {/* Combined results */}
             {allResults.length > 0 ? (
-              <div className="space-y-2">
+              <div className="space-y-1 sm:space-y-2">
                 {allResults.map((track, index) => (
                   <TrackRow
                     key={track.id}
@@ -421,20 +421,20 @@ const Search = () => {
             </TabsList>
 
             <TabsContent value="library">
-              <h2 className="font-display text-xl font-bold mb-4">{t("search.browseAll")}</h2>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              <h2 className="font-display text-base sm:text-xl font-bold mb-3 sm:mb-4">{t("search.browseAll")}</h2>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-4">
                 {genres.map((genre) => (
-                  <motion.button key={genre.name} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={() => handleGenreClick(genre.name)} className={`relative h-32 rounded-xl bg-gradient-to-br ${genre.color} overflow-hidden group`}>
+                  <motion.button key={genre.name} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={() => handleGenreClick(genre.name)} className={`relative h-20 sm:h-32 rounded-xl bg-gradient-to-br ${genre.color} overflow-hidden group`}>
                     <div className="absolute inset-0 flex items-center justify-center">
-                      <span className="font-display text-xl font-bold text-primary-foreground">{genre.name}</span>
+                      <span className="font-display text-base sm:text-xl font-bold text-primary-foreground">{genre.name}</span>
                     </div>
                     <Music className="absolute bottom-2 right-2 h-8 w-8 text-primary-foreground/30 rotate-12" />
                   </motion.button>
                 ))}
               </div>
 
-              <h2 className="font-display text-xl font-bold mt-8 mb-4">{t("search.allTracks")} ({allTracks.length})</h2>
-              <div className="space-y-2">
+              <h2 className="font-display text-base sm:text-xl font-bold mt-6 sm:mt-8 mb-3 sm:mb-4">{t("search.allTracks")} ({allTracks.length})</h2>
+              <div className="space-y-1 sm:space-y-2">
                 {allTracks.slice(0, 50).map((track, index) => (
                   <TrackRow key={track.id} id={track.id} index={index + 1} title={track.title} artist={track.artist} album={track.album || ""} duration={formatDuration(track.duration)} imageUrl={track.cover_url || undefined} trackUrl={track.video_url || track.audio_url} isPlaying={currentTrack?.id === track.id && isPlaying} onPlay={() => handlePlayTrack(track, index)} />
                 ))}

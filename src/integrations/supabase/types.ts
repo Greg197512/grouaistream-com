@@ -515,6 +515,7 @@ export type Database = {
           id: string
           plan: Database["public"]["Enums"]["subscription_plan"]
           status: string
+          trial_ends_at: string | null
           updated_at: string
           user_id: string
         }
@@ -524,6 +525,7 @@ export type Database = {
           id?: string
           plan?: Database["public"]["Enums"]["subscription_plan"]
           status?: string
+          trial_ends_at?: string | null
           updated_at?: string
           user_id: string
         }
@@ -533,6 +535,7 @@ export type Database = {
           id?: string
           plan?: Database["public"]["Enums"]["subscription_plan"]
           status?: string
+          trial_ends_at?: string | null
           updated_at?: string
           user_id?: string
         }

@@ -8,7 +8,10 @@ interface SubscriptionContextType {
   isLoading: boolean;
   isPro: boolean;
   isUltimate: boolean;
-  /** Check if user has at least the given plan level */
+  /** Is user in free trial period */
+  isTrialActive: boolean;
+  trialDaysLeft: number;
+  /** Check if user has at least the given plan level (includes trial) */
   hasAccess: (requiredPlan: SubscriptionPlan) => boolean;
   /** Feature-specific checks */
   canUseAIDJ: boolean;
@@ -49,6 +52,7 @@ export const useSubscription = () => {
 export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
   const [plan, setPlan] = useState<SubscriptionPlan>("free");
   const [isLoading, setIsLoading] = useState(true);
+  const [trialEndsAt, setTrialEndsAt] = useState<string | null>(null);
   const [dailyAIPlaylistsUsed, setDailyAIPlaylistsUsed] = useState(0);
   const [upgradePromptFeature, setUpgradePromptFeature] = useState<string | null>(null);
 
@@ -63,7 +67,7 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
 
       const { data, error } = await supabase
         .from("user_subscriptions")
-        .select("plan, status")
+        .select("plan, status, trial_ends_at")
         .eq("user_id", session.user.id)
         .eq("status", "active")
         .maybeSingle();
@@ -74,15 +78,19 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
         localStorage.setItem("grooveai-current-plan", "free");
       } else if (data) {
         setPlan(data.plan as SubscriptionPlan);
+        setTrialEndsAt((data as any).trial_ends_at || null);
         localStorage.setItem("grooveai-current-plan", data.plan as string);
       } else {
-        // No subscription row yet — create free one
+        // No subscription row yet — create free one with 7-day trial
+        const trialEnd = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
         await supabase.from("user_subscriptions").insert({
           user_id: session.user.id,
           plan: "free",
           status: "active",
-        });
+          trial_ends_at: trialEnd,
+        } as any);
         setPlan("free");
+        setTrialEndsAt(trialEnd);
         localStorage.setItem("grooveai-current-plan", "free");
       }
     } catch (err) {
@@ -117,14 +125,24 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
-  const hasAccess = useCallback((requiredPlan: SubscriptionPlan) => {
-    return PLAN_LEVELS[plan] >= PLAN_LEVELS[requiredPlan];
-  }, [plan]);
+  // Trial logic
+  const isTrialActive = Boolean(
+    plan === "free" && trialEndsAt && new Date(trialEndsAt) > new Date()
+  );
+  const trialDaysLeft = trialEndsAt
+    ? Math.max(0, Math.ceil((new Date(trialEndsAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+    : 0;
 
-  const isPro = plan === "pro" || plan === "ultimate";
+  const hasAccess = useCallback((requiredPlan: SubscriptionPlan) => {
+    if (PLAN_LEVELS[plan] >= PLAN_LEVELS[requiredPlan]) return true;
+    if (requiredPlan === "pro" && isTrialActive) return true;
+    return false;
+  }, [plan, isTrialActive]);
+
+  const isPro = plan === "pro" || plan === "ultimate" || isTrialActive;
   const isUltimate = plan === "ultimate";
 
-  // Feature access
+  // Feature access — trial gives Pro-level access
   const canUseAIDJ = isPro;
   const canUseMoodDetection = isPro;
   const canGenerateAIPlaylist = isPro;
@@ -162,6 +180,8 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
         isLoading,
         isPro,
         isUltimate,
+        isTrialActive,
+        trialDaysLeft,
         hasAccess,
         canUseAIDJ,
         canUseMoodDetection,
