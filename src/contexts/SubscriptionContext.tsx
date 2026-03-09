@@ -71,8 +71,10 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
       if (error) {
         console.error("Error fetching subscription:", error);
         setPlan("free");
+        localStorage.setItem("grooveai-current-plan", "free");
       } else if (data) {
         setPlan(data.plan as SubscriptionPlan);
+        localStorage.setItem("grooveai-current-plan", data.plan as string);
       } else {
         // No subscription row yet — create free one
         await supabase.from("user_subscriptions").insert({
