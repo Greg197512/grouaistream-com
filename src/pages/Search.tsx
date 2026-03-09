@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
-import { motion } from "framer-motion";
-import { Search as SearchIcon, Music, Mic, Download, Loader2, Youtube, Sparkles } from "lucide-react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Search as SearchIcon, Music, Mic, MicOff, Download, Loader2, Youtube, Sparkles, Globe } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,8 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "sonner";
 import { CCMixterSection } from "@/components/sections/CCMixterSection";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { searchCCMixter, CCMixterTrack } from "@/services/ccMixterService";
+import { cn } from "@/lib/utils";
 
 const formatDuration = (seconds: number): string => {
   const mins = Math.floor(seconds / 60);
@@ -46,12 +48,32 @@ const genres = [
   { name: "Reggae", color: "from-green-500 to-yellow-500" },
 ];
 
+const ccTrackToTrack = (cc: CCMixterTrack): Track => {
+  const downloadUrl = cc.download_url || cc.files?.[0]?.download_url;
+  return {
+    id: `cc-${cc.upload_id}`,
+    title: cc.upload_name,
+    artist: cc.user_real_name || cc.user_name,
+    album: "CC Mixter",
+    duration: 180,
+    audio_url: downloadUrl || null,
+    cover_url: null,
+    video_url: null,
+    genre: null,
+    mood: null,
+  };
+};
+
 const Search = () => {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Track[]>([]);
+  const [ccResults, setCcResults] = useState<Track[]>([]);
   const [allTracks, setAllTracks] = useState<Track[]>([]);
   const [loading, setLoading] = useState(false);
+  const [ccLoading, setCcLoading] = useState(false);
   const [youtubeLoading, setYoutubeLoading] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef<any>(null);
   const { playTrack, playPlaylist, currentTrack, isPlaying, togglePlay } = usePlayer();
   const { filterTracks } = useUnlock();
   const { t } = useLanguage();
@@ -66,20 +88,35 @@ const Search = () => {
     loadTracks();
   }, []);
 
+  // Local library search
   useEffect(() => {
-    if (!query.trim()) { setResults([]); return; }
-    const searchTracks = async () => {
-      setLoading(true);
-      const searchQuery = query.toLowerCase();
-      const filtered = allTracks.filter((track) =>
-        track.title.toLowerCase().includes(searchQuery) || track.artist.toLowerCase().includes(searchQuery) || track.genre?.toLowerCase().includes(searchQuery) || track.album?.toLowerCase().includes(searchQuery)
-      );
-      setResults(filtered);
-      setLoading(false);
-    };
-    const debounce = setTimeout(searchTracks, 300);
-    return () => clearTimeout(debounce);
+    if (!query.trim()) { setResults([]); setCcResults([]); return; }
+    const searchQuery = query.toLowerCase();
+    setLoading(true);
+
+    const filtered = allTracks.filter((track) =>
+      track.title.toLowerCase().includes(searchQuery) || track.artist.toLowerCase().includes(searchQuery) || track.genre?.toLowerCase().includes(searchQuery) || track.album?.toLowerCase().includes(searchQuery)
+    );
+    setResults(filtered);
+    setLoading(false);
   }, [query, allTracks]);
+
+  // CC Mixter search (debounced)
+  useEffect(() => {
+    if (!query.trim() || query.length < 3) { setCcResults([]); return; }
+    setCcLoading(true);
+    const timer = setTimeout(async () => {
+      try {
+        const { tracks } = await searchCCMixter(query, 10);
+        setCcResults(tracks.map(ccTrackToTrack).filter(t => t.audio_url));
+      } catch {
+        setCcResults([]);
+      } finally {
+        setCcLoading(false);
+      }
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [query]);
 
   const handleYouTubeSearch = useCallback(async () => {
     if (!query.trim() || youtubeLoading) return;
@@ -156,64 +193,169 @@ const Search = () => {
     }
   }, [query, youtubeLoading, playTrack]);
 
+  // Voice input via Web Speech API
+  const toggleVoiceSearch = useCallback(() => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      toast.error("Twoja przeglądarka nie obsługuje rozpoznawania mowy");
+      return;
+    }
+
+    if (isListening && recognitionRef.current) {
+      recognitionRef.current.stop();
+      setIsListening(false);
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = "pl-PL";
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognitionRef.current = recognition;
+
+    recognition.onstart = () => setIsListening(true);
+    recognition.onend = () => setIsListening(false);
+    recognition.onerror = () => {
+      setIsListening(false);
+      toast.error("Błąd rozpoznawania mowy");
+    };
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[0][0].transcript;
+      setQuery(transcript);
+      toast.success(`🎤 "${transcript}"`);
+    };
+
+    recognition.start();
+  }, [isListening]);
+
   const handleGenreClick = (genre: string) => setQuery(genre);
+
+  const allResults = [...results, ...ccResults.filter(cc => !results.some(r => r.title.toLowerCase() === cc.title.toLowerCase()))];
 
   const handlePlayTrack = (track: Track, index: number) => {
     if (currentTrack?.id === track.id) { togglePlay(); }
-    else if (results.length > 0) { playPlaylist(results, index); }
+    else if (allResults.length > 0) { playPlaylist(allResults, index); }
     else { const trackIndex = allTracks.findIndex(t => t.id === track.id); playPlaylist(allTracks, trackIndex >= 0 ? trackIndex : 0); }
   };
 
+  const totalLoading = loading || ccLoading;
+
   return (
     <MainLayout>
-      <div className="px-6 py-8">
-        <div className="mb-8">
+      <div className="px-4 sm:px-6 py-6 sm:py-8">
+        <div className="mb-6 sm:mb-8">
           <div className="relative max-w-xl">
             <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-            <Input type="text" placeholder={t("search.placeholder")} value={query} onChange={(e) => setQuery(e.target.value)} className="pl-12 pr-12 h-14 text-lg rounded-full bg-secondary border-none" />
-            <button className="absolute right-4 top-1/2 -translate-y-1/2 p-2 hover:bg-muted rounded-full transition-colors">
-              <Mic className="h-5 w-5 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder={t("search.placeholder")}
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="pl-12 pr-12 h-14 text-lg rounded-full bg-secondary border-none"
+            />
+            <button
+              onClick={toggleVoiceSearch}
+              className={cn(
+                "absolute right-4 top-1/2 -translate-y-1/2 p-2 rounded-full transition-colors",
+                isListening
+                  ? "bg-destructive/20 text-destructive animate-pulse"
+                  : "hover:bg-muted text-muted-foreground"
+              )}
+            >
+              {isListening ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
             </button>
           </div>
+          {isListening && (
+            <motion.p
+              initial={{ opacity: 0, y: -5 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-sm text-destructive mt-2 ml-4 flex items-center gap-2"
+            >
+              <span className="w-2 h-2 rounded-full bg-destructive animate-pulse" />
+              Słucham... powiedz nazwę utworu
+            </motion.p>
+          )}
         </div>
 
         {query.trim() ? (
           <div>
+            {/* Results header */}
             <h2 className="font-display text-xl font-bold mb-4">
-              {loading ? t("search.searching") : `${t("search.resultsFor")} "${query}" (${results.length})`}
+              {totalLoading ? t("search.searching") : `${t("search.resultsFor")} "${query}" (${allResults.length})`}
             </h2>
-            {results.length > 0 ? (
+
+            {/* Source badges */}
+            {allResults.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-4">
+                {results.length > 0 && (
+                  <span className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary flex items-center gap-1">
+                    <Music className="h-3 w-3" /> Biblioteka: {results.length}
+                  </span>
+                )}
+                {ccResults.length > 0 && (
+                  <span className="text-xs px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-500 flex items-center gap-1">
+                    <Globe className="h-3 w-3" /> CC Mixter: {ccResults.length}
+                  </span>
+                )}
+                {ccLoading && (
+                  <span className="text-xs px-2 py-1 rounded-full bg-muted text-muted-foreground flex items-center gap-1">
+                    <Loader2 className="h-3 w-3 animate-spin" /> CC Mixter...
+                  </span>
+                )}
+              </div>
+            )}
+
+            {/* Combined results */}
+            {allResults.length > 0 ? (
               <div className="space-y-2">
-                {results.map((track, index) => (
-                  <TrackRow key={track.id} id={track.id} index={index + 1} title={track.title} artist={track.artist} album={track.album || ""} duration={formatDuration(track.duration)} imageUrl={track.cover_url || undefined} trackUrl={track.video_url || track.audio_url} isPlaying={currentTrack?.id === track.id && isPlaying} onPlay={() => handlePlayTrack(track, index)} />
+                {allResults.map((track, index) => (
+                  <TrackRow
+                    key={track.id}
+                    id={track.id}
+                    index={index + 1}
+                    title={track.title}
+                    artist={track.artist}
+                    album={track.album || ""}
+                    duration={formatDuration(track.duration)}
+                    imageUrl={track.cover_url || undefined}
+                    trackUrl={track.video_url || track.audio_url}
+                    isPlaying={currentTrack?.id === track.id && isPlaying}
+                    onPlay={() => handlePlayTrack(track, index)}
+                  />
                 ))}
               </div>
-            ) : (!loading && (
+            ) : (!totalLoading && (
               <div className="flex flex-col items-center gap-4 py-12">
                 <p className="text-muted-foreground">{t("search.noResults")}</p>
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="flex flex-col items-center gap-3"
-                >
-                  <Sparkles className="h-8 w-8 text-primary animate-pulse" />
-                  <p className="text-sm text-muted-foreground">AI znajdzie to na YouTube</p>
-                  <Button
-                    onClick={handleYouTubeSearch}
-                    disabled={youtubeLoading}
-                    className="gap-2 bg-red-600 hover:bg-red-700 text-white"
-                    size="lg"
-                  >
-                    {youtubeLoading ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Youtube className="h-5 w-5" />
-                    )}
-                    {youtubeLoading ? "Szukam..." : `Wyszukaj "${query}" na YouTube`}
-                  </Button>
-                </motion.div>
               </div>
             ))}
+
+            {/* YouTube fallback — always show when query exists */}
+            {!totalLoading && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex flex-col items-center gap-3 mt-6 pt-6 border-t border-border"
+              >
+                <Sparkles className="h-6 w-6 text-primary animate-pulse" />
+                <p className="text-sm text-muted-foreground">
+                  {allResults.length > 0 ? "Nie widzisz tego, czego szukasz?" : "AI znajdzie to na YouTube"}
+                </p>
+                <Button
+                  onClick={handleYouTubeSearch}
+                  disabled={youtubeLoading}
+                  className="gap-2 bg-red-600 hover:bg-red-700 text-white"
+                  size="lg"
+                >
+                  {youtubeLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Youtube className="h-5 w-5" />
+                  )}
+                  {youtubeLoading ? "Szukam..." : `Wyszukaj "${query}" na YouTube`}
+                </Button>
+              </motion.div>
+            )}
           </div>
         ) : (
           <Tabs defaultValue="library" className="w-full">
