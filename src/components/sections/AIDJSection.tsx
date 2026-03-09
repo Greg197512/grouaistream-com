@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { MoodDetector } from "@/components/mood/MoodDetector";
 import { useAI } from "@/contexts/AIContext";
 import { usePlayer } from "@/contexts/PlayerContext";
+import { FeatureGate } from "@/components/ui/FeatureGate";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface MoodState {
   mood: string;
