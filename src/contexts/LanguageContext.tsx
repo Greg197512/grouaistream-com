@@ -34,9 +34,14 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
   });
 
   const setLanguage = (lang: Language) => {
+    const prevLang = language;
     setLanguageState(lang);
     localStorage.setItem("grooveai-language", lang);
     document.documentElement.lang = lang === "ua" ? "uk" : lang;
+    // Dispatch custom event so PlayerContext can react
+    if (prevLang !== lang) {
+      window.dispatchEvent(new CustomEvent("grooveai-language-change", { detail: { language: lang } }));
+    }
   };
 
   useEffect(() => {
