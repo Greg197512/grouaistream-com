@@ -381,6 +381,39 @@ type TranslationKeys = {
   "legal.gdpr.dpo.title": string;
   "legal.gdpr.dpo.p1": string;
   "legal.gdpr.dpo.p2": string;
+
+  // Upgrade Modal
+  "upgrade.title": string;
+  "upgrade.subtitle": string;
+  "upgrade.popular": string;
+  "upgrade.forever": string;
+  "upgrade.perMonth": string;
+  "upgrade.free.name": string;
+  "upgrade.free.f1": string;
+  "upgrade.free.f2": string;
+  "upgrade.free.f3": string;
+  "upgrade.free.f4": string;
+  "upgrade.pro.name": string;
+  "upgrade.pro.f1": string;
+  "upgrade.pro.f2": string;
+  "upgrade.pro.f3": string;
+  "upgrade.pro.f4": string;
+  "upgrade.pro.f5": string;
+  "upgrade.pro.f6": string;
+  "upgrade.ultimate.name": string;
+  "upgrade.ultimate.f1": string;
+  "upgrade.ultimate.f2": string;
+  "upgrade.ultimate.f3": string;
+  "upgrade.ultimate.f4": string;
+  "upgrade.ultimate.f5": string;
+  "upgrade.ultimate.f6": string;
+  "upgrade.ultimate.f7": string;
+  "upgrade.currentPlan": string;
+  "upgrade.upgradeTo": string;
+  "upgrade.processing": string;
+  "upgrade.footer": string;
+  "upgrade.alreadyFree": string;
+  "upgrade.welcomeMsg": string;
 };
 
 const pl: TranslationKeys = {
