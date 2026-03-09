@@ -526,6 +526,8 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
       // Map language to a specific track
       const langTrackMap: Record<string, string> = {
         pl: '%Holenderski Club Peak%',
+        en: '%Drop Chant Stream%',
+        nl: '%Drop Chant Stream%',
       };
 
       const pattern = langTrackMap[lang];
