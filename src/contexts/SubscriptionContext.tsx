@@ -126,13 +126,25 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const hasAccess = useCallback((requiredPlan: SubscriptionPlan) => {
-    return PLAN_LEVELS[plan] >= PLAN_LEVELS[requiredPlan];
-  }, [plan]);
+    // Paid plans always have access
+    if (PLAN_LEVELS[plan] >= PLAN_LEVELS[requiredPlan]) return true;
+    // Free trial gives Pro-level access for 7 days
+    if (requiredPlan === "pro" && isTrialActive) return true;
+    return false;
+  }, [plan, isTrialActive]);
 
-  const isPro = plan === "pro" || plan === "ultimate";
+  // Trial logic
+  const isTrialActive = Boolean(
+    plan === "free" && trialEndsAt && new Date(trialEndsAt) > new Date()
+  );
+  const trialDaysLeft = trialEndsAt
+    ? Math.max(0, Math.ceil((new Date(trialEndsAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+    : 0;
+
+  const isPro = plan === "pro" || plan === "ultimate" || isTrialActive;
   const isUltimate = plan === "ultimate";
 
-  // Feature access
+  // Feature access — trial gives Pro-level access
   const canUseAIDJ = isPro;
   const canUseMoodDetection = isPro;
   const canGenerateAIPlaylist = isPro;
