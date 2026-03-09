@@ -160,6 +160,12 @@ export const UpgradeModal = ({ open, onOpenChange }: UpgradeModalProps) => {
                     </span>
                   )}
                   
+                  {plan.id === currentPlan && (
+                    <span className="absolute -top-2.5 right-3 bg-green-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                      ✓ {t("upgrade.currentPlan")}
+                    </span>
+                  )}
+                  
                   <div className="flex items-center gap-2 mb-2 sm:mb-3">
                     <plan.icon className={cn("h-4 w-4 sm:h-5 sm:w-5", plan.color)} />
                     <span className="font-display font-semibold text-sm sm:text-base">{t(plan.nameKey)}</span>
