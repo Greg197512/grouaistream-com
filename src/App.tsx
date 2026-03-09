@@ -84,6 +84,7 @@ const App = () => (
           </TooltipProvider>
         </AIProvider>
       </PlayerProvider>
+      </SubscriptionProvider>
     </AuthProvider>
     </UnlockProvider>
     </LanguageProvider>
