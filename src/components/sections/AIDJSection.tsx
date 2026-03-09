@@ -105,8 +105,10 @@ export const AIDJSection = () => {
     setDisplayMood(mappedMood);
   };
 
+  const { t } = useLanguage();
+
   return (
-    <section className="px-6 py-12">
+    <FeatureGate requiredPlan="pro" featureName={t("upgrade.pro.f4")}>
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <div className="groove-gradient-bg h-10 w-10 rounded-xl flex items-center justify-center">
