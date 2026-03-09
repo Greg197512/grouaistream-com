@@ -67,7 +67,7 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
 
       const { data, error } = await supabase
         .from("user_subscriptions")
-        .select("plan, status")
+        .select("plan, status, trial_ends_at")
         .eq("user_id", session.user.id)
         .eq("status", "active")
         .maybeSingle();
