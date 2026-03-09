@@ -295,27 +295,27 @@ const Search = () => {
 
   return (
     <MainLayout>
-      <div className="px-4 sm:px-6 py-6 sm:py-8">
-        <div className="mb-6 sm:mb-8">
-          <div className="relative max-w-xl">
-            <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+      <div className="px-3 sm:px-6 py-4 sm:py-8 pb-24 sm:pb-8">
+        <div className="mb-4 sm:mb-8">
+          <div className="relative max-w-xl mx-auto sm:mx-0">
+            <SearchIcon className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
             <Input
               type="text"
               placeholder={t("search.placeholder")}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="pl-12 pr-12 h-14 text-lg rounded-full bg-secondary border-none"
+              className="pl-10 sm:pl-12 pr-10 sm:pr-12 h-11 sm:h-14 text-base sm:text-lg rounded-full bg-secondary border-none"
             />
             <button
               onClick={toggleVoiceSearch}
               className={cn(
-                "absolute right-4 top-1/2 -translate-y-1/2 p-2 rounded-full transition-colors",
+                "absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 p-1.5 sm:p-2 rounded-full transition-colors",
                 isListening
                   ? "bg-destructive/20 text-destructive animate-pulse"
                   : "hover:bg-muted text-muted-foreground"
               )}
             >
-              {isListening ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
+              {isListening ? <MicOff className="h-4 w-4 sm:h-5 sm:w-5" /> : <Mic className="h-4 w-4 sm:h-5 sm:w-5" />}
             </button>
           </div>
           {isListening && (
