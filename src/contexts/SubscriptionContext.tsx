@@ -78,6 +78,7 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
         localStorage.setItem("grooveai-current-plan", "free");
       } else if (data) {
         setPlan(data.plan as SubscriptionPlan);
+        setTrialEndsAt((data as any).trial_ends_at || null);
         localStorage.setItem("grooveai-current-plan", data.plan as string);
       } else {
         // No subscription row yet — create free one
