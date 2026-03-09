@@ -421,10 +421,10 @@ const Search = () => {
             </TabsList>
 
             <TabsContent value="library">
-              <h2 className="font-display text-xl font-bold mb-4">{t("search.browseAll")}</h2>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              <h2 className="font-display text-base sm:text-xl font-bold mb-3 sm:mb-4">{t("search.browseAll")}</h2>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-4">
                 {genres.map((genre) => (
-                  <motion.button key={genre.name} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={() => handleGenreClick(genre.name)} className={`relative h-32 rounded-xl bg-gradient-to-br ${genre.color} overflow-hidden group`}>
+                  <motion.button key={genre.name} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={() => handleGenreClick(genre.name)} className={`relative h-20 sm:h-32 rounded-xl bg-gradient-to-br ${genre.color} overflow-hidden group`}>
                     <div className="absolute inset-0 flex items-center justify-center">
                       <span className="font-display text-xl font-bold text-primary-foreground">{genre.name}</span>
                     </div>
