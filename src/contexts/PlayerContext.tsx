@@ -527,7 +527,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
       const langTrackMap: Record<string, string> = {
         pl: '%Holenderski Club Peak%',
         en: '%Drop Chant Stream%',
-        nl: '%Drop Chant Stream%',
+        nl: '%Amsterdam Drop Call%',
         ua: '%Kyiv Club Signal%',
       };
 
