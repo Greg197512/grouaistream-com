@@ -8,7 +8,10 @@ interface SubscriptionContextType {
   isLoading: boolean;
   isPro: boolean;
   isUltimate: boolean;
-  /** Check if user has at least the given plan level */
+  /** Is user in free trial period */
+  isTrialActive: boolean;
+  trialDaysLeft: number;
+  /** Check if user has at least the given plan level (includes trial) */
   hasAccess: (requiredPlan: SubscriptionPlan) => boolean;
   /** Feature-specific checks */
   canUseAIDJ: boolean;
