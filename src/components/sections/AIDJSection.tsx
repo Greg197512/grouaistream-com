@@ -109,6 +109,7 @@ export const AIDJSection = () => {
 
   return (
     <FeatureGate requiredPlan="pro" featureName={t("upgrade.pro.f4")}>
+    <section className="px-6 py-12">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <div className="groove-gradient-bg h-10 w-10 rounded-xl flex items-center justify-center">
