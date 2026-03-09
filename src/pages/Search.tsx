@@ -426,7 +426,7 @@ const Search = () => {
                 {genres.map((genre) => (
                   <motion.button key={genre.name} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={() => handleGenreClick(genre.name)} className={`relative h-20 sm:h-32 rounded-xl bg-gradient-to-br ${genre.color} overflow-hidden group`}>
                     <div className="absolute inset-0 flex items-center justify-center">
-                      <span className="font-display text-xl font-bold text-primary-foreground">{genre.name}</span>
+                      <span className="font-display text-base sm:text-xl font-bold text-primary-foreground">{genre.name}</span>
                     </div>
                     <Music className="absolute bottom-2 right-2 h-8 w-8 text-primary-foreground/30 rotate-12" />
                   </motion.button>
