@@ -517,6 +517,41 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
       });
   }, []);
 
+  // Auto-play specific track when language changes
+  useEffect(() => {
+    const handleLanguageChange = (e: Event) => {
+      const lang = (e as CustomEvent).detail?.language;
+      if (!lang) return;
+
+      // Map language to a specific track
+      const langTrackMap: Record<string, string> = {
+        pl: '%Holenderski Club Peak%',
+      };
+
+      const pattern = langTrackMap[lang];
+      if (!pattern) return;
+
+      supabase
+        .from('tracks')
+        .select('*')
+        .ilike('title', pattern)
+        .limit(1)
+        .then(({ data }) => {
+          if (data && data.length > 0) {
+            const track = data[0] as Track;
+            if (track.audio_url || track.video_url) {
+              setCurrentTrack(track);
+              setQueue([track]);
+              setQueueIndex(0);
+            }
+          }
+        });
+    };
+
+    window.addEventListener("grooveai-language-change", handleLanguageChange);
+    return () => window.removeEventListener("grooveai-language-change", handleLanguageChange);
+  }, []);
+
   // Reset track start time when track changes
   useEffect(() => {
     trackStartTime.current = Date.now();
