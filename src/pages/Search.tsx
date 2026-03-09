@@ -333,7 +333,7 @@ const Search = () => {
         {query.trim() ? (
           <div>
             {/* Results header */}
-            <h2 className="font-display text-xl font-bold mb-4">
+            <h2 className="font-display text-base sm:text-xl font-bold mb-3 sm:mb-4">
               {totalLoading ? t("search.searching") : `${t("search.resultsFor")} "${query}" (${allResults.length})`}
             </h2>
 
