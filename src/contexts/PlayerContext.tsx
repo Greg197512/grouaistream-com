@@ -426,6 +426,34 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const nextTrack = () => {
+    // Skip limiting for free users — check localStorage for plan
+    // (avoiding circular context dependency with SubscriptionContext)
+    const planData = localStorage.getItem("grooveai-skip-count");
+    const today = new Date().toDateString();
+    const skipStore = planData ? JSON.parse(planData) : { date: today, count: 0 };
+
+    if (skipStore.date !== today) {
+      skipStore.date = today;
+      skipStore.count = 0;
+    }
+
+    // Check subscription plan from supabase cache
+    const cachedPlan = localStorage.getItem("grooveai-current-plan") || "free";
+    
+    if (cachedPlan === "free") {
+      const MAX_FREE_SKIPS = 6;
+      if (skipStore.count >= MAX_FREE_SKIPS) {
+        toast.error("Osiągnąłeś limit pomijania na darmowym planie. Ulepsz do Pro!");
+        return;
+      }
+      skipStore.count += 1;
+      localStorage.setItem("grooveai-skip-count", JSON.stringify(skipStore));
+      
+      if (skipStore.count >= MAX_FREE_SKIPS - 1) {
+        toast.warning(`Pozostało ${MAX_FREE_SKIPS - skipStore.count} pominięć na dziś`);
+      }
+    }
+
     nextTrackInternal(true); // User-initiated skip
   };
 
