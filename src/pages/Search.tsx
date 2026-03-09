@@ -88,18 +88,71 @@ const Search = () => {
     loadTracks();
   }, []);
 
-  // Local library search
+  // Normalize text for fuzzy matching (remove diacritics, lowercase)
+  const normalize = useCallback((text: string) => {
+    return text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/ł/g, "l").replace(/ø/g, "o");
+  }, []);
+
+  // Local library + DB search (debounced)
   useEffect(() => {
     if (!query.trim()) { setResults([]); setCcResults([]); return; }
-    const searchQuery = query.toLowerCase();
     setLoading(true);
 
-    const filtered = allTracks.filter((track) =>
-      track.title.toLowerCase().includes(searchQuery) || track.artist.toLowerCase().includes(searchQuery) || track.genre?.toLowerCase().includes(searchQuery) || track.album?.toLowerCase().includes(searchQuery)
-    );
-    setResults(filtered);
-    setLoading(false);
-  }, [query, allTracks]);
+    const timer = setTimeout(async () => {
+      const searchQuery = normalize(query);
+      const words = searchQuery.split(/\s+/).filter(w => w.length > 1);
+
+      // 1. Local fuzzy search — score-based ranking
+      const scored = allTracks.map(track => {
+        const title = normalize(track.title);
+        const artist = normalize(track.artist);
+        const genre = normalize(track.genre || "");
+        const album = normalize(track.album || "");
+        const combined = `${title} ${artist} ${genre} ${album}`;
+
+        let score = 0;
+        // Exact full match = highest
+        if (title === searchQuery || artist === searchQuery) score += 100;
+        // Title/artist starts with query
+        if (title.startsWith(searchQuery) || artist.startsWith(searchQuery)) score += 50;
+        // Contains full query
+        if (combined.includes(searchQuery)) score += 30;
+        // Each word matched
+        for (const word of words) {
+          if (title.includes(word)) score += 10;
+          if (artist.includes(word)) score += 8;
+          if (genre.includes(word)) score += 3;
+          if (album.includes(word)) score += 3;
+        }
+        return { track, score };
+      }).filter(s => s.score > 0).sort((a, b) => b.score - a.score).map(s => s.track);
+
+      // 2. Also query DB directly with ilike for tracks not yet loaded
+      try {
+        const ilikePattern = `%${query.trim()}%`;
+        const { data: dbResults } = await supabase
+          .from("tracks")
+          .select("*")
+          .or(`title.ilike.${ilikePattern},artist.ilike.${ilikePattern},album.ilike.${ilikePattern},genre.ilike.${ilikePattern}`)
+          .or("audio_url.not.is.null,video_url.not.is.null")
+          .limit(50);
+
+        if (dbResults) {
+          const dbPlayable = filterTracks(dbResults.filter(isPlayableTrack));
+          const existingIds = new Set(scored.map(t => t.id));
+          const newFromDb = dbPlayable.filter(t => !existingIds.has(t.id));
+          setResults([...scored, ...newFromDb]);
+        } else {
+          setResults(scored);
+        }
+      } catch {
+        setResults(scored);
+      }
+      setLoading(false);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [query, allTracks, normalize, filterTracks]);
 
   // CC Mixter search (debounced)
   useEffect(() => {
