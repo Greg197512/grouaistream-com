@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Crown, Check, Zap, Star, Sparkles, X, Infinity, Music, Radio, Brain } from "lucide-react";
+import { PaymentQRModal } from "./PaymentQRModal";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
