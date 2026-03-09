@@ -125,14 +125,6 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
-  const hasAccess = useCallback((requiredPlan: SubscriptionPlan) => {
-    // Paid plans always have access
-    if (PLAN_LEVELS[plan] >= PLAN_LEVELS[requiredPlan]) return true;
-    // Free trial gives Pro-level access for 7 days
-    if (requiredPlan === "pro" && isTrialActive) return true;
-    return false;
-  }, [plan, isTrialActive]);
-
   // Trial logic
   const isTrialActive = Boolean(
     plan === "free" && trialEndsAt && new Date(trialEndsAt) > new Date()
@@ -140,6 +132,12 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
   const trialDaysLeft = trialEndsAt
     ? Math.max(0, Math.ceil((new Date(trialEndsAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
     : 0;
+
+  const hasAccess = useCallback((requiredPlan: SubscriptionPlan) => {
+    if (PLAN_LEVELS[plan] >= PLAN_LEVELS[requiredPlan]) return true;
+    if (requiredPlan === "pro" && isTrialActive) return true;
+    return false;
+  }, [plan, isTrialActive]);
 
   const isPro = plan === "pro" || plan === "ultimate" || isTrialActive;
   const isUltimate = plan === "ultimate";
