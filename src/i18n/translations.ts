@@ -414,6 +414,74 @@ type TranslationKeys = {
   "upgrade.footer": string;
   "upgrade.alreadyFree": string;
   "upgrade.welcomeMsg": string;
+
+  // Mood Detection (QuickMoodDetector)
+  "moodDet.title": string;
+  "moodDet.subtitle": string;
+  "moodDet.loadingModels": string;
+  "moodDet.loadingWait": string;
+  "moodDet.tfReady": string;
+  "moodDet.deepAnalyzing": string;
+  "moodDet.analyzing": string;
+  "moodDet.initTf": string;
+  "moodDet.detectingFace": string;
+  "moodDet.analyzingExpression": string;
+  "moodDet.recognizingEmotions": string;
+  "moodDet.finalizing": string;
+  "moodDet.noFace": string;
+  "moodDet.noFaceHint": string;
+  "moodDet.tryAgain": string;
+  "moodDet.cameraActive": string;
+  "moodDet.noCameraAccess": string;
+  "moodDet.analyzeBtn": string;
+  "moodDet.loadingAI": string;
+  "moodDet.starting": string;
+  "moodDet.cancel": string;
+  "moodDet.scanAgain": string;
+  "moodDet.confidence": string;
+  "moodDet.diagnosisTitle": string;
+  "moodDet.emotionalStateTitle": string;
+  "moodDet.riskTitle": string;
+  "moodDet.fullAnalysis": string;
+  "moodDet.collapse": string;
+  "moodDet.microExpressions": string;
+  "moodDet.psychInsight": string;
+  "moodDet.therapeuticAdvice": string;
+  "moodDet.musicTherapy": string;
+  "moodDet.healingFreq": string;
+  "moodDet.playing5tracks": string;
+  "moodDet.boostGuarantee": string;
+  "moodDet.goalLabel": string;
+  "moodDet.noTracks": string;
+  "moodDet.trackError": string;
+  "moodDet.faceError": string;
+  "moodDet.analysisError": string;
+  "moodDet.microStep": string;
+  "moodDet.diagStep": string;
+  "moodDet.therapyStep": string;
+  "moodDet.selectionStep": string;
+  "moodDet.professorAnalyzing": string;
+  "moodDet.happy": string;
+  "moodDet.melancholic": string;
+  "moodDet.intense": string;
+  "moodDet.anxious": string;
+  "moodDet.rebellious": string;
+  "moodDet.excited": string;
+  "moodDet.relaxed": string;
+  "moodDet.energetic": string;
+  "moodDet.romantic": string;
+  "moodDet.focused": string;
+  "moodDet.happyDesc": string;
+  "moodDet.sadDesc": string;
+  "moodDet.angryDesc": string;
+  "moodDet.fearfulDesc": string;
+  "moodDet.disgustedDesc": string;
+  "moodDet.surprisedDesc": string;
+  "moodDet.neutralDesc": string;
+  "moodDet.energeticDesc": string;
+  "moodDet.romanticDesc": string;
+  "moodDet.focusedDesc": string;
+  "moodDet.aiDescription": string;
 };
 
 const pl: TranslationKeys = {
@@ -801,6 +869,73 @@ const pl: TranslationKeys = {
   "upgrade.footer": "Anuluj w każdej chwili • 7-dniowy darmowy okres • Bez karty kredytowej",
   "upgrade.alreadyFree": "Już masz plan Darmowy!",
   "upgrade.welcomeMsg": "🎉 Witaj w GrouAI {plan}! Ciesz się funkcjami premium.",
+
+  "moodDet.title": "AI Profesor Psychologii",
+  "moodDet.subtitle": "TensorFlow.js + AI gotowy",
+  "moodDet.loadingModels": "Ładowanie modeli face-api.js...",
+  "moodDet.loadingWait": "To może potrwać kilka sekund",
+  "moodDet.tfReady": "TensorFlow.js gotowy",
+  "moodDet.deepAnalyzing": "Głęboka analiza psychiatryczna...",
+  "moodDet.analyzing": "Analizuję...",
+  "moodDet.initTf": "Inicjalizacja TensorFlow.js...",
+  "moodDet.detectingFace": "Wykrywanie twarzy...",
+  "moodDet.analyzingExpression": "Analiza wyrazu twarzy...",
+  "moodDet.recognizingEmotions": "Rozpoznawanie emocji...",
+  "moodDet.finalizing": "Finalizacja wyników...",
+  "moodDet.noFace": "Nie wykryto twarzy",
+  "moodDet.noFaceHint": "Upewnij się, że twarz jest dobrze oświetlona",
+  "moodDet.tryAgain": "Spróbuj ponownie",
+  "moodDet.cameraActive": "🎥 Kamera aktywna! Analizuję twarz przez 5 sekund...",
+  "moodDet.noCameraAccess": "Brak dostępu do kamery. Sprawdź uprawnienia.",
+  "moodDet.analyzeBtn": "Analizuj emocje (5s)",
+  "moodDet.loadingAI": "Ładowanie AI...",
+  "moodDet.starting": "Uruchamiam...",
+  "moodDet.cancel": "Anuluj",
+  "moodDet.scanAgain": "Skanuj ponownie",
+  "moodDet.confidence": "pewności detekcji",
+  "moodDet.diagnosisTitle": "Diagnoza Profesora",
+  "moodDet.emotionalStateTitle": "Stan Emocjonalny",
+  "moodDet.riskTitle": "Poziom Ryzyka",
+  "moodDet.fullAnalysis": "Pełna analiza psychiatryczna",
+  "moodDet.collapse": "Zwiń",
+  "moodDet.microExpressions": "Mikroekspresje",
+  "moodDet.psychInsight": "Wgląd Psychologiczny",
+  "moodDet.therapeuticAdvice": "Zalecenia Terapeutyczne",
+  "moodDet.musicTherapy": "Muzykoterapia",
+  "moodDet.healingFreq": "Częstotliwość Lecznicza",
+  "moodDet.playing5tracks": "Gram 5 utworów dobranych przez AI Profesora",
+  "moodDet.boostGuarantee": "Humor +100% gwarantowany!",
+  "moodDet.goalLabel": "Cel",
+  "moodDet.noTracks": "Brak utworów w bazie.",
+  "moodDet.trackError": "Błąd podczas ładowania utworów.",
+  "moodDet.faceError": "Błąd podczas analizy twarzy. Spróbuj ponownie.",
+  "moodDet.analysisError": "Nie udało się przeprowadzić głębokiej analizy AI.",
+  "moodDet.microStep": "Analiza mikroekspresji...",
+  "moodDet.diagStep": "Diagnoza psychiatryczna...",
+  "moodDet.therapyStep": "Dobór muzykoterapii...",
+  "moodDet.selectionStep": "Selekcja 5 utworów...",
+  "moodDet.professorAnalyzing": "🧠 Profesor AI analizuje Twój stan...",
+  "moodDet.happy": "Szczęśliwy",
+  "moodDet.melancholic": "Melancholijny",
+  "moodDet.intense": "Intensywny",
+  "moodDet.anxious": "Niespokojny",
+  "moodDet.rebellious": "Buntowniczy",
+  "moodDet.excited": "Podekscytowany",
+  "moodDet.relaxed": "Zrelaksowany",
+  "moodDet.energetic": "Energetyczny",
+  "moodDet.romantic": "Romantyczny",
+  "moodDet.focused": "Skupiony",
+  "moodDet.happyDesc": "Masz świetny dzień! Energia pozytywna promieniuje z Ciebie!",
+  "moodDet.sadDesc": "Wygląda na trudniejszy dzień... Muzyka poprawi Ci nastrój!",
+  "moodDet.angryDesc": "Czujesz się intensywnie! Czas na muzykę, która to uwolni!",
+  "moodDet.fearfulDesc": "Stresujący dzień? Uspokajające dźwięki pomogą!",
+  "moodDet.disgustedDesc": "Buntowniczy nastrój! Rock i punk dla Ciebie!",
+  "moodDet.surprisedDesc": "Pełen ekscytacji dzień! Czas na energetyczną muzykę!",
+  "moodDet.neutralDesc": "Spokojny, zrelaksowany dzień. Idealna pora na chill!",
+  "moodDet.energeticDesc": "WOW! Mega energetyczny dzień! Czas rozkręcić imprezę!",
+  "moodDet.romanticDesc": "Romantyczny nastrój... Czas na piękne melodie!",
+  "moodDet.focusedDesc": "Skupiony i gotowy do działania! Muzyka pomoże!",
+  "moodDet.aiDescription": "AI Profesor przeanalizuje Twoje emocje i dobierze 5 idealnych utworów",
 };
 
 const en: TranslationKeys = {
@@ -1188,6 +1323,73 @@ const en: TranslationKeys = {
   "upgrade.footer": "Cancel anytime • 7-day free trial • No credit card required",
   "upgrade.alreadyFree": "You're already on the Free plan!",
   "upgrade.welcomeMsg": "🎉 Welcome to GrouAI {plan}! Enjoy premium features.",
+
+  "moodDet.title": "AI Psychology Professor",
+  "moodDet.subtitle": "TensorFlow.js + AI ready",
+  "moodDet.loadingModels": "Loading face-api.js models...",
+  "moodDet.loadingWait": "This may take a few seconds",
+  "moodDet.tfReady": "TensorFlow.js ready",
+  "moodDet.deepAnalyzing": "Deep psychiatric analysis...",
+  "moodDet.analyzing": "Analyzing...",
+  "moodDet.initTf": "Initializing TensorFlow.js...",
+  "moodDet.detectingFace": "Detecting face...",
+  "moodDet.analyzingExpression": "Analyzing facial expression...",
+  "moodDet.recognizingEmotions": "Recognizing emotions...",
+  "moodDet.finalizing": "Finalizing results...",
+  "moodDet.noFace": "No face detected",
+  "moodDet.noFaceHint": "Make sure your face is well lit",
+  "moodDet.tryAgain": "Try again",
+  "moodDet.cameraActive": "🎥 Camera active! Analyzing face for 5 seconds...",
+  "moodDet.noCameraAccess": "No camera access. Check your permissions.",
+  "moodDet.analyzeBtn": "Analyze emotions (5s)",
+  "moodDet.loadingAI": "Loading AI...",
+  "moodDet.starting": "Starting...",
+  "moodDet.cancel": "Cancel",
+  "moodDet.scanAgain": "Scan again",
+  "moodDet.confidence": "detection confidence",
+  "moodDet.diagnosisTitle": "Professor's Diagnosis",
+  "moodDet.emotionalStateTitle": "Emotional State",
+  "moodDet.riskTitle": "Risk Level",
+  "moodDet.fullAnalysis": "Full psychiatric analysis",
+  "moodDet.collapse": "Collapse",
+  "moodDet.microExpressions": "Micro Expressions",
+  "moodDet.psychInsight": "Psychological Insight",
+  "moodDet.therapeuticAdvice": "Therapeutic Recommendations",
+  "moodDet.musicTherapy": "Music Therapy",
+  "moodDet.healingFreq": "Healing Frequency",
+  "moodDet.playing5tracks": "Playing 5 tracks selected by AI Professor",
+  "moodDet.boostGuarantee": "Mood +100% guaranteed!",
+  "moodDet.goalLabel": "Goal",
+  "moodDet.noTracks": "No tracks in the library.",
+  "moodDet.trackError": "Error loading tracks.",
+  "moodDet.faceError": "Error analyzing face. Try again.",
+  "moodDet.analysisError": "Deep AI analysis failed.",
+  "moodDet.microStep": "Analyzing micro expressions...",
+  "moodDet.diagStep": "Psychiatric diagnosis...",
+  "moodDet.therapyStep": "Selecting music therapy...",
+  "moodDet.selectionStep": "Selecting 5 tracks...",
+  "moodDet.professorAnalyzing": "🧠 AI Professor is analyzing your state...",
+  "moodDet.happy": "Happy",
+  "moodDet.melancholic": "Melancholic",
+  "moodDet.intense": "Intense",
+  "moodDet.anxious": "Anxious",
+  "moodDet.rebellious": "Rebellious",
+  "moodDet.excited": "Excited",
+  "moodDet.relaxed": "Relaxed",
+  "moodDet.energetic": "Energetic",
+  "moodDet.romantic": "Romantic",
+  "moodDet.focused": "Focused",
+  "moodDet.happyDesc": "You're having a great day! Positive energy radiates from you!",
+  "moodDet.sadDesc": "Looks like a tough day... Music will boost your mood!",
+  "moodDet.angryDesc": "You're feeling intense! Time for music to release it!",
+  "moodDet.fearfulDesc": "Stressful day? Calming sounds will help!",
+  "moodDet.disgustedDesc": "Rebellious mood! Rock and punk for you!",
+  "moodDet.surprisedDesc": "Full of excitement! Time for energetic music!",
+  "moodDet.neutralDesc": "Calm, relaxed day. Perfect time to chill!",
+  "moodDet.energeticDesc": "WOW! Super energetic day! Time to party!",
+  "moodDet.romanticDesc": "Romantic mood... Time for beautiful melodies!",
+  "moodDet.focusedDesc": "Focused and ready to go! Music will help!",
+  "moodDet.aiDescription": "AI Professor will analyze your emotions and select 5 perfect tracks",
 };
 
 const nl: TranslationKeys = {
@@ -1575,6 +1777,73 @@ const nl: TranslationKeys = {
   "upgrade.footer": "Op elk moment opzeggen • 7 dagen gratis proberen • Geen creditcard nodig",
   "upgrade.alreadyFree": "Je hebt al het gratis abonnement!",
   "upgrade.welcomeMsg": "🎉 Welkom bij GrouAI {plan}! Geniet van premium functies.",
+
+  "moodDet.title": "AI Professor Psychologie",
+  "moodDet.subtitle": "TensorFlow.js + AI klaar",
+  "moodDet.loadingModels": "Face-api.js modellen laden...",
+  "moodDet.loadingWait": "Dit kan enkele seconden duren",
+  "moodDet.tfReady": "TensorFlow.js klaar",
+  "moodDet.deepAnalyzing": "Diepe psychiatrische analyse...",
+  "moodDet.analyzing": "Analyseren...",
+  "moodDet.initTf": "TensorFlow.js initialiseren...",
+  "moodDet.detectingFace": "Gezicht detecteren...",
+  "moodDet.analyzingExpression": "Gezichtsuitdrukking analyseren...",
+  "moodDet.recognizingEmotions": "Emoties herkennen...",
+  "moodDet.finalizing": "Resultaten afronden...",
+  "moodDet.noFace": "Geen gezicht gedetecteerd",
+  "moodDet.noFaceHint": "Zorg dat je gezicht goed verlicht is",
+  "moodDet.tryAgain": "Probeer opnieuw",
+  "moodDet.cameraActive": "🎥 Camera actief! Gezicht wordt 5 seconden geanalyseerd...",
+  "moodDet.noCameraAccess": "Geen cameratoegang. Controleer je rechten.",
+  "moodDet.analyzeBtn": "Emoties analyseren (5s)",
+  "moodDet.loadingAI": "AI laden...",
+  "moodDet.starting": "Starten...",
+  "moodDet.cancel": "Annuleren",
+  "moodDet.scanAgain": "Opnieuw scannen",
+  "moodDet.confidence": "detectie zekerheid",
+  "moodDet.diagnosisTitle": "Diagnose van de Professor",
+  "moodDet.emotionalStateTitle": "Emotionele Toestand",
+  "moodDet.riskTitle": "Risiconiveau",
+  "moodDet.fullAnalysis": "Volledige psychiatrische analyse",
+  "moodDet.collapse": "Inklappen",
+  "moodDet.microExpressions": "Micro-expressies",
+  "moodDet.psychInsight": "Psychologisch Inzicht",
+  "moodDet.therapeuticAdvice": "Therapeutische Aanbevelingen",
+  "moodDet.musicTherapy": "Muziektherapie",
+  "moodDet.healingFreq": "Helende Frequentie",
+  "moodDet.playing5tracks": "5 nummers geselecteerd door AI Professor",
+  "moodDet.boostGuarantee": "Stemming +100% gegarandeerd!",
+  "moodDet.goalLabel": "Doel",
+  "moodDet.noTracks": "Geen nummers in de bibliotheek.",
+  "moodDet.trackError": "Fout bij laden van nummers.",
+  "moodDet.faceError": "Fout bij gezichtsanalyse. Probeer opnieuw.",
+  "moodDet.analysisError": "Diepe AI-analyse mislukt.",
+  "moodDet.microStep": "Micro-expressies analyseren...",
+  "moodDet.diagStep": "Psychiatrische diagnose...",
+  "moodDet.therapyStep": "Muziektherapie selecteren...",
+  "moodDet.selectionStep": "5 nummers selecteren...",
+  "moodDet.professorAnalyzing": "🧠 AI Professor analyseert je toestand...",
+  "moodDet.happy": "Gelukkig",
+  "moodDet.melancholic": "Melancholisch",
+  "moodDet.intense": "Intens",
+  "moodDet.anxious": "Angstig",
+  "moodDet.rebellious": "Rebels",
+  "moodDet.excited": "Opgewonden",
+  "moodDet.relaxed": "Ontspannen",
+  "moodDet.energetic": "Energiek",
+  "moodDet.romantic": "Romantisch",
+  "moodDet.focused": "Gefocust",
+  "moodDet.happyDesc": "Je hebt een geweldige dag! Positieve energie straalt van je af!",
+  "moodDet.sadDesc": "Het lijkt een zware dag... Muziek zal je stemming verbeteren!",
+  "moodDet.angryDesc": "Je voelt je intens! Tijd voor muziek om het los te laten!",
+  "moodDet.fearfulDesc": "Stressvolle dag? Kalmerende klanken helpen!",
+  "moodDet.disgustedDesc": "Rebelse stemming! Rock en punk voor jou!",
+  "moodDet.surprisedDesc": "Vol opwinding! Tijd voor energieke muziek!",
+  "moodDet.neutralDesc": "Rustige, ontspannen dag. Perfect moment om te chillen!",
+  "moodDet.energeticDesc": "WOW! Super energieke dag! Tijd om te feesten!",
+  "moodDet.romanticDesc": "Romantische stemming... Tijd voor mooie melodieën!",
+  "moodDet.focusedDesc": "Gefocust en klaar voor actie! Muziek helpt!",
+  "moodDet.aiDescription": "AI Professor analyseert je emoties en selecteert 5 perfecte nummers",
 };
 
 const ua: TranslationKeys = {
@@ -1962,6 +2231,73 @@ const ua: TranslationKeys = {
   "upgrade.footer": "Скасувати в будь-який час • 7-денний безкоштовний період • Без кредитної картки",
   "upgrade.alreadyFree": "У вас вже безкоштовний план!",
   "upgrade.welcomeMsg": "🎉 Ласкаво просимо до GrouAI {plan}! Насолоджуйтесь преміум функціями.",
+
+  "moodDet.title": "AI Професор Психології",
+  "moodDet.subtitle": "TensorFlow.js + AI готовий",
+  "moodDet.loadingModels": "Завантаження моделей face-api.js...",
+  "moodDet.loadingWait": "Це може тривати кілька секунд",
+  "moodDet.tfReady": "TensorFlow.js готовий",
+  "moodDet.deepAnalyzing": "Глибокий психіатричний аналіз...",
+  "moodDet.analyzing": "Аналізую...",
+  "moodDet.initTf": "Ініціалізація TensorFlow.js...",
+  "moodDet.detectingFace": "Виявлення обличчя...",
+  "moodDet.analyzingExpression": "Аналіз виразу обличчя...",
+  "moodDet.recognizingEmotions": "Розпізнавання емоцій...",
+  "moodDet.finalizing": "Завершення результатів...",
+  "moodDet.noFace": "Обличчя не виявлено",
+  "moodDet.noFaceHint": "Переконайтесь, що обличчя добре освітлене",
+  "moodDet.tryAgain": "Спробувати знову",
+  "moodDet.cameraActive": "🎥 Камера активна! Аналізую обличчя протягом 5 секунд...",
+  "moodDet.noCameraAccess": "Немає доступу до камери. Перевірте дозволи.",
+  "moodDet.analyzeBtn": "Аналізувати емоції (5с)",
+  "moodDet.loadingAI": "Завантаження AI...",
+  "moodDet.starting": "Запуск...",
+  "moodDet.cancel": "Скасувати",
+  "moodDet.scanAgain": "Сканувати знову",
+  "moodDet.confidence": "впевненість детекції",
+  "moodDet.diagnosisTitle": "Діагноз Професора",
+  "moodDet.emotionalStateTitle": "Емоційний Стан",
+  "moodDet.riskTitle": "Рівень Ризику",
+  "moodDet.fullAnalysis": "Повний психіатричний аналіз",
+  "moodDet.collapse": "Згорнути",
+  "moodDet.microExpressions": "Мікровирази",
+  "moodDet.psychInsight": "Психологічний Інсайт",
+  "moodDet.therapeuticAdvice": "Терапевтичні Рекомендації",
+  "moodDet.musicTherapy": "Музикотерапія",
+  "moodDet.healingFreq": "Цілюща Частота",
+  "moodDet.playing5tracks": "Граю 5 треків, підібраних AI Професором",
+  "moodDet.boostGuarantee": "Настрій +100% гарантовано!",
+  "moodDet.goalLabel": "Ціль",
+  "moodDet.noTracks": "Немає треків у бібліотеці.",
+  "moodDet.trackError": "Помилка завантаження треків.",
+  "moodDet.faceError": "Помилка аналізу обличчя. Спробуйте знову.",
+  "moodDet.analysisError": "Глибокий AI аналіз не вдався.",
+  "moodDet.microStep": "Аналіз мікровиразів...",
+  "moodDet.diagStep": "Психіатричний діагноз...",
+  "moodDet.therapyStep": "Підбір музикотерапії...",
+  "moodDet.selectionStep": "Відбір 5 треків...",
+  "moodDet.professorAnalyzing": "🧠 AI Професор аналізує ваш стан...",
+  "moodDet.happy": "Щасливий",
+  "moodDet.melancholic": "Меланхолійний",
+  "moodDet.intense": "Інтенсивний",
+  "moodDet.anxious": "Тривожний",
+  "moodDet.rebellious": "Бунтівний",
+  "moodDet.excited": "Збуджений",
+  "moodDet.relaxed": "Розслаблений",
+  "moodDet.energetic": "Енергійний",
+  "moodDet.romantic": "Романтичний",
+  "moodDet.focused": "Зосереджений",
+  "moodDet.happyDesc": "У вас чудовий день! Позитивна енергія випромінює від вас!",
+  "moodDet.sadDesc": "Виглядає на важкий день... Музика покращить настрій!",
+  "moodDet.angryDesc": "Ви відчуваєте інтенсивно! Час для музики, щоб звільнити це!",
+  "moodDet.fearfulDesc": "Стресовий день? Заспокійливі звуки допоможуть!",
+  "moodDet.disgustedDesc": "Бунтівний настрій! Рок і панк для вас!",
+  "moodDet.surprisedDesc": "Повні збудження! Час для енергійної музики!",
+  "moodDet.neutralDesc": "Спокійний, розслаблений день. Ідеальний час для відпочинку!",
+  "moodDet.energeticDesc": "ВАУ! Супер енергійний день! Час запалювати!",
+  "moodDet.romanticDesc": "Романтичний настрій... Час для прекрасних мелодій!",
+  "moodDet.focusedDesc": "Зосереджений і готовий до дії! Музика допоможе!",
+  "moodDet.aiDescription": "AI Професор проаналізує ваші емоції та підбере 5 ідеальних треків",
 };
 
 export const translations: Record<Language, TranslationKeys> = { pl, en, nl, ua };
