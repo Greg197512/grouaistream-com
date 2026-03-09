@@ -182,6 +182,8 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
         isLoading,
         isPro,
         isUltimate,
+        isTrialActive,
+        trialDaysLeft,
         hasAccess,
         canUseAIDJ,
         canUseMoodDetection,
