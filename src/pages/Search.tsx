@@ -360,7 +360,7 @@ const Search = () => {
 
             {/* Combined results */}
             {allResults.length > 0 ? (
-              <div className="space-y-2">
+              <div className="space-y-1 sm:space-y-2">
                 {allResults.map((track, index) => (
                   <TrackRow
                     key={track.id}
