@@ -381,6 +381,39 @@ type TranslationKeys = {
   "legal.gdpr.dpo.title": string;
   "legal.gdpr.dpo.p1": string;
   "legal.gdpr.dpo.p2": string;
+
+  // Upgrade Modal
+  "upgrade.title": string;
+  "upgrade.subtitle": string;
+  "upgrade.popular": string;
+  "upgrade.forever": string;
+  "upgrade.perMonth": string;
+  "upgrade.free.name": string;
+  "upgrade.free.f1": string;
+  "upgrade.free.f2": string;
+  "upgrade.free.f3": string;
+  "upgrade.free.f4": string;
+  "upgrade.pro.name": string;
+  "upgrade.pro.f1": string;
+  "upgrade.pro.f2": string;
+  "upgrade.pro.f3": string;
+  "upgrade.pro.f4": string;
+  "upgrade.pro.f5": string;
+  "upgrade.pro.f6": string;
+  "upgrade.ultimate.name": string;
+  "upgrade.ultimate.f1": string;
+  "upgrade.ultimate.f2": string;
+  "upgrade.ultimate.f3": string;
+  "upgrade.ultimate.f4": string;
+  "upgrade.ultimate.f5": string;
+  "upgrade.ultimate.f6": string;
+  "upgrade.ultimate.f7": string;
+  "upgrade.currentPlan": string;
+  "upgrade.upgradeTo": string;
+  "upgrade.processing": string;
+  "upgrade.footer": string;
+  "upgrade.alreadyFree": string;
+  "upgrade.welcomeMsg": string;
 };
 
 const pl: TranslationKeys = {
@@ -736,6 +769,38 @@ const pl: TranslationKeys = {
   "legal.gdpr.dpo.title": "Kontakt z Inspektorem Ochrony Danych",
   "legal.gdpr.dpo.p1": "E-mail: dpo@grouai.stream",
   "legal.gdpr.dpo.p2": "Odpowiadamy na zapytania w ciągu 30 dni kalendarzowych, zgodnie z art. 12 ust. 3 RODO.",
+
+  "upgrade.title": "Ulepsz GrouAI Stream",
+  "upgrade.subtitle": "Odblokuj pełen potencjał AI muzyki",
+  "upgrade.popular": "POPULARNE",
+  "upgrade.forever": "na zawsze",
+  "upgrade.perMonth": "/mies.",
+  "upgrade.free.name": "Darmowy",
+  "upgrade.free.f1": "Podstawowe słuchanie",
+  "upgrade.free.f2": "Ograniczone pomijanie",
+  "upgrade.free.f3": "Reklamy między utworami",
+  "upgrade.free.f4": "Standardowa jakość",
+  "upgrade.pro.name": "Pro",
+  "upgrade.pro.f1": "Nieograniczone słuchanie",
+  "upgrade.pro.f2": "Bez reklam",
+  "upgrade.pro.f3": "Wysoka jakość (320kbps)",
+  "upgrade.pro.f4": "AI DJ i Detekcja Nastroju",
+  "upgrade.pro.f5": "Pobieranie offline",
+  "upgrade.pro.f6": "5 playlist AI dziennie",
+  "upgrade.ultimate.name": "Ultimate",
+  "upgrade.ultimate.f1": "Wszystko z Pro",
+  "upgrade.ultimate.f2": "Bezstratne audio (FLAC)",
+  "upgrade.ultimate.f3": "Nieograniczone playlisty AI",
+  "upgrade.ultimate.f4": "Raporty AI Psychologa",
+  "upgrade.ultimate.f5": "Priorytetowe wsparcie",
+  "upgrade.ultimate.f6": "Wczesny dostęp do funkcji",
+  "upgrade.ultimate.f7": "Własna osobowość AI DJ",
+  "upgrade.currentPlan": "Aktualny Plan",
+  "upgrade.upgradeTo": "Ulepsz do",
+  "upgrade.processing": "Przetwarzanie...",
+  "upgrade.footer": "Anuluj w każdej chwili • 7-dniowy darmowy okres • Bez karty kredytowej",
+  "upgrade.alreadyFree": "Już masz plan Darmowy!",
+  "upgrade.welcomeMsg": "🎉 Witaj w GrouAI {plan}! Ciesz się funkcjami premium.",
 };
 
 const en: TranslationKeys = {
@@ -1091,6 +1156,38 @@ const en: TranslationKeys = {
   "legal.gdpr.dpo.title": "Data Protection Officer Contact",
   "legal.gdpr.dpo.p1": "Email: dpo@grouai.stream",
   "legal.gdpr.dpo.p2": "We respond to inquiries within 30 calendar days, in accordance with Art. 12(3) GDPR.",
+
+  "upgrade.title": "Upgrade GrouAI Stream",
+  "upgrade.subtitle": "Unlock the full potential of AI music",
+  "upgrade.popular": "POPULAR",
+  "upgrade.forever": "forever",
+  "upgrade.perMonth": "/month",
+  "upgrade.free.name": "Free",
+  "upgrade.free.f1": "Basic streaming",
+  "upgrade.free.f2": "Limited skips",
+  "upgrade.free.f3": "Ads between songs",
+  "upgrade.free.f4": "Standard quality",
+  "upgrade.pro.name": "Pro",
+  "upgrade.pro.f1": "Unlimited streaming",
+  "upgrade.pro.f2": "No ads",
+  "upgrade.pro.f3": "HQ Audio (320kbps)",
+  "upgrade.pro.f4": "AI DJ & Mood Detection",
+  "upgrade.pro.f5": "Offline downloads",
+  "upgrade.pro.f6": "5 AI playlists/day",
+  "upgrade.ultimate.name": "Ultimate",
+  "upgrade.ultimate.f1": "Everything in Pro",
+  "upgrade.ultimate.f2": "Lossless Audio (FLAC)",
+  "upgrade.ultimate.f3": "Unlimited AI playlists",
+  "upgrade.ultimate.f4": "AI Psychologist reports",
+  "upgrade.ultimate.f5": "Priority support",
+  "upgrade.ultimate.f6": "Early access to features",
+  "upgrade.ultimate.f7": "Custom AI DJ personality",
+  "upgrade.currentPlan": "Current Plan",
+  "upgrade.upgradeTo": "Upgrade to",
+  "upgrade.processing": "Processing...",
+  "upgrade.footer": "Cancel anytime • 7-day free trial • No credit card required",
+  "upgrade.alreadyFree": "You're already on the Free plan!",
+  "upgrade.welcomeMsg": "🎉 Welcome to GrouAI {plan}! Enjoy premium features.",
 };
 
 const nl: TranslationKeys = {
@@ -1446,6 +1543,38 @@ const nl: TranslationKeys = {
   "legal.gdpr.dpo.title": "Contact Functionaris voor Gegevensbescherming",
   "legal.gdpr.dpo.p1": "E-mail: dpo@grouai.stream",
   "legal.gdpr.dpo.p2": "We reageren op vragen binnen 30 kalenderdagen, conform Art. 12(3) AVG.",
+
+  "upgrade.title": "Upgrade GrouAI Stream",
+  "upgrade.subtitle": "Ontgrendel het volledige potentieel van AI-muziek",
+  "upgrade.popular": "POPULAIR",
+  "upgrade.forever": "voor altijd",
+  "upgrade.perMonth": "/maand",
+  "upgrade.free.name": "Gratis",
+  "upgrade.free.f1": "Basis streaming",
+  "upgrade.free.f2": "Beperkt overslaan",
+  "upgrade.free.f3": "Advertenties tussen nummers",
+  "upgrade.free.f4": "Standaard kwaliteit",
+  "upgrade.pro.name": "Pro",
+  "upgrade.pro.f1": "Onbeperkt streamen",
+  "upgrade.pro.f2": "Geen advertenties",
+  "upgrade.pro.f3": "HQ Audio (320kbps)",
+  "upgrade.pro.f4": "AI DJ & Stemmingsdetectie",
+  "upgrade.pro.f5": "Offline downloads",
+  "upgrade.pro.f6": "5 AI-afspeellijsten/dag",
+  "upgrade.ultimate.name": "Ultimate",
+  "upgrade.ultimate.f1": "Alles uit Pro",
+  "upgrade.ultimate.f2": "Lossless Audio (FLAC)",
+  "upgrade.ultimate.f3": "Onbeperkte AI-afspeellijsten",
+  "upgrade.ultimate.f4": "AI Psycholoog rapporten",
+  "upgrade.ultimate.f5": "Prioriteitsondersteuning",
+  "upgrade.ultimate.f6": "Vroege toegang tot functies",
+  "upgrade.ultimate.f7": "Aangepaste AI DJ persoonlijkheid",
+  "upgrade.currentPlan": "Huidig Abonnement",
+  "upgrade.upgradeTo": "Upgraden naar",
+  "upgrade.processing": "Verwerken...",
+  "upgrade.footer": "Op elk moment opzeggen • 7 dagen gratis proberen • Geen creditcard nodig",
+  "upgrade.alreadyFree": "Je hebt al het gratis abonnement!",
+  "upgrade.welcomeMsg": "🎉 Welkom bij GrouAI {plan}! Geniet van premium functies.",
 };
 
 const ua: TranslationKeys = {
@@ -1801,6 +1930,38 @@ const ua: TranslationKeys = {
   "legal.gdpr.dpo.title": "Контакт з Офіцером захисту даних",
   "legal.gdpr.dpo.p1": "E-mail: dpo@grouai.stream",
   "legal.gdpr.dpo.p2": "Ми відповідаємо на запити протягом 30 календарних днів, відповідно до ст. 12(3) GDPR.",
+
+  "upgrade.title": "Покращити GrouAI Stream",
+  "upgrade.subtitle": "Розблокуйте повний потенціал AI музики",
+  "upgrade.popular": "ПОПУЛЯРНЕ",
+  "upgrade.forever": "назавжди",
+  "upgrade.perMonth": "/місяць",
+  "upgrade.free.name": "Безкоштовний",
+  "upgrade.free.f1": "Базове прослуховування",
+  "upgrade.free.f2": "Обмежене пропускання",
+  "upgrade.free.f3": "Реклама між піснями",
+  "upgrade.free.f4": "Стандартна якість",
+  "upgrade.pro.name": "Pro",
+  "upgrade.pro.f1": "Необмежене прослуховування",
+  "upgrade.pro.f2": "Без реклами",
+  "upgrade.pro.f3": "Висока якість (320kbps)",
+  "upgrade.pro.f4": "AI DJ та Визначення Настрою",
+  "upgrade.pro.f5": "Завантаження офлайн",
+  "upgrade.pro.f6": "5 AI плейлистів на день",
+  "upgrade.ultimate.name": "Ultimate",
+  "upgrade.ultimate.f1": "Все з Pro",
+  "upgrade.ultimate.f2": "Безвтратне аудіо (FLAC)",
+  "upgrade.ultimate.f3": "Необмежені AI плейлисти",
+  "upgrade.ultimate.f4": "Звіти AI Психолога",
+  "upgrade.ultimate.f5": "Пріоритетна підтримка",
+  "upgrade.ultimate.f6": "Ранній доступ до функцій",
+  "upgrade.ultimate.f7": "Індивідуальна особистість AI DJ",
+  "upgrade.currentPlan": "Поточний План",
+  "upgrade.upgradeTo": "Покращити до",
+  "upgrade.processing": "Обробка...",
+  "upgrade.footer": "Скасувати в будь-який час • 7-денний безкоштовний період • Без кредитної картки",
+  "upgrade.alreadyFree": "У вас вже безкоштовний план!",
+  "upgrade.welcomeMsg": "🎉 Ласкаво просимо до GrouAI {plan}! Насолоджуйтесь преміум функціями.",
 };
 
 export const translations: Record<Language, TranslationKeys> = { pl, en, nl, ua };
