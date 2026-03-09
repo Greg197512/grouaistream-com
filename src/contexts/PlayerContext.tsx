@@ -522,16 +522,28 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     toast.success(`Added "${track.title}" to queue`);
   };
 
-  // Auto-play "Drop Chant Stream" on app start
+  // Auto-play language-specific track after login
   const hasAutoPlayed = useRef(false);
   useEffect(() => {
     if (hasAutoPlayed.current || currentTrack) return;
+    if (!userId) return; // Wait for login
     hasAutoPlayed.current = true;
-    
+
+    // Read current language from localStorage
+    const lang = localStorage.getItem("grooveai-language") || "en";
+    const langTrackMap: Record<string, string> = {
+      pl: '%Holenderski Club Peak%',
+      en: '%Drop Chant Stream%',
+      nl: '%Amsterdam Drop Call%',
+      ua: '%Kyiv Club Signal%',
+    };
+    const pattern = langTrackMap[lang] || langTrackMap.en;
+
     supabase
       .from('tracks')
       .select('*')
-      .ilike('title', '%Drop Chant Stream%')
+      .ilike('title', pattern)
+      .not('audio_url', 'is', null)
       .limit(1)
       .then(({ data }) => {
         if (data && data.length > 0) {
@@ -543,7 +555,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
           }
         }
       });
-  }, []);
+  }, [userId]);
 
   // Auto-play specific track when language changes
   useEffect(() => {
