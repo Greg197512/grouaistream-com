@@ -333,68 +333,6 @@ export const PlayerBar = () => {
             )} />
           </button>
 
-          {/* Face Recognition / Mood Detection Button - hidden on mobile */}
-          <motion.div className="relative flex-shrink-0 hidden md:block">
-            {/* Glow ring */}
-            <motion.div
-              className="absolute -inset-1 rounded-full bg-gradient-to-t from-primary via-accent to-primary opacity-60 blur-md"
-              animate={{ opacity: [0.4, 0.8, 0.4], scale: [1, 1.1, 1] }}
-              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-            />
-            {/* Sparkle particles going up */}
-            {[...Array(5)].map((_, i) => (
-              <motion.div
-                key={i}
-                className="absolute w-1 h-1 rounded-full bg-accent"
-                style={{ left: `${20 + i * 15}%`, bottom: '50%' }}
-                animate={{
-                  y: [-2, -18, -28],
-                  x: [0, (i % 2 === 0 ? 4 : -4), (i % 2 === 0 ? 6 : -6)],
-                  opacity: [0.9, 0.6, 0],
-                  scale: [1, 0.7, 0.3],
-                }}
-                transition={{
-                  duration: 1.2 + i * 0.2,
-                  repeat: Infinity,
-                  delay: i * 0.3,
-                  ease: "easeOut",
-                }}
-              />
-            ))}
-            <motion.button
-              whileHover={{ scale: 1.2 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={() => setShowMoodDetector(true)}
-              className="relative z-10 flex items-center justify-center h-9 w-9 rounded-full bg-gradient-to-br from-primary to-accent border border-white/30 shadow-[0_0_12px_rgba(var(--primary),0.5)]"
-              title="Rozpoznawanie nastroju (Kamera)"
-            >
-              <motion.div
-                className="absolute inset-0 flex flex-col items-center justify-center"
-                animate={{ opacity: [1, 1, 0, 0, 1] }}
-                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-              >
-                <div className="flex flex-col items-center gap-0.5">
-                  <div className="flex gap-1.5">
-                    <div className="w-1 h-1 rounded-full bg-white" />
-                    <div className="w-1 h-1 rounded-full bg-white" />
-                  </div>
-                  <div className="w-3.5 h-1.5 border-b-[1.5px] border-white rounded-b-full" />
-                </div>
-              </motion.div>
-              <motion.div
-                className="absolute inset-0 flex items-center justify-center"
-                animate={{ opacity: [0, 0, 1, 1, 0] }}
-                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-              >
-                <motion.div
-                  animate={{ scale: [0.8, 1, 0.8], rotate: [0, 5, -5, 0] }}
-                  transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                >
-                  <Camera className="h-5 w-5 text-white" />
-                </motion.div>
-              </motion.div>
-            </motion.button>
-          </motion.div>
         </div>
 
         {/* Player Controls */}
