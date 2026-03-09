@@ -399,11 +399,11 @@ export const PlayerBar = () => {
 
         {/* Player Controls */}
         <div className="flex-1 flex flex-col items-center gap-0.5 md:gap-1.5 max-w-[600px] min-w-0">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <button 
               onClick={toggleShuffle}
               className={cn(
-                "p-1 transition-colors",
+                "p-1 transition-colors hidden sm:block",
                 isShuffled ? "text-primary" : "text-white/40 hover:text-white/70"
               )}
             >
@@ -417,16 +417,27 @@ export const PlayerBar = () => {
               <SkipBack className="h-4 w-4" />
             </button>
 
+            {/* Mood Detector Button - next to play */}
+            <motion.button
+              whileHover={{ scale: 1.15 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={() => setShowMoodDetector(true)}
+              className="relative flex items-center justify-center h-7 w-7 sm:h-8 sm:w-8 rounded-full bg-gradient-to-br from-primary to-accent border border-white/20 shadow-[0_0_8px_rgba(var(--primary),0.4)]"
+              title="Rozpoznawanie nastroju"
+            >
+              <ScanFace className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-white" />
+            </motion.button>
+
             <motion.button
               onClick={togglePlay}
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-background hover:bg-white transition-colors"
+              className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full bg-white/90 text-background hover:bg-white transition-colors"
             >
               {isPlaying ? (
-                <Pause className="h-3.5 w-3.5 fill-current" />
+                <Pause className="h-3.5 w-3.5 sm:h-4 sm:w-4 fill-current" />
               ) : (
-                <Play className="h-3.5 w-3.5 fill-current ml-0.5" />
+                <Play className="h-3.5 w-3.5 sm:h-4 sm:w-4 fill-current ml-0.5" />
               )}
             </motion.button>
 
@@ -440,7 +451,7 @@ export const PlayerBar = () => {
             <button 
               onClick={toggleRepeat}
               className={cn(
-                "relative p-1 transition-colors",
+                "relative p-1 transition-colors hidden sm:block",
                 repeatMode !== 'off' ? "text-primary" : "text-white/40 hover:text-white/70"
               )}
             >
