@@ -417,16 +417,69 @@ export const PlayerBar = () => {
               <SkipBack className="h-4 w-4" />
             </button>
 
-            {/* Mood Detector Button - next to play */}
-            <motion.button
-              whileHover={{ scale: 1.15 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={() => setShowMoodDetector(true)}
-              className="relative flex items-center justify-center h-7 w-7 sm:h-8 sm:w-8 rounded-full bg-gradient-to-br from-primary to-accent border border-white/20 shadow-[0_0_8px_rgba(var(--primary),0.4)]"
-              title="Rozpoznawanie nastroju"
-            >
-              <ScanFace className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-white" />
-            </motion.button>
+            {/* Mood Detector Button - next to play with animations */}
+            <motion.div className="relative flex items-center justify-center">
+              {/* Neon glow */}
+              <motion.div
+                className="absolute -inset-1 rounded-full bg-gradient-to-t from-primary via-accent to-primary opacity-50 blur-md"
+                animate={{ opacity: [0.3, 0.7, 0.3], scale: [1, 1.15, 1] }}
+                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+              />
+              {/* Sparkle particles */}
+              {[...Array(4)].map((_, i) => (
+                <motion.div
+                  key={i}
+                  className="absolute w-1 h-1 rounded-full bg-accent"
+                  style={{ left: `${15 + i * 20}%`, bottom: '50%' }}
+                  animate={{
+                    y: [-2, -14, -22],
+                    x: [0, (i % 2 === 0 ? 3 : -3), (i % 2 === 0 ? 5 : -5)],
+                    opacity: [0.9, 0.5, 0],
+                    scale: [1, 0.6, 0.2],
+                  }}
+                  transition={{
+                    duration: 1 + i * 0.2,
+                    repeat: Infinity,
+                    delay: i * 0.25,
+                    ease: "easeOut",
+                  }}
+                />
+              ))}
+              <motion.button
+                whileHover={{ scale: 1.2 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={() => setShowMoodDetector(true)}
+                className="relative z-10 flex items-center justify-center h-7 w-7 sm:h-8 sm:w-8 rounded-full bg-gradient-to-br from-primary to-accent border border-white/30 shadow-[0_0_10px_rgba(var(--primary),0.5)]"
+                title="Rozpoznawanie nastroju (Kamera)"
+              >
+                {/* Face icon → Camera icon alternating */}
+                <motion.div
+                  className="absolute inset-0 flex flex-col items-center justify-center"
+                  animate={{ opacity: [1, 1, 0, 0, 1] }}
+                  transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                >
+                  <div className="flex flex-col items-center gap-0.5">
+                    <div className="flex gap-1">
+                      <div className="w-0.5 h-0.5 sm:w-1 sm:h-1 rounded-full bg-white" />
+                      <div className="w-0.5 h-0.5 sm:w-1 sm:h-1 rounded-full bg-white" />
+                    </div>
+                    <div className="w-2.5 sm:w-3.5 h-1 sm:h-1.5 border-b-[1.5px] border-white rounded-b-full" />
+                  </div>
+                </motion.div>
+                <motion.div
+                  className="absolute inset-0 flex items-center justify-center"
+                  animate={{ opacity: [0, 0, 1, 1, 0] }}
+                  transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                >
+                  <motion.div
+                    animate={{ scale: [0.8, 1, 0.8], rotate: [0, 5, -5, 0] }}
+                    transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                  >
+                    <Camera className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-white" />
+                  </motion.div>
+                </motion.div>
+              </motion.button>
+            </motion.div>
 
             <motion.button
               onClick={togglePlay}
