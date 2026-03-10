@@ -28,9 +28,13 @@ serve(async (req) => {
       /domówk[aęi]/i, /imprez[aęi]/i, /party/i,
       /set\s+muzyczn/i, /zrób\s+set/i, /postaw\s+domówk/i,
       /rozkręć/i, /haus\s*party/i, /house\s*party/i,
+      /peak\s*time/i, /peak\s*hour/i, /rotterdam/i, /hard\s*techno/i,
+      /parkiet\s*do\s*czerwoności/i, /rozbaw\s*do\s*czerwoności/i,
+      /high\s*energy\s*domówka/i, /feestje/i, /draai/i,
+      /вечірк[аіу]/i, /діджей/i,
     ];
     const hasDJIntent = djPatterns.some(p => p.test(lowerMessage)) && 
-      (/puś|graj|włącz|zapodaj|odpal|play|daj|zrób|rozkręć|postaw|zajmij|mixu|miksuj/i.test(lowerMessage));
+      (/puś|graj|włącz|zapodaj|odpal|play|daj|zrób|rozkręć|postaw|zajmij|mixu|miksuj|draai|start|go|dawaj|jazda|peak|parkiet|rozbaw/i.test(lowerMessage));
 
     // Fetch ALL tracks from the database so the assistant knows the full library
     const { data: allTracks } = await supabase
