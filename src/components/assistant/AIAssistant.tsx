@@ -27,6 +27,7 @@ interface Message {
   isDJMode?: boolean;
   radioUpdate?: { genre: string; trackCount: number };
   radioWish?: { wishText: string };
+  radioTrackMod?: { action: "added" | "removed"; tracks: string[]; count: number };
 }
 
 const getTimeOfDay = () => {
@@ -185,6 +186,7 @@ export const AIAssistant = () => {
   const pendingPlaylistRef = useRef<{ tracks: PlaylistTrackInfo[]; isDJ: boolean } | null>(null);
   const pendingRadioUpdateRef = useRef<{ genre: string; trackCount: number } | null>(null);
   const pendingRadioWishRef = useRef<{ wishText: string } | null>(null);
+  const pendingRadioTrackModRef = useRef<{ action: "added" | "removed"; tracks: string[]; count: number } | null>(null);
 
   const handleSend = useCallback(async () => {
     if (!input.trim() || isLoading) return;
@@ -250,6 +252,12 @@ export const AIAssistant = () => {
               continue;
             }
 
+            // Handle radio track add/remove event
+            if (parsed.type === "radio_tracks_modified") {
+              pendingRadioTrackModRef.current = parsed.data;
+              continue;
+            }
+
             // Handle auto-play multiple tracks (normal + DJ mode)
             if (parsed.type === "auto_play_tracks" || parsed.type === "dj_mode_tracks") {
               const trackIds = parsed.data.map((t: any) => t.id);
@@ -282,6 +290,7 @@ export const AIAssistant = () => {
               const pending = pendingPlaylistRef.current;
               const radioUpdate = pendingRadioUpdateRef.current;
               const radioWish = pendingRadioWishRef.current;
+              const radioTrackMod = pendingRadioTrackModRef.current;
               setMessages(prev => {
                 const msgData: Message = {
                   role: "assistant",
@@ -291,6 +300,7 @@ export const AIAssistant = () => {
                   isDJMode: pending?.isDJ,
                   radioUpdate: radioUpdate || undefined,
                   radioWish: radioWish || undefined,
+                  radioTrackMod: radioTrackMod || undefined,
                 };
                 const last = prev[prev.length - 1];
                 if (last?.role === "assistant" && prev.length > 1 && prev[prev.length - 2]?.role === "user") {
@@ -333,6 +343,7 @@ export const AIAssistant = () => {
       pendingPlaylistRef.current = null;
       pendingRadioUpdateRef.current = null;
       pendingRadioWishRef.current = null;
+      pendingRadioTrackModRef.current = null;
       setIsLoading(false);
     }
   }, [input, isLoading, messages, userContext, startDJSession, parseDJCommand]);
@@ -510,6 +521,29 @@ export const AIAssistant = () => {
                           <div className="flex-1 min-w-0">
                             <p className="text-xs font-medium">Życzenie wysłane do radia</p>
                             <p className="text-[10px] text-muted-foreground truncate">"{msg.radioWish.wishText}"</p>
+                          </div>
+                        </motion.div>
+                      )}
+                      {/* Radio track add/remove badge */}
+                      {msg.radioTrackMod && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 4 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="mt-3 p-2.5 rounded-xl bg-accent/10 border border-accent/20"
+                        >
+                          <div className="flex items-center gap-2 mb-1.5">
+                            <Radio className="h-4 w-4 text-accent-foreground" />
+                            <p className="text-xs font-medium">
+                              {msg.radioTrackMod.action === "added" ? "➕ Dodano do ramówki" : "➖ Usunięto z ramówki"} ({msg.radioTrackMod.count})
+                            </p>
+                          </div>
+                          <div className="space-y-0.5">
+                            {msg.radioTrackMod.tracks.slice(0, 5).map((t, i) => (
+                              <p key={i} className="text-[10px] text-muted-foreground truncate">• {t}</p>
+                            ))}
+                            {msg.radioTrackMod.tracks.length > 5 && (
+                              <p className="text-[10px] text-muted-foreground">...i {msg.radioTrackMod.tracks.length - 5} więcej</p>
+                            )}
                           </div>
                         </motion.div>
                       )}

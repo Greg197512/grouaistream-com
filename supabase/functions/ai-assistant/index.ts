@@ -197,6 +197,89 @@ serve(async (req) => {
     }
 
     // ==========================================
+    // RADIO TRACK ADD/REMOVE DETECTION
+    // ==========================================
+    const radioAddPatterns = [
+      /(?:dodaj|wstaw|dorzuć|dorzuc|wrzuć|wrzuc|add|put).*(?:do\s+radi|do\s+ramówk|do\s+ramowk|w\s+radiu|to\s+radio|do\s+rozgłośni|do\s+rozglosni)/i,
+      /(?:radi|ramówk|ramowk|rozgłośni|rozglosni).*(?:dodaj|wstaw|dorzuć|dorzuc|wrzuć|wrzuc)/i,
+    ];
+    const radioRemovePatterns = [
+      /(?:usuń|usun|skasuj|wywal|zdejmij|remove|delete).*(?:z\s+radi|z\s+ramówk|z\s+ramowk|z\s+rozgłośni|z\s+rozglosni|from\s+radio)/i,
+      /(?:radi|ramówk|ramowk|rozgłośni|rozglosni).*(?:usuń|usun|skasuj|wywal|zdejmij|remove)/i,
+    ];
+    const hasRadioAddIntent = !hasRadioIntent && !hasWishIntent && radioAddPatterns.some(p => p.test(lowerMessage));
+    const hasRadioRemoveIntent = !hasRadioIntent && !hasWishIntent && radioRemovePatterns.some(p => p.test(lowerMessage));
+    let radioTrackResult: { action: "added" | "removed"; tracks: string[]; count: number } | null = null;
+
+    if (hasRadioAddIntent || hasRadioRemoveIntent) {
+      // Fetch all playable tracks to match against user's request
+      const { data: allLibTracks } = await supabase
+        .from("tracks")
+        .select("id, title, artist, genre, duration, audio_url")
+        .not("audio_url", "is", null)
+        .limit(1000);
+
+      if (allLibTracks && allLibTracks.length > 0) {
+        // Extract search terms - remove radio/action keywords to get track/artist names
+        const cleanedMessage = message
+          .replace(/(?:dodaj|wstaw|dorzuć|dorzuc|wrzuć|wrzuc|usuń|usun|skasuj|wywal|zdejmij|add|put|remove|delete)/gi, "")
+          .replace(/(?:do\s+radi|do\s+ramówk|do\s+ramowk|w\s+radiu|to\s+radio|do\s+rozgłośni|do\s+rozglosni|z\s+radi|z\s+ramówk|z\s+ramowk|z\s+rozgłośni|z\s+rozglosni|from\s+radio)/gi, "")
+          .replace(/(?:utwór|utwor|piosenkę|piosenke|piosenkę|track|song|kawałek|kawalek)/gi, "")
+          .trim();
+
+        const searchTerms = cleanedMessage.split(/[\s,;]+/).filter(w => w.length > 2);
+
+        // Find matching tracks
+        const matchingTracks = allLibTracks.filter((t: any) =>
+          searchTerms.some(term =>
+            t.title?.toLowerCase().includes(term.toLowerCase()) ||
+            t.artist?.toLowerCase().includes(term.toLowerCase())
+          )
+        );
+
+        if (hasRadioAddIntent && matchingTracks.length > 0) {
+          // Get current max position
+          const { data: currentSchedule } = await supabase
+            .from("radio_schedule")
+            .select("position")
+            .order("position", { ascending: false })
+            .limit(1);
+
+          const maxPos = currentSchedule?.[0]?.position ?? -1;
+
+          const newItems = matchingTracks.slice(0, 10).map((t: any, i: number) => ({
+            track_id: t.id,
+            position: maxPos + 1 + i,
+            item_type: "track",
+            custom_duration: t.duration || 180,
+          }));
+
+          await supabase.from("radio_schedule").insert(newItems);
+
+          radioTrackResult = {
+            action: "added",
+            tracks: matchingTracks.slice(0, 10).map((t: any) => `${t.title} — ${t.artist}`),
+            count: Math.min(matchingTracks.length, 10),
+          };
+        }
+
+        if (hasRadioRemoveIntent && matchingTracks.length > 0) {
+          const trackIds = matchingTracks.map((t: any) => t.id);
+          await supabase
+            .from("radio_schedule")
+            .delete()
+            .in("track_id", trackIds);
+
+          radioTrackResult = {
+            action: "removed",
+            tracks: matchingTracks.map((t: any) => `${t.title} — ${t.artist}`),
+            count: matchingTracks.length,
+          };
+        }
+      }
+    }
+
+    // ==========================================
     // MUSIC PLAY DETECTION (existing logic)
     // ==========================================
 
@@ -385,6 +468,15 @@ W odpowiedzi POTWIERDŹ że życzenie zostało wysłane do radia. Bądź entuzja
 Powiedz że wiadomość pojawi się na stronie /radio-live w sekcji życzeń.`
       : "";
 
+    // Build radio track add/remove info
+    const radioTrackInfo = radioTrackResult
+      ? `\n\n## 🎵 UTWORY ${radioTrackResult.action === "added" ? "DODANE DO" : "USUNIĘTE Z"} RAMÓWKI RADIA!
+${radioTrackResult.action === "added" ? "Dodano" : "Usunięto"} **${radioTrackResult.count}** utworów:
+${radioTrackResult.tracks.map((n: string, i: number) => `${i + 1}. ${n}`).join("\n")}
+
+W odpowiedzi POTWIERDŹ ${radioTrackResult.action === "added" ? "dodanie utworów do" : "usunięcie utworów z"} ramówki radia. Bądź entuzjastyczny! Użyj emoji 📻 🎵.`
+      : "";
+
     // Build info about auto-played tracks for the AI to reference
     const autoPlayInfo = autoPlayTracks.length > 0
       ? hasDJIntent
@@ -435,6 +527,10 @@ ${radioUpdateInfo}
 ## SUPER WAŻNA FUNKCJA - ŻYCZENIA W RADIU:
 Gdy użytkownik pisze np. "napisz życzenia w radiu: pozdrawiam wszystkich!" lub "dodaj wiadomość do radia: super muzyka!" — system AUTOMATYCZNIE dodaje życzenie do sekcji życzeń na /radio-live. Ty musisz POTWIERDZIĆ wysłanie.
 ${wishInfo}
+
+## SUPER WAŻNA FUNKCJA - DODAWANIE/USUWANIE KONKRETNYCH UTWORÓW Z RAMÓWKI RADIA:
+Gdy użytkownik pisze np. "dodaj utwór X do radia", "wrzuć Y do ramówki", "usuń Z z radia" — system AUTOMATYCZNIE dodaje lub usuwa konkretne utwory z ramówki. Ty musisz POTWIERDZIĆ operację.
+${radioTrackInfo}
 
 ## FORMATOWANIE ODPOWIEDZI:
 - Używaj **pogrubień** dla ważnych terminów
@@ -545,6 +641,13 @@ Znasz DOKŁADNIE każdą funkcję aplikacji:
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({
             type: "radio_wish_sent",
             data: wishResult,
+          })}\n\n`));
+        }
+        // Send radio track add/remove event
+        if (radioTrackResult) {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+            type: "radio_tracks_modified",
+            data: radioTrackResult,
           })}\n\n`));
         }
         // Send auto-play tracks as first event (multiple tracks for playlist)
