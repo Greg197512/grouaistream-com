@@ -320,6 +320,7 @@ export const AIAssistant = () => {
       }]);
     } finally {
       pendingPlaylistRef.current = null;
+      pendingRadioUpdateRef.current = null;
       setIsLoading(false);
     }
   }, [input, isLoading, messages, userContext, startDJSession, parseDJCommand]);
