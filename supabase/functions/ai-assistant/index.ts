@@ -540,6 +540,13 @@ Znasz DOKŁADNIE każdą funkcję aplikacji:
             data: radioUpdateResult,
           })}\n\n`));
         }
+        // Send radio wish event
+        if (wishResult) {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+            type: "radio_wish_sent",
+            data: wishResult,
+          })}\n\n`));
+        }
         // Send auto-play tracks as first event (multiple tracks for playlist)
         else if (autoPlayTracks.length > 0) {
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({
