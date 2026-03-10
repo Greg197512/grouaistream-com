@@ -468,6 +468,15 @@ W odpowiedzi POTWIERDŹ że życzenie zostało wysłane do radia. Bądź entuzja
 Powiedz że wiadomość pojawi się na stronie /radio-live w sekcji życzeń.`
       : "";
 
+    // Build radio track add/remove info
+    const radioTrackInfo = radioTrackResult
+      ? `\n\n## 🎵 UTWORY ${radioTrackResult.action === "added" ? "DODANE DO" : "USUNIĘTE Z"} RAMÓWKI RADIA!
+${radioTrackResult.action === "added" ? "Dodano" : "Usunięto"} **${radioTrackResult.count}** utworów:
+${radioTrackResult.tracks.map((n: string, i: number) => `${i + 1}. ${n}`).join("\n")}
+
+W odpowiedzi POTWIERDŹ ${radioTrackResult.action === "added" ? "dodanie utworów do" : "usunięcie utworów z"} ramówki radia. Bądź entuzjastyczny! Użyj emoji 📻 🎵.`
+      : "";
+
     // Build info about auto-played tracks for the AI to reference
     const autoPlayInfo = autoPlayTracks.length > 0
       ? hasDJIntent
