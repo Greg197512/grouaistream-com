@@ -252,6 +252,12 @@ export const AIAssistant = () => {
               continue;
             }
 
+            // Handle radio track add/remove event
+            if (parsed.type === "radio_tracks_modified") {
+              pendingRadioTrackModRef.current = parsed.data;
+              continue;
+            }
+
             // Handle auto-play multiple tracks (normal + DJ mode)
             if (parsed.type === "auto_play_tracks" || parsed.type === "dj_mode_tracks") {
               const trackIds = parsed.data.map((t: any) => t.id);
