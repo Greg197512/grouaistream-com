@@ -14,16 +14,18 @@ export const isTTSSpeaking = () => _isSpeaking;
  * Speak text via Web Speech Synthesis.
  * Returns a Promise that resolves when speech ends (or immediately if unsupported).
  */
-export const speak = (text: string, opts?: { rate?: number; pitch?: number }): Promise<void> => {
+export const speak = (text: string, opts?: { rate?: number; pitch?: number; lang?: string }): Promise<void> => {
   if (!("speechSynthesis" in window)) return Promise.resolve();
 
   // Cancel any ongoing speech
   window.speechSynthesis.cancel();
 
+  const requestedLang = opts?.lang || "pl-PL";
+
   const trySpeak = (voices: SpeechSynthesisVoice[]) => {
     return new Promise<void>((resolve) => {
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = "pl-PL";
+      utterance.lang = requestedLang;
       utterance.rate = opts?.rate ?? 1.0;
       utterance.pitch = opts?.pitch ?? 0.85;
 
