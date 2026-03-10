@@ -125,9 +125,17 @@ export const AIDJSection = () => {
             <p className="text-sm text-muted-foreground">Your personal music curator</p>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Button
-            onClick={() => setShowMoodDetector(!showMoodDetector)}
+            onClick={() => { setShowCrowdCamera(!showCrowdCamera); if (showMoodDetector) setShowMoodDetector(false); }}
+            variant={showCrowdCamera ? "default" : "outline"}
+            className="gap-2 rounded-full"
+          >
+            <Eye className="h-4 w-4" />
+            {showCrowdCamera ? "Ukryj Crowd Vision" : "Crowd Vision"}
+          </Button>
+          <Button
+            onClick={() => { setShowMoodDetector(!showMoodDetector); if (showCrowdCamera) setShowCrowdCamera(false); }}
             variant="outline"
             className="gap-2 rounded-full"
           >
