@@ -765,6 +765,13 @@ Znasz DOKŁADNIE każdą funkcję aplikacji:
             data: radioTrackResult,
           })}\n\n`));
         }
+        // Send dedication event
+        if (dedicationResult) {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+            type: "radio_dedication",
+            data: dedicationResult,
+          })}\n\n`));
+        }
         // Send auto-play tracks as first event (multiple tracks for playlist)
         else if (autoPlayTracks.length > 0) {
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({
