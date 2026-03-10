@@ -22,6 +22,128 @@ serve(async (req) => {
 
     const lowerMessage = message.toLowerCase();
 
+    // ==========================================
+    // RADIO MANAGEMENT DETECTION
+    // ==========================================
+    const radioPatterns = [
+      /(?:zmień|zmien|ustaw|przełącz|przelacz|włącz|wlacz|daj|puść|pusc|postaw|zrób|zrob).*(?:rozgłośni|rozglosni|radio|ramówk[ęeai]|ramowk[eai]|stacj[ęeai])/i,
+      /(?:rozgłośni|rozglosni|radio|ramówk[ęeai]|ramowk[eai]|stacj[ęeai]).*(?:zmień|zmien|ustaw|przełącz|przelacz|na\s)/i,
+      /(?:w\s+radiu|na\s+radiu).*(?:puść|pusc|graj|daj|zmień|zmien|ustaw)/i,
+      /(?:puść|pusc|graj|daj|zmień|zmien|ustaw).*(?:w\s+radiu|na\s+radiu)/i,
+      /(?:radio|rozgłośni|rozglosni)\s+(?:na|w)\s+/i,
+      /(?:zmień|zmien|daj|ustaw)\s+(?:muzykę|muzyke|gatunek|genre)\s+(?:w|na)\s+(?:radiu|rozgłośni|rozglosni)/i,
+      /(?:change|set|switch)\s+(?:radio|station)\s+(?:to|for)/i,
+    ];
+    const hasRadioIntent = radioPatterns.some(p => p.test(lowerMessage));
+
+    // Radio genre mapping
+    const radioGenreKeywords: Record<string, string[]> = {
+      "dance": ["Dance", "EDM", "Electronic", "Disco"],
+      "haus": ["House", "Electronic", "Dance"],
+      "house": ["House", "Electronic", "Dance"],
+      "techno": ["Techno", "Electronic"],
+      "trance": ["Trance", "Electronic"],
+      "rap": ["Rap", "Hip-Hop"],
+      "hip-hop": ["Hip-Hop", "Rap"],
+      "hip hop": ["Hip-Hop", "Rap"],
+      "hiphop": ["Hip-Hop", "Rap"],
+      "rock": ["Rock"],
+      "metal": ["Metal", "Rock"],
+      "pop": ["Pop"],
+      "jazz": ["Jazz"],
+      "blues": ["Blues"],
+      "classical": ["Classical"],
+      "klasyczn": ["Classical"],
+      "chill": ["Ambient", "Lo-Fi", "Chill"],
+      "ambient": ["Ambient"],
+      "reggae": ["Reggae"],
+      "punk": ["Punk"],
+      "indie": ["Indie"],
+      "r&b": ["R&B"],
+      "rnb": ["R&B"],
+      "disco": ["Disco", "Dance"],
+      "electronic": ["Electronic", "EDM"],
+      "elektro": ["Electronic", "EDM"],
+      "country": ["Country"],
+      "alternative": ["Alternative"],
+      "latin": ["Latin"],
+      "funk": ["Funk", "Disco"],
+      "soul": ["R&B", "Soul"],
+      "lo-fi": ["Lo-Fi", "Ambient"],
+      "lofi": ["Lo-Fi", "Ambient"],
+    };
+
+    let radioUpdateResult: { success: boolean; genre: string; trackCount: number; trackNames: string[] } | null = null;
+
+    if (hasRadioIntent) {
+      // Detect which genre the user wants
+      let targetGenres: string[] = [];
+      let detectedGenreLabel = "";
+      
+      for (const [keyword, genres] of Object.entries(radioGenreKeywords)) {
+        if (lowerMessage.includes(keyword)) {
+          targetGenres.push(...genres);
+          if (!detectedGenreLabel) detectedGenreLabel = keyword.charAt(0).toUpperCase() + keyword.slice(1);
+        }
+      }
+
+      if (targetGenres.length > 0) {
+        // Fetch tracks matching the genre
+        const { data: allTracks } = await supabase
+          .from("tracks")
+          .select("id, title, artist, genre, mood, audio_url, duration")
+          .not("audio_url", "is", null)
+          .order("title")
+          .limit(1000);
+
+        const matchingTracks = (allTracks || []).filter((t: any) =>
+          targetGenres.some(g =>
+            t.genre?.toLowerCase().includes(g.toLowerCase()) ||
+            t.mood?.toLowerCase().includes(g.toLowerCase())
+          )
+        );
+
+        if (matchingTracks.length > 0) {
+          // Shuffle and pick up to 50 tracks for the radio schedule
+          const shuffled = [...matchingTracks].sort(() => Math.random() - 0.5).slice(0, 50);
+
+          // Clear existing radio schedule
+          await supabase.from("radio_schedule").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+
+          // Insert new schedule
+          const scheduleItems = shuffled.map((t: any, i: number) => ({
+            track_id: t.id,
+            position: i,
+            item_type: "track",
+            custom_duration: t.duration || 180,
+          }));
+
+          await supabase.from("radio_schedule").insert(scheduleItems);
+
+          // Update radio config - reset started_at to resync
+          await supabase
+            .from("radio_config")
+            .update({
+              started_at: new Date().toISOString(),
+              is_active: true,
+              station_name: `GrouaRadio ${detectedGenreLabel}`,
+            })
+            .eq("id", (await supabase.from("radio_config").select("id").limit(1).single()).data?.id);
+
+          radioUpdateResult = {
+            success: true,
+            genre: detectedGenreLabel,
+            trackCount: shuffled.length,
+            trackNames: shuffled.slice(0, 10).map((t: any) => `${t.title} — ${t.artist}`),
+          };
+        }
+      }
+    }
+
+    // ==========================================
+    // MUSIC PLAY DETECTION (existing logic)
+    // ==========================================
+
     // Detect DJ mode intent
     const djPatterns = [
       /dj/i, /didżej/i, /disc\s*jockey/i,
@@ -33,7 +155,7 @@ serve(async (req) => {
       /high\s*energy\s*domówka/i, /feestje/i, /draai/i,
       /вечірк[аіу]/i, /діджей/i,
     ];
-    const hasDJIntent = djPatterns.some(p => p.test(lowerMessage)) && 
+    const hasDJIntent = !hasRadioIntent && djPatterns.some(p => p.test(lowerMessage)) && 
       (/puś|graj|włącz|zapodaj|odpal|play|daj|zrób|rozkręć|postaw|zajmij|mixu|miksuj|draai|start|go|dawaj|jazda|peak|parkiet|rozbaw/i.test(lowerMessage));
 
     // Fetch ALL tracks from the database so the assistant knows the full library
@@ -105,71 +227,59 @@ serve(async (req) => {
     let autoPlayTracks: any[] = [];
     let requestedCount = 0;
 
-    // Check for play intent
-    for (const pattern of playIntentPatterns) {
-      const match = message.match(pattern);
-      if (match) {
-        requestedCount = Math.min(parseInt(match[1]), 20);
-        break;
-      }
-    }
-
-    // Also detect simple play requests without numbers like "puść coś na domówkę"
-    if (requestedCount === 0) {
-      const simplePlayPatterns = [
-        /zapodaj|puść|graj|włącz|odpal|play|give/i,
-      ];
-      const hasPlayIntent = simplePlayPatterns.some(p => p.test(lowerMessage));
-      const hasContextKeyword = Object.keys(contextKeywords).some(k => lowerMessage.includes(k));
-      if (hasPlayIntent && hasContextKeyword) {
-        requestedCount = hasDJIntent ? 20 : 5; // DJ mode gets more tracks
-      }
-    }
-
-    // If DJ mode with no count yet, default to 15-20
-    if (hasDJIntent && requestedCount === 0) {
-      requestedCount = 15;
-    }
-    // Increase cap for DJ mode
-    if (hasDJIntent && requestedCount < 10) {
-      requestedCount = Math.max(requestedCount, 10);
-    }
-
-    if (requestedCount > 0 && playableTracks.length > 0) {
-      // Find matching genres based on context
-      let matchingGenres: string[] = [];
-      for (const [keyword, genres] of Object.entries(contextKeywords)) {
-        if (lowerMessage.includes(keyword)) {
-          matchingGenres.push(...genres);
+    // Skip play detection if radio intent was detected
+    if (!hasRadioIntent) {
+      // Check for play intent
+      for (const pattern of playIntentPatterns) {
+        const match = message.match(pattern);
+        if (match) {
+          requestedCount = Math.min(parseInt(match[1]), 20);
+          break;
         }
       }
 
-      let candidates: any[];
-      if (matchingGenres.length > 0) {
-        // Filter by matching genres/moods
-        candidates = playableTracks.filter((t: any) =>
-          matchingGenres.some(g =>
-            t.genre?.toLowerCase().includes(g.toLowerCase()) ||
-            t.mood?.toLowerCase().includes(g.toLowerCase())
-          )
-        );
-        // If not enough, add random playable tracks
-        if (candidates.length < requestedCount) {
-          const remaining = playableTracks.filter((t: any) => !candidates.includes(t));
-          const shuffled = [...remaining].sort(() => Math.random() - 0.5);
-          candidates = [...candidates, ...shuffled];
+      // Also detect simple play requests without numbers
+      if (requestedCount === 0) {
+        const simplePlayPatterns = [/zapodaj|puść|graj|włącz|odpal|play|give/i];
+        const hasPlayIntent = simplePlayPatterns.some(p => p.test(lowerMessage));
+        const hasContextKeyword = Object.keys(contextKeywords).some(k => lowerMessage.includes(k));
+        if (hasPlayIntent && hasContextKeyword) {
+          requestedCount = hasDJIntent ? 20 : 5;
         }
-      } else {
-        candidates = [...playableTracks].sort(() => Math.random() - 0.5);
       }
 
-      // Shuffle and take requested count
-      autoPlayTracks = [...candidates].sort(() => Math.random() - 0.5).slice(0, requestedCount);
+      if (hasDJIntent && requestedCount === 0) requestedCount = 15;
+      if (hasDJIntent && requestedCount < 10) requestedCount = Math.max(requestedCount, 10);
+
+      if (requestedCount > 0 && playableTracks.length > 0) {
+        let matchingGenres: string[] = [];
+        for (const [keyword, genres] of Object.entries(contextKeywords)) {
+          if (lowerMessage.includes(keyword)) matchingGenres.push(...genres);
+        }
+
+        let candidates: any[];
+        if (matchingGenres.length > 0) {
+          candidates = playableTracks.filter((t: any) =>
+            matchingGenres.some(g =>
+              t.genre?.toLowerCase().includes(g.toLowerCase()) ||
+              t.mood?.toLowerCase().includes(g.toLowerCase())
+            )
+          );
+          if (candidates.length < requestedCount) {
+            const remaining = playableTracks.filter((t: any) => !candidates.includes(t));
+            candidates = [...candidates, ...[...remaining].sort(() => Math.random() - 0.5)];
+          }
+        } else {
+          candidates = [...playableTracks].sort(() => Math.random() - 0.5);
+        }
+
+        autoPlayTracks = [...candidates].sort(() => Math.random() - 0.5).slice(0, requestedCount);
+      }
     }
 
     // Search for specific tracks matching the user's query (single track link)
     let trackLink = null;
-    if (autoPlayTracks.length === 0) {
+    if (autoPlayTracks.length === 0 && !hasRadioIntent) {
       const searchTerms = message.split(" ").filter((w: string) => w.length > 3);
       if (searchTerms.length > 0 && playableTracks.length > 0) {
         const matching = playableTracks.filter((t: any) =>
@@ -198,6 +308,17 @@ serve(async (req) => {
     const topMoods = ctx.topMoods || [];
     const currentPage = ctx.currentPage || "/";
 
+    // Build radio update info for the AI
+    const radioUpdateInfo = radioUpdateResult
+      ? `\n\n## 📻 RADIO ZOSTAŁO ZMIENIONE!
+Właśnie zmieniłem ramówkę rozgłośni GrouaRadio na gatunek **${radioUpdateResult.genre}**.
+Załadowano **${radioUpdateResult.trackCount}** utworów. Przykłady:
+${radioUpdateResult.trackNames.map((n, i) => `${i + 1}. ${n}`).join("\n")}
+
+W odpowiedzi POTWIERDŹ zmianę rozgłośni. Powiedz że radio gra teraz ${radioUpdateResult.genre}. Bądź entuzjastyczny! Użyj emoji 📻 🎵 🔊.
+Zaproponuj użytkownikowi przejście na /radio-live aby posłuchać.`
+      : "";
+
     // Build info about auto-played tracks for the AI to reference
     const autoPlayInfo = autoPlayTracks.length > 0
       ? hasDJIntent
@@ -210,27 +331,21 @@ ${autoPlayTracks.map((t: any, i: number) => `${i + 1}. **${t.title}** — ${t.ar
 You are DJ GrooveAI — a professional 2026 Dutch/Rotterdam peak-time hard techno DJ.
 
 **RESPONSE FORMAT (MANDATORY):**
-1. Open with 1 PUNCHY sentence max — raw, aggressive, Rotterdam energy. Examples:
-   - "DJ GrooveAI za konsolą! Rotterdam peak-time — ZERO hamulców! 💀🔥"
-   - "Peak hour ACTIVATED — dark synths, industrial kick, sub-bas do kości! ⚡🖤"
-2. List the set with numbering + 1 SHORT comment per track (max 5-7 words each):
-   - "1. Track — Artist → Twardy kick na start! 💥"
-   - "2. Track — Artist → Dark synth ACTIVATED 🖤"
-3. Close with 1 sentence outro: "Peak time DELIVERED! DJ GrooveAI nie zwalnia! 🔥💀"
+1. Open with 1 PUNCHY sentence max — raw, aggressive, Rotterdam energy.
+2. List the set with numbering + 1 SHORT comment per track (max 5-7 words each).
+3. Close with 1 sentence outro.
 
 **STYLE RULES:**
-- Emoji: 🎧 🔥 💥 ⚡ 🖤 💀 🚀 ONLY — NO flowers, hearts, sparkles, party poppers
+- Emoji: 🎧 🔥 💥 ⚡ 🖤 💀 🚀 ONLY
 - Energy: MAXIMUM — raw, dark, underground, driving, industrial
 - BPM reference: 130-132 unless user specified otherwise
-- Language: Match user's language (PL/EN/NL/UA)
+- Language: Match user's language
 - Length: MAX 2-3 sentences intro + numbered setlist + 1 sentence outro. NO essays.
-- NEVER ask "are you sure?" or "I think you want..." — just EXECUTE
-- NEVER add ambient, crowd noise, or chill elements unless user literally says so
-- If user gives feedback ("more bass", "darker", "slower") → apply INSTANTLY, no questions`
+- NEVER ask questions — just EXECUTE`
         : `\n\n## WAŻNE - WŁAŚNIE WŁĄCZAM TE UTWORY NA PLAYERZE:
 ${autoPlayTracks.map((t: any, i: number) => `${i + 1}. **${t.title}** — ${t.artist} [${t.genre || '?'}]`).join("\n")}
 
-W swojej odpowiedzi POTWIERDŹ że włączasz te utwory. Wymień je z numeracją. Dodaj krótki komentarz do każdego lub ogólny opis dlaczego pasują do kontekstu użytkownika. Użyj emoji 🎵 🔥 🎶 💃 itp.`
+W swojej odpowiedzi POTWIERDŹ że włączasz te utwory. Wymień je z numeracją. Dodaj krótki komentarz. Użyj emoji 🎵 🔥 🎶 💃 itp.`
       : "";
 
     const systemPrompt = `Jesteś GrooveAI — zaawansowany, inteligentny asystent AI w aplikacji muzycznej GrooveAI Stream. Twój poziom konwersacji i wiedzy jest porównywalny z GPT-5 lub Grok. Jesteś EKSPERTEM w muzyce, kulturze, technologii, psychologii i każdym innym temacie.
@@ -246,6 +361,10 @@ W swojej odpowiedzi POTWIERDŹ że włączasz te utwory. Wymień je z numeracją
 
 ## SUPER WAŻNA FUNKCJA - ODTWARZANIE MUZYKI:
 Gdy użytkownik prosi o muzykę (np. "zapodaj mi 5 utworów na domówkę", "puść coś na chill"), system AUTOMATYCZNIE wyszukuje i włącza odpowiednie utwory na playerze. Ty musisz tylko POTWIERDZIĆ co zostało włączone i dodać komentarz.
+
+## SUPER WAŻNA FUNKCJA - ZARZĄDZANIE ROZGŁOŚNIĄ RADIO:
+Gdy użytkownik pisze np. "zmień w rozgłośni muzykę na dance", "ustaw radio na rap", "daj w radiu jazz" — system AUTOMATYCZNIE zmienia ramówkę rozgłośni GrouaRadio. Ty musisz POTWIERDZIĆ zmianę i zaproponować przejście na /radio-live.
+${radioUpdateInfo}
 
 ## FORMATOWANIE ODPOWIEDZI:
 - Używaj **pogrubień** dla ważnych terminów
@@ -275,7 +394,7 @@ Znasz DOKŁADNIE każdą funkcję aplikacji:
 - **Polubione (/liked)**: Lista ulubionych utworów
 - **Tworzenie playlist (/create-playlist)**: Tworzenie playlist AI lub ręcznych
 - **Menedżer playlist (/playlist-manager)**: Zarządzanie, edycja, usuwanie playlist
-- **Radio (/radio-live)**: Radio na żywo z różnymi stacjami
+- **Radio (/radio-live)**: Radio na żywo z różnymi stacjami — MOŻESZ ZMIENIAĆ RAMÓWKĘ na życzenie użytkownika!
 - **Import YouTube (/import-youtube)**: Importowanie muzyki z YouTube
 - **Filmy (/movies)**: Sekcja filmowa
 - **Serwer mediów (/server)**: Zarządzanie plikami multimedialnymi
@@ -283,14 +402,15 @@ Znasz DOKŁADNIE każdą funkcję aplikacji:
 - **Ustawienia (/settings)**: Konfiguracja konta, język, motyw
 - **Panel admina (/admin)**: Zarządzanie dla administratorów
 - **Detekcja nastroju**: Rozpoznawanie emocji przez kamerę w czasie rzeczywistym
-- **Komendy głosowe**: Asystent głosowy reagujący na polecenia (puść, zatrzymaj, następny, itp.)
+- **Komendy głosowe**: Asystent głosowy reagujący na polecenia
 - **Drag & Drop**: Przeciąganie utworów między playlistami
 - **AI DJ**: Automatyczny DJ dobierający muzykę na podstawie nastroju
+- **QR Parkiet (/party/:code)**: System głosowania i reakcji gości na parkiecie DJ
 
 ## SPECJALNE KONTEKSTY:
 - Pytania o vinyl/winyl → kieruj do sekcji **Hubs Vinyl** w aplikacji
 - Współpraca/biznes/kontakt → email: **grouarock@gmail.com**
-- Gdy użytkownik pyta o konkretny utwór z biblioteki — podaj szczegóły (gatunek, nastrój, artysta) i zaproponuj odtworzenie
+- Gdy użytkownik pyta o konkretny utwór z biblioteki — podaj szczegóły i zaproponuj odtworzenie
 - Gdy pyta "co masz?", "jakie utwory?", "co mogę posłuchać?" — pokaż przegląd gatunków i przykłady z biblioteki
 
 ## ZASADY:
@@ -343,8 +463,15 @@ Znasz DOKŁADNIE każdą funkcję aplikacji:
     const encoder = new TextEncoder();
     const body = new ReadableStream({
       async start(controller) {
+        // Send radio update event
+        if (radioUpdateResult) {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+            type: "radio_updated",
+            data: radioUpdateResult,
+          })}\n\n`));
+        }
         // Send auto-play tracks as first event (multiple tracks for playlist)
-        if (autoPlayTracks.length > 0) {
+        else if (autoPlayTracks.length > 0) {
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({
             type: hasDJIntent ? "dj_mode_tracks" : "auto_play_tracks",
             djMode: hasDJIntent,

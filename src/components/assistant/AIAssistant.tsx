@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { motion, AnimatePresence, useDragControls } from "framer-motion";
-import { Send, Loader2, ExternalLink, Music, Power, GripHorizontal, Sparkles, Maximize2, Minimize2 } from "lucide-react";
+import { Send, Loader2, ExternalLink, Music, Power, GripHorizontal, Sparkles, Maximize2, Minimize2, Radio } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -25,6 +25,7 @@ interface Message {
   trackLink?: { id: string; title: string; artist: string };
   playlistTracks?: PlaylistTrackInfo[];
   isDJMode?: boolean;
+  radioUpdate?: { genre: string; trackCount: number };
 }
 
 const getTimeOfDay = () => {
@@ -180,6 +181,7 @@ export const AIAssistant = () => {
 
   // Ref to store playlist tracks to attach to the next assistant message
   const pendingPlaylistRef = useRef<{ tracks: PlaylistTrackInfo[]; isDJ: boolean } | null>(null);
+  const pendingRadioUpdateRef = useRef<{ genre: string; trackCount: number } | null>(null);
 
   const handleSend = useCallback(async () => {
     if (!input.trim() || isLoading) return;
@@ -231,6 +233,14 @@ export const AIAssistant = () => {
           try {
             const parsed = JSON.parse(jsonStr);
             
+            // Handle radio update event
+            if (parsed.type === "radio_updated") {
+              pendingPlaylistRef.current = null;
+              // Store radio update info to attach to the next assistant message
+              pendingRadioUpdateRef.current = { genre: parsed.data.genre, trackCount: parsed.data.trackCount };
+              continue;
+            }
+
             // Handle auto-play multiple tracks (normal + DJ mode)
             if (parsed.type === "auto_play_tracks" || parsed.type === "dj_mode_tracks") {
               const trackIds = parsed.data.map((t: any) => t.id);
@@ -238,7 +248,6 @@ export const AIAssistant = () => {
               const playedTracks = await handleAutoPlayTracks(trackIds, isDJ);
               if (playedTracks.length > 0) {
                 pendingPlaylistRef.current = { tracks: playedTracks, isDJ };
-                // If DJ mode, start the DJ session with sound effects & announcements
                 if (isDJ) {
                   const djCmd = parseDJCommand(userMessage);
                   startDJSession({
@@ -262,6 +271,7 @@ export const AIAssistant = () => {
             if (content) {
               assistantContent += content;
               const pending = pendingPlaylistRef.current;
+              const radioUpdate = pendingRadioUpdateRef.current;
               setMessages(prev => {
                 const msgData: Message = {
                   role: "assistant",
@@ -269,6 +279,7 @@ export const AIAssistant = () => {
                   trackLink: currentTrackLink,
                   playlistTracks: pending?.tracks,
                   isDJMode: pending?.isDJ,
+                  radioUpdate: radioUpdate || undefined,
                 };
                 const last = prev[prev.length - 1];
                 if (last?.role === "assistant" && prev.length > 1 && prev[prev.length - 2]?.role === "user") {
@@ -309,6 +320,7 @@ export const AIAssistant = () => {
       }]);
     } finally {
       pendingPlaylistRef.current = null;
+      pendingRadioUpdateRef.current = null;
       setIsLoading(false);
     }
   }, [input, isLoading, messages, userContext, startDJSession, parseDJCommand]);
@@ -456,6 +468,22 @@ export const AIAssistant = () => {
                             ))}
                           </div>
                         </div>
+                      )}
+                      {/* Radio update badge */}
+                      {msg.radioUpdate && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 4 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="mt-3 flex items-center gap-2 p-2.5 rounded-xl bg-accent/10 border border-accent/20"
+                        >
+                          <div className="w-8 h-8 rounded-lg bg-accent/20 flex items-center justify-center">
+                            <Radio className="h-4 w-4 text-accent-foreground" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-medium">📻 Radio: {msg.radioUpdate.genre}</p>
+                            <p className="text-[10px] text-muted-foreground">{msg.radioUpdate.trackCount} utworów załadowanych</p>
+                          </div>
+                        </motion.div>
                       )}
                     </div>
                   </motion.div>
