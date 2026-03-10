@@ -1,46 +1,35 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Heart, Flame, Zap, Music, ThumbsUp, Volume2, ChevronUp, Headphones, Download } from "lucide-react";
+import { Headphones, Send, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-const REACTIONS = [
-  { emoji: "🔥", label: "Fire", value: "fire" },
-  { emoji: "💀", label: "Hard", value: "skull" },
-  { emoji: "⚡", label: "Energy", value: "energy" },
-  { emoji: "🖤", label: "Dark", value: "dark" },
-  { emoji: "🚀", label: "Harder!", value: "harder" },
-  { emoji: "👏", label: "Drop!", value: "drop" },
-];
-
-const GENRE_VOTES = [
-  "Hard Techno", "Driving House", "Industrial", "Acid", 
-  "Dark Techno", "Peak-Time", "Hardcore", "Trance"
+const QUICK_COMMANDS = [
+  { emoji: "🔊", label: "Więcej basu!", cmd: "Więcej basu!" },
+  { emoji: "💥", label: "Drop teraz!", cmd: "Drop teraz!" },
+  { emoji: "🌑", label: "Ciemniej", cmd: "Ciemniej, wolniej" },
+  { emoji: "⚡", label: "Szybciej", cmd: "Szybciej!" },
+  { emoji: "🔥", label: "Hardciej!", cmd: "Hardciej!" },
+  { emoji: "🎵", label: "Melodia", cmd: "Więcej melodii" },
 ];
 
 export default function PartyPulpit() {
   const { code } = useParams<{ code: string }>();
-  const [session, setSession] = useState<any>(null);
-  const [guestId, setGuestId] = useState<string | null>(null);
-  const [guestName, setGuestName] = useState("");
+  const [room, setRoom] = useState<any>(null);
+  const [guestLabel, setGuestLabel] = useState("");
   const [isJoined, setIsJoined] = useState(false);
-  const [guestCount, setGuestCount] = useState(0);
-  const [recentReactions, setRecentReactions] = useState<string[]>([]);
-  const [votes, setVotes] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [nameInput, setNameInput] = useState("");
+  const [customMsg, setCustomMsg] = useState("");
+  const [sentCount, setSentCount] = useState(0);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showInstallBanner, setShowInstallBanner] = useState(false);
 
-  // PWA install prompt
+  // PWA install
   useEffect(() => {
-    const handler = (e: Event) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-      setShowInstallBanner(true);
-    };
+    const handler = (e: Event) => { e.preventDefault(); setDeferredPrompt(e); setShowInstallBanner(true); };
     window.addEventListener("beforeinstallprompt", handler);
     return () => window.removeEventListener("beforeinstallprompt", handler);
   }, []);
@@ -49,139 +38,102 @@ export default function PartyPulpit() {
     if (!deferredPrompt) return;
     deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === "accepted") {
-      toast.success("💀 Apka zainstalowana — jesteś na parkiecie na stałe!");
-    }
+    if (outcome === "accepted") toast.success("💀 Apka zainstalowana!");
     setDeferredPrompt(null);
     setShowInstallBanner(false);
   };
 
-  // Fetch session by code
+  // Fetch room by code
   useEffect(() => {
     if (!code) return;
-    const fetchSession = async () => {
-      const { data, error } = await supabase
+    const fetch = async () => {
+      // Try party_rooms first (new system)
+      const { data: pr } = await supabase
+        .from("party_rooms")
+        .select("*")
+        .eq("room_code", code)
+        .eq("is_active", true)
+        .maybeSingle();
+
+      if (pr) {
+        setRoom({ ...pr, _type: "party_room" });
+        setLoading(false);
+        return;
+      }
+
+      // Fallback to legacy dj_sessions
+      const { data: ds } = await supabase
         .from("dj_sessions")
         .select("*")
         .eq("session_code", code)
         .eq("is_active", true)
         .maybeSingle();
 
-      if (error || !data) {
-        toast.error("Sesja nie znaleziona lub nieaktywna");
+      if (ds) {
+        setRoom({ ...ds, _type: "dj_session" });
       } else {
-        setSession(data);
+        toast.error("Sesja nie znaleziona lub nieaktywna");
       }
       setLoading(false);
     };
-    fetchSession();
+    fetch();
   }, [code]);
 
-  // Realtime subscriptions
-  useEffect(() => {
-    if (!session) return;
-
-    const guestsChannel = supabase
-      .channel(`party-guests-${session.id}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "dj_session_guests", filter: `session_id=eq.${session.id}` }, (payload) => {
-        fetchGuestCount();
-        if (payload.eventType === "UPDATE" && payload.new.last_reaction) {
-          setRecentReactions(prev => [payload.new.last_reaction, ...prev].slice(0, 20));
-        }
-      })
-      .subscribe();
-
-    const votesChannel = supabase
-      .channel(`party-votes-${session.id}`)
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "dj_session_votes", filter: `session_id=eq.${session.id}` }, () => {
-        fetchVotes();
-      })
-      .subscribe();
-
-    fetchGuestCount();
-    fetchVotes();
-
-    return () => {
-      supabase.removeChannel(guestsChannel);
-      supabase.removeChannel(votesChannel);
-    };
-  }, [session?.id]);
-
-  const fetchGuestCount = async () => {
-    if (!session) return;
-    const { count } = await supabase
-      .from("dj_session_guests")
-      .select("*", { count: "exact", head: true })
-      .eq("session_id", session.id);
-    setGuestCount(count || 0);
-  };
-
-  const fetchVotes = async () => {
-    if (!session) return;
-    const { data } = await supabase
-      .from("dj_session_votes")
-      .select("vote_value")
-      .eq("session_id", session.id)
-      .eq("vote_type", "genre_request");
-
-    if (data) {
-      const counts: Record<string, number> = {};
-      data.forEach(v => { counts[v.vote_value] = (counts[v.vote_value] || 0) + 1; });
-      setVotes(counts);
-    }
-  };
-
-  const joinSession = async () => {
-    if (!session) return;
+  const joinParty = () => {
     const name = nameInput.trim() || "Anonim";
-    const { data, error } = await supabase
-      .from("dj_session_guests")
-      .insert({ session_id: session.id, guest_name: name })
-      .select()
-      .single();
+    const guestNum = Math.floor(Math.random() * 99) + 1;
+    setGuestLabel(`Gość #${guestNum} (${name})`);
+    setIsJoined(true);
+    if (navigator.vibrate) navigator.vibrate(200);
+    toast.success(`💀 ${name} na parkiecie!`);
+  };
 
-    if (error) {
-      toast.error("Nie udało się dołączyć");
+  const sendCommand = async (command: string) => {
+    if (!room) return;
+
+    if (room._type === "party_room") {
+      await supabase.from("party_commands").insert({
+        room_id: room.id,
+        guest_label: guestLabel,
+        command,
+        command_type: "quick",
+      });
     } else {
-      setGuestId(data.id);
-      setGuestName(name);
-      setIsJoined(true);
-      toast.success(`💀 ${name} na parkiecie!`);
+      // Legacy: use dj_session_votes
+      await supabase.from("dj_session_votes").insert({
+        session_id: room.id,
+        vote_type: "command",
+        vote_value: command,
+      });
     }
+
+    setSentCount(prev => prev + 1);
+    if (navigator.vibrate) navigator.vibrate(50);
+    toast.success("Komenda wysłana do DJ-a! 🎧");
   };
 
-  const sendReaction = async (reaction: string) => {
-    if (!guestId) return;
-    await supabase
-      .from("dj_session_guests")
-      .update({ last_reaction: reaction, last_reaction_at: new Date().toISOString() })
-      .eq("id", guestId);
-  };
-
-  const voteGenre = async (genre: string) => {
-    if (!guestId || !session) return;
-    await supabase
-      .from("dj_session_votes")
-      .insert({ session_id: session.id, guest_id: guestId, vote_type: "genre_request", vote_value: genre });
-    toast.success(`Głos: ${genre} 💀`);
+  const sendCustom = () => {
+    if (!customMsg.trim()) return;
+    sendCommand(customMsg.trim());
+    setCustomMsg("");
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-screen bg-[#050510] flex items-center justify-center">
         <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }}>
-          <Headphones className="h-12 w-12 text-primary" />
+          <Headphones className="h-12 w-12 text-red-500" />
         </motion.div>
       </div>
     );
   }
 
-  if (!session) {
+  if (!room) {
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 text-center">
+      <div className="min-h-screen bg-[#050510] flex flex-col items-center justify-center p-6 text-center">
         <div className="text-6xl mb-4">💀</div>
-        <h1 className="text-2xl font-bold mb-2">Sesja nieaktywna</h1>
-        <p className="text-muted-foreground">Ta sesja DJ już się zakończyła lub nie istnieje.</p>
+        <h1 className="text-2xl font-bold mb-2 text-white">Sesja nieaktywna</h1>
+        <p className="text-gray-400">Ta sesja DJ już się zakończyła lub nie istnieje.</p>
       </div>
     );
   }
@@ -189,39 +141,32 @@ export default function PartyPulpit() {
   // Join screen
   if (!isJoined) {
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6">
-        <div className="absolute inset-0 bg-gradient-to-b from-red-900/20 via-transparent to-purple-900/20 pointer-events-none" />
+      <div className="min-h-screen bg-[#050510] flex flex-col items-center justify-center p-6 relative">
+        <div className="absolute inset-0 bg-gradient-to-b from-red-900/15 via-transparent to-purple-900/10 pointer-events-none" />
         <motion.div
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           className="relative z-10 max-w-sm w-full text-center"
         >
           <div className="text-6xl mb-4">🎧</div>
-          <h1 className="text-3xl font-bold mb-1">DJ GrooveAI</h1>
-          <p className="text-primary font-mono text-sm mb-6">ROTTERDAM PEAK-TIME 2026</p>
+          <h1 className="text-3xl font-bold mb-1 text-white">GrouAI Stream</h1>
+          <p className="text-red-400 font-mono text-sm mb-6">ROTTERDAM UNDERGROUND DOMÓWKA</p>
 
-          <div className="groove-card p-6 space-y-4">
+          <div className="rounded-2xl border border-red-500/20 bg-black/60 p-6 space-y-4">
             <div>
-              <p className="text-sm text-muted-foreground mb-2">Twoje imię na parkiecie</p>
+              <p className="text-sm text-gray-400 mb-2">Twoje imię na parkiecie</p>
               <input
                 type="text"
                 value={nameInput}
                 onChange={(e) => setNameInput(e.target.value)}
                 placeholder="Anonim"
-                className="w-full px-4 py-3 rounded-xl bg-secondary text-foreground text-center font-medium focus:outline-none focus:ring-2 focus:ring-primary"
+                className="w-full px-4 py-3 rounded-xl bg-black/50 border border-red-500/20 text-white text-center font-medium focus:outline-none focus:border-red-500/50 focus:ring-1 focus:ring-red-500/30"
                 maxLength={20}
               />
             </div>
 
-            <div className="flex items-center gap-2 text-sm text-muted-foreground justify-center">
-              <Music className="h-4 w-4" />
-              <span>{session.session_name}</span>
-              <span>•</span>
-              <span>{guestCount} osób</span>
-            </div>
-
-            <Button onClick={joinSession} className="w-full text-lg py-6 gap-2" size="lg">
-              <Zap className="h-5 w-5" />
+            <Button onClick={joinParty} className="w-full text-lg py-6 gap-2 bg-gradient-to-r from-red-600 to-purple-700 border-0" size="lg">
+              <Headphones className="h-5 w-5" />
               Dołącz na parkiet!
             </Button>
           </div>
@@ -230,134 +175,73 @@ export default function PartyPulpit() {
     );
   }
 
-  // Party pulpit
+  // Party guest mode
   return (
-    <div className="min-h-screen bg-background relative overflow-hidden">
-      {/* Background glow */}
-      <div className="absolute inset-0 bg-gradient-to-b from-red-900/15 via-background to-purple-900/10 pointer-events-none" />
-
-      {/* Floating reactions */}
-      <AnimatePresence>
-        {recentReactions.slice(0, 8).map((r, i) => (
-          <motion.div
-            key={`${r}-${i}-${Date.now()}`}
-            initial={{ opacity: 1, y: 0, x: Math.random() * 300 + 30 }}
-            animate={{ opacity: 0, y: -200 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 2 }}
-            className="absolute bottom-32 text-3xl pointer-events-none z-20"
-          >
-            {r}
-          </motion.div>
-        ))}
-      </AnimatePresence>
+    <div className="min-h-screen bg-[#050510] relative overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-b from-red-900/10 via-transparent to-purple-900/8 pointer-events-none" />
 
       <div className="relative z-10 p-4 max-w-lg mx-auto">
         {/* Header */}
         <div className="text-center mb-6 pt-4">
-          <p className="text-xs text-primary font-mono tracking-widest uppercase">Live Session</p>
-          <h1 className="text-2xl font-bold">{session.session_name}</h1>
-          <div className="flex items-center justify-center gap-3 mt-2 text-sm text-muted-foreground">
-            <span className="flex items-center gap-1">
-              <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
-              LIVE
-            </span>
-            <span>{guestCount} na parkiecie</span>
-            <span>{guestName}</span>
+          <div className="flex items-center justify-center gap-2 mb-1">
+            <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+            <span className="text-xs text-red-400 font-mono uppercase tracking-widest">LIVE</span>
           </div>
+          <h1 className="text-xl font-bold text-white">{guestLabel}</h1>
+          <p className="text-xs text-gray-500 mt-1">{sentCount} komend wysłanych</p>
         </div>
 
-        {/* Quick Reactions */}
+        {/* Quick Commands */}
         <div className="mb-6">
-          <p className="text-xs text-muted-foreground uppercase tracking-wider mb-3 text-center">Reakcje</p>
-          <div className="grid grid-cols-3 gap-2">
-            {REACTIONS.map((r) => (
+          <p className="text-xs text-gray-500 uppercase tracking-wider mb-3 text-center">Szybkie komendy</p>
+          <div className="grid grid-cols-2 gap-3">
+            {QUICK_COMMANDS.map((qc) => (
               <motion.button
-                key={r.value}
-                whileTap={{ scale: 0.85 }}
-                onClick={() => sendReaction(r.emoji)}
-                className="bg-secondary/80 hover:bg-secondary rounded-xl py-4 text-center transition-colors active:bg-primary/20"
+                key={qc.cmd}
+                whileTap={{ scale: 0.9 }}
+                onClick={() => sendCommand(qc.cmd)}
+                className="rounded-2xl border border-red-500/15 bg-black/50 py-5 text-center transition-all active:bg-red-500/20 hover:border-red-500/30"
               >
-                <span className="text-3xl block">{r.emoji}</span>
-                <span className="text-xs text-muted-foreground mt-1 block">{r.label}</span>
+                <span className="text-3xl block">{qc.emoji}</span>
+                <span className="text-sm text-gray-300 mt-1 block font-medium">{qc.label}</span>
               </motion.button>
             ))}
           </div>
         </div>
 
-        {/* Genre Vote */}
+        {/* Custom message */}
         <div className="mb-6">
-          <p className="text-xs text-muted-foreground uppercase tracking-wider mb-3 text-center">
-            Głosuj na gatunek
-          </p>
-          <div className="grid grid-cols-2 gap-2">
-            {GENRE_VOTES.map((genre) => {
-              const voteCount = votes[genre] || 0;
-              return (
-                <motion.button
-                  key={genre}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => voteGenre(genre)}
-                  className="bg-secondary/60 hover:bg-secondary rounded-xl px-3 py-3 text-left transition-colors relative overflow-hidden"
-                >
-                  {/* Vote bar */}
-                  {voteCount > 0 && (
-                    <motion.div
-                      initial={{ width: 0 }}
-                      animate={{ width: `${Math.min(voteCount * 15, 100)}%` }}
-                      className="absolute inset-y-0 left-0 bg-primary/15 rounded-xl"
-                    />
-                  )}
-                  <span className="relative z-10 text-sm font-medium">{genre}</span>
-                  {voteCount > 0 && (
-                    <span className="relative z-10 text-xs text-primary ml-2">{voteCount}</span>
-                  )}
-                </motion.button>
-              );
-            })}
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={customMsg}
+              onChange={(e) => setCustomMsg(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && sendCustom()}
+              placeholder="Napisz do DJ-a..."
+              className="flex-1 px-4 py-3 rounded-xl bg-black/50 border border-red-500/15 text-white placeholder:text-gray-600 focus:outline-none focus:border-red-500/40"
+              maxLength={100}
+            />
+            <Button onClick={sendCustom} size="icon" className="h-12 w-12 bg-gradient-to-r from-red-600 to-purple-700 border-0 rounded-xl shrink-0">
+              <Send className="h-5 w-5" />
+            </Button>
           </div>
         </div>
 
-        {/* Energy meter */}
-        <div className="groove-card p-4 text-center">
-          <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Energia parkietu</p>
-          <div className="flex items-center justify-center gap-1">
-            {[...Array(10)].map((_, i) => (
-              <motion.div
-                key={i}
-                animate={{
-                  height: [12, 12 + Math.random() * 24, 12],
-                  backgroundColor: i < Math.min(guestCount, 10)
-                    ? ["hsl(0,80%,50%)", "hsl(0,90%,60%)", "hsl(0,80%,50%)"]
-                    : "hsl(var(--secondary))",
-                }}
-                transition={{ repeat: Infinity, duration: 0.5 + Math.random() * 0.5, delay: i * 0.05 }}
-                className="w-3 rounded-full"
-                style={{ minHeight: 12 }}
-              />
-            ))}
-          </div>
-          <p className="text-2xl font-bold mt-2">{guestCount}</p>
-          <p className="text-xs text-muted-foreground">osób na parkiecie</p>
-        </div>
-
-        {/* PWA Install Banner */}
+        {/* PWA Install */}
         <AnimatePresence>
           {showInstallBanner && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 20 }}
-              className="groove-card p-4 flex items-center gap-3"
+              className="rounded-xl border border-red-500/20 bg-black/60 p-4 flex items-center gap-3"
             >
-              <Download className="h-5 w-5 text-primary shrink-0" />
+              <Download className="h-5 w-5 text-red-400 shrink-0" />
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium">Zainstaluj apkę DJ</p>
-                <p className="text-xs text-muted-foreground">Dodaj na ekran główny — pełny ekran, zero przeglądarki</p>
+                <p className="text-sm font-medium text-white">Zainstaluj apkę</p>
+                <p className="text-xs text-gray-500">Pełny ekran, zero przeglądarki</p>
               </div>
-              <Button onClick={handleInstall} size="sm" className="shrink-0">
-                Instaluj
-              </Button>
+              <Button onClick={handleInstall} size="sm" className="shrink-0 bg-red-600 border-0">Instaluj</Button>
             </motion.div>
           )}
         </AnimatePresence>
