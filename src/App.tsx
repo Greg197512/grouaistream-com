@@ -29,6 +29,7 @@ import Admin from "./pages/Admin";
 import Movies from "./pages/Movies";
 import Server from "./pages/Server";
 import Legal from "./pages/Legal";
+import PartyPulpit from "./pages/PartyPulpit";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
