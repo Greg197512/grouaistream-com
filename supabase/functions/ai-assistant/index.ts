@@ -643,6 +643,10 @@ ${wishInfo}
 Gdy użytkownik pisze np. "dodaj utwór X do radia", "wrzuć Y do ramówki", "usuń Z z radia" — system AUTOMATYCZNIE dodaje lub usuwa konkretne utwory z ramówki. Ty musisz POTWIERDZIĆ operację.
 ${radioTrackInfo}
 
+## SUPER WAŻNA FUNKCJA - DEDYKACJE MUZYCZNE:
+Gdy użytkownik pisze np. "dedykuję utwór X dla Y w radiu", "puść Z dla mojej dziewczyny w radiu" — system AUTOMATYCZNIE dodaje utwór do ramówki i publikuje dedykację w sekcji życzeń. Ty musisz POTWIERDZIĆ dedykację emocjonalnie.
+${dedicationInfo}
+
 ## FORMATOWANIE ODPOWIEDZI:
 - Używaj **pogrubień** dla ważnych terminów
 - Używaj list punktowanych i numerowanych
