@@ -579,6 +579,15 @@ ${radioTrackResult.tracks.map((n: string, i: number) => `${i + 1}. ${n}`).join("
 W odpowiedzi POTWIERDŹ ${radioTrackResult.action === "added" ? "dodanie utworów do" : "usunięcie utworów z"} ramówki radia. Bądź entuzjastyczny! Użyj emoji 📻 🎵.`
       : "";
 
+    // Build dedication info
+    const dedicationInfo = dedicationResult
+      ? `\n\n## 🎵❤️ DEDYKACJA MUZYCZNA WYSŁANA!
+Dedykacja: **"${dedicationResult.trackName}"** dla **${dedicationResult.recipientName}** od **${dedicationResult.senderName}**!
+Utwór został dodany do ramówki radia, a dedykacja pojawi się w sekcji życzeń na /radio-live.
+
+W odpowiedzi POTWIERDŹ dedykację w piękny, emocjonalny sposób. Użyj emoji ❤️ 🎵 📻 💝. Powiedz że utwór zagra w radiu i dedykacja pojawi się na antenie.`
+      : "";
+
     // Build info about auto-played tracks for the AI to reference
     const autoPlayInfo = autoPlayTracks.length > 0
       ? hasDJIntent
