@@ -232,6 +232,14 @@ export const AIAssistant = () => {
           try {
             const parsed = JSON.parse(jsonStr);
             
+            // Handle radio update event
+            if (parsed.type === "radio_updated") {
+              pendingPlaylistRef.current = null;
+              // Store radio update info to attach to the next assistant message
+              pendingRadioUpdateRef.current = { genre: parsed.data.genre, trackCount: parsed.data.trackCount };
+              continue;
+            }
+
             // Handle auto-play multiple tracks (normal + DJ mode)
             if (parsed.type === "auto_play_tracks" || parsed.type === "dj_mode_tracks") {
               const trackIds = parsed.data.map((t: any) => t.id);
@@ -239,7 +247,6 @@ export const AIAssistant = () => {
               const playedTracks = await handleAutoPlayTracks(trackIds, isDJ);
               if (playedTracks.length > 0) {
                 pendingPlaylistRef.current = { tracks: playedTracks, isDJ };
-                // If DJ mode, start the DJ session with sound effects & announcements
                 if (isDJ) {
                   const djCmd = parseDJCommand(userMessage);
                   startDJSession({
