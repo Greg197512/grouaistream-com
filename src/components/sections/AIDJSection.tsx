@@ -1,10 +1,12 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Brain, Headphones, TrendingUp, Play, Pause, Camera, Zap } from "lucide-react";
+import { Sparkles, Brain, Headphones, TrendingUp, Play, Pause, Camera, Zap, Eye } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { MoodDetector } from "@/components/mood/MoodDetector";
+import { DJCrowdCamera, CrowdEnergy } from "@/components/dj/DJCrowdCamera";
 import { useAI } from "@/contexts/AIContext";
 import { usePlayer } from "@/contexts/PlayerContext";
+import { useDJMode } from "@/hooks/useDJMode";
 import { FeatureGate } from "@/components/ui/FeatureGate";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -45,11 +47,14 @@ export const AIDJSection = () => {
     generateAIPlaylist 
   } = useAI();
   const { playPlaylist, isPlaying: playerIsPlaying } = usePlayer();
+  const { isDJActive: djModeActive, handleCrowdEnergy } = useDJMode();
   
   const [displayMood, setDisplayMood] = useState(moods[1]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [djActive, setDjActive] = useState(true);
   const [showMoodDetector, setShowMoodDetector] = useState(false);
+  const [showCrowdCamera, setShowCrowdCamera] = useState(false);
+  const [crowdEnergy, setCrowdEnergy] = useState<CrowdEnergy | null>(null);
 
   // Sync with AI context mood
   useEffect(() => {
@@ -120,9 +125,17 @@ export const AIDJSection = () => {
             <p className="text-sm text-muted-foreground">Your personal music curator</p>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Button
-            onClick={() => setShowMoodDetector(!showMoodDetector)}
+            onClick={() => { setShowCrowdCamera(!showCrowdCamera); if (showMoodDetector) setShowMoodDetector(false); }}
+            variant={showCrowdCamera ? "default" : "outline"}
+            className="gap-2 rounded-full"
+          >
+            <Eye className="h-4 w-4" />
+            {showCrowdCamera ? "Ukryj Crowd Vision" : "Crowd Vision"}
+          </Button>
+          <Button
+            onClick={() => { setShowMoodDetector(!showMoodDetector); if (showCrowdCamera) setShowCrowdCamera(false); }}
             variant="outline"
             className="gap-2 rounded-full"
           >
@@ -157,7 +170,55 @@ export const AIDJSection = () => {
         )}
       </AnimatePresence>
 
+      {/* Crowd Camera Panel */}
+      <AnimatePresence>
+        {showCrowdCamera && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="mb-6 overflow-hidden"
+          >
+            <DJCrowdCamera
+              isActive={showCrowdCamera && djActive}
+              onCrowdUpdate={(energy) => {
+                setCrowdEnergy(energy);
+                handleCrowdEnergy(energy);
+              }}
+              onClose={() => setShowCrowdCamera(false)}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Crowd Energy Banner */}
+        {crowdEnergy && showCrowdCamera && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="col-span-1 md:col-span-3 groove-card p-3 flex items-center gap-3"
+          >
+            <span className="text-2xl">
+              {crowdEnergy.level === "peak" ? "🔥" : crowdEnergy.level === "high" ? "🎉" : crowdEnergy.level === "medium" ? "🎵" : "😌"}
+            </span>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">
+                  Energia parkietu: <span className="text-primary">{crowdEnergy.score}%</span>
+                </span>
+                <span className="text-xs text-muted-foreground">{crowdEnergy.facesDetected} osób</span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-0.5 truncate">{crowdEnergy.suggestion}</p>
+            </div>
+            {crowdEnergy.suggestedGenreShift && (
+              <span className="text-xs bg-primary/20 text-primary px-2 py-1 rounded-full whitespace-nowrap">
+                → {crowdEnergy.suggestedGenreShift}
+              </span>
+            )}
+          </motion.div>
+        )}
+
         {/* Mood Card */}
         <motion.div 
           className="groove-card p-6 col-span-1 md:col-span-2"
