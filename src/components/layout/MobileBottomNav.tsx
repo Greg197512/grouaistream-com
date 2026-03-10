@@ -8,7 +8,7 @@ const navItems = [
   { icon: "search", labelKey: "nav.search", href: "/search" },
   { icon: "library_music", labelKey: "nav.library", href: "/library" },
   { icon: "radio", labelKey: "nav.radioLive", href: "/radio-live" },
-  { icon: "qr_code_2", labelKey: "nav.qrParkiet", href: "/ai-dj" },
+  { icon: "qr_code_2", labelKey: "nav.aiDj", href: "/ai-dj" },
 ];
 
 export const MobileBottomNav = () => {
