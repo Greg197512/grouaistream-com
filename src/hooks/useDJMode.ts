@@ -293,6 +293,31 @@ export const useDJMode = () => {
     };
   }, []);
 
+  // Handle crowd energy update — DJ reacts and can switch genres
+  const handleCrowdEnergy = useCallback(async (energy: {
+    level: string;
+    score: number;
+    suggestion: string;
+    suggestedGenreShift?: string;
+  }) => {
+    if (!isDJActive || !djSession) return;
+
+    // Only react to significant energy shifts
+    const shouldReact = Math.random() > 0.65; // ~35% chance per scan
+    if (!shouldReact) return;
+
+    const comment = energy.suggestion;
+    
+    if (energy.suggestedGenreShift) {
+      toast.info(`🎥 DJ widzi parkiet: ${comment}`, { duration: 4000 });
+      
+      // Every ~3rd crowd update, DJ speaks about what they see
+      if (Math.random() > 0.6) {
+        speak(comment, { rate: 1.05, pitch: 0.75 });
+      }
+    }
+  }, [isDJActive, djSession]);
+
   return {
     isDJActive,
     isLoading,
@@ -300,5 +325,6 @@ export const useDJMode = () => {
     startDJSession,
     stopDJSession,
     parseDJCommand,
+    handleCrowdEnergy,
   };
 };
