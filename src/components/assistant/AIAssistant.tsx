@@ -12,10 +12,19 @@ import { useLocation } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import aiAssistantAvatar from "@/assets/ai-assistant-avatar.jpg";
 
+interface PlaylistTrackInfo {
+  id: string;
+  title: string;
+  artist: string;
+  genre?: string;
+}
+
 interface Message {
   role: "user" | "assistant";
   content: string;
   trackLink?: { id: string; title: string; artist: string };
+  playlistTracks?: PlaylistTrackInfo[];
+  isDJMode?: boolean;
 }
 
 const getTimeOfDay = () => {
