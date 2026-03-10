@@ -332,6 +332,7 @@ export const AIAssistant = () => {
     } finally {
       pendingPlaylistRef.current = null;
       pendingRadioUpdateRef.current = null;
+      pendingRadioWishRef.current = null;
       setIsLoading(false);
     }
   }, [input, isLoading, messages, userContext, startDJSession, parseDJCommand]);
