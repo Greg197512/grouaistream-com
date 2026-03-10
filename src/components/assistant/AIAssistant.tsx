@@ -222,6 +222,26 @@ export const AIAssistant = () => {
               continue;
             }
 
+            // Handle DJ mode tracks — start DJ session with transitions & announcements
+            if (parsed.type === "dj_mode_tracks") {
+              const trackIds = parsed.data.map((t: any) => t.id);
+              const genres = [...new Set(parsed.data.map((t: any) => t.genre).filter(Boolean))] as string[];
+              // Fetch full tracks, then start DJ session
+              const { data: djTracks } = await supabase
+                .from("tracks")
+                .select("*")
+                .in("id", trackIds)
+                .not("audio_url", "is", null);
+              
+              if (djTracks && djTracks.length > 0) {
+                const orderedDJ = trackIds
+                  .map((id: string) => djTracks.find(t => t.id === id))
+                  .filter(Boolean);
+                startDJSession({ genres, partyType: "party", trackCount: orderedDJ.length, customPrompt: "" });
+              }
+              continue;
+            }
+
             // Handle custom track_link event
             if (parsed.type === "track_link") {
               currentTrackLink = parsed.data;
