@@ -77,6 +77,7 @@ const App = () => (
                   <Route path="/server" element={<Server />} />
                   <Route path="/admin" element={<Admin />} />
                   <Route path="/legal" element={<Legal />} />
+                  <Route path="/party/:code" element={<PartyPulpit />} />
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>
