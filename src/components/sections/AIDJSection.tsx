@@ -170,7 +170,55 @@ export const AIDJSection = () => {
         )}
       </AnimatePresence>
 
+      {/* Crowd Camera Panel */}
+      <AnimatePresence>
+        {showCrowdCamera && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="mb-6 overflow-hidden"
+          >
+            <DJCrowdCamera
+              isActive={showCrowdCamera && djActive}
+              onCrowdUpdate={(energy) => {
+                setCrowdEnergy(energy);
+                handleCrowdEnergy(energy);
+              }}
+              onClose={() => setShowCrowdCamera(false)}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Crowd Energy Banner */}
+        {crowdEnergy && showCrowdCamera && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="col-span-1 md:col-span-3 groove-card p-3 flex items-center gap-3"
+          >
+            <span className="text-2xl">
+              {crowdEnergy.level === "peak" ? "🔥" : crowdEnergy.level === "high" ? "🎉" : crowdEnergy.level === "medium" ? "🎵" : "😌"}
+            </span>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">
+                  Energia parkietu: <span className="text-primary">{crowdEnergy.score}%</span>
+                </span>
+                <span className="text-xs text-muted-foreground">{crowdEnergy.facesDetected} osób</span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-0.5 truncate">{crowdEnergy.suggestion}</p>
+            </div>
+            {crowdEnergy.suggestedGenreShift && (
+              <span className="text-xs bg-primary/20 text-primary px-2 py-1 rounded-full whitespace-nowrap">
+                → {crowdEnergy.suggestedGenreShift}
+              </span>
+            )}
+          </motion.div>
+        )}
+
         {/* Mood Card */}
         <motion.div 
           className="groove-card p-6 col-span-1 md:col-span-2"
