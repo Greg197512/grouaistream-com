@@ -315,7 +315,8 @@ Znasz DOKŁADNIE każdą funkcję aplikacji:
         // Send auto-play tracks as first event (multiple tracks for playlist)
         if (autoPlayTracks.length > 0) {
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({
-            type: "auto_play_tracks",
+            type: hasDJIntent ? "dj_mode_tracks" : "auto_play_tracks",
+            djMode: hasDJIntent,
             data: autoPlayTracks.map((t: any) => ({
               id: t.id,
               title: t.title,
