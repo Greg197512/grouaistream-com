@@ -118,8 +118,17 @@ serve(async (req) => {
       const hasPlayIntent = simplePlayPatterns.some(p => p.test(lowerMessage));
       const hasContextKeyword = Object.keys(contextKeywords).some(k => lowerMessage.includes(k));
       if (hasPlayIntent && hasContextKeyword) {
-        requestedCount = 5; // Default to 5 tracks
+        requestedCount = hasDJIntent ? 20 : 5; // DJ mode gets more tracks
       }
+    }
+
+    // If DJ mode with no count yet, default to 15-20
+    if (hasDJIntent && requestedCount === 0) {
+      requestedCount = 15;
+    }
+    // Increase cap for DJ mode
+    if (hasDJIntent && requestedCount < 10) {
+      requestedCount = Math.max(requestedCount, 10);
     }
 
     if (requestedCount > 0 && playableTracks.length > 0) {
