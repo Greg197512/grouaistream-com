@@ -32,11 +32,11 @@ export const useDJMode = () => {
   const lastAnnouncedTrackRef = useRef<string | null>(null);
   const trackCountRef = useRef(0);
 
-  // DJ speaks with the correct language
+  // DJ speaks with ENERGY — fast, punchy, club-style
   const djSpeak = useCallback((text: string, opts?: { rate?: number; pitch?: number }) => {
     const lang = getAppLang();
     const ttsLang = getDJTTSLang(lang);
-    return speak(text, { rate: opts?.rate ?? 1.05, pitch: opts?.pitch ?? 0.75, lang: ttsLang });
+    return speak(text, { rate: opts?.rate ?? 1.18, pitch: opts?.pitch ?? 1.05, lang: ttsLang, mode: "dj" });
   }, []);
 
   // Announce DJ transition between tracks with sound effects
@@ -59,21 +59,32 @@ export const useDJMode = () => {
     const trackInfo = texts.trackAnnounce(currentTrack.title, currentTrack.artist);
     const announcement = `${transition} ${trackInfo}`;
 
-    // Play a DJ sound effect then speak
+    // Play DJ effect + hype line + track announcement for maximum energy
     transitionTimerRef.current = window.setTimeout(() => {
-      // Random chance for different effects
+      // Always play an effect on transitions
       const effectRoll = Math.random();
-      if (effectRoll > 0.6) {
+      if (effectRoll > 0.7) {
         playRandomTransitionEffect();
-      } else if (effectRoll > 0.3) {
+      } else if (effectRoll > 0.4) {
         playDJEffect("scratch");
+      } else if (effectRoll > 0.2) {
+        playDJEffect("riser");
+      } else {
+        playDJEffect("laser");
       }
       
-      // Small delay after effect, then speak
+      // Add a random hype line before the announcement sometimes
+      const hypeRoll = Math.random();
+      let fullAnnouncement = announcement;
+      if (hypeRoll > 0.5 && texts.hypeLines) {
+        fullAnnouncement = `${randomFrom(texts.hypeLines)} ${announcement}`;
+      }
+      
+      // Small delay after effect, then speak with ENERGY
       setTimeout(() => {
-        djSpeak(announcement);
-      }, 500);
-    }, 1000);
+        djSpeak(fullAnnouncement);
+      }, 400);
+    }, 800);
 
     return () => {
       if (transitionTimerRef.current) clearTimeout(transitionTimerRef.current);
@@ -155,14 +166,15 @@ export const useDJMode = () => {
 
       toast.success(`🎧 DJ GrooveAI! ${curatedTracks.length} tracks`, { id: "dj-mode", duration: 5000 });
 
-      // Play buildup effect, then speak intro, then start playback
+      // Epic buildup sequence: buildup effect → speak intro → impact + horn → START
       playDJEffect("buildup");
       
-      await new Promise(r => setTimeout(r, 1500));
+      await new Promise(r => setTimeout(r, 2000));
       await djSpeak(introText);
       
-      // Start playback with a horn effect
-      playDJEffect("horn");
+      // Double effect for maximum impact on drop
+      playDJEffect("impact");
+      setTimeout(() => playDJEffect("horn"), 200);
       playPlaylist(curatedTracks);
 
     } catch (error) {
