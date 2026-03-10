@@ -144,7 +144,7 @@ export const AIAssistant = () => {
     }
   };
 
-  const handleAutoPlayTracks = async (trackIds: string[]) => {
+  const handleAutoPlayTracks = async (trackIds: string[], isDJ = false): Promise<PlaylistTrackInfo[]> => {
     try {
       const { data: tracks } = await supabase
         .from("tracks")
@@ -153,7 +153,6 @@ export const AIAssistant = () => {
         .not("audio_url", "is", null);
       
       if (tracks && tracks.length > 0) {
-        // Maintain the order from the AI response
         const orderedTracks = trackIds
           .map(id => tracks.find(t => t.id === id))
           .filter(Boolean)
@@ -168,11 +167,19 @@ export const AIAssistant = () => {
         if (orderedTracks.length > 0) {
           playPlaylist(orderedTracks);
         }
+
+        return orderedTracks.map(t => ({
+          id: t.id, title: t.title, artist: t.artist, genre: t.genre as string | undefined,
+        }));
       }
     } catch (error) {
       console.error("Error auto-playing tracks:", error);
     }
+    return [];
   };
+
+  // Ref to store playlist tracks to attach to the next assistant message
+  const pendingPlaylistRef = useRef<{ tracks: PlaylistTrackInfo[]; isDJ: boolean } | null>(null);
 
   const handleSend = useCallback(async () => {
     if (!input.trim() || isLoading) return;
