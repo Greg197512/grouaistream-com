@@ -213,6 +213,13 @@ export const AIAssistant = () => {
           try {
             const parsed = JSON.parse(jsonStr);
             
+            // Handle auto-play multiple tracks
+            if (parsed.type === "auto_play_tracks") {
+              const trackIds = parsed.data.map((t: any) => t.id);
+              handleAutoPlayTracks(trackIds);
+              continue;
+            }
+
             // Handle custom track_link event
             if (parsed.type === "track_link") {
               currentTrackLink = parsed.data;
