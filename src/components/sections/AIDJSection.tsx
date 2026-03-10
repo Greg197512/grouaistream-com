@@ -129,7 +129,15 @@ export const AIDJSection = () => {
         </div>
         <div className="flex gap-2 flex-wrap">
           <Button
-            onClick={() => { setShowCrowdCamera(!showCrowdCamera); if (showMoodDetector) setShowMoodDetector(false); }}
+            onClick={() => { setShowQRSession(!showQRSession); if (showCrowdCamera) setShowCrowdCamera(false); if (showMoodDetector) setShowMoodDetector(false); }}
+            variant={showQRSession ? "default" : "outline"}
+            className="gap-2 rounded-full"
+          >
+            <QrCode className="h-4 w-4" />
+            {showQRSession ? "Ukryj QR" : "QR Parkiet"}
+          </Button>
+          <Button
+            onClick={() => { setShowCrowdCamera(!showCrowdCamera); if (showMoodDetector) setShowMoodDetector(false); if (showQRSession) setShowQRSession(false); }}
             variant={showCrowdCamera ? "default" : "outline"}
             className="gap-2 rounded-full"
           >
@@ -137,7 +145,7 @@ export const AIDJSection = () => {
             {showCrowdCamera ? "Ukryj Crowd Vision" : "Crowd Vision"}
           </Button>
           <Button
-            onClick={() => { setShowMoodDetector(!showMoodDetector); if (showCrowdCamera) setShowCrowdCamera(false); }}
+            onClick={() => { setShowMoodDetector(!showMoodDetector); if (showCrowdCamera) setShowCrowdCamera(false); if (showQRSession) setShowQRSession(false); }}
             variant="outline"
             className="gap-2 rounded-full"
           >
