@@ -4,7 +4,8 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { MoodDetector } from "@/components/mood/MoodDetector";
 import { DJCrowdCamera, CrowdEnergy } from "@/components/dj/DJCrowdCamera";
-import { DJSessionQR } from "@/components/dj/DJSessionQR";
+import { PartyActivationModal } from "@/components/dj/PartyActivationModal";
+import { PartyControlPanel } from "@/components/dj/PartyControlPanel";
 import { useAI } from "@/contexts/AIContext";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { useDJMode } from "@/hooks/useDJMode";
@@ -56,6 +57,8 @@ export const AIDJSection = () => {
   const [showMoodDetector, setShowMoodDetector] = useState(false);
   const [showCrowdCamera, setShowCrowdCamera] = useState(false);
   const [showQRSession, setShowQRSession] = useState(false);
+  const [showActivationModal, setShowActivationModal] = useState(false);
+  const [showPartyPanel, setShowPartyPanel] = useState(false);
   const [crowdEnergy, setCrowdEnergy] = useState<CrowdEnergy | null>(null);
 
   // Sync with AI context mood
@@ -129,12 +132,12 @@ export const AIDJSection = () => {
         </div>
         <div className="flex gap-2 flex-wrap">
           <Button
-            onClick={() => { setShowQRSession(!showQRSession); if (showCrowdCamera) setShowCrowdCamera(false); if (showMoodDetector) setShowMoodDetector(false); }}
-            variant={showQRSession ? "default" : "outline"}
+            onClick={() => { setShowActivationModal(true); if (showCrowdCamera) setShowCrowdCamera(false); if (showMoodDetector) setShowMoodDetector(false); }}
+            variant="outline"
             className="gap-2 rounded-full"
           >
             <QrCode className="h-4 w-4" />
-            {showQRSession ? "Ukryj QR" : "QR Parkiet"}
+            QR Parkiet
           </Button>
           <Button
             onClick={() => { setShowCrowdCamera(!showCrowdCamera); if (showMoodDetector) setShowMoodDetector(false); if (showQRSession) setShowQRSession(false); }}
@@ -163,17 +166,17 @@ export const AIDJSection = () => {
         </div>
       </div>
 
-      {/* QR Session Panel */}
+      {/* Party Activation Modal */}
+      <PartyActivationModal
+        open={showActivationModal}
+        onClose={() => setShowActivationModal(false)}
+        onActivated={() => { setShowActivationModal(false); setShowPartyPanel(true); }}
+      />
+
+      {/* Full-screen Party Control Panel */}
       <AnimatePresence>
-        {showQRSession && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            className="mb-6 overflow-hidden"
-          >
-            <DJSessionQR onClose={() => setShowQRSession(false)} />
-          </motion.div>
+        {showPartyPanel && (
+          <PartyControlPanel onClose={() => setShowPartyPanel(false)} />
         )}
       </AnimatePresence>
 
