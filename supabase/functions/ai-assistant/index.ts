@@ -22,6 +22,16 @@ serve(async (req) => {
 
     const lowerMessage = message.toLowerCase();
 
+    // Detect DJ mode intent
+    const djPatterns = [
+      /dj/i, /didżej/i, /disc\s*jockey/i,
+      /domówk[aęi]/i, /imprez[aęi]/i, /party/i,
+      /set\s+muzyczn/i, /zrób\s+set/i, /postaw\s+domówk/i,
+      /rozkręć/i, /haus\s*party/i, /house\s*party/i,
+    ];
+    const hasDJIntent = djPatterns.some(p => p.test(lowerMessage)) && 
+      (/puś|graj|włącz|zapodaj|odpal|play|daj|zrób|rozkręć|postaw|zajmij|mixu|miksuj/i.test(lowerMessage));
+
     // Fetch ALL tracks from the database so the assistant knows the full library
     const { data: allTracks } = await supabase
       .from("tracks")
