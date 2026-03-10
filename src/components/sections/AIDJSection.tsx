@@ -1,9 +1,10 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Brain, Headphones, TrendingUp, Play, Pause, Camera, Zap, Eye } from "lucide-react";
+import { Sparkles, Brain, Headphones, TrendingUp, Play, Pause, Camera, Zap, Eye, QrCode } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { MoodDetector } from "@/components/mood/MoodDetector";
 import { DJCrowdCamera, CrowdEnergy } from "@/components/dj/DJCrowdCamera";
+import { DJSessionQR } from "@/components/dj/DJSessionQR";
 import { useAI } from "@/contexts/AIContext";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { useDJMode } from "@/hooks/useDJMode";
