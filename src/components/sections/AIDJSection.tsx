@@ -108,6 +108,18 @@ export const AIDJSection = () => {
         )}
       </AnimatePresence>
 
+      {/* QR Parkiet button OUTSIDE FeatureGate so it's always clickable */}
+      <div className="px-6 pt-6 flex justify-end">
+        <Button
+          onClick={() => { setShowActivationModal(true); if (showCrowdCamera) setShowCrowdCamera(false); if (showMoodDetector) setShowMoodDetector(false); }}
+          variant="outline"
+          className="gap-2 rounded-full border-primary/30 hover:bg-primary/10"
+        >
+          <QrCode className="h-4 w-4" />
+          QR Parkiet
+        </Button>
+      </div>
+
       <FeatureGate requiredPlan="pro" featureName={t("upgrade.pro.f4")}>
       <section className="px-6 py-12">
         <div className="flex items-center justify-between mb-6">
