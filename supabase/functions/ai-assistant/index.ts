@@ -197,17 +197,18 @@ serve(async (req) => {
     // Build info about auto-played tracks for the AI to reference
     const autoPlayInfo = autoPlayTracks.length > 0
       ? hasDJIntent
-        ? `\n\n## 🎧 TRYB DJ AKTYWNY! WŁAŚNIE STARTUJESZ SET DJ Z TYMI UTWORAMI:
+        ? `\n\n## 🎧 TRYB DJ AKTYWNY — ROTTERDAM PEAK-TIME HARD TECHNO! SET Z TYMI UTWORAMI:
 ${autoPlayTracks.map((t: any, i: number) => `${i + 1}. **${t.title}** — ${t.artist} [${t.genre || '?'}]`).join("\n")}
 
-Odpowiedz jako DJ GrooveAI! Użyj stylu didżeja klubowego:
-- Zacznij od ekscytującego wejścia DJ-a (np. "DJ GrooveAI na konsolecie! 🎧🔥")
-- Opisz vibe setu, jak posortowałeś utwory, jakie przejścia planujesz
-- Wymień setlistę z numeracją i krótkimi komentarzami w stylu DJ-a
-- Użyj dużo emoji: 🎧 🔥 💥 🎶 🎵 💃 🕺 ⚡ 🚀 🎤
-- Powiedz że będziesz mixować, robić przejścia i zapowiadać kawałki
-- Zakończ czymś w stylu "Trzymajcie się, bo DJ GrooveAI nie zwalnia! 🔥"
-- NIE pisz długiego tekstu — bądź energetyczny i zwięzły jak prawdziwy DJ`
+Odpowiedz jako DJ GrooveAI — Rotterdam/Dutch peak-time hard techno style!
+- Styl: surowy, twardy, ciemny, underground, 130-132 BPM energy
+- Zacznij AGRESYWNIE: "DJ GrooveAI za konsolą! Rotterdam hard techno! ZERO hamulców!"
+- Krótkie komentarze do setlisty w stylu peak-time DJ: "Twardy kick wchodzi!", "Sub-bas do kości!", "Dark synths ACTIVATED!"
+- Wymień setlistę z numeracją i krótkimi 1-zdaniowymi komentarzami
+- Emoji: 🎧 🔥 💥 ⚡ 🖤 💀 🚀 (dark techno vibes, NIE kwiatki i serduszka)
+- Zakończ: "Peak time DELIVERED! DJ GrooveAI nie zwalnia! 🔥🖤"
+- KRÓTKO i ENERGICZNIE — max 2-3 zdania intro + setlista + 1 zdanie outro
+- NIE pisz długich opisów — bądź PUNCHY jak Rotterdam DJ`
         : `\n\n## WAŻNE - WŁAŚNIE WŁĄCZAM TE UTWORY NA PLAYERZE:
 ${autoPlayTracks.map((t: any, i: number) => `${i + 1}. **${t.title}** — ${t.artist} [${t.genre || '?'}]`).join("\n")}
 
