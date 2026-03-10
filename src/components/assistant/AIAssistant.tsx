@@ -238,6 +238,16 @@ export const AIAssistant = () => {
               const playedTracks = await handleAutoPlayTracks(trackIds, isDJ);
               if (playedTracks.length > 0) {
                 pendingPlaylistRef.current = { tracks: playedTracks, isDJ };
+                // If DJ mode, start the DJ session with sound effects & announcements
+                if (isDJ) {
+                  const djCmd = parseDJCommand(userMessage);
+                  startDJSession({
+                    genres: djCmd.genres,
+                    partyType: djCmd.partyType || "party",
+                    trackCount: playedTracks.length,
+                    customPrompt: userMessage,
+                  });
+                }
               }
               continue;
             }
