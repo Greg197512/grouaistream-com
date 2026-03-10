@@ -358,6 +358,7 @@ export const AIAssistant = () => {
       pendingRadioUpdateRef.current = null;
       pendingRadioWishRef.current = null;
       pendingRadioTrackModRef.current = null;
+      pendingDedicationRef.current = null;
       setIsLoading(false);
     }
   }, [input, isLoading, messages, userContext, startDJSession, parseDJCommand]);
