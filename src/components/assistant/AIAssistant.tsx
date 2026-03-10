@@ -413,6 +413,40 @@ export const AIAssistant = () => {
                           <ExternalLink className="h-3 w-3 text-primary shrink-0" />
                         </motion.button>
                       )}
+                      {/* Visual playlist track list */}
+                      {msg.playlistTracks && msg.playlistTracks.length > 0 && (
+                        <div className="mt-3 space-y-1">
+                          <div className="flex items-center gap-1.5 mb-2">
+                            <Music className="h-3 w-3 text-primary" />
+                            <span className="text-[10px] font-semibold text-primary">
+                              {msg.isDJMode ? "🎧 DJ Set" : "🎵 Playlista"} • {msg.playlistTracks.length} utworów
+                            </span>
+                          </div>
+                          <div className="max-h-[200px] overflow-y-auto space-y-1 pr-1">
+                            {msg.playlistTracks.map((track, idx) => (
+                              <motion.button
+                                key={track.id}
+                                onClick={() => handlePlayTrack(track.id)}
+                                className="flex items-center gap-2 w-full p-1.5 rounded-lg bg-primary/5 hover:bg-primary/15 transition-colors text-left group"
+                                initial={{ opacity: 0, x: -8 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: idx * 0.03 }}
+                                whileHover={{ scale: 1.01 }}
+                                whileTap={{ scale: 0.98 }}
+                              >
+                                <div className="w-6 h-6 rounded-md bg-primary/20 flex items-center justify-center shrink-0 group-hover:bg-primary/40 transition-colors">
+                                  <span className="text-[9px] font-bold text-primary group-hover:hidden">{idx + 1}</span>
+                                  <Music className="h-3 w-3 text-primary hidden group-hover:block" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-[11px] font-medium truncate text-foreground/90">{track.title}</p>
+                                  <p className="text-[9px] text-muted-foreground truncate">{track.artist}{track.genre ? ` • ${track.genre}` : ""}</p>
+                                </div>
+                              </motion.button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </motion.div>
                 ))}
