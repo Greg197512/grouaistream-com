@@ -26,6 +26,7 @@ interface Message {
   playlistTracks?: PlaylistTrackInfo[];
   isDJMode?: boolean;
   radioUpdate?: { genre: string; trackCount: number };
+  radioWish?: { wishText: string };
 }
 
 const getTimeOfDay = () => {
@@ -124,9 +125,10 @@ export const AIAssistant = () => {
     recentTracks: listeningStats?.recentTracks || 0,
     currentMood: null,
     userName,
+    userId: user?.id || null,
     currentTrack: currentTrack ? { title: currentTrack.title, artist: currentTrack.artist } : null,
     timeOfDay: getTimeOfDay(),
-  }), [location.pathname, listeningStats, userName, currentTrack]);
+  }), [location.pathname, listeningStats, userName, user?.id, currentTrack]);
 
   const handlePlayTrack = async (trackId: string) => {
     try {
@@ -182,6 +184,7 @@ export const AIAssistant = () => {
   // Ref to store playlist tracks to attach to the next assistant message
   const pendingPlaylistRef = useRef<{ tracks: PlaylistTrackInfo[]; isDJ: boolean } | null>(null);
   const pendingRadioUpdateRef = useRef<{ genre: string; trackCount: number } | null>(null);
+  const pendingRadioWishRef = useRef<{ wishText: string } | null>(null);
 
   const handleSend = useCallback(async () => {
     if (!input.trim() || isLoading) return;
@@ -241,6 +244,12 @@ export const AIAssistant = () => {
               continue;
             }
 
+            // Handle radio wish event
+            if (parsed.type === "radio_wish_sent") {
+              pendingRadioWishRef.current = { wishText: parsed.data.wishText };
+              continue;
+            }
+
             // Handle auto-play multiple tracks (normal + DJ mode)
             if (parsed.type === "auto_play_tracks" || parsed.type === "dj_mode_tracks") {
               const trackIds = parsed.data.map((t: any) => t.id);
@@ -272,6 +281,7 @@ export const AIAssistant = () => {
               assistantContent += content;
               const pending = pendingPlaylistRef.current;
               const radioUpdate = pendingRadioUpdateRef.current;
+              const radioWish = pendingRadioWishRef.current;
               setMessages(prev => {
                 const msgData: Message = {
                   role: "assistant",
@@ -280,6 +290,7 @@ export const AIAssistant = () => {
                   playlistTracks: pending?.tracks,
                   isDJMode: pending?.isDJ,
                   radioUpdate: radioUpdate || undefined,
+                  radioWish: radioWish || undefined,
                 };
                 const last = prev[prev.length - 1];
                 if (last?.role === "assistant" && prev.length > 1 && prev[prev.length - 2]?.role === "user") {
@@ -321,6 +332,7 @@ export const AIAssistant = () => {
     } finally {
       pendingPlaylistRef.current = null;
       pendingRadioUpdateRef.current = null;
+      pendingRadioWishRef.current = null;
       setIsLoading(false);
     }
   }, [input, isLoading, messages, userContext, startDJSession, parseDJCommand]);
@@ -482,6 +494,22 @@ export const AIAssistant = () => {
                           <div className="flex-1 min-w-0">
                             <p className="text-xs font-medium">📻 Radio: {msg.radioUpdate.genre}</p>
                             <p className="text-[10px] text-muted-foreground">{msg.radioUpdate.trackCount} utworów załadowanych</p>
+                          </div>
+                        </motion.div>
+                      )}
+                      {/* Radio wish badge */}
+                      {msg.radioWish && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 4 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="mt-3 flex items-center gap-2 p-2.5 rounded-xl bg-primary/10 border border-primary/20"
+                        >
+                          <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
+                            <span className="text-sm">📨</span>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-medium">Życzenie wysłane do radia</p>
+                            <p className="text-[10px] text-muted-foreground truncate">"{msg.radioWish.wishText}"</p>
                           </div>
                         </motion.div>
                       )}

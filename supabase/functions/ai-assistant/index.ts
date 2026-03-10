@@ -141,6 +141,62 @@ serve(async (req) => {
     }
 
     // ==========================================
+    // RADIO WISHES / MESSAGES DETECTION
+    // ==========================================
+    const wishPatterns = [
+      /(?:napisz|dodaj|wyślij|wyslij|prześlij|przeslij|daj|wstaw|postuj).*(?:życzeni|zyczeni|wiadomo|wish|message).*(?:radi|rozgłośni|rozglosni)/i,
+      /(?:życzeni|zyczeni|wiadomo|wish).*(?:radi|rozgłośni|rozglosni).*[:：]/i,
+      /(?:radi|rozgłośni|rozglosni).*(?:życzeni|zyczeni|wiadomo|wish|napisz|dodaj)/i,
+      /(?:napisz|dodaj|wyślij|wyslij)\s+(?:w|na|do)\s+(?:radiu|rozgłośni|rozglosni)/i,
+    ];
+    const hasWishIntent = wishPatterns.some(p => p.test(lowerMessage));
+    let wishResult: { success: boolean; wishText: string } | null = null;
+
+    if (hasWishIntent) {
+      // Extract the wish text - look for text after colon, quotes, or key phrases
+      let wishText = "";
+      
+      // Try to extract after colon
+      const colonMatch = message.match(/[:：]\s*(.+)/s);
+      if (colonMatch) {
+        wishText = colonMatch[1].trim();
+      }
+      
+      // Try to extract quoted text
+      if (!wishText) {
+        const quoteMatch = message.match(/["""„](.+?)["""]/s);
+        if (quoteMatch) wishText = quoteMatch[1].trim();
+      }
+      
+      // Fallback: extract text after the radio/wish keywords
+      if (!wishText) {
+        const fallbackMatch = message.match(/(?:życzeni[ae]|zyczeni[ae]|wiadomo(?:ść|sc)|radiu|rozgłośni|rozglosni)\s+(.{5,})/i);
+        if (fallbackMatch) wishText = fallbackMatch[1].trim();
+      }
+
+      if (wishText && wishText.length >= 2) {
+        // Get user info from context
+        const wishUserName = (userContext?.userName || "Słuchacz").slice(0, 30);
+        
+        // We need a user_id - use a deterministic one from context or generate
+        // The service_role bypasses RLS, so we can insert with any user_id
+        const wishUserId = userContext?.userId || "00000000-0000-0000-0000-000000000001";
+
+        const { error: wishError } = await supabase
+          .from("radio_messages")
+          .insert({
+            user_id: wishUserId,
+            display_name: wishUserName,
+            message: wishText.slice(0, 500),
+          });
+
+        if (!wishError) {
+          wishResult = { success: true, wishText: wishText.slice(0, 500) };
+        }
+      }
+    }
+
+    // ==========================================
     // MUSIC PLAY DETECTION (existing logic)
     // ==========================================
 
@@ -319,6 +375,16 @@ W odpowiedzi POTWIERDŹ zmianę rozgłośni. Powiedz że radio gra teraz ${radio
 Zaproponuj użytkownikowi przejście na /radio-live aby posłuchać.`
       : "";
 
+    // Build radio wish info for the AI
+    const wishInfo = wishResult
+      ? `\n\n## 📨 ŻYCZENIE DODANE DO RADIA!
+Właśnie dodałem życzenie do rozgłośni GrouaRadio:
+> "${wishResult.wishText}"
+
+W odpowiedzi POTWIERDŹ że życzenie zostało wysłane do radia. Bądź entuzjastyczny! Użyj emoji 📨 📻 🎵.
+Powiedz że wiadomość pojawi się na stronie /radio-live w sekcji życzeń.`
+      : "";
+
     // Build info about auto-played tracks for the AI to reference
     const autoPlayInfo = autoPlayTracks.length > 0
       ? hasDJIntent
@@ -365,6 +431,10 @@ Gdy użytkownik prosi o muzykę (np. "zapodaj mi 5 utworów na domówkę", "puś
 ## SUPER WAŻNA FUNKCJA - ZARZĄDZANIE ROZGŁOŚNIĄ RADIO:
 Gdy użytkownik pisze np. "zmień w rozgłośni muzykę na dance", "ustaw radio na rap", "daj w radiu jazz" — system AUTOMATYCZNIE zmienia ramówkę rozgłośni GrouaRadio. Ty musisz POTWIERDZIĆ zmianę i zaproponować przejście na /radio-live.
 ${radioUpdateInfo}
+
+## SUPER WAŻNA FUNKCJA - ŻYCZENIA W RADIU:
+Gdy użytkownik pisze np. "napisz życzenia w radiu: pozdrawiam wszystkich!" lub "dodaj wiadomość do radia: super muzyka!" — system AUTOMATYCZNIE dodaje życzenie do sekcji życzeń na /radio-live. Ty musisz POTWIERDZIĆ wysłanie.
+${wishInfo}
 
 ## FORMATOWANIE ODPOWIEDZI:
 - Używaj **pogrubień** dla ważnych terminów
@@ -468,6 +538,13 @@ Znasz DOKŁADNIE każdą funkcję aplikacji:
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({
             type: "radio_updated",
             data: radioUpdateResult,
+          })}\n\n`));
+        }
+        // Send radio wish event
+        if (wishResult) {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+            type: "radio_wish_sent",
+            data: wishResult,
           })}\n\n`));
         }
         // Send auto-play tracks as first event (multiple tracks for playlist)
