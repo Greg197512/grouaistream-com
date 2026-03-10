@@ -375,6 +375,16 @@ W odpowiedzi POTWIERDŹ zmianę rozgłośni. Powiedz że radio gra teraz ${radio
 Zaproponuj użytkownikowi przejście na /radio-live aby posłuchać.`
       : "";
 
+    // Build radio wish info for the AI
+    const wishInfo = wishResult
+      ? `\n\n## 📨 ŻYCZENIE DODANE DO RADIA!
+Właśnie dodałem życzenie do rozgłośni GrouaRadio:
+> "${wishResult.wishText}"
+
+W odpowiedzi POTWIERDŹ że życzenie zostało wysłane do radia. Bądź entuzjastyczny! Użyj emoji 📨 📻 🎵.
+Powiedz że wiadomość pojawi się na stronie /radio-live w sekcji życzeń.`
+      : "";
+
     // Build info about auto-played tracks for the AI to reference
     const autoPlayInfo = autoPlayTracks.length > 0
       ? hasDJIntent
