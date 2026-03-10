@@ -3,6 +3,8 @@ import { usePlayer, Track } from "@/contexts/PlayerContext";
 import { speak } from "@/utils/tts";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { getDJTexts, getDJLangFromAppLang, getDJTTSLang, DJLanguage } from "@/utils/djTexts";
+import { playRandomTransitionEffect, playDJEffect } from "@/utils/djMixer";
 
 interface DJSession {
   tracks: Track[];
@@ -13,55 +15,16 @@ interface DJSession {
   totalTracks: number;
 }
 
-const DJ_INTROS: Record<string, string[]> = {
-  default: [
-    "DJ GrooveAI na konsolecie! Zaczynamy imprezę!",
-    "Hej, hej! DJ GrooveAI wchodzi na scenę! Gotowi na niezapomnianą noc?",
-    "Uwaga, uwaga! DJ GrooveAI przejmuje kontrolę! Trzymajcie się mocno!",
-  ],
-  techno: [
-    "Boom boom boom! DJ GrooveAI startuje set techno! Bas wchodzi twardy!",
-    "Witamy w podziemnym klubie! DJ GrooveAI rozkręca techno session!",
-  ],
-  house: [
-    "Welcome to the house! DJ GrooveAI na decku! Feel the groove!",
-    "House music all night long! DJ GrooveAI zaczyna set!",
-  ],
-  "hip-hop": [
-    "Yo yo yo! DJ GrooveAI in da house! Czas na hiphopową jazdę!",
-    "Reprezentuj! DJ GrooveAI na bicie! Zaczynamy!",
-  ],
-  rock: [
-    "Rock and roll! DJ GrooveAI odpala rockową maszynę!",
-    "Gitara, bas, bębny! DJ GrooveAI startuje rockowy set!",
-  ],
-  party: [
-    "Party time! DJ GrooveAI rozkręca domówkę na maksa!",
-    "Hej ekipa! DJ GrooveAI puszcza największe hity na domówkę!",
-  ],
+/** Get current app language from localStorage */
+const getAppLang = (): DJLanguage => {
+  const saved = localStorage.getItem("grooveai-language");
+  return getDJLangFromAppLang(saved || "en");
 };
 
-const DJ_TRANSITIONS: string[] = [
-  "A teraz coś jeszcze lepszego!",
-  "Nie zwalniamy tempa! Następny banger!",
-  "Uwaga, zmiana! Wchodzi kolejny hit!",
-  "Czujecie ten vibe? Lecimy dalej!",
-  "DJ GrooveAI przełącza na kolejny level!",
-  "Energia na maksa! Oto następny kawałek!",
-  "Idziemy wyżej! Kolejny track!",
-  "Bez przerwy! Następny w kolejce!",
-  "Trzymajcie się! To dopiero początek!",
-  "Feel the bass! Kolejny utwór wchodzi!",
-];
-
-const DJ_OUTROS: string[] = [
-  "To był DJ GrooveAI! Dzięki za wspólną zabawę! Do następnego razu!",
-  "DJ GrooveAI kończy set! Było gorąco! Peace!",
-  "Koniec setu! DJ GrooveAI dziękuje! Było mega!",
-];
+const randomFrom = <T>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
 
 export const useDJMode = () => {
-  const { playPlaylist, currentTrack, queue, isPlaying } = usePlayer();
+  const { playPlaylist, currentTrack, queue, isPlaying, audioElement } = usePlayer();
   const [djSession, setDjSession] = useState<DJSession | null>(null);
   const [isDJActive, setIsDJActive] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -69,13 +32,16 @@ export const useDJMode = () => {
   const lastAnnouncedTrackRef = useRef<string | null>(null);
   const trackCountRef = useRef(0);
 
-  const randomFrom = (arr: string[]) => arr[Math.floor(Math.random() * arr.length)];
+  // DJ speaks with the correct language
+  const djSpeak = useCallback((text: string, opts?: { rate?: number; pitch?: number }) => {
+    const lang = getAppLang();
+    const ttsLang = getDJTTSLang(lang);
+    return speak(text, { rate: opts?.rate ?? 1.05, pitch: opts?.pitch ?? 0.75, lang: ttsLang });
+  }, []);
 
-  // Announce DJ transition between tracks
+  // Announce DJ transition between tracks with sound effects
   useEffect(() => {
     if (!isDJActive || !currentTrack || !djSession) return;
-
-    // Don't announce the same track twice
     if (lastAnnouncedTrackRef.current === currentTrack.id) return;
     lastAnnouncedTrackRef.current = currentTrack.id;
     trackCountRef.current += 1;
@@ -83,21 +49,36 @@ export const useDJMode = () => {
     // Skip announcement for first track (intro already played)
     if (trackCountRef.current <= 1) return;
 
-    // Announce every 2-3 tracks to feel natural
+    // Announce every 2-3 tracks
     const shouldAnnounce = trackCountRef.current % 2 === 0 || trackCountRef.current % 3 === 0;
     if (!shouldAnnounce) return;
 
-    const announcement = `${randomFrom(DJ_TRANSITIONS)} ${currentTrack.title} od ${currentTrack.artist}!`;
-    
-    // Small delay before DJ speaks
+    const lang = getAppLang();
+    const texts = getDJTexts(lang);
+    const transition = randomFrom(texts.transitions);
+    const trackInfo = texts.trackAnnounce(currentTrack.title, currentTrack.artist);
+    const announcement = `${transition} ${trackInfo}`;
+
+    // Play a DJ sound effect then speak
     transitionTimerRef.current = window.setTimeout(() => {
-      speak(announcement, { rate: 1.05, pitch: 0.8 });
-    }, 1500);
+      // Random chance for different effects
+      const effectRoll = Math.random();
+      if (effectRoll > 0.6) {
+        playRandomTransitionEffect();
+      } else if (effectRoll > 0.3) {
+        playDJEffect("scratch");
+      }
+      
+      // Small delay after effect, then speak
+      setTimeout(() => {
+        djSpeak(announcement);
+      }, 500);
+    }, 1000);
 
     return () => {
       if (transitionTimerRef.current) clearTimeout(transitionTimerRef.current);
     };
-  }, [currentTrack?.id, isDJActive, djSession]);
+  }, [currentTrack?.id, isDJActive, djSession, djSpeak]);
 
   // Start DJ session
   const startDJSession = useCallback(async (options: {
@@ -108,11 +89,13 @@ export const useDJMode = () => {
   }) => {
     setIsLoading(true);
     const { genres = [], partyType = "party", trackCount = 15, customPrompt = "" } = options;
+    const lang = getAppLang();
+    const texts = getDJTexts(lang);
 
     try {
-      toast.loading("🎧 DJ GrooveAI przygotowuje set...", { id: "dj-mode" });
+      toast.loading("🎧 DJ GrooveAI...", { id: "dj-mode" });
 
-      // Fetch tracks from library matching genres
+      // Fetch tracks matching genres
       let allTracks: any[] = [];
       
       if (genres.length > 0) {
@@ -126,7 +109,7 @@ export const useDJMode = () => {
         allTracks = data || [];
       }
 
-      // If not enough genre-matched tracks, get more
+      // Fill with more tracks if needed
       if (allTracks.length < trackCount) {
         const existingIds = allTracks.map(t => t.id);
         const { data: moreTracks } = await supabase
@@ -140,29 +123,16 @@ export const useDJMode = () => {
       }
 
       if (allTracks.length === 0) {
-        toast.error("Brak utworów w bibliotece!", { id: "dj-mode" });
+        toast.error("No tracks available!", { id: "dj-mode" });
         setIsLoading(false);
         return;
       }
 
-      // Use AI to curate the best order for DJ mixing
-      let curatedTracks: Track[];
-      
-      try {
-        const { data: aiData } = await supabase.functions.invoke("ai-assistant", {
-          body: {
-            message: `DJ MODE: Przygotuj set DJ na ${partyType}. Gatunki: ${genres.join(", ") || "mieszane"}. ${customPrompt}. Potrzebuję ${trackCount} utworów. Odpowiedz TYLKO listą ID utworów w najlepszej kolejności do mixowania, po jednym ID w linii, bez żadnego innego tekstu.`,
-            history: [],
-            userContext: { isDJMode: true }
-          }
-        });
-        // Try to extract track order from AI response — fallback to shuffle
-        curatedTracks = [...allTracks].sort(() => Math.random() - 0.5).slice(0, trackCount);
-      } catch {
-        curatedTracks = [...allTracks].sort(() => Math.random() - 0.5).slice(0, trackCount);
-      }
+      // Shuffle and pick tracks
+      const curatedTracks: Track[] = [...allTracks]
+        .sort(() => Math.random() - 0.5)
+        .slice(0, trackCount);
 
-      // Create session
       const session: DJSession = {
         tracks: curatedTracks,
         genres,
@@ -177,26 +147,31 @@ export const useDJMode = () => {
       trackCountRef.current = 0;
       lastAnnouncedTrackRef.current = null;
 
-      // DJ Intro announcement
+      // Build intro
       const introCategory = genres[0]?.toLowerCase() || partyType;
-      const intros = DJ_INTROS[introCategory] || DJ_INTROS.default;
-      const introText = `${randomFrom(intros)} Mam dla was ${curatedTracks.length} kawałków! ${genres.length > 0 ? `Lecimy w stylu ${genres.join(", ")}!` : "Mieszanka najlepszych hitów!"} Zaczynamy od ${curatedTracks[0].title}!`;
+      const intros = texts.intros[introCategory] || texts.intros.default;
+      const genreText = genres.length > 0 ? genres.join(", ") : "";
+      const introText = `${randomFrom(intros)} ${texts.setStart(curatedTracks.length, genreText)} ${texts.trackAnnounce(curatedTracks[0].title, curatedTracks[0].artist)}`;
 
-      toast.success(`🎧 DJ GrooveAI startuje! ${curatedTracks.length} utworów`, { id: "dj-mode", duration: 5000 });
+      toast.success(`🎧 DJ GrooveAI! ${curatedTracks.length} tracks`, { id: "dj-mode", duration: 5000 });
 
-      // Speak intro then start playback
-      await speak(introText, { rate: 1.05, pitch: 0.75 });
+      // Play buildup effect, then speak intro, then start playback
+      playDJEffect("buildup");
       
-      // Start playback
+      await new Promise(r => setTimeout(r, 1500));
+      await djSpeak(introText);
+      
+      // Start playback with a horn effect
+      playDJEffect("horn");
       playPlaylist(curatedTracks);
 
     } catch (error) {
       console.error("DJ session error:", error);
-      toast.error("Nie udało się uruchomić DJ mode", { id: "dj-mode" });
+      toast.error("DJ mode failed", { id: "dj-mode" });
     } finally {
       setIsLoading(false);
     }
-  }, [playPlaylist]);
+  }, [playPlaylist, djSpeak]);
 
   // Stop DJ session
   const stopDJSession = useCallback(async () => {
@@ -209,10 +184,14 @@ export const useDJMode = () => {
       clearTimeout(transitionTimerRef.current);
     }
 
-    const outro = randomFrom(DJ_OUTROS);
-    toast.info("🎧 DJ GrooveAI kończy set!", { duration: 4000 });
-    await speak(outro, { rate: 1.0, pitch: 0.75 });
-  }, []);
+    const lang = getAppLang();
+    const texts = getDJTexts(lang);
+    const outro = randomFrom(texts.outros);
+    
+    playDJEffect("siren");
+    toast.info("🎧 DJ GrooveAI - Set Complete!", { duration: 4000 });
+    await djSpeak(outro);
+  }, [djSpeak]);
 
   // Parse DJ command from text
   const parseDJCommand = useCallback((text: string): {
@@ -224,18 +203,18 @@ export const useDJMode = () => {
   } => {
     const lower = text.toLowerCase();
     
-    // Check if it's a DJ command
     const djPatterns = [
       /dj/i, /didżej/i, /disc\s*jockey/i,
       /domówk[aęi]/i, /imprez[aęi]/i, /party/i,
       /set\s+muzyczn/i, /zrób\s+set/i, /postaw\s+domówk/i,
       /rozkręć/i, /haus\s*party/i, /house\s*party/i,
+      /feestje/i, /draai/i, // Dutch
+      /вечірк[аіу]/i, /діджей/i, // Ukrainian
     ];
     
     const isDJCommand = djPatterns.some(p => p.test(lower));
     if (!isDJCommand) return { isDJCommand: false, genres: [], partyType: "", trackCount: 0, customPrompt: "" };
 
-    // Extract genres
     const genreMap: Record<string, string> = {
       "techno": "Electronic", "house": "House", "haus": "House",
       "hip-hop": "Hip-Hop", "hip hop": "Hip-Hop", "hiphop": "Hip-Hop",
@@ -254,28 +233,28 @@ export const useDJMode = () => {
       }
     }
 
-    // Extract track count
     let trackCount = 15;
-    const countMatch = lower.match(/(\d+)\s*(?:utw|kawałk|piosen|track|song|utwor)/i);
+    const countMatch = lower.match(/(\d+)\s*(?:utw|kawałk|piosen|track|song|utwor|nummer|трек|пісн)/i);
     if (countMatch) trackCount = Math.min(parseInt(countMatch[1]), 50);
     
-    // Polish numbers
-    const polishNums: Record<string, number> = {
-      "pięć": 5, "piec": 5, "dziesięć": 10, "dziesiec": 10,
-      "piętnaście": 15, "pietnascie": 15, "dwadzieścia": 20, "dwadziescia": 20,
-      "trzydzieści": 30, "trzydziesci": 30,
+    // Multi-language numbers
+    const numberWords: Record<string, number> = {
+      "pięć": 5, "piec": 5, "five": 5, "vijf": 5, "п'ять": 5,
+      "dziesięć": 10, "dziesiec": 10, "ten": 10, "tien": 10, "десять": 10,
+      "piętnaście": 15, "pietnascie": 15, "fifteen": 15, "vijftien": 15, "п'ятнадцять": 15,
+      "dwadzieścia": 20, "dwadziescia": 20, "twenty": 20, "twintig": 20, "двадцять": 20,
+      "trzydzieści": 30, "trzydziesci": 30, "thirty": 30, "dertig": 30, "тридцять": 30,
     };
-    for (const [word, num] of Object.entries(polishNums)) {
+    for (const [word, num] of Object.entries(numberWords)) {
       if (lower.includes(word)) { trackCount = num; break; }
     }
 
-    // Detect party type
     let partyType = "party";
-    if (lower.includes("domówk") || lower.includes("domowk")) partyType = "party";
+    if (lower.includes("domówk") || lower.includes("domowk") || lower.includes("feestje")) partyType = "party";
     else if (lower.includes("klub") || lower.includes("club")) partyType = "club";
-    else if (lower.includes("chill") || lower.includes("relaks")) partyType = "chill";
+    else if (lower.includes("chill") || lower.includes("relaks") || lower.includes("relax")) partyType = "chill";
     else if (lower.includes("trening") || lower.includes("workout")) partyType = "workout";
-    else if (lower.includes("festival") || lower.includes("festiwal")) partyType = "festival";
+    else if (lower.includes("festival") || lower.includes("festiwal") || lower.includes("фестиваль")) partyType = "festival";
 
     return {
       isDJCommand: true,
@@ -286,14 +265,7 @@ export const useDJMode = () => {
     };
   }, []);
 
-  // Cleanup
-  useEffect(() => {
-    return () => {
-      if (transitionTimerRef.current) clearTimeout(transitionTimerRef.current);
-    };
-  }, []);
-
-  // Handle crowd energy update — DJ reacts and can switch genres
+  // Handle crowd energy update
   const handleCrowdEnergy = useCallback(async (energy: {
     level: string;
     score: number;
@@ -302,21 +274,30 @@ export const useDJMode = () => {
   }) => {
     if (!isDJActive || !djSession) return;
 
-    // Only react to significant energy shifts
-    const shouldReact = Math.random() > 0.65; // ~35% chance per scan
+    const shouldReact = Math.random() > 0.65;
     if (!shouldReact) return;
 
-    const comment = energy.suggestion;
-    
+    const lang = getAppLang();
+    const texts = getDJTexts(lang);
+    const reactions = texts.crowdReactions[energy.level] || texts.crowdReactions.medium;
+    const comment = randomFrom(reactions);
+
     if (energy.suggestedGenreShift) {
-      toast.info(`🎥 DJ widzi parkiet: ${comment}`, { duration: 4000 });
+      toast.info(`🎥 ${comment}`, { duration: 4000 });
       
-      // Every ~3rd crowd update, DJ speaks about what they see
       if (Math.random() > 0.6) {
-        speak(comment, { rate: 1.05, pitch: 0.75 });
+        playDJEffect("scratch");
+        setTimeout(() => djSpeak(comment), 300);
       }
     }
-  }, [isDJActive, djSession]);
+  }, [isDJActive, djSession, djSpeak]);
+
+  // Cleanup
+  useEffect(() => {
+    return () => {
+      if (transitionTimerRef.current) clearTimeout(transitionTimerRef.current);
+    };
+  }, []);
 
   return {
     isDJActive,
