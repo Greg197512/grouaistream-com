@@ -231,29 +231,13 @@ export const AIAssistant = () => {
           try {
             const parsed = JSON.parse(jsonStr);
             
-            // Handle auto-play multiple tracks
-            if (parsed.type === "auto_play_tracks") {
+            // Handle auto-play multiple tracks (normal + DJ mode)
+            if (parsed.type === "auto_play_tracks" || parsed.type === "dj_mode_tracks") {
               const trackIds = parsed.data.map((t: any) => t.id);
-              handleAutoPlayTracks(trackIds);
-              continue;
-            }
-
-            // Handle DJ mode tracks — start DJ session with transitions & announcements
-            if (parsed.type === "dj_mode_tracks") {
-              const trackIds = parsed.data.map((t: any) => t.id);
-              const genres = [...new Set(parsed.data.map((t: any) => t.genre).filter(Boolean))] as string[];
-              // Fetch full tracks, then start DJ session
-              const { data: djTracks } = await supabase
-                .from("tracks")
-                .select("*")
-                .in("id", trackIds)
-                .not("audio_url", "is", null);
-              
-              if (djTracks && djTracks.length > 0) {
-                const orderedDJ = trackIds
-                  .map((id: string) => djTracks.find(t => t.id === id))
-                  .filter(Boolean);
-                startDJSession({ genres, partyType: "party", trackCount: orderedDJ.length, customPrompt: "" });
+              const isDJ = parsed.type === "dj_mode_tracks";
+              const playedTracks = await handleAutoPlayTracks(trackIds, isDJ);
+              if (playedTracks.length > 0) {
+                pendingPlaylistRef.current = { tracks: playedTracks, isDJ };
               }
               continue;
             }
