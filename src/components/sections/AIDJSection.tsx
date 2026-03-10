@@ -47,11 +47,14 @@ export const AIDJSection = () => {
     generateAIPlaylist 
   } = useAI();
   const { playPlaylist, isPlaying: playerIsPlaying } = usePlayer();
+  const { isDJActive: djModeActive, handleCrowdEnergy } = useDJMode();
   
   const [displayMood, setDisplayMood] = useState(moods[1]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [djActive, setDjActive] = useState(true);
   const [showMoodDetector, setShowMoodDetector] = useState(false);
+  const [showCrowdCamera, setShowCrowdCamera] = useState(false);
+  const [crowdEnergy, setCrowdEnergy] = useState<CrowdEnergy | null>(null);
 
   // Sync with AI context mood
   useEffect(() => {
