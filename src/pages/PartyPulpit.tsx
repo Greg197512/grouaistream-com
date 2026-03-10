@@ -340,6 +340,27 @@ export default function PartyPulpit() {
           <p className="text-2xl font-bold mt-2">{guestCount}</p>
           <p className="text-xs text-muted-foreground">osób na parkiecie</p>
         </div>
+
+        {/* PWA Install Banner */}
+        <AnimatePresence>
+          {showInstallBanner && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+              className="groove-card p-4 flex items-center gap-3"
+            >
+              <Download className="h-5 w-5 text-primary shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium">Zainstaluj apkę DJ</p>
+                <p className="text-xs text-muted-foreground">Dodaj na ekran główny — pełny ekran, zero przeglądarki</p>
+              </div>
+              <Button onClick={handleInstall} size="sm" className="shrink-0">
+                Instaluj
+              </Button>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );
