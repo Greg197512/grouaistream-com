@@ -133,6 +133,36 @@ export const AIAssistant = () => {
     }
   };
 
+  const handleAutoPlayTracks = async (trackIds: string[]) => {
+    try {
+      const { data: tracks } = await supabase
+        .from("tracks")
+        .select("*")
+        .in("id", trackIds)
+        .not("audio_url", "is", null);
+      
+      if (tracks && tracks.length > 0) {
+        // Maintain the order from the AI response
+        const orderedTracks = trackIds
+          .map(id => tracks.find(t => t.id === id))
+          .filter(Boolean)
+          .map(t => ({
+            id: t!.id, title: t!.title, artist: t!.artist,
+            album: t!.album || undefined, duration: t!.duration,
+            cover_url: t!.cover_url || undefined, audio_url: t!.audio_url || undefined,
+            video_url: t!.video_url || undefined, genre: t!.genre || undefined,
+            mood: t!.mood || undefined,
+          }));
+        
+        if (orderedTracks.length > 0) {
+          playPlaylist(orderedTracks);
+        }
+      }
+    } catch (error) {
+      console.error("Error auto-playing tracks:", error);
+    }
+  };
+
   const handleSend = useCallback(async () => {
     if (!input.trim() || isLoading) return;
     const userMessage = input.trim();
