@@ -303,6 +303,7 @@ export const AIAssistant = () => {
               const radioUpdate = pendingRadioUpdateRef.current;
               const radioWish = pendingRadioWishRef.current;
               const radioTrackMod = pendingRadioTrackModRef.current;
+              const dedication = pendingDedicationRef.current;
               setMessages(prev => {
                 const msgData: Message = {
                   role: "assistant",
@@ -313,6 +314,7 @@ export const AIAssistant = () => {
                   radioUpdate: radioUpdate || undefined,
                   radioWish: radioWish || undefined,
                   radioTrackMod: radioTrackMod || undefined,
+                  radioDedication: dedication || undefined,
                 };
                 const last = prev[prev.length - 1];
                 if (last?.role === "assistant" && prev.length > 1 && prev[prev.length - 2]?.role === "user") {
