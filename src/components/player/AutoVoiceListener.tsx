@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useClapControl } from "@/hooks/useClapControl";
+import { useDJMode } from "@/hooks/useDJMode";
 
 interface SpeechRecognitionEvent extends Event {
   resultIndex: number;
