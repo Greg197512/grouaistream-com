@@ -166,17 +166,17 @@ export const AIDJSection = () => {
         </div>
       </div>
 
-      {/* QR Session Panel */}
+      {/* Party Activation Modal */}
+      <PartyActivationModal
+        open={showActivationModal}
+        onClose={() => setShowActivationModal(false)}
+        onActivated={() => { setShowActivationModal(false); setShowPartyPanel(true); }}
+      />
+
+      {/* Full-screen Party Control Panel */}
       <AnimatePresence>
-        {showQRSession && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            className="mb-6 overflow-hidden"
-          >
-            <DJSessionQR onClose={() => setShowQRSession(false)} />
-          </motion.div>
+        {showPartyPanel && (
+          <PartyControlPanel onClose={() => setShowPartyPanel(false)} />
         )}
       </AnimatePresence>
 
