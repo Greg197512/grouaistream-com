@@ -375,6 +375,18 @@ export default function Admin() {
         .from("listening_history")
         .delete()
         .in("track_id", trackIds);
+
+      // Delete from radio_likes
+      await supabase
+        .from("radio_likes")
+        .delete()
+        .in("track_id", trackIds);
+
+      // Delete from radio_schedule
+      await supabase
+        .from("radio_schedule")
+        .delete()
+        .in("track_id", trackIds);
       
       // Delete tracks
       const { error } = await supabase
