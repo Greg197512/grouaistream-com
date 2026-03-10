@@ -305,6 +305,71 @@ export type Database = {
         }
         Relationships: []
       }
+      party_commands: {
+        Row: {
+          command: string
+          command_type: string
+          created_at: string
+          guest_label: string
+          id: string
+          room_id: string
+        }
+        Insert: {
+          command: string
+          command_type?: string
+          created_at?: string
+          guest_label?: string
+          id?: string
+          room_id: string
+        }
+        Update: {
+          command?: string
+          command_type?: string
+          created_at?: string
+          guest_label?: string
+          id?: string
+          room_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "party_commands_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "party_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      party_rooms: {
+        Row: {
+          created_at: string
+          expires_at: string
+          guest_count: number
+          host_user_id: string
+          id: string
+          is_active: boolean
+          room_code: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string
+          guest_count?: number
+          host_user_id: string
+          id?: string
+          is_active?: boolean
+          room_code?: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          guest_count?: number
+          host_user_id?: string
+          id?: string
+          is_active?: boolean
+          room_code?: string
+        }
+        Relationships: []
+      }
       playlist_tracks: {
         Row: {
           added_at: string
