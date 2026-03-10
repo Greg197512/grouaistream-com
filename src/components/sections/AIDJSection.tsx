@@ -132,12 +132,12 @@ export const AIDJSection = () => {
         </div>
         <div className="flex gap-2 flex-wrap">
           <Button
-            onClick={() => { setShowQRSession(!showQRSession); if (showCrowdCamera) setShowCrowdCamera(false); if (showMoodDetector) setShowMoodDetector(false); }}
-            variant={showQRSession ? "default" : "outline"}
+            onClick={() => { setShowActivationModal(true); if (showCrowdCamera) setShowCrowdCamera(false); if (showMoodDetector) setShowMoodDetector(false); }}
+            variant="outline"
             className="gap-2 rounded-full"
           >
             <QrCode className="h-4 w-4" />
-            {showQRSession ? "Ukryj QR" : "QR Parkiet"}
+            QR Parkiet
           </Button>
           <Button
             onClick={() => { setShowCrowdCamera(!showCrowdCamera); if (showMoodDetector) setShowMoodDetector(false); if (showQRSession) setShowQRSession(false); }}
