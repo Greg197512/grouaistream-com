@@ -562,6 +562,25 @@ export const AIAssistant = () => {
                           </div>
                         </motion.div>
                       )}
+                      {/* Dedication badge */}
+                      {msg.radioDedication && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 4 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="mt-3 p-3 rounded-xl bg-gradient-to-r from-pink-500/10 to-red-500/10 border border-pink-500/20"
+                        >
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-lg">💝</span>
+                            <p className="text-xs font-bold text-foreground">Dedykacja muzyczna</p>
+                          </div>
+                          <p className="text-[11px] text-foreground/80">
+                            🎵 <strong>{msg.radioDedication.trackName}</strong>
+                          </p>
+                          <p className="text-[10px] text-muted-foreground mt-0.5">
+                            Dla <strong>{msg.radioDedication.recipientName}</strong> od <strong>{msg.radioDedication.senderName}</strong>
+                          </p>
+                        </motion.div>
+                      )}
                     </div>
                   </motion.div>
                 ))}
