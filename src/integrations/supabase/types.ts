@@ -38,6 +38,125 @@ export type Database = {
         }
         Relationships: []
       }
+      dj_session_guests: {
+        Row: {
+          guest_name: string | null
+          id: string
+          joined_at: string
+          last_reaction: string | null
+          last_reaction_at: string | null
+          session_id: string
+          user_id: string | null
+        }
+        Insert: {
+          guest_name?: string | null
+          id?: string
+          joined_at?: string
+          last_reaction?: string | null
+          last_reaction_at?: string | null
+          session_id: string
+          user_id?: string | null
+        }
+        Update: {
+          guest_name?: string | null
+          id?: string
+          joined_at?: string
+          last_reaction?: string | null
+          last_reaction_at?: string | null
+          session_id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dj_session_guests_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "dj_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dj_session_votes: {
+        Row: {
+          created_at: string
+          guest_id: string | null
+          id: string
+          session_id: string
+          vote_type: string
+          vote_value: string
+        }
+        Insert: {
+          created_at?: string
+          guest_id?: string | null
+          id?: string
+          session_id: string
+          vote_type?: string
+          vote_value: string
+        }
+        Update: {
+          created_at?: string
+          guest_id?: string | null
+          id?: string
+          session_id?: string
+          vote_type?: string
+          vote_value?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dj_session_votes_guest_id_fkey"
+            columns: ["guest_id"]
+            isOneToOne: false
+            referencedRelation: "dj_session_guests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dj_session_votes_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "dj_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dj_sessions: {
+        Row: {
+          bpm: number | null
+          created_at: string
+          genre: string | null
+          host_user_id: string
+          id: string
+          is_active: boolean
+          max_guests: number | null
+          session_code: string
+          session_name: string
+          updated_at: string
+        }
+        Insert: {
+          bpm?: number | null
+          created_at?: string
+          genre?: string | null
+          host_user_id: string
+          id?: string
+          is_active?: boolean
+          max_guests?: number | null
+          session_code?: string
+          session_name?: string
+          updated_at?: string
+        }
+        Update: {
+          bpm?: number | null
+          created_at?: string
+          genre?: string | null
+          host_user_id?: string
+          id?: string
+          is_active?: boolean
+          max_guests?: number | null
+          session_code?: string
+          session_name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       liked_songs: {
         Row: {
           id: string
