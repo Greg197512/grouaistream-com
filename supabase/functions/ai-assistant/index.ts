@@ -25,28 +25,145 @@ serve(async (req) => {
     // Fetch ALL tracks from the database so the assistant knows the full library
     const { data: allTracks } = await supabase
       .from("tracks")
-      .select("id,title,artist,genre,mood,album")
+      .select("id,title,artist,genre,mood,album,audio_url")
       .order("title")
       .limit(1000);
 
-    // Search for specific tracks matching the user's query
+    // Only playable tracks (have audio_url)
+    const playableTracks = (allTracks || []).filter((t: any) => t.audio_url);
+
+    // Detect if user wants to play multiple tracks
+    const playIntentPatterns = [
+      /zapodaj\s+(?:mi\s+)?(\d+)/i,
+      /puść\s+(?:mi\s+)?(\d+)/i,
+      /graj\s+(?:mi\s+)?(\d+)/i,
+      /daj\s+(?:mi\s+)?(\d+)/i,
+      /włącz\s+(?:mi\s+)?(\d+)/i,
+      /odpal\s+(?:mi\s+)?(\d+)/i,
+      /play\s+(\d+)/i,
+      /give\s+(?:me\s+)?(\d+)/i,
+      /(\d+)\s*(?:utw|piosen|track|song|kawałk)/i,
+    ];
+
+    // Detect context keywords for genre/mood matching
+    const contextKeywords: Record<string, string[]> = {
+      "domówka": ["Electronic", "Dance", "EDM", "Pop", "House", "Disco", "Party"],
+      "domowka": ["Electronic", "Dance", "EDM", "Pop", "House", "Disco", "Party"],
+      "impreza": ["Electronic", "Dance", "EDM", "Pop", "House", "Disco", "Party"],
+      "party": ["Electronic", "Dance", "EDM", "Pop", "House", "Disco", "Party"],
+      "chill": ["Ambient", "Lo-Fi", "Jazz", "Acoustic", "Chill"],
+      "relax": ["Ambient", "Lo-Fi", "Jazz", "Acoustic", "Chill"],
+      "spokojn": ["Ambient", "Lo-Fi", "Jazz", "Classical", "Acoustic"],
+      "energi": ["Rock", "Punk", "Metal", "Electronic", "Dance"],
+      "trening": ["Rock", "Electronic", "Hip-Hop", "Rap", "Metal"],
+      "workout": ["Rock", "Electronic", "Hip-Hop", "Rap", "Metal"],
+      "smutn": ["Blues", "Acoustic", "Indie", "Classical"],
+      "sad": ["Blues", "Acoustic", "Indie", "Classical"],
+      "wesol": ["Pop", "Dance", "Disco", "Funk"],
+      "happy": ["Pop", "Dance", "Disco", "Funk"],
+      "rock": ["Rock"],
+      "punk": ["Punk"],
+      "metal": ["Metal"],
+      "jazz": ["Jazz"],
+      "blues": ["Blues"],
+      "pop": ["Pop"],
+      "hip-hop": ["Hip-Hop"],
+      "rap": ["Rap"],
+      "electronic": ["Electronic"],
+      "klasycz": ["Classical"],
+      "classical": ["Classical"],
+      "reggae": ["Reggae"],
+      "indie": ["Indie"],
+      "r&b": ["R&B"],
+      "disco": ["Disco"],
+      "house": ["House"],
+      "techno": ["Techno", "Electronic"],
+      "trance": ["Trance", "Electronic"],
+      "ambient": ["Ambient"],
+      "do pracy": ["Lo-Fi", "Ambient", "Jazz", "Classical"],
+      "do nauki": ["Lo-Fi", "Ambient", "Classical"],
+      "romantyczn": ["R&B", "Jazz", "Acoustic", "Pop"],
+      "romantic": ["R&B", "Jazz", "Acoustic", "Pop"],
+      "na drog": ["Pop", "Rock", "Indie", "Electronic"],
+      "road trip": ["Pop", "Rock", "Indie", "Electronic"],
+    };
+
+    let autoPlayTracks: any[] = [];
+    let requestedCount = 0;
+
+    // Check for play intent
+    for (const pattern of playIntentPatterns) {
+      const match = message.match(pattern);
+      if (match) {
+        requestedCount = Math.min(parseInt(match[1]), 20);
+        break;
+      }
+    }
+
+    // Also detect simple play requests without numbers like "puść coś na domówkę"
+    if (requestedCount === 0) {
+      const simplePlayPatterns = [
+        /zapodaj|puść|graj|włącz|odpal|play|give/i,
+      ];
+      const hasPlayIntent = simplePlayPatterns.some(p => p.test(lowerMessage));
+      const hasContextKeyword = Object.keys(contextKeywords).some(k => lowerMessage.includes(k));
+      if (hasPlayIntent && hasContextKeyword) {
+        requestedCount = 5; // Default to 5 tracks
+      }
+    }
+
+    if (requestedCount > 0 && playableTracks.length > 0) {
+      // Find matching genres based on context
+      let matchingGenres: string[] = [];
+      for (const [keyword, genres] of Object.entries(contextKeywords)) {
+        if (lowerMessage.includes(keyword)) {
+          matchingGenres.push(...genres);
+        }
+      }
+
+      let candidates: any[];
+      if (matchingGenres.length > 0) {
+        // Filter by matching genres/moods
+        candidates = playableTracks.filter((t: any) =>
+          matchingGenres.some(g =>
+            t.genre?.toLowerCase().includes(g.toLowerCase()) ||
+            t.mood?.toLowerCase().includes(g.toLowerCase())
+          )
+        );
+        // If not enough, add random playable tracks
+        if (candidates.length < requestedCount) {
+          const remaining = playableTracks.filter((t: any) => !candidates.includes(t));
+          const shuffled = [...remaining].sort(() => Math.random() - 0.5);
+          candidates = [...candidates, ...shuffled];
+        }
+      } else {
+        candidates = [...playableTracks].sort(() => Math.random() - 0.5);
+      }
+
+      // Shuffle and take requested count
+      autoPlayTracks = [...candidates].sort(() => Math.random() - 0.5).slice(0, requestedCount);
+    }
+
+    // Search for specific tracks matching the user's query (single track link)
     let trackLink = null;
-    const searchTerms = message.split(" ").filter((w: string) => w.length > 3);
-    if (searchTerms.length > 0 && allTracks) {
-      const matching = allTracks.filter((t: any) => 
-        searchTerms.some((term: string) => 
-          t.title?.toLowerCase().includes(term.toLowerCase()) || 
-          t.artist?.toLowerCase().includes(term.toLowerCase())
-        )
-      ).slice(0, 3);
-      if (matching.length > 0) {
-        trackLink = { id: matching[0].id, title: matching[0].title, artist: matching[0].artist };
+    if (autoPlayTracks.length === 0) {
+      const searchTerms = message.split(" ").filter((w: string) => w.length > 3);
+      if (searchTerms.length > 0 && playableTracks.length > 0) {
+        const matching = playableTracks.filter((t: any) =>
+          searchTerms.some((term: string) =>
+            t.title?.toLowerCase().includes(term.toLowerCase()) ||
+            t.artist?.toLowerCase().includes(term.toLowerCase())
+          )
+        ).slice(0, 3);
+        if (matching.length > 0) {
+          trackLink = { id: matching[0].id, title: matching[0].title, artist: matching[0].artist };
+        }
       }
     }
 
     // Build compact track catalog for the AI context
-    const trackCatalog = allTracks && allTracks.length > 0
-      ? allTracks.map((t: any) => `${t.title} — ${t.artist} [${t.genre || '?'}/${t.mood || '?'}]`).join("\n")
+    const trackCatalog = playableTracks.length > 0
+      ? playableTracks.map((t: any) => `${t.title} — ${t.artist} [${t.genre || '?'}/${t.mood || '?'}]`).join("\n")
       : "Brak utworów w bazie";
 
     // Build context
@@ -58,6 +175,14 @@ serve(async (req) => {
     const topMoods = ctx.topMoods || [];
     const currentPage = ctx.currentPage || "/";
 
+    // Build info about auto-played tracks for the AI to reference
+    const autoPlayInfo = autoPlayTracks.length > 0
+      ? `\n\n## WAŻNE - WŁAŚNIE WŁĄCZAM TE UTWORY NA PLAYERZE:
+${autoPlayTracks.map((t: any, i: number) => `${i + 1}. **${t.title}** — ${t.artist} [${t.genre || '?'}]`).join("\n")}
+
+W swojej odpowiedzi POTWIERDŹ że włączasz te utwory. Wymień je z numeracją. Dodaj krótki komentarz do każdego lub ogólny opis dlaczego pasują do kontekstu użytkownika. Użyj emoji 🎵 🔥 🎶 💃 itp.`
+      : "";
+
     const systemPrompt = `Jesteś GrooveAI — zaawansowany, inteligentny asystent AI w aplikacji muzycznej GrooveAI Stream. Twój poziom konwersacji i wiedzy jest porównywalny z GPT-5 lub Grok. Jesteś EKSPERTEM w muzyce, kulturze, technologii, psychologii i każdym innym temacie.
 
 ## TWOJA OSOBOWOŚĆ:
@@ -68,6 +193,9 @@ serve(async (req) => {
 - Jesteś kreatywny — piszesz wiersze, teksty piosenek, opowiadania na życzenie
 - Reagujesz emocjonalnie i empatycznie na nastrój użytkownika
 - Używasz emoji naturalnie, ale nie przesadzasz
+
+## SUPER WAŻNA FUNKCJA - ODTWARZANIE MUZYKI:
+Gdy użytkownik prosi o muzykę (np. "zapodaj mi 5 utworów na domówkę", "puść coś na chill"), system AUTOMATYCZNIE wyszukuje i włącza odpowiednie utwory na playerze. Ty musisz tylko POTWIERDZIĆ co zostało włączone i dodać komentarz.
 
 ## FORMATOWANIE ODPOWIEDZI:
 - Używaj **pogrubień** dla ważnych terminów
@@ -84,6 +212,7 @@ serve(async (req) => {
 - Ulubione gatunki: ${topGenres.length > 0 ? topGenres.join(", ") : "jeszcze nieznane"}
 - Dominujące nastroje: ${topMoods.length > 0 ? topMoods.join(", ") : "jeszcze nieznane"}
 - Aktualnie grany utwór: ${currentTrack ? `"${currentTrack.title}" — ${currentTrack.artist}` : "nic nie gra"}
+${autoPlayInfo}
 
 ## PEŁNA BIBLIOTEKA MUZYCZNA (ZNASZ WSZYSTKIE TE UTWORY):
 ${trackCatalog}
@@ -160,12 +289,24 @@ Znasz DOKŁADNIE każdą funkcję aplikacji:
       throw new Error("AI Gateway error: " + aiResponse.status);
     }
 
-    // Return SSE stream with track link prepended as first event
+    // Return SSE stream with track data prepended as first events
     const encoder = new TextEncoder();
     const body = new ReadableStream({
       async start(controller) {
-        // Send track link metadata as first event
-        if (trackLink) {
+        // Send auto-play tracks as first event (multiple tracks for playlist)
+        if (autoPlayTracks.length > 0) {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+            type: "auto_play_tracks",
+            data: autoPlayTracks.map((t: any) => ({
+              id: t.id,
+              title: t.title,
+              artist: t.artist,
+              genre: t.genre,
+            }))
+          })}\n\n`));
+        }
+        // Send single track link metadata
+        else if (trackLink) {
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: "track_link", data: trackLink })}\n\n`));
         }
 
