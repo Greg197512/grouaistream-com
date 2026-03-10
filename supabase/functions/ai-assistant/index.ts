@@ -528,6 +528,10 @@ ${radioUpdateInfo}
 Gdy użytkownik pisze np. "napisz życzenia w radiu: pozdrawiam wszystkich!" lub "dodaj wiadomość do radia: super muzyka!" — system AUTOMATYCZNIE dodaje życzenie do sekcji życzeń na /radio-live. Ty musisz POTWIERDZIĆ wysłanie.
 ${wishInfo}
 
+## SUPER WAŻNA FUNKCJA - DODAWANIE/USUWANIE KONKRETNYCH UTWORÓW Z RAMÓWKI RADIA:
+Gdy użytkownik pisze np. "dodaj utwór X do radia", "wrzuć Y do ramówki", "usuń Z z radia" — system AUTOMATYCZNIE dodaje lub usuwa konkretne utwory z ramówki. Ty musisz POTWIERDZIĆ operację.
+${radioTrackInfo}
+
 ## FORMATOWANIE ODPOWIEDZI:
 - Używaj **pogrubień** dla ważnych terminów
 - Używaj list punktowanych i numerowanych
