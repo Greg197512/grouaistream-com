@@ -34,7 +34,7 @@ export const AIAssistant = () => {
   const [userName, setUserName] = useState("Użytkownik");
   const [listeningStats, setListeningStats] = useState<{ topGenres: string[]; topMoods: string[]; recentTracks: number } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const { playTrack, currentTrack } = usePlayer();
+  const { playTrack, playPlaylist, currentTrack } = usePlayer();
   const { user } = useAuth();
   const location = useLocation();
   const dragControls = useDragControls();
