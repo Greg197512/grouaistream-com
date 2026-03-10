@@ -133,14 +133,7 @@ export const AIDJSection = () => {
             </div>
           </div>
           <div className="flex gap-2 flex-wrap">
-            <Button
-              onClick={() => { setShowActivationModal(true); if (showCrowdCamera) setShowCrowdCamera(false); if (showMoodDetector) setShowMoodDetector(false); }}
-              variant="outline"
-              className="gap-2 rounded-full"
-            >
-              <QrCode className="h-4 w-4" />
-              QR Parkiet
-            </Button>
+            
             <Button
               onClick={() => { setShowCrowdCamera(!showCrowdCamera); if (showMoodDetector) setShowMoodDetector(false); if (showQRSession) setShowQRSession(false); }}
               variant={showCrowdCamera ? "default" : "outline"}
