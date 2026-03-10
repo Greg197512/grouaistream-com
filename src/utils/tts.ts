@@ -34,9 +34,11 @@ export const speak = (text: string, opts?: { rate?: number; pitch?: number; lang
       const maleKeywords = /male|męs|adam|jacek|jan|krzyszt|łukasz|marcin|paweł|piotr|tomasz|mateusz/i;
       const femaleKeywords = /female|kobieta|żeń|ewa|anna|agnieszk|magda|monika|zofia|paulina|google.*pl.*female/i;
 
-      const plMaleVoice = voices.find(v => v.lang.startsWith("pl") && maleKeywords.test(v.name));
-      const plNonFemaleVoice = voices.find(v => v.lang.startsWith("pl") && !femaleKeywords.test(v.name));
-      const plAnyVoice = voices.find(v => v.lang.startsWith("pl"));
+      const langPrefix = requestedLang.split("-")[0];
+
+      const plMaleVoice = voices.find(v => v.lang.startsWith(langPrefix) && maleKeywords.test(v.name));
+      const plNonFemaleVoice = voices.find(v => v.lang.startsWith(langPrefix) && !femaleKeywords.test(v.name));
+      const plAnyVoice = voices.find(v => v.lang.startsWith(langPrefix));
       const enMaleVoice = voices.find(v => v.lang.startsWith("en") && /male|daniel|george|james|david/i.test(v.name));
 
       const selectedVoice = plMaleVoice || plNonFemaleVoice || plAnyVoice || enMaleVoice || voices[0];
