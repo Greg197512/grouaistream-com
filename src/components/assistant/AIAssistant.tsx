@@ -184,6 +184,7 @@ export const AIAssistant = () => {
   // Ref to store playlist tracks to attach to the next assistant message
   const pendingPlaylistRef = useRef<{ tracks: PlaylistTrackInfo[]; isDJ: boolean } | null>(null);
   const pendingRadioUpdateRef = useRef<{ genre: string; trackCount: number } | null>(null);
+  const pendingRadioWishRef = useRef<{ wishText: string } | null>(null);
 
   const handleSend = useCallback(async () => {
     if (!input.trim() || isLoading) return;
