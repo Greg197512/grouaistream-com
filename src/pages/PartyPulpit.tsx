@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Heart, Flame, Zap, Music, ThumbsUp, Volume2, ChevronUp, Headphones } from "lucide-react";
+import { Heart, Flame, Zap, Music, ThumbsUp, Volume2, ChevronUp, Headphones, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
