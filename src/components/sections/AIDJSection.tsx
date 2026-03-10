@@ -55,6 +55,7 @@ export const AIDJSection = () => {
   const [djActive, setDjActive] = useState(true);
   const [showMoodDetector, setShowMoodDetector] = useState(false);
   const [showCrowdCamera, setShowCrowdCamera] = useState(false);
+  const [showQRSession, setShowQRSession] = useState(false);
   const [crowdEnergy, setCrowdEnergy] = useState<CrowdEnergy | null>(null);
 
   // Sync with AI context mood
