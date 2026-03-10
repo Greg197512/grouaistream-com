@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useClapControl } from "@/hooks/useClapControl";
+import { useDJMode } from "@/hooks/useDJMode";
 
 interface SpeechRecognitionEvent extends Event {
   resultIndex: number;
@@ -124,6 +125,7 @@ export const AutoVoiceListener = () => {
   const { playPlaylist, nextTrack, prevTrack, setVolume, pausePlayback, resumePlayback, restartCurrentTrack } = usePlayer();
   const navigate = useNavigate();
   const { assistantName, needsNaming, saveAssistantName } = useAssistantConfig();
+  const { startDJSession, parseDJCommand, isDJActive, stopDJSession } = useDJMode();
 
   const [isListening, setIsListening] = useState(false);
   const [lastTranscript, setLastTranscript] = useState("");
@@ -448,6 +450,26 @@ export const AutoVoiceListener = () => {
     // Shutdown commands
     if (lower.includes("wyłącz się") || (lower.includes("wyłącz") && lower.includes("asystent")) || lower.includes("zamknij się")) {
       shutdownMic();
+      return;
+    }
+
+    // DJ Mode commands
+    const djResult = parseDJCommand(command);
+    if (djResult.isDJCommand) {
+      toast.loading("🎧 DJ GrooveAI przygotowuje set...", { id: "dj-voice" });
+      await startDJSession({
+        genres: djResult.genres,
+        partyType: djResult.partyType,
+        trackCount: djResult.trackCount,
+        customPrompt: djResult.customPrompt,
+      });
+      toast.success(`🎧 DJ GrooveAI startuje set! ${djResult.trackCount} utworów`, { id: "dj-voice", duration: 5000 });
+      return;
+    }
+
+    // Stop DJ
+    if (isDJActive && includesAny(normalized, ["stop dj", "wylacz dj", "koniec setu", "zakoncz set"])) {
+      await stopDJSession();
       return;
     }
 

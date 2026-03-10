@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { usePlayer } from "@/contexts/PlayerContext";
+import { useDJMode } from "@/hooks/useDJMode";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLocation } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
@@ -35,6 +36,7 @@ export const AIAssistant = () => {
   const [listeningStats, setListeningStats] = useState<{ topGenres: string[]; topMoods: string[]; recentTracks: number } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const { playTrack, playPlaylist, currentTrack } = usePlayer();
+  const { startDJSession, isDJActive, parseDJCommand } = useDJMode();
   const { user } = useAuth();
   const location = useLocation();
   const dragControls = useDragControls();
@@ -217,6 +219,26 @@ export const AIAssistant = () => {
             if (parsed.type === "auto_play_tracks") {
               const trackIds = parsed.data.map((t: any) => t.id);
               handleAutoPlayTracks(trackIds);
+              continue;
+            }
+
+            // Handle DJ mode tracks — start DJ session with transitions & announcements
+            if (parsed.type === "dj_mode_tracks") {
+              const trackIds = parsed.data.map((t: any) => t.id);
+              const genres = [...new Set(parsed.data.map((t: any) => t.genre).filter(Boolean))] as string[];
+              // Fetch full tracks, then start DJ session
+              const { data: djTracks } = await supabase
+                .from("tracks")
+                .select("*")
+                .in("id", trackIds)
+                .not("audio_url", "is", null);
+              
+              if (djTracks && djTracks.length > 0) {
+                const orderedDJ = trackIds
+                  .map((id: string) => djTracks.find(t => t.id === id))
+                  .filter(Boolean);
+                startDJSession({ genres, partyType: "party", trackCount: orderedDJ.length, customPrompt: "" });
+              }
               continue;
             }
 

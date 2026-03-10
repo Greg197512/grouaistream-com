@@ -22,6 +22,16 @@ serve(async (req) => {
 
     const lowerMessage = message.toLowerCase();
 
+    // Detect DJ mode intent
+    const djPatterns = [
+      /dj/i, /didżej/i, /disc\s*jockey/i,
+      /domówk[aęi]/i, /imprez[aęi]/i, /party/i,
+      /set\s+muzyczn/i, /zrób\s+set/i, /postaw\s+domówk/i,
+      /rozkręć/i, /haus\s*party/i, /house\s*party/i,
+    ];
+    const hasDJIntent = djPatterns.some(p => p.test(lowerMessage)) && 
+      (/puś|graj|włącz|zapodaj|odpal|play|daj|zrób|rozkręć|postaw|zajmij|mixu|miksuj/i.test(lowerMessage));
+
     // Fetch ALL tracks from the database so the assistant knows the full library
     const { data: allTracks } = await supabase
       .from("tracks")
@@ -108,8 +118,17 @@ serve(async (req) => {
       const hasPlayIntent = simplePlayPatterns.some(p => p.test(lowerMessage));
       const hasContextKeyword = Object.keys(contextKeywords).some(k => lowerMessage.includes(k));
       if (hasPlayIntent && hasContextKeyword) {
-        requestedCount = 5; // Default to 5 tracks
+        requestedCount = hasDJIntent ? 20 : 5; // DJ mode gets more tracks
       }
+    }
+
+    // If DJ mode with no count yet, default to 15-20
+    if (hasDJIntent && requestedCount === 0) {
+      requestedCount = 15;
+    }
+    // Increase cap for DJ mode
+    if (hasDJIntent && requestedCount < 10) {
+      requestedCount = Math.max(requestedCount, 10);
     }
 
     if (requestedCount > 0 && playableTracks.length > 0) {
@@ -177,7 +196,19 @@ serve(async (req) => {
 
     // Build info about auto-played tracks for the AI to reference
     const autoPlayInfo = autoPlayTracks.length > 0
-      ? `\n\n## WAŻNE - WŁAŚNIE WŁĄCZAM TE UTWORY NA PLAYERZE:
+      ? hasDJIntent
+        ? `\n\n## 🎧 TRYB DJ AKTYWNY! WŁAŚNIE STARTUJESZ SET DJ Z TYMI UTWORAMI:
+${autoPlayTracks.map((t: any, i: number) => `${i + 1}. **${t.title}** — ${t.artist} [${t.genre || '?'}]`).join("\n")}
+
+Odpowiedz jako DJ GrooveAI! Użyj stylu didżeja klubowego:
+- Zacznij od ekscytującego wejścia DJ-a (np. "DJ GrooveAI na konsolecie! 🎧🔥")
+- Opisz vibe setu, jak posortowałeś utwory, jakie przejścia planujesz
+- Wymień setlistę z numeracją i krótkimi komentarzami w stylu DJ-a
+- Użyj dużo emoji: 🎧 🔥 💥 🎶 🎵 💃 🕺 ⚡ 🚀 🎤
+- Powiedz że będziesz mixować, robić przejścia i zapowiadać kawałki
+- Zakończ czymś w stylu "Trzymajcie się, bo DJ GrooveAI nie zwalnia! 🔥"
+- NIE pisz długiego tekstu — bądź energetyczny i zwięzły jak prawdziwy DJ`
+        : `\n\n## WAŻNE - WŁAŚNIE WŁĄCZAM TE UTWORY NA PLAYERZE:
 ${autoPlayTracks.map((t: any, i: number) => `${i + 1}. **${t.title}** — ${t.artist} [${t.genre || '?'}]`).join("\n")}
 
 W swojej odpowiedzi POTWIERDŹ że włączasz te utwory. Wymień je z numeracją. Dodaj krótki komentarz do każdego lub ogólny opis dlaczego pasują do kontekstu użytkownika. Użyj emoji 🎵 🔥 🎶 💃 itp.`
@@ -296,7 +327,8 @@ Znasz DOKŁADNIE każdą funkcję aplikacji:
         // Send auto-play tracks as first event (multiple tracks for playlist)
         if (autoPlayTracks.length > 0) {
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({
-            type: "auto_play_tracks",
+            type: hasDJIntent ? "dj_mode_tracks" : "auto_play_tracks",
+            djMode: hasDJIntent,
             data: autoPlayTracks.map((t: any) => ({
               id: t.id,
               title: t.title,
