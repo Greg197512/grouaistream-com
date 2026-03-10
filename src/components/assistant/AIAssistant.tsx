@@ -124,9 +124,10 @@ export const AIAssistant = () => {
     recentTracks: listeningStats?.recentTracks || 0,
     currentMood: null,
     userName,
+    userId: user?.id || null,
     currentTrack: currentTrack ? { title: currentTrack.title, artist: currentTrack.artist } : null,
     timeOfDay: getTimeOfDay(),
-  }), [location.pathname, listeningStats, userName, currentTrack]);
+  }), [location.pathname, listeningStats, userName, user?.id, currentTrack]);
 
   const handlePlayTrack = async (trackId: string) => {
     try {
