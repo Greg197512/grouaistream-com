@@ -453,6 +453,26 @@ export const AutoVoiceListener = () => {
       return;
     }
 
+    // DJ Mode commands
+    const djResult = parseDJCommand(command);
+    if (djResult.isDJCommand) {
+      toast.loading("🎧 DJ GrooveAI przygotowuje set...", { id: "dj-voice" });
+      await startDJSession({
+        genres: djResult.genres,
+        partyType: djResult.partyType,
+        trackCount: djResult.trackCount,
+        customPrompt: djResult.customPrompt,
+      });
+      toast.success(`🎧 DJ GrooveAI startuje set! ${djResult.trackCount} utworów`, { id: "dj-voice", duration: 5000 });
+      return;
+    }
+
+    // Stop DJ
+    if (isDJActive && includesAny(normalized, ["stop dj", "wylacz dj", "koniec setu", "zakoncz set"])) {
+      await stopDJSession();
+      return;
+    }
+
     // Weather command (online)
     if (includesAny(normalized, ["pogoda", "prognoza", "jaka pogoda", "sprawdz pogode"])) {
       toast.loading("🌤️ Sprawdzam pogodę w sieci...", { id: "voice-weather" });
