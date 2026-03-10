@@ -298,6 +298,7 @@ export const AIAssistant = () => {
         content: "Przepraszam, wystąpił błąd. Spróbuj ponownie za chwilę. 😔"
       }]);
     } finally {
+      pendingPlaylistRef.current = null;
       setIsLoading(false);
     }
   }, [input, isLoading, messages, userContext]);
