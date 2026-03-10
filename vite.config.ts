@@ -2,6 +2,7 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
+import { VitePWA } from "vite-plugin-pwa";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
@@ -12,7 +13,33 @@ export default defineConfig(({ mode }) => ({
       overlay: false,
     },
   },
-  plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
+  plugins: [
+    react(),
+    mode === "development" && componentTagger(),
+    VitePWA({
+      registerType: "autoUpdate",
+      includeAssets: ["logo-icon.png", "favicon.ico"],
+      workbox: {
+        navigateFallbackDenylist: [/^\/~oauth/],
+        globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
+      },
+      manifest: {
+        name: "GrouAI Stream — DJ Parkiet",
+        short_name: "GrouAI DJ",
+        description: "AI DJ Rotterdam Peak-Time — dołącz na parkiet, głosuj, reaguj na żywo!",
+        theme_color: "#1a1a2e",
+        background_color: "#0a0a1a",
+        display: "standalone",
+        orientation: "portrait",
+        start_url: "/",
+        icons: [
+          { src: "/logo-icon.png", sizes: "192x192", type: "image/png" },
+          { src: "/logo-icon.png", sizes: "512x512", type: "image/png" },
+          { src: "/logo-icon.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
+        ],
+      },
+    }),
+  ].filter(Boolean),
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),

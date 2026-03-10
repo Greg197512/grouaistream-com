@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Heart, Flame, Zap, Music, ThumbsUp, Volume2, ChevronUp, Headphones } from "lucide-react";
+import { Heart, Flame, Zap, Music, ThumbsUp, Volume2, ChevronUp, Headphones, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -31,6 +31,30 @@ export default function PartyPulpit() {
   const [votes, setVotes] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [nameInput, setNameInput] = useState("");
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [showInstallBanner, setShowInstallBanner] = useState(false);
+
+  // PWA install prompt
+  useEffect(() => {
+    const handler = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setShowInstallBanner(true);
+    };
+    window.addEventListener("beforeinstallprompt", handler);
+    return () => window.removeEventListener("beforeinstallprompt", handler);
+  }, []);
+
+  const handleInstall = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === "accepted") {
+      toast.success("💀 Apka zainstalowana — jesteś na parkiecie na stałe!");
+    }
+    setDeferredPrompt(null);
+    setShowInstallBanner(false);
+  };
 
   // Fetch session by code
   useEffect(() => {
@@ -316,6 +340,27 @@ export default function PartyPulpit() {
           <p className="text-2xl font-bold mt-2">{guestCount}</p>
           <p className="text-xs text-muted-foreground">osób na parkiecie</p>
         </div>
+
+        {/* PWA Install Banner */}
+        <AnimatePresence>
+          {showInstallBanner && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+              className="groove-card p-4 flex items-center gap-3"
+            >
+              <Download className="h-5 w-5 text-primary shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium">Zainstaluj apkę DJ</p>
+                <p className="text-xs text-muted-foreground">Dodaj na ekran główny — pełny ekran, zero przeglądarki</p>
+              </div>
+              <Button onClick={handleInstall} size="sm" className="shrink-0">
+                Instaluj
+              </Button>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );
