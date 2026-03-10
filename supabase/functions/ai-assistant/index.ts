@@ -643,6 +643,13 @@ Znasz DOKŁADNIE każdą funkcję aplikacji:
             data: wishResult,
           })}\n\n`));
         }
+        // Send radio track add/remove event
+        if (radioTrackResult) {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+            type: "radio_tracks_modified",
+            data: radioTrackResult,
+          })}\n\n`));
+        }
         // Send auto-play tracks as first event (multiple tracks for playlist)
         else if (autoPlayTracks.length > 0) {
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({
