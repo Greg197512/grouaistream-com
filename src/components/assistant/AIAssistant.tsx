@@ -497,6 +497,22 @@ export const AIAssistant = () => {
                           </div>
                         </motion.div>
                       )}
+                      {/* Radio wish badge */}
+                      {msg.radioWish && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 4 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="mt-3 flex items-center gap-2 p-2.5 rounded-xl bg-primary/10 border border-primary/20"
+                        >
+                          <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
+                            <span className="text-sm">📨</span>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-medium">Życzenie wysłane do radia</p>
+                            <p className="text-[10px] text-muted-foreground truncate">"{msg.radioWish.wishText}"</p>
+                          </div>
+                        </motion.div>
+                      )}
                     </div>
                   </motion.div>
                 ))}
