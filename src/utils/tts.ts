@@ -2,7 +2,7 @@
  * Browser-based TTS utility for assistant voice responses.
  * Uses Web Speech Synthesis API with language detection.
  * 
- * Optimized for ENERGETIC DJ delivery — fast rate, punchy tone.
+ * DJ mode: Rotterdam peak-time energy — fast rate, punchy, aggressive.
  * Exposes isSpeaking flag so voice recognition can pause while TTS is active.
  */
 
@@ -23,7 +23,7 @@ export type TTSMode = "assistant" | "dj";
 
 /**
  * Speak text via Web Speech Synthesis.
- * mode="dj" uses faster rate, higher energy pitch for club DJ feel.
+ * mode="dj" uses faster rate (1.22), higher pitch (1.08) for Rotterdam club DJ energy.
  * Returns a Promise that resolves when speech ends.
  */
 export const speak = (text: string, opts?: { 
@@ -40,8 +40,8 @@ export const speak = (text: string, opts?: {
   const mode = opts?.mode || "assistant";
   const requestedLang = opts?.lang || "pl-PL";
 
-  // DJ mode defaults: FAST, ENERGETIC, PUNCHY
-  const djDefaults = { rate: 1.18, pitch: 1.05 };
+  // DJ mode: FAST, AGGRESSIVE, PUNCHY — Rotterdam peak-time energy
+  const djDefaults = { rate: 1.22, pitch: 1.08 };
   const assistantDefaults = { rate: 1.0, pitch: 0.85 };
   const defaults = mode === "dj" ? djDefaults : assistantDefaults;
 
@@ -52,7 +52,7 @@ export const speak = (text: string, opts?: {
       utterance.rate = opts?.rate ?? defaults.rate;
       utterance.pitch = opts?.pitch ?? defaults.pitch;
 
-      // Voice selection
+      // Voice selection — prefer male voices for DJ
       const maleKeywords = /male|męs|adam|jacek|jan|krzyszt|łukasz|marcin|paweł|piotr|tomasz|mateusz|daniel|george|james|david|mark/i;
       const femaleKeywords = /female|kobieta|żeń|ewa|anna|agnieszk|magda|monika|zofia|paulina|google.*female/i;
 
@@ -72,8 +72,8 @@ export const speak = (text: string, opts?: {
         if (mode === "dj") {
           // DJ mode: even with female voice, keep energy HIGH
           if (isFemale) {
-            utterance.pitch = 0.7; // lower but not too sleepy
-            utterance.rate = opts?.rate ?? 1.15; // keep fast and punchy
+            utterance.pitch = 0.75; // lower but keep aggressive
+            utterance.rate = opts?.rate ?? 1.2; // fast and punchy
           }
         } else {
           // Assistant mode: deep masculine

@@ -4,7 +4,7 @@ import { speak } from "@/utils/tts";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { getDJTexts, getDJLangFromAppLang, getDJTTSLang, DJLanguage } from "@/utils/djTexts";
-import { playRandomTransitionEffect, playDJEffect } from "@/utils/djMixer";
+import { playRandomTransitionEffect, playDJEffect, playDropCombo } from "@/utils/djMixer";
 
 interface DJSession {
   tracks: Track[];
@@ -32,14 +32,14 @@ export const useDJMode = () => {
   const lastAnnouncedTrackRef = useRef<string | null>(null);
   const trackCountRef = useRef(0);
 
-  // DJ speaks with ENERGY — fast, punchy, club-style
+  // DJ speaks — FAST, PUNCHY, HARD, Rotterdam energy
   const djSpeak = useCallback((text: string, opts?: { rate?: number; pitch?: number }) => {
     const lang = getAppLang();
     const ttsLang = getDJTTSLang(lang);
-    return speak(text, { rate: opts?.rate ?? 1.18, pitch: opts?.pitch ?? 1.05, lang: ttsLang, mode: "dj" });
+    return speak(text, { rate: opts?.rate ?? 1.22, pitch: opts?.pitch ?? 1.08, lang: ttsLang, mode: "dj" });
   }, []);
 
-  // Announce DJ transition between tracks with sound effects
+  // Announce DJ transition between tracks with hard techno effects
   useEffect(() => {
     if (!isDJActive || !currentTrack || !djSession) return;
     if (lastAnnouncedTrackRef.current === currentTrack.id) return;
@@ -49,49 +49,50 @@ export const useDJMode = () => {
     // Skip announcement for first track (intro already played)
     if (trackCountRef.current <= 1) return;
 
-    // Announce every 2-3 tracks
-    const shouldAnnounce = trackCountRef.current % 2 === 0 || trackCountRef.current % 3 === 0;
+    // Announce every 2nd track, with occasional 3rd track bonus
+    const shouldAnnounce = trackCountRef.current % 2 === 0 || (trackCountRef.current % 3 === 0 && Math.random() > 0.5);
     if (!shouldAnnounce) return;
 
     const lang = getAppLang();
     const texts = getDJTexts(lang);
     const transition = randomFrom(texts.transitions);
     const trackInfo = texts.trackAnnounce(currentTrack.title, currentTrack.artist);
-    const announcement = `${transition} ${trackInfo}`;
 
-    // Play DJ effect + hype line + track announcement for maximum energy
     transitionTimerRef.current = window.setTimeout(() => {
-      // Always play an effect on transitions
+      // Hard techno effects on transitions
       const effectRoll = Math.random();
       if (effectRoll > 0.7) {
+        playDJEffect("industrial_kick");
+        setTimeout(() => playDJEffect("stab"), 100);
+      } else if (effectRoll > 0.45) {
         playRandomTransitionEffect();
-      } else if (effectRoll > 0.4) {
+      } else if (effectRoll > 0.25) {
         playDJEffect("scratch");
-      } else if (effectRoll > 0.2) {
-        playDJEffect("riser");
       } else {
-        playDJEffect("laser");
+        playDJEffect("riser");
       }
       
-      // Add a random hype line before the announcement sometimes
-      const hypeRoll = Math.random();
-      let fullAnnouncement = announcement;
-      if (hypeRoll > 0.5 && texts.hypeLines) {
-        fullAnnouncement = `${randomFrom(texts.hypeLines)} ${announcement}`;
+      // Build announcement: hype + transition + track
+      let fullAnnouncement = transition;
+      if (Math.random() > 0.4) {
+        fullAnnouncement = `${randomFrom(texts.hypeLines)} ${transition}`;
       }
+      // Add drop line occasionally for peak energy
+      if (Math.random() > 0.7 && texts.dropLines) {
+        fullAnnouncement += ` ${randomFrom(texts.dropLines)}`;
+      }
+      fullAnnouncement += ` ${trackInfo}`;
       
-      // Small delay after effect, then speak with ENERGY
-      setTimeout(() => {
-        djSpeak(fullAnnouncement);
-      }, 400);
-    }, 800);
+      // Speak with hard energy after effect
+      setTimeout(() => djSpeak(fullAnnouncement), 300);
+    }, 600);
 
     return () => {
       if (transitionTimerRef.current) clearTimeout(transitionTimerRef.current);
     };
   }, [currentTrack?.id, isDJActive, djSession, djSpeak]);
 
-  // Start DJ session
+  // Start DJ session — Rotterdam peak-time style
   const startDJSession = useCallback(async (options: {
     genres?: string[];
     partyType?: string;
@@ -104,7 +105,7 @@ export const useDJMode = () => {
     const texts = getDJTexts(lang);
 
     try {
-      toast.loading("🎧 DJ GrooveAI...", { id: "dj-mode" });
+      toast.loading("🎧 DJ GrooveAI — Rotterdam Peak-Time...", { id: "dj-mode" });
 
       // Fetch tracks matching genres
       let allTracks: any[] = [];
@@ -128,7 +129,6 @@ export const useDJMode = () => {
           .select("*")
           .not("audio_url", "is", null)
           .limit(200);
-        
         const additional = (moreTracks || []).filter(t => !existingIds.includes(t.id));
         allTracks = [...allTracks, ...additional];
       }
@@ -158,23 +158,27 @@ export const useDJMode = () => {
       trackCountRef.current = 0;
       lastAnnouncedTrackRef.current = null;
 
-      // Build intro
+      // Build intro — Rotterdam hard techno style
       const introCategory = genres[0]?.toLowerCase() || partyType;
-      const intros = texts.intros[introCategory] || texts.intros.default;
-      const genreText = genres.length > 0 ? genres.join(", ") : "";
+      const intros = texts.intros[introCategory] || texts.intros.techno || texts.intros.default;
+      const genreText = genres.length > 0 ? genres.join(", ") : "Hard Techno";
       const introText = `${randomFrom(intros)} ${texts.setStart(curatedTracks.length, genreText)} ${texts.trackAnnounce(curatedTracks[0].title, curatedTracks[0].artist)}`;
 
-      toast.success(`🎧 DJ GrooveAI! ${curatedTracks.length} tracks`, { id: "dj-mode", duration: 5000 });
+      toast.success(`🎧 DJ GrooveAI — ${curatedTracks.length} tracks — Rotterdam Peak-Time!`, { id: "dj-mode", duration: 5000 });
 
-      // Epic buildup sequence: buildup effect → speak intro → impact + horn → START
+      // Epic sequence: dark_riser → buildup → speak intro → DROP COMBO → START
+      playDJEffect("dark_riser");
+      
+      await new Promise(r => setTimeout(r, 1800));
       playDJEffect("buildup");
       
-      await new Promise(r => setTimeout(r, 2000));
+      await new Promise(r => setTimeout(r, 1500));
       await djSpeak(introText);
       
-      // Double effect for maximum impact on drop
-      playDJEffect("impact");
-      setTimeout(() => playDJEffect("horn"), 200);
+      // Maximum impact drop combo
+      playDropCombo();
+      setTimeout(() => playDJEffect("horn"), 300);
+      
       playPlaylist(curatedTracks);
 
     } catch (error) {
@@ -201,7 +205,7 @@ export const useDJMode = () => {
     const outro = randomFrom(texts.outros);
     
     playDJEffect("siren");
-    toast.info("🎧 DJ GrooveAI - Set Complete!", { duration: 4000 });
+    toast.info("🎧 DJ GrooveAI — Set Complete!", { duration: 4000 });
     await djSpeak(outro);
   }, [djSpeak]);
 
@@ -220,15 +224,18 @@ export const useDJMode = () => {
       /domówk[aęi]/i, /imprez[aęi]/i, /party/i,
       /set\s+muzyczn/i, /zrób\s+set/i, /postaw\s+domówk/i,
       /rozkręć/i, /haus\s*party/i, /house\s*party/i,
-      /feestje/i, /draai/i, // Dutch
-      /вечірк[аіу]/i, /діджей/i, // Ukrainian
+      /feestje/i, /draai/i,
+      /вечірк[аіу]/i, /діджей/i,
+      /peak\s*time/i, /rotterdam/i, /hard\s*techno/i,
+      /parkiet\s*do\s*czerwoności/i, /rozbaw\s*do\s*czerwoności/i,
+      /high\s*energy\s*domówka/i,
     ];
     
     const isDJCommand = djPatterns.some(p => p.test(lower));
     if (!isDJCommand) return { isDJCommand: false, genres: [], partyType: "", trackCount: 0, customPrompt: "" };
 
     const genreMap: Record<string, string> = {
-      "techno": "Electronic", "house": "House", "haus": "House",
+      "techno": "Electronic", "hard techno": "Electronic", "house": "House", "haus": "House",
       "hip-hop": "Hip-Hop", "hip hop": "Hip-Hop", "hiphop": "Hip-Hop",
       "rap": "Rap", "rock": "Rock", "punk": "Punk", "metal": "Metal",
       "pop": "Pop", "jazz": "Jazz", "blues": "Blues", "disco": "Disco",
@@ -236,6 +243,7 @@ export const useDJMode = () => {
       "reggae": "Reggae", "r&b": "R&B", "rnb": "R&B", "funk": "Funk",
       "electronic": "Electronic", "indie": "Indie", "classical": "Classical",
       "ambient": "Ambient", "dens": "Dance", "electro": "Electronic",
+      "rotterdam": "Electronic", "driving house": "House",
     };
 
     const genres: string[] = [];
@@ -245,11 +253,15 @@ export const useDJMode = () => {
       }
     }
 
+    // Default to Electronic for peak-time/Rotterdam requests
+    if (genres.length === 0 && (lower.includes("peak") || lower.includes("rotterdam") || lower.includes("hard"))) {
+      genres.push("Electronic");
+    }
+
     let trackCount = 15;
     const countMatch = lower.match(/(\d+)\s*(?:utw|kawałk|piosen|track|song|utwor|nummer|трек|пісн)/i);
     if (countMatch) trackCount = Math.min(parseInt(countMatch[1]), 50);
     
-    // Multi-language numbers
     const numberWords: Record<string, number> = {
       "pięć": 5, "piec": 5, "five": 5, "vijf": 5, "п'ять": 5,
       "dziesięć": 10, "dziesiec": 10, "ten": 10, "tien": 10, "десять": 10,
@@ -263,10 +275,11 @@ export const useDJMode = () => {
 
     let partyType = "party";
     if (lower.includes("domówk") || lower.includes("domowk") || lower.includes("feestje")) partyType = "party";
-    else if (lower.includes("klub") || lower.includes("club")) partyType = "club";
+    else if (lower.includes("klub") || lower.includes("club") || lower.includes("darkroom")) partyType = "club";
     else if (lower.includes("chill") || lower.includes("relaks") || lower.includes("relax")) partyType = "chill";
     else if (lower.includes("trening") || lower.includes("workout")) partyType = "workout";
     else if (lower.includes("festival") || lower.includes("festiwal") || lower.includes("фестиваль")) partyType = "festival";
+    else if (lower.includes("peak") || lower.includes("rotterdam")) partyType = "club";
 
     return {
       isDJCommand: true,
@@ -286,7 +299,7 @@ export const useDJMode = () => {
   }) => {
     if (!isDJActive || !djSession) return;
 
-    const shouldReact = Math.random() > 0.65;
+    const shouldReact = Math.random() > 0.6;
     if (!shouldReact) return;
 
     const lang = getAppLang();
@@ -294,13 +307,14 @@ export const useDJMode = () => {
     const reactions = texts.crowdReactions[energy.level] || texts.crowdReactions.medium;
     const comment = randomFrom(reactions);
 
-    if (energy.suggestedGenreShift) {
-      toast.info(`🎥 ${comment}`, { duration: 4000 });
-      
-      if (Math.random() > 0.6) {
-        playDJEffect("scratch");
-        setTimeout(() => djSpeak(comment), 300);
-      }
+    toast.info(`🎧 ${comment}`, { duration: 4000 });
+    
+    if (energy.level === "peak") {
+      playDJEffect("industrial_kick");
+      setTimeout(() => djSpeak(comment), 200);
+    } else if (Math.random() > 0.5) {
+      playDJEffect("stab");
+      setTimeout(() => djSpeak(comment), 200);
     }
   }, [isDJActive, djSession, djSpeak]);
 
