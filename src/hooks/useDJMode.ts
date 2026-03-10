@@ -166,14 +166,15 @@ export const useDJMode = () => {
 
       toast.success(`🎧 DJ GrooveAI! ${curatedTracks.length} tracks`, { id: "dj-mode", duration: 5000 });
 
-      // Play buildup effect, then speak intro, then start playback
+      // Epic buildup sequence: buildup effect → speak intro → impact + horn → START
       playDJEffect("buildup");
       
-      await new Promise(r => setTimeout(r, 1500));
+      await new Promise(r => setTimeout(r, 2000));
       await djSpeak(introText);
       
-      // Start playback with a horn effect
-      playDJEffect("horn");
+      // Double effect for maximum impact on drop
+      playDJEffect("impact");
+      setTimeout(() => playDJEffect("horn"), 200);
       playPlaylist(curatedTracks);
 
     } catch (error) {
