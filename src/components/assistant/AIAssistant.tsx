@@ -469,6 +469,22 @@ export const AIAssistant = () => {
                           </div>
                         </div>
                       )}
+                      {/* Radio update badge */}
+                      {msg.radioUpdate && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 4 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="mt-3 flex items-center gap-2 p-2.5 rounded-xl bg-accent/10 border border-accent/20"
+                        >
+                          <div className="w-8 h-8 rounded-lg bg-accent/20 flex items-center justify-center">
+                            <Radio className="h-4 w-4 text-accent-foreground" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-medium">📻 Radio: {msg.radioUpdate.genre}</p>
+                            <p className="text-[10px] text-muted-foreground">{msg.radioUpdate.trackCount} utworów załadowanych</p>
+                          </div>
+                        </motion.div>
+                      )}
                     </div>
                   </motion.div>
                 ))}
