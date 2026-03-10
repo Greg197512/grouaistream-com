@@ -125,6 +125,7 @@ export const AutoVoiceListener = () => {
   const { playPlaylist, nextTrack, prevTrack, setVolume, pausePlayback, resumePlayback, restartCurrentTrack } = usePlayer();
   const navigate = useNavigate();
   const { assistantName, needsNaming, saveAssistantName } = useAssistantConfig();
+  const { startDJSession, parseDJCommand, isDJActive, stopDJSession } = useDJMode();
 
   const [isListening, setIsListening] = useState(false);
   const [lastTranscript, setLastTranscript] = useState("");
