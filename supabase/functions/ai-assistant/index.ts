@@ -141,6 +141,62 @@ serve(async (req) => {
     }
 
     // ==========================================
+    // RADIO WISHES / MESSAGES DETECTION
+    // ==========================================
+    const wishPatterns = [
+      /(?:napisz|dodaj|wyślij|wyslij|prześlij|przeslij|daj|wstaw|postuj).*(?:życzeni|zyczeni|wiadomo|wish|message).*(?:radi|rozgłośni|rozglosni)/i,
+      /(?:życzeni|zyczeni|wiadomo|wish).*(?:radi|rozgłośni|rozglosni).*[:：]/i,
+      /(?:radi|rozgłośni|rozglosni).*(?:życzeni|zyczeni|wiadomo|wish|napisz|dodaj)/i,
+      /(?:napisz|dodaj|wyślij|wyslij)\s+(?:w|na|do)\s+(?:radiu|rozgłośni|rozglosni)/i,
+    ];
+    const hasWishIntent = wishPatterns.some(p => p.test(lowerMessage));
+    let wishResult: { success: boolean; wishText: string } | null = null;
+
+    if (hasWishIntent) {
+      // Extract the wish text - look for text after colon, quotes, or key phrases
+      let wishText = "";
+      
+      // Try to extract after colon
+      const colonMatch = message.match(/[:：]\s*(.+)/s);
+      if (colonMatch) {
+        wishText = colonMatch[1].trim();
+      }
+      
+      // Try to extract quoted text
+      if (!wishText) {
+        const quoteMatch = message.match(/["""„](.+?)["""]/s);
+        if (quoteMatch) wishText = quoteMatch[1].trim();
+      }
+      
+      // Fallback: extract text after the radio/wish keywords
+      if (!wishText) {
+        const fallbackMatch = message.match(/(?:życzeni[ae]|zyczeni[ae]|wiadomo(?:ść|sc)|radiu|rozgłośni|rozglosni)\s+(.{5,})/i);
+        if (fallbackMatch) wishText = fallbackMatch[1].trim();
+      }
+
+      if (wishText && wishText.length >= 2) {
+        // Get user info from context
+        const wishUserName = (userContext?.userName || "Słuchacz").slice(0, 30);
+        
+        // We need a user_id - use a deterministic one from context or generate
+        // The service_role bypasses RLS, so we can insert with any user_id
+        const wishUserId = userContext?.userId || "00000000-0000-0000-0000-000000000001";
+
+        const { error: wishError } = await supabase
+          .from("radio_messages")
+          .insert({
+            user_id: wishUserId,
+            display_name: wishUserName,
+            message: wishText.slice(0, 500),
+          });
+
+        if (!wishError) {
+          wishResult = { success: true, wishText: wishText.slice(0, 500) };
+        }
+      }
+    }
+
+    // ==========================================
     // MUSIC PLAY DETECTION (existing logic)
     // ==========================================
 
