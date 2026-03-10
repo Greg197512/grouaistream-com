@@ -55,12 +55,6 @@ export default function PartyPulpit() {
     setDeferredPrompt(null);
     setShowInstallBanner(false);
   };
-  const [isJoined, setIsJoined] = useState(false);
-  const [guestCount, setGuestCount] = useState(0);
-  const [recentReactions, setRecentReactions] = useState<string[]>([]);
-  const [votes, setVotes] = useState<Record<string, number>>({});
-  const [loading, setLoading] = useState(true);
-  const [nameInput, setNameInput] = useState("");
 
   // Fetch session by code
   useEffect(() => {
