@@ -36,6 +36,7 @@ export const AIAssistant = () => {
   const [listeningStats, setListeningStats] = useState<{ topGenres: string[]; topMoods: string[]; recentTracks: number } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const { playTrack, playPlaylist, currentTrack } = usePlayer();
+  const { startDJSession, isDJActive, parseDJCommand } = useDJMode();
   const { user } = useAuth();
   const location = useLocation();
   const dragControls = useDragControls();
