@@ -28,6 +28,7 @@ interface Message {
   radioUpdate?: { genre: string; trackCount: number };
   radioWish?: { wishText: string };
   radioTrackMod?: { action: "added" | "removed"; tracks: string[]; count: number };
+  radioDedication?: { trackName: string; recipientName: string; senderName: string };
 }
 
 const getTimeOfDay = () => {
