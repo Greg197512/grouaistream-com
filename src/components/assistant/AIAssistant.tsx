@@ -251,12 +251,20 @@ export const AIAssistant = () => {
             const content = parsed.choices?.[0]?.delta?.content as string | undefined;
             if (content) {
               assistantContent += content;
+              const pending = pendingPlaylistRef.current;
               setMessages(prev => {
+                const msgData: Message = {
+                  role: "assistant",
+                  content: assistantContent,
+                  trackLink: currentTrackLink,
+                  playlistTracks: pending?.tracks,
+                  isDJMode: pending?.isDJ,
+                };
                 const last = prev[prev.length - 1];
                 if (last?.role === "assistant" && prev.length > 1 && prev[prev.length - 2]?.role === "user") {
-                  return prev.map((m, i) => i === prev.length - 1 ? { ...m, content: assistantContent, trackLink: currentTrackLink } : m);
+                  return prev.map((m, i) => i === prev.length - 1 ? msgData : m);
                 }
-                return [...prev, { role: "assistant", content: assistantContent, trackLink: currentTrackLink }];
+                return [...prev, msgData];
               });
             }
           } catch {
