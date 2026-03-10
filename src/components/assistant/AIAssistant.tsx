@@ -28,6 +28,7 @@ interface Message {
   radioUpdate?: { genre: string; trackCount: number };
   radioWish?: { wishText: string };
   radioTrackMod?: { action: "added" | "removed"; tracks: string[]; count: number };
+  radioDedication?: { trackName: string; recipientName: string; senderName: string };
 }
 
 const getTimeOfDay = () => {
@@ -187,6 +188,7 @@ export const AIAssistant = () => {
   const pendingRadioUpdateRef = useRef<{ genre: string; trackCount: number } | null>(null);
   const pendingRadioWishRef = useRef<{ wishText: string } | null>(null);
   const pendingRadioTrackModRef = useRef<{ action: "added" | "removed"; tracks: string[]; count: number } | null>(null);
+  const pendingDedicationRef = useRef<{ trackName: string; recipientName: string; senderName: string } | null>(null);
 
   const handleSend = useCallback(async () => {
     if (!input.trim() || isLoading) return;
@@ -258,6 +260,16 @@ export const AIAssistant = () => {
               continue;
             }
 
+            // Handle radio dedication event
+            if (parsed.type === "radio_dedication") {
+              pendingDedicationRef.current = {
+                trackName: parsed.data.trackName,
+                recipientName: parsed.data.recipientName,
+                senderName: parsed.data.senderName,
+              };
+              continue;
+            }
+
             // Handle auto-play multiple tracks (normal + DJ mode)
             if (parsed.type === "auto_play_tracks" || parsed.type === "dj_mode_tracks") {
               const trackIds = parsed.data.map((t: any) => t.id);
@@ -291,6 +303,7 @@ export const AIAssistant = () => {
               const radioUpdate = pendingRadioUpdateRef.current;
               const radioWish = pendingRadioWishRef.current;
               const radioTrackMod = pendingRadioTrackModRef.current;
+              const dedication = pendingDedicationRef.current;
               setMessages(prev => {
                 const msgData: Message = {
                   role: "assistant",
@@ -301,6 +314,7 @@ export const AIAssistant = () => {
                   radioUpdate: radioUpdate || undefined,
                   radioWish: radioWish || undefined,
                   radioTrackMod: radioTrackMod || undefined,
+                  radioDedication: dedication || undefined,
                 };
                 const last = prev[prev.length - 1];
                 if (last?.role === "assistant" && prev.length > 1 && prev[prev.length - 2]?.role === "user") {
@@ -344,6 +358,7 @@ export const AIAssistant = () => {
       pendingRadioUpdateRef.current = null;
       pendingRadioWishRef.current = null;
       pendingRadioTrackModRef.current = null;
+      pendingDedicationRef.current = null;
       setIsLoading(false);
     }
   }, [input, isLoading, messages, userContext, startDJSession, parseDJCommand]);
@@ -545,6 +560,25 @@ export const AIAssistant = () => {
                               <p className="text-[10px] text-muted-foreground">...i {msg.radioTrackMod.tracks.length - 5} więcej</p>
                             )}
                           </div>
+                        </motion.div>
+                      )}
+                      {/* Dedication badge */}
+                      {msg.radioDedication && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 4 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="mt-3 p-3 rounded-xl bg-gradient-to-r from-pink-500/10 to-red-500/10 border border-pink-500/20"
+                        >
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-lg">💝</span>
+                            <p className="text-xs font-bold text-foreground">Dedykacja muzyczna</p>
+                          </div>
+                          <p className="text-[11px] text-foreground/80">
+                            🎵 <strong>{msg.radioDedication.trackName}</strong>
+                          </p>
+                          <p className="text-[10px] text-muted-foreground mt-0.5">
+                            Dla <strong>{msg.radioDedication.recipientName}</strong> od <strong>{msg.radioDedication.senderName}</strong>
+                          </p>
                         </motion.div>
                       )}
                     </div>
