@@ -31,6 +31,36 @@ export default function PartyPulpit() {
   const [votes, setVotes] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [nameInput, setNameInput] = useState("");
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [showInstallBanner, setShowInstallBanner] = useState(false);
+
+  // PWA install prompt
+  useEffect(() => {
+    const handler = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setShowInstallBanner(true);
+    };
+    window.addEventListener("beforeinstallprompt", handler);
+    return () => window.removeEventListener("beforeinstallprompt", handler);
+  }, []);
+
+  const handleInstall = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === "accepted") {
+      toast.success("💀 Apka zainstalowana — jesteś na parkiecie na stałe!");
+    }
+    setDeferredPrompt(null);
+    setShowInstallBanner(false);
+  };
+  const [isJoined, setIsJoined] = useState(false);
+  const [guestCount, setGuestCount] = useState(0);
+  const [recentReactions, setRecentReactions] = useState<string[]>([]);
+  const [votes, setVotes] = useState<Record<string, number>>({});
+  const [loading, setLoading] = useState(true);
+  const [nameInput, setNameInput] = useState("");
 
   // Fetch session by code
   useEffect(() => {
