@@ -32,11 +32,11 @@ export const useDJMode = () => {
   const lastAnnouncedTrackRef = useRef<string | null>(null);
   const trackCountRef = useRef(0);
 
-  // DJ speaks with the correct language
+  // DJ speaks with ENERGY — fast, punchy, club-style
   const djSpeak = useCallback((text: string, opts?: { rate?: number; pitch?: number }) => {
     const lang = getAppLang();
     const ttsLang = getDJTTSLang(lang);
-    return speak(text, { rate: opts?.rate ?? 1.05, pitch: opts?.pitch ?? 0.75, lang: ttsLang });
+    return speak(text, { rate: opts?.rate ?? 1.18, pitch: opts?.pitch ?? 1.05, lang: ttsLang, mode: "dj" });
   }, []);
 
   // Announce DJ transition between tracks with sound effects
