@@ -59,21 +59,32 @@ export const useDJMode = () => {
     const trackInfo = texts.trackAnnounce(currentTrack.title, currentTrack.artist);
     const announcement = `${transition} ${trackInfo}`;
 
-    // Play a DJ sound effect then speak
+    // Play DJ effect + hype line + track announcement for maximum energy
     transitionTimerRef.current = window.setTimeout(() => {
-      // Random chance for different effects
+      // Always play an effect on transitions
       const effectRoll = Math.random();
-      if (effectRoll > 0.6) {
+      if (effectRoll > 0.7) {
         playRandomTransitionEffect();
-      } else if (effectRoll > 0.3) {
+      } else if (effectRoll > 0.4) {
         playDJEffect("scratch");
+      } else if (effectRoll > 0.2) {
+        playDJEffect("riser");
+      } else {
+        playDJEffect("laser");
       }
       
-      // Small delay after effect, then speak
+      // Add a random hype line before the announcement sometimes
+      const hypeRoll = Math.random();
+      let fullAnnouncement = announcement;
+      if (hypeRoll > 0.5 && texts.hypeLines) {
+        fullAnnouncement = `${randomFrom(texts.hypeLines)} ${announcement}`;
+      }
+      
+      // Small delay after effect, then speak with ENERGY
       setTimeout(() => {
-        djSpeak(announcement);
-      }, 500);
-    }, 1000);
+        djSpeak(fullAnnouncement);
+      }, 400);
+    }, 800);
 
     return () => {
       if (transitionTimerRef.current) clearTimeout(transitionTimerRef.current);
