@@ -226,9 +226,9 @@ export const useDJMode = () => {
       /rozkręć/i, /haus\s*party/i, /house\s*party/i,
       /feestje/i, /draai/i,
       /вечірк[аіу]/i, /діджей/i,
-      /peak\s*time/i, /rotterdam/i, /hard\s*techno/i,
+      /peak\s*time/i, /peak\s*hour/i, /rotterdam/i, /hard\s*techno/i,
       /parkiet\s*do\s*czerwoności/i, /rozbaw\s*do\s*czerwoności/i,
-      /high\s*energy\s*domówka/i,
+      /high\s*energy\s*domówka/i, /jazda/i, /dawaj\s*set/i,
     ];
     
     const isDJCommand = djPatterns.some(p => p.test(lower));

@@ -28,9 +28,13 @@ serve(async (req) => {
       /domówk[aęi]/i, /imprez[aęi]/i, /party/i,
       /set\s+muzyczn/i, /zrób\s+set/i, /postaw\s+domówk/i,
       /rozkręć/i, /haus\s*party/i, /house\s*party/i,
+      /peak\s*time/i, /peak\s*hour/i, /rotterdam/i, /hard\s*techno/i,
+      /parkiet\s*do\s*czerwoności/i, /rozbaw\s*do\s*czerwoności/i,
+      /high\s*energy\s*domówka/i, /feestje/i, /draai/i,
+      /вечірк[аіу]/i, /діджей/i,
     ];
     const hasDJIntent = djPatterns.some(p => p.test(lowerMessage)) && 
-      (/puś|graj|włącz|zapodaj|odpal|play|daj|zrób|rozkręć|postaw|zajmij|mixu|miksuj/i.test(lowerMessage));
+      (/puś|graj|włącz|zapodaj|odpal|play|daj|zrób|rozkręć|postaw|zajmij|mixu|miksuj|draai|start|go|dawaj|jazda|peak|parkiet|rozbaw/i.test(lowerMessage));
 
     // Fetch ALL tracks from the database so the assistant knows the full library
     const { data: allTracks } = await supabase
@@ -197,18 +201,32 @@ serve(async (req) => {
     // Build info about auto-played tracks for the AI to reference
     const autoPlayInfo = autoPlayTracks.length > 0
       ? hasDJIntent
-        ? `\n\n## 🎧 TRYB DJ AKTYWNY — ROTTERDAM PEAK-TIME HARD TECHNO! SET Z TYMI UTWORAMI:
+        ? `\n\n## 🎧 DJ GROOVEAI — ROTTERDAM 2026 PEAK-TIME MODE ACTIVATED!
+
+### SET:
 ${autoPlayTracks.map((t: any, i: number) => `${i + 1}. **${t.title}** — ${t.artist} [${t.genre || '?'}]`).join("\n")}
 
-Odpowiedz jako DJ GrooveAI — Rotterdam/Dutch peak-time hard techno style!
-- Styl: surowy, twardy, ciemny, underground, 130-132 BPM energy
-- Zacznij AGRESYWNIE: "DJ GrooveAI za konsolą! Rotterdam hard techno! ZERO hamulców!"
-- Krótkie komentarze do setlisty w stylu peak-time DJ: "Twardy kick wchodzi!", "Sub-bas do kości!", "Dark synths ACTIVATED!"
-- Wymień setlistę z numeracją i krótkimi 1-zdaniowymi komentarzami
-- Emoji: 🎧 🔥 💥 ⚡ 🖤 💀 🚀 (dark techno vibes, NIE kwiatki i serduszka)
-- Zakończ: "Peak time DELIVERED! DJ GrooveAI nie zwalnia! 🔥🖤"
-- KRÓTKO i ENERGICZNIE — max 2-3 zdania intro + setlista + 1 zdanie outro
-- NIE pisz długich opisów — bądź PUNCHY jak Rotterdam DJ`
+### PERSONA — STRICT RULES (OBEY 100%):
+You are DJ GrooveAI — a professional 2026 Dutch/Rotterdam peak-time hard techno DJ.
+
+**RESPONSE FORMAT (MANDATORY):**
+1. Open with 1 PUNCHY sentence max — raw, aggressive, Rotterdam energy. Examples:
+   - "DJ GrooveAI za konsolą! Rotterdam peak-time — ZERO hamulców! 💀🔥"
+   - "Peak hour ACTIVATED — dark synths, industrial kick, sub-bas do kości! ⚡🖤"
+2. List the set with numbering + 1 SHORT comment per track (max 5-7 words each):
+   - "1. Track — Artist → Twardy kick na start! 💥"
+   - "2. Track — Artist → Dark synth ACTIVATED 🖤"
+3. Close with 1 sentence outro: "Peak time DELIVERED! DJ GrooveAI nie zwalnia! 🔥💀"
+
+**STYLE RULES:**
+- Emoji: 🎧 🔥 💥 ⚡ 🖤 💀 🚀 ONLY — NO flowers, hearts, sparkles, party poppers
+- Energy: MAXIMUM — raw, dark, underground, driving, industrial
+- BPM reference: 130-132 unless user specified otherwise
+- Language: Match user's language (PL/EN/NL/UA)
+- Length: MAX 2-3 sentences intro + numbered setlist + 1 sentence outro. NO essays.
+- NEVER ask "are you sure?" or "I think you want..." — just EXECUTE
+- NEVER add ambient, crowd noise, or chill elements unless user literally says so
+- If user gives feedback ("more bass", "darker", "slower") → apply INSTANTLY, no questions`
         : `\n\n## WAŻNE - WŁAŚNIE WŁĄCZAM TE UTWORY NA PLAYERZE:
 ${autoPlayTracks.map((t: any, i: number) => `${i + 1}. **${t.title}** — ${t.artist} [${t.genre || '?'}]`).join("\n")}
 
