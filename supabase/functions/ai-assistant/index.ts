@@ -432,6 +432,10 @@ Gdy użytkownik prosi o muzykę (np. "zapodaj mi 5 utworów na domówkę", "puś
 Gdy użytkownik pisze np. "zmień w rozgłośni muzykę na dance", "ustaw radio na rap", "daj w radiu jazz" — system AUTOMATYCZNIE zmienia ramówkę rozgłośni GrouaRadio. Ty musisz POTWIERDZIĆ zmianę i zaproponować przejście na /radio-live.
 ${radioUpdateInfo}
 
+## SUPER WAŻNA FUNKCJA - ŻYCZENIA W RADIU:
+Gdy użytkownik pisze np. "napisz życzenia w radiu: pozdrawiam wszystkich!" lub "dodaj wiadomość do radia: super muzyka!" — system AUTOMATYCZNIE dodaje życzenie do sekcji życzeń na /radio-live. Ty musisz POTWIERDZIĆ wysłanie.
+${wishInfo}
+
 ## FORMATOWANIE ODPOWIEDZI:
 - Używaj **pogrubień** dla ważnych terminów
 - Używaj list punktowanych i numerowanych
