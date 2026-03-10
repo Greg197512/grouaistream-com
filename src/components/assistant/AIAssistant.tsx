@@ -271,6 +271,7 @@ export const AIAssistant = () => {
             if (content) {
               assistantContent += content;
               const pending = pendingPlaylistRef.current;
+              const radioUpdate = pendingRadioUpdateRef.current;
               setMessages(prev => {
                 const msgData: Message = {
                   role: "assistant",
@@ -278,6 +279,7 @@ export const AIAssistant = () => {
                   trackLink: currentTrackLink,
                   playlistTracks: pending?.tracks,
                   isDJMode: pending?.isDJ,
+                  radioUpdate: radioUpdate || undefined,
                 };
                 const last = prev[prev.length - 1];
                 if (last?.role === "assistant" && prev.length > 1 && prev[prev.length - 2]?.role === "user") {
