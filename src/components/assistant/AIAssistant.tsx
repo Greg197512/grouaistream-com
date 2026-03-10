@@ -186,6 +186,7 @@ export const AIAssistant = () => {
   const pendingPlaylistRef = useRef<{ tracks: PlaylistTrackInfo[]; isDJ: boolean } | null>(null);
   const pendingRadioUpdateRef = useRef<{ genre: string; trackCount: number } | null>(null);
   const pendingRadioWishRef = useRef<{ wishText: string } | null>(null);
+  const pendingRadioTrackModRef = useRef<{ action: "added" | "removed"; tracks: string[]; count: number } | null>(null);
 
   const handleSend = useCallback(async () => {
     if (!input.trim() || isLoading) return;
