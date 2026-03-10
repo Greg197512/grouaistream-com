@@ -29,6 +29,7 @@ import Admin from "./pages/Admin";
 import Movies from "./pages/Movies";
 import Server from "./pages/Server";
 import Legal from "./pages/Legal";
+import PartyPulpit from "./pages/PartyPulpit";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -76,6 +77,7 @@ const App = () => (
                   <Route path="/server" element={<Server />} />
                   <Route path="/admin" element={<Admin />} />
                   <Route path="/legal" element={<Legal />} />
+                  <Route path="/party/:code" element={<PartyPulpit />} />
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>
