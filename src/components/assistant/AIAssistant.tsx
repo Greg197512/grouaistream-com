@@ -26,6 +26,7 @@ interface Message {
   playlistTracks?: PlaylistTrackInfo[];
   isDJMode?: boolean;
   radioUpdate?: { genre: string; trackCount: number };
+  radioWish?: { wishText: string };
 }
 
 const getTimeOfDay = () => {
