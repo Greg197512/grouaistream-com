@@ -12,10 +12,19 @@ import { useLocation } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import aiAssistantAvatar from "@/assets/ai-assistant-avatar.jpg";
 
+interface PlaylistTrackInfo {
+  id: string;
+  title: string;
+  artist: string;
+  genre?: string;
+}
+
 interface Message {
   role: "user" | "assistant";
   content: string;
   trackLink?: { id: string; title: string; artist: string };
+  playlistTracks?: PlaylistTrackInfo[];
+  isDJMode?: boolean;
 }
 
 const getTimeOfDay = () => {
@@ -135,7 +144,7 @@ export const AIAssistant = () => {
     }
   };
 
-  const handleAutoPlayTracks = async (trackIds: string[]) => {
+  const handleAutoPlayTracks = async (trackIds: string[], isDJ = false): Promise<PlaylistTrackInfo[]> => {
     try {
       const { data: tracks } = await supabase
         .from("tracks")
@@ -144,7 +153,6 @@ export const AIAssistant = () => {
         .not("audio_url", "is", null);
       
       if (tracks && tracks.length > 0) {
-        // Maintain the order from the AI response
         const orderedTracks = trackIds
           .map(id => tracks.find(t => t.id === id))
           .filter(Boolean)
@@ -159,11 +167,19 @@ export const AIAssistant = () => {
         if (orderedTracks.length > 0) {
           playPlaylist(orderedTracks);
         }
+
+        return orderedTracks.map(t => ({
+          id: t.id, title: t.title, artist: t.artist, genre: t.genre as string | undefined,
+        }));
       }
     } catch (error) {
       console.error("Error auto-playing tracks:", error);
     }
+    return [];
   };
+
+  // Ref to store playlist tracks to attach to the next assistant message
+  const pendingPlaylistRef = useRef<{ tracks: PlaylistTrackInfo[]; isDJ: boolean } | null>(null);
 
   const handleSend = useCallback(async () => {
     if (!input.trim() || isLoading) return;
@@ -215,29 +231,13 @@ export const AIAssistant = () => {
           try {
             const parsed = JSON.parse(jsonStr);
             
-            // Handle auto-play multiple tracks
-            if (parsed.type === "auto_play_tracks") {
+            // Handle auto-play multiple tracks (normal + DJ mode)
+            if (parsed.type === "auto_play_tracks" || parsed.type === "dj_mode_tracks") {
               const trackIds = parsed.data.map((t: any) => t.id);
-              handleAutoPlayTracks(trackIds);
-              continue;
-            }
-
-            // Handle DJ mode tracks — start DJ session with transitions & announcements
-            if (parsed.type === "dj_mode_tracks") {
-              const trackIds = parsed.data.map((t: any) => t.id);
-              const genres = [...new Set(parsed.data.map((t: any) => t.genre).filter(Boolean))] as string[];
-              // Fetch full tracks, then start DJ session
-              const { data: djTracks } = await supabase
-                .from("tracks")
-                .select("*")
-                .in("id", trackIds)
-                .not("audio_url", "is", null);
-              
-              if (djTracks && djTracks.length > 0) {
-                const orderedDJ = trackIds
-                  .map((id: string) => djTracks.find(t => t.id === id))
-                  .filter(Boolean);
-                startDJSession({ genres, partyType: "party", trackCount: orderedDJ.length, customPrompt: "" });
+              const isDJ = parsed.type === "dj_mode_tracks";
+              const playedTracks = await handleAutoPlayTracks(trackIds, isDJ);
+              if (playedTracks.length > 0) {
+                pendingPlaylistRef.current = { tracks: playedTracks, isDJ };
               }
               continue;
             }
@@ -251,12 +251,20 @@ export const AIAssistant = () => {
             const content = parsed.choices?.[0]?.delta?.content as string | undefined;
             if (content) {
               assistantContent += content;
+              const pending = pendingPlaylistRef.current;
               setMessages(prev => {
+                const msgData: Message = {
+                  role: "assistant",
+                  content: assistantContent,
+                  trackLink: currentTrackLink,
+                  playlistTracks: pending?.tracks,
+                  isDJMode: pending?.isDJ,
+                };
                 const last = prev[prev.length - 1];
                 if (last?.role === "assistant" && prev.length > 1 && prev[prev.length - 2]?.role === "user") {
-                  return prev.map((m, i) => i === prev.length - 1 ? { ...m, content: assistantContent, trackLink: currentTrackLink } : m);
+                  return prev.map((m, i) => i === prev.length - 1 ? msgData : m);
                 }
-                return [...prev, { role: "assistant", content: assistantContent, trackLink: currentTrackLink }];
+                return [...prev, msgData];
               });
             }
           } catch {
@@ -290,6 +298,7 @@ export const AIAssistant = () => {
         content: "Przepraszam, wystąpił błąd. Spróbuj ponownie za chwilę. 😔"
       }]);
     } finally {
+      pendingPlaylistRef.current = null;
       setIsLoading(false);
     }
   }, [input, isLoading, messages, userContext]);
@@ -403,6 +412,40 @@ export const AIAssistant = () => {
                           </div>
                           <ExternalLink className="h-3 w-3 text-primary shrink-0" />
                         </motion.button>
+                      )}
+                      {/* Visual playlist track list */}
+                      {msg.playlistTracks && msg.playlistTracks.length > 0 && (
+                        <div className="mt-3 space-y-1">
+                          <div className="flex items-center gap-1.5 mb-2">
+                            <Music className="h-3 w-3 text-primary" />
+                            <span className="text-[10px] font-semibold text-primary">
+                              {msg.isDJMode ? "🎧 DJ Set" : "🎵 Playlista"} • {msg.playlistTracks.length} utworów
+                            </span>
+                          </div>
+                          <div className="max-h-[200px] overflow-y-auto space-y-1 pr-1">
+                            {msg.playlistTracks.map((track, idx) => (
+                              <motion.button
+                                key={track.id}
+                                onClick={() => handlePlayTrack(track.id)}
+                                className="flex items-center gap-2 w-full p-1.5 rounded-lg bg-primary/5 hover:bg-primary/15 transition-colors text-left group"
+                                initial={{ opacity: 0, x: -8 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: idx * 0.03 }}
+                                whileHover={{ scale: 1.01 }}
+                                whileTap={{ scale: 0.98 }}
+                              >
+                                <div className="w-6 h-6 rounded-md bg-primary/20 flex items-center justify-center shrink-0 group-hover:bg-primary/40 transition-colors">
+                                  <span className="text-[9px] font-bold text-primary group-hover:hidden">{idx + 1}</span>
+                                  <Music className="h-3 w-3 text-primary hidden group-hover:block" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-[11px] font-medium truncate text-foreground/90">{track.title}</p>
+                                  <p className="text-[9px] text-muted-foreground truncate">{track.artist}{track.genre ? ` • ${track.genre}` : ""}</p>
+                                </div>
+                              </motion.button>
+                            ))}
+                          </div>
+                        </div>
                       )}
                     </div>
                   </motion.div>
