@@ -197,6 +197,108 @@ serve(async (req) => {
     }
 
     // ==========================================
+    // RADIO DEDICATION DETECTION
+    // ==========================================
+    const dedicationPatterns = [
+      /dedykuj[ęe]?\s/i,
+      /dedykacja\s/i,
+      /dedykuj.*(?:dla|od|w\s+radiu)/i,
+      /(?:puść|pusc|graj|zagraj).*(?:dla|od).*(?:w\s+radiu|na\s+radiu|dedyk)/i,
+      /(?:w\s+radiu|na\s+radiu).*dedyk/i,
+      /dedicate\s/i,
+    ];
+    const hasDedicationIntent = !hasWishIntent && dedicationPatterns.some(p => p.test(lowerMessage));
+    let dedicationResult: { success: boolean; trackName: string; recipientName: string; senderName: string; message: string } | null = null;
+
+    if (hasDedicationIntent) {
+      // Extract recipient: "dla X", "for X"
+      const forMatch = message.match(/(?:dla|for)\s+([A-Za-zÀ-žąćęłńóśźżĄĆĘŁŃÓŚŹŻ\s]{2,30}?)(?:\s+(?:od|from|w\s+radiu|na\s+radiu|utwór|utwor|piosenkę|piosenke|kawałek|kawalek|track|song)|[,!.;]|$)/i);
+      const recipientName = forMatch ? forMatch[1].trim() : "";
+
+      // Extract sender: "od X"
+      const fromMatch = message.match(/(?:od|from)\s+([A-Za-zÀ-žąćęłńóśźżĄĆĘŁŃÓŚŹŻ\s]{2,30}?)(?:\s+(?:dla|for|w\s+radiu|na\s+radiu|utwór|utwor|piosenkę|piosenke)|[,!.;]|$)/i);
+      const senderName = fromMatch ? fromMatch[1].trim() : (userContext?.userName || "Słuchacz");
+
+      // Extract track name - look for quoted text or text after "utwór/piosenkę"
+      let trackSearch = "";
+      const quotedTrack = message.match(/["""„](.+?)["""]/);
+      if (quotedTrack) {
+        trackSearch = quotedTrack[1].trim();
+      } else {
+        const trackKw = message.match(/(?:utwór|utwor|piosenkę|piosenke|kawałek|kawalek|track|song)\s+(.+?)(?:\s+(?:dla|od|for|from|w\s+radiu|na\s+radiu)|[,!.;]|$)/i);
+        if (trackKw) trackSearch = trackKw[1].trim();
+      }
+      // Fallback: try to find after "dedykuję"
+      if (!trackSearch) {
+        const dedMatch = message.match(/dedykuj[ęe]?\s+(.+?)(?:\s+(?:dla|od|for|from|w\s+radiu)|$)/i);
+        if (dedMatch) trackSearch = dedMatch[1].trim();
+      }
+
+      if (trackSearch || recipientName) {
+        // Fetch tracks to find a match
+        const { data: allLibTracks } = await supabase
+          .from("tracks")
+          .select("id, title, artist, genre, duration, audio_url")
+          .not("audio_url", "is", null)
+          .limit(1000);
+
+        let matchedTrack: any = null;
+        if (trackSearch && allLibTracks) {
+          const searchLower = trackSearch.toLowerCase();
+          const terms = searchLower.split(/\s+/).filter((w: string) => w.length > 2);
+          matchedTrack = allLibTracks.find((t: any) =>
+            t.title?.toLowerCase().includes(searchLower) ||
+            t.artist?.toLowerCase().includes(searchLower)
+          ) || allLibTracks.find((t: any) =>
+            terms.some((term: string) =>
+              t.title?.toLowerCase().includes(term) ||
+              t.artist?.toLowerCase().includes(term)
+            )
+          );
+        }
+
+        const trackLabel = matchedTrack ? `${matchedTrack.title} — ${matchedTrack.artist}` : trackSearch || "wybrany utwór";
+        const dedMessage = `🎵 DEDYKACJA: "${trackLabel}" — dla **${recipientName || "kogoś wyjątkowego"}** od **${senderName}** ❤️`;
+
+        // Post dedication to radio messages
+        const wishUserId = userContext?.userId || "00000000-0000-0000-0000-000000000001";
+        const { error: dedError } = await supabase
+          .from("radio_messages")
+          .insert({
+            user_id: wishUserId,
+            display_name: senderName.slice(0, 30),
+            message: dedMessage.slice(0, 500),
+          });
+
+        // If track found, also add it to the radio schedule
+        if (matchedTrack) {
+          const { data: currentSchedule } = await supabase
+            .from("radio_schedule")
+            .select("position")
+            .order("position", { ascending: false })
+            .limit(1);
+          const maxPos = currentSchedule?.[0]?.position ?? -1;
+          await supabase.from("radio_schedule").insert({
+            track_id: matchedTrack.id,
+            position: maxPos + 1,
+            item_type: "track",
+            custom_duration: matchedTrack.duration || 180,
+          });
+        }
+
+        if (!dedError) {
+          dedicationResult = {
+            success: true,
+            trackName: trackLabel,
+            recipientName: recipientName || "kogoś wyjątkowego",
+            senderName,
+            message: dedMessage,
+          };
+        }
+      }
+    }
+
+    // ==========================================
     // RADIO TRACK ADD/REMOVE DETECTION
     // ==========================================
     const radioAddPatterns = [
