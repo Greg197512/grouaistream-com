@@ -524,6 +524,29 @@ export const AIAssistant = () => {
                           </div>
                         </motion.div>
                       )}
+                      {/* Radio track add/remove badge */}
+                      {msg.radioTrackMod && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 4 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="mt-3 p-2.5 rounded-xl bg-accent/10 border border-accent/20"
+                        >
+                          <div className="flex items-center gap-2 mb-1.5">
+                            <Radio className="h-4 w-4 text-accent-foreground" />
+                            <p className="text-xs font-medium">
+                              {msg.radioTrackMod.action === "added" ? "➕ Dodano do ramówki" : "➖ Usunięto z ramówki"} ({msg.radioTrackMod.count})
+                            </p>
+                          </div>
+                          <div className="space-y-0.5">
+                            {msg.radioTrackMod.tracks.slice(0, 5).map((t, i) => (
+                              <p key={i} className="text-[10px] text-muted-foreground truncate">• {t}</p>
+                            ))}
+                            {msg.radioTrackMod.tracks.length > 5 && (
+                              <p className="text-[10px] text-muted-foreground">...i {msg.radioTrackMod.tracks.length - 5} więcej</p>
+                            )}
+                          </div>
+                        </motion.div>
+                      )}
                     </div>
                   </motion.div>
                 ))}
