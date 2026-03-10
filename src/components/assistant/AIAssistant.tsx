@@ -243,6 +243,12 @@ export const AIAssistant = () => {
               continue;
             }
 
+            // Handle radio wish event
+            if (parsed.type === "radio_wish_sent") {
+              pendingRadioWishRef.current = { wishText: parsed.data.wishText };
+              continue;
+            }
+
             // Handle auto-play multiple tracks (normal + DJ mode)
             if (parsed.type === "auto_play_tracks" || parsed.type === "dj_mode_tracks") {
               const trackIds = parsed.data.map((t: any) => t.id);
