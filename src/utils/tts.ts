@@ -14,16 +14,18 @@ export const isTTSSpeaking = () => _isSpeaking;
  * Speak text via Web Speech Synthesis.
  * Returns a Promise that resolves when speech ends (or immediately if unsupported).
  */
-export const speak = (text: string, opts?: { rate?: number; pitch?: number }): Promise<void> => {
+export const speak = (text: string, opts?: { rate?: number; pitch?: number; lang?: string }): Promise<void> => {
   if (!("speechSynthesis" in window)) return Promise.resolve();
 
   // Cancel any ongoing speech
   window.speechSynthesis.cancel();
 
+  const requestedLang = opts?.lang || "pl-PL";
+
   const trySpeak = (voices: SpeechSynthesisVoice[]) => {
     return new Promise<void>((resolve) => {
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = "pl-PL";
+      utterance.lang = requestedLang;
       utterance.rate = opts?.rate ?? 1.0;
       utterance.pitch = opts?.pitch ?? 0.85;
 
@@ -32,9 +34,11 @@ export const speak = (text: string, opts?: { rate?: number; pitch?: number }): P
       const maleKeywords = /male|męs|adam|jacek|jan|krzyszt|łukasz|marcin|paweł|piotr|tomasz|mateusz/i;
       const femaleKeywords = /female|kobieta|żeń|ewa|anna|agnieszk|magda|monika|zofia|paulina|google.*pl.*female/i;
 
-      const plMaleVoice = voices.find(v => v.lang.startsWith("pl") && maleKeywords.test(v.name));
-      const plNonFemaleVoice = voices.find(v => v.lang.startsWith("pl") && !femaleKeywords.test(v.name));
-      const plAnyVoice = voices.find(v => v.lang.startsWith("pl"));
+      const langPrefix = requestedLang.split("-")[0];
+
+      const plMaleVoice = voices.find(v => v.lang.startsWith(langPrefix) && maleKeywords.test(v.name));
+      const plNonFemaleVoice = voices.find(v => v.lang.startsWith(langPrefix) && !femaleKeywords.test(v.name));
+      const plAnyVoice = voices.find(v => v.lang.startsWith(langPrefix));
       const enMaleVoice = voices.find(v => v.lang.startsWith("en") && /male|daniel|george|james|david/i.test(v.name));
 
       const selectedVoice = plMaleVoice || plNonFemaleVoice || plAnyVoice || enMaleVoice || voices[0];

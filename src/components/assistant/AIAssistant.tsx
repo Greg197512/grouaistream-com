@@ -238,6 +238,16 @@ export const AIAssistant = () => {
               const playedTracks = await handleAutoPlayTracks(trackIds, isDJ);
               if (playedTracks.length > 0) {
                 pendingPlaylistRef.current = { tracks: playedTracks, isDJ };
+                // If DJ mode, start the DJ session with sound effects & announcements
+                if (isDJ) {
+                  const djCmd = parseDJCommand(userMessage);
+                  startDJSession({
+                    genres: djCmd.genres,
+                    partyType: djCmd.partyType || "party",
+                    trackCount: playedTracks.length,
+                    customPrompt: userMessage,
+                  });
+                }
               }
               continue;
             }
@@ -301,7 +311,7 @@ export const AIAssistant = () => {
       pendingPlaylistRef.current = null;
       setIsLoading(false);
     }
-  }, [input, isLoading, messages, userContext]);
+  }, [input, isLoading, messages, userContext, startDJSession, parseDJCommand]);
 
   const chatWidth = isExpanded ? "w-[calc(100vw-2rem)] sm:w-[600px]" : "w-[calc(100vw-2rem)] sm:w-[400px]";
   const chatHeight = isExpanded ? "h-[calc(100vh-8rem)] sm:h-[700px]" : "h-[calc(100vh-8rem)] sm:h-[520px]";
