@@ -62,10 +62,11 @@ export const useDJMode = () => {
     const lang = getAppLang();
     const texts = getDJTexts(lang);
     const transition = randomFrom(texts.transitions);
-    const trackInfo = texts.trackAnnounce(currentTrack.title, currentTrack.artist);
+    const shortTitle = shortenTitle(currentTrack.title);
+    const trackInfo = texts.trackAnnounce(shortTitle, shortenArtist(currentTrack.artist));
 
-    transitionTimerRef.current = window.setTimeout(() => {
-      // Hard techno effects on transitions
+    transitionTimerRef.current = window.setTimeout(async () => {
+      // Hard techno effects BEFORE speech
       const effectRoll = Math.random();
       if (effectRoll > 0.7) {
         playDJEffect("industrial_kick");
@@ -78,19 +79,28 @@ export const useDJMode = () => {
         playDJEffect("riser");
       }
       
-      // Build announcement: hype + transition + track
+      // Build SHORT announcement: hype + transition (skip full track info sometimes)
       let fullAnnouncement = transition;
-      if (Math.random() > 0.4) {
+      if (Math.random() > 0.5) {
         fullAnnouncement = `${randomFrom(texts.hypeLines)} ${transition}`;
       }
-      // Add drop line occasionally for peak energy
-      if (Math.random() > 0.7 && texts.dropLines) {
+      // Add drop line occasionally
+      if (Math.random() > 0.75 && texts.dropLines) {
         fullAnnouncement += ` ${randomFrom(texts.dropLines)}`;
       }
-      fullAnnouncement += ` ${trackInfo}`;
+      // Only add track name sometimes (real DJs don't announce every track)
+      if (Math.random() > 0.4) {
+        fullAnnouncement += ` ${trackInfo}`;
+      }
       
       // Speak with hard energy after effect
-      setTimeout(() => djSpeak(fullAnnouncement), 300);
+      await new Promise(r => setTimeout(r, 250));
+      await djSpeak(fullAnnouncement);
+      
+      // Post-speech effect for mix continuity
+      if (Math.random() > 0.5) {
+        setTimeout(() => playDJEffect(Math.random() > 0.5 ? "impact" : "industrial_kick"), 200);
+      }
     }, 600);
 
     return () => {
