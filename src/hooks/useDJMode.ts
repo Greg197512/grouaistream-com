@@ -3,7 +3,7 @@ import { usePlayer, Track } from "@/contexts/PlayerContext";
 import { speak } from "@/utils/tts";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { getDJTexts, getDJLangFromAppLang, getDJTTSLang, DJLanguage } from "@/utils/djTexts";
+import { getDJTexts, getDJLangFromAppLang, getDJTTSLang, DJLanguage, shortenTitle, shortenArtist } from "@/utils/djTexts";
 import { playRandomTransitionEffect, playDJEffect, playDropCombo } from "@/utils/djMixer";
 
 interface DJSession {
