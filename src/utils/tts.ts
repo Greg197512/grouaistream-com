@@ -75,9 +75,7 @@ export const speak = async (text: string, opts?: {
       const audio = new Audio();
       _currentAudio = audio;
       
-      // Set src after creating to avoid some browser quirks
       audio.preload = "auto";
-      audio.src = audioUrl;
       
       const cleanup = () => {
         _isSpeaking = false;
@@ -92,16 +90,21 @@ export const speak = async (text: string, opts?: {
         resolve(); 
       };
 
-      // Try to play - handle autoplay policy
-      const playPromise = audio.play();
-      if (playPromise) {
-        playPromise.catch((e) => {
-          console.warn("ElevenLabs audio play blocked:", e.message);
-          cleanup();
-          // Fallback to browser TTS if autoplay blocked
-          speakBrowser(text, opts).then(resolve);
-        });
-      }
+      // Wait for audio to be ready before playing
+      audio.oncanplaythrough = () => {
+        if (_currentAudio !== audio) { cleanup(); resolve(); return; }
+        const playPromise = audio.play();
+        if (playPromise) {
+          playPromise.catch((e) => {
+            console.warn("ElevenLabs audio play blocked:", e.message);
+            cleanup();
+            speakBrowser(text, opts).then(resolve);
+          });
+        }
+      };
+
+      // Set src after handlers to avoid race
+      audio.src = audioUrl;
 
       // Safety timeout
       setTimeout(() => {

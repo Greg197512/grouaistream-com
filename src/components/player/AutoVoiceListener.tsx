@@ -186,6 +186,8 @@ export const AutoVoiceListener = () => {
 
   // Flag to prevent recognition from processing input while TTS is active
   const isSpeakingRef = useRef(false);
+  // Flag to indicate safeSpeakAndResume will handle restart (prevents onend from double-restarting)
+  const speakRestartingRef = useRef(false);
 
   /**
    * Pause recognition → speak → resume recognition.
@@ -193,23 +195,31 @@ export const AutoVoiceListener = () => {
    */
   const safeSpeakAndResume = useCallback(async (text: string) => {
     isSpeakingRef.current = true;
-    // Pause recognition while speaking
+    speakRestartingRef.current = true;
+    // Fully destroy recognition to prevent onend from restarting
     if (recognitionRef.current) {
+      recognitionRef.current.onresult = null;
+      recognitionRef.current.onerror = null;
+      recognitionRef.current.onend = null;
       try { recognitionRef.current.abort(); } catch {}
+      recognitionRef.current = null;
     }
+    if (restartTimeoutRef.current) { clearTimeout(restartTimeoutRef.current); restartTimeoutRef.current = null; }
     setIsListening(false);
 
     await speak(text, { mode: "assistant" });
 
     // Small extra gap to let echo fade
-    await new Promise(r => setTimeout(r, 600));
+    await new Promise(r => setTimeout(r, 800));
     isSpeakingRef.current = false;
+    speakRestartingRef.current = false;
 
     // Restart recognition if auto-listen is still on
     if (autoListenEnabled) {
       restartTimeoutRef.current = window.setTimeout(() => {
+        console.log("[Voice] Restarting recognition after TTS");
         startListeningRef.current?.();
-      }, 300);
+      }, 200);
     }
   }, [autoListenEnabled]);
 
@@ -642,39 +652,46 @@ export const AutoVoiceListener = () => {
         resetSilenceTimer();
 
         const last = event.results[event.results.length - 1];
-        if (last?.isFinal) processCommand(last[0].transcript);
+        if (last?.isFinal) {
+          console.log("[Voice] Final transcript:", last[0].transcript);
+          processCommand(last[0].transcript);
+        }
       };
       rec.onerror = (event: SpeechRecognitionErrorEvent) => {
+        console.log("[Voice] Recognition error:", event.error);
         if (event.error === "not-allowed" || event.error === "service-not-allowed") {
           setAutoListenEnabled(false); localStorage.setItem("auto-voice-listen", "false");
           setIsListening(false); toast.error("🎙️ Brak dostępu do mikrofonu"); return;
         }
         if (event.error === "aborted") return;
         if (event.error === "no-speech") {
-          if (autoListenEnabled) {
-            restartTimeoutRef.current = window.setTimeout(() => {
-              try { rec.start(); setIsListening(true); } catch {}
-            }, 300);
-          }
+          // Don't restart here — onend will handle it
           return;
         }
         setIsListening(false);
       };
       rec.onend = () => {
+        console.log("[Voice] Recognition ended, speakRestarting:", speakRestartingRef.current, "autoListen:", autoListenEnabled);
         setIsListening(false);
-        if (autoListenEnabled) {
+        // If safeSpeakAndResume is handling restart, don't interfere
+        if (speakRestartingRef.current) return;
+        if (isSpeakingRef.current) return;
+        
+        if (autoListenEnabled && recognitionRef.current === rec) {
+          // Create a fresh recognition instance instead of reusing aborted one
           restartTimeoutRef.current = window.setTimeout(() => {
-            if (autoListenEnabled && recognitionRef.current) {
-              try { rec.start(); setIsListening(true); } catch {}
-            }
-          }, 500);
+            console.log("[Voice] Auto-restarting recognition from onend");
+            startListeningRef.current?.();
+          }, 400);
         }
       };
       rec.start();
       recognitionRef.current = rec;
       setIsListening(true);
       resetSilenceTimer();
-    } catch {
+      console.log("[Voice] Recognition started successfully");
+    } catch (e) {
+      console.error("[Voice] Failed to start recognition:", e);
       toast.error("Nie udało się uruchomić mikrofonu");
     }
   }, [user, processCommand, autoListenEnabled, resetSilenceTimer]);
