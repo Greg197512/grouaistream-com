@@ -219,13 +219,13 @@ export const AutoVoiceListener = () => {
     speakRestartingRef.current = false;
 
     // Restart recognition if auto-listen is still on
-    if (autoListenEnabled) {
+    if (autoListenRef.current) {
       restartTimeoutRef.current = window.setTimeout(() => {
         console.log("[Voice] Restarting recognition after TTS");
         startListeningRef.current?.();
       }, 200);
     }
-  }, [autoListenEnabled]);
+  }, []);
 
   const shutdownMic = useCallback(() => {
     // Fully destroy recognition instance
