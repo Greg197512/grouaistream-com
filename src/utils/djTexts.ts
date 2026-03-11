@@ -338,7 +338,10 @@ const DJ_TEXTS: Record<DJLanguage, DJTexts> = {
         "Chill MOMENT! Maar niet INSLAPEN! BOEM komt!",
       ],
     },
-    trackAnnounce: (title, artist) => `Incoming! ${title}! ${artist}! VOEL JE DAT?!`,
+    trackAnnounce: (title, artist) => {
+      const short = title.split(/\s+/).slice(0, 2).join(" ");
+      return `${short}! VOEL JE DAT?!`;
+    },
     setStart: (count, genres) => `${count} nummers! Elk HARDER dan de vorige! ${genres ? `${genres} STIJL! HOU JE VAST!` : "Peak-time hard techno! Let's GO!"}`,
   },
 
