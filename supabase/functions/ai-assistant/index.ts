@@ -558,7 +558,8 @@ serve(async (req) => {
     const topGenres = ctx.topGenres || [];
     const topMoods = ctx.topMoods || [];
     const currentPage = ctx.currentPage || "/";
-
+    const userLanguage = ctx.language || "en";
+    const userLanguageName = ctx.languageName || "English";
     // Build radio update info for the AI
     const radioUpdateInfo = radioUpdateResult
       ? `\n\n## 📻 RADIO ZOSTAŁO ZMIENIONE!
