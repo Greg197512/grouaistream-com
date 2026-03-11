@@ -681,7 +681,7 @@ export const AutoVoiceListener = () => {
         if (speakRestartingRef.current) return;
         if (isSpeakingRef.current) return;
         
-        if (autoListenEnabled && recognitionRef.current === rec) {
+        if (autoListenRef.current && recognitionRef.current === rec) {
           // Create a fresh recognition instance instead of reusing aborted one
           restartTimeoutRef.current = window.setTimeout(() => {
             console.log("[Voice] Auto-restarting recognition from onend");
