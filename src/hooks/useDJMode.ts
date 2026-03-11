@@ -32,11 +32,17 @@ export const useDJMode = () => {
   const lastAnnouncedTrackRef = useRef<string | null>(null);
   const trackCountRef = useRef(0);
 
-  // DJ speaks — FAST, PUNCHY, HARD, Rotterdam energy
-  const djSpeak = useCallback((text: string, opts?: { rate?: number; pitch?: number }) => {
+  // DJ speaks — LOUD, FAST, PUNCHY, HARD, Rotterdam energy
+  const djSpeak = useCallback(async (text: string, opts?: { rate?: number; pitch?: number }) => {
     const lang = getAppLang();
     const ttsLang = getDJTTSLang(lang);
-    return speak(text, { rate: opts?.rate ?? 1.22, pitch: opts?.pitch ?? 1.08, lang: ttsLang, mode: "dj" });
+    // Play a subtle effect before DJ speaks for mix feel
+    const preEffect = Math.random();
+    if (preEffect > 0.6) playDJEffect("stab");
+    else if (preEffect > 0.3) playDJEffect("laser");
+    
+    await new Promise(r => setTimeout(r, 150));
+    return speak(text, { rate: opts?.rate ?? 1.25, pitch: opts?.pitch ?? 1.1, lang: ttsLang, mode: "dj" });
   }, []);
 
   // Announce DJ transition between tracks with hard techno effects
