@@ -481,11 +481,21 @@ serve(async (req) => {
 
       // Also detect simple play requests without numbers
       if (requestedCount === 0) {
-        const simplePlayPatterns = [/zapodaj|puść|graj|włącz|odpal|play|give/i];
+        const simplePlayPatterns = [/zapodaj|puść|pusc|graj|włącz|wlacz|odpal|play|give|daj|postaw|odtwórz|odtworz/i];
         const hasPlayIntent = simplePlayPatterns.some(p => p.test(lowerMessage));
         const hasContextKeyword = Object.keys(contextKeywords).some(k => lowerMessage.includes(k));
+        
+        // Also detect generic play requests without specific genre (e.g. "puść coś", "daj muzykę", "graj")
+        const genericPlayPatterns = [
+          /(?:puść|pusc|graj|włącz|wlacz|odpal|zapodaj|daj|postaw|odtwórz|odtworz)\s+(?:mi\s+)?(?:coś|cos|jakąś|jakas|muzyk|piosen|utw|track|song|jakieś|jakies|losow)/i,
+          /(?:puść|pusc|graj|włącz|wlacz|odpal|zapodaj|daj)\s*$/i,
+        ];
+        const hasGenericPlay = genericPlayPatterns.some(p => p.test(lowerMessage));
+        
         if (hasPlayIntent && hasContextKeyword) {
           requestedCount = hasDJIntent ? 20 : 5;
+        } else if (hasGenericPlay) {
+          requestedCount = 5;
         }
       }
 
@@ -773,7 +783,7 @@ Znasz DOKŁADNIE każdą funkcję aplikacji:
           })}\n\n`));
         }
         // Send auto-play tracks as first event (multiple tracks for playlist)
-        else if (autoPlayTracks.length > 0) {
+        if (autoPlayTracks.length > 0) {
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({
             type: hasDJIntent ? "dj_mode_tracks" : "auto_play_tracks",
             djMode: hasDJIntent,
