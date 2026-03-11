@@ -326,6 +326,7 @@ export const AutoVoiceListener = () => {
 
   const searchAndPlay = useCallback(async (query: string, count?: number) => {
     try {
+      console.log("[Voice] searchAndPlay:", query, "count:", count);
       toast.loading(`🔍 Szukam: "${query}"...`, { id: "voice-search" });
 
       const lowerQuery = query.toLowerCase().trim();
@@ -333,7 +334,16 @@ export const AutoVoiceListener = () => {
 
       let tracks: any[] | null = null;
 
-      if (matchedGenre) {
+      // "mix" or empty = random tracks from library
+      if (lowerQuery === "mix" || lowerQuery === "" || lowerQuery === "coś" || lowerQuery === "cos" || lowerQuery === "muzykę" || lowerQuery === "muzyke" || lowerQuery === "muzyka") {
+        const { data } = await supabase
+          .from("tracks")
+          .select("*")
+          .limit(100);
+        if (data && data.length > 0) {
+          tracks = data.sort(() => Math.random() - 0.5).slice(0, count || 10);
+        }
+      } else if (matchedGenre) {
         const { data } = await supabase
           .from("tracks")
           .select("*")
@@ -427,14 +437,15 @@ export const AutoVoiceListener = () => {
   const processCommand = useCallback(async (command: string) => {
     const lower = command.toLowerCase().trim();
     const normalized = normalizeCommand(command);
-    if (normalized.length < 3) return;
+    console.log("[Voice] processCommand:", command, "| normalized:", normalized, "| length:", normalized.length);
+    if (normalized.length < 2) return;
 
     // Guard: ignore if TTS is still speaking (mic echo protection)
-    if (isSpeakingRef.current) return;
+    if (isSpeakingRef.current) { console.log("[Voice] Ignored - TTS speaking"); return; }
 
     // Guard: ignore if already processing a command
     if (isProcessingCommandRef.current) {
-      console.log("[Voice] Ignoring command, already processing:", command);
+      console.log("[Voice] Ignored - already processing:", command);
       return;
     }
     isProcessingCommandRef.current = true;
@@ -526,17 +537,31 @@ export const AutoVoiceListener = () => {
     }
     if (tryNavigate(lower)) return;
 
-    // Search & play - "puść/zagraj X" or "puść 5 rock"
-    const playMatch = lower.match(/(?:włącz|puść|zagraj|odtwórz|graj|play)\s+(.+)/i);
-    if (playMatch) {
-      const query = playMatch[1].replace(/w\s+playerze/i, "").trim();
-      const count = parsePolishNumber(query);
-      const cleanQuery = query
+    // Search & play - expanded triggers including "start", "daj", "leć", number+genre patterns
+    const playMatch = lower.match(/(?:włącz|puść|zagraj|odtwórz|graj|play|start|startuj|daj|leć|dawaj|odpal|wrzuć|kręć)\s+(.+)/i);
+    // Also match "10 piosenek rock" or "dziesięć rock" without a verb
+    const numberFirstMatch = !playMatch && lower.match(/^(\d+|jeden|jedną|dwa|dwie|trzy|cztery|pięć|sześć|siedem|osiem|dziewięć|dziesięć|piętnaście|dwadzieścia)\s+(piosen\w*|utw\w*|track\w*|song\w*|numer\w*)?\s*(.+)?/i);
+    
+    if (playMatch || numberFirstMatch) {
+      let rawQuery: string;
+      if (playMatch) {
+        rawQuery = playMatch[1].replace(/w\s+playerze/i, "").trim();
+      } else {
+        // "10 piosenek rock" → count from first group, query from rest
+        rawQuery = `${numberFirstMatch![1]} ${numberFirstMatch![3] || numberFirstMatch![2] || ""}`.trim();
+      }
+      console.log("[Voice] Play command detected, raw query:", rawQuery);
+      const count = parsePolishNumber(rawQuery);
+      const cleanQuery = rawQuery
         .replace(/\d+/g, "")
         .replace(/(?:jeden|jedną|jedno|dwa|dwie|dwóch|dwoch|trzy|trzech|cztery|czterech|pięć|piec|pieciu|pięciu|sześć|szesc|sześciu|szesciu|siedem|siedmiu|osiem|ośmiu|osmiu|dziewięć|dziewiec|dziewięciu|dziesięć|dziesiec|dziesięciu|piętnaście|pietnascie|dwadzieścia|dwadziescia)\s*/gi, "")
-        .replace(/\s*(utw\w*|piosen\w*|track\w*|song\w*)\s*/gi, "")
+        .replace(/\s*(utw\w*|piosen\w*|track\w*|song\w*|numer\w*)\s*/gi, "")
         .trim();
-      await searchAndPlay(cleanQuery || query, count);
+      
+      // If no genre/query specified, play random mix
+      const finalQuery = cleanQuery || "mix";
+      console.log("[Voice] Clean query:", finalQuery, "count:", count);
+      await searchAndPlay(finalQuery, count || 10);
       return;
     }
 
