@@ -440,6 +440,31 @@ const DJ_TEXTS: Record<DJLanguage, DJTexts> = {
   },
 };
 
+/**
+ * Shorten a track title to DJ-friendly nickname.
+ * "Bohemian Rhapsody" → "Bohemian"
+ * "Lose Yourself" → "Lose Yourself"  (short enough)
+ * "Never Gonna Give You Up" → "Never Gonna"
+ */
+export const shortenTitle = (title: string): string => {
+  if (!title) return "";
+  // Remove parenthetical info like "(feat. X)" or "(Remix)" or "[Official]"
+  const clean = title.replace(/[\(\[\{].*?[\)\]\}]/g, "").trim();
+  const words = clean.split(/\s+/);
+  // If 3 words or less, keep as is
+  if (words.length <= 3) return clean;
+  // Take first 2 words max
+  return words.slice(0, 2).join(" ");
+};
+
+/** Shorten artist name similarly */
+export const shortenArtist = (artist: string): string => {
+  if (!artist) return "";
+  // Remove "feat." parts
+  const clean = artist.replace(/\s*(feat\.?|ft\.?|&|vs\.?|x)\s*.*/i, "").trim();
+  return clean;
+};
+
 export const getDJTexts = (lang: DJLanguage): DJTexts => {
   return DJ_TEXTS[lang] || DJ_TEXTS.en;
 };
