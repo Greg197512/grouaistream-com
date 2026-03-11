@@ -72,39 +72,44 @@ export const speak = async (text: string, opts?: {
     const audioUrl = URL.createObjectURL(audioBlob);
     
     return new Promise<void>((resolve) => {
-      const audio = new Audio(audioUrl);
+      const audio = new Audio();
       _currentAudio = audio;
       
-      audio.onended = () => {
+      // Set src after creating to avoid some browser quirks
+      audio.preload = "auto";
+      audio.src = audioUrl;
+      
+      const cleanup = () => {
         _isSpeaking = false;
         _currentAudio = null;
-        URL.revokeObjectURL(audioUrl);
-        resolve();
+        try { URL.revokeObjectURL(audioUrl); } catch {}
       };
       
-      audio.onerror = () => {
-        _isSpeaking = false;
-        _currentAudio = null;
-        URL.revokeObjectURL(audioUrl);
-        resolve();
+      audio.onended = () => { cleanup(); resolve(); };
+      audio.onerror = (e) => { 
+        console.warn("ElevenLabs audio playback error:", e);
+        cleanup(); 
+        resolve(); 
       };
 
-      audio.play().catch(() => {
-        _isSpeaking = false;
-        _currentAudio = null;
-        URL.revokeObjectURL(audioUrl);
-        resolve();
-      });
+      // Try to play - handle autoplay policy
+      const playPromise = audio.play();
+      if (playPromise) {
+        playPromise.catch((e) => {
+          console.warn("ElevenLabs audio play blocked:", e.message);
+          cleanup();
+          // Fallback to browser TTS if autoplay blocked
+          speakBrowser(text, opts).then(resolve);
+        });
+      }
 
       // Safety timeout
       setTimeout(() => {
         if (_isSpeaking && _currentAudio === audio) {
-          _isSpeaking = false;
-          _currentAudio = null;
-          URL.revokeObjectURL(audioUrl);
+          cleanup();
           resolve();
         }
-      }, Math.max(text.length * 150, 5000));
+      }, Math.max(text.length * 150, 8000));
     });
   } catch (err) {
     console.warn("ElevenLabs TTS failed, falling back to browser:", err);
