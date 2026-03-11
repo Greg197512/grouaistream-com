@@ -124,7 +124,7 @@ const DJ_TEXTS: Record<DJLanguage, DJTexts> = {
     },
     trackAnnounce: (title, artist) => {
       const short = title.split(/\s+/).slice(0, 2).join(" ");
-      return `${short}! CZUJECIE?!`;
+      return `${short}! SŁYSZYCIE?!`;
     },
     setStart: (count, genres) => `${count} kawałków! Jeden TWARDSZY od drugiego! ${genres ? `Styl ${genres}! TRZYMAJCIE SIĘ!` : "Peak-time hard techno! Let's GO!"}`,
   },
