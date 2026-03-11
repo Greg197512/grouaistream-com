@@ -326,6 +326,7 @@ export const AutoVoiceListener = () => {
 
   const searchAndPlay = useCallback(async (query: string, count?: number) => {
     try {
+      console.log("[Voice] searchAndPlay:", query, "count:", count);
       toast.loading(`🔍 Szukam: "${query}"...`, { id: "voice-search" });
 
       const lowerQuery = query.toLowerCase().trim();
@@ -333,7 +334,16 @@ export const AutoVoiceListener = () => {
 
       let tracks: any[] | null = null;
 
-      if (matchedGenre) {
+      // "mix" or empty = random tracks from library
+      if (lowerQuery === "mix" || lowerQuery === "" || lowerQuery === "coś" || lowerQuery === "cos" || lowerQuery === "muzykę" || lowerQuery === "muzyke" || lowerQuery === "muzyka") {
+        const { data } = await supabase
+          .from("tracks")
+          .select("*")
+          .limit(100);
+        if (data && data.length > 0) {
+          tracks = data.sort(() => Math.random() - 0.5).slice(0, count || 10);
+        }
+      } else if (matchedGenre) {
         const { data } = await supabase
           .from("tracks")
           .select("*")
