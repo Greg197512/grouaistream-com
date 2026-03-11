@@ -120,17 +120,23 @@ export const AIAssistant = () => {
     }
   }, [messages]);
 
-  const userContext = useMemo(() => ({
-    currentPage: location.pathname,
-    topGenres: listeningStats?.topGenres || [],
-    topMoods: listeningStats?.topMoods || [],
-    recentTracks: listeningStats?.recentTracks || 0,
-    currentMood: null,
-    userName,
-    userId: user?.id || null,
-    currentTrack: currentTrack ? { title: currentTrack.title, artist: currentTrack.artist } : null,
-    timeOfDay: getTimeOfDay(),
-  }), [location.pathname, listeningStats, userName, user?.id, currentTrack]);
+  const userContext = useMemo(() => {
+    const appLang = localStorage.getItem("grooveai-language") || "en";
+    const langMap: Record<string, string> = { pl: "polski", en: "English", nl: "Nederlands", ua: "Українська" };
+    return {
+      currentPage: location.pathname,
+      topGenres: listeningStats?.topGenres || [],
+      topMoods: listeningStats?.topMoods || [],
+      recentTracks: listeningStats?.recentTracks || 0,
+      currentMood: null,
+      userName,
+      userId: user?.id || null,
+      currentTrack: currentTrack ? { title: currentTrack.title, artist: currentTrack.artist } : null,
+      timeOfDay: getTimeOfDay(),
+      language: appLang,
+      languageName: langMap[appLang] || "English",
+    };
+  }, [location.pathname, listeningStats, userName, user?.id, currentTrack]);
 
   const handlePlayTrack = async (trackId: string) => {
     try {
