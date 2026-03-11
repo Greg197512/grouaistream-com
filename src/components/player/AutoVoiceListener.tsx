@@ -437,14 +437,15 @@ export const AutoVoiceListener = () => {
   const processCommand = useCallback(async (command: string) => {
     const lower = command.toLowerCase().trim();
     const normalized = normalizeCommand(command);
-    if (normalized.length < 3) return;
+    console.log("[Voice] processCommand:", command, "| normalized:", normalized, "| length:", normalized.length);
+    if (normalized.length < 2) return;
 
     // Guard: ignore if TTS is still speaking (mic echo protection)
-    if (isSpeakingRef.current) return;
+    if (isSpeakingRef.current) { console.log("[Voice] Ignored - TTS speaking"); return; }
 
     // Guard: ignore if already processing a command
     if (isProcessingCommandRef.current) {
-      console.log("[Voice] Ignoring command, already processing:", command);
+      console.log("[Voice] Ignored - already processing:", command);
       return;
     }
     isProcessingCommandRef.current = true;
