@@ -232,7 +232,7 @@ const DJ_TEXTS: Record<DJLanguage, DJTexts> = {
     },
     trackAnnounce: (title, artist) => {
       const short = title.split(/\s+/).slice(0, 2).join(" ");
-      return `${short}! FEEL THAT?!`;
+      return `${short}! HEAR THAT?!`;
     },
     setStart: (count, genres) => `${count} tracks! Each one HARDER than the last! ${genres ? `Going ${genres} STYLE! HOLD TIGHT!` : "Peak-time hard techno! Let's GO!"}`,
   },
