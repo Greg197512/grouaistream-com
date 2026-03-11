@@ -142,6 +142,9 @@ export const AutoVoiceListener = () => {
   const startListeningRef = useRef<(() => void) | null>(null);
   const autoListenRef = useRef(false);
 
+  // Keep ref in sync with state so async handlers always have latest value
+  useEffect(() => { autoListenRef.current = autoListenEnabled; }, [autoListenEnabled]);
+
   useEffect(() => {
     const stored = localStorage.getItem("auto-voice-listen");
     if (stored === "true") setAutoListenEnabled(true);
