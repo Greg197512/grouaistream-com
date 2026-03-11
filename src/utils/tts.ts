@@ -85,9 +85,10 @@ export const speak = async (text: string, opts?: {
       
       audio.onended = () => { cleanup(); resolve(); };
       audio.onerror = (e) => { 
-        console.warn("ElevenLabs audio playback error:", e);
+        console.warn("ElevenLabs audio playback error, falling back to browser TTS:", e);
         cleanup(); 
-        resolve(); 
+        // Fall back to browser TTS instead of silently resolving
+        speakBrowser(text, opts).then(resolve);
       };
 
       // Wait for audio to be ready before playing
