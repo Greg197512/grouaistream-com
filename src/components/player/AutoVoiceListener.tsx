@@ -675,13 +675,13 @@ export const AutoVoiceListener = () => {
         setIsListening(false);
       };
       rec.onend = () => {
-        console.log("[Voice] Recognition ended, speakRestarting:", speakRestartingRef.current, "autoListen:", autoListenEnabled);
+        console.log("[Voice] Recognition ended, speakRestarting:", speakRestartingRef.current, "autoListen:", autoListenRef.current);
         setIsListening(false);
         // If safeSpeakAndResume is handling restart, don't interfere
         if (speakRestartingRef.current) return;
         if (isSpeakingRef.current) return;
         
-        if (autoListenRef.current && recognitionRef.current === rec) {
+        if (autoListenRef.current) {
           // Create a fresh recognition instance instead of reusing aborted one
           restartTimeoutRef.current = window.setTimeout(() => {
             console.log("[Voice] Auto-restarting recognition from onend");
@@ -698,7 +698,7 @@ export const AutoVoiceListener = () => {
       console.error("[Voice] Failed to start recognition:", e);
       toast.error("Nie udało się uruchomić mikrofonu");
     }
-  }, [user, processCommand, autoListenEnabled, resetSilenceTimer]);
+  }, [user, processCommand, resetSilenceTimer]);
 
   // Keep ref in sync so safeSpeakAndResume can restart listening
   useEffect(() => { startListeningRef.current = startListening; }, [startListening]);
