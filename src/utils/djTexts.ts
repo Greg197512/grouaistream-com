@@ -122,7 +122,10 @@ const DJ_TEXTS: Record<DJLanguage, DJTexts> = {
         "Chill moment! Ale nie ZASYPIAJCIE! Bo za chwilę BOOM!",
       ],
     },
-    trackAnnounce: (title, artist) => `Wchodzi! ${title}! ${artist}! CZUJECIE?!`,
+    trackAnnounce: (title, artist) => {
+      const short = title.split(/\s+/).slice(0, 2).join(" ");
+      return `${short}! CZUJECIE?!`;
+    },
     setStart: (count, genres) => `${count} kawałków! Jeden TWARDSZY od drugiego! ${genres ? `Styl ${genres}! TRZYMAJCIE SIĘ!` : "Peak-time hard techno! Let's GO!"}`,
   },
 
@@ -227,7 +230,10 @@ const DJ_TEXTS: Record<DJLanguage, DJTexts> = {
         "Chill MOMENT! But don't sleep! BOOM incoming!",
       ],
     },
-    trackAnnounce: (title, artist) => `Incoming! ${title}! ${artist}! FEEL THAT?!`,
+    trackAnnounce: (title, artist) => {
+      const short = title.split(/\s+/).slice(0, 2).join(" ");
+      return `${short}! FEEL THAT?!`;
+    },
     setStart: (count, genres) => `${count} tracks! Each one HARDER than the last! ${genres ? `Going ${genres} STYLE! HOLD TIGHT!` : "Peak-time hard techno! Let's GO!"}`,
   },
 
@@ -332,7 +338,10 @@ const DJ_TEXTS: Record<DJLanguage, DJTexts> = {
         "Chill MOMENT! Maar niet INSLAPEN! BOEM komt!",
       ],
     },
-    trackAnnounce: (title, artist) => `Incoming! ${title}! ${artist}! VOEL JE DAT?!`,
+    trackAnnounce: (title, artist) => {
+      const short = title.split(/\s+/).slice(0, 2).join(" ");
+      return `${short}! VOEL JE DAT?!`;
+    },
     setStart: (count, genres) => `${count} nummers! Elk HARDER dan de vorige! ${genres ? `${genres} STIJL! HOU JE VAST!` : "Peak-time hard techno! Let's GO!"}`,
   },
 
@@ -435,9 +444,37 @@ const DJ_TEXTS: Record<DJLanguage, DJTexts> = {
         "Чіл МОМЕНТ! Але не СПІТЬ! БУМ скоро!",
       ],
     },
-    trackAnnounce: (title, artist) => `Заходить! ${title}! ${artist}! ВІДЧУВАЄТЕ?!`,
+    trackAnnounce: (title, artist) => {
+      const short = title.split(/\s+/).slice(0, 2).join(" ");
+      return `${short}! ВІДЧУВАЄТЕ?!`;
+    },
     setStart: (count, genres) => `${count} треків! Кожен ТВЕРДІШИЙ за попередній! ${genres ? `Стиль ${genres}! ТРИМАЙТЕСЬ!` : "Peak-time hard techno! Let's GO!"}`,
   },
+};
+
+/**
+ * Shorten a track title to DJ-friendly nickname.
+ * "Bohemian Rhapsody" → "Bohemian"
+ * "Lose Yourself" → "Lose Yourself"  (short enough)
+ * "Never Gonna Give You Up" → "Never Gonna"
+ */
+export const shortenTitle = (title: string): string => {
+  if (!title) return "";
+  // Remove parenthetical info like "(feat. X)" or "(Remix)" or "[Official]"
+  const clean = title.replace(/[\(\[\{].*?[\)\]\}]/g, "").trim();
+  const words = clean.split(/\s+/);
+  // If 3 words or less, keep as is
+  if (words.length <= 3) return clean;
+  // Take first 2 words max
+  return words.slice(0, 2).join(" ");
+};
+
+/** Shorten artist name similarly */
+export const shortenArtist = (artist: string): string => {
+  if (!artist) return "";
+  // Remove "feat." parts
+  const clean = artist.replace(/\s*(feat\.?|ft\.?|&|vs\.?|x)\s*.*/i, "").trim();
+  return clean;
 };
 
 export const getDJTexts = (lang: DJLanguage): DJTexts => {

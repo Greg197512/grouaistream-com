@@ -3,7 +3,7 @@ import { usePlayer, Track } from "@/contexts/PlayerContext";
 import { speak } from "@/utils/tts";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { getDJTexts, getDJLangFromAppLang, getDJTTSLang, DJLanguage } from "@/utils/djTexts";
+import { getDJTexts, getDJLangFromAppLang, getDJTTSLang, DJLanguage, shortenTitle, shortenArtist } from "@/utils/djTexts";
 import { playRandomTransitionEffect, playDJEffect, playDropCombo } from "@/utils/djMixer";
 
 interface DJSession {
@@ -32,11 +32,17 @@ export const useDJMode = () => {
   const lastAnnouncedTrackRef = useRef<string | null>(null);
   const trackCountRef = useRef(0);
 
-  // DJ speaks — FAST, PUNCHY, HARD, Rotterdam energy
-  const djSpeak = useCallback((text: string, opts?: { rate?: number; pitch?: number }) => {
+  // DJ speaks — LOUD, FAST, PUNCHY, HARD, Rotterdam energy
+  const djSpeak = useCallback(async (text: string, opts?: { rate?: number; pitch?: number }) => {
     const lang = getAppLang();
     const ttsLang = getDJTTSLang(lang);
-    return speak(text, { rate: opts?.rate ?? 1.22, pitch: opts?.pitch ?? 1.08, lang: ttsLang, mode: "dj" });
+    // Play a subtle effect before DJ speaks for mix feel
+    const preEffect = Math.random();
+    if (preEffect > 0.6) playDJEffect("stab");
+    else if (preEffect > 0.3) playDJEffect("laser");
+    
+    await new Promise(r => setTimeout(r, 150));
+    return speak(text, { rate: opts?.rate ?? 1.25, pitch: opts?.pitch ?? 1.1, lang: ttsLang, mode: "dj" });
   }, []);
 
   // Announce DJ transition between tracks with hard techno effects
@@ -56,10 +62,11 @@ export const useDJMode = () => {
     const lang = getAppLang();
     const texts = getDJTexts(lang);
     const transition = randomFrom(texts.transitions);
-    const trackInfo = texts.trackAnnounce(currentTrack.title, currentTrack.artist);
+    const shortTitle = shortenTitle(currentTrack.title);
+    const trackInfo = texts.trackAnnounce(shortTitle, shortenArtist(currentTrack.artist));
 
-    transitionTimerRef.current = window.setTimeout(() => {
-      // Hard techno effects on transitions
+    transitionTimerRef.current = window.setTimeout(async () => {
+      // Hard techno effects BEFORE speech
       const effectRoll = Math.random();
       if (effectRoll > 0.7) {
         playDJEffect("industrial_kick");
@@ -72,19 +79,28 @@ export const useDJMode = () => {
         playDJEffect("riser");
       }
       
-      // Build announcement: hype + transition + track
+      // Build SHORT announcement: hype + transition (skip full track info sometimes)
       let fullAnnouncement = transition;
-      if (Math.random() > 0.4) {
+      if (Math.random() > 0.5) {
         fullAnnouncement = `${randomFrom(texts.hypeLines)} ${transition}`;
       }
-      // Add drop line occasionally for peak energy
-      if (Math.random() > 0.7 && texts.dropLines) {
+      // Add drop line occasionally
+      if (Math.random() > 0.75 && texts.dropLines) {
         fullAnnouncement += ` ${randomFrom(texts.dropLines)}`;
       }
-      fullAnnouncement += ` ${trackInfo}`;
+      // Only add track name sometimes (real DJs don't announce every track)
+      if (Math.random() > 0.4) {
+        fullAnnouncement += ` ${trackInfo}`;
+      }
       
       // Speak with hard energy after effect
-      setTimeout(() => djSpeak(fullAnnouncement), 300);
+      await new Promise(r => setTimeout(r, 250));
+      await djSpeak(fullAnnouncement);
+      
+      // Post-speech effect for mix continuity
+      if (Math.random() > 0.5) {
+        setTimeout(() => playDJEffect(Math.random() > 0.5 ? "impact" : "industrial_kick"), 200);
+      }
     }, 600);
 
     return () => {
@@ -162,7 +178,8 @@ export const useDJMode = () => {
       const introCategory = genres[0]?.toLowerCase() || partyType;
       const intros = texts.intros[introCategory] || texts.intros.techno || texts.intros.default;
       const genreText = genres.length > 0 ? genres.join(", ") : "Hard Techno";
-      const introText = `${randomFrom(intros)} ${texts.setStart(curatedTracks.length, genreText)} ${texts.trackAnnounce(curatedTracks[0].title, curatedTracks[0].artist)}`;
+      const firstTrackShort = shortenTitle(curatedTracks[0].title);
+      const introText = `${randomFrom(intros)} ${texts.setStart(curatedTracks.length, genreText)} ${firstTrackShort}! LECIMY!`;
 
       toast.success(`🎧 DJ GrooveAI — ${curatedTracks.length} tracks — Rotterdam Peak-Time!`, { id: "dj-mode", duration: 5000 });
 
