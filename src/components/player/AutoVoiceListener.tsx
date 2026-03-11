@@ -186,6 +186,8 @@ export const AutoVoiceListener = () => {
 
   // Flag to prevent recognition from processing input while TTS is active
   const isSpeakingRef = useRef(false);
+  // Flag to indicate safeSpeakAndResume will handle restart (prevents onend from double-restarting)
+  const speakRestartingRef = useRef(false);
 
   /**
    * Pause recognition → speak → resume recognition.
@@ -193,23 +195,31 @@ export const AutoVoiceListener = () => {
    */
   const safeSpeakAndResume = useCallback(async (text: string) => {
     isSpeakingRef.current = true;
-    // Pause recognition while speaking
+    speakRestartingRef.current = true;
+    // Fully destroy recognition to prevent onend from restarting
     if (recognitionRef.current) {
+      recognitionRef.current.onresult = null;
+      recognitionRef.current.onerror = null;
+      recognitionRef.current.onend = null;
       try { recognitionRef.current.abort(); } catch {}
+      recognitionRef.current = null;
     }
+    if (restartTimeoutRef.current) { clearTimeout(restartTimeoutRef.current); restartTimeoutRef.current = null; }
     setIsListening(false);
 
     await speak(text, { mode: "assistant" });
 
     // Small extra gap to let echo fade
-    await new Promise(r => setTimeout(r, 600));
+    await new Promise(r => setTimeout(r, 800));
     isSpeakingRef.current = false;
+    speakRestartingRef.current = false;
 
     // Restart recognition if auto-listen is still on
     if (autoListenEnabled) {
       restartTimeoutRef.current = window.setTimeout(() => {
+        console.log("[Voice] Restarting recognition after TTS");
         startListeningRef.current?.();
-      }, 300);
+      }, 200);
     }
   }, [autoListenEnabled]);
 
