@@ -178,7 +178,8 @@ export const useDJMode = () => {
       const introCategory = genres[0]?.toLowerCase() || partyType;
       const intros = texts.intros[introCategory] || texts.intros.techno || texts.intros.default;
       const genreText = genres.length > 0 ? genres.join(", ") : "Hard Techno";
-      const introText = `${randomFrom(intros)} ${texts.setStart(curatedTracks.length, genreText)} ${texts.trackAnnounce(curatedTracks[0].title, curatedTracks[0].artist)}`;
+      const firstTrackShort = shortenTitle(curatedTracks[0].title);
+      const introText = `${randomFrom(intros)} ${texts.setStart(curatedTracks.length, genreText)} ${firstTrackShort}! LECIMY!`;
 
       toast.success(`🎧 DJ GrooveAI — ${curatedTracks.length} tracks — Rotterdam Peak-Time!`, { id: "dj-mode", duration: 5000 });
 

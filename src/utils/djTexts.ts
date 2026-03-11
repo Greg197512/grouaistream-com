@@ -444,7 +444,10 @@ const DJ_TEXTS: Record<DJLanguage, DJTexts> = {
         "Чіл МОМЕНТ! Але не СПІТЬ! БУМ скоро!",
       ],
     },
-    trackAnnounce: (title, artist) => `Заходить! ${title}! ${artist}! ВІДЧУВАЄТЕ?!`,
+    trackAnnounce: (title, artist) => {
+      const short = title.split(/\s+/).slice(0, 2).join(" ");
+      return `${short}! ВІДЧУВАЄТЕ?!`;
+    },
     setStart: (count, genres) => `${count} треків! Кожен ТВЕРДІШИЙ за попередній! ${genres ? `Стиль ${genres}! ТРИМАЙТЕСЬ!` : "Peak-time hard techno! Let's GO!"}`,
   },
 };

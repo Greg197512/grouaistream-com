@@ -29,7 +29,7 @@ serve(async (req) => {
     const voiceId = mode === "dj" ? "nPczCjzI2devNBz1zQrb" : "CwhRBWXzGAHq8TQ4Fs17";
     
     const voiceSettings = mode === "dj" 
-      ? { stability: 0.3, similarity_boost: 0.8, style: 0.7, use_speaker_boost: true, speed: 1.15 }
+      ? { stability: 0.25, similarity_boost: 0.85, style: 0.8, use_speaker_boost: true, speed: 1.2 }
       : { stability: 0.5, similarity_boost: 0.75, style: 0.4, use_speaker_boost: true, speed: 1.0 };
 
     const response = await fetch(
