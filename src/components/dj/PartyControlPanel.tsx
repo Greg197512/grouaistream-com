@@ -151,6 +151,24 @@ export const PartyControlPanel = ({ onClose }: PartyControlPanelProps) => {
   const topCommand = Object.entries(voteSummary).sort((a, b) => b[1] - a[1])[0];
   const majorityReached = topCommand && totalVotes > 0 && topCommand[1] / totalVotes > 0.5;
 
+  if (!user) {
+    return (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 z-[100] bg-[#050510] flex items-center justify-center"
+      >
+        <div className="text-center p-8">
+          <Zap className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <h2 className="text-xl font-bold mb-2">Zaloguj się</h2>
+          <p className="text-muted-foreground mb-4">Musisz być zalogowany, żeby uruchomić sesję QR Parkiet.</p>
+          <Button onClick={onClose} variant="outline">Zamknij</Button>
+        </div>
+      </motion.div>
+    );
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
