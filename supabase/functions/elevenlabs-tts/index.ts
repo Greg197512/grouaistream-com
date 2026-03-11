@@ -28,8 +28,11 @@ serve(async (req) => {
     // Roger - deep male voice for assistant, Brian for DJ energy
     const voiceId = mode === "dj" ? "nPczCjzI2devNBz1zQrb" : "CwhRBWXzGAHq8TQ4Fs17";
     
+    // DJ voice: LOUD, raspy, booming with slight echo feel
+    // Low stability = more expressive/gritty, high style = dramatic delivery
+    // Speed 1.15 for punchy but clear, similarity_boost high for consistent character
     const voiceSettings = mode === "dj" 
-      ? { stability: 0.25, similarity_boost: 0.85, style: 0.8, use_speaker_boost: true, speed: 1.2 }
+      ? { stability: 0.15, similarity_boost: 0.9, style: 0.95, use_speaker_boost: true, speed: 1.15 }
       : { stability: 0.5, similarity_boost: 0.75, style: 0.4, use_speaker_boost: true, speed: 1.0 };
 
     const response = await fetch(
