@@ -717,27 +717,33 @@ export const AutoVoiceListener = () => {
   const handleNameSubmit = useCallback(async (name: string) => {
     setShowNamingModal(false);
     await saveAssistantName(name);
-    setTimeout(() => {
-      speak(`Cześć! Miło mi że mnie tak nazwałeś — ${name}. Jestem Twoim asystentem muzycznym. Powiedz moje imię kiedy będziesz mnie potrzebować!`);
-      toast.success(`🎤 ${name} aktywowany!`, { duration: 5000 });
-    }, 500);
     setAutoListenEnabled(true);
     localStorage.setItem("auto-voice-listen", "true");
-    setTimeout(() => startListening(), 1000);
+    toast.success(`🎤 ${name} aktywowany!`, { duration: 5000 });
+    // Speak greeting FIRST, then start listening (prevents mic from hearing its own TTS)
+    isSpeakingRef.current = true;
+    await speak(`Cześć! Miło mi że mnie tak nazwałeś — ${name}. Jestem Twoim asystentem muzycznym. Powiedz moje imię kiedy będziesz mnie potrzebować!`);
+    await new Promise(r => setTimeout(r, 600));
+    isSpeakingRef.current = false;
+    startListening();
   }, [saveAssistantName, startListening]);
 
-  const toggleAutoListen = useCallback(() => {
+  const toggleAutoListen = useCallback(async () => {
     const next = !autoListenEnabled;
     setAutoListenEnabled(next);
     localStorage.setItem("auto-voice-listen", String(next));
     if (next) {
-      startListening();
-      speak(`Mikrofon włączony.${assistantName ? ` Jestem ${assistantName}.` : ""} Słucham.`);
       toast.success("🎙️ Mikrofon AI włączony");
+      // Speak greeting FIRST, then start listening (prevents mic from hearing its own TTS)
+      isSpeakingRef.current = true;
+      await speak(`Mikrofon włączony.${assistantName ? ` Jestem ${assistantName}.` : ""} Słucham.`);
+      await new Promise(r => setTimeout(r, 600));
+      isSpeakingRef.current = false;
+      startListening();
     } else {
       shutdownMic();
     }
-  }, [autoListenEnabled, startListening, assistantName]);
+  }, [autoListenEnabled, startListening, assistantName, shutdownMic]);
 
   // Listen for toggle from InfinityWidget
   useEffect(() => {
