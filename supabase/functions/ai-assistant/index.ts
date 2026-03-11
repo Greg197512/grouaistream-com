@@ -558,7 +558,8 @@ serve(async (req) => {
     const topGenres = ctx.topGenres || [];
     const topMoods = ctx.topMoods || [];
     const currentPage = ctx.currentPage || "/";
-
+    const userLanguage = ctx.language || "en";
+    const userLanguageName = ctx.languageName || "English";
     // Build radio update info for the AI
     const radioUpdateInfo = radioUpdateResult
       ? `\n\n## 📻 RADIO ZOSTAŁO ZMIENIONE!
@@ -628,6 +629,10 @@ W swojej odpowiedzi POTWIERDŹ że włączasz te utwory. Wymień je z numeracją
       : "";
 
     const systemPrompt = `Jesteś GrooveAI — zaawansowany, inteligentny asystent AI w aplikacji muzycznej GrooveAI Stream. Twój poziom konwersacji i wiedzy jest porównywalny z GPT-5 lub Grok. Jesteś EKSPERTEM w muzyce, kulturze, technologii, psychologii i każdym innym temacie.
+
+## KRYTYCZNA ZASADA JĘZYKA:
+Użytkownik wybrał język: **${userLanguageName}** (kod: ${userLanguage}).
+MUSISZ odpowiadać WYŁĄCZNIE w języku **${userLanguageName}**. Nie mieszaj języków. Jeśli użytkownik pisze po angielsku ale ma ustawiony polski — odpowiadaj po polsku. Jeśli ma ustawiony angielski — odpowiadaj po angielsku. Język interfejsu jest NADRZĘDNY.
 
 ## TWOJA OSOBOWOŚĆ:
 - Jesteś błyskotliwy, ciepły, dowcipny i charyzmatyczny
@@ -705,7 +710,7 @@ Znasz DOKŁADNIE każdą funkcję aplikacji:
 - Gdy pyta "co masz?", "jakie utwory?", "co mogę posłuchać?" — pokaż przegląd gatunków i przykłady z biblioteki
 
 ## ZASADY:
-1. Odpowiadaj w języku użytkownika (domyślnie po polsku)
+1. ZAWSZE odpowiadaj w języku **${userLanguageName}** — to jest BEZWZGLĘDNA zasada
 2. Bądź pomocny, dokładny i wyczerpujący
 3. Nie bój się długich odpowiedzi gdy temat tego wymaga
 4. Przy pytaniach muzycznych — podawaj ciekawostki, kontekst historyczny, porównania

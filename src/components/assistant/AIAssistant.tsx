@@ -99,17 +99,56 @@ export const AIAssistant = () => {
     if (isOpen && !hasGreeted.current) {
       hasGreeted.current = true;
       const time = getTimeOfDay();
-      const greetings: Record<string, string> = {
-        morning: `Dzień dobry **${userName}**! ☀️ Gotowy na poranną dawkę muzyki?`,
-        afternoon: `Hej **${userName}**! 🌤️ Co chcesz dziś posłuchać?`,
-        evening: `Dobry wieczór **${userName}**! 🌅 Czas na wieczorny chill?`,
-        night: `Hej **${userName}**! 🌙 Nocna sesja muzyczna?`,
+      const lang = localStorage.getItem("grooveai-language") || "en";
+      
+      const greetingsByLang: Record<string, Record<string, string>> = {
+        pl: {
+          morning: `Dzień dobry **${userName}**! ☀️ Gotowy na poranną dawkę muzyki?`,
+          afternoon: `Hej **${userName}**! 🌤️ Co chcesz dziś posłuchać?`,
+          evening: `Dobry wieczór **${userName}**! 🌅 Czas na wieczorny chill?`,
+          night: `Hej **${userName}**! 🌙 Nocna sesja muzyczna?`,
+        },
+        en: {
+          morning: `Good morning **${userName}**! ☀️ Ready for your morning music?`,
+          afternoon: `Hey **${userName}**! 🌤️ What do you want to listen to?`,
+          evening: `Good evening **${userName}**! 🌅 Time for an evening chill?`,
+          night: `Hey **${userName}**! 🌙 Late night music session?`,
+        },
+        nl: {
+          morning: `Goedemorgen **${userName}**! ☀️ Klaar voor je ochtendmuziek?`,
+          afternoon: `Hey **${userName}**! 🌤️ Waar heb je zin in?`,
+          evening: `Goedenavond **${userName}**! 🌅 Tijd voor avondmuziek?`,
+          night: `Hey **${userName}**! 🌙 Nachtelijke muziek sessie?`,
+        },
+        ua: {
+          morning: `Доброго ранку **${userName}**! ☀️ Готовий до ранкової музики?`,
+          afternoon: `Привіт **${userName}**! 🌤️ Що хочеш послухати?`,
+          evening: `Добрий вечір **${userName}**! 🌅 Час на вечірній чіл?`,
+          night: `Привіт **${userName}**! 🌙 Нічна музична сесія?`,
+        },
       };
-      let greeting = greetings[time] || `Hej **${userName}**! 🎵 `;
+      
+      const greetings = greetingsByLang[lang] || greetingsByLang.en;
+      let greeting = greetings[time] || `Hey **${userName}**! 🎵 `;
+      
+      const statsText: Record<string, string> = {
+        pl: `\n\nWidzę, że lubisz **${listeningStats?.topGenres?.join(", ")}** — mam dla Ciebie propozycje!`,
+        en: `\n\nI see you like **${listeningStats?.topGenres?.join(", ")}** — I have suggestions for you!`,
+        nl: `\n\nIk zie dat je van **${listeningStats?.topGenres?.join(", ")}** houdt — ik heb suggesties!`,
+        ua: `\n\nБачу, що тобі подобається **${listeningStats?.topGenres?.join(", ")}** — маю пропозиції!`,
+      };
+      
       if (listeningStats?.topGenres?.length) {
-        greeting += `\n\nWidzę, że lubisz **${listeningStats.topGenres.join(", ")}** — mam dla Ciebie propozycje!`;
+        greeting += statsText[lang] || statsText.en;
       }
-      greeting += "\n\nJestem Twoim asystentem AI — mogę rozmawiać o **muzyce, technologii, nauce, kulturze** i wszystkim innym. Zapytaj o cokolwiek! 🎶";
+      
+      const introText: Record<string, string> = {
+        pl: "\n\nJestem Twoim asystentem AI — mogę rozmawiać o **muzyce, technologii, nauce, kulturze** i wszystkim innym. Zapytaj o cokolwiek! 🎶",
+        en: "\n\nI'm your AI assistant — I can talk about **music, technology, science, culture** and anything else. Ask me anything! 🎶",
+        nl: "\n\nIk ben je AI-assistent — ik kan praten over **muziek, technologie, wetenschap, cultuur** en alles. Vraag me alles! 🎶",
+        ua: "\n\nЯ твій AI асистент — можу говорити про **музику, технології, науку, культуру** та все інше. Запитуй! 🎶",
+      };
+      greeting += introText[lang] || introText.en;
       setMessages([{ role: "assistant", content: greeting }]);
     }
   }, [isOpen, userName, listeningStats]);
@@ -120,17 +159,23 @@ export const AIAssistant = () => {
     }
   }, [messages]);
 
-  const userContext = useMemo(() => ({
-    currentPage: location.pathname,
-    topGenres: listeningStats?.topGenres || [],
-    topMoods: listeningStats?.topMoods || [],
-    recentTracks: listeningStats?.recentTracks || 0,
-    currentMood: null,
-    userName,
-    userId: user?.id || null,
-    currentTrack: currentTrack ? { title: currentTrack.title, artist: currentTrack.artist } : null,
-    timeOfDay: getTimeOfDay(),
-  }), [location.pathname, listeningStats, userName, user?.id, currentTrack]);
+  const userContext = useMemo(() => {
+    const appLang = localStorage.getItem("grooveai-language") || "en";
+    const langMap: Record<string, string> = { pl: "polski", en: "English", nl: "Nederlands", ua: "Українська" };
+    return {
+      currentPage: location.pathname,
+      topGenres: listeningStats?.topGenres || [],
+      topMoods: listeningStats?.topMoods || [],
+      recentTracks: listeningStats?.recentTracks || 0,
+      currentMood: null,
+      userName,
+      userId: user?.id || null,
+      currentTrack: currentTrack ? { title: currentTrack.title, artist: currentTrack.artist } : null,
+      timeOfDay: getTimeOfDay(),
+      language: appLang,
+      languageName: langMap[appLang] || "English",
+    };
+  }, [location.pathname, listeningStats, userName, user?.id, currentTrack]);
 
   const handlePlayTrack = async (trackId: string) => {
     try {

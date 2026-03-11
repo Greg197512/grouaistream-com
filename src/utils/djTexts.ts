@@ -124,7 +124,7 @@ const DJ_TEXTS: Record<DJLanguage, DJTexts> = {
     },
     trackAnnounce: (title, artist) => {
       const short = title.split(/\s+/).slice(0, 2).join(" ");
-      return `${short}! CZUJECIE?!`;
+      return `${short}! SŁYSZYCIE?!`;
     },
     setStart: (count, genres) => `${count} kawałków! Jeden TWARDSZY od drugiego! ${genres ? `Styl ${genres}! TRZYMAJCIE SIĘ!` : "Peak-time hard techno! Let's GO!"}`,
   },
@@ -232,7 +232,7 @@ const DJ_TEXTS: Record<DJLanguage, DJTexts> = {
     },
     trackAnnounce: (title, artist) => {
       const short = title.split(/\s+/).slice(0, 2).join(" ");
-      return `${short}! FEEL THAT?!`;
+      return `${short}! HEAR THAT?!`;
     },
     setStart: (count, genres) => `${count} tracks! Each one HARDER than the last! ${genres ? `Going ${genres} STYLE! HOLD TIGHT!` : "Peak-time hard techno! Let's GO!"}`,
   },
@@ -340,7 +340,7 @@ const DJ_TEXTS: Record<DJLanguage, DJTexts> = {
     },
     trackAnnounce: (title, artist) => {
       const short = title.split(/\s+/).slice(0, 2).join(" ");
-      return `${short}! VOEL JE DAT?!`;
+      return `${short}! HOOR JE DAT?!`;
     },
     setStart: (count, genres) => `${count} nummers! Elk HARDER dan de vorige! ${genres ? `${genres} STIJL! HOU JE VAST!` : "Peak-time hard techno! Let's GO!"}`,
   },
@@ -446,7 +446,7 @@ const DJ_TEXTS: Record<DJLanguage, DJTexts> = {
     },
     trackAnnounce: (title, artist) => {
       const short = title.split(/\s+/).slice(0, 2).join(" ");
-      return `${short}! ВІДЧУВАЄТЕ?!`;
+      return `${short}! ЧУЄТЕ?!`;
     },
     setStart: (count, genres) => `${count} треків! Кожен ТВЕРДІШИЙ за попередній! ${genres ? `Стиль ${genres}! ТРИМАЙТЕСЬ!` : "Peak-time hard techno! Let's GO!"}`,
   },
