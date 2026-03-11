@@ -230,7 +230,10 @@ const DJ_TEXTS: Record<DJLanguage, DJTexts> = {
         "Chill MOMENT! But don't sleep! BOOM incoming!",
       ],
     },
-    trackAnnounce: (title, artist) => `Incoming! ${title}! ${artist}! FEEL THAT?!`,
+    trackAnnounce: (title, artist) => {
+      const short = title.split(/\s+/).slice(0, 2).join(" ");
+      return `${short}! FEEL THAT?!`;
+    },
     setStart: (count, genres) => `${count} tracks! Each one HARDER than the last! ${genres ? `Going ${genres} STYLE! HOLD TIGHT!` : "Peak-time hard techno! Let's GO!"}`,
   },
 
