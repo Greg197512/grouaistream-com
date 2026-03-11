@@ -526,17 +526,31 @@ export const AutoVoiceListener = () => {
     }
     if (tryNavigate(lower)) return;
 
-    // Search & play - "puść/zagraj X" or "puść 5 rock"
-    const playMatch = lower.match(/(?:włącz|puść|zagraj|odtwórz|graj|play)\s+(.+)/i);
-    if (playMatch) {
-      const query = playMatch[1].replace(/w\s+playerze/i, "").trim();
-      const count = parsePolishNumber(query);
-      const cleanQuery = query
+    // Search & play - expanded triggers including "start", "daj", "leć", number+genre patterns
+    const playMatch = lower.match(/(?:włącz|puść|zagraj|odtwórz|graj|play|start|startuj|daj|leć|dawaj|odpal|wrzuć|kręć)\s+(.+)/i);
+    // Also match "10 piosenek rock" or "dziesięć rock" without a verb
+    const numberFirstMatch = !playMatch && lower.match(/^(\d+|jeden|jedną|dwa|dwie|trzy|cztery|pięć|sześć|siedem|osiem|dziewięć|dziesięć|piętnaście|dwadzieścia)\s+(piosen\w*|utw\w*|track\w*|song\w*|numer\w*)?\s*(.+)?/i);
+    
+    if (playMatch || numberFirstMatch) {
+      let rawQuery: string;
+      if (playMatch) {
+        rawQuery = playMatch[1].replace(/w\s+playerze/i, "").trim();
+      } else {
+        // "10 piosenek rock" → count from first group, query from rest
+        rawQuery = `${numberFirstMatch![1]} ${numberFirstMatch![3] || numberFirstMatch![2] || ""}`.trim();
+      }
+      console.log("[Voice] Play command detected, raw query:", rawQuery);
+      const count = parsePolishNumber(rawQuery);
+      const cleanQuery = rawQuery
         .replace(/\d+/g, "")
         .replace(/(?:jeden|jedną|jedno|dwa|dwie|dwóch|dwoch|trzy|trzech|cztery|czterech|pięć|piec|pieciu|pięciu|sześć|szesc|sześciu|szesciu|siedem|siedmiu|osiem|ośmiu|osmiu|dziewięć|dziewiec|dziewięciu|dziesięć|dziesiec|dziesięciu|piętnaście|pietnascie|dwadzieścia|dwadziescia)\s*/gi, "")
-        .replace(/\s*(utw\w*|piosen\w*|track\w*|song\w*)\s*/gi, "")
+        .replace(/\s*(utw\w*|piosen\w*|track\w*|song\w*|numer\w*)\s*/gi, "")
         .trim();
-      await searchAndPlay(cleanQuery || query, count);
+      
+      // If no genre/query specified, play random mix
+      const finalQuery = cleanQuery || "mix";
+      console.log("[Voice] Clean query:", finalQuery, "count:", count);
+      await searchAndPlay(finalQuery, count || 10);
       return;
     }
 
