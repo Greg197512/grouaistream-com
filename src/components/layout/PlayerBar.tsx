@@ -212,6 +212,10 @@ export const PlayerBar = () => {
   const displayDuration = duration || currentTrack?.duration || 0;
   const displayCurrentTime = currentTime;
 
+  if (!currentTrack && !isVideoMode) {
+    return null;
+  }
+
   return (
     <>
       {/* Drag constraints container (full viewport) */}
