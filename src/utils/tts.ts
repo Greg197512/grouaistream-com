@@ -107,11 +107,12 @@ export const speak = async (text: string, opts?: {
       // Set src after handlers to avoid race
       audio.src = audioUrl;
 
-      // Safety timeout
+      // Safety timeout - fall back to browser if audio takes too long
       setTimeout(() => {
         if (_isSpeaking && _currentAudio === audio) {
+          console.warn("ElevenLabs audio timeout, falling back to browser TTS");
           cleanup();
-          resolve();
+          speakBrowser(text, opts).then(resolve);
         }
       }, Math.max(text.length * 150, 8000));
     });
