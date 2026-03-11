@@ -729,10 +729,10 @@ export const AutoVoiceListener = () => {
     return () => window.removeEventListener("toggle-voice-mic", handler);
   }, [toggleAutoListen]);
 
-  // Broadcast mic state to InfinityWidget
+  // Broadcast mic state to InfinityWidget — use autoListenEnabled so it stays orange during TTS pauses
   useEffect(() => {
-    window.dispatchEvent(new CustomEvent("voice-mic-state", { detail: isListening }));
-  }, [isListening]);
+    window.dispatchEvent(new CustomEvent("voice-mic-state", { detail: autoListenEnabled }));
+  }, [autoListenEnabled]);
 
   const playSuggestion = async (track: any) => {
     playPlaylist([{ id: track.id, title: track.title, artist: track.artist, album: null, audio_url: null, cover_url: null, genre: track.genre, mood: track.mood, duration: 180 }], 0);
