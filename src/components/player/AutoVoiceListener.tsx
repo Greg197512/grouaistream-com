@@ -140,6 +140,7 @@ export const AutoVoiceListener = () => {
   const restartTimeoutRef = useRef<number | null>(null);
   const silenceTimerRef = useRef<number | null>(null);
   const startListeningRef = useRef<(() => void) | null>(null);
+  const autoListenRef = useRef(false);
 
   useEffect(() => {
     const stored = localStorage.getItem("auto-voice-listen");
