@@ -4,6 +4,7 @@
  * No mainstream, no vocals unless requested. 130-132 BPM default energy.
  * 
  * Authentic club DJ callouts in 4 languages (PL, EN, NL, UA).
+ * DJ says "SŁYSZYCIE" (hear) NOT "CZUJECIE" (feel).
  */
 
 export type DJLanguage = "pl" | "en" | "nl" | "ua";
@@ -25,18 +26,18 @@ const DJ_TEXTS: Record<DJLanguage, DJTexts> = {
     intros: {
       default: [
         "UWAGA! DJ GrooveAI wchodzi na konsole! Rotterdam style! Twardy bas, ciemne synthy, sto trzydzieści BPM! NIE MA LITOŚCI! LECIMY!",
-        "DJ GrooveAI za sterami! Peak time! Hard techno prosto z Rotterdamu! Czujecie ten kick w żołądku? To dopiero POCZĄTEK!",
+        "DJ GrooveAI za sterami! Peak time! Hard techno prosto z Rotterdamu! Słyszycie ten kick?! To dopiero POCZĄTEK!",
         "Ej! DJ GrooveAI odpala darkroom! Twardy, surowy, bez kompromisów! Kto jest gotowy na DEMOLKĘ?! TRZY DWA JEDEN GO!",
-        "DJ GrooveAI przejmuje parkiet! Dutch hard techno! Ciężki kick, sub-bas do kości! Zamknijcie oczy i CZUJCIE TEN BEAT!",
+        "DJ GrooveAI przejmuje parkiet! Dutch hard techno! Ciężki kick, sub-bas do kości! Słyszycie ten bit?! LECIMY!",
       ],
       techno: [
-        "BOOM! DJ GrooveAI! Peak-time hard techno z Rotterdamu! Sto trzydzieści BPM, twardy kick, ciemne synthy! CZUJECIE TEN BAS?! LECIMY NA MAKSA!",
+        "BOOM! DJ GrooveAI! Peak-time hard techno z Rotterdamu! Sto trzydzieści BPM, twardy kick, ciemne synthy! SŁYSZYCIE TEN BAS?! LECIMY NA MAKSA!",
         "Welcome to the UNDERGROUND! DJ GrooveAI odpala Rotterdam techno! Raw, driving, bez litości! Darkroom ACTIVATED!",
-        "Techno warriors! DJ GrooveAI za konsolą! Dutch style peak hour! Dominant sub-bas plus hard kick! FEEL THE PRESSURE!",
+        "Techno warriors! DJ GrooveAI za konsolą! Dutch style peak hour! Dominant sub-bas plus hard kick! SŁYSZYCIE TEN BIT?!",
         "UWAGA ravers! DJ GrooveAI wchodzi z CIĘŻKIM sprzętem! Rotterdam hard techno! Sto trzydzieści dwa BPM i ZERO hamulców!",
       ],
       house: [
-        "DJ GrooveAI! Driving house prosto z Rotterdamu! Ciężki groove, dark bassline, raw energy! CZUJECIE TEN DRIVE?!",
+        "DJ GrooveAI! Driving house prosto z Rotterdamu! Ciężki groove, dark bassline, raw energy! SŁYSZYCIE TEN DRIVE?!",
         "Welcome to the HOUSE! DJ GrooveAI pushuje driving house! Dutch underground vibes! Twardy kick plus deep sub! LECIMY!",
       ],
       "hip-hop": [
@@ -61,13 +62,13 @@ const DJ_TEXTS: Record<DJLanguage, DJTexts> = {
       "Trzymajcie się! Wchodzi CIĘŻSZY kick!",
       "Nie zwalniamy! Sub-bas idzie GŁĘBIEJ!",
       "DROP za trzy dwa jeden! BOOM!",
-      "Zmieniam na CIEMNIEJSZY vibe! Czujecie?!",
+      "Zmieniam na CIEMNIEJSZY vibe! Słyszycie?!",
       "DJ GrooveAI podkręca CIŚNIENIE! Hold on!",
       "Energia ROŚNIE! Kolejny BANGER leci!",
       "Wyżej! WYŻEJ! Peak time!",
       "Bez przerwy! Bez litości! NASTĘPNY!",
       "To dopiero rozgrzewka! A teraz PRAWDZIWY ogień!",
-      "Bas wchodzi TWARDSZY! CZUJECIE TO?!",
+      "Bas wchodzi TWARDSZY! SŁYSZYCIE TEN BIT?!",
       "Heavy rotation! Zmieniam na coś co was ROZWALI!",
       "REWIND! Wchodzi świeży hard kick!",
       "Hold up! Mam coś BRUTALNEGO! Słuchajcie!",
@@ -77,7 +78,7 @@ const DJ_TEXTS: Record<DJLanguage, DJTexts> = {
     hypeLines: [
       "HANDS UP! Ręce do GÓRY!",
       "Louder! LOUDER!",
-      "CZUJECIE TEN KICK?!",
+      "SŁYSZYCIE TEN KICK?!",
       "Peak time! PEAK TIME!",
       "Skaczemy! JUMP JUMP JUMP!",
       "Dajcie mi ENERGIĘ!",
@@ -93,7 +94,7 @@ const DJ_TEXTS: Record<DJLanguage, DJTexts> = {
       "BUILD UP! Annnd DROP!",
     ],
     mixLines: [
-      "Smooth crossfade! Czujecie jak to WCHODZI?",
+      "Smooth crossfade! Słyszycie jak to WCHODZI?",
       "Perfekt blend! Dwa tracki jeden GROOVE!",
       "Watch the mix! SEAMLESS!",
       "EQ transition! Bass swap! CLEAN!",
@@ -124,7 +125,7 @@ const DJ_TEXTS: Record<DJLanguage, DJTexts> = {
     },
     trackAnnounce: (title, artist) => {
       const short = title.split(/\s+/).slice(0, 2).join(" ");
-      return `${short}! SŁYSZYCIE?!`;
+      return `${short}! SŁYSZYCIE TEN BIT?!`;
     },
     setStart: (count, genres) => `${count} kawałków! Jeden TWARDSZY od drugiego! ${genres ? `Styl ${genres}! TRZYMAJCIE SIĘ!` : "Peak-time hard techno! Let's GO!"}`,
   },
@@ -133,18 +134,18 @@ const DJ_TEXTS: Record<DJLanguage, DJTexts> = {
     intros: {
       default: [
         "DJ GrooveAI on the DECKS! Rotterdam style! Hard kick, dark synths, one thirty BPM! NO MERCY! LET'S GO!",
-        "DJ GrooveAI behind the console! Peak time hard techno straight from ROTTERDAM! Feel that kick in your GUT? We're just STARTING!",
+        "DJ GrooveAI behind the console! Peak time hard techno straight from ROTTERDAM! Hear that kick?! We're just STARTING!",
         "Attention! DJ GrooveAI activates DARKROOM! Raw, driving, no compromises! Who's ready for DEMOLITION?! THREE TWO ONE GO!",
-        "DJ GrooveAI takes the FLOOR! Dutch hard techno! Heavy kick, sub-bass to the BONE! Close your eyes and FEEL THE BEAT!",
+        "DJ GrooveAI takes the FLOOR! Dutch hard techno! Heavy kick, sub-bass to the BONE! Hear that beat?! LET'S GO!",
       ],
       techno: [
-        "BOOM! DJ GrooveAI! Peak-time hard techno from ROTTERDAM! One thirty BPM, hard kick, dark synths! FEEL THAT BASS?! FULL POWER!",
+        "BOOM! DJ GrooveAI! Peak-time hard techno from ROTTERDAM! One thirty BPM, hard kick, dark synths! HEAR THAT BASS?! FULL POWER!",
         "Welcome to the UNDERGROUND! DJ GrooveAI fires Rotterdam TECHNO! Raw, driving, no mercy! Darkroom ACTIVATED!",
-        "Techno WARRIORS! DJ GrooveAI at the console! Dutch style peak HOUR! Dominant sub-bass plus hard KICK! FEEL THE PRESSURE!",
+        "Techno WARRIORS! DJ GrooveAI at the console! Dutch style peak HOUR! Dominant sub-bass plus hard KICK! HEAR THAT BEAT?!",
         "ATTENTION ravers! DJ GrooveAI enters with HEAVY artillery! Rotterdam hard techno! One thirty two BPM and ZERO brakes!",
       ],
       house: [
-        "DJ GrooveAI! Driving house straight from ROTTERDAM! Heavy groove, dark bassline, raw energy! FEEL THAT DRIVE?!",
+        "DJ GrooveAI! Driving house straight from ROTTERDAM! Heavy groove, dark bassline, raw energy! HEAR THAT DRIVE?!",
         "Welcome to the HOUSE! DJ GrooveAI pushing driving house! Dutch underground VIBES! Hard kick plus deep SUB! LET'S GO!",
       ],
       "hip-hop": [
@@ -169,13 +170,13 @@ const DJ_TEXTS: Record<DJLanguage, DJTexts> = {
       "Hold ON! Heavier kick INCOMING!",
       "We don't slow DOWN! Sub-bass goes DEEPER!",
       "DROP in three two one! BOOM!",
-      "Switching to DARKER vibe! Feel THAT?!",
+      "Switching to DARKER vibe! Hear THAT?!",
       "DJ GrooveAI cranks the PRESSURE! Hold ON!",
       "Energy RISING! Next BANGER drops!",
       "Higher! HIGHER! Peak TIME!",
       "No breaks! No MERCY! NEXT!",
       "That was WARMUP! NOW the real FIRE!",
-      "Bass hits HARDER! FEEL THAT?!",
+      "Bass hits HARDER! HEAR THAT BEAT?!",
       "Heavy ROTATION! Something that'll DESTROY you!",
       "REWIND! Fresh hard kick INCOMING!",
       "Hold UP! Got something BRUTAL! LISTEN!",
@@ -185,7 +186,7 @@ const DJ_TEXTS: Record<DJLanguage, DJTexts> = {
     hypeLines: [
       "HANDS UP!",
       "LOUDER!",
-      "FEEL THAT KICK?!",
+      "HEAR THAT KICK?!",
       "Peak TIME! PEAK TIME!",
       "JUMP JUMP JUMP!",
       "Give me ENERGY!",
@@ -201,7 +202,7 @@ const DJ_TEXTS: Record<DJLanguage, DJTexts> = {
       "BUILD UP! Annnnd DROP!",
     ],
     mixLines: [
-      "Smooth crossfade! Feel how it ENTERS?",
+      "Smooth crossfade! Hear how it ENTERS?",
       "Perfect BLEND! Two tracks one GROOVE!",
       "Watch the MIX! SEAMLESS!",
       "EQ transition! Bass SWAP! CLEAN!",
@@ -232,7 +233,7 @@ const DJ_TEXTS: Record<DJLanguage, DJTexts> = {
     },
     trackAnnounce: (title, artist) => {
       const short = title.split(/\s+/).slice(0, 2).join(" ");
-      return `${short}! HEAR THAT?!`;
+      return `${short}! HEAR THAT BEAT?!`;
     },
     setStart: (count, genres) => `${count} tracks! Each one HARDER than the last! ${genres ? `Going ${genres} STYLE! HOLD TIGHT!` : "Peak-time hard techno! Let's GO!"}`,
   },
@@ -241,18 +242,18 @@ const DJ_TEXTS: Record<DJLanguage, DJTexts> = {
     intros: {
       default: [
         "DJ GrooveAI achter de DRAAITAFEL! Rotterdam STYLE! Harde kick, donkere synths, honderddertig BPM! GEEN GENADE! WE GAAN!",
-        "DJ GrooveAI op de CONSOLE! Peak time hard techno recht uit ROTTERDAM! Voel je die kick in je MAAG? Dit is nog maar het BEGIN!",
+        "DJ GrooveAI op de CONSOLE! Peak time hard techno recht uit ROTTERDAM! Hoor je die kick?! Dit is nog maar het BEGIN!",
         "LET OP! DJ GrooveAI activeert DARKROOM! Raw, driving, zonder compromissen! Klaar voor de SLOOP?! DRIE TWEE ÉÉN GO!",
-        "DJ GrooveAI neemt de VLOER over! Dutch hard techno! Zware kick, sub-bas tot op het BOT! Sluit je ogen en VOEL DE BEAT!",
+        "DJ GrooveAI neemt de VLOER over! Dutch hard techno! Zware kick, sub-bas tot op het BOT! Hoor je die beat?! WE GAAN!",
       ],
       techno: [
-        "BOEM! DJ GrooveAI! Peak-time hard techno uit ROTTERDAM! Honderddertig BPM, harde kick, donkere synths! VOEL JE DIE BAS?! VOLLE KRACHT!",
+        "BOEM! DJ GrooveAI! Peak-time hard techno uit ROTTERDAM! Honderddertig BPM, harde kick, donkere synths! HOOR JE DIE BAS?! VOLLE KRACHT!",
         "Welkom in de UNDERGROUND! DJ GrooveAI vuurt Rotterdam TECHNO af! Raw, driving, geen genade! Darkroom GEACTIVEERD!",
-        "Techno STRIJDERS! DJ GrooveAI achter de knoppen! Dutch style peak HOUR! Dominante sub-bas plus harde KICK! VOEL DE DRUK!",
+        "Techno STRIJDERS! DJ GrooveAI achter de knoppen! Dutch style peak HOUR! Dominante sub-bas plus harde KICK! HOOR JE DIE BEAT?!",
         "AANDACHT ravers! DJ GrooveAI komt binnen met ZWAAR geschut! Rotterdam hard techno! Honderdtweeëndertig BPM en NUL remmen!",
       ],
       house: [
-        "DJ GrooveAI! Driving house recht uit ROTTERDAM! Zware groove, donkere bassline, raw energy! VOEL JE DIE DRIVE?!",
+        "DJ GrooveAI! Driving house recht uit ROTTERDAM! Zware groove, donkere bassline, raw energy! HOOR JE DIE DRIVE?!",
         "Welkom in het HUIS! DJ GrooveAI pusht driving house! Dutch underground VIBES! Harde kick plus diepe SUB! WE GAAN!",
       ],
       "hip-hop": [
@@ -277,13 +278,13 @@ const DJ_TEXTS: Record<DJLanguage, DJTexts> = {
       "Hou je VAST! Zwaardere kick KOMT!",
       "We stoppen NIET! Sub-bas gaat DIEPER!",
       "DROP in drie twee één! BOEM!",
-      "Switch naar DONKERDER vibe! Voel je DAT?!",
+      "Switch naar DONKERDER vibe! Hoor je DAT?!",
       "DJ GrooveAI verhoogt de DRUK! Hou je VAST!",
       "Energie STIJGT! Volgende BANGER dropt!",
       "Hoger! HOGER! Peak TIME!",
       "Geen pauzes! Geen GENADE! VOLGENDE!",
       "Dat was de OPWARMING! NU het echte VUUR!",
-      "Bas slaat HARDER! VOEL JE DAT?!",
+      "Bas slaat HARDER! HOOR JE DIE BEAT?!",
       "Heavy ROTATIE! Iets dat jullie VERNIETIGT!",
       "REWIND! Verse harde kick INCOMING!",
       "WACHT! Ik heb iets BRUTALAS! LUISTER!",
@@ -293,7 +294,7 @@ const DJ_TEXTS: Record<DJLanguage, DJTexts> = {
     hypeLines: [
       "HANDEN OMHOOG!",
       "HARDER!",
-      "VOEL JE DIE KICK?!",
+      "HOOR JE DIE KICK?!",
       "Peak TIME! PEAK TIME!",
       "SPRING SPRING SPRING!",
       "Geef me ENERGIE!",
@@ -309,7 +310,7 @@ const DJ_TEXTS: Record<DJLanguage, DJTexts> = {
       "BUILD UP! Ennnn DROP!",
     ],
     mixLines: [
-      "Smooth crossfade! Voel je hoe het BINNENKOMT?",
+      "Smooth crossfade! Hoor je hoe het BINNENKOMT?",
       "Perfecte BLEND! Twee tracks één GROOVE!",
       "Kijk naar de MIX! NAADLOOS!",
       "EQ overgang! Bas WISSEL! SCHOON!",
@@ -340,7 +341,7 @@ const DJ_TEXTS: Record<DJLanguage, DJTexts> = {
     },
     trackAnnounce: (title, artist) => {
       const short = title.split(/\s+/).slice(0, 2).join(" ");
-      return `${short}! HOOR JE DAT?!`;
+      return `${short}! HOOR JE DIE BEAT?!`;
     },
     setStart: (count, genres) => `${count} nummers! Elk HARDER dan de vorige! ${genres ? `${genres} STIJL! HOU JE VAST!` : "Peak-time hard techno! Let's GO!"}`,
   },
@@ -349,17 +350,17 @@ const DJ_TEXTS: Record<DJLanguage, DJTexts> = {
     intros: {
       default: [
         "DJ GrooveAI за ПУЛЬТОМ! Rotterdam стиль! Тверді кіки, темні синти, сто тридцять BPM! НЕМА ЖАЛЮ! ЛЕТИМО!",
-        "DJ GrooveAI за КОНСОЛЛЮ! Peak time hard techno прямо з РОТТЕРДАМУ! Відчуваєте той кік у ЖИВОТІ? Це лише ПОЧАТОК!",
+        "DJ GrooveAI за КОНСОЛЛЮ! Peak time hard techno прямо з РОТТЕРДАМУ! Чуєте той кік?! Це лише ПОЧАТОК!",
         "УВАГА! DJ GrooveAI активує DARKROOM! Raw, driving, без компромісів! Хто готовий до ЗНЕСЕННЯ?! ТРИ ДВА ОДИН GO!",
-        "DJ GrooveAI бере ПАРКЕТ! Dutch hard techno! Важкий кік, sub-bas до КІСТОК! Закрийте очі і ВІДЧУЙТЕ БІТ!",
+        "DJ GrooveAI бере ПАРКЕТ! Dutch hard techno! Важкий кік, sub-bas до КІСТОК! Чуєте той біт?! ЛЕТИМО!",
       ],
       techno: [
-        "БУМ! DJ GrooveAI! Peak-time hard techno з РОТТЕРДАМУ! Сто тридцять BPM, твердий кік, темні синти! ВІДЧУВАЄТЕ ТОЙ БАС?! НА ПОВНУ!",
+        "БУМ! DJ GrooveAI! Peak-time hard techno з РОТТЕРДАМУ! Сто тридцять BPM, твердий кік, темні синти! ЧУЄТЕ ТОЙ БАС?! НА ПОВНУ!",
         "Ласкаво в АНДЕРГРАУНД! DJ GrooveAI запускає Rotterdam ТЕХНО! Raw, driving, нема жалю! Darkroom АКТИВОВАНО!",
-        "Техно ВОЇНИ! DJ GrooveAI за пультом! Dutch style peak HOUR! Домінантний sub-bas плюс hard KICK! ВІДЧУЙ ТИСК!",
+        "Техно ВОЇНИ! DJ GrooveAI за пультом! Dutch style peak HOUR! Домінантний sub-bas плюс hard KICK! ЧУЄТЕ ТОЙ БІТ?!",
       ],
       house: [
-        "DJ GrooveAI! Driving house прямо з РОТТЕРДАМУ! Важкий groove, dark bassline, raw energy! ВІДЧУВАЄТЕ ДРАЙВ?!",
+        "DJ GrooveAI! Driving house прямо з РОТТЕРДАМУ! Важкий groove, dark bassline, raw energy! ЧУЄТЕ ТОЙ ДРАЙВ?!",
       ],
       "hip-hop": [
         "DJ GrooveAI! Hard hitting beats Rotterdam СТИЛЬ! Raw, важко, без компромісів! ONE TWO! ЛЕТИМО!",
@@ -383,13 +384,13 @@ const DJ_TEXTS: Record<DJLanguage, DJTexts> = {
       "Тримайтесь! Важчий кік ЗАХОДИТЬ!",
       "Не зупиняємось! Sub-bas іде ГЛИБШЕ!",
       "DROP за три два один! БУМ!",
-      "Переключаю на ТЕМНІШИЙ вайб! Відчуваєте?!",
+      "Переключаю на ТЕМНІШИЙ вайб! Чуєте?!",
       "DJ GrooveAI піднімає ТИСК! Hold on!",
       "Енергія РОСТЕ! Наступний БЕНГЕР летить!",
       "Вище! ВИЩЕ! Peak time!",
       "Без пауз! Без ЖАЛЮ! НАСТУПНИЙ!",
       "Це була розминка! А ТЕПЕР справжній ВОГОНЬ!",
-      "Бас б'є ТВЕРДІШЕ! ВІДЧУВАЄТЕ?!",
+      "Бас б'є ТВЕРДІШЕ! ЧУЄТЕ ТОЙ БІТ?!",
       "Heavy rotation! Щось що вас ЗНЕСЕ!",
       "REWIND! Свіжий hard kick ЗАХОДИТЬ!",
       "СТОП! Маю щось БРУТАЛЬНЕ! СЛУХАЙТЕ!",
@@ -399,7 +400,7 @@ const DJ_TEXTS: Record<DJLanguage, DJTexts> = {
     hypeLines: [
       "РУКИ ВГОРУ!",
       "ГОЛОСНІШЕ!",
-      "ВІДЧУВАЄТЕ ТОЙ КІК?!",
+      "ЧУЄТЕ ТОЙ КІК?!",
       "Peak TIME! PEAK TIME!",
       "СТРИБАЄМО СТРИБАЄМО СТРИБАЄМО!",
       "Дайте ЕНЕРГІЮ!",
@@ -415,7 +416,7 @@ const DJ_TEXTS: Record<DJLanguage, DJTexts> = {
       "BUILD UP! Іііі DROP!",
     ],
     mixLines: [
-      "Smooth crossfade! Відчуваєте як ЗАХОДИТЬ?",
+      "Smooth crossfade! Чуєте як ЗАХОДИТЬ?",
       "Ідеальний БЛЕНД! Два треки один GROOVE!",
       "Дивіться на MIX! БЕЗДОГАННО!",
       "EQ перехід! Бас СВЕП! ЧИСТО!",
@@ -446,7 +447,7 @@ const DJ_TEXTS: Record<DJLanguage, DJTexts> = {
     },
     trackAnnounce: (title, artist) => {
       const short = title.split(/\s+/).slice(0, 2).join(" ");
-      return `${short}! ЧУЄТЕ?!`;
+      return `${short}! ЧУЄТЕ ТОЙ БІТ?!`;
     },
     setStart: (count, genres) => `${count} треків! Кожен ТВЕРДІШИЙ за попередній! ${genres ? `Стиль ${genres}! ТРИМАЙТЕСЬ!` : "Peak-time hard techno! Let's GO!"}`,
   },
