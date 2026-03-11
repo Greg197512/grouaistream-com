@@ -199,7 +199,7 @@ export const AutoVoiceListener = () => {
     }
     setIsListening(false);
 
-    await speak(text);
+    await speak(text, { mode: "assistant" });
 
     // Small extra gap to let echo fade
     await new Promise(r => setTimeout(r, 600));

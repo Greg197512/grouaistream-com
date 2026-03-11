@@ -145,7 +145,7 @@ export const DJCrowdCamera = ({ isActive, onCrowdUpdate, onClose }: DJCrowdCamer
         intervalRef.current = setInterval(analyzeCrowd, 4000);
         toast.success("🎥 DJ widzi imprezę! Kamera aktywna!");
 
-        speak("Kamera aktywna! Widzę parkiet! Dostosuję muzykę do energii tłumu!", { rate: 1.05, pitch: 0.75 });
+        speak("Kamera aktywna! Widzę parkiet! Dostosuję muzykę do energii tłumu!", { mode: "dj" });
       }
     } catch {
       toast.error("Brak dostępu do kamery");
