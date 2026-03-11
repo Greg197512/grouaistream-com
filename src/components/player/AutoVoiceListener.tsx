@@ -140,6 +140,10 @@ export const AutoVoiceListener = () => {
   const restartTimeoutRef = useRef<number | null>(null);
   const silenceTimerRef = useRef<number | null>(null);
   const startListeningRef = useRef<(() => void) | null>(null);
+  const autoListenRef = useRef(false);
+
+  // Keep ref in sync with state so async handlers always have latest value
+  useEffect(() => { autoListenRef.current = autoListenEnabled; }, [autoListenEnabled]);
 
   useEffect(() => {
     const stored = localStorage.getItem("auto-voice-listen");
@@ -215,13 +219,13 @@ export const AutoVoiceListener = () => {
     speakRestartingRef.current = false;
 
     // Restart recognition if auto-listen is still on
-    if (autoListenEnabled) {
+    if (autoListenRef.current) {
       restartTimeoutRef.current = window.setTimeout(() => {
         console.log("[Voice] Restarting recognition after TTS");
         startListeningRef.current?.();
       }, 200);
     }
-  }, [autoListenEnabled]);
+  }, []);
 
   const shutdownMic = useCallback(() => {
     // Fully destroy recognition instance
@@ -671,13 +675,13 @@ export const AutoVoiceListener = () => {
         setIsListening(false);
       };
       rec.onend = () => {
-        console.log("[Voice] Recognition ended, speakRestarting:", speakRestartingRef.current, "autoListen:", autoListenEnabled);
+        console.log("[Voice] Recognition ended, speakRestarting:", speakRestartingRef.current, "autoListen:", autoListenRef.current);
         setIsListening(false);
         // If safeSpeakAndResume is handling restart, don't interfere
         if (speakRestartingRef.current) return;
         if (isSpeakingRef.current) return;
         
-        if (autoListenEnabled && recognitionRef.current === rec) {
+        if (autoListenRef.current) {
           // Create a fresh recognition instance instead of reusing aborted one
           restartTimeoutRef.current = window.setTimeout(() => {
             console.log("[Voice] Auto-restarting recognition from onend");
@@ -694,7 +698,7 @@ export const AutoVoiceListener = () => {
       console.error("[Voice] Failed to start recognition:", e);
       toast.error("Nie udało się uruchomić mikrofonu");
     }
-  }, [user, processCommand, autoListenEnabled, resetSilenceTimer]);
+  }, [user, processCommand, resetSilenceTimer]);
 
   // Keep ref in sync so safeSpeakAndResume can restart listening
   useEffect(() => { startListeningRef.current = startListening; }, [startListening]);
