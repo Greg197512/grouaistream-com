@@ -25,14 +25,17 @@ serve(async (req) => {
     }
 
     // Voice selection based on mode
-    // Roger - deep male voice for assistant, Brian for DJ energy
+    // Roger - deep male voice for assistant
+    // Brian - energetic male voice for DJ (springy, disco, booming)
     const voiceId = mode === "dj" ? "nPczCjzI2devNBz1zQrb" : "CwhRBWXzGAHq8TQ4Fs17";
     
-    // DJ voice: LOUD, raspy, booming with slight echo feel
-    // Low stability = more expressive/gritty, high style = dramatic delivery
-    // Speed 1.15 for punchy but clear, similarity_boost high for consistent character
+    // DJ voice: Ultra-expressive, springy disco DJ character
+    // stability 0.12 = maximum expressiveness, raspy, gritty variations
+    // similarity_boost 0.92 = keep Brian's character strong  
+    // style 1.0 = MAXIMUM stylization — disco announcer energy
+    // speed 1.1 = punchy but clear delivery
     const voiceSettings = mode === "dj" 
-      ? { stability: 0.15, similarity_boost: 0.9, style: 0.95, use_speaker_boost: true, speed: 1.15 }
+      ? { stability: 0.12, similarity_boost: 0.92, style: 1.0, use_speaker_boost: true, speed: 1.1 }
       : { stability: 0.5, similarity_boost: 0.75, style: 0.4, use_speaker_boost: true, speed: 1.0 };
 
     const response = await fetch(
@@ -44,7 +47,7 @@ serve(async (req) => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          text: text.substring(0, 2000), // Limit text length
+          text: text.substring(0, 2000),
           model_id: "eleven_multilingual_v2",
           voice_settings: voiceSettings,
         }),
