@@ -53,6 +53,7 @@ const App = () => (
               <Toaster />
               <Sonner />
               <WelcomeOverlay />
+              <PWAInstallPrompt />
               <BrowserRouter>
                 <AutoVoiceListener />
                 <Routes>
