@@ -11,6 +11,7 @@ import { LanguageProvider } from "@/contexts/LanguageContext";
 import { UnlockProvider } from "@/contexts/UnlockContext";
 import { SubscriptionProvider } from "@/contexts/SubscriptionContext";
 import { AutoVoiceListener } from "@/components/player/AutoVoiceListener";
+import { PWAInstallPrompt } from "@/components/pwa/PWAInstallPrompt";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Search from "./pages/Search";
@@ -52,6 +53,7 @@ const App = () => (
               <Toaster />
               <Sonner />
               <WelcomeOverlay />
+              <PWAInstallPrompt />
               <BrowserRouter>
                 <AutoVoiceListener />
                 <Routes>

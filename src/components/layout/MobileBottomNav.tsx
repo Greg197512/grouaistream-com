@@ -19,11 +19,13 @@ export const MobileBottomNav = () => {
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around h-14 border-t border-border/50"
+      className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around border-t border-border/50 safe-bottom"
       style={{
-        background: "rgba(0,0,0,0.85)",
-        backdropFilter: "blur(20px)",
-        WebkitBackdropFilter: "blur(20px)",
+        height: "calc(3.5rem + env(safe-area-inset-bottom, 0px))",
+        paddingBottom: "env(safe-area-inset-bottom, 0px)",
+        background: "rgba(0,0,0,0.92)",
+        backdropFilter: "blur(20px) saturate(180%)",
+        WebkitBackdropFilter: "blur(20px) saturate(180%)",
       }}
     >
       {navItems.map((item) => {
