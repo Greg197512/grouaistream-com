@@ -69,22 +69,12 @@ export const MusicGenerateModal = ({ isOpen, onClose }: MusicGenerateModalProps)
 
   const saveSongToLibrary = async (song: GeneratedTrack) => {
     try {
-      // Upload WAV to storage
-      const fileName = `ai-generated/${song.id}.wav`;
-      const { error: uploadErr } = await supabase.storage
-        .from("music")
-        .upload(fileName, song.audioBlob, { contentType: "audio/wav" });
-      
-      if (uploadErr) throw uploadErr;
-
-      const { data: urlData } = supabase.storage.from("music").getPublicUrl(fileName);
-
       const { error } = await supabase.from("tracks").insert({
         title: song.title,
-        artist: "AI Generator",
+        artist: "GrouAI Generator",
         album: "AI Generated",
         duration: song.duration,
-        audio_url: urlData.publicUrl,
+        audio_url: song.audioUrl,
         genre: song.style,
         mood: "generated",
       });
