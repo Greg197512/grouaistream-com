@@ -20,7 +20,7 @@ import { toast } from "sonner";
 import { ImportTrackModal } from "@/components/modals/ImportTrackModal";
 import { FileUploadModal } from "@/components/modals/FileUploadModal";
 import { cn } from "@/lib/utils";
-import { SunoGenerateModal } from "@/components/modals/SunoGenerateModal";
+
 import {
   DropdownMenu,
   DropdownMenuContent,
