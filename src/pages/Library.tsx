@@ -20,7 +20,7 @@ import { toast } from "sonner";
 import { ImportTrackModal } from "@/components/modals/ImportTrackModal";
 import { FileUploadModal } from "@/components/modals/FileUploadModal";
 import { cn } from "@/lib/utils";
-import { SunoGenerateModal } from "@/components/modals/SunoGenerateModal";
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -83,10 +83,6 @@ const Library = () => {
   const [loading, setLoading] = useState(true);
   const [showImportModal, setShowImportModal] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
-  const [spotifyToken, setSpotifyToken] = useState("");
-  const [spotifyImporting, setSpotifyImporting] = useState(false);
-  const [spotifyMsg, setSpotifyMsg] = useState("");
-  const [showSpotifyInput, setShowSpotifyInput] = useState(false);
   const [populating, setPopulating] = useState(false);
   const [populateProgress, setPopulateProgress] = useState(0);
   const [populateMsg, setPopulateMsg] = useState("");
@@ -96,7 +92,7 @@ const Library = () => {
   const [openGenre, setOpenGenre] = useState<string | null>(null);
   const [genreTracks, setGenreTracks] = useState<Track[]>([]);
   const [genreLoading, setGenreLoading] = useState(false);
-  const [showSunoModal, setShowSunoModal] = useState(false);
+  
 
   const runBulkPopulate = useCallback(async () => {
     if (populating) return;
@@ -137,26 +133,6 @@ const Library = () => {
     }
   }, [populating]);
 
-  const runSpotifyImport = useCallback(async () => {
-    if (!spotifyToken.trim()) { toast.error(t("library.pasteTokenError")); return; }
-    setSpotifyImporting(true);
-    setSpotifyMsg(t("library.fetchingSpotify"));
-    try {
-      const { data, error } = await supabase.functions.invoke('spotify-import', {
-        body: { spotifyToken: spotifyToken.trim() },
-      });
-      if (error) throw error;
-      setSpotifyMsg(`${t("library.spotifyDone")} ${data.fetched}, ${t("library.batchAdded")} ${data.inserted}`);
-      toast.success(`${data.inserted} ${t("library.spotifyAddedSuccess")}`);
-      loadLibrary();
-    } catch (err: any) {
-      console.error('Spotify import error:', err);
-      toast.error(t("library.spotifyImportError") + ": " + (err.message || "Unknown"));
-      setSpotifyMsg(t("library.spotifyImportErrorMsg"));
-    } finally {
-      setTimeout(() => { setSpotifyImporting(false); setSpotifyMsg(""); }, 3000);
-    }
-  }, [spotifyToken]);
 
   const loadGenreCounts = async () => {
     // Fetch counts for each genre from liked_songs joined with tracks
@@ -278,12 +254,8 @@ const Library = () => {
               {populating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Database className="h-4 w-4" />}
               {populating ? t("library.populating") : t("library.populate20k")}
             </Button>
-            <Button onClick={() => setShowSpotifyInput(!showSpotifyInput)} variant="outline" className="gap-2 border-green-500/50 text-green-400 hover:bg-green-500/10" disabled={spotifyImporting}>
-              {spotifyImporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Music className="h-4 w-4" />}
-              {t("library.spotifyImport")}
-            </Button>
-            <Button onClick={() => setShowSunoModal(true)} variant="outline" className="gap-2 border-purple-500/50 text-purple-400 hover:bg-purple-500/10">
-              <Wand2 className="h-4 w-4" /> Suno AI
+            <Button onClick={() => navigate("/suno")} variant="outline" className="gap-2 border-purple-500/50 text-purple-400 hover:bg-purple-500/10">
+              <Wand2 className="h-4 w-4" /> GrouAI Studio
             </Button>
             <Button onClick={() => setShowUploadModal(true)} variant="outline" className="gap-2">
               <FileAudio className="h-4 w-4" /> {t("library.uploadFile")}
@@ -308,23 +280,6 @@ const Library = () => {
           </div>
         )}
 
-        {/* Spotify Import Section */}
-        {showSpotifyInput && (
-          <div className="mb-6 p-4 rounded-xl border border-green-500/30 bg-green-500/5 space-y-3">
-            <h3 className="font-semibold text-green-400 flex items-center gap-2">
-              <Music className="h-4 w-4" /> {t("library.spotifyImportTitle")}
-            </h3>
-            <p className="text-sm text-muted-foreground">{t("library.spotifyImportDesc")}</p>
-            <div className="flex gap-2">
-              <Input placeholder={t("library.pasteToken")} value={spotifyToken} onChange={e => setSpotifyToken(e.target.value)} className="flex-1 bg-background/50" />
-              <Button onClick={runSpotifyImport} disabled={spotifyImporting || !spotifyToken.trim()} className="bg-green-600 hover:bg-green-700 text-white gap-2">
-                {spotifyImporting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                {spotifyImporting ? t("library.importing") : t("library.import")}
-              </Button>
-            </div>
-            {spotifyMsg && <p className="text-sm text-green-400">{spotifyMsg}</p>}
-          </div>
-        )}
 
         {/* Quick Stats */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
@@ -538,7 +493,7 @@ const Library = () => {
 
       <ImportTrackModal isOpen={showImportModal} onClose={() => setShowImportModal(false)} onSuccess={loadLibrary} />
       <FileUploadModal isOpen={showUploadModal} onClose={() => setShowUploadModal(false)} onSuccess={loadLibrary} />
-      <SunoGenerateModal isOpen={showSunoModal} onClose={() => setShowSunoModal(false)} />
+      
     </MainLayout>
   );
 };
