@@ -26,7 +26,7 @@ serve(async (req) => {
 
     // Check status of a generation task
     if (action === 'status' && taskId) {
-      const statusRes = await fetch(`${SUNO_API_BASE}/generate/record?taskId=${taskId}`, {
+      const statusRes = await fetch(`${SUNO_API_BASE}/generate/record-info?taskId=${taskId}`, {
         headers: {
           'Authorization': `Bearer ${SUNO_API_KEY}`,
           'Content-Type': 'application/json',
