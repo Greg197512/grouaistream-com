@@ -26,3 +26,6 @@ verify_jwt = false
 
 [functions.ai-assistant]
 verify_jwt = false
+
+[functions.suno-generate]
+verify_jwt = false

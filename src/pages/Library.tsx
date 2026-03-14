@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { 
   Library as LibraryIcon, Plus, Music, Clock, Heart, Upload, Youtube, 
   FileAudio, Loader2, Database, FolderOpen, X, MoreVertical, Trash2,
-  Play, ChevronRight, Sparkles
+  Play, ChevronRight, Sparkles, Wand2
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { MainLayout } from "@/components/layout/MainLayout";
@@ -20,6 +20,7 @@ import { toast } from "sonner";
 import { ImportTrackModal } from "@/components/modals/ImportTrackModal";
 import { FileUploadModal } from "@/components/modals/FileUploadModal";
 import { cn } from "@/lib/utils";
+import { SunoGenerateModal } from "@/components/modals/SunoGenerateModal";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -95,6 +96,7 @@ const Library = () => {
   const [openGenre, setOpenGenre] = useState<string | null>(null);
   const [genreTracks, setGenreTracks] = useState<Track[]>([]);
   const [genreLoading, setGenreLoading] = useState(false);
+  const [showSunoModal, setShowSunoModal] = useState(false);
 
   const runBulkPopulate = useCallback(async () => {
     if (populating) return;
@@ -279,6 +281,9 @@ const Library = () => {
             <Button onClick={() => setShowSpotifyInput(!showSpotifyInput)} variant="outline" className="gap-2 border-green-500/50 text-green-400 hover:bg-green-500/10" disabled={spotifyImporting}>
               {spotifyImporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Music className="h-4 w-4" />}
               {t("library.spotifyImport")}
+            </Button>
+            <Button onClick={() => setShowSunoModal(true)} variant="outline" className="gap-2 border-purple-500/50 text-purple-400 hover:bg-purple-500/10">
+              <Wand2 className="h-4 w-4" /> Suno AI
             </Button>
             <Button onClick={() => setShowUploadModal(true)} variant="outline" className="gap-2">
               <FileAudio className="h-4 w-4" /> {t("library.uploadFile")}
@@ -533,6 +538,7 @@ const Library = () => {
 
       <ImportTrackModal isOpen={showImportModal} onClose={() => setShowImportModal(false)} onSuccess={loadLibrary} />
       <FileUploadModal isOpen={showUploadModal} onClose={() => setShowUploadModal(false)} onSuccess={loadLibrary} />
+      <SunoGenerateModal isOpen={showSunoModal} onClose={() => setShowSunoModal(false)} />
     </MainLayout>
   );
 };
