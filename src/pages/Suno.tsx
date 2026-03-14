@@ -19,7 +19,7 @@ const Suno = () => {
           <div className="mx-auto w-20 h-20 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-lg shadow-purple-500/30">
             <Waves className="h-10 w-10 text-white" />
           </div>
-          <h1 className="text-3xl font-bold">AI Music Generator</h1>
+          <h1 className="text-3xl font-bold">GrouAI Studio</h1>
           <p className="text-muted-foreground">
             Twórz unikalne utwory muzyczne algorytmicznie. Wybierz styl, ustaw długość i wygeneruj muzykę bezpośrednio w przeglądarce — bez zewnętrznych API, za darmo!
           </p>
