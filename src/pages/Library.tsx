@@ -304,23 +304,6 @@ const Library = () => {
           </div>
         )}
 
-        {/* Spotify Import Section */}
-        {showSpotifyInput && (
-          <div className="mb-6 p-4 rounded-xl border border-green-500/30 bg-green-500/5 space-y-3">
-            <h3 className="font-semibold text-green-400 flex items-center gap-2">
-              <Music className="h-4 w-4" /> {t("library.spotifyImportTitle")}
-            </h3>
-            <p className="text-sm text-muted-foreground">{t("library.spotifyImportDesc")}</p>
-            <div className="flex gap-2">
-              <Input placeholder={t("library.pasteToken")} value={spotifyToken} onChange={e => setSpotifyToken(e.target.value)} className="flex-1 bg-background/50" />
-              <Button onClick={runSpotifyImport} disabled={spotifyImporting || !spotifyToken.trim()} className="bg-green-600 hover:bg-green-700 text-white gap-2">
-                {spotifyImporting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                {spotifyImporting ? t("library.importing") : t("library.import")}
-              </Button>
-            </div>
-            {spotifyMsg && <p className="text-sm text-green-400">{spotifyMsg}</p>}
-          </div>
-        )}
 
         {/* Quick Stats */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
