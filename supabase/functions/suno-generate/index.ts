@@ -26,7 +26,7 @@ serve(async (req) => {
 
     // Check status of a generation task
     if (action === 'status' && taskId) {
-      const statusRes = await fetch(`${SUNO_API_BASE}/generate/record?taskId=${taskId}`, {
+      const statusRes = await fetch(`${SUNO_API_BASE}/generate/record-info?taskId=${taskId}`, {
         headers: {
           'Authorization': `Bearer ${SUNO_API_KEY}`,
           'Content-Type': 'application/json',
@@ -45,10 +45,15 @@ serve(async (req) => {
 
     // Generate music
     const isCustom = !!(style || title);
+    // Build the Supabase project URL for callback
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+    const callBackUrl = `${supabaseUrl}/functions/v1/suno-generate`;
+
     const generateBody: any = {
       customMode: isCustom,
       instrumental: instrumental || false,
       model: 'V4',
+      callBackUrl,
     };
 
     if (isCustom) {

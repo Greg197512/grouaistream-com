@@ -75,17 +75,21 @@ export const SunoGenerateModal = ({ isOpen, onClose }: SunoGenerateModalProps) =
 
       console.log("[Suno] Response:", data);
 
+      // Check for API-level errors
+      if (data?.code && data.code !== 200) {
+        throw new Error(data?.msg || "Błąd API Suno");
+      }
+
       const taskId = data?.data?.taskId || data?.taskId;
 
       if (taskId) {
         setStatusMsg("⏳ Utwór jest generowany... czekam na wynik (~30-120s)");
         setPolling(true);
         pollForResult(taskId);
-      } else if (data?.data) {
-        // Direct result
-        handleResult(data.data);
+      } else if (data?.data?.songs || data?.data) {
+        handleResult(data.data.songs || data.data);
       } else {
-        throw new Error("Nieoczekiwana odpowiedź z Suno API");
+        throw new Error(data?.msg || "Nieoczekiwana odpowiedź z Suno API");
       }
     } catch (err: any) {
       console.error("[Suno] Generate error:", err);
@@ -117,13 +121,13 @@ export const SunoGenerateModal = ({ isOpen, onClose }: SunoGenerateModalProps) =
         if (error) throw error;
 
         const status = data?.data?.status || data?.status;
-        const songs = data?.data?.songs || data?.data?.data || [];
+        const sunoData = data?.data?.response?.sunoData || data?.data?.songs || [];
 
-        if (status === "completed" || status === "SUCCESS") {
+        if (status === "SUCCESS" || status === "FIRST_SUCCESS" || status === "TEXT_SUCCESS") {
           if (pollRef.current) clearInterval(pollRef.current);
           setPolling(false);
-          handleResult(songs);
-        } else if (status === "failed" || status === "FAILED") {
+          handleResult(sunoData);
+        } else if (status === "failed" || status === "FAILED" || status === "GENERATE_AUDIO_FAILED" || status === "CREATE_TASK_FAILED") {
           if (pollRef.current) clearInterval(pollRef.current);
           setPolling(false);
           setStatusMsg("❌ Generowanie nie powiodło się");
@@ -144,11 +148,11 @@ export const SunoGenerateModal = ({ isOpen, onClose }: SunoGenerateModalProps) =
       .map((s: any) => ({
         id: s.id || s.songId || crypto.randomUUID(),
         title: s.title || s.name || title || "AI Generated",
-        audioUrl: s.audioUrl || s.audio_url || s.sourceUrl || s.stream_url || "",
-        streamUrl: s.streamUrl || s.stream_url || "",
-        imageUrl: s.imageUrl || s.image_url || s.coverUrl || "",
+        audioUrl: s.audioUrl || s.audio_url || s.sourceAudioUrl || "",
+        streamUrl: s.streamAudioUrl || s.sourceStreamAudioUrl || s.streamUrl || s.stream_url || "",
+        imageUrl: s.imageUrl || s.image_url || s.sourceImageUrl || "",
         duration: s.duration || 0,
-        style: s.style || s.tags || style || "",
+        style: s.tags || s.style || style || "",
       }));
 
     setSongs(parsed);
