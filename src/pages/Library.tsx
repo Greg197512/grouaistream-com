@@ -278,12 +278,8 @@ const Library = () => {
               {populating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Database className="h-4 w-4" />}
               {populating ? t("library.populating") : t("library.populate20k")}
             </Button>
-            <Button onClick={() => setShowSpotifyInput(!showSpotifyInput)} variant="outline" className="gap-2 border-green-500/50 text-green-400 hover:bg-green-500/10" disabled={spotifyImporting}>
-              {spotifyImporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Music className="h-4 w-4" />}
-              {t("library.spotifyImport")}
-            </Button>
-            <Button onClick={() => setShowSunoModal(true)} variant="outline" className="gap-2 border-purple-500/50 text-purple-400 hover:bg-purple-500/10">
-              <Wand2 className="h-4 w-4" /> Suno AI
+            <Button onClick={() => navigate("/suno")} variant="outline" className="gap-2 border-purple-500/50 text-purple-400 hover:bg-purple-500/10">
+              <Wand2 className="h-4 w-4" /> GrouAI Studio
             </Button>
             <Button onClick={() => setShowUploadModal(true)} variant="outline" className="gap-2">
               <FileAudio className="h-4 w-4" /> {t("library.uploadFile")}
