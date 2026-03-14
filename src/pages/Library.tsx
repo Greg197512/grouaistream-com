@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { 
   Library as LibraryIcon, Plus, Music, Clock, Heart, Upload, Youtube, 
   FileAudio, Loader2, Database, FolderOpen, X, MoreVertical, Trash2,
-  Play, ChevronRight, Sparkles
+  Play, ChevronRight, Sparkles, Wand2
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { MainLayout } from "@/components/layout/MainLayout";
