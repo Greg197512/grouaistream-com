@@ -282,6 +282,9 @@ const Library = () => {
               {spotifyImporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Music className="h-4 w-4" />}
               {t("library.spotifyImport")}
             </Button>
+            <Button onClick={() => setShowSunoModal(true)} variant="outline" className="gap-2 border-purple-500/50 text-purple-400 hover:bg-purple-500/10">
+              <Wand2 className="h-4 w-4" /> Suno AI
+            </Button>
             <Button onClick={() => setShowUploadModal(true)} variant="outline" className="gap-2">
               <FileAudio className="h-4 w-4" /> {t("library.uploadFile")}
             </Button>
