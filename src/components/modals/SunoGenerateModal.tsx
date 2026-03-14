@@ -123,7 +123,7 @@ export const SunoGenerateModal = ({ isOpen, onClose }: SunoGenerateModalProps) =
         const status = data?.data?.status || data?.status;
         const sunoData = data?.data?.response?.sunoData || data?.data?.songs || [];
 
-        if (status === "SUCCESS" || status === "FIRST_SUCCESS") {
+        if (status === "SUCCESS" || status === "FIRST_SUCCESS" || status === "TEXT_SUCCESS") {
           if (pollRef.current) clearInterval(pollRef.current);
           setPolling(false);
           handleResult(sunoData);
