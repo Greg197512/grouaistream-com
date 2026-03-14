@@ -496,7 +496,7 @@ const pl: TranslationKeys = {
   "nav.movies": "Filmy",
   "nav.radioLive": "GrouaRadio Live",
   "nav.importYoutube": "Import YouTube",
-  "nav.sunoAI": "Suno AI",
+  "nav.sunoAI": "GrouAI Studio",
   "nav.aiDj": "AI DJ",
   "nav.moodDetection": "Detekcja Nastroju",
   "nav.moodHistory": "Historia Nastrojów",
