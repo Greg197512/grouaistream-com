@@ -92,7 +92,7 @@ const Library = () => {
   const [openGenre, setOpenGenre] = useState<string | null>(null);
   const [genreTracks, setGenreTracks] = useState<Track[]>([]);
   const [genreLoading, setGenreLoading] = useState(false);
-  const [showSunoModal, setShowSunoModal] = useState(false);
+  
 
   const runBulkPopulate = useCallback(async () => {
     if (populating) return;
