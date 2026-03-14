@@ -26,6 +26,7 @@ type TranslationKeys = {
   "nav.movies": string;
   "nav.radioLive": string;
   "nav.importYoutube": string;
+  "nav.sunoAI": string;
   "nav.aiDj": string;
   "nav.moodDetection": string;
   "nav.moodHistory": string;
@@ -495,6 +496,7 @@ const pl: TranslationKeys = {
   "nav.movies": "Filmy",
   "nav.radioLive": "GrouaRadio Live",
   "nav.importYoutube": "Import YouTube",
+  "nav.sunoAI": "Suno AI",
   "nav.aiDj": "AI DJ",
   "nav.moodDetection": "Detekcja Nastroju",
   "nav.moodHistory": "Historia Nastrojów",
@@ -949,6 +951,7 @@ const en: TranslationKeys = {
   "nav.movies": "Movies",
   "nav.radioLive": "GrouaRadio Live",
   "nav.importYoutube": "Import YouTube",
+  "nav.sunoAI": "Suno AI",
   "nav.aiDj": "AI DJ",
   "nav.moodDetection": "Mood Detection",
   "nav.moodHistory": "Mood History",
@@ -1403,6 +1406,7 @@ const nl: TranslationKeys = {
   "nav.movies": "Films",
   "nav.radioLive": "GrouaRadio Live",
   "nav.importYoutube": "YouTube Importeren",
+  "nav.sunoAI": "Suno AI",
   "nav.aiDj": "AI DJ",
   "nav.moodDetection": "Stemming Detectie",
   "nav.moodHistory": "Stemmingsgeschiedenis",
@@ -1857,6 +1861,7 @@ const ua: TranslationKeys = {
   "nav.movies": "Фільми",
   "nav.radioLive": "GrouaRadio Live",
   "nav.importYoutube": "Імпорт YouTube",
+  "nav.sunoAI": "Suno AI",
   "nav.aiDj": "AI DJ",
   "nav.moodDetection": "Визначення Настрою",
   "nav.moodHistory": "Історія Настрою",

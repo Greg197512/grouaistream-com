@@ -35,6 +35,7 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
     { icon: "movie", labelKey: "nav.movies", href: "/movies" },
     { icon: "radio", labelKey: "nav.radioLive", href: "/radio-live", badge: "LIVE" },
     { icon: "download", labelKey: "nav.importYoutube", href: "/import-youtube" },
+    { icon: "auto_awesome", labelKey: "nav.sunoAI", href: "/suno", badge: "AI" },
   ];
 
   const aiFeatures = [
