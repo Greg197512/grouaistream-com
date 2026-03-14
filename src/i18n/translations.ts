@@ -1406,6 +1406,7 @@ const nl: TranslationKeys = {
   "nav.movies": "Films",
   "nav.radioLive": "GrouaRadio Live",
   "nav.importYoutube": "YouTube Importeren",
+  "nav.sunoAI": "Suno AI",
   "nav.aiDj": "AI DJ",
   "nav.moodDetection": "Stemming Detectie",
   "nav.moodHistory": "Stemmingsgeschiedenis",
