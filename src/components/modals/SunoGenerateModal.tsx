@@ -121,13 +121,13 @@ export const SunoGenerateModal = ({ isOpen, onClose }: SunoGenerateModalProps) =
         if (error) throw error;
 
         const status = data?.data?.status || data?.status;
-        const songs = data?.data?.songs || data?.data?.data || [];
+        const sunoData = data?.data?.response?.sunoData || data?.data?.songs || [];
 
-        if (status === "completed" || status === "SUCCESS") {
+        if (status === "SUCCESS" || status === "FIRST_SUCCESS") {
           if (pollRef.current) clearInterval(pollRef.current);
           setPolling(false);
-          handleResult(songs);
-        } else if (status === "failed" || status === "FAILED") {
+          handleResult(sunoData);
+        } else if (status === "failed" || status === "FAILED" || status === "GENERATE_AUDIO_FAILED" || status === "CREATE_TASK_FAILED") {
           if (pollRef.current) clearInterval(pollRef.current);
           setPolling(false);
           setStatusMsg("❌ Generowanie nie powiodło się");
