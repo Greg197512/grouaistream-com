@@ -83,10 +83,6 @@ const Library = () => {
   const [loading, setLoading] = useState(true);
   const [showImportModal, setShowImportModal] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
-  const [spotifyToken, setSpotifyToken] = useState("");
-  const [spotifyImporting, setSpotifyImporting] = useState(false);
-  const [spotifyMsg, setSpotifyMsg] = useState("");
-  const [showSpotifyInput, setShowSpotifyInput] = useState(false);
   const [populating, setPopulating] = useState(false);
   const [populateProgress, setPopulateProgress] = useState(0);
   const [populateMsg, setPopulateMsg] = useState("");
