@@ -148,11 +148,11 @@ export const SunoGenerateModal = ({ isOpen, onClose }: SunoGenerateModalProps) =
       .map((s: any) => ({
         id: s.id || s.songId || crypto.randomUUID(),
         title: s.title || s.name || title || "AI Generated",
-        audioUrl: s.audioUrl || s.audio_url || s.sourceUrl || s.stream_url || "",
-        streamUrl: s.streamUrl || s.stream_url || "",
-        imageUrl: s.imageUrl || s.image_url || s.coverUrl || "",
+        audioUrl: s.audioUrl || s.audio_url || s.sourceAudioUrl || "",
+        streamUrl: s.streamAudioUrl || s.sourceStreamAudioUrl || s.streamUrl || s.stream_url || "",
+        imageUrl: s.imageUrl || s.image_url || s.sourceImageUrl || "",
         duration: s.duration || 0,
-        style: s.style || s.tags || style || "",
+        style: s.tags || s.style || style || "",
       }));
 
     setSongs(parsed);
