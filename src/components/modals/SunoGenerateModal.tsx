@@ -75,17 +75,21 @@ export const SunoGenerateModal = ({ isOpen, onClose }: SunoGenerateModalProps) =
 
       console.log("[Suno] Response:", data);
 
+      // Check for API-level errors
+      if (data?.code && data.code !== 200) {
+        throw new Error(data?.msg || "Błąd API Suno");
+      }
+
       const taskId = data?.data?.taskId || data?.taskId;
 
       if (taskId) {
         setStatusMsg("⏳ Utwór jest generowany... czekam na wynik (~30-120s)");
         setPolling(true);
         pollForResult(taskId);
-      } else if (data?.data) {
-        // Direct result
-        handleResult(data.data);
+      } else if (data?.data?.songs || data?.data) {
+        handleResult(data.data.songs || data.data);
       } else {
-        throw new Error("Nieoczekiwana odpowiedź z Suno API");
+        throw new Error(data?.msg || "Nieoczekiwana odpowiedź z Suno API");
       }
     } catch (err: any) {
       console.error("[Suno] Generate error:", err);
