@@ -538,6 +538,7 @@ const Library = () => {
 
       <ImportTrackModal isOpen={showImportModal} onClose={() => setShowImportModal(false)} onSuccess={loadLibrary} />
       <FileUploadModal isOpen={showUploadModal} onClose={() => setShowUploadModal(false)} onSuccess={loadLibrary} />
+      <SunoGenerateModal isOpen={showSunoModal} onClose={() => setShowSunoModal(false)} />
     </MainLayout>
   );
 };
