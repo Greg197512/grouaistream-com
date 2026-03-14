@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
-import { SunoGenerateModal } from "@/components/modals/SunoGenerateModal";
+import { MusicGenerateModal } from "@/components/modals/MusicGenerateModal";
 import { Button } from "@/components/ui/button";
-import { Wand2, Music, Sparkles } from "lucide-react";
+import { Waves, Music, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
 
 const Suno = () => {
@@ -17,11 +17,11 @@ const Suno = () => {
           className="text-center space-y-4 max-w-lg"
         >
           <div className="mx-auto w-20 h-20 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-lg shadow-purple-500/30">
-            <Wand2 className="h-10 w-10 text-white" />
+            <Waves className="h-10 w-10 text-white" />
           </div>
-          <h1 className="text-3xl font-bold">Suno AI — Generator Muzyki</h1>
+          <h1 className="text-3xl font-bold">AI Music Generator</h1>
           <p className="text-muted-foreground">
-            Twórz unikalne utwory muzyczne za pomocą sztucznej inteligencji. Opisz swój utwór, wybierz styl i pozwól AI wygenerować muzykę specjalnie dla Ciebie.
+            Twórz unikalne utwory muzyczne algorytmicznie. Wybierz styl, ustaw długość i wygeneruj muzykę bezpośrednio w przeglądarce — bez zewnętrznych API, za darmo!
           </p>
           <div className="flex flex-wrap justify-center gap-2 text-xs text-muted-foreground">
             {["Pop", "Rock", "Electronic", "Hip-Hop", "Jazz", "Lo-fi", "Ambient", "Metal"].map((g) => (
@@ -37,13 +37,13 @@ const Suno = () => {
             className="gap-3 h-14 px-8 text-lg bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-xl shadow-purple-500/25"
           >
             <Sparkles className="h-5 w-5" />
-            Generuj utwór z Suno AI
+            Generuj utwór
             <Music className="h-5 w-5" />
           </Button>
         </motion.div>
       </div>
 
-      <SunoGenerateModal isOpen={showModal} onClose={() => setShowModal(false)} />
+      <MusicGenerateModal isOpen={showModal} onClose={() => setShowModal(false)} />
     </MainLayout>
   );
 };
