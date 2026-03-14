@@ -26,6 +26,7 @@ type TranslationKeys = {
   "nav.movies": string;
   "nav.radioLive": string;
   "nav.importYoutube": string;
+  "nav.sunoAI": string;
   "nav.aiDj": string;
   "nav.moodDetection": string;
   "nav.moodHistory": string;
