@@ -1861,6 +1861,7 @@ const ua: TranslationKeys = {
   "nav.movies": "Фільми",
   "nav.radioLive": "GrouaRadio Live",
   "nav.importYoutube": "Імпорт YouTube",
+  "nav.sunoAI": "Suno AI",
   "nav.aiDj": "AI DJ",
   "nav.moodDetection": "Визначення Настрою",
   "nav.moodHistory": "Історія Настрою",
