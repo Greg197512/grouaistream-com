@@ -133,26 +133,6 @@ const Library = () => {
     }
   }, [populating]);
 
-  const runSpotifyImport = useCallback(async () => {
-    if (!spotifyToken.trim()) { toast.error(t("library.pasteTokenError")); return; }
-    setSpotifyImporting(true);
-    setSpotifyMsg(t("library.fetchingSpotify"));
-    try {
-      const { data, error } = await supabase.functions.invoke('spotify-import', {
-        body: { spotifyToken: spotifyToken.trim() },
-      });
-      if (error) throw error;
-      setSpotifyMsg(`${t("library.spotifyDone")} ${data.fetched}, ${t("library.batchAdded")} ${data.inserted}`);
-      toast.success(`${data.inserted} ${t("library.spotifyAddedSuccess")}`);
-      loadLibrary();
-    } catch (err: any) {
-      console.error('Spotify import error:', err);
-      toast.error(t("library.spotifyImportError") + ": " + (err.message || "Unknown"));
-      setSpotifyMsg(t("library.spotifyImportErrorMsg"));
-    } finally {
-      setTimeout(() => { setSpotifyImporting(false); setSpotifyMsg(""); }, 3000);
-    }
-  }, [spotifyToken]);
 
   const loadGenreCounts = async () => {
     // Fetch counts for each genre from liked_songs joined with tracks
