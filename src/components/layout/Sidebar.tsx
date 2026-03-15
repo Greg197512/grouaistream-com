@@ -69,7 +69,7 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
             whileHover={{ scale: 1.1, rotate: 5 }}
             onClick={() => handleNavClick("/")}
           >
-            <MatrixNotes enabled={matrixEnabled} width={56} height={56} />
+            <MatrixNotes enabled={matrixEnabled} />
             <img src="/logo-icon.png" alt="GrouAI Stream" className="h-14 w-14 object-contain drop-shadow-[0_0_12px_hsl(var(--primary)/0.5)] relative z-10" />
           </motion.div>
         ) : (
@@ -81,7 +81,7 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
             onClick={() => handleNavClick("/")}
             whileHover={{ scale: 1.03 }}
           >
-            <MatrixNotes enabled={matrixEnabled} width={240} height={96} />
+            <MatrixNotes enabled={matrixEnabled} />
             <img src={logoIcon} alt="GrouAI Stream by GrouaRock" className="h-24 object-contain relative z-10" />
           </motion.div>
         )}
