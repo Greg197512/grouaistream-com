@@ -42,6 +42,7 @@ export const DragDropProvider = ({ children }: DragDropProviderProps) => {
   const [draggedTrack, setDraggedTrack] = useState<Track | null>(null);
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [showDropZones, setShowDropZones] = useState(false);
+  const [onMixerDrop, setOnMixerDrop] = useState<((slot: "A" | "B", track: Track) => void) | null>(null);
 
   const refreshPlaylists = async () => {
     if (!user) return;
