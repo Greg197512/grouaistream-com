@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Sparkles, Music, Guitar, Waves, Plus, Blend, Disc3 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { motion, AnimatePresence } from "framer-motion";
+import { TrackMixer } from "@/components/studio/TrackMixer";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
