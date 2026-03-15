@@ -339,7 +339,8 @@ export const AutoVoiceListener = () => {
     "country", "r&b", "rnb", "indie", "alternative", "ambient", "latin", "folk",
   ];
 
-  const POLISH_NUMBERS: Record<string, number> = {
+  const MULTILINGUAL_NUMBERS: Record<string, number> = {
+    // PL
     "jeden": 1, "jedną": 1, "jedno": 1,
     "dwa": 2, "dwie": 2, "dwóch": 2, "dwoch": 2,
     "trzy": 3, "trzech": 3,
@@ -352,15 +353,26 @@ export const AutoVoiceListener = () => {
     "dziesięć": 10, "dziesiec": 10, "dziesięciu": 10,
     "piętnaście": 15, "pietnascie": 15,
     "dwadzieścia": 20, "dwadziescia": 20,
+    // EN
+    "one": 1, "two": 2, "three": 3, "four": 4, "five": 5,
+    "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10,
+    "eleven": 11, "twelve": 12, "fifteen": 15, "twenty": 20,
+    // NL
+    "een": 1, "één": 1, "twee": 2, "drie": 3, "vier": 4, "vijf": 5,
+    "zes": 6, "zeven": 7, "acht": 8, "negen": 9, "tien": 10,
+    "elf": 11, "twaalf": 12, "vijftien": 15, "twintig": 20,
+    // UA
+    "один": 1, "одну": 1, "два": 2, "дві": 2, "три": 3,
+    "чотири": 4, "п'ять": 5, "шість": 6, "сім": 7,
+    "вісім": 8, "дев'ять": 9, "десять": 10, "п'ятнадцять": 15,
+    "двадцять": 20,
   };
 
-  const parsePolishNumber = useCallback((text: string): number | undefined => {
-    // Try digit first
+  const parseNumber = useCallback((text: string): number | undefined => {
     const digitMatch = text.match(/(\d+)/);
     if (digitMatch) return parseInt(digitMatch[1]);
-    // Try Polish word
     const normalized = normalizeCommand(text);
-    for (const [word, num] of Object.entries(POLISH_NUMBERS)) {
+    for (const [word, num] of Object.entries(MULTILINGUAL_NUMBERS)) {
       if (normalized.includes(normalizeCommand(word))) return num;
     }
     return undefined;
