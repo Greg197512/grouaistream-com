@@ -810,7 +810,7 @@ export const AutoVoiceListener = () => {
       // Extract everything useful from the command
       const rawQuery = playMatch ? playMatch[1].replace(/w\s+playerze/i, "").trim() : lower;
       console.log("[Voice] Play command detected, raw query:", rawQuery);
-      const count = parsePolishNumber(rawQuery);
+      const count = parseNumber(rawQuery);
       const cleanQuery = rawQuery
         .replace(/\d+/g, "")
         .replace(/(?:włącz|puść|zagraj|odtwórz|graj|play|start|startuj|daj|leć|dawaj|odpal|wrzuć|kręć)\s*/gi, "")
