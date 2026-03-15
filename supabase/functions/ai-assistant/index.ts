@@ -799,19 +799,60 @@ serve(async (req) => {
       }
     }
 
-    // Search for specific tracks matching the user's query (single track link)
+    // Search for specific tracks matching the user's query (single track link or auto-play)
     let trackLink = null;
-    if (autoPlayTracks.length === 0 && !hasRadioIntent) {
-      const searchTerms = message.split(" ").filter((w: string) => w.length > 3);
-      if (searchTerms.length > 0 && playableTracks.length > 0) {
-        const matching = playableTracks.filter((t: any) =>
-          searchTerms.some((term: string) =>
-            t.title?.toLowerCase().includes(term.toLowerCase()) ||
-            t.artist?.toLowerCase().includes(term.toLowerCase())
-          )
-        ).slice(0, 3);
-        if (matching.length > 0) {
-          trackLink = { id: matching[0].id, title: matching[0].title, artist: matching[0].artist };
+    if (autoPlayTracks.length === 0 && !hasRadioIntent && !hasGenerateIntent && !hasMoveIntent) {
+      // Remove common command words to isolate the track/artist query
+      const commandWords = new Set([
+        "puść","pusc","graj","włącz","wlacz","zagraj","odtwórz","odtworz","odpal",
+        "daj","dawaj","zapodaj","postaw","leć","lec","wrzuć","wrzuc","kręć","krec",
+        "play","start","listen","put","give","speel","draai","zet","geef",
+        "грай","увімкни","постав","давай",
+        "mi","mnie","jakieś","jakies","jakiś","jakis","tam","no","to","coś","cos","please",
+        "utwór","utwor","piosenkę","piosenke","piosenkę","track","song","numer","kawałek","kawalek",
+        "znajdź","znajdz","poszukaj","wyszukaj","szukaj","search","find","look","zoek",
+        "otwórz","otworz","pokaż","pokaz","open","show",
+      ]);
+      
+      const queryWords = message
+        .replace(/[.,!?;:"""„]/g, "")
+        .split(/\s+/)
+        .filter((w: string) => w.length >= 2 && !commandWords.has(w.toLowerCase()));
+      
+      if (queryWords.length > 0 && playableTracks.length > 0) {
+        const fullQuery = queryWords.join(" ").toLowerCase();
+        
+        // Score-based matching for better results
+        const scored = playableTracks.map((t: any) => {
+          const title = (t.title || "").toLowerCase();
+          const artist = (t.artist || "").toLowerCase();
+          let score = 0;
+          
+          // Exact title/artist match
+          if (title === fullQuery || artist === fullQuery) score += 100;
+          // Title/artist contains full query
+          if (title.includes(fullQuery) || artist.includes(fullQuery)) score += 50;
+          // Individual word matches
+          for (const w of queryWords) {
+            const wl = w.toLowerCase();
+            if (wl.length < 2) continue;
+            if (title.includes(wl)) score += 10;
+            if (artist.includes(wl)) score += 10;
+          }
+          return { track: t, score };
+        })
+        .filter(s => s.score > 0)
+        .sort((a, b) => b.score - a.score);
+        
+        if (scored.length > 0) {
+          trackLink = { id: scored[0].track.id, title: scored[0].track.title, artist: scored[0].track.artist };
+          
+          // If user has play intent (play verbs), auto-play the found tracks
+          const hasPlayVerb = /puść|pusc|graj|włącz|wlacz|zagraj|odtwórz|odtworz|odpal|zapodaj|dawaj|play|start|speel|draai|грай|увімкни/i.test(lowerMessage);
+          if (hasPlayVerb && scored[0].score >= 10) {
+            // Auto-play top matches (up to 5)
+            autoPlayTracks = scored.slice(0, Math.min(5, scored.length)).map(s => s.track);
+          }
         }
       }
     }
