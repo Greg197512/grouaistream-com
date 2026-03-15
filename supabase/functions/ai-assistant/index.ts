@@ -385,34 +385,103 @@ serve(async (req) => {
     // MUSIC GENERATION DETECTION (GrouAI Studio)
     // ==========================================
     const generatePatterns = [
-      /(?:wygeneruj|stwórz|stworz|zrób|zrob|skomponuj|napisz|nagraj|create|generate|make|compose).*(?:utw[oó]r|piosen[kę]|piosenke|track|beat|muzyk[ęe]|song|bit)/i,
-      /(?:utw[oó]r|piosen[kę]|piosenke|track|beat|muzyk[ęe]|song|bit).*(?:wygeneruj|stwórz|stworz|zrób|zrob|skomponuj)/i,
-      /(?:chc[ęe]|chciałbym|chcialbym|potrzebuj[ęe]|daj|zrób|zrob|make me|i want|i need).*(?:now[yąa]|now[ąa]|swoj|swój).*(?:utw[oó]r|piosen[kę]|piosenke|track|beat|muzyk[ęe]|song)/i,
+      /(?:wygeneruj|stwórz|stworz|zrób|zrob|skomponuj|napisz|nagraj|create|generate|make|compose|produc|nagrywaj|wyprodukuj|zmasteruj).*(?:utw[oó]r|piosen[kę]|piosenke|track|beat|muzyk[ęe]|song|bit|melodię|melodie|remix|mix|set|drop|hook|intro|outro)/i,
+      /(?:utw[oó]r|piosen[kę]|piosenke|track|beat|muzyk[ęe]|song|bit|melodię|melodie).*(?:wygeneruj|stwórz|stworz|zrób|zrob|skomponuj)/i,
+      /(?:chc[ęe]|chciałbym|chcialbym|potrzebuj[ęe]|daj|zrób|zrob|make me|i want|i need).*(?:now[yąa]|now[ąa]|swoj|swój|taki|jak[iąa]ś|własn).*(?:utw[oó]r|piosen[kę]|piosenke|track|beat|muzyk[ęe]|song)/i,
+      /(?:zrób|zrob|stwórz|stworz|daj)\s+(?:mi\s+)?(?:coś|cos)\s+(?:w\s+stylu|jak|podobn)/i,
+      /(?:chcę|chce)\s+(?:żeby|zeby)?\s*(?:brzmiał|brzmial|grał|gral|był|byl)\s+(?:jak|w\s+stylu)/i,
+      /(?:wyprodukuj|produc|nagraj)\s/i,
+      /(?:zrób|zrob|stwórz|stworz)\s+(?:mi\s+)?(?:bit|beat|drop|hook|bass\s*line|melodię|melodie|riff)/i,
     ];
     const hasGenerateIntent = !hasRadioIntent && !hasWishIntent && !hasDedicationIntent && !hasRadioAddIntent && !hasRadioRemoveIntent && generatePatterns.some(p => p.test(lowerMessage));
-    let generateResult: { style: string; instrumental: boolean; title?: string } | null = null;
+    let generateResult: { style: string; style2?: string; blendRatio?: number; instrumental: boolean; title?: string; mood?: string; energy?: string; tempoOverride?: number; prompt: string } | null = null;
 
     if (hasGenerateIntent) {
-      // Detect style from message
-      const styleKeywords: Record<string, string> = {
-        "pop": "Pop", "rock": "Rock", "electronic": "Electronic", "elektroniczn": "Electronic",
-        "hip-hop": "Hip-Hop", "hip hop": "Hip-Hop", "hiphop": "Hip-Hop", "rap": "Hip-Hop",
-        "jazz": "Jazz", "classical": "Classical", "klasyczn": "Classical",
-        "r&b": "R&B", "rnb": "R&B", "country": "Country", "reggae": "Reggae",
-        "metal": "Metal", "indie": "Indie", "lo-fi": "Lo-fi", "lofi": "Lo-fi",
-        "ambient": "Ambient", "trap": "Trap", "house": "House", "disco": "Disco",
-      };
-      let detectedStyle = "Pop";
-      for (const [kw, style] of Object.entries(styleKeywords)) {
-        if (lowerMessage.includes(kw)) { detectedStyle = style; break; }
+      // Use AI to parse the complex prompt into generation parameters
+      try {
+        const parseResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${LOVABLE_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "google/gemini-2.5-flash-lite",
+            messages: [
+              { role: "system", content: `You are a music production AI that parses user prompts into generation parameters. Analyze the user's request and extract parameters. Available styles: Pop, Rock, Electronic, Hip-Hop, Jazz, Classical, Lo-fi, Ambient, Metal, R&B, Reggae, Trap, House, Disco, Indie, Country. Available moods: dark, bright, melancholic, euphoric, aggressive, dreamy, romantic, tense. Available energy: low, medium, high, extreme.` },
+              { role: "user", content: message },
+            ],
+            tools: [{
+              type: "function",
+              function: {
+                name: "set_music_params",
+                description: "Set music generation parameters based on user's prompt",
+                parameters: {
+                  type: "object",
+                  properties: {
+                    style: { type: "string", description: "Primary music style/genre" },
+                    style2: { type: "string", description: "Secondary style for blending (optional)" },
+                    blendRatio: { type: "number", description: "Blend ratio 0-1 (optional, default 0.5)" },
+                    mood: { type: "string", enum: ["dark", "bright", "melancholic", "euphoric", "aggressive", "dreamy", "romantic", "tense"] },
+                    energy: { type: "string", enum: ["low", "medium", "high", "extreme"] },
+                    instrumental: { type: "boolean", description: "True if no vocals/lyrics requested" },
+                    title: { type: "string", description: "Suggested title based on the prompt" },
+                    tempoOverride: { type: "number", description: "Specific BPM if user requested (optional)" },
+                  },
+                  required: ["style", "mood", "energy", "instrumental", "title"],
+                  additionalProperties: false,
+                },
+              },
+            }],
+            tool_choice: { type: "function", function: { name: "set_music_params" } },
+          }),
+        });
+
+        if (parseResponse.ok) {
+          const parseData = await parseResponse.json();
+          const toolCall = parseData.choices?.[0]?.message?.tool_calls?.[0];
+          if (toolCall?.function?.arguments) {
+            const params = JSON.parse(toolCall.function.arguments);
+            generateResult = {
+              style: params.style || "Pop",
+              style2: params.style2 || undefined,
+              blendRatio: params.blendRatio || undefined,
+              instrumental: params.instrumental ?? false,
+              title: params.title || undefined,
+              mood: params.mood || undefined,
+              energy: params.energy || undefined,
+              tempoOverride: params.tempoOverride || undefined,
+              prompt: message,
+            };
+          }
+        }
+      } catch (parseErr) {
+        console.error("AI prompt parsing error:", parseErr);
       }
-      const isInstrumental = /instrumental|bez\s+(?:wokalu|głosu|tekstu|słów)/i.test(lowerMessage);
 
-      // Try to extract title from quotes
-      const titleMatch = message.match(/["""„](.+?)["""]/);
-      const extractedTitle = titleMatch ? titleMatch[1].trim() : undefined;
-
-      generateResult = { style: detectedStyle, instrumental: isInstrumental, title: extractedTitle };
+      // Fallback: basic keyword detection if AI parsing failed
+      if (!generateResult) {
+        const styleKeywords: Record<string, string> = {
+          "pop": "Pop", "rock": "Rock", "electronic": "Electronic", "elektroniczn": "Electronic",
+          "hip-hop": "Hip-Hop", "hip hop": "Hip-Hop", "hiphop": "Hip-Hop", "rap": "Hip-Hop",
+          "jazz": "Jazz", "classical": "Classical", "klasyczn": "Classical",
+          "r&b": "R&B", "rnb": "R&B", "country": "Country", "reggae": "Reggae",
+          "metal": "Metal", "indie": "Indie", "lo-fi": "Lo-fi", "lofi": "Lo-fi",
+          "ambient": "Ambient", "trap": "Trap", "house": "House", "disco": "Disco",
+        };
+        let detectedStyle = "Pop";
+        for (const [kw, style] of Object.entries(styleKeywords)) {
+          if (lowerMessage.includes(kw)) { detectedStyle = style; break; }
+        }
+        const isInstrumental = /instrumental|bez\s+(?:wokalu|głosu|tekstu|słów)/i.test(lowerMessage);
+        const titleMatch = message.match(/["""„](.+?)["""]/);
+        generateResult = {
+          style: detectedStyle,
+          instrumental: isInstrumental,
+          title: titleMatch ? titleMatch[1].trim() : undefined,
+          prompt: message,
+        };
+      }
     }
 
     // ==========================================
