@@ -407,12 +407,27 @@ export const AutoVoiceListener = () => {
       }
 
       if (!tracks || tracks.length === 0) {
-        const { data } = await supabase
-          .from("tracks")
-          .select("*")
-          .or(`title.ilike.%${query}%,artist.ilike.%${query}%`)
-          .limit(count || 10);
-        tracks = data;
+        // Sanitize query to prevent PostgREST parse errors (remove commas, special chars)
+        const safeQuery = query.replace(/[,()]/g, "").trim();
+        if (safeQuery) {
+          // Search title and artist separately to avoid .or() parsing issues
+          const { data: titleMatches } = await supabase
+            .from("tracks")
+            .select("*")
+            .ilike("title", `%${safeQuery}%`)
+            .limit(count || 10);
+          
+          const { data: artistMatches } = await supabase
+            .from("tracks")
+            .select("*")
+            .ilike("artist", `%${safeQuery}%`)
+            .limit(count || 10);
+          
+          // Merge and deduplicate
+          const all = [...(titleMatches || []), ...(artistMatches || [])];
+          const seen = new Set<string>();
+          tracks = all.filter(t => { if (seen.has(t.id)) return false; seen.add(t.id); return true; }).slice(0, count || 10);
+        }
       }
 
       if (tracks && tracks.length > 0) {
