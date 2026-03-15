@@ -1,6 +1,17 @@
 import { useEffect, useRef } from "react";
 
-const NOTE_CHARS = ["♩", "♪", "♫", "♬", "𝄞", "♭", "♯"];
+const NOTE_CHARS = ["♩", "♪", "♫", "♬", "𝄞", "♭", "♯", "𝅘𝅥", "𝅗𝅥"];
+
+interface NoteParticle {
+  x: number;
+  y: number;
+  speed: number;
+  char: string;
+  hue: number;
+  size: number;
+  alpha: number;
+  wobble: number;
+}
 
 interface MatrixNotesProps {
   enabled: boolean;
@@ -10,6 +21,7 @@ interface MatrixNotesProps {
 
 export const MatrixNotes = ({ enabled, width = 280, height = 96 }: MatrixNotesProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const particlesRef = useRef<NoteParticle[]>([]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -23,65 +35,64 @@ export const MatrixNotes = ({ enabled, width = 280, height = 96 }: MatrixNotesPr
     canvas.height = height * dpr;
     ctx.scale(dpr, dpr);
 
-    const fontSize = 11;
-    const columns = Math.floor(width / fontSize);
-    const drops = Array.from({ length: columns }, () => Math.random() * -(height / fontSize));
-    const speeds = Array.from({ length: columns }, () => 0.25 + Math.random() * 0.35);
+    // Create particles
+    const count = Math.max(8, Math.floor(width / 18));
+    particlesRef.current = Array.from({ length: count }, () => ({
+      x: Math.random() * width,
+      y: Math.random() * height,
+      speed: 0.3 + Math.random() * 0.5,
+      char: NOTE_CHARS[Math.floor(Math.random() * NOTE_CHARS.length)],
+      hue: 15 + Math.random() * 30, // orange range
+      size: 12 + Math.random() * 6,
+      alpha: 0.5 + Math.random() * 0.5,
+      wobble: Math.random() * Math.PI * 2,
+    }));
 
     let animId: number;
-    let lastTime = 0;
 
     const draw = (time: number) => {
-      const delta = time - lastTime;
-      if (delta < 45) {
-        animId = requestAnimationFrame(draw);
-        return;
-      }
-      lastTime = time;
-
-      // Clear with transparency instead of black overlay for trail effect
       ctx.clearRect(0, 0, width, height);
+      const particles = particlesRef.current;
 
-      ctx.font = `bold ${fontSize}px monospace`;
-      ctx.textAlign = "center";
+      for (const p of particles) {
+        // Move down
+        p.y += p.speed;
+        p.wobble += 0.02;
+        const xOff = Math.sin(p.wobble) * 3;
 
-      for (let i = 0; i < columns; i++) {
-        const char = NOTE_CHARS[Math.floor(Math.random() * NOTE_CHARS.length)];
-        const x = i * fontSize + fontSize / 2;
-        const y = drops[i] * fontSize;
-
-        // Shimmer hue shift
-        const hue = 20 + Math.sin(time * 0.003 + i * 0.7) * 15;
-        const lightness = 55 + Math.sin(time * 0.002 + i * 1.3) * 10;
-        const alpha = 0.6 + Math.sin(time * 0.004 + i * 0.9) * 0.3;
-
-        // Head note — bright
-        ctx.globalAlpha = Math.max(0.3, alpha);
-        ctx.fillStyle = `hsl(${hue}, 95%, ${lightness}%)`;
-        ctx.shadowColor = `hsl(${hue}, 90%, 50%)`;
-        ctx.shadowBlur = 6;
-        ctx.fillText(char, x, y);
-
-        // Trail note — dimmer
-        if (drops[i] > 1) {
-          ctx.globalAlpha = Math.max(0.1, alpha * 0.35);
-          ctx.shadowBlur = 2;
-          ctx.fillText(
-            NOTE_CHARS[Math.floor(Math.random() * NOTE_CHARS.length)],
-            x,
-            y - fontSize
-          );
+        // Reset at bottom
+        if (p.y > height + p.size) {
+          p.y = -p.size;
+          p.x = Math.random() * width;
+          p.char = NOTE_CHARS[Math.floor(Math.random() * NOTE_CHARS.length)];
+          p.hue = 15 + Math.random() * 30;
         }
 
-        // Reset
-        if (y > height + fontSize) {
-          drops[i] = Math.random() * -3;
-        }
-        drops[i] += speeds[i];
+        // Shimmer alpha
+        const shimmer = 0.3 + Math.sin(time * 0.003 + p.wobble * 5) * 0.25;
+        const a = p.alpha * shimmer + 0.2;
+
+        // Draw glow
+        ctx.save();
+        ctx.globalAlpha = a * 0.4;
+        ctx.shadowColor = `hsl(${p.hue}, 100%, 55%)`;
+        ctx.shadowBlur = 12;
+        ctx.font = `bold ${p.size}px serif`;
+        ctx.textAlign = "center";
+        ctx.fillStyle = `hsl(${p.hue}, 100%, 60%)`;
+        ctx.fillText(p.char, p.x + xOff, p.y);
+        ctx.restore();
+
+        // Draw note
+        ctx.save();
+        ctx.globalAlpha = a;
+        ctx.font = `bold ${p.size}px serif`;
+        ctx.textAlign = "center";
+        ctx.fillStyle = `hsl(${p.hue}, 95%, ${55 + Math.sin(time * 0.004 + p.wobble) * 10}%)`;
+        ctx.fillText(p.char, p.x + xOff, p.y);
+        ctx.restore();
       }
 
-      ctx.globalAlpha = 1;
-      ctx.shadowBlur = 0;
       animId = requestAnimationFrame(draw);
     };
 
