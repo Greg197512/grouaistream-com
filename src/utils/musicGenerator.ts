@@ -427,7 +427,44 @@ function renderAudio(config: GenerationConfig, bpm: number, rootMidi: number, sc
   
   // Get params (blended if two genres)
   const params1 = getStyleParams(style1);
-  const params = style2 ? blendParams(params1, getStyleParams(style2), blendRatio) : params1;
+  let params = style2 ? blendParams(params1, getStyleParams(style2), blendRatio) : params1;
+
+  // Apply mood-based modifications
+  if (config.mood) {
+    switch (config.mood) {
+      case 'dark':
+        params = { ...params, filterFreq: params.filterFreq * 0.7, reverbDecay: params.reverbDecay * 1.3, reverbMix: Math.min(0.6, params.reverbMix * 1.4), padVol: params.padVol * 1.5 };
+        break;
+      case 'bright':
+        params = { ...params, filterFreq: params.filterFreq * 1.4, melodyVol: params.melodyVol * 1.2, delayFeedback: params.delayFeedback * 0.7 };
+        break;
+      case 'aggressive':
+        params = { ...params, drumVol: params.drumVol * 1.3, filterFreq: params.filterFreq * 1.3, filterQ: params.filterQ * 1.5, melodyDetune: params.melodyDetune * 1.5 };
+        break;
+      case 'dreamy':
+        params = { ...params, reverbDecay: params.reverbDecay * 1.5, reverbMix: Math.min(0.65, params.reverbMix * 1.6), delayFeedback: Math.min(0.5, params.delayFeedback * 1.5), drumVol: params.drumVol * 0.6, padVol: params.padVol * 2, usePad: true };
+        break;
+      case 'melancholic':
+        params = { ...params, filterFreq: params.filterFreq * 0.8, reverbMix: Math.min(0.5, params.reverbMix * 1.3), melodyVol: params.melodyVol * 1.15, drumVol: params.drumVol * 0.8 };
+        break;
+      case 'euphoric':
+        params = { ...params, filterFreq: params.filterFreq * 1.3, chordVol: params.chordVol * 1.3, padVol: params.padVol * 1.5, usePad: true, reverbMix: Math.min(0.5, params.reverbMix * 1.2) };
+        break;
+      case 'romantic':
+        params = { ...params, reverbDecay: params.reverbDecay * 1.2, padVol: params.padVol * 1.4, usePad: true, drumVol: params.drumVol * 0.7, filterFreq: params.filterFreq * 0.9 };
+        break;
+      case 'tense':
+        params = { ...params, filterQ: params.filterQ * 2, delayFeedback: Math.min(0.5, params.delayFeedback * 1.5), melodyDetune: params.melodyDetune * 1.8, reverbMix: params.reverbMix * 0.8 };
+        break;
+    }
+  }
+
+  // Apply energy-based modifications
+  if (config.energy === 'extreme') {
+    params = { ...params, drumVol: params.drumVol * 1.3, melodyVol: params.melodyVol * 1.2, filterFreq: params.filterFreq * 1.3 };
+  } else if (config.energy === 'low') {
+    params = { ...params, drumVol: params.drumVol * 0.5, melodyVol: params.melodyVol * 0.8, padVol: params.padVol * 1.5, usePad: true };
+  }
   
   // Get drum pattern (blended if two genres)
   const drums1 = DRUM_PATTERNS[style1] || DRUM_PATTERNS.Pop;
