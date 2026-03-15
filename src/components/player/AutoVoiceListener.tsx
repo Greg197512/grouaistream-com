@@ -36,18 +36,59 @@ interface SpeechRecognitionInstance extends EventTarget {
 
 const SILENCE_TIMEOUT_MS = 300_000; // 5 minutes
 
+/** Get current app language */
+const getAppLanguage = (): Language => {
+  const saved = localStorage.getItem("grooveai-language");
+  return (saved as Language) || "en";
+};
+
+/** Speech recognition locale code */
+const LANG_TO_RECOGNITION: Record<Language, string> = {
+  pl: "pl-PL", en: "en-US", nl: "nl-NL", ua: "uk-UA",
+};
+
+/** Multilingual navigation keywords → route */
 const NAV_MAP: Record<string, string> = {
-  "stron": "/", "główn": "/", "home": "/",
-  "szukaj": "/search", "wyszuk": "/search", "search": "/search",
-  "bibliotek": "/library", "library": "/library",
-  "polubionych": "/liked", "polubion": "/liked", "liked": "/liked",
-  "serwer": "/server", "server": "/server", "medi": "/server",
-  "film": "/movies", "movie": "/movies",
-  "radio": "/radio-live",
-  "ustawien": "/settings", "settings": "/settings",
-  "nastro": "/mood-history", "mood": "/mood-history",
+  // PL
+  "stron": "/", "główn": "/",
+  "szukaj": "/search", "wyszuk": "/search",
+  "bibliotek": "/library",
+  "polubionych": "/liked", "polubion": "/liked",
+  "serwer": "/server", "medi": "/server",
+  "film": "/movies",
+  "ustawien": "/settings",
+  "nastro": "/mood-history",
   "playlist": "/playlist-manager",
   "admin": "/admin",
+  // EN
+  "home": "/", "main page": "/",
+  "search": "/search",
+  "library": "/library",
+  "liked": "/liked", "favorites": "/liked", "favourite": "/liked",
+  "server": "/server", "media": "/server",
+  "movie": "/movies", "films": "/movies",
+  "radio": "/radio-live",
+  "settings": "/settings",
+  "mood": "/mood-history",
+  // NL
+  "startpagina": "/", "hoofdpagina": "/", "thuis": "/",
+  "zoek": "/search", "zoeken": "/search",
+  "bibliotheek": "/library",
+  "favorieten": "/liked", "geliked": "/liked",
+  "mediaserver": "/server",
+  "instellingen": "/settings",
+  "stemming": "/mood-history",
+  "afspeellijst": "/playlist-manager",
+  // UA
+  "головн": "/", "дом": "/",
+  "пошук": "/search", "шукай": "/search",
+  "бібліотек": "/library",
+  "улюблен": "/liked",
+  "сервер": "/server",
+  "фільм": "/movies",
+  "налаштув": "/settings",
+  "настрі": "/mood-history",
+  "плейліст": "/playlist-manager",
 };
 
 const normalizeCommand = (text: string) =>
