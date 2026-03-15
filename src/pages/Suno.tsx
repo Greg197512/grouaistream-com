@@ -409,6 +409,23 @@ const Suno = () => {
                   />
                 </motion.div>
 
+                {/* Lyrics Display */}
+                {result.lyrics.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.35 }}
+                    className="relative z-10"
+                  >
+                    <LyricsDisplay
+                      lyrics={result.lyrics}
+                      currentTime={playbackTime}
+                      isPlaying={isPlaying}
+                      totalDuration={result.durationSeconds}
+                    />
+                  </motion.div>
+                )}
+
                 {/* Extend button */}
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
