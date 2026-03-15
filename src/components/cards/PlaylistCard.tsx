@@ -42,10 +42,10 @@ export const PlaylistCard = ({
       {/* Image */}
       <div className="relative mb-4 aspect-square overflow-hidden rounded-md shadow-lg">
         {imageUrl ? (
-          <img 
+          <HQCover 
             src={imageUrl} 
             alt={title}
-            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+            className="h-full w-full transition-transform duration-500 group-hover:scale-105"
           />
         ) : (
           <div className={cn(

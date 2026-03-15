@@ -278,10 +278,10 @@ export const PlayerBar = () => {
             whileHover={{ scale: 1.05 }}
           >
             {currentTrack?.cover_url ? (
-              <img 
+              <HQCover 
                 src={currentTrack.cover_url} 
                 alt={currentTrack.title}
-                className="h-full w-full object-cover"
+                className="h-full w-full"
               />
             ) : (
               <>

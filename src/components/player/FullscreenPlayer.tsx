@@ -88,10 +88,10 @@ export const FullscreenPlayer = ({ isOpen, onClose }: FullscreenPlayerProps) => 
               className="relative w-72 h-72 md:w-96 md:h-96 rounded-2xl overflow-hidden shadow-2xl mb-8"
             >
               {currentTrack?.cover_url ? (
-                <img
+                <HQCover
                   src={currentTrack.cover_url}
                   alt={currentTrack.title}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full"
                 />
               ) : (
                 <div className="w-full h-full groove-gradient-bg animate-gradient" />

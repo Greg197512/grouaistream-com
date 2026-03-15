@@ -204,7 +204,7 @@ export const RecentlyPlayed = () => {
                         onClick={() => handlePlayTrack(track, index)}
                       >
                         {track.cover_url ? (
-                          <img src={track.cover_url} alt={track.title} className="h-full w-full object-cover" draggable={false} />
+                          <HQCover src={track.cover_url} alt={track.title} className="h-full w-full" />
                         ) : (
                           <div className="absolute inset-0 groove-gradient-bg opacity-70" />
                         )}
