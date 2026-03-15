@@ -337,8 +337,35 @@ const Suno = () => {
               <Guitar className="h-5 w-5 text-[#FF9500]" />
               <Label className="text-sm text-gray-200">Tylko instrumentalny</Label>
             </div>
-            <Switch checked={instrumental} onCheckedChange={setInstrumental} className="data-[state=checked]:bg-[#FF6B00]" />
+            <Switch checked={instrumental} onCheckedChange={(v) => { setInstrumental(v); if (v) setCustomLyrics(""); }} className="data-[state=checked]:bg-[#FF6B00]" />
           </div>
+
+          {/* Custom Lyrics Editor */}
+          <AnimatePresence>
+            {!instrumental && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="space-y-2 overflow-hidden"
+              >
+                <Label className="text-sm text-gray-300 flex items-center gap-2">
+                  <Type className="h-4 w-4 text-[#FF9500]" />
+                  Tekst / Lyrics (opcjonalnie)
+                </Label>
+                <Textarea
+                  placeholder={"Wpisz lub wklej tekst piosenki...\n\nVerse 1:\nTwój tekst tutaj...\n\nChorus:\nRefren tutaj..."}
+                  value={customLyrics}
+                  onChange={(e) => setCustomLyrics(e.target.value)}
+                  rows={6}
+                  className="bg-[#1a1a2e] border-[#FF6B00]/20 text-white placeholder:text-gray-600 focus:border-[#FF6B00] focus:ring-[#FF6B00]/30 resize-none font-mono text-sm"
+                />
+                <p className="text-xs text-gray-500">
+                  Zostaw puste, aby użyć automatycznie generowanego tekstu. Każda linia = osobna fraza.
+                </p>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* CC Mixter Samples Toggle */}
           <div className="flex items-center justify-between p-4 rounded-xl border border-[#FF6B00]/20 bg-[#1a1a2e]/60">
