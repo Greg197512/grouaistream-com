@@ -79,11 +79,13 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
             initial={{ opacity: 0, x: -10 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -10 }}
-            className="relative cursor-pointer flex items-center overflow-hidden"
+            className="relative cursor-pointer flex items-center"
             onClick={() => handleNavClick("/")}
             whileHover={{ scale: 1.03 }}
           >
-            <MatrixNotes enabled={matrixEnabled} />
+            <div className="absolute -inset-6 overflow-hidden">
+              <MatrixNotes enabled={matrixEnabled} />
+            </div>
             <img src={logoIcon} alt="GrouAI Stream by GrouaRock" className="h-24 object-contain relative z-10" />
           </motion.div>
         )}

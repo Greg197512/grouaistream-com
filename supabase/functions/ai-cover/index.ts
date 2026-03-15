@@ -63,8 +63,11 @@ async function findOriginalCover(title: string, artist: string): Promise<string 
     if (deezerRes.ok) {
       const data = await deezerRes.json();
       if (data.data?.length > 0) {
+        // Deezer cover_xl is 1000x1000, upgrade URL to 1800x1800 for max quality
         const albumCover = data.data[0].album?.cover_xl || data.data[0].album?.cover_big;
-        if (albumCover) return albumCover;
+        if (albumCover) {
+          return albumCover.replace("/1000x1000", "/1800x1800").replace("/500x500", "/1800x1800");
+        }
       }
     }
   } catch (e) {

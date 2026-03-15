@@ -81,7 +81,7 @@ export const MatrixNotes = ({ enabled }: MatrixNotesProps) => {
   const centerY = 50;
 
   return (
-    <div className="absolute inset-0 pointer-events-none z-20 overflow-hidden">
+    <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
       <AnimatePresence>
         {notes.map((note) => {
           if (note.tornado) {
