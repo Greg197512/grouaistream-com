@@ -29,6 +29,7 @@ export const RecentlyPlayed = () => {
   const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
   const { playPlaylist, currentTrack, isPlaying } = usePlayer();
+  const { filterTracks } = useUnlock();
 
   useEffect(() => {
     const fetchRecentTracks = async () => {
