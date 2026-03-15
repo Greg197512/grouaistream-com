@@ -760,28 +760,42 @@ serve(async (req) => {
       if (hasDJIntent && requestedCount < 10) requestedCount = Math.max(requestedCount, 10);
 
       if (requestedCount > 0 && playableTracks.length > 0) {
-        let matchingGenres: string[] = [];
-        for (const [keyword, genres] of Object.entries(contextKeywords)) {
-          if (lowerMessage.includes(keyword)) matchingGenres.push(...genres);
-        }
+        // Detect source: favorites, recent uploads, or general library
+        const wantsFavorites = /ulubionych|polubion|liked|favorite|ulubione|z\s+ulubionych|z\s+polubionych/i.test(lowerMessage);
+        const wantsRecent = /ostatni[echm]?\s+(?:wgrany|wrzucon|dodany|upload|piosen|utw)|najnowsz|ostatnio\s+(?:wgrany|dodany|wrzucon)|z\s+serwera|newest|recent|śwież|swiez|ostatnie\s+\d/i.test(lowerMessage);
 
         let candidates: any[];
-        if (matchingGenres.length > 0) {
-          candidates = playableTracks.filter((t: any) =>
-            matchingGenres.some(g =>
-              t.genre?.toLowerCase().includes(g.toLowerCase()) ||
-              t.mood?.toLowerCase().includes(g.toLowerCase())
-            )
-          );
-          if (candidates.length < requestedCount) {
-            const remaining = playableTracks.filter((t: any) => !candidates.includes(t));
-            candidates = [...candidates, ...[...remaining].sort(() => Math.random() - 0.5)];
-          }
+
+        if (wantsFavorites && userFavorites.length > 0) {
+          candidates = [...userFavorites];
+        } else if (wantsRecent && recentUploads.length > 0) {
+          candidates = [...recentUploads];
         } else {
-          candidates = [...playableTracks].sort(() => Math.random() - 0.5);
+          let matchingGenres: string[] = [];
+          for (const [keyword, genres] of Object.entries(contextKeywords)) {
+            if (lowerMessage.includes(keyword)) matchingGenres.push(...genres);
+          }
+
+          if (matchingGenres.length > 0) {
+            candidates = playableTracks.filter((t: any) =>
+              matchingGenres.some(g =>
+                t.genre?.toLowerCase().includes(g.toLowerCase()) ||
+                t.mood?.toLowerCase().includes(g.toLowerCase())
+              )
+            );
+            if (candidates.length < requestedCount) {
+              const remaining = playableTracks.filter((t: any) => !candidates.includes(t));
+              candidates = [...candidates, ...[...remaining].sort(() => Math.random() - 0.5)];
+            }
+          } else {
+            candidates = [...playableTracks].sort(() => Math.random() - 0.5);
+          }
         }
 
-        autoPlayTracks = [...candidates].sort(() => Math.random() - 0.5).slice(0, requestedCount);
+        // Don't shuffle favorites/recent - keep order (by date)
+        autoPlayTracks = (wantsFavorites || wantsRecent)
+          ? candidates.slice(0, requestedCount)
+          : [...candidates].sort(() => Math.random() - 0.5).slice(0, requestedCount);
       }
     }
 
