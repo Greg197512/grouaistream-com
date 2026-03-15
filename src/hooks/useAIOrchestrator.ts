@@ -239,8 +239,8 @@ export const useAIOrchestrator = () => {
         },
       });
 
-      const detectedMood = aiResponse?.data?.detectedMood || "neutral";
-      const suggestedGenre = aiResponse?.data?.musicRecommendation || "Pop";
+      const detectedMood = (aiResponse?.data?.detectedMood || "neutral").replace(/[,()]/g, "").trim().split(/\s+/).slice(0, 3).join(" ");
+      const suggestedGenre = (aiResponse?.data?.musicRecommendation || "Pop").replace(/[,()]/g, "").trim().split(/\s+/).slice(0, 3).join(" ");
 
       // Parse command for explicit genre requests (PL + EN)
       let targetGenre = suggestedGenre;
