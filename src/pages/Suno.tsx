@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, Music, Guitar, Waves, Plus, Blend } from "lucide-react";
+import { Sparkles, Music, Guitar, Waves, Plus, Blend, Disc3 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { WaveformPlayer } from "@/components/studio/WaveformPlayer";
 import { NeonWavesLoader } from "@/components/studio/NeonWavesLoader";
 import { GenerationHistory } from "@/components/studio/GenerationHistory";
+import { LyricsDisplay, generateLyrics } from "@/components/studio/LyricsDisplay";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { generateMusic, extendTrack, type GeneratedTrack } from "@/utils/musicGenerator";
 
@@ -30,10 +31,39 @@ const Suno = () => {
   const [blendRatio, setBlendRatio] = useState(50);
   const [title, setTitle] = useState("");
   const [instrumental, setInstrumental] = useState(false);
+  const [useSamples, setUseSamples] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [extending, setExtending] = useState(false);
-  const [result, setResult] = useState<{ audioUrl: string; title: string; genre: string; generationId?: string; durationSeconds: number; lastTrack?: GeneratedTrack } | null>(null);
+  const [result, setResult] = useState<{ audioUrl: string; title: string; genre: string; generationId?: string; durationSeconds: number; lastTrack?: GeneratedTrack; lyrics: { time: number; text: string }[] } | null>(null);
   const [errorModal, setErrorModal] = useState<string | null>(null);
+  const [playbackTime, setPlaybackTime] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Track playback time for lyrics sync
+  useEffect(() => {
+    if (!result?.audioUrl) return;
+    const audio = new Audio(result.audioUrl);
+    audioRef.current = audio;
+    
+    const onTimeUpdate = () => setPlaybackTime(audio.currentTime);
+    const onPlay = () => setIsPlaying(true);
+    const onPause = () => setIsPlaying(false);
+    const onEnded = () => { setIsPlaying(false); setPlaybackTime(0); };
+    
+    audio.addEventListener('timeupdate', onTimeUpdate);
+    audio.addEventListener('play', onPlay);
+    audio.addEventListener('pause', onPause);
+    audio.addEventListener('ended', onEnded);
+    
+    return () => {
+      audio.removeEventListener('timeupdate', onTimeUpdate);
+      audio.removeEventListener('play', onPlay);
+      audio.removeEventListener('pause', onPause);
+      audio.removeEventListener('ended', onEnded);
+      audio.pause();
+    };
+  }, [result?.audioUrl]);
 
   const generate = async () => {
     setGenerating(true);
@@ -47,9 +77,11 @@ const Suno = () => {
         durationSeconds: 30,
         instrumental,
         title: title.trim() || undefined,
+        useSamples,
       });
 
       const genreName = genre2 ? `${genre} × ${genre2}` : genre;
+      const lyrics = generateLyrics(genreName, track.title, 30, instrumental);
 
       let generationId: string | undefined;
       if (user) {
@@ -57,7 +89,7 @@ const Suno = () => {
           user_id: user.id,
           title: track.title,
           genre: genreName,
-          prompt: `30-second ${genreName} track${instrumental ? ", instrumental only" : ""}`,
+          prompt: `30-second ${genreName} track${instrumental ? ", instrumental only" : ""}${useSamples ? " + CC Mixter samples" : ""}`,
           instrumental,
           status: "completed",
           audio_url: track.audioUrl,
@@ -72,6 +104,7 @@ const Suno = () => {
         generationId,
         durationSeconds: 30,
         lastTrack: track,
+        lyrics,
       });
       toast.success(`🎶 Wygenerowano "${track.title}"!`);
     } catch (err: any) {
@@ -96,11 +129,13 @@ const Suno = () => {
         }).eq("id", result.generationId);
       }
 
+      const newLyrics = generateLyrics(result.genre, result.title, newDuration, instrumental);
       setResult(prev => prev ? {
         ...prev,
         audioUrl: extended.audioUrl,
         durationSeconds: newDuration,
         lastTrack: extended,
+        lyrics: newLyrics,
       } : null);
       toast.success(`🎶 Przedłużono do ${newDuration}s!`);
     } catch (err: any) {
@@ -270,6 +305,18 @@ const Suno = () => {
             <Switch checked={instrumental} onCheckedChange={setInstrumental} className="data-[state=checked]:bg-[#FF6B00]" />
           </div>
 
+          {/* CC Mixter Samples Toggle */}
+          <div className="flex items-center justify-between p-4 rounded-xl border border-[#FF6B00]/20 bg-[#1a1a2e]/60">
+            <div className="flex items-center gap-3">
+              <Disc3 className="h-5 w-5 text-[#FF9500]" />
+              <div>
+                <Label className="text-sm text-gray-200">Sample z CC Mixter</Label>
+                <p className="text-xs text-gray-500">Wzbogaca brzmienie prawdziwymi loopami CC</p>
+              </div>
+            </div>
+            <Switch checked={useSamples} onCheckedChange={setUseSamples} className="data-[state=checked]:bg-[#FF6B00]" />
+          </div>
+
           {/* Generate Button */}
           <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}>
             <Button
@@ -361,6 +408,23 @@ const Suno = () => {
                     onSaveToLibrary={saveToLibrary}
                   />
                 </motion.div>
+
+                {/* Lyrics Display */}
+                {result.lyrics.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.35 }}
+                    className="relative z-10"
+                  >
+                    <LyricsDisplay
+                      lyrics={result.lyrics}
+                      currentTime={playbackTime}
+                      isPlaying={isPlaying}
+                      totalDuration={result.durationSeconds}
+                    />
+                  </motion.div>
+                )}
 
                 {/* Extend button */}
                 <motion.div

@@ -1,7 +1,10 @@
 /**
  * Advanced Algorithmic Music Generator using Web Audio API
  * Rich layered synthesis with reverb, delay, compression, detuned oscillators
+ * Now with CC Mixter sample integration for richer sound
  */
+
+import { loadGenreSamples, mixSampleIntoContext, type LoadedSample } from './sampleLoader';
 
 const SCALES = {
   major: [0, 2, 4, 5, 7, 9, 11],
@@ -130,6 +133,8 @@ export interface GenerationConfig {
   energy?: 'low' | 'medium' | 'high' | 'extreme';
   tempoOverride?: number; // Exact BPM override
   textContent?: string; // Lyrics/text to weave into the vibe
+  useSamples?: boolean; // Whether to layer CC Mixter samples
+  samples?: LoadedSample[]; // Pre-loaded samples to mix in
 }
 
 export interface GeneratedTrack {
@@ -638,6 +643,20 @@ function renderAudio(config: GenerationConfig, bpm: number, rootMidi: number, sc
     }
   }
 
+  // === CC MIXTER SAMPLES ===
+  if (config.samples && config.samples.length > 0) {
+    const sampleVol = 0.12; // Blend volume for samples
+    config.samples.forEach((sample, idx) => {
+      // Stagger sample entry for variety
+      const startOffset = idx * 4; // Each sample enters 4 seconds later
+      const sampleDuration = Math.max(0, duration - startOffset - 1);
+      if (sampleDuration > 2) {
+        mixSampleIntoContext(ctx, sample.buffer, startOffset, sampleDuration, sampleVol, sendBus);
+      }
+    });
+    console.log(`Mixed ${config.samples.length} CC Mixter samples into track`);
+  }
+
   // Fade out last 1.5s
   const fadeStart = duration - 1.5;
   masterGain.gain.setValueAtTime(0.85, fadeStart);
@@ -697,7 +716,17 @@ export async function generateMusic(config: GenerationConfig): Promise<Generated
     ? randomFromArray(brightRoots)
     : randomFromArray([48, 50, 52, 53, 55, 57]);
 
-  const { buffer } = await renderAudio(config, bpm, rootMidi, scaleType);
+  // Load CC Mixter samples if requested
+  let samples: LoadedSample[] = [];
+  if (config.useSamples) {
+    try {
+      samples = await loadGenreSamples(style, 2);
+    } catch (err) {
+      console.warn('Sample loading failed, continuing without samples:', err);
+    }
+  }
+
+  const { buffer } = await renderAudio({ ...config, samples }, bpm, rootMidi, scaleType);
   const wavBlob = audioBufferToWav(buffer);
   const audioUrl = URL.createObjectURL(wavBlob);
 
