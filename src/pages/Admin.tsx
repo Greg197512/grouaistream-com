@@ -117,8 +117,10 @@ export default function Admin() {
   // Email state
   const [emailType, setEmailType] = useState<"invitation" | "challenge" | "newsletter" | "weekly_digest">("invitation");
   const [recipientName, setRecipientName] = useState("");
+  const [recipientEmail, setRecipientEmail] = useState("");
   const [customMessage, setCustomMessage] = useState("");
   const [generatingEmail, setGeneratingEmail] = useState(false);
+  const [sendingEmail, setSendingEmail] = useState(false);
   const [generatedEmail, setGeneratedEmail] = useState<GeneratedEmail | null>(null);
   const [emailHistory, setEmailHistory] = useState<GeneratedEmail[]>([]);
   
