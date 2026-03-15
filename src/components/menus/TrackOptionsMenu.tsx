@@ -11,6 +11,7 @@ import {
   ListPlus,
   ExternalLink,
   Twitter,
+  MessageCircle,
   Trash2,
   Scissors
 } from "lucide-react";
