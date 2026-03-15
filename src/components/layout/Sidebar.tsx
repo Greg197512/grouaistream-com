@@ -17,6 +17,7 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
   const location = useLocation();
   const { t } = useLanguage();
   const [activeItem, setActiveItem] = useState(location.pathname);
+  const [matrixEnabled, setMatrixEnabled] = useState(true);
 
   useEffect(() => {
     setActiveItem(location.pathname);
