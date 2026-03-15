@@ -382,6 +382,40 @@ serve(async (req) => {
     }
 
     // ==========================================
+    // MUSIC GENERATION DETECTION (GrouAI Studio)
+    // ==========================================
+    const generatePatterns = [
+      /(?:wygeneruj|stwórz|stworz|zrób|zrob|skomponuj|napisz|nagraj|create|generate|make|compose).*(?:utw[oó]r|piosen[kę]|piosenke|track|beat|muzyk[ęe]|song|bit)/i,
+      /(?:utw[oó]r|piosen[kę]|piosenke|track|beat|muzyk[ęe]|song|bit).*(?:wygeneruj|stwórz|stworz|zrób|zrob|skomponuj)/i,
+      /(?:chc[ęe]|chciałbym|chcialbym|potrzebuj[ęe]|daj|zrób|zrob|make me|i want|i need).*(?:now[yąa]|now[ąa]|swoj|swój).*(?:utw[oó]r|piosen[kę]|piosenke|track|beat|muzyk[ęe]|song)/i,
+    ];
+    const hasGenerateIntent = !hasRadioIntent && !hasWishIntent && !hasDedicationIntent && !hasRadioAddIntent && !hasRadioRemoveIntent && generatePatterns.some(p => p.test(lowerMessage));
+    let generateResult: { style: string; instrumental: boolean; title?: string } | null = null;
+
+    if (hasGenerateIntent) {
+      // Detect style from message
+      const styleKeywords: Record<string, string> = {
+        "pop": "Pop", "rock": "Rock", "electronic": "Electronic", "elektroniczn": "Electronic",
+        "hip-hop": "Hip-Hop", "hip hop": "Hip-Hop", "hiphop": "Hip-Hop", "rap": "Hip-Hop",
+        "jazz": "Jazz", "classical": "Classical", "klasyczn": "Classical",
+        "r&b": "R&B", "rnb": "R&B", "country": "Country", "reggae": "Reggae",
+        "metal": "Metal", "indie": "Indie", "lo-fi": "Lo-fi", "lofi": "Lo-fi",
+        "ambient": "Ambient", "trap": "Trap", "house": "House", "disco": "Disco",
+      };
+      let detectedStyle = "Pop";
+      for (const [kw, style] of Object.entries(styleKeywords)) {
+        if (lowerMessage.includes(kw)) { detectedStyle = style; break; }
+      }
+      const isInstrumental = /instrumental|bez\s+(?:wokalu|głosu|tekstu|słów)/i.test(lowerMessage);
+
+      // Try to extract title from quotes
+      const titleMatch = message.match(/["""„](.+?)["""]/);
+      const extractedTitle = titleMatch ? titleMatch[1].trim() : undefined;
+
+      generateResult = { style: detectedStyle, instrumental: isInstrumental, title: extractedTitle };
+    }
+
+    // ==========================================
     // MUSIC PLAY DETECTION (existing logic)
     // ==========================================
 
