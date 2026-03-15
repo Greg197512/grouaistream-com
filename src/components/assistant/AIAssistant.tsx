@@ -351,14 +351,15 @@ export const AIAssistant = () => {
     setInput("");
     setAttachments([]);
 
-    // Upload attachments
+    // Upload attachments (with graceful fallback to blob URLs)
     const uploadedAttachments: ChatAttachment[] = [];
     for (const att of currentAttachments) {
       try {
         const publicUrl = await uploadAttachment(att);
         uploadedAttachments.push({ type: att.type, url: publicUrl, name: att.name });
-      } catch (err) {
-        console.error("Upload error:", err);
+      } catch (err: any) {
+        console.warn("Upload failed, using local URL:", err?.message);
+        // Keep the blob URL as fallback — works for local mixing/playback
         uploadedAttachments.push({ type: att.type, url: att.url, name: att.name });
       }
     }
