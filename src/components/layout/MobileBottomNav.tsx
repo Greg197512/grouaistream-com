@@ -35,10 +35,12 @@ export const MobileBottomNav = () => {
       }}
     >
       <div
-        className="flex items-center h-full overflow-x-auto scrollbar-none"
+        className="flex items-center h-full overflow-x-auto"
         style={{
           scrollSnapType: "x mandatory",
           WebkitOverflowScrolling: "touch",
+          msOverflowStyle: "none",
+          scrollbarWidth: "none",
         }}
       >
         {navItems.map((item) => {
