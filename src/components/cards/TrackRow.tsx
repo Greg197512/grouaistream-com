@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { Play, Pause, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TrackOptionsMenu, LikeButton } from "@/components/menus/TrackOptionsMenu";
+import { HQCover } from "@/components/ui/HQCover";
 
 interface TrackRowProps {
   id: string;
