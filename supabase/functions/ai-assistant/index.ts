@@ -821,6 +821,24 @@ serve(async (req) => {
       ? playableTracks.map((t: any) => `${t.title} — ${t.artist} [${t.genre || '?'}/${t.mood || '?'}]`).join("\n")
       : "Brak utworów w bazie";
 
+    // Build catalogs for favorites, recent, playlists
+    const favoritesCatalog = userFavorites.length > 0
+      ? userFavorites.map((t: any, i: number) => `${i+1}. ${t.title} — ${t.artist} [${t.genre || '?'}]`).join("\n")
+      : "Brak ulubionych";
+
+    const recentUploadsCatalog = recentUploads.length > 0
+      ? recentUploads.map((t: any, i: number) => `${i+1}. ${t.title} — ${t.artist} [${t.genre || '?'}] (${new Date(t.created_at).toLocaleDateString('pl')})`).join("\n")
+      : "Brak";
+
+    const playlistsCatalog = userPlaylistsData.length > 0
+      ? userPlaylistsData.map((pl: any) => `📁 **${pl.title}** (${pl.tracks.length} utw.): ${pl.tracks.slice(0, 5).map((t: any) => `${t.title}`).join(", ")}${pl.tracks.length > 5 ? "..." : ""}`).join("\n")
+      : "Brak playlist";
+
+    // Build move result info
+    const moveInfo = moveResult
+      ? `\n\n## 📁 UTWÓR ${moveResult.action === "added" ? "DODANY DO" : "USUNIĘTY Z"} PLAYLISTY!\nUtwór **"${moveResult.trackName}"** został ${moveResult.action === "added" ? "dodany do" : "usunięty z"} playlisty **"${moveResult.playlistName}"**.\nPOTWIERDŹ operację entuzjastycznie! Użyj emoji 📁 ✅ 🎵.`
+      : "";
+
     // Build context
     const ctx = userContext || {};
     const userName = ctx.userName || "Użytkownik";
