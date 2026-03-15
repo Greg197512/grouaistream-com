@@ -1410,6 +1410,7 @@ const nl: TranslationKeys = {
   "nav.radioLive": "GrouaRadio Live",
   "nav.importYoutube": "YouTube Importeren",
   "nav.sunoAI": "GrouAI Studio",
+  "nav.localPlayer": "Lokale Speler",
   "nav.aiDj": "AI DJ",
   "nav.moodDetection": "Stemming Detectie",
   "nav.moodHistory": "Stemmingsgeschiedenis",
