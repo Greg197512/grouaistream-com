@@ -508,26 +508,34 @@ export const AutoVoiceListener = () => {
     setShowIndicator(true);
     resetSilenceTimer();
 
-    try {
-    // STOP command - HIGHEST PRIORITY - check first before anything else
+    const lang = getAppLanguage();
+
+    // STOP command - HIGHEST PRIORITY - all languages
     const stopRequested = includesAny(normalized, [
-      "stop", "stopp", "stup", "stap",
-      "zatrzymaj",
-      "pauza", "pauze", "pause",
-      "wstrzymaj",
-      "wylacz player", "wylacz muzyk",
-      "cisza", "ucisz",
-    ]) || includesAny(lower, ["stop", "pauza", "zatrzymaj", "wstrzymaj", "pause"]);
+      // PL
+      "stop", "stopp", "stup", "stap", "zatrzymaj", "pauza", "pauze", "wstrzymaj",
+      "wylacz player", "wylacz muzyk", "cisza", "ucisz",
+      // EN
+      "pause", "halt", "silence", "quiet", "shut up",
+      // NL
+      "pauzeer", "pauzeren", "stilte", "stil",
+      // UA
+      "стоп", "пауза", "зупини", "тиша",
+    ]) || includesAny(lower, ["stop", "pauza", "zatrzymaj", "wstrzymaj", "pause", "pauzeer", "стоп", "пауза"]);
 
     if (stopRequested) {
       pausePlayback();
-      await safeSpeakAndResume("Zatrzymuję");
-      toast.info("⏹️ Zatrzymano");
+      const msgs: Record<Language, string> = { pl: "Zatrzymuję", en: "Pausing", nl: "Gepauzeerd", ua: "Зупиняю" };
+      await safeSpeakAndResume(msgs[lang]);
+      toast.info("⏹️ " + msgs[lang]);
       return;
     }
 
     // Shutdown commands
-    if (lower.includes("wyłącz się") || (lower.includes("wyłącz") && lower.includes("asystent")) || lower.includes("zamknij się")) {
+    if (lower.includes("wyłącz się") || (lower.includes("wyłącz") && lower.includes("asystent")) || lower.includes("zamknij się")
+      || lower.includes("shut down") || lower.includes("turn off") || lower.includes("go away")
+      || lower.includes("schakel uit") || lower.includes("ga weg") || lower.includes("stop ermee")
+      || lower.includes("вимкнись") || lower.includes("вимкни")) {
       shutdownMic();
       return;
     }
@@ -535,55 +543,132 @@ export const AutoVoiceListener = () => {
     // DJ Mode commands
     const djResult = parseDJCommand(command);
     if (djResult.isDJCommand) {
-      toast.loading("🎧 DJ GrooveAI przygotowuje set...", { id: "dj-voice" });
+      const djMsgs: Record<Language, string> = {
+        pl: "DJ GrooveAI przygotowuje set...",
+        en: "DJ GrooveAI preparing set...",
+        nl: "DJ GrooveAI bereidt set voor...",
+        ua: "DJ GrooveAI готує сет...",
+      };
+      toast.loading(`🎧 ${djMsgs[lang]}`, { id: "dj-voice" });
       await startDJSession({
         genres: djResult.genres,
         partyType: djResult.partyType,
         trackCount: djResult.trackCount,
         customPrompt: djResult.customPrompt,
       });
-      toast.success(`🎧 DJ GrooveAI startuje set! ${djResult.trackCount} utworów`, { id: "dj-voice", duration: 5000 });
+      toast.success(`🎧 DJ GrooveAI! ${djResult.trackCount} tracks`, { id: "dj-voice", duration: 5000 });
       return;
     }
 
     // Stop DJ
-    if (isDJActive && includesAny(normalized, ["stop dj", "wylacz dj", "koniec setu", "zakoncz set"])) {
+    if (isDJActive && includesAny(normalized, [
+      "stop dj", "wylacz dj", "koniec setu", "zakoncz set",
+      "stop the dj", "end the set",
+      "stop de dj", "einde set",
+      "зупини діджея", "кінець сету",
+    ])) {
       await stopDJSession();
       return;
     }
 
-    // Weather command (online)
-    if (includesAny(normalized, ["pogoda", "prognoza", "jaka pogoda", "sprawdz pogode"])) {
-      toast.loading("🌤️ Sprawdzam pogodę w sieci...", { id: "voice-weather" });
+    // Weather command (online) - multilingual
+    if (includesAny(normalized, [
+      "pogoda", "prognoza", "jaka pogoda", "sprawdz pogode",
+      "weather", "forecast", "what's the weather",
+      "weer", "weerbericht", "wat is het weer",
+      "погода", "прогноз",
+    ])) {
+      toast.loading("🌤️ ...", { id: "voice-weather" });
       try {
         const weatherSummary = await getWeatherSummary(command);
         toast.success(`🌤️ ${weatherSummary.slice(0, 80)}...`, { id: "voice-weather", duration: 4500 });
         await safeSpeakAndResume(weatherSummary);
       } catch {
-        toast.error("Nie udało się pobrać pogody", { id: "voice-weather" });
-        await safeSpeakAndResume("Nie udało mi się sprawdzić pogody. Spróbuj ponownie za chwilę.");
+        const errMsgs: Record<Language, string> = {
+          pl: "Nie udało się pobrać pogody", en: "Failed to get weather",
+          nl: "Weer ophalen mislukt", ua: "Не вдалося отримати погоду",
+        };
+        toast.error(errMsgs[lang], { id: "voice-weather" });
+        await safeSpeakAndResume(errMsgs[lang]);
       }
       return;
     }
 
-    if (includesAny(normalized, ["wznow", "kontynuuj", "graj dalej", "resume"])) {
+    // Resume
+    if (includesAny(normalized, [
+      "wznow", "kontynuuj", "graj dalej",
+      "resume", "continue", "keep playing",
+      "hervat", "ga door", "verder spelen",
+      "продовжуй", "далі грай",
+    ])) {
       resumePlayback();
-      await safeSpeakAndResume("Wznawiam odtwarzanie");
+      const msgs: Record<Language, string> = { pl: "Wznawiam odtwarzanie", en: "Resuming playback", nl: "Hervatten", ua: "Продовжую" };
+      await safeSpeakAndResume(msgs[lang]);
       return;
     }
 
-    if (includesAny(normalized, ["od poczatku", "zacznij od poczatku", "od nowa"])) {
+    // Restart
+    if (includesAny(normalized, [
+      "od poczatku", "zacznij od poczatku", "od nowa",
+      "from the start", "restart", "from beginning", "start over",
+      "opnieuw", "van het begin", "begin opnieuw",
+      "спочатку", "заново",
+    ])) {
       restartCurrentTrack();
-      await safeSpeakAndResume("Uruchamiam od początku");
+      const msgs: Record<Language, string> = { pl: "Od początku", en: "Restarting", nl: "Opnieuw", ua: "Спочатку" };
+      await safeSpeakAndResume(msgs[lang]);
       return;
     }
 
-    if (lower.includes("graj") && !lower.includes("następ") && !lower.includes("odtwarz") && lower.split(" ").length <= 2) { resumePlayback(); await safeSpeakAndResume("Odtwarzam"); return; }
-    if (lower.includes("następn") || lower.includes("dalej") || lower.includes("skip")) { nextTrack(); await safeSpeakAndResume("Następny utwór"); return; }
-    if (lower.includes("poprzedni") || lower.includes("cofnij") || lower.includes("wstecz")) { prevTrack(); await safeSpeakAndResume("Poprzedni utwór"); return; }
-    if (lower.includes("głośniej") || lower.includes("louder")) { setVolume(85); await safeSpeakAndResume("Głośniej"); return; }
-    if (lower.includes("ciszej") || lower.includes("cicho")) { setVolume(25); await safeSpeakAndResume("Ciszej"); return; }
-    if (lower.includes("wycisz") || lower.includes("mute")) { setVolume(0); await safeSpeakAndResume("Wyciszono"); return; }
+    // Simple play/resume (short commands)
+    if ((lower.includes("graj") || lower.includes("play") || lower.includes("speel") || lower.includes("грай"))
+        && !lower.includes("następ") && !lower.includes("odtwarz") && !lower.includes("next") && !lower.includes("volgende")
+        && lower.split(" ").length <= 2) {
+      resumePlayback();
+      const msgs: Record<Language, string> = { pl: "Odtwarzam", en: "Playing", nl: "Afspelen", ua: "Граю" };
+      await safeSpeakAndResume(msgs[lang]);
+      return;
+    }
+
+    // Next track
+    if (includesAny(lower, ["następn", "dalej", "skip", "next", "volgende", "overslaan", "наступн", "далі"])) {
+      nextTrack();
+      const msgs: Record<Language, string> = { pl: "Następny utwór", en: "Next track", nl: "Volgend nummer", ua: "Наступний трек" };
+      await safeSpeakAndResume(msgs[lang]);
+      return;
+    }
+
+    // Previous track
+    if (includesAny(lower, ["poprzedni", "cofnij", "wstecz", "previous", "back", "vorige", "terug", "попередн", "назад"])) {
+      prevTrack();
+      const msgs: Record<Language, string> = { pl: "Poprzedni utwór", en: "Previous track", nl: "Vorig nummer", ua: "Попередній трек" };
+      await safeSpeakAndResume(msgs[lang]);
+      return;
+    }
+
+    // Volume up
+    if (includesAny(lower, ["głośniej", "louder", "volume up", "harder", "luider", "гучніше"])) {
+      setVolume(85);
+      const msgs: Record<Language, string> = { pl: "Głośniej", en: "Louder", nl: "Harder", ua: "Гучніше" };
+      await safeSpeakAndResume(msgs[lang]);
+      return;
+    }
+
+    // Volume down
+    if (includesAny(lower, ["ciszej", "cicho", "quieter", "softer", "volume down", "zachter", "stiller", "тихіше"])) {
+      setVolume(25);
+      const msgs: Record<Language, string> = { pl: "Ciszej", en: "Quieter", nl: "Zachter", ua: "Тихіше" };
+      await safeSpeakAndResume(msgs[lang]);
+      return;
+    }
+
+    // Mute
+    if (includesAny(lower, ["wycisz", "mute", "dempen", "вимкни звук"])) {
+      setVolume(0);
+      const msgs: Record<Language, string> = { pl: "Wyciszono", en: "Muted", nl: "Gedempt", ua: "Без звуку" };
+      await safeSpeakAndResume(msgs[lang]);
+      return;
+    }
 
     // ==========================================
     // PLAYLIST OPEN / PLAY COMMANDS
