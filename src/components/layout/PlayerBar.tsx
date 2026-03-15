@@ -534,11 +534,10 @@ export const PlayerBar = () => {
           <motion.button 
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
-            onClick={() => setShowVoiceCommand(true)}
-            className="p-1 text-white/40 hover:text-white/70 transition-colors"
+            className="hidden"
             title="Voice Commands"
           >
-            <Mic2 className="h-3.5 w-3.5" />
+            <span className="sr-only">Voice Commands</span>
           </motion.button>
 
           {/* Queue */}
