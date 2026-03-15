@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { motion, AnimatePresence, useDragControls } from "framer-motion";
-import { Send, Loader2, ExternalLink, Music, Power, GripHorizontal, Sparkles, Maximize2, Minimize2, Radio } from "lucide-react";
+import { Send, Loader2, ExternalLink, Music, Power, GripHorizontal, Sparkles, Maximize2, Minimize2, Radio, Waves } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -11,6 +11,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useLocation } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import aiAssistantAvatar from "@/assets/ai-assistant-avatar.jpg";
+import { generateMusic, type GeneratedTrack } from "@/utils/musicGenerator";
+import { WaveformPlayer } from "@/components/studio/WaveformPlayer";
+import { toast } from "sonner";
 
 interface PlaylistTrackInfo {
   id: string;
@@ -29,6 +32,7 @@ interface Message {
   radioWish?: { wishText: string };
   radioTrackMod?: { action: "added" | "removed"; tracks: string[]; count: number };
   radioDedication?: { trackName: string; recipientName: string; senderName: string };
+  generatedTrack?: { audioUrl: string; title: string; genre: string; duration: number };
 }
 
 const getTimeOfDay = () => {
@@ -234,6 +238,7 @@ export const AIAssistant = () => {
   const pendingRadioWishRef = useRef<{ wishText: string } | null>(null);
   const pendingRadioTrackModRef = useRef<{ action: "added" | "removed"; tracks: string[]; count: number } | null>(null);
   const pendingDedicationRef = useRef<{ trackName: string; recipientName: string; senderName: string } | null>(null);
+  const pendingGeneratedTrackRef = useRef<{ audioUrl: string; title: string; genre: string; duration: number } | null>(null);
 
   const handleSend = useCallback(async () => {
     if (!input.trim() || isLoading) return;
@@ -315,6 +320,29 @@ export const AIAssistant = () => {
               continue;
             }
 
+            // Handle music generation event - generate locally
+            if (parsed.type === "music_generate") {
+              const genData = parsed.data;
+              try {
+                const track = await generateMusic({
+                  style: genData.style,
+                  durationSeconds: 30,
+                  instrumental: genData.instrumental,
+                  title: genData.title || undefined,
+                });
+                pendingGeneratedTrackRef.current = {
+                  audioUrl: track.audioUrl,
+                  title: track.title,
+                  genre: track.style,
+                  duration: 30,
+                };
+                toast.success(`🎶 Wygenerowano "${track.title}"!`);
+              } catch (err) {
+                console.error("Generation error in chat:", err);
+              }
+              continue;
+            }
+
             // Handle auto-play multiple tracks (normal + DJ mode)
             if (parsed.type === "auto_play_tracks" || parsed.type === "dj_mode_tracks") {
               const trackIds = parsed.data.map((t: any) => t.id);
@@ -349,6 +377,7 @@ export const AIAssistant = () => {
               const radioWish = pendingRadioWishRef.current;
               const radioTrackMod = pendingRadioTrackModRef.current;
               const dedication = pendingDedicationRef.current;
+              const genTrack = pendingGeneratedTrackRef.current;
               setMessages(prev => {
                 const msgData: Message = {
                   role: "assistant",
@@ -360,6 +389,7 @@ export const AIAssistant = () => {
                   radioWish: radioWish || undefined,
                   radioTrackMod: radioTrackMod || undefined,
                   radioDedication: dedication || undefined,
+                  generatedTrack: genTrack || undefined,
                 };
                 const last = prev[prev.length - 1];
                 if (last?.role === "assistant" && prev.length > 1 && prev[prev.length - 2]?.role === "user") {
@@ -404,6 +434,7 @@ export const AIAssistant = () => {
       pendingRadioWishRef.current = null;
       pendingRadioTrackModRef.current = null;
       pendingDedicationRef.current = null;
+      pendingGeneratedTrackRef.current = null;
       setIsLoading(false);
     }
   }, [input, isLoading, messages, userContext, startDJSession, parseDJCommand]);
@@ -624,6 +655,34 @@ export const AIAssistant = () => {
                           <p className="text-[10px] text-muted-foreground mt-0.5">
                             Dla <strong>{msg.radioDedication.recipientName}</strong> od <strong>{msg.radioDedication.senderName}</strong>
                           </p>
+                        </motion.div>
+                      )}
+                      {/* Generated track inline player */}
+                      {msg.generatedTrack && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 8, scale: 0.95 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          transition={{ type: "spring", stiffness: 200, damping: 20 }}
+                          className="mt-3 p-3 rounded-xl border border-[#FF6B00]/30 bg-[#1a1a2e]/80 space-y-2"
+                          style={{ boxShadow: "0 0 20px #FF6B0015" }}
+                        >
+                          <div className="flex items-center gap-2">
+                            <div className="w-9 h-9 rounded-lg flex items-center justify-center"
+                              style={{ background: "linear-gradient(135deg, #FF6B00, #FF9500)" }}
+                            >
+                              <Waves className="h-5 w-5 text-white" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-bold text-white truncate">{msg.generatedTrack.title}</p>
+                              <p className="text-[10px] text-[#FF9500]/70">GrouAI Studio • {msg.generatedTrack.genre} • {msg.generatedTrack.duration}s</p>
+                            </div>
+                          </div>
+                          <WaveformPlayer
+                            audioUrl={msg.generatedTrack.audioUrl}
+                            title={msg.generatedTrack.title}
+                            genre={msg.generatedTrack.genre}
+                            compact
+                          />
                         </motion.div>
                       )}
                     </div>

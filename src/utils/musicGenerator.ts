@@ -87,6 +87,10 @@ export interface GeneratedTrack {
   duration: number;
   audioBlob: Blob;
   audioUrl: string;
+  // Internal state for extending
+  _bpm?: number;
+  _rootMidi?: number;
+  _scaleType?: string;
 }
 
 function midiToFreq(midi: number): number {
@@ -104,7 +108,7 @@ function generateMelodyNotes(scale: number[], bars: number, stepsPerBar: number,
   for (let step = 0; step < totalSteps; ) {
     if (Math.random() < 0.3) {
       step++;
-      continue; // rest
+      continue;
     }
     const degree = Math.floor(Math.random() * scale.length);
     const octaveShift = Math.random() < 0.3 ? 12 : 0;
@@ -117,7 +121,6 @@ function generateMelodyNotes(scale: number[], bars: number, stepsPerBar: number,
   return notes;
 }
 
-// Synthesize a drum sound
 function synthDrum(ctx: OfflineAudioContext, type: 'kick' | 'snare' | 'hihat', time: number, volume: number) {
   if (type === 'kick') {
     const osc = ctx.createOscillator();
@@ -131,7 +134,6 @@ function synthDrum(ctx: OfflineAudioContext, type: 'kick' | 'snare' | 'hihat', t
     osc.start(time);
     osc.stop(time + 0.3);
   } else if (type === 'snare') {
-    // Noise burst
     const bufferSize = ctx.sampleRate * 0.15;
     const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
     const data = buffer.getChannelData(0);
@@ -147,7 +149,6 @@ function synthDrum(ctx: OfflineAudioContext, type: 'kick' | 'snare' | 'hihat', t
     noise.connect(filter).connect(gain).connect(ctx.destination);
     noise.start(time);
     noise.stop(time + 0.15);
-    // Body
     const osc = ctx.createOscillator();
     const oscGain = ctx.createGain();
     osc.type = 'triangle';
@@ -158,7 +159,6 @@ function synthDrum(ctx: OfflineAudioContext, type: 'kick' | 'snare' | 'hihat', t
     osc.start(time);
     osc.stop(time + 0.1);
   } else {
-    // Hihat
     const bufferSize = ctx.sampleRate * 0.05;
     const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
     const data = buffer.getChannelData(0);
@@ -177,7 +177,6 @@ function synthDrum(ctx: OfflineAudioContext, type: 'kick' | 'snare' | 'hihat', t
   }
 }
 
-// Synthesize a note with given waveform
 function synthNote(
   ctx: OfflineAudioContext,
   freq: number,
@@ -192,7 +191,6 @@ function synthNote(
   osc.type = waveform;
   osc.frequency.value = freq;
 
-  // Attack-decay envelope
   const attack = Math.min(0.05, duration * 0.1);
   const release = Math.min(0.1, duration * 0.3);
   gain.gain.setValueAtTime(0, time);
@@ -213,7 +211,6 @@ function synthNote(
   osc.stop(time + duration + 0.01);
 }
 
-// Style-specific waveform selection
 function getWaveforms(style: string): { melody: OscillatorType; chord: OscillatorType; bass: OscillatorType } {
   switch (style) {
     case 'Rock': case 'Metal': return { melody: 'sawtooth', chord: 'sawtooth', bass: 'square' };
@@ -224,37 +221,23 @@ function getWaveforms(style: string): { melody: OscillatorType; chord: Oscillato
   }
 }
 
-export async function generateMusic(config: GenerationConfig): Promise<GeneratedTrack> {
+function renderAudio(config: GenerationConfig, bpm: number, rootMidi: number, scaleType: string): Promise<{ buffer: AudioBuffer; bpm: number; rootMidi: number; scaleType: string }> {
   const style = config.style || 'Pop';
   const duration = config.durationSeconds || 30;
-
-  const [bpmMin, bpmMax] = BPM_RANGES[style] || [110, 130];
-  const bpm = bpmMin + Math.floor(Math.random() * (bpmMax - bpmMin));
-  const stepDuration = 60 / bpm / 4; // 16th note duration
-
+  const stepDuration = 60 / bpm / 4;
   const sampleRate = 44100;
   const totalSamples = sampleRate * duration;
   const ctx = new OfflineAudioContext(2, totalSamples, sampleRate);
 
-  // Pick scale & root
-  const scaleType = ['Jazz', 'Blues', 'Lo-fi'].includes(style) ? 'blues'
-    : ['Metal', 'Hip-Hop', 'Trap'].includes(style) ? 'minor'
-    : ['Ambient'].includes(style) ? 'pentatonic'
-    : Math.random() < 0.4 ? 'minor' : 'major';
-  const scale = SCALES[scaleType];
-
-  const roots = [48, 50, 52, 53, 55, 57]; // C3 to A3
-  const rootMidi = randomFromArray(roots);
+  const scale = SCALES[scaleType as keyof typeof SCALES] || SCALES.major;
   const waveforms = getWaveforms(style);
-
   const progression = PROGRESSIONS[style] || PROGRESSIONS.Pop;
   const drums = DRUM_PATTERNS[style] || DRUM_PATTERNS.Pop;
-
   const stepsPerBar = 16;
   const bars = Math.ceil(duration / (stepsPerBar * stepDuration));
   const totalSteps = bars * stepsPerBar;
 
-  // --- DRUMS ---
+  // DRUMS
   const drumVolume = style === 'Ambient' || style === 'Classical' ? 0.05 : 0.35;
   for (let step = 0; step < totalSteps; step++) {
     const time = step * stepDuration;
@@ -265,7 +248,7 @@ export async function generateMusic(config: GenerationConfig): Promise<Generated
     if (drums.hihat[patIdx]) synthDrum(ctx, 'hihat', time, drumVolume);
   }
 
-  // --- BASS ---
+  // BASS
   const bassVolume = 0.2;
   for (let bar = 0; bar < bars; bar++) {
     const chordIdx = bar % progression.length;
@@ -273,8 +256,6 @@ export async function generateMusic(config: GenerationConfig): Promise<Generated
     const bassNote = rootMidi - 12 + chord[0];
     const barTime = bar * stepsPerBar * stepDuration;
     if (barTime >= duration) break;
-
-    // Simple bass pattern
     for (let i = 0; i < 4; i++) {
       const t = barTime + i * 4 * stepDuration;
       if (t >= duration) break;
@@ -282,21 +263,20 @@ export async function generateMusic(config: GenerationConfig): Promise<Generated
     }
   }
 
-  // --- CHORDS ---
+  // CHORDS
   const chordVolume = 0.1;
   for (let bar = 0; bar < bars; bar++) {
     const chordIdx = bar % progression.length;
     const chord = progression[chordIdx];
     const barTime = bar * stepsPerBar * stepDuration;
     if (barTime >= duration) break;
-
     for (const interval of chord) {
       const freq = midiToFreq(rootMidi + interval);
       synthNote(ctx, freq, barTime, stepsPerBar * stepDuration * 0.9, chordVolume, waveforms.chord);
     }
   }
 
-  // --- MELODY ---
+  // MELODY
   if (!config.instrumental || Math.random() < 0.7) {
     const melodyNotes = generateMelodyNotes(scale, bars, stepsPerBar, rootMidi + 12);
     const melodyVolume = 0.15;
@@ -308,11 +288,24 @@ export async function generateMusic(config: GenerationConfig): Promise<Generated
     }
   }
 
-  // Render
-  const renderedBuffer = await ctx.startRendering();
+  return ctx.startRendering().then(buffer => ({ buffer, bpm, rootMidi, scaleType }));
+}
 
-  // Convert to WAV blob
-  const wavBlob = audioBufferToWav(renderedBuffer);
+export async function generateMusic(config: GenerationConfig): Promise<GeneratedTrack> {
+  const style = config.style || 'Pop';
+  const [bpmMin, bpmMax] = BPM_RANGES[style] || [110, 130];
+  const bpm = bpmMin + Math.floor(Math.random() * (bpmMax - bpmMin));
+
+  const scaleType = ['Jazz', 'Blues', 'Lo-fi'].includes(style) ? 'blues'
+    : ['Metal', 'Hip-Hop', 'Trap'].includes(style) ? 'minor'
+    : ['Ambient'].includes(style) ? 'pentatonic'
+    : Math.random() < 0.4 ? 'minor' : 'major';
+
+  const roots = [48, 50, 52, 53, 55, 57];
+  const rootMidi = randomFromArray(roots);
+
+  const { buffer } = await renderAudio(config, bpm, rootMidi, scaleType);
+  const wavBlob = audioBufferToWav(buffer);
   const audioUrl = URL.createObjectURL(wavBlob);
 
   const titleNames = [
@@ -326,7 +319,45 @@ export async function generateMusic(config: GenerationConfig): Promise<Generated
     id: crypto.randomUUID(),
     title: config.title || randomFromArray(titleNames),
     style,
-    duration,
+    duration: config.durationSeconds,
+    audioBlob: wavBlob,
+    audioUrl,
+    _bpm: bpm,
+    _rootMidi: rootMidi,
+    _scaleType: scaleType,
+  };
+}
+
+/**
+ * Extend an existing track by generating additional seconds and concatenating
+ */
+export async function extendTrack(existingTrack: GeneratedTrack, additionalSeconds: number): Promise<GeneratedTrack> {
+  const bpm = existingTrack._bpm || 120;
+  const rootMidi = existingTrack._rootMidi || 48;
+  const scaleType = existingTrack._scaleType || 'major';
+  const newDuration = existingTrack.duration + additionalSeconds;
+
+  // Re-render the full track at the new duration to keep coherent
+  const config: GenerationConfig = {
+    style: existingTrack.style,
+    durationSeconds: newDuration,
+    instrumental: false,
+    title: existingTrack.title,
+  };
+
+  const { buffer } = await renderAudio(config, bpm, rootMidi, scaleType);
+  const wavBlob = audioBufferToWav(buffer);
+
+  // Revoke old URL
+  if (existingTrack.audioUrl.startsWith('blob:')) {
+    URL.revokeObjectURL(existingTrack.audioUrl);
+  }
+
+  const audioUrl = URL.createObjectURL(wavBlob);
+
+  return {
+    ...existingTrack,
+    duration: newDuration,
     audioBlob: wavBlob,
     audioUrl,
   };
@@ -336,7 +367,7 @@ export async function generateMusic(config: GenerationConfig): Promise<Generated
 function audioBufferToWav(buffer: AudioBuffer): Blob {
   const numChannels = buffer.numberOfChannels;
   const sampleRate = buffer.sampleRate;
-  const format = 1; // PCM
+  const format = 1;
   const bitDepth = 16;
   const bytesPerSample = bitDepth / 8;
   const blockAlign = numChannels * bytesPerSample;
@@ -346,7 +377,6 @@ function audioBufferToWav(buffer: AudioBuffer): Blob {
   const arrayBuffer = new ArrayBuffer(headerSize + dataSize);
   const view = new DataView(arrayBuffer);
 
-  // WAV header
   writeString(view, 0, 'RIFF');
   view.setUint32(4, 36 + dataSize, true);
   writeString(view, 8, 'WAVE');
@@ -361,7 +391,6 @@ function audioBufferToWav(buffer: AudioBuffer): Blob {
   writeString(view, 36, 'data');
   view.setUint32(40, dataSize, true);
 
-  // Interleave channels
   const channels: Float32Array[] = [];
   for (let ch = 0; ch < numChannels; ch++) {
     channels.push(buffer.getChannelData(ch));
