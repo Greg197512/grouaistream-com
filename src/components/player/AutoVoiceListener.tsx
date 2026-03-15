@@ -537,6 +537,94 @@ export const AutoVoiceListener = () => {
     }
     if (tryNavigate(lower)) return;
 
+    // ==========================================
+    // FAVORITES PLAY COMMAND
+    // ==========================================
+    const wantsFavorites = /ulubionych|polubion|z\s+ulubionych|z\s+polubionych|ulubione|liked|favorite/i.test(lower);
+    if (wantsFavorites) {
+      const count = parsePolishNumber(lower) || 5;
+      toast.loading(`❤️ Pobieram ${count} z ulubionych...`, { id: "voice-cmd" });
+      try {
+        const { data: liked } = await supabase
+          .from("liked_songs")
+          .select("track_id")
+          .eq("user_id", user!.id)
+          .order("liked_at", { ascending: false })
+          .limit(count);
+        if (liked && liked.length > 0) {
+          const ids = liked.map(l => l.track_id);
+          const { data: tracks } = await supabase.from("tracks").select("*").in("id", ids);
+          if (tracks && tracks.length > 0) {
+            const ordered = ids.map(id => tracks.find(t => t.id === id)).filter(Boolean);
+            playPlaylist(ordered as any[], 0);
+            toast.success(`❤️ Odtwarzam ${ordered.length} ulubionych`, { id: "voice-cmd", duration: 4000 });
+            await safeSpeakAndResume(`Odtwarzam ${ordered.length} utworów z ulubionych`);
+            return;
+          }
+        }
+        toast.error("Brak ulubionych utworów", { id: "voice-cmd" });
+        await safeSpeakAndResume("Nie masz jeszcze żadnych ulubionych utworów. Polub kilka piosenek!");
+      } catch {
+        toast.error("Błąd pobierania ulubionych", { id: "voice-cmd" });
+      }
+      return;
+    }
+
+    // ==========================================
+    // RECENT UPLOADS PLAY COMMAND
+    // ==========================================
+    const wantsRecent = /ostatni[echm]?\s+(?:wgrany|wrzucon|dodany|piosen|utw)|najnowsz|z\s+serwera|ostatnie\s+\d|śwież|swiez|newest|recent|ostatnio\s+(?:wgran|dodan|wrzucon)/i.test(lower);
+    if (wantsRecent) {
+      const count = parsePolishNumber(lower) || 10;
+      toast.loading(`📥 Pobieram ${count} ostatnich wgranych...`, { id: "voice-cmd" });
+      try {
+        const { data: tracks } = await supabase
+          .from("tracks")
+          .select("*")
+          .not("audio_url", "is", null)
+          .order("created_at", { ascending: false })
+          .limit(count);
+        if (tracks && tracks.length > 0) {
+          playPlaylist(tracks, 0);
+          toast.success(`📥 Odtwarzam ${tracks.length} najnowszych`, { id: "voice-cmd", duration: 4000 });
+          await safeSpeakAndResume(`Odtwarzam ${tracks.length} ostatnio wgranych utworów. Pierwszy to ${tracks[0].title}`);
+          return;
+        }
+        toast.error("Brak utworów w bibliotece", { id: "voice-cmd" });
+        await safeSpeakAndResume("Biblioteka jest pusta. Wgraj jakieś utwory!");
+      } catch {
+        toast.error("Błąd pobierania", { id: "voice-cmd" });
+      }
+      return;
+    }
+
+    // ==========================================
+    // MOVE/TRANSFER TRACK COMMAND (delegate to AI)
+    // ==========================================
+    const wantsMove = /(?:przenieś|przenies|wytnij|dodaj|wrzuć|wrzuc|usuń|usun).*(?:do\s+(?:katalogu|playlisty|folderu)|z\s+(?:katalogu|playlisty|folderu))/i.test(lower);
+    if (wantsMove) {
+      toast.loading(`📁 Zarządzam playlistą...`, { id: "voice-cmd" });
+      try {
+        const { data: aiData } = await supabase.functions.invoke("ai-assistant", {
+          body: { 
+            message: command, 
+            history: [],
+            userContext: { userId: user?.id, userName: user?.email?.split("@")[0] || "Użytkownik" }
+          }
+        });
+        if (aiData?.response) {
+          toast.success(`📁 ${aiData.response.slice(0, 100)}`, { id: "voice-cmd", duration: 5000 });
+          await safeSpeakAndResume(aiData.response.slice(0, 200));
+        } else {
+          toast.info("Nie udało się wykonać operacji", { id: "voice-cmd" });
+          await safeSpeakAndResume("Nie udało mi się przenieść utworu. Spróbuj bardziej precyzyjnie.");
+        }
+      } catch {
+        toast.error("Błąd zarządzania playlistą", { id: "voice-cmd" });
+      }
+      return;
+    }
+
     // Search & play - expanded triggers including "start", "daj", "leć", number+genre patterns
     const PLAY_VERBS = ["włącz", "puść", "zagraj", "odtwórz", "graj", "play", "start", "startuj", "daj", "leć", "dawaj", "odpal", "wrzuć", "kręć"];
     const hasPlayVerb = PLAY_VERBS.some(v => lower.includes(v));

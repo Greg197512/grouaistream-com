@@ -526,12 +526,128 @@ serve(async (req) => {
     // Fetch ALL tracks from the database so the assistant knows the full library
     const { data: allTracks } = await supabase
       .from("tracks")
-      .select("id,title,artist,genre,mood,album,audio_url")
+      .select("id,title,artist,genre,mood,album,audio_url,created_at")
       .order("title")
       .limit(1000);
 
     // Only playable tracks (have audio_url)
     const playableTracks = (allTracks || []).filter((t: any) => t.audio_url);
+
+    // ==========================================
+    // FETCH USER-SPECIFIC DATA (favorites, recent, playlists)
+    // ==========================================
+    const userId = (userContext as any)?.userId;
+    let userFavorites: any[] = [];
+    let userPlaylistsData: any[] = [];
+
+    // Recent uploads (newest tracks in DB)
+    const recentUploads = [...(allTracks || [])]
+      .filter((t: any) => t.audio_url)
+      .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .slice(0, 20);
+
+    if (userId) {
+      // Fetch favorites (liked songs)
+      const { data: likedData } = await supabase
+        .from("liked_songs")
+        .select("track_id, liked_at")
+        .eq("user_id", userId)
+        .order("liked_at", { ascending: false })
+        .limit(50);
+
+      if (likedData && likedData.length > 0) {
+        const likedIds = likedData.map((l: any) => l.track_id);
+        userFavorites = playableTracks
+          .filter((t: any) => likedIds.includes(t.id))
+          .map((t: any) => {
+            const likeEntry = likedData.find((l: any) => l.track_id === t.id);
+            return { ...t, liked_at: likeEntry?.liked_at };
+          });
+      }
+
+      // Fetch user playlists with tracks
+      const { data: plData } = await supabase
+        .from("playlists")
+        .select("id, title")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(20);
+
+      if (plData) {
+        for (const pl of plData) {
+          const { data: ptData } = await supabase
+            .from("playlist_tracks")
+            .select("track_id")
+            .eq("playlist_id", pl.id)
+            .order("position")
+            .limit(50);
+          const trackIds = (ptData || []).map((pt: any) => pt.track_id);
+          const plTracks = playableTracks.filter((t: any) => trackIds.includes(t.id));
+          userPlaylistsData.push({ ...pl, tracks: plTracks });
+        }
+      }
+    }
+
+    // ==========================================
+    // PLAYLIST TRACK MOVE/TRANSFER DETECTION
+    // ==========================================
+    const movePatterns = [
+      /(?:przenieś|przenies|wytnij|przesuń|przesun|dodaj|wrzuć|wrzuc|move|transfer|cut).*(?:do\s+(?:katalogu|playlisty|folderu)|to\s+(?:playlist|folder|catalog))/i,
+      /(?:usuń|usun|wywal|skasuj|remove|delete).*(?:z\s+(?:katalogu|playlisty|folderu)|from\s+(?:playlist|folder))/i,
+    ];
+    const hasMoveIntent = !hasRadioIntent && !hasWishIntent && !hasDedicationIntent && !hasRadioAddIntent && !hasRadioRemoveIntent && !hasGenerateIntent && movePatterns.some(p => p.test(lowerMessage));
+    let moveResult: { action: string; trackName: string; playlistName: string; success: boolean } | null = null;
+
+    if (hasMoveIntent && userId) {
+      const trackMatch = message.match(/(?:utwór|utwor|piosenkę|piosenke|track|song|kawałek|kawalek)\s+["""„]?(.+?)[""""]?\s+(?:do|z|from|to)/i) ||
+        message.match(/(?:przenieś|przenies|wytnij|dodaj|wrzuć|wrzuc|usuń|usun)\s+["""„]?(.+?)[""""]?\s+(?:do|z|from|to)/i);
+      const playlistMatch = message.match(/(?:do|z|from|to)\s+(?:katalogu|playlisty|folderu|playlist|folder)\s+["""„]?(.+?)[""""]?(?:\s|$|[,!.])/i);
+
+      if (trackMatch && playlistMatch) {
+        const trackSearch = trackMatch[1].trim();
+        const playlistSearch = playlistMatch[1].trim();
+
+        const matchedTrack = (allTracks || []).find((t: any) =>
+          t.title?.toLowerCase().includes(trackSearch.toLowerCase()) ||
+          t.artist?.toLowerCase().includes(trackSearch.toLowerCase())
+        );
+
+        const { data: matchedPlaylist } = await supabase
+          .from("playlists")
+          .select("id, title")
+          .eq("user_id", userId)
+          .ilike("title", `%${playlistSearch}%`)
+          .limit(1)
+          .maybeSingle();
+
+        if (matchedTrack && matchedPlaylist) {
+          const isRemove = /usuń|usun|wywal|skasuj|wytnij|remove|delete/i.test(lowerMessage);
+
+          if (isRemove) {
+            await supabase.from("playlist_tracks").delete()
+              .eq("playlist_id", matchedPlaylist.id)
+              .eq("track_id", matchedTrack.id);
+            moveResult = { action: "removed", trackName: `${matchedTrack.title} — ${matchedTrack.artist}`, playlistName: matchedPlaylist.title, success: true };
+          } else {
+            const { data: existing } = await supabase.from("playlist_tracks")
+              .select("id").eq("playlist_id", matchedPlaylist.id).eq("track_id", matchedTrack.id).maybeSingle();
+
+            if (!existing) {
+              const { data: maxPos } = await supabase.from("playlist_tracks")
+                .select("position").eq("playlist_id", matchedPlaylist.id)
+                .order("position", { ascending: false }).limit(1);
+              const nextPos = (maxPos?.[0]?.position ?? -1) + 1;
+              await supabase.from("playlist_tracks").insert({
+                playlist_id: matchedPlaylist.id,
+                track_id: matchedTrack.id,
+                position: nextPos,
+              });
+            }
+            moveResult = { action: "added", trackName: `${matchedTrack.title} — ${matchedTrack.artist}`, playlistName: matchedPlaylist.title, success: true };
+          }
+        }
+      }
+    }
 
     // Detect if user wants to play multiple tracks
     const playIntentPatterns = [
@@ -623,32 +739,63 @@ serve(async (req) => {
         }
       }
 
+      // Detect favorites/recent requests even without explicit play verb
+      if (requestedCount === 0) {
+        const favRecentNumMatch = lowerMessage.match(/(?:ostatni[echm]?|najnowsz[eych]|śwież[eych]|swiez[eych]|ulubionych|polubion)\s+(\d+)/i) ||
+          lowerMessage.match(/(\d+)\s+(?:ostatni|najnowsz|ulubionych|polubion|wgrany|wrzucon)/i);
+        if (favRecentNumMatch) {
+          requestedCount = Math.min(parseInt(favRecentNumMatch[1]), 20);
+        }
+        // Polish word numbers + favorites/recent keywords
+        if (requestedCount === 0 && (/ulubionych|polubion|ostatni[echm]?\s+(?:wgrany|wrzucon|dodany|piosen|utw)|najnowsz|z\s+serwer|ostatnie\s+\d|śwież|swiez/i.test(lowerMessage))) {
+          const polishNums: Record<string, number> = {"jeden":1,"dwa":2,"trzy":3,"cztery":4,"pięć":5,"sześć":6,"siedem":7,"osiem":8,"dziewięć":9,"dziesięć":10,"piętnaście":15,"dwadzieścia":20};
+          for (const [word, num] of Object.entries(polishNums)) {
+            if (lowerMessage.includes(word)) { requestedCount = num; break; }
+          }
+          if (requestedCount === 0) requestedCount = 5;
+        }
+      }
+
       if (hasDJIntent && requestedCount === 0) requestedCount = 15;
       if (hasDJIntent && requestedCount < 10) requestedCount = Math.max(requestedCount, 10);
 
       if (requestedCount > 0 && playableTracks.length > 0) {
-        let matchingGenres: string[] = [];
-        for (const [keyword, genres] of Object.entries(contextKeywords)) {
-          if (lowerMessage.includes(keyword)) matchingGenres.push(...genres);
-        }
+        // Detect source: favorites, recent uploads, or general library
+        const wantsFavorites = /ulubionych|polubion|liked|favorite|ulubione|z\s+ulubionych|z\s+polubionych/i.test(lowerMessage);
+        const wantsRecent = /ostatni[echm]?\s+(?:wgrany|wrzucon|dodany|upload|piosen|utw)|najnowsz|ostatnio\s+(?:wgrany|dodany|wrzucon)|z\s+serwera|newest|recent|śwież|swiez|ostatnie\s+\d/i.test(lowerMessage);
 
         let candidates: any[];
-        if (matchingGenres.length > 0) {
-          candidates = playableTracks.filter((t: any) =>
-            matchingGenres.some(g =>
-              t.genre?.toLowerCase().includes(g.toLowerCase()) ||
-              t.mood?.toLowerCase().includes(g.toLowerCase())
-            )
-          );
-          if (candidates.length < requestedCount) {
-            const remaining = playableTracks.filter((t: any) => !candidates.includes(t));
-            candidates = [...candidates, ...[...remaining].sort(() => Math.random() - 0.5)];
-          }
+
+        if (wantsFavorites && userFavorites.length > 0) {
+          candidates = [...userFavorites];
+        } else if (wantsRecent && recentUploads.length > 0) {
+          candidates = [...recentUploads];
         } else {
-          candidates = [...playableTracks].sort(() => Math.random() - 0.5);
+          let matchingGenres: string[] = [];
+          for (const [keyword, genres] of Object.entries(contextKeywords)) {
+            if (lowerMessage.includes(keyword)) matchingGenres.push(...genres);
+          }
+
+          if (matchingGenres.length > 0) {
+            candidates = playableTracks.filter((t: any) =>
+              matchingGenres.some(g =>
+                t.genre?.toLowerCase().includes(g.toLowerCase()) ||
+                t.mood?.toLowerCase().includes(g.toLowerCase())
+              )
+            );
+            if (candidates.length < requestedCount) {
+              const remaining = playableTracks.filter((t: any) => !candidates.includes(t));
+              candidates = [...candidates, ...[...remaining].sort(() => Math.random() - 0.5)];
+            }
+          } else {
+            candidates = [...playableTracks].sort(() => Math.random() - 0.5);
+          }
         }
 
-        autoPlayTracks = [...candidates].sort(() => Math.random() - 0.5).slice(0, requestedCount);
+        // Don't shuffle favorites/recent - keep order (by date)
+        autoPlayTracks = (wantsFavorites || wantsRecent)
+          ? candidates.slice(0, requestedCount)
+          : [...candidates].sort(() => Math.random() - 0.5).slice(0, requestedCount);
       }
     }
 
@@ -673,6 +820,24 @@ serve(async (req) => {
     const trackCatalog = playableTracks.length > 0
       ? playableTracks.map((t: any) => `${t.title} — ${t.artist} [${t.genre || '?'}/${t.mood || '?'}]`).join("\n")
       : "Brak utworów w bazie";
+
+    // Build catalogs for favorites, recent, playlists
+    const favoritesCatalog = userFavorites.length > 0
+      ? userFavorites.map((t: any, i: number) => `${i+1}. ${t.title} — ${t.artist} [${t.genre || '?'}]`).join("\n")
+      : "Brak ulubionych";
+
+    const recentUploadsCatalog = recentUploads.length > 0
+      ? recentUploads.map((t: any, i: number) => `${i+1}. ${t.title} — ${t.artist} [${t.genre || '?'}] (${new Date(t.created_at).toLocaleDateString('pl')})`).join("\n")
+      : "Brak";
+
+    const playlistsCatalog = userPlaylistsData.length > 0
+      ? userPlaylistsData.map((pl: any) => `📁 **${pl.title}** (${pl.tracks.length} utw.): ${pl.tracks.slice(0, 5).map((t: any) => `${t.title}`).join(", ")}${pl.tracks.length > 5 ? "..." : ""}`).join("\n")
+      : "Brak playlist";
+
+    // Build move result info
+    const moveInfo = moveResult
+      ? `\n\n## 📁 UTWÓR ${moveResult.action === "added" ? "DODANY DO" : "USUNIĘTY Z"} PLAYLISTY!\nUtwór **"${moveResult.trackName}"** został ${moveResult.action === "added" ? "dodany do" : "usunięty z"} playlisty **"${moveResult.playlistName}"**.\nPOTWIERDŹ operację entuzjastycznie! Użyj emoji 📁 ✅ 🎵.`
+      : "";
 
     // Build context
     const ctx = userContext || {};
@@ -823,21 +988,40 @@ ${audioAttachments.length > 0 && !mixRequest ? `\n### ZAŁĄCZONE PLIKI AUDIO:\n
 - Aktualnie grany utwór: ${currentTrack ? `"${currentTrack.title}" — ${currentTrack.artist}` : "nic nie gra"}
 ${autoPlayInfo}
 
-## PEŁNA BIBLIOTEKA MUZYCZNA (ZNASZ WSZYSTKIE TE UTWORY):
+## PEŁNA BIBLIOTEKA MUZYCZNA (ZNASZ WSZYSTKIE TE UTWORY — ${playableTracks.length} szt.):
 ${trackCatalog}
+
+## ULUBIONE UTWORY UŻYTKOWNIKA (${userFavorites.length} szt.):
+${favoritesCatalog}
+
+## OSTATNIE 20 WGRANYCH UTWORÓW (NAJNOWSZE W SERWISIE):
+${recentUploadsCatalog}
+
+## PLAYLISTY/KATALOGI UŻYTKOWNIKA (${userPlaylistsData.length} szt.):
+${playlistsCatalog}
+${moveInfo}
+
+## SUPER WAŻNA FUNKCJA - ULUBIONE I OSTATNIE WGRANE:
+Gdy użytkownik mówi "daj 5 z ulubionych", "puść ostatnie polubione", "ostatnie wgrane 10", "najnowsze z serwera", "daj ostatnie 20 piosenek wrzuconych", "świeże utwory" — system AUTOMATYCZNIE wybiera odpowiednie utwory z ulubionych lub najnowszych wgranych i włącza na playerze. Znasz DOKŁADNE daty wgrania i polubienia. Ty musisz POTWIERDZIĆ co włączasz, wymienić utwory z numeracją.
+
+## SUPER WAŻNA FUNKCJA - ZARZĄDZANIE UTWORAMI MIĘDZY KATALOGAMI:
+Gdy użytkownik mówi "przenieś X do katalogu Y", "wytnij X z playlisty", "dodaj X do playlisty Y", "usuń X z katalogu" — system AUTOMATYCZNIE wykonuje operację. Znasz WSZYSTKIE playlisty użytkownika i ich zawartość. Potwierdź operację.
+
+## SUPER WAŻNA FUNKCJA - UCZENIE SIĘ PREFERENCJI:
+Analizujesz historię słuchania, ulubione gatunki (${topGenres.join(", ") || "nieznane"}) i nastroje (${topMoods.join(", ") || "nieznane"}) użytkownika. Na tej podstawie proponujesz coraz trafniejsze rekomendacje. Jeśli użytkownik często słucha jednego gatunku — domyślnie preferuj ten gatunek. Pamiętaj kontekst rozmowy i ucz się z każdej interakcji.
 
 ## WIEDZA O APLIKACJI GrooveAI Stream:
 Znasz DOKŁADNIE każdą funkcję aplikacji:
 - **Strona główna (/)**: Sekcje gatunkowe (EDM, Disco, House, Rock, Punk, Pop, Hip-Hop, R&B, Trance), Radio na żywo, AI DJ, Playlisty
 - **Wyszukiwarka (/search)**: Wyszukiwanie utworów po tytule, artyście, gatunku
-- **Biblioteka (/library)**: Osobista kolekcja użytkownika
-- **Polubione (/liked)**: Lista ulubionych utworów
+- **Biblioteka (/library)**: Osobista kolekcja użytkownika — 15 katalogów gatunkowych (Rock, Pop, Jazz, Blues, Classical, Electronic, Hip-Hop, R&B, Metal, Punk, Indie, Alternative, Reggae, Country, Rap)
+- **Polubione (/liked)**: Lista ulubionych utworów (${userFavorites.length} szt.)
 - **Tworzenie playlist (/create-playlist)**: Tworzenie playlist AI lub ręcznych
-- **Menedżer playlist (/playlist-manager)**: Zarządzanie, edycja, usuwanie playlist
+- **Menedżer playlist (/playlist-manager)**: Zarządzanie, edycja, usuwanie playlist — drag & drop między playlistami
 - **Radio (/radio-live)**: Radio na żywo z różnymi stacjami — MOŻESZ ZMIENIAĆ RAMÓWKĘ na życzenie użytkownika!
 - **Import YouTube (/import-youtube)**: Importowanie muzyki z YouTube
 - **Filmy (/movies)**: Sekcja filmowa
-- **Serwer mediów (/server)**: Zarządzanie plikami multimedialnymi
+- **Serwer mediów (/server)**: Zarządzanie plikami multimedialnymi — tutaj widać ostatnie wgrane utwory
 - **Historia nastroju (/mood-history)**: Analiza historii nastrojów z wykresami
 - **Ustawienia (/settings)**: Konfiguracja konta, język, motyw
 - **Panel admina (/admin)**: Zarządzanie dla administratorów
@@ -851,7 +1035,9 @@ Znasz DOKŁADNIE każdą funkcję aplikacji:
 - Pytania o vinyl/winyl → kieruj do sekcji **Hubs Vinyl** w aplikacji
 - Współpraca/biznes/kontakt → email: **grouarock@gmail.com**
 - Gdy użytkownik pyta o konkretny utwór z biblioteki — podaj szczegóły i zaproponuj odtworzenie
-- Gdy pyta "co masz?", "jakie utwory?", "co mogę posłuchać?" — pokaż przegląd gatunków i przykłady z biblioteki
+- Gdy pyta "co masz?", "jakie utwory?", "co mogę posłuchać?" — pokaż przegląd gatunków, ulubionych i ostatnich wgranych
+- Gdy pyta o playlisty/katalogi — wymień wszystkie playlisty użytkownika z zawartością
+- Gdy mówi "ostatnie z serwera" — pokaż ostatnie wgrane utwory z datami
 
 ## ZASADY:
 1. ZAWSZE odpowiadaj w języku **${userLanguageName}** — to jest BEZWZGLĘDNA zasada
@@ -861,7 +1047,9 @@ Znasz DOKŁADNIE każdą funkcję aplikacji:
 5. Przy pytaniach technicznych — wyjaśniaj krok po kroku
 6. Przy emocjach użytkownika — bądź empatyczny i wspierający
 7. Możesz prowadzić naturalną konwersację na DOWOLNY temat
-8. ZAWSZE znaj zawartość biblioteki muzycznej — jeśli użytkownik pyta o utwór, sprawdź czy jest w katalogu powyżej`;
+8. ZAWSZE znaj zawartość biblioteki muzycznej — jeśli użytkownik pyta o utwór, sprawdź czy jest w katalogu powyżej
+9. Znasz DOKŁADNIE ulubione utwory, ostatnie wgrane, playlisty i katalogi — odpowiadaj precyzyjnie z datami
+10. UCZ SIĘ z każdej rozmowy — zapamiętuj preferencje i dopasowuj rekomendacje`;
 
     const userPrompt = message;
 
@@ -943,6 +1131,13 @@ Znasz DOKŁADNIE każdą funkcję aplikacji:
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({
             type: "audio_mix",
             data: mixRequest,
+          })}\n\n`));
+        }
+        // Send playlist move event
+        if (moveResult) {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+            type: "playlist_track_moved",
+            data: moveResult,
           })}\n\n`));
         }
         // Send auto-play tracks as first event (multiple tracks for playlist)
