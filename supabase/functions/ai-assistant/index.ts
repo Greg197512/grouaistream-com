@@ -739,6 +739,23 @@ serve(async (req) => {
         }
       }
 
+      // Detect favorites/recent requests even without explicit play verb
+      if (requestedCount === 0) {
+        const favRecentNumMatch = lowerMessage.match(/(?:ostatni[echm]?|najnowsz[eych]|śwież[eych]|swiez[eych]|ulubionych|polubion)\s+(\d+)/i) ||
+          lowerMessage.match(/(\d+)\s+(?:ostatni|najnowsz|ulubionych|polubion|wgrany|wrzucon)/i);
+        if (favRecentNumMatch) {
+          requestedCount = Math.min(parseInt(favRecentNumMatch[1]), 20);
+        }
+        // Polish word numbers + favorites/recent keywords
+        if (requestedCount === 0 && (/ulubionych|polubion|ostatni[echm]?\s+(?:wgrany|wrzucon|dodany|piosen|utw)|najnowsz|z\s+serwer|ostatnie\s+\d|śwież|swiez/i.test(lowerMessage))) {
+          const polishNums: Record<string, number> = {"jeden":1,"dwa":2,"trzy":3,"cztery":4,"pięć":5,"sześć":6,"siedem":7,"osiem":8,"dziewięć":9,"dziesięć":10,"piętnaście":15,"dwadzieścia":20};
+          for (const [word, num] of Object.entries(polishNums)) {
+            if (lowerMessage.includes(word)) { requestedCount = num; break; }
+          }
+          if (requestedCount === 0) requestedCount = 5;
+        }
+      }
+
       if (hasDJIntent && requestedCount === 0) requestedCount = 15;
       if (hasDJIntent && requestedCount < 10) requestedCount = Math.max(requestedCount, 10);
 
