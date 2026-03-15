@@ -153,7 +153,15 @@ const TrackOptionsMenuComponent = (
 
   const handleShareWhatsApp = () => {
     const text = `🎵 Posłuchaj "${trackTitle}" by ${trackArtist} na GrooveAI Stream! ${trackUrl || window.location.origin}`;
-    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
+    const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+    // Use link click instead of window.open to avoid popup blockers
+    const a = document.createElement("a");
+    a.href = whatsappUrl;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   };
 
   const [downloading, setDownloading] = useState(false);
