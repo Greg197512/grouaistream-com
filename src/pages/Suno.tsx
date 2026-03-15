@@ -85,7 +85,9 @@ const Suno = () => {
       });
 
       const genreName = genre2 ? `${genre} × ${genre2}` : genre;
-      const lyrics = generateLyrics(genreName, track.title, 30, instrumental);
+      const lyrics = customLyrics.trim()
+        ? parseLyricsFromText(customLyrics, 30)
+        : generateLyrics(genreName, track.title, 30, instrumental);
 
       let generationId: string | undefined;
       if (user) {
