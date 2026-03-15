@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { Play, Pause, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TrackOptionsMenu, LikeButton } from "@/components/menus/TrackOptionsMenu";
+import { HQCover } from "@/components/ui/HQCover";
 
 interface TrackRowProps {
   id: string;
@@ -85,7 +86,7 @@ const TrackRowComponent = forwardRef<HTMLDivElement, TrackRowProps>(({
       <div className="flex items-center gap-3 min-w-0">
         {imageUrl && (
           <div className="h-10 w-10 rounded overflow-hidden flex-shrink-0">
-            <img src={imageUrl} alt={title} className="h-full w-full object-cover" />
+            <HQCover src={imageUrl} alt={title} className="h-full w-full" />
           </div>
         )}
         <div className="min-w-0">

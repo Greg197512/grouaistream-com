@@ -9,6 +9,7 @@ import { useUnlock } from "@/contexts/UnlockContext";
 import { formatDistanceToNow } from "date-fns";
 import { TrackOptionsMenu, LikeButton } from "@/components/menus/TrackOptionsMenu";
 import { cn } from "@/lib/utils";
+import { HQCover } from "@/components/ui/HQCover";
 
 interface RecentTrack {
   id: string;
@@ -203,7 +204,7 @@ export const RecentlyPlayed = () => {
                         onClick={() => handlePlayTrack(track, index)}
                       >
                         {track.cover_url ? (
-                          <img src={track.cover_url} alt={track.title} className="h-full w-full object-cover" draggable={false} />
+                          <HQCover src={track.cover_url} alt={track.title} className="h-full w-full" />
                         ) : (
                           <div className="absolute inset-0 groove-gradient-bg opacity-70" />
                         )}

@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { HQCover } from "@/components/ui/HQCover";
 
 interface PlaylistCardProps {
   id?: string;
@@ -41,10 +42,10 @@ export const PlaylistCard = ({
       {/* Image */}
       <div className="relative mb-4 aspect-square overflow-hidden rounded-md shadow-lg">
         {imageUrl ? (
-          <img 
+          <HQCover 
             src={imageUrl} 
             alt={title}
-            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+            className="h-full w-full transition-transform duration-500 group-hover:scale-105"
           />
         ) : (
           <div className={cn(
