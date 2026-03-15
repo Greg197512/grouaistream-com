@@ -18,6 +18,8 @@ interface DragDropContextType {
   showDropZones: boolean;
   setShowDropZones: (show: boolean) => void;
   refreshPlaylists: () => Promise<void>;
+  onMixerDrop: ((slot: "A" | "B", track: Track) => void) | null;
+  setOnMixerDrop: (cb: ((slot: "A" | "B", track: Track) => void) | null) => void;
 }
 
 const DragDropContext = createContext<DragDropContextType | undefined>(undefined);
