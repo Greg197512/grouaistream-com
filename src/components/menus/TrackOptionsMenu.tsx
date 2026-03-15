@@ -318,6 +318,10 @@ const TrackOptionsMenuComponent = (
                 <Twitter className="mr-2 h-4 w-4" />
                 Share on X
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleShareWhatsApp} className="cursor-pointer">
+                <MessageCircle className="mr-2 h-4 w-4" />
+                WhatsApp
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={handleCopyLink} className="cursor-pointer">
                 <Link className="mr-2 h-4 w-4" />
                 Copy Link
