@@ -12,6 +12,7 @@ import { useLocation } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import aiAssistantAvatar from "@/assets/ai-assistant-avatar.jpg";
 import { generateMusic, type GeneratedTrack } from "@/utils/musicGenerator";
+import { mixAudioFiles, type MixStyle } from "@/utils/audioMixer";
 import { WaveformPlayer } from "@/components/studio/WaveformPlayer";
 import { toast } from "sonner";
 
@@ -363,7 +364,12 @@ export const AIAssistant = () => {
           "Content-Type": "application/json",
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
-        body: JSON.stringify({ message: userMessage, history: messages, userContext }),
+        body: JSON.stringify({ 
+          message: userMessage, 
+          history: messages, 
+          userContext,
+          attachments: uploadedAttachments.length > 0 ? uploadedAttachments.map(a => ({ type: a.type, url: a.url, name: a.name })) : undefined,
+        }),
       });
 
       if (!resp.ok) {
@@ -450,6 +456,30 @@ export const AIAssistant = () => {
                 toast.success(`🎶 Wygenerowano "${track.title}"!`);
               } catch (err) {
                 console.error("Generation error in chat:", err);
+              }
+              continue;
+            }
+
+            // Handle audio mix event
+            if (parsed.type === "audio_mix") {
+              const mixData = parsed.data;
+              try {
+                toast.info("🎧 Miksuję pliki audio...");
+                const mixResult = await mixAudioFiles(
+                  mixData.urls[0],
+                  mixData.urls[1],
+                  { style: mixData.style as MixStyle }
+                );
+                pendingGeneratedTrackRef.current = {
+                  audioUrl: mixResult.audioUrl,
+                  title: mixResult.title,
+                  genre: `Mix (${mixData.style})`,
+                  duration: mixResult.duration,
+                };
+                toast.success(`🎧 Mix gotowy! ${mixResult.duration}s`);
+              } catch (err) {
+                console.error("Mix error in chat:", err);
+                toast.error("Błąd miksowania plików");
               }
               continue;
             }

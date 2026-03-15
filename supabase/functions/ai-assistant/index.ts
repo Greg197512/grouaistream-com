@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { message, history, userContext } = await req.json();
+    const { message, history, userContext, attachments } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
@@ -485,6 +485,27 @@ serve(async (req) => {
     }
 
     // ==========================================
+    // AUDIO MIXING DETECTION
+    // ==========================================
+    const audioAttachments = (attachments || []).filter((a: any) => a.type === "audio");
+    const hasMixIntent = /miksuj|zmixuj|zmiksuj|mixuj|połącz|polacz|blend|merge|mashup|mix\s+(?:te|to|these)|zrób\s+mix|zrob\s+mix|zmieszaj/i.test(lowerMessage);
+    let mixRequest: { urls: string[]; style: string } | null = null;
+
+    if (hasMixIntent && audioAttachments.length >= 2) {
+      const mixStyleMatch = lowerMessage.match(/crossfade|overlay|mashup|nakładk|nakladk/i);
+      let style = "crossfade";
+      if (mixStyleMatch) {
+        const s = mixStyleMatch[0].toLowerCase();
+        if (s === "overlay" || s.startsWith("nakładk") || s.startsWith("nakladk")) style = "overlay";
+        if (s === "mashup") style = "mashup";
+      }
+      mixRequest = {
+        urls: audioAttachments.slice(0, 2).map((a: any) => a.url),
+        style,
+      };
+    }
+
+    // ==========================================
     // MUSIC PLAY DETECTION (existing logic)
     // ==========================================
 
@@ -780,6 +801,11 @@ Ty musisz POTWIERDZIĆ generowanie, SZCZEGÓŁOWO opisać co stworzyłeś (BPM, 
 Jeśli użytkownik poda tekst/lyrics — potwierdź że wkomponowałeś klimat tekstu w muzykę (emocje tekstu wpływają na mood i energię).
 ${generateResult ? `\n### AKTYWNA GENERACJA:\nWłaśnie uruchamiam generator GrouAI Studio:\n- **Styl:** ${generateResult.style}${generateResult.style2 ? ` × ${generateResult.style2}` : ""}\n- **Nastrój:** ${generateResult.mood || "auto"}\n- **Energia:** ${generateResult.energy || "medium"}\n- **BPM:** ${generateResult.tempoOverride || "auto"}\n${generateResult.instrumental ? "- **Instrumental** (bez wokalu)" : ""}\n${generateResult.title ? `- **Tytuł:** "${generateResult.title}"` : ""}\n- **Prompt:** "${generateResult.prompt}"\n\nPotwierdź to entuzjastycznie jak profesjonalny producent! Opisz szczegóły techniczne produkcji.` : ""}
 
+## SUPER WAŻNA FUNKCJA - MIKSOWANIE AUDIO:
+Gdy użytkownik załącza 2 pliki audio i pisze "miksuj", "zmixuj", "połącz", "mashup" itp. — system AUTOMATYCZNIE miksuje oba pliki w jeden za pomocą Web Audio API. Dostępne style: crossfade (domyślny), overlay, mashup.
+${mixRequest ? `\n### AKTYWNE MIKSOWANIE:\nWłaśnie miksuję 2 pliki audio użytkownika w stylu **${mixRequest.style}**!\n- Plik 1: ${audioAttachments[0]?.name || "Track A"}\n- Plik 2: ${audioAttachments[1]?.name || "Track B"}\n\nPotwierdź miksowanie entuzjastycznie! Opisz styl mixu (${mixRequest.style}). Użyj emoji 🎧 🔀 🎶 ✨.` : ""}
+${audioAttachments.length > 0 && !mixRequest ? `\n### ZAŁĄCZONE PLIKI AUDIO:\nUżytkownik załączył ${audioAttachments.length} plik(ów) audio: ${audioAttachments.map((a: any) => a.name).join(", ")}. Możesz zaproponować ich zmiksowanie, jeśli jest 2+, lub skomentować.` : ""}
+
 ## FORMATOWANIE ODPOWIEDZI:
 - Używaj **pogrubień** dla ważnych terminów
 - Używaj list punktowanych i numerowanych
@@ -910,6 +936,13 @@ Znasz DOKŁADNIE każdą funkcję aplikacji:
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({
             type: "music_generate",
             data: generateResult,
+          })}\n\n`));
+        }
+        // Send audio mix event
+        if (mixRequest) {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+            type: "audio_mix",
+            data: mixRequest,
           })}\n\n`));
         }
         // Send auto-play tracks as first event (multiple tracks for playlist)
