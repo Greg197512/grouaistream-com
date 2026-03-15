@@ -191,7 +191,7 @@ const Suno = () => {
           <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}>
             <Button
               onClick={generate}
-              disabled={generating || !user}
+              disabled={generating}
               className="w-full h-14 text-lg font-bold text-white border-0 gap-3"
               style={{
                 background: generating ? "#333" : "linear-gradient(135deg, #FF6B00, #FF9500)",
