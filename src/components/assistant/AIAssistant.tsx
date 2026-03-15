@@ -85,8 +85,10 @@ export const AIAssistant = () => {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [userName, setUserName] = useState("Użytkownik");
+  const [attachments, setAttachments] = useState<ChatAttachment[]>([]);
   const [listeningStats, setListeningStats] = useState<{ topGenres: string[]; topMoods: string[]; recentTracks: number } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { playTrack, playPlaylist, currentTrack } = usePlayer();
   const { startDJSession, isDJActive, parseDJCommand } = useDJMode();
   const { user } = useAuth();
