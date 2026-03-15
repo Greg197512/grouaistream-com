@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, Music, Guitar, Waves } from "lucide-react";
+import { Sparkles, Music, Guitar, Waves, Plus } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,7 +14,7 @@ import { WaveformPlayer } from "@/components/studio/WaveformPlayer";
 import { NeonWavesLoader } from "@/components/studio/NeonWavesLoader";
 import { GenerationHistory } from "@/components/studio/GenerationHistory";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { generateMusic, type GeneratedTrack } from "@/utils/musicGenerator";
+import { generateMusic, extendTrack, type GeneratedTrack } from "@/utils/musicGenerator";
 
 const GENRES = [
   "Pop", "Rock", "Electronic", "Hip-Hop", "Jazz", "Classical",
@@ -28,7 +28,8 @@ const Suno = () => {
   const [title, setTitle] = useState("");
   const [instrumental, setInstrumental] = useState(false);
   const [generating, setGenerating] = useState(false);
-  const [result, setResult] = useState<{ audioUrl: string; title: string; genre: string; generationId?: string } | null>(null);
+  const [extending, setExtending] = useState(false);
+  const [result, setResult] = useState<{ audioUrl: string; title: string; genre: string; generationId?: string; durationSeconds: number; lastTrack?: GeneratedTrack } | null>(null);
   const [errorModal, setErrorModal] = useState<string | null>(null);
 
   const generate = async () => {
@@ -43,7 +44,6 @@ const Suno = () => {
         title: title.trim() || undefined,
       });
 
-      // Save to generations table if logged in
       let generationId: string | undefined;
       if (user) {
         const { data: gen } = await supabase.from("generations").insert({
@@ -63,6 +63,8 @@ const Suno = () => {
         title: track.title,
         genre,
         generationId,
+        durationSeconds: 30,
+        lastTrack: track,
       });
       toast.success(`🎶 Wygenerowano "${track.title}"!`);
     } catch (err: any) {
@@ -73,6 +75,34 @@ const Suno = () => {
     }
   };
 
+  const handleExtend = async () => {
+    if (!result?.lastTrack) return;
+    setExtending(true);
+    try {
+      const extended = await extendTrack(result.lastTrack, 30);
+      const newDuration = result.durationSeconds + 30;
+
+      // Update generation record
+      if (user && result.generationId) {
+        await supabase.from("generations").update({
+          audio_url: extended.audioUrl,
+        }).eq("id", result.generationId);
+      }
+
+      setResult(prev => prev ? {
+        ...prev,
+        audioUrl: extended.audioUrl,
+        durationSeconds: newDuration,
+        lastTrack: extended,
+      } : null);
+      toast.success(`🎶 Przedłużono do ${newDuration}s!`);
+    } catch (err: any) {
+      toast.error("Błąd przedłużania: " + err.message);
+    } finally {
+      setExtending(false);
+    }
+  };
+
   const saveToLibrary = async () => {
     if (!result) return;
     try {
@@ -80,7 +110,7 @@ const Suno = () => {
         title: result.title,
         artist: "GrouAI Studio",
         album: "AI Generated",
-        duration: 30,
+        duration: result.durationSeconds,
         audio_url: result.audioUrl,
         genre: result.genre,
         mood: "generated",
@@ -96,7 +126,7 @@ const Suno = () => {
     <MainLayout>
       <div className="min-h-screen" style={{ background: "#0F0F1A" }}>
         <div className="max-w-2xl mx-auto px-4 py-8 space-y-8">
-          {/* Header / Logo */}
+          {/* Header */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -109,7 +139,6 @@ const Suno = () => {
               }}
             >
               <Waves className="h-12 w-12 text-white" />
-              {/* Animated glow ring */}
               <motion.div
                 className="absolute inset-0 rounded-2xl"
                 style={{ border: "2px solid #FF6B0080" }}
@@ -158,20 +187,13 @@ const Suno = () => {
             />
           </div>
 
-          {/* Duration (locked) */}
+          {/* Duration */}
           <div className="space-y-2">
             <Label className="text-sm text-gray-300">Długość: 30s</Label>
             <div className="h-2 rounded-full bg-[#1a1a2e] relative overflow-hidden">
-              <div
-                className="h-full rounded-full"
-                style={{
-                  width: "100%",
-                  background: "linear-gradient(90deg, #FF6B00, #FF9500)",
-                  boxShadow: "0 0 8px #FF6B0060",
-                }}
-              />
+              <div className="h-full rounded-full" style={{ width: "100%", background: "linear-gradient(90deg, #FF6B00, #FF9500)", boxShadow: "0 0 8px #FF6B0060" }} />
             </div>
-            <p className="text-xs text-gray-500">Stała długość 30 sekund</p>
+            <p className="text-xs text-gray-500">Stała długość 30 sekund (możesz przedłużyć po wygenerowaniu)</p>
           </div>
 
           {/* Instrumental Toggle */}
@@ -180,11 +202,7 @@ const Suno = () => {
               <Guitar className="h-5 w-5 text-[#FF9500]" />
               <Label className="text-sm text-gray-200">Tylko instrumentalny</Label>
             </div>
-            <Switch
-              checked={instrumental}
-              onCheckedChange={setInstrumental}
-              className="data-[state=checked]:bg-[#FF6B00]"
-            />
+            <Switch checked={instrumental} onCheckedChange={setInstrumental} className="data-[state=checked]:bg-[#FF6B00]" />
           </div>
 
           {/* Generate Button */}
@@ -219,32 +237,83 @@ const Suno = () => {
             )}
           </AnimatePresence>
 
-          {/* Result */}
+          {/* Result with enhanced animation */}
           <AnimatePresence>
             {result && (
               <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="p-5 rounded-2xl border border-[#FF6B00]/30 bg-[#1a1a2e]/80 backdrop-blur-sm space-y-4"
-                style={{ boxShadow: "0 0 30px #FF6B0015" }}
+                initial={{ opacity: 0, y: 40, scale: 0.92 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -20, scale: 0.95 }}
+                transition={{ type: "spring", stiffness: 200, damping: 20 }}
+                className="relative p-5 rounded-2xl border border-[#FF6B00]/30 bg-[#1a1a2e]/80 backdrop-blur-sm space-y-4 overflow-hidden"
+                style={{ boxShadow: "0 0 40px #FF6B0020, 0 8px 32px rgba(0,0,0,0.4)" }}
               >
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-xl flex items-center justify-center"
-                    style={{ background: "linear-gradient(135deg, #FF6B00, #FF9500)" }}
-                  >
-                    <Music className="h-6 w-6 text-white" />
-                  </div>
-                  <div>
-                    <p className="font-bold text-white">{result.title}</p>
-                    <p className="text-xs text-[#FF9500]/70">GrouAI Studio • {result.genre} • 30s</p>
-                  </div>
-                </div>
-                <WaveformPlayer
-                  audioUrl={result.audioUrl}
-                  title={result.title}
-                  genre={result.genre}
-                  onSaveToLibrary={saveToLibrary}
+                {/* Animated glow behind card */}
+                <motion.div
+                  className="absolute -top-20 -right-20 w-40 h-40 rounded-full"
+                  style={{ background: "radial-gradient(circle, #FF6B0030, transparent 70%)" }}
+                  animate={{ scale: [1, 1.3, 1], opacity: [0.5, 0.8, 0.5] }}
+                  transition={{ duration: 3, repeat: Infinity }}
                 />
+
+                <motion.div
+                  className="flex items-center gap-3 relative z-10"
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.15 }}
+                >
+                  <motion.div
+                    className="w-14 h-14 rounded-xl flex items-center justify-center"
+                    style={{ background: "linear-gradient(135deg, #FF6B00, #FF9500)" }}
+                    animate={{ rotate: [0, 5, -5, 0] }}
+                    transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
+                  >
+                    <Music className="h-7 w-7 text-white" />
+                  </motion.div>
+                  <div className="flex-1">
+                    <motion.p
+                      className="font-bold text-white text-lg"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.25 }}
+                    >
+                      {result.title}
+                    </motion.p>
+                    <p className="text-xs text-[#FF9500]/70">GrouAI Studio • {result.genre} • {result.durationSeconds}s</p>
+                  </div>
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 }}
+                  className="relative z-10"
+                >
+                  <WaveformPlayer
+                    audioUrl={result.audioUrl}
+                    title={result.title}
+                    genre={result.genre}
+                    onSaveToLibrary={saveToLibrary}
+                  />
+                </motion.div>
+
+                {/* Extend button */}
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.45 }}
+                  className="relative z-10"
+                >
+                  <Button
+                    onClick={handleExtend}
+                    disabled={extending}
+                    variant="outline"
+                    className="w-full gap-2 border-[#FF6B00]/30 text-[#FF9500] hover:bg-[#FF6B00]/10 hover:text-white"
+                  >
+                    <Plus className="h-4 w-4" />
+                    {extending ? "Przedłużam..." : `Przedłuż o 30s (obecny: ${result.durationSeconds}s)`}
+                  </Button>
+                </motion.div>
               </motion.div>
             )}
           </AnimatePresence>
