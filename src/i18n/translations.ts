@@ -498,6 +498,7 @@ const pl: TranslationKeys = {
   "nav.radioLive": "GrouaRadio Live",
   "nav.importYoutube": "Import YouTube",
   "nav.sunoAI": "GrouAI Studio",
+  "nav.localPlayer": "Lokalny Player",
   "nav.aiDj": "AI DJ",
   "nav.moodDetection": "Detekcja Nastroju",
   "nav.moodHistory": "Historia Nastrojów",
