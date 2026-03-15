@@ -75,7 +75,7 @@ export const RecentlyPlayed = () => {
                 mood: item.tracks!.mood,
                 played_at: item.played_at,
               }));
-            setRecentTracks(tracks);
+            setRecentTracks(filterTracks(tracks));
           }
         } else {
           const { data, error } = await supabase
