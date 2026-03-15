@@ -43,6 +43,7 @@ const MIX_STYLES: { value: MixStyle; label: string; desc: string }[] = [
 
 export const TrackMixer = () => {
   const { user, session } = useAuth();
+  const { isDragging, setOnMixerDrop } = useDragDrop();
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<TrackItem[]>([]);
   const [searching, setSearching] = useState(false);
