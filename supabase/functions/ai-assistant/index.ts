@@ -801,6 +801,11 @@ Ty musisz POTWIERDZIĆ generowanie, SZCZEGÓŁOWO opisać co stworzyłeś (BPM, 
 Jeśli użytkownik poda tekst/lyrics — potwierdź że wkomponowałeś klimat tekstu w muzykę (emocje tekstu wpływają na mood i energię).
 ${generateResult ? `\n### AKTYWNA GENERACJA:\nWłaśnie uruchamiam generator GrouAI Studio:\n- **Styl:** ${generateResult.style}${generateResult.style2 ? ` × ${generateResult.style2}` : ""}\n- **Nastrój:** ${generateResult.mood || "auto"}\n- **Energia:** ${generateResult.energy || "medium"}\n- **BPM:** ${generateResult.tempoOverride || "auto"}\n${generateResult.instrumental ? "- **Instrumental** (bez wokalu)" : ""}\n${generateResult.title ? `- **Tytuł:** "${generateResult.title}"` : ""}\n- **Prompt:** "${generateResult.prompt}"\n\nPotwierdź to entuzjastycznie jak profesjonalny producent! Opisz szczegóły techniczne produkcji.` : ""}
 
+## SUPER WAŻNA FUNKCJA - MIKSOWANIE AUDIO:
+Gdy użytkownik załącza 2 pliki audio i pisze "miksuj", "zmixuj", "połącz", "mashup" itp. — system AUTOMATYCZNIE miksuje oba pliki w jeden za pomocą Web Audio API. Dostępne style: crossfade (domyślny), overlay, mashup.
+${mixRequest ? `\n### AKTYWNE MIKSOWANIE:\nWłaśnie miksuję 2 pliki audio użytkownika w stylu **${mixRequest.style}**!\n- Plik 1: ${audioAttachments[0]?.name || "Track A"}\n- Plik 2: ${audioAttachments[1]?.name || "Track B"}\n\nPotwierdź miksowanie entuzjastycznie! Opisz styl mixu (${mixRequest.style}). Użyj emoji 🎧 🔀 🎶 ✨.` : ""}
+${audioAttachments.length > 0 && !mixRequest ? `\n### ZAŁĄCZONE PLIKI AUDIO:\nUżytkownik załączył ${audioAttachments.length} plik(ów) audio: ${audioAttachments.map((a: any) => a.name).join(", ")}. Możesz zaproponować ich zmiksowanie, jeśli jest 2+, lub skomentować.` : ""}
+
 ## FORMATOWANIE ODPOWIEDZI:
 - Używaj **pogrubień** dla ważnych terminów
 - Używaj list punktowanych i numerowanych
