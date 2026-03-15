@@ -16,7 +16,7 @@ import { toast } from "sonner";
 import { WaveformPlayer } from "@/components/studio/WaveformPlayer";
 import { NeonWavesLoader } from "@/components/studio/NeonWavesLoader";
 import { GenerationHistory } from "@/components/studio/GenerationHistory";
-import { LyricsDisplay, generateLyrics } from "@/components/studio/LyricsDisplay";
+import { LyricsDisplay, generateLyrics, parseLyricsFromText } from "@/components/studio/LyricsDisplay";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { generateMusic, extendTrack, type GeneratedTrack } from "@/utils/musicGenerator";
 
