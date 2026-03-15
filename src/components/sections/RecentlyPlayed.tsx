@@ -9,6 +9,7 @@ import { useUnlock } from "@/contexts/UnlockContext";
 import { formatDistanceToNow } from "date-fns";
 import { TrackOptionsMenu, LikeButton } from "@/components/menus/TrackOptionsMenu";
 import { cn } from "@/lib/utils";
+import { HQCover } from "@/components/ui/HQCover";
 
 interface RecentTrack {
   id: string;
