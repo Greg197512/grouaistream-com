@@ -11,7 +11,6 @@ import {
   Heart,
   Maximize2,
   ListMusic,
-  Mic2,
   MonitorSpeaker,
   Sparkles,
   Youtube,
@@ -33,7 +32,6 @@ import { useState, useEffect, useRef } from "react";
 import { YouTubePlayer, YouTubePlayerRef } from "@/components/player/YouTubePlayer";
 import { TrackOptionsMenu } from "@/components/menus/TrackOptionsMenu";
 import { QueueSidebar } from "@/components/player/QueueSidebar";
-import { VoiceCommandHandler } from "@/components/player/VoiceCommandHandler";
 import { FullscreenPlayer } from "@/components/player/FullscreenPlayer";
 import { QuickMoodDetector } from "@/components/mood/QuickMoodDetector";
 
