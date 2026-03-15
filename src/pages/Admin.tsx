@@ -117,8 +117,10 @@ export default function Admin() {
   // Email state
   const [emailType, setEmailType] = useState<"invitation" | "challenge" | "newsletter" | "weekly_digest">("invitation");
   const [recipientName, setRecipientName] = useState("");
+  const [recipientEmail, setRecipientEmail] = useState("");
   const [customMessage, setCustomMessage] = useState("");
   const [generatingEmail, setGeneratingEmail] = useState(false);
+  const [sendingEmail, setSendingEmail] = useState(false);
   const [generatedEmail, setGeneratedEmail] = useState<GeneratedEmail | null>(null);
   const [emailHistory, setEmailHistory] = useState<GeneratedEmail[]>([]);
   
@@ -455,6 +457,38 @@ export default function Admin() {
       toast.error("Błąd generowania e-maila");
     } finally {
       setGeneratingEmail(false);
+    }
+  };
+
+  const sendEmailViaResend = async () => {
+    if (!generatedEmail) return;
+    if (!recipientEmail.trim()) {
+      toast.error("Podaj adres e-mail odbiorcy!");
+      return;
+    }
+
+    setSendingEmail(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('send-email', {
+        body: {
+          to: recipientEmail.trim(),
+          subject: generatedEmail.subject,
+          html: generatedEmail.body,
+        }
+      });
+
+      if (error) throw error;
+
+      if (data?.success) {
+        toast.success(`E-mail wysłany do ${recipientEmail}! ✉️`);
+      } else {
+        throw new Error(data?.error || "Wysyłanie nie powiodło się");
+      }
+    } catch (error) {
+      console.error("Error sending email:", error);
+      toast.error(error instanceof Error ? error.message : "Błąd wysyłania e-maila");
+    } finally {
+      setSendingEmail(false);
     }
   };
 
@@ -1069,6 +1103,16 @@ export default function Admin() {
                       </div>
 
                       <div className="space-y-2">
+                        <Label>E-mail odbiorcy</Label>
+                        <Input 
+                          placeholder="np. jan@example.com"
+                          type="email"
+                          value={recipientEmail}
+                          onChange={(e) => setRecipientEmail(e.target.value)}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
                         <Label>Imię odbiorcy (opcjonalne)</Label>
                         <Input 
                           placeholder="np. Jan"
@@ -1162,11 +1206,15 @@ export default function Admin() {
                             <Button 
                               variant="default" 
                               className="flex-1 gap-2"
-                              disabled
-                              title="Dodaj RESEND_API_KEY aby wysyłać e-maile"
+                              onClick={sendEmailViaResend}
+                              disabled={sendingEmail || !recipientEmail.trim()}
                             >
-                              <Send className="h-4 w-4" />
-                              Wyślij (wymaga Resend)
+                              {sendingEmail ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Send className="h-4 w-4" />
+                              )}
+                              {sendingEmail ? "Wysyłanie..." : "Wyślij przez Resend"}
                             </Button>
                           </div>
                         </div>
