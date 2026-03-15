@@ -878,30 +878,37 @@ export const AutoVoiceListener = () => {
       return;
     }
 
-    // Search & play - expanded triggers including "start", "daj", "leć", number+genre patterns
-    const PLAY_VERBS = ["włącz", "puść", "zagraj", "odtwórz", "graj", "play", "start", "startuj", "daj", "leć", "dawaj", "odpal", "wrzuć", "kręć"];
+    // Search & play - multilingual verbs
+    const PLAY_VERBS = [
+      // PL
+      "włącz", "puść", "zagraj", "odtwórz", "graj", "startuj", "daj", "leć", "dawaj", "odpal", "wrzuć", "kręć",
+      // EN
+      "play", "start", "put on", "give me",
+      // NL
+      "speel", "draai", "zet op", "geef",
+      // UA
+      "грай", "увімкни", "постав", "давай",
+    ];
     const hasPlayVerb = PLAY_VERBS.some(v => lower.includes(v));
-    const playMatch = lower.match(/(?:włącz|puść|zagraj|odtwórz|graj|play|start|startuj|daj|leć|dawaj|odpal|wrzuć|kręć)\s+(.+)/i);
+    const playMatch = lower.match(/(?:włącz|puść|zagraj|odtwórz|graj|play|start|startuj|daj|leć|dawaj|odpal|wrzuć|kręć|speel|draai|zet\s+op|geef|грай|увімкни|постав|давай|put\s+on|give\s+me)\s+(.+)/i);
     
-    // Also match number+songs pattern anywhere, e.g. "dziesięć piosenek rock", "10 piosenek", "rock 10 piosenek"
+    // Also match number+songs pattern - multilingual
     const hasCountWord = parseNumber(lower) !== undefined;
-    const hasSongWord = /piosen|utw|track|song|numer|kawalk/i.test(lower);
+    const hasSongWord = /piosen|utw|track|song|numer|kawalk|nummer|liedje|lied|трек|пісн/i.test(lower);
     const hasGenreWord = GENRE_KEYWORDS.some(g => lower.includes(g));
     
-    // Match if: has play verb, OR has count+songs pattern, OR has count+genre
     const shouldPlay = playMatch || (hasCountWord && (hasSongWord || hasGenreWord)) || (hasPlayVerb && !playMatch);
     
     if (shouldPlay) {
-      // Extract everything useful from the command
-      const rawQuery = playMatch ? playMatch[1].replace(/w\s+playerze/i, "").trim() : lower;
+      const rawQuery = playMatch ? playMatch[1].replace(/w\s+playerze/i, "").replace(/in\s+the\s+player/i, "").replace(/in\s+de\s+speler/i, "").trim() : lower;
       console.log("[Voice] Play command detected, raw query:", rawQuery);
       const count = parseNumber(rawQuery);
       const cleanQuery = rawQuery
         .replace(/\d+/g, "")
-        .replace(/(?:włącz|puść|zagraj|odtwórz|graj|play|start|startuj|daj|leć|dawaj|odpal|wrzuć|kręć)\s*/gi, "")
-        .replace(/(?:jeden|jedną|jedno|dwa|dwie|dwóch|dwoch|trzy|trzech|cztery|czterech|pięć|piec|pieciu|pięciu|sześć|szesc|sześciu|szesciu|siedem|siedmiu|osiem|ośmiu|osmiu|dziewięć|dziewiec|dziewięciu|dziesięć|dziesiec|dziesięciu|piętnaście|pietnascie|dwadzieścia|dwadziescia)\s*/gi, "")
-        .replace(/\s*(utw\w*|piosen\w*|track\w*|song\w*|numer\w*|kawalk\w*)\s*/gi, "")
-        .replace(/\s*(mi|mnie|jakieś|jakies|jakiś|tam|no|to)\s*/gi, " ")
+        .replace(/(?:włącz|puść|zagraj|odtwórz|graj|play|start|startuj|daj|leć|dawaj|odpal|wrzuć|kręć|speel|draai|zet\s+op|geef|грай|увімкни|постав|давай|put\s+on|give\s+me)\s*/gi, "")
+        .replace(/(?:jeden|jedną|jedno|dwa|dwie|dwóch|dwoch|trzy|trzech|cztery|czterech|pięć|piec|pieciu|pięciu|sześć|szesc|sześciu|szesciu|siedem|siedmiu|osiem|ośmiu|osmiu|dziewięć|dziewiec|dziewięciu|dziesięć|dziesiec|dziesięciu|piętnaście|pietnascie|dwadzieścia|dwadziescia|one|two|three|four|five|six|seven|eight|nine|ten|fifteen|twenty|een|één|twee|drie|vier|vijf|zes|zeven|acht|negen|tien|twaalf|vijftien|twintig)\s*/gi, "")
+        .replace(/\s*(utw\w*|piosen\w*|track\w*|song\w*|numer\w*|kawalk\w*|nummer\w*|liedje\w*|lied\w*|трек\w*|пісн\w*)\s*/gi, "")
+        .replace(/\s*(mi|mnie|jakieś|jakies|jakiś|tam|no|to|me|some|wat|mij|які)\s*/gi, " ")
         .trim();
       
       // If no genre/query specified, play random mix
