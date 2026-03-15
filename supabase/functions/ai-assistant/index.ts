@@ -1133,6 +1133,13 @@ Znasz DOKŁADNIE każdą funkcję aplikacji:
             data: mixRequest,
           })}\n\n`));
         }
+        // Send playlist move event
+        if (moveResult) {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+            type: "playlist_track_moved",
+            data: moveResult,
+          })}\n\n`));
+        }
         // Send auto-play tracks as first event (multiple tracks for playlist)
         if (autoPlayTracks.length > 0) {
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({
