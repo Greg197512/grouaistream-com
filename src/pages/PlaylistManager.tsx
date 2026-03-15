@@ -62,7 +62,7 @@ const PlaylistManager = () => {
       cover_url: t.cover_url,
       genre: t.genre,
       mood: t.mood,
-    }));
+    })));
 
     // Load playlist tracks for each playlist
     const playlistsWithTracks: Playlist[] = [];
