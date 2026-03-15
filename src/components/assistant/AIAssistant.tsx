@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { motion, AnimatePresence, useDragControls } from "framer-motion";
-import { Send, Loader2, ExternalLink, Music, Power, GripHorizontal, Sparkles, Maximize2, Minimize2, Radio, Waves } from "lucide-react";
+import { Send, Loader2, ExternalLink, Music, Power, GripHorizontal, Sparkles, Maximize2, Minimize2, Radio, Waves, Copy, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -41,6 +41,33 @@ const getTimeOfDay = () => {
   if (h < 12) return "morning";
   if (h < 18) return "afternoon";
   return "evening";
+};
+
+const CopyButton = ({ text, isUser }: { text: string; isUser: boolean }) => {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    await navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+  return (
+    <motion.button
+      onClick={handleCopy}
+      whileHover={{ scale: 1.15 }}
+      whileTap={{ scale: 0.9 }}
+      className={`absolute top-1.5 right-1.5 w-6 h-6 rounded-md flex items-center justify-center opacity-0 group-hover/msg:opacity-100 transition-opacity ${
+        isUser ? "bg-primary-foreground/20 hover:bg-primary-foreground/30" : "bg-white/10 hover:bg-white/20"
+      }`}
+      title="Kopiuj"
+    >
+      {copied ? (
+        <Check className="h-3 w-3 text-green-400" />
+      ) : (
+        <Copy className="h-3 w-3" />
+      )}
+    </motion.button>
+  );
 };
 
 export const AIAssistant = () => {
@@ -526,11 +553,13 @@ export const AIAssistant = () => {
                         <img src={aiAssistantAvatar} alt="" className="w-full h-full object-cover" />
                       </div>
                     )}
-                    <div className={`max-w-[88%] rounded-2xl px-4 py-3 ${
+                    <div className={`group/msg relative max-w-[88%] rounded-2xl px-4 py-3 ${
                       msg.role === "user"
                         ? "bg-primary text-primary-foreground rounded-br-sm"
                         : "bg-white/5 text-foreground rounded-bl-sm border border-white/5"
                     }`}>
+                      {/* Copy button */}
+                      <CopyButton text={msg.content} isUser={msg.role === "user"} />
                       {msg.role === "assistant" ? (
                         <div className="prose prose-sm prose-invert max-w-none text-[13px] leading-relaxed [&_p]:mb-2 [&_ul]:mb-2 [&_ol]:mb-2 [&_h3]:text-sm [&_h3]:font-bold [&_h3]:mt-3 [&_h3]:mb-1 [&_code]:bg-white/10 [&_code]:px-1 [&_code]:rounded [&_blockquote]:border-primary/30 [&_blockquote]:text-muted-foreground [&_a]:text-primary">
                           <ReactMarkdown>{msg.content}</ReactMarkdown>
