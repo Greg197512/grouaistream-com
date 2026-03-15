@@ -508,6 +508,7 @@ export const AutoVoiceListener = () => {
     setShowIndicator(true);
     resetSilenceTimer();
 
+    try {
     const lang = getAppLanguage();
 
     // STOP command - HIGHEST PRIORITY - all languages
