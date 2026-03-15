@@ -11,7 +11,6 @@ import {
   Heart,
   Maximize2,
   ListMusic,
-  Mic2,
   MonitorSpeaker,
   Sparkles,
   Youtube,
@@ -33,7 +32,6 @@ import { useState, useEffect, useRef } from "react";
 import { YouTubePlayer, YouTubePlayerRef } from "@/components/player/YouTubePlayer";
 import { TrackOptionsMenu } from "@/components/menus/TrackOptionsMenu";
 import { QueueSidebar } from "@/components/player/QueueSidebar";
-import { VoiceCommandHandler } from "@/components/player/VoiceCommandHandler";
 import { FullscreenPlayer } from "@/components/player/FullscreenPlayer";
 import { QuickMoodDetector } from "@/components/mood/QuickMoodDetector";
 
@@ -83,7 +81,6 @@ export const PlayerBar = () => {
   
   // New state for modals/sidebars
   const [showQueue, setShowQueue] = useState(false);
-  const [showVoiceCommand, setShowVoiceCommand] = useState(false);
   const [showFullscreen, setShowFullscreen] = useState(false);
   const [showMoodDetector, setShowMoodDetector] = useState(false);
 
@@ -533,17 +530,6 @@ export const PlayerBar = () => {
             />
           )}
 
-          {/* Voice Commands (Mic) */}
-          <motion.button 
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            onClick={() => setShowVoiceCommand(true)}
-            className="p-1 text-white/40 hover:text-white/70 transition-colors"
-            title="Voice Commands"
-          >
-            <Mic2 className="h-3.5 w-3.5" />
-          </motion.button>
-
           {/* Queue */}
           <motion.button 
             whileHover={{ scale: 1.1 }}
@@ -593,9 +579,6 @@ export const PlayerBar = () => {
 
       {/* Queue Sidebar */}
       <QueueSidebar isOpen={showQueue} onClose={() => setShowQueue(false)} />
-
-      {/* Voice Command Modal */}
-      <VoiceCommandHandler isOpen={showVoiceCommand} onClose={() => setShowVoiceCommand(false)} />
 
       {/* Fullscreen Player */}
       <FullscreenPlayer isOpen={showFullscreen} onClose={() => setShowFullscreen(false)} />
