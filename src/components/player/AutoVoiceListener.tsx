@@ -883,7 +883,7 @@ export const AutoVoiceListener = () => {
       toast.loading(`🎙️ AI analizuje...`, { id: "voice-cmd" });
       
       if (isAIEnabled) {
-        const requestedCount = parsePolishNumber(command);
+        const requestedCount = parseNumber(command);
         const result = await processVoiceCommand(command);
         if (result.action === "play" && result.tracks?.length) {
           const limitedTracks = requestedCount ? result.tracks.slice(0, requestedCount) : result.tracks.slice(0, 10);
