@@ -553,7 +553,7 @@ export const AIAssistant = () => {
                         <img src={aiAssistantAvatar} alt="" className="w-full h-full object-cover" />
                       </div>
                     )}
-                    <div className={`group/msg relative max-w-[88%] rounded-2xl px-4 py-3 ${
+                    <div className={`relative max-w-[88%] rounded-2xl px-4 py-3 ${
                       msg.role === "user"
                         ? "bg-primary text-primary-foreground rounded-br-sm"
                         : "bg-white/5 text-foreground rounded-bl-sm border border-white/5"
