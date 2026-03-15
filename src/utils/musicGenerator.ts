@@ -1,7 +1,10 @@
 /**
  * Advanced Algorithmic Music Generator using Web Audio API
  * Rich layered synthesis with reverb, delay, compression, detuned oscillators
+ * Now with CC Mixter sample integration for richer sound
  */
+
+import { loadGenreSamples, mixSampleIntoContext, type LoadedSample } from './sampleLoader';
 
 const SCALES = {
   major: [0, 2, 4, 5, 7, 9, 11],
