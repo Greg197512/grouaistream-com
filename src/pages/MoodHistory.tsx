@@ -310,7 +310,8 @@ export default function MoodHistory() {
         .limit(20);
 
       if (tracks && tracks.length > 0) {
-        const shuffled = [...tracks].sort(() => Math.random() - 0.5);
+        const filtered = filterTracks(tracks);
+        const shuffled = [...filtered].sort(() => Math.random() - 0.5);
         setRecommendedTracks(shuffled);
       } else {
         const { data: fallback } = await supabase
