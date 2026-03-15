@@ -307,7 +307,6 @@ export const AIAssistant = () => {
   }, []);
 
   // Drag & drop handler for the chat window
-  const [isDragOver, setIsDragOver] = useState(false);
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragOver(false);
