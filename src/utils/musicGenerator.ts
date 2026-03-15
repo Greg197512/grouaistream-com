@@ -125,6 +125,11 @@ export interface GenerationConfig {
   durationSeconds: number;
   instrumental: boolean;
   title?: string;
+  prompt?: string; // Full text prompt from user
+  mood?: 'dark' | 'bright' | 'melancholic' | 'euphoric' | 'aggressive' | 'dreamy' | 'romantic' | 'tense';
+  energy?: 'low' | 'medium' | 'high' | 'extreme';
+  tempoOverride?: number; // Exact BPM override
+  textContent?: string; // Lyrics/text to weave into the vibe
 }
 
 export interface GeneratedTrack {
@@ -422,7 +427,44 @@ function renderAudio(config: GenerationConfig, bpm: number, rootMidi: number, sc
   
   // Get params (blended if two genres)
   const params1 = getStyleParams(style1);
-  const params = style2 ? blendParams(params1, getStyleParams(style2), blendRatio) : params1;
+  let params = style2 ? blendParams(params1, getStyleParams(style2), blendRatio) : params1;
+
+  // Apply mood-based modifications
+  if (config.mood) {
+    switch (config.mood) {
+      case 'dark':
+        params = { ...params, filterFreq: params.filterFreq * 0.7, reverbDecay: params.reverbDecay * 1.3, reverbMix: Math.min(0.6, params.reverbMix * 1.4), padVol: params.padVol * 1.5 };
+        break;
+      case 'bright':
+        params = { ...params, filterFreq: params.filterFreq * 1.4, melodyVol: params.melodyVol * 1.2, delayFeedback: params.delayFeedback * 0.7 };
+        break;
+      case 'aggressive':
+        params = { ...params, drumVol: params.drumVol * 1.3, filterFreq: params.filterFreq * 1.3, filterQ: params.filterQ * 1.5, melodyDetune: params.melodyDetune * 1.5 };
+        break;
+      case 'dreamy':
+        params = { ...params, reverbDecay: params.reverbDecay * 1.5, reverbMix: Math.min(0.65, params.reverbMix * 1.6), delayFeedback: Math.min(0.5, params.delayFeedback * 1.5), drumVol: params.drumVol * 0.6, padVol: params.padVol * 2, usePad: true };
+        break;
+      case 'melancholic':
+        params = { ...params, filterFreq: params.filterFreq * 0.8, reverbMix: Math.min(0.5, params.reverbMix * 1.3), melodyVol: params.melodyVol * 1.15, drumVol: params.drumVol * 0.8 };
+        break;
+      case 'euphoric':
+        params = { ...params, filterFreq: params.filterFreq * 1.3, chordVol: params.chordVol * 1.3, padVol: params.padVol * 1.5, usePad: true, reverbMix: Math.min(0.5, params.reverbMix * 1.2) };
+        break;
+      case 'romantic':
+        params = { ...params, reverbDecay: params.reverbDecay * 1.2, padVol: params.padVol * 1.4, usePad: true, drumVol: params.drumVol * 0.7, filterFreq: params.filterFreq * 0.9 };
+        break;
+      case 'tense':
+        params = { ...params, filterQ: params.filterQ * 2, delayFeedback: Math.min(0.5, params.delayFeedback * 1.5), melodyDetune: params.melodyDetune * 1.8, reverbMix: params.reverbMix * 0.8 };
+        break;
+    }
+  }
+
+  // Apply energy-based modifications
+  if (config.energy === 'extreme') {
+    params = { ...params, drumVol: params.drumVol * 1.3, melodyVol: params.melodyVol * 1.2, filterFreq: params.filterFreq * 1.3 };
+  } else if (config.energy === 'low') {
+    params = { ...params, drumVol: params.drumVol * 0.5, melodyVol: params.melodyVol * 0.8, padVol: params.padVol * 1.5, usePad: true };
+  }
   
   // Get drum pattern (blended if two genres)
   const drums1 = DRUM_PATTERNS[style1] || DRUM_PATTERNS.Pop;
@@ -608,25 +650,52 @@ export async function generateMusic(config: GenerationConfig): Promise<Generated
   const style = config.style || 'Pop';
   const style2 = config.style2;
   
-  // BPM: blend if two genres
-  const [bpmMin1, bpmMax1] = BPM_RANGES[style] || [110, 130];
-  let bpmMin = bpmMin1, bpmMax = bpmMax1;
-  if (style2) {
-    const [bpmMin2, bpmMax2] = BPM_RANGES[style2] || [110, 130];
-    const ratio = config.blendRatio ?? 0.5;
-    bpmMin = Math.round(lerp(bpmMin1, bpmMin2, ratio));
-    bpmMax = Math.round(lerp(bpmMax1, bpmMax2, ratio));
+  // BPM: use override, or blend if two genres
+  let bpm: number;
+  if (config.tempoOverride) {
+    bpm = config.tempoOverride;
+  } else {
+    const [bpmMin1, bpmMax1] = BPM_RANGES[style] || [110, 130];
+    let bpmMin = bpmMin1, bpmMax = bpmMax1;
+    if (style2) {
+      const [bpmMin2, bpmMax2] = BPM_RANGES[style2] || [110, 130];
+      const ratio = config.blendRatio ?? 0.5;
+      bpmMin = Math.round(lerp(bpmMin1, bpmMin2, ratio));
+      bpmMax = Math.round(lerp(bpmMax1, bpmMax2, ratio));
+    }
+    // Energy-based BPM adjustment
+    if (config.energy === 'extreme') { bpmMin += 15; bpmMax += 20; }
+    else if (config.energy === 'high') { bpmMin += 5; bpmMax += 10; }
+    else if (config.energy === 'low') { bpmMin -= 15; bpmMax -= 10; }
+    bpm = bpmMin + Math.floor(Math.random() * (bpmMax - bpmMin));
   }
-  const bpm = bpmMin + Math.floor(Math.random() * (bpmMax - bpmMin));
 
-  const scaleType = ['Jazz', 'Blues', 'Lo-fi'].includes(style) ? 'blues'
-    : ['Metal', 'Hip-Hop', 'Trap'].includes(style) ? 'minor'
-    : ['Ambient'].includes(style) ? 'pentatonic'
-    : ['Classical'].includes(style) ? randomFromArray(['major', 'harmonicMinor'] as const)
-    : Math.random() < 0.4 ? 'minor' : 'major';
+  // Scale selection influenced by mood
+  let scaleType: string;
+  if (config.mood === 'dark' || config.mood === 'tense' || config.mood === 'aggressive') {
+    scaleType = randomFromArray(['minor', 'harmonicMinor', 'blues']);
+  } else if (config.mood === 'melancholic' || config.mood === 'dreamy') {
+    scaleType = randomFromArray(['minor', 'dorian', 'pentatonic']);
+  } else if (config.mood === 'bright' || config.mood === 'euphoric') {
+    scaleType = randomFromArray(['major', 'mixolydian', 'pentatonic']);
+  } else if (config.mood === 'romantic') {
+    scaleType = randomFromArray(['major', 'dorian']);
+  } else {
+    scaleType = ['Jazz', 'Blues', 'Lo-fi'].includes(style) ? 'blues'
+      : ['Metal', 'Hip-Hop', 'Trap'].includes(style) ? 'minor'
+      : ['Ambient'].includes(style) ? 'pentatonic'
+      : ['Classical'].includes(style) ? randomFromArray(['major', 'harmonicMinor'] as const)
+      : Math.random() < 0.4 ? 'minor' : 'major';
+  }
 
-  const roots = [48, 50, 52, 53, 55, 57];
-  const rootMidi = randomFromArray(roots);
+  // Root note - mood influences register
+  const brightRoots = [53, 55, 57]; // higher
+  const darkRoots = [48, 50, 52]; // lower
+  const rootMidi = (config.mood === 'dark' || config.mood === 'aggressive' || config.mood === 'tense')
+    ? randomFromArray(darkRoots)
+    : (config.mood === 'bright' || config.mood === 'euphoric')
+    ? randomFromArray(brightRoots)
+    : randomFromArray([48, 50, 52, 53, 55, 57]);
 
   const { buffer } = await renderAudio(config, bpm, rootMidi, scaleType);
   const wavBlob = audioBufferToWav(buffer);
@@ -638,6 +707,8 @@ export async function generateMusic(config: GenerationConfig): Promise<Generated
     "Deep Horizon", "Golden Hour", "Infinite Loop", "Silent Storm",
     "Future Echo", "Cosmic Dust", "Urban Jungle", "Quantum Beat",
     "Neon Horizon", "Astral Drift", "Vapor Trail", "Chrome Sky",
+    "Phantom Groove", "Liquid Fire", "Stellar Pulse", "Dark Matter",
+    "Aurora Beats", "Crimson Wave", "Emerald Night", "Obsidian Flow",
   ];
 
   const styleName = style2 ? `${style} × ${style2}` : style;
