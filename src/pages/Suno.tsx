@@ -5,7 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, Music, Guitar, Waves, Plus, Blend, Disc3 } from "lucide-react";
+import { Sparkles, Music, Guitar, Waves, Plus, Blend, Disc3, Type } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
 import { motion, AnimatePresence } from "framer-motion";
 import { TrackMixer } from "@/components/studio/TrackMixer";
@@ -15,7 +16,7 @@ import { toast } from "sonner";
 import { WaveformPlayer } from "@/components/studio/WaveformPlayer";
 import { NeonWavesLoader } from "@/components/studio/NeonWavesLoader";
 import { GenerationHistory } from "@/components/studio/GenerationHistory";
-import { LyricsDisplay, generateLyrics } from "@/components/studio/LyricsDisplay";
+import { LyricsDisplay, generateLyrics, parseLyricsFromText } from "@/components/studio/LyricsDisplay";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { generateMusic, extendTrack, type GeneratedTrack } from "@/utils/musicGenerator";
 
@@ -33,6 +34,7 @@ const Suno = () => {
   const [blendRatio, setBlendRatio] = useState(50);
   const [title, setTitle] = useState("");
   const [instrumental, setInstrumental] = useState(false);
+  const [customLyrics, setCustomLyrics] = useState("");
   const [useSamples, setUseSamples] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [extending, setExtending] = useState(false);
@@ -83,7 +85,9 @@ const Suno = () => {
       });
 
       const genreName = genre2 ? `${genre} × ${genre2}` : genre;
-      const lyrics = generateLyrics(genreName, track.title, 30, instrumental);
+      const lyrics = customLyrics.trim()
+        ? parseLyricsFromText(customLyrics, 30)
+        : generateLyrics(genreName, track.title, 30, instrumental);
 
       let generationId: string | undefined;
       if (user) {
@@ -131,7 +135,9 @@ const Suno = () => {
         }).eq("id", result.generationId);
       }
 
-      const newLyrics = generateLyrics(result.genre, result.title, newDuration, instrumental);
+      const newLyrics = customLyrics.trim()
+        ? parseLyricsFromText(customLyrics, newDuration)
+        : generateLyrics(result.genre, result.title, newDuration, instrumental);
       setResult(prev => prev ? {
         ...prev,
         audioUrl: extended.audioUrl,
@@ -335,8 +341,35 @@ const Suno = () => {
               <Guitar className="h-5 w-5 text-[#FF9500]" />
               <Label className="text-sm text-gray-200">Tylko instrumentalny</Label>
             </div>
-            <Switch checked={instrumental} onCheckedChange={setInstrumental} className="data-[state=checked]:bg-[#FF6B00]" />
+            <Switch checked={instrumental} onCheckedChange={(v) => { setInstrumental(v); if (v) setCustomLyrics(""); }} className="data-[state=checked]:bg-[#FF6B00]" />
           </div>
+
+          {/* Custom Lyrics Editor */}
+          <AnimatePresence>
+            {!instrumental && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="space-y-2 overflow-hidden"
+              >
+                <Label className="text-sm text-gray-300 flex items-center gap-2">
+                  <Type className="h-4 w-4 text-[#FF9500]" />
+                  Tekst / Lyrics (opcjonalnie)
+                </Label>
+                <Textarea
+                  placeholder={"Wpisz lub wklej tekst piosenki...\n\nVerse 1:\nTwój tekst tutaj...\n\nChorus:\nRefren tutaj..."}
+                  value={customLyrics}
+                  onChange={(e) => setCustomLyrics(e.target.value)}
+                  rows={6}
+                  className="bg-[#1a1a2e] border-[#FF6B00]/20 text-white placeholder:text-gray-600 focus:border-[#FF6B00] focus:ring-[#FF6B00]/30 resize-none font-mono text-sm"
+                />
+                <p className="text-xs text-gray-500">
+                  Zostaw puste, aby użyć automatycznie generowanego tekstu. Każda linia = osobna fraza.
+                </p>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* CC Mixter Samples Toggle */}
           <div className="flex items-center justify-between p-4 rounded-xl border border-[#FF6B00]/20 bg-[#1a1a2e]/60">

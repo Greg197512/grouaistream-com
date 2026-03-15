@@ -127,6 +127,30 @@ export const LyricsDisplay = ({ lyrics, currentTime, isPlaying, totalDuration }:
 };
 
 /**
+ * Parse user-written lyrics text into timed LyricsLine array.
+ * Distributes lines evenly across the track duration.
+ */
+export function parseLyricsFromText(text: string, durationSeconds: number): LyricsLine[] {
+  const rawLines = text.split('\n');
+  const lines: LyricsLine[] = [];
+  const nonEmptyLines = rawLines.filter(l => l.trim().length > 0);
+  
+  if (nonEmptyLines.length === 0) return [];
+  
+  const interval = durationSeconds / (nonEmptyLines.length + 1);
+  let lineIndex = 0;
+  
+  rawLines.forEach((raw) => {
+    const trimmed = raw.trim();
+    if (trimmed.length === 0) return;
+    lines.push({ time: interval * (lineIndex + 0.5), text: trimmed });
+    lineIndex++;
+  });
+  
+  return lines;
+}
+
+/**
  * Generate lyrics/text lines for a generated track
  * Creates atmospheric text content synced to timing
  */
