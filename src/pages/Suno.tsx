@@ -5,7 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, Music, Guitar, Waves, Plus } from "lucide-react";
+import { Sparkles, Music, Guitar, Waves, Plus, Blend } from "lucide-react";
+import { Slider } from "@/components/ui/slider";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -25,6 +26,8 @@ const GENRES = [
 const Suno = () => {
   const { user } = useAuth();
   const [genre, setGenre] = useState("Pop");
+  const [genre2, setGenre2] = useState<string | null>(null);
+  const [blendRatio, setBlendRatio] = useState(50);
   const [title, setTitle] = useState("");
   const [instrumental, setInstrumental] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -39,18 +42,22 @@ const Suno = () => {
     try {
       const track = await generateMusic({
         style: genre,
+        style2: genre2 || undefined,
+        blendRatio: genre2 ? blendRatio / 100 : undefined,
         durationSeconds: 30,
         instrumental,
         title: title.trim() || undefined,
       });
+
+      const genreName = genre2 ? `${genre} × ${genre2}` : genre;
 
       let generationId: string | undefined;
       if (user) {
         const { data: gen } = await supabase.from("generations").insert({
           user_id: user.id,
           title: track.title,
-          genre,
-          prompt: `30-second ${genre} track${instrumental ? ", instrumental only" : ""}`,
+          genre: genreName,
+          prompt: `30-second ${genreName} track${instrumental ? ", instrumental only" : ""}`,
           instrumental,
           status: "completed",
           audio_url: track.audioUrl,
@@ -61,7 +68,7 @@ const Suno = () => {
       setResult({
         audioUrl: track.audioUrl,
         title: track.title,
-        genre,
+        genre: genreName,
         generationId,
         durationSeconds: 30,
         lastTrack: track,
@@ -174,6 +181,64 @@ const Suno = () => {
                 </Badge>
               ))}
             </div>
+          </motion.div>
+
+          {/* Genre Blend */}
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.15 }} className="space-y-3">
+            <div className="flex items-center justify-between">
+              <Label className="text-sm text-gray-300 flex items-center gap-2">
+                <Blend className="h-4 w-4 text-[#FF9500]" />
+                Łączenie gatunków
+              </Label>
+              {genre2 && (
+                <button onClick={() => setGenre2(null)} className="text-xs text-gray-500 hover:text-gray-300 transition-colors">
+                  Wyłącz ✕
+                </button>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {GENRES.filter(g => g !== genre).map((g) => (
+                <Badge
+                  key={g}
+                  className={`cursor-pointer text-xs px-3 py-1.5 transition-all ${
+                    genre2 === g
+                      ? "text-white border-transparent"
+                      : "bg-transparent border-[#9333EA]/20 text-gray-500 hover:border-[#9333EA]/50 hover:text-gray-300"
+                  }`}
+                  style={genre2 === g ? {
+                    background: "linear-gradient(135deg, #9333EA, #FF6B00)",
+                    boxShadow: "0 0 12px #9333EA50",
+                  } : undefined}
+                  onClick={() => setGenre2(genre2 === g ? null : g)}
+                >
+                  {g}
+                </Badge>
+              ))}
+            </div>
+            <AnimatePresence>
+              {genre2 && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="space-y-2 overflow-hidden"
+                >
+                  <div className="flex items-center justify-between text-xs text-gray-400">
+                    <span>{genre}</span>
+                    <span>Mix: {blendRatio}%</span>
+                    <span>{genre2}</span>
+                  </div>
+                  <Slider
+                    value={[blendRatio]}
+                    onValueChange={([v]) => setBlendRatio(v)}
+                    min={10}
+                    max={90}
+                    step={5}
+                    className="w-full"
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
           </motion.div>
 
           {/* Title Input */}
