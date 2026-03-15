@@ -364,7 +364,12 @@ export const AIAssistant = () => {
           "Content-Type": "application/json",
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
-        body: JSON.stringify({ message: userMessage, history: messages, userContext }),
+        body: JSON.stringify({ 
+          message: userMessage, 
+          history: messages, 
+          userContext,
+          attachments: uploadedAttachments.length > 0 ? uploadedAttachments.map(a => ({ type: a.type, url: a.url, name: a.name })) : undefined,
+        }),
       });
 
       if (!resp.ok) {
