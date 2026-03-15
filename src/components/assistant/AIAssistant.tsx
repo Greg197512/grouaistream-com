@@ -657,6 +657,34 @@ export const AIAssistant = () => {
                           </p>
                         </motion.div>
                       )}
+                      {/* Generated track inline player */}
+                      {msg.generatedTrack && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 8, scale: 0.95 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          transition={{ type: "spring", stiffness: 200, damping: 20 }}
+                          className="mt-3 p-3 rounded-xl border border-[#FF6B00]/30 bg-[#1a1a2e]/80 space-y-2"
+                          style={{ boxShadow: "0 0 20px #FF6B0015" }}
+                        >
+                          <div className="flex items-center gap-2">
+                            <div className="w-9 h-9 rounded-lg flex items-center justify-center"
+                              style={{ background: "linear-gradient(135deg, #FF6B00, #FF9500)" }}
+                            >
+                              <Waves className="h-5 w-5 text-white" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-bold text-white truncate">{msg.generatedTrack.title}</p>
+                              <p className="text-[10px] text-[#FF9500]/70">GrouAI Studio • {msg.generatedTrack.genre} • {msg.generatedTrack.duration}s</p>
+                            </div>
+                          </div>
+                          <WaveformPlayer
+                            audioUrl={msg.generatedTrack.audioUrl}
+                            title={msg.generatedTrack.title}
+                            genre={msg.generatedTrack.genre}
+                            compact
+                          />
+                        </motion.div>
+                      )}
                     </div>
                   </motion.div>
                 ))}
