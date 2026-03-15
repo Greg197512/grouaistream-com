@@ -799,7 +799,7 @@ export const AutoVoiceListener = () => {
     const playMatch = lower.match(/(?:włącz|puść|zagraj|odtwórz|graj|play|start|startuj|daj|leć|dawaj|odpal|wrzuć|kręć)\s+(.+)/i);
     
     // Also match number+songs pattern anywhere, e.g. "dziesięć piosenek rock", "10 piosenek", "rock 10 piosenek"
-    const hasCountWord = parsePolishNumber(lower) !== undefined;
+    const hasCountWord = parseNumber(lower) !== undefined;
     const hasSongWord = /piosen|utw|track|song|numer|kawalk/i.test(lower);
     const hasGenreWord = GENRE_KEYWORDS.some(g => lower.includes(g));
     
