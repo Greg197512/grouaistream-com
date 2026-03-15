@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/contexts/LanguageContext";
 import logoIcon from "@/assets/logo-full.png";
+import { MatrixNotes } from "@/components/effects/MatrixNotes";
 
 interface SidebarProps {
   collapsed: boolean;
