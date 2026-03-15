@@ -196,6 +196,37 @@ const Suno = () => {
             </p>
           </motion.div>
 
+          {/* Tabs */}
+          <div className="flex gap-2 p-1 rounded-xl bg-[#1a1a2e]/80 border border-[#FF6B00]/10">
+            <button
+              onClick={() => setActiveTab("generate")}
+              className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${
+                activeTab === "generate"
+                  ? "text-white"
+                  : "text-gray-400 hover:text-gray-200"
+              }`}
+              style={activeTab === "generate" ? { background: "linear-gradient(135deg, #FF6B00, #FF9500)", boxShadow: "0 0 15px #FF6B0040" } : undefined}
+            >
+              <Sparkles className="h-4 w-4" /> Generator
+            </button>
+            <button
+              onClick={() => setActiveTab("mix")}
+              className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${
+                activeTab === "mix"
+                  ? "text-white"
+                  : "text-gray-400 hover:text-gray-200"
+              }`}
+              style={activeTab === "mix" ? { background: "linear-gradient(135deg, #9333EA, #FF6B00)", boxShadow: "0 0 15px #9333EA40" } : undefined}
+            >
+              <Blend className="h-4 w-4" /> Track Mix
+            </button>
+          </div>
+
+          {activeTab === "mix" ? (
+            <TrackMixer />
+          ) : (
+          <>
+
           {/* Genre Selection */}
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }} className="space-y-2">
             <Label className="text-sm text-gray-300">Styl muzyczny</Label>
