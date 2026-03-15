@@ -206,7 +206,7 @@ const Suno = () => {
 
           {!user && (
             <p className="text-center text-xs text-gray-500">
-              <a href="/auth" className="text-[#FF9500] underline">Zaloguj się</a>, aby generować muzykę
+              <a href="/auth" className="text-[#FF9500] underline">Zaloguj się</a>, aby zapisywać utwory do biblioteki
             </p>
           )}
 
