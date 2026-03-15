@@ -643,7 +643,30 @@ export const AIAssistant = () => {
                           <ReactMarkdown>{msg.content}</ReactMarkdown>
                         </div>
                       ) : (
-                        <p className="whitespace-pre-wrap text-[13px]">{msg.content}</p>
+                        <>
+                          {msg.content && <p className="whitespace-pre-wrap text-[13px]">{msg.content}</p>}
+                          {/* Inline attachments */}
+                          {msg.attachments && msg.attachments.length > 0 && (
+                            <div className="mt-2 space-y-2">
+                              {msg.attachments.map((att, ai) => (
+                                <div key={ai}>
+                                  {att.type === "image" && (
+                                    <img src={att.url} alt={att.name} className="max-w-full max-h-40 rounded-lg object-cover" />
+                                  )}
+                                  {att.type === "audio" && (
+                                    <div className="flex items-center gap-2 p-2 rounded-lg bg-primary-foreground/10">
+                                      <FileAudio className="h-4 w-4 shrink-0" />
+                                      <div className="flex-1 min-w-0">
+                                        <p className="text-[10px] truncate">{att.name}</p>
+                                        <audio src={att.url} controls className="w-full h-7 mt-1" style={{ filter: "invert(1)" }} />
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </>
                       )}
                       {msg.trackLink && (
                         <motion.button
