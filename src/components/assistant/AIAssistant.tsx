@@ -841,17 +841,65 @@ export const AIAssistant = () => {
               </div>
             </ScrollArea>
 
+            {/* Attachment previews */}
+            {attachments.length > 0 && (
+              <div className="px-3 pt-2 flex gap-2 flex-wrap">
+                {attachments.map((att, i) => (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="relative group"
+                  >
+                    {att.type === "image" ? (
+                      <img src={att.url} alt={att.name} className="w-14 h-14 rounded-lg object-cover border border-white/10" />
+                    ) : (
+                      <div className="w-14 h-14 rounded-lg bg-white/5 border border-white/10 flex flex-col items-center justify-center">
+                        <FileAudio className="h-5 w-5 text-primary" />
+                        <span className="text-[7px] text-muted-foreground mt-0.5 max-w-[48px] truncate">{att.name}</span>
+                      </div>
+                    )}
+                    <button
+                      onClick={() => removeAttachment(i)}
+                      className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-destructive flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <X className="h-2.5 w-2.5 text-destructive-foreground" />
+                    </button>
+                  </motion.div>
+                ))}
+              </div>
+            )}
+
             {/* Input */}
             <div className="p-3 border-t border-white/5 bg-black/20">
-              <form onSubmit={(e) => { e.preventDefault(); handleSend(); }} className="flex gap-2">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*,audio/*"
+                multiple
+                className="hidden"
+                onChange={(e) => { if (e.target.files) handleFiles(e.target.files); e.target.value = ""; }}
+              />
+              <form onSubmit={(e) => { e.preventDefault(); handleSend(); }} className="flex gap-1.5 items-center">
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="shrink-0 h-9 w-9 rounded-xl text-muted-foreground hover:text-foreground"
+                  disabled={isLoading}
+                >
+                  <Paperclip className="h-4 w-4" />
+                </Button>
                 <Input
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
+                  onPaste={handlePaste}
                   placeholder={`Zapytaj mnie o cokolwiek, ${userName}...`}
                   className="flex-1 bg-white/5 border-white/10 focus:border-primary/50 h-10 text-sm rounded-xl"
                   disabled={isLoading}
                 />
-                <Button type="submit" size="icon" disabled={!input.trim() || isLoading} className="shrink-0 h-10 w-10 rounded-xl">
+                <Button type="submit" size="icon" disabled={(!input.trim() && attachments.length === 0) || isLoading} className="shrink-0 h-10 w-10 rounded-xl">
                   <Send className="h-4 w-4" />
                 </Button>
               </form>
