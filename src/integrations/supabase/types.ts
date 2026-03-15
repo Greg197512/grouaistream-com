@@ -292,6 +292,63 @@ export type Database = {
           },
         ]
       }
+      mix_preferences: {
+        Row: {
+          created_at: string
+          id: string
+          mix_style: string
+          rating: number | null
+          track_a_genre: string | null
+          track_a_id: string | null
+          track_a_title: string
+          track_b_genre: string | null
+          track_b_id: string | null
+          track_b_title: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          mix_style?: string
+          rating?: number | null
+          track_a_genre?: string | null
+          track_a_id?: string | null
+          track_a_title: string
+          track_b_genre?: string | null
+          track_b_id?: string | null
+          track_b_title: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          mix_style?: string
+          rating?: number | null
+          track_a_genre?: string | null
+          track_a_id?: string | null
+          track_a_title?: string
+          track_b_genre?: string | null
+          track_b_id?: string | null
+          track_b_title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mix_preferences_track_a_id_fkey"
+            columns: ["track_a_id"]
+            isOneToOne: false
+            referencedRelation: "tracks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mix_preferences_track_b_id_fkey"
+            columns: ["track_b_id"]
+            isOneToOne: false
+            referencedRelation: "tracks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mood_sessions: {
         Row: {
           confidence: number | null
