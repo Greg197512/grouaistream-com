@@ -14,6 +14,7 @@ import { WaveformPlayer } from "@/components/studio/WaveformPlayer";
 import { NeonWavesLoader } from "@/components/studio/NeonWavesLoader";
 import { GenerationHistory } from "@/components/studio/GenerationHistory";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { generateMusic, type GeneratedTrack } from "@/utils/musicGenerator";
 
 const GENRES = [
   "Pop", "Rock", "Electronic", "Hip-Hop", "Jazz", "Classical",
@@ -27,53 +28,43 @@ const Suno = () => {
   const [title, setTitle] = useState("");
   const [instrumental, setInstrumental] = useState(false);
   const [generating, setGenerating] = useState(false);
-  const [result, setResult] = useState<{ audioUrl: string; title: string; genre: string; generationId: string } | null>(null);
+  const [result, setResult] = useState<{ audioUrl: string; title: string; genre: string; generationId?: string } | null>(null);
   const [errorModal, setErrorModal] = useState<string | null>(null);
 
-  const buildPrompt = () => {
-    let prompt = `30-second ${genre} track`;
-    if (title.trim()) prompt += `, "${title.trim()}"`;
-    if (instrumental) prompt += ", instrumental only";
-    prompt += ", high quality, professional mix";
-    return prompt;
-  };
-
   const generate = async () => {
-    if (!user) {
-      toast.error("Zaloguj się, aby generować muzykę");
-      return;
-    }
-
     setGenerating(true);
     setResult(null);
 
     try {
-      const customApiKey = localStorage.getItem("replicate_api_key") || undefined;
-      const prompt = buildPrompt();
-
-      const { data, error } = await supabase.functions.invoke("replicate-music", {
-        body: {
-          prompt,
-          title: title.trim() || `${genre} Track`,
-          genre,
-          instrumental,
-          customApiKey,
-        },
+      const track = await generateMusic({
+        style: genre,
+        durationSeconds: 30,
+        instrumental,
+        title: title.trim() || undefined,
       });
 
-      if (error) throw error;
-      if (data?.error) {
-        setErrorModal(data.error);
-        return;
+      // Save to generations table if logged in
+      let generationId: string | undefined;
+      if (user) {
+        const { data: gen } = await supabase.from("generations").insert({
+          user_id: user.id,
+          title: track.title,
+          genre,
+          prompt: `30-second ${genre} track${instrumental ? ", instrumental only" : ""}`,
+          instrumental,
+          status: "completed",
+          audio_url: track.audioUrl,
+        }).select().single();
+        generationId = gen?.id;
       }
 
       setResult({
-        audioUrl: data.audioUrl,
-        title: data.title,
-        genre: data.genre,
-        generationId: data.generationId,
+        audioUrl: track.audioUrl,
+        title: track.title,
+        genre,
+        generationId,
       });
-      toast.success(`🎶 Wygenerowano "${data.title}"!`);
+      toast.success(`🎶 Wygenerowano "${track.title}"!`);
     } catch (err: any) {
       console.error("Generate error:", err);
       setErrorModal(err.message || "Nieznany błąd generowania");
@@ -83,7 +74,7 @@ const Suno = () => {
   };
 
   const saveToLibrary = async () => {
-    if (!result || !user) return;
+    if (!result) return;
     try {
       const { error } = await supabase.from("tracks").insert({
         title: result.title,
