@@ -548,7 +548,7 @@ export const AIAssistant = () => {
       pendingGeneratedTrackRef.current = null;
       setIsLoading(false);
     }
-  }, [input, isLoading, messages, userContext, startDJSession, parseDJCommand]);
+  }, [input, isLoading, messages, userContext, startDJSession, parseDJCommand, attachments]);
 
   const chatWidth = isExpanded ? "w-[calc(100vw-2rem)] sm:w-[600px]" : "w-[calc(100vw-2rem)] sm:w-[400px]";
   const chatHeight = isExpanded ? "h-[calc(100vh-8rem)] sm:h-[700px]" : "h-[calc(100vh-8rem)] sm:h-[520px]";
