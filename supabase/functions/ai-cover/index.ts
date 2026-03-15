@@ -14,10 +14,10 @@ async function findOriginalCover(title: string, artist: string): Promise<string 
     if (itunesRes.ok) {
       const data = await itunesRes.json();
       if (data.results?.length > 0) {
-        // Get the highest resolution artwork (replace 100x100 with 600x600)
+        // Get the highest resolution artwork (replace 100x100 with 3000x3000 for near-8K quality)
         const artwork = data.results[0].artworkUrl100;
         if (artwork) {
-          return artwork.replace("100x100bb", "600x600bb");
+          return artwork.replace("100x100bb", "3000x3000bb");
         }
       }
     }
