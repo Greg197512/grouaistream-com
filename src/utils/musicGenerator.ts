@@ -125,6 +125,11 @@ export interface GenerationConfig {
   durationSeconds: number;
   instrumental: boolean;
   title?: string;
+  prompt?: string; // Full text prompt from user
+  mood?: 'dark' | 'bright' | 'melancholic' | 'euphoric' | 'aggressive' | 'dreamy' | 'romantic' | 'tense';
+  energy?: 'low' | 'medium' | 'high' | 'extreme';
+  tempoOverride?: number; // Exact BPM override
+  textContent?: string; // Lyrics/text to weave into the vibe
 }
 
 export interface GeneratedTrack {
