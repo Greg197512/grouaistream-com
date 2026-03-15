@@ -62,7 +62,7 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
       className="relative flex h-full flex-col bg-sidebar border-r border-sidebar-border overflow-hidden"
     >
       {/* Matrix-style falling notes */}
-      <MatrixNotes />
+      <MatrixNotes enabled={matrixEnabled} />
 
       {/* Logo */}
       <div className="flex h-24 items-center gap-3 px-4">
