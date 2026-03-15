@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { PlaylistCard } from "@/components/cards/PlaylistCard";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { useAI } from "@/contexts/AIContext";
+import { useUnlock } from "@/contexts/UnlockContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2, Sparkles } from "lucide-react";

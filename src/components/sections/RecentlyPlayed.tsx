@@ -5,6 +5,7 @@ import { Droppable, Draggable } from "@hello-pangea/dnd";
 import { supabase } from "@/integrations/supabase/client";
 import { usePlayer, Track } from "@/contexts/PlayerContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { useUnlock } from "@/contexts/UnlockContext";
 import { formatDistanceToNow } from "date-fns";
 import { TrackOptionsMenu, LikeButton } from "@/components/menus/TrackOptionsMenu";
 import { cn } from "@/lib/utils";
