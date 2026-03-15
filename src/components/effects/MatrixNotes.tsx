@@ -30,7 +30,7 @@ export const MatrixNotes = ({ enabled }: MatrixNotesProps) => {
       x: 5 + Math.random() * 90, // % position
       char: NOTE_CHARS[Math.floor(Math.random() * NOTE_CHARS.length)],
       hue: 15 + Math.random() * 30,
-      size: 10 + Math.random() * 8,
+      size: 7 + Math.random() * 4,
       duration: 3 + Math.random() * 3,
       delay: 0,
     };
