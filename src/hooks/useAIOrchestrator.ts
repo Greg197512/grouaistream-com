@@ -138,17 +138,27 @@ export const useAIOrchestrator = () => {
         setLastRecommendation(aiData.data as AIRecommendation);
       }
 
-      // Fetch matching tracks
-      const targetMood = mood || currentMood?.mood || "relaxed";
-      const targetGenre = genre || stats?.topGenres[0] || "Pop";
+      // Fetch matching tracks - sanitize values to prevent PostgREST parse errors
+      const targetMood = (mood || currentMood?.mood || "relaxed").replace(/[,()]/g, "").trim().split(/\s+/).slice(0, 3).join(" ");
+      const targetGenre = (genre || stats?.topGenres[0] || "Pop").replace(/[,()]/g, "").trim().split(/\s+/).slice(0, 3).join(" ");
 
-      const { data: tracks, error } = await supabase
+      // Use separate queries instead of .or() to avoid PostgREST filter parsing issues
+      const { data: genreTracks } = await supabase
         .from("tracks")
         .select("*")
-        .or(`genre.ilike.%${targetGenre}%,mood.ilike.%${targetMood}%`)
-        .limit(25);
+        .ilike("genre", `%${targetGenre}%`)
+        .limit(15);
 
-      if (error) throw error;
+      const { data: moodTracks } = await supabase
+        .from("tracks")
+        .select("*")
+        .ilike("mood", `%${targetMood}%`)
+        .limit(15);
+
+      // Merge and deduplicate
+      const allTracks = [...(genreTracks || []), ...(moodTracks || [])];
+      const seen = new Set<string>();
+      const tracks = allTracks.filter(t => { if (seen.has(t.id)) return false; seen.add(t.id); return true; }).slice(0, 25);
 
       if (tracks && tracks.length > 0) {
         // Shuffle for variety
