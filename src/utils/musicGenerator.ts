@@ -643,6 +643,20 @@ function renderAudio(config: GenerationConfig, bpm: number, rootMidi: number, sc
     }
   }
 
+  // === CC MIXTER SAMPLES ===
+  if (config.samples && config.samples.length > 0) {
+    const sampleVol = 0.12; // Blend volume for samples
+    config.samples.forEach((sample, idx) => {
+      // Stagger sample entry for variety
+      const startOffset = idx * 4; // Each sample enters 4 seconds later
+      const sampleDuration = Math.max(0, duration - startOffset - 1);
+      if (sampleDuration > 2) {
+        mixSampleIntoContext(ctx, sample.buffer, startOffset, sampleDuration, sampleVol, sendBus);
+      }
+    });
+    console.log(`Mixed ${config.samples.length} CC Mixter samples into track`);
+  }
+
   // Fade out last 1.5s
   const fadeStart = duration - 1.5;
   masterGain.gain.setValueAtTime(0.85, fadeStart);
