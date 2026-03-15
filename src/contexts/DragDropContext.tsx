@@ -18,6 +18,8 @@ interface DragDropContextType {
   showDropZones: boolean;
   setShowDropZones: (show: boolean) => void;
   refreshPlaylists: () => Promise<void>;
+  onMixerDrop: ((slot: "A" | "B", track: Track) => void) | null;
+  setOnMixerDrop: (cb: ((slot: "A" | "B", track: Track) => void) | null) => void;
 }
 
 const DragDropContext = createContext<DragDropContextType | undefined>(undefined);
@@ -40,6 +42,7 @@ export const DragDropProvider = ({ children }: DragDropProviderProps) => {
   const [draggedTrack, setDraggedTrack] = useState<Track | null>(null);
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [showDropZones, setShowDropZones] = useState(false);
+  const [onMixerDrop, setOnMixerDrop] = useState<((slot: "A" | "B", track: Track) => void) | null>(null);
 
   const refreshPlaylists = async () => {
     if (!user) return;
@@ -80,6 +83,16 @@ export const DragDropProvider = ({ children }: DragDropProviderProps) => {
     if (!result.destination) return;
     
     const { source, destination, draggableId } = result;
+
+    // Handle dropping to mixer slots
+    if (destination.droppableId === "mixer-A" || destination.droppableId === "mixer-B") {
+      const slot = destination.droppableId === "mixer-A" ? "A" : "B";
+      if (draggedTrack && onMixerDrop) {
+        onMixerDrop(slot, draggedTrack);
+        toast.success(`Dodano do slotu ${slot}`);
+      }
+      return;
+    }
     
     // Handle dropping to playlist
     if (destination.droppableId.startsWith("playlist-")) {
@@ -153,6 +166,8 @@ export const DragDropProvider = ({ children }: DragDropProviderProps) => {
         showDropZones,
         setShowDropZones,
         refreshPlaylists,
+        onMixerDrop,
+        setOnMixerDrop,
       }}
     >
       <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>

@@ -1,6 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useDragDrop } from "@/contexts/DragDropContext";
+import { Droppable } from "@hello-pangea/dnd";
+import { Track } from "@/contexts/PlayerContext";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -40,6 +43,7 @@ const MIX_STYLES: { value: MixStyle; label: string; desc: string }[] = [
 
 export const TrackMixer = () => {
   const { user, session } = useAuth();
+  const { isDragging, setOnMixerDrop } = useDragDrop();
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<TrackItem[]>([]);
   const [searching, setSearching] = useState(false);
@@ -69,6 +73,26 @@ export const TrackMixer = () => {
       .limit(10)
       .then(({ data }) => setMixHistory(data || []));
   }, [user]);
+
+  // Register mixer drop callback
+  const handleMixerDrop = useCallback((slot: "A" | "B", track: Track) => {
+    const item: TrackItem = {
+      id: track.id,
+      title: track.title,
+      artist: track.artist,
+      audio_url: track.audio_url || null,
+      genre: track.genre || null,
+      duration: track.duration || 180,
+    };
+    if (slot === "A") setTrackA(item);
+    else setTrackB(item);
+    setMixResult(null);
+  }, []);
+
+  useEffect(() => {
+    setOnMixerDrop(() => handleMixerDrop);
+    return () => setOnMixerDrop(null);
+  }, [handleMixerDrop, setOnMixerDrop]);
 
   // Search tracks from library
   useEffect(() => {
@@ -227,31 +251,52 @@ export const TrackMixer = () => {
   };
 
   const TrackSlot = ({ slot, track, onRemove }: { slot: "A" | "B"; track: TrackItem | null; onRemove: () => void }) => (
-    <motion.div
-      layout
-      className="p-3 rounded-xl border border-[#FF6B00]/20 bg-[#1a1a2e]/60 min-h-[72px] flex items-center gap-3 cursor-pointer hover:border-[#FF6B00]/50 transition-colors"
-      onClick={() => { if (!track) { setSelectingSlot(slot); } }}
-    >
-      <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
-        style={{ background: slot === "A" ? "linear-gradient(135deg, #FF6B00, #FF9500)" : "linear-gradient(135deg, #9333EA, #FF6B00)" }}>
-        <span className="text-white font-bold text-sm">{slot}</span>
-      </div>
-      {track ? (
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-white truncate">{track.title}</p>
-          <p className="text-xs text-gray-400 truncate">{track.artist} • {track.genre || "—"}</p>
-        </div>
-      ) : (
-        <p className="text-sm text-gray-500 flex items-center gap-2">
-          <Plus className="h-4 w-4" /> Wybierz utwór
-        </p>
+    <Droppable droppableId={`mixer-${slot}`}>
+      {(provided, snapshot) => (
+        <motion.div
+          ref={provided.innerRef}
+          {...provided.droppableProps}
+          layout
+          className={`p-3 rounded-xl border min-h-[72px] flex items-center gap-3 cursor-pointer transition-all ${
+            snapshot.isDraggingOver
+              ? "border-[#FF9500] bg-[#FF6B00]/10 ring-2 ring-[#FF6B00]/30"
+              : isDragging
+                ? "border-[#FF6B00]/40 bg-[#1a1a2e]/80 border-dashed"
+                : "border-[#FF6B00]/20 bg-[#1a1a2e]/60 hover:border-[#FF6B00]/50"
+          }`}
+          onClick={() => { if (!track) { setSelectingSlot(slot); } }}
+        >
+          <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
+            style={{ background: slot === "A" ? "linear-gradient(135deg, #FF6B00, #FF9500)" : "linear-gradient(135deg, #9333EA, #FF6B00)" }}>
+            <span className="text-white font-bold text-sm">{slot}</span>
+          </div>
+          {track ? (
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-white truncate">{track.title}</p>
+              <p className="text-xs text-gray-400 truncate">{track.artist} • {track.genre || "—"}</p>
+            </div>
+          ) : snapshot.isDraggingOver ? (
+            <p className="text-sm text-[#FF9500] flex items-center gap-2 animate-pulse">
+              <Plus className="h-4 w-4" /> Upuść tutaj!
+            </p>
+          ) : isDragging ? (
+            <p className="text-sm text-[#FF6B00]/60 flex items-center gap-2">
+              <Plus className="h-4 w-4" /> Przeciągnij utwór tutaj
+            </p>
+          ) : (
+            <p className="text-sm text-gray-500 flex items-center gap-2">
+              <Plus className="h-4 w-4" /> Wybierz lub przeciągnij utwór
+            </p>
+          )}
+          {track && (
+            <button onClick={(e) => { e.stopPropagation(); onRemove(); }} className="text-gray-500 hover:text-red-400 transition-colors p-1">
+              <X className="h-4 w-4" />
+            </button>
+          )}
+          <div className="hidden">{provided.placeholder}</div>
+        </motion.div>
       )}
-      {track && (
-        <button onClick={(e) => { e.stopPropagation(); onRemove(); }} className="text-gray-500 hover:text-red-400 transition-colors p-1">
-          <X className="h-4 w-4" />
-        </button>
-      )}
-    </motion.div>
+    </Droppable>
   );
 
   return (
