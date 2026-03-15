@@ -81,7 +81,6 @@ export const PlayerBar = () => {
   
   // New state for modals/sidebars
   const [showQueue, setShowQueue] = useState(false);
-  const [showVoiceCommand, setShowVoiceCommand] = useState(false);
   const [showFullscreen, setShowFullscreen] = useState(false);
   const [showMoodDetector, setShowMoodDetector] = useState(false);
 
