@@ -590,9 +590,6 @@ export const PlayerBar = () => {
       {/* Queue Sidebar */}
       <QueueSidebar isOpen={showQueue} onClose={() => setShowQueue(false)} />
 
-      {/* Voice Command Modal */}
-      <VoiceCommandHandler isOpen={showVoiceCommand} onClose={() => setShowVoiceCommand(false)} />
-
       {/* Fullscreen Player */}
       <FullscreenPlayer isOpen={showFullscreen} onClose={() => setShowFullscreen(false)} />
 
