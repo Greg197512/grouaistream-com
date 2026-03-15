@@ -934,21 +934,30 @@ export const AutoVoiceListener = () => {
       }
     }
 
-    // Mood-based requests
+    // Mood-based requests - multilingual
     const MOOD_PHRASES: Record<string, string> = {
-      "zly dzien": "happy",
-      "zle sie czuje": "chill",
-      "smutno": "happy",
-      "popraw": "happy",
-      "humor": "happy",
-      "wesolo": "happy",
-      "energi": "energetic",
-      "spokojn": "chill",
-      "relaks": "chill",
-      "imprez": "energetic",
-      "tanc": "energetic",
-      "romantycz": "romantic",
-      "milosc": "romantic",
+      // PL
+      "zly dzien": "happy", "zle sie czuje": "chill", "smutno": "happy",
+      "popraw": "happy", "humor": "happy", "wesolo": "happy",
+      "energi": "energetic", "spokojn": "chill", "relaks": "chill",
+      "imprez": "energetic", "tanc": "energetic",
+      "romantycz": "romantic", "milosc": "romantic",
+      // EN
+      "bad day": "happy", "feel sad": "happy", "cheer me up": "happy",
+      "happy": "happy", "excited": "energetic", "calm": "chill",
+      "relax": "chill", "party": "energetic", "dance": "energetic",
+      "romantic": "romantic", "love": "romantic", "energy": "energetic",
+      "chill": "chill", "peaceful": "chill",
+      // NL
+      "slecht dag": "happy", "verdrietig": "happy", "blij": "happy",
+      "vrolijk": "happy", "rustig": "chill", "ontspannen": "chill",
+      "feest": "energetic", "dansen": "energetic", "romantisch": "romantic",
+      "liefde": "romantic", "energie": "energetic",
+      // UA
+      "поганий день": "happy", "сумно": "happy", "веселий": "happy",
+      "спокійно": "chill", "релакс": "chill", "енергія": "energetic",
+      "вечірка": "energetic", "танц": "energetic", "романтика": "romantic",
+      "кохання": "romantic",
     };
 
     const detectedMood = Object.entries(MOOD_PHRASES).find(([phrase]) => normalized.includes(normalizeCommand(phrase)));
