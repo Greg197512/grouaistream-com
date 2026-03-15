@@ -933,6 +933,13 @@ Znasz DOKŁADNIE każdą funkcję aplikacji:
             data: generateResult,
           })}\n\n`));
         }
+        // Send audio mix event
+        if (mixRequest) {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+            type: "audio_mix",
+            data: mixRequest,
+          })}\n\n`));
+        }
         // Send auto-play tracks as first event (multiple tracks for playlist)
         if (autoPlayTracks.length > 0) {
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({
