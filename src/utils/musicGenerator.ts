@@ -133,6 +133,8 @@ export interface GenerationConfig {
   energy?: 'low' | 'medium' | 'high' | 'extreme';
   tempoOverride?: number; // Exact BPM override
   textContent?: string; // Lyrics/text to weave into the vibe
+  useSamples?: boolean; // Whether to layer CC Mixter samples
+  samples?: LoadedSample[]; // Pre-loaded samples to mix in
 }
 
 export interface GeneratedTrack {
