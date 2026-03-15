@@ -854,7 +854,7 @@ export const AutoVoiceListener = () => {
     // ==========================================
     // MOVE/TRANSFER TRACK COMMAND (delegate to AI)
     // ==========================================
-    const wantsMove = /(?:przenieś|przenies|wytnij|dodaj|wrzuć|wrzuc|usuń|usun).*(?:do\s+(?:katalogu|playlisty|folderu)|z\s+(?:katalogu|playlisty|folderu))/i.test(lower);
+    const wantsMove = /(?:przenieś|przenies|wytnij|dodaj|wrzuć|wrzuc|usuń|usun|move|transfer|add|remove|verplaats|voeg toe|verwijder|перенеси|додай|видали).*(?:do\s+(?:katalogu|playlisty|folderu)|z\s+(?:katalogu|playlisty|folderu)|to\s+(?:playlist|folder)|from\s+(?:playlist|folder)|naar\s+(?:afspeellijst|map)|uit\s+(?:afspeellijst|map)|до\s+(?:плейліст|папк)|з\s+(?:плейліст|папк))/i.test(lower);
     if (wantsMove) {
       toast.loading(`📁 Zarządzam playlistą...`, { id: "voice-cmd" });
       try {
