@@ -42,6 +42,7 @@ const PlaylistDetail = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { playPlaylist, currentTrack, isPlaying } = usePlayer();
+  const { filterTracks } = useUnlock();
   
   const [playlist, setPlaylist] = useState<Playlist | null>(null);
   const [tracks, setTracks] = useState<Track[]>([]);
