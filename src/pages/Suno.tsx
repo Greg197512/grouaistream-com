@@ -62,16 +62,13 @@ const Suno = () => {
           status: "completed",
           audio_url: track.audioUrl,
         }).select().single();
-          status: "completed",
-          audio_url: track.audioUrl,
-        }).select().single();
         generationId = gen?.id;
       }
 
       setResult({
         audioUrl: track.audioUrl,
         title: track.title,
-        genre,
+        genre: genreName,
         generationId,
         durationSeconds: 30,
         lastTrack: track,
