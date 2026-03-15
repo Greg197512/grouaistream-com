@@ -460,6 +460,30 @@ export const AIAssistant = () => {
               continue;
             }
 
+            // Handle audio mix event
+            if (parsed.type === "audio_mix") {
+              const mixData = parsed.data;
+              try {
+                toast.info("🎧 Miksuję pliki audio...");
+                const mixResult = await mixAudioFiles(
+                  mixData.urls[0],
+                  mixData.urls[1],
+                  { style: mixData.style as MixStyle }
+                );
+                pendingGeneratedTrackRef.current = {
+                  audioUrl: mixResult.audioUrl,
+                  title: mixResult.title,
+                  genre: `Mix (${mixData.style})`,
+                  duration: mixResult.duration,
+                };
+                toast.success(`🎧 Mix gotowy! ${mixResult.duration}s`);
+              } catch (err) {
+                console.error("Mix error in chat:", err);
+                toast.error("Błąd miksowania plików");
+              }
+              continue;
+            }
+
             // Handle auto-play multiple tracks (normal + DJ mode)
             if (parsed.type === "auto_play_tracks" || parsed.type === "dj_mode_tracks") {
               const trackIds = parsed.data.map((t: any) => t.id);
