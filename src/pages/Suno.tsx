@@ -135,7 +135,9 @@ const Suno = () => {
         }).eq("id", result.generationId);
       }
 
-      const newLyrics = generateLyrics(result.genre, result.title, newDuration, instrumental);
+      const newLyrics = customLyrics.trim()
+        ? parseLyricsFromText(customLyrics, newDuration)
+        : generateLyrics(result.genre, result.title, newDuration, instrumental);
       setResult(prev => prev ? {
         ...prev,
         audioUrl: extended.audioUrl,
