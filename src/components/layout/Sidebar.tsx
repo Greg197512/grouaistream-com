@@ -81,7 +81,7 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
             onClick={() => handleNavClick("/")}
             whileHover={{ scale: 1.03 }}
           >
-            <MatrixNotes enabled={matrixEnabled} width={240} height={96} />
+            <MatrixNotes enabled={matrixEnabled} />
             <img src={logoIcon} alt="GrouAI Stream by GrouaRock" className="h-24 object-contain relative z-10" />
           </motion.div>
         )}
