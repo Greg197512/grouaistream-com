@@ -44,7 +44,6 @@ export const HQCover = ({ src, alt, className, fallbackClassName, showFallbackIc
       )}
       style={{
         imageRendering: "auto",
-        WebkitImageSmoothing: "high" as any,
       }}
     />
   );
