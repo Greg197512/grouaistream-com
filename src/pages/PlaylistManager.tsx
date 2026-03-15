@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { Track } from "@/contexts/PlayerContext";
+import { useUnlock } from "@/contexts/UnlockContext";
 import { toast } from "sonner";
 
 interface Playlist {
@@ -21,6 +22,7 @@ interface Playlist {
 const PlaylistManager = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { filterTracks } = useUnlock();
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [allTracks, setAllTracks] = useState<Track[]>([]);
   const [loading, setLoading] = useState(true);
@@ -50,7 +52,7 @@ const PlaylistManager = () => {
       .select("*")
       .order("title");
 
-    const tracks: Track[] = (tracksData || []).map((t) => ({
+    const tracks: Track[] = filterTracks((tracksData || []).map((t) => ({
       id: t.id,
       title: t.title,
       artist: t.artist,
@@ -61,7 +63,7 @@ const PlaylistManager = () => {
       cover_url: t.cover_url,
       genre: t.genre,
       mood: t.mood,
-    }));
+    })));
 
     // Load playlist tracks for each playlist
     const playlistsWithTracks: Playlist[] = [];

@@ -12,6 +12,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Track } from "@/contexts/PlayerContext";
+import { useUnlock } from "@/contexts/UnlockContext";
 
 const gradients = [
   "from-purple-400 to-pink-500",
@@ -25,6 +26,7 @@ const gradients = [
 const CreatePlaylist = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { filterTracks } = useUnlock();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [selectedGradient, setSelectedGradient] = useState(gradients[0]);
@@ -45,7 +47,7 @@ const CreatePlaylist = () => {
         .select("*")
         .order("title", { ascending: true });
 
-      setAllTracks(data || []);
+      setAllTracks(filterTracks(data || []));
     };
 
     loadTracks();

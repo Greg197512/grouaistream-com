@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { PlaylistCard } from "@/components/cards/PlaylistCard";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { useAI } from "@/contexts/AIContext";
+import { useUnlock } from "@/contexts/UnlockContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2, Sparkles } from "lucide-react";
@@ -105,6 +106,7 @@ export const PlaylistGrid = ({ title, subtitle, showAll = true }: PlaylistGridPr
   const isAISection = title.toLowerCase().includes("ai");
   const playlists = isAISection ? aiPlaylists : trendingPlaylists;
   const { playPlaylist } = usePlayer();
+  const { filterTracks } = useUnlock();
   const { generateAIPlaylist, isProcessing, lastRecommendation } = useAI();
   const [generatingId, setGeneratingId] = useState<string | null>(null);
 
@@ -150,7 +152,8 @@ export const PlaylistGrid = ({ title, subtitle, showAll = true }: PlaylistGridPr
         .limit(20);
       
       if (tracks && tracks.length > 0) {
-        const shuffled = [...tracks].sort(() => Math.random() - 0.5);
+        const filtered = filterTracks(tracks);
+        const shuffled = [...filtered].sort(() => Math.random() - 0.5);
         playPlaylist(shuffled);
         toast.success(`Playing ${shuffled.length} tracks`, { id: "trending-playlist" });
       } else {

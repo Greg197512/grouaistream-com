@@ -14,6 +14,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePlayer, Track } from "@/contexts/PlayerContext";
+import { useUnlock } from "@/contexts/UnlockContext";
 import { TrackOptionsMenu } from "@/components/menus/TrackOptionsMenu";
 import { toast } from "sonner";
 import {
@@ -41,6 +42,7 @@ const PlaylistDetail = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { playPlaylist, currentTrack, isPlaying } = usePlayer();
+  const { filterTracks } = useUnlock();
   
   const [playlist, setPlaylist] = useState<Playlist | null>(null);
   const [tracks, setTracks] = useState<Track[]>([]);
@@ -86,9 +88,9 @@ const PlaylistDetail = () => {
         .in("id", trackIds);
 
       // Sort tracks by position
-      const sortedTracks = trackIds
+      const sortedTracks = filterTracks(trackIds
         .map((trackId) => tracksData?.find((t) => t.id === trackId))
-        .filter(Boolean) as Track[];
+        .filter(Boolean) as Track[]);
 
       setTracks(sortedTracks);
     }
