@@ -954,6 +954,7 @@ const en: TranslationKeys = {
   "nav.radioLive": "GrouaRadio Live",
   "nav.importYoutube": "Import YouTube",
   "nav.sunoAI": "GrouAI Studio",
+  "nav.localPlayer": "Local Player",
   "nav.aiDj": "AI DJ",
   "nav.moodDetection": "Mood Detection",
   "nav.moodHistory": "Mood History",
