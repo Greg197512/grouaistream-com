@@ -773,9 +773,9 @@ export const AutoVoiceListener = () => {
     }
 
     // ==========================================
-    // SEARCH COMMAND ("poszukaj X", "znajdź X", "szukaj X")
+    // SEARCH COMMAND - multilingual
     // ==========================================
-    const searchMatch = lower.match(/(?:poszukaj|znajdź|znajdz|wyszukaj|szukaj|search|find)\s+(.+)/i);
+    const searchMatch = lower.match(/(?:poszukaj|znajdź|znajdz|wyszukaj|szukaj|search|find|look for|zoek|zoek naar|знайди|шукай)\s+(.+)/i);
     if (searchMatch) {
       const query = searchMatch[1].trim();
       if (query) {
@@ -784,16 +784,16 @@ export const AutoVoiceListener = () => {
       }
     }
 
-    // Navigation (general)
-    if (lower.includes("otwórz") || lower.includes("włącz") || lower.includes("pokaż") || lower.includes("przejdź") || lower.includes("idź")) {
+    // Navigation (general) - multilingual triggers
+    if (includesAny(lower, ["otwórz", "włącz", "pokaż", "przejdź", "idź", "open", "show", "go to", "navigate", "toon", "ga naar", "відкрий", "покажи", "перейди"])) {
       if (tryNavigate(lower)) return;
     }
     if (tryNavigate(lower)) return;
 
     // ==========================================
-    // FAVORITES PLAY COMMAND
+    // FAVORITES PLAY COMMAND - multilingual
     // ==========================================
-    const wantsFavorites = /ulubionych|polubion|z\s+ulubionych|z\s+polubionych|ulubione|liked|favorite/i.test(lower);
+    const wantsFavorites = /ulubionych|polubion|z\s+ulubionych|z\s+polubionych|ulubione|liked|favorites?|favorieten|geliked|улюблен/i.test(lower);
     if (wantsFavorites) {
       const count = parseNumber(lower) || 5;
       toast.loading(`❤️ Pobieram ${count} z ulubionych...`, { id: "voice-cmd" });
