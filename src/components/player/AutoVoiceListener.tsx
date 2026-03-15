@@ -919,7 +919,7 @@ export const AutoVoiceListener = () => {
     }
 
     // "wybierz X rock/pop/etc" - genre-based selection (number + genre words)
-    const selectMatch = lower.match(/wybierz\s+(.+)/i);
+    const selectMatch = lower.match(/(?:wybierz|select|choose|pick|kies|selecteer|вибери)\s+(.+)/i);
     if (selectMatch) {
       const rest = selectMatch[1].replace(/i\s+włącz.*/i, "").replace(/w\s+playerze/i, "").trim();
       const count = parseNumber(rest);
