@@ -320,6 +320,29 @@ export const AIAssistant = () => {
               continue;
             }
 
+            // Handle music generation event - generate locally
+            if (parsed.type === "music_generate") {
+              const genData = parsed.data;
+              try {
+                const track = await generateMusic({
+                  style: genData.style,
+                  durationSeconds: 30,
+                  instrumental: genData.instrumental,
+                  title: genData.title || undefined,
+                });
+                pendingGeneratedTrackRef.current = {
+                  audioUrl: track.audioUrl,
+                  title: track.title,
+                  genre: track.style,
+                  duration: 30,
+                };
+                toast.success(`🎶 Wygenerowano "${track.title}"!`);
+              } catch (err) {
+                console.error("Generation error in chat:", err);
+              }
+              continue;
+            }
+
             // Handle auto-play multiple tracks (normal + DJ mode)
             if (parsed.type === "auto_play_tracks" || parsed.type === "dj_mode_tracks") {
               const trackIds = parsed.data.map((t: any) => t.id);
