@@ -1233,7 +1233,7 @@ export const AutoVoiceListener = () => {
             initial={{ opacity: 0, y: 20, x: 20 }}
             animate={{ opacity: 1, y: 0, x: 0 }}
             exit={{ opacity: 0, y: 20 }}
-            className="fixed bottom-36 md:bottom-40 right-4 z-40 max-w-[240px] rounded-xl p-2.5"
+            className="fixed bottom-44 md:bottom-48 right-4 z-40 max-w-[240px] rounded-xl p-2.5"
             style={{
               background: 'rgba(0,0,0,0.25)',
               backdropFilter: 'blur(30px)',
