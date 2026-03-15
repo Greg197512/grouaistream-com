@@ -56,8 +56,8 @@ const CopyButton = ({ text, isUser }: { text: string; isUser: boolean }) => {
       onClick={handleCopy}
       whileHover={{ scale: 1.15 }}
       whileTap={{ scale: 0.9 }}
-      className={`absolute top-1.5 right-1.5 w-6 h-6 rounded-md flex items-center justify-center opacity-0 group-hover/msg:opacity-100 transition-opacity ${
-        isUser ? "bg-primary-foreground/20 hover:bg-primary-foreground/30" : "bg-white/10 hover:bg-white/20"
+      className={`absolute top-1.5 right-1.5 z-10 w-6 h-6 rounded-md flex items-center justify-center opacity-40 hover:opacity-100 transition-opacity ${
+        isUser ? "bg-primary-foreground/20 hover:bg-primary-foreground/40" : "bg-white/10 hover:bg-white/20"
       }`}
       title="Kopiuj"
     >
@@ -553,7 +553,7 @@ export const AIAssistant = () => {
                         <img src={aiAssistantAvatar} alt="" className="w-full h-full object-cover" />
                       </div>
                     )}
-                    <div className={`group/msg relative max-w-[88%] rounded-2xl px-4 py-3 ${
+                    <div className={`relative max-w-[88%] rounded-2xl px-4 py-3 ${
                       msg.role === "user"
                         ? "bg-primary text-primary-foreground rounded-br-sm"
                         : "bg-white/5 text-foreground rounded-bl-sm border border-white/5"
