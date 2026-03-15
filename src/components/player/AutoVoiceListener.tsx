@@ -921,7 +921,7 @@ export const AutoVoiceListener = () => {
     } finally {
       isProcessingCommandRef.current = false;
     }
-  }, [isAIEnabled, processVoiceCommand, playPlaylist, nextTrack, prevTrack, setVolume, tryNavigate, searchAndPlay, resetSilenceTimer, assistantName, fetchAISuggestions, shutdownMic, showSuggestions, aiSuggestions, pausePlayback, resumePlayback, restartCurrentTrack, parsePolishNumber, handlePlayFromAI, safeSpeakAndResume]);
+  }, [isAIEnabled, processVoiceCommand, playPlaylist, nextTrack, prevTrack, setVolume, tryNavigate, searchAndPlay, resetSilenceTimer, assistantName, fetchAISuggestions, shutdownMic, showSuggestions, aiSuggestions, pausePlayback, resumePlayback, restartCurrentTrack, parseNumber, handlePlayFromAI, safeSpeakAndResume]);
 
   const startListening = useCallback(() => {
     if (!user) return;
