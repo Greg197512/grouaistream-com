@@ -138,17 +138,27 @@ export const useAIOrchestrator = () => {
         setLastRecommendation(aiData.data as AIRecommendation);
       }
 
-      // Fetch matching tracks
-      const targetMood = mood || currentMood?.mood || "relaxed";
-      const targetGenre = genre || stats?.topGenres[0] || "Pop";
+      // Fetch matching tracks - sanitize values to prevent PostgREST parse errors
+      const targetMood = (mood || currentMood?.mood || "relaxed").replace(/[,()]/g, "").trim().split(/\s+/).slice(0, 3).join(" ");
+      const targetGenre = (genre || stats?.topGenres[0] || "Pop").replace(/[,()]/g, "").trim().split(/\s+/).slice(0, 3).join(" ");
 
-      const { data: tracks, error } = await supabase
+      // Use separate queries instead of .or() to avoid PostgREST filter parsing issues
+      const { data: genreTracks } = await supabase
         .from("tracks")
         .select("*")
-        .or(`genre.ilike.%${targetGenre}%,mood.ilike.%${targetMood}%`)
-        .limit(25);
+        .ilike("genre", `%${targetGenre}%`)
+        .limit(15);
 
-      if (error) throw error;
+      const { data: moodTracks } = await supabase
+        .from("tracks")
+        .select("*")
+        .ilike("mood", `%${targetMood}%`)
+        .limit(15);
+
+      // Merge and deduplicate
+      const allTracks = [...(genreTracks || []), ...(moodTracks || [])];
+      const seen = new Set<string>();
+      const tracks = allTracks.filter(t => { if (seen.has(t.id)) return false; seen.add(t.id); return true; }).slice(0, 25);
 
       if (tracks && tracks.length > 0) {
         // Shuffle for variety
@@ -229,8 +239,8 @@ export const useAIOrchestrator = () => {
         },
       });
 
-      const detectedMood = aiResponse?.data?.detectedMood || "neutral";
-      const suggestedGenre = aiResponse?.data?.musicRecommendation || "Pop";
+      const detectedMood = (aiResponse?.data?.detectedMood || "neutral").replace(/[,()]/g, "").trim().split(/\s+/).slice(0, 3).join(" ");
+      const suggestedGenre = (aiResponse?.data?.musicRecommendation || "Pop").replace(/[,()]/g, "").trim().split(/\s+/).slice(0, 3).join(" ");
 
       // Parse command for explicit genre requests (PL + EN)
       let targetGenre = suggestedGenre;
@@ -260,11 +270,17 @@ export const useAIOrchestrator = () => {
       else if (lower.includes("głośn") || lower.includes("cisz") || lower.includes("volume")) action = "volume";
 
       if (action === "play") {
-        let tracks = await generateAIPlaylist(detectedMood, targetGenre, `Voice command: ${command}`);
-        if (requestedCount && requestedCount > 0) {
-          tracks = tracks.slice(0, requestedCount);
+        try {
+          let tracks = await generateAIPlaylist(detectedMood, targetGenre, `Voice command: ${command}`);
+          if (requestedCount && requestedCount > 0) {
+            tracks = tracks.slice(0, requestedCount);
+          }
+          return { action, genre: targetGenre, mood: detectedMood, tracks };
+        } catch (playlistError) {
+          console.error("AI playlist fallback error:", playlistError);
+          // Return empty tracks instead of crashing
+          return { action, genre: targetGenre, mood: detectedMood, tracks: [] };
         }
-        return { action, genre: targetGenre, mood: detectedMood, tracks };
       }
 
       return { action, genre: targetGenre, mood: detectedMood };
