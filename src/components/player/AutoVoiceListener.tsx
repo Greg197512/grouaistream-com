@@ -672,12 +672,11 @@ export const AutoVoiceListener = () => {
     }
 
     // ==========================================
-    // PLAYLIST OPEN / PLAY COMMANDS
+    // PLAYLIST OPEN / PLAY COMMANDS (multilingual)
     // ==========================================
-    const playlistOpenMatch = lower.match(/(?:otwórz|otworz|pokaż|pokaz|wyświetl|wyswietl)\s+(?:playlist[ęeay]?|plej\s*list[ęeay]?)\s+(.+)/i);
-    const playlistPlayMatch = lower.match(/(?:plej|play|puść|pusc|odtwórz|odtworz|włącz|wlacz|zagraj|graj|odpal|leć|lec|dawaj)\s+(?:playlist[ęeay]?|plej\s*list[ęeay]?)\s+(.+)/i);
-    // Also match "playlistę X" without verb (just name after "playlistę")
-    const playlistNameOnly = !playlistOpenMatch && !playlistPlayMatch && lower.match(/(?:playlist[ęeay]?|plej\s*list[ęeay]?)\s+(.+)/i);
+    const playlistOpenMatch = lower.match(/(?:otwórz|otworz|pokaż|pokaz|wyświetl|wyswietl|open|show|display|toon|open|відкрий|покажи)\s+(?:playlist[ęeay]?|plej\s*list[ęeay]?|afspeellijst|плейліст)\s+(.+)/i);
+    const playlistPlayMatch = lower.match(/(?:plej|play|puść|pusc|odtwórz|odtworz|włącz|wlacz|zagraj|graj|odpal|leć|lec|dawaj|speel|draai|грай|увімкни)\s+(?:playlist[ęeay]?|plej\s*list[ęeay]?|afspeellijst|плейліст)\s+(.+)/i);
+    const playlistNameOnly = !playlistOpenMatch && !playlistPlayMatch && lower.match(/(?:playlist[ęeay]?|plej\s*list[ęeay]?|afspeellijst|плейліст)\s+(.+)/i);
 
     if (playlistOpenMatch || playlistPlayMatch || playlistNameOnly) {
       const isPlayMode = !!playlistPlayMatch || !!playlistNameOnly;
