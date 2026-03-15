@@ -59,16 +59,16 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
       initial={false}
       animate={{ width: collapsed ? 80 : 280 }}
       transition={{ duration: 0.3, ease: "easeInOut" }}
-      className="relative flex h-full flex-col bg-sidebar border-r border-sidebar-border overflow-hidden"
+      className="relative flex h-full flex-col bg-sidebar border-r border-sidebar-border"
     >
-      {/* Matrix-style falling notes */}
-      <MatrixNotes enabled={matrixEnabled} />
-
       {/* Logo */}
-      <div className="flex h-24 items-center gap-3 px-4">
+      <div className="relative flex h-24 items-center gap-3 px-4 overflow-hidden">
+        {/* Matrix notes rain behind logo */}
+        <MatrixNotes enabled={matrixEnabled} width={collapsed ? 80 : 280} height={96} />
+        
         {collapsed ? (
           <motion.div 
-            className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-xl cursor-pointer overflow-hidden mx-auto"
+            className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-xl cursor-pointer overflow-hidden mx-auto relative z-10"
             whileHover={{ scale: 1.1, rotate: 5 }}
             onClick={() => handleNavClick("/")}
           >
@@ -79,7 +79,7 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
             initial={{ opacity: 0, x: -10 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -10 }}
-            className="cursor-pointer flex items-center"
+            className="cursor-pointer flex items-center relative z-10"
             onClick={() => handleNavClick("/")}
             whileHover={{ scale: 1.03 }}
           >
