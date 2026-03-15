@@ -32,6 +32,7 @@ import Server from "./pages/Server";
 import Legal from "./pages/Legal";
 import PartyPulpit from "./pages/PartyPulpit";
 import Suno from "./pages/Suno";
+import LocalPlayer from "./pages/LocalPlayer";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -82,6 +83,7 @@ const App = () => (
                   <Route path="/legal" element={<Legal />} />
                   <Route path="/party/:code" element={<PartyPulpit />} />
                   <Route path="/suno" element={<Suno />} />
+                  <Route path="/local-player" element={<LocalPlayer />} />
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>
