@@ -1,17 +1,19 @@
-import { useEffect, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 
-const NOTE_CHARS = ["♩", "♪", "♫", "♬", "𝄞", "♭", "♯", "𝅘𝅥", "𝅗𝅥"];
+const NOTE_CHARS = ["♩", "♪", "♫", "♬", "𝄞", "♭", "♯"];
 
-interface NoteParticle {
+interface FallingNote {
+  id: number;
   x: number;
-  y: number;
-  speed: number;
   char: string;
   hue: number;
   size: number;
-  alpha: number;
-  wobble: number;
+  duration: number;
+  delay: number;
 }
+
+let noteId = 0;
 
 interface MatrixNotesProps {
   enabled: boolean;
@@ -19,94 +21,74 @@ interface MatrixNotesProps {
   height?: number;
 }
 
-export const MatrixNotes = ({ enabled, width = 280, height = 96 }: MatrixNotesProps) => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const particlesRef = useRef<NoteParticle[]>([]);
+export const MatrixNotes = ({ enabled }: MatrixNotesProps) => {
+  const [notes, setNotes] = useState<FallingNote[]>([]);
+
+  const spawnNote = useCallback(() => {
+    const note: FallingNote = {
+      id: ++noteId,
+      x: 5 + Math.random() * 90, // % position
+      char: NOTE_CHARS[Math.floor(Math.random() * NOTE_CHARS.length)],
+      hue: 15 + Math.random() * 30,
+      size: 10 + Math.random() * 8,
+      duration: 3 + Math.random() * 3,
+      delay: 0,
+    };
+    setNotes((prev) => [...prev.slice(-20), note]); // keep max 20
+  }, []);
 
   useEffect(() => {
-    if (!enabled) return;
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+    if (!enabled) {
+      setNotes([]);
+      return;
+    }
+    // Spawn notes at intervals
+    const interval = setInterval(spawnNote, 400 + Math.random() * 300);
+    // Spawn a few immediately
+    for (let i = 0; i < 5; i++) {
+      setTimeout(spawnNote, i * 200);
+    }
+    return () => clearInterval(interval);
+  }, [enabled, spawnNote]);
 
-    const dpr = 2;
-    canvas.width = width * dpr;
-    canvas.height = height * dpr;
-    ctx.scale(dpr, dpr);
-
-    // Create particles
-    const count = Math.max(8, Math.floor(width / 18));
-    particlesRef.current = Array.from({ length: count }, () => ({
-      x: Math.random() * width,
-      y: Math.random() * height,
-      speed: 0.3 + Math.random() * 0.5,
-      char: NOTE_CHARS[Math.floor(Math.random() * NOTE_CHARS.length)],
-      hue: 15 + Math.random() * 30, // orange range
-      size: 12 + Math.random() * 6,
-      alpha: 0.5 + Math.random() * 0.5,
-      wobble: Math.random() * Math.PI * 2,
-    }));
-
-    let animId: number;
-
-    const draw = (time: number) => {
-      ctx.clearRect(0, 0, width, height);
-      const particles = particlesRef.current;
-
-      for (const p of particles) {
-        // Move down
-        p.y += p.speed;
-        p.wobble += 0.02;
-        const xOff = Math.sin(p.wobble) * 3;
-
-        // Reset at bottom
-        if (p.y > height + p.size) {
-          p.y = -p.size;
-          p.x = Math.random() * width;
-          p.char = NOTE_CHARS[Math.floor(Math.random() * NOTE_CHARS.length)];
-          p.hue = 15 + Math.random() * 30;
-        }
-
-        // Shimmer alpha
-        const shimmer = 0.3 + Math.sin(time * 0.003 + p.wobble * 5) * 0.25;
-        const a = p.alpha * shimmer + 0.2;
-
-        // Draw glow
-        ctx.save();
-        ctx.globalAlpha = a * 0.4;
-        ctx.shadowColor = `hsl(${p.hue}, 100%, 55%)`;
-        ctx.shadowBlur = 12;
-        ctx.font = `bold ${p.size}px serif`;
-        ctx.textAlign = "center";
-        ctx.fillStyle = `hsl(${p.hue}, 100%, 60%)`;
-        ctx.fillText(p.char, p.x + xOff, p.y);
-        ctx.restore();
-
-        // Draw note
-        ctx.save();
-        ctx.globalAlpha = a;
-        ctx.font = `bold ${p.size}px serif`;
-        ctx.textAlign = "center";
-        ctx.fillStyle = `hsl(${p.hue}, 95%, ${55 + Math.sin(time * 0.004 + p.wobble) * 10}%)`;
-        ctx.fillText(p.char, p.x + xOff, p.y);
-        ctx.restore();
-      }
-
-      animId = requestAnimationFrame(draw);
-    };
-
-    animId = requestAnimationFrame(draw);
-    return () => cancelAnimationFrame(animId);
-  }, [enabled, width, height]);
+  const handleComplete = useCallback((id: number) => {
+    setNotes((prev) => prev.filter((n) => n.id !== id));
+  }, []);
 
   if (!enabled) return null;
 
   return (
-    <canvas
-      ref={canvasRef}
-      className="absolute inset-0 pointer-events-none z-0"
-      style={{ width, height }}
-    />
+    <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
+      <AnimatePresence>
+        {notes.map((note) => (
+          <motion.span
+            key={note.id}
+            initial={{ y: "-20%", opacity: 0, scale: 0.5 }}
+            animate={{ 
+              y: "120%", 
+              opacity: [0, 0.9, 0.8, 0.6, 0],
+              scale: [0.5, 1, 1, 0.8],
+              rotate: [0, -5, 5, -3, 0],
+            }}
+            transition={{ 
+              duration: note.duration, 
+              ease: "linear",
+              opacity: { duration: note.duration, times: [0, 0.1, 0.5, 0.8, 1] },
+            }}
+            onAnimationComplete={() => handleComplete(note.id)}
+            className="absolute font-bold select-none"
+            style={{
+              left: `${note.x}%`,
+              fontSize: note.size,
+              color: `hsl(${note.hue}, 95%, 58%)`,
+              textShadow: `0 0 8px hsl(${note.hue}, 100%, 50%), 0 0 16px hsl(${note.hue}, 90%, 40%)`,
+              filter: `brightness(1.2)`,
+            }}
+          >
+            {note.char}
+          </motion.span>
+        ))}
+      </AnimatePresence>
+    </div>
   );
 };
