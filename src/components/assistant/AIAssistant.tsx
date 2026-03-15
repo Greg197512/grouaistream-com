@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { motion, AnimatePresence, useDragControls } from "framer-motion";
-import { Send, Loader2, ExternalLink, Music, Power, GripHorizontal, Sparkles, Maximize2, Minimize2, Radio, Waves, Copy, Check } from "lucide-react";
+import { Send, Loader2, ExternalLink, Music, Power, GripHorizontal, Sparkles, Maximize2, Minimize2, Radio, Waves, Copy, Check, Paperclip, Image, X, FileAudio } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -15,6 +15,13 @@ import { generateMusic, type GeneratedTrack } from "@/utils/musicGenerator";
 import { WaveformPlayer } from "@/components/studio/WaveformPlayer";
 import { toast } from "sonner";
 
+interface ChatAttachment {
+  type: "image" | "audio";
+  url: string; // object URL or uploaded URL
+  name: string;
+  file?: File;
+}
+
 interface PlaylistTrackInfo {
   id: string;
   title: string;
@@ -25,6 +32,7 @@ interface PlaylistTrackInfo {
 interface Message {
   role: "user" | "assistant";
   content: string;
+  attachments?: ChatAttachment[];
   trackLink?: { id: string; title: string; artist: string };
   playlistTracks?: PlaylistTrackInfo[];
   isDJMode?: boolean;
@@ -77,8 +85,10 @@ export const AIAssistant = () => {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [userName, setUserName] = useState("Użytkownik");
+  const [attachments, setAttachments] = useState<ChatAttachment[]>([]);
   const [listeningStats, setListeningStats] = useState<{ topGenres: string[]; topMoods: string[]; recentTracks: number } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { playTrack, playPlaylist, currentTrack } = usePlayer();
   const { startDJSession, isDJActive, parseDJCommand } = useDJMode();
   const { user } = useAuth();
@@ -267,11 +277,79 @@ export const AIAssistant = () => {
   const pendingDedicationRef = useRef<{ trackName: string; recipientName: string; senderName: string } | null>(null);
   const pendingGeneratedTrackRef = useRef<{ audioUrl: string; title: string; genre: string; duration: number } | null>(null);
 
+  // File handling
+  const handleFiles = useCallback((files: FileList | File[]) => {
+    const fileArr = Array.from(files);
+    const newAttachments: ChatAttachment[] = [];
+    for (const file of fileArr) {
+      if (file.type.startsWith("image/")) {
+        newAttachments.push({ type: "image", url: URL.createObjectURL(file), name: file.name, file });
+      } else if (file.type.startsWith("audio/")) {
+        newAttachments.push({ type: "audio", url: URL.createObjectURL(file), name: file.name, file });
+      } else {
+        toast.error(`Nieobsługiwany format: ${file.name}`);
+      }
+    }
+    if (newAttachments.length) setAttachments(prev => [...prev, ...newAttachments]);
+  }, []);
+
+  const removeAttachment = useCallback((idx: number) => {
+    setAttachments(prev => {
+      const removed = prev[idx];
+      if (removed?.url?.startsWith("blob:")) URL.revokeObjectURL(removed.url);
+      return prev.filter((_, i) => i !== idx);
+    });
+  }, []);
+
+  // Paste handler for images
+  const handlePaste = useCallback((e: React.ClipboardEvent) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    const files: File[] = [];
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.kind === "file" && (item.type.startsWith("image/") || item.type.startsWith("audio/"))) {
+        const file = item.getAsFile();
+        if (file) files.push(file);
+      }
+    }
+    if (files.length) {
+      e.preventDefault();
+      handleFiles(files);
+    }
+  }, [handleFiles]);
+
+  // Upload attachment to storage, returns public URL
+  const uploadAttachment = async (att: ChatAttachment): Promise<string> => {
+    if (!att.file) return att.url;
+    const ext = att.name.split(".").pop() || "bin";
+    const path = `chat/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+    const { error } = await supabase.storage.from("music").upload(path, att.file);
+    if (error) throw error;
+    const { data } = supabase.storage.from("music").getPublicUrl(path);
+    return data.publicUrl;
+  };
+
   const handleSend = useCallback(async () => {
-    if (!input.trim() || isLoading) return;
+    if ((!input.trim() && attachments.length === 0) || isLoading) return;
     const userMessage = input.trim();
+    const currentAttachments = [...attachments];
     setInput("");
-    setMessages(prev => [...prev, { role: "user", content: userMessage }]);
+    setAttachments([]);
+
+    // Upload attachments
+    const uploadedAttachments: ChatAttachment[] = [];
+    for (const att of currentAttachments) {
+      try {
+        const publicUrl = await uploadAttachment(att);
+        uploadedAttachments.push({ type: att.type, url: publicUrl, name: att.name });
+      } catch (err) {
+        console.error("Upload error:", err);
+        uploadedAttachments.push({ type: att.type, url: att.url, name: att.name });
+      }
+    }
+
+    setMessages(prev => [...prev, { role: "user", content: userMessage || (uploadedAttachments.length > 0 ? `📎 ${uploadedAttachments.map(a => a.name).join(", ")}` : ""), attachments: uploadedAttachments.length > 0 ? uploadedAttachments : undefined }]);
     setIsLoading(true);
 
     let assistantContent = "";
@@ -470,7 +548,7 @@ export const AIAssistant = () => {
       pendingGeneratedTrackRef.current = null;
       setIsLoading(false);
     }
-  }, [input, isLoading, messages, userContext, startDJSession, parseDJCommand]);
+  }, [input, isLoading, messages, userContext, startDJSession, parseDJCommand, attachments]);
 
   const chatWidth = isExpanded ? "w-[calc(100vw-2rem)] sm:w-[600px]" : "w-[calc(100vw-2rem)] sm:w-[400px]";
   const chatHeight = isExpanded ? "h-[calc(100vh-8rem)] sm:h-[700px]" : "h-[calc(100vh-8rem)] sm:h-[520px]";
@@ -565,7 +643,30 @@ export const AIAssistant = () => {
                           <ReactMarkdown>{msg.content}</ReactMarkdown>
                         </div>
                       ) : (
-                        <p className="whitespace-pre-wrap text-[13px]">{msg.content}</p>
+                        <>
+                          {msg.content && <p className="whitespace-pre-wrap text-[13px]">{msg.content}</p>}
+                          {/* Inline attachments */}
+                          {msg.attachments && msg.attachments.length > 0 && (
+                            <div className="mt-2 space-y-2">
+                              {msg.attachments.map((att, ai) => (
+                                <div key={ai}>
+                                  {att.type === "image" && (
+                                    <img src={att.url} alt={att.name} className="max-w-full max-h-40 rounded-lg object-cover" />
+                                  )}
+                                  {att.type === "audio" && (
+                                    <div className="flex items-center gap-2 p-2 rounded-lg bg-primary-foreground/10">
+                                      <FileAudio className="h-4 w-4 shrink-0" />
+                                      <div className="flex-1 min-w-0">
+                                        <p className="text-[10px] truncate">{att.name}</p>
+                                        <audio src={att.url} controls className="w-full h-7 mt-1" style={{ filter: "invert(1)" }} />
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </>
                       )}
                       {msg.trackLink && (
                         <motion.button
@@ -740,17 +841,65 @@ export const AIAssistant = () => {
               </div>
             </ScrollArea>
 
+            {/* Attachment previews */}
+            {attachments.length > 0 && (
+              <div className="px-3 pt-2 flex gap-2 flex-wrap">
+                {attachments.map((att, i) => (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="relative group"
+                  >
+                    {att.type === "image" ? (
+                      <img src={att.url} alt={att.name} className="w-14 h-14 rounded-lg object-cover border border-white/10" />
+                    ) : (
+                      <div className="w-14 h-14 rounded-lg bg-white/5 border border-white/10 flex flex-col items-center justify-center">
+                        <FileAudio className="h-5 w-5 text-primary" />
+                        <span className="text-[7px] text-muted-foreground mt-0.5 max-w-[48px] truncate">{att.name}</span>
+                      </div>
+                    )}
+                    <button
+                      onClick={() => removeAttachment(i)}
+                      className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-destructive flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <X className="h-2.5 w-2.5 text-destructive-foreground" />
+                    </button>
+                  </motion.div>
+                ))}
+              </div>
+            )}
+
             {/* Input */}
             <div className="p-3 border-t border-white/5 bg-black/20">
-              <form onSubmit={(e) => { e.preventDefault(); handleSend(); }} className="flex gap-2">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*,audio/*"
+                multiple
+                className="hidden"
+                onChange={(e) => { if (e.target.files) handleFiles(e.target.files); e.target.value = ""; }}
+              />
+              <form onSubmit={(e) => { e.preventDefault(); handleSend(); }} className="flex gap-1.5 items-center">
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="shrink-0 h-9 w-9 rounded-xl text-muted-foreground hover:text-foreground"
+                  disabled={isLoading}
+                >
+                  <Paperclip className="h-4 w-4" />
+                </Button>
                 <Input
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
+                  onPaste={handlePaste}
                   placeholder={`Zapytaj mnie o cokolwiek, ${userName}...`}
                   className="flex-1 bg-white/5 border-white/10 focus:border-primary/50 h-10 text-sm rounded-xl"
                   disabled={isLoading}
                 />
-                <Button type="submit" size="icon" disabled={!input.trim() || isLoading} className="shrink-0 h-10 w-10 rounded-xl">
+                <Button type="submit" size="icon" disabled={(!input.trim() && attachments.length === 0) || isLoading} className="shrink-0 h-10 w-10 rounded-xl">
                   <Send className="h-4 w-4" />
                 </Button>
               </form>
