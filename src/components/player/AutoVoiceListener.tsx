@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useClapControl } from "@/hooks/useClapControl";
 import { useDJMode } from "@/hooks/useDJMode";
+import type { Language } from "@/i18n/translations";
 
 interface SpeechRecognitionEvent extends Event {
   resultIndex: number;
@@ -35,18 +36,59 @@ interface SpeechRecognitionInstance extends EventTarget {
 
 const SILENCE_TIMEOUT_MS = 300_000; // 5 minutes
 
+/** Get current app language */
+const getAppLanguage = (): Language => {
+  const saved = localStorage.getItem("grooveai-language");
+  return (saved as Language) || "en";
+};
+
+/** Speech recognition locale code */
+const LANG_TO_RECOGNITION: Record<Language, string> = {
+  pl: "pl-PL", en: "en-US", nl: "nl-NL", ua: "uk-UA",
+};
+
+/** Multilingual navigation keywords → route */
 const NAV_MAP: Record<string, string> = {
-  "stron": "/", "główn": "/", "home": "/",
-  "szukaj": "/search", "wyszuk": "/search", "search": "/search",
-  "bibliotek": "/library", "library": "/library",
-  "polubionych": "/liked", "polubion": "/liked", "liked": "/liked",
-  "serwer": "/server", "server": "/server", "medi": "/server",
-  "film": "/movies", "movie": "/movies",
-  "radio": "/radio-live",
-  "ustawien": "/settings", "settings": "/settings",
-  "nastro": "/mood-history", "mood": "/mood-history",
+  // PL
+  "stron": "/", "główn": "/",
+  "szukaj": "/search", "wyszuk": "/search",
+  "bibliotek": "/library",
+  "polubionych": "/liked", "polubion": "/liked",
+  "serwer": "/server", "medi": "/server",
+  "film": "/movies",
+  "ustawien": "/settings",
+  "nastro": "/mood-history",
   "playlist": "/playlist-manager",
   "admin": "/admin",
+  // EN
+  "home": "/", "main page": "/",
+  "search": "/search",
+  "library": "/library",
+  "liked": "/liked", "favorites": "/liked", "favourite": "/liked",
+  "server": "/server", "media": "/server",
+  "movie": "/movies", "films": "/movies",
+  "radio": "/radio-live",
+  "settings": "/settings",
+  "mood": "/mood-history",
+  // NL
+  "startpagina": "/", "hoofdpagina": "/", "thuis": "/",
+  "zoek": "/search", "zoeken": "/search",
+  "bibliotheek": "/library",
+  "favorieten": "/liked", "geliked": "/liked",
+  "mediaserver": "/server",
+  "instellingen": "/settings",
+  "stemming": "/mood-history",
+  "afspeellijst": "/playlist-manager",
+  // UA
+  "головн": "/", "дом": "/",
+  "пошук": "/search", "шукай": "/search",
+  "бібліотек": "/library",
+  "улюблен": "/liked",
+  "сервер": "/server",
+  "фільм": "/movies",
+  "налаштув": "/settings",
+  "настрі": "/mood-history",
+  "плейліст": "/playlist-manager",
 };
 
 const normalizeCommand = (text: string) =>
@@ -297,7 +339,8 @@ export const AutoVoiceListener = () => {
     "country", "r&b", "rnb", "indie", "alternative", "ambient", "latin", "folk",
   ];
 
-  const POLISH_NUMBERS: Record<string, number> = {
+  const MULTILINGUAL_NUMBERS: Record<string, number> = {
+    // PL
     "jeden": 1, "jedną": 1, "jedno": 1,
     "dwa": 2, "dwie": 2, "dwóch": 2, "dwoch": 2,
     "trzy": 3, "trzech": 3,
@@ -310,15 +353,26 @@ export const AutoVoiceListener = () => {
     "dziesięć": 10, "dziesiec": 10, "dziesięciu": 10,
     "piętnaście": 15, "pietnascie": 15,
     "dwadzieścia": 20, "dwadziescia": 20,
+    // EN
+    "one": 1, "two": 2, "three": 3, "four": 4, "five": 5,
+    "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10,
+    "eleven": 11, "twelve": 12, "fifteen": 15, "twenty": 20,
+    // NL
+    "een": 1, "één": 1, "twee": 2, "drie": 3, "vier": 4, "vijf": 5,
+    "zes": 6, "zeven": 7, "acht": 8, "negen": 9, "tien": 10,
+    "elf": 11, "twaalf": 12, "vijftien": 15, "twintig": 20,
+    // UA
+    "один": 1, "одну": 1, "два": 2, "дві": 2, "три": 3,
+    "чотири": 4, "п'ять": 5, "шість": 6, "сім": 7,
+    "вісім": 8, "дев'ять": 9, "десять": 10, "п'ятнадцять": 15,
+    "двадцять": 20,
   };
 
-  const parsePolishNumber = useCallback((text: string): number | undefined => {
-    // Try digit first
+  const parseNumber = useCallback((text: string): number | undefined => {
     const digitMatch = text.match(/(\d+)/);
     if (digitMatch) return parseInt(digitMatch[1]);
-    // Try Polish word
     const normalized = normalizeCommand(text);
-    for (const [word, num] of Object.entries(POLISH_NUMBERS)) {
+    for (const [word, num] of Object.entries(MULTILINGUAL_NUMBERS)) {
       if (normalized.includes(normalizeCommand(word))) return num;
     }
     return undefined;
@@ -455,25 +509,34 @@ export const AutoVoiceListener = () => {
     resetSilenceTimer();
 
     try {
-    // STOP command - HIGHEST PRIORITY - check first before anything else
+    const lang = getAppLanguage();
+
+    // STOP command - HIGHEST PRIORITY - all languages
     const stopRequested = includesAny(normalized, [
-      "stop", "stopp", "stup", "stap",
-      "zatrzymaj",
-      "pauza", "pauze", "pause",
-      "wstrzymaj",
-      "wylacz player", "wylacz muzyk",
-      "cisza", "ucisz",
-    ]) || includesAny(lower, ["stop", "pauza", "zatrzymaj", "wstrzymaj", "pause"]);
+      // PL
+      "stop", "stopp", "stup", "stap", "zatrzymaj", "pauza", "pauze", "wstrzymaj",
+      "wylacz player", "wylacz muzyk", "cisza", "ucisz",
+      // EN
+      "pause", "halt", "silence", "quiet", "shut up",
+      // NL
+      "pauzeer", "pauzeren", "stilte", "stil",
+      // UA
+      "стоп", "пауза", "зупини", "тиша",
+    ]) || includesAny(lower, ["stop", "pauza", "zatrzymaj", "wstrzymaj", "pause", "pauzeer", "стоп", "пауза"]);
 
     if (stopRequested) {
       pausePlayback();
-      await safeSpeakAndResume("Zatrzymuję");
-      toast.info("⏹️ Zatrzymano");
+      const msgs: Record<Language, string> = { pl: "Zatrzymuję", en: "Pausing", nl: "Gepauzeerd", ua: "Зупиняю" };
+      await safeSpeakAndResume(msgs[lang]);
+      toast.info("⏹️ " + msgs[lang]);
       return;
     }
 
     // Shutdown commands
-    if (lower.includes("wyłącz się") || (lower.includes("wyłącz") && lower.includes("asystent")) || lower.includes("zamknij się")) {
+    if (lower.includes("wyłącz się") || (lower.includes("wyłącz") && lower.includes("asystent")) || lower.includes("zamknij się")
+      || lower.includes("shut down") || lower.includes("turn off") || lower.includes("go away")
+      || lower.includes("schakel uit") || lower.includes("ga weg") || lower.includes("stop ermee")
+      || lower.includes("вимкнись") || lower.includes("вимкни")) {
       shutdownMic();
       return;
     }
@@ -481,63 +544,139 @@ export const AutoVoiceListener = () => {
     // DJ Mode commands
     const djResult = parseDJCommand(command);
     if (djResult.isDJCommand) {
-      toast.loading("🎧 DJ GrooveAI przygotowuje set...", { id: "dj-voice" });
+      const djMsgs: Record<Language, string> = {
+        pl: "DJ GrooveAI przygotowuje set...",
+        en: "DJ GrooveAI preparing set...",
+        nl: "DJ GrooveAI bereidt set voor...",
+        ua: "DJ GrooveAI готує сет...",
+      };
+      toast.loading(`🎧 ${djMsgs[lang]}`, { id: "dj-voice" });
       await startDJSession({
         genres: djResult.genres,
         partyType: djResult.partyType,
         trackCount: djResult.trackCount,
         customPrompt: djResult.customPrompt,
       });
-      toast.success(`🎧 DJ GrooveAI startuje set! ${djResult.trackCount} utworów`, { id: "dj-voice", duration: 5000 });
+      toast.success(`🎧 DJ GrooveAI! ${djResult.trackCount} tracks`, { id: "dj-voice", duration: 5000 });
       return;
     }
 
     // Stop DJ
-    if (isDJActive && includesAny(normalized, ["stop dj", "wylacz dj", "koniec setu", "zakoncz set"])) {
+    if (isDJActive && includesAny(normalized, [
+      "stop dj", "wylacz dj", "koniec setu", "zakoncz set",
+      "stop the dj", "end the set",
+      "stop de dj", "einde set",
+      "зупини діджея", "кінець сету",
+    ])) {
       await stopDJSession();
       return;
     }
 
-    // Weather command (online)
-    if (includesAny(normalized, ["pogoda", "prognoza", "jaka pogoda", "sprawdz pogode"])) {
-      toast.loading("🌤️ Sprawdzam pogodę w sieci...", { id: "voice-weather" });
+    // Weather command (online) - multilingual
+    if (includesAny(normalized, [
+      "pogoda", "prognoza", "jaka pogoda", "sprawdz pogode",
+      "weather", "forecast", "what's the weather",
+      "weer", "weerbericht", "wat is het weer",
+      "погода", "прогноз",
+    ])) {
+      toast.loading("🌤️ ...", { id: "voice-weather" });
       try {
         const weatherSummary = await getWeatherSummary(command);
         toast.success(`🌤️ ${weatherSummary.slice(0, 80)}...`, { id: "voice-weather", duration: 4500 });
         await safeSpeakAndResume(weatherSummary);
       } catch {
-        toast.error("Nie udało się pobrać pogody", { id: "voice-weather" });
-        await safeSpeakAndResume("Nie udało mi się sprawdzić pogody. Spróbuj ponownie za chwilę.");
+        const errMsgs: Record<Language, string> = {
+          pl: "Nie udało się pobrać pogody", en: "Failed to get weather",
+          nl: "Weer ophalen mislukt", ua: "Не вдалося отримати погоду",
+        };
+        toast.error(errMsgs[lang], { id: "voice-weather" });
+        await safeSpeakAndResume(errMsgs[lang]);
       }
       return;
     }
 
-    if (includesAny(normalized, ["wznow", "kontynuuj", "graj dalej", "resume"])) {
+    // Resume
+    if (includesAny(normalized, [
+      "wznow", "kontynuuj", "graj dalej",
+      "resume", "continue", "keep playing",
+      "hervat", "ga door", "verder spelen",
+      "продовжуй", "далі грай",
+    ])) {
       resumePlayback();
-      await safeSpeakAndResume("Wznawiam odtwarzanie");
+      const msgs: Record<Language, string> = { pl: "Wznawiam odtwarzanie", en: "Resuming playback", nl: "Hervatten", ua: "Продовжую" };
+      await safeSpeakAndResume(msgs[lang]);
       return;
     }
 
-    if (includesAny(normalized, ["od poczatku", "zacznij od poczatku", "od nowa"])) {
+    // Restart
+    if (includesAny(normalized, [
+      "od poczatku", "zacznij od poczatku", "od nowa",
+      "from the start", "restart", "from beginning", "start over",
+      "opnieuw", "van het begin", "begin opnieuw",
+      "спочатку", "заново",
+    ])) {
       restartCurrentTrack();
-      await safeSpeakAndResume("Uruchamiam od początku");
+      const msgs: Record<Language, string> = { pl: "Od początku", en: "Restarting", nl: "Opnieuw", ua: "Спочатку" };
+      await safeSpeakAndResume(msgs[lang]);
       return;
     }
 
-    if (lower.includes("graj") && !lower.includes("następ") && !lower.includes("odtwarz") && lower.split(" ").length <= 2) { resumePlayback(); await safeSpeakAndResume("Odtwarzam"); return; }
-    if (lower.includes("następn") || lower.includes("dalej") || lower.includes("skip")) { nextTrack(); await safeSpeakAndResume("Następny utwór"); return; }
-    if (lower.includes("poprzedni") || lower.includes("cofnij") || lower.includes("wstecz")) { prevTrack(); await safeSpeakAndResume("Poprzedni utwór"); return; }
-    if (lower.includes("głośniej") || lower.includes("louder")) { setVolume(85); await safeSpeakAndResume("Głośniej"); return; }
-    if (lower.includes("ciszej") || lower.includes("cicho")) { setVolume(25); await safeSpeakAndResume("Ciszej"); return; }
-    if (lower.includes("wycisz") || lower.includes("mute")) { setVolume(0); await safeSpeakAndResume("Wyciszono"); return; }
+    // Simple play/resume (short commands)
+    if ((lower.includes("graj") || lower.includes("play") || lower.includes("speel") || lower.includes("грай"))
+        && !lower.includes("następ") && !lower.includes("odtwarz") && !lower.includes("next") && !lower.includes("volgende")
+        && lower.split(" ").length <= 2) {
+      resumePlayback();
+      const msgs: Record<Language, string> = { pl: "Odtwarzam", en: "Playing", nl: "Afspelen", ua: "Граю" };
+      await safeSpeakAndResume(msgs[lang]);
+      return;
+    }
+
+    // Next track
+    if (includesAny(lower, ["następn", "dalej", "skip", "next", "volgende", "overslaan", "наступн", "далі"])) {
+      nextTrack();
+      const msgs: Record<Language, string> = { pl: "Następny utwór", en: "Next track", nl: "Volgend nummer", ua: "Наступний трек" };
+      await safeSpeakAndResume(msgs[lang]);
+      return;
+    }
+
+    // Previous track
+    if (includesAny(lower, ["poprzedni", "cofnij", "wstecz", "previous", "back", "vorige", "terug", "попередн", "назад"])) {
+      prevTrack();
+      const msgs: Record<Language, string> = { pl: "Poprzedni utwór", en: "Previous track", nl: "Vorig nummer", ua: "Попередній трек" };
+      await safeSpeakAndResume(msgs[lang]);
+      return;
+    }
+
+    // Volume up
+    if (includesAny(lower, ["głośniej", "louder", "volume up", "harder", "luider", "гучніше"])) {
+      setVolume(85);
+      const msgs: Record<Language, string> = { pl: "Głośniej", en: "Louder", nl: "Harder", ua: "Гучніше" };
+      await safeSpeakAndResume(msgs[lang]);
+      return;
+    }
+
+    // Volume down
+    if (includesAny(lower, ["ciszej", "cicho", "quieter", "softer", "volume down", "zachter", "stiller", "тихіше"])) {
+      setVolume(25);
+      const msgs: Record<Language, string> = { pl: "Ciszej", en: "Quieter", nl: "Zachter", ua: "Тихіше" };
+      await safeSpeakAndResume(msgs[lang]);
+      return;
+    }
+
+    // Mute
+    if (includesAny(lower, ["wycisz", "mute", "dempen", "вимкни звук"])) {
+      setVolume(0);
+      const msgs: Record<Language, string> = { pl: "Wyciszono", en: "Muted", nl: "Gedempt", ua: "Без звуку" };
+      await safeSpeakAndResume(msgs[lang]);
+      return;
+    }
 
     // ==========================================
-    // PLAYLIST OPEN / PLAY COMMANDS
+    // PLAYLIST OPEN / PLAY COMMANDS (multilingual)
     // ==========================================
-    const playlistOpenMatch = lower.match(/(?:otwórz|otworz|pokaż|pokaz|wyświetl|wyswietl)\s+(?:playlist[ęeay]?|plej\s*list[ęeay]?)\s+(.+)/i);
-    const playlistPlayMatch = lower.match(/(?:plej|play|puść|pusc|odtwórz|odtworz|włącz|wlacz|zagraj|graj|odpal|leć|lec|dawaj)\s+(?:playlist[ęeay]?|plej\s*list[ęeay]?)\s+(.+)/i);
-    // Also match "playlistę X" without verb (just name after "playlistę")
-    const playlistNameOnly = !playlistOpenMatch && !playlistPlayMatch && lower.match(/(?:playlist[ęeay]?|plej\s*list[ęeay]?)\s+(.+)/i);
+    const playlistOpenMatch = lower.match(/(?:otwórz|otworz|pokaż|pokaz|wyświetl|wyswietl|open|show|display|toon|open|відкрий|покажи)\s+(?:playlist[ęeay]?|plej\s*list[ęeay]?|afspeellijst|плейліст)\s+(.+)/i);
+    const playlistPlayMatch = lower.match(/(?:plej|play|puść|pusc|odtwórz|odtworz|włącz|wlacz|zagraj|graj|odpal|leć|lec|dawaj|speel|draai|грай|увімкни)\s+(?:playlist[ęeay]?|plej\s*list[ęeay]?|afspeellijst|плейліст)\s+(.+)/i);
+    const playlistNameOnly = !playlistOpenMatch && !playlistPlayMatch && lower.match(/(?:playlist[ęeay]?|plej\s*list[ęeay]?|afspeellijst|плейліст)\s+(.+)/i);
 
     if (playlistOpenMatch || playlistPlayMatch || playlistNameOnly) {
       const isPlayMode = !!playlistPlayMatch || !!playlistNameOnly;
@@ -595,10 +734,10 @@ export const AutoVoiceListener = () => {
     }
 
     // ==========================================
-    // GENRE FOLDER OPEN / PLAY COMMANDS
+    // GENRE FOLDER OPEN / PLAY COMMANDS (multilingual)
     // ==========================================
-    const genreFolderOpenMatch = lower.match(/(?:otwórz|otworz|pokaż|pokaz|wyświetl|wyswietl)\s+(?:katalog|folder|gatunek)\s+(.+)/i);
-    const genreFolderPlayMatch = lower.match(/(?:plej|play|puść|pusc|odtwórz|odtworz|włącz|wlacz|zagraj|graj|odpal|leć|lec|dawaj)\s+(?:katalog|folder|gatunek|z\s+katalogu|z\s+folderu)\s+(.+)/i);
+    const genreFolderOpenMatch = lower.match(/(?:otwórz|otworz|pokaż|pokaz|wyświetl|wyswietl|open|show|toon|відкрий|покажи)\s+(?:katalog|folder|gatunek|genre|category|categorie|map|жанр|папк)\s+(.+)/i);
+    const genreFolderPlayMatch = lower.match(/(?:plej|play|puść|pusc|odtwórz|odtworz|włącz|wlacz|zagraj|graj|odpal|leć|lec|dawaj|speel|draai|грай|увімкни)\s+(?:katalog|folder|gatunek|genre|category|categorie|map|z\s+katalogu|z\s+folderu|from\s+folder|from\s+genre|uit\s+map|з\s+папк|жанр)\s+(.+)/i);
 
     if (genreFolderOpenMatch || genreFolderPlayMatch) {
       const isPlayMode = !!genreFolderPlayMatch;
@@ -634,9 +773,9 @@ export const AutoVoiceListener = () => {
     }
 
     // ==========================================
-    // SEARCH COMMAND ("poszukaj X", "znajdź X", "szukaj X")
+    // SEARCH COMMAND - multilingual
     // ==========================================
-    const searchMatch = lower.match(/(?:poszukaj|znajdź|znajdz|wyszukaj|szukaj|search|find)\s+(.+)/i);
+    const searchMatch = lower.match(/(?:poszukaj|znajdź|znajdz|wyszukaj|szukaj|search|find|look for|zoek|zoek naar|знайди|шукай)\s+(.+)/i);
     if (searchMatch) {
       const query = searchMatch[1].trim();
       if (query) {
@@ -645,18 +784,18 @@ export const AutoVoiceListener = () => {
       }
     }
 
-    // Navigation (general)
-    if (lower.includes("otwórz") || lower.includes("włącz") || lower.includes("pokaż") || lower.includes("przejdź") || lower.includes("idź")) {
+    // Navigation (general) - multilingual triggers
+    if (includesAny(lower, ["otwórz", "włącz", "pokaż", "przejdź", "idź", "open", "show", "go to", "navigate", "toon", "ga naar", "відкрий", "покажи", "перейди"])) {
       if (tryNavigate(lower)) return;
     }
     if (tryNavigate(lower)) return;
 
     // ==========================================
-    // FAVORITES PLAY COMMAND
+    // FAVORITES PLAY COMMAND - multilingual
     // ==========================================
-    const wantsFavorites = /ulubionych|polubion|z\s+ulubionych|z\s+polubionych|ulubione|liked|favorite/i.test(lower);
+    const wantsFavorites = /ulubionych|polubion|z\s+ulubionych|z\s+polubionych|ulubione|liked|favorites?|favorieten|geliked|улюблен/i.test(lower);
     if (wantsFavorites) {
-      const count = parsePolishNumber(lower) || 5;
+      const count = parseNumber(lower) || 5;
       toast.loading(`❤️ Pobieram ${count} z ulubionych...`, { id: "voice-cmd" });
       try {
         const { data: liked } = await supabase
@@ -687,9 +826,9 @@ export const AutoVoiceListener = () => {
     // ==========================================
     // RECENT UPLOADS PLAY COMMAND
     // ==========================================
-    const wantsRecent = /ostatni[echm]?\s+(?:wgrany|wrzucon|dodany|piosen|utw)|najnowsz|z\s+serwera|ostatnie\s+\d|śwież|swiez|newest|recent|ostatnio\s+(?:wgran|dodan|wrzucon)/i.test(lower);
+    const wantsRecent = /ostatni[echm]?\s+(?:wgrany|wrzucon|dodany|piosen|utw)|najnowsz|z\s+serwera|ostatnie\s+\d|śwież|swiez|newest|recent|latest|nieuwste|recent|laatste|останн|нові|свіж/i.test(lower);
     if (wantsRecent) {
-      const count = parsePolishNumber(lower) || 10;
+      const count = parseNumber(lower) || 10;
       toast.loading(`📥 Pobieram ${count} ostatnich wgranych...`, { id: "voice-cmd" });
       try {
         const { data: tracks } = await supabase
@@ -715,7 +854,7 @@ export const AutoVoiceListener = () => {
     // ==========================================
     // MOVE/TRANSFER TRACK COMMAND (delegate to AI)
     // ==========================================
-    const wantsMove = /(?:przenieś|przenies|wytnij|dodaj|wrzuć|wrzuc|usuń|usun).*(?:do\s+(?:katalogu|playlisty|folderu)|z\s+(?:katalogu|playlisty|folderu))/i.test(lower);
+    const wantsMove = /(?:przenieś|przenies|wytnij|dodaj|wrzuć|wrzuc|usuń|usun|move|transfer|add|remove|verplaats|voeg toe|verwijder|перенеси|додай|видали).*(?:do\s+(?:katalogu|playlisty|folderu)|z\s+(?:katalogu|playlisty|folderu)|to\s+(?:playlist|folder)|from\s+(?:playlist|folder)|naar\s+(?:afspeellijst|map)|uit\s+(?:afspeellijst|map)|до\s+(?:плейліст|папк)|з\s+(?:плейліст|папк))/i.test(lower);
     if (wantsMove) {
       toast.loading(`📁 Zarządzam playlistą...`, { id: "voice-cmd" });
       try {
@@ -739,30 +878,37 @@ export const AutoVoiceListener = () => {
       return;
     }
 
-    // Search & play - expanded triggers including "start", "daj", "leć", number+genre patterns
-    const PLAY_VERBS = ["włącz", "puść", "zagraj", "odtwórz", "graj", "play", "start", "startuj", "daj", "leć", "dawaj", "odpal", "wrzuć", "kręć"];
+    // Search & play - multilingual verbs
+    const PLAY_VERBS = [
+      // PL
+      "włącz", "puść", "zagraj", "odtwórz", "graj", "startuj", "daj", "leć", "dawaj", "odpal", "wrzuć", "kręć",
+      // EN
+      "play", "start", "put on", "give me",
+      // NL
+      "speel", "draai", "zet op", "geef",
+      // UA
+      "грай", "увімкни", "постав", "давай",
+    ];
     const hasPlayVerb = PLAY_VERBS.some(v => lower.includes(v));
-    const playMatch = lower.match(/(?:włącz|puść|zagraj|odtwórz|graj|play|start|startuj|daj|leć|dawaj|odpal|wrzuć|kręć)\s+(.+)/i);
+    const playMatch = lower.match(/(?:włącz|puść|zagraj|odtwórz|graj|play|start|startuj|daj|leć|dawaj|odpal|wrzuć|kręć|speel|draai|zet\s+op|geef|грай|увімкни|постав|давай|put\s+on|give\s+me)\s+(.+)/i);
     
-    // Also match number+songs pattern anywhere, e.g. "dziesięć piosenek rock", "10 piosenek", "rock 10 piosenek"
-    const hasCountWord = parsePolishNumber(lower) !== undefined;
-    const hasSongWord = /piosen|utw|track|song|numer|kawalk/i.test(lower);
+    // Also match number+songs pattern - multilingual
+    const hasCountWord = parseNumber(lower) !== undefined;
+    const hasSongWord = /piosen|utw|track|song|numer|kawalk|nummer|liedje|lied|трек|пісн/i.test(lower);
     const hasGenreWord = GENRE_KEYWORDS.some(g => lower.includes(g));
     
-    // Match if: has play verb, OR has count+songs pattern, OR has count+genre
     const shouldPlay = playMatch || (hasCountWord && (hasSongWord || hasGenreWord)) || (hasPlayVerb && !playMatch);
     
     if (shouldPlay) {
-      // Extract everything useful from the command
-      const rawQuery = playMatch ? playMatch[1].replace(/w\s+playerze/i, "").trim() : lower;
+      const rawQuery = playMatch ? playMatch[1].replace(/w\s+playerze/i, "").replace(/in\s+the\s+player/i, "").replace(/in\s+de\s+speler/i, "").trim() : lower;
       console.log("[Voice] Play command detected, raw query:", rawQuery);
-      const count = parsePolishNumber(rawQuery);
+      const count = parseNumber(rawQuery);
       const cleanQuery = rawQuery
         .replace(/\d+/g, "")
-        .replace(/(?:włącz|puść|zagraj|odtwórz|graj|play|start|startuj|daj|leć|dawaj|odpal|wrzuć|kręć)\s*/gi, "")
-        .replace(/(?:jeden|jedną|jedno|dwa|dwie|dwóch|dwoch|trzy|trzech|cztery|czterech|pięć|piec|pieciu|pięciu|sześć|szesc|sześciu|szesciu|siedem|siedmiu|osiem|ośmiu|osmiu|dziewięć|dziewiec|dziewięciu|dziesięć|dziesiec|dziesięciu|piętnaście|pietnascie|dwadzieścia|dwadziescia)\s*/gi, "")
-        .replace(/\s*(utw\w*|piosen\w*|track\w*|song\w*|numer\w*|kawalk\w*)\s*/gi, "")
-        .replace(/\s*(mi|mnie|jakieś|jakies|jakiś|tam|no|to)\s*/gi, " ")
+        .replace(/(?:włącz|puść|zagraj|odtwórz|graj|play|start|startuj|daj|leć|dawaj|odpal|wrzuć|kręć|speel|draai|zet\s+op|geef|грай|увімкни|постав|давай|put\s+on|give\s+me)\s*/gi, "")
+        .replace(/(?:jeden|jedną|jedno|dwa|dwie|dwóch|dwoch|trzy|trzech|cztery|czterech|pięć|piec|pieciu|pięciu|sześć|szesc|sześciu|szesciu|siedem|siedmiu|osiem|ośmiu|osmiu|dziewięć|dziewiec|dziewięciu|dziesięć|dziesiec|dziesięciu|piętnaście|pietnascie|dwadzieścia|dwadziescia|one|two|three|four|five|six|seven|eight|nine|ten|fifteen|twenty|een|één|twee|drie|vier|vijf|zes|zeven|acht|negen|tien|twaalf|vijftien|twintig)\s*/gi, "")
+        .replace(/\s*(utw\w*|piosen\w*|track\w*|song\w*|numer\w*|kawalk\w*|nummer\w*|liedje\w*|lied\w*|трек\w*|пісн\w*)\s*/gi, "")
+        .replace(/\s*(mi|mnie|jakieś|jakies|jakiś|tam|no|to|me|some|wat|mij|які)\s*/gi, " ")
         .trim();
       
       // If no genre/query specified, play random mix
@@ -773,10 +919,10 @@ export const AutoVoiceListener = () => {
     }
 
     // "wybierz X rock/pop/etc" - genre-based selection (number + genre words)
-    const selectMatch = lower.match(/wybierz\s+(.+)/i);
+    const selectMatch = lower.match(/(?:wybierz|select|choose|pick|kies|selecteer|вибери)\s+(.+)/i);
     if (selectMatch) {
       const rest = selectMatch[1].replace(/i\s+włącz.*/i, "").replace(/w\s+playerze/i, "").trim();
-      const count = parsePolishNumber(rest);
+      const count = parseNumber(rest);
       const cleanQuery = rest
         .replace(/\d+/g, "")
         .replace(/(?:jeden|jedną|jedno|dwa|dwie|dwóch|dwoch|trzy|trzech|cztery|czterech|pięć|piec|pieciu|pięciu|sześć|szesc|sześciu|szesciu|siedem|siedmiu|osiem|ośmiu|osmiu|dziewięć|dziewiec|dziewięciu|dziesięć|dziesiec|dziesięciu|piętnaście|pietnascie|dwadzieścia|dwadziescia)\s*/gi, "")
@@ -788,21 +934,30 @@ export const AutoVoiceListener = () => {
       }
     }
 
-    // Mood-based requests
+    // Mood-based requests - multilingual
     const MOOD_PHRASES: Record<string, string> = {
-      "zly dzien": "happy",
-      "zle sie czuje": "chill",
-      "smutno": "happy",
-      "popraw": "happy",
-      "humor": "happy",
-      "wesolo": "happy",
-      "energi": "energetic",
-      "spokojn": "chill",
-      "relaks": "chill",
-      "imprez": "energetic",
-      "tanc": "energetic",
-      "romantycz": "romantic",
-      "milosc": "romantic",
+      // PL
+      "zly dzien": "happy", "zle sie czuje": "chill", "smutno": "happy",
+      "popraw": "happy", "humor": "happy", "wesolo": "happy",
+      "energi": "energetic", "spokojn": "chill", "relaks": "chill",
+      "imprez": "energetic", "tanc": "energetic",
+      "romantycz": "romantic", "milosc": "romantic",
+      // EN
+      "bad day": "happy", "feel sad": "happy", "cheer me up": "happy",
+      "happy": "happy", "excited": "energetic", "calm": "chill",
+      "relax": "chill", "party": "energetic", "dance": "energetic",
+      "romantic": "romantic", "love": "romantic", "energy": "energetic",
+      "chill": "chill", "peaceful": "chill",
+      // NL
+      "slecht dag": "happy", "verdrietig": "happy", "blij": "happy",
+      "vrolijk": "happy", "rustig": "chill", "ontspannen": "chill",
+      "feest": "energetic", "dansen": "energetic", "romantisch": "romantic",
+      "liefde": "romantic", "energie": "energetic",
+      // UA
+      "поганий день": "happy", "сумно": "happy", "веселий": "happy",
+      "спокійно": "chill", "релакс": "chill", "енергія": "energetic",
+      "вечірка": "energetic", "танц": "energetic", "романтика": "romantic",
+      "кохання": "romantic",
     };
 
     const detectedMood = Object.entries(MOOD_PHRASES).find(([phrase]) => normalized.includes(normalizeCommand(phrase)));
@@ -829,7 +984,7 @@ export const AutoVoiceListener = () => {
       toast.loading(`🎙️ AI analizuje...`, { id: "voice-cmd" });
       
       if (isAIEnabled) {
-        const requestedCount = parsePolishNumber(command);
+        const requestedCount = parseNumber(command);
         const result = await processVoiceCommand(command);
         if (result.action === "play" && result.tracks?.length) {
           const limitedTracks = requestedCount ? result.tracks.slice(0, requestedCount) : result.tracks.slice(0, 10);
@@ -867,7 +1022,7 @@ export const AutoVoiceListener = () => {
     } finally {
       isProcessingCommandRef.current = false;
     }
-  }, [isAIEnabled, processVoiceCommand, playPlaylist, nextTrack, prevTrack, setVolume, tryNavigate, searchAndPlay, resetSilenceTimer, assistantName, fetchAISuggestions, shutdownMic, showSuggestions, aiSuggestions, pausePlayback, resumePlayback, restartCurrentTrack, parsePolishNumber, handlePlayFromAI, safeSpeakAndResume]);
+  }, [isAIEnabled, processVoiceCommand, playPlaylist, nextTrack, prevTrack, setVolume, tryNavigate, searchAndPlay, resetSilenceTimer, assistantName, fetchAISuggestions, shutdownMic, showSuggestions, aiSuggestions, pausePlayback, resumePlayback, restartCurrentTrack, parseNumber, handlePlayFromAI, safeSpeakAndResume]);
 
   const startListening = useCallback(() => {
     if (!user) return;
@@ -879,7 +1034,7 @@ export const AutoVoiceListener = () => {
       const rec = new SpeechAPI() as SpeechRecognitionInstance;
       rec.continuous = true;
       rec.interimResults = true;
-      rec.lang = "pl-PL";
+      rec.lang = LANG_TO_RECOGNITION[getAppLanguage()] || "en-US";
       rec.onresult = (event: SpeechRecognitionEvent) => {
         // Guard: ignore anything picked up while TTS is speaking
         if (isSpeakingRef.current) return;
