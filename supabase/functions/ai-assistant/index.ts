@@ -526,12 +526,128 @@ serve(async (req) => {
     // Fetch ALL tracks from the database so the assistant knows the full library
     const { data: allTracks } = await supabase
       .from("tracks")
-      .select("id,title,artist,genre,mood,album,audio_url")
+      .select("id,title,artist,genre,mood,album,audio_url,created_at")
       .order("title")
       .limit(1000);
 
     // Only playable tracks (have audio_url)
     const playableTracks = (allTracks || []).filter((t: any) => t.audio_url);
+
+    // ==========================================
+    // FETCH USER-SPECIFIC DATA (favorites, recent, playlists)
+    // ==========================================
+    const userId = (userContext as any)?.userId;
+    let userFavorites: any[] = [];
+    let userPlaylistsData: any[] = [];
+
+    // Recent uploads (newest tracks in DB)
+    const recentUploads = [...(allTracks || [])]
+      .filter((t: any) => t.audio_url)
+      .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .slice(0, 20);
+
+    if (userId) {
+      // Fetch favorites (liked songs)
+      const { data: likedData } = await supabase
+        .from("liked_songs")
+        .select("track_id, liked_at")
+        .eq("user_id", userId)
+        .order("liked_at", { ascending: false })
+        .limit(50);
+
+      if (likedData && likedData.length > 0) {
+        const likedIds = likedData.map((l: any) => l.track_id);
+        userFavorites = playableTracks
+          .filter((t: any) => likedIds.includes(t.id))
+          .map((t: any) => {
+            const likeEntry = likedData.find((l: any) => l.track_id === t.id);
+            return { ...t, liked_at: likeEntry?.liked_at };
+          });
+      }
+
+      // Fetch user playlists with tracks
+      const { data: plData } = await supabase
+        .from("playlists")
+        .select("id, title")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(20);
+
+      if (plData) {
+        for (const pl of plData) {
+          const { data: ptData } = await supabase
+            .from("playlist_tracks")
+            .select("track_id")
+            .eq("playlist_id", pl.id)
+            .order("position")
+            .limit(50);
+          const trackIds = (ptData || []).map((pt: any) => pt.track_id);
+          const plTracks = playableTracks.filter((t: any) => trackIds.includes(t.id));
+          userPlaylistsData.push({ ...pl, tracks: plTracks });
+        }
+      }
+    }
+
+    // ==========================================
+    // PLAYLIST TRACK MOVE/TRANSFER DETECTION
+    // ==========================================
+    const movePatterns = [
+      /(?:przenieś|przenies|wytnij|przesuń|przesun|dodaj|wrzuć|wrzuc|move|transfer|cut).*(?:do\s+(?:katalogu|playlisty|folderu)|to\s+(?:playlist|folder|catalog))/i,
+      /(?:usuń|usun|wywal|skasuj|remove|delete).*(?:z\s+(?:katalogu|playlisty|folderu)|from\s+(?:playlist|folder))/i,
+    ];
+    const hasMoveIntent = !hasRadioIntent && !hasWishIntent && !hasDedicationIntent && !hasRadioAddIntent && !hasRadioRemoveIntent && !hasGenerateIntent && movePatterns.some(p => p.test(lowerMessage));
+    let moveResult: { action: string; trackName: string; playlistName: string; success: boolean } | null = null;
+
+    if (hasMoveIntent && userId) {
+      const trackMatch = message.match(/(?:utwór|utwor|piosenkę|piosenke|track|song|kawałek|kawalek)\s+["""„]?(.+?)[""""]?\s+(?:do|z|from|to)/i) ||
+        message.match(/(?:przenieś|przenies|wytnij|dodaj|wrzuć|wrzuc|usuń|usun)\s+["""„]?(.+?)[""""]?\s+(?:do|z|from|to)/i);
+      const playlistMatch = message.match(/(?:do|z|from|to)\s+(?:katalogu|playlisty|folderu|playlist|folder)\s+["""„]?(.+?)[""""]?(?:\s|$|[,!.])/i);
+
+      if (trackMatch && playlistMatch) {
+        const trackSearch = trackMatch[1].trim();
+        const playlistSearch = playlistMatch[1].trim();
+
+        const matchedTrack = (allTracks || []).find((t: any) =>
+          t.title?.toLowerCase().includes(trackSearch.toLowerCase()) ||
+          t.artist?.toLowerCase().includes(trackSearch.toLowerCase())
+        );
+
+        const { data: matchedPlaylist } = await supabase
+          .from("playlists")
+          .select("id, title")
+          .eq("user_id", userId)
+          .ilike("title", `%${playlistSearch}%`)
+          .limit(1)
+          .maybeSingle();
+
+        if (matchedTrack && matchedPlaylist) {
+          const isRemove = /usuń|usun|wywal|skasuj|wytnij|remove|delete/i.test(lowerMessage);
+
+          if (isRemove) {
+            await supabase.from("playlist_tracks").delete()
+              .eq("playlist_id", matchedPlaylist.id)
+              .eq("track_id", matchedTrack.id);
+            moveResult = { action: "removed", trackName: `${matchedTrack.title} — ${matchedTrack.artist}`, playlistName: matchedPlaylist.title, success: true };
+          } else {
+            const { data: existing } = await supabase.from("playlist_tracks")
+              .select("id").eq("playlist_id", matchedPlaylist.id).eq("track_id", matchedTrack.id).maybeSingle();
+
+            if (!existing) {
+              const { data: maxPos } = await supabase.from("playlist_tracks")
+                .select("position").eq("playlist_id", matchedPlaylist.id)
+                .order("position", { ascending: false }).limit(1);
+              const nextPos = (maxPos?.[0]?.position ?? -1) + 1;
+              await supabase.from("playlist_tracks").insert({
+                playlist_id: matchedPlaylist.id,
+                track_id: matchedTrack.id,
+                position: nextPos,
+              });
+            }
+            moveResult = { action: "added", trackName: `${matchedTrack.title} — ${matchedTrack.artist}`, playlistName: matchedPlaylist.title, success: true };
+          }
+        }
+      }
+    }
 
     // Detect if user wants to play multiple tracks
     const playIntentPatterns = [
