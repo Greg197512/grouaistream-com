@@ -285,13 +285,16 @@ export const AIAssistant = () => {
     for (const file of fileArr) {
       if (file.type.startsWith("image/")) {
         newAttachments.push({ type: "image", url: URL.createObjectURL(file), name: file.name, file });
-      } else if (file.type.startsWith("audio/")) {
+      } else if (file.type.startsWith("audio/") || file.name.match(/\.(mp3|wav|ogg|flac|m4a|aac|wma)$/i)) {
         newAttachments.push({ type: "audio", url: URL.createObjectURL(file), name: file.name, file });
       } else {
         toast.error(`Nieobsługiwany format: ${file.name}`);
       }
     }
-    if (newAttachments.length) setAttachments(prev => [...prev, ...newAttachments]);
+    if (newAttachments.length) {
+      setAttachments(prev => [...prev, ...newAttachments]);
+      toast.success(`📎 Dodano ${newAttachments.length} plik(ów)`);
+    }
   }, []);
 
   const removeAttachment = useCallback((idx: number) => {
@@ -301,6 +304,16 @@ export const AIAssistant = () => {
       return prev.filter((_, i) => i !== idx);
     });
   }, []);
+
+  // Drag & drop handler for the chat window
+  const [isDragOver, setIsDragOver] = useState(false);
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    if (e.dataTransfer.files?.length) handleFiles(e.dataTransfer.files);
+  }, [handleFiles]);
+  const handleDragOver = useCallback((e: React.DragEvent) => { e.preventDefault(); setIsDragOver(true); }, []);
+  const handleDragLeave = useCallback(() => setIsDragOver(false), []);
 
   // Paste handler for images
   const handlePaste = useCallback((e: React.ClipboardEvent) => {
