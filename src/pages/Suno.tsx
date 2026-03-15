@@ -33,6 +33,7 @@ const Suno = () => {
   const [blendRatio, setBlendRatio] = useState(50);
   const [title, setTitle] = useState("");
   const [instrumental, setInstrumental] = useState(false);
+  const [customLyrics, setCustomLyrics] = useState("");
   const [useSamples, setUseSamples] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [extending, setExtending] = useState(false);
