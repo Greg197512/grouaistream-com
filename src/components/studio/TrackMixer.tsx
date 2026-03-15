@@ -74,6 +74,26 @@ export const TrackMixer = () => {
       .then(({ data }) => setMixHistory(data || []));
   }, [user]);
 
+  // Register mixer drop callback
+  const handleMixerDrop = useCallback((slot: "A" | "B", track: Track) => {
+    const item: TrackItem = {
+      id: track.id,
+      title: track.title,
+      artist: track.artist,
+      audio_url: track.audio_url || null,
+      genre: track.genre || null,
+      duration: track.duration || 180,
+    };
+    if (slot === "A") setTrackA(item);
+    else setTrackB(item);
+    setMixResult(null);
+  }, []);
+
+  useEffect(() => {
+    setOnMixerDrop(() => handleMixerDrop);
+    return () => setOnMixerDrop(null);
+  }, [handleMixerDrop, setOnMixerDrop]);
+
   // Search tracks from library
   useEffect(() => {
     if (!searchQuery.trim() || !selectingSlot) {
