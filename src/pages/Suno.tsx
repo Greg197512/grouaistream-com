@@ -305,6 +305,18 @@ const Suno = () => {
             <Switch checked={instrumental} onCheckedChange={setInstrumental} className="data-[state=checked]:bg-[#FF6B00]" />
           </div>
 
+          {/* CC Mixter Samples Toggle */}
+          <div className="flex items-center justify-between p-4 rounded-xl border border-[#FF6B00]/20 bg-[#1a1a2e]/60">
+            <div className="flex items-center gap-3">
+              <Disc3 className="h-5 w-5 text-[#FF9500]" />
+              <div>
+                <Label className="text-sm text-gray-200">Sample z CC Mixter</Label>
+                <p className="text-xs text-gray-500">Wzbogaca brzmienie prawdziwymi loopami CC</p>
+              </div>
+            </div>
+            <Switch checked={useSamples} onCheckedChange={setUseSamples} className="data-[state=checked]:bg-[#FF6B00]" />
+          </div>
+
           {/* Generate Button */}
           <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}>
             <Button
