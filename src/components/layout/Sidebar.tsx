@@ -17,6 +17,7 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
   const location = useLocation();
   const { t } = useLanguage();
   const [activeItem, setActiveItem] = useState(location.pathname);
+  const [matrixEnabled, setMatrixEnabled] = useState(true);
 
   useEffect(() => {
     setActiveItem(location.pathname);
@@ -61,7 +62,7 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
       className="relative flex h-full flex-col bg-sidebar border-r border-sidebar-border overflow-hidden"
     >
       {/* Matrix-style falling notes */}
-      <MatrixNotes />
+      <MatrixNotes enabled={matrixEnabled} />
 
       {/* Logo */}
       <div className="flex h-24 items-center gap-3 px-4">
@@ -129,6 +130,24 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
       <div className="border-t border-border p-3 space-y-1">
         <NavItem icon="settings" label={t("nav.settings")} active={activeItem === "/settings"} collapsed={collapsed} onClick={() => handleNavClick("/settings")} />
         <NavItem icon="gavel" label={t("nav.legalDocs")} active={activeItem === "/legal"} collapsed={collapsed} onClick={() => handleNavClick("/legal")} />
+        {/* Matrix notes toggle */}
+        <button
+          onClick={() => setMatrixEnabled(!matrixEnabled)}
+          className={cn(
+            "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all",
+            matrixEnabled ? "text-accent" : "text-muted-foreground hover:text-sidebar-foreground",
+            collapsed && "justify-center px-2"
+          )}
+          title={matrixEnabled ? "Wyłącz efekt nut" : "Włącz efekt nut"}
+        >
+          <span className={cn(
+            "h-3 w-3 rounded-full border-2 transition-all flex-shrink-0",
+            matrixEnabled 
+              ? "bg-accent border-accent shadow-[0_0_8px_hsl(var(--accent)/0.6)]" 
+              : "bg-transparent border-muted-foreground"
+          )} />
+          {!collapsed && <span className="text-left truncate">{matrixEnabled ? "♪ Efekt 3D: ON" : "♪ Efekt 3D: OFF"}</span>}
+        </button>
       </div>
     </motion.aside>
   );
