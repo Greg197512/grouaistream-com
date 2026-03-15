@@ -531,7 +531,121 @@ export const AutoVoiceListener = () => {
     if (lower.includes("ciszej") || lower.includes("cicho")) { setVolume(25); await safeSpeakAndResume("Ciszej"); return; }
     if (lower.includes("wycisz") || lower.includes("mute")) { setVolume(0); await safeSpeakAndResume("Wyciszono"); return; }
 
-    // Navigation
+    // ==========================================
+    // PLAYLIST OPEN / PLAY COMMANDS
+    // ==========================================
+    const playlistOpenMatch = lower.match(/(?:otwórz|otworz|pokaż|pokaz|wyświetl|wyswietl)\s+(?:playlist[ęeay]?|plej\s*list[ęeay]?)\s+(.+)/i);
+    const playlistPlayMatch = lower.match(/(?:plej|play|puść|pusc|odtwórz|odtworz|włącz|wlacz|zagraj|graj|odpal|leć|lec|dawaj)\s+(?:playlist[ęeay]?|plej\s*list[ęeay]?)\s+(.+)/i);
+    // Also match "playlistę X" without verb (just name after "playlistę")
+    const playlistNameOnly = !playlistOpenMatch && !playlistPlayMatch && lower.match(/(?:playlist[ęeay]?|plej\s*list[ęeay]?)\s+(.+)/i);
+
+    if (playlistOpenMatch || playlistPlayMatch || playlistNameOnly) {
+      const isPlayMode = !!playlistPlayMatch || !!playlistNameOnly;
+      const searchName = (playlistPlayMatch?.[1] || playlistOpenMatch?.[1] || playlistNameOnly?.[1] || "").trim();
+      
+      if (searchName) {
+        toast.loading(`📋 Szukam playlisty: "${searchName}"...`, { id: "voice-playlist" });
+        try {
+          const { data: playlists } = await supabase
+            .from("playlists")
+            .select("id, title")
+            .ilike("title", `%${searchName}%`)
+            .limit(5);
+
+          if (playlists && playlists.length > 0) {
+            const playlist = playlists[0];
+            
+            if (isPlayMode) {
+              // Fetch tracks and play from first
+              const { data: ptData } = await supabase
+                .from("playlist_tracks")
+                .select("track_id, position")
+                .eq("playlist_id", playlist.id)
+                .order("position", { ascending: true });
+              
+              if (ptData && ptData.length > 0) {
+                const trackIds = ptData.map(pt => pt.track_id);
+                const { data: tracks } = await supabase.from("tracks").select("*").in("id", trackIds);
+                if (tracks && tracks.length > 0) {
+                  // Order by position
+                  const ordered = trackIds.map(id => tracks.find(t => t.id === id)).filter(Boolean);
+                  playPlaylist(ordered as any[], 0);
+                  toast.success(`▶ Odtwarzam playlistę "${playlist.title}" — ${ordered.length} utworów`, { id: "voice-playlist", duration: 4000 });
+                  await safeSpeakAndResume(`Odtwarzam playlistę ${playlist.title}, ${ordered.length} utworów. Pierwszy to ${(ordered[0] as any)?.title}`);
+                  return;
+                }
+              }
+              toast.error(`Playlista "${playlist.title}" jest pusta`, { id: "voice-playlist" });
+              await safeSpeakAndResume(`Playlista ${playlist.title} jest pusta`);
+            } else {
+              // Navigate to playlist detail
+              navigate(`/playlist/${playlist.id}`);
+              toast.success(`📋 Otwieram playlistę: ${playlist.title}`, { id: "voice-playlist" });
+              await safeSpeakAndResume(`Otwieram playlistę ${playlist.title}`);
+            }
+          } else {
+            toast.error(`Nie znaleziono playlisty: "${searchName}"`, { id: "voice-playlist" });
+            await safeSpeakAndResume(`Nie znalazłem playlisty o nazwie ${searchName}`);
+          }
+        } catch {
+          toast.error("Błąd szukania playlisty", { id: "voice-playlist" });
+        }
+        return;
+      }
+    }
+
+    // ==========================================
+    // GENRE FOLDER OPEN / PLAY COMMANDS
+    // ==========================================
+    const genreFolderOpenMatch = lower.match(/(?:otwórz|otworz|pokaż|pokaz|wyświetl|wyswietl)\s+(?:katalog|folder|gatunek)\s+(.+)/i);
+    const genreFolderPlayMatch = lower.match(/(?:plej|play|puść|pusc|odtwórz|odtworz|włącz|wlacz|zagraj|graj|odpal|leć|lec|dawaj)\s+(?:katalog|folder|gatunek|z\s+katalogu|z\s+folderu)\s+(.+)/i);
+
+    if (genreFolderOpenMatch || genreFolderPlayMatch) {
+      const isPlayMode = !!genreFolderPlayMatch;
+      const genreName = (genreFolderPlayMatch?.[1] || genreFolderOpenMatch?.[1] || "").trim();
+      
+      if (genreName) {
+        if (isPlayMode) {
+          // Fetch tracks from genre and play
+          toast.loading(`🎵 Pobieram utwory z katalogu "${genreName}"...`, { id: "voice-genre" });
+          const { data: tracks } = await supabase
+            .from("tracks")
+            .select("*")
+            .ilike("genre", `%${genreName}%`)
+            .not("audio_url", "is", null)
+            .limit(50);
+          
+          if (tracks && tracks.length > 0) {
+            playPlaylist(tracks, 0);
+            toast.success(`▶ Odtwarzam katalog "${genreName}" — ${tracks.length} utworów`, { id: "voice-genre", duration: 4000 });
+            await safeSpeakAndResume(`Odtwarzam katalog ${genreName}, ${tracks.length} utworów`);
+          } else {
+            toast.error(`Brak utworów w katalogu "${genreName}"`, { id: "voice-genre" });
+            await safeSpeakAndResume(`Katalog ${genreName} jest pusty`);
+          }
+        } else {
+          // Navigate to library with genre filter
+          navigate(`/library?genre=${encodeURIComponent(genreName)}`);
+          toast.success(`📂 Otwieram katalog: ${genreName}`, { id: "voice-genre" });
+          await safeSpeakAndResume(`Otwieram katalog ${genreName}`);
+        }
+        return;
+      }
+    }
+
+    // ==========================================
+    // SEARCH COMMAND ("poszukaj X", "znajdź X", "szukaj X")
+    // ==========================================
+    const searchMatch = lower.match(/(?:poszukaj|znajdź|znajdz|wyszukaj|szukaj|search|find)\s+(.+)/i);
+    if (searchMatch) {
+      const query = searchMatch[1].trim();
+      if (query) {
+        await searchAndPlay(query);
+        return;
+      }
+    }
+
+    // Navigation (general)
     if (lower.includes("otwórz") || lower.includes("włącz") || lower.includes("pokaż") || lower.includes("przejdź") || lower.includes("idź")) {
       if (tryNavigate(lower)) return;
     }
