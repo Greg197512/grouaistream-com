@@ -65,11 +65,13 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
       <div className="flex h-24 items-center gap-3 px-4">
         {collapsed ? (
           <motion.div 
-            className="relative flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-xl cursor-pointer overflow-hidden mx-auto"
+            className="relative flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-xl cursor-pointer mx-auto"
             whileHover={{ scale: 1.1, rotate: 5 }}
             onClick={() => handleNavClick("/")}
           >
-            <MatrixNotes enabled={matrixEnabled} />
+            <div className="absolute -inset-4 overflow-hidden">
+              <MatrixNotes enabled={matrixEnabled} />
+            </div>
             <img src="/logo-icon.png" alt="GrouAI Stream" className="h-14 w-14 object-contain drop-shadow-[0_0_12px_hsl(var(--primary)/0.5)] relative z-10" />
           </motion.div>
         ) : (
@@ -77,11 +79,13 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
             initial={{ opacity: 0, x: -10 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -10 }}
-            className="relative cursor-pointer flex items-center overflow-hidden"
+            className="relative cursor-pointer flex items-center"
             onClick={() => handleNavClick("/")}
             whileHover={{ scale: 1.03 }}
           >
-            <MatrixNotes enabled={matrixEnabled} />
+            <div className="absolute -inset-6 overflow-hidden">
+              <MatrixNotes enabled={matrixEnabled} />
+            </div>
             <img src={logoIcon} alt="GrouAI Stream by GrouaRock" className="h-24 object-contain relative z-10" />
           </motion.div>
         )}

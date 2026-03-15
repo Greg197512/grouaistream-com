@@ -14,10 +14,10 @@ async function findOriginalCover(title: string, artist: string): Promise<string 
     if (itunesRes.ok) {
       const data = await itunesRes.json();
       if (data.results?.length > 0) {
-        // Get the highest resolution artwork (replace 100x100 with 600x600)
+        // Get the highest resolution artwork (replace 100x100 with 3000x3000 for near-8K quality)
         const artwork = data.results[0].artworkUrl100;
         if (artwork) {
-          return artwork.replace("100x100bb", "600x600bb");
+          return artwork.replace("100x100bb", "3000x3000bb");
         }
       }
     }
@@ -43,8 +43,9 @@ async function findOriginalCover(title: string, artist: string): Promise<string 
               if (coverRes.ok) {
                 const coverData = await coverRes.json();
                 const front = coverData.images?.find((img: any) => img.front);
-                if (front?.thumbnails?.large || front?.image) {
-                  return front.thumbnails.large || front.image;
+                if (front) {
+                  // Prefer highest quality: image (full size) > large thumbnail
+                  return front.image || front.thumbnails?.["1200"] || front.thumbnails?.large;
                 }
               }
             } catch { /* skip this release */ }
@@ -63,8 +64,11 @@ async function findOriginalCover(title: string, artist: string): Promise<string 
     if (deezerRes.ok) {
       const data = await deezerRes.json();
       if (data.data?.length > 0) {
+        // Deezer cover_xl is 1000x1000, upgrade URL to 1800x1800 for max quality
         const albumCover = data.data[0].album?.cover_xl || data.data[0].album?.cover_big;
-        if (albumCover) return albumCover;
+        if (albumCover) {
+          return albumCover.replace("/1000x1000", "/1800x1800").replace("/500x500", "/1800x1800");
+        }
       }
     }
   } catch (e) {
