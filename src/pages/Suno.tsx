@@ -77,9 +77,11 @@ const Suno = () => {
         durationSeconds: 30,
         instrumental,
         title: title.trim() || undefined,
+        useSamples,
       });
 
       const genreName = genre2 ? `${genre} × ${genre2}` : genre;
+      const lyrics = generateLyrics(genreName, track.title, 30, instrumental);
 
       let generationId: string | undefined;
       if (user) {
@@ -87,7 +89,7 @@ const Suno = () => {
           user_id: user.id,
           title: track.title,
           genre: genreName,
-          prompt: `30-second ${genreName} track${instrumental ? ", instrumental only" : ""}`,
+          prompt: `30-second ${genreName} track${instrumental ? ", instrumental only" : ""}${useSamples ? " + CC Mixter samples" : ""}`,
           instrumental,
           status: "completed",
           audio_url: track.audioUrl,
@@ -102,6 +104,7 @@ const Suno = () => {
         generationId,
         durationSeconds: 30,
         lastTrack: track,
+        lyrics,
       });
       toast.success(`🎶 Wygenerowano "${track.title}"!`);
     } catch (err: any) {
