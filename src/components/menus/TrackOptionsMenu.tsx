@@ -151,6 +151,11 @@ const TrackOptionsMenuComponent = (
     );
   };
 
+  const handleShareWhatsApp = () => {
+    const text = `🎵 Posłuchaj "${trackTitle}" by ${trackArtist} na GrooveAI Stream! ${trackUrl || window.location.origin}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
+  };
+
   const [downloading, setDownloading] = useState(false);
 
   const handleDownload = async () => {
