@@ -716,7 +716,17 @@ export async function generateMusic(config: GenerationConfig): Promise<Generated
     ? randomFromArray(brightRoots)
     : randomFromArray([48, 50, 52, 53, 55, 57]);
 
-  const { buffer } = await renderAudio(config, bpm, rootMidi, scaleType);
+  // Load CC Mixter samples if requested
+  let samples: LoadedSample[] = [];
+  if (config.useSamples) {
+    try {
+      samples = await loadGenreSamples(style, 2);
+    } catch (err) {
+      console.warn('Sample loading failed, continuing without samples:', err);
+    }
+  }
+
+  const { buffer } = await renderAudio({ ...config, samples }, bpm, rootMidi, scaleType);
   const wavBlob = audioBufferToWav(buffer);
   const audioUrl = URL.createObjectURL(wavBlob);
 
