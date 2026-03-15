@@ -1206,11 +1206,15 @@ export default function Admin() {
                             <Button 
                               variant="default" 
                               className="flex-1 gap-2"
-                              disabled
-                              title="Dodaj RESEND_API_KEY aby wysyłać e-maile"
+                              onClick={sendEmailViaResend}
+                              disabled={sendingEmail || !recipientEmail.trim()}
                             >
-                              <Send className="h-4 w-4" />
-                              Wyślij (wymaga Resend)
+                              {sendingEmail ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Send className="h-4 w-4" />
+                              )}
+                              {sendingEmail ? "Wysyłanie..." : "Wyślij przez Resend"}
                             </Button>
                           </div>
                         </div>
