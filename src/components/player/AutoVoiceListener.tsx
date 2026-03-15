@@ -14,7 +14,6 @@ import { cn } from "@/lib/utils";
 import { useClapControl } from "@/hooks/useClapControl";
 import { useDJMode } from "@/hooks/useDJMode";
 import type { Language } from "@/i18n/translations";
-import { useDJMode } from "@/hooks/useDJMode";
 
 interface SpeechRecognitionEvent extends Event {
   resultIndex: number;
