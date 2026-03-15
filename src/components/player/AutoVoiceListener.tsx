@@ -734,10 +734,10 @@ export const AutoVoiceListener = () => {
     }
 
     // ==========================================
-    // GENRE FOLDER OPEN / PLAY COMMANDS
+    // GENRE FOLDER OPEN / PLAY COMMANDS (multilingual)
     // ==========================================
-    const genreFolderOpenMatch = lower.match(/(?:otwórz|otworz|pokaż|pokaz|wyświetl|wyswietl)\s+(?:katalog|folder|gatunek)\s+(.+)/i);
-    const genreFolderPlayMatch = lower.match(/(?:plej|play|puść|pusc|odtwórz|odtworz|włącz|wlacz|zagraj|graj|odpal|leć|lec|dawaj)\s+(?:katalog|folder|gatunek|z\s+katalogu|z\s+folderu)\s+(.+)/i);
+    const genreFolderOpenMatch = lower.match(/(?:otwórz|otworz|pokaż|pokaz|wyświetl|wyswietl|open|show|toon|відкрий|покажи)\s+(?:katalog|folder|gatunek|genre|category|categorie|map|жанр|папк)\s+(.+)/i);
+    const genreFolderPlayMatch = lower.match(/(?:plej|play|puść|pusc|odtwórz|odtworz|włącz|wlacz|zagraj|graj|odpal|leć|lec|dawaj|speel|draai|грай|увімкни)\s+(?:katalog|folder|gatunek|genre|category|categorie|map|z\s+katalogu|z\s+folderu|from\s+folder|from\s+genre|uit\s+map|з\s+папк|жанр)\s+(.+)/i);
 
     if (genreFolderOpenMatch || genreFolderPlayMatch) {
       const isPlayMode = !!genreFolderPlayMatch;
