@@ -743,7 +743,7 @@ export const AutoVoiceListener = () => {
     // ==========================================
     const wantsRecent = /ostatni[echm]?\s+(?:wgrany|wrzucon|dodany|piosen|utw)|najnowsz|z\s+serwera|ostatnie\s+\d|śwież|swiez|newest|recent|ostatnio\s+(?:wgran|dodan|wrzucon)/i.test(lower);
     if (wantsRecent) {
-      const count = parsePolishNumber(lower) || 10;
+      const count = parseNumber(lower) || 10;
       toast.loading(`📥 Pobieram ${count} ostatnich wgranych...`, { id: "voice-cmd" });
       try {
         const { data: tracks } = await supabase
