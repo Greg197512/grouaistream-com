@@ -1,13 +1,6 @@
 import { useEffect, useRef } from "react";
 
 const NOTE_CHARS = ["♩", "♪", "♫", "♬", "𝄞", "♭", "♯"];
-const COLORS = [
-  "hsl(25, 95%, 55%)",   // orange
-  "hsl(35, 92%, 50%)",   // amber
-  "hsl(15, 90%, 50%)",   // deep orange
-  "hsl(40, 95%, 58%)",   // gold
-  "hsl(20, 88%, 52%)",   // warm orange
-];
 
 interface MatrixNotesProps {
   enabled: boolean;
@@ -25,54 +18,71 @@ export const MatrixNotes = ({ enabled, width = 280, height = 96 }: MatrixNotesPr
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    canvas.width = width * 2;
-    canvas.height = height * 2;
-    ctx.scale(2, 2);
+    const dpr = 2;
+    canvas.width = width * dpr;
+    canvas.height = height * dpr;
+    ctx.scale(dpr, dpr);
 
-    const fontSize = 10;
+    const fontSize = 11;
     const columns = Math.floor(width / fontSize);
-    const drops = Array.from({ length: columns }, () => Math.random() * -10);
-    const charColors = Array.from({ length: columns }, () => COLORS[Math.floor(Math.random() * COLORS.length)]);
-    const speeds = Array.from({ length: columns }, () => 0.3 + Math.random() * 0.4);
+    const drops = Array.from({ length: columns }, () => Math.random() * -(height / fontSize));
+    const speeds = Array.from({ length: columns }, () => 0.25 + Math.random() * 0.35);
 
     let animId: number;
     let lastTime = 0;
 
     const draw = (time: number) => {
       const delta = time - lastTime;
-      if (delta < 50) {
+      if (delta < 45) {
         animId = requestAnimationFrame(draw);
         return;
       }
       lastTime = time;
 
-      ctx.fillStyle = "rgba(0, 0, 0, 0.08)";
+      // Fade trail
+      ctx.fillStyle = "rgba(0, 0, 0, 0.12)";
       ctx.fillRect(0, 0, width, height);
 
-      ctx.font = `${fontSize}px monospace`;
+      ctx.font = `bold ${fontSize}px monospace`;
+      ctx.textAlign = "center";
 
       for (let i = 0; i < columns; i++) {
         const char = NOTE_CHARS[Math.floor(Math.random() * NOTE_CHARS.length)];
-        const x = i * fontSize;
+        const x = i * fontSize + fontSize / 2;
         const y = drops[i] * fontSize;
 
-        // Shimmer: randomly shift color occasionally
-        if (Math.random() > 0.97) {
-          charColors[i] = COLORS[Math.floor(Math.random() * COLORS.length)];
-        }
+        // Shimmer hue shift
+        const hue = 20 + Math.sin(time * 0.003 + i * 0.7) * 15;
+        const lightness = 55 + Math.sin(time * 0.002 + i * 1.3) * 10;
+        const alpha = 0.6 + Math.sin(time * 0.004 + i * 0.9) * 0.3;
 
-        const alpha = 0.3 + Math.sin(time * 0.002 + i) * 0.2;
-        ctx.globalAlpha = Math.max(0.1, alpha);
-        ctx.fillStyle = charColors[i];
+        // Head note — bright
+        ctx.globalAlpha = Math.max(0.3, alpha);
+        ctx.fillStyle = `hsl(${hue}, 95%, ${lightness}%)`;
+        ctx.shadowColor = `hsl(${hue}, 90%, 50%)`;
+        ctx.shadowBlur = 6;
         ctx.fillText(char, x, y);
 
-        if (y > height && Math.random() > 0.95) {
-          drops[i] = 0;
+        // Trail note — dimmer
+        if (drops[i] > 1) {
+          ctx.globalAlpha = Math.max(0.1, alpha * 0.35);
+          ctx.shadowBlur = 2;
+          ctx.fillText(
+            NOTE_CHARS[Math.floor(Math.random() * NOTE_CHARS.length)],
+            x,
+            y - fontSize
+          );
+        }
+
+        // Reset
+        if (y > height + fontSize) {
+          drops[i] = Math.random() * -3;
         }
         drops[i] += speeds[i];
       }
 
       ctx.globalAlpha = 1;
+      ctx.shadowBlur = 0;
       animId = requestAnimationFrame(draw);
     };
 
@@ -86,12 +96,7 @@ export const MatrixNotes = ({ enabled, width = 280, height = 96 }: MatrixNotesPr
     <canvas
       ref={canvasRef}
       className="absolute inset-0 pointer-events-none z-0"
-      style={{
-        width,
-        height,
-        opacity: 0.5,
-        mixBlendMode: "screen",
-      }}
+      style={{ width, height }}
     />
   );
 };
