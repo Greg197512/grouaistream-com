@@ -58,7 +58,7 @@ export const MatrixNotes = ({ enabled }: MatrixNotesProps) => {
   if (!enabled) return null;
 
   return (
-    <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
+    <div className="absolute inset-0 pointer-events-none z-20 overflow-hidden">
       <AnimatePresence>
         {notes.map((note) => (
           <motion.span
