@@ -42,10 +42,14 @@ const Suno = () => {
     try {
       const track = await generateMusic({
         style: genre,
+        style2: genre2 || undefined,
+        blendRatio: genre2 ? blendRatio / 100 : undefined,
         durationSeconds: 30,
         instrumental,
         title: title.trim() || undefined,
       });
+
+      const genreName = genre2 ? `${genre} × ${genre2}` : genre;
 
       let generationId: string | undefined;
       if (user) {
