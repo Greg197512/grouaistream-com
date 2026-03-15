@@ -1,0 +1,38 @@
+import { motion } from "framer-motion";
+
+export const NeonWavesLoader = () => {
+  const bars = Array.from({ length: 24 });
+
+  return (
+    <div className="flex flex-col items-center gap-4 py-8">
+      <div className="flex items-end gap-1 h-16">
+        {bars.map((_, i) => (
+          <motion.div
+            key={i}
+            className="w-1.5 rounded-full"
+            style={{
+              background: `linear-gradient(to top, #FF6B00, #FF9500)`,
+              boxShadow: "0 0 8px #FF6B0080",
+            }}
+            animate={{
+              height: [8, 40 + Math.random() * 24, 12, 48 + Math.random() * 16, 8],
+            }}
+            transition={{
+              duration: 1.2 + Math.random() * 0.6,
+              repeat: Infinity,
+              ease: "easeInOut",
+              delay: i * 0.05,
+            }}
+          />
+        ))}
+      </div>
+      <motion.p
+        className="text-[#FF9500] font-medium text-sm"
+        animate={{ opacity: [0.5, 1, 0.5] }}
+        transition={{ duration: 2, repeat: Infinity }}
+      >
+        Tworzę Twój utwór...
+      </motion.p>
+    </div>
+  );
+};
