@@ -11,6 +11,7 @@ import {
   ListPlus,
   ExternalLink,
   Twitter,
+  MessageCircle,
   Trash2,
   Scissors
 } from "lucide-react";
@@ -148,6 +149,11 @@ const TrackOptionsMenuComponent = (
       `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`,
       "_blank"
     );
+  };
+
+  const handleShareWhatsApp = () => {
+    const text = `🎵 Posłuchaj "${trackTitle}" by ${trackArtist} na GrooveAI Stream! ${trackUrl || window.location.origin}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
   };
 
   const [downloading, setDownloading] = useState(false);
@@ -316,6 +322,10 @@ const TrackOptionsMenuComponent = (
               <DropdownMenuItem onClick={handleShareTwitter} className="cursor-pointer">
                 <Twitter className="mr-2 h-4 w-4" />
                 Share on X
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleShareWhatsApp} className="cursor-pointer">
+                <MessageCircle className="mr-2 h-4 w-4" />
+                WhatsApp
               </DropdownMenuItem>
               <DropdownMenuItem onClick={handleCopyLink} className="cursor-pointer">
                 <Link className="mr-2 h-4 w-4" />
