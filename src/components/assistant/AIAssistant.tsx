@@ -526,11 +526,13 @@ export const AIAssistant = () => {
                         <img src={aiAssistantAvatar} alt="" className="w-full h-full object-cover" />
                       </div>
                     )}
-                    <div className={`max-w-[88%] rounded-2xl px-4 py-3 ${
+                    <div className={`group/msg relative max-w-[88%] rounded-2xl px-4 py-3 ${
                       msg.role === "user"
                         ? "bg-primary text-primary-foreground rounded-br-sm"
                         : "bg-white/5 text-foreground rounded-bl-sm border border-white/5"
                     }`}>
+                      {/* Copy button */}
+                      <CopyButton text={msg.content} isUser={msg.role === "user"} />
                       {msg.role === "assistant" ? (
                         <div className="prose prose-sm prose-invert max-w-none text-[13px] leading-relaxed [&_p]:mb-2 [&_ul]:mb-2 [&_ol]:mb-2 [&_h3]:text-sm [&_h3]:font-bold [&_h3]:mt-3 [&_h3]:mb-1 [&_code]:bg-white/10 [&_code]:px-1 [&_code]:rounded [&_blockquote]:border-primary/30 [&_blockquote]:text-muted-foreground [&_a]:text-primary">
                           <ReactMarkdown>{msg.content}</ReactMarkdown>
