@@ -43,8 +43,9 @@ async function findOriginalCover(title: string, artist: string): Promise<string 
               if (coverRes.ok) {
                 const coverData = await coverRes.json();
                 const front = coverData.images?.find((img: any) => img.front);
-                if (front?.thumbnails?.large || front?.image) {
-                  return front.thumbnails.large || front.image;
+                if (front) {
+                  // Prefer highest quality: image (full size) > large thumbnail
+                  return front.image || front.thumbnails?.["1200"] || front.thumbnails?.large;
                 }
               }
             } catch { /* skip this release */ }
