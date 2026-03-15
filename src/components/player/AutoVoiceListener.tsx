@@ -830,7 +830,7 @@ export const AutoVoiceListener = () => {
     const selectMatch = lower.match(/wybierz\s+(.+)/i);
     if (selectMatch) {
       const rest = selectMatch[1].replace(/i\s+włącz.*/i, "").replace(/w\s+playerze/i, "").trim();
-      const count = parsePolishNumber(rest);
+      const count = parseNumber(rest);
       const cleanQuery = rest
         .replace(/\d+/g, "")
         .replace(/(?:jeden|jedną|jedno|dwa|dwie|dwóch|dwoch|trzy|trzech|cztery|czterech|pięć|piec|pieciu|pięciu|sześć|szesc|sześciu|szesciu|siedem|siedmiu|osiem|ośmiu|osmiu|dziewięć|dziewiec|dziewięciu|dziesięć|dziesiec|dziesięciu|piętnaście|pietnascie|dwadzieścia|dwadziescia)\s*/gi, "")
