@@ -34,6 +34,7 @@ import { TrackOptionsMenu } from "@/components/menus/TrackOptionsMenu";
 import { QueueSidebar } from "@/components/player/QueueSidebar";
 import { FullscreenPlayer } from "@/components/player/FullscreenPlayer";
 import { QuickMoodDetector } from "@/components/mood/QuickMoodDetector";
+import { HQCover } from "@/components/ui/HQCover";
 
 // Video visibility state - shared via window for simplicity
 declare global {
