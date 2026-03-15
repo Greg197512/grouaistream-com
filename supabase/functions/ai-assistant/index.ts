@@ -825,6 +825,13 @@ Znasz DOKŁADNIE każdą funkcję aplikacji:
             data: dedicationResult,
           })}\n\n`));
         }
+        // Send music generation event
+        if (generateResult) {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+            type: "music_generate",
+            data: generateResult,
+          })}\n\n`));
+        }
         // Send auto-play tracks as first event (multiple tracks for playlist)
         if (autoPlayTracks.length > 0) {
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({
