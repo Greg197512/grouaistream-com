@@ -56,9 +56,12 @@ const Suno = () => {
         const { data: gen } = await supabase.from("generations").insert({
           user_id: user.id,
           title: track.title,
-          genre,
-          prompt: `30-second ${genre} track${instrumental ? ", instrumental only" : ""}`,
+          genre: genreName,
+          prompt: `30-second ${genreName} track${instrumental ? ", instrumental only" : ""}`,
           instrumental,
+          status: "completed",
+          audio_url: track.audioUrl,
+        }).select().single();
           status: "completed",
           audio_url: track.audioUrl,
         }).select().single();
