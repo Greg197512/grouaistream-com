@@ -914,7 +914,7 @@ export const AIAssistant = () => {
                     )}
                     <button
                       onClick={() => removeAttachment(i)}
-                      className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-destructive flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-destructive flex items-center justify-center opacity-70 hover:opacity-100 transition-opacity"
                     >
                       <X className="h-2.5 w-2.5 text-destructive-foreground" />
                     </button>
