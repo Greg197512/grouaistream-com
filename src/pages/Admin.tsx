@@ -460,6 +460,38 @@ export default function Admin() {
     }
   };
 
+  const sendEmailViaResend = async () => {
+    if (!generatedEmail) return;
+    if (!recipientEmail.trim()) {
+      toast.error("Podaj adres e-mail odbiorcy!");
+      return;
+    }
+
+    setSendingEmail(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('send-email', {
+        body: {
+          to: recipientEmail.trim(),
+          subject: generatedEmail.subject,
+          html: generatedEmail.body,
+        }
+      });
+
+      if (error) throw error;
+
+      if (data?.success) {
+        toast.success(`E-mail wysłany do ${recipientEmail}! ✉️`);
+      } else {
+        throw new Error(data?.error || "Wysyłanie nie powiodło się");
+      }
+    } catch (error) {
+      console.error("Error sending email:", error);
+      toast.error(error instanceof Error ? error.message : "Błąd wysyłania e-maila");
+    } finally {
+      setSendingEmail(false);
+    }
+  };
+
   const deleteGenre = async (genre: string) => {
     if (!confirm(`Czy na pewno chcesz usunąć wszystkie utwory z gatunku "${genre}"? Ta operacja jest nieodwracalna!`)) {
       return;
