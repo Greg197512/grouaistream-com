@@ -485,6 +485,27 @@ serve(async (req) => {
     }
 
     // ==========================================
+    // AUDIO MIXING DETECTION
+    // ==========================================
+    const audioAttachments = (attachments || []).filter((a: any) => a.type === "audio");
+    const hasMixIntent = /miksuj|zmixuj|zmiksuj|mixuj|połącz|polacz|blend|merge|mashup|mix\s+(?:te|to|these)|zrób\s+mix|zrob\s+mix|zmieszaj/i.test(lowerMessage);
+    let mixRequest: { urls: string[]; style: string } | null = null;
+
+    if (hasMixIntent && audioAttachments.length >= 2) {
+      const mixStyleMatch = lowerMessage.match(/crossfade|overlay|mashup|nakładk|nakladk/i);
+      let style = "crossfade";
+      if (mixStyleMatch) {
+        const s = mixStyleMatch[0].toLowerCase();
+        if (s === "overlay" || s.startsWith("nakładk") || s.startsWith("nakladk")) style = "overlay";
+        if (s === "mashup") style = "mashup";
+      }
+      mixRequest = {
+        urls: audioAttachments.slice(0, 2).map((a: any) => a.url),
+        style,
+      };
+    }
+
+    // ==========================================
     // MUSIC PLAY DETECTION (existing logic)
     // ==========================================
 
