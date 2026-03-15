@@ -29,3 +29,6 @@ verify_jwt = false
 
 [functions.suno-generate]
 verify_jwt = false
+
+[functions.ai-mix-suggest]
+verify_jwt = false

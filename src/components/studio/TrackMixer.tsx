@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,7 +11,7 @@ import { mixAudioFiles, type MixStyle } from "@/utils/audioMixer";
 import { NeonWavesLoader } from "./NeonWavesLoader";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Plus, X, Blend, Music, Disc3, Save, Shuffle } from "lucide-react";
+import { Search, Plus, X, Blend, Music, Disc3, Save, Shuffle, Sparkles, Star, ThumbsUp, Brain } from "lucide-react";
 
 interface TrackItem {
   id: string;
@@ -21,6 +22,16 @@ interface TrackItem {
   duration: number;
 }
 
+interface AISuggestion {
+  track_a_id: string;
+  track_b_id: string;
+  track_a: { id: string; title: string; artist: string; genre: string | null };
+  track_b: { id: string; title: string; artist: string; genre: string | null };
+  reason: string;
+  mix_style: MixStyle;
+  confidence: number;
+}
+
 const MIX_STYLES: { value: MixStyle; label: string; desc: string }[] = [
   { value: "crossfade", label: "Crossfade", desc: "Płynne przejście A → B" },
   { value: "overlay", label: "Overlay", desc: "Oba naraz, pełny mix" },
@@ -28,6 +39,7 @@ const MIX_STYLES: { value: MixStyle; label: string; desc: string }[] = [
 ];
 
 export const TrackMixer = () => {
+  const { user, session } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<TrackItem[]>([]);
   const [searching, setSearching] = useState(false);
@@ -40,6 +52,23 @@ export const TrackMixer = () => {
   const [crossfadeDur, setCrossfadeDur] = useState(3);
   const [mixing, setMixing] = useState(false);
   const [mixResult, setMixResult] = useState<{ audioUrl: string; duration: number; title: string } | null>(null);
+
+  // AI suggestions
+  const [suggestions, setSuggestions] = useState<AISuggestion[]>([]);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const [mixHistory, setMixHistory] = useState<any[]>([]);
+
+  // Load mix history
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from("mix_preferences")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(10)
+      .then(({ data }) => setMixHistory(data || []));
+  }, [user]);
 
   // Search tracks from library
   useEffect(() => {
@@ -73,6 +102,85 @@ export const TrackMixer = () => {
     setSelectingSlot(null);
     setSearchQuery("");
     setSearchResults([]);
+  };
+
+  const fetchAISuggestions = async () => {
+    if (!session?.access_token) {
+      toast.error("Zaloguj się, aby otrzymać sugestie AI");
+      return;
+    }
+    setLoadingSuggestions(true);
+    try {
+      const resp = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-mix-suggest`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({}),
+        }
+      );
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || "AI error");
+      setSuggestions(data.suggestions || []);
+      if (data.suggestions?.length) {
+        toast.success(`🧠 AI zasugerowało ${data.suggestions.length} par do miksowania!`);
+      } else {
+        toast.info("AI nie znalazło jeszcze sugestii — dodaj więcej utworów do biblioteki");
+      }
+    } catch (err: any) {
+      toast.error("Błąd AI: " + err.message);
+    } finally {
+      setLoadingSuggestions(false);
+    }
+  };
+
+  const applySuggestion = async (s: AISuggestion) => {
+    // Fetch full track data with audio_url
+    const { data } = await supabase
+      .from("tracks")
+      .select("id, title, artist, audio_url, genre, duration")
+      .in("id", [s.track_a_id, s.track_b_id]);
+    if (!data || data.length < 2) {
+      toast.error("Nie znaleziono utworów");
+      return;
+    }
+    const a = data.find(t => t.id === s.track_a_id) as TrackItem;
+    const b = data.find(t => t.id === s.track_b_id) as TrackItem;
+    if (a) setTrackA(a);
+    if (b) setTrackB(b);
+    setMixStyle(s.mix_style);
+    toast.success(`Załadowano: "${a?.title}" × "${b?.title}"`);
+  };
+
+  const saveMixPreference = async (rating: number) => {
+    if (!user || !trackA || !trackB) return;
+    try {
+      await supabase.from("mix_preferences").insert({
+        user_id: user.id,
+        track_a_id: trackA.id,
+        track_b_id: trackB.id,
+        track_a_title: trackA.title,
+        track_b_title: trackB.title,
+        track_a_genre: trackA.genre,
+        track_b_genre: trackB.genre,
+        mix_style: mixStyle,
+        rating,
+      });
+      toast.success(`Ocena ${rating}⭐ zapisana — AI się uczy!`);
+      // Refresh history
+      const { data } = await supabase
+        .from("mix_preferences")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(10);
+      setMixHistory(data || []);
+    } catch (err: any) {
+      toast.error("Błąd zapisu: " + err.message);
+    }
   };
 
   const handleMix = async () => {
@@ -154,11 +262,75 @@ export const TrackMixer = () => {
           style={{ background: "linear-gradient(135deg, #9333EA, #FF6B00)", boxShadow: "0 0 20px #9333EA40" }}>
           <Blend className="h-5 w-5 text-white" />
         </div>
-        <div>
+        <div className="flex-1">
           <h2 className="text-lg font-bold text-white">Track Mixer</h2>
           <p className="text-xs text-gray-400">Wybierz 2 utwory z biblioteki i zmiksuj je</p>
         </div>
       </div>
+
+      {/* AI Suggestions Button */}
+      {user && (
+        <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}>
+          <Button
+            onClick={fetchAISuggestions}
+            disabled={loadingSuggestions}
+            variant="outline"
+            className="w-full gap-2 border-[#9333EA]/30 text-[#9333EA] hover:bg-[#9333EA]/10 hover:text-white h-10"
+          >
+            <Brain className="h-4 w-4" />
+            {loadingSuggestions ? "AI analizuje..." : "🧠 Sugestie AI — co zmiksować?"}
+          </Button>
+        </motion.div>
+      )}
+
+      {/* AI Suggestions List */}
+      <AnimatePresence>
+        {suggestions.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="space-y-2 overflow-hidden"
+          >
+            <Label className="text-sm text-gray-300 flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-[#FF9500]" />
+              Sugestie AI ({suggestions.length})
+            </Label>
+            {suggestions.map((s, i) => (
+              <motion.button
+                key={i}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.1 }}
+                onClick={() => applySuggestion(s)}
+                className="w-full p-3 rounded-xl border border-[#9333EA]/20 bg-[#1a1a2e]/60 hover:border-[#9333EA]/50 transition-all text-left space-y-1.5"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-white font-medium truncate">
+                    {s.track_a.title} × {s.track_b.title}
+                  </span>
+                  <Badge className="text-[10px] px-1.5 py-0 bg-[#9333EA]/20 text-[#9333EA] border-[#9333EA]/30 shrink-0">
+                    {Math.round(s.confidence * 100)}%
+                  </Badge>
+                </div>
+                <p className="text-xs text-gray-400 line-clamp-2">{s.reason}</p>
+                <div className="flex gap-1.5">
+                  <Badge className="text-[10px] px-1.5 py-0 bg-[#FF6B00]/10 text-[#FF9500] border-[#FF6B00]/20">
+                    {s.track_a.genre || "—"}
+                  </Badge>
+                  <span className="text-[10px] text-gray-500">×</span>
+                  <Badge className="text-[10px] px-1.5 py-0 bg-[#9333EA]/10 text-[#9333EA] border-[#9333EA]/20">
+                    {s.track_b.genre || "—"}
+                  </Badge>
+                  <Badge className="text-[10px] px-1.5 py-0 bg-white/5 text-gray-400 border-white/10 ml-auto">
+                    {s.mix_style}
+                  </Badge>
+                </div>
+              </motion.button>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Track Slots */}
       <div className="space-y-2">
@@ -215,7 +387,7 @@ export const TrackMixer = () => {
         )}
       </AnimatePresence>
 
-      {/* Mix Controls (show when both tracks selected) */}
+      {/* Mix Controls */}
       <AnimatePresence>
         {trackA && trackB && (
           <motion.div
@@ -224,7 +396,6 @@ export const TrackMixer = () => {
             exit={{ opacity: 0, y: -10 }}
             className="space-y-4"
           >
-            {/* Mix Style */}
             <div className="space-y-2">
               <Label className="text-sm text-gray-300">Styl miksowania</Label>
               <div className="flex gap-2">
@@ -246,7 +417,6 @@ export const TrackMixer = () => {
               <p className="text-xs text-gray-500">{MIX_STYLES.find(s => s.value === mixStyle)?.desc}</p>
             </div>
 
-            {/* Gain Controls */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
                 <div className="flex justify-between text-xs text-gray-400">
@@ -262,7 +432,6 @@ export const TrackMixer = () => {
               </div>
             </div>
 
-            {/* Crossfade duration (for crossfade mode) */}
             {mixStyle === "crossfade" && (
               <div className="space-y-1">
                 <div className="flex justify-between text-xs text-gray-400">
@@ -272,7 +441,6 @@ export const TrackMixer = () => {
               </div>
             )}
 
-            {/* Mix Button */}
             <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}>
               <Button
                 onClick={handleMix}
@@ -328,6 +496,26 @@ export const TrackMixer = () => {
               onSaveToLibrary={saveToLibrary}
             />
 
+            {/* Rating */}
+            {user && (
+              <div className="space-y-1.5">
+                <p className="text-xs text-gray-400 flex items-center gap-1.5">
+                  <ThumbsUp className="h-3 w-3" /> Oceń mix — AI nauczy się twoich preferencji
+                </p>
+                <div className="flex gap-1.5">
+                  {[1, 2, 3, 4, 5].map((r) => (
+                    <button
+                      key={r}
+                      onClick={() => saveMixPreference(r)}
+                      className="p-1.5 rounded-lg hover:bg-[#FF6B00]/10 transition-colors group"
+                    >
+                      <Star className={`h-5 w-5 transition-colors ${r <= 3 ? "text-gray-500 group-hover:text-[#FF9500]" : "text-gray-600 group-hover:text-[#FF9500]"}`} />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <Button
               onClick={saveToLibrary}
               variant="outline"
@@ -339,6 +527,31 @@ export const TrackMixer = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Mix History */}
+      {mixHistory.length > 0 && (
+        <div className="space-y-2">
+          <Label className="text-sm text-gray-300 flex items-center gap-2">
+            <Disc3 className="h-4 w-4 text-[#FF9500]" />
+            Historia miksów ({mixHistory.length})
+          </Label>
+          <div className="space-y-1.5 max-h-40 overflow-y-auto">
+            {mixHistory.map((m: any) => (
+              <div key={m.id} className="flex items-center gap-2 p-2 rounded-lg bg-[#1a1a2e]/40 border border-white/5">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-white truncate">{m.track_a_title} × {m.track_b_title}</p>
+                  <p className="text-[10px] text-gray-500">{m.track_a_genre} × {m.track_b_genre} • {m.mix_style}</p>
+                </div>
+                <div className="flex gap-0.5 shrink-0">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Star key={i} className={`h-3 w-3 ${i < (m.rating || 0) ? "text-[#FF9500] fill-[#FF9500]" : "text-gray-600"}`} />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
