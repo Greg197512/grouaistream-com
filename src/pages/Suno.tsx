@@ -31,10 +31,39 @@ const Suno = () => {
   const [blendRatio, setBlendRatio] = useState(50);
   const [title, setTitle] = useState("");
   const [instrumental, setInstrumental] = useState(false);
+  const [useSamples, setUseSamples] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [extending, setExtending] = useState(false);
-  const [result, setResult] = useState<{ audioUrl: string; title: string; genre: string; generationId?: string; durationSeconds: number; lastTrack?: GeneratedTrack } | null>(null);
+  const [result, setResult] = useState<{ audioUrl: string; title: string; genre: string; generationId?: string; durationSeconds: number; lastTrack?: GeneratedTrack; lyrics: { time: number; text: string }[] } | null>(null);
   const [errorModal, setErrorModal] = useState<string | null>(null);
+  const [playbackTime, setPlaybackTime] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Track playback time for lyrics sync
+  useEffect(() => {
+    if (!result?.audioUrl) return;
+    const audio = new Audio(result.audioUrl);
+    audioRef.current = audio;
+    
+    const onTimeUpdate = () => setPlaybackTime(audio.currentTime);
+    const onPlay = () => setIsPlaying(true);
+    const onPause = () => setIsPlaying(false);
+    const onEnded = () => { setIsPlaying(false); setPlaybackTime(0); };
+    
+    audio.addEventListener('timeupdate', onTimeUpdate);
+    audio.addEventListener('play', onPlay);
+    audio.addEventListener('pause', onPause);
+    audio.addEventListener('ended', onEnded);
+    
+    return () => {
+      audio.removeEventListener('timeupdate', onTimeUpdate);
+      audio.removeEventListener('play', onPlay);
+      audio.removeEventListener('pause', onPause);
+      audio.removeEventListener('ended', onEnded);
+      audio.pause();
+    };
+  }, [result?.audioUrl]);
 
   const generate = async () => {
     setGenerating(true);
