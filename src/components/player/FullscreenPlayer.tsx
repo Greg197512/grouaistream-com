@@ -16,6 +16,7 @@ import {
 import { Slider } from "@/components/ui/slider";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { cn } from "@/lib/utils";
+import { HQCover } from "@/components/ui/HQCover";
 
 interface FullscreenPlayerProps {
   isOpen: boolean;
