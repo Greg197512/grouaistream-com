@@ -51,7 +51,7 @@ const PlaylistManager = () => {
       .select("*")
       .order("title");
 
-    const tracks: Track[] = (tracksData || []).map((t) => ({
+    const tracks: Track[] = filterTracks((tracksData || []).map((t) => ({
       id: t.id,
       title: t.title,
       artist: t.artist,

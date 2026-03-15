@@ -151,7 +151,8 @@ export const PlaylistGrid = ({ title, subtitle, showAll = true }: PlaylistGridPr
         .limit(20);
       
       if (tracks && tracks.length > 0) {
-        const shuffled = [...tracks].sort(() => Math.random() - 0.5);
+        const filtered = filterTracks(tracks);
+        const shuffled = [...filtered].sort(() => Math.random() - 0.5);
         playPlaylist(shuffled);
         toast.success(`Playing ${shuffled.length} tracks`, { id: "trending-playlist" });
       } else {

@@ -318,7 +318,7 @@ export default function MoodHistory() {
           .from("tracks")
           .select("*")
           .limit(15);
-        setRecommendedTracks(fallback || []);
+        setRecommendedTracks(filterTracks(fallback || []));
       }
     } catch (error) {
       console.error("Error fetching tracks:", error);

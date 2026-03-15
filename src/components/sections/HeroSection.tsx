@@ -67,7 +67,8 @@ export const HeroSection = () => {
         .limit(10);
       if (error) throw error;
       if (tracks && tracks.length > 0) {
-        const shuffled = [...tracks].sort(() => Math.random() - 0.5);
+        const filtered = filterTracks(tracks);
+        const shuffled = [...filtered].sort(() => Math.random() - 0.5);
         playPlaylist(shuffled);
         toast.success(t("hero.nowPlaying"));
       } else {

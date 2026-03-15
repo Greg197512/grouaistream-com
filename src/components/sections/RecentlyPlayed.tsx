@@ -86,10 +86,10 @@ export const RecentlyPlayed = () => {
           if (error) throw error;
 
           if (data) {
-            setRecentTracks(data.map(t => ({
+            setRecentTracks(filterTracks(data.map(t => ({
               ...t,
               played_at: new Date().toISOString(),
-            })));
+            }))));
           }
         }
       } catch (error) {
