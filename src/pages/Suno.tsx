@@ -482,6 +482,8 @@ const Suno = () => {
 
           {/* Generation History */}
           <GenerationHistory />
+          </>
+          )}
         </div>
       </div>
 
