@@ -15,6 +15,13 @@ import { generateMusic, type GeneratedTrack } from "@/utils/musicGenerator";
 import { WaveformPlayer } from "@/components/studio/WaveformPlayer";
 import { toast } from "sonner";
 
+interface ChatAttachment {
+  type: "image" | "audio";
+  url: string; // object URL or uploaded URL
+  name: string;
+  file?: File;
+}
+
 interface PlaylistTrackInfo {
   id: string;
   title: string;
@@ -25,6 +32,7 @@ interface PlaylistTrackInfo {
 interface Message {
   role: "user" | "assistant";
   content: string;
+  attachments?: ChatAttachment[];
   trackLink?: { id: string; title: string; artist: string };
   playlistTracks?: PlaylistTrackInfo[];
   isDJMode?: boolean;
