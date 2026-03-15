@@ -183,6 +183,64 @@ const Suno = () => {
             </div>
           </motion.div>
 
+          {/* Genre Blend */}
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.15 }} className="space-y-3">
+            <div className="flex items-center justify-between">
+              <Label className="text-sm text-gray-300 flex items-center gap-2">
+                <Blend className="h-4 w-4 text-[#FF9500]" />
+                Łączenie gatunków
+              </Label>
+              {genre2 && (
+                <button onClick={() => setGenre2(null)} className="text-xs text-gray-500 hover:text-gray-300 transition-colors">
+                  Wyłącz ✕
+                </button>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {GENRES.filter(g => g !== genre).map((g) => (
+                <Badge
+                  key={g}
+                  className={`cursor-pointer text-xs px-3 py-1.5 transition-all ${
+                    genre2 === g
+                      ? "text-white border-transparent"
+                      : "bg-transparent border-[#9333EA]/20 text-gray-500 hover:border-[#9333EA]/50 hover:text-gray-300"
+                  }`}
+                  style={genre2 === g ? {
+                    background: "linear-gradient(135deg, #9333EA, #FF6B00)",
+                    boxShadow: "0 0 12px #9333EA50",
+                  } : undefined}
+                  onClick={() => setGenre2(genre2 === g ? null : g)}
+                >
+                  {g}
+                </Badge>
+              ))}
+            </div>
+            <AnimatePresence>
+              {genre2 && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="space-y-2 overflow-hidden"
+                >
+                  <div className="flex items-center justify-between text-xs text-gray-400">
+                    <span>{genre}</span>
+                    <span>Mix: {blendRatio}%</span>
+                    <span>{genre2}</span>
+                  </div>
+                  <Slider
+                    value={[blendRatio]}
+                    onValueChange={([v]) => setBlendRatio(v)}
+                    min={10}
+                    max={90}
+                    step={5}
+                    className="w-full"
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
+
           {/* Title Input */}
           <div className="space-y-2">
             <Label className="text-sm text-gray-300">Tytuł (opcjonalnie)</Label>
