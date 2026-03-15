@@ -277,11 +277,79 @@ export const AIAssistant = () => {
   const pendingDedicationRef = useRef<{ trackName: string; recipientName: string; senderName: string } | null>(null);
   const pendingGeneratedTrackRef = useRef<{ audioUrl: string; title: string; genre: string; duration: number } | null>(null);
 
+  // File handling
+  const handleFiles = useCallback((files: FileList | File[]) => {
+    const fileArr = Array.from(files);
+    const newAttachments: ChatAttachment[] = [];
+    for (const file of fileArr) {
+      if (file.type.startsWith("image/")) {
+        newAttachments.push({ type: "image", url: URL.createObjectURL(file), name: file.name, file });
+      } else if (file.type.startsWith("audio/")) {
+        newAttachments.push({ type: "audio", url: URL.createObjectURL(file), name: file.name, file });
+      } else {
+        toast.error(`Nieobsługiwany format: ${file.name}`);
+      }
+    }
+    if (newAttachments.length) setAttachments(prev => [...prev, ...newAttachments]);
+  }, []);
+
+  const removeAttachment = useCallback((idx: number) => {
+    setAttachments(prev => {
+      const removed = prev[idx];
+      if (removed?.url?.startsWith("blob:")) URL.revokeObjectURL(removed.url);
+      return prev.filter((_, i) => i !== idx);
+    });
+  }, []);
+
+  // Paste handler for images
+  const handlePaste = useCallback((e: React.ClipboardEvent) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    const files: File[] = [];
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.kind === "file" && (item.type.startsWith("image/") || item.type.startsWith("audio/"))) {
+        const file = item.getAsFile();
+        if (file) files.push(file);
+      }
+    }
+    if (files.length) {
+      e.preventDefault();
+      handleFiles(files);
+    }
+  }, [handleFiles]);
+
+  // Upload attachment to storage, returns public URL
+  const uploadAttachment = async (att: ChatAttachment): Promise<string> => {
+    if (!att.file) return att.url;
+    const ext = att.name.split(".").pop() || "bin";
+    const path = `chat/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+    const { error } = await supabase.storage.from("music").upload(path, att.file);
+    if (error) throw error;
+    const { data } = supabase.storage.from("music").getPublicUrl(path);
+    return data.publicUrl;
+  };
+
   const handleSend = useCallback(async () => {
-    if (!input.trim() || isLoading) return;
+    if ((!input.trim() && attachments.length === 0) || isLoading) return;
     const userMessage = input.trim();
+    const currentAttachments = [...attachments];
     setInput("");
-    setMessages(prev => [...prev, { role: "user", content: userMessage }]);
+    setAttachments([]);
+
+    // Upload attachments
+    const uploadedAttachments: ChatAttachment[] = [];
+    for (const att of currentAttachments) {
+      try {
+        const publicUrl = await uploadAttachment(att);
+        uploadedAttachments.push({ type: att.type, url: publicUrl, name: att.name });
+      } catch (err) {
+        console.error("Upload error:", err);
+        uploadedAttachments.push({ type: att.type, url: att.url, name: att.name });
+      }
+    }
+
+    setMessages(prev => [...prev, { role: "user", content: userMessage || (uploadedAttachments.length > 0 ? `📎 ${uploadedAttachments.map(a => a.name).join(", ")}` : ""), attachments: uploadedAttachments.length > 0 ? uploadedAttachments : undefined }]);
     setIsLoading(true);
 
     let assistantContent = "";
