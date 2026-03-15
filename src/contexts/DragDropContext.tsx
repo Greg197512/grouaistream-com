@@ -166,6 +166,8 @@ export const DragDropProvider = ({ children }: DragDropProviderProps) => {
         showDropZones,
         setShowDropZones,
         refreshPlaylists,
+        onMixerDrop,
+        setOnMixerDrop,
       }}
     >
       <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
