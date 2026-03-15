@@ -468,8 +468,14 @@ export const AIAssistant = () => {
                   duration: 30,
                 };
                 toast.success(`🎶 Wygenerowano "${track.title}"!`);
-              } catch (err) {
+              } catch (err: any) {
                 console.error("Generation error in chat:", err);
+                toast.error("❌ Błąd generowania: " + (err?.message || "Nieznany błąd"));
+                // Add error message to chat
+                setMessages(prev => [...prev, {
+                  role: "assistant",
+                  content: `❌ **Błąd generowania muzyki**: ${err?.message || "Nieznany błąd"}\n\nSpróbuj ponownie z prostszym opisem, np. *"stwórz utwór elektroniczny"*.`
+                }]);
               }
               continue;
             }
