@@ -320,15 +320,21 @@ export const AIAssistant = () => {
               continue;
             }
 
-            // Handle music generation event - generate locally
+            // Handle music generation event - generate locally with AI-parsed params
             if (parsed.type === "music_generate") {
               const genData = parsed.data;
               try {
                 const track = await generateMusic({
                   style: genData.style,
+                  style2: genData.style2 || undefined,
+                  blendRatio: genData.blendRatio || undefined,
                   durationSeconds: 30,
                   instrumental: genData.instrumental,
                   title: genData.title || undefined,
+                  prompt: genData.prompt || undefined,
+                  mood: genData.mood || undefined,
+                  energy: genData.energy || undefined,
+                  tempoOverride: genData.tempoOverride || undefined,
                 });
                 pendingGeneratedTrackRef.current = {
                   audioUrl: track.audioUrl,
