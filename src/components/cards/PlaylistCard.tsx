@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { HQCover } from "@/components/ui/HQCover";
 
 interface PlaylistCardProps {
   id?: string;
