@@ -43,6 +43,33 @@ const getTimeOfDay = () => {
   return "evening";
 };
 
+const CopyButton = ({ text, isUser }: { text: string; isUser: boolean }) => {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    await navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+  return (
+    <motion.button
+      onClick={handleCopy}
+      whileHover={{ scale: 1.15 }}
+      whileTap={{ scale: 0.9 }}
+      className={`absolute top-1.5 right-1.5 w-6 h-6 rounded-md flex items-center justify-center opacity-0 group-hover/msg:opacity-100 transition-opacity ${
+        isUser ? "bg-primary-foreground/20 hover:bg-primary-foreground/30" : "bg-white/10 hover:bg-white/20"
+      }`}
+      title="Kopiuj"
+    >
+      {copied ? (
+        <Check className="h-3 w-3 text-green-400" />
+      ) : (
+        <Copy className="h-3 w-3" />
+      )}
+    </motion.button>
+  );
+};
+
 export const AIAssistant = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
