@@ -710,7 +710,7 @@ export const AutoVoiceListener = () => {
     // ==========================================
     const wantsFavorites = /ulubionych|polubion|z\s+ulubionych|z\s+polubionych|ulubione|liked|favorite/i.test(lower);
     if (wantsFavorites) {
-      const count = parsePolishNumber(lower) || 5;
+      const count = parseNumber(lower) || 5;
       toast.loading(`❤️ Pobieram ${count} z ulubionych...`, { id: "voice-cmd" });
       try {
         const { data: liked } = await supabase
