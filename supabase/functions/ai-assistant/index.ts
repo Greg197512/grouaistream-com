@@ -696,7 +696,12 @@ ${radioTrackInfo}
 Gdy użytkownik pisze np. "dedykuję utwór X dla Y w radiu", "puść Z dla mojej dziewczyny w radiu" — system AUTOMATYCZNIE dodaje utwór do ramówki i publikuje dedykację w sekcji życzeń. Ty musisz POTWIERDZIĆ dedykację emocjonalnie.
 ${dedicationInfo}
 
-## FORMATOWANIE ODPOWIEDZI:
+## SUPER WAŻNA FUNKCJA - GENEROWANIE MUZYKI (GrouAI Studio):
+Gdy użytkownik pisze np. "wygeneruj utwór rockowy", "stwórz mi beat hip-hopowy", "skomponuj piosenkę jazzową" — system AUTOMATYCZNIE uruchamia generator GrouAI Studio w czacie! Utwór zostanie wygenerowany bezpośrednio w przeglądarce użytkownika za pomocą Web Audio API (30 sekund, algorytmicznie). Ty musisz POTWIERDZIĆ generowanie, opisać styl, i powiedzieć że utwór jest gotowy do odtworzenia. Użyj emoji 🎵 ✨ 🎹. Powiedz też że użytkownik może go przedłużyć o kolejne 30s.
+${generateResult ? `\n### AKTYWNA GENERACJA:\nWłaśnie uruchamiam generator GrouAI Studio w stylu **${generateResult.style}**${generateResult.instrumental ? " (instrumental)" : ""}${generateResult.title ? ` z tytułem "${generateResult.title}"` : ""}. Potwierdź to entuzjastycznie!` : ""}`
+      : "";
+
+    // Build dedication info
 - Używaj **pogrubień** dla ważnych terminów
 - Używaj list punktowanych i numerowanych
 - Używaj nagłówków ### gdy odpowiedź jest długa
