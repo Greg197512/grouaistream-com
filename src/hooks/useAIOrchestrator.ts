@@ -270,11 +270,17 @@ export const useAIOrchestrator = () => {
       else if (lower.includes("głośn") || lower.includes("cisz") || lower.includes("volume")) action = "volume";
 
       if (action === "play") {
-        let tracks = await generateAIPlaylist(detectedMood, targetGenre, `Voice command: ${command}`);
-        if (requestedCount && requestedCount > 0) {
-          tracks = tracks.slice(0, requestedCount);
+        try {
+          let tracks = await generateAIPlaylist(detectedMood, targetGenre, `Voice command: ${command}`);
+          if (requestedCount && requestedCount > 0) {
+            tracks = tracks.slice(0, requestedCount);
+          }
+          return { action, genre: targetGenre, mood: detectedMood, tracks };
+        } catch (playlistError) {
+          console.error("AI playlist fallback error:", playlistError);
+          // Return empty tracks instead of crashing
+          return { action, genre: targetGenre, mood: detectedMood, tracks: [] };
         }
-        return { action, genre: targetGenre, mood: detectedMood, tracks };
       }
 
       return { action, genre: targetGenre, mood: detectedMood };
