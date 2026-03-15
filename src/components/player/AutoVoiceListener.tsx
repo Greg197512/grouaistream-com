@@ -826,7 +826,7 @@ export const AutoVoiceListener = () => {
     // ==========================================
     // RECENT UPLOADS PLAY COMMAND
     // ==========================================
-    const wantsRecent = /ostatni[echm]?\s+(?:wgrany|wrzucon|dodany|piosen|utw)|najnowsz|z\s+serwera|ostatnie\s+\d|śwież|swiez|newest|recent|ostatnio\s+(?:wgran|dodan|wrzucon)/i.test(lower);
+    const wantsRecent = /ostatni[echm]?\s+(?:wgrany|wrzucon|dodany|piosen|utw)|najnowsz|z\s+serwera|ostatnie\s+\d|śwież|swiez|newest|recent|latest|nieuwste|recent|laatste|останн|нові|свіж/i.test(lower);
     if (wantsRecent) {
       const count = parseNumber(lower) || 10;
       toast.loading(`📥 Pobieram ${count} ostatnich wgranych...`, { id: "voice-cmd" });
