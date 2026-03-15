@@ -39,9 +39,8 @@ export const MatrixNotes = ({ enabled, width = 280, height = 96 }: MatrixNotesPr
       }
       lastTime = time;
 
-      // Fade trail
-      ctx.fillStyle = "rgba(0, 0, 0, 0.12)";
-      ctx.fillRect(0, 0, width, height);
+      // Clear with transparency instead of black overlay for trail effect
+      ctx.clearRect(0, 0, width, height);
 
       ctx.font = `bold ${fontSize}px monospace`;
       ctx.textAlign = "center";
