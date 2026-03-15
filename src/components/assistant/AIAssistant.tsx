@@ -87,6 +87,7 @@ export const AIAssistant = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [userName, setUserName] = useState("Użytkownik");
   const [attachments, setAttachments] = useState<ChatAttachment[]>([]);
+  const [isDragOver, setIsDragOver] = useState(false);
   const [listeningStats, setListeningStats] = useState<{ topGenres: string[]; topMoods: string[]; recentTracks: number } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -285,13 +286,16 @@ export const AIAssistant = () => {
     for (const file of fileArr) {
       if (file.type.startsWith("image/")) {
         newAttachments.push({ type: "image", url: URL.createObjectURL(file), name: file.name, file });
-      } else if (file.type.startsWith("audio/")) {
+      } else if (file.type.startsWith("audio/") || file.name.match(/\.(mp3|wav|ogg|flac|m4a|aac|wma)$/i)) {
         newAttachments.push({ type: "audio", url: URL.createObjectURL(file), name: file.name, file });
       } else {
         toast.error(`Nieobsługiwany format: ${file.name}`);
       }
     }
-    if (newAttachments.length) setAttachments(prev => [...prev, ...newAttachments]);
+    if (newAttachments.length) {
+      setAttachments(prev => [...prev, ...newAttachments]);
+      toast.success(`📎 Dodano ${newAttachments.length} plik(ów)`);
+    }
   }, []);
 
   const removeAttachment = useCallback((idx: number) => {
@@ -301,6 +305,15 @@ export const AIAssistant = () => {
       return prev.filter((_, i) => i !== idx);
     });
   }, []);
+
+  // Drag & drop handler for the chat window
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    if (e.dataTransfer.files?.length) handleFiles(e.dataTransfer.files);
+  }, [handleFiles]);
+  const handleDragOver = useCallback((e: React.DragEvent) => { e.preventDefault(); setIsDragOver(true); }, []);
+  const handleDragLeave = useCallback(() => setIsDragOver(false), []);
 
   // Paste handler for images
   const handlePaste = useCallback((e: React.ClipboardEvent) => {
@@ -338,14 +351,15 @@ export const AIAssistant = () => {
     setInput("");
     setAttachments([]);
 
-    // Upload attachments
+    // Upload attachments (with graceful fallback to blob URLs)
     const uploadedAttachments: ChatAttachment[] = [];
     for (const att of currentAttachments) {
       try {
         const publicUrl = await uploadAttachment(att);
         uploadedAttachments.push({ type: att.type, url: publicUrl, name: att.name });
-      } catch (err) {
-        console.error("Upload error:", err);
+      } catch (err: any) {
+        console.warn("Upload failed, using local URL:", err?.message);
+        // Keep the blob URL as fallback — works for local mixing/playback
         uploadedAttachments.push({ type: att.type, url: att.url, name: att.name });
       }
     }
@@ -454,8 +468,14 @@ export const AIAssistant = () => {
                   duration: 30,
                 };
                 toast.success(`🎶 Wygenerowano "${track.title}"!`);
-              } catch (err) {
+              } catch (err: any) {
                 console.error("Generation error in chat:", err);
+                toast.error("❌ Błąd generowania: " + (err?.message || "Nieznany błąd"));
+                // Add error message to chat
+                setMessages(prev => [...prev, {
+                  role: "assistant",
+                  content: `❌ **Błąd generowania muzyki**: ${err?.message || "Nieznany błąd"}\n\nSpróbuj ponownie z prostszym opisem, np. *"stwórz utwór elektroniczny"*.`
+                }]);
               }
               continue;
             }
@@ -595,7 +615,10 @@ export const AIAssistant = () => {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.9 }}
             transition={{ type: "spring", stiffness: 300, damping: 25 }}
-            className={`fixed bottom-20 md:bottom-24 right-2 md:right-4 z-50 ${chatWidth} ${chatHeight} rounded-2xl shadow-2xl shadow-black/40 flex flex-col overflow-hidden transition-all duration-300`}
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            className={`fixed bottom-20 md:bottom-24 right-2 md:right-4 z-50 ${chatWidth} ${chatHeight} rounded-2xl shadow-2xl shadow-black/40 flex flex-col overflow-hidden transition-all duration-300 ${isDragOver ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' : ''}`}
             style={{
               background: 'rgba(10, 10, 15, 0.85)',
               backdropFilter: 'blur(40px) saturate(200%)',
@@ -644,6 +667,16 @@ export const AIAssistant = () => {
                 </motion.button>
               </div>
             </div>
+
+            {/* Drag-over overlay */}
+            {isDragOver && (
+              <div className="absolute inset-0 z-50 bg-primary/10 backdrop-blur-sm flex items-center justify-center rounded-2xl border-2 border-dashed border-primary">
+                <div className="text-center">
+                  <Paperclip className="h-8 w-8 text-primary mx-auto mb-2" />
+                  <p className="text-sm font-medium text-primary">Upuść pliki tutaj</p>
+                </div>
+              </div>
+            )}
 
             {/* Messages */}
             <ScrollArea className="flex-1 p-4" ref={scrollRef}>
@@ -891,7 +924,7 @@ export const AIAssistant = () => {
                     )}
                     <button
                       onClick={() => removeAttachment(i)}
-                      className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-destructive flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-destructive flex items-center justify-center opacity-70 hover:opacity-100 transition-opacity"
                     >
                       <X className="h-2.5 w-2.5 text-destructive-foreground" />
                     </button>
