@@ -445,6 +445,13 @@ export const AIAssistant = () => {
               continue;
             }
 
+            // Handle playlist track move event
+            if (parsed.type === "playlist_track_moved") {
+              const moveData = parsed.data;
+              toast.success(`📁 ${moveData.action === "added" ? "Dodano" : "Usunięto"}: ${moveData.trackName} → ${moveData.playlistName}`);
+              continue;
+            }
+
             // Handle music generation event - generate locally with AI-parsed params
             if (parsed.type === "music_generate") {
               const genData = parsed.data;
