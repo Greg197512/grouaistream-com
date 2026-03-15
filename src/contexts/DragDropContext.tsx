@@ -83,6 +83,16 @@ export const DragDropProvider = ({ children }: DragDropProviderProps) => {
     if (!result.destination) return;
     
     const { source, destination, draggableId } = result;
+
+    // Handle dropping to mixer slots
+    if (destination.droppableId === "mixer-A" || destination.droppableId === "mixer-B") {
+      const slot = destination.droppableId === "mixer-A" ? "A" : "B";
+      if (draggedTrack && onMixerDrop) {
+        onMixerDrop(slot, draggedTrack);
+        toast.success(`Dodano do slotu ${slot}`);
+      }
+      return;
+    }
     
     // Handle dropping to playlist
     if (destination.droppableId.startsWith("playlist-")) {
