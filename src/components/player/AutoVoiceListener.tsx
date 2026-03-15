@@ -933,7 +933,7 @@ export const AutoVoiceListener = () => {
       const rec = new SpeechAPI() as SpeechRecognitionInstance;
       rec.continuous = true;
       rec.interimResults = true;
-      rec.lang = "pl-PL";
+      rec.lang = LANG_TO_RECOGNITION[getAppLanguage()] || "en-US";
       rec.onresult = (event: SpeechRecognitionEvent) => {
         // Guard: ignore anything picked up while TTS is speaking
         if (isSpeakingRef.current) return;
