@@ -668,6 +668,16 @@ export const AIAssistant = () => {
               </div>
             </div>
 
+            {/* Drag-over overlay */}
+            {isDragOver && (
+              <div className="absolute inset-0 z-50 bg-primary/10 backdrop-blur-sm flex items-center justify-center rounded-2xl border-2 border-dashed border-primary">
+                <div className="text-center">
+                  <Paperclip className="h-8 w-8 text-primary mx-auto mb-2" />
+                  <p className="text-sm font-medium text-primary">Upuść pliki tutaj</p>
+                </div>
+              </div>
+            )}
+
             {/* Messages */}
             <ScrollArea className="flex-1 p-4" ref={scrollRef}>
               <div className="space-y-4">
