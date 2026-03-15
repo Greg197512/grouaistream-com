@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Sparkles, Music, Guitar, Waves, Plus, Blend, Disc3 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { motion, AnimatePresence } from "framer-motion";
+import { TrackMixer } from "@/components/studio/TrackMixer";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -26,6 +27,7 @@ const GENRES = [
 
 const Suno = () => {
   const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState<"generate" | "mix">("generate");
   const [genre, setGenre] = useState("Pop");
   const [genre2, setGenre2] = useState<string | null>(null);
   const [blendRatio, setBlendRatio] = useState(50);
@@ -193,6 +195,37 @@ const Suno = () => {
               Twórz unikalne utwory muzyczne algorytmicznie. Wybierz styl, ustaw długość i wygeneruj muzykę bezpośrednio w przeglądarce — bez zewnętrznych API, za darmo!
             </p>
           </motion.div>
+
+          {/* Tabs */}
+          <div className="flex gap-2 p-1 rounded-xl bg-[#1a1a2e]/80 border border-[#FF6B00]/10">
+            <button
+              onClick={() => setActiveTab("generate")}
+              className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${
+                activeTab === "generate"
+                  ? "text-white"
+                  : "text-gray-400 hover:text-gray-200"
+              }`}
+              style={activeTab === "generate" ? { background: "linear-gradient(135deg, #FF6B00, #FF9500)", boxShadow: "0 0 15px #FF6B0040" } : undefined}
+            >
+              <Sparkles className="h-4 w-4" /> Generator
+            </button>
+            <button
+              onClick={() => setActiveTab("mix")}
+              className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${
+                activeTab === "mix"
+                  ? "text-white"
+                  : "text-gray-400 hover:text-gray-200"
+              }`}
+              style={activeTab === "mix" ? { background: "linear-gradient(135deg, #9333EA, #FF6B00)", boxShadow: "0 0 15px #9333EA40" } : undefined}
+            >
+              <Blend className="h-4 w-4" /> Track Mix
+            </button>
+          </div>
+
+          {activeTab === "mix" ? (
+            <TrackMixer />
+          ) : (
+          <>
 
           {/* Genre Selection */}
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }} className="space-y-2">
@@ -449,6 +482,8 @@ const Suno = () => {
 
           {/* Generation History */}
           <GenerationHistory />
+          </>
+          )}
         </div>
       </div>
 
