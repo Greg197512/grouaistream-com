@@ -1103,6 +1103,16 @@ export default function Admin() {
                       </div>
 
                       <div className="space-y-2">
+                        <Label>E-mail odbiorcy</Label>
+                        <Input 
+                          placeholder="np. jan@example.com"
+                          type="email"
+                          value={recipientEmail}
+                          onChange={(e) => setRecipientEmail(e.target.value)}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
                         <Label>Imię odbiorcy (opcjonalne)</Label>
                         <Input 
                           placeholder="np. Jan"
