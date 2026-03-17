@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { cn } from "@/lib/utils";
-import { Music2 } from "lucide-react";
+import { motion } from "framer-motion";
 
 interface HQCoverProps {
   src?: string | null;
@@ -8,18 +8,60 @@ interface HQCoverProps {
   className?: string;
   fallbackClassName?: string;
   showFallbackIcon?: boolean;
+  genre?: string | null;
+  animated?: boolean;
 }
 
-/** Generate a deterministic vibrant gradient from a string */
-function generateGradient(seed: string): string {
-  let hash = 0;
-  for (let i = 0; i < seed.length; i++) {
-    hash = seed.charCodeAt(i) + ((hash << 5) - hash);
+/* ── Deterministic hash ── */
+function hashStr(s: string): number {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = s.charCodeAt(i) + ((h << 5) - h);
+  return Math.abs(h);
+}
+
+/* ── Genre → palette mapping ── */
+const GENRE_PALETTES: Record<string, { bg: string[]; accent: string; icon: string }> = {
+  rock:        { bg: ["#1a0a0a", "#2d1111", "#441818"], accent: "#ff4444", icon: "🎸" },
+  metal:       { bg: ["#0a0a0a", "#1a1a1a", "#0d0d0d"], accent: "#888888", icon: "🤘" },
+  punk:        { bg: ["#1a0f00", "#2d1a00", "#442800"], accent: "#ff8800", icon: "⚡" },
+  pop:         { bg: ["#1a0020", "#2d0040", "#440060"], accent: "#ff44cc", icon: "🎤" },
+  "hip-hop":   { bg: ["#0a0014", "#1a0028", "#2d0044"], accent: "#aa44ff", icon: "🎧" },
+  rap:         { bg: ["#0f0020", "#1a0035", "#2d005a"], accent: "#cc66ff", icon: "🎙️" },
+  electronic:  { bg: ["#000a1a", "#001a2d", "#002844"], accent: "#00ccff", icon: "🎹" },
+  jazz:        { bg: ["#1a1400", "#2d2200", "#443300"], accent: "#ffaa00", icon: "🎷" },
+  blues:       { bg: ["#000a1a", "#00142d", "#001e44"], accent: "#4488ff", icon: "🎺" },
+  classical:   { bg: ["#0a1a0a", "#112d11", "#184418"], accent: "#44cc44", icon: "🎻" },
+  "r&b":       { bg: ["#1a0014", "#2d0028", "#440040"], accent: "#ff44aa", icon: "💜" },
+  rnb:         { bg: ["#1a0014", "#2d0028", "#440040"], accent: "#ff44aa", icon: "💜" },
+  indie:       { bg: ["#0a1a14", "#112d22", "#184433"], accent: "#44ccaa", icon: "🌿" },
+  alternative: { bg: ["#0a0a1a", "#14142d", "#1e1e44"], accent: "#6688ff", icon: "🔮" },
+  reggae:      { bg: ["#0a1a00", "#142d00", "#1e4400"], accent: "#44cc00", icon: "🌴" },
+  country:     { bg: ["#1a1000", "#2d1c00", "#442a00"], accent: "#ffbb44", icon: "🤠" },
+  soul:        { bg: ["#1a0a14", "#2d1122", "#441833"], accent: "#ff6688", icon: "🎵" },
+  funk:        { bg: ["#1a0a00", "#2d1400", "#441e00"], accent: "#ff6600", icon: "🕺" },
+  latin:       { bg: ["#1a0800", "#2d1000", "#441800"], accent: "#ff5522", icon: "💃" },
+};
+
+function getPalette(genre: string | null | undefined, title: string) {
+  if (genre) {
+    const key = genre.toLowerCase().trim();
+    if (GENRE_PALETTES[key]) return GENRE_PALETTES[key];
+    for (const [k, v] of Object.entries(GENRE_PALETTES)) {
+      if (key.includes(k) || k.includes(key)) return v;
+    }
   }
-  const h1 = Math.abs(hash % 360);
-  const h2 = (h1 + 40 + Math.abs((hash >> 8) % 60)) % 360;
-  const h3 = (h2 + 30 + Math.abs((hash >> 16) % 50)) % 360;
-  return `linear-gradient(135deg, hsl(${h1} 70% 25%) 0%, hsl(${h2} 60% 35%) 50%, hsl(${h3} 50% 20%) 100%)`;
+  // Fallback: hash-based palette
+  const h = hashStr(title);
+  const hue = h % 360;
+  return {
+    bg: [
+      `hsl(${hue}, 40%, 8%)`,
+      `hsl(${(hue + 20) % 360}, 35%, 14%)`,
+      `hsl(${(hue + 40) % 360}, 30%, 10%)`,
+    ],
+    accent: `hsl(${hue}, 70%, 55%)`,
+    icon: "🎵",
+  };
 }
 
 function getInitials(name: string): string {
@@ -27,58 +69,267 @@ function getInitials(name: string): string {
     .split(/[\s\-&,]+/)
     .filter(Boolean)
     .slice(0, 2)
-    .map(w => w[0]?.toUpperCase() || "")
+    .map((w) => w[0]?.toUpperCase() || "")
     .join("");
 }
 
-/** Check if URL is a low-quality placeholder */
 function isPlaceholder(url: string): boolean {
-  return url.includes("picsum.photos") || url.includes("placeholder") || url.includes("via.placeholder");
+  return (
+    url.includes("picsum.photos") ||
+    url.includes("placeholder") ||
+    url.includes("via.placeholder")
+  );
 }
 
-/**
- * High-Quality Cover Image component
- * Renders album artwork at photographic 8K quality with sharp rendering,
- * eager loading, and graceful fallback with artistic gradient + initials.
- */
-export const HQCover = ({ src, alt, className, fallbackClassName, showFallbackIcon = true }: HQCoverProps) => {
+/* ── Animated Music Cover Fallback ── */
+const AnimatedCover = ({
+  title,
+  genre,
+  className,
+}: {
+  title: string;
+  genre?: string | null;
+  className?: string;
+}) => {
+  const palette = useMemo(() => getPalette(genre, title), [genre, title]);
+  const initials = useMemo(() => getInitials(title || "?"), [title]);
+  const h = useMemo(() => hashStr(title), [title]);
+  const variant = h % 5; // 5 different visual styles
+
+  const bgGradient = `radial-gradient(ellipse at 30% 20%, ${palette.bg[1]} 0%, ${palette.bg[0]} 50%, ${palette.bg[2]} 100%)`;
+
+  return (
+    <div
+      className={cn(
+        "relative flex items-center justify-center overflow-hidden select-none",
+        className
+      )}
+      style={{ background: bgGradient }}
+    >
+      {/* Animated background elements */}
+      {variant === 0 && <VinylDisc accent={palette.accent} />}
+      {variant === 1 && <SoundWaves accent={palette.accent} />}
+      {variant === 2 && <PulsingRings accent={palette.accent} />}
+      {variant === 3 && <FloatingNotes accent={palette.accent} seed={h} />}
+      {variant === 4 && <EqualizerBars accent={palette.accent} seed={h} />}
+
+      {/* Light leak overlay */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background: `radial-gradient(circle at ${30 + (h % 40)}% ${20 + (h % 30)}%, ${palette.accent}15 0%, transparent 50%)`,
+        }}
+      />
+
+      {/* Genre icon + title */}
+      <div className="relative z-10 flex flex-col items-center gap-1 px-2">
+        <span className="text-lg sm:text-xl drop-shadow-lg" style={{ filter: "drop-shadow(0 0 8px rgba(0,0,0,0.5))" }}>
+          {palette.icon}
+        </span>
+        <span
+          className="font-bold text-white/90 text-center leading-tight drop-shadow-lg"
+          style={{
+            fontSize: "clamp(0.45rem, 28%, 1.1rem)",
+            letterSpacing: "0.08em",
+            textShadow: `0 2px 12px rgba(0,0,0,0.6), 0 0 20px ${palette.accent}40`,
+            maxWidth: "90%",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {initials}
+        </span>
+      </div>
+
+      {/* Bottom accent line */}
+      <div
+        className="absolute bottom-0 left-0 right-0 h-[2px]"
+        style={{
+          background: `linear-gradient(90deg, transparent, ${palette.accent}80, transparent)`,
+        }}
+      />
+    </div>
+  );
+};
+
+/* ── Visual variants ── */
+
+const VinylDisc = ({ accent }: { accent: string }) => (
+  <div className="absolute inset-0 flex items-center justify-center">
+    <motion.div
+      animate={{ rotate: 360 }}
+      transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+      className="rounded-full"
+      style={{
+        width: "75%",
+        height: "75%",
+        background: `conic-gradient(from 0deg, ${accent}10, ${accent}05, ${accent}15, ${accent}05, ${accent}10)`,
+        boxShadow: `0 0 30px ${accent}15`,
+      }}
+    >
+      <div className="absolute inset-0 rounded-full" style={{
+        background: `repeating-radial-gradient(circle at center, transparent 0px, transparent 3px, ${accent}08 4px, transparent 5px)`,
+      }} />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full"
+        style={{
+          width: "20%", height: "20%",
+          background: `radial-gradient(circle, ${accent}40, ${accent}15)`,
+          boxShadow: `0 0 15px ${accent}30`,
+        }}
+      />
+    </motion.div>
+  </div>
+);
+
+const SoundWaves = ({ accent }: { accent: string }) => (
+  <div className="absolute inset-0 flex items-center justify-center">
+    {[0, 1, 2, 3].map((i) => (
+      <motion.div
+        key={i}
+        animate={{ scale: [1, 1.8, 1], opacity: [0.3, 0, 0.3] }}
+        transition={{ duration: 3, repeat: Infinity, delay: i * 0.7, ease: "easeOut" }}
+        className="absolute rounded-full border"
+        style={{
+          width: `${30 + i * 18}%`,
+          height: `${30 + i * 18}%`,
+          borderColor: `${accent}30`,
+        }}
+      />
+    ))}
+  </div>
+);
+
+const PulsingRings = ({ accent }: { accent: string }) => (
+  <div className="absolute inset-0 flex items-center justify-center">
+    {[0, 1, 2].map((i) => (
+      <motion.div
+        key={i}
+        animate={{
+          scale: [0.8, 1.2, 0.8],
+          rotate: [0, 120, 240, 360],
+        }}
+        transition={{
+          duration: 6 + i * 2,
+          repeat: Infinity,
+          ease: "easeInOut",
+        }}
+        className="absolute rounded-full"
+        style={{
+          width: `${50 + i * 20}%`,
+          height: `${50 + i * 20}%`,
+          border: `1px solid ${accent}${20 - i * 5}`,
+          boxShadow: `inset 0 0 20px ${accent}08`,
+        }}
+      />
+    ))}
+  </div>
+);
+
+const FloatingNotes = ({ accent, seed }: { accent: string; seed: number }) => {
+  const notes = useMemo(
+    () =>
+      Array.from({ length: 6 }, (_, i) => ({
+        x: (seed * (i + 1) * 17) % 80 + 10,
+        y: (seed * (i + 1) * 23) % 80 + 10,
+        size: 10 + ((seed * (i + 1)) % 8),
+        delay: i * 0.5,
+        symbol: ["♪", "♫", "♬", "♩", "🎵", "🎶"][i],
+      })),
+    [seed]
+  );
+
+  return (
+    <div className="absolute inset-0 overflow-hidden">
+      {notes.map((n, i) => (
+        <motion.span
+          key={i}
+          animate={{
+            y: [0, -15, 0],
+            opacity: [0.15, 0.35, 0.15],
+            scale: [1, 1.1, 1],
+          }}
+          transition={{
+            duration: 4 + (i % 3),
+            repeat: Infinity,
+            delay: n.delay,
+            ease: "easeInOut",
+          }}
+          className="absolute"
+          style={{
+            left: `${n.x}%`,
+            top: `${n.y}%`,
+            fontSize: n.size,
+            color: accent,
+            filter: `drop-shadow(0 0 6px ${accent}60)`,
+          }}
+        >
+          {n.symbol}
+        </motion.span>
+      ))}
+    </div>
+  );
+};
+
+const EqualizerBars = ({ accent, seed }: { accent: string; seed: number }) => {
+  const bars = useMemo(
+    () => Array.from({ length: 7 }, (_, i) => ({
+      height: 20 + ((seed * (i + 1) * 13) % 50),
+      delay: i * 0.12,
+    })),
+    [seed]
+  );
+
+  return (
+    <div className="absolute bottom-[15%] left-1/2 -translate-x-1/2 flex items-end gap-[3px]">
+      {bars.map((b, i) => (
+        <motion.div
+          key={i}
+          animate={{ height: [`${b.height * 0.3}%`, `${b.height}%`, `${b.height * 0.5}%`] }}
+          transition={{ duration: 1.2, repeat: Infinity, delay: b.delay, ease: "easeInOut" }}
+          style={{
+            width: 3,
+            borderRadius: 2,
+            background: `linear-gradient(to top, ${accent}90, ${accent}30)`,
+            boxShadow: `0 0 6px ${accent}40`,
+          }}
+        />
+      ))}
+    </div>
+  );
+};
+
+/* ── Upgrade CDN URLs ── */
+function upgradeToMaxRes(url: string): string {
+  if (url.includes("mzstatic.com")) return url.replace(/\d+x\d+bb/, "3000x3000bb");
+  if (url.includes("cdns-images.dzcdn.net")) return url.replace(/\/\d+x\d+/, "/1800x1800");
+  return url;
+}
+
+/* ── Main component ── */
+export const HQCover = ({
+  src,
+  alt,
+  className,
+  fallbackClassName,
+  showFallbackIcon = true,
+  genre,
+  animated = true,
+}: HQCoverProps) => {
   const [error, setError] = useState(false);
-  const gradient = useMemo(() => generateGradient(alt || "music"), [alt]);
-  const initials = useMemo(() => getInitials(alt || "?"), [alt]);
 
   const isLowQuality = src ? isPlaceholder(src) : true;
 
   if (!src || error || isLowQuality) {
     return (
-      <div
-        className={cn(
-          "relative flex items-center justify-center overflow-hidden select-none",
-          fallbackClassName || className
-        )}
-        style={{ background: gradient }}
-      >
-        {/* Subtle texture overlay */}
-        <div className="absolute inset-0 opacity-20" style={{
-          backgroundImage: "radial-gradient(circle at 30% 20%, rgba(255,255,255,0.15) 0%, transparent 50%), radial-gradient(circle at 70% 80%, rgba(255,255,255,0.1) 0%, transparent 40%)"
-        }} />
-        {showFallbackIcon ? (
-          <div className="flex flex-col items-center gap-0.5 z-10">
-            <span className="font-bold text-white/90 drop-shadow-lg" style={{
-              fontSize: "clamp(0.5rem, 40%, 1.5rem)",
-              letterSpacing: "0.05em",
-              textShadow: "0 2px 8px rgba(0,0,0,0.4)"
-            }}>
-              {initials || <Music2 className="h-1/3 w-1/3 text-white/60" />}
-            </span>
-          </div>
-        ) : (
-          <div className="absolute inset-0 opacity-60" style={{ background: gradient }} />
-        )}
-      </div>
+      <AnimatedCover
+        title={alt}
+        genre={genre}
+        className={fallbackClassName || className}
+      />
     );
   }
 
-  // Upgrade known CDN URLs to max resolution
   const hqSrc = upgradeToMaxRes(src);
 
   return (
@@ -89,35 +340,8 @@ export const HQCover = ({ src, alt, className, fallbackClassName, showFallbackIc
       decoding="async"
       draggable={false}
       onError={() => setError(true)}
-      className={cn(
-        "object-cover",
-        className
-      )}
-      style={{
-        imageRendering: "auto",
-      }}
+      className={cn("object-cover", className)}
+      style={{ imageRendering: "auto" }}
     />
   );
 };
-
-/**
- * Upgrade known CDN cover URLs to maximum available resolution
- */
-function upgradeToMaxRes(url: string): string {
-  // iTunes: upgrade to 3000x3000 (near-8K)
-  if (url.includes("mzstatic.com")) {
-    return url.replace(/\d+x\d+bb/, "3000x3000bb");
-  }
-  
-  // Deezer: upgrade to max
-  if (url.includes("cdns-images.dzcdn.net")) {
-    return url.replace(/\/\d+x\d+/, "/1800x1800");
-  }
-
-  // Spotify (i.scdn.co): already max but ensure largest
-  if (url.includes("i.scdn.co")) {
-    return url; // Spotify doesn't support size params in URL
-  }
-
-  return url;
-}
