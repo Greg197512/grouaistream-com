@@ -277,10 +277,11 @@ export const PlayerBar = () => {
             className="relative h-10 w-10 md:h-12 md:w-12 rounded-lg overflow-hidden bg-white/10 flex-shrink-0 backdrop-blur-sm"
             whileHover={{ scale: 1.05 }}
           >
-            {currentTrack?.cover_url ? (
+            {currentTrack ? (
               <HQCover 
                 src={currentTrack.cover_url} 
                 alt={currentTrack.title}
+                genre={currentTrack.genre}
                 className="h-full w-full"
               />
             ) : (

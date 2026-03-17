@@ -87,10 +87,11 @@ export const FullscreenPlayer = ({ isOpen, onClose }: FullscreenPlayerProps) => 
               transition={{ delay: 0.1 }}
               className="relative w-72 h-72 md:w-96 md:h-96 rounded-2xl overflow-hidden shadow-2xl mb-8"
             >
-              {currentTrack?.cover_url ? (
+              {currentTrack ? (
                 <HQCover
                   src={currentTrack.cover_url}
                   alt={currentTrack.title}
+                  genre={currentTrack.genre}
                   className="w-full h-full"
                 />
               ) : (

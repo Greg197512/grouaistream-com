@@ -16,6 +16,7 @@ interface TrackRowProps {
   isPlaying?: boolean;
   imageUrl?: string;
   trackUrl?: string | null;
+  genre?: string | null;
   onPlay?: () => void;
 }
 
@@ -30,6 +31,7 @@ const TrackRowComponent = forwardRef<HTMLDivElement, TrackRowProps>(({
   isPlaying = false,
   imageUrl,
   trackUrl,
+  genre,
   onPlay
 }, ref) => {
   const [isHovered, setIsHovered] = useState(false);
@@ -84,9 +86,9 @@ const TrackRowComponent = forwardRef<HTMLDivElement, TrackRowProps>(({
 
       {/* Title & Artist */}
       <div className="flex items-center gap-3 min-w-0">
-        {imageUrl && (
+        {(
           <div className="h-10 w-10 rounded overflow-hidden flex-shrink-0">
-            <HQCover src={imageUrl} alt={title} className="h-full w-full" />
+            <HQCover src={imageUrl || null} alt={title} genre={genre} className="h-full w-full" />
           </div>
         )}
         <div className="min-w-0">

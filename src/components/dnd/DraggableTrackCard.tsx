@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { Play, GripVertical } from "lucide-react";
 import { Track, usePlayer } from "@/contexts/PlayerContext";
 import { TrackOptionsMenu, LikeButton } from "@/components/menus/TrackOptionsMenu";
+import { HQCover } from "@/components/ui/HQCover";
 import { cn } from "@/lib/utils";
 
 interface DraggableTrackCardProps {
@@ -77,7 +78,7 @@ export const DraggableTrackCard = ({
                 draggable={false}
               />
             ) : (
-              <div className="w-full h-full groove-gradient-bg opacity-60" />
+              <HQCover src={null} alt={track.title} genre={track.genre} className="w-full h-full" />
             )}
 
             {/* Play overlay */}
