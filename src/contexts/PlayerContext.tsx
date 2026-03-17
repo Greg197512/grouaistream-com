@@ -195,8 +195,9 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   // Keep ref in sync so audio error/ended handlers use latest function
   useEffect(() => { nextTrackRef.current = nextTrackInternal; }, [nextTrackInternal]);
 
-  const isPlayableUrl = (value?: string | null) => Boolean(value && /^(https?|blob):\/?\/?/i.test(value));
-  const isHttpUrl = isPlayableUrl;
+  const isPlayableUrl = (value?: string | null) => Boolean(value && /^(https?|blob|data):/i.test(value));
+  const isRemoteUrl = (value?: string | null) => Boolean(value && /^https?:\/\//i.test(value));
+  const isLocalBrowserUrl = (value?: string | null) => Boolean(value && /^(blob|data):/i.test(value));
 
   const isAutoplayBlockedError = (error: unknown) => {
     if (!error) return false;
@@ -215,8 +216,8 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     const candidates = [track.audio_url, track.video_url];
 
     for (const candidate of candidates) {
-      if (!candidate || !isHttpUrl(candidate) || isBlockedStreamUrl(candidate)) continue;
-      if (extractYouTubeId(candidate)) continue;
+      if (!candidate || !isPlayableUrl(candidate) || isBlockedStreamUrl(candidate)) continue;
+      if (isRemoteUrl(candidate) && extractYouTubeId(candidate)) continue;
       return candidate;
     }
 
