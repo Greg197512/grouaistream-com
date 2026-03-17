@@ -13,7 +13,7 @@ const navItems = [
   { icon: "radio", labelKey: "nav.radioLive", href: "/radio-live" },
   { icon: "folder_open", labelKey: "nav.localPlayer", href: "/local-player" },
   { icon: "movie", labelKey: "nav.movies", href: "/movies" },
-  { icon: "dns", labelKey: "nav.server", href: "/server" },
+  { icon: "dns", labelKey: "nav.mediaServer", href: "/server" },
   { icon: "playlist_play", labelKey: "nav.managePlaylists", href: "/playlists" },
   { icon: "favorite", labelKey: "nav.likedSongs", href: "/liked" },
   { icon: "psychology", labelKey: "nav.moodHistory", href: "/mood-history" },
