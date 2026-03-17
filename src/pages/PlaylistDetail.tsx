@@ -54,6 +54,13 @@ const PlaylistDetail = () => {
     if (id) loadPlaylist();
   }, [id]);
 
+  // Listen for track changes from menus
+  useEffect(() => {
+    const handler = () => { if (id) loadPlaylist(); };
+    window.addEventListener("track-list-changed", handler);
+    return () => window.removeEventListener("track-list-changed", handler);
+  }, [id]);
+
   const loadPlaylist = async () => {
     if (!id) return;
     setLoading(true);
