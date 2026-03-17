@@ -224,22 +224,21 @@ const TrackOptionsMenuComponent = (
     if (!user || !playlistId) return;
 
     setDeleteLoading(true);
-    try {
-      await supabase
-        .from("playlist_tracks")
-        .delete()
-        .eq("playlist_id", playlistId)
-        .eq("track_id", trackId);
+    const { error } = await supabase
+      .from("playlist_tracks")
+      .delete()
+      .eq("playlist_id", playlistId)
+      .eq("track_id", trackId);
 
+    if (error) {
+      console.error("Error removing track:", error);
+      toast.error("Nie udało się usunąć");
+    } else {
       toast.success(`"${trackTitle}" usunięty z playlisty`);
       onDelete?.();
       window.dispatchEvent(new CustomEvent("track-list-changed"));
-    } catch (error) {
-      console.error("Error removing track:", error);
-      toast.error("Nie udało się usunąć");
-    } finally {
-      setDeleteLoading(false);
     }
+    setDeleteLoading(false);
   };
 
   const handleDeleteTrack = async () => {
