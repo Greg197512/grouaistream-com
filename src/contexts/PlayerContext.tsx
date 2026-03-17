@@ -255,6 +255,8 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
       setYoutubeVideoId(null);
 
       if (audioRef.current) {
+        // Set crossOrigin only for remote URLs, not blob: URLs
+        audioRef.current.crossOrigin = audioUrl.startsWith("blob:") ? null : "anonymous";
         console.log("[Player] Setting audio src:", audioUrl);
         audioRef.current.src = audioUrl;
         const playPromise = audioRef.current.play();
