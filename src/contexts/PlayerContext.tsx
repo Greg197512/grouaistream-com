@@ -196,7 +196,8 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   // Keep ref in sync so audio error/ended handlers use latest function
   useEffect(() => { nextTrackRef.current = nextTrackInternal; }, [nextTrackInternal]);
 
-  const isHttpUrl = (value?: string | null) => Boolean(value && /^https?:\/\//i.test(value));
+  const isPlayableUrl = (value?: string | null) => Boolean(value && /^(https?|blob):\/?\/?/i.test(value));
+  const isHttpUrl = isPlayableUrl;
 
   const isAutoplayBlockedError = (error: unknown) => {
     if (!error) return false;
