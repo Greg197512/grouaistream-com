@@ -143,36 +143,39 @@ const PlaylistDetail = () => {
   const handleRemoveTrack = async () => {
     if (!trackToRemove || !id) return;
 
-    try {
-      await supabase
-        .from("playlist_tracks")
-        .delete()
-        .eq("playlist_id", id)
-        .eq("track_id", trackToRemove.id);
+    const { error } = await supabase
+      .from("playlist_tracks")
+      .delete()
+      .eq("playlist_id", id)
+      .eq("track_id", trackToRemove.id);
 
+    if (error) {
+      console.error("Remove track error:", error);
+      toast.error("Failed to remove track");
+    } else {
       setTracks((prev) => prev.filter((t) => t.id !== trackToRemove.id));
       toast.success(`"${trackToRemove.title}" usunięty z playlisty`);
-    } catch (error) {
-      toast.error("Failed to remove track");
-    } finally {
-      setTrackToRemove(null);
     }
+    setTrackToRemove(null);
   };
 
   const handleDeletePlaylist = async () => {
     if (!id) return;
 
-    try {
-      // Delete playlist tracks first
-      await supabase.from("playlist_tracks").delete().eq("playlist_id", id);
-      // Delete playlist
-      await supabase.from("playlists").delete().eq("id", id);
-      
-      toast.success("Playlista usunięta");
-      navigate("/library");
-    } catch (error) {
+    // Delete playlist tracks first
+    const r1 = await supabase.from("playlist_tracks").delete().eq("playlist_id", id);
+    if (r1.error) console.warn("playlist_tracks cleanup:", r1.error.message);
+    
+    // Delete playlist
+    const r2 = await supabase.from("playlists").delete().eq("id", id);
+    if (r2.error) {
+      console.error("Delete playlist error:", r2.error);
       toast.error("Failed to delete playlist");
+      return;
     }
+    
+    toast.success("Playlista usunięta");
+    navigate("/library");
   };
 
   const isOwner = user?.id === playlist?.user_id;
