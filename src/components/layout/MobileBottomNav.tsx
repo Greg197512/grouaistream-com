@@ -7,7 +7,7 @@ const navItems = [
   { icon: "home", labelKey: "nav.home", href: "/" },
   { icon: "search", labelKey: "nav.search", href: "/search" },
   { icon: "auto_awesome", labelKey: "nav.sunoAI", href: "/suno" },
-  { icon: "smart_toy", labelKey: "nav.aiDj", href: "/party" },
+  { icon: "smart_toy", labelKey: "nav.aiDj", href: "/ai-dj" },
   { icon: "library_music", labelKey: "nav.library", href: "/library" },
   { icon: "radio", labelKey: "nav.radioLive", href: "/radio-live" },
   { icon: "folder_open", labelKey: "nav.localPlayer", href: "/local-player" },
