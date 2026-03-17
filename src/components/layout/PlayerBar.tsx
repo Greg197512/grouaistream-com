@@ -285,6 +285,10 @@ export const PlayerBar = () => {
                 className="h-full w-full"
               />
             ) : (
+              <>
+                <div className="absolute inset-0 groove-gradient-bg opacity-60" />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <MonitorSpeaker className="h-5 w-5 text-white/70" />
                 </div>
               </>
             )}
