@@ -522,18 +522,16 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     toast.success(`Added "${track.title}" to queue`);
   };
 
-  // Auto-play language-specific track after login
+  // Auto-play language-specific track on app start (no login required)
   const hasAutoPlayed = useRef(false);
   useEffect(() => {
     if (hasAutoPlayed.current || currentTrack) return;
-    if (!userId) return; // Wait for login
     hasAutoPlayed.current = true;
 
-    // Read current language from localStorage
     const lang = localStorage.getItem("grooveai-language") || "en";
     const langTrackMap: Record<string, string> = {
       pl: '%Holenderski Club Peak%',
-      en: '%Drop Chant Stream%',
+      en: '%Neon Floor Directions%',
       nl: '%Amsterdam Drop Call%',
       ua: '%Kyiv Club Signal%',
     };
@@ -552,10 +550,25 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
             setCurrentTrack(track);
             setQueue([track]);
             setQueueIndex(0);
+            return;
           }
         }
+        // Fallback: pick any track with audio
+        supabase
+          .from('tracks')
+          .select('*')
+          .not('audio_url', 'is', null)
+          .limit(1)
+          .then(({ data: fallback }) => {
+            if (fallback && fallback.length > 0) {
+              const track = fallback[0] as Track;
+              setCurrentTrack(track);
+              setQueue([track]);
+              setQueueIndex(0);
+            }
+          });
       });
-  }, [userId]);
+  }, []);
 
   // Auto-play specific track when language changes
   useEffect(() => {
