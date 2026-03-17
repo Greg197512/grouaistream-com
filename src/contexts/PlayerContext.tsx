@@ -256,11 +256,18 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
       setYoutubeVideoId(null);
 
       if (audioRef.current) {
-        // Set crossOrigin only for remote URLs, not blob: URLs
-        audioRef.current.crossOrigin = audioUrl.startsWith("blob:") ? null : "anonymous";
+        const audioElement = audioRef.current;
+        const isLocalSource = isLocalBrowserUrl(audioUrl);
+
+        audioElement.pause();
+        audioElement.removeAttribute("src");
+        audioElement.load();
+        audioElement.crossOrigin = isLocalSource ? null : "anonymous";
         console.log("[Player] Setting audio src:", audioUrl);
-        audioRef.current.src = audioUrl;
-        const playPromise = audioRef.current.play();
+        audioElement.src = audioUrl;
+        audioElement.load();
+
+        const playPromise = audioElement.play();
         console.log("[Player] play() called, promise:", !!playPromise);
         if (playPromise) {
           playPromise.then(() => {
@@ -271,6 +278,12 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
             if (isAutoplayBlockedError(error)) {
               setIsPlaying(false);
               toast.info("Na telefonie naciśnij Play, aby rozpocząć odtwarzanie");
+              return;
+            }
+
+            if (isLocalSource) {
+              setIsPlaying(false);
+              toast.error("Telefon zablokował ten plik lokalny. Spróbuj ponownie nacisnąć Play lub wybierz inny format MP3/M4A.");
               return;
             }
 
