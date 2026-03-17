@@ -16,6 +16,7 @@ interface TrackRowProps {
   isPlaying?: boolean;
   imageUrl?: string;
   trackUrl?: string | null;
+  genre?: string | null;
   onPlay?: () => void;
 }
 
