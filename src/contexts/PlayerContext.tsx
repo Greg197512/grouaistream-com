@@ -106,7 +106,6 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     const audio = new Audio();
     audio.volume = volume / 100;
     audio.preload = "auto";
-    audio.crossOrigin = "anonymous";
     audioRef.current = audio;
 
     const handleTimeUpdate = () => {
@@ -196,7 +195,8 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   // Keep ref in sync so audio error/ended handlers use latest function
   useEffect(() => { nextTrackRef.current = nextTrackInternal; }, [nextTrackInternal]);
 
-  const isHttpUrl = (value?: string | null) => Boolean(value && /^https?:\/\//i.test(value));
+  const isPlayableUrl = (value?: string | null) => Boolean(value && /^(https?|blob):\/?\/?/i.test(value));
+  const isHttpUrl = isPlayableUrl;
 
   const isAutoplayBlockedError = (error: unknown) => {
     if (!error) return false;
@@ -255,6 +255,8 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
       setYoutubeVideoId(null);
 
       if (audioRef.current) {
+        // Set crossOrigin only for remote URLs, not blob: URLs
+        audioRef.current.crossOrigin = audioUrl.startsWith("blob:") ? null : "anonymous";
         console.log("[Player] Setting audio src:", audioUrl);
         audioRef.current.src = audioUrl;
         const playPromise = audioRef.current.play();
