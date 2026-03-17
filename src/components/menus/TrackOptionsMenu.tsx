@@ -220,21 +220,43 @@ const TrackOptionsMenuComponent = (
     }
   };
 
+  const handleRemoveFromPlaylist = async () => {
+    if (!user || !playlistId) return;
+
+    setDeleteLoading(true);
+    try {
+      await supabase
+        .from("playlist_tracks")
+        .delete()
+        .eq("playlist_id", playlistId)
+        .eq("track_id", trackId);
+
+      toast.success(`"${trackTitle}" usunięty z playlisty`);
+      onDelete?.();
+      window.dispatchEvent(new CustomEvent("track-list-changed"));
+    } catch (error) {
+      console.error("Error removing track:", error);
+      toast.error("Nie udało się usunąć");
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
   const handleDeleteTrack = async () => {
     if (!user) {
-      toast.error("Sign in to delete tracks");
+      toast.error("Zaloguj się, aby usunąć utwór");
       return;
     }
 
     const confirmed = window.confirm(
-      `Delete "${trackTitle}" from library? This will remove it from all playlists.`
+      `Usunąć "${trackTitle}" z biblioteki? Zostanie usunięty ze wszystkich playlist i ulubionych.`
     );
 
     if (!confirmed) return;
 
     setDeleteLoading(true);
     try {
-      // Remove from all playlists first
+      // Remove from all playlists
       await supabase
         .from("playlist_tracks")
         .delete()
@@ -244,25 +266,28 @@ const TrackOptionsMenuComponent = (
       await supabase
         .from("liked_songs")
         .delete()
-        .eq("track_id", trackId);
+        .eq("track_id", trackId)
+        .eq("user_id", user.id);
 
-      // Remove from listening history
+      // Remove from listening history  
       await supabase
         .from("listening_history")
         .delete()
-        .eq("track_id", trackId);
+        .eq("track_id", trackId)
+        .eq("user_id", user.id);
 
-      // Finally delete the track
+      // Try to delete the track record (works for admins)
       await supabase
         .from("tracks")
         .delete()
         .eq("id", trackId);
 
-      toast.success(`"${trackTitle}" deleted`);
+      toast.success(`"${trackTitle}" usunięty`);
       onDelete?.();
+      window.dispatchEvent(new CustomEvent("track-list-changed"));
     } catch (error) {
       console.error("Error deleting track:", error);
-      toast.error("Failed to delete track - you may not have permission");
+      toast.error("Nie udało się usunąć utworu");
     } finally {
       setDeleteLoading(false);
     }
@@ -371,7 +396,22 @@ const TrackOptionsMenuComponent = (
             </DropdownMenuItem>
           )}
 
-          {/* Delete track */}
+          {/* Remove from playlist */}
+          {playlistId && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem 
+                onClick={handleRemoveFromPlaylist} 
+                disabled={deleteLoading}
+                className="cursor-pointer text-destructive focus:text-destructive"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Usuń z playlisty
+              </DropdownMenuItem>
+            </>
+          )}
+
+          {/* Delete track from library */}
           {showDelete && (
             <>
               <DropdownMenuSeparator />
@@ -381,7 +421,7 @@ const TrackOptionsMenuComponent = (
                 className="cursor-pointer text-destructive focus:text-destructive"
               >
                 <Trash2 className="mr-2 h-4 w-4" />
-                Delete from Library
+                Usuń z biblioteki
               </DropdownMenuItem>
             </>
           )}
