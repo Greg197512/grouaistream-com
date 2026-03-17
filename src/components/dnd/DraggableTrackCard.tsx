@@ -78,9 +78,7 @@ export const DraggableTrackCard = ({
                 draggable={false}
               />
             ) : (
-              <div className="w-full h-full">
-                <HQCoverInline title={track.title} genre={track.genre} />
-              </div>
+              <HQCover src={null} alt={track.title} genre={track.genre} className="w-full h-full" />
             )}
 
             {/* Play overlay */}
