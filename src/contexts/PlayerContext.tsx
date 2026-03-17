@@ -195,8 +195,9 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   // Keep ref in sync so audio error/ended handlers use latest function
   useEffect(() => { nextTrackRef.current = nextTrackInternal; }, [nextTrackInternal]);
 
-  const isPlayableUrl = (value?: string | null) => Boolean(value && /^(https?|blob):\/?\/?/i.test(value));
-  const isHttpUrl = isPlayableUrl;
+  const isPlayableUrl = (value?: string | null) => Boolean(value && /^(https?|blob|data):/i.test(value));
+  const isRemoteUrl = (value?: string | null) => Boolean(value && /^https?:\/\//i.test(value));
+  const isLocalBrowserUrl = (value?: string | null) => Boolean(value && /^(blob|data):/i.test(value));
 
   const isAutoplayBlockedError = (error: unknown) => {
     if (!error) return false;
@@ -215,8 +216,8 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     const candidates = [track.audio_url, track.video_url];
 
     for (const candidate of candidates) {
-      if (!candidate || !isHttpUrl(candidate) || isBlockedStreamUrl(candidate)) continue;
-      if (extractYouTubeId(candidate)) continue;
+      if (!candidate || !isPlayableUrl(candidate) || isBlockedStreamUrl(candidate)) continue;
+      if (isRemoteUrl(candidate) && extractYouTubeId(candidate)) continue;
       return candidate;
     }
 
@@ -255,11 +256,18 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
       setYoutubeVideoId(null);
 
       if (audioRef.current) {
-        // Set crossOrigin only for remote URLs, not blob: URLs
-        audioRef.current.crossOrigin = audioUrl.startsWith("blob:") ? null : "anonymous";
+        const audioElement = audioRef.current;
+        const isLocalSource = isLocalBrowserUrl(audioUrl);
+
+        audioElement.pause();
+        audioElement.removeAttribute("src");
+        audioElement.load();
+        audioElement.crossOrigin = isLocalSource ? null : "anonymous";
         console.log("[Player] Setting audio src:", audioUrl);
-        audioRef.current.src = audioUrl;
-        const playPromise = audioRef.current.play();
+        audioElement.src = audioUrl;
+        audioElement.load();
+
+        const playPromise = audioElement.play();
         console.log("[Player] play() called, promise:", !!playPromise);
         if (playPromise) {
           playPromise.then(() => {
@@ -270,6 +278,12 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
             if (isAutoplayBlockedError(error)) {
               setIsPlaying(false);
               toast.info("Na telefonie naciśnij Play, aby rozpocząć odtwarzanie");
+              return;
+            }
+
+            if (isLocalSource) {
+              setIsPlaying(false);
+              toast.error("Telefon zablokował ten plik lokalny. Spróbuj ponownie nacisnąć Play lub wybierz inny format MP3/M4A.");
               return;
             }
 
