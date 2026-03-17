@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { Play, GripVertical } from "lucide-react";
 import { Track, usePlayer } from "@/contexts/PlayerContext";
 import { TrackOptionsMenu, LikeButton } from "@/components/menus/TrackOptionsMenu";
+import { HQCover } from "@/components/ui/HQCover";
 import { cn } from "@/lib/utils";
 
 interface DraggableTrackCardProps {
