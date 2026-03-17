@@ -224,22 +224,21 @@ const TrackOptionsMenuComponent = (
     if (!user || !playlistId) return;
 
     setDeleteLoading(true);
-    try {
-      await supabase
-        .from("playlist_tracks")
-        .delete()
-        .eq("playlist_id", playlistId)
-        .eq("track_id", trackId);
+    const { error } = await supabase
+      .from("playlist_tracks")
+      .delete()
+      .eq("playlist_id", playlistId)
+      .eq("track_id", trackId);
 
+    if (error) {
+      console.error("Error removing track:", error);
+      toast.error("Nie udało się usunąć");
+    } else {
       toast.success(`"${trackTitle}" usunięty z playlisty`);
       onDelete?.();
       window.dispatchEvent(new CustomEvent("track-list-changed"));
-    } catch (error) {
-      console.error("Error removing track:", error);
-      toast.error("Nie udało się usunąć");
-    } finally {
-      setDeleteLoading(false);
     }
+    setDeleteLoading(false);
   };
 
   const handleDeleteTrack = async () => {
@@ -255,42 +254,27 @@ const TrackOptionsMenuComponent = (
     if (!confirmed) return;
 
     setDeleteLoading(true);
-    try {
-      // Remove from all playlists
-      await supabase
-        .from("playlist_tracks")
-        .delete()
-        .eq("track_id", trackId);
 
-      // Remove from liked songs
-      await supabase
-        .from("liked_songs")
-        .delete()
-        .eq("track_id", trackId)
-        .eq("user_id", user.id);
+    // Remove from all playlists
+    const r1 = await supabase.from("playlist_tracks").delete().eq("track_id", trackId);
+    if (r1.error) console.warn("playlist_tracks cleanup:", r1.error.message);
 
-      // Remove from listening history  
-      await supabase
-        .from("listening_history")
-        .delete()
-        .eq("track_id", trackId)
-        .eq("user_id", user.id);
+    // Remove from liked songs
+    const r2 = await supabase.from("liked_songs").delete().eq("track_id", trackId).eq("user_id", user.id);
+    if (r2.error) console.warn("liked_songs cleanup:", r2.error.message);
 
-      // Try to delete the track record (works for admins)
-      await supabase
-        .from("tracks")
-        .delete()
-        .eq("id", trackId);
+    // Remove from listening history  
+    const r3 = await supabase.from("listening_history").delete().eq("track_id", trackId).eq("user_id", user.id);
+    if (r3.error) console.warn("listening_history cleanup:", r3.error.message);
 
-      toast.success(`"${trackTitle}" usunięty`);
-      onDelete?.();
-      window.dispatchEvent(new CustomEvent("track-list-changed"));
-    } catch (error) {
-      console.error("Error deleting track:", error);
-      toast.error("Nie udało się usunąć utworu");
-    } finally {
-      setDeleteLoading(false);
-    }
+    // Try to delete the track record (works for admins)
+    const r4 = await supabase.from("tracks").delete().eq("id", trackId);
+    if (r4.error) console.warn("tracks delete:", r4.error.message);
+
+    toast.success(`"${trackTitle}" usunięty`);
+    onDelete?.();
+    window.dispatchEvent(new CustomEvent("track-list-changed"));
+    setDeleteLoading(false);
   };
 
   const iconSize = {
