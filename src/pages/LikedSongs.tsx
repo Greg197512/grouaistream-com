@@ -34,17 +34,26 @@ const LikedSongs = () => {
   const [likedSongs, setLikedSongs] = useState<LikedSong[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const loadLikedSongs = async () => {
+    if (!user) return;
+    setLoading(true);
+    const { data, error } = await supabase.from("liked_songs").select(`id, liked_at, tracks (id, title, artist, album, duration, audio_url, video_url, cover_url, genre, mood)`).eq("user_id", user.id).order("liked_at", { ascending: false });
+    if (error) console.error("Error loading liked songs:", error);
+    else setLikedSongs(data as unknown as LikedSong[] || []);
+    setLoading(false);
+  };
+
   useEffect(() => {
     if (!user) { navigate("/auth"); return; }
-    const loadLikedSongs = async () => {
-      setLoading(true);
-      const { data, error } = await supabase.from("liked_songs").select(`id, liked_at, tracks (id, title, artist, album, duration, audio_url, video_url, cover_url, genre, mood)`).eq("user_id", user.id).order("liked_at", { ascending: false });
-      if (error) console.error("Error loading liked songs:", error);
-      else setLikedSongs(data as unknown as LikedSong[] || []);
-      setLoading(false);
-    };
     loadLikedSongs();
   }, [user, navigate]);
+
+  // Listen for track deletions
+  useEffect(() => {
+    const handler = () => loadLikedSongs();
+    window.addEventListener("track-list-changed", handler);
+    return () => window.removeEventListener("track-list-changed", handler);
+  }, [user]);
 
   const tracks: Track[] = likedSongs.filter(ls => ls.tracks).map(ls => ({
     id: ls.tracks.id, title: ls.tracks.title, artist: ls.tracks.artist, album: ls.tracks.album,

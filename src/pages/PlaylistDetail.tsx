@@ -345,6 +345,8 @@ const PlaylistDetail = () => {
                               trackTitle={track.title}
                               trackArtist={track.artist}
                               trackUrl={track.video_url || track.audio_url}
+                              playlistId={id}
+                              onDelete={() => setTracks(prev => prev.filter(t => t.id !== track.id))}
                             />
                           </div>
                         </motion.div>
