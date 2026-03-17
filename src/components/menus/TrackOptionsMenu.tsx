@@ -396,7 +396,22 @@ const TrackOptionsMenuComponent = (
             </DropdownMenuItem>
           )}
 
-          {/* Delete track */}
+          {/* Remove from playlist */}
+          {playlistId && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem 
+                onClick={handleRemoveFromPlaylist} 
+                disabled={deleteLoading}
+                className="cursor-pointer text-destructive focus:text-destructive"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Usuń z playlisty
+              </DropdownMenuItem>
+            </>
+          )}
+
+          {/* Delete track from library */}
           {showDelete && (
             <>
               <DropdownMenuSeparator />
@@ -406,7 +421,7 @@ const TrackOptionsMenuComponent = (
                 className="cursor-pointer text-destructive focus:text-destructive"
               >
                 <Trash2 className="mr-2 h-4 w-4" />
-                Delete from Library
+                Usuń z biblioteki
               </DropdownMenuItem>
             </>
           )}
