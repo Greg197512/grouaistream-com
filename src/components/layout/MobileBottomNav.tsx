@@ -2,6 +2,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRef, useState, useEffect } from "react";
 
 const navItems = [
   { icon: "home", labelKey: "nav.home", href: "/" },
@@ -12,6 +13,7 @@ const navItems = [
   { icon: "radio", labelKey: "nav.radioLive", href: "/radio-live" },
   { icon: "folder_open", labelKey: "nav.localPlayer", href: "/local-player" },
   { icon: "movie", labelKey: "nav.movies", href: "/movies" },
+  { icon: "dns", labelKey: "nav.mediaServer", href: "/server" },
   { icon: "playlist_play", labelKey: "nav.managePlaylists", href: "/playlists" },
   { icon: "favorite", labelKey: "nav.likedSongs", href: "/liked" },
   { icon: "psychology", labelKey: "nav.moodHistory", href: "/mood-history" },
@@ -22,6 +24,28 @@ export const MobileBottomNav = () => {
   const location = useLocation();
   const { t } = useLanguage();
   const { user } = useAuth();
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(true);
+
+  const checkScroll = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    setCanScrollLeft(el.scrollLeft > 4);
+    setCanScrollRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 4);
+  };
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    checkScroll();
+    el.addEventListener("scroll", checkScroll, { passive: true });
+    return () => el.removeEventListener("scroll", checkScroll);
+  }, []);
+
+  const scroll = (dir: "left" | "right") => {
+    scrollRef.current?.scrollBy({ left: dir === "left" ? -160 : 160, behavior: "smooth" });
+  };
 
   return (
     <nav
@@ -34,7 +58,30 @@ export const MobileBottomNav = () => {
         WebkitBackdropFilter: "blur(20px) saturate(180%)",
       }}
     >
+      {/* Left arrow */}
+      {canScrollLeft && (
+        <button
+          onClick={() => scroll("left")}
+          className="absolute left-0 top-0 bottom-0 z-10 flex items-center px-1"
+          style={{ background: "linear-gradient(to right, rgba(0,0,0,0.7) 60%, transparent)" }}
+        >
+          <span className="material-icons-outlined text-white/60 text-lg">chevron_left</span>
+        </button>
+      )}
+
+      {/* Right arrow */}
+      {canScrollRight && (
+        <button
+          onClick={() => scroll("right")}
+          className="absolute right-0 top-0 bottom-0 z-10 flex items-center px-1"
+          style={{ background: "linear-gradient(to left, rgba(0,0,0,0.7) 60%, transparent)" }}
+        >
+          <span className="material-icons-outlined text-white/60 text-lg">chevron_right</span>
+        </button>
+      )}
+
       <div
+        ref={scrollRef}
         className="flex items-center h-full overflow-x-auto"
         style={{
           scrollSnapType: "x mandatory",
