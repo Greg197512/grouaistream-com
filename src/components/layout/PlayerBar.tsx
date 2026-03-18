@@ -282,6 +282,7 @@ export const PlayerBar = () => {
                 src={currentTrack.cover_url} 
                 alt={currentTrack.title}
                 genre={currentTrack.genre}
+                artist={currentTrack.artist}
                 className="h-full w-full"
               />
             ) : (

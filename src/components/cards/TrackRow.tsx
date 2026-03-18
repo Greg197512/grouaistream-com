@@ -88,7 +88,7 @@ const TrackRowComponent = forwardRef<HTMLDivElement, TrackRowProps>(({
       <div className="flex items-center gap-3 min-w-0">
         {(
           <div className="h-10 w-10 rounded overflow-hidden flex-shrink-0">
-            <HQCover src={imageUrl || null} alt={title} genre={genre} className="h-full w-full" />
+            <HQCover src={imageUrl || null} alt={title} genre={genre} artist={artist} className="h-full w-full" />
           </div>
         )}
         <div className="min-w-0">
