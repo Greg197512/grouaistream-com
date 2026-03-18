@@ -57,7 +57,7 @@ export const RecentlyPlayed = () => {
             `)
             .eq("user_id", user.id)
             .order("played_at", { ascending: false })
-            .limit(6);
+            .limit(30);
 
           if (error) throw error;
 
