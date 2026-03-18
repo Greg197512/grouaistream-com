@@ -625,7 +625,7 @@ export const AIAssistant = () => {
             onDrop={handleDrop}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
-            className={`fixed bottom-20 md:bottom-24 right-2 md:right-4 z-50 ${chatWidth} ${chatHeight} rounded-2xl shadow-2xl shadow-black/40 flex flex-col overflow-hidden transition-all duration-300 ${isDragOver ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' : ''}`}
+            className={`fixed inset-0 sm:inset-auto sm:bottom-24 sm:right-4 z-50 ${chatWidth} ${chatHeight} sm:rounded-2xl shadow-2xl shadow-black/40 flex flex-col overflow-hidden transition-all duration-300 ${isDragOver ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' : ''}`}
             style={{
               background: 'rgba(10, 10, 15, 0.85)',
               backdropFilter: 'blur(40px) saturate(200%)',
