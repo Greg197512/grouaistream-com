@@ -607,8 +607,8 @@ export const AIAssistant = () => {
     }
   }, [input, isLoading, messages, userContext, startDJSession, parseDJCommand, attachments]);
 
-  const chatWidth = isExpanded ? "w-[calc(100vw-2rem)] sm:w-[600px]" : "w-[calc(100vw-2rem)] sm:w-[400px]";
-  const chatHeight = isExpanded ? "h-[calc(100vh-8rem)] sm:h-[700px]" : "h-[calc(100vh-8rem)] sm:h-[520px]";
+  const chatWidth = isExpanded ? "w-full sm:w-[600px]" : "w-full sm:w-[400px]";
+  const chatHeight = isExpanded ? "h-full sm:h-[700px]" : "h-full sm:h-[520px]";
 
   return (
     <>
