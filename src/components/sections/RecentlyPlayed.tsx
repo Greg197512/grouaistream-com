@@ -84,7 +84,7 @@ export const RecentlyPlayed = () => {
               seen.add(t.id);
               return true;
             });
-            setRecentTracks(filterTracks(unique));
+            setRecentTracks(filterTracks(unique).slice(0, 6));
           }
         } else {
           const { data, error } = await supabase
