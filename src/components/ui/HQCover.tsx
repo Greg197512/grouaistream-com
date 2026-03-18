@@ -1,6 +1,7 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
+import { supabase } from "@/integrations/supabase/client";
 
 interface HQCoverProps {
   src?: string | null;
@@ -10,6 +11,39 @@ interface HQCoverProps {
   showFallbackIcon?: boolean;
   genre?: string | null;
   animated?: boolean;
+  artist?: string | null;
+}
+
+/* ── In-memory cache for cover searches ── */
+const coverCache = new Map<string, string | null>();
+const pendingRequests = new Map<string, Promise<string | null>>();
+
+async function fetchCoverArt(artist: string, title: string): Promise<string | null> {
+  const cacheKey = `${artist}||${title}`.toLowerCase();
+  
+  if (coverCache.has(cacheKey)) return coverCache.get(cacheKey)!;
+  
+  // Deduplicate in-flight requests
+  if (pendingRequests.has(cacheKey)) return pendingRequests.get(cacheKey)!;
+  
+  const promise = (async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke("cover-search", {
+        body: { artist, title },
+      });
+      const url = (!error && data?.cover_url) ? data.cover_url : null;
+      coverCache.set(cacheKey, url);
+      return url;
+    } catch {
+      coverCache.set(cacheKey, null);
+      return null;
+    } finally {
+      pendingRequests.delete(cacheKey);
+    }
+  })();
+  
+  pendingRequests.set(cacheKey, promise);
+  return promise;
 }
 
 /* ── Deterministic hash ── */
@@ -50,7 +84,6 @@ function getPalette(genre: string | null | undefined, title: string) {
       if (key.includes(k) || k.includes(key)) return v;
     }
   }
-  // Fallback: hash-based palette
   const h = hashStr(title);
   const hue = h % 360;
   return {
@@ -94,7 +127,7 @@ const AnimatedCover = ({
   const palette = useMemo(() => getPalette(genre, title), [genre, title]);
   const initials = useMemo(() => getInitials(title || "?"), [title]);
   const h = useMemo(() => hashStr(title), [title]);
-  const variant = h % 5; // 5 different visual styles
+  const variant = h % 5;
 
   const bgGradient = `radial-gradient(ellipse at 30% 20%, ${palette.bg[1]} 0%, ${palette.bg[0]} 50%, ${palette.bg[2]} 100%)`;
 
@@ -106,14 +139,12 @@ const AnimatedCover = ({
       )}
       style={{ background: bgGradient }}
     >
-      {/* Animated background elements */}
       {variant === 0 && <VinylDisc accent={palette.accent} />}
       {variant === 1 && <SoundWaves accent={palette.accent} />}
       {variant === 2 && <PulsingRings accent={palette.accent} />}
       {variant === 3 && <FloatingNotes accent={palette.accent} seed={h} />}
       {variant === 4 && <EqualizerBars accent={palette.accent} seed={h} />}
 
-      {/* Light leak overlay */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
@@ -121,7 +152,6 @@ const AnimatedCover = ({
         }}
       />
 
-      {/* Genre icon + title */}
       <div className="relative z-10 flex flex-col items-center gap-1 px-2">
         <span className="text-lg sm:text-xl drop-shadow-lg" style={{ filter: "drop-shadow(0 0 8px rgba(0,0,0,0.5))" }}>
           {palette.icon}
@@ -142,7 +172,6 @@ const AnimatedCover = ({
         </span>
       </div>
 
-      {/* Bottom accent line */}
       <div
         className="absolute bottom-0 left-0 right-0 h-[2px]"
         style={{
@@ -315,12 +344,47 @@ export const HQCover = ({
   showFallbackIcon = true,
   genre,
   animated = true,
+  artist,
 }: HQCoverProps) => {
   const [error, setError] = useState(false);
+  const [fetchedCover, setFetchedCover] = useState<string | null>(null);
+  const [fetchAttempted, setFetchAttempted] = useState(false);
+  const mountedRef = useRef(true);
 
   const isLowQuality = src ? isPlaceholder(src) : true;
+  const needsFetch = (!src || error || isLowQuality) && !fetchAttempted;
 
-  if (!src || error || isLowQuality) {
+  // Auto-fetch cover art from iTunes/Deezer/MusicBrainz when no cover exists
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
+
+  useEffect(() => {
+    if (!needsFetch) return;
+    
+    // Extract artist from alt text if not provided (format: "Title - Artist" or just "Title")
+    const effectiveArtist = artist || "";
+    const effectiveTitle = alt || "";
+    
+    if (!effectiveArtist && !effectiveTitle) {
+      setFetchAttempted(true);
+      return;
+    }
+
+    setFetchAttempted(true);
+    
+    fetchCoverArt(effectiveArtist, effectiveTitle).then((url) => {
+      if (mountedRef.current && url) {
+        setFetchedCover(url);
+      }
+    });
+  }, [needsFetch, artist, alt]);
+
+  // If we fetched a cover, use it
+  const effectiveSrc = (!src || error || isLowQuality) ? fetchedCover : src;
+
+  if (!effectiveSrc) {
     return (
       <AnimatedCover
         title={alt}
@@ -330,7 +394,7 @@ export const HQCover = ({
     );
   }
 
-  const hqSrc = upgradeToMaxRes(src);
+  const hqSrc = upgradeToMaxRes(effectiveSrc);
 
   return (
     <img
@@ -339,7 +403,13 @@ export const HQCover = ({
       loading="eager"
       decoding="async"
       draggable={false}
-      onError={() => setError(true)}
+      onError={() => {
+        if (effectiveSrc === fetchedCover) {
+          setFetchedCover(null); // Fetched cover failed, fall back to animated
+        } else {
+          setError(true);
+        }
+      }}
       className={cn("object-cover", className)}
       style={{ imageRendering: "auto" }}
     />
