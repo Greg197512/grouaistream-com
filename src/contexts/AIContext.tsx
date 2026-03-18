@@ -1,5 +1,6 @@
 import { createContext, useContext, ReactNode, useCallback, useState, useEffect } from "react";
 import { useAIOrchestrator, DetectedMood, AIRecommendation } from "@/hooks/useAIOrchestrator";
+import { useAILearning, UserPreferences } from "@/hooks/useAILearning";
 import { Track } from "@/contexts/PlayerContext";
 
 interface AIContextType {
@@ -23,6 +24,13 @@ interface AIContextType {
   adaptToUserBehavior: (signal: { type: "skip" | "repeat" | "volume_change" | "seek"; value?: number }) => Promise<void>;
   isAIEnabled: boolean;
   toggleAI: () => void;
+  // Learning engine
+  preferences: UserPreferences | null;
+  isLearning: boolean;
+  getTimeBasedRecommendations: () => string[];
+  getDayBasedRecommendations: () => string[];
+  getTopGenres: (count?: number) => string[];
+  triggerLearning: () => Promise<void>;
 }
 
 const AIContext = createContext<AIContextType | undefined>(undefined);
@@ -48,6 +56,15 @@ export const AIProvider = ({ children }: { children: ReactNode }) => {
     processVoiceCommand,
     adaptToUserBehavior,
   } = useAIOrchestrator();
+
+  const {
+    preferences,
+    isLearning,
+    triggerLearning,
+    getTimeBasedRecommendations,
+    getDayBasedRecommendations,
+    getTopGenres,
+  } = useAILearning();
 
   const toggleAI = useCallback(() => {
     setIsAIEnabled((prev) => !prev);
@@ -79,6 +96,12 @@ export const AIProvider = ({ children }: { children: ReactNode }) => {
         adaptToUserBehavior,
         isAIEnabled,
         toggleAI,
+        preferences,
+        isLearning,
+        getTimeBasedRecommendations,
+        getDayBasedRecommendations,
+        getTopGenres,
+        triggerLearning,
       }}
     >
       {children}

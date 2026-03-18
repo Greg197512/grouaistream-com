@@ -796,6 +796,60 @@ export type Database = {
         }
         Relationships: []
       }
+      user_preferences: {
+        Row: {
+          ai_profile_summary: string | null
+          avoid_genres: string[]
+          avoid_moods: string[]
+          created_at: string
+          daily_patterns: Json
+          genre_weights: Json
+          id: string
+          last_analyzed_at: string | null
+          mood_weights: Json
+          preferred_energy: string
+          preferred_tempo: string
+          total_tracks_analyzed: number
+          updated_at: string
+          user_id: string
+          weekly_patterns: Json
+        }
+        Insert: {
+          ai_profile_summary?: string | null
+          avoid_genres?: string[]
+          avoid_moods?: string[]
+          created_at?: string
+          daily_patterns?: Json
+          genre_weights?: Json
+          id?: string
+          last_analyzed_at?: string | null
+          mood_weights?: Json
+          preferred_energy?: string
+          preferred_tempo?: string
+          total_tracks_analyzed?: number
+          updated_at?: string
+          user_id: string
+          weekly_patterns?: Json
+        }
+        Update: {
+          ai_profile_summary?: string | null
+          avoid_genres?: string[]
+          avoid_moods?: string[]
+          created_at?: string
+          daily_patterns?: Json
+          genre_weights?: Json
+          id?: string
+          last_analyzed_at?: string | null
+          mood_weights?: Json
+          preferred_energy?: string
+          preferred_tempo?: string
+          total_tracks_analyzed?: number
+          updated_at?: string
+          user_id?: string
+          weekly_patterns?: Json
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string

@@ -534,12 +534,13 @@ serve(async (req) => {
     const playableTracks = (allTracks || []).filter((t: any) => t.audio_url);
 
     // ==========================================
-    // FETCH USER-SPECIFIC DATA (favorites, recent, playlists)
+    // FETCH USER-SPECIFIC DATA (favorites, recent, playlists, AI preferences)
     // ==========================================
     const userId = (userContext as any)?.userId;
     let userFavorites: any[] = [];
     let userListeningHistory: any[] = [];
     let userPlaylistsData: any[] = [];
+    let userPreferences: any = null;
 
     // Recent uploads (newest tracks in DB)
     const recentUploads = [...(allTracks || [])]
@@ -548,6 +549,14 @@ serve(async (req) => {
       .slice(0, 20);
 
     if (userId) {
+      // Fetch AI-learned preferences
+      const { data: prefsData } = await supabase
+        .from("user_preferences")
+        .select("*")
+        .eq("user_id", userId)
+        .maybeSingle();
+      if (prefsData) userPreferences = prefsData;
+
       // Fetch favorites (liked songs)
       const { data: likedData } = await supabase
         .from("liked_songs")
@@ -575,7 +584,6 @@ serve(async (req) => {
         .limit(50);
 
       if (historyData && historyData.length > 0) {
-        // Deduplicate by track_id, keep most recent
         const seenIds = new Set<string>();
         const uniqueHistory = historyData.filter((h: any) => {
           if (seenIds.has(h.track_id)) return false;
@@ -807,6 +815,36 @@ serve(async (req) => {
             );
             if (candidates.length < requestedCount) {
               const remaining = playableTracks.filter((t: any) => !candidates.includes(t));
+              candidates = [...candidates, ...[...remaining].sort(() => Math.random() - 0.5)];
+            }
+          } else if (userPreferences && userPreferences.genre_weights) {
+            // USE AI LEARNING: pick genres based on time-of-day preferences and weights
+            const hour = new Date().getHours();
+            let timeSlot = "morning";
+            if (hour >= 12 && hour < 18) timeSlot = "afternoon";
+            else if (hour >= 18) timeSlot = "evening";
+            else if (hour < 6) timeSlot = "night";
+
+            const timeGenres: string[] = userPreferences.daily_patterns?.[timeSlot] || [];
+            const topWeightedGenres = Object.entries(userPreferences.genre_weights as Record<string, number>)
+              .sort((a: any, b: any) => b[1] - a[1])
+              .slice(0, 5)
+              .map(([g]: any) => g);
+            const preferredGenres = [...new Set([...timeGenres, ...topWeightedGenres])];
+            const avoidSet = new Set((userPreferences.avoid_genres || []).map((g: string) => g.toLowerCase()));
+
+            candidates = playableTracks.filter((t: any) => {
+              const tGenre = (t.genre || "").toLowerCase();
+              if (avoidSet.has(tGenre)) return false;
+              return preferredGenres.some(g => tGenre.includes(g.toLowerCase()));
+            });
+
+            if (candidates.length < requestedCount) {
+              // Fill with non-avoided tracks
+              const remaining = playableTracks.filter((t: any) => {
+                const tGenre = (t.genre || "").toLowerCase();
+                return !avoidSet.has(tGenre) && !candidates.some((c: any) => c.id === t.id);
+              });
               candidates = [...candidates, ...[...remaining].sort(() => Math.random() - 0.5)];
             }
           } else {
@@ -1077,7 +1115,33 @@ Gdy użytkownik mówi "daj 5 z ulubionych", "puść ostatnie polubione", "ostatn
 ## SUPER WAŻNA FUNKCJA - ZARZĄDZANIE UTWORAMI MIĘDZY KATALOGAMI:
 Gdy użytkownik mówi "przenieś X do katalogu Y", "wytnij X z playlisty", "dodaj X do playlisty Y", "usuń X z katalogu" — system AUTOMATYCZNIE wykonuje operację. Znasz WSZYSTKIE playlisty użytkownika i ich zawartość. Potwierdź operację.
 
-## SUPER WAŻNA FUNKCJA - UCZENIE SIĘ PREFERENCJI:
+## SUPER WAŻNA FUNKCJA - UCZENIE SIĘ PREFERENCJI (AI LEARNING ENGINE):
+System posiada zaawansowany silnik uczenia się preferencji użytkownika. Analizuje CODZIENNIE wzorce słuchania — gatunki, nastroje, pory dnia, dni tygodnia, częstotliwość skipów.
+
+${userPreferences ? `### 🧠 PROFIL AI UŻYTKOWNIKA (automatycznie wygenerowany):
+- **Preferowane gatunki (wagi):** ${JSON.stringify(userPreferences.genre_weights || {})}
+- **Preferowane nastroje (wagi):** ${JSON.stringify(userPreferences.mood_weights || {})}
+- **Wzorce dzienne:**
+  - Rano: ${(userPreferences.daily_patterns?.morning || []).join(", ") || "brak danych"}
+  - Popołudnie: ${(userPreferences.daily_patterns?.afternoon || []).join(", ") || "brak danych"}
+  - Wieczór: ${(userPreferences.daily_patterns?.evening || []).join(", ") || "brak danych"}
+  - Noc: ${(userPreferences.daily_patterns?.night || []).join(", ") || "brak danych"}
+- **Wzorce tygodniowe:** ${JSON.stringify(userPreferences.weekly_patterns || {})}
+- **Preferowana energia:** ${userPreferences.preferred_energy || "medium"}
+- **Preferowane tempo:** ${userPreferences.preferred_tempo || "medium"}
+- **Unikane gatunki (wysokie skip-rate):** ${(userPreferences.avoid_genres || []).join(", ") || "brak"}
+- **Unikane nastroje:** ${(userPreferences.avoid_moods || []).join(", ") || "brak"}
+- **Łącznie przeanalizowanych utworów:** ${userPreferences.total_tracks_analyzed || 0}
+- **Profil psychologiczny AI:** ${userPreferences.ai_profile_summary || "jeszcze nie wygenerowany"}
+
+UŻYJ TYCH DANYCH aby:
+1. Proponować muzykę dopasowaną do PORY DNIA (rano → gatunki poranne, wieczorem → wieczorne)
+2. Unikać gatunków z wysokim skip-rate
+3. Preferować gatunki z najwyższymi wagami
+4. Dostosowywać energię i tempo do preferencji użytkownika
+5. Na weekendy proponować gatunki weekendowe, w tygodniu → robocze
+6. Gdy użytkownik mówi "puść coś" bez kontekstu → AUTOMATYCZNIE dobieraj na podstawie pory dnia + dnia tygodnia + preferencji` : "Profil AI jeszcze nie został wygenerowany — zbyt mało danych odsłuchowych."}
+
 Analizujesz historię słuchania, ulubione gatunki (${topGenres.join(", ") || "nieznane"}) i nastroje (${topMoods.join(", ") || "nieznane"}) użytkownika. Na tej podstawie proponujesz coraz trafniejsze rekomendacje. Jeśli użytkownik często słucha jednego gatunku — domyślnie preferuj ten gatunek. Pamiętaj kontekst rozmowy i ucz się z każdej interakcji.
 
 ## WIEDZA O APLIKACJI GrooveAI Stream:
