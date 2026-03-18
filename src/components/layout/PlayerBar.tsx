@@ -285,7 +285,6 @@ export const PlayerBar = () => {
                 artist={currentTrack.artist}
                 className="h-full w-full"
               />
-              />
             ) : (
               <>
                 <div className="absolute inset-0 groove-gradient-bg opacity-60" />
