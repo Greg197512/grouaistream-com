@@ -538,6 +538,7 @@ serve(async (req) => {
     // ==========================================
     const userId = (userContext as any)?.userId;
     let userFavorites: any[] = [];
+    let userListeningHistory: any[] = [];
     let userPlaylistsData: any[] = [];
 
     // Recent uploads (newest tracks in DB)
