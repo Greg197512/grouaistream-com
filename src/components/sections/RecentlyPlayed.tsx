@@ -62,7 +62,7 @@ export const RecentlyPlayed = () => {
           if (error) throw error;
 
           if (data) {
-            const tracks = data
+            const allTracks = data
               .filter(item => item.tracks)
               .map(item => ({
                 id: item.tracks!.id,
@@ -77,7 +77,14 @@ export const RecentlyPlayed = () => {
                 mood: item.tracks!.mood,
                 played_at: item.played_at,
               }));
-            setRecentTracks(filterTracks(tracks));
+            // Deduplicate by track id — keep only the most recent play
+            const seen = new Set<string>();
+            const unique = allTracks.filter(t => {
+              if (seen.has(t.id)) return false;
+              seen.add(t.id);
+              return true;
+            });
+            setRecentTracks(filterTracks(unique));
           }
         } else {
           const { data, error } = await supabase
