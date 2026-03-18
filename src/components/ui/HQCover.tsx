@@ -14,35 +14,58 @@ interface HQCoverProps {
   artist?: string | null;
 }
 
-/* ── In-memory cache for cover searches ── */
+/* ── In-memory cache + rate limiter ── */
 const coverCache = new Map<string, string | null>();
 const pendingRequests = new Map<string, Promise<string | null>>();
 
-async function fetchCoverArt(artist: string, title: string): Promise<string | null> {
+// Queue system to avoid flooding edge function
+const requestQueue: Array<{ key: string; artist: string; title: string; resolve: (url: string | null) => void }> = [];
+let isProcessing = false;
+
+async function processQueue() {
+  if (isProcessing || requestQueue.length === 0) return;
+  isProcessing = true;
+
+  while (requestQueue.length > 0) {
+    const batch = requestQueue.splice(0, 3); // Process 3 at a time
+    
+    await Promise.all(batch.map(async (item) => {
+      try {
+        const { data, error } = await supabase.functions.invoke("cover-search", {
+          body: { artist: item.artist, title: item.title },
+        });
+        const url = (!error && data?.cover_url) ? data.cover_url : null;
+        coverCache.set(item.key, url);
+        item.resolve(url);
+      } catch {
+        coverCache.set(item.key, null);
+        item.resolve(null);
+      }
+    }));
+    
+    // Small delay between batches to not overwhelm the function
+    if (requestQueue.length > 0) {
+      await new Promise(r => setTimeout(r, 300));
+    }
+  }
+
+  isProcessing = false;
+}
+
+function fetchCoverArt(artist: string, title: string): Promise<string | null> {
   const cacheKey = `${artist}||${title}`.toLowerCase();
   
-  if (coverCache.has(cacheKey)) return coverCache.get(cacheKey)!;
-  
-  // Deduplicate in-flight requests
+  if (coverCache.has(cacheKey)) return Promise.resolve(coverCache.get(cacheKey)!);
   if (pendingRequests.has(cacheKey)) return pendingRequests.get(cacheKey)!;
   
-  const promise = (async () => {
-    try {
-      const { data, error } = await supabase.functions.invoke("cover-search", {
-        body: { artist, title },
-      });
-      const url = (!error && data?.cover_url) ? data.cover_url : null;
-      coverCache.set(cacheKey, url);
-      return url;
-    } catch {
-      coverCache.set(cacheKey, null);
-      return null;
-    } finally {
-      pendingRequests.delete(cacheKey);
-    }
-  })();
+  const promise = new Promise<string | null>((resolve) => {
+    requestQueue.push({ key: cacheKey, artist, title, resolve });
+    processQueue();
+  });
   
   pendingRequests.set(cacheKey, promise);
+  promise.finally(() => pendingRequests.delete(cacheKey));
+  
   return promise;
 }
 
@@ -113,6 +136,20 @@ function isPlaceholder(url: string): boolean {
     url.includes("via.placeholder")
   );
 }
+
+/* ── Loading shimmer ── */
+const CoverShimmer = ({ className }: { className?: string }) => (
+  <div className={cn("relative overflow-hidden bg-secondary/50", className)}>
+    <motion.div
+      className="absolute inset-0"
+      style={{
+        background: "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.05) 50%, transparent 100%)",
+      }}
+      animate={{ x: ["-100%", "100%"] }}
+      transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+    />
+  </div>
+);
 
 /* ── Animated Music Cover Fallback ── */
 const AnimatedCover = ({
@@ -348,13 +385,13 @@ export const HQCover = ({
 }: HQCoverProps) => {
   const [error, setError] = useState(false);
   const [fetchedCover, setFetchedCover] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const [fetchAttempted, setFetchAttempted] = useState(false);
   const mountedRef = useRef(true);
 
   const isLowQuality = src ? isPlaceholder(src) : true;
   const needsFetch = (!src || error || isLowQuality) && !fetchAttempted;
 
-  // Auto-fetch cover art from iTunes/Deezer/MusicBrainz when no cover exists
   useEffect(() => {
     mountedRef.current = true;
     return () => { mountedRef.current = false; };
@@ -363,26 +400,31 @@ export const HQCover = ({
   useEffect(() => {
     if (!needsFetch) return;
     
-    // Extract artist from alt text if not provided (format: "Title - Artist" or just "Title")
     const effectiveArtist = artist || "";
     const effectiveTitle = alt || "";
     
-    if (!effectiveArtist && !effectiveTitle) {
+    if (!effectiveTitle) {
       setFetchAttempted(true);
       return;
     }
 
     setFetchAttempted(true);
+    setIsLoading(true);
     
     fetchCoverArt(effectiveArtist, effectiveTitle).then((url) => {
-      if (mountedRef.current && url) {
+      if (mountedRef.current) {
         setFetchedCover(url);
+        setIsLoading(false);
       }
     });
   }, [needsFetch, artist, alt]);
 
-  // If we fetched a cover, use it
   const effectiveSrc = (!src || error || isLowQuality) ? fetchedCover : src;
+
+  // Show shimmer while loading
+  if (isLoading && !effectiveSrc) {
+    return <CoverShimmer className={fallbackClassName || className} />;
+  }
 
   if (!effectiveSrc) {
     return (
@@ -405,7 +447,7 @@ export const HQCover = ({
       draggable={false}
       onError={() => {
         if (effectiveSrc === fetchedCover) {
-          setFetchedCover(null); // Fetched cover failed, fall back to animated
+          setFetchedCover(null);
         } else {
           setError(true);
         }
