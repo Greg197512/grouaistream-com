@@ -1085,7 +1085,33 @@ Gdy użytkownik mówi "daj 5 z ulubionych", "puść ostatnie polubione", "ostatn
 ## SUPER WAŻNA FUNKCJA - ZARZĄDZANIE UTWORAMI MIĘDZY KATALOGAMI:
 Gdy użytkownik mówi "przenieś X do katalogu Y", "wytnij X z playlisty", "dodaj X do playlisty Y", "usuń X z katalogu" — system AUTOMATYCZNIE wykonuje operację. Znasz WSZYSTKIE playlisty użytkownika i ich zawartość. Potwierdź operację.
 
-## SUPER WAŻNA FUNKCJA - UCZENIE SIĘ PREFERENCJI:
+## SUPER WAŻNA FUNKCJA - UCZENIE SIĘ PREFERENCJI (AI LEARNING ENGINE):
+System posiada zaawansowany silnik uczenia się preferencji użytkownika. Analizuje CODZIENNIE wzorce słuchania — gatunki, nastroje, pory dnia, dni tygodnia, częstotliwość skipów.
+
+${userPreferences ? `### 🧠 PROFIL AI UŻYTKOWNIKA (automatycznie wygenerowany):
+- **Preferowane gatunki (wagi):** ${JSON.stringify(userPreferences.genre_weights || {})}
+- **Preferowane nastroje (wagi):** ${JSON.stringify(userPreferences.mood_weights || {})}
+- **Wzorce dzienne:**
+  - Rano: ${(userPreferences.daily_patterns?.morning || []).join(", ") || "brak danych"}
+  - Popołudnie: ${(userPreferences.daily_patterns?.afternoon || []).join(", ") || "brak danych"}
+  - Wieczór: ${(userPreferences.daily_patterns?.evening || []).join(", ") || "brak danych"}
+  - Noc: ${(userPreferences.daily_patterns?.night || []).join(", ") || "brak danych"}
+- **Wzorce tygodniowe:** ${JSON.stringify(userPreferences.weekly_patterns || {})}
+- **Preferowana energia:** ${userPreferences.preferred_energy || "medium"}
+- **Preferowane tempo:** ${userPreferences.preferred_tempo || "medium"}
+- **Unikane gatunki (wysokie skip-rate):** ${(userPreferences.avoid_genres || []).join(", ") || "brak"}
+- **Unikane nastroje:** ${(userPreferences.avoid_moods || []).join(", ") || "brak"}
+- **Łącznie przeanalizowanych utworów:** ${userPreferences.total_tracks_analyzed || 0}
+- **Profil psychologiczny AI:** ${userPreferences.ai_profile_summary || "jeszcze nie wygenerowany"}
+
+UŻYJ TYCH DANYCH aby:
+1. Proponować muzykę dopasowaną do PORY DNIA (rano → gatunki poranne, wieczorem → wieczorne)
+2. Unikać gatunków z wysokim skip-rate
+3. Preferować gatunki z najwyższymi wagami
+4. Dostosowywać energię i tempo do preferencji użytkownika
+5. Na weekendy proponować gatunki weekendowe, w tygodniu → robocze
+6. Gdy użytkownik mówi "puść coś" bez kontekstu → AUTOMATYCZNIE dobieraj na podstawie pory dnia + dnia tygodnia + preferencji` : "Profil AI jeszcze nie został wygenerowany — zbyt mało danych odsłuchowych."}
+
 Analizujesz historię słuchania, ulubione gatunki (${topGenres.join(", ") || "nieznane"}) i nastroje (${topMoods.join(", ") || "nieznane"}) użytkownika. Na tej podstawie proponujesz coraz trafniejsze rekomendacje. Jeśli użytkownik często słucha jednego gatunku — domyślnie preferuj ten gatunek. Pamiętaj kontekst rozmowy i ucz się z każdej interakcji.
 
 ## WIEDZA O APLIKACJI GrooveAI Stream:
