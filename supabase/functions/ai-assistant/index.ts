@@ -565,6 +565,31 @@ serve(async (req) => {
           });
       }
 
+      // Fetch listening history (recently played)
+      const { data: historyData } = await supabase
+        .from("listening_history")
+        .select("track_id, played_at")
+        .eq("user_id", userId)
+        .order("played_at", { ascending: false })
+        .limit(50);
+
+      if (historyData && historyData.length > 0) {
+        // Deduplicate by track_id, keep most recent
+        const seenIds = new Set<string>();
+        const uniqueHistory = historyData.filter((h: any) => {
+          if (seenIds.has(h.track_id)) return false;
+          seenIds.add(h.track_id);
+          return true;
+        });
+        userListeningHistory = playableTracks
+          .filter((t: any) => uniqueHistory.some((h: any) => h.track_id === t.id))
+          .map((t: any) => {
+            const histEntry = uniqueHistory.find((h: any) => h.track_id === t.id);
+            return { ...t, played_at: histEntry?.played_at };
+          })
+          .sort((a: any, b: any) => new Date(b.played_at).getTime() - new Date(a.played_at).getTime());
+      }
+
       // Fetch user playlists with tracks
       const { data: plData } = await supabase
         .from("playlists")
