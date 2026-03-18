@@ -127,9 +127,12 @@ export const FullscreenPlayer = ({ isOpen, onClose }: FullscreenPlayerProps) => 
               <h1 className="text-3xl md:text-4xl font-bold mb-2">
                 {currentTrack?.title || "No track playing"}
               </h1>
-              <p className="text-lg text-muted-foreground">
-                {currentTrack?.artist || "Select a track"}
-              </p>
+              <div className="flex items-center justify-center gap-2">
+                <p className="text-lg text-muted-foreground">
+                  {currentTrack?.artist || "Select a track"}
+                </p>
+                {currentTrack && <span className="text-xs font-bold text-primary/70">Grouarock®</span>}
+              </div>
             </motion.div>
 
             {/* Progress */}

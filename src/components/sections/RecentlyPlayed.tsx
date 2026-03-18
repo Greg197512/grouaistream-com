@@ -240,7 +240,7 @@ export const RecentlyPlayed = () => {
                       </div>
                       <div className="flex-1 min-w-0" onClick={() => handlePlayTrack(track, index)}>
                         <p className="font-medium text-sm truncate">{track.title}</p>
-                        <p className="text-xs text-muted-foreground truncate">{track.artist}</p>
+                        <div className="flex items-center gap-1"><p className="text-xs text-muted-foreground truncate">{track.artist}</p><span className="text-[7px] font-bold text-primary/70 whitespace-nowrap">Grouarock®</span></div>
                       </div>
                       <div className="flex items-center gap-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                         {user && (

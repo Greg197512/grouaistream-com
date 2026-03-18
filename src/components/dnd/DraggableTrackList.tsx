@@ -137,9 +137,10 @@ export const DraggableTrackList = ({
                         >
                           {track.title}
                         </p>
-                        <p className="text-sm text-muted-foreground truncate">
-                          {track.artist}
-                        </p>
+                        <div className="flex items-center gap-1">
+                          <p className="text-sm text-muted-foreground truncate">{track.artist}</p>
+                          <span className="text-[7px] font-bold text-primary/70 whitespace-nowrap">Grouarock®</span>
+                        </div>
                       </div>
 
                       {/* Duration */}

@@ -273,7 +273,7 @@ export const TrackMixer = () => {
           {track ? (
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-white truncate">{track.title}</p>
-              <p className="text-xs text-gray-400 truncate">{track.artist} • {track.genre || "—"}</p>
+              <p className="text-xs text-gray-400 truncate">{track.artist} <span className="text-[7px] font-bold text-primary/70">Grouarock®</span> • {track.genre || "—"}</p>
             </div>
           ) : snapshot.isDraggingOver ? (
             <p className="text-sm text-[#FF9500] flex items-center gap-2 animate-pulse">

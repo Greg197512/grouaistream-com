@@ -320,9 +320,12 @@ export const PlayerBar = () => {
             <p className="font-medium text-xs truncate text-white/90 hover:text-white cursor-pointer">
               {currentTrack?.title || "No track playing"}
             </p>
-            <p className="text-[10px] text-white/50 truncate hover:text-white/70 cursor-pointer">
-              {currentTrack?.artist || "Select a track"}
-            </p>
+            <div className="flex items-center gap-1">
+              <p className="text-[10px] text-white/50 truncate hover:text-white/70 cursor-pointer">
+                {currentTrack?.artist || "Select a track"}
+              </p>
+              {currentTrack && <span className="text-[7px] font-bold text-primary/70 whitespace-nowrap">Grouarock®</span>}
+            </div>
           </div>
 
           <button 
