@@ -994,10 +994,11 @@ export const AutoVoiceListener = () => {
       }
     }
 
-    // AI fallback
+    // AI fallback — answer ANY question via Grok/AI voice endpoint
     try {
-      toast.loading(`🎙️ AI analizuje...`, { id: "voice-cmd" });
+      toast.loading(`🧠 Myślę...`, { id: "voice-cmd" });
       
+      // First try music AI for play commands
       if (isAIEnabled) {
         const requestedCount = parseNumber(command);
         const result = await processVoiceCommand(command);
@@ -1014,25 +1015,37 @@ export const AutoVoiceListener = () => {
         }
       }
 
-      // General AI assistant fallback
-      const { data: aiData, error: aiError } = await supabase.functions.invoke("ai-assistant", {
-        body: { message: command, history: [] }
+      // Universal voice answer — calls Grok for ANY question (weather, facts, general knowledge, etc.)
+      const lang = getAppLanguage();
+      const { data: voiceData, error: voiceError } = await supabase.functions.invoke("ai-voice-answer", {
+        body: { question: command, language: lang }
       });
-      if (!aiError && aiData?.response) {
-        const response = aiData.response;
-        await safeSpeakAndResume(response.slice(0, 300));
-        toast.success(`🤖 ${response.slice(0, 120)}...`, { id: "voice-cmd", duration: 6000 });
-        
-        if (aiData.trackLink) {
-          await handlePlayFromAI(aiData.trackLink.id);
-        }
+      
+      if (!voiceError && voiceData?.answer) {
+        const answer = voiceData.answer;
+        toast.success(`🌐 ${answer.slice(0, 120)}...`, { id: "voice-cmd", duration: 8000 });
+        await safeSpeakAndResume(answer);
       } else {
-        await safeSpeakAndResume("Przepraszam, nie rozumiem. Możesz powtórzyć?");
-        toast.info("🤖 Przepraszam, nie rozumiem. Możesz powtórzyć?", { id: "voice-cmd" });
+        // Last resort fallback
+        const errMsgs: Record<Language, string> = {
+          pl: "Przepraszam, nie udało mi się znaleźć odpowiedzi. Spróbuj ponownie.",
+          en: "Sorry, I couldn't find an answer. Please try again.",
+          nl: "Sorry, ik kon geen antwoord vinden. Probeer het opnieuw.",
+          ua: "Вибачте, не вдалося знайти відповідь. Спробуйте ще раз.",
+        };
+        await safeSpeakAndResume(errMsgs[lang]);
+        toast.info(`🤖 ${errMsgs[lang]}`, { id: "voice-cmd" });
       }
     } catch {
-      await safeSpeakAndResume("Przepraszam, nie rozumiem. Możesz powtórzyć?");
-      toast.error("Przepraszam, nie rozumiem. Możesz powtórzyć?", { id: "voice-cmd" });
+      const lang = getAppLanguage();
+      const errMsgs: Record<Language, string> = {
+        pl: "Przepraszam, wystąpił błąd. Spróbuj ponownie.",
+        en: "Sorry, an error occurred. Please try again.",
+        nl: "Sorry, er is een fout opgetreden. Probeer het opnieuw.",
+        ua: "Вибачте, сталася помилка. Спробуйте ще раз.",
+      };
+      await safeSpeakAndResume(errMsgs[lang]);
+      toast.error(errMsgs[lang], { id: "voice-cmd" });
     }
     } finally {
       isProcessingCommandRef.current = false;
