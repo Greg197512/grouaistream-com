@@ -92,7 +92,9 @@ export const FullscreenPlayer = ({ isOpen, onClose }: FullscreenPlayerProps) => 
                   src={currentTrack.cover_url}
                   alt={currentTrack.title}
                   genre={currentTrack.genre}
+                  artist={currentTrack.artist}
                   className="w-full h-full"
+                />
                 />
               ) : (
                 <div className="w-full h-full groove-gradient-bg animate-gradient" />

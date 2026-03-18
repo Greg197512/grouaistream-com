@@ -215,9 +215,9 @@ export const RecentlyPlayed = () => {
                         onClick={() => handlePlayTrack(track, index)}
                       >
                         {track.cover_url ? (
-                          <HQCover src={track.cover_url} alt={track.title} genre={track.genre} className="h-full w-full" />
+                          <HQCover src={track.cover_url} alt={track.title} genre={track.genre} artist={track.artist} className="h-full w-full" />
                         ) : (
-                          <HQCover src={null} alt={track.title} genre={track.genre} className="h-full w-full" />
+                          <HQCover src={null} alt={track.title} genre={track.genre} artist={track.artist} className="h-full w-full" />
                         )}
                         <div className={`absolute inset-0 flex items-center justify-center transition-opacity bg-black/40 ${
                           currentTrack?.id === track.id && isPlaying ? "opacity-100" : "opacity-0 group-hover:opacity-100"
