@@ -255,21 +255,29 @@ const TrackOptionsMenuComponent = (
 
     setDeleteLoading(true);
 
-    // Remove from all playlists
-    const r1 = await supabase.from("playlist_tracks").delete().eq("track_id", trackId);
-    if (r1.error) console.warn("playlist_tracks cleanup:", r1.error.message);
+    // Remove from liked songs (user's own)
+    await supabase.from("liked_songs").delete().eq("track_id", trackId).eq("user_id", user.id);
 
-    // Remove from liked songs
-    const r2 = await supabase.from("liked_songs").delete().eq("track_id", trackId).eq("user_id", user.id);
-    if (r2.error) console.warn("liked_songs cleanup:", r2.error.message);
+    // Remove from listening history (user's own)
+    await supabase.from("listening_history").delete().eq("track_id", trackId).eq("user_id", user.id);
 
-    // Remove from listening history  
-    const r3 = await supabase.from("listening_history").delete().eq("track_id", trackId).eq("user_id", user.id);
-    if (r3.error) console.warn("listening_history cleanup:", r3.error.message);
+    // Remove from user's playlists
+    const { data: userPlaylists } = await supabase
+      .from("playlists")
+      .select("id")
+      .eq("user_id", user.id);
+    
+    if (userPlaylists && userPlaylists.length > 0) {
+      const playlistIds = userPlaylists.map(p => p.id);
+      await supabase
+        .from("playlist_tracks")
+        .delete()
+        .eq("track_id", trackId)
+        .in("playlist_id", playlistIds);
+    }
 
-    // Try to delete the track record (works for admins)
-    const r4 = await supabase.from("tracks").delete().eq("id", trackId);
-    if (r4.error) console.warn("tracks delete:", r4.error.message);
+    // Try to delete the track record (works for admins only)
+    await supabase.from("tracks").delete().eq("id", trackId);
 
     toast.success(`"${trackTitle}" usunięty`);
     onDelete?.();

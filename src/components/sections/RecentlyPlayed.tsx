@@ -102,6 +102,10 @@ export const RecentlyPlayed = () => {
     };
 
     fetchRecentTracks();
+
+    const handler = () => fetchRecentTracks();
+    window.addEventListener("track-list-changed", handler);
+    return () => window.removeEventListener("track-list-changed", handler);
   }, [user]);
 
   const handlePlayTrack = (track: RecentTrack, index: number) => {
