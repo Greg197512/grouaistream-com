@@ -893,6 +893,38 @@ export const AutoVoiceListener = () => {
       return;
     }
 
+    // ==========================================
+    // GENERAL QUESTION DETECTION → route to Grok AI voice answer
+    // Must be BEFORE play commands to avoid false matches (e.g. "daj" inside "Amster*daj*")
+    // ==========================================
+    const isGeneralQuestion = (
+      /(?:powiedz|opowiedz|wytłumacz|wytlumacz|wyjaśnij|wyjasnij|co to jest|co to|kto to|czym jest|jak działa|jak dziala|ile wynosi|kiedy |gdzie |dlaczego |czy .{5,}\?|jaki |jaka |jakie )/i.test(lower) ||
+      /(?:tell me|explain|what is|who is|how does|how to|what are|why |when did|where is|how much|how many)/i.test(lower) ||
+      /(?:vertel|uitleggen|wat is|wie is|hoe werkt|waarom|wanneer|waar is)/i.test(lower) ||
+      /(?:розкажи|поясни|що таке|хто це|як працює|чому|коли|де є)/i.test(lower) ||
+      /(?:co tam|co słychać|co slychac|co nowego|jak tam|how's it going|what's up|what's new|hoe gaat het|як справи|що нового)/i.test(lower) ||
+      (lower.includes("?") && lower.length > 10 && !/(?:puść|pusc|graj|zagraj|play|włącz|wlacz|speel|грай)/i.test(lower))
+    );
+
+    if (isGeneralQuestion) {
+      toast.loading(`🧠 Myślę...`, { id: "voice-cmd" });
+      try {
+        const lang = getAppLanguage();
+        const { data: voiceData, error: voiceError } = await supabase.functions.invoke("ai-voice-answer", {
+          body: { question: command, language: lang }
+        });
+        if (!voiceError && voiceData?.answer) {
+          toast.success(`🌐 ${voiceData.answer.slice(0, 120)}`, { id: "voice-cmd", duration: 8000 });
+          await safeSpeakAndResume(voiceData.answer);
+        } else {
+          await safeSpeakAndResume("Przepraszam, nie udało mi się znaleźć odpowiedzi.");
+        }
+      } catch {
+        await safeSpeakAndResume("Przepraszam, wystąpił błąd.");
+      }
+      return;
+    }
+
     // Search & play - multilingual verbs
     const PLAY_VERBS = [
       // PL
