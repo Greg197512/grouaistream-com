@@ -227,6 +227,10 @@ const Library = () => {
   useEffect(() => {
     if (!user) { navigate("/auth"); return; }
     loadLibrary();
+
+    const handler = () => loadLibrary();
+    window.addEventListener("track-list-changed", handler);
+    return () => window.removeEventListener("track-list-changed", handler);
   }, [user, navigate]);
 
   if (loading) {
