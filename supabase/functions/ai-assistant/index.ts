@@ -677,15 +677,8 @@ serve(async (req) => {
 
     // Detect if user wants to play multiple tracks
     const playIntentPatterns = [
-      /zapodaj\s+(?:mi\s+)?(\d+)/i,
-      /puść\s+(?:mi\s+)?(\d+)/i,
-      /graj\s+(?:mi\s+)?(\d+)/i,
-      /daj\s+(?:mi\s+)?(\d+)/i,
-      /włącz\s+(?:mi\s+)?(\d+)/i,
-      /odpal\s+(?:mi\s+)?(\d+)/i,
-      /play\s+(\d+)/i,
-      /give\s+(?:me\s+)?(\d+)/i,
-      /(\d+)\s*(?:utw|piosen|track|song|kawałk)/i,
+      /(?:zapodaj|pu[sśćcz]{1,3}|posc|graj|daj|w[lł][aą][cć]z|odpal|play|give)\s+(?:mi\s+)?(\d+)/i,
+      /(\d+)\s*(?:utw|piosen|track|song|kawałk|numer)/i,
     ];
 
     // Detect context keywords for genre/mood matching
