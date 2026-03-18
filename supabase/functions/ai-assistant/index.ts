@@ -758,15 +758,15 @@ serve(async (req) => {
         }
       }
 
-      // Detect favorites/recent requests even without explicit play verb
+      // Detect favorites/recent/listened requests even without explicit play verb
       if (requestedCount === 0) {
-        const favRecentNumMatch = lowerMessage.match(/(?:ostatni[echm]?|najnowsz[eych]|śwież[eych]|swiez[eych]|ulubionych|polubion)\s+(\d+)/i) ||
-          lowerMessage.match(/(\d+)\s+(?:ostatni|najnowsz|ulubionych|polubion|wgrany|wrzucon)/i);
-        if (favRecentNumMatch) {
-          requestedCount = Math.min(parseInt(favRecentNumMatch[1]), 20);
+        const favRecentNumMatch = lowerMessage.match(/(?:ostatni[echm]?|najnowsz[eych]|śwież[eych]|swiez[eych]|ulubionych|polubion|lubi[ęe]|słucha[łlm]|sluchal)/i) && lowerMessage.match(/(\d+)/);
+        const numOnly = lowerMessage.match(/(\d+)/);
+        if (numOnly && /(?:ostatni|najnowsz|ulubionych|polubion|lubi[ęe]|słucha[łlm]|sluchal|śwież|swiez|piosen|utw|track|song)/i.test(lowerMessage)) {
+          requestedCount = Math.min(parseInt(numOnly[1]), 20);
         }
         // Polish word numbers + favorites/recent keywords
-        if (requestedCount === 0 && (/ulubionych|polubion|ostatni[echm]?\s+(?:wgrany|wrzucon|dodany|piosen|utw)|najnowsz|z\s+serwer|ostatnie\s+\d|śwież|swiez/i.test(lowerMessage))) {
+        if (requestedCount === 0 && (/ulubionych|polubion|lubi[ęe]|słucha[łlm]|sluchal|ostatni[echm]?\s+(?:wgrany|wrzucon|dodany|piosen|utw|słuchan)|najnowsz|z\s+serwer|ostatnie\s+\d|śwież|swiez/i.test(lowerMessage))) {
           const polishNums: Record<string, number> = {"jeden":1,"dwa":2,"trzy":3,"cztery":4,"pięć":5,"sześć":6,"siedem":7,"osiem":8,"dziewięć":9,"dziesięć":10,"piętnaście":15,"dwadzieścia":20};
           for (const [word, num] of Object.entries(polishNums)) {
             if (lowerMessage.includes(word)) { requestedCount = num; break; }
