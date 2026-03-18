@@ -538,6 +538,7 @@ serve(async (req) => {
     // ==========================================
     const userId = (userContext as any)?.userId;
     let userFavorites: any[] = [];
+    let userListeningHistory: any[] = [];
     let userPlaylistsData: any[] = [];
 
     // Recent uploads (newest tracks in DB)
@@ -563,6 +564,31 @@ serve(async (req) => {
             const likeEntry = likedData.find((l: any) => l.track_id === t.id);
             return { ...t, liked_at: likeEntry?.liked_at };
           });
+      }
+
+      // Fetch listening history (recently played)
+      const { data: historyData } = await supabase
+        .from("listening_history")
+        .select("track_id, played_at")
+        .eq("user_id", userId)
+        .order("played_at", { ascending: false })
+        .limit(50);
+
+      if (historyData && historyData.length > 0) {
+        // Deduplicate by track_id, keep most recent
+        const seenIds = new Set<string>();
+        const uniqueHistory = historyData.filter((h: any) => {
+          if (seenIds.has(h.track_id)) return false;
+          seenIds.add(h.track_id);
+          return true;
+        });
+        userListeningHistory = playableTracks
+          .filter((t: any) => uniqueHistory.some((h: any) => h.track_id === t.id))
+          .map((t: any) => {
+            const histEntry = uniqueHistory.find((h: any) => h.track_id === t.id);
+            return { ...t, played_at: histEntry?.played_at };
+          })
+          .sort((a: any, b: any) => new Date(b.played_at).getTime() - new Date(a.played_at).getTime());
       }
 
       // Fetch user playlists with tracks
@@ -651,15 +677,8 @@ serve(async (req) => {
 
     // Detect if user wants to play multiple tracks
     const playIntentPatterns = [
-      /zapodaj\s+(?:mi\s+)?(\d+)/i,
-      /puść\s+(?:mi\s+)?(\d+)/i,
-      /graj\s+(?:mi\s+)?(\d+)/i,
-      /daj\s+(?:mi\s+)?(\d+)/i,
-      /włącz\s+(?:mi\s+)?(\d+)/i,
-      /odpal\s+(?:mi\s+)?(\d+)/i,
-      /play\s+(\d+)/i,
-      /give\s+(?:me\s+)?(\d+)/i,
-      /(\d+)\s*(?:utw|piosen|track|song|kawałk)/i,
+      /(?:zapodaj|pu[sśćcz]{1,3}|posc|graj|daj|w[lł][aą][cć]z|odpal|play|give)\s+(?:mi\s+)?(\d+)/i,
+      /(\d+)\s*(?:utw|piosen|track|song|kawałk|numer)/i,
     ];
 
     // Detect context keywords for genre/mood matching
@@ -721,14 +740,14 @@ serve(async (req) => {
 
       // Also detect simple play requests without numbers
       if (requestedCount === 0) {
-        const simplePlayPatterns = [/zapodaj|puść|pusc|graj|włącz|wlacz|odpal|play|give|daj|postaw|odtwórz|odtworz/i];
+        const simplePlayPatterns = [/zapodaj|pu[sśćcz]{1,3}|posc|graj|w[lł][aą][cć]z|wlacz|odpal|play|give|daj|postaw|odtw[oó]rz|odtworz/i];
         const hasPlayIntent = simplePlayPatterns.some(p => p.test(lowerMessage));
         const hasContextKeyword = Object.keys(contextKeywords).some(k => lowerMessage.includes(k));
         
         // Also detect generic play requests without specific genre (e.g. "puść coś", "daj muzykę", "graj")
         const genericPlayPatterns = [
-          /(?:puść|pusc|graj|włącz|wlacz|odpal|zapodaj|daj|postaw|odtwórz|odtworz)\s+(?:mi\s+)?(?:coś|cos|jakąś|jakas|muzyk|piosen|utw|track|song|jakieś|jakies|losow)/i,
-          /(?:puść|pusc|graj|włącz|wlacz|odpal|zapodaj|daj)\s*$/i,
+          /(?:pu[sśćcz]{1,3}|posc|graj|w[lł][aą][cć]z|wlacz|odpal|zapodaj|daj|postaw|odtw[oó]rz|odtworz)\s+(?:mi\s+)?(?:coś|cos|jakąś|jakas|muzyk|piosen|utw|track|song|jakieś|jakies|losow)/i,
+          /(?:pu[sśćcz]{1,3}|posc|graj|w[lł][aą][cć]z|wlacz|odpal|zapodaj|daj)\s*$/i,
         ];
         const hasGenericPlay = genericPlayPatterns.some(p => p.test(lowerMessage));
         
@@ -739,15 +758,15 @@ serve(async (req) => {
         }
       }
 
-      // Detect favorites/recent requests even without explicit play verb
+      // Detect favorites/recent/listened requests even without explicit play verb
       if (requestedCount === 0) {
-        const favRecentNumMatch = lowerMessage.match(/(?:ostatni[echm]?|najnowsz[eych]|śwież[eych]|swiez[eych]|ulubionych|polubion)\s+(\d+)/i) ||
-          lowerMessage.match(/(\d+)\s+(?:ostatni|najnowsz|ulubionych|polubion|wgrany|wrzucon)/i);
-        if (favRecentNumMatch) {
-          requestedCount = Math.min(parseInt(favRecentNumMatch[1]), 20);
+        const favRecentNumMatch = lowerMessage.match(/(?:ostatni[echm]?|najnowsz[eych]|śwież[eych]|swiez[eych]|ulubionych|polubion|lubi[ęe]|słucha[łlm]|sluchal)/i) && lowerMessage.match(/(\d+)/);
+        const numOnly = lowerMessage.match(/(\d+)/);
+        if (numOnly && /(?:ostatni|najnowsz|ulubionych|polubion|lubi[ęe]|słucha[łlm]|sluchal|śwież|swiez|piosen|utw|track|song)/i.test(lowerMessage)) {
+          requestedCount = Math.min(parseInt(numOnly[1]), 20);
         }
         // Polish word numbers + favorites/recent keywords
-        if (requestedCount === 0 && (/ulubionych|polubion|ostatni[echm]?\s+(?:wgrany|wrzucon|dodany|piosen|utw)|najnowsz|z\s+serwer|ostatnie\s+\d|śwież|swiez/i.test(lowerMessage))) {
+        if (requestedCount === 0 && (/ulubionych|polubion|lubi[ęe]|słucha[łlm]|sluchal|ostatni[echm]?\s+(?:wgrany|wrzucon|dodany|piosen|utw|słuchan)|najnowsz|z\s+serwer|ostatnie\s+\d|śwież|swiez/i.test(lowerMessage))) {
           const polishNums: Record<string, number> = {"jeden":1,"dwa":2,"trzy":3,"cztery":4,"pięć":5,"sześć":6,"siedem":7,"osiem":8,"dziewięć":9,"dziesięć":10,"piętnaście":15,"dwadzieścia":20};
           for (const [word, num] of Object.entries(polishNums)) {
             if (lowerMessage.includes(word)) { requestedCount = num; break; }
@@ -760,14 +779,17 @@ serve(async (req) => {
       if (hasDJIntent && requestedCount < 10) requestedCount = Math.max(requestedCount, 10);
 
       if (requestedCount > 0 && playableTracks.length > 0) {
-        // Detect source: favorites, recent uploads, or general library
-        const wantsFavorites = /ulubionych|polubion|liked|favorite|ulubione|z\s+ulubionych|z\s+polubionych/i.test(lowerMessage);
+        // Detect source: favorites, recently listened, recent uploads, or general library
+        const wantsFavorites = /ulubionych|polubion|liked|favorite|ulubione|z\s+ulubionych|z\s+polubionych|lubi[ęe]|lubisz/i.test(lowerMessage);
+        const wantsListened = /słucha[łlm]|sluchal|ostatnio\s+(?:słucha|sluch)|niedawno|grał[oe]?m|gral[oe]?m|recently\s+(?:played|listened)/i.test(lowerMessage);
         const wantsRecent = /ostatni[echm]?\s+(?:wgrany|wrzucon|dodany|upload|piosen|utw)|najnowsz|ostatnio\s+(?:wgrany|dodany|wrzucon)|z\s+serwera|newest|recent|śwież|swiez|ostatnie\s+\d/i.test(lowerMessage);
 
         let candidates: any[];
 
         if (wantsFavorites && userFavorites.length > 0) {
           candidates = [...userFavorites];
+        } else if (wantsListened && userListeningHistory.length > 0) {
+          candidates = [...userListeningHistory];
         } else if (wantsRecent && recentUploads.length > 0) {
           candidates = [...recentUploads];
         } else {
@@ -792,8 +814,8 @@ serve(async (req) => {
           }
         }
 
-        // Don't shuffle favorites/recent - keep order (by date)
-        autoPlayTracks = (wantsFavorites || wantsRecent)
+        // Don't shuffle favorites/recent/listened - keep order (by date)
+        autoPlayTracks = (wantsFavorites || wantsRecent || wantsListened)
           ? candidates.slice(0, requestedCount)
           : [...candidates].sort(() => Math.random() - 0.5).slice(0, requestedCount);
       }
@@ -866,6 +888,10 @@ serve(async (req) => {
     const favoritesCatalog = userFavorites.length > 0
       ? userFavorites.map((t: any, i: number) => `${i+1}. ${t.title} — ${t.artist} [${t.genre || '?'}]`).join("\n")
       : "Brak ulubionych";
+
+    const listeningHistoryCatalog = userListeningHistory.length > 0
+      ? userListeningHistory.map((t: any, i: number) => `${i+1}. ${t.title} — ${t.artist} [${t.genre || '?'}] (${new Date(t.played_at).toLocaleDateString('pl')})`).join("\n")
+      : "Brak historii";
 
     const recentUploadsCatalog = recentUploads.length > 0
       ? recentUploads.map((t: any, i: number) => `${i+1}. ${t.title} — ${t.artist} [${t.genre || '?'}] (${new Date(t.created_at).toLocaleDateString('pl')})`).join("\n")
@@ -1035,6 +1061,9 @@ ${trackCatalog}
 ## ULUBIONE UTWORY UŻYTKOWNIKA (${userFavorites.length} szt.):
 ${favoritesCatalog}
 
+## OSTATNIO SŁUCHANE UTWORY (HISTORIA ODTWARZANIA — ${userListeningHistory.length} szt.):
+${listeningHistoryCatalog}
+
 ## OSTATNIE 20 WGRANYCH UTWORÓW (NAJNOWSZE W SERWISIE):
 ${recentUploadsCatalog}
 
@@ -1042,8 +1071,8 @@ ${recentUploadsCatalog}
 ${playlistsCatalog}
 ${moveInfo}
 
-## SUPER WAŻNA FUNKCJA - ULUBIONE I OSTATNIE WGRANE:
-Gdy użytkownik mówi "daj 5 z ulubionych", "puść ostatnie polubione", "ostatnie wgrane 10", "najnowsze z serwera", "daj ostatnie 20 piosenek wrzuconych", "świeże utwory" — system AUTOMATYCZNIE wybiera odpowiednie utwory z ulubionych lub najnowszych wgranych i włącza na playerze. Znasz DOKŁADNE daty wgrania i polubienia. Ty musisz POTWIERDZIĆ co włączasz, wymienić utwory z numeracją.
+## SUPER WAŻNA FUNKCJA - ULUBIONE, OSTATNIO SŁUCHANE I WGRANE:
+Gdy użytkownik mówi "daj 5 z ulubionych", "puść ostatnie polubione", "ostatnie wgrane 10", "piosenki które lubię", "co ostatnio słuchałem", "10 piosenek które lubię" — system AUTOMATYCZNIE wybiera odpowiednie utwory z ulubionych, historii słuchania lub najnowszych wgranych i włącza na playerze. Znasz DOKŁADNE daty wgrania, polubienia i odtworzenia. Ty musisz POTWIERDZIĆ co włączasz, wymienić utwory z numeracją.
 
 ## SUPER WAŻNA FUNKCJA - ZARZĄDZANIE UTWORAMI MIĘDZY KATALOGAMI:
 Gdy użytkownik mówi "przenieś X do katalogu Y", "wytnij X z playlisty", "dodaj X do playlisty Y", "usuń X z katalogu" — system AUTOMATYCZNIE wykonuje operację. Znasz WSZYSTKIE playlisty użytkownika i ich zawartość. Potwierdź operację.
