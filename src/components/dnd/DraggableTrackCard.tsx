@@ -131,7 +131,10 @@ export const DraggableTrackCard = ({
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0 flex-1">
                 <p className="font-medium text-sm truncate">{track.title}</p>
-                <p className="text-xs text-muted-foreground truncate">{track.artist}</p>
+                <div className="flex items-center gap-1">
+                  <p className="text-xs text-muted-foreground truncate">{track.artist}</p>
+                  <span className="text-[7px] font-bold text-primary/70 whitespace-nowrap">Grouarock®</span>
+                </div>
               </div>
               <div 
                 className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity" 

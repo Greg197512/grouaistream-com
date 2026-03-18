@@ -98,9 +98,12 @@ const TrackRowComponent = forwardRef<HTMLDivElement, TrackRowProps>(({
           )}>
             {title}
           </p>
-          <p className="text-xs text-muted-foreground truncate hover:underline cursor-pointer">
-            {artist}
-          </p>
+          <div className="flex items-center gap-1.5">
+            <p className="text-xs text-muted-foreground truncate hover:underline cursor-pointer">
+              {artist}
+            </p>
+            <span className="text-[8px] font-bold text-primary/70 whitespace-nowrap">Grouarock®</span>
+          </div>
         </div>
       </div>
 
