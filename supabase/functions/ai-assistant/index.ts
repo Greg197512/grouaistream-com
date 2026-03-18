@@ -534,12 +534,13 @@ serve(async (req) => {
     const playableTracks = (allTracks || []).filter((t: any) => t.audio_url);
 
     // ==========================================
-    // FETCH USER-SPECIFIC DATA (favorites, recent, playlists)
+    // FETCH USER-SPECIFIC DATA (favorites, recent, playlists, AI preferences)
     // ==========================================
     const userId = (userContext as any)?.userId;
     let userFavorites: any[] = [];
     let userListeningHistory: any[] = [];
     let userPlaylistsData: any[] = [];
+    let userPreferences: any = null;
 
     // Recent uploads (newest tracks in DB)
     const recentUploads = [...(allTracks || [])]
@@ -548,6 +549,14 @@ serve(async (req) => {
       .slice(0, 20);
 
     if (userId) {
+      // Fetch AI-learned preferences
+      const { data: prefsData } = await supabase
+        .from("user_preferences")
+        .select("*")
+        .eq("user_id", userId)
+        .maybeSingle();
+      if (prefsData) userPreferences = prefsData;
+
       // Fetch favorites (liked songs)
       const { data: likedData } = await supabase
         .from("liked_songs")
@@ -575,7 +584,6 @@ serve(async (req) => {
         .limit(50);
 
       if (historyData && historyData.length > 0) {
-        // Deduplicate by track_id, keep most recent
         const seenIds = new Set<string>();
         const uniqueHistory = historyData.filter((h: any) => {
           if (seenIds.has(h.track_id)) return false;
