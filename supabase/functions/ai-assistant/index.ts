@@ -1183,7 +1183,62 @@ Znasz DOKŁADNIE każdą funkcję aplikacji:
 7. Możesz prowadzić naturalną konwersację na DOWOLNY temat
 8. ZAWSZE znaj zawartość biblioteki muzycznej — jeśli użytkownik pyta o utwór, sprawdź czy jest w katalogu powyżej
 9. Znasz DOKŁADNIE ulubione utwory, ostatnie wgrane, playlisty i katalogi — odpowiadaj precyzyjnie z datami
-10. UCZ SIĘ z każdej rozmowy — zapamiętuj preferencje i dopasowuj rekomendacje`;
+10. UCZ SIĘ z każdej rozmowy — zapamiętuj preferencje i dopasowuj rekomendacje
+11. Gdy masz dane z wyszukiwania internetowego (WEB SEARCH) — WYKORZYSTAJ JE w odpowiedzi. Cytuj źródła, podawaj fakty. Odpowiadaj na pytania z wiedzą z sieci.`;
+
+    // ==========================================
+    // WEB SEARCH via Grok (xAI) — for factual/general questions
+    // ==========================================
+    const GROK_API_KEY = Deno.env.get("GROK_API_KEY");
+    let webSearchResult = "";
+
+    // Detect if user is asking a factual/web question (not music playback commands)
+    const isPlaybackCommand = /(?:puść|pusc|graj|zagraj|włącz|wlacz|odtwórz|odtworz|play|next|prev|pause|stop|volume|głośn|glosn|skip|następn|nastepn|poprzedni|dodaj do|usuń z|przenieś|przenies|dedykuj|miksuj|zmixuj|wygeneruj|stwórz|stworz|zmień.*radio|ustaw.*radio)/i.test(lowerMessage);
+    const isWebQuestion = !isPlaybackCommand && !hasRadioIntent && !hasWishIntent && !hasDedicationIntent && !hasRadioAddIntent && !hasRadioRemoveIntent && !hasGenerateIntent && (
+      // Explicit search intents
+      /(?:wyszukaj|szukaj|znajdź|znajdz|sprawdź|sprawdz|search|find|look up|google|check|co to|kto to|ile|kiedy|gdzie|dlaczego|jak|why|what|who|when|where|how|pogoda|weather|news|wiadomości|wiadomosci|cena|price|kurs|wynik|score|rezultat|result|najnowsz|latest|aktualn|current)/i.test(lowerMessage) ||
+      // Questions about real-world facts
+      /(?:czy\s+.{5,}\?|what\s+is|who\s+is|how\s+to|tell\s+me\s+about|opowiedz\s+o|powiedz\s+mi\s+o)/i.test(lowerMessage) ||
+      // Any question mark with sufficient length (likely a factual question)
+      (lowerMessage.includes("?") && lowerMessage.length > 15 && !/(?:puść|graj|play|włącz|daj mi|zapodaj)/i.test(lowerMessage))
+    );
+
+    if (isWebQuestion && GROK_API_KEY) {
+      try {
+        console.log("🔍 Web search triggered for:", message.slice(0, 100));
+        const grokResponse = await fetch("https://api.x.ai/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${GROK_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "grok-3-mini",
+            messages: [
+              {
+                role: "system",
+                content: "You are a search assistant. Answer the user's question with factual, up-to-date information. Be concise but comprehensive. Include relevant data, dates, numbers, sources when possible. Answer in the same language as the question."
+              },
+              { role: "user", content: message }
+            ],
+            search_mode: "auto",
+          }),
+        });
+
+        if (grokResponse.ok) {
+          const grokData = await grokResponse.json();
+          const grokAnswer = grokData.choices?.[0]?.message?.content;
+          if (grokAnswer) {
+            webSearchResult = `\n\n## 🌐 DANE Z WYSZUKIWANIA INTERNETOWEGO (GROK AI):\n${grokAnswer}\n\nUŻYJ TYCH DANYCH w swojej odpowiedzi! Sformatuj je ładnie z emoji i markdown. Jeśli pytanie dotyczyło faktów — odpowiedz na podstawie tych danych. Dodaj że sprawdziłeś to w sieci. Użyj emoji 🌐 🔍.`;
+            console.log("✅ Web search result received, length:", grokAnswer.length);
+          }
+        } else {
+          console.error("Grok API error:", grokResponse.status, await grokResponse.text());
+        }
+      } catch (e) {
+        console.error("Web search error:", e);
+      }
+    }
 
     const userPrompt = message;
 
@@ -1197,7 +1252,7 @@ Znasz DOKŁADNIE każdą funkcję aplikacji:
       body: JSON.stringify({
         model: "google/gemini-3-flash-preview",
         messages: [
-          { role: "system", content: systemPrompt },
+          { role: "system", content: systemPrompt + webSearchResult },
           ...history.slice(-12).map((m: any) => ({ role: m.role, content: m.content })),
           { role: "user", content: userPrompt }
         ],
