@@ -814,8 +814,8 @@ serve(async (req) => {
           }
         }
 
-        // Don't shuffle favorites/recent - keep order (by date)
-        autoPlayTracks = (wantsFavorites || wantsRecent)
+        // Don't shuffle favorites/recent/listened - keep order (by date)
+        autoPlayTracks = (wantsFavorites || wantsRecent || wantsListened)
           ? candidates.slice(0, requestedCount)
           : [...candidates].sort(() => Math.random() - 0.5).slice(0, requestedCount);
       }
