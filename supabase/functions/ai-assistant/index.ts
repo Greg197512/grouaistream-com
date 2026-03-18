@@ -746,8 +746,8 @@ serve(async (req) => {
         
         // Also detect generic play requests without specific genre (e.g. "puść coś", "daj muzykę", "graj")
         const genericPlayPatterns = [
-          /(?:puść|pusc|graj|włącz|wlacz|odpal|zapodaj|daj|postaw|odtwórz|odtworz)\s+(?:mi\s+)?(?:coś|cos|jakąś|jakas|muzyk|piosen|utw|track|song|jakieś|jakies|losow)/i,
-          /(?:puść|pusc|graj|włącz|wlacz|odpal|zapodaj|daj)\s*$/i,
+          /(?:pu[sśćcz]{1,3}|posc|graj|w[lł][aą][cć]z|wlacz|odpal|zapodaj|daj|postaw|odtw[oó]rz|odtworz)\s+(?:mi\s+)?(?:coś|cos|jakąś|jakas|muzyk|piosen|utw|track|song|jakieś|jakies|losow)/i,
+          /(?:pu[sśćcz]{1,3}|posc|graj|w[lł][aą][cć]z|wlacz|odpal|zapodaj|daj)\s*$/i,
         ];
         const hasGenericPlay = genericPlayPatterns.some(p => p.test(lowerMessage));
         
