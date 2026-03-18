@@ -889,6 +889,10 @@ serve(async (req) => {
       ? userFavorites.map((t: any, i: number) => `${i+1}. ${t.title} — ${t.artist} [${t.genre || '?'}]`).join("\n")
       : "Brak ulubionych";
 
+    const listeningHistoryCatalog = userListeningHistory.length > 0
+      ? userListeningHistory.map((t: any, i: number) => `${i+1}. ${t.title} — ${t.artist} [${t.genre || '?'}] (${new Date(t.played_at).toLocaleDateString('pl')})`).join("\n")
+      : "Brak historii";
+
     const recentUploadsCatalog = recentUploads.length > 0
       ? recentUploads.map((t: any, i: number) => `${i+1}. ${t.title} — ${t.artist} [${t.genre || '?'}] (${new Date(t.created_at).toLocaleDateString('pl')})`).join("\n")
       : "Brak";
