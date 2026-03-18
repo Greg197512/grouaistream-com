@@ -69,7 +69,7 @@ export const QueueSidebar = ({ isOpen, onClose }: QueueSidebarProps) => {
                   </div>
                   <div className="min-w-0">
                     <p className="font-medium text-sm truncate">{currentTrack.title}</p>
-                    <p className="text-xs text-muted-foreground truncate">{currentTrack.artist}</p>
+                    <div className="flex items-center gap-1"><p className="text-xs text-muted-foreground truncate">{currentTrack.artist}</p><span className="text-[7px] font-bold text-primary/70 whitespace-nowrap">Grouarock®</span></div>
                   </div>
                 </div>
               </div>
