@@ -779,14 +779,17 @@ serve(async (req) => {
       if (hasDJIntent && requestedCount < 10) requestedCount = Math.max(requestedCount, 10);
 
       if (requestedCount > 0 && playableTracks.length > 0) {
-        // Detect source: favorites, recent uploads, or general library
-        const wantsFavorites = /ulubionych|polubion|liked|favorite|ulubione|z\s+ulubionych|z\s+polubionych/i.test(lowerMessage);
+        // Detect source: favorites, recently listened, recent uploads, or general library
+        const wantsFavorites = /ulubionych|polubion|liked|favorite|ulubione|z\s+ulubionych|z\s+polubionych|lubi[ęe]|lubisz/i.test(lowerMessage);
+        const wantsListened = /słucha[łlm]|sluchal|ostatnio\s+(?:słucha|sluch)|niedawno|grał[oe]?m|gral[oe]?m|recently\s+(?:played|listened)/i.test(lowerMessage);
         const wantsRecent = /ostatni[echm]?\s+(?:wgrany|wrzucon|dodany|upload|piosen|utw)|najnowsz|ostatnio\s+(?:wgrany|dodany|wrzucon)|z\s+serwera|newest|recent|śwież|swiez|ostatnie\s+\d/i.test(lowerMessage);
 
         let candidates: any[];
 
         if (wantsFavorites && userFavorites.length > 0) {
           candidates = [...userFavorites];
+        } else if (wantsListened && userListeningHistory.length > 0) {
+          candidates = [...userListeningHistory];
         } else if (wantsRecent && recentUploads.length > 0) {
           candidates = [...recentUploads];
         } else {
