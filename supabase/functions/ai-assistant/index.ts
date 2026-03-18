@@ -817,6 +817,36 @@ serve(async (req) => {
               const remaining = playableTracks.filter((t: any) => !candidates.includes(t));
               candidates = [...candidates, ...[...remaining].sort(() => Math.random() - 0.5)];
             }
+          } else if (userPreferences && userPreferences.genre_weights) {
+            // USE AI LEARNING: pick genres based on time-of-day preferences and weights
+            const hour = new Date().getHours();
+            let timeSlot = "morning";
+            if (hour >= 12 && hour < 18) timeSlot = "afternoon";
+            else if (hour >= 18) timeSlot = "evening";
+            else if (hour < 6) timeSlot = "night";
+
+            const timeGenres: string[] = userPreferences.daily_patterns?.[timeSlot] || [];
+            const topWeightedGenres = Object.entries(userPreferences.genre_weights as Record<string, number>)
+              .sort((a: any, b: any) => b[1] - a[1])
+              .slice(0, 5)
+              .map(([g]: any) => g);
+            const preferredGenres = [...new Set([...timeGenres, ...topWeightedGenres])];
+            const avoidSet = new Set((userPreferences.avoid_genres || []).map((g: string) => g.toLowerCase()));
+
+            candidates = playableTracks.filter((t: any) => {
+              const tGenre = (t.genre || "").toLowerCase();
+              if (avoidSet.has(tGenre)) return false;
+              return preferredGenres.some(g => tGenre.includes(g.toLowerCase()));
+            });
+
+            if (candidates.length < requestedCount) {
+              // Fill with non-avoided tracks
+              const remaining = playableTracks.filter((t: any) => {
+                const tGenre = (t.genre || "").toLowerCase();
+                return !avoidSet.has(tGenre) && !candidates.some((c: any) => c.id === t.id);
+              });
+              candidates = [...candidates, ...[...remaining].sort(() => Math.random() - 0.5)];
+            }
           } else {
             candidates = [...playableTracks].sort(() => Math.random() - 0.5);
           }
