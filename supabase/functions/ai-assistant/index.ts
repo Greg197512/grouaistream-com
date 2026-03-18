@@ -740,7 +740,7 @@ serve(async (req) => {
 
       // Also detect simple play requests without numbers
       if (requestedCount === 0) {
-        const simplePlayPatterns = [/zapodaj|puść|pusc|graj|włącz|wlacz|odpal|play|give|daj|postaw|odtwórz|odtworz/i];
+        const simplePlayPatterns = [/zapodaj|pu[sśćcz]{1,3}|posc|graj|w[lł][aą][cć]z|wlacz|odpal|play|give|daj|postaw|odtw[oó]rz|odtworz/i];
         const hasPlayIntent = simplePlayPatterns.some(p => p.test(lowerMessage));
         const hasContextKeyword = Object.keys(contextKeywords).some(k => lowerMessage.includes(k));
         
