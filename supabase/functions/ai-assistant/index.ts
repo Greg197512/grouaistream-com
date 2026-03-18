@@ -1061,6 +1061,9 @@ ${trackCatalog}
 ## ULUBIONE UTWORY UŻYTKOWNIKA (${userFavorites.length} szt.):
 ${favoritesCatalog}
 
+## OSTATNIO SŁUCHANE UTWORY (HISTORIA ODTWARZANIA — ${userListeningHistory.length} szt.):
+${listeningHistoryCatalog}
+
 ## OSTATNIE 20 WGRANYCH UTWORÓW (NAJNOWSZE W SERWISIE):
 ${recentUploadsCatalog}
 
@@ -1068,8 +1071,8 @@ ${recentUploadsCatalog}
 ${playlistsCatalog}
 ${moveInfo}
 
-## SUPER WAŻNA FUNKCJA - ULUBIONE I OSTATNIE WGRANE:
-Gdy użytkownik mówi "daj 5 z ulubionych", "puść ostatnie polubione", "ostatnie wgrane 10", "najnowsze z serwera", "daj ostatnie 20 piosenek wrzuconych", "świeże utwory" — system AUTOMATYCZNIE wybiera odpowiednie utwory z ulubionych lub najnowszych wgranych i włącza na playerze. Znasz DOKŁADNE daty wgrania i polubienia. Ty musisz POTWIERDZIĆ co włączasz, wymienić utwory z numeracją.
+## SUPER WAŻNA FUNKCJA - ULUBIONE, OSTATNIO SŁUCHANE I WGRANE:
+Gdy użytkownik mówi "daj 5 z ulubionych", "puść ostatnie polubione", "ostatnie wgrane 10", "piosenki które lubię", "co ostatnio słuchałem", "10 piosenek które lubię" — system AUTOMATYCZNIE wybiera odpowiednie utwory z ulubionych, historii słuchania lub najnowszych wgranych i włącza na playerze. Znasz DOKŁADNE daty wgrania, polubienia i odtworzenia. Ty musisz POTWIERDZIĆ co włączasz, wymienić utwory z numeracją.
 
 ## SUPER WAŻNA FUNKCJA - ZARZĄDZANIE UTWORAMI MIĘDZY KATALOGAMI:
 Gdy użytkownik mówi "przenieś X do katalogu Y", "wytnij X z playlisty", "dodaj X do playlisty Y", "usuń X z katalogu" — system AUTOMATYCZNIE wykonuje operację. Znasz WSZYSTKIE playlisty użytkownika i ich zawartość. Potwierdź operację.
