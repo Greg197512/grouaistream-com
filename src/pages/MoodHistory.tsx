@@ -706,7 +706,7 @@ export default function MoodHistory() {
                                 </div>
                               </div>
                               <p className="text-sm font-medium truncate">{track.title}</p>
-                              <p className="text-xs text-muted-foreground truncate">{track.artist}</p>
+                              <div className="flex items-center gap-1"><p className="text-xs text-muted-foreground truncate">{track.artist}</p><span className="text-[7px] font-bold text-primary/70 whitespace-nowrap">Grouarock®</span></div>
                             </motion.div>
                           ))}
                         </div>

@@ -451,7 +451,7 @@ const Library = () => {
                             </div>
                             <div className="flex-1 min-w-0">
                               <p className={cn("text-sm font-medium truncate", isCurrent && "text-primary")}>{track.title}</p>
-                              <p className="text-xs text-muted-foreground truncate">{track.artist}</p>
+                              <div className="flex items-center gap-1"><p className="text-xs text-muted-foreground truncate">{track.artist}</p><span className="text-[7px] font-bold text-primary/70 whitespace-nowrap">Grouarock®</span></div>
                             </div>
                             {isCurrent && isPlaying && (
                               <div className="flex gap-0.5">
