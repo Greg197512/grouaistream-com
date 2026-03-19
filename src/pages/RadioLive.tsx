@@ -354,8 +354,13 @@ const RadioLive = () => {
       audioRef.current = audio;
       audio.addEventListener("loadeddata", () => {
         audio.currentTime = offset;
-        audio.play().catch(() => {});
-        setIsPlaying(true);
+        audio.play().then(() => {
+          setIsPlaying(true);
+          setAutoplayBlocked(false);
+        }).catch(() => {
+          setAutoplayBlocked(true);
+          setIsPlaying(false);
+        });
       });
       audio.addEventListener("timeupdate", () => {
         if (audio.duration) setProgress((audio.currentTime / audio.duration) * 100);
