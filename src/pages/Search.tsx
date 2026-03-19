@@ -161,7 +161,7 @@ const Search = () => {
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [query, allTracks, normalize, filterTracks]);
+  }, [query, allTracks, normalize]);
 
   // CC Mixter search (debounced)
   useEffect(() => {
