@@ -1,76 +1,79 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Download, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 }
 
-const IOS_INSTALL_KEY = "grouai_ios_install_dismissed";
-const PWA_INSTALL_KEY = "grouai_pwa_install_dismissed";
+// Permanent key — set only when user installs or clicks "Rozumiem" on iOS
+const PWA_INSTALLED_KEY = "grouai_pwa_installed";
 
 export const PWAInstallPrompt = () => {
   const isMobile = useIsMobile();
+  const { user } = useAuth();
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showPrompt, setShowPrompt] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
 
+  // Capture the beforeinstallprompt event (Chrome/Edge/Firefox)
   useEffect(() => {
-    // Check if already running as PWA
-    const standalone =
-      window.matchMedia("(display-mode: standalone)").matches ||
-      (navigator as any).standalone === true;
-    setIsStandalone(standalone);
-    if (standalone) return;
-
-    // Detect iOS
-    const ua = navigator.userAgent;
-    const ios = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-    setIsIOS(ios);
-
-    if (ios) {
-      // Show iOS-specific prompt after delay if not dismissed
-      const dismissed = localStorage.getItem(IOS_INSTALL_KEY);
-      if (!dismissed) {
-        const timer = setTimeout(() => setShowPrompt(true), 3000);
-        return () => clearTimeout(timer);
-      }
-      return;
-    }
-
-    // Chrome/Edge/Firefox - listen for beforeinstallprompt
     const handler = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
-      const dismissed = localStorage.getItem(PWA_INSTALL_KEY);
-      if (!dismissed) {
-        setTimeout(() => setShowPrompt(true), 2000);
-      }
     };
-
     window.addEventListener("beforeinstallprompt", handler);
     return () => window.removeEventListener("beforeinstallprompt", handler);
   }, []);
 
-  const handleInstall = async () => {
+  // Detect platform once
+  useEffect(() => {
+    const standalone =
+      window.matchMedia("(display-mode: standalone)").matches ||
+      (navigator as any).standalone === true;
+    setIsStandalone(standalone);
+
+    const ua = navigator.userAgent;
+    const ios = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    setIsIOS(ios);
+  }, []);
+
+  // Show prompt after login on mobile — only if not already installed
+  useEffect(() => {
+    if (!user || !isMobile || isStandalone) return;
+    if (localStorage.getItem(PWA_INSTALLED_KEY)) return;
+
+    const timer = setTimeout(() => setShowPrompt(true), 2000);
+    return () => clearTimeout(timer);
+  }, [user, isMobile, isStandalone]);
+
+  const handleInstall = useCallback(async () => {
     if (deferredPrompt) {
       await deferredPrompt.prompt();
       const { outcome } = await deferredPrompt.userChoice;
       if (outcome === "accepted") {
-        setShowPrompt(false);
+        localStorage.setItem(PWA_INSTALLED_KEY, "1");
       }
       setDeferredPrompt(null);
     }
-  };
-
-  const handleDismiss = () => {
     setShowPrompt(false);
-    localStorage.setItem(isIOS ? IOS_INSTALL_KEY : PWA_INSTALL_KEY, "1");
-  };
+  }, [deferredPrompt]);
+
+  const handleIOSConfirm = useCallback(() => {
+    // User acknowledged iOS instructions — mark as "installed" permanently
+    localStorage.setItem(PWA_INSTALLED_KEY, "1");
+    setShowPrompt(false);
+  }, []);
+
+  const handleDismiss = useCallback(() => {
+    // Just close for this session — will show again on next login
+    setShowPrompt(false);
+  }, []);
 
   if (isStandalone || !showPrompt) return null;
 
@@ -140,14 +143,22 @@ export const PWAInstallPrompt = () => {
           )}
 
           {isIOS && (
-            <div className="mt-3">
+            <div className="mt-3 flex gap-2">
               <Button
                 onClick={handleDismiss}
                 variant="ghost"
                 size="sm"
-                className="w-full text-xs"
+                className="flex-1 text-xs"
               >
-                Rozumiem
+                Nie teraz
+              </Button>
+              <Button
+                onClick={handleIOSConfirm}
+                size="sm"
+                className="flex-1 text-xs gap-1.5 bg-primary hover:bg-primary/90"
+              >
+                <Download className="h-3.5 w-3.5" />
+                Rozumiem, zainstaluję
               </Button>
             </div>
           )}
