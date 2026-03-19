@@ -19,6 +19,18 @@ const isMusicPlaying = () => {
   return musicAudio && !musicAudio.paused && musicAudio.volume > 0.05;
 };
 
+export function useClapControl({ enabled, onSingleClap, onDoubleClap }: UseClapControlOptions) {
+  const rafRef = useRef<number | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const contextRef = useRef<AudioContext | null>(null);
+  const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const lastPeakRef = useRef(0);
+  const clapTimesRef = useRef<number[]>([]);
+  const clapDecisionTimerRef = useRef<number | null>(null);
+  const peakStartRef = useRef(0);
+  const wasPeakRef = useRef(false);
+
   useEffect(() => {
     if (!enabled) {
       return;
