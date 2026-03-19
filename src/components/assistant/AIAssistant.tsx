@@ -17,7 +17,7 @@ import { WaveformPlayer } from "@/components/studio/WaveformPlayer";
 import { toast } from "sonner";
 
 interface ChatAttachment {
-  type: "image" | "audio";
+  type: "image" | "audio" | "video";
   url: string; // object URL or uploaded URL
   name: string;
   file?: File;
