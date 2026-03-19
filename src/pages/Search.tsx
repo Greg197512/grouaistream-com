@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search as SearchIcon, Music, Mic, MicOff, Download, Loader2, Youtube, Sparkles, Globe } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -65,7 +66,16 @@ const ccTrackToTrack = (cc: CCMixterTrack): Track => {
 };
 
 const Search = () => {
-  const [query, setQuery] = useState("");
+  const [searchParams] = useSearchParams();
+  const urlQuery = searchParams.get("q") || "";
+  const [query, setQuery] = useState(urlQuery);
+
+  // Sync query from URL params (when navigating from TopBar)
+  useEffect(() => {
+    if (urlQuery && urlQuery !== query) {
+      setQuery(urlQuery);
+    }
+  }, [urlQuery]);
   const [results, setResults] = useState<Track[]>([]);
   const [ccResults, setCcResults] = useState<Track[]>([]);
   const [allTracks, setAllTracks] = useState<Track[]>([]);

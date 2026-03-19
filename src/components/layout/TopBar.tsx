@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   ChevronLeft, ChevronRight, Search, Bell, User, Crown, LogOut,
@@ -48,6 +48,15 @@ export const TopBar = () => {
       navigate(`/search?q=${encodeURIComponent(searchQuery)}`);
     }
   };
+
+  // Navigate to search page as user types
+  useEffect(() => {
+    if (!searchQuery.trim()) return;
+    const timer = setTimeout(() => {
+      navigate(`/search?q=${encodeURIComponent(searchQuery)}`, { replace: true });
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [searchQuery, navigate]);
 
   const getUserInitials = () => {
     if (!user?.email) return "U";
