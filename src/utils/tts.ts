@@ -363,12 +363,13 @@ const speakBrowser = (text: string, opts?: {
       }
 
       _isSpeaking = true;
-      utterance.onend = () => { _isSpeaking = false; resolve(); };
-      utterance.onerror = () => { _isSpeaking = false; resolve(); };
+      duckMusicVolume();
+      utterance.onend = () => { _isSpeaking = false; restoreMusicVolume(); resolve(); };
+      utterance.onerror = () => { _isSpeaking = false; restoreMusicVolume(); resolve(); };
       window.speechSynthesis.speak(utterance);
 
       setTimeout(() => {
-        if (_isSpeaking) { _isSpeaking = false; resolve(); }
+        if (_isSpeaking) { _isSpeaking = false; restoreMusicVolume(); resolve(); }
       }, Math.max(text.length * 100, 3000));
     });
   };
