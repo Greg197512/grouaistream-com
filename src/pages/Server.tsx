@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 
 const ALLOWED_AUDIO = ["audio/mpeg", "audio/wav", "audio/mp3", "audio/x-wav"];
 const ALLOWED_VIDEO = ["video/mp4", "video/webm"];
+const ALLOWED_IMAGE = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 const ALL_ALLOWED = [...ALLOWED_AUDIO, ...ALLOWED_VIDEO];
 const MAX_SIZE = 500 * 1024 * 1024;
 
@@ -31,6 +32,8 @@ interface QueuedFile {
   status: "pending" | "uploading" | "done" | "error";
   progress: number;
   error?: string;
+  coverFile?: File;
+  coverPreview?: string;
 }
 
 const parseFileName = (name: string) => {
