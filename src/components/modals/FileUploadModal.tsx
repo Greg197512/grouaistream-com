@@ -273,7 +273,7 @@ export const FileUploadModal = ({ isOpen, onClose, onSuccess }: FileUploadModalP
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".mp3,.wav,.m4a,.ogg,.flac,.mp4,.webm,.aac"
+                accept=".mp3,.wav,.m4a,.ogg,.flac,.aac,.opus,.wma,.weba,.mp4,.webm,.mkv,.avi,.mov,.3gp,.ogv"
                 multiple
                 onChange={handleFileSelect}
                 className="hidden"

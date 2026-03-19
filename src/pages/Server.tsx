@@ -595,7 +595,7 @@ const Server = () => {
                         <input
                           ref={fileInputRef}
                           type="file"
-                          accept=".mp3,.wav,.mp4,.webm"
+                          accept=".mp3,.wav,.m4a,.ogg,.flac,.aac,.opus,.wma,.weba,.mp4,.webm,.mkv,.avi,.mov,.3gp,.ogv"
                           multiple
                           onChange={(e) => { if (e.target.files) addFilesToQueue(e.target.files); e.target.value = ""; }}
                           className="hidden"
