@@ -66,7 +66,8 @@ const ccTrackToTrack = (cc: CCMixterTrack): Track => {
 };
 
 const Search = () => {
-  const [query, setQuery] = useState("");
+  const [searchParams] = useSearchParams();
+  const [query, setQuery] = useState(searchParams.get("q") || "");
   const [results, setResults] = useState<Track[]>([]);
   const [ccResults, setCcResults] = useState<Track[]>([]);
   const [allTracks, setAllTracks] = useState<Track[]>([]);
