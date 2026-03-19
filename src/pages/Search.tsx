@@ -85,7 +85,6 @@ const Search = () => {
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef<any>(null);
   const { playTrack, playPlaylist, currentTrack, isPlaying, togglePlay } = usePlayer();
-  const { filterTracks } = useUnlock();
   const { t } = useLanguage();
 
   useEffect(() => {
