@@ -1007,6 +1007,11 @@ export const AIAssistant = () => {
                   >
                     {att.type === "image" ? (
                       <img src={att.url} alt={att.name} className="w-14 h-14 rounded-lg object-cover border border-white/10" />
+                    ) : att.type === "video" ? (
+                      <div className="w-14 h-14 rounded-lg bg-white/5 border border-white/10 flex flex-col items-center justify-center">
+                        <Film className="h-5 w-5 text-accent" />
+                        <span className="text-[7px] text-muted-foreground mt-0.5 max-w-[48px] truncate">{att.name}</span>
+                      </div>
                     ) : (
                       <div className="w-14 h-14 rounded-lg bg-white/5 border border-white/10 flex flex-col items-center justify-center">
                         <FileAudio className="h-5 w-5 text-primary" />
