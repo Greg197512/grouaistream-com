@@ -91,7 +91,7 @@ const Search = () => {
     const loadTracks = async () => {
       const { data, error } = await supabase.from("tracks").select("*").or("audio_url.not.is.null,video_url.not.is.null").order("created_at", { ascending: false });
       if (error) { console.error("Error loading tracks:", error); return; }
-      const playableTracks = filterTracks((data || []).filter(isPlayableTrack));
+      const playableTracks = (data || []).filter(isPlayableTrack);
       setAllTracks(playableTracks);
     };
     loadTracks();
