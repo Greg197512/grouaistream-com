@@ -66,6 +66,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   const trackStartTime = useRef<number>(0);
   const isVideoModeRef = useRef(false);
   const nextTrackRef = useRef<(isUserSkip?: boolean) => void>(() => {});
+  const userIdRef = useRef<string | null>(null);
   
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -89,13 +90,18 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => { isVideoModeRef.current = isVideoMode; }, [isVideoMode]);
 
   // Get user ID from Supabase auth directly to avoid circular dependency
+  // Use ref to avoid re-triggering playback when auth state changes
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setUserId(session?.user?.id ?? null);
+      const uid = session?.user?.id ?? null;
+      setUserId(uid);
+      userIdRef.current = uid;
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
-      setUserId(session?.user?.id ?? null);
+      const uid = session?.user?.id ?? null;
+      setUserId(uid);
+      userIdRef.current = uid;
     });
 
     return () => subscription.unsubscribe();
@@ -296,15 +302,17 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
       }
     }
 
-    if (userId) {
+    // Log listening history using ref (no re-trigger on auth change)
+    const uid = userIdRef.current;
+    if (uid) {
       supabase.from('listening_history').insert({
-        user_id: userId,
+        user_id: uid,
         track_id: currentTrack.id,
       }).then(({ error }) => {
         if (error) console.error("Failed to log listening history:", error);
       });
     }
-  }, [currentTrack, userId]);
+  }, [currentTrack]); // Removed userId — use ref to avoid restarting playback on auth change
 
   // YouTube time update handler
   const onYouTubeTimeUpdate = useCallback((time: number, dur: number) => {
