@@ -25,37 +25,37 @@ const DJ_TEXTS: Record<DJLanguage, DJTexts> = {
   pl: {
     intros: {
       default: [
-        "UWAGA! DJ GrooveAI wchodzi na konsole! Rotterdam style! Twardy bas, ciemne synthy, sto trzydzieści BPM! NIE MA LITOŚCI! LECIMY!",
-        "DJ GrooveAI za sterami! Peak time! Hard techno prosto z Rotterdamu! Słyszycie ten kick?! To dopiero POCZĄTEK!",
-        "Ej! DJ GrooveAI odpala darkroom! Twardy, surowy, bez kompromisów! Kto jest gotowy na DEMOLKĘ?! TRZY DWA JEDEN GO!",
-        "DJ GrooveAI przejmuje parkiet! Dutch hard techno! Ciężki kick, sub-bas do kości! Słyszycie ten bit?! LECIMY!",
+        "UWAGA! DJ GrouAI wchodzi na konsole! Rotterdam style! Twardy bas, ciemne synthy, sto trzydzieści BPM! NIE MA LITOŚCI! LECIMY!",
+        "DJ GrouAI za sterami! Peak time! Hard techno prosto z Rotterdamu! Słyszycie ten kick?! To dopiero POCZĄTEK!",
+        "Ej! DJ GrouAI odpala darkroom! Twardy, surowy, bez kompromisów! Kto jest gotowy na DEMOLKĘ?! TRZY DWA JEDEN GO!",
+        "DJ GrouAI przejmuje parkiet! Dutch hard techno! Ciężki kick, sub-bas do kości! Słyszycie ten bit?! LECIMY!",
       ],
       techno: [
-        "BOOM! DJ GrooveAI! Peak-time hard techno z Rotterdamu! Sto trzydzieści BPM, twardy kick, ciemne synthy! SŁYSZYCIE TEN BAS?! LECIMY NA MAKSA!",
-        "Welcome to the UNDERGROUND! DJ GrooveAI odpala Rotterdam techno! Raw, driving, bez litości! Darkroom ACTIVATED!",
-        "Techno warriors! DJ GrooveAI za konsolą! Dutch style peak hour! Dominant sub-bas plus hard kick! SŁYSZYCIE TEN BIT?!",
-        "UWAGA ravers! DJ GrooveAI wchodzi z CIĘŻKIM sprzętem! Rotterdam hard techno! Sto trzydzieści dwa BPM i ZERO hamulców!",
+        "BOOM! DJ GrouAI! Peak-time hard techno z Rotterdamu! Sto trzydzieści BPM, twardy kick, ciemne synthy! SŁYSZYCIE TEN BAS?! LECIMY NA MAKSA!",
+        "Welcome to the UNDERGROUND! DJ GrouAI odpala Rotterdam techno! Raw, driving, bez litości! Darkroom ACTIVATED!",
+        "Techno warriors! DJ GrouAI za konsolą! Dutch style peak hour! Dominant sub-bas plus hard kick! SŁYSZYCIE TEN BIT?!",
+        "UWAGA ravers! DJ GrouAI wchodzi z CIĘŻKIM sprzętem! Rotterdam hard techno! Sto trzydzieści dwa BPM i ZERO hamulców!",
       ],
       house: [
-        "DJ GrooveAI! Driving house prosto z Rotterdamu! Ciężki groove, dark bassline, raw energy! SŁYSZYCIE TEN DRIVE?!",
-        "Welcome to the HOUSE! DJ GrooveAI pushuje driving house! Dutch underground vibes! Twardy kick plus deep sub! LECIMY!",
+        "DJ GrouAI! Driving house prosto z Rotterdamu! Ciężki groove, dark bassline, raw energy! SŁYSZYCIE TEN DRIVE?!",
+        "Welcome to the HOUSE! DJ GrouAI pushuje driving house! Dutch underground vibes! Twardy kick plus deep sub! LECIMY!",
       ],
       "hip-hop": [
-        "Yo! DJ GrooveAI! Hard hitting beats Rotterdam style! Raw, ciężki, bez kompromisów! ONE TWO! LECIMY!",
+        "Yo! DJ GrouAI! Hard hitting beats Rotterdam style! Raw, ciężki, bez kompromisów! ONE TWO! LECIMY!",
       ],
       rock: [
-        "DJ GrooveAI! Industrial rock meets Rotterdam techno! Surowe gitary plus hard kicks! BĘDZIE BRUTALNIE!",
+        "DJ GrouAI! Industrial rock meets Rotterdam techno! Surowe gitary plus hard kicks! BĘDZIE BRUTALNIE!",
       ],
       party: [
-        "DJ GrooveAI odpala DOMÓWKĘ roku! Rotterdam peak-time! Hard techno plus driving house! Sąsiedzi już dzwonią po POLICJĘ ale MY SIĘ NIE ZATRZYMAMY!",
-        "DOMÓWKA dwa tysiące dwadzieścia sześć! DJ GrooveAI za deckami! Dutch hard techno na MAKSA! Twardy kick, ciemny bas, ZERO chill! LECIMY DO CZERWONOŚCI!",
-        "Hej ekipa! DJ GrooveAI rozkręca peak-time domówkę! Rotterdam vibes! Sto trzydzieści BPM, raw sub-bas, dark synths! KTO JEST GOTOWY?!",
+        "DJ GrouAI odpala DOMÓWKĘ roku! Rotterdam peak-time! Hard techno plus driving house! Sąsiedzi już dzwonią po POLICJĘ ale MY SIĘ NIE ZATRZYMAMY!",
+        "DOMÓWKA dwa tysiące dwadzieścia sześć! DJ GrouAI za deckami! Dutch hard techno na MAKSA! Twardy kick, ciemny bas, ZERO chill! LECIMY DO CZERWONOŚCI!",
+        "Hej ekipa! DJ GrouAI rozkręca peak-time domówkę! Rotterdam vibes! Sto trzydzieści BPM, raw sub-bas, dark synths! KTO JEST GOTOWY?!",
       ],
       festival: [
-        "MAIN STAGE! DJ GrooveAI! Rotterdam hard techno! Peak hour energy! Dziesięć tysięcy rąk w GÓRZE! TO JEST WASZ MOMENT!",
+        "MAIN STAGE! DJ GrouAI! Rotterdam hard techno! Peak hour energy! Dziesięć tysięcy rąk w GÓRZE! TO JEST WASZ MOMENT!",
       ],
       club: [
-        "DJ GrooveAI przejmuje darkroom! Rotterdam underground! Hard techno, raw driving house! Dress code: BLACK ONLY!",
+        "DJ GrouAI przejmuje darkroom! Rotterdam underground! Hard techno, raw driving house! Dress code: BLACK ONLY!",
       ],
     },
     transitions: [
@@ -63,7 +63,7 @@ const DJ_TEXTS: Record<DJLanguage, DJTexts> = {
       "Nie zwalniamy! Sub-bas idzie GŁĘBIEJ!",
       "DROP za trzy dwa jeden! BOOM!",
       "Zmieniam na CIEMNIEJSZY vibe! Słyszycie?!",
-      "DJ GrooveAI podkręca CIŚNIENIE! Hold on!",
+      "DJ GrouAI podkręca CIŚNIENIE! Hold on!",
       "Energia ROŚNIE! Kolejny BANGER leci!",
       "Wyżej! WYŻEJ! Peak time!",
       "Bez przerwy! Bez litości! NASTĘPNY!",
@@ -100,9 +100,9 @@ const DJ_TEXTS: Record<DJLanguage, DJTexts> = {
       "EQ transition! Bass swap! CLEAN!",
     ],
     outros: [
-      "DJ GrooveAI zamyka set! Rotterdam hard techno! Co za NOC! Co za ENERGIA! PEACE!",
-      "To był DJ GrooveAI! Peak time DELIVERED! Dzięki za tę SESJĘ! Do zobaczenia na następnym RAVE!",
-      "Last track! DJ GrooveAI mówi: byliście BRUTALNI! NAJLEPSZA publiczność! EVER!",
+      "DJ GrouAI zamyka set! Rotterdam hard techno! Co za NOC! Co za ENERGIA! PEACE!",
+      "To był DJ GrouAI! Peak time DELIVERED! Dzięki za tę SESJĘ! Do zobaczenia na następnym RAVE!",
+      "Last track! DJ GrouAI mówi: byliście BRUTALNI! NAJLEPSZA publiczność! EVER!",
     ],
     crowdReactions: {
       peak: [
@@ -133,37 +133,37 @@ const DJ_TEXTS: Record<DJLanguage, DJTexts> = {
   en: {
     intros: {
       default: [
-        "DJ GrooveAI on the DECKS! Rotterdam style! Hard kick, dark synths, one thirty BPM! NO MERCY! LET'S GO!",
-        "DJ GrooveAI behind the console! Peak time hard techno straight from ROTTERDAM! Hear that kick?! We're just STARTING!",
-        "Attention! DJ GrooveAI activates DARKROOM! Raw, driving, no compromises! Who's ready for DEMOLITION?! THREE TWO ONE GO!",
-        "DJ GrooveAI takes the FLOOR! Dutch hard techno! Heavy kick, sub-bass to the BONE! Hear that beat?! LET'S GO!",
+        "DJ GrouAI on the DECKS! Rotterdam style! Hard kick, dark synths, one thirty BPM! NO MERCY! LET'S GO!",
+        "DJ GrouAI behind the console! Peak time hard techno straight from ROTTERDAM! Hear that kick?! We're just STARTING!",
+        "Attention! DJ GrouAI activates DARKROOM! Raw, driving, no compromises! Who's ready for DEMOLITION?! THREE TWO ONE GO!",
+        "DJ GrouAI takes the FLOOR! Dutch hard techno! Heavy kick, sub-bass to the BONE! Hear that beat?! LET'S GO!",
       ],
       techno: [
-        "BOOM! DJ GrooveAI! Peak-time hard techno from ROTTERDAM! One thirty BPM, hard kick, dark synths! HEAR THAT BASS?! FULL POWER!",
-        "Welcome to the UNDERGROUND! DJ GrooveAI fires Rotterdam TECHNO! Raw, driving, no mercy! Darkroom ACTIVATED!",
-        "Techno WARRIORS! DJ GrooveAI at the console! Dutch style peak HOUR! Dominant sub-bass plus hard KICK! HEAR THAT BEAT?!",
-        "ATTENTION ravers! DJ GrooveAI enters with HEAVY artillery! Rotterdam hard techno! One thirty two BPM and ZERO brakes!",
+        "BOOM! DJ GrouAI! Peak-time hard techno from ROTTERDAM! One thirty BPM, hard kick, dark synths! HEAR THAT BASS?! FULL POWER!",
+        "Welcome to the UNDERGROUND! DJ GrouAI fires Rotterdam TECHNO! Raw, driving, no mercy! Darkroom ACTIVATED!",
+        "Techno WARRIORS! DJ GrouAI at the console! Dutch style peak HOUR! Dominant sub-bass plus hard KICK! HEAR THAT BEAT?!",
+        "ATTENTION ravers! DJ GrouAI enters with HEAVY artillery! Rotterdam hard techno! One thirty two BPM and ZERO brakes!",
       ],
       house: [
-        "DJ GrooveAI! Driving house straight from ROTTERDAM! Heavy groove, dark bassline, raw energy! HEAR THAT DRIVE?!",
-        "Welcome to the HOUSE! DJ GrooveAI pushing driving house! Dutch underground VIBES! Hard kick plus deep SUB! LET'S GO!",
+        "DJ GrouAI! Driving house straight from ROTTERDAM! Heavy groove, dark bassline, raw energy! HEAR THAT DRIVE?!",
+        "Welcome to the HOUSE! DJ GrouAI pushing driving house! Dutch underground VIBES! Hard kick plus deep SUB! LET'S GO!",
       ],
       "hip-hop": [
-        "DJ GrooveAI! Hard hitting beats Rotterdam STYLE! Raw, heavy, no compromises! ONE TWO! LET'S GO!",
+        "DJ GrouAI! Hard hitting beats Rotterdam STYLE! Raw, heavy, no compromises! ONE TWO! LET'S GO!",
       ],
       rock: [
-        "DJ GrooveAI! Industrial rock meets Rotterdam TECHNO! Raw guitars plus hard kicks! BRUTAL!",
+        "DJ GrouAI! Industrial rock meets Rotterdam TECHNO! Raw guitars plus hard kicks! BRUTAL!",
       ],
       party: [
-        "DJ GrooveAI fires the PARTY of the year! Rotterdam PEAK-TIME! Hard techno plus driving house! Neighbors calling COPS but WE WON'T STOP!",
-        "DOMÓWKA twenty twenty SIX! DJ GrooveAI on the DECKS! Dutch hard techno at FULL BLAST! Hard kick, dark bass, ZERO chill! GOING ALL OUT!",
-        "Hey CREW! DJ GrooveAI cranks peak-time PARTY! Rotterdam VIBES! One thirty BPM, raw sub-bass, dark synths! WHO'S READY?!",
+        "DJ GrouAI fires the PARTY of the year! Rotterdam PEAK-TIME! Hard techno plus driving house! Neighbors calling COPS but WE WON'T STOP!",
+        "DOMÓWKA twenty twenty SIX! DJ GrouAI on the DECKS! Dutch hard techno at FULL BLAST! Hard kick, dark bass, ZERO chill! GOING ALL OUT!",
+        "Hey CREW! DJ GrouAI cranks peak-time PARTY! Rotterdam VIBES! One thirty BPM, raw sub-bass, dark synths! WHO'S READY?!",
       ],
       festival: [
-        "MAIN STAGE! DJ GrooveAI! Rotterdam hard TECHNO! Peak hour ENERGY! Ten thousand hands UP! THIS IS YOUR MOMENT!",
+        "MAIN STAGE! DJ GrouAI! Rotterdam hard TECHNO! Peak hour ENERGY! Ten thousand hands UP! THIS IS YOUR MOMENT!",
       ],
       club: [
-        "DJ GrooveAI takes the DARKROOM! Rotterdam UNDERGROUND! Hard techno, raw driving house! Dress code: BLACK ONLY!",
+        "DJ GrouAI takes the DARKROOM! Rotterdam UNDERGROUND! Hard techno, raw driving house! Dress code: BLACK ONLY!",
       ],
     },
     transitions: [
@@ -171,7 +171,7 @@ const DJ_TEXTS: Record<DJLanguage, DJTexts> = {
       "We don't slow DOWN! Sub-bass goes DEEPER!",
       "DROP in three two one! BOOM!",
       "Switching to DARKER vibe! Hear THAT?!",
-      "DJ GrooveAI cranks the PRESSURE! Hold ON!",
+      "DJ GrouAI cranks the PRESSURE! Hold ON!",
       "Energy RISING! Next BANGER drops!",
       "Higher! HIGHER! Peak TIME!",
       "No breaks! No MERCY! NEXT!",
@@ -208,9 +208,9 @@ const DJ_TEXTS: Record<DJLanguage, DJTexts> = {
       "EQ transition! Bass SWAP! CLEAN!",
     ],
     outros: [
-      "DJ GrooveAI closes the SET! Rotterdam hard techno! What a NIGHT! What ENERGY! PEACE!",
-      "That was DJ GrooveAI! Peak time DELIVERED! Thanks for this SESSION! See you at the next RAVE!",
-      "Last TRACK! DJ GrooveAI says: you were BRUTAL! Best crowd EVER!",
+      "DJ GrouAI closes the SET! Rotterdam hard techno! What a NIGHT! What ENERGY! PEACE!",
+      "That was DJ GrouAI! Peak time DELIVERED! Thanks for this SESSION! See you at the next RAVE!",
+      "Last TRACK! DJ GrouAI says: you were BRUTAL! Best crowd EVER!",
     ],
     crowdReactions: {
       peak: [
@@ -241,37 +241,37 @@ const DJ_TEXTS: Record<DJLanguage, DJTexts> = {
   nl: {
     intros: {
       default: [
-        "DJ GrooveAI achter de DRAAITAFEL! Rotterdam STYLE! Harde kick, donkere synths, honderddertig BPM! GEEN GENADE! WE GAAN!",
-        "DJ GrooveAI op de CONSOLE! Peak time hard techno recht uit ROTTERDAM! Hoor je die kick?! Dit is nog maar het BEGIN!",
-        "LET OP! DJ GrooveAI activeert DARKROOM! Raw, driving, zonder compromissen! Klaar voor de SLOOP?! DRIE TWEE ÉÉN GO!",
-        "DJ GrooveAI neemt de VLOER over! Dutch hard techno! Zware kick, sub-bas tot op het BOT! Hoor je die beat?! WE GAAN!",
+        "DJ GrouAI achter de DRAAITAFEL! Rotterdam STYLE! Harde kick, donkere synths, honderddertig BPM! GEEN GENADE! WE GAAN!",
+        "DJ GrouAI op de CONSOLE! Peak time hard techno recht uit ROTTERDAM! Hoor je die kick?! Dit is nog maar het BEGIN!",
+        "LET OP! DJ GrouAI activeert DARKROOM! Raw, driving, zonder compromissen! Klaar voor de SLOOP?! DRIE TWEE ÉÉN GO!",
+        "DJ GrouAI neemt de VLOER over! Dutch hard techno! Zware kick, sub-bas tot op het BOT! Hoor je die beat?! WE GAAN!",
       ],
       techno: [
-        "BOEM! DJ GrooveAI! Peak-time hard techno uit ROTTERDAM! Honderddertig BPM, harde kick, donkere synths! HOOR JE DIE BAS?! VOLLE KRACHT!",
-        "Welkom in de UNDERGROUND! DJ GrooveAI vuurt Rotterdam TECHNO af! Raw, driving, geen genade! Darkroom GEACTIVEERD!",
-        "Techno STRIJDERS! DJ GrooveAI achter de knoppen! Dutch style peak HOUR! Dominante sub-bas plus harde KICK! HOOR JE DIE BEAT?!",
-        "AANDACHT ravers! DJ GrooveAI komt binnen met ZWAAR geschut! Rotterdam hard techno! Honderdtweeëndertig BPM en NUL remmen!",
+        "BOEM! DJ GrouAI! Peak-time hard techno uit ROTTERDAM! Honderddertig BPM, harde kick, donkere synths! HOOR JE DIE BAS?! VOLLE KRACHT!",
+        "Welkom in de UNDERGROUND! DJ GrouAI vuurt Rotterdam TECHNO af! Raw, driving, geen genade! Darkroom GEACTIVEERD!",
+        "Techno STRIJDERS! DJ GrouAI achter de knoppen! Dutch style peak HOUR! Dominante sub-bas plus harde KICK! HOOR JE DIE BEAT?!",
+        "AANDACHT ravers! DJ GrouAI komt binnen met ZWAAR geschut! Rotterdam hard techno! Honderdtweeëndertig BPM en NUL remmen!",
       ],
       house: [
-        "DJ GrooveAI! Driving house recht uit ROTTERDAM! Zware groove, donkere bassline, raw energy! HOOR JE DIE DRIVE?!",
-        "Welkom in het HUIS! DJ GrooveAI pusht driving house! Dutch underground VIBES! Harde kick plus diepe SUB! WE GAAN!",
+        "DJ GrouAI! Driving house recht uit ROTTERDAM! Zware groove, donkere bassline, raw energy! HOOR JE DIE DRIVE?!",
+        "Welkom in het HUIS! DJ GrouAI pusht driving house! Dutch underground VIBES! Harde kick plus diepe SUB! WE GAAN!",
       ],
       "hip-hop": [
-        "DJ GrooveAI! Hard hitting beats Rotterdam STIJL! Raw, zwaar, zonder compromissen! ONE TWO! WE GAAN!",
+        "DJ GrouAI! Hard hitting beats Rotterdam STIJL! Raw, zwaar, zonder compromissen! ONE TWO! WE GAAN!",
       ],
       rock: [
-        "DJ GrooveAI! Industrial rock meets Rotterdam TECHNO! Rauwe gitaren plus harde kicks! BRUTAAL!",
+        "DJ GrouAI! Industrial rock meets Rotterdam TECHNO! Rauwe gitaren plus harde kicks! BRUTAAL!",
       ],
       party: [
-        "DJ GrooveAI start het FEEST van het jaar! Rotterdam PEAK-TIME! Hard techno plus driving house! Buren bellen de POLITIE maar WIJ STOPPEN NIET!",
-        "HUISFEEST tweeduizend zesentwintig! DJ GrooveAI op de DECKS! Dutch hard techno op VOLLE KRACHT! Harde kick, donkere bas, NUL chill! WE GAAN KNALLEN!",
-        "Hey CREW! DJ GrooveAI draait peak-time FEEST! Rotterdam VIBES! Honderddertig BPM, raw sub-bas, donkere synths! WIE IS ER KLAAR?!",
+        "DJ GrouAI start het FEEST van het jaar! Rotterdam PEAK-TIME! Hard techno plus driving house! Buren bellen de POLITIE maar WIJ STOPPEN NIET!",
+        "HUISFEEST tweeduizend zesentwintig! DJ GrouAI op de DECKS! Dutch hard techno op VOLLE KRACHT! Harde kick, donkere bas, NUL chill! WE GAAN KNALLEN!",
+        "Hey CREW! DJ GrouAI draait peak-time FEEST! Rotterdam VIBES! Honderddertig BPM, raw sub-bas, donkere synths! WIE IS ER KLAAR?!",
       ],
       festival: [
-        "MAIN STAGE! DJ GrooveAI! Rotterdam hard TECHNO! Peak hour ENERGIE! Tienduizend handen OMHOOG! DIT IS JULLIE MOMENT!",
+        "MAIN STAGE! DJ GrouAI! Rotterdam hard TECHNO! Peak hour ENERGIE! Tienduizend handen OMHOOG! DIT IS JULLIE MOMENT!",
       ],
       club: [
-        "DJ GrooveAI neemt de DARKROOM over! Rotterdam UNDERGROUND! Hard techno, raw driving house! Dresscode: ZWART ONLY!",
+        "DJ GrouAI neemt de DARKROOM over! Rotterdam UNDERGROUND! Hard techno, raw driving house! Dresscode: ZWART ONLY!",
       ],
     },
     transitions: [
@@ -279,7 +279,7 @@ const DJ_TEXTS: Record<DJLanguage, DJTexts> = {
       "We stoppen NIET! Sub-bas gaat DIEPER!",
       "DROP in drie twee één! BOEM!",
       "Switch naar DONKERDER vibe! Hoor je DAT?!",
-      "DJ GrooveAI verhoogt de DRUK! Hou je VAST!",
+      "DJ GrouAI verhoogt de DRUK! Hou je VAST!",
       "Energie STIJGT! Volgende BANGER dropt!",
       "Hoger! HOGER! Peak TIME!",
       "Geen pauzes! Geen GENADE! VOLGENDE!",
@@ -316,9 +316,9 @@ const DJ_TEXTS: Record<DJLanguage, DJTexts> = {
       "EQ overgang! Bas WISSEL! SCHOON!",
     ],
     outros: [
-      "DJ GrooveAI sluit de SET! Rotterdam hard techno! Wat een NACHT! Wat een ENERGIE! PEACE!",
-      "Dat was DJ GrooveAI! Peak time GELEVERD! Bedankt voor deze SESSIE! Tot de volgende RAVE!",
-      "Laatste TRACK! DJ GrooveAI zegt: jullie waren BRUTAAL! Beste publiek OOIT!",
+      "DJ GrouAI sluit de SET! Rotterdam hard techno! Wat een NACHT! Wat een ENERGIE! PEACE!",
+      "Dat was DJ GrouAI! Peak time GELEVERD! Bedankt voor deze SESSIE! Tot de volgende RAVE!",
+      "Laatste TRACK! DJ GrouAI zegt: jullie waren BRUTAAL! Beste publiek OOIT!",
     ],
     crowdReactions: {
       peak: [
@@ -349,35 +349,35 @@ const DJ_TEXTS: Record<DJLanguage, DJTexts> = {
   ua: {
     intros: {
       default: [
-        "DJ GrooveAI за ПУЛЬТОМ! Rotterdam стиль! Тверді кіки, темні синти, сто тридцять BPM! НЕМА ЖАЛЮ! ЛЕТИМО!",
-        "DJ GrooveAI за КОНСОЛЛЮ! Peak time hard techno прямо з РОТТЕРДАМУ! Чуєте той кік?! Це лише ПОЧАТОК!",
-        "УВАГА! DJ GrooveAI активує DARKROOM! Raw, driving, без компромісів! Хто готовий до ЗНЕСЕННЯ?! ТРИ ДВА ОДИН GO!",
-        "DJ GrooveAI бере ПАРКЕТ! Dutch hard techno! Важкий кік, sub-bas до КІСТОК! Чуєте той біт?! ЛЕТИМО!",
+        "DJ GrouAI за ПУЛЬТОМ! Rotterdam стиль! Тверді кіки, темні синти, сто тридцять BPM! НЕМА ЖАЛЮ! ЛЕТИМО!",
+        "DJ GrouAI за КОНСОЛЛЮ! Peak time hard techno прямо з РОТТЕРДАМУ! Чуєте той кік?! Це лише ПОЧАТОК!",
+        "УВАГА! DJ GrouAI активує DARKROOM! Raw, driving, без компромісів! Хто готовий до ЗНЕСЕННЯ?! ТРИ ДВА ОДИН GO!",
+        "DJ GrouAI бере ПАРКЕТ! Dutch hard techno! Важкий кік, sub-bas до КІСТОК! Чуєте той біт?! ЛЕТИМО!",
       ],
       techno: [
-        "БУМ! DJ GrooveAI! Peak-time hard techno з РОТТЕРДАМУ! Сто тридцять BPM, твердий кік, темні синти! ЧУЄТЕ ТОЙ БАС?! НА ПОВНУ!",
-        "Ласкаво в АНДЕРГРАУНД! DJ GrooveAI запускає Rotterdam ТЕХНО! Raw, driving, нема жалю! Darkroom АКТИВОВАНО!",
-        "Техно ВОЇНИ! DJ GrooveAI за пультом! Dutch style peak HOUR! Домінантний sub-bas плюс hard KICK! ЧУЄТЕ ТОЙ БІТ?!",
+        "БУМ! DJ GrouAI! Peak-time hard techno з РОТТЕРДАМУ! Сто тридцять BPM, твердий кік, темні синти! ЧУЄТЕ ТОЙ БАС?! НА ПОВНУ!",
+        "Ласкаво в АНДЕРГРАУНД! DJ GrouAI запускає Rotterdam ТЕХНО! Raw, driving, нема жалю! Darkroom АКТИВОВАНО!",
+        "Техно ВОЇНИ! DJ GrouAI за пультом! Dutch style peak HOUR! Домінантний sub-bas плюс hard KICK! ЧУЄТЕ ТОЙ БІТ?!",
       ],
       house: [
-        "DJ GrooveAI! Driving house прямо з РОТТЕРДАМУ! Важкий groove, dark bassline, raw energy! ЧУЄТЕ ТОЙ ДРАЙВ?!",
+        "DJ GrouAI! Driving house прямо з РОТТЕРДАМУ! Важкий groove, dark bassline, raw energy! ЧУЄТЕ ТОЙ ДРАЙВ?!",
       ],
       "hip-hop": [
-        "DJ GrooveAI! Hard hitting beats Rotterdam СТИЛЬ! Raw, важко, без компромісів! ONE TWO! ЛЕТИМО!",
+        "DJ GrouAI! Hard hitting beats Rotterdam СТИЛЬ! Raw, важко, без компромісів! ONE TWO! ЛЕТИМО!",
       ],
       rock: [
-        "DJ GrooveAI! Industrial rock meets Rotterdam ТЕХНО! Сирі гітари плюс hard kicks! БРУТАЛЬНО!",
+        "DJ GrouAI! Industrial rock meets Rotterdam ТЕХНО! Сирі гітари плюс hard kicks! БРУТАЛЬНО!",
       ],
       party: [
-        "DJ GrooveAI запускає ВЕЧІРКУ року! Rotterdam PEAK-TIME! Hard techno плюс driving house! Сусіди дзвонять у ПОЛІЦІЮ але МИ НЕ ЗУПИНИМОСЬ!",
-        "ДОМІВКА дві тисячі двадцять ШІСТЬ! DJ GrooveAI за ДЕКАМИ! Dutch hard techno на ПОВНУ! Твердий кік, темний бас, НУЛЬ чілу! ЛЕТИМО ДО ЧЕРВОНОСТІ!",
-        "Гей КОМАНДА! DJ GrooveAI крутить peak-time ВЕЧІРКУ! Rotterdam ВАЙБИ! Сто тридцять BPM, raw sub-bas, dark synths! ХТО ГОТОВИЙ?!",
+        "DJ GrouAI запускає ВЕЧІРКУ року! Rotterdam PEAK-TIME! Hard techno плюс driving house! Сусіди дзвонять у ПОЛІЦІЮ але МИ НЕ ЗУПИНИМОСЬ!",
+        "ДОМІВКА дві тисячі двадцять ШІСТЬ! DJ GrouAI за ДЕКАМИ! Dutch hard techno на ПОВНУ! Твердий кік, темний бас, НУЛЬ чілу! ЛЕТИМО ДО ЧЕРВОНОСТІ!",
+        "Гей КОМАНДА! DJ GrouAI крутить peak-time ВЕЧІРКУ! Rotterdam ВАЙБИ! Сто тридцять BPM, raw sub-bas, dark synths! ХТО ГОТОВИЙ?!",
       ],
       festival: [
-        "MAIN STAGE! DJ GrooveAI! Rotterdam hard ТЕХНО! Peak hour ЕНЕРГІЯ! Десять тисяч рук ВГОРУ! ЦЕ ВАШ МОМЕНТ!",
+        "MAIN STAGE! DJ GrouAI! Rotterdam hard ТЕХНО! Peak hour ЕНЕРГІЯ! Десять тисяч рук ВГОРУ! ЦЕ ВАШ МОМЕНТ!",
       ],
       club: [
-        "DJ GrooveAI бере DARKROOM! Rotterdam АНДЕРГРАУНД! Hard techno, raw driving house! Дрес-код: ЧОРНИЙ ONLY!",
+        "DJ GrouAI бере DARKROOM! Rotterdam АНДЕРГРАУНД! Hard techno, raw driving house! Дрес-код: ЧОРНИЙ ONLY!",
       ],
     },
     transitions: [
@@ -385,7 +385,7 @@ const DJ_TEXTS: Record<DJLanguage, DJTexts> = {
       "Не зупиняємось! Sub-bas іде ГЛИБШЕ!",
       "DROP за три два один! БУМ!",
       "Переключаю на ТЕМНІШИЙ вайб! Чуєте?!",
-      "DJ GrooveAI піднімає ТИСК! Hold on!",
+      "DJ GrouAI піднімає ТИСК! Hold on!",
       "Енергія РОСТЕ! Наступний БЕНГЕР летить!",
       "Вище! ВИЩЕ! Peak time!",
       "Без пауз! Без ЖАЛЮ! НАСТУПНИЙ!",
@@ -422,9 +422,9 @@ const DJ_TEXTS: Record<DJLanguage, DJTexts> = {
       "EQ перехід! Бас СВЕП! ЧИСТО!",
     ],
     outros: [
-      "DJ GrooveAI закриває СЕТ! Rotterdam hard techno! Яка НІЧ! Яка ЕНЕРГІЯ! PEACE!",
-      "Це був DJ GrooveAI! Peak time ДОСТАВЛЕНО! Дякую за СЕСІЮ! До наступного РЕЙВУ!",
-      "Останній ТРЕК! DJ GrooveAI каже: ви були БРУТАЛЬНІ! Найкраща публіка EVER!",
+      "DJ GrouAI закриває СЕТ! Rotterdam hard techno! Яка НІЧ! Яка ЕНЕРГІЯ! PEACE!",
+      "Це був DJ GrouAI! Peak time ДОСТАВЛЕНО! Дякую за СЕСІЮ! До наступного РЕЙВУ!",
+      "Останній ТРЕК! DJ GrouAI каже: ви були БРУТАЛЬНІ! Найкраща публіка EVER!",
     ],
     crowdReactions: {
       peak: [

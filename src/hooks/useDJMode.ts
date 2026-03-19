@@ -121,7 +121,7 @@ export const useDJMode = () => {
     const texts = getDJTexts(lang);
 
     try {
-      toast.loading("🎧 DJ GrooveAI — Rotterdam Peak-Time...", { id: "dj-mode" });
+      toast.loading("🎧 DJ GrouAI — Rotterdam Peak-Time...", { id: "dj-mode" });
 
       // Fetch tracks matching genres
       let allTracks: any[] = [];
@@ -181,7 +181,7 @@ export const useDJMode = () => {
       const firstTrackShort = shortenTitle(curatedTracks[0].title);
       const introText = `${randomFrom(intros)} ${texts.setStart(curatedTracks.length, genreText)} ${firstTrackShort}! LECIMY!`;
 
-      toast.success(`🎧 DJ GrooveAI — ${curatedTracks.length} tracks — Rotterdam Peak-Time!`, { id: "dj-mode", duration: 5000 });
+      toast.success(`🎧 DJ GrouAI — ${curatedTracks.length} tracks — Rotterdam Peak-Time!`, { id: "dj-mode", duration: 5000 });
 
       // Epic sequence: dark_riser → buildup → speak intro → DROP COMBO → START
       playDJEffect("dark_riser");
@@ -222,7 +222,7 @@ export const useDJMode = () => {
     const outro = randomFrom(texts.outros);
     
     playDJEffect("siren");
-    toast.info("🎧 DJ GrooveAI — Set Complete!", { duration: 4000 });
+    toast.info("🎧 DJ GrouAI — Set Complete!", { duration: 4000 });
     await djSpeak(outro);
   }, [djSpeak]);
 

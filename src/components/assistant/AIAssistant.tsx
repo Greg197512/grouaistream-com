@@ -649,7 +649,7 @@ export const AIAssistant = () => {
               </div>
               <div className="flex-1 min-w-0">
                 <h3 className="font-bold text-sm flex items-center gap-1.5">
-                  GrooveAI <Sparkles className="h-3.5 w-3.5 text-primary" />
+                  GrouAI <Sparkles className="h-3.5 w-3.5 text-primary" />
                 </h3>
                 <p className="text-[10px] text-muted-foreground truncate">
                   {currentTrack ? `🎵 ${currentTrack.title}` : "Zaawansowany asystent AI • Online"}

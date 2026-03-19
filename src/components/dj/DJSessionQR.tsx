@@ -90,7 +90,7 @@ export const DJSessionQR = ({ onClose }: DJSessionQRProps) => {
 
   const shareLink = async () => {
     if (navigator.share) {
-      await navigator.share({ title: "🎧 DJ GrooveAI — Dołącz na parkiet!", url: partyUrl });
+      await navigator.share({ title: "🎧 DJ GrouAI — Dołącz na parkiet!", url: partyUrl });
     } else {
       copyLink();
     }

@@ -560,10 +560,10 @@ export const AutoVoiceListener = () => {
     const djResult = parseDJCommand(command);
     if (djResult.isDJCommand) {
       const djMsgs: Record<Language, string> = {
-        pl: "DJ GrooveAI przygotowuje set...",
-        en: "DJ GrooveAI preparing set...",
-        nl: "DJ GrooveAI bereidt set voor...",
-        ua: "DJ GrooveAI готує сет...",
+        pl: "DJ GrouAI przygotowuje set...",
+        en: "DJ GrouAI preparing set...",
+        nl: "DJ GrouAI bereidt set voor...",
+        ua: "DJ GrouAI готує сет...",
       };
       toast.loading(`🎧 ${djMsgs[lang]}`, { id: "dj-voice" });
       await startDJSession({
@@ -572,7 +572,7 @@ export const AutoVoiceListener = () => {
         trackCount: djResult.trackCount,
         customPrompt: djResult.customPrompt,
       });
-      toast.success(`🎧 DJ GrooveAI! ${djResult.trackCount} tracks`, { id: "dj-voice", duration: 5000 });
+      toast.success(`🎧 DJ GrouAI! ${djResult.trackCount} tracks`, { id: "dj-voice", duration: 5000 });
       return;
     }
 
