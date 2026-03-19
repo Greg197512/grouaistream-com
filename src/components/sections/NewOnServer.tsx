@@ -11,8 +11,12 @@ import { HQCover } from "@/components/ui/HQCover";
 import { LikeButton, TrackOptionsMenu } from "@/components/menus/TrackOptionsMenu";
 import { cn } from "@/lib/utils";
 
+interface ServerTrack extends Track {
+  created_at: string;
+}
+
 export const NewOnServer = () => {
-  const [tracks, setTracks] = useState<Track[]>([]);
+  const [tracks, setTracks] = useState<ServerTrack[]>([]);
   const [loading, setLoading] = useState(true);
   const { playPlaylist, currentTrack, isPlaying } = usePlayer();
   const { filterTracks } = useUnlock();
