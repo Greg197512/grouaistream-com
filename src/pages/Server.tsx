@@ -233,8 +233,24 @@ const Server = () => {
           .upload(filePath, item.file, { contentType: item.file.type });
         if (uploadError) throw uploadError;
 
-        updateQueueItem(item.id, { progress: 70 });
+        updateQueueItem(item.id, { progress: 60 });
         const { data: urlData } = supabase.storage.from("music").getPublicUrl(filePath);
+
+        // Upload cover image if provided
+        let coverUrl: string | null = null;
+        if (item.coverFile) {
+          const coverExt = item.coverFile.name.split('.').pop();
+          const coverPath = `covers/${Date.now()}-${safeName}.${coverExt}`;
+          const { error: coverErr } = await supabase.storage
+            .from("music")
+            .upload(coverPath, item.coverFile, { contentType: item.coverFile.type });
+          if (!coverErr) {
+            const { data: coverUrlData } = supabase.storage.from("music").getPublicUrl(coverPath);
+            coverUrl = coverUrlData.publicUrl;
+          }
+        }
+
+        updateQueueItem(item.id, { progress: 80 });
 
         const { data: insertData, error: insertError } = await supabase.from("tracks").insert({
           title: item.title,
@@ -242,6 +258,7 @@ const Server = () => {
           duration: 0,
           audio_url: isVideo ? null : urlData.publicUrl,
           video_url: isVideo ? urlData.publicUrl : null,
+          cover_url: coverUrl,
         }).select("id").single();
         if (insertError) throw insertError;
         
