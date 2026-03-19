@@ -632,6 +632,38 @@ const Server = () => {
                   <div className="space-y-1.5 max-h-64 overflow-y-auto">
                     {uploadQueue.map(item => (
                       <div key={item.id} className="flex items-center gap-3 p-2.5 rounded-lg bg-secondary/50 text-sm">
+                        {/* Cover preview / add cover */}
+                        <div className="relative h-10 w-10 rounded overflow-hidden flex-shrink-0 bg-muted">
+                          {item.coverPreview ? (
+                            <img src={item.coverPreview} alt="cover" className="h-full w-full object-cover" />
+                          ) : (
+                            <label className="flex items-center justify-center h-full w-full cursor-pointer hover:bg-muted-foreground/10 transition-colors">
+                              <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                              <input
+                                type="file"
+                                accept="image/jpeg,image/png,image/webp,image/gif"
+                                className="hidden"
+                                onChange={(e) => {
+                                  const f = e.target.files?.[0];
+                                  if (f && ALLOWED_IMAGE.includes(f.type)) {
+                                    const preview = URL.createObjectURL(f);
+                                    updateQueueItem(item.id, { coverFile: f, coverPreview: preview } as any);
+                                  }
+                                  e.target.value = "";
+                                }}
+                              />
+                            </label>
+                          )}
+                          {item.coverPreview && item.status === "pending" && (
+                            <button
+                              onClick={() => updateQueueItem(item.id, { coverFile: undefined, coverPreview: undefined } as any)}
+                              className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-destructive flex items-center justify-center"
+                            >
+                              <X className="h-2.5 w-2.5 text-destructive-foreground" />
+                            </button>
+                          )}
+                        </div>
+
                         {ALLOWED_VIDEO.includes(item.file.type)
                           ? <FileVideo className="h-4 w-4 text-accent flex-shrink-0" />
                           : <FileAudio className="h-4 w-4 text-primary flex-shrink-0" />
@@ -642,6 +674,7 @@ const Server = () => {
                           </p>
                           <div className="flex gap-2 text-[10px] text-muted-foreground">
                             <span>{formatSize(item.file.size)}</span>
+                            {item.coverFile && <span className="text-primary">🖼️ okładka</span>}
                             {item.relativePath && <span className="truncate">📁 {item.relativePath}</span>}
                           </div>
                           {item.status === "uploading" && <Progress value={item.progress} className="h-1 mt-1" />}
