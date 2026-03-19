@@ -379,7 +379,7 @@ export const AIAssistant = () => {
     const files: File[] = [];
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
-      if (item.kind === "file" && (item.type.startsWith("image/") || item.type.startsWith("audio/"))) {
+      if (item.kind === "file" && (item.type.startsWith("image/") || item.type.startsWith("audio/") || item.type.startsWith("video/"))) {
         const file = item.getAsFile();
         if (file) files.push(file);
       }
