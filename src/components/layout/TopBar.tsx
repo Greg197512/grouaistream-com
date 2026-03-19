@@ -49,6 +49,15 @@ export const TopBar = () => {
     }
   };
 
+  // Navigate to search page as user types
+  useEffect(() => {
+    if (!searchQuery.trim()) return;
+    const timer = setTimeout(() => {
+      navigate(`/search?q=${encodeURIComponent(searchQuery)}`, { replace: true });
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [searchQuery, navigate]);
+
   const getUserInitials = () => {
     if (!user?.email) return "U";
     return user.email.charAt(0).toUpperCase();
