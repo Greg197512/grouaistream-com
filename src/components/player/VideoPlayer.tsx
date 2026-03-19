@@ -41,6 +41,19 @@ export const VideoPlayer = ({ isVisible, onClose }: VideoPlayerProps) => {
     if (isPlaying) videoRef.current.play().catch(() => {});
   }, [currentTrack?.video_url, isNativeVideo]);
 
+  // Listen for seek events
+  useEffect(() => {
+    if (!isNativeVideo) return;
+    const handleSeek = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (videoRef.current && detail?.time !== undefined) {
+        videoRef.current.currentTime = detail.time;
+      }
+    };
+    window.addEventListener('native-video-seek', handleSeek);
+    return () => window.removeEventListener('native-video-seek', handleSeek);
+  }, [isNativeVideo]);
+
   if (!isVisible || !isVideoMode) return null;
   if (!videoId && !isNativeVideo) return null;
 
