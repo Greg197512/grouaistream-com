@@ -13,11 +13,16 @@ interface FileUploadModalProps {
   onSuccess?: () => void;
 }
 
-const ALLOWED_EXTENSIONS = [".mp3", ".wav", ".m4a", ".ogg", ".flac", ".mp4", ".webm", ".aac"];
+const ALLOWED_EXTENSIONS = [
+  ".mp3", ".wav", ".m4a", ".ogg", ".flac", ".aac", ".opus", ".wma", ".weba",
+  ".mp4", ".webm", ".mkv", ".avi", ".mov", ".3gp", ".ogv",
+];
 const ALLOWED_TYPES = [
-  "audio/mpeg", "audio/wav", "audio/mp3", "audio/x-wav", "audio/mp4",
-  "audio/ogg", "audio/flac", "audio/aac", "audio/x-m4a",
-  "video/mp4", "video/webm",
+  "audio/mpeg", "audio/wav", "audio/mp3", "audio/x-wav", "audio/mp4", "audio/x-m4a",
+  "audio/ogg", "audio/flac", "audio/aac", "audio/opus", "audio/webm", "audio/x-flac",
+  "audio/x-aac", "audio/vnd.wave", "audio/wave", "audio/x-ms-wma",
+  "video/mp4", "video/webm", "video/ogg", "video/quicktime", "video/x-matroska",
+  "video/x-msvideo", "video/avi", "video/3gpp",
 ];
 const MAX_SIZE = 100 * 1024 * 1024;
 
