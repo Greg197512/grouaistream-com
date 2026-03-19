@@ -542,7 +542,8 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     if (isVideoMode) {
       setProgress(position);
       setCurrentTime(time);
-      // YouTube seek will be handled by the component
+      // Dispatch seek event for native video player
+      window.dispatchEvent(new CustomEvent('native-video-seek', { detail: { time } }));
     } else if (audioRef.current) {
       audioRef.current.currentTime = time;
       setProgress(position);
