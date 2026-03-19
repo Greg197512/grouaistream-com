@@ -130,7 +130,8 @@ export const FileUploadModal = ({ isOpen, onClose, onSuccess }: FileUploadModalP
 
       try {
         const ext = item.file.name.split(".").pop()?.toLowerCase() || "mp3";
-        const filePath = `shared/${Date.now()}-${crypto.randomUUID()}.${ext}`;
+        const safeName = item.title.replace(/[^a-zA-Z0-9\-_]/g, '_').substring(0, 80);
+        const filePath = `shared/${Date.now()}-${safeName}.${ext}`;
 
         const { error: uploadError } = await supabase.storage
           .from("music")

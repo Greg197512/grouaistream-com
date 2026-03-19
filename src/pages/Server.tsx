@@ -224,7 +224,7 @@ const Server = () => {
       try {
         const isVideo = ALLOWED_VIDEO.includes(item.file.type);
         const ext = item.file.name.split('.').pop();
-        const safeName = item.title.replace(/[^a-zA-Z0-9\-_ ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]/g, '').substring(0, 80);
+        const safeName = item.title.replace(/[^a-zA-Z0-9\-_ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]/g, '_').substring(0, 80);
         const filePath = `shared/${Date.now()}-${safeName}.${ext}`;
 
         updateQueueItem(item.id, { progress: 30 });
