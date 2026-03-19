@@ -687,6 +687,29 @@ const RadioLive = () => {
                   className="flex-1"
                 />
               </div>
+              {/* Manual play button when autoplay blocked */}
+              {autoplayBlocked && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="pt-2"
+                >
+                  <Button
+                    onClick={() => {
+                      if (audioRef.current) {
+                        audioRef.current.play().then(() => {
+                          setIsPlaying(true);
+                          setAutoplayBlocked(false);
+                        }).catch(() => {});
+                      }
+                    }}
+                    className="w-full gap-2 groove-gradient-bg text-primary-foreground font-bold text-lg h-12 animate-pulse"
+                  >
+                    <Play className="h-5 w-5" />
+                    Odblokuj dźwięk
+                  </Button>
+                </motion.div>
+              )}
             </div>
           </div>
         )}
