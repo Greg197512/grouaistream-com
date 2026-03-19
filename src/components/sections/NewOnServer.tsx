@@ -32,7 +32,7 @@ export const NewOnServer = () => {
         .order("created_at", { ascending: false })
         .limit(8);
 
-      setTracks(filterTracks((data as Track[]) || []));
+      setTracks(filterTracks((data || []) as any) as ServerTrack[]);
       setLoading(false);
     };
 
