@@ -576,7 +576,7 @@ const Server = () => {
                     <div>
                       <p className="font-medium">Przeciągnij pliki lub foldery tutaj</p>
                       <p className="text-sm text-muted-foreground mt-1">
-                        MP3, WAV, MP4, WebM — max 500MB każdy
+                        MP3, WAV, MP4, WebM — max 500MB • Dodaj okładkę 🖼️ do każdego utworu w kolejce
                       </p>
                     </div>
                     <div className="flex flex-col items-center gap-2 mt-2">
