@@ -100,68 +100,31 @@ export const PWAInstallPrompt = () => {
             </div>
             <div className="flex-1 min-w-0">
               <h3 className="font-bold text-sm text-foreground mb-0.5">
-                Zainstaluj GrouAI DJ
+                Chcesz mieć GrouAI DJ na telefonie?
               </h3>
-              {isIOS ? (
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  Kliknij{" "}
-                  <span className="inline-flex items-center">
-                    <svg className="h-3.5 w-3.5 mx-0.5 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M12 5v14M5 12l7-7 7 7" />
-                      <rect x="4" y="18" width="16" height="2" rx="1" />
-                    </svg>
-                  </span>{" "}
-                  <strong>Udostępnij</strong> → <strong>Dodaj do ekranu początkowego</strong>
-                </p>
-              ) : (
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  Dodaj na pulpit — działa jak natywna aplikacja, offline i błyskawicznie!
-                </p>
-              )}
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Aplikacja na pulpicie — szybka, offline, jak natywna!
+              </p>
             </div>
           </div>
 
-          {!isIOS && deferredPrompt && (
-            <div className="mt-3 flex gap-2">
-              <Button
-                onClick={handleDismiss}
-                variant="ghost"
-                size="sm"
-                className="flex-1 text-xs"
-              >
-                Nie teraz
-              </Button>
-              <Button
-                onClick={handleInstall}
-                size="sm"
-                className="flex-1 text-xs gap-1.5 bg-primary hover:bg-primary/90"
-              >
-                <Download className="h-3.5 w-3.5" />
-                Zainstaluj
-              </Button>
-            </div>
-          )}
-
-          {isIOS && (
-            <div className="mt-3 flex gap-2">
-              <Button
-                onClick={handleDismiss}
-                variant="ghost"
-                size="sm"
-                className="flex-1 text-xs"
-              >
-                Nie teraz
-              </Button>
-              <Button
-                onClick={handleIOSConfirm}
-                size="sm"
-                className="flex-1 text-xs gap-1.5 bg-primary hover:bg-primary/90"
-              >
-                <Download className="h-3.5 w-3.5" />
-                Rozumiem, zainstaluję
-              </Button>
-            </div>
-          )}
+          <div className="mt-3 flex gap-2">
+            <Button
+              onClick={handleDismiss}
+              variant="ghost"
+              size="sm"
+              className="flex-1 text-xs"
+            >
+              Nie
+            </Button>
+            <Button
+              onClick={isIOS ? handleIOSConfirm : handleInstall}
+              size="sm"
+              className="flex-1 text-xs bg-primary hover:bg-primary/90"
+            >
+              Tak
+            </Button>
+          </div>
         </div>
       </motion.div>
     </AnimatePresence>
