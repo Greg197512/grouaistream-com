@@ -246,7 +246,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const hasPlayableSource = (track: Track) =>
-    Boolean(getPlayableYouTubeId(track) || getPlayableAudioUrl(track));
+    Boolean(getPlayableYouTubeId(track) || getNativeVideoUrl(track) || getPlayableAudioUrl(track));
 
   // Play current track when it changes
   useEffect(() => {
