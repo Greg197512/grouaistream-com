@@ -112,6 +112,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     const audio = new Audio();
     audio.volume = volume / 100;
     audio.preload = "auto";
+    audio.setAttribute("data-player", "main");
     audioRef.current = audio;
 
     const handleTimeUpdate = () => {
