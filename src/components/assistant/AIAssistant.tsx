@@ -457,7 +457,7 @@ export const AIAssistant = () => {
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
         body: JSON.stringify({ 
-          message: userMessage, 
+          message: userMessage + saveInfoForAI, 
           history: messages, 
           userContext,
           attachments: uploadedAttachments.length > 0 ? uploadedAttachments.map(a => ({ type: a.type, url: a.url, name: a.name })) : undefined,
