@@ -302,15 +302,17 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
       }
     }
 
-    if (userId) {
+    // Log listening history using ref (no re-trigger on auth change)
+    const uid = userIdRef.current;
+    if (uid) {
       supabase.from('listening_history').insert({
-        user_id: userId,
+        user_id: uid,
         track_id: currentTrack.id,
       }).then(({ error }) => {
         if (error) console.error("Failed to log listening history:", error);
       });
     }
-  }, [currentTrack, userId]);
+  }, [currentTrack]); // Removed userId — use ref to avoid restarting playback on auth change
 
   // YouTube time update handler
   const onYouTubeTimeUpdate = useCallback((time: number, dur: number) => {
