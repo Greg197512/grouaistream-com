@@ -1,0 +1,1 @@
+ALTER TABLE public.ai_assistant_config ALTER COLUMN assistant_name SET DEFAULT 'GrouAI';
