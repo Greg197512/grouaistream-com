@@ -613,7 +613,10 @@ const Server = () => {
                           multiple
                           onChange={(e) => {
                             if (e.target.files) {
-                              const files = Array.from(e.target.files).filter(f => ALL_ALLOWED.includes(f.type));
+                              const files = Array.from(e.target.files).filter(f => {
+                                const ext = "." + f.name.split(".").pop()?.toLowerCase();
+                                return ALL_ALLOWED.includes(f.type) || ALLOWED_EXTENSIONS.includes(ext);
+                              });
                               const paths = files.map(f => (f as any).webkitRelativePath || f.name);
                               addFilesToQueue(files as any, paths);
                             }
