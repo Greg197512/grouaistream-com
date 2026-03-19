@@ -1,11 +1,13 @@
-import { useState, ReactNode } from "react";
+import { useState, useEffect, ReactNode } from "react";
 import { Sidebar } from "./Sidebar";
 import { PlayerBar } from "./PlayerBar";
 import { TopBar } from "./TopBar";
 import { MobileBottomNav } from "./MobileBottomNav";
 import { AIAssistant } from "@/components/assistant/AIAssistant";
 import { InfinityAssistantWidget } from "@/components/assistant/InfinityAssistantWidget";
+import { VideoPlayer } from "@/components/player/VideoPlayer";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { usePlayer } from "@/contexts/PlayerContext";
 
 import { DragDropProvider } from "@/contexts/DragDropContext";
 import { FloatingPlaylistDropZones } from "@/components/dnd/FloatingPlaylistDropZones";
@@ -17,7 +19,22 @@ interface MainLayoutProps {
 
 export const MainLayout = ({ children }: MainLayoutProps) => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [showVideo, setShowVideo] = useState(false);
   const isMobile = useIsMobile();
+  const { isVideoMode, currentTrack } = usePlayer();
+
+  // Auto-show video player when a video track starts playing
+  useEffect(() => {
+    if (isVideoMode && currentTrack) {
+      setShowVideo(true);
+    }
+  }, [isVideoMode, currentTrack]);
+
+  // Expose toggle for PlayerBar button
+  useEffect(() => {
+    window.toggleVideoPlayer = () => setShowVideo(prev => !prev);
+    return () => { delete window.toggleVideoPlayer; };
+  }, []);
 
   return (
     <DragDropProvider>
@@ -46,6 +63,9 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
 
         {/* Floating Playlist Drop Zones */}
         <FloatingPlaylistDropZones />
+
+        {/* Floating Video Player */}
+        <VideoPlayer isVisible={showVideo} onClose={() => setShowVideo(false)} />
 
         {/* Floating Draggable Player Bar */}
         <PlayerBar />
