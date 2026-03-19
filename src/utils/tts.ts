@@ -238,6 +238,7 @@ export const speak = async (text: string, opts?: {
     if (!supabaseUrl || !supabaseKey) throw new Error("No Supabase config");
 
     _isSpeaking = true;
+    duckMusicVolume();
 
     const response = await fetch(`${supabaseUrl}/functions/v1/elevenlabs-tts`, {
       method: "POST",
