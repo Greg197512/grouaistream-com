@@ -279,14 +279,16 @@ export const AIAssistant = () => {
   const pendingDedicationRef = useRef<{ trackName: string; recipientName: string; senderName: string } | null>(null);
   const pendingGeneratedTrackRef = useRef<{ audioUrl: string; title: string; genre: string; duration: number } | null>(null);
 
-  // File handling
+  // File handling — supports audio, video, and images
   const handleFiles = useCallback((files: FileList | File[]) => {
     const fileArr = Array.from(files);
     const newAttachments: ChatAttachment[] = [];
     for (const file of fileArr) {
       if (file.type.startsWith("image/")) {
         newAttachments.push({ type: "image", url: URL.createObjectURL(file), name: file.name, file });
-      } else if (file.type.startsWith("audio/") || file.name.match(/\.(mp3|wav|ogg|flac|m4a|aac|wma)$/i)) {
+      } else if (file.type.startsWith("video/") || file.name.match(/\.(mp4|webm|mov|avi|mkv)$/i)) {
+        newAttachments.push({ type: "video", url: URL.createObjectURL(file), name: file.name, file });
+      } else if (file.type.startsWith("audio/") || file.name.match(/\.(mp3|wav|ogg|flac|m4a|aac|wma|opus)$/i)) {
         newAttachments.push({ type: "audio", url: URL.createObjectURL(file), name: file.name, file });
       } else {
         toast.error(`Nieobsługiwany format: ${file.name}`);
@@ -296,6 +298,61 @@ export const AIAssistant = () => {
       setAttachments(prev => [...prev, ...newAttachments]);
       toast.success(`📎 Dodano ${newAttachments.length} plik(ów)`);
     }
+  }, []);
+
+  // Save attached media files to server (tracks table)
+  const saveAttachmentsToServer = useCallback(async (
+    uploadedAttachments: ChatAttachment[],
+    userMessage: string
+  ): Promise<{ saved: number; titles: string[] }> => {
+    const mediaFiles = uploadedAttachments.filter(a => a.type === "audio" || a.type === "video");
+    const coverFile = uploadedAttachments.find(a => a.type === "image");
+    if (mediaFiles.length === 0) return { saved: 0, titles: [] };
+
+    const savedTitles: string[] = [];
+    
+    for (const media of mediaFiles) {
+      // Parse title from filename
+      const cleanName = media.name.replace(/\.[^/.]+$/, "");
+      const parts = cleanName.split(" - ");
+      let artist = "Suno AI";
+      let title = cleanName;
+      if (parts.length >= 2) {
+        artist = parts[0].trim();
+        title = parts.slice(1).join(" - ").trim();
+      }
+
+      // If user mentioned a title in the message, use it
+      const titleMatch = userMessage.match(/(?:tytuł|tytul|nazwa|title)[:\s]+["']?([^"'\n,]+)/i);
+      if (titleMatch) title = titleMatch[1].trim();
+
+      const artistMatch = userMessage.match(/(?:artysta|artist|wykonawca)[:\s]+["']?([^"'\n,]+)/i);
+      if (artistMatch) artist = artistMatch[1].trim();
+
+      const isVideo = media.type === "video";
+
+      const { error: insertError } = await supabase.from("tracks").insert({
+        title,
+        artist,
+        duration: 0,
+        audio_url: !isVideo ? media.url : null,
+        video_url: isVideo ? media.url : null,
+        cover_url: coverFile?.url || null,
+      });
+
+      if (!insertError) {
+        savedTitles.push(title);
+      } else {
+        console.error("Error saving track:", insertError);
+      }
+    }
+
+    // Notify other components
+    if (savedTitles.length > 0) {
+      window.dispatchEvent(new CustomEvent("track-list-changed"));
+    }
+
+    return { saved: savedTitles.length, titles: savedTitles };
   }, []);
 
   const removeAttachment = useCallback((idx: number) => {
