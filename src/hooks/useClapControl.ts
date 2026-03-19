@@ -154,5 +154,5 @@ const isMusicPlaying = () => {
       cancelled = true;
       cleanup();
     };
-  }, [enabled, onSingleClap, onDoubleClap, isMusicPlaying]);
+  }, [enabled, onSingleClap, onDoubleClap]);
 }
