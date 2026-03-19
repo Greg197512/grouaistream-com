@@ -177,7 +177,8 @@ const Server = () => {
                 if (entry.isFile) {
                   await new Promise<void>((res) => {
                     entry.file((file: File) => {
-                      if (ALL_ALLOWED.includes(file.type)) {
+                      const ext = "." + file.name.split(".").pop()?.toLowerCase();
+                      if (ALL_ALLOWED.includes(file.type) || ALLOWED_EXTENSIONS.includes(ext)) {
                         files.push(file);
                         paths.push(`${path}/${file.name}`);
                       }
