@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { motion, AnimatePresence, useDragControls } from "framer-motion";
-import { Send, Loader2, ExternalLink, Music, Power, GripHorizontal, Sparkles, Maximize2, Minimize2, Radio, Waves, Copy, Check, Paperclip, Image, X, FileAudio } from "lucide-react";
+import { Send, Loader2, ExternalLink, Music, Power, GripHorizontal, Sparkles, Maximize2, Minimize2, Radio, Waves, Copy, Check, Paperclip, Image, X, FileAudio, Film } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -17,7 +17,7 @@ import { WaveformPlayer } from "@/components/studio/WaveformPlayer";
 import { toast } from "sonner";
 
 interface ChatAttachment {
-  type: "image" | "audio";
+  type: "image" | "audio" | "video";
   url: string; // object URL or uploaded URL
   name: string;
   file?: File;
@@ -279,14 +279,16 @@ export const AIAssistant = () => {
   const pendingDedicationRef = useRef<{ trackName: string; recipientName: string; senderName: string } | null>(null);
   const pendingGeneratedTrackRef = useRef<{ audioUrl: string; title: string; genre: string; duration: number } | null>(null);
 
-  // File handling
+  // File handling — supports audio, video, and images
   const handleFiles = useCallback((files: FileList | File[]) => {
     const fileArr = Array.from(files);
     const newAttachments: ChatAttachment[] = [];
     for (const file of fileArr) {
       if (file.type.startsWith("image/")) {
         newAttachments.push({ type: "image", url: URL.createObjectURL(file), name: file.name, file });
-      } else if (file.type.startsWith("audio/") || file.name.match(/\.(mp3|wav|ogg|flac|m4a|aac|wma)$/i)) {
+      } else if (file.type.startsWith("video/") || file.name.match(/\.(mp4|webm|mov|avi|mkv)$/i)) {
+        newAttachments.push({ type: "video", url: URL.createObjectURL(file), name: file.name, file });
+      } else if (file.type.startsWith("audio/") || file.name.match(/\.(mp3|wav|ogg|flac|m4a|aac|wma|opus)$/i)) {
         newAttachments.push({ type: "audio", url: URL.createObjectURL(file), name: file.name, file });
       } else {
         toast.error(`Nieobsługiwany format: ${file.name}`);
@@ -296,6 +298,61 @@ export const AIAssistant = () => {
       setAttachments(prev => [...prev, ...newAttachments]);
       toast.success(`📎 Dodano ${newAttachments.length} plik(ów)`);
     }
+  }, []);
+
+  // Save attached media files to server (tracks table)
+  const saveAttachmentsToServer = useCallback(async (
+    uploadedAttachments: ChatAttachment[],
+    userMessage: string
+  ): Promise<{ saved: number; titles: string[] }> => {
+    const mediaFiles = uploadedAttachments.filter(a => a.type === "audio" || a.type === "video");
+    const coverFile = uploadedAttachments.find(a => a.type === "image");
+    if (mediaFiles.length === 0) return { saved: 0, titles: [] };
+
+    const savedTitles: string[] = [];
+    
+    for (const media of mediaFiles) {
+      // Parse title from filename
+      const cleanName = media.name.replace(/\.[^/.]+$/, "");
+      const parts = cleanName.split(" - ");
+      let artist = "Suno AI";
+      let title = cleanName;
+      if (parts.length >= 2) {
+        artist = parts[0].trim();
+        title = parts.slice(1).join(" - ").trim();
+      }
+
+      // If user mentioned a title in the message, use it
+      const titleMatch = userMessage.match(/(?:tytuł|tytul|nazwa|title)[:\s]+["']?([^"'\n,]+)/i);
+      if (titleMatch) title = titleMatch[1].trim();
+
+      const artistMatch = userMessage.match(/(?:artysta|artist|wykonawca)[:\s]+["']?([^"'\n,]+)/i);
+      if (artistMatch) artist = artistMatch[1].trim();
+
+      const isVideo = media.type === "video";
+
+      const { error: insertError } = await supabase.from("tracks").insert({
+        title,
+        artist,
+        duration: 0,
+        audio_url: !isVideo ? media.url : null,
+        video_url: isVideo ? media.url : null,
+        cover_url: coverFile?.url || null,
+      });
+
+      if (!insertError) {
+        savedTitles.push(title);
+      } else {
+        console.error("Error saving track:", insertError);
+      }
+    }
+
+    // Notify other components
+    if (savedTitles.length > 0) {
+      window.dispatchEvent(new CustomEvent("track-list-changed"));
+    }
+
+    return { saved: savedTitles.length, titles: savedTitles };
   }, []);
 
   const removeAttachment = useCallback((idx: number) => {
@@ -322,7 +379,7 @@ export const AIAssistant = () => {
     const files: File[] = [];
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
-      if (item.kind === "file" && (item.type.startsWith("image/") || item.type.startsWith("audio/"))) {
+      if (item.kind === "file" && (item.type.startsWith("image/") || item.type.startsWith("audio/") || item.type.startsWith("video/"))) {
         const file = item.getAsFile();
         if (file) files.push(file);
       }
@@ -364,6 +421,27 @@ export const AIAssistant = () => {
       }
     }
 
+    // Detect "save to server" intent — user sends media files with keywords like suno, wrzuć, dodaj, serwer
+    const saveKeywords = /suno|wrzuć|wrzuc|dodaj|zapisz|save|upload|serwer|server|katalog|bibliotek|library/i;
+    const hasMediaAttachments = uploadedAttachments.some(a => a.type === "audio" || a.type === "video");
+    let serverSaveResult: { saved: number; titles: string[] } | null = null;
+
+    if (hasMediaAttachments && (saveKeywords.test(userMessage) || !userMessage.trim())) {
+      // Auto-save to server when user sends media (especially if they mention suno/save/server)
+      try {
+        serverSaveResult = await saveAttachmentsToServer(uploadedAttachments, userMessage);
+        if (serverSaveResult.saved > 0) {
+          toast.success(`💾 Zapisano ${serverSaveResult.saved} utworów na serwerze!`);
+        }
+      } catch (err) {
+        console.error("Error saving to server:", err);
+      }
+    }
+
+    const saveInfoForAI = serverSaveResult && serverSaveResult.saved > 0
+      ? `\n[SYSTEM: Użytkownik wrzucił ${serverSaveResult.saved} plików na serwer: ${serverSaveResult.titles.join(", ")}. Potwierdź to w odpowiedzi.]`
+      : "";
+
     setMessages(prev => [...prev, { role: "user", content: userMessage || (uploadedAttachments.length > 0 ? `📎 ${uploadedAttachments.map(a => a.name).join(", ")}` : ""), attachments: uploadedAttachments.length > 0 ? uploadedAttachments : undefined }]);
     setIsLoading(true);
 
@@ -379,7 +457,7 @@ export const AIAssistant = () => {
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
         body: JSON.stringify({ 
-          message: userMessage, 
+          message: userMessage + saveInfoForAI, 
           history: messages, 
           userContext,
           attachments: uploadedAttachments.length > 0 ? uploadedAttachments.map(a => ({ type: a.type, url: a.url, name: a.name })) : undefined,
@@ -732,6 +810,12 @@ export const AIAssistant = () => {
                                       </div>
                                     </div>
                                   )}
+                                  {att.type === "video" && (
+                                    <div className="rounded-lg overflow-hidden">
+                                      <video src={att.url} controls className="max-w-full max-h-48 rounded-lg" />
+                                      <p className="text-[10px] mt-1 truncate text-muted-foreground">{att.name}</p>
+                                    </div>
+                                  )}
                                 </div>
                               ))}
                             </div>
@@ -923,6 +1007,11 @@ export const AIAssistant = () => {
                   >
                     {att.type === "image" ? (
                       <img src={att.url} alt={att.name} className="w-14 h-14 rounded-lg object-cover border border-white/10" />
+                    ) : att.type === "video" ? (
+                      <div className="w-14 h-14 rounded-lg bg-white/5 border border-white/10 flex flex-col items-center justify-center">
+                        <Film className="h-5 w-5 text-accent" />
+                        <span className="text-[7px] text-muted-foreground mt-0.5 max-w-[48px] truncate">{att.name}</span>
+                      </div>
                     ) : (
                       <div className="w-14 h-14 rounded-lg bg-white/5 border border-white/10 flex flex-col items-center justify-center">
                         <FileAudio className="h-5 w-5 text-primary" />
@@ -945,7 +1034,7 @@ export const AIAssistant = () => {
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*,audio/*"
+                accept="image/*,audio/*,video/*,.mp4,.webm,.mov,.avi,.mkv,.mp3,.wav,.flac,.m4a,.aac,.ogg,.opus"
                 multiple
                 className="hidden"
                 onChange={(e) => { if (e.target.files) handleFiles(e.target.files); e.target.value = ""; }}
