@@ -76,6 +76,7 @@ const RadioLive = () => {
   const [schedule, setSchedule] = useState<ScheduleTrack[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [autoplayBlocked, setAutoplayBlocked] = useState(false);
   const [volume, setVolume] = useState(80);
   const [muted, setMuted] = useState(false);
   const [progress, setProgress] = useState(0);
