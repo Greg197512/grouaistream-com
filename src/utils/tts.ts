@@ -68,6 +68,7 @@ export const stopSpeaking = () => {
     window.speechSynthesis.cancel();
   }
   _isSpeaking = false;
+  restoreMusicVolume();
 };
 
 export type TTSMode = "assistant" | "dj";
