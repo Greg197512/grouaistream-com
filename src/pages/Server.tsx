@@ -17,9 +17,20 @@ import { useUnlock } from "@/contexts/UnlockContext";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
-const ALLOWED_AUDIO = ["audio/mpeg", "audio/wav", "audio/mp3", "audio/x-wav"];
-const ALLOWED_VIDEO = ["video/mp4", "video/webm"];
+const ALLOWED_AUDIO = [
+  "audio/mpeg", "audio/wav", "audio/mp3", "audio/x-wav", "audio/mp4", "audio/x-m4a",
+  "audio/ogg", "audio/flac", "audio/aac", "audio/opus", "audio/webm", "audio/x-flac",
+  "audio/x-aac", "audio/vnd.wave", "audio/wave", "audio/x-ms-wma",
+];
+const ALLOWED_VIDEO = [
+  "video/mp4", "video/webm", "video/ogg", "video/quicktime", "video/x-matroska",
+  "video/x-msvideo", "video/avi", "video/3gpp", "video/3gpp2",
+];
 const ALLOWED_IMAGE = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+const ALLOWED_EXTENSIONS = [
+  ".mp3", ".wav", ".m4a", ".ogg", ".flac", ".aac", ".opus", ".wma", ".weba",
+  ".mp4", ".webm", ".mkv", ".avi", ".mov", ".3gp", ".ogv",
+];
 const ALL_ALLOWED = [...ALLOWED_AUDIO, ...ALLOWED_VIDEO];
 const MAX_SIZE = 500 * 1024 * 1024;
 
@@ -111,7 +122,8 @@ const Server = () => {
   });
 
   const validateFile = (f: File): string | null => {
-    if (!ALL_ALLOWED.includes(f.type)) return "Dozwolone: MP3, WAV, MP4, WebM";
+    const ext = "." + f.name.split(".").pop()?.toLowerCase();
+    if (!ALL_ALLOWED.includes(f.type) && !ALLOWED_EXTENSIONS.includes(ext)) return "Nieobsługiwany format pliku";
     if (f.size > MAX_SIZE) return "Max: 500MB";
     return null;
   };
@@ -165,7 +177,8 @@ const Server = () => {
                 if (entry.isFile) {
                   await new Promise<void>((res) => {
                     entry.file((file: File) => {
-                      if (ALL_ALLOWED.includes(file.type)) {
+                      const ext = "." + file.name.split(".").pop()?.toLowerCase();
+                      if (ALL_ALLOWED.includes(file.type) || ALLOWED_EXTENSIONS.includes(ext)) {
                         files.push(file);
                         paths.push(`${path}/${file.name}`);
                       }
@@ -185,7 +198,8 @@ const Server = () => {
           if (entry.isDirectory) return readDirectory(entry, entry.name);
           return new Promise<void>((res) => {
             entry.file((file: File) => {
-              if (ALL_ALLOWED.includes(file.type)) {
+              const ext = "." + file.name.split(".").pop()?.toLowerCase();
+              if (ALL_ALLOWED.includes(file.type) || ALLOWED_EXTENSIONS.includes(ext)) {
                 files.push(file);
                 paths.push(file.name);
               }
@@ -584,7 +598,7 @@ const Server = () => {
                         <input
                           ref={fileInputRef}
                           type="file"
-                          accept=".mp3,.wav,.mp4,.webm"
+                          accept=".mp3,.wav,.m4a,.ogg,.flac,.aac,.opus,.wma,.weba,.mp4,.webm,.mkv,.avi,.mov,.3gp,.ogv"
                           multiple
                           onChange={(e) => { if (e.target.files) addFilesToQueue(e.target.files); e.target.value = ""; }}
                           className="hidden"
@@ -599,7 +613,10 @@ const Server = () => {
                           multiple
                           onChange={(e) => {
                             if (e.target.files) {
-                              const files = Array.from(e.target.files).filter(f => ALL_ALLOWED.includes(f.type));
+                              const files = Array.from(e.target.files).filter(f => {
+                                const ext = "." + f.name.split(".").pop()?.toLowerCase();
+                                return ALL_ALLOWED.includes(f.type) || ALLOWED_EXTENSIONS.includes(ext);
+                              });
                               const paths = files.map(f => (f as any).webkitRelativePath || f.name);
                               addFilesToQueue(files as any, paths);
                             }
