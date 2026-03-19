@@ -90,13 +90,18 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => { isVideoModeRef.current = isVideoMode; }, [isVideoMode]);
 
   // Get user ID from Supabase auth directly to avoid circular dependency
+  // Use ref to avoid re-triggering playback when auth state changes
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setUserId(session?.user?.id ?? null);
+      const uid = session?.user?.id ?? null;
+      setUserId(uid);
+      userIdRef.current = uid;
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
-      setUserId(session?.user?.id ?? null);
+      const uid = session?.user?.id ?? null;
+      setUserId(uid);
+      userIdRef.current = uid;
     });
 
     return () => subscription.unsubscribe();
