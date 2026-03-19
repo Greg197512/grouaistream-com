@@ -143,7 +143,7 @@ const TrackOptionsMenuComponent = (
   };
 
   const handleShareTwitter = () => {
-    const text = `🎵 Listening to "${trackTitle}" by ${trackArtist} on GrooveAI Stream!`;
+    const text = `🎵 Listening to "${trackTitle}" by ${trackArtist} on GrouAI Stream!`;
     const url = trackUrl || window.location.origin;
     window.open(
       `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`,
@@ -152,7 +152,7 @@ const TrackOptionsMenuComponent = (
   };
 
   const handleShareWhatsApp = () => {
-    const text = `🎵 Posłuchaj "${trackTitle}" by ${trackArtist} na GrooveAI Stream! ${trackUrl || window.location.origin}`;
+    const text = `🎵 Posłuchaj "${trackTitle}" by ${trackArtist} na GrouAI Stream! ${trackUrl || window.location.origin}`;
     const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
     // Use link click instead of window.open to avoid popup blockers
     const a = document.createElement("a");

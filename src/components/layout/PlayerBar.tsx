@@ -169,7 +169,7 @@ export const PlayerBar = () => {
   const handleShare = async () => {
     if (!currentTrack) return;
     
-    const text = `🎵 Listening to "${currentTrack.title}" by ${currentTrack.artist} on GrooveAI Stream!`;
+    const text = `🎵 Listening to "${currentTrack.title}" by ${currentTrack.artist} on GrouAI Stream!`;
     const url = currentTrack.video_url || window.location.origin;
     
     try {

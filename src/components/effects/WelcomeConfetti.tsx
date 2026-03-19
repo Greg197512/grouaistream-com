@@ -78,7 +78,7 @@ export const WelcomeConfetti = ({ show, onComplete }: { show: boolean; onComplet
               className="font-display text-3xl md:text-5xl font-bold bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent"
               style={{ textShadow: "0 0 40px hsl(var(--primary) / 0.5)" }}
             >
-              Witaj w GrooveAI!
+              Witaj w GrouAI!
             </h1>
             <motion.p
               initial={{ opacity: 0 }}
