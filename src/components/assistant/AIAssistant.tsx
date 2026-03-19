@@ -1023,7 +1023,7 @@ export const AIAssistant = () => {
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*,audio/*"
+                accept="image/*,audio/*,video/*,.mp4,.webm,.mov,.avi,.mkv,.mp3,.wav,.flac,.m4a,.aac,.ogg,.opus"
                 multiple
                 className="hidden"
                 onChange={(e) => { if (e.target.files) handleFiles(e.target.files); e.target.value = ""; }}
