@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef } from "react";
 
 interface UseClapControlOptions {
   enabled: boolean;
@@ -13,6 +13,12 @@ const DOUBLE_CLAP_WINDOW_MS = 500;
 // Claps are very short transients — if the signal stays loud for longer, it's music not a clap
 const CLAP_MAX_DURATION_MS = 60;
 
+/** Check if music is currently playing — if so, ignore peaks entirely */
+const isMusicPlaying = () => {
+  const musicAudio = document.querySelector("audio[data-player='main']") as HTMLAudioElement | null;
+  return musicAudio && !musicAudio.paused && musicAudio.volume > 0.05;
+};
+
 export function useClapControl({ enabled, onSingleClap, onDoubleClap }: UseClapControlOptions) {
   const rafRef = useRef<number | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -24,12 +30,6 @@ export function useClapControl({ enabled, onSingleClap, onDoubleClap }: UseClapC
   const clapDecisionTimerRef = useRef<number | null>(null);
   const peakStartRef = useRef(0);
   const wasPeakRef = useRef(false);
-
-  // Check if music is currently playing — if so, ignore peaks entirely
-  const isMusicPlaying = useCallback(() => {
-    const musicAudio = document.querySelector("audio[data-player='main']") as HTMLAudioElement | null;
-    return musicAudio && !musicAudio.paused && musicAudio.volume > 0.05;
-  }, []);
 
   useEffect(() => {
     if (!enabled) {
@@ -166,5 +166,5 @@ export function useClapControl({ enabled, onSingleClap, onDoubleClap }: UseClapC
       cancelled = true;
       cleanup();
     };
-  }, [enabled, onSingleClap, onDoubleClap, isMusicPlaying]);
+  }, [enabled, onSingleClap, onDoubleClap]);
 }
