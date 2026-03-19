@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { TrackRow } from "@/components/cards/TrackRow";
 import { supabase } from "@/integrations/supabase/client";
 import { usePlayer, Track } from "@/contexts/PlayerContext";
-import { useUnlock } from "@/contexts/UnlockContext";
+
 import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "sonner";
 import { CCMixterSection } from "@/components/sections/CCMixterSection";
@@ -85,14 +85,13 @@ const Search = () => {
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef<any>(null);
   const { playTrack, playPlaylist, currentTrack, isPlaying, togglePlay } = usePlayer();
-  const { filterTracks } = useUnlock();
   const { t } = useLanguage();
 
   useEffect(() => {
     const loadTracks = async () => {
       const { data, error } = await supabase.from("tracks").select("*").or("audio_url.not.is.null,video_url.not.is.null").order("created_at", { ascending: false });
       if (error) { console.error("Error loading tracks:", error); return; }
-      const playableTracks = filterTracks((data || []).filter(isPlayableTrack));
+      const playableTracks = (data || []).filter(isPlayableTrack);
       setAllTracks(playableTracks);
     };
     loadTracks();
@@ -148,7 +147,7 @@ const Search = () => {
           .limit(50);
 
         if (dbResults) {
-          const dbPlayable = filterTracks(dbResults.filter(isPlayableTrack));
+          const dbPlayable = dbResults.filter(isPlayableTrack);
           const existingIds = new Set(scored.map(t => t.id));
           const newFromDb = dbPlayable.filter(t => !existingIds.has(t.id));
           setResults([...scored, ...newFromDb]);
@@ -162,7 +161,7 @@ const Search = () => {
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [query, allTracks, normalize, filterTracks]);
+  }, [query, allTracks, normalize]);
 
   // CC Mixter search (debounced)
   useEffect(() => {
