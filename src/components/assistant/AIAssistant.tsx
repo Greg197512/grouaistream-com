@@ -810,6 +810,12 @@ export const AIAssistant = () => {
                                       </div>
                                     </div>
                                   )}
+                                  {att.type === "video" && (
+                                    <div className="rounded-lg overflow-hidden">
+                                      <video src={att.url} controls className="max-w-full max-h-48 rounded-lg" />
+                                      <p className="text-[10px] mt-1 truncate text-muted-foreground">{att.name}</p>
+                                    </div>
+                                  )}
                                 </div>
                               ))}
                             </div>
