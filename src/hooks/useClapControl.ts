@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useCallback } from "react";
 
 interface UseClapControlOptions {
   enabled: boolean;
@@ -6,9 +6,12 @@ interface UseClapControlOptions {
   onDoubleClap: () => void;
 }
 
-const CLAP_THRESHOLD = 0.2;
-const PEAK_COOLDOWN_MS = 180;
+// Much higher threshold to avoid music triggering false claps
+const CLAP_THRESHOLD = 0.55;
+const PEAK_COOLDOWN_MS = 250;
 const DOUBLE_CLAP_WINDOW_MS = 500;
+// Claps are very short transients — if the signal stays loud for longer, it's music not a clap
+const CLAP_MAX_DURATION_MS = 60;
 
 export function useClapControl({ enabled, onSingleClap, onDoubleClap }: UseClapControlOptions) {
   const rafRef = useRef<number | null>(null);
@@ -19,6 +22,14 @@ export function useClapControl({ enabled, onSingleClap, onDoubleClap }: UseClapC
   const lastPeakRef = useRef(0);
   const clapTimesRef = useRef<number[]>([]);
   const clapDecisionTimerRef = useRef<number | null>(null);
+  const peakStartRef = useRef(0);
+  const wasPeakRef = useRef(false);
+
+  // Check if music is currently playing — if so, ignore peaks entirely
+  const isMusicPlaying = useCallback(() => {
+    const musicAudio = document.querySelector("audio[data-player='main']") as HTMLAudioElement | null;
+    return musicAudio && !musicAudio.paused && musicAudio.volume > 0.05;
+  }, []);
 
   useEffect(() => {
     if (!enabled) {
@@ -74,30 +85,40 @@ export function useClapControl({ enabled, onSingleClap, onDoubleClap }: UseClapC
       const isPeak = rms > CLAP_THRESHOLD;
       const cooledDown = now - lastPeakRef.current > PEAK_COOLDOWN_MS;
 
-      if (isPeak && cooledDown) {
-        lastPeakRef.current = now;
+      // Track peak duration — claps are very short, music sustains
+      if (isPeak && !wasPeakRef.current) {
+        peakStartRef.current = now;
+        wasPeakRef.current = true;
+      } else if (!isPeak && wasPeakRef.current) {
+        const peakDuration = now - peakStartRef.current;
+        wasPeakRef.current = false;
 
-        clapTimesRef.current = [...clapTimesRef.current, now].filter(
-          (time) => now - time <= DOUBLE_CLAP_WINDOW_MS,
-        );
+        // Only count as clap if: short transient, cooled down, music not playing
+        if (peakDuration < CLAP_MAX_DURATION_MS && cooledDown && !isMusicPlaying()) {
+          lastPeakRef.current = now;
 
-        if (clapDecisionTimerRef.current) {
-          clearTimeout(clapDecisionTimerRef.current);
-        }
+          clapTimesRef.current = [...clapTimesRef.current, now].filter(
+            (time) => now - time <= DOUBLE_CLAP_WINDOW_MS,
+          );
 
-        clapDecisionTimerRef.current = window.setTimeout(() => {
-          const count = clapTimesRef.current.filter(
-            (time) => performance.now() - time <= DOUBLE_CLAP_WINDOW_MS,
-          ).length;
-
-          if (count >= 2) {
-            onDoubleClap();
-          } else if (count === 1) {
-            onSingleClap();
+          if (clapDecisionTimerRef.current) {
+            clearTimeout(clapDecisionTimerRef.current);
           }
 
-          clapTimesRef.current = [];
-        }, DOUBLE_CLAP_WINDOW_MS);
+          clapDecisionTimerRef.current = window.setTimeout(() => {
+            const count = clapTimesRef.current.filter(
+              (time) => performance.now() - time <= DOUBLE_CLAP_WINDOW_MS,
+            ).length;
+
+            if (count >= 2) {
+              onDoubleClap();
+            } else if (count === 1) {
+              onSingleClap();
+            }
+
+            clapTimesRef.current = [];
+          }, DOUBLE_CLAP_WINDOW_MS);
+        }
       }
 
       rafRef.current = requestAnimationFrame(detectLoop);
@@ -145,5 +166,5 @@ export function useClapControl({ enabled, onSingleClap, onDoubleClap }: UseClapC
       cancelled = true;
       cleanup();
     };
-  }, [enabled, onSingleClap, onDoubleClap]);
+  }, [enabled, onSingleClap, onDoubleClap, isMusicPlaying]);
 }
