@@ -253,10 +253,22 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     if (!currentTrack) return;
 
     const videoId = getPlayableYouTubeId(currentTrack);
+    const nativeVideoUrl = getNativeVideoUrl(currentTrack);
 
     if (videoId) {
       setIsVideoMode(true);
       setYoutubeVideoId(videoId);
+      setIsPlaying(true);
+      setDuration(currentTrack.duration || 0);
+
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.src = "";
+      }
+    } else if (nativeVideoUrl) {
+      // Native video file (MP4/WEBM) — use isVideoMode but no youtubeVideoId
+      setIsVideoMode(true);
+      setYoutubeVideoId(null);
       setIsPlaying(true);
       setDuration(currentTrack.duration || 0);
 
