@@ -122,7 +122,8 @@ const Server = () => {
   });
 
   const validateFile = (f: File): string | null => {
-    if (!ALL_ALLOWED.includes(f.type)) return "Dozwolone: MP3, WAV, MP4, WebM";
+    const ext = "." + f.name.split(".").pop()?.toLowerCase();
+    if (!ALL_ALLOWED.includes(f.type) && !ALLOWED_EXTENSIONS.includes(ext)) return "Nieobsługiwany format pliku";
     if (f.size > MAX_SIZE) return "Max: 500MB";
     return null;
   };
