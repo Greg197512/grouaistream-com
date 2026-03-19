@@ -66,6 +66,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   const trackStartTime = useRef<number>(0);
   const isVideoModeRef = useRef(false);
   const nextTrackRef = useRef<(isUserSkip?: boolean) => void>(() => {});
+  const userIdRef = useRef<string | null>(null);
   
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
