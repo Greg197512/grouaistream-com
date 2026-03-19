@@ -147,7 +147,7 @@ const Search = () => {
           .limit(50);
 
         if (dbResults) {
-          const dbPlayable = filterTracks(dbResults.filter(isPlayableTrack));
+          const dbPlayable = dbResults.filter(isPlayableTrack);
           const existingIds = new Set(scored.map(t => t.id));
           const newFromDb = dbPlayable.filter(t => !existingIds.has(t.id));
           setResults([...scored, ...newFromDb]);
