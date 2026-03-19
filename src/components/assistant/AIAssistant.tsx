@@ -421,6 +421,27 @@ export const AIAssistant = () => {
       }
     }
 
+    // Detect "save to server" intent — user sends media files with keywords like suno, wrzuć, dodaj, serwer
+    const saveKeywords = /suno|wrzuć|wrzuc|dodaj|zapisz|save|upload|serwer|server|katalog|bibliotek|library/i;
+    const hasMediaAttachments = uploadedAttachments.some(a => a.type === "audio" || a.type === "video");
+    let serverSaveResult: { saved: number; titles: string[] } | null = null;
+
+    if (hasMediaAttachments && (saveKeywords.test(userMessage) || !userMessage.trim())) {
+      // Auto-save to server when user sends media (especially if they mention suno/save/server)
+      try {
+        serverSaveResult = await saveAttachmentsToServer(uploadedAttachments, userMessage);
+        if (serverSaveResult.saved > 0) {
+          toast.success(`💾 Zapisano ${serverSaveResult.saved} utworów na serwerze!`);
+        }
+      } catch (err) {
+        console.error("Error saving to server:", err);
+      }
+    }
+
+    const saveInfoForAI = serverSaveResult && serverSaveResult.saved > 0
+      ? `\n[SYSTEM: Użytkownik wrzucił ${serverSaveResult.saved} plików na serwer: ${serverSaveResult.titles.join(", ")}. Potwierdź to w odpowiedzi.]`
+      : "";
+
     setMessages(prev => [...prev, { role: "user", content: userMessage || (uploadedAttachments.length > 0 ? `📎 ${uploadedAttachments.map(a => a.name).join(", ")}` : ""), attachments: uploadedAttachments.length > 0 ? uploadedAttachments : undefined }]);
     setIsLoading(true);
 
