@@ -67,7 +67,15 @@ const ccTrackToTrack = (cc: CCMixterTrack): Track => {
 
 const Search = () => {
   const [searchParams] = useSearchParams();
-  const [query, setQuery] = useState(searchParams.get("q") || "");
+  const urlQuery = searchParams.get("q") || "";
+  const [query, setQuery] = useState(urlQuery);
+
+  // Sync query from URL params (when navigating from TopBar)
+  useEffect(() => {
+    if (urlQuery && urlQuery !== query) {
+      setQuery(urlQuery);
+    }
+  }, [urlQuery]);
   const [results, setResults] = useState<Track[]>([]);
   const [ccResults, setCcResults] = useState<Track[]>([]);
   const [allTracks, setAllTracks] = useState<Track[]>([]);
