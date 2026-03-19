@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { TrackRow } from "@/components/cards/TrackRow";
 import { supabase } from "@/integrations/supabase/client";
 import { usePlayer, Track } from "@/contexts/PlayerContext";
-import { useUnlock } from "@/contexts/UnlockContext";
+
 import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "sonner";
 import { CCMixterSection } from "@/components/sections/CCMixterSection";
