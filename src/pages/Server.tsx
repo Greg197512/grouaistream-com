@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 
 const ALLOWED_AUDIO = ["audio/mpeg", "audio/wav", "audio/mp3", "audio/x-wav"];
 const ALLOWED_VIDEO = ["video/mp4", "video/webm"];
+const ALLOWED_IMAGE = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 const ALL_ALLOWED = [...ALLOWED_AUDIO, ...ALLOWED_VIDEO];
 const MAX_SIZE = 500 * 1024 * 1024;
 
@@ -31,6 +32,8 @@ interface QueuedFile {
   status: "pending" | "uploading" | "done" | "error";
   progress: number;
   error?: string;
+  coverFile?: File;
+  coverPreview?: string;
 }
 
 const parseFileName = (name: string) => {
@@ -230,8 +233,24 @@ const Server = () => {
           .upload(filePath, item.file, { contentType: item.file.type });
         if (uploadError) throw uploadError;
 
-        updateQueueItem(item.id, { progress: 70 });
+        updateQueueItem(item.id, { progress: 60 });
         const { data: urlData } = supabase.storage.from("music").getPublicUrl(filePath);
+
+        // Upload cover image if provided
+        let coverUrl: string | null = null;
+        if (item.coverFile) {
+          const coverExt = item.coverFile.name.split('.').pop();
+          const coverPath = `covers/${Date.now()}-${safeName}.${coverExt}`;
+          const { error: coverErr } = await supabase.storage
+            .from("music")
+            .upload(coverPath, item.coverFile, { contentType: item.coverFile.type });
+          if (!coverErr) {
+            const { data: coverUrlData } = supabase.storage.from("music").getPublicUrl(coverPath);
+            coverUrl = coverUrlData.publicUrl;
+          }
+        }
+
+        updateQueueItem(item.id, { progress: 80 });
 
         const { data: insertData, error: insertError } = await supabase.from("tracks").insert({
           title: item.title,
@@ -239,6 +258,7 @@ const Server = () => {
           duration: 0,
           audio_url: isVideo ? null : urlData.publicUrl,
           video_url: isVideo ? urlData.publicUrl : null,
+          cover_url: coverUrl,
         }).select("id").single();
         if (insertError) throw insertError;
         
@@ -556,7 +576,7 @@ const Server = () => {
                     <div>
                       <p className="font-medium">Przeciągnij pliki lub foldery tutaj</p>
                       <p className="text-sm text-muted-foreground mt-1">
-                        MP3, WAV, MP4, WebM — max 500MB każdy
+                        MP3, WAV, MP4, WebM — max 500MB • Dodaj okładkę 🖼️ do każdego utworu w kolejce
                       </p>
                     </div>
                     <div className="flex flex-col items-center gap-2 mt-2">
@@ -612,6 +632,38 @@ const Server = () => {
                   <div className="space-y-1.5 max-h-64 overflow-y-auto">
                     {uploadQueue.map(item => (
                       <div key={item.id} className="flex items-center gap-3 p-2.5 rounded-lg bg-secondary/50 text-sm">
+                        {/* Cover preview / add cover */}
+                        <div className="relative h-10 w-10 rounded overflow-hidden flex-shrink-0 bg-muted">
+                          {item.coverPreview ? (
+                            <img src={item.coverPreview} alt="cover" className="h-full w-full object-cover" />
+                          ) : (
+                            <label className="flex items-center justify-center h-full w-full cursor-pointer hover:bg-muted-foreground/10 transition-colors">
+                              <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                              <input
+                                type="file"
+                                accept="image/jpeg,image/png,image/webp,image/gif"
+                                className="hidden"
+                                onChange={(e) => {
+                                  const f = e.target.files?.[0];
+                                  if (f && ALLOWED_IMAGE.includes(f.type)) {
+                                    const preview = URL.createObjectURL(f);
+                                    updateQueueItem(item.id, { coverFile: f, coverPreview: preview } as any);
+                                  }
+                                  e.target.value = "";
+                                }}
+                              />
+                            </label>
+                          )}
+                          {item.coverPreview && item.status === "pending" && (
+                            <button
+                              onClick={() => updateQueueItem(item.id, { coverFile: undefined, coverPreview: undefined } as any)}
+                              className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-destructive flex items-center justify-center"
+                            >
+                              <X className="h-2.5 w-2.5 text-destructive-foreground" />
+                            </button>
+                          )}
+                        </div>
+
                         {ALLOWED_VIDEO.includes(item.file.type)
                           ? <FileVideo className="h-4 w-4 text-accent flex-shrink-0" />
                           : <FileAudio className="h-4 w-4 text-primary flex-shrink-0" />
@@ -622,6 +674,7 @@ const Server = () => {
                           </p>
                           <div className="flex gap-2 text-[10px] text-muted-foreground">
                             <span>{formatSize(item.file.size)}</span>
+                            {item.coverFile && <span className="text-primary">🖼️ okładka</span>}
                             {item.relativePath && <span className="truncate">📁 {item.relativePath}</span>}
                           </div>
                           {item.status === "uploading" && <Progress value={item.progress} className="h-1 mt-1" />}

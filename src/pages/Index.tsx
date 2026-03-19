@@ -6,6 +6,7 @@ import { PlaylistGrid } from "@/components/sections/PlaylistGrid";
 import { LiveRadioCard } from "@/components/sections/LiveRadioCard";
 import { TopArtists } from "@/components/sections/TopArtists";
 import { GenreSection } from "@/components/sections/GenreSection";
+import { NewOnServer } from "@/components/sections/NewOnServer";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 const Index = () => {
@@ -14,6 +15,7 @@ const Index = () => {
   return (
     <MainLayout>
       <HeroSection />
+      <NewOnServer />
       <RecentlyPlayed />
       
       <GenreSection genre="EDM" title="🎧 EDM & Electronic Hits" icon="headphones" color="text-primary" limit={8} />
