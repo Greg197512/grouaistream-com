@@ -216,8 +216,22 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   const isBlockedStreamUrl = (value: string) =>
     value.includes("open.spotify.com") || value.startsWith("spotify:");
 
+  const isNativeVideoUrl = (url?: string | null): boolean => {
+    if (!url) return false;
+    const lower = url.toLowerCase();
+    return /\.(mp4|webm|mov|avi|mkv)(\?.*)?$/i.test(lower) || 
+           (lower.includes('/music/') && (lower.includes('video') || lower.includes('.mp4') || lower.includes('.webm')));
+  };
+
   const getPlayableYouTubeId = (track: Track): string | null =>
     track.video_url ? extractYouTubeId(track.video_url) : null;
+
+  const getNativeVideoUrl = (track: Track): string | null => {
+    if (track.video_url && isPlayableUrl(track.video_url) && !extractYouTubeId(track.video_url) && isNativeVideoUrl(track.video_url)) {
+      return track.video_url;
+    }
+    return null;
+  };
 
   const getPlayableAudioUrl = (track: Track): string | null => {
     const candidates = [track.audio_url, track.video_url];
