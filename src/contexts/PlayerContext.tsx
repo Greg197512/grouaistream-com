@@ -216,8 +216,22 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   const isBlockedStreamUrl = (value: string) =>
     value.includes("open.spotify.com") || value.startsWith("spotify:");
 
+  const isNativeVideoUrl = (url?: string | null): boolean => {
+    if (!url) return false;
+    const lower = url.toLowerCase();
+    return /\.(mp4|webm|mov|avi|mkv)(\?.*)?$/i.test(lower) || 
+           (lower.includes('/music/') && (lower.includes('video') || lower.includes('.mp4') || lower.includes('.webm')));
+  };
+
   const getPlayableYouTubeId = (track: Track): string | null =>
     track.video_url ? extractYouTubeId(track.video_url) : null;
+
+  const getNativeVideoUrl = (track: Track): string | null => {
+    if (track.video_url && isPlayableUrl(track.video_url) && !extractYouTubeId(track.video_url) && isNativeVideoUrl(track.video_url)) {
+      return track.video_url;
+    }
+    return null;
+  };
 
   const getPlayableAudioUrl = (track: Track): string | null => {
     const candidates = [track.audio_url, track.video_url];
@@ -232,17 +246,29 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const hasPlayableSource = (track: Track) =>
-    Boolean(getPlayableYouTubeId(track) || getPlayableAudioUrl(track));
+    Boolean(getPlayableYouTubeId(track) || getNativeVideoUrl(track) || getPlayableAudioUrl(track));
 
   // Play current track when it changes
   useEffect(() => {
     if (!currentTrack) return;
 
     const videoId = getPlayableYouTubeId(currentTrack);
+    const nativeVideoUrl = getNativeVideoUrl(currentTrack);
 
     if (videoId) {
       setIsVideoMode(true);
       setYoutubeVideoId(videoId);
+      setIsPlaying(true);
+      setDuration(currentTrack.duration || 0);
+
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.src = "";
+      }
+    } else if (nativeVideoUrl) {
+      // Native video file (MP4/WEBM) — use isVideoMode but no youtubeVideoId
+      setIsVideoMode(true);
+      setYoutubeVideoId(null);
       setIsPlaying(true);
       setDuration(currentTrack.duration || 0);
 
@@ -516,7 +542,8 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     if (isVideoMode) {
       setProgress(position);
       setCurrentTime(time);
-      // YouTube seek will be handled by the component
+      // Dispatch seek event for native video player
+      window.dispatchEvent(new CustomEvent('native-video-seek', { detail: { time } }));
     } else if (audioRef.current) {
       audioRef.current.currentTime = time;
       setProgress(position);
