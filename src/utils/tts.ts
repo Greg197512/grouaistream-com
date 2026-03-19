@@ -5,6 +5,9 @@
  * Uses Web Audio API for DJ voice processing (gain boost, delay doubling).
  * DJ mode is ElevenLabs ONLY — no browser fallback (real DJ needs real voice).
  * 
+ * Audio ducking: automatically lowers music volume while TTS speaks,
+ * then smoothly restores it when done.
+ * 
  * Exposes isSpeaking flag so voice recognition can pause while TTS is active.
  */
 
@@ -12,9 +15,43 @@ let _isSpeaking = false;
 let _currentAudio: HTMLAudioElement | null = null;
 let _djAudioContext: AudioContext | null = null;
 let _djSourceNode: MediaElementAudioSourceNode | null = null;
+let _savedMusicVolume: number | null = null;
 
 /** Returns true if the TTS engine is currently speaking */
 export const isTTSSpeaking = () => _isSpeaking;
+
+/** Duck music volume down when TTS starts speaking */
+const duckMusicVolume = () => {
+  // Find the main music audio element managed by PlayerContext
+  const musicAudio = document.querySelector("audio[data-player='main']") as HTMLAudioElement | null;
+  if (musicAudio && _savedMusicVolume === null) {
+    _savedMusicVolume = musicAudio.volume;
+    // Smoothly lower to 15% of current volume
+    musicAudio.volume = Math.max(musicAudio.volume * 0.15, 0.02);
+  }
+};
+
+/** Restore music volume after TTS finishes */
+const restoreMusicVolume = () => {
+  const musicAudio = document.querySelector("audio[data-player='main']") as HTMLAudioElement | null;
+  if (musicAudio && _savedMusicVolume !== null) {
+    // Smooth fade back up
+    const target = _savedMusicVolume;
+    const current = musicAudio.volume;
+    const steps = 10;
+    const stepTime = 50; // 500ms total fade
+    let step = 0;
+    const fadeInterval = setInterval(() => {
+      step++;
+      musicAudio.volume = current + (target - current) * (step / steps);
+      if (step >= steps) {
+        musicAudio.volume = target;
+        clearInterval(fadeInterval);
+      }
+    }, stepTime);
+    _savedMusicVolume = null;
+  }
+};
 
 /** Stop any current speech */
 export const stopSpeaking = () => {
