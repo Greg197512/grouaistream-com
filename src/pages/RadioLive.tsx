@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
-import { Radio, Wifi, Music, Volume2, VolumeX, ArrowLeft, Heart, Sparkles, MessageCircle, Send, X, Trash2, Smile } from "lucide-react";
+import { Radio, Wifi, Music, Volume2, VolumeX, ArrowLeft, Heart, Sparkles, MessageCircle, Send, X, Trash2, Smile, Play } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -76,6 +76,7 @@ const RadioLive = () => {
   const [schedule, setSchedule] = useState<ScheduleTrack[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [autoplayBlocked, setAutoplayBlocked] = useState(false);
   const [volume, setVolume] = useState(80);
   const [muted, setMuted] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -353,8 +354,13 @@ const RadioLive = () => {
       audioRef.current = audio;
       audio.addEventListener("loadeddata", () => {
         audio.currentTime = offset;
-        audio.play().catch(() => {});
-        setIsPlaying(true);
+        audio.play().then(() => {
+          setIsPlaying(true);
+          setAutoplayBlocked(false);
+        }).catch(() => {
+          setAutoplayBlocked(true);
+          setIsPlaying(false);
+        });
       });
       audio.addEventListener("timeupdate", () => {
         if (audio.duration) setProgress((audio.currentTime / audio.duration) * 100);
@@ -681,6 +687,29 @@ const RadioLive = () => {
                   className="flex-1"
                 />
               </div>
+              {/* Manual play button when autoplay blocked */}
+              {autoplayBlocked && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="pt-2"
+                >
+                  <Button
+                    onClick={() => {
+                      if (audioRef.current) {
+                        audioRef.current.play().then(() => {
+                          setIsPlaying(true);
+                          setAutoplayBlocked(false);
+                        }).catch(() => {});
+                      }
+                    }}
+                    className="w-full gap-2 groove-gradient-bg text-primary-foreground font-bold text-lg h-12 animate-pulse"
+                  >
+                    <Play className="h-5 w-5" />
+                    Odblokuj dźwięk
+                  </Button>
+                </motion.div>
+              )}
             </div>
           </div>
         )}
