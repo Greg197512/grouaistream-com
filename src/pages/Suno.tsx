@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, Music, Guitar, Waves, Plus, Blend, Disc3, Type } from "lucide-react";
+import { Sparkles, Music, Guitar, Waves, Plus, Blend, Disc3, Type, Zap, Cpu } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
 import { motion, AnimatePresence } from "framer-motion";
@@ -38,11 +38,17 @@ const Suno = () => {
   const [useSamples, setUseSamples] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [extending, setExtending] = useState(false);
-  const [result, setResult] = useState<{ audioUrl: string; title: string; genre: string; generationId?: string; durationSeconds: number; lastTrack?: GeneratedTrack; lyrics: { time: number; text: string }[] } | null>(null);
+  const [result, setResult] = useState<{ audioUrl: string; title: string; genre: string; generationId?: string; durationSeconds: number; lastTrack?: GeneratedTrack; lyrics: { time: number; text: string }[]; imageUrl?: string } | null>(null);
   const [errorModal, setErrorModal] = useState<string | null>(null);
   const [playbackTime, setPlaybackTime] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  
+  // Suno AI engine toggle
+  const [useSunoAI, setUseSunoAI] = useState(true);
+  const [sunoPolling, setSunoPolling] = useState(false);
+  const [sunoStatus, setSunoStatus] = useState("");
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Track playback time for lyrics sync
   useEffect(() => {
