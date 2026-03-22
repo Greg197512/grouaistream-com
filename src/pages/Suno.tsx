@@ -641,17 +641,6 @@ const Suno = () => {
                   </motion.div>
                 )}
 
-                {/* Suno AI cover image */}
-                {result.imageUrl && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.5 }}
-                    className="relative z-10"
-                  >
-                    <img src={result.imageUrl} alt={result.title} className="w-full rounded-xl object-cover max-h-48" />
-                  </motion.div>
-                )}
               </motion.div>
             )}
           </AnimatePresence>
