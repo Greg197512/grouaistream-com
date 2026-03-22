@@ -168,7 +168,7 @@ const Suno = () => {
   const [generating, setGenerating] = useState(false);
   const [genStatus, setGenStatus] = useState("");
   const [duration, setDuration] = useState(30);
-  const [selectedVoice, setSelectedVoice] = useState(VOICE_OPTIONS[0].id);
+  // Voice auto-selected based on genre
   const [result, setResult] = useState<{
     audioUrl: string;
     title: string;
