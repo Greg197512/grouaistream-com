@@ -44,8 +44,7 @@ const Suno = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   
-  // Suno AI engine toggle
-  const [useSunoAI, setUseSunoAI] = useState(true);
+  // Suno AI engine (always on)
   const [sunoPolling, setSunoPolling] = useState(false);
   const [sunoStatus, setSunoStatus] = useState("");
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
