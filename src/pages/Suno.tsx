@@ -222,7 +222,7 @@ const Suno = () => {
         duration,
         vocals: !instrumental && customLyrics.trim().length > 0,
         vocalText: !instrumental ? customLyrics.trim() : null,
-        vocalVoiceId: selectedVoice,
+        vocalVoiceId: getVoiceForGenre(genre),
       };
 
       setGenStatus("🎼 ElevenLabs generuje instrumenty...");
