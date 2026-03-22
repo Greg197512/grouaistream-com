@@ -667,7 +667,8 @@ const Suno = () => {
                   </motion.div>
                 )}
 
-                {/* Extend button */}
+                {/* Extend button - only for local engine */}
+                {!useSunoAI && result.lastTrack && (
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -684,6 +685,19 @@ const Suno = () => {
                     {extending ? "Przedłużam..." : `Przedłuż o 30s (obecny: ${result.durationSeconds}s)`}
                   </Button>
                 </motion.div>
+                )}
+
+                {/* Suno AI cover image */}
+                {result.imageUrl && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.5 }}
+                    className="relative z-10"
+                  >
+                    <img src={result.imageUrl} alt={result.title} className="w-full rounded-xl object-cover max-h-48" />
+                  </motion.div>
+                )}
               </motion.div>
             )}
           </AnimatePresence>
