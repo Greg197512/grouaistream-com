@@ -3,14 +3,24 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Mic, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface Props {
   open: boolean;
   onSubmit: (name: string) => void;
 }
 
+const texts = {
+  pl: { title: "Nadaj imię asystentowi", desc: "Wpisz imię — będzie Cię słuchać i reagować na głos", placeholder: "np. Rocco, Luna, Max...", activate: "Aktywuj" },
+  en: { title: "Name your assistant", desc: "Enter a name — it will listen and respond to your voice", placeholder: "e.g. Rocco, Luna, Max...", activate: "Activate" },
+  nl: { title: "Geef je assistent een naam", desc: "Voer een naam in — het luistert en reageert op je stem", placeholder: "bijv. Rocco, Luna, Max...", activate: "Activeren" },
+  ua: { title: "Назвіть асистента", desc: "Введіть ім'я — він слухатиме і реагуватиме на голос", placeholder: "напр. Rocco, Luna, Max...", activate: "Активувати" },
+};
+
 export const AssistantNamingModal = ({ open, onSubmit }: Props) => {
   const [name, setName] = useState("");
+  const { language } = useLanguage();
+  const t = texts[language] || texts.en;
 
   const handleSubmit = () => {
     const trimmed = name.trim() || "Groove";
@@ -41,10 +51,8 @@ export const AssistantNamingModal = ({ open, onSubmit }: Props) => {
               boxShadow: '0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.1)',
             }}
           >
-            {/* Subtle glow accent */}
             <div className="absolute -top-px left-1/2 -translate-x-1/2 w-24 h-px bg-gradient-to-r from-transparent via-primary/60 to-transparent" />
             
-            {/* Icon */}
             <div className="flex justify-center mb-3">
               <motion.div
                 animate={{ rotate: [0, 360] }}
@@ -62,16 +70,16 @@ export const AssistantNamingModal = ({ open, onSubmit }: Props) => {
             <div className="text-center mb-4">
               <div className="flex items-center justify-center gap-1.5 mb-1">
                 <Sparkles className="h-3 w-3 text-primary/70" />
-                <h2 className="text-sm font-semibold text-foreground/90">Nadaj imię asystentowi</h2>
+                <h2 className="text-sm font-semibold text-foreground/90">{t.title}</h2>
               </div>
               <p className="text-[10px] text-muted-foreground/70 leading-relaxed">
-                Wpisz imię — będzie Cię słuchać i reagować na głos
+                {t.desc}
               </p>
             </div>
 
             <div className="space-y-3">
               <Input
-                placeholder="np. Rocco, Luna, Max..."
+                placeholder={t.placeholder}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
@@ -92,7 +100,7 @@ export const AssistantNamingModal = ({ open, onSubmit }: Props) => {
                 }}
               >
                 <Mic className="mr-1.5 h-3 w-3" />
-                {name.trim() ? `Aktywuj „${name.trim()}"` : "Aktywuj"}
+                {name.trim() ? `${t.activate} „${name.trim()}"` : t.activate}
               </Button>
             </div>
           </motion.div>
