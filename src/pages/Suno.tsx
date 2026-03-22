@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, Music, Guitar, Waves, Plus, Blend, Disc3, Type } from "lucide-react";
+import { Sparkles, Music, Guitar, Waves, Plus, Blend, Disc3, Type, Zap, Cpu } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
 import { motion, AnimatePresence } from "framer-motion";
@@ -38,11 +38,24 @@ const Suno = () => {
   const [useSamples, setUseSamples] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [extending, setExtending] = useState(false);
-  const [result, setResult] = useState<{ audioUrl: string; title: string; genre: string; generationId?: string; durationSeconds: number; lastTrack?: GeneratedTrack; lyrics: { time: number; text: string }[] } | null>(null);
+  const [result, setResult] = useState<{ audioUrl: string; title: string; genre: string; generationId?: string; durationSeconds: number; lastTrack?: GeneratedTrack; lyrics: { time: number; text: string }[]; imageUrl?: string } | null>(null);
   const [errorModal, setErrorModal] = useState<string | null>(null);
   const [playbackTime, setPlaybackTime] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  
+  // Suno AI engine toggle
+  const [useSunoAI, setUseSunoAI] = useState(true);
+  const [sunoPolling, setSunoPolling] = useState(false);
+  const [sunoStatus, setSunoStatus] = useState("");
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, []);
 
   // Track playback time for lyrics sync
   useEffect(() => {
@@ -69,10 +82,131 @@ const Suno = () => {
     };
   }, [result?.audioUrl]);
 
+  // Suno AI polling
+  const pollSunoResult = (taskId: string) => {
+    let attempts = 0;
+    const maxAttempts = 60;
+    pollRef.current = setInterval(async () => {
+      attempts++;
+      if (attempts > maxAttempts) {
+        if (pollRef.current) clearInterval(pollRef.current);
+        setSunoPolling(false);
+        setSunoStatus("⏰ Timeout — spróbuj ponownie");
+        setGenerating(false);
+        return;
+      }
+      try {
+        const { data, error } = await supabase.functions.invoke("suno-generate", {
+          body: { action: "status", taskId },
+        });
+        if (error) throw error;
+        const status = data?.data?.status || data?.status;
+        const sunoData = data?.data?.response?.sunoData || data?.data?.songs || [];
+        if (status === "SUCCESS" || status === "FIRST_SUCCESS" || status === "TEXT_SUCCESS") {
+          if (pollRef.current) clearInterval(pollRef.current);
+          setSunoPolling(false);
+          handleSunoResult(sunoData);
+          setGenerating(false);
+        } else if (status === "failed" || status === "FAILED" || status === "GENERATE_AUDIO_FAILED" || status === "CREATE_TASK_FAILED") {
+          if (pollRef.current) clearInterval(pollRef.current);
+          setSunoPolling(false);
+          setSunoStatus("❌ Generowanie nie powiodło się");
+          toast.error("Suno AI nie mogło wygenerować utworu");
+          setGenerating(false);
+        } else {
+          setSunoStatus(`⏳ Suno AI generuje... (${Math.floor(attempts * 5)}s)`);
+        }
+      } catch (err) {
+        console.error("[Suno] Poll error:", err);
+      }
+    }, 5000);
+  };
+
+  const handleSunoResult = (data: any) => {
+    const songList = Array.isArray(data) ? data : [data];
+    const song = songList.find((s: any) => s) || songList[0];
+    if (!song) {
+      setSunoStatus("Brak wyników z Suno AI");
+      return;
+    }
+    const audioUrl = song.streamAudioUrl || song.sourceStreamAudioUrl || song.audioUrl || song.audio_url || song.sourceAudioUrl || "";
+    const songTitle = song.title || title || "Suno AI Track";
+    const imageUrl = song.imageUrl || song.image_url || song.sourceImageUrl || "";
+    const duration = song.duration || 120;
+    const songStyle = song.tags || song.style || genre;
+
+    const lyrics = customLyrics.trim()
+      ? parseLyricsFromText(customLyrics, duration)
+      : generateLyrics(songStyle, songTitle, duration, instrumental);
+
+    setResult({
+      audioUrl,
+      title: songTitle,
+      genre: songStyle,
+      durationSeconds: duration,
+      lyrics,
+      imageUrl,
+    });
+    setSunoStatus(`✅ Wygenerowano z Suno AI!`);
+    toast.success(`🎶 Suno AI: "${songTitle}"`);
+
+    // Save to generations if logged in
+    if (user) {
+      supabase.from("generations").insert({
+        user_id: user.id,
+        title: songTitle,
+        genre: songStyle,
+        prompt: customLyrics || `Suno AI: ${genre}`,
+        instrumental,
+        status: "completed",
+        audio_url: audioUrl,
+      }).then();
+    }
+  };
+
   const generate = async () => {
     setGenerating(true);
     setResult(null);
+    setSunoStatus("");
 
+    // Use Suno AI engine
+    if (useSunoAI) {
+      try {
+        const body: any = { action: "generate", prompt: customLyrics.trim() || `A ${genre.toLowerCase()} track${title ? ` called "${title}"` : ""}`, instrumental };
+        if (title || genre) {
+          body.style = genre;
+          body.title = title || `${genre} Track`;
+        }
+
+        setSunoStatus("🎵 Wysyłam do Suno AI...");
+        const { data, error } = await supabase.functions.invoke("suno-generate", { body });
+        if (error) throw error;
+
+        if (data?.code && data.code !== 200) {
+          throw new Error(data?.msg || "Błąd API Suno");
+        }
+
+        const taskId = data?.data?.taskId || data?.taskId;
+        if (taskId) {
+          setSunoStatus("⏳ Suno AI generuje utwór... (~30-120s)");
+          setSunoPolling(true);
+          pollSunoResult(taskId);
+        } else if (data?.data?.songs || data?.data) {
+          handleSunoResult(data.data.songs || data.data);
+          setGenerating(false);
+        } else {
+          throw new Error("Nieoczekiwana odpowiedź z Suno API");
+        }
+      } catch (err: any) {
+        console.error("[Suno] Generate error:", err);
+        toast.error("Błąd Suno AI: " + (err.message || "Nieznany błąd"));
+        setSunoStatus("");
+        setGenerating(false);
+      }
+      return;
+    }
+
+    // Local Web Audio engine (fallback)
     try {
       const track = await generateMusic({
         style: genre,
@@ -328,11 +462,15 @@ const Suno = () => {
 
           {/* Duration */}
           <div className="space-y-2">
-            <Label className="text-sm text-gray-300">Długość: 30s</Label>
+            <Label className="text-sm text-gray-300">
+              {useSunoAI ? "Długość: ~2-3 min (Suno AI)" : "Długość: 30s"}
+            </Label>
             <div className="h-2 rounded-full bg-[#1a1a2e] relative overflow-hidden">
-              <div className="h-full rounded-full" style={{ width: "100%", background: "linear-gradient(90deg, #FF6B00, #FF9500)", boxShadow: "0 0 8px #FF6B0060" }} />
+              <div className="h-full rounded-full" style={{ width: "100%", background: useSunoAI ? "linear-gradient(90deg, #9333EA, #FF6B00)" : "linear-gradient(90deg, #FF6B00, #FF9500)", boxShadow: "0 0 8px #FF6B0060" }} />
             </div>
-            <p className="text-xs text-gray-500">Stała długość 30 sekund (możesz przedłużyć po wygenerowaniu)</p>
+            <p className="text-xs text-gray-500">
+              {useSunoAI ? "Suno AI generuje pełne utwory w profesjonalnej jakości" : "Stała długość 30 sekund (możesz przedłużyć po wygenerowaniu)"}
+            </p>
           </div>
 
           {/* Instrumental Toggle */}
@@ -371,7 +509,36 @@ const Suno = () => {
             )}
           </AnimatePresence>
 
-          {/* CC Mixter Samples Toggle */}
+          {/* AI Engine Toggle */}
+          <div className="p-4 rounded-xl border border-[#9333EA]/30 bg-[#1a1a2e]/60 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Zap className="h-5 w-5 text-[#9333EA]" />
+                <div>
+                  <Label className="text-sm text-gray-200">Suno AI Engine</Label>
+                  <p className="text-xs text-gray-500">Profesjonalna jakość — generuje prawdziwe brzmienie</p>
+                </div>
+              </div>
+              <Switch checked={useSunoAI} onCheckedChange={setUseSunoAI} className="data-[state=checked]:bg-[#9333EA]" />
+            </div>
+            <div className="flex gap-2">
+              <Badge 
+                className={`text-xs cursor-pointer transition-all ${useSunoAI ? 'bg-[#9333EA] text-white border-transparent' : 'bg-transparent border-[#9333EA]/30 text-gray-400'}`}
+                onClick={() => setUseSunoAI(true)}
+              >
+                <Zap className="h-3 w-3 mr-1" /> Suno AI (HQ)
+              </Badge>
+              <Badge 
+                className={`text-xs cursor-pointer transition-all ${!useSunoAI ? 'bg-[#FF6B00] text-white border-transparent' : 'bg-transparent border-[#FF6B00]/30 text-gray-400'}`}
+                onClick={() => setUseSunoAI(false)}
+              >
+                <Cpu className="h-3 w-3 mr-1" /> Lokalny (Web Audio)
+              </Badge>
+            </div>
+          </div>
+
+          {/* CC Mixter Samples Toggle - only for local engine */}
+          {!useSunoAI && (
           <div className="flex items-center justify-between p-4 rounded-xl border border-[#FF6B00]/20 bg-[#1a1a2e]/60">
             <div className="flex items-center gap-3">
               <Disc3 className="h-5 w-5 text-[#FF9500]" />
@@ -382,23 +549,31 @@ const Suno = () => {
             </div>
             <Switch checked={useSamples} onCheckedChange={setUseSamples} className="data-[state=checked]:bg-[#FF6B00]" />
           </div>
+          )}
 
           {/* Generate Button */}
           <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}>
             <Button
               onClick={generate}
-              disabled={generating}
+              disabled={generating || sunoPolling}
               className="w-full h-14 text-lg font-bold text-white border-0 gap-3"
               style={{
-                background: generating ? "#333" : "linear-gradient(135deg, #FF6B00, #FF9500)",
+                background: generating ? "#333" : useSunoAI 
+                  ? "linear-gradient(135deg, #9333EA, #FF6B00)" 
+                  : "linear-gradient(135deg, #FF6B00, #FF9500)",
                 boxShadow: generating ? "none" : "0 0 30px #FF6B0040, 0 4px 20px #FF6B0030",
               }}
             >
-              {!generating && <Sparkles className="h-5 w-5" />}
-              {generating ? "Generuję..." : "✨ Generuj utwór ♪"}
+              {!generating && (useSunoAI ? <Zap className="h-5 w-5" /> : <Sparkles className="h-5 w-5" />)}
+              {generating || sunoPolling ? (sunoPolling ? "Suno AI generuje..." : "Generuję...") : useSunoAI ? "⚡ Generuj z Suno AI" : "✨ Generuj utwór ♪"}
               {!generating && <Music className="h-5 w-5" />}
             </Button>
           </motion.div>
+
+          {/* Suno status */}
+          {sunoStatus && (
+            <p className="text-sm text-center text-gray-400">{sunoStatus}</p>
+          )}
 
           {!user && (
             <p className="text-center text-xs text-gray-500">
@@ -492,7 +667,8 @@ const Suno = () => {
                   </motion.div>
                 )}
 
-                {/* Extend button */}
+                {/* Extend button - only for local engine */}
+                {!useSunoAI && result.lastTrack && (
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -509,6 +685,19 @@ const Suno = () => {
                     {extending ? "Przedłużam..." : `Przedłuż o 30s (obecny: ${result.durationSeconds}s)`}
                   </Button>
                 </motion.div>
+                )}
+
+                {/* Suno AI cover image */}
+                {result.imageUrl && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.5 }}
+                    className="relative z-10"
+                  >
+                    <img src={result.imageUrl} alt={result.title} className="w-full rounded-xl object-cover max-h-48" />
+                  </motion.div>
+                )}
               </motion.div>
             )}
           </AnimatePresence>
