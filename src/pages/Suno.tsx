@@ -25,14 +25,14 @@ const GENRES = [
   "Ambient", "Trap", "House", "Disco",
 ];
 
-const VOICE_OPTIONS = [
-  { id: "EXAVITQu4vr4xnSDxMaL", name: "Sarah", desc: "Melodyjny żeński" },
-  { id: "FGY2WhTYpPnrIDTdsKH5", name: "Laura", desc: "Ciepły żeński" },
-  { id: "CwhRBWXzGAHq8TQ4Fs17", name: "Roger", desc: "Głęboki męski" },
-  { id: "TX3LPaxmHKxFdv7VOQHJ", name: "Liam", desc: "Młody męski" },
-  { id: "pFZP5JQG7iQjIQuC4Bku", name: "Lily", desc: "Delikatny żeński" },
-  { id: "nPczCjzI2devNBz1zQrb", name: "Brian", desc: "Energetyczny męski" },
-];
+// Auto voice selection based on genre
+const getVoiceForGenre = (genre: string): string => {
+  const femaleGenres = ["Pop", "R&B", "Disco", "Jazz", "Ambient", "Lo-fi", "Indie"];
+  const energeticGenres = ["Electronic", "House", "Trap", "Metal", "Rock"];
+  if (femaleGenres.includes(genre)) return "EXAVITQu4vr4xnSDxMaL"; // Sarah
+  if (energeticGenres.includes(genre)) return "nPczCjzI2devNBz1zQrb"; // Brian
+  return "TX3LPaxmHKxFdv7VOQHJ"; // Liam - default
+};
 
 const DURATION_OPTIONS = [15, 30, 60, 120];
 
@@ -168,7 +168,7 @@ const Suno = () => {
   const [generating, setGenerating] = useState(false);
   const [genStatus, setGenStatus] = useState("");
   const [duration, setDuration] = useState(30);
-  const [selectedVoice, setSelectedVoice] = useState(VOICE_OPTIONS[0].id);
+  // Voice auto-selected based on genre
   const [result, setResult] = useState<{
     audioUrl: string;
     title: string;
@@ -222,7 +222,7 @@ const Suno = () => {
         duration,
         vocals: !instrumental && customLyrics.trim().length > 0,
         vocalText: !instrumental ? customLyrics.trim() : null,
-        vocalVoiceId: selectedVoice,
+        vocalVoiceId: getVoiceForGenre(genre),
       };
 
       setGenStatus("🎼 ElevenLabs generuje instrumenty...");
@@ -484,37 +484,20 @@ const Suno = () => {
             <Switch checked={instrumental} onCheckedChange={(v) => { setInstrumental(v); if (v) setCustomLyrics(""); }} className="data-[state=checked]:bg-[#FF6B00]" />
           </div>
 
-          {/* Voice Selection */}
+          {/* Auto Voice Info */}
           <AnimatePresence>
             {!instrumental && (
               <motion.div
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: "auto" }}
                 exit={{ opacity: 0, height: 0 }}
-                className="space-y-3 overflow-hidden"
+                className="overflow-hidden"
               >
-                <Label className="text-sm text-gray-300 flex items-center gap-2">
+                <div className="p-3 rounded-xl border border-[#9333EA]/20 bg-[#1a1a2e]/40 flex items-center gap-3">
                   <Mic className="h-4 w-4 text-[#9333EA]" />
-                  Głos wokalisty
-                </Label>
-                <div className="grid grid-cols-3 gap-2">
-                  {VOICE_OPTIONS.map((v) => (
-                    <Badge
-                      key={v.id}
-                      className={`cursor-pointer text-xs px-3 py-2 transition-all text-center ${
-                        selectedVoice === v.id
-                          ? "text-white border-transparent"
-                          : "bg-transparent border-[#9333EA]/20 text-gray-400 hover:border-[#9333EA]/50"
-                      }`}
-                      style={selectedVoice === v.id ? { background: "linear-gradient(135deg, #9333EA, #FF6B00)" } : undefined}
-                      onClick={() => setSelectedVoice(v.id)}
-                    >
-                      <div>
-                        <div className="font-medium">{v.name}</div>
-                        <div className="text-[10px] opacity-70">{v.desc}</div>
-                      </div>
-                    </Badge>
-                  ))}
+                  <p className="text-xs text-gray-400">
+                    Głos wokalisty zostanie automatycznie dobrany do stylu <span className="text-[#FF9500] font-medium">{genre}</span>
+                  </p>
                 </div>
               </motion.div>
             )}
