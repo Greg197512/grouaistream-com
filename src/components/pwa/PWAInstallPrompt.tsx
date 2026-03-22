@@ -17,6 +17,7 @@ const PWA_INSTALLED_KEY = "grouai_pwa_installed";
 export const PWAInstallPrompt = () => {
   const isMobile = useIsMobile();
   const { user } = useAuth();
+  const { language } = useLanguage();
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showPrompt, setShowPrompt] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
