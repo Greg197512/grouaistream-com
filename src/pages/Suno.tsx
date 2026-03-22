@@ -458,15 +458,11 @@ const Suno = () => {
 
           {/* Duration */}
           <div className="space-y-2">
-            <Label className="text-sm text-gray-300">
-              {useSunoAI ? "Długość: ~2-3 min (Suno AI)" : "Długość: 30s"}
-            </Label>
+            <Label className="text-sm text-gray-300">Długość: ~2-3 min (Suno AI)</Label>
             <div className="h-2 rounded-full bg-[#1a1a2e] relative overflow-hidden">
-              <div className="h-full rounded-full" style={{ width: "100%", background: useSunoAI ? "linear-gradient(90deg, #9333EA, #FF6B00)" : "linear-gradient(90deg, #FF6B00, #FF9500)", boxShadow: "0 0 8px #FF6B0060" }} />
+              <div className="h-full rounded-full" style={{ width: "100%", background: "linear-gradient(90deg, #9333EA, #FF6B00)", boxShadow: "0 0 8px #FF6B0060" }} />
             </div>
-            <p className="text-xs text-gray-500">
-              {useSunoAI ? "Suno AI generuje pełne utwory w profesjonalnej jakości" : "Stała długość 30 sekund (możesz przedłużyć po wygenerowaniu)"}
-            </p>
+            <p className="text-xs text-gray-500">Suno AI generuje pełne utwory w profesjonalnej jakości</p>
           </div>
 
           {/* Instrumental Toggle */}
