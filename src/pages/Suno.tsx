@@ -501,47 +501,19 @@ const Suno = () => {
             )}
           </AnimatePresence>
 
-          {/* AI Engine Toggle */}
-          <div className="p-4 rounded-xl border border-[#9333EA]/30 bg-[#1a1a2e]/60 space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Zap className="h-5 w-5 text-[#9333EA]" />
-                <div>
-                  <Label className="text-sm text-gray-200">Suno AI Engine</Label>
-                  <p className="text-xs text-gray-500">Profesjonalna jakość — generuje prawdziwe brzmienie</p>
-                </div>
-              </div>
-              <Switch checked={useSunoAI} onCheckedChange={setUseSunoAI} className="data-[state=checked]:bg-[#9333EA]" />
-            </div>
-            <div className="flex gap-2">
-              <Badge 
-                className={`text-xs cursor-pointer transition-all ${useSunoAI ? 'bg-[#9333EA] text-white border-transparent' : 'bg-transparent border-[#9333EA]/30 text-gray-400'}`}
-                onClick={() => setUseSunoAI(true)}
-              >
-                <Zap className="h-3 w-3 mr-1" /> Suno AI (HQ)
-              </Badge>
-              <Badge 
-                className={`text-xs cursor-pointer transition-all ${!useSunoAI ? 'bg-[#FF6B00] text-white border-transparent' : 'bg-transparent border-[#FF6B00]/30 text-gray-400'}`}
-                onClick={() => setUseSunoAI(false)}
-              >
-                <Cpu className="h-3 w-3 mr-1" /> Lokalny (Web Audio)
-              </Badge>
-            </div>
-          </div>
-
-          {/* CC Mixter Samples Toggle - only for local engine */}
-          {!useSunoAI && (
-          <div className="flex items-center justify-between p-4 rounded-xl border border-[#FF6B00]/20 bg-[#1a1a2e]/60">
+          {/* Suno AI Engine Info */}
+          <div className="p-4 rounded-xl border border-[#9333EA]/30 bg-[#1a1a2e]/60 space-y-2">
             <div className="flex items-center gap-3">
-              <Disc3 className="h-5 w-5 text-[#FF9500]" />
+              <Zap className="h-5 w-5 text-[#9333EA]" />
               <div>
-                <Label className="text-sm text-gray-200">Sample z CC Mixter</Label>
-                <p className="text-xs text-gray-500">Wzbogaca brzmienie prawdziwymi loopami CC</p>
+                <Label className="text-sm text-gray-200">Suno AI Engine</Label>
+                <p className="text-xs text-gray-500">Profesjonalna jakość — generuje prawdziwe brzmienie w jakości studyjnej</p>
               </div>
             </div>
-            <Switch checked={useSamples} onCheckedChange={setUseSamples} className="data-[state=checked]:bg-[#FF6B00]" />
+            <Badge className="text-xs bg-[#9333EA] text-white border-transparent">
+              <Zap className="h-3 w-3 mr-1" /> Suno AI (HQ) — aktywny
+            </Badge>
           </div>
-          )}
 
           {/* Generate Button */}
           <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}>
@@ -550,14 +522,12 @@ const Suno = () => {
               disabled={generating || sunoPolling}
               className="w-full h-14 text-lg font-bold text-white border-0 gap-3"
               style={{
-                background: generating ? "#333" : useSunoAI 
-                  ? "linear-gradient(135deg, #9333EA, #FF6B00)" 
-                  : "linear-gradient(135deg, #FF6B00, #FF9500)",
-                boxShadow: generating ? "none" : "0 0 30px #FF6B0040, 0 4px 20px #FF6B0030",
+                background: generating ? "#333" : "linear-gradient(135deg, #9333EA, #FF6B00)",
+                boxShadow: generating ? "none" : "0 0 30px #9333EA40, 0 4px 20px #FF6B0030",
               }}
             >
-              {!generating && (useSunoAI ? <Zap className="h-5 w-5" /> : <Sparkles className="h-5 w-5" />)}
-              {generating || sunoPolling ? (sunoPolling ? "Suno AI generuje..." : "Generuję...") : useSunoAI ? "⚡ Generuj z Suno AI" : "✨ Generuj utwór ♪"}
+              {!generating && <Zap className="h-5 w-5" />}
+              {generating || sunoPolling ? (sunoPolling ? "Suno AI generuje..." : "Generuję...") : "⚡ Generuj z Suno AI"}
               {!generating && <Music className="h-5 w-5" />}
             </Button>
           </motion.div>
