@@ -201,54 +201,6 @@ const Suno = () => {
       setSunoStatus("");
       setGenerating(false);
     }
-
-    // Local Web Audio engine (fallback)
-    try {
-      const track = await generateMusic({
-        style: genre,
-        style2: genre2 || undefined,
-        blendRatio: genre2 ? blendRatio / 100 : undefined,
-        durationSeconds: 30,
-        instrumental,
-        title: title.trim() || undefined,
-        useSamples,
-      });
-
-      const genreName = genre2 ? `${genre} × ${genre2}` : genre;
-      const lyrics = customLyrics.trim()
-        ? parseLyricsFromText(customLyrics, 30)
-        : generateLyrics(genreName, track.title, 30, instrumental);
-
-      let generationId: string | undefined;
-      if (user) {
-        const { data: gen } = await supabase.from("generations").insert({
-          user_id: user.id,
-          title: track.title,
-          genre: genreName,
-          prompt: `30-second ${genreName} track${instrumental ? ", instrumental only" : ""}${useSamples ? " + CC Mixter samples" : ""}`,
-          instrumental,
-          status: "completed",
-          audio_url: track.audioUrl,
-        }).select().single();
-        generationId = gen?.id;
-      }
-
-      setResult({
-        audioUrl: track.audioUrl,
-        title: track.title,
-        genre: genreName,
-        generationId,
-        durationSeconds: 30,
-        lastTrack: track,
-        lyrics,
-      });
-      toast.success(`🎶 Wygenerowano "${track.title}"!`);
-    } catch (err: any) {
-      console.error("Generate error:", err);
-      setErrorModal(err.message || "Nieznany błąd generowania");
-    } finally {
-      setGenerating(false);
-    }
   };
 
   const handleExtend = async () => {
