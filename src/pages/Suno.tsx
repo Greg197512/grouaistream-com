@@ -484,37 +484,20 @@ const Suno = () => {
             <Switch checked={instrumental} onCheckedChange={(v) => { setInstrumental(v); if (v) setCustomLyrics(""); }} className="data-[state=checked]:bg-[#FF6B00]" />
           </div>
 
-          {/* Voice Selection */}
+          {/* Auto Voice Info */}
           <AnimatePresence>
             {!instrumental && (
               <motion.div
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: "auto" }}
                 exit={{ opacity: 0, height: 0 }}
-                className="space-y-3 overflow-hidden"
+                className="overflow-hidden"
               >
-                <Label className="text-sm text-gray-300 flex items-center gap-2">
+                <div className="p-3 rounded-xl border border-[#9333EA]/20 bg-[#1a1a2e]/40 flex items-center gap-3">
                   <Mic className="h-4 w-4 text-[#9333EA]" />
-                  Głos wokalisty
-                </Label>
-                <div className="grid grid-cols-3 gap-2">
-                  {VOICE_OPTIONS.map((v) => (
-                    <Badge
-                      key={v.id}
-                      className={`cursor-pointer text-xs px-3 py-2 transition-all text-center ${
-                        selectedVoice === v.id
-                          ? "text-white border-transparent"
-                          : "bg-transparent border-[#9333EA]/20 text-gray-400 hover:border-[#9333EA]/50"
-                      }`}
-                      style={selectedVoice === v.id ? { background: "linear-gradient(135deg, #9333EA, #FF6B00)" } : undefined}
-                      onClick={() => setSelectedVoice(v.id)}
-                    >
-                      <div>
-                        <div className="font-medium">{v.name}</div>
-                        <div className="text-[10px] opacity-70">{v.desc}</div>
-                      </div>
-                    </Badge>
-                  ))}
+                  <p className="text-xs text-gray-400">
+                    Głos wokalisty zostanie automatycznie dobrany do stylu <span className="text-[#FF9500] font-medium">{genre}</span>
+                  </p>
                 </div>
               </motion.div>
             )}
