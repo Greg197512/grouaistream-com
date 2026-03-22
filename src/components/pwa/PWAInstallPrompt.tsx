@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Download, Smartphone } from "lucide-react";
+import { X, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface BeforeInstallPromptEvent extends Event {
@@ -16,6 +17,7 @@ const PWA_INSTALLED_KEY = "grouai_pwa_installed";
 export const PWAInstallPrompt = () => {
   const isMobile = useIsMobile();
   const { user } = useAuth();
+  const { language } = useLanguage();
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showPrompt, setShowPrompt] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
@@ -100,10 +102,16 @@ export const PWAInstallPrompt = () => {
             </div>
             <div className="flex-1 min-w-0">
               <h3 className="font-bold text-sm text-foreground mb-0.5">
-                Chcesz mieć GrouAI DJ na telefonie?
+                {language === "en" ? "Want GrouAI DJ on your phone?" :
+                 language === "nl" ? "Wil je GrouAI DJ op je telefoon?" :
+                 language === "ua" ? "Хочеш GrouAI DJ на телефоні?" :
+                 "Chcesz mieć GrouAI DJ na telefonie?"}
               </h3>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                Aplikacja na pulpicie — szybka, offline, jak natywna!
+              <p className="text-[10px] text-muted-foreground/60 leading-relaxed">
+                {language === "en" ? "Fast, offline-ready, like a native app on your home screen." :
+                 language === "nl" ? "Snel, offline-klaar, als een native app op je startscherm." :
+                 language === "ua" ? "Швидко, офлайн, як рідний додаток на головному екрані." :
+                 "Szybka, offline, jak natywna aplikacja na pulpicie."}
               </p>
             </div>
           </div>
@@ -115,14 +123,14 @@ export const PWAInstallPrompt = () => {
               size="sm"
               className="flex-1 text-xs"
             >
-              Nie
+              {language === "en" ? "No" : language === "nl" ? "Nee" : language === "ua" ? "Ні" : "Nie"}
             </Button>
             <Button
               onClick={isIOS ? handleIOSConfirm : handleInstall}
               size="sm"
               className="flex-1 text-xs bg-primary hover:bg-primary/90"
             >
-              Tak
+              {language === "en" ? "Yes" : language === "nl" ? "Ja" : language === "ua" ? "Так" : "Tak"}
             </Button>
           </div>
         </div>
