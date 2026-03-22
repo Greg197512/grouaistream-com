@@ -50,6 +50,13 @@ const Suno = () => {
   const [sunoStatus, setSunoStatus] = useState("");
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, []);
+
   // Track playback time for lyrics sync
   useEffect(() => {
     if (!result?.audioUrl) return;
@@ -75,10 +82,131 @@ const Suno = () => {
     };
   }, [result?.audioUrl]);
 
+  // Suno AI polling
+  const pollSunoResult = (taskId: string) => {
+    let attempts = 0;
+    const maxAttempts = 60;
+    pollRef.current = setInterval(async () => {
+      attempts++;
+      if (attempts > maxAttempts) {
+        if (pollRef.current) clearInterval(pollRef.current);
+        setSunoPolling(false);
+        setSunoStatus("⏰ Timeout — spróbuj ponownie");
+        setGenerating(false);
+        return;
+      }
+      try {
+        const { data, error } = await supabase.functions.invoke("suno-generate", {
+          body: { action: "status", taskId },
+        });
+        if (error) throw error;
+        const status = data?.data?.status || data?.status;
+        const sunoData = data?.data?.response?.sunoData || data?.data?.songs || [];
+        if (status === "SUCCESS" || status === "FIRST_SUCCESS" || status === "TEXT_SUCCESS") {
+          if (pollRef.current) clearInterval(pollRef.current);
+          setSunoPolling(false);
+          handleSunoResult(sunoData);
+          setGenerating(false);
+        } else if (status === "failed" || status === "FAILED" || status === "GENERATE_AUDIO_FAILED" || status === "CREATE_TASK_FAILED") {
+          if (pollRef.current) clearInterval(pollRef.current);
+          setSunoPolling(false);
+          setSunoStatus("❌ Generowanie nie powiodło się");
+          toast.error("Suno AI nie mogło wygenerować utworu");
+          setGenerating(false);
+        } else {
+          setSunoStatus(`⏳ Suno AI generuje... (${Math.floor(attempts * 5)}s)`);
+        }
+      } catch (err) {
+        console.error("[Suno] Poll error:", err);
+      }
+    }, 5000);
+  };
+
+  const handleSunoResult = (data: any) => {
+    const songList = Array.isArray(data) ? data : [data];
+    const song = songList.find((s: any) => s) || songList[0];
+    if (!song) {
+      setSunoStatus("Brak wyników z Suno AI");
+      return;
+    }
+    const audioUrl = song.streamAudioUrl || song.sourceStreamAudioUrl || song.audioUrl || song.audio_url || song.sourceAudioUrl || "";
+    const songTitle = song.title || title || "Suno AI Track";
+    const imageUrl = song.imageUrl || song.image_url || song.sourceImageUrl || "";
+    const duration = song.duration || 120;
+    const songStyle = song.tags || song.style || genre;
+
+    const lyrics = customLyrics.trim()
+      ? parseLyricsFromText(customLyrics, duration)
+      : generateLyrics(songStyle, songTitle, duration, instrumental);
+
+    setResult({
+      audioUrl,
+      title: songTitle,
+      genre: songStyle,
+      durationSeconds: duration,
+      lyrics,
+      imageUrl,
+    });
+    setSunoStatus(`✅ Wygenerowano z Suno AI!`);
+    toast.success(`🎶 Suno AI: "${songTitle}"`);
+
+    // Save to generations if logged in
+    if (user) {
+      supabase.from("generations").insert({
+        user_id: user.id,
+        title: songTitle,
+        genre: songStyle,
+        prompt: customLyrics || `Suno AI: ${genre}`,
+        instrumental,
+        status: "completed",
+        audio_url: audioUrl,
+      }).then();
+    }
+  };
+
   const generate = async () => {
     setGenerating(true);
     setResult(null);
+    setSunoStatus("");
 
+    // Use Suno AI engine
+    if (useSunoAI) {
+      try {
+        const body: any = { action: "generate", prompt: customLyrics.trim() || `A ${genre.toLowerCase()} track${title ? ` called "${title}"` : ""}`, instrumental };
+        if (title || genre) {
+          body.style = genre;
+          body.title = title || `${genre} Track`;
+        }
+
+        setSunoStatus("🎵 Wysyłam do Suno AI...");
+        const { data, error } = await supabase.functions.invoke("suno-generate", { body });
+        if (error) throw error;
+
+        if (data?.code && data.code !== 200) {
+          throw new Error(data?.msg || "Błąd API Suno");
+        }
+
+        const taskId = data?.data?.taskId || data?.taskId;
+        if (taskId) {
+          setSunoStatus("⏳ Suno AI generuje utwór... (~30-120s)");
+          setSunoPolling(true);
+          pollSunoResult(taskId);
+        } else if (data?.data?.songs || data?.data) {
+          handleSunoResult(data.data.songs || data.data);
+          setGenerating(false);
+        } else {
+          throw new Error("Nieoczekiwana odpowiedź z Suno API");
+        }
+      } catch (err: any) {
+        console.error("[Suno] Generate error:", err);
+        toast.error("Błąd Suno AI: " + (err.message || "Nieznany błąd"));
+        setSunoStatus("");
+        setGenerating(false);
+      }
+      return;
+    }
+
+    // Local Web Audio engine (fallback)
     try {
       const track = await generateMusic({
         style: genre,
