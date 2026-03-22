@@ -25,14 +25,14 @@ const GENRES = [
   "Ambient", "Trap", "House", "Disco",
 ];
 
-const VOICE_OPTIONS = [
-  { id: "EXAVITQu4vr4xnSDxMaL", name: "Sarah", desc: "Melodyjny żeński" },
-  { id: "FGY2WhTYpPnrIDTdsKH5", name: "Laura", desc: "Ciepły żeński" },
-  { id: "CwhRBWXzGAHq8TQ4Fs17", name: "Roger", desc: "Głęboki męski" },
-  { id: "TX3LPaxmHKxFdv7VOQHJ", name: "Liam", desc: "Młody męski" },
-  { id: "pFZP5JQG7iQjIQuC4Bku", name: "Lily", desc: "Delikatny żeński" },
-  { id: "nPczCjzI2devNBz1zQrb", name: "Brian", desc: "Energetyczny męski" },
-];
+// Auto voice selection based on genre
+const getVoiceForGenre = (genre: string): string => {
+  const femaleGenres = ["Pop", "R&B", "Disco", "Jazz", "Ambient", "Lo-fi", "Indie"];
+  const energeticGenres = ["Electronic", "House", "Trap", "Metal", "Rock"];
+  if (femaleGenres.includes(genre)) return "EXAVITQu4vr4xnSDxMaL"; // Sarah
+  if (energeticGenres.includes(genre)) return "nPczCjzI2devNBz1zQrb"; // Brian
+  return "TX3LPaxmHKxFdv7VOQHJ"; // Liam - default
+};
 
 const DURATION_OPTIONS = [15, 30, 60, 120];
 
