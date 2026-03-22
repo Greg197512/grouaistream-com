@@ -629,24 +629,16 @@ const Suno = () => {
                   </motion.div>
                 )}
 
-                {/* Extend button - only for local engine */}
-                {!useSunoAI && result.lastTrack && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.45 }}
-                  className="relative z-10"
-                >
-                  <Button
-                    onClick={handleExtend}
-                    disabled={extending}
-                    variant="outline"
-                    className="w-full gap-2 border-[#FF6B00]/30 text-[#FF9500] hover:bg-[#FF6B00]/10 hover:text-white"
+                {/* Suno AI cover image */}
+                {result.imageUrl && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.45 }}
+                    className="relative z-10"
                   >
-                    <Plus className="h-4 w-4" />
-                    {extending ? "Przedłużam..." : `Przedłuż o 30s (obecny: ${result.durationSeconds}s)`}
-                  </Button>
-                </motion.div>
+                    <img src={result.imageUrl} alt={result.title} className="w-full rounded-xl object-cover max-h-48" />
+                  </motion.div>
                 )}
 
                 {/* Suno AI cover image */}
