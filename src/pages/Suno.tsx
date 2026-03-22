@@ -551,18 +551,25 @@ const Suno = () => {
           <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}>
             <Button
               onClick={generate}
-              disabled={generating}
+              disabled={generating || sunoPolling}
               className="w-full h-14 text-lg font-bold text-white border-0 gap-3"
               style={{
-                background: generating ? "#333" : "linear-gradient(135deg, #FF6B00, #FF9500)",
+                background: generating ? "#333" : useSunoAI 
+                  ? "linear-gradient(135deg, #9333EA, #FF6B00)" 
+                  : "linear-gradient(135deg, #FF6B00, #FF9500)",
                 boxShadow: generating ? "none" : "0 0 30px #FF6B0040, 0 4px 20px #FF6B0030",
               }}
             >
-              {!generating && <Sparkles className="h-5 w-5" />}
-              {generating ? "Generuję..." : "✨ Generuj utwór ♪"}
+              {!generating && (useSunoAI ? <Zap className="h-5 w-5" /> : <Sparkles className="h-5 w-5" />)}
+              {generating || sunoPolling ? (sunoPolling ? "Suno AI generuje..." : "Generuję...") : useSunoAI ? "⚡ Generuj z Suno AI" : "✨ Generuj utwór ♪"}
               {!generating && <Music className="h-5 w-5" />}
             </Button>
           </motion.div>
+
+          {/* Suno status */}
+          {sunoStatus && (
+            <p className="text-sm text-center text-gray-400">{sunoStatus}</p>
+          )}
 
           {!user && (
             <p className="text-center text-xs text-gray-500">
