@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, Music, Guitar, Waves, Blend, Type, Zap } from "lucide-react";
+import { Sparkles, Music, Guitar, Waves, Blend, Type, Zap, Mic } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
 import { motion, AnimatePresence } from "framer-motion";
@@ -18,13 +18,143 @@ import { NeonWavesLoader } from "@/components/studio/NeonWavesLoader";
 import { GenerationHistory } from "@/components/studio/GenerationHistory";
 import { LyricsDisplay, generateLyrics, parseLyricsFromText } from "@/components/studio/LyricsDisplay";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { generateMusic, extendTrack, type GeneratedTrack } from "@/utils/musicGenerator";
 
 const GENRES = [
   "Pop", "Rock", "Electronic", "Hip-Hop", "Jazz", "Classical",
   "R&B", "Country", "Reggae", "Metal", "Indie", "Lo-fi",
   "Ambient", "Trap", "House", "Disco",
 ];
+
+const VOICE_OPTIONS = [
+  { id: "EXAVITQu4vr4xnSDxMaL", name: "Sarah", desc: "Melodyjny żeński" },
+  { id: "FGY2WhTYpPnrIDTdsKH5", name: "Laura", desc: "Ciepły żeński" },
+  { id: "CwhRBWXzGAHq8TQ4Fs17", name: "Roger", desc: "Głęboki męski" },
+  { id: "TX3LPaxmHKxFdv7VOQHJ", name: "Liam", desc: "Młody męski" },
+  { id: "pFZP5JQG7iQjIQuC4Bku", name: "Lily", desc: "Delikatny żeński" },
+  { id: "nPczCjzI2devNBz1zQrb", name: "Brian", desc: "Energetyczny męski" },
+];
+
+const DURATION_OPTIONS = [15, 30, 60, 120];
+
+// Mix two base64 audio tracks in browser using Web Audio API
+async function mixAudioTracks(musicBase64: string, vocalsBase64: string | null): Promise<string> {
+  const audioCtx = new AudioContext({ sampleRate: 44100 });
+
+  const musicBytes = Uint8Array.from(atob(musicBase64), c => c.charCodeAt(0));
+  const musicBuffer = await audioCtx.decodeAudioData(musicBytes.buffer.slice(0));
+
+  if (!vocalsBase64) {
+    // Return music only
+    const offCtx = new OfflineAudioContext(musicBuffer.numberOfChannels, musicBuffer.length, 44100);
+    const src = offCtx.createBufferSource();
+    src.buffer = musicBuffer;
+    src.connect(offCtx.destination);
+    src.start(0);
+    const rendered = await offCtx.startRendering();
+    audioCtx.close();
+    return audioBufferToWav(rendered);
+  }
+
+  const vocalBytes = Uint8Array.from(atob(vocalsBase64), c => c.charCodeAt(0));
+  const vocalBuffer = await audioCtx.decodeAudioData(vocalBytes.buffer.slice(0));
+
+  const maxLen = Math.max(musicBuffer.length, vocalBuffer.length);
+  const channels = Math.max(musicBuffer.numberOfChannels, vocalBuffer.numberOfChannels);
+  const offCtx = new OfflineAudioContext(channels, maxLen, 44100);
+
+  // Music track at ~70% volume
+  const musicSrc = offCtx.createBufferSource();
+  musicSrc.buffer = musicBuffer;
+  const musicGain = offCtx.createGain();
+  musicGain.gain.value = 0.65;
+  musicSrc.connect(musicGain).connect(offCtx.destination);
+  musicSrc.start(0);
+
+  // Vocals at ~90% volume with slight delay for natural feel
+  const vocalSrc = offCtx.createBufferSource();
+  vocalSrc.buffer = vocalBuffer;
+  const vocalGain = offCtx.createGain();
+  vocalGain.gain.value = 0.85;
+
+  // Add reverb to vocals
+  const convolver = offCtx.createConvolver();
+  const irLength = 44100 * 1.5;
+  const irBuffer = offCtx.createBuffer(2, irLength, 44100);
+  for (let ch = 0; ch < 2; ch++) {
+    const data = irBuffer.getChannelData(ch);
+    for (let i = 0; i < irLength; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.exp(-4 * i / irLength) * 0.3;
+    }
+  }
+  convolver.buffer = irBuffer;
+
+  // Dry vocals
+  const dryGain = offCtx.createGain();
+  dryGain.gain.value = 0.75;
+  vocalSrc.connect(vocalGain).connect(dryGain).connect(offCtx.destination);
+
+  // Wet (reverb) vocals
+  const wetGain = offCtx.createGain();
+  wetGain.gain.value = 0.25;
+  vocalSrc.connect(vocalGain).connect(convolver).connect(wetGain).connect(offCtx.destination);
+
+  vocalSrc.start(0.3); // Slight delay
+
+  // Master compressor
+  const comp = offCtx.createDynamicsCompressor();
+  comp.threshold.value = -12;
+  comp.ratio.value = 4;
+  comp.attack.value = 0.003;
+  comp.release.value = 0.25;
+
+  const rendered = await offCtx.startRendering();
+  audioCtx.close();
+  return audioBufferToWav(rendered);
+}
+
+function audioBufferToWav(buffer: AudioBuffer): string {
+  const numChannels = buffer.numberOfChannels;
+  const length = buffer.length;
+  const sampleRate = buffer.sampleRate;
+  const bytesPerSample = 2;
+  const dataSize = length * numChannels * bytesPerSample;
+
+  const arrayBuffer = new ArrayBuffer(44 + dataSize);
+  const view = new DataView(arrayBuffer);
+
+  const writeString = (offset: number, str: string) => {
+    for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
+  };
+
+  writeString(0, 'RIFF');
+  view.setUint32(4, 36 + dataSize, true);
+  writeString(8, 'WAVE');
+  writeString(12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, numChannels, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * numChannels * bytesPerSample, true);
+  view.setUint16(32, numChannels * bytesPerSample, true);
+  view.setUint16(34, 16, true);
+  writeString(36, 'data');
+  view.setUint32(40, dataSize, true);
+
+  let offset = 44;
+  const channels = [];
+  for (let ch = 0; ch < numChannels; ch++) channels.push(buffer.getChannelData(ch));
+
+  for (let i = 0; i < length; i++) {
+    for (let ch = 0; ch < numChannels; ch++) {
+      const sample = Math.max(-1, Math.min(1, channels[ch][i]));
+      view.setInt16(offset, sample * 0x7FFF, true);
+      offset += 2;
+    }
+  }
+
+  const blob = new Blob([arrayBuffer], { type: 'audio/wav' });
+  return URL.createObjectURL(blob);
+}
 
 const Suno = () => {
   const { user } = useAuth();
@@ -35,43 +165,40 @@ const Suno = () => {
   const [title, setTitle] = useState("");
   const [instrumental, setInstrumental] = useState(false);
   const [customLyrics, setCustomLyrics] = useState("");
-  const [useSamples, setUseSamples] = useState(true);
   const [generating, setGenerating] = useState(false);
-  const [extending, setExtending] = useState(false);
-  const [result, setResult] = useState<{ audioUrl: string; title: string; genre: string; generationId?: string; durationSeconds: number; lastTrack?: GeneratedTrack; lyrics: { time: number; text: string }[]; imageUrl?: string } | null>(null);
+  const [genStatus, setGenStatus] = useState("");
+  const [duration, setDuration] = useState(30);
+  const [selectedVoice, setSelectedVoice] = useState(VOICE_OPTIONS[0].id);
+  const [result, setResult] = useState<{
+    audioUrl: string;
+    title: string;
+    genre: string;
+    generationId?: string;
+    durationSeconds: number;
+    lyrics: { time: number; text: string }[];
+    imageUrl?: string;
+  } | null>(null);
   const [errorModal, setErrorModal] = useState<string | null>(null);
   const [playbackTime, setPlaybackTime] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  
-  // Suno AI engine (always on)
-  const [sunoPolling, setSunoPolling] = useState(false);
-  const [sunoStatus, setSunoStatus] = useState("");
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  // Cleanup polling on unmount
-  useEffect(() => {
-    return () => {
-      if (pollRef.current) clearInterval(pollRef.current);
-    };
-  }, []);
 
   // Track playback time for lyrics sync
   useEffect(() => {
     if (!result?.audioUrl) return;
     const audio = new Audio(result.audioUrl);
     audioRef.current = audio;
-    
+
     const onTimeUpdate = () => setPlaybackTime(audio.currentTime);
     const onPlay = () => setIsPlaying(true);
     const onPause = () => setIsPlaying(false);
     const onEnded = () => { setIsPlaying(false); setPlaybackTime(0); };
-    
+
     audio.addEventListener('timeupdate', onTimeUpdate);
     audio.addEventListener('play', onPlay);
     audio.addEventListener('pause', onPause);
     audio.addEventListener('ended', onEnded);
-    
+
     return () => {
       audio.removeEventListener('timeupdate', onTimeUpdate);
       audio.removeEventListener('play', onPlay);
@@ -81,157 +208,89 @@ const Suno = () => {
     };
   }, [result?.audioUrl]);
 
-  // Suno AI polling
-  const pollSunoResult = (taskId: string) => {
-    let attempts = 0;
-    const maxAttempts = 60;
-    pollRef.current = setInterval(async () => {
-      attempts++;
-      if (attempts > maxAttempts) {
-        if (pollRef.current) clearInterval(pollRef.current);
-        setSunoPolling(false);
-        setSunoStatus("⏰ Timeout — spróbuj ponownie");
-        setGenerating(false);
-        return;
-      }
-      try {
-        const { data, error } = await supabase.functions.invoke("suno-generate", {
-          body: { action: "status", taskId },
-        });
-        if (error) throw error;
-        const status = data?.data?.status || data?.status;
-        const sunoData = data?.data?.response?.sunoData || data?.data?.songs || [];
-        if (status === "SUCCESS" || status === "FIRST_SUCCESS" || status === "TEXT_SUCCESS") {
-          if (pollRef.current) clearInterval(pollRef.current);
-          setSunoPolling(false);
-          handleSunoResult(sunoData);
-          setGenerating(false);
-        } else if (status === "failed" || status === "FAILED" || status === "GENERATE_AUDIO_FAILED" || status === "CREATE_TASK_FAILED") {
-          if (pollRef.current) clearInterval(pollRef.current);
-          setSunoPolling(false);
-          setSunoStatus("❌ Generowanie nie powiodło się");
-          toast.error("Suno AI nie mogło wygenerować utworu");
-          setGenerating(false);
-        } else {
-          setSunoStatus(`⏳ Suno AI generuje... (${Math.floor(attempts * 5)}s)`);
-        }
-      } catch (err) {
-        console.error("[Suno] Poll error:", err);
-      }
-    }, 5000);
-  };
-
-  const handleSunoResult = (data: any) => {
-    const songList = Array.isArray(data) ? data : [data];
-    const song = songList.find((s: any) => s) || songList[0];
-    if (!song) {
-      setSunoStatus("Brak wyników z Suno AI");
-      return;
-    }
-    const audioUrl = song.streamAudioUrl || song.sourceStreamAudioUrl || song.audioUrl || song.audio_url || song.sourceAudioUrl || "";
-    const songTitle = song.title || title || "Suno AI Track";
-    const imageUrl = song.imageUrl || song.image_url || song.sourceImageUrl || "";
-    const duration = song.duration || 120;
-    const songStyle = song.tags || song.style || genre;
-
-    const lyrics = customLyrics.trim()
-      ? parseLyricsFromText(customLyrics, duration)
-      : generateLyrics(songStyle, songTitle, duration, instrumental);
-
-    setResult({
-      audioUrl,
-      title: songTitle,
-      genre: songStyle,
-      durationSeconds: duration,
-      lyrics,
-      imageUrl,
-    });
-    setSunoStatus(`✅ Wygenerowano z Suno AI!`);
-    toast.success(`🎶 Suno AI: "${songTitle}"`);
-
-    // Save to generations if logged in
-    if (user) {
-      supabase.from("generations").insert({
-        user_id: user.id,
-        title: songTitle,
-        genre: songStyle,
-        prompt: customLyrics || `Suno AI: ${genre}`,
-        instrumental,
-        status: "completed",
-        audio_url: audioUrl,
-      }).then();
-    }
-  };
-
   const generate = async () => {
     setGenerating(true);
     setResult(null);
-    setSunoStatus("");
+    setGenStatus("🎵 Generuję muzykę z ElevenLabs...");
 
-    // Always use Suno AI engine
     try {
-      const body: any = { action: "generate", prompt: customLyrics.trim() || `A ${genre.toLowerCase()} track${title ? ` called "${title}"` : ""}`, instrumental };
-      if (title || genre) {
-        body.style = genre;
-        body.title = title || `${genre} Track`;
+      const genreBlend = genre2 ? `${genre} mixed with ${genre2}` : genre;
+      const musicPrompt = `${genreBlend} ${title ? `"${title}"` : ""} track, professional studio quality, rich production`.trim();
+
+      const body: any = {
+        prompt: musicPrompt,
+        duration,
+        vocals: !instrumental && customLyrics.trim().length > 0,
+        vocalText: !instrumental ? customLyrics.trim() : null,
+        vocalVoiceId: selectedVoice,
+      };
+
+      setGenStatus("🎼 ElevenLabs generuje instrumenty...");
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-music`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify(body),
+        }
+      );
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({ error: "Unknown error" }));
+        throw new Error(errData.error || `HTTP ${response.status}`);
       }
 
-      setSunoStatus("🎵 Wysyłam do Suno AI...");
-      const { data, error } = await supabase.functions.invoke("suno-generate", { body });
-      if (error) throw error;
+      const data = await response.json();
 
-      if (data?.code && data.code !== 200) {
-        throw new Error(data?.msg || "Błąd API Suno");
+      if (!data.success || !data.music) {
+        throw new Error("Brak danych audio z ElevenLabs");
       }
 
-      const taskId = data?.data?.taskId || data?.taskId;
-      if (taskId) {
-        setSunoStatus("⏳ Suno AI generuje utwór... (~30-120s)");
-        setSunoPolling(true);
-        pollSunoResult(taskId);
-      } else if (data?.data?.songs || data?.data) {
-        handleSunoResult(data.data.songs || data.data);
-        setGenerating(false);
-      } else {
-        throw new Error("Nieoczekiwana odpowiedź z Suno API");
+      setGenStatus(data.vocals ? "🎤 Miksowanie wokalu z muzyką..." : "🔊 Finalizuję utwór...");
+
+      // Mix music + vocals in browser
+      const audioUrl = await mixAudioTracks(data.music, data.vocals);
+
+      const trackTitle = title || `${genre} Track`;
+      const lyrics = customLyrics.trim()
+        ? parseLyricsFromText(customLyrics, duration)
+        : generateLyrics(genre, trackTitle, duration, instrumental);
+
+      setResult({
+        audioUrl,
+        title: trackTitle,
+        genre,
+        durationSeconds: duration,
+        lyrics,
+      });
+
+      setGenStatus("✅ Wygenerowano!");
+      toast.success(`🎶 "${trackTitle}" — gotowy!`);
+
+      // Save to generations if logged in
+      if (user) {
+        supabase.from("generations").insert({
+          user_id: user.id,
+          title: trackTitle,
+          genre,
+          prompt: customLyrics || `ElevenLabs: ${musicPrompt}`,
+          instrumental,
+          status: "completed",
+          audio_url: audioUrl,
+        }).then();
       }
     } catch (err: any) {
-      console.error("[Suno] Generate error:", err);
-      toast.error("Błąd Suno AI: " + (err.message || "Nieznany błąd"));
-      setSunoStatus("");
-      setGenerating(false);
-    }
-  };
-
-  const handleExtend = async () => {
-    if (!result?.lastTrack) return;
-    setExtending(true);
-    try {
-      const extended = await extendTrack(result.lastTrack, 30);
-      const newDuration = result.durationSeconds + 30;
-
-      // Update generation record
-      if (user && result.generationId) {
-        await supabase.from("generations").update({
-          audio_url: extended.audioUrl,
-        }).eq("id", result.generationId);
-      }
-
-      const newLyrics = customLyrics.trim()
-        ? parseLyricsFromText(customLyrics, newDuration)
-        : generateLyrics(result.genre, result.title, newDuration, instrumental);
-      setResult(prev => prev ? {
-        ...prev,
-        audioUrl: extended.audioUrl,
-        durationSeconds: newDuration,
-        lastTrack: extended,
-        lyrics: newLyrics,
-      } : null);
-      toast.success(`🎶 Przedłużono do ${newDuration}s!`);
-    } catch (err: any) {
-      toast.error("Błąd przedłużania: " + err.message);
+      console.error("[GrouAI Studio] Generate error:", err);
+      toast.error("Błąd generowania: " + (err.message || "Nieznany błąd"));
+      setGenStatus("");
+      setErrorModal(err.message);
     } finally {
-      setExtending(false);
+      setGenerating(false);
     }
   };
 
@@ -280,7 +339,7 @@ const Suno = () => {
             </div>
             <h1 className="text-3xl font-bold text-white">GrouAI Studio</h1>
             <p className="text-sm text-gray-400 max-w-md mx-auto leading-relaxed">
-              Twórz profesjonalne utwory muzyczne z Suno AI. Wybierz styl, wpisz tekst i wygeneruj muzykę w jakości studyjnej — pełne utwory z wokalem i instrumentami.
+              Twórz profesjonalne utwory muzyczne z AI. Wybierz styl, wpisz tekst, wybierz głos — i wygeneruj muzykę ze śpiewanym wokalem w jakości studyjnej.
             </p>
           </motion.div>
 
@@ -289,9 +348,7 @@ const Suno = () => {
             <button
               onClick={() => setActiveTab("generate")}
               className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${
-                activeTab === "generate"
-                  ? "text-white"
-                  : "text-gray-400 hover:text-gray-200"
+                activeTab === "generate" ? "text-white" : "text-gray-400 hover:text-gray-200"
               }`}
               style={activeTab === "generate" ? { background: "linear-gradient(135deg, #FF6B00, #FF9500)", boxShadow: "0 0 15px #FF6B0040" } : undefined}
             >
@@ -300,9 +357,7 @@ const Suno = () => {
             <button
               onClick={() => setActiveTab("mix")}
               className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${
-                activeTab === "mix"
-                  ? "text-white"
-                  : "text-gray-400 hover:text-gray-200"
+                activeTab === "mix" ? "text-white" : "text-gray-400 hover:text-gray-200"
               }`}
               style={activeTab === "mix" ? { background: "linear-gradient(135deg, #9333EA, #FF6B00)", boxShadow: "0 0 15px #9333EA40" } : undefined}
             >
@@ -314,7 +369,6 @@ const Suno = () => {
             <TrackMixer />
           ) : (
           <>
-
           {/* Genre Selection */}
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }} className="space-y-2">
             <Label className="text-sm text-gray-300">Styl muzyczny</Label>
@@ -327,10 +381,7 @@ const Suno = () => {
                       ? "text-white border-transparent"
                       : "bg-transparent border-[#FF6B00]/20 text-gray-400 hover:border-[#FF6B00]/50 hover:text-gray-200"
                   }`}
-                  style={genre === g ? {
-                    background: "linear-gradient(135deg, #FF6B00, #FF9500)",
-                    boxShadow: "0 0 12px #FF6B0050",
-                  } : undefined}
+                  style={genre === g ? { background: "linear-gradient(135deg, #FF6B00, #FF9500)", boxShadow: "0 0 12px #FF6B0050" } : undefined}
                   onClick={() => setGenre(g)}
                 >
                   {g}
@@ -361,10 +412,7 @@ const Suno = () => {
                       ? "text-white border-transparent"
                       : "bg-transparent border-[#9333EA]/20 text-gray-500 hover:border-[#9333EA]/50 hover:text-gray-300"
                   }`}
-                  style={genre2 === g ? {
-                    background: "linear-gradient(135deg, #9333EA, #FF6B00)",
-                    boxShadow: "0 0 12px #9333EA50",
-                  } : undefined}
+                  style={genre2 === g ? { background: "linear-gradient(135deg, #9333EA, #FF6B00)", boxShadow: "0 0 12px #9333EA50" } : undefined}
                   onClick={() => setGenre2(genre2 === g ? null : g)}
                 >
                   {g}
@@ -387,9 +435,7 @@ const Suno = () => {
                   <Slider
                     value={[blendRatio]}
                     onValueChange={([v]) => setBlendRatio(v)}
-                    min={10}
-                    max={90}
-                    step={5}
+                    min={10} max={90} step={5}
                     className="w-full"
                   />
                 </motion.div>
@@ -408,13 +454,25 @@ const Suno = () => {
             />
           </div>
 
-          {/* Duration */}
+          {/* Duration Selection */}
           <div className="space-y-2">
-            <Label className="text-sm text-gray-300">Długość: ~2-3 min (Suno AI)</Label>
-            <div className="h-2 rounded-full bg-[#1a1a2e] relative overflow-hidden">
-              <div className="h-full rounded-full" style={{ width: "100%", background: "linear-gradient(90deg, #9333EA, #FF6B00)", boxShadow: "0 0 8px #FF6B0060" }} />
+            <Label className="text-sm text-gray-300">Długość</Label>
+            <div className="flex gap-2">
+              {DURATION_OPTIONS.map((d) => (
+                <Badge
+                  key={d}
+                  className={`cursor-pointer text-xs px-4 py-2 transition-all ${
+                    duration === d
+                      ? "text-white border-transparent"
+                      : "bg-transparent border-[#FF6B00]/20 text-gray-400 hover:border-[#FF6B00]/50"
+                  }`}
+                  style={duration === d ? { background: "linear-gradient(135deg, #FF6B00, #FF9500)" } : undefined}
+                  onClick={() => setDuration(d)}
+                >
+                  {d}s
+                </Badge>
+              ))}
             </div>
-            <p className="text-xs text-gray-500">Suno AI generuje pełne utwory w profesjonalnej jakości</p>
           </div>
 
           {/* Instrumental Toggle */}
@@ -425,6 +483,42 @@ const Suno = () => {
             </div>
             <Switch checked={instrumental} onCheckedChange={(v) => { setInstrumental(v); if (v) setCustomLyrics(""); }} className="data-[state=checked]:bg-[#FF6B00]" />
           </div>
+
+          {/* Voice Selection */}
+          <AnimatePresence>
+            {!instrumental && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="space-y-3 overflow-hidden"
+              >
+                <Label className="text-sm text-gray-300 flex items-center gap-2">
+                  <Mic className="h-4 w-4 text-[#9333EA]" />
+                  Głos wokalisty
+                </Label>
+                <div className="grid grid-cols-3 gap-2">
+                  {VOICE_OPTIONS.map((v) => (
+                    <Badge
+                      key={v.id}
+                      className={`cursor-pointer text-xs px-3 py-2 transition-all text-center ${
+                        selectedVoice === v.id
+                          ? "text-white border-transparent"
+                          : "bg-transparent border-[#9333EA]/20 text-gray-400 hover:border-[#9333EA]/50"
+                      }`}
+                      style={selectedVoice === v.id ? { background: "linear-gradient(135deg, #9333EA, #FF6B00)" } : undefined}
+                      onClick={() => setSelectedVoice(v.id)}
+                    >
+                      <div>
+                        <div className="font-medium">{v.name}</div>
+                        <div className="text-[10px] opacity-70">{v.desc}</div>
+                      </div>
+                    </Badge>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Custom Lyrics Editor */}
           <AnimatePresence>
@@ -437,41 +531,48 @@ const Suno = () => {
               >
                 <Label className="text-sm text-gray-300 flex items-center gap-2">
                   <Type className="h-4 w-4 text-[#FF9500]" />
-                  Tekst / Lyrics (opcjonalnie)
+                  Tekst / Lyrics (wpisz, aby wokal śpiewał)
                 </Label>
                 <Textarea
-                  placeholder={"Wpisz lub wklej tekst piosenki...\n\nVerse 1:\nTwój tekst tutaj...\n\nChorus:\nRefren tutaj..."}
+                  placeholder={"Wpisz tekst piosenki...\n\nVerse 1:\nTwój tekst tutaj...\n\nChorus:\nRefren tutaj..."}
                   value={customLyrics}
                   onChange={(e) => setCustomLyrics(e.target.value)}
                   rows={6}
                   className="bg-[#1a1a2e] border-[#FF6B00]/20 text-white placeholder:text-gray-600 focus:border-[#FF6B00] focus:ring-[#FF6B00]/30 resize-none font-mono text-sm"
                 />
                 <p className="text-xs text-gray-500">
-                  Zostaw puste, aby użyć automatycznie generowanego tekstu. Każda linia = osobna fraza.
+                  Wpisz tekst — AI wokalista zaśpiewa go na tle muzyki. Zostaw puste dla utworu bez wokalu.
                 </p>
               </motion.div>
             )}
           </AnimatePresence>
 
-          {/* Suno AI Engine Info */}
+          {/* Engine Info */}
           <div className="p-4 rounded-xl border border-[#9333EA]/30 bg-[#1a1a2e]/60 space-y-2">
             <div className="flex items-center gap-3">
               <Zap className="h-5 w-5 text-[#9333EA]" />
               <div>
-                <Label className="text-sm text-gray-200">Suno AI Engine</Label>
-                <p className="text-xs text-gray-500">Profesjonalna jakość — generuje prawdziwe brzmienie w jakości studyjnej</p>
+                <Label className="text-sm text-gray-200">GrouAI Engine (ElevenLabs HQ)</Label>
+                <p className="text-xs text-gray-500">Profesjonalna muzyka AI + śpiewany wokal — jakość studyjna</p>
               </div>
             </div>
-            <Badge className="text-xs bg-[#9333EA] text-white border-transparent">
-              <Zap className="h-3 w-3 mr-1" /> Suno AI (HQ) — aktywny
-            </Badge>
+            <div className="flex gap-2">
+              <Badge className="text-xs bg-[#9333EA] text-white border-transparent">
+                <Music className="h-3 w-3 mr-1" /> Instrumenty AI
+              </Badge>
+              {!instrumental && (
+                <Badge className="text-xs bg-[#FF6B00] text-white border-transparent">
+                  <Mic className="h-3 w-3 mr-1" /> Wokal AI
+                </Badge>
+              )}
+            </div>
           </div>
 
           {/* Generate Button */}
           <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}>
             <Button
               onClick={generate}
-              disabled={generating || sunoPolling}
+              disabled={generating}
               className="w-full h-14 text-lg font-bold text-white border-0 gap-3"
               style={{
                 background: generating ? "#333" : "linear-gradient(135deg, #9333EA, #FF6B00)",
@@ -479,14 +580,14 @@ const Suno = () => {
               }}
             >
               {!generating && <Zap className="h-5 w-5" />}
-              {generating || sunoPolling ? (sunoPolling ? "Suno AI generuje..." : "Generuję...") : "⚡ Generuj z Suno AI"}
+              {generating ? "Generuję..." : `⚡ Generuj ${duration}s${!instrumental ? " + wokal" : ""}`}
               {!generating && <Music className="h-5 w-5" />}
             </Button>
           </motion.div>
 
-          {/* Suno status */}
-          {sunoStatus && (
-            <p className="text-sm text-center text-gray-400">{sunoStatus}</p>
+          {/* Status */}
+          {genStatus && (
+            <p className="text-sm text-center text-gray-400">{genStatus}</p>
           )}
 
           {!user && (
@@ -504,7 +605,7 @@ const Suno = () => {
             )}
           </AnimatePresence>
 
-          {/* Result with enhanced animation */}
+          {/* Result */}
           <AnimatePresence>
             {result && (
               <motion.div
@@ -515,7 +616,6 @@ const Suno = () => {
                 className="relative p-5 rounded-2xl border border-[#FF6B00]/30 bg-[#1a1a2e]/80 backdrop-blur-sm space-y-4 overflow-hidden"
                 style={{ boxShadow: "0 0 40px #FF6B0020, 0 8px 32px rgba(0,0,0,0.4)" }}
               >
-                {/* Animated glow behind card */}
                 <motion.div
                   className="absolute -top-20 -right-20 w-40 h-40 rounded-full"
                   style={{ background: "radial-gradient(circle, #FF6B0030, transparent 70%)" }}
@@ -538,61 +638,22 @@ const Suno = () => {
                     <Music className="h-7 w-7 text-white" />
                   </motion.div>
                   <div className="flex-1">
-                    <motion.p
-                      className="font-bold text-white text-lg"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: 0.25 }}
-                    >
+                    <motion.p className="font-bold text-white text-lg" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.25 }}>
                       {result.title}
                     </motion.p>
                     <p className="text-xs text-[#FF9500]/70">GrouAI Studio • {result.genre} • {result.durationSeconds}s</p>
                   </div>
                 </motion.div>
 
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3 }}
-                  className="relative z-10"
-                >
-                  <WaveformPlayer
-                    audioUrl={result.audioUrl}
-                    title={result.title}
-                    genre={result.genre}
-                    onSaveToLibrary={saveToLibrary}
-                  />
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="relative z-10">
+                  <WaveformPlayer audioUrl={result.audioUrl} title={result.title} genre={result.genre} onSaveToLibrary={saveToLibrary} />
                 </motion.div>
 
-                {/* Lyrics Display */}
                 {result.lyrics.length > 0 && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.35 }}
-                    className="relative z-10"
-                  >
-                    <LyricsDisplay
-                      lyrics={result.lyrics}
-                      currentTime={playbackTime}
-                      isPlaying={isPlaying}
-                      totalDuration={result.durationSeconds}
-                    />
+                  <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }} className="relative z-10">
+                    <LyricsDisplay lyrics={result.lyrics} currentTime={playbackTime} isPlaying={isPlaying} totalDuration={result.durationSeconds} />
                   </motion.div>
                 )}
-
-                {/* Suno AI cover image */}
-                {result.imageUrl && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.45 }}
-                    className="relative z-10"
-                  >
-                    <img src={result.imageUrl} alt={result.title} className="w-full rounded-xl object-cover max-h-48" />
-                  </motion.div>
-                )}
-
               </motion.div>
             )}
           </AnimatePresence>
@@ -611,7 +672,7 @@ const Suno = () => {
             <DialogTitle className="text-[#FF9500]">Błąd generowania</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-gray-300">{errorModal}</p>
-          <p className="text-xs text-gray-500">Spróbuj ponownie za chwilę — serwer jest zajęty</p>
+          <p className="text-xs text-gray-500">Sprawdź czy ElevenLabs API jest dostępne i spróbuj ponownie</p>
           <Button
             onClick={() => { setErrorModal(null); generate(); }}
             className="w-full text-white"
