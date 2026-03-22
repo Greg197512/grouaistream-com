@@ -280,7 +280,7 @@ const Suno = () => {
             </div>
             <h1 className="text-3xl font-bold text-white">GrouAI Studio</h1>
             <p className="text-sm text-gray-400 max-w-md mx-auto leading-relaxed">
-              Twórz unikalne utwory muzyczne algorytmicznie. Wybierz styl, ustaw długość i wygeneruj muzykę bezpośrednio w przeglądarce — bez zewnętrznych API, za darmo!
+              Twórz profesjonalne utwory muzyczne z Suno AI. Wybierz styl, wpisz tekst i wygeneruj muzykę w jakości studyjnej — pełne utwory z wokalem i instrumentami.
             </p>
           </motion.div>
 
