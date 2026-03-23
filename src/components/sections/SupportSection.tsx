@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { Heart, Coffee, Star, HandHeart } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const supportLinks = [
   {
@@ -30,6 +30,8 @@ const supportLinks = [
 ];
 
 export const SupportSection = () => {
+  const { t } = useLanguage();
+
   return (
     <section className="px-6 py-10">
       <motion.div
@@ -40,14 +42,14 @@ export const SupportSection = () => {
       >
         <div className="inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs font-medium text-primary mb-4">
           <Star className="h-3.5 w-3.5" />
-          Support
+          {t("support.badge")}
         </div>
 
         <h2 className="text-xl md:text-2xl font-bold mb-2">
-          Pomóż rozwijać uczciwą platformę AI
+          {t("support.title")}
         </h2>
         <p className="text-sm text-muted-foreground mb-6">
-          Każda kawa = walka z bot-farmami i nowe funkcje. Dzięki! ☕
+          {t("support.desc")}
         </p>
 
         <div className="flex flex-wrap justify-center gap-3">

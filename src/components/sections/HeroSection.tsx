@@ -381,10 +381,18 @@ export const HeroSection = () => {
             className="max-w-lg rounded-xl border border-muted/30 bg-card/40 backdrop-blur-sm px-5 py-4 text-sm leading-relaxed text-muted-foreground"
           >
             <p>
-              <span className="text-foreground font-semibold">GrouAI Stream</span> łączy wybrane utwory AI (Grouarock®, Amsterdam drops i inne) z Twoimi własnymi trackami z Suno.
+              <span className="text-foreground font-semibold">GrouAI Stream</span> {t("hero.manifest1")}
             </p>
-            <p className="mt-1.5">Słuchaj za darmo 24/7 przez <span className="text-primary font-medium">GrouaRadio</span> z real-time mood detection.</p>
-            <p className="mt-1.5">Wrzuć swój numer → dostaje badge <span className="text-primary font-medium">AI</span> → streamy tylko od prawdziwych ludzi.</p>
+            <p className="mt-1.5">
+              {t("hero.manifest2").split("{radio}").map((part, i, arr) => (
+                <span key={i}>{part}{i < arr.length - 1 && <span className="text-primary font-medium">GrouaRadio</span>}</span>
+              ))}
+            </p>
+            <p className="mt-1.5">
+              {t("hero.manifest3").split("{ai}").map((part, i, arr) => (
+                <span key={i}>{part}{i < arr.length - 1 && <span className="text-primary font-medium">AI</span>}</span>
+              ))}
+            </p>
           </motion.div>
         </motion.div>
 

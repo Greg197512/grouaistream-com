@@ -247,6 +247,31 @@ type TranslationKeys = {
   "section.trendingNowDesc": string;
   "section.recentlyPlayed": string;
   "section.topArtists": string;
+  "section.edm": string;
+  "section.disco": string;
+  "section.house": string;
+  "section.rock": string;
+  "section.punk": string;
+  "section.pop": string;
+  "section.hiphop": string;
+  "section.rnb": string;
+  "section.trance": string;
+
+  // Hero manifest
+  "hero.manifest1": string;
+  "hero.manifest2": string;
+  "hero.manifest3": string;
+
+  // Upload CTA
+  "upload.ctaBadge": string;
+  "upload.ctaTitle": string;
+  "upload.ctaDesc": string;
+  "upload.ctaButton": string;
+
+  // Support
+  "support.badge": string;
+  "support.title": string;
+  "support.desc": string;
 
   // Legal page
   "legal.title": string;
@@ -706,6 +731,25 @@ const pl: TranslationKeys = {
   "section.trendingNowDesc": "Czego słucha świat",
   "section.recentlyPlayed": "Ostatnio Odtwarzane",
   "section.topArtists": "Najlepsi Artyści",
+  "section.edm": "🎧 EDM i Elektronika",
+  "section.disco": "🪩 Disco Klasyka i Grooves",
+  "section.house": "🏠 House Music",
+  "section.rock": "🎸 Rock Hity 2026",
+  "section.punk": "🤘 Punk i Punk-Rock",
+  "section.pop": "🎤 Pop Ulubione",
+  "section.hiphop": "🎤 Hip-Hop i Rap",
+  "section.rnb": "💜 R&B i Soul",
+  "section.trance": "🌌 Trance i Progressive",
+  "hero.manifest1": "łączy wybrane utwory AI (Grouarock®, Amsterdam drops i inne) z Twoimi własnymi trackami z Suno.",
+  "hero.manifest2": "Słuchaj za darmo 24/7 przez {radio} z real-time mood detection.",
+  "hero.manifest3": "Wrzuć swój numer → dostaje badge {ai} → streamy tylko od prawdziwych ludzi.",
+  "upload.ctaBadge": "Nowe — Upload z Suno AI",
+  "upload.ctaTitle": "Wrzuć swój utwór z Suno",
+  "upload.ctaDesc": "Dodaj swój track → badge {ai} → zarabiaj na verified human streams",
+  "upload.ctaButton": "Wrzuć swój utwór",
+  "support.badge": "Wsparcie",
+  "support.title": "Pomóż rozwijać uczciwą platformę AI",
+  "support.desc": "Każda kawa = walka z bot-farmami i nowe funkcje. Dzięki! ☕",
 
   "legal.title": "Dokumenty prawne",
   "legal.subtitle": "GrouAI Stream działa w pełni legalnie i zgodnie z obowiązującym prawem UE, RODO oraz międzynarodowymi regulacjami dotyczącymi praw autorskich.",
@@ -1162,6 +1206,25 @@ const en: TranslationKeys = {
   "section.trendingNowDesc": "What the world is listening to",
   "section.recentlyPlayed": "Recently Played",
   "section.topArtists": "Top Artists",
+  "section.edm": "🎧 EDM & Electronic Hits",
+  "section.disco": "🪩 Disco Classics & Grooves",
+  "section.house": "🏠 House Music Essentials",
+  "section.rock": "🎸 Rock Hits 2026",
+  "section.punk": "🤘 Punk & Punk-Rock",
+  "section.pop": "🎤 Pop Favorites",
+  "section.hiphop": "🎤 Hip-Hop & Rap",
+  "section.rnb": "💜 R&B & Soul",
+  "section.trance": "🌌 Trance & Progressive",
+  "hero.manifest1": "combines selected AI tracks (Grouarock®, Amsterdam drops and more) with your own tracks from Suno.",
+  "hero.manifest2": "Listen for free 24/7 on {radio} with real-time mood detection.",
+  "hero.manifest3": "Upload your track → gets {ai} badge → streams only from real people.",
+  "upload.ctaBadge": "New — Upload from Suno AI",
+  "upload.ctaTitle": "Upload your track from Suno",
+  "upload.ctaDesc": "Add your track → {ai} badge → earn on verified human streams",
+  "upload.ctaButton": "Upload your track",
+  "support.badge": "Support",
+  "support.title": "Help build a fair AI platform",
+  "support.desc": "Every coffee = fighting bot farms and new features. Thanks! ☕",
 
   "legal.title": "Legal Documents",
   "legal.subtitle": "GrouAI Stream operates fully legally and in compliance with EU law, GDPR, and international copyright regulations.",
@@ -1618,6 +1681,25 @@ const nl: TranslationKeys = {
   "section.trendingNowDesc": "Waar de wereld naar luistert",
   "section.recentlyPlayed": "Recent Afgespeeld",
   "section.topArtists": "Top Artiesten",
+  "section.edm": "🎧 EDM & Elektronische Hits",
+  "section.disco": "🪩 Disco Klassiekers & Grooves",
+  "section.house": "🏠 House Music Essentials",
+  "section.rock": "🎸 Rock Hits 2026",
+  "section.punk": "🤘 Punk & Punk-Rock",
+  "section.pop": "🎤 Pop Favorieten",
+  "section.hiphop": "🎤 Hip-Hop & Rap",
+  "section.rnb": "💜 R&B & Soul",
+  "section.trance": "🌌 Trance & Progressive",
+  "hero.manifest1": "combineert geselecteerde AI-tracks (Grouarock®, Amsterdam drops en meer) met je eigen tracks van Suno.",
+  "hero.manifest2": "Luister gratis 24/7 via {radio} met realtime stemmingsdetectie.",
+  "hero.manifest3": "Upload je nummer → krijgt {ai} badge → streams alleen van echte mensen.",
+  "upload.ctaBadge": "Nieuw — Upload van Suno AI",
+  "upload.ctaTitle": "Upload je nummer van Suno",
+  "upload.ctaDesc": "Voeg je track toe → {ai} badge → verdien met verified human streams",
+  "upload.ctaButton": "Upload je nummer",
+  "support.badge": "Ondersteuning",
+  "support.title": "Help een eerlijk AI-platform bouwen",
+  "support.desc": "Elke koffie = strijd tegen botfarms en nieuwe functies. Bedankt! ☕",
 
   "legal.title": "Juridische Documenten",
   "legal.subtitle": "GrouAI Stream opereert volledig legaal en in overeenstemming met EU-wetgeving, AVG en internationale auteursrechtregelingen.",
@@ -2074,6 +2156,25 @@ const ua: TranslationKeys = {
   "section.trendingNowDesc": "Що слухає світ",
   "section.recentlyPlayed": "Нещодавно Відтворене",
   "section.topArtists": "Топ Артисти",
+  "section.edm": "🎧 EDM та Електроніка",
+  "section.disco": "🪩 Диско Класика та Grooves",
+  "section.house": "🏠 House Музика",
+  "section.rock": "🎸 Рок Хіти 2026",
+  "section.punk": "🤘 Панк та Панк-Рок",
+  "section.pop": "🎤 Поп Улюблене",
+  "section.hiphop": "🎤 Хіп-Хоп та Реп",
+  "section.rnb": "💜 R&B та Соул",
+  "section.trance": "🌌 Транс та Прогресив",
+  "hero.manifest1": "поєднує обрані AI-треки (Grouarock®, Amsterdam drops та інші) з вашими власними треками з Suno.",
+  "hero.manifest2": "Слухайте безкоштовно 24/7 через {radio} з визначенням настрою в реальному часі.",
+  "hero.manifest3": "Завантажте свій трек → отримує значок {ai} → стріми лише від справжніх людей.",
+  "upload.ctaBadge": "Нове — Завантаження з Suno AI",
+  "upload.ctaTitle": "Завантажте свій трек з Suno",
+  "upload.ctaDesc": "Додайте свій трек → значок {ai} → заробляйте на verified human streams",
+  "upload.ctaButton": "Завантажити трек",
+  "support.badge": "Підтримка",
+  "support.title": "Допоможіть розвивати чесну AI-платформу",
+  "support.desc": "Кожна кава = боротьба з бот-фермами та нові функції. Дякуємо! ☕",
 
   "legal.title": "Юридичні Документи",
   "legal.subtitle": "GrouAI Stream працює повністю легально та відповідно до законодавства ЄС, GDPR та міжнародних норм авторського права.",
