@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Play, Sparkles, Zap, Brain, Radio, Loader2, Volume2 } from "lucide-react";
+import { Play, Sparkles, Zap, Brain, Radio, Loader2, Volume2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { usePlayer } from "@/contexts/PlayerContext";
@@ -336,9 +336,17 @@ export const HeroSection = () => {
             </h1>
           </div>
 
-          <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-xl">
-            Experience the future of music streaming with AI that learns your mood, adapts to your rhythm, and creates the perfect soundtrack for every moment.
+          <p className="text-base md:text-lg text-muted-foreground mb-4 max-w-xl leading-relaxed">
+            {t("hero.subtitle")}
           </p>
+          
+          {/* Anti-fraud explainer */}
+          <div className="flex items-start gap-3 mb-6 max-w-xl rounded-lg border border-primary/20 bg-primary/5 backdrop-blur-sm px-4 py-3">
+            <Zap className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              {t("hero.antiFraudExplainer")}
+            </p>
+          </div>
 
           {/* Tags */}
           <div className="flex flex-wrap gap-3 mb-8">
@@ -360,15 +368,21 @@ export const HeroSection = () => {
             ))}
           </div>
 
-          <div className="flex flex-wrap gap-4 mb-8">
+          <div className="flex flex-wrap gap-3 mb-8">
             <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-              <Button size="lg" className="groove-gradient-bg text-primary-foreground hover:opacity-90 gap-2 rounded-full px-8 h-12 font-semibold" onClick={handleStartListening} disabled={isLoading}>
+              <Button size="lg" className="groove-gradient-bg text-primary-foreground hover:opacity-90 gap-2 rounded-full px-8 h-14 font-semibold text-base shadow-[0_0_30px_hsl(var(--primary)/0.3)]" onClick={handleStartListening} disabled={isLoading}>
                 {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Play className="h-5 w-5 fill-current" />}
                 {t("hero.startListening")}
               </Button>
             </motion.div>
             <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-              <Button size="lg" variant="outline" className="groove-gradient-border hover:bg-muted gap-2 rounded-full px-8 h-12" onClick={() => navigate("/radio-live")}>
+              <Button size="lg" className="bg-green-500 hover:bg-green-400 text-black font-semibold gap-2 rounded-full px-8 h-14 text-base shadow-[0_0_25px_rgba(34,197,94,0.3)]" onClick={() => navigate("/upload")}>
+                <Upload className="h-5 w-5" />
+                {t("hero.uploadTrack")}
+              </Button>
+            </motion.div>
+            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+              <Button size="lg" variant="outline" className="groove-gradient-border hover:bg-muted gap-2 rounded-full px-6 h-14" onClick={() => navigate("/radio-live")}>
                 <Radio className="h-5 w-5" />
                 {t("hero.liveRadio")}
               </Button>

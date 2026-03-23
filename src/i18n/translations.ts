@@ -72,6 +72,8 @@ type TranslationKeys = {
   "hero.failedLoad": string;
   "hero.enableMoodDetection": string;
   "hero.realtimeActive": string;
+  "hero.antiFraudExplainer": string;
+  "hero.uploadTrack": string;
 
   // Settings
   "settings.title": string;
@@ -566,6 +568,8 @@ const pl: TranslationKeys = {
   "hero.failedLoad": "Nie udało się załadować utworów. Spróbuj ponownie.",
   "hero.enableMoodDetection": "Włącz Detekcję Nastroju w Ustawieniach → AI i Prywatność",
   "hero.realtimeActive": "Adaptacja w czasie rzeczywistym jest aktywna podczas słuchania!",
+  "hero.antiFraudExplainer": "Każdy stream jest weryfikowany jako prawdziwe odsłuchanie. Zero farm botów, zero fake streamów – artyści zarabiają tylko na prawdziwych fanach.",
+  "hero.uploadTrack": "Wrzuć Swój Utwór",
 
   "settings.title": "Ustawienia",
   "settings.profile": "Profil",
@@ -1041,6 +1045,8 @@ const en: TranslationKeys = {
   "hero.failedLoad": "Failed to load tracks. Please try again.",
   "hero.enableMoodDetection": "Enable Mood Detection in Settings → AI & Privacy",
   "hero.realtimeActive": "Real-time adaptation is always active while you listen!",
+  "hero.antiFraudExplainer": "Every stream is verified as a real human listen. Zero bot farms, zero fake plays – artists earn only from real fans.",
+  "hero.uploadTrack": "Upload Your Track",
 
   "settings.title": "Settings",
   "settings.profile": "Profile",
@@ -1516,6 +1522,8 @@ const nl: TranslationKeys = {
   "hero.failedLoad": "Nummers laden mislukt. Probeer het opnieuw.",
   "hero.enableMoodDetection": "Schakel Stemming Detectie in via Instellingen → AI & Privacy",
   "hero.realtimeActive": "Realtime aanpassing is altijd actief terwijl je luistert!",
+  "hero.antiFraudExplainer": "Elke stream wordt geverifieerd als echt menselijk luisteren. Geen botfarms, geen nepstreams – artiesten verdienen alleen aan echte fans.",
+  "hero.uploadTrack": "Upload Je Nummer",
 
   "settings.title": "Instellingen",
   "settings.profile": "Profiel",
@@ -1991,6 +1999,8 @@ const ua: TranslationKeys = {
   "hero.failedLoad": "Не вдалося завантажити треки. Спробуйте ще раз.",
   "hero.enableMoodDetection": "Увімкніть Визначення Настрою в Налаштуваннях → AI та Приватність",
   "hero.realtimeActive": "Адаптація в реальному часі завжди активна під час прослуховування!",
+  "hero.antiFraudExplainer": "Кожен стрім перевіряється як реальне прослуховування людиною. Жодних бот-ферм, жодних фейкових стрімів – артисти заробляють лише на реальних фанатах.",
+  "hero.uploadTrack": "Завантажити Свій Трек",
 
   "settings.title": "Налаштування",
   "settings.profile": "Профіль",
