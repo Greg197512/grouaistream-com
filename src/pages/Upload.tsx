@@ -58,21 +58,12 @@ const Upload = () => {
 
       toast.info("🔍 Analizuję utwór przez AI...");
 
-      // 2. Trigger AI moderation with extended timeout
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 min timeout
+      // 2. Trigger AI moderation
+      const { data: modData, error: modErr } = await supabase.functions.invoke("ai-moderate-track", {
+        body: { submission_id: submissionId },
+      });
       
-      let modResult: any;
-      let modErr: any;
-      try {
-        const res = await supabase.functions.invoke("ai-moderate-track", {
-          body: { submission_id: submissionId },
-        });
-        modResult = res.data;
-        modErr = res.error;
-      } finally {
-        clearTimeout(timeoutId);
-      }
+      const modResult = modData;
 
       if (modErr) throw modErr;
 
