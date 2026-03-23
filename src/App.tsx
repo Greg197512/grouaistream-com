@@ -33,6 +33,7 @@ import Legal from "./pages/Legal";
 import PartyPulpit from "./pages/PartyPulpit";
 import Suno from "./pages/Suno";
 import LocalPlayer from "./pages/LocalPlayer";
+import Upload from "./pages/Upload";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
