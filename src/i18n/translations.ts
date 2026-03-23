@@ -568,6 +568,8 @@ const pl: TranslationKeys = {
   "hero.failedLoad": "Nie udało się załadować utworów. Spróbuj ponownie.",
   "hero.enableMoodDetection": "Włącz Detekcję Nastroju w Ustawieniach → AI i Prywatność",
   "hero.realtimeActive": "Adaptacja w czasie rzeczywistym jest aktywna podczas słuchania!",
+  "hero.antiFraudExplainer": "Każdy stream jest weryfikowany jako prawdziwe odsłuchanie. Zero farm botów, zero fake streamów – artyści zarabiają tylko na prawdziwych fanach.",
+  "hero.uploadTrack": "Wrzuć Swój Utwór",
 
   "settings.title": "Ustawienia",
   "settings.profile": "Profil",
