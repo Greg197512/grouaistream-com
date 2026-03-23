@@ -329,13 +329,13 @@ export const HeroSection = () => {
           <div className="mb-6 relative">
             <BassParticles bass={levels.bass} overall={levels.overall} isPlaying={isPlaying} palette={genrePalette} />
             <h1 className="font-display text-4xl md:text-6xl lg:text-7xl font-bold leading-tight relative z-10">
-              <span className="block">Koniec z botami</span>
-              <span className="block groove-gradient-text mt-1">i fake streamami</span>
+              <span className="block">Music That</span>
+              <span className="block groove-gradient-text mt-1">Understands</span>
             </h1>
           </div>
 
           <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-xl">
-            Prawdziwe słuchanie z mood detection. Zarabiasz tylko na realnych fanach – zero farm jak na Spotify.
+            Experience the future of music streaming with AI that learns your mood, adapts to your rhythm, and creates the perfect soundtrack for every moment.
           </p>
 
           {/* Tags */}
