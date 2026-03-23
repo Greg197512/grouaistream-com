@@ -1033,7 +1033,7 @@ export const AIAssistant = () => {
             )}
 
             {/* Input */}
-            <div className="p-3 border-t border-white/5 bg-black/20">
+            <div className="p-3 border-t border-white/5 bg-black/20 shrink-0 safe-bottom">
               <input
                 ref={fileInputRef}
                 type="file"
