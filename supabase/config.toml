@@ -38,3 +38,6 @@ verify_jwt = false
 
 [functions.ai-learn]
 verify_jwt = false
+
+[functions.ai-moderate-track]
+verify_jwt = false
