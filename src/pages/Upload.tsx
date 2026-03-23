@@ -39,19 +39,20 @@ const Upload = () => {
     setModerationResult(null);
 
     try {
+      const submissionId = crypto.randomUUID();
+      
       // 1. Insert submission
-      const { data: submission, error: insertErr } = await supabase
+      const { error: insertErr } = await supabase
         .from("track_submissions" as any)
         .insert({
+          id: submissionId,
           suno_link: sunoLink,
           title,
           genre,
           description: description || null,
           user_email: email,
           status: "pending",
-        } as any)
-        .select()
-        .single();
+        } as any);
 
       if (insertErr) throw insertErr;
 
@@ -59,7 +60,7 @@ const Upload = () => {
 
       // 2. Trigger AI moderation
       const { data: modResult, error: modErr } = await supabase.functions.invoke("ai-moderate-track", {
-        body: { submission_id: (submission as any).id },
+        body: { submission_id: submissionId },
       });
 
       if (modErr) throw modErr;
