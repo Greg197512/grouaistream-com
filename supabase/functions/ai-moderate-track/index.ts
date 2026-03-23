@@ -103,7 +103,7 @@ Respond in JSON format ONLY:
   "recommendations": "What could be improved, in Polish"
 }`;
 
-    const aiResponse = await fetch("https://ai-gateway.lovable.dev/chat/completions", {
+    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${LOVABLE_API_KEY}`,
