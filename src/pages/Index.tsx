@@ -8,6 +8,7 @@ import { TopArtists } from "@/components/sections/TopArtists";
 import { GenreSection } from "@/components/sections/GenreSection";
 import { NewOnServer } from "@/components/sections/NewOnServer";
 import { UploadCTA } from "@/components/sections/UploadCTA";
+import { SupportSection } from "@/components/sections/SupportSection";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 const Index = () => {
