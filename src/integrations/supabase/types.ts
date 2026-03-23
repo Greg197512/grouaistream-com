@@ -730,6 +730,69 @@ export type Database = {
           },
         ]
       }
+      track_submissions: {
+        Row: {
+          created_at: string
+          description: string | null
+          genre: string
+          id: string
+          moderated_at: string | null
+          moderation_result: Json | null
+          moderator_notes: string | null
+          rejection_reasons: string[] | null
+          score_length: number | null
+          score_lyrics: number | null
+          score_originality: number | null
+          score_production: number | null
+          score_vocal: number | null
+          status: string
+          suno_link: string
+          title: string
+          total_score: number | null
+          user_email: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          genre: string
+          id?: string
+          moderated_at?: string | null
+          moderation_result?: Json | null
+          moderator_notes?: string | null
+          rejection_reasons?: string[] | null
+          score_length?: number | null
+          score_lyrics?: number | null
+          score_originality?: number | null
+          score_production?: number | null
+          score_vocal?: number | null
+          status?: string
+          suno_link: string
+          title: string
+          total_score?: number | null
+          user_email: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          genre?: string
+          id?: string
+          moderated_at?: string | null
+          moderation_result?: Json | null
+          moderator_notes?: string | null
+          rejection_reasons?: string[] | null
+          score_length?: number | null
+          score_lyrics?: number | null
+          score_originality?: number | null
+          score_production?: number | null
+          score_vocal?: number | null
+          status?: string
+          suno_link?: string
+          title?: string
+          total_score?: number | null
+          user_email?: string
+        }
+        Relationships: []
+      }
       tracks: {
         Row: {
           album: string | null
