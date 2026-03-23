@@ -85,6 +85,7 @@ const App = () => (
                   <Route path="/party/:code" element={<PartyPulpit />} />
                   <Route path="/suno" element={<Suno />} />
                   <Route path="/local-player" element={<LocalPlayer />} />
+                  <Route path="/upload" element={<Upload />} />
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>

@@ -16,6 +16,7 @@ const Index = () => {
   return (
     <MainLayout>
       <HeroSection />
+      <UploadCTA />
       <NewOnServer />
       <RecentlyPlayed />
       
