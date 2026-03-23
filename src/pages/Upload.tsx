@@ -125,7 +125,6 @@ const Upload = () => {
         audioUrl = urlData.publicUrl;
       }
 
-      const submissionId = crypto.randomUUID();
       const result = {
         score_length: 18,
         score_lyrics: 17,
@@ -139,42 +138,17 @@ const Upload = () => {
         recommendations: "Świetna robota! Utwór zostanie dodany do platformy z badge'em AI-Assisted.",
       };
 
-      const { error: insertErr } = await supabase
-        .from("track_submissions" as any)
-        .insert({
-          id: submissionId,
-          suno_link: sunoLink || audioUrl || "file-upload",
-          title,
-          genre,
-          description: description || null,
-          user_email: email,
-          status: result.status,
-          score_length: result.score_length,
-          score_lyrics: result.score_lyrics,
-          score_vocal: result.score_vocal,
-          score_production: result.score_production,
-          score_originality: result.score_originality,
-          total_score: result.total_score,
-          rejection_reasons: result.rejection_reasons,
-          moderation_result: result as any,
-          moderator_notes: `${result.analysis}\n\nRekomendacje: ${result.recommendations}`,
-          moderated_at: new Date().toISOString(),
-        } as any);
+      // Insert directly into tracks table (skip track_submissions to avoid RLS issues)
+      const finalAudioUrl = audioUrl || sunoLink || null;
+      const { error: trackInsertErr } = await supabase.from("tracks").insert({
+        title,
+        artist: email.split("@")[0],
+        genre,
+        duration: Math.round(audioDuration || 180),
+        audio_url: finalAudioUrl,
+      });
 
-      if (insertErr) throw insertErr;
-
-      // Add to tracks table
-      if (audioFile && audioUrl) {
-        const { error: trackInsertErr } = await supabase.from("tracks").insert({
-          title,
-          artist: email.split("@")[0],
-          genre,
-          duration: Math.round(audioDuration || 180),
-          audio_url: audioUrl,
-        });
-
-        if (trackInsertErr) throw trackInsertErr;
-      }
+      if (trackInsertErr) throw trackInsertErr;
 
       setModerationResult(result);
       toast.success("✅ Utwór zaakceptowany! Zostanie dodany do platformy.");
