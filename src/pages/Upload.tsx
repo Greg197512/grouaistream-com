@@ -282,7 +282,7 @@ const Upload = () => {
               />
             </div>
 
-            <div className="flex items-start gap-3 pt-2">
+            <div className="flex items-center gap-3 pt-2">
               <Checkbox
                 id="agree"
                 checked={agreed}
@@ -290,8 +290,17 @@ const Upload = () => {
                 className="mt-0.5"
               />
               <Label htmlFor="agree" className="text-sm text-muted-foreground leading-relaxed cursor-pointer">
-                Akceptuję regulamin GrouAI Stream i zgadzam się na publikację utworu z badge'em AI-Assisted po pozytywnej weryfikacji.
+                Akceptuję regulamin i zgadzam się na publikację z badge'em AI-Assisted.
               </Label>
+              <Button
+                type="button"
+                variant="link"
+                size="sm"
+                className="text-primary px-0 whitespace-nowrap"
+                onClick={() => window.location.href = "/legal"}
+              >
+                Regulamin
+              </Button>
             </div>
 
             <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }} className="pt-2">
