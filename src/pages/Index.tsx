@@ -7,6 +7,7 @@ import { LiveRadioCard } from "@/components/sections/LiveRadioCard";
 import { TopArtists } from "@/components/sections/TopArtists";
 import { GenreSection } from "@/components/sections/GenreSection";
 import { NewOnServer } from "@/components/sections/NewOnServer";
+import { UploadCTA } from "@/components/sections/UploadCTA";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 const Index = () => {
@@ -15,6 +16,7 @@ const Index = () => {
   return (
     <MainLayout>
       <HeroSection />
+      <UploadCTA />
       <NewOnServer />
       <RecentlyPlayed />
       
