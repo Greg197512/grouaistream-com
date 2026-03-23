@@ -247,6 +247,31 @@ type TranslationKeys = {
   "section.trendingNowDesc": string;
   "section.recentlyPlayed": string;
   "section.topArtists": string;
+  "section.edm": string;
+  "section.disco": string;
+  "section.house": string;
+  "section.rock": string;
+  "section.punk": string;
+  "section.pop": string;
+  "section.hiphop": string;
+  "section.rnb": string;
+  "section.trance": string;
+
+  // Hero manifest
+  "hero.manifest1": string;
+  "hero.manifest2": string;
+  "hero.manifest3": string;
+
+  // Upload CTA
+  "upload.ctaBadge": string;
+  "upload.ctaTitle": string;
+  "upload.ctaDesc": string;
+  "upload.ctaButton": string;
+
+  // Support
+  "support.badge": string;
+  "support.title": string;
+  "support.desc": string;
 
   // Legal page
   "legal.title": string;
