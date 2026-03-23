@@ -72,6 +72,8 @@ type TranslationKeys = {
   "hero.failedLoad": string;
   "hero.enableMoodDetection": string;
   "hero.realtimeActive": string;
+  "hero.antiFraudExplainer": string;
+  "hero.uploadTrack": string;
 
   // Settings
   "settings.title": string;
