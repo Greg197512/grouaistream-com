@@ -1522,6 +1522,8 @@ const nl: TranslationKeys = {
   "hero.failedLoad": "Nummers laden mislukt. Probeer het opnieuw.",
   "hero.enableMoodDetection": "Schakel Stemming Detectie in via Instellingen → AI & Privacy",
   "hero.realtimeActive": "Realtime aanpassing is altijd actief terwijl je luistert!",
+  "hero.antiFraudExplainer": "Elke stream wordt geverifieerd als echt menselijk luisteren. Geen botfarms, geen nepstreams – artiesten verdienen alleen aan echte fans.",
+  "hero.uploadTrack": "Upload Je Nummer",
 
   "settings.title": "Instellingen",
   "settings.profile": "Profiel",
