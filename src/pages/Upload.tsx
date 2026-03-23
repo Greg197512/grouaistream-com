@@ -126,22 +126,6 @@ const Upload = () => {
       }
 
       const submissionId = crypto.randomUUID();
-
-      const { error: insertErr } = await supabase
-        .from("track_submissions" as any)
-        .insert({
-          id: submissionId,
-          suno_link: sunoLink || audioUrl || "file-upload",
-          title,
-          genre,
-          description: description || null,
-          user_email: email,
-          status: "pending",
-        } as any);
-
-      if (insertErr) throw insertErr;
-
-      // Auto-approve: update submission status directly
       const result = {
         score_length: 18,
         score_lyrics: 17,
@@ -155,31 +139,41 @@ const Upload = () => {
         recommendations: "Świetna robota! Utwór zostanie dodany do platformy z badge'em AI-Assisted.",
       };
 
-      await supabase
+      const { error: insertErr } = await supabase
         .from("track_submissions" as any)
-        .update({
-          status: "approved",
+        .insert({
+          id: submissionId,
+          suno_link: sunoLink || audioUrl || "file-upload",
+          title,
+          genre,
+          description: description || null,
+          user_email: email,
+          status: result.status,
           score_length: result.score_length,
           score_lyrics: result.score_lyrics,
           score_vocal: result.score_vocal,
           score_production: result.score_production,
           score_originality: result.score_originality,
           total_score: result.total_score,
+          rejection_reasons: result.rejection_reasons,
           moderation_result: result as any,
           moderator_notes: `${result.analysis}\n\nRekomendacje: ${result.recommendations}`,
           moderated_at: new Date().toISOString(),
-        } as any)
-        .eq("id", submissionId);
+        } as any);
+
+      if (insertErr) throw insertErr;
 
       // Add to tracks table
       if (audioFile && audioUrl) {
-        await supabase.from("tracks").insert({
+        const { error: trackInsertErr } = await supabase.from("tracks").insert({
           title,
           artist: email.split("@")[0],
           genre,
           duration: Math.round(audioDuration || 180),
           audio_url: audioUrl,
         });
+
+        if (trackInsertErr) throw trackInsertErr;
       }
 
       setModerationResult(result);
