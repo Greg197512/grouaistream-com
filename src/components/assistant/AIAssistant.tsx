@@ -723,7 +723,7 @@ export const AIAssistant = () => {
             )}
 
             {/* Header */}
-            <div className="flex items-center gap-3 p-3 pt-6 border-b border-white/5 bg-gradient-to-r from-primary/5 to-accent/5">
+            <div className={`flex items-center gap-3 p-3 ${isMobileView ? 'pt-3' : 'pt-6'} border-b border-white/5 bg-gradient-to-r from-primary/5 to-accent/5 shrink-0`}>
               <div className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-primary/30 shadow-lg shadow-primary/20">
                 <img src={aiAssistantAvatar} alt="AI" className="w-full h-full object-cover" />
                 <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-background" />
