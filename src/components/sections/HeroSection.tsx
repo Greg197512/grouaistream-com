@@ -376,12 +376,6 @@ export const HeroSection = () => {
               </Button>
             </motion.div>
             <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-              <Button size="lg" className="bg-green-500 hover:bg-green-400 text-black font-semibold gap-2 rounded-full px-8 h-14 text-base shadow-[0_0_25px_rgba(34,197,94,0.3)]" onClick={() => navigate("/upload")}>
-                <Upload className="h-5 w-5" />
-                {t("hero.uploadTrack")}
-              </Button>
-            </motion.div>
-            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
               <Button size="lg" variant="outline" className="groove-gradient-border hover:bg-muted gap-2 rounded-full px-6 h-14" onClick={() => navigate("/radio-live")}>
                 <Radio className="h-5 w-5" />
                 {t("hero.liveRadio")}
