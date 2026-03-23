@@ -336,9 +336,17 @@ export const HeroSection = () => {
             </h1>
           </div>
 
-          <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-xl">
-            Experience the future of music streaming with AI that learns your mood, adapts to your rhythm, and creates the perfect soundtrack for every moment.
+          <p className="text-base md:text-lg text-muted-foreground mb-4 max-w-xl leading-relaxed">
+            {t("hero.subtitle")}
           </p>
+          
+          {/* Anti-fraud explainer */}
+          <div className="flex items-start gap-3 mb-6 max-w-xl rounded-lg border border-primary/20 bg-primary/5 backdrop-blur-sm px-4 py-3">
+            <Zap className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              {t("hero.antiFraudExplainer")}
+            </p>
+          </div>
 
           {/* Tags */}
           <div className="flex flex-wrap gap-3 mb-8">
