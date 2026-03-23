@@ -42,6 +42,7 @@ const Index = () => {
         title={t("section.trendingNow")} 
         subtitle={t("section.trendingNowDesc")}
       />
+      <SupportSection />
     </MainLayout>
   );
 };
