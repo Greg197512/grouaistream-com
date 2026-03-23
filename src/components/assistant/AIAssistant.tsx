@@ -685,6 +685,7 @@ export const AIAssistant = () => {
     }
   }, [input, isLoading, messages, userContext, startDJSession, parseDJCommand, attachments]);
 
+  const isMobileView = typeof window !== "undefined" && window.innerWidth < 640;
   const chatWidth = isExpanded ? "w-full sm:w-[600px]" : "w-full sm:w-[400px]";
   const chatHeight = isExpanded ? "h-full sm:h-[700px]" : "h-full sm:h-[520px]";
 
@@ -694,8 +695,7 @@ export const AIAssistant = () => {
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            drag dragControls={dragControls} dragMomentum={false} dragElastic={0}
-            dragConstraints={{ left: -(window.innerWidth - 60), right: 0, top: -(window.innerHeight - 100), bottom: 0 }}
+            {...(!isMobileView ? { drag: true, dragControls, dragMomentum: false, dragElastic: 0, dragConstraints: { left: -(window.innerWidth - 60), right: 0, top: -(window.innerHeight - 100), bottom: 0 } } : {})}
             initial={{ opacity: 0, y: 20, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.9 }}
@@ -703,24 +703,27 @@ export const AIAssistant = () => {
             onDrop={handleDrop}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
-            className={`fixed inset-0 sm:inset-auto sm:bottom-24 sm:right-4 z-50 ${chatWidth} ${chatHeight} sm:rounded-2xl shadow-2xl shadow-black/40 flex flex-col overflow-hidden transition-all duration-300 ${isDragOver ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' : ''}`}
+            className={`fixed z-50 flex flex-col overflow-hidden transition-all duration-300 ${isDragOver ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' : ''} ${isMobileView ? 'inset-0' : `bottom-24 right-4 ${chatWidth} ${chatHeight} rounded-2xl`} shadow-2xl shadow-black/40`}
             style={{
-              background: 'rgba(10, 10, 15, 0.85)',
+              background: 'rgba(10, 10, 15, 0.95)',
               backdropFilter: 'blur(40px) saturate(200%)',
               WebkitBackdropFilter: 'blur(40px) saturate(200%)',
-              border: '1px solid rgba(255, 255, 255, 0.08)',
+              border: isMobileView ? 'none' : '1px solid rgba(255, 255, 255, 0.08)',
+              ...(isMobileView ? { height: '100dvh', width: '100vw' } : {}),
             }}
           >
-            {/* Drag Handle */}
-            <motion.div
-              onPointerDown={(e) => dragControls.start(e)}
-              className="absolute top-0 left-0 right-0 h-6 flex items-center justify-center cursor-grab active:cursor-grabbing z-10"
-            >
-              <GripHorizontal className="h-4 w-4 text-muted-foreground/30" />
-            </motion.div>
+            {/* Drag Handle - only on desktop */}
+            {!isMobileView && (
+              <motion.div
+                onPointerDown={(e) => dragControls.start(e)}
+                className="absolute top-0 left-0 right-0 h-6 flex items-center justify-center cursor-grab active:cursor-grabbing z-10"
+              >
+                <GripHorizontal className="h-4 w-4 text-muted-foreground/30" />
+              </motion.div>
+            )}
 
             {/* Header */}
-            <div className="flex items-center gap-3 p-3 pt-6 border-b border-white/5 bg-gradient-to-r from-primary/5 to-accent/5">
+            <div className={`flex items-center gap-3 p-3 ${isMobileView ? 'pt-3' : 'pt-6'} border-b border-white/5 bg-gradient-to-r from-primary/5 to-accent/5 shrink-0`}>
               <div className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-primary/30 shadow-lg shadow-primary/20">
                 <img src={aiAssistantAvatar} alt="AI" className="w-full h-full object-cover" />
                 <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-background" />
@@ -1030,7 +1033,7 @@ export const AIAssistant = () => {
             )}
 
             {/* Input */}
-            <div className="p-3 border-t border-white/5 bg-black/20">
+            <div className="p-3 border-t border-white/5 bg-black/20 shrink-0 safe-bottom">
               <input
                 ref={fileInputRef}
                 type="file"
