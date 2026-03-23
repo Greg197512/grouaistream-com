@@ -329,14 +329,36 @@ export const HeroSection = () => {
           <div className="mb-6 relative">
             <BassParticles bass={levels.bass} overall={levels.overall} isPlaying={isPlaying} palette={genrePalette} />
             <h1 className="font-display text-4xl md:text-6xl lg:text-7xl font-bold leading-tight relative z-10">
-              <span className="block">{t("hero.title1")}</span>
-              <span className="block groove-gradient-text mt-1">{t("hero.titleHighlight")}</span>
+              <span className="block">Koniec z botami</span>
+              <span className="block groove-gradient-text mt-1">i fake streamami</span>
             </h1>
           </div>
 
-          <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-xl">{t("hero.subtitle")}</p>
+          <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-xl">
+            Prawdziwe słuchanie z mood detection. Zarabiasz tylko na realnych fanach – zero farm jak na Spotify.
+          </p>
 
-          <div className="flex flex-wrap gap-4 mb-12">
+          {/* Tags */}
+          <div className="flex flex-wrap gap-3 mb-8">
+            {[
+              { icon: Zap, label: "Verified Human Streams" },
+              { icon: Brain, label: "AI Anti-Fraud" },
+              { icon: Sparkles, label: "Mood-Based Playlists" },
+            ].map((tag, i) => (
+              <motion.div
+                key={tag.label}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 + i * 0.1 }}
+                className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3.5 py-1.5 text-xs font-medium text-primary"
+              >
+                <tag.icon className="h-3.5 w-3.5" />
+                {tag.label}
+              </motion.div>
+            ))}
+          </div>
+
+          <div className="flex flex-wrap gap-4 mb-8">
             <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
               <Button size="lg" className="groove-gradient-bg text-primary-foreground hover:opacity-90 gap-2 rounded-full px-8 h-12 font-semibold" onClick={handleStartListening} disabled={isLoading}>
                 {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Play className="h-5 w-5 fill-current" />}
@@ -351,18 +373,19 @@ export const HeroSection = () => {
             </motion.div>
           </div>
 
-          <div className="flex flex-wrap gap-6">
-            {[
-              { icon: Brain, labelKey: "hero.moodDetection", key: "moodDetection" },
-              { icon: Zap, labelKey: "hero.realtimeAdaptation", key: "realtimeAdaptation" },
-              { icon: Sparkles, labelKey: "hero.aiPlaylists", key: "aiPlaylists" },
-            ].map((feature, i) => (
-              <motion.button key={feature.key} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 + i * 0.1 }} whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }} onClick={() => handleFeatureClick(feature.key)} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer">
-                <feature.icon className="h-4 w-4 text-primary" />
-                <span>{t(feature.labelKey)}</span>
-              </motion.button>
-            ))}
-          </div>
+          {/* Manifest text */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.6 }}
+            className="max-w-lg rounded-xl border border-muted/30 bg-card/40 backdrop-blur-sm px-5 py-4 text-sm leading-relaxed text-muted-foreground"
+          >
+            <p>
+              <span className="text-foreground font-semibold">GrouAI Stream</span> łączy wybrane utwory AI (Grouarock®, Amsterdam drops i inne) z Twoimi własnymi trackami z Suno.
+            </p>
+            <p className="mt-1.5">Słuchaj za darmo 24/7 przez <span className="text-primary font-medium">GrouaRadio</span> z real-time mood detection.</p>
+            <p className="mt-1.5">Wrzuć swój numer → dostaje badge <span className="text-primary font-medium">AI</span> → streamy tylko od prawdziwych ludzi.</p>
+          </motion.div>
         </motion.div>
 
         <motion.div animate={{ y: [0, -10, 0] }} transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }} className="absolute right-10 top-20 hidden lg:block">
