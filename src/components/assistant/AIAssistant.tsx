@@ -685,6 +685,7 @@ export const AIAssistant = () => {
     }
   }, [input, isLoading, messages, userContext, startDJSession, parseDJCommand, attachments]);
 
+  const isMobileView = typeof window !== "undefined" && window.innerWidth < 640;
   const chatWidth = isExpanded ? "w-full sm:w-[600px]" : "w-full sm:w-[400px]";
   const chatHeight = isExpanded ? "h-full sm:h-[700px]" : "h-full sm:h-[520px]";
 
