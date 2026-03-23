@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { motion } from "framer-motion";
-import { Upload as UploadIcon, Music, CheckCircle, Loader2, ShieldCheck, XCircle, AlertTriangle } from "lucide-react";
+import { Upload as UploadIcon, Music, CheckCircle, Loader2, ShieldCheck, XCircle, AlertTriangle, FileAudio } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -18,8 +18,33 @@ const genres = [
   "Reggaeton", "Classical", "Folk", "Country", "Other"
 ];
 
+const AUDIO_EXTENSIONS = [".mp3", ".wav", ".m4a", ".ogg", ".flac", ".aac", ".opus", ".wma", ".weba"];
+const AUDIO_TYPES = [
+  "audio/mpeg", "audio/wav", "audio/mp3", "audio/x-wav", "audio/mp4", "audio/x-m4a",
+  "audio/ogg", "audio/flac", "audio/aac", "audio/opus", "audio/webm",
+];
+const MIN_DURATION_SEC = 180; // 3 minuty
+
+function getAudioDuration(file: File): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const audio = new Audio();
+    audio.preload = "metadata";
+    audio.onloadedmetadata = () => {
+      URL.revokeObjectURL(url);
+      resolve(audio.duration);
+    };
+    audio.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("Nie można odczytać pliku audio"));
+    };
+    audio.src = url;
+  });
+}
+
 const Upload = () => {
   const { t } = useLanguage();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [sunoLink, setSunoLink] = useState("");
   const [title, setTitle] = useState("");
   const [genre, setGenre] = useState("");
@@ -28,25 +53,85 @@ const Upload = () => {
   const [agreed, setAgreed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [moderationResult, setModerationResult] = useState<any>(null);
+  const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [audioDuration, setAudioDuration] = useState<number | null>(null);
+  const [durationError, setDurationError] = useState(false);
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const ext = "." + file.name.split(".").pop()?.toLowerCase();
+    if (!AUDIO_TYPES.includes(file.type) && !AUDIO_EXTENSIONS.includes(ext)) {
+      toast.error("Nieobsługiwany format. Użyj MP3, WAV, FLAC, OGG, M4A.");
+      e.target.value = "";
+      return;
+    }
+
+    try {
+      const dur = await getAudioDuration(file);
+      setAudioFile(file);
+      setAudioDuration(dur);
+      if (dur < MIN_DURATION_SEC) {
+        setDurationError(true);
+        toast.error(`Utwór trwa ${Math.floor(dur / 60)}:${String(Math.floor(dur % 60)).padStart(2, "0")} — minimum to 3:00.`);
+      } else {
+        setDurationError(false);
+      }
+    } catch {
+      toast.error("Nie można odczytać pliku audio.");
+      e.target.value = "";
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!sunoLink || !title || !genre || !email || !agreed) {
+    if (!title || !genre || !email || !agreed) {
       toast.error("Wypełnij wszystkie wymagane pola i zaakceptuj regulamin.");
       return;
     }
+    if (!sunoLink && !audioFile) {
+      toast.error("Dodaj link Suno lub prześlij plik audio (MP3, WAV, FLAC...).");
+      return;
+    }
+    if (audioFile && durationError) {
+      toast.error("Utwór jest za krótki! Minimum to 3 minuty.");
+      return;
+    }
+    if (audioFile && audioDuration !== null && audioDuration < MIN_DURATION_SEC) {
+      toast.error("Utwór jest za krótki! Minimum to 3 minuty.");
+      return;
+    }
+
     setIsSubmitting(true);
     setModerationResult(null);
 
     try {
+      let audioUrl = "";
+
+      // Upload file if provided
+      if (audioFile) {
+        const ext = audioFile.name.split(".").pop()?.toLowerCase() || "mp3";
+        const safeName = title.replace(/[^a-zA-Z0-9\-_]/g, '_').substring(0, 80);
+        const filePath = `submissions/${Date.now()}-${safeName}.${ext}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from("music")
+          .upload(filePath, audioFile, { contentType: audioFile.type || "audio/mpeg" });
+
+        if (uploadError) throw uploadError;
+
+        const { data: urlData } = supabase.storage.from("music").getPublicUrl(filePath);
+        audioUrl = urlData.publicUrl;
+      }
+
       const submissionId = crypto.randomUUID();
-      
-      // 1. Insert submission
+
       const { error: insertErr } = await supabase
         .from("track_submissions" as any)
         .insert({
           id: submissionId,
-          suno_link: sunoLink,
+          suno_link: sunoLink || audioUrl || "file-upload",
           title,
           genre,
           description: description || null,
@@ -58,20 +143,27 @@ const Upload = () => {
 
       toast.info("🔍 Analizuję utwór przez AI...");
 
-      // 2. Trigger AI moderation
       const { data: modData, error: modErr } = await supabase.functions.invoke("ai-moderate-track", {
         body: { submission_id: submissionId },
       });
-      
-      const modResult = modData;
 
       if (modErr) throw modErr;
 
-      setModerationResult(modResult.result);
+      setModerationResult(modData.result);
 
-      if (modResult.result?.status === "approved") {
+      if (modData.result?.status === "approved") {
+        // If audio file was uploaded, also add to tracks table
+        if (audioFile && audioUrl) {
+          await supabase.from("tracks").insert({
+            title,
+            artist: email.split("@")[0],
+            genre,
+            duration: Math.round(audioDuration || 180),
+            audio_url: audioUrl,
+          });
+        }
         toast.success("✅ Utwór zaakceptowany! Zostanie dodany do platformy.");
-      } else if (modResult.result?.status === "review") {
+      } else if (modData.result?.status === "review") {
         toast.info("⏳ Utwór wymaga ręcznej weryfikacji. Sprawdzimy go w 24-48h.");
       } else {
         toast.error("❌ Utwór nie spełnia wymagań jakościowych.");
@@ -92,6 +184,9 @@ const Upload = () => {
     setEmail("");
     setAgreed(false);
     setModerationResult(null);
+    setAudioFile(null);
+    setAudioDuration(null);
+    setDurationError(false);
   };
 
   if (moderationResult) {
@@ -108,18 +203,28 @@ const Upload = () => {
               <Icon className={`h-20 w-20 ${iconColor} mx-auto mb-6`} />
             </motion.div>
             <h1 className="text-3xl font-bold mb-3">
-              {isApproved ? "Zaakceptowany! 🎉" : isReview ? "Do ręcznej weryfikacji ⏳" : "Odrzucony ❌"}
+              {isApproved ? "🎉 Gratulacje! Utwór zaakceptowany!" : isReview ? "Do ręcznej weryfikacji ⏳" : "Odrzucony ❌"}
             </h1>
             <p className="text-muted-foreground max-w-md mx-auto">
               {isApproved
-                ? "Twój utwór spełnia nasze standardy jakości i zostanie dodany z badge'em AI-Assisted."
+                ? "Twój utwór przeszedł weryfikację AI i został dodany do GrouAI Stream z badge'em AI-Assisted. Będzie dostępny dla słuchaczy na całym świecie!"
                 : isReview
                 ? "Utwór wymaga dodatkowej weryfikacji. Sprawdzimy go w ciągu 24-48h."
                 : "Utwór nie spełnił wymagań jakościowych. Popraw go i spróbuj ponownie."}
             </p>
+            {isApproved && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.5 }}
+                className="mt-6 inline-flex items-center gap-2 bg-green-500/20 border border-green-500/30 rounded-full px-6 py-3"
+              >
+                <CheckCircle className="h-5 w-5 text-green-400" />
+                <span className="text-green-300 font-semibold">Potwierdzone — utwór jest na serwerze!</span>
+              </motion.div>
+            )}
           </motion.div>
 
-          {/* Score breakdown */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -200,18 +305,17 @@ const Upload = () => {
             </div>
           </div>
           <p className="text-muted-foreground mb-4 mt-3">
-            Wklej link do Suno (lub embed), tytuł, gatunek i opis.
+            Wklej link do Suno lub prześlij plik audio (MP3, WAV, FLAC...). Minimum 3 minuty.
             AI sprawdzi jakość w kilka sekund. Wynik ≥60/100 = automatyczna akceptacja.
           </p>
 
-          {/* Quality criteria info */}
           <div className="bg-secondary/30 rounded-xl p-4 mb-8 border border-border/50">
             <div className="flex items-center gap-2 mb-2">
               <ShieldCheck className="h-4 w-4 text-primary" />
               <span className="text-sm font-semibold">AI sprawdza 5 kryteriów:</span>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs text-muted-foreground">
-              <span>📏 Długość & Struktura</span>
+              <span>📏 Długość min. 3:00</span>
               <span>📝 Jakość tekstu</span>
               <span>🎤 Jakość wokalu</span>
               <span>🎛️ Produkcja & dynamika</span>
@@ -223,7 +327,7 @@ const Upload = () => {
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-2">
               <Label htmlFor="suno-link" className="flex items-center gap-1.5">
-                <Music className="h-4 w-4 text-primary" /> Link Suno / Embed *
+                <Music className="h-4 w-4 text-primary" /> Link Suno / Embed (opcjonalny)
               </Label>
               <Input
                 id="suno-link"
@@ -231,6 +335,70 @@ const Upload = () => {
                 value={sunoLink}
                 onChange={(e) => setSunoLink(e.target.value)}
                 className="bg-card/60 border-muted"
+              />
+            </div>
+
+            {/* Audio file upload */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1.5">
+                <FileAudio className="h-4 w-4 text-primary" /> Plik audio (MP3, WAV, FLAC, OGG, M4A)
+              </Label>
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                className={`border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition-all ${
+                  durationError
+                    ? "border-red-500/50 bg-red-500/5"
+                    : audioFile
+                    ? "border-green-500/50 bg-green-500/5"
+                    : "border-border hover:border-primary/50 hover:bg-secondary/30"
+                }`}
+              >
+                {audioFile ? (
+                  <div className="flex items-center justify-center gap-3">
+                    {durationError ? (
+                      <XCircle className="h-5 w-5 text-red-500 shrink-0" />
+                    ) : (
+                      <CheckCircle className="h-5 w-5 text-green-500 shrink-0" />
+                    )}
+                    <div className="text-left">
+                      <p className="text-sm font-medium truncate">{audioFile.name}</p>
+                      <p className={`text-xs ${durationError ? "text-red-400" : "text-muted-foreground"}`}>
+                        {audioDuration !== null
+                          ? `${Math.floor(audioDuration / 60)}:${String(Math.floor(audioDuration % 60)).padStart(2, "0")}`
+                          : "..."}{" "}
+                        • {(audioFile.size / 1024 / 1024).toFixed(1)} MB
+                        {durationError && " — za krótki! Min. 3:00"}
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setAudioFile(null);
+                        setAudioDuration(null);
+                        setDurationError(false);
+                        if (fileInputRef.current) fileInputRef.current.value = "";
+                      }}
+                    >
+                      Zmień
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center gap-2 py-2">
+                    <FileAudio className="h-8 w-8 text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground">Kliknij, aby wybrać plik audio</p>
+                    <p className="text-xs text-muted-foreground/60">Min. 3 minuty • Max 100 MB</p>
+                  </div>
+                )}
+              </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".mp3,.wav,.m4a,.ogg,.flac,.aac,.opus,.wma,.weba"
+                onChange={handleFileChange}
+                className="hidden"
               />
             </div>
 
@@ -306,7 +474,7 @@ const Upload = () => {
             <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }} className="pt-2">
               <Button
                 type="submit"
-                disabled={isSubmitting}
+                disabled={isSubmitting || durationError}
                 className="w-full h-12 text-base font-semibold bg-green-500 hover:bg-green-400 text-black rounded-full gap-2"
               >
                 {isSubmitting ? (
