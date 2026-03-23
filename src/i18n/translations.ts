@@ -1045,6 +1045,8 @@ const en: TranslationKeys = {
   "hero.failedLoad": "Failed to load tracks. Please try again.",
   "hero.enableMoodDetection": "Enable Mood Detection in Settings → AI & Privacy",
   "hero.realtimeActive": "Real-time adaptation is always active while you listen!",
+  "hero.antiFraudExplainer": "Every stream is verified as a real human listen. Zero bot farms, zero fake plays – artists earn only from real fans.",
+  "hero.uploadTrack": "Upload Your Track",
 
   "settings.title": "Settings",
   "settings.profile": "Profile",
