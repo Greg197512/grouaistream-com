@@ -65,6 +65,8 @@ export const HeroSection = () => {
         .from("tracks")
         .select("id,title,artist,album,cover_url,audio_url,video_url,duration,genre,mood")
         .not("audio_url", "is", null)
+        .eq("artist", "Unknown Artist")
+        .order("created_at", { ascending: false })
         .limit(10);
       if (error) throw error;
       if (tracks && tracks.length > 0) {
