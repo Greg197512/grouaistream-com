@@ -221,6 +221,12 @@ const Library = () => {
       .eq("user_id", user.id);
     setHistoryCount(historyCountData || 0);
 
+    const { count: myTracksCountData } = await supabase
+      .from("tracks")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", user.id);
+    setMyTracksCount(myTracksCountData || 0);
+
     await loadGenreCounts();
     setLoading(false);
   };
