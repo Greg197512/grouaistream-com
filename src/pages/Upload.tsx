@@ -24,7 +24,7 @@ const AUDIO_TYPES = [
   "audio/mpeg", "audio/wav", "audio/mp3", "audio/x-wav", "audio/mp4", "audio/x-m4a",
   "audio/ogg", "audio/flac", "audio/aac", "audio/opus", "audio/webm",
 ];
-const MIN_DURATION_SEC = 180;
+const MIN_DURATION_SEC = 10;
 
 function getAudioDuration(file: File): Promise<number> {
   return new Promise((resolve, reject) => {
