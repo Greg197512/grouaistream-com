@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { motion } from "framer-motion";
-import { Upload as UploadIcon, Music, CheckCircle, Loader2, ShieldCheck, XCircle, AlertTriangle, FileAudio } from "lucide-react";
+import { Upload as UploadIcon, Music, CheckCircle, Loader2, ShieldCheck, XCircle, AlertTriangle, FileAudio, ImageIcon } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -24,7 +24,7 @@ const AUDIO_TYPES = [
   "audio/mpeg", "audio/wav", "audio/mp3", "audio/x-wav", "audio/mp4", "audio/x-m4a",
   "audio/ogg", "audio/flac", "audio/aac", "audio/opus", "audio/webm",
 ];
-const MIN_DURATION_SEC = 180; // 3 minuty
+const MIN_DURATION_SEC = 180;
 
 function getAudioDuration(file: File): Promise<number> {
   return new Promise((resolve, reject) => {
@@ -37,7 +37,7 @@ function getAudioDuration(file: File): Promise<number> {
     };
     audio.onerror = () => {
       URL.revokeObjectURL(url);
-      reject(new Error("Nie można odczytać pliku audio"));
+      reject(new Error("Cannot read audio file"));
     };
     audio.src = url;
   });
@@ -58,6 +58,7 @@ const Upload = () => {
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [audioDuration, setAudioDuration] = useState<number | null>(null);
   const [durationError, setDurationError] = useState(false);
+  const [aiCover, setAiCover] = useState(true);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -65,7 +66,7 @@ const Upload = () => {
 
     const ext = "." + file.name.split(".").pop()?.toLowerCase();
     if (!AUDIO_TYPES.includes(file.type) && !AUDIO_EXTENSIONS.includes(ext)) {
-      toast.error("Nieobsługiwany format. Użyj MP3, WAV, FLAC, OGG, M4A.");
+      toast.error(t("upload.unsupportedFormat"));
       e.target.value = "";
       return;
     }
@@ -76,12 +77,12 @@ const Upload = () => {
       setAudioDuration(dur);
       if (dur < MIN_DURATION_SEC) {
         setDurationError(true);
-        toast.error(`Utwór trwa ${Math.floor(dur / 60)}:${String(Math.floor(dur % 60)).padStart(2, "0")} — minimum to 3:00.`);
+        toast.error(`${Math.floor(dur / 60)}:${String(Math.floor(dur % 60)).padStart(2, "0")} — ${t("upload.fileTooShort")}`);
       } else {
         setDurationError(false);
       }
     } catch {
-      toast.error("Nie można odczytać pliku audio.");
+      toast.error(t("upload.unsupportedFormat"));
       e.target.value = "";
     }
   };
@@ -89,19 +90,15 @@ const Upload = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title || !genre || !email || !agreed) {
-      toast.error("Wypełnij wszystkie wymagane pola i zaakceptuj regulamin.");
+      toast.error(t("upload.fillRequired"));
       return;
     }
     if (!sunoLink && !audioFile) {
-      toast.error("Dodaj link Suno lub prześlij plik audio (MP3, WAV, FLAC...).");
+      toast.error(t("upload.addFileOrLink"));
       return;
     }
     if (audioFile && durationError) {
-      toast.error("Utwór jest za krótki! Minimum to 3 minuty.");
-      return;
-    }
-    if (audioFile && audioDuration !== null && audioDuration < MIN_DURATION_SEC) {
-      toast.error("Utwór jest za krótki! Minimum to 3 minuty.");
+      toast.error(t("upload.tooShort"));
       return;
     }
 
@@ -111,7 +108,6 @@ const Upload = () => {
     try {
       let audioUrl = "";
 
-      // Upload file if provided
       if (audioFile) {
         const ext = audioFile.name.split(".").pop()?.toLowerCase() || "mp3";
         const safeName = title.replace(/[^a-zA-Z0-9\-_]/g, '_').substring(0, 80);
@@ -136,31 +132,36 @@ const Upload = () => {
         total_score: 84,
         status: "approved",
         rejection_reasons: [],
-        analysis: "Utwór spełnia standardy jakości GrouAI Stream. Zatwierdzony automatycznie.",
-        recommendations: "Świetna robota! Utwór zostanie dodany do platformy z badge'em AI-Assisted.",
+        analysis: t("upload.successDesc"),
+        recommendations: "",
       };
 
-      // Insert directly into tracks table (skip track_submissions to avoid RLS issues)
       const finalAudioUrl = audioUrl || sunoLink || null;
-      const { error: trackInsertErr } = await supabase.from("tracks").insert({
+      const { data: insertedTrack, error: trackInsertErr } = await supabase.from("tracks").insert({
         title,
         artist: email.split("@")[0],
         genre,
         duration: Math.round(audioDuration || 180),
         audio_url: finalAudioUrl,
         user_id: user?.id || null,
-      });
+      }).select("id").single();
 
       if (trackInsertErr) throw trackInsertErr;
 
-      // Notify other pages (MyTracks, Library, Sidebar badge)
+      // If AI cover is enabled, trigger cover search
+      if (aiCover && insertedTrack?.id) {
+        supabase.functions.invoke("ai-cover", {
+          body: { trackId: insertedTrack.id },
+        }).catch(() => {/* silent */});
+      }
+
       window.dispatchEvent(new Event("track-list-changed"));
 
       setModerationResult(result);
-      toast.success("✅ Utwór zaakceptowany! Zostanie dodany do platformy.");
+      toast.success(t("upload.accepted"));
     } catch (err: any) {
       console.error("Submit error:", err);
-      toast.error("Błąd podczas wysyłania: " + (err.message || "Spróbuj ponownie"));
+      toast.error(t("upload.submitError") + ": " + (err.message || ""));
     } finally {
       setIsSubmitting(false);
     }
@@ -177,6 +178,7 @@ const Upload = () => {
     setAudioFile(null);
     setAudioDuration(null);
     setDurationError(false);
+    setAiCover(true);
   };
 
   if (moderationResult) {
@@ -193,14 +195,10 @@ const Upload = () => {
               <Icon className={`h-20 w-20 ${iconColor} mx-auto mb-6`} />
             </motion.div>
             <h1 className="text-3xl font-bold mb-3">
-              {isApproved ? "🎉 Gratulacje! Utwór zaakceptowany!" : isReview ? "Do ręcznej weryfikacji ⏳" : "Odrzucony ❌"}
+              {isApproved ? t("upload.successTitle") : isReview ? t("upload.reviewTitle") : t("upload.rejectedTitle")}
             </h1>
             <p className="text-muted-foreground max-w-md mx-auto">
-              {isApproved
-                ? "Twój utwór przeszedł weryfikację AI i został dodany do GrouAI Stream z badge'em AI-Assisted. Będzie dostępny dla słuchaczy na całym świecie!"
-                : isReview
-                ? "Utwór wymaga dodatkowej weryfikacji. Sprawdzimy go w ciągu 24-48h."
-                : "Utwór nie spełnił wymagań jakościowych. Popraw go i spróbuj ponownie."}
+              {isApproved ? t("upload.successDesc") : isReview ? t("upload.reviewDesc") : t("upload.rejectedDesc")}
             </p>
             {isApproved && (
               <motion.div
@@ -210,7 +208,7 @@ const Upload = () => {
                 className="mt-6 inline-flex items-center gap-2 bg-green-500/20 border border-green-500/30 rounded-full px-6 py-3"
               >
                 <CheckCircle className="h-5 w-5 text-green-400" />
-                <span className="text-green-300 font-semibold">Potwierdzone — utwór jest na serwerze!</span>
+                <span className="text-green-300 font-semibold">{t("upload.confirmed")}</span>
               </motion.div>
             )}
           </motion.div>
@@ -228,11 +226,11 @@ const Upload = () => {
 
             <div className="space-y-3">
               {[
-                { label: "📏 Długość & Struktura", score: moderationResult.score_length },
-                { label: "📝 Tekst / Lyrics", score: moderationResult.score_lyrics },
-                { label: "🎤 Wokal", score: moderationResult.score_vocal },
-                { label: "🎛️ Produkcja & Aranż", score: moderationResult.score_production },
-                { label: "💎 Oryginalność", score: moderationResult.score_originality },
+                { label: t("upload.lengthMin"), score: moderationResult.score_length },
+                { label: t("upload.lyricQuality"), score: moderationResult.score_lyrics },
+                { label: t("upload.vocalQuality"), score: moderationResult.score_vocal },
+                { label: t("upload.production"), score: moderationResult.score_production },
+                { label: t("upload.originality"), score: moderationResult.score_originality },
               ].map((item) => (
                 <div key={item.label} className="flex items-center gap-3">
                   <span className="text-sm w-48">{item.label}</span>
@@ -253,7 +251,7 @@ const Upload = () => {
 
             {moderationResult.rejection_reasons?.length > 0 && (
               <div className="mt-4 p-3 bg-red-500/10 rounded-lg border border-red-500/20">
-                <p className="text-sm font-medium text-red-400 mb-1">Powody:</p>
+                <p className="text-sm font-medium text-red-400 mb-1">{t("upload.reasons")}</p>
                 <ul className="text-sm text-muted-foreground list-disc list-inside">
                   {moderationResult.rejection_reasons.map((r: string, i: number) => (
                     <li key={i}>{r}</li>
@@ -268,14 +266,14 @@ const Upload = () => {
 
             {moderationResult.recommendations && (
               <div className="mt-3 p-3 bg-primary/10 rounded-lg border border-primary/20">
-                <p className="text-sm font-medium text-primary mb-1">💡 Rekomendacje:</p>
+                <p className="text-sm font-medium text-primary mb-1">{t("upload.recommendations")}</p>
                 <p className="text-sm text-muted-foreground">{moderationResult.recommendations}</p>
               </div>
             )}
           </motion.div>
 
           <Button className="w-full" onClick={resetForm}>
-            Wyślij kolejny utwór
+            {t("upload.sendAnother")}
           </Button>
         </div>
       </MainLayout>
@@ -291,37 +289,34 @@ const Upload = () => {
               <UploadIcon className="h-6 w-6 text-green-400" />
             </div>
             <div>
-              <h1 className="text-2xl md:text-3xl font-bold">Dodaj swój utwór</h1>
+              <h1 className="text-2xl md:text-3xl font-bold">{t("upload.title")}</h1>
             </div>
           </div>
-          <p className="text-muted-foreground mb-4 mt-3">
-            Wklej link do Suno lub prześlij plik audio (MP3, WAV, FLAC...). Minimum 3 minuty.
-            AI sprawdzi jakość w kilka sekund. Wynik ≥60/100 = automatyczna akceptacja.
-          </p>
+          <p className="text-muted-foreground mb-4 mt-3">{t("upload.desc")}</p>
 
           <div className="bg-secondary/30 rounded-xl p-4 mb-8 border border-border/50">
             <div className="flex items-center gap-2 mb-2">
               <ShieldCheck className="h-4 w-4 text-primary" />
-              <span className="text-sm font-semibold">AI sprawdza 5 kryteriów:</span>
+              <span className="text-sm font-semibold">{t("upload.aiChecks")}</span>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs text-muted-foreground">
-              <span>📏 Długość min. 3:00</span>
-              <span>📝 Jakość tekstu</span>
-              <span>🎤 Jakość wokalu</span>
-              <span>🎛️ Produkcja & dynamika</span>
-              <span>💎 Oryginalność</span>
-              <span>🎯 Min. 60/100 pkt</span>
+              <span>{t("upload.lengthMin")}</span>
+              <span>{t("upload.lyricQuality")}</span>
+              <span>{t("upload.vocalQuality")}</span>
+              <span>{t("upload.production")}</span>
+              <span>{t("upload.originality")}</span>
+              <span>{t("upload.minScore")}</span>
             </div>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-2">
               <Label htmlFor="suno-link" className="flex items-center gap-1.5">
-                <Music className="h-4 w-4 text-primary" /> Link Suno / Embed (opcjonalny)
+                <Music className="h-4 w-4 text-primary" /> {t("upload.sunoLabel")}
               </Label>
               <Input
                 id="suno-link"
-                placeholder="https://suno.com/song/... lub embed link"
+                placeholder={t("upload.sunoPlaceholder")}
                 value={sunoLink}
                 onChange={(e) => setSunoLink(e.target.value)}
                 className="bg-card/60 border-muted"
@@ -331,7 +326,7 @@ const Upload = () => {
             {/* Audio file upload */}
             <div className="space-y-2">
               <Label className="flex items-center gap-1.5">
-                <FileAudio className="h-4 w-4 text-primary" /> Plik audio (MP3, WAV, FLAC, OGG, M4A)
+                <FileAudio className="h-4 w-4 text-primary" /> {t("upload.fileLabel")}
               </Label>
               <div
                 onClick={() => fileInputRef.current?.click()}
@@ -357,7 +352,7 @@ const Upload = () => {
                           ? `${Math.floor(audioDuration / 60)}:${String(Math.floor(audioDuration % 60)).padStart(2, "0")}`
                           : "..."}{" "}
                         • {(audioFile.size / 1024 / 1024).toFixed(1)} MB
-                        {durationError && " — za krótki! Min. 3:00"}
+                        {durationError && ` — ${t("upload.fileTooShort")}`}
                       </p>
                     </div>
                     <Button
@@ -372,14 +367,14 @@ const Upload = () => {
                         if (fileInputRef.current) fileInputRef.current.value = "";
                       }}
                     >
-                      Zmień
+                      {t("upload.fileChange")}
                     </Button>
                   </div>
                 ) : (
                   <div className="flex flex-col items-center gap-2 py-2">
                     <FileAudio className="h-8 w-8 text-muted-foreground" />
-                    <p className="text-sm text-muted-foreground">Kliknij, aby wybrać plik audio</p>
-                    <p className="text-xs text-muted-foreground/60">Min. 3 minuty • Max 100 MB</p>
+                    <p className="text-sm text-muted-foreground">{t("upload.fileDrop")}</p>
+                    <p className="text-xs text-muted-foreground/60">{t("upload.fileMinMax")}</p>
                   </div>
                 )}
               </div>
@@ -393,10 +388,10 @@ const Upload = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="title">Tytuł utworu *</Label>
+              <Label htmlFor="title">{t("upload.titleLabel")}</Label>
               <Input
                 id="title"
-                placeholder="Nazwa Twojego tracka"
+                placeholder={t("upload.titlePlaceholder")}
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 className="bg-card/60 border-muted"
@@ -404,10 +399,10 @@ const Upload = () => {
             </div>
 
             <div className="space-y-2">
-              <Label>Gatunek *</Label>
+              <Label>{t("upload.genreLabel")}</Label>
               <Select value={genre} onValueChange={setGenre}>
                 <SelectTrigger className="bg-card/60 border-muted">
-                  <SelectValue placeholder="Wybierz gatunek" />
+                  <SelectValue placeholder={t("upload.genrePlaceholder")} />
                 </SelectTrigger>
                 <SelectContent>
                   {genres.map((g) => (
@@ -418,10 +413,10 @@ const Upload = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="desc">Opis (opcjonalny – wpływa na ocenę!)</Label>
+              <Label htmlFor="desc">{t("upload.descLabel")}</Label>
               <Textarea
                 id="desc"
-                placeholder="Opowiedz o procesie tworzenia, inspiracjach, co chciałeś przekazać..."
+                placeholder={t("upload.descPlaceholder")}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 className="bg-card/60 border-muted min-h-[100px]"
@@ -429,15 +424,32 @@ const Upload = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="email">Email kontaktowy *</Label>
+              <Label htmlFor="email">{t("upload.emailLabel")}</Label>
               <Input
                 id="email"
                 type="email"
-                placeholder="twoj@email.com"
+                placeholder={t("upload.emailPlaceholder")}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="bg-card/60 border-muted"
               />
+            </div>
+
+            {/* AI Cover option */}
+            <div className="flex items-start gap-3 p-4 bg-secondary/30 rounded-xl border border-border/50">
+              <Checkbox
+                id="ai-cover"
+                checked={aiCover}
+                onCheckedChange={(v) => setAiCover(v === true)}
+                className="mt-0.5"
+              />
+              <div className="flex-1">
+                <Label htmlFor="ai-cover" className="flex items-center gap-2 cursor-pointer text-sm font-semibold">
+                  <ImageIcon className="h-4 w-4 text-primary" />
+                  {t("upload.aiCoverLabel")}
+                </Label>
+                <p className="text-xs text-muted-foreground mt-1">{t("upload.aiCoverDesc")}</p>
+              </div>
             </div>
 
             <div className="flex items-center gap-3 pt-2">
@@ -448,7 +460,7 @@ const Upload = () => {
                 className="mt-0.5"
               />
               <Label htmlFor="agree" className="text-sm text-muted-foreground leading-relaxed cursor-pointer">
-                Akceptuję regulamin i zgadzam się na publikację z badge'em AI-Assisted.
+                {t("upload.agreeLabel")}
               </Label>
               <Button
                 type="button"
@@ -457,7 +469,7 @@ const Upload = () => {
                 className="text-primary px-0 whitespace-nowrap"
                 onClick={() => window.location.href = "/legal"}
               >
-                Regulamin
+                {t("upload.agreeRules")}
               </Button>
             </div>
 
@@ -470,12 +482,12 @@ const Upload = () => {
                 {isSubmitting ? (
                   <>
                     <Loader2 className="h-5 w-5 animate-spin" />
-                    AI analizuje utwór...
+                    {t("upload.submitting")}
                   </>
                 ) : (
                   <>
                     <ShieldCheck className="h-5 w-5" />
-                    Wyślij do weryfikacji AI
+                    {t("upload.submitBtn")}
                   </>
                 )}
               </Button>

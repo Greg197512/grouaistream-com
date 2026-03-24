@@ -6,9 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "sonner";
 
 const Auth = () => {
+  const { t } = useLanguage();
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -28,12 +30,12 @@ const Auth = () => {
         if (error) {
           toast.error(error.message || "Failed to sign in");
         } else {
-          toast.success("Welcome back!");
+          toast.success(t("auth.welcomeBackMsg"));
           navigate("/");
         }
       } else {
         if (!displayName.trim() || displayName.trim().length < 2) {
-          toast.error("Podaj nick (min. 2 znaki)");
+          toast.error(t("auth.nickMinError"));
           setLoading(false);
           return;
         }
@@ -41,7 +43,7 @@ const Auth = () => {
         if (error) {
           toast.error(error.message || "Failed to sign up");
         } else {
-          toast.success("Account created! You can now sign in.");
+          toast.success(t("auth.accountCreated"));
           setIsLogin(true);
         }
       }
@@ -60,36 +62,34 @@ const Auth = () => {
         className="w-full max-w-md"
       >
         <div className="groove-card p-8">
-          {/* Back button */}
           <button
             onClick={() => navigate("/")}
             className="flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6 transition-colors"
           >
             <ArrowLeft className="h-4 w-4" />
-            Back to home
+            {t("auth.backHome")}
           </button>
 
-          {/* Logo */}
           <div className="flex flex-col items-center mb-8">
             <img src="/logo-icon.png" alt="GrouAI Stream" className="h-16 w-16 mb-4" />
             <h1 className="font-display text-2xl font-bold groove-gradient-text">
               GrouAI Stream
             </h1>
             <p className="text-sm text-muted-foreground mt-1">
-              {isLogin ? "Welcome back" : "Create your account"}
+              {isLogin ? t("auth.welcomeBack") : t("auth.createAccount")}
             </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {!isLogin && (
               <div className="space-y-2">
-                <Label htmlFor="displayName">Nick / Przezwisko *</Label>
+                <Label htmlFor="displayName">{t("auth.nickLabel")}</Label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="displayName"
                     type="text"
-                    placeholder="Twój nick lub przezwisko"
+                    placeholder={t("auth.nickPlaceholder")}
                     value={displayName}
                     onChange={(e) => setDisplayName(e.target.value)}
                     required
@@ -98,13 +98,13 @@ const Auth = () => {
                   />
                 </div>
                 <p className="text-[11px] text-muted-foreground/70">
-                  Ten nick będzie widoczny dla innych użytkowników
+                  {t("auth.nickHint")}
                 </p>
               </div>
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{t("auth.emailLabel")}</Label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -120,7 +120,7 @@ const Auth = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">{t("auth.passwordLabel")}</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -138,11 +138,7 @@ const Auth = () => {
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                 >
-                  {showPassword ? (
-                    <EyeOff className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
-                  )}
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
             </div>
@@ -152,7 +148,7 @@ const Auth = () => {
               disabled={loading}
               className="w-full groove-gradient-bg text-primary-foreground hover:opacity-90"
             >
-              {loading ? "Loading..." : isLogin ? "Sign In" : "Create Account"}
+              {loading ? t("auth.loading") : isLogin ? t("auth.signIn") : t("auth.signUp")}
             </Button>
           </form>
 
@@ -161,9 +157,7 @@ const Auth = () => {
               onClick={() => setIsLogin(!isLogin)}
               className="text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
-              {isLogin
-                ? "Don't have an account? Sign up"
-                : "Already have an account? Sign in"}
+              {isLogin ? t("auth.noAccount") : t("auth.hasAccount")}
             </button>
           </div>
 
