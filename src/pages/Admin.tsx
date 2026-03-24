@@ -1001,41 +1001,72 @@ export default function Admin() {
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <Users className="h-5 w-5" />
-                      Lista użytkowników
+                      Zarejestrowani użytkownicy
                     </CardTitle>
+                    <CardDescription>
+                      Wszystkie konta z adresami e-mail i nickami — łącznie {users.length} użytkowników
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <ScrollArea className="h-[400px]">
+                    <ScrollArea className="h-[500px]">
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead>Nazwa</TableHead>
-                            <TableHead>ID</TableHead>
+                            <TableHead className="w-[50px]">#</TableHead>
+                            <TableHead>Nick</TableHead>
+                            <TableHead>E-mail</TableHead>
                             <TableHead>Rejestracja</TableHead>
-                            <TableHead>Ostatnia aktywność</TableHead>
+                            <TableHead>Ostatnie logowanie</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {users.map((u) => (
-                            <TableRow key={u.id}>
-                              <TableCell className="font-medium">{u.display_name || "Nieznany"}</TableCell>
-                              <TableCell className="font-mono text-xs text-muted-foreground">
-                                {u.id.slice(0, 8)}...
+                          {users.map((u, idx) => (
+                            <TableRow key={u.id} className="hover:bg-primary/5">
+                              <TableCell className="text-muted-foreground text-xs">
+                                {idx + 1}
                               </TableCell>
-                              <TableCell className="text-muted-foreground">
-                                {new Date(u.created_at).toLocaleDateString("pl-PL")}
+                              <TableCell>
+                                <div className="flex items-center gap-2">
+                                  <div className="h-7 w-7 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold text-primary">
+                                    {(u.display_name || "?")[0].toUpperCase()}
+                                  </div>
+                                  <span className="font-medium">
+                                    {u.display_name || <span className="text-muted-foreground italic">Brak nicku</span>}
+                                  </span>
+                                </div>
                               </TableCell>
-                              <TableCell className="text-muted-foreground">
+                              <TableCell>
+                                <div className="flex items-center gap-1.5">
+                                  <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+                                  <span className="text-sm">{u.email}</span>
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-muted-foreground text-sm">
+                                {new Date(u.created_at).toLocaleDateString("pl-PL", {
+                                  day: "2-digit",
+                                  month: "2-digit",
+                                  year: "numeric",
+                                  hour: "2-digit",
+                                  minute: "2-digit"
+                                })}
+                              </TableCell>
+                              <TableCell className="text-muted-foreground text-sm">
                                 {u.last_sign_in_at 
-                                  ? new Date(u.last_sign_in_at).toLocaleDateString("pl-PL")
-                                  : "Brak danych"
+                                  ? new Date(u.last_sign_in_at).toLocaleDateString("pl-PL", {
+                                      day: "2-digit",
+                                      month: "2-digit",
+                                      year: "numeric",
+                                      hour: "2-digit",
+                                      minute: "2-digit"
+                                    })
+                                  : "Nigdy"
                                 }
                               </TableCell>
                             </TableRow>
                           ))}
                           {users.length === 0 && (
                             <TableRow>
-                              <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                              <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                                 Brak zarejestrowanych użytkowników
                               </TableCell>
                             </TableRow>
