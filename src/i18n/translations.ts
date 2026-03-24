@@ -531,6 +531,72 @@ type TranslationKeys = {
   "moodDet.romanticDesc": string;
   "moodDet.focusedDesc": string;
   "moodDet.aiDescription": string;
+
+  // Upload page
+  "upload.title": string;
+  "upload.desc": string;
+  "upload.aiChecks": string;
+  "upload.lengthMin": string;
+  "upload.lyricQuality": string;
+  "upload.vocalQuality": string;
+  "upload.production": string;
+  "upload.originality": string;
+  "upload.minScore": string;
+  "upload.sunoLabel": string;
+  "upload.sunoPlaceholder": string;
+  "upload.fileLabel": string;
+  "upload.fileDrop": string;
+  "upload.fileMinMax": string;
+  "upload.fileChange": string;
+  "upload.fileTooShort": string;
+  "upload.titleLabel": string;
+  "upload.titlePlaceholder": string;
+  "upload.genreLabel": string;
+  "upload.genrePlaceholder": string;
+  "upload.descLabel": string;
+  "upload.descPlaceholder": string;
+  "upload.emailLabel": string;
+  "upload.emailPlaceholder": string;
+  "upload.agreeLabel": string;
+  "upload.agreeRules": string;
+  "upload.submitBtn": string;
+  "upload.submitting": string;
+  "upload.successTitle": string;
+  "upload.reviewTitle": string;
+  "upload.rejectedTitle": string;
+  "upload.successDesc": string;
+  "upload.reviewDesc": string;
+  "upload.rejectedDesc": string;
+  "upload.confirmed": string;
+  "upload.sendAnother": string;
+  "upload.recommendations": string;
+  "upload.reasons": string;
+  "upload.unsupportedFormat": string;
+  "upload.fillRequired": string;
+  "upload.addFileOrLink": string;
+  "upload.tooShort": string;
+  "upload.accepted": string;
+  "upload.submitError": string;
+  "upload.aiCoverLabel": string;
+  "upload.aiCoverDesc": string;
+
+  // Auth page
+  "auth.backHome": string;
+  "auth.welcomeBack": string;
+  "auth.createAccount": string;
+  "auth.nickLabel": string;
+  "auth.nickPlaceholder": string;
+  "auth.nickHint": string;
+  "auth.nickMinError": string;
+  "auth.emailLabel": string;
+  "auth.passwordLabel": string;
+  "auth.signIn": string;
+  "auth.signUp": string;
+  "auth.loading": string;
+  "auth.noAccount": string;
+  "auth.hasAccount": string;
+  "auth.welcomeBackMsg": string;
+  "auth.accountCreated": string;
 };
 
 const pl: TranslationKeys = {
@@ -1027,6 +1093,70 @@ const pl: TranslationKeys = {
   "moodDet.romanticDesc": "Romantyczny nastrój... Czas na piękne melodie!",
   "moodDet.focusedDesc": "Skupiony i gotowy do działania! Muzyka pomoże!",
   "moodDet.aiDescription": "AI Profesor przeanalizuje Twoje emocje i dobierze 5 idealnych utworów",
+
+  "upload.title": "Dodaj swój utwór",
+  "upload.desc": "Wklej link do Suno lub prześlij plik audio (MP3, WAV, FLAC...). Minimum 3 minuty. AI sprawdzi jakość w kilka sekund. Wynik ≥60/100 = automatyczna akceptacja.",
+  "upload.aiChecks": "AI sprawdza 5 kryteriów:",
+  "upload.lengthMin": "📏 Długość min. 3:00",
+  "upload.lyricQuality": "📝 Jakość tekstu",
+  "upload.vocalQuality": "🎤 Jakość wokalu",
+  "upload.production": "🎛️ Produkcja & dynamika",
+  "upload.originality": "💎 Oryginalność",
+  "upload.minScore": "🎯 Min. 60/100 pkt",
+  "upload.sunoLabel": "Link Suno / Embed (opcjonalny)",
+  "upload.sunoPlaceholder": "https://suno.com/song/... lub embed link",
+  "upload.fileLabel": "Plik audio (MP3, WAV, FLAC, OGG, M4A)",
+  "upload.fileDrop": "Kliknij, aby wybrać plik audio",
+  "upload.fileMinMax": "Min. 3 minuty • Max 100 MB",
+  "upload.fileChange": "Zmień",
+  "upload.fileTooShort": "za krótki! Min. 3:00",
+  "upload.titleLabel": "Tytuł utworu *",
+  "upload.titlePlaceholder": "Nazwa Twojego tracka",
+  "upload.genreLabel": "Gatunek *",
+  "upload.genrePlaceholder": "Wybierz gatunek",
+  "upload.descLabel": "Opis (opcjonalny – wpływa na ocenę!)",
+  "upload.descPlaceholder": "Opowiedz o procesie tworzenia, inspiracjach, co chciałeś przekazać...",
+  "upload.emailLabel": "Email kontaktowy *",
+  "upload.emailPlaceholder": "twoj@email.com",
+  "upload.agreeLabel": "Akceptuję regulamin i zgadzam się na publikację z badge'em AI-Assisted.",
+  "upload.agreeRules": "Regulamin",
+  "upload.submitBtn": "Wyślij do weryfikacji AI",
+  "upload.submitting": "AI analizuje utwór...",
+  "upload.successTitle": "🎉 Gratulacje! Utwór zaakceptowany!",
+  "upload.reviewTitle": "Do ręcznej weryfikacji ⏳",
+  "upload.rejectedTitle": "Odrzucony ❌",
+  "upload.successDesc": "Twój utwór przeszedł weryfikację AI i został dodany do GrouAI Stream z badge'em AI-Assisted.",
+  "upload.reviewDesc": "Utwór wymaga dodatkowej weryfikacji. Sprawdzimy go w ciągu 24-48h.",
+  "upload.rejectedDesc": "Utwór nie spełnił wymagań jakościowych. Popraw go i spróbuj ponownie.",
+  "upload.confirmed": "Potwierdzone — utwór jest na serwerze!",
+  "upload.sendAnother": "Wyślij kolejny utwór",
+  "upload.recommendations": "💡 Rekomendacje:",
+  "upload.reasons": "Powody:",
+  "upload.unsupportedFormat": "Nieobsługiwany format. Użyj MP3, WAV, FLAC, OGG, M4A.",
+  "upload.fillRequired": "Wypełnij wszystkie wymagane pola i zaakceptuj regulamin.",
+  "upload.addFileOrLink": "Dodaj link Suno lub prześlij plik audio.",
+  "upload.tooShort": "Utwór jest za krótki! Minimum to 3 minuty.",
+  "upload.accepted": "✅ Utwór zaakceptowany! Zostanie dodany do platformy.",
+  "upload.submitError": "Błąd podczas wysyłania",
+  "upload.aiCoverLabel": "AI wygeneruje okładkę",
+  "upload.aiCoverDesc": "AI automatycznie znajdzie lub wygeneruje profesjonalną okładkę dla Twojego utworu",
+
+  "auth.backHome": "Powrót do strony głównej",
+  "auth.welcomeBack": "Witaj ponownie",
+  "auth.createAccount": "Utwórz konto",
+  "auth.nickLabel": "Nick / Przezwisko *",
+  "auth.nickPlaceholder": "Twój nick lub przezwisko",
+  "auth.nickHint": "Ten nick będzie widoczny dla innych użytkowników",
+  "auth.nickMinError": "Podaj nick (min. 2 znaki)",
+  "auth.emailLabel": "Email",
+  "auth.passwordLabel": "Hasło",
+  "auth.signIn": "Zaloguj się",
+  "auth.signUp": "Utwórz konto",
+  "auth.loading": "Ładowanie...",
+  "auth.noAccount": "Nie masz konta? Zarejestruj się",
+  "auth.hasAccount": "Masz już konto? Zaloguj się",
+  "auth.welcomeBackMsg": "Witaj ponownie!",
+  "auth.accountCreated": "Konto utworzone! Możesz się teraz zalogować.",
 };
 
 const en: TranslationKeys = {
@@ -1523,6 +1653,70 @@ const en: TranslationKeys = {
   "moodDet.romanticDesc": "Romantic mood... Time for beautiful melodies!",
   "moodDet.focusedDesc": "Focused and ready to go! Music will help!",
   "moodDet.aiDescription": "AI Professor will analyze your emotions and select 5 perfect tracks",
+
+  "upload.title": "Submit your track",
+  "upload.desc": "Paste a Suno link or upload an audio file (MP3, WAV, FLAC...). Minimum 3 minutes. AI will check quality in seconds. Score ≥60/100 = auto-approved.",
+  "upload.aiChecks": "AI checks 5 criteria:",
+  "upload.lengthMin": "📏 Length min. 3:00",
+  "upload.lyricQuality": "📝 Lyric quality",
+  "upload.vocalQuality": "🎤 Vocal quality",
+  "upload.production": "🎛️ Production & dynamics",
+  "upload.originality": "💎 Originality",
+  "upload.minScore": "🎯 Min. 60/100 pts",
+  "upload.sunoLabel": "Suno Link / Embed (optional)",
+  "upload.sunoPlaceholder": "https://suno.com/song/... or embed link",
+  "upload.fileLabel": "Audio file (MP3, WAV, FLAC, OGG, M4A)",
+  "upload.fileDrop": "Click to select an audio file",
+  "upload.fileMinMax": "Min. 3 minutes • Max 100 MB",
+  "upload.fileChange": "Change",
+  "upload.fileTooShort": "too short! Min. 3:00",
+  "upload.titleLabel": "Track title *",
+  "upload.titlePlaceholder": "Your track name",
+  "upload.genreLabel": "Genre *",
+  "upload.genrePlaceholder": "Select genre",
+  "upload.descLabel": "Description (optional – affects score!)",
+  "upload.descPlaceholder": "Tell us about the creative process, inspirations, what you wanted to convey...",
+  "upload.emailLabel": "Contact email *",
+  "upload.emailPlaceholder": "your@email.com",
+  "upload.agreeLabel": "I accept the terms and agree to publish with AI-Assisted badge.",
+  "upload.agreeRules": "Terms",
+  "upload.submitBtn": "Submit for AI verification",
+  "upload.submitting": "AI is analyzing the track...",
+  "upload.successTitle": "🎉 Congratulations! Track accepted!",
+  "upload.reviewTitle": "Manual review required ⏳",
+  "upload.rejectedTitle": "Rejected ❌",
+  "upload.successDesc": "Your track passed AI verification and has been added to GrouAI Stream with AI-Assisted badge.",
+  "upload.reviewDesc": "The track requires additional verification. We'll review it within 24-48h.",
+  "upload.rejectedDesc": "The track did not meet quality requirements. Improve it and try again.",
+  "upload.confirmed": "Confirmed — track is on the server!",
+  "upload.sendAnother": "Submit another track",
+  "upload.recommendations": "💡 Recommendations:",
+  "upload.reasons": "Reasons:",
+  "upload.unsupportedFormat": "Unsupported format. Use MP3, WAV, FLAC, OGG, M4A.",
+  "upload.fillRequired": "Fill all required fields and accept the terms.",
+  "upload.addFileOrLink": "Add a Suno link or upload an audio file.",
+  "upload.tooShort": "Track is too short! Minimum is 3 minutes.",
+  "upload.accepted": "✅ Track accepted! It will be added to the platform.",
+  "upload.submitError": "Error while submitting",
+  "upload.aiCoverLabel": "AI will generate a cover",
+  "upload.aiCoverDesc": "AI will automatically find or generate a professional cover for your track",
+
+  "auth.backHome": "Back to home",
+  "auth.welcomeBack": "Welcome back",
+  "auth.createAccount": "Create your account",
+  "auth.nickLabel": "Nickname *",
+  "auth.nickPlaceholder": "Your nickname",
+  "auth.nickHint": "This nickname will be visible to other users",
+  "auth.nickMinError": "Enter a nickname (min. 2 characters)",
+  "auth.emailLabel": "Email",
+  "auth.passwordLabel": "Password",
+  "auth.signIn": "Sign In",
+  "auth.signUp": "Create Account",
+  "auth.loading": "Loading...",
+  "auth.noAccount": "Don't have an account? Sign up",
+  "auth.hasAccount": "Already have an account? Sign in",
+  "auth.welcomeBackMsg": "Welcome back!",
+  "auth.accountCreated": "Account created! You can now sign in.",
 };
 
 const nl: TranslationKeys = {
@@ -2019,6 +2213,70 @@ const nl: TranslationKeys = {
   "moodDet.romanticDesc": "Romantische stemming... Tijd voor mooie melodieën!",
   "moodDet.focusedDesc": "Gefocust en klaar voor actie! Muziek helpt!",
   "moodDet.aiDescription": "AI Professor analyseert je emoties en selecteert 5 perfecte nummers",
+
+  "upload.title": "Dien je nummer in",
+  "upload.desc": "Plak een Suno-link of upload een audiobestand (MP3, WAV, FLAC...). Minimaal 3 minuten. AI controleert de kwaliteit in seconden. Score ≥60/100 = automatisch goedgekeurd.",
+  "upload.aiChecks": "AI controleert 5 criteria:",
+  "upload.lengthMin": "📏 Lengte min. 3:00",
+  "upload.lyricQuality": "📝 Tekstkwaliteit",
+  "upload.vocalQuality": "🎤 Vocale kwaliteit",
+  "upload.production": "🎛️ Productie & dynamiek",
+  "upload.originality": "💎 Originaliteit",
+  "upload.minScore": "🎯 Min. 60/100 ptn",
+  "upload.sunoLabel": "Suno Link / Embed (optioneel)",
+  "upload.sunoPlaceholder": "https://suno.com/song/... of embed link",
+  "upload.fileLabel": "Audiobestand (MP3, WAV, FLAC, OGG, M4A)",
+  "upload.fileDrop": "Klik om een audiobestand te selecteren",
+  "upload.fileMinMax": "Min. 3 minuten • Max 100 MB",
+  "upload.fileChange": "Wijzigen",
+  "upload.fileTooShort": "te kort! Min. 3:00",
+  "upload.titleLabel": "Titel van het nummer *",
+  "upload.titlePlaceholder": "Naam van je track",
+  "upload.genreLabel": "Genre *",
+  "upload.genrePlaceholder": "Selecteer genre",
+  "upload.descLabel": "Beschrijving (optioneel – beïnvloedt de score!)",
+  "upload.descPlaceholder": "Vertel over het creatieve proces, inspiraties, wat je wilde overbrengen...",
+  "upload.emailLabel": "Contact e-mail *",
+  "upload.emailPlaceholder": "jouw@email.com",
+  "upload.agreeLabel": "Ik accepteer de voorwaarden en ga akkoord met publicatie met AI-Assisted badge.",
+  "upload.agreeRules": "Voorwaarden",
+  "upload.submitBtn": "Indienen voor AI-verificatie",
+  "upload.submitting": "AI analyseert het nummer...",
+  "upload.successTitle": "🎉 Gefeliciteerd! Nummer geaccepteerd!",
+  "upload.reviewTitle": "Handmatige beoordeling vereist ⏳",
+  "upload.rejectedTitle": "Afgewezen ❌",
+  "upload.successDesc": "Je nummer heeft de AI-verificatie doorstaan en is toegevoegd aan GrouAI Stream met AI-Assisted badge.",
+  "upload.reviewDesc": "Het nummer vereist aanvullende verificatie. We beoordelen het binnen 24-48 uur.",
+  "upload.rejectedDesc": "Het nummer voldeed niet aan de kwaliteitseisen. Verbeter het en probeer opnieuw.",
+  "upload.confirmed": "Bevestigd — nummer staat op de server!",
+  "upload.sendAnother": "Dien nog een nummer in",
+  "upload.recommendations": "💡 Aanbevelingen:",
+  "upload.reasons": "Redenen:",
+  "upload.unsupportedFormat": "Niet-ondersteund formaat. Gebruik MP3, WAV, FLAC, OGG, M4A.",
+  "upload.fillRequired": "Vul alle verplichte velden in en accepteer de voorwaarden.",
+  "upload.addFileOrLink": "Voeg een Suno-link toe of upload een audiobestand.",
+  "upload.tooShort": "Nummer is te kort! Minimaal 3 minuten.",
+  "upload.accepted": "✅ Nummer geaccepteerd! Het wordt toegevoegd aan het platform.",
+  "upload.submitError": "Fout bij het indienen",
+  "upload.aiCoverLabel": "AI genereert een hoes",
+  "upload.aiCoverDesc": "AI vindt of genereert automatisch een professionele hoes voor je nummer",
+
+  "auth.backHome": "Terug naar home",
+  "auth.welcomeBack": "Welkom terug",
+  "auth.createAccount": "Maak je account aan",
+  "auth.nickLabel": "Bijnaam *",
+  "auth.nickPlaceholder": "Jouw bijnaam",
+  "auth.nickHint": "Deze bijnaam is zichtbaar voor andere gebruikers",
+  "auth.nickMinError": "Voer een bijnaam in (min. 2 tekens)",
+  "auth.emailLabel": "E-mail",
+  "auth.passwordLabel": "Wachtwoord",
+  "auth.signIn": "Inloggen",
+  "auth.signUp": "Account aanmaken",
+  "auth.loading": "Laden...",
+  "auth.noAccount": "Nog geen account? Registreer je",
+  "auth.hasAccount": "Heb je al een account? Log in",
+  "auth.welcomeBackMsg": "Welkom terug!",
+  "auth.accountCreated": "Account aangemaakt! Je kunt nu inloggen.",
 };
 
 const ua: TranslationKeys = {
@@ -2515,6 +2773,70 @@ const ua: TranslationKeys = {
   "moodDet.romanticDesc": "Романтичний настрій... Час для прекрасних мелодій!",
   "moodDet.focusedDesc": "Зосереджений і готовий до дії! Музика допоможе!",
   "moodDet.aiDescription": "AI Професор проаналізує ваші емоції та підбере 5 ідеальних треків",
+
+  "upload.title": "Додайте свій трек",
+  "upload.desc": "Вставте посилання Suno або завантажте аудіофайл (MP3, WAV, FLAC...). Мінімум 3 хвилини. AI перевірить якість за секунди. Оцінка ≥60/100 = автоматичне схвалення.",
+  "upload.aiChecks": "AI перевіряє 5 критеріїв:",
+  "upload.lengthMin": "📏 Тривалість мін. 3:00",
+  "upload.lyricQuality": "📝 Якість тексту",
+  "upload.vocalQuality": "🎤 Якість вокалу",
+  "upload.production": "🎛️ Продакшн та динаміка",
+  "upload.originality": "💎 Оригінальність",
+  "upload.minScore": "🎯 Мін. 60/100 балів",
+  "upload.sunoLabel": "Посилання Suno / Embed (необов'язково)",
+  "upload.sunoPlaceholder": "https://suno.com/song/... або embed посилання",
+  "upload.fileLabel": "Аудіофайл (MP3, WAV, FLAC, OGG, M4A)",
+  "upload.fileDrop": "Натисніть, щоб вибрати аудіофайл",
+  "upload.fileMinMax": "Мін. 3 хвилини • Макс. 100 МБ",
+  "upload.fileChange": "Змінити",
+  "upload.fileTooShort": "занадто короткий! Мін. 3:00",
+  "upload.titleLabel": "Назва треку *",
+  "upload.titlePlaceholder": "Назва вашого треку",
+  "upload.genreLabel": "Жанр *",
+  "upload.genrePlaceholder": "Виберіть жанр",
+  "upload.descLabel": "Опис (необов'язково – впливає на оцінку!)",
+  "upload.descPlaceholder": "Розкажіть про процес створення, натхнення, що хотіли передати...",
+  "upload.emailLabel": "Контактний email *",
+  "upload.emailPlaceholder": "ваш@email.com",
+  "upload.agreeLabel": "Я приймаю умови та погоджуюсь на публікацію з badge AI-Assisted.",
+  "upload.agreeRules": "Умови",
+  "upload.submitBtn": "Надіслати на перевірку AI",
+  "upload.submitting": "AI аналізує трек...",
+  "upload.successTitle": "🎉 Вітаємо! Трек прийнято!",
+  "upload.reviewTitle": "Потрібна ручна перевірка ⏳",
+  "upload.rejectedTitle": "Відхилено ❌",
+  "upload.successDesc": "Ваш трек пройшов перевірку AI і додано до GrouAI Stream з badge AI-Assisted.",
+  "upload.reviewDesc": "Трек потребує додаткової перевірки. Ми перевіримо його протягом 24-48 годин.",
+  "upload.rejectedDesc": "Трек не відповідає вимогам якості. Покращте його та спробуйте знову.",
+  "upload.confirmed": "Підтверджено — трек на сервері!",
+  "upload.sendAnother": "Надіслати ще один трек",
+  "upload.recommendations": "💡 Рекомендації:",
+  "upload.reasons": "Причини:",
+  "upload.unsupportedFormat": "Непідтримуваний формат. Використовуйте MP3, WAV, FLAC, OGG, M4A.",
+  "upload.fillRequired": "Заповніть усі обов'язкові поля та прийміть умови.",
+  "upload.addFileOrLink": "Додайте посилання Suno або завантажте аудіофайл.",
+  "upload.tooShort": "Трек занадто короткий! Мінімум 3 хвилини.",
+  "upload.accepted": "✅ Трек прийнято! Його буде додано на платформу.",
+  "upload.submitError": "Помилка при надсиланні",
+  "upload.aiCoverLabel": "AI згенерує обкладинку",
+  "upload.aiCoverDesc": "AI автоматично знайде або згенерує професійну обкладинку для вашого треку",
+
+  "auth.backHome": "Повернутися на головну",
+  "auth.welcomeBack": "З поверненням",
+  "auth.createAccount": "Створіть акаунт",
+  "auth.nickLabel": "Нікнейм *",
+  "auth.nickPlaceholder": "Ваш нікнейм",
+  "auth.nickHint": "Цей нікнейм буде видно іншим користувачам",
+  "auth.nickMinError": "Введіть нікнейм (мін. 2 символи)",
+  "auth.emailLabel": "Email",
+  "auth.passwordLabel": "Пароль",
+  "auth.signIn": "Увійти",
+  "auth.signUp": "Створити акаунт",
+  "auth.loading": "Завантаження...",
+  "auth.noAccount": "Немає акаунта? Зареєструйтесь",
+  "auth.hasAccount": "Вже є акаунт? Увійти",
+  "auth.welcomeBackMsg": "З поверненням!",
+  "auth.accountCreated": "Акаунт створено! Тепер ви можете увійти.",
 };
 
 export const translations: Record<Language, TranslationKeys> = { pl, en, nl, ua };
