@@ -82,6 +82,7 @@ const Library = () => {
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [likedCount, setLikedCount] = useState(0);
   const [historyCount, setHistoryCount] = useState(0);
+  const [myTracksCount, setMyTracksCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [showImportModal, setShowImportModal] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
