@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import { ArtistCard } from "@/components/cards/ArtistCard";
 import { supabase } from "@/integrations/supabase/client";
+import { usePlayer, Track } from "@/contexts/PlayerContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { Loader2 } from "lucide-react";
 
@@ -31,8 +33,26 @@ const formatPlayCount = (count: number): string => {
 
 export const TopArtists = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const { playPlaylist } = usePlayer();
   const [artists, setArtists] = useState<ArtistData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  const handleArtistClick = async (artistName: string) => {
+    // Fetch tracks by this artist and play them
+    const { data } = await supabase
+      .from('tracks')
+      .select('*')
+      .ilike('artist', `%${artistName}%`)
+      .order('created_at', { ascending: false })
+      .limit(50);
+
+    if (data && data.length > 0) {
+      playPlaylist(data as Track[], 0);
+    }
+    // Also navigate to search with artist name
+    navigate(`/search?q=${encodeURIComponent(artistName)}`);
+  };
 
   useEffect(() => {
     const fetchTopArtists = async () => {
@@ -169,6 +189,7 @@ export const TopArtists = () => {
               name={artist.name}
               followers={formatPlayCount(artist.playCount)}
               gradient={artist.gradient}
+              onClick={() => handleArtistClick(artist.name)}
             />
           </motion.div>
         ))}
