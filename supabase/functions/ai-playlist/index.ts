@@ -13,6 +13,8 @@ function getCorsHeaders(req: Request) {
 }
 
 serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req);
+
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -128,12 +130,10 @@ Based on this skip behavior, analyze what the user probably wants and suggest ad
       throw new Error("No content in AI response");
     }
 
-    // Parse JSON from response
     let parsedContent;
     try {
       parsedContent = JSON.parse(content);
     } catch {
-      // If parsing fails, return raw content
       parsedContent = { raw: content };
     }
 
