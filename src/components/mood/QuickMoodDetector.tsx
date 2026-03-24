@@ -466,24 +466,36 @@ export const QuickMoodDetector = ({ isOpen, onClose }: QuickMoodDetectorProps) =
           {/* Deep Analysis Results */}
           {deepAnalysis && currentMood && !isDeepAnalyzing && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="p-3 space-y-3">
-              {/* Header with mood */}
-              <div className={`p-3 rounded-xl bg-gradient-to-r ${currentMood.color} relative overflow-hidden`}>
+              {/* Doctor Header */}
+              <div className="p-3 rounded-xl bg-gradient-to-br from-[#1a1a2e] to-[#16213e] border border-primary/30 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-20 h-20 bg-primary/5 rounded-full blur-2xl" />
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-xs font-bold text-white">
+                    🩺
+                  </div>
+                  <div>
+                    <p className="text-white font-bold text-[11px]">Dr. Alexander Melodia</p>
+                    <p className="text-white/40 text-[9px]">Dr. med. mus. — Music Therapy & Sound Neurology</p>
+                  </div>
+                </div>
+                <div className="h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent my-2" />
                 <div className="flex items-center gap-3">
                   <span className="text-3xl">{currentMood.emoji}</span>
                   <div className="flex-1">
                     <p className="text-white font-bold text-lg">{currentMood.mood}</p>
-                    <p className="text-white/80 text-xs">{currentMood.confidence}% {t("moodDet.confidence")}</p>
+                    <p className="text-white/60 text-[10px]">{t("moodDet.confidence")}: {currentMood.confidence}% • FACS Analysis</p>
                   </div>
                   {tracksPlaying && (
                     <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ duration: 1.5, repeat: Infinity }}>
-                      <Music className="h-5 w-5 text-white" />
+                      <Music className="h-5 w-5 text-primary" />
                     </motion.div>
                   )}
                 </div>
               </div>
 
-              {/* Diagnosis */}
-              <div className="p-3 rounded-xl bg-white/5 border border-white/10">
+              {/* Diagnosis - Clinical style */}
+              <div className="p-3 rounded-xl bg-white/5 border border-white/10 relative">
+                <div className="absolute top-2 right-2 text-[8px] text-white/20 font-mono">CLINICAL REPORT</div>
                 <div className="flex items-center gap-2 mb-2">
                   <Brain className="h-4 w-4 text-primary" />
                   <h4 className="text-white font-semibold text-xs uppercase tracking-wider">{t("moodDet.diagnosisTitle")}</h4>
@@ -491,23 +503,32 @@ export const QuickMoodDetector = ({ isOpen, onClose }: QuickMoodDetectorProps) =
                 <p className="text-white/80 text-xs leading-relaxed">{deepAnalysis.diagnosis}</p>
               </div>
 
-              {/* Emotional State */}
+              {/* Neuroaffective Profile */}
               <div className="p-3 rounded-xl bg-white/5 border border-white/10">
                 <div className="flex items-center gap-2 mb-2">
                   <Heart className="h-4 w-4 text-pink-400" />
-                  <h4 className="text-white font-semibold text-xs uppercase tracking-wider">{t("moodDet.emotionalStateTitle")}</h4>
+                  <h4 className="text-white font-semibold text-xs uppercase tracking-wider">🧬 {t("moodDet.emotionalStateTitle")}</h4>
                 </div>
-                <p className="text-white/80 text-xs leading-relaxed">{deepAnalysis.emotionalState}</p>
+                <p className="text-white/80 text-xs leading-relaxed font-mono">{deepAnalysis.emotionalState}</p>
               </div>
 
-              {/* Risk Level */}
+              {/* Risk Assessment */}
               <div className="p-3 rounded-xl bg-white/5 border border-white/10">
                 <div className="flex items-center gap-2 mb-1">
                   <Shield className="h-4 w-4 text-primary" />
                   <h4 className="text-white font-semibold text-xs uppercase tracking-wider">{t("moodDet.riskTitle")}</h4>
-                  <span className={`ml-auto text-xs font-bold ${riskColor}`}>{deepAnalysis.riskLevel?.toUpperCase()}</span>
+                  <span className={`ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full ${riskColor} bg-white/5 border border-current/20`}>{deepAnalysis.riskLevel?.toUpperCase()}</span>
                 </div>
                 <p className="text-white/60 text-[11px]">{deepAnalysis.riskNote}</p>
+              </div>
+
+              {/* Musical Prescription - highlighted */}
+              <div className="p-3 rounded-xl bg-gradient-to-r from-primary/15 to-accent/15 border border-primary/30">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-sm">💊</span>
+                  <h4 className="text-primary font-bold text-xs uppercase tracking-wider">Recepta Muzyczna</h4>
+                </div>
+                <p className="text-white/80 text-xs leading-relaxed">{deepAnalysis.therapeuticAdvice}</p>
               </div>
 
               {/* Expandable full analysis */}
@@ -533,19 +554,21 @@ export const QuickMoodDetector = ({ isOpen, onClose }: QuickMoodDetectorProps) =
                     </div>
 
                     <div className="p-3 rounded-xl bg-white/5 border border-white/10">
-                      <h4 className="text-white font-semibold text-xs uppercase tracking-wider mb-1">🧩 {t("moodDet.psychInsight")}</h4>
+                      <h4 className="text-white font-semibold text-xs uppercase tracking-wider mb-1">🧠 {t("moodDet.psychInsight")}</h4>
                       <p className="text-white/70 text-xs leading-relaxed">{deepAnalysis.psychologicalInsight}</p>
-                    </div>
-
-                    <div className="p-3 rounded-xl bg-white/5 border border-white/10">
-                      <h4 className="text-white font-semibold text-xs uppercase tracking-wider mb-1">💊 {t("moodDet.therapeuticAdvice")}</h4>
-                      <p className="text-white/70 text-xs leading-relaxed">{deepAnalysis.therapeuticAdvice}</p>
                     </div>
 
                     <div className="p-3 rounded-xl bg-gradient-to-r from-primary/20 to-accent/20 border border-primary/20">
                       <h4 className="text-white font-semibold text-xs uppercase tracking-wider mb-1">🎵 {t("moodDet.musicTherapy")}</h4>
                       <p className="text-white/70 text-xs leading-relaxed">{deepAnalysis.musicTherapy}</p>
                     </div>
+
+                    {deepAnalysis.moodBoostStrategy && (
+                      <div className="p-3 rounded-xl bg-gradient-to-br from-green-900/20 to-emerald-900/20 border border-green-500/20">
+                        <h4 className="text-white font-semibold text-xs uppercase tracking-wider mb-1">📋 Protokół 5-Utworowy</h4>
+                        <p className="text-white/70 text-xs leading-relaxed">{deepAnalysis.moodBoostStrategy}</p>
+                      </div>
+                    )}
 
                     <div className="p-3 rounded-xl bg-white/5 border border-white/10">
                       <h4 className="text-white font-semibold text-xs uppercase tracking-wider mb-1">〰️ {t("moodDet.healingFreq")}</h4>
@@ -555,7 +578,7 @@ export const QuickMoodDetector = ({ isOpen, onClose }: QuickMoodDetectorProps) =
                 )}
               </AnimatePresence>
 
-              {/* Personal Message */}
+              {/* Personal Message from Dr. Melodia */}
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -563,8 +586,11 @@ export const QuickMoodDetector = ({ isOpen, onClose }: QuickMoodDetectorProps) =
                 className="p-3 rounded-xl bg-gradient-to-r from-primary/10 to-accent/10 border border-primary/20"
               >
                 <div className="flex items-start gap-2">
-                  <Sparkles className="h-4 w-4 text-primary mt-0.5 shrink-0" />
-                  <p className="text-white/80 text-xs italic leading-relaxed">{deepAnalysis.personalMessage}</p>
+                  <span className="text-sm shrink-0">🩺</span>
+                  <div>
+                    <p className="text-white/80 text-xs italic leading-relaxed">{deepAnalysis.personalMessage}</p>
+                    <p className="text-white/30 text-[9px] mt-1.5 font-mono">— Dr. Alexander Melodia, GrouAI Stream</p>
+                  </div>
                 </div>
               </motion.div>
 
