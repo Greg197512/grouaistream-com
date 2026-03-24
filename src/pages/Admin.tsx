@@ -59,6 +59,7 @@ import {
 import { Track, usePlayer } from "@/contexts/PlayerContext";
 import { RadioStationManager } from "@/components/admin/RadioStationManager";
 import { StorageStats } from "@/components/admin/StorageStats";
+import { AdminEmailDashboard } from "@/components/admin/AdminEmailDashboard";
 import { Radio as RadioIcon, HardDrive } from "lucide-react";
 
 interface UserStats {
