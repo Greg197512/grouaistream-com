@@ -92,13 +92,7 @@ interface TrackData {
   created_at: string;
 }
 
-interface GeneratedEmail {
-  subject: string;
-  body: string;
-  preview: string;
-  type: string;
-  generatedAt: string;
-}
+// GeneratedEmail type removed - now handled in AdminEmailDashboard
 
 export default function Admin() {
   const { isAdmin, loading, user } = useAdminAuth();
