@@ -148,9 +148,13 @@ const Upload = () => {
         genre,
         duration: Math.round(audioDuration || 180),
         audio_url: finalAudioUrl,
+        user_id: user?.id || null,
       });
 
       if (trackInsertErr) throw trackInsertErr;
+
+      // Notify other pages (MyTracks, Library, Sidebar badge)
+      window.dispatchEvent(new Event("track-list-changed"));
 
       setModerationResult(result);
       toast.success("✅ Utwór zaakceptowany! Zostanie dodany do platformy.");

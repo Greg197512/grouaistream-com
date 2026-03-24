@@ -295,7 +295,18 @@ const Library = () => {
 
 
         {/* Quick Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={() => navigate("/my-tracks")}
+            className="flex items-center gap-4 p-4 rounded-xl bg-gradient-to-r from-green-500/20 to-emerald-500/20 border border-green-500/30 hover:border-green-500/50 transition-colors">
+            <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-gradient-to-br from-green-500 to-emerald-500">
+              <Upload className="h-6 w-6 text-primary-foreground" />
+            </div>
+            <div className="text-left">
+              <h3 className="font-semibold">{t("myTracks.title")}</h3>
+              <p className="text-sm text-muted-foreground">{myTracksCount} {t("library.tracks")}</p>
+            </div>
+          </motion.button>
+
           <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={() => navigate("/liked")}
             className="flex items-center gap-4 p-4 rounded-xl bg-gradient-to-r from-primary/20 to-accent/20 border border-primary/30 hover:border-primary/50 transition-colors">
             <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-accent">
