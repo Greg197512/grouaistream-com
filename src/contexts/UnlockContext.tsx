@@ -21,15 +21,11 @@ export const UnlockProvider = ({ children }: { children: ReactNode }) => {
   });
 
   const unlock = async (password: string): Promise<boolean> => {
-    // Check against database codes
-    const { data } = await supabase
-      .from("unlock_codes")
-      .select("id")
-      .eq("code", password)
-      .eq("is_active", true)
-      .maybeSingle();
+    // Verify code via secure RPC (codes are never exposed to client)
+    const { data, error } = await supabase
+      .rpc("verify_unlock_code", { candidate: password });
 
-    if (data) {
+    if (!error && data === true) {
       setIsUnlocked(true);
       sessionStorage.setItem(STORAGE_KEY, "true");
       return true;
