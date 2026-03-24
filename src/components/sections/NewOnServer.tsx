@@ -32,13 +32,22 @@ export const NewOnServer = () => {
         .order("created_at", { ascending: false })
         .limit(8);
 
-      setTracks(filterTracks((data || []) as any) as ServerTrack[]);
+      const filtered = filterTracks((data || []) as any) as ServerTrack[];
+      setTracks(filtered);
       setLoading(false);
+
+      // Auto-generate covers for tracks without them
+      filtered.forEach(async (track) => {
+        if (!track.cover_url || track.cover_url.includes("placeholder") || track.cover_url.includes("picsum")) {
+          try {
+            await supabase.functions.invoke("ai-cover", { body: { trackId: track.id } });
+          } catch { /* silent */ }
+        }
+      });
     };
 
     fetchLatest();
 
-    // Listen for new uploads
     const channel = supabase
       .channel("new-tracks-home")
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "tracks" }, () => {
