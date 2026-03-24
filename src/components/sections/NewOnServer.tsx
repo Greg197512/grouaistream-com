@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { Play, HardDrive, Loader2, Flame } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePlayer, Track } from "@/contexts/PlayerContext";
-import { useUnlock } from "@/contexts/UnlockContext";
+import { useUnlock } from "@/contexts/UnlockContext"; // kept for potential future use
 import { useNavigate } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
 import { pl } from "date-fns/locale";
