@@ -32,8 +32,7 @@ export const NewOnServer = () => {
         .order("created_at", { ascending: false })
         .limit(8);
 
-      const filtered = filterTracks((data || []) as any) as ServerTrack[];
-      setTracks(filtered);
+      setTracks((data || []) as ServerTrack[]);
       setLoading(false);
 
       // Auto-generate covers for tracks without them
