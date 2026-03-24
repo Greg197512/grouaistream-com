@@ -981,6 +981,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      verify_unlock_code: { Args: { candidate: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
