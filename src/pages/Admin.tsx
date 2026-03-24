@@ -408,71 +408,7 @@ export default function Admin() {
     toast.success("Statystyki wyeksportowane!");
   };
 
-  const generateEmail = async () => {
-    setGeneratingEmail(true);
-    try {
-      const topGenres = genreStats.slice(0, 5).map(g => g.genre);
-      
-      const { data, error } = await supabase.functions.invoke('generate-email', {
-        body: {
-          type: emailType,
-          recipientName: recipientName || undefined,
-          customMessage: customMessage || undefined,
-          stats: {
-            totalTracks: stats?.totalTracks || 0,
-            totalUsers: stats?.totalUsers || 0,
-            topGenres
-          }
-        }
-      });
-
-      if (error) throw error;
-
-      if (data?.email) {
-        setGeneratedEmail(data.email);
-        setEmailHistory(prev => [data.email, ...prev.slice(0, 9)]);
-        toast.success("E-mail wygenerowany przez AI!");
-      }
-    } catch (error) {
-      console.error("Error generating email:", error);
-      toast.error("Błąd generowania e-maila");
-    } finally {
-      setGeneratingEmail(false);
-    }
-  };
-
-  const sendEmailViaResend = async () => {
-    if (!generatedEmail) return;
-    if (!recipientEmail.trim()) {
-      toast.error("Podaj adres e-mail odbiorcy!");
-      return;
-    }
-
-    setSendingEmail(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('send-email', {
-        body: {
-          to: recipientEmail.trim(),
-          subject: generatedEmail.subject,
-          html: generatedEmail.body,
-        }
-      });
-
-      if (error) throw error;
-
-      if (data?.success) {
-        toast.success(`E-mail wysłany do ${recipientEmail}! ✉️`);
-      } else {
-        throw new Error(data?.error || "Wysyłanie nie powiodło się");
-      }
-    } catch (error) {
-      console.error("Error sending email:", error);
-      toast.error(error instanceof Error ? error.message : "Błąd wysyłania e-maila");
-    } finally {
-      setSendingEmail(false);
-    }
-  };
-
+  // Email functions removed - now handled in AdminEmailDashboard
   const deleteGenre = async (genre: string) => {
     if (!confirm(`Czy na pewno chcesz usunąć wszystkie utwory z gatunku "${genre}"? Ta operacja jest nieodwracalna!`)) {
       return;
