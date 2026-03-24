@@ -29,33 +29,53 @@ serve(async (req) => {
 
     const { type, recipientName, customMessage, stats }: EmailRequest = await req.json();
 
-    const systemPrompt = `Jesteś asystentem platformy muzycznej GrouAI Stream. 
-Generujesz kreatywne, przyjazne e-maile po polsku dla użytkowników.
-Pisz w tonie entuzjastycznym, ale profesjonalnym.
-Używaj emoji dla lepszego efektu wizualnego.
-E-maile powinny być krótkie (max 150 słów) i angażujące.`;
+    const systemPrompt = `Jesteś ekspertem od komunikacji marki GrouAI Stream — premium platformy muzycznej z AI.
+
+TOŻSAMOŚĆ MARKI:
+- GrouAI Stream to „muzyka, która słucha Ciebie" — empatyczny, inteligentny DJ oparty na AI
+- Funkcje kluczowe: detekcja nastroju przez kamerę, komendy głosowe, generowanie muzyki AI, radio na żywo, sesje DJ z QR, raport AI-psychologa
+- Ton marki: premium, ciepły, inteligentny, z nutą poetyckości. Nigdy korporacyjny czy sztywny.
+- Kolory marki: pomarańczowy (#e8450a) jako akcent, ciemne tło, neonowe detale
+
+ZASADY PISANIA:
+1. Pisz po polsku, profesjonalnie ale z duszą — jak człowiek do człowieka
+2. Używaj max 3 emoji, tylko jako subtelne akcenty (🎵 🎧 ✨), nigdy w nadmiarze
+3. Struktura: chwytliwy nagłówek → treść wartościowa → jasne CTA
+4. Unikaj pustych frazesów i korporacyjnego żargonu
+5. Max 120 słów treści — każde zdanie musi nieść wartość
+6. Wplataj unikalne cechy platformy (AI mood, generowanie muzyki, sesje DJ)
+7. Generuj piękny, dobrze sformatowany HTML z:
+   - Nagłówkami w kolorze #e8450a (pomarańczowy GrouAI)
+   - Przyciskami CTA z gradientem od #e8450a do #f59e0b
+   - Czystą typografią (Inter lub Arial)
+   - Separatorami i spacjami dla czytelności
+   - Responsywnym layoutem (max-width 580px, padding 20-30px)
+8. HTML body musi mieć białe tło (#ffffff), akcenty w kolorach marki`;
 
     let userPrompt = "";
     switch (type) {
       case "invitation":
-        userPrompt = `Wygeneruj e-mail zapraszający nowego użytkownika ${recipientName || ""}do GrouAI Stream.
-Podkreśl funkcje: AI wykrywa nastrój, personalizowane playlisty, darmowa muzyka CC.
-${customMessage ? `Dodatkowa informacja: ${customMessage}` : ""}`;
+        userPrompt = `Wygeneruj e-mail zapraszający ${recipientName ? `użytkownika ${recipientName} ` : ""}do GrouAI Stream.
+Podkreśl 3 unikalne funkcje: (1) AI rozpoznaje nastrój przez kamerę i dobiera muzykę, (2) generowanie własnych utworów w 15 gatunkach, (3) radio na żywo z czatem i głosowaniem.
+Zakończ mocnym CTA zachęcającym do dołączenia.
+${customMessage ? `Kontekst: ${customMessage}` : ""}`;
         break;
       case "challenge":
-        userPrompt = `Wygeneruj e-mail z muzycznym wyzwaniem tygodniowym dla użytkownika ${recipientName || ""}.
-Zaproponuj challenge jak: "Odkryj 5 nowych gatunków" lub "Słuchaj muzyki 30 min dziennie".
+        userPrompt = `Wygeneruj e-mail z ekskluzywnym muzycznym wyzwaniem tygodniowym dla ${recipientName ? `${recipientName}` : "użytkownika"}.
+Wymyśl kreatywne, angażujące wyzwanie powiązane z funkcjami AI (np. „Pozwól AI odczytać 5 Twoich nastrojów", „Stwórz utwór AI w gatunku, którego nigdy nie słuchałeś").
+Dodaj motywujący opis dlaczego warto i co użytkownik zyska.
 ${customMessage ? `Temat challenge: ${customMessage}` : ""}`;
         break;
       case "newsletter":
-        userPrompt = `Wygeneruj newsletter o nowościach w GrouAI Stream.
-${stats ? `Statystyki: ${stats.totalTracks} utworów, ${stats.totalUsers} użytkowników, top gatunki: ${stats.topGenres.join(", ")}` : ""}
+        userPrompt = `Wygeneruj elegancki newsletter o nowościach w GrouAI Stream.
+Struktura: (1) główna nowość/highlight, (2) ciekawostka o AI w muzyce, (3) krótka statystyka platformy.
+${stats ? `Statystyki do wykorzystania: ${stats.totalTracks} utworów, ${stats.totalUsers} użytkowników, popularne gatunki: ${stats.topGenres.join(", ")}` : ""}
 ${customMessage ? `Główny temat: ${customMessage}` : ""}`;
         break;
       case "weekly_digest":
-        userPrompt = `Wygeneruj cotygodniowe podsumowanie dla użytkownika ${recipientName || ""}.
-Uwzględnij: podziękowanie za słuchanie, zachętę do odkrywania nowej muzyki, info o funkcji AI mood detection.
-${stats ? `Aktualnie w serwisie: ${stats.totalTracks} utworów w ${stats.topGenres.length} gatunkach` : ""}`;
+        userPrompt = `Wygeneruj spersonalizowane cotygodniowe podsumowanie dla ${recipientName ? `${recipientName}` : "użytkownika"}.
+Struktura: (1) podziękowanie za bycie częścią społeczności, (2) odkrywcza rekomendacja — zaproponuj eksplorację nowego gatunku lub funkcji (np. sesje DJ, generowanie muzyki, mood detection), (3) inspirująca myśl o muzyce na nowy tydzień.
+${stats ? `Dane platformy: ${stats.totalTracks} utworów dostępnych w ${stats.topGenres.length} gatunkach` : ""}`;
         break;
     }
 
