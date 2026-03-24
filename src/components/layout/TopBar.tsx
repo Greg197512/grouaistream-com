@@ -297,6 +297,10 @@ export const TopBar = () => {
                   <Heart className="mr-2 h-4 w-4" />
                   {t("topbar.likedSongs")}
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/my-tracks")} className="cursor-pointer">
+                  <Music className="mr-2 h-4 w-4" />
+                  {t("topbar.myTracks")}
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => navigate("/settings")} className="cursor-pointer">
                   <Settings className="mr-2 h-4 w-4" />
                   {t("topbar.settings")}
