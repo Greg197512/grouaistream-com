@@ -36,6 +36,7 @@ type TranslationKeys = {
   "nav.settings": string;
   "nav.legalDocs": string;
   "nav.aiFeatures": string;
+  "nav.myTracks": string;
 
   // TopBar
   "topbar.searchPlaceholder": string;
@@ -55,6 +56,25 @@ type TranslationKeys = {
   "topbar.signOut": string;
   "topbar.myAccount": string;
   "topbar.createAccount": string;
+  "topbar.myTracks": string;
+
+  // My Tracks
+  "myTracks.title": string;
+  "myTracks.tracksCount": string;
+  "myTracks.uploadTrack": string;
+  "myTracks.searchPlaceholder": string;
+  "myTracks.emptyTitle": string;
+  "myTracks.emptyDesc": string;
+  "myTracks.uploadFirst": string;
+  "myTracks.noResults": string;
+  "myTracks.loadError": string;
+  "myTracks.deleteError": string;
+  "myTracks.deleted": string;
+  "myTracks.linkCopied": string;
+  "myTracks.deleteConfirmTitle": string;
+  "myTracks.deleteConfirmDesc": string;
+  "myTracks.cancel": string;
+  "myTracks.delete": string;
 
   // Hero
   "hero.badge": string;
