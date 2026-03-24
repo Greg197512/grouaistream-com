@@ -21,6 +21,13 @@ import { toast } from "sonner";
 import { ImportTrackModal } from "@/components/modals/ImportTrackModal";
 import { FileUploadModal } from "@/components/modals/FileUploadModal";
 import { cn } from "@/lib/utils";
+import { Top10Chart } from "@/components/sections/Top10Chart";
+
+// Library card images
+import myTracksCardImg from "@/assets/library/my-tracks-card.jpg";
+import likedSongsCardImg from "@/assets/library/liked-songs-card.jpg";
+import recentlyPlayedCardImg from "@/assets/library/recently-played-card.jpg";
+import grouaRadioCardImg from "@/assets/library/groua-radio-card.jpg";
 
 import {
   DropdownMenu,
