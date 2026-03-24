@@ -273,6 +273,7 @@ const Server = () => {
           audio_url: isVideo ? null : urlData.publicUrl,
           video_url: isVideo ? urlData.publicUrl : null,
           cover_url: coverUrl,
+          user_id: user?.id || null,
         }).select("id").single();
         if (insertError) throw insertError;
         
