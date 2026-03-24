@@ -301,52 +301,114 @@ const Library = () => {
         )}
 
 
-        {/* Quick Stats */}
+        {/* Premium Library Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={() => navigate("/my-tracks")}
-            className="flex items-center gap-4 p-4 rounded-xl bg-gradient-to-r from-green-500/20 to-emerald-500/20 border border-green-500/30 hover:border-green-500/50 transition-colors">
-            <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-gradient-to-br from-green-500 to-emerald-500">
-              <Upload className="h-6 w-6 text-primary-foreground" />
-            </div>
-            <div className="text-left">
-              <h3 className="font-semibold">{t("myTracks.title")}</h3>
-              <p className="text-sm text-muted-foreground">{myTracksCount} {t("library.tracks")}</p>
-            </div>
-          </motion.button>
-
-          <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={() => navigate("/liked")}
-            className="flex items-center gap-4 p-4 rounded-xl bg-gradient-to-r from-primary/20 to-accent/20 border border-primary/30 hover:border-primary/50 transition-colors">
-            <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-accent">
-              <Heart className="h-6 w-6 text-primary-foreground fill-primary-foreground" />
-            </div>
-            <div className="text-left">
-              <h3 className="font-semibold">{t("library.likedSongs")}</h3>
-              <p className="text-sm text-muted-foreground">{likedCount} {t("library.songs")}</p>
-            </div>
-          </motion.button>
-
-          <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-            className="flex items-center gap-4 p-4 rounded-xl bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border border-blue-500/30 hover:border-blue-500/50 transition-colors">
-            <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500">
-              <Clock className="h-6 w-6 text-primary-foreground" />
-            </div>
-            <div className="text-left">
-              <h3 className="font-semibold">{t("library.recentlyPlayed")}</h3>
-              <p className="text-sm text-muted-foreground">{historyCount} {t("library.plays")}</p>
+          {/* Moje Utwory */}
+          <motion.button 
+            whileHover={{ scale: 1.03, y: -4 }} 
+            whileTap={{ scale: 0.97 }} 
+            onClick={() => navigate("/my-tracks")}
+            className="relative rounded-2xl overflow-hidden border border-emerald-500/30 hover:border-emerald-400/60 transition-all group h-44"
+          >
+            <img src={myTracksCardImg} alt="" className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" loading="lazy" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+            <div className="relative h-full flex flex-col justify-end p-4">
+              <div className="flex items-center gap-2 mb-1">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 shadow-lg shadow-emerald-500/25">
+                  <Upload className="h-4 w-4 text-white" />
+                </div>
+                <div className="text-left">
+                  <h3 className="font-bold text-white text-sm">{t("myTracks.title")}</h3>
+                  <p className="text-xs text-emerald-300/80">{myTracksCount} {t("library.tracks")}</p>
+                </div>
+              </div>
+              <div className="h-0.5 w-full bg-gradient-to-r from-emerald-500/60 to-transparent rounded-full" />
             </div>
           </motion.button>
 
-          <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={() => navigate("/radio-live")}
-            className="flex items-center gap-4 p-4 rounded-xl bg-gradient-to-r from-primary/20 to-accent/20 border border-primary/30 hover:border-primary/50 transition-colors">
-            <div className="flex h-14 w-14 items-center justify-center rounded-lg groove-gradient-bg">
-              <Music className="h-6 w-6 text-primary-foreground" />
+          {/* Polubione Utwory */}
+          <motion.button 
+            whileHover={{ scale: 1.03, y: -4 }} 
+            whileTap={{ scale: 0.97 }} 
+            onClick={() => navigate("/liked")}
+            className="relative rounded-2xl overflow-hidden border border-rose-500/30 hover:border-rose-400/60 transition-all group h-44"
+          >
+            <img src={likedSongsCardImg} alt="" className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" loading="lazy" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-r from-rose-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+            <div className="relative h-full flex flex-col justify-end p-4">
+              <div className="flex items-center gap-2 mb-1">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-rose-500 to-pink-600 shadow-lg shadow-rose-500/25">
+                  <Heart className="h-4 w-4 text-white fill-white" />
+                </div>
+                <div className="text-left">
+                  <h3 className="font-bold text-white text-sm">{t("library.likedSongs")}</h3>
+                  <p className="text-xs text-rose-300/80">{likedCount} {t("library.songs")}</p>
+                </div>
+              </div>
+              <div className="h-0.5 w-full bg-gradient-to-r from-rose-500/60 to-transparent rounded-full" />
             </div>
-            <div className="text-left">
-              <h3 className="font-semibold">GrouaRadio</h3>
-              <p className="text-sm text-muted-foreground">{t("library.liveStreaming")}</p>
+          </motion.button>
+
+          {/* Ostatnio Odtwarzane */}
+          <motion.button 
+            whileHover={{ scale: 1.03, y: -4 }} 
+            whileTap={{ scale: 0.97 }}
+            className="relative rounded-2xl overflow-hidden border border-blue-500/30 hover:border-blue-400/60 transition-all group h-44"
+          >
+            <img src={recentlyPlayedCardImg} alt="" className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" loading="lazy" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+            <div className="relative h-full flex flex-col justify-end p-4">
+              <div className="flex items-center gap-2 mb-1">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-cyan-600 shadow-lg shadow-blue-500/25">
+                  <Clock className="h-4 w-4 text-white" />
+                </div>
+                <div className="text-left">
+                  <h3 className="font-bold text-white text-sm">{t("library.recentlyPlayed")}</h3>
+                  <p className="text-xs text-blue-300/80">{historyCount} {t("library.plays")}</p>
+                </div>
+              </div>
+              <div className="h-0.5 w-full bg-gradient-to-r from-blue-500/60 to-transparent rounded-full" />
+            </div>
+          </motion.button>
+
+          {/* GrouaRadio */}
+          <motion.button 
+            whileHover={{ scale: 1.03, y: -4 }} 
+            whileTap={{ scale: 0.97 }} 
+            onClick={() => navigate("/radio-live")}
+            className="relative rounded-2xl overflow-hidden border border-primary/30 hover:border-primary/60 transition-all group h-44"
+          >
+            <img src={grouaRadioCardImg} alt="" className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" loading="lazy" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+            <div className="relative h-full flex flex-col justify-end p-4">
+              <div className="flex items-center gap-2 mb-1">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg groove-gradient-bg shadow-lg shadow-primary/25">
+                  <Music className="h-4 w-4 text-white" />
+                </div>
+                <div className="text-left">
+                  <h3 className="font-bold text-white text-sm">GrouaRadio</h3>
+                  <p className="text-xs text-primary/80">{t("library.liveStreaming")}</p>
+                </div>
+              </div>
+              <div className="h-0.5 w-full bg-gradient-to-r from-primary/60 to-transparent rounded-full" />
+              {/* Live pulse indicator */}
+              <div className="absolute top-3 right-3 flex items-center gap-1.5">
+                <span className="relative flex h-2.5 w-2.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500" />
+                </span>
+                <span className="text-[10px] font-bold text-red-400 uppercase tracking-wider">LIVE</span>
+              </div>
             </div>
           </motion.button>
         </div>
+
+        {/* Top 10 Chart */}
+        <Top10Chart />
 
         {/* Genre Catalogs */}
         <div className="mb-8">
