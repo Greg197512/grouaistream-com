@@ -53,7 +53,6 @@ export const TopArtists = () => {
     // Also navigate to search with artist name
     navigate(`/search?q=${encodeURIComponent(artistName)}`);
   };
-  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchTopArtists = async () => {
