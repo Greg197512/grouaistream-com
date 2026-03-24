@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   ChevronLeft, ChevronRight, Search, Bell, User, Crown, LogOut,
-  Settings, Sparkles, UserCircle, Heart, Library, Power, Globe, Lock, LockOpen
+  Settings, Sparkles, UserCircle, Heart, Library, Power, Globe, Lock, LockOpen, Music
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -296,6 +296,10 @@ export const TopBar = () => {
                 <DropdownMenuItem onClick={() => navigate("/liked")} className="cursor-pointer">
                   <Heart className="mr-2 h-4 w-4" />
                   {t("topbar.likedSongs")}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/my-tracks")} className="cursor-pointer">
+                  <Music className="mr-2 h-4 w-4" />
+                  {t("topbar.myTracks")}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => navigate("/settings")} className="cursor-pointer">
                   <Settings className="mr-2 h-4 w-4" />

@@ -39,6 +39,7 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
     { icon: "download", labelKey: "nav.importYoutube", href: "/import-youtube" },
     { icon: "auto_awesome", labelKey: "nav.sunoAI", href: "/suno", badge: "🎵" },
     { icon: "headphones", labelKey: "nav.localPlayer", href: "/local-player", badge: "MP3" },
+    { icon: "queue_music", labelKey: "nav.myTracks", href: "/my-tracks" },
   ];
 
   const aiFeatures = [

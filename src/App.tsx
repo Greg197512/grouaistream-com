@@ -34,6 +34,7 @@ import PartyPulpit from "./pages/PartyPulpit";
 import Suno from "./pages/Suno";
 import LocalPlayer from "./pages/LocalPlayer";
 import Upload from "./pages/Upload";
+import MyTracks from "./pages/MyTracks";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -86,6 +87,7 @@ const App = () => (
                   <Route path="/suno" element={<Suno />} />
                   <Route path="/local-player" element={<LocalPlayer />} />
                   <Route path="/upload" element={<Upload />} />
+                  <Route path="/my-tracks" element={<MyTracks />} />
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>

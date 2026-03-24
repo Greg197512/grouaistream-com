@@ -36,6 +36,7 @@ type TranslationKeys = {
   "nav.settings": string;
   "nav.legalDocs": string;
   "nav.aiFeatures": string;
+  "nav.myTracks": string;
 
   // TopBar
   "topbar.searchPlaceholder": string;
@@ -55,6 +56,25 @@ type TranslationKeys = {
   "topbar.signOut": string;
   "topbar.myAccount": string;
   "topbar.createAccount": string;
+  "topbar.myTracks": string;
+
+  // My Tracks
+  "myTracks.title": string;
+  "myTracks.tracksCount": string;
+  "myTracks.uploadTrack": string;
+  "myTracks.searchPlaceholder": string;
+  "myTracks.emptyTitle": string;
+  "myTracks.emptyDesc": string;
+  "myTracks.uploadFirst": string;
+  "myTracks.noResults": string;
+  "myTracks.loadError": string;
+  "myTracks.deleteError": string;
+  "myTracks.deleted": string;
+  "myTracks.linkCopied": string;
+  "myTracks.deleteConfirmTitle": string;
+  "myTracks.deleteConfirmDesc": string;
+  "myTracks.cancel": string;
+  "myTracks.delete": string;
 
   // Hero
   "hero.badge": string;
@@ -534,6 +554,7 @@ const pl: TranslationKeys = {
   "nav.settings": "Ustawienia",
   "nav.legalDocs": "Dokumenty prawne",
   "nav.aiFeatures": "Funkcje AI",
+  "nav.myTracks": "Moje Utwory",
 
   "topbar.searchPlaceholder": "Czego chcesz posłuchać?",
   "topbar.signIn": "Zaloguj się",
@@ -552,6 +573,24 @@ const pl: TranslationKeys = {
   "topbar.signOut": "Wyloguj się",
   "topbar.myAccount": "Moje Konto",
   "topbar.createAccount": "Utwórz Konto",
+  "topbar.myTracks": "Moje Utwory",
+
+  "myTracks.title": "Moje Utwory",
+  "myTracks.tracksCount": "utworów",
+  "myTracks.uploadTrack": "Dodaj utwór",
+  "myTracks.searchPlaceholder": "Szukaj w moich utworach...",
+  "myTracks.emptyTitle": "Nie dodałeś jeszcze żadnego utworu",
+  "myTracks.emptyDesc": "Zacznij dodawać swoje utwory – będą tu na Ciebie czekać.",
+  "myTracks.uploadFirst": "Dodaj pierwszy utwór",
+  "myTracks.noResults": "Brak wyników wyszukiwania",
+  "myTracks.loadError": "Błąd ładowania utworów",
+  "myTracks.deleteError": "Błąd usuwania utworu",
+  "myTracks.deleted": "Utwór został usunięty",
+  "myTracks.linkCopied": "Link skopiowany do schowka",
+  "myTracks.deleteConfirmTitle": "Usunąć utwór?",
+  "myTracks.deleteConfirmDesc": "Czy na pewno chcesz usunąć utwór",
+  "myTracks.cancel": "Anuluj",
+  "myTracks.delete": "Usuń",
 
   "hero.badge": "GrouAI Stream",
   "hero.title1": "Muzyka, Która ",
@@ -1011,6 +1050,7 @@ const en: TranslationKeys = {
   "nav.settings": "Settings",
   "nav.legalDocs": "Legal Documents",
   "nav.aiFeatures": "AI Features",
+  "nav.myTracks": "My Tracks",
 
   "topbar.searchPlaceholder": "What do you want to listen to?",
   "topbar.signIn": "Sign In",
@@ -1029,6 +1069,24 @@ const en: TranslationKeys = {
   "topbar.signOut": "Sign Out",
   "topbar.myAccount": "My Account",
   "topbar.createAccount": "Create Account",
+  "topbar.myTracks": "My Tracks",
+
+  "myTracks.title": "My Tracks",
+  "myTracks.tracksCount": "tracks",
+  "myTracks.uploadTrack": "Upload track",
+  "myTracks.searchPlaceholder": "Search my tracks...",
+  "myTracks.emptyTitle": "You haven't uploaded any tracks yet",
+  "myTracks.emptyDesc": "Start adding your tracks – they'll be waiting for you here.",
+  "myTracks.uploadFirst": "Upload your first track",
+  "myTracks.noResults": "No search results",
+  "myTracks.loadError": "Error loading tracks",
+  "myTracks.deleteError": "Error deleting track",
+  "myTracks.deleted": "Track has been deleted",
+  "myTracks.linkCopied": "Link copied to clipboard",
+  "myTracks.deleteConfirmTitle": "Delete track?",
+  "myTracks.deleteConfirmDesc": "Are you sure you want to delete",
+  "myTracks.cancel": "Cancel",
+  "myTracks.delete": "Delete",
 
   "hero.badge": "GrouAI Stream",
   "hero.title1": "Music That ",
@@ -1488,6 +1546,7 @@ const nl: TranslationKeys = {
   "nav.settings": "Instellingen",
   "nav.legalDocs": "Juridische Documenten",
   "nav.aiFeatures": "AI Functies",
+  "nav.myTracks": "Mijn Nummers",
 
   "topbar.searchPlaceholder": "Waar wil je naar luisteren?",
   "topbar.signIn": "Inloggen",
@@ -1506,6 +1565,24 @@ const nl: TranslationKeys = {
   "topbar.signOut": "Uitloggen",
   "topbar.myAccount": "Mijn Account",
   "topbar.createAccount": "Account Aanmaken",
+  "topbar.myTracks": "Mijn Nummers",
+
+  "myTracks.title": "Mijn Nummers",
+  "myTracks.tracksCount": "nummers",
+  "myTracks.uploadTrack": "Nummer uploaden",
+  "myTracks.searchPlaceholder": "Zoek in mijn nummers...",
+  "myTracks.emptyTitle": "Je hebt nog geen nummers geüpload",
+  "myTracks.emptyDesc": "Begin met het toevoegen van je nummers – ze wachten hier op je.",
+  "myTracks.uploadFirst": "Upload je eerste nummer",
+  "myTracks.noResults": "Geen zoekresultaten",
+  "myTracks.loadError": "Fout bij laden van nummers",
+  "myTracks.deleteError": "Fout bij verwijderen van nummer",
+  "myTracks.deleted": "Nummer is verwijderd",
+  "myTracks.linkCopied": "Link gekopieerd naar klembord",
+  "myTracks.deleteConfirmTitle": "Nummer verwijderen?",
+  "myTracks.deleteConfirmDesc": "Weet je zeker dat je wilt verwijderen",
+  "myTracks.cancel": "Annuleren",
+  "myTracks.delete": "Verwijderen",
 
   "hero.badge": "GrouAI Stream",
   "hero.title1": "Muziek Die Je ",
@@ -1965,6 +2042,7 @@ const ua: TranslationKeys = {
   "nav.settings": "Налаштування",
   "nav.legalDocs": "Юридичні Документи",
   "nav.aiFeatures": "Функції AI",
+  "nav.myTracks": "Мої Треки",
 
   "topbar.searchPlaceholder": "Що хочеш послухати?",
   "topbar.signIn": "Увійти",
@@ -1983,6 +2061,24 @@ const ua: TranslationKeys = {
   "topbar.signOut": "Вийти",
   "topbar.myAccount": "Мій Акаунт",
   "topbar.createAccount": "Створити Акаунт",
+  "topbar.myTracks": "Мої Треки",
+
+  "myTracks.title": "Мої Треки",
+  "myTracks.tracksCount": "треків",
+  "myTracks.uploadTrack": "Завантажити трек",
+  "myTracks.searchPlaceholder": "Пошук у моїх треках...",
+  "myTracks.emptyTitle": "Ви ще не завантажили жодного треку",
+  "myTracks.emptyDesc": "Почніть додавати свої треки – вони чекатимуть тут на вас.",
+  "myTracks.uploadFirst": "Завантажити перший трек",
+  "myTracks.noResults": "Немає результатів пошуку",
+  "myTracks.loadError": "Помилка завантаження треків",
+  "myTracks.deleteError": "Помилка видалення треку",
+  "myTracks.deleted": "Трек видалено",
+  "myTracks.linkCopied": "Посилання скопійовано",
+  "myTracks.deleteConfirmTitle": "Видалити трек?",
+  "myTracks.deleteConfirmDesc": "Ви впевнені, що хочете видалити",
+  "myTracks.cancel": "Скасувати",
+  "myTracks.delete": "Видалити",
 
   "hero.badge": "GrouAI Stream",
   "hero.title1": "Музика, Яка ",
