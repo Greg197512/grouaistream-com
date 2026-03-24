@@ -33,7 +33,26 @@ const formatPlayCount = (count: number): string => {
 
 export const TopArtists = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const { playPlaylist } = usePlayer();
   const [artists, setArtists] = useState<ArtistData[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const handleArtistClick = async (artistName: string) => {
+    // Fetch tracks by this artist and play them
+    const { data } = await supabase
+      .from('tracks')
+      .select('*')
+      .ilike('artist', `%${artistName}%`)
+      .order('created_at', { ascending: false })
+      .limit(50);
+
+    if (data && data.length > 0) {
+      playPlaylist(data as Track[], 0);
+    }
+    // Also navigate to search with artist name
+    navigate(`/search?q=${encodeURIComponent(artistName)}`);
+  };
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
