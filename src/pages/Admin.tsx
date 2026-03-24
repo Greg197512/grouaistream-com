@@ -109,16 +109,7 @@ export default function Admin() {
   const [testingTrack, setTestingTrack] = useState<string | null>(null);
   const [testedTracks, setTestedTracks] = useState<Map<string, boolean>>(new Map());
   
-  // Email state
-  const [emailType, setEmailType] = useState<"invitation" | "challenge" | "newsletter" | "weekly_digest">("invitation");
-  const [recipientName, setRecipientName] = useState("");
-  const [recipientEmail, setRecipientEmail] = useState("");
-  const [customMessage, setCustomMessage] = useState("");
-  const [generatingEmail, setGeneratingEmail] = useState(false);
-  const [sendingEmail, setSendingEmail] = useState(false);
-  const [generatedEmail, setGeneratedEmail] = useState<GeneratedEmail | null>(null);
-  const [emailHistory, setEmailHistory] = useState<GeneratedEmail[]>([]);
-  
+  // Email state removed - now handled in AdminEmailDashboard
   // Verification state
   const [verifyingTracks, setVerifyingTracks] = useState(false);
   const [brokenTracks, setBrokenTracks] = useState<TrackData[]>([]);
