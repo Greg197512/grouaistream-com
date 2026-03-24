@@ -976,6 +976,7 @@ export type Database = {
     }
     Functions: {
       get_admin_stats: { Args: never; Returns: Json }
+      get_all_users_for_admin: { Args: never; Returns: Json }
       get_user_id_by_email: { Args: { _email: string }; Returns: string }
       has_role: {
         Args: {

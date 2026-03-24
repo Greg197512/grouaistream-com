@@ -32,7 +32,12 @@ const Auth = () => {
           navigate("/");
         }
       } else {
-        const { error } = await signUp(email, password, displayName);
+        if (!displayName.trim() || displayName.trim().length < 2) {
+          toast.error("Podaj nick (min. 2 znaki)");
+          setLoading(false);
+          return;
+        }
+        const { error } = await signUp(email, password, displayName.trim());
         if (error) {
           toast.error(error.message || "Failed to sign up");
         } else {
@@ -78,18 +83,23 @@ const Auth = () => {
           <form onSubmit={handleSubmit} className="space-y-4">
             {!isLogin && (
               <div className="space-y-2">
-                <Label htmlFor="displayName">Display Name</Label>
+                <Label htmlFor="displayName">Nick / Przezwisko *</Label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="displayName"
                     type="text"
-                    placeholder="Your name"
+                    placeholder="Twój nick lub przezwisko"
                     value={displayName}
                     onChange={(e) => setDisplayName(e.target.value)}
+                    required
+                    minLength={2}
                     className="pl-10"
                   />
                 </div>
+                <p className="text-[11px] text-muted-foreground/70">
+                  Ten nick będzie widoczny dla innych użytkowników
+                </p>
               </div>
             )}
 
