@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   ChevronLeft, ChevronRight, Search, Bell, User, Crown, LogOut,
-  Settings, Sparkles, UserCircle, Heart, Library, Power, Globe, Lock, LockOpen
+  Settings, Sparkles, UserCircle, Heart, Library, Power, Globe, Lock, LockOpen, Music
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
