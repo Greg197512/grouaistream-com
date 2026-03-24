@@ -32,7 +32,12 @@ const Auth = () => {
           navigate("/");
         }
       } else {
-        const { error } = await signUp(email, password, displayName);
+        if (!displayName.trim() || displayName.trim().length < 2) {
+          toast.error("Podaj nick (min. 2 znaki)");
+          setLoading(false);
+          return;
+        }
+        const { error } = await signUp(email, password, displayName.trim());
         if (error) {
           toast.error(error.message || "Failed to sign up");
         } else {
