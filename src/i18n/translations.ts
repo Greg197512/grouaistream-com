@@ -531,6 +531,72 @@ type TranslationKeys = {
   "moodDet.romanticDesc": string;
   "moodDet.focusedDesc": string;
   "moodDet.aiDescription": string;
+
+  // Upload page
+  "upload.title": string;
+  "upload.desc": string;
+  "upload.aiChecks": string;
+  "upload.lengthMin": string;
+  "upload.lyricQuality": string;
+  "upload.vocalQuality": string;
+  "upload.production": string;
+  "upload.originality": string;
+  "upload.minScore": string;
+  "upload.sunoLabel": string;
+  "upload.sunoPlaceholder": string;
+  "upload.fileLabel": string;
+  "upload.fileDrop": string;
+  "upload.fileMinMax": string;
+  "upload.fileChange": string;
+  "upload.fileTooShort": string;
+  "upload.titleLabel": string;
+  "upload.titlePlaceholder": string;
+  "upload.genreLabel": string;
+  "upload.genrePlaceholder": string;
+  "upload.descLabel": string;
+  "upload.descPlaceholder": string;
+  "upload.emailLabel": string;
+  "upload.emailPlaceholder": string;
+  "upload.agreeLabel": string;
+  "upload.agreeRules": string;
+  "upload.submitBtn": string;
+  "upload.submitting": string;
+  "upload.successTitle": string;
+  "upload.reviewTitle": string;
+  "upload.rejectedTitle": string;
+  "upload.successDesc": string;
+  "upload.reviewDesc": string;
+  "upload.rejectedDesc": string;
+  "upload.confirmed": string;
+  "upload.sendAnother": string;
+  "upload.recommendations": string;
+  "upload.reasons": string;
+  "upload.unsupportedFormat": string;
+  "upload.fillRequired": string;
+  "upload.addFileOrLink": string;
+  "upload.tooShort": string;
+  "upload.accepted": string;
+  "upload.submitError": string;
+  "upload.aiCoverLabel": string;
+  "upload.aiCoverDesc": string;
+
+  // Auth page
+  "auth.backHome": string;
+  "auth.welcomeBack": string;
+  "auth.createAccount": string;
+  "auth.nickLabel": string;
+  "auth.nickPlaceholder": string;
+  "auth.nickHint": string;
+  "auth.nickMinError": string;
+  "auth.emailLabel": string;
+  "auth.passwordLabel": string;
+  "auth.signIn": string;
+  "auth.signUp": string;
+  "auth.loading": string;
+  "auth.noAccount": string;
+  "auth.hasAccount": string;
+  "auth.welcomeBackMsg": string;
+  "auth.accountCreated": string;
 };
 
 const pl: TranslationKeys = {
