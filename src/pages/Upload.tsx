@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -44,6 +45,7 @@ function getAudioDuration(file: File): Promise<number> {
 
 const Upload = () => {
   const { t } = useLanguage();
+  const { user } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [sunoLink, setSunoLink] = useState("");
   const [title, setTitle] = useState("");
@@ -146,9 +148,13 @@ const Upload = () => {
         genre,
         duration: Math.round(audioDuration || 180),
         audio_url: finalAudioUrl,
+        user_id: user?.id || null,
       });
 
       if (trackInsertErr) throw trackInsertErr;
+
+      // Notify other pages (MyTracks, Library, Sidebar badge)
+      window.dispatchEvent(new Event("track-list-changed"));
 
       setModerationResult(result);
       toast.success("✅ Utwór zaakceptowany! Zostanie dodany do platformy.");

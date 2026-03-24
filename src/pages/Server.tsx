@@ -273,6 +273,7 @@ const Server = () => {
           audio_url: isVideo ? null : urlData.publicUrl,
           video_url: isVideo ? urlData.publicUrl : null,
           cover_url: coverUrl,
+          user_id: user?.id || null,
         }).select("id").single();
         if (insertError) throw insertError;
         
@@ -287,6 +288,7 @@ const Server = () => {
     const doneCount = pending.filter(p => uploadQueue.find(q => q.id === p.id)?.status !== "error").length;
     toast.success(`Przesłano ${doneCount} plików na serwer!`);
     loadTracks();
+    window.dispatchEvent(new Event("track-list-changed"));
 
     // Auto-categorize uploaded tracks with AI
     if (uploadedIds.length > 0) {
