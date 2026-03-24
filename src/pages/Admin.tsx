@@ -152,13 +152,19 @@ export default function Admin() {
       // Fetch real stats via security definer function
       const { data: adminStats } = await supabase.rpc("get_admin_stats");
 
-      // Fetch profiles with user data
-      const { data: profiles, error: profilesError } = await supabase
-        .from("profiles")
-        .select("*")
-        .order("created_at", { ascending: false });
-
-      if (profilesError) throw profilesError;
+      // Fetch all users with emails via admin RPC
+      const { data: allUsersData } = await supabase.rpc("get_all_users_for_admin");
+      
+      if (Array.isArray(allUsersData)) {
+        const mappedUsers: UserData[] = allUsersData.map((u: any) => ({
+          id: u.id,
+          email: u.email || "Brak",
+          created_at: u.created_at,
+          last_sign_in_at: u.last_sign_in_at,
+          display_name: u.display_name,
+        }));
+        setUsers(mappedUsers);
+      }
 
       // Fetch genre breakdown
       const { data: allTracks } = await supabase
@@ -199,22 +205,11 @@ export default function Admin() {
       const realStats = adminStats as { total_mood_sessions: number; active_today: number; total_tracks: number; total_users: number } | null;
       
       setStats({
-        totalUsers: realStats?.total_users || profiles?.length || 0,
+        totalUsers: realStats?.total_users || 0,
         activeToday: realStats?.active_today || 0,
         totalMoodSessions: realStats?.total_mood_sessions || 0,
         totalTracks: realStats?.total_tracks || 0,
       });
-
-      // Map profiles to user data format
-      const mappedUsers: UserData[] = (profiles || []).map(profile => ({
-        id: profile.user_id,
-        email: profile.display_name || "Nieznany",
-        created_at: profile.created_at,
-        last_sign_in_at: profile.updated_at,
-        display_name: profile.display_name,
-      }));
-
-      setUsers(mappedUsers);
     } catch (error) {
       console.error("Error fetching admin data:", error);
       toast.error("Błąd ładowania danych");
