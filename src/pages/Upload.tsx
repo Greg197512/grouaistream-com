@@ -45,6 +45,7 @@ function getAudioDuration(file: File): Promise<number> {
 
 const Upload = () => {
   const { t } = useLanguage();
+  const { user } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [sunoLink, setSunoLink] = useState("");
   const [title, setTitle] = useState("");
