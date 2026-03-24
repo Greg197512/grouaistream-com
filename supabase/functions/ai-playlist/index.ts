@@ -1,11 +1,20 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+function getCorsHeaders(req: Request) {
+  const allowedOrigins = [
+    "https://grouaistream-com.lovable.app",
+    "https://id-preview--462bddcb-d545-4f42-bc51-5f437cb12bbe.lovable.app",
+  ];
+  const origin = req.headers.get("origin") || "";
+  return {
+    "Access-Control-Allow-Origin": allowedOrigins.includes(origin) ? origin : allowedOrigins[0],
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  };
+}
 
 serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req);
+
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -121,12 +130,10 @@ Based on this skip behavior, analyze what the user probably wants and suggest ad
       throw new Error("No content in AI response");
     }
 
-    // Parse JSON from response
     let parsedContent;
     try {
       parsedContent = JSON.parse(content);
     } catch {
-      // If parsing fails, return raw content
       parsedContent = { raw: content };
     }
 
