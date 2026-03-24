@@ -35,6 +35,7 @@ import Suno from "./pages/Suno";
 import LocalPlayer from "./pages/LocalPlayer";
 import Upload from "./pages/Upload";
 import MyTracks from "./pages/MyTracks";
+import Unsubscribe from "./pages/Unsubscribe";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
