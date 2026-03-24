@@ -805,6 +805,7 @@ export type Database = {
           id: string
           mood: string | null
           title: string
+          user_id: string | null
           video_url: string | null
         }
         Insert: {
@@ -818,6 +819,7 @@ export type Database = {
           id?: string
           mood?: string | null
           title: string
+          user_id?: string | null
           video_url?: string | null
         }
         Update: {
@@ -831,6 +833,7 @@ export type Database = {
           id?: string
           mood?: string | null
           title?: string
+          user_id?: string | null
           video_url?: string | null
         }
         Relationships: []
