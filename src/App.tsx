@@ -89,6 +89,7 @@ const App = () => (
                   <Route path="/local-player" element={<LocalPlayer />} />
                   <Route path="/upload" element={<Upload />} />
                   <Route path="/my-tracks" element={<MyTracks />} />
+                  <Route path="/unsubscribe" element={<Unsubscribe />} />
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>
