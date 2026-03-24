@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { Play, HardDrive, Loader2, Flame } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePlayer, Track } from "@/contexts/PlayerContext";
-import { useUnlock } from "@/contexts/UnlockContext";
+
 import { useNavigate } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
 import { pl } from "date-fns/locale";
@@ -19,7 +19,7 @@ export const NewOnServer = () => {
   const [tracks, setTracks] = useState<ServerTrack[]>([]);
   const [loading, setLoading] = useState(true);
   const { playPlaylist, currentTrack, isPlaying } = usePlayer();
-  const { filterTracks } = useUnlock();
+  
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -32,12 +32,11 @@ export const NewOnServer = () => {
         .order("created_at", { ascending: false })
         .limit(8);
 
-      const filtered = filterTracks((data || []) as any) as ServerTrack[];
-      setTracks(filtered);
+      setTracks((data || []) as ServerTrack[]);
       setLoading(false);
 
       // Auto-generate covers for tracks without them
-      filtered.forEach(async (track) => {
+      (data || []).forEach(async (track: any) => {
         if (!track.cover_url || track.cover_url.includes("placeholder") || track.cover_url.includes("picsum")) {
           try {
             await supabase.functions.invoke("ai-cover", { body: { trackId: track.id } });
