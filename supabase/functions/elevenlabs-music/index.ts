@@ -51,14 +51,19 @@ serve(async (req) => {
     const musicBase64 = base64Encode(musicBuffer);
     console.log("[ElevenLabs Music] Instrumental generated, size:", musicBuffer.byteLength);
 
-    // Step 2: If vocals requested, generate TTS vocals
+    // Step 2: If vocals requested, generate singing-style TTS vocals
     let vocalBase64: string | null = null;
     if (vocals && vocalText && vocalText.trim().length > 0) {
-      console.log("[ElevenLabs Music] Generating vocals...");
+      console.log("[ElevenLabs Music] Generating singing vocals...");
       
-      // Use Sarah voice for singing (female) or Roger for male
+      // Voice selection based on style
       const voiceId = vocalVoiceId || "EXAVITQu4vr4xnSDxMaL"; // Sarah - melodic female
       
+      // SINGING-OPTIMIZED SETTINGS:
+      // stability 0.15 = maximum expressiveness & pitch variation (singing-like)
+      // similarity_boost 0.85 = keep character but allow creative freedom
+      // style 1.0 = MAXIMUM stylization — essential for singing delivery
+      // speed 0.75 = slower tempo for melodic, song-like phrasing
       const ttsResponse = await fetch(
         `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_128`,
         {
@@ -71,11 +76,11 @@ serve(async (req) => {
             text: vocalText.substring(0, 3000),
             model_id: "eleven_multilingual_v2",
             voice_settings: {
-              stability: 0.3,       // Expressive, sing-like
-              similarity_boost: 0.8,
-              style: 0.7,           // Stylized delivery
+              stability: 0.15,        // Very low = singing-like variation
+              similarity_boost: 0.85,
+              style: 1.0,             // Maximum stylization for singing
               use_speaker_boost: true,
-              speed: 0.9,           // Slightly slower for singing feel
+              speed: 0.75,            // Slow for melodic delivery
             },
           }),
         }
@@ -87,7 +92,7 @@ serve(async (req) => {
       } else {
         const vocalBuffer = await ttsResponse.arrayBuffer();
         vocalBase64 = base64Encode(vocalBuffer);
-        console.log("[ElevenLabs Music] Vocals generated, size:", vocalBuffer.byteLength);
+        console.log("[ElevenLabs Music] Singing vocals generated, size:", vocalBuffer.byteLength);
       }
     }
 

@@ -44,7 +44,6 @@ async function mixAudioTracks(musicBase64: string, vocalsBase64: string | null):
   const musicBuffer = await audioCtx.decodeAudioData(musicBytes.buffer.slice(0));
 
   if (!vocalsBase64) {
-    // Return music only
     const offCtx = new OfflineAudioContext(musicBuffer.numberOfChannels, musicBuffer.length, 44100);
     const src = offCtx.createBufferSource();
     src.buffer = musicBuffer;
@@ -62,50 +61,77 @@ async function mixAudioTracks(musicBase64: string, vocalsBase64: string | null):
   const channels = Math.max(musicBuffer.numberOfChannels, vocalBuffer.numberOfChannels);
   const offCtx = new OfflineAudioContext(channels, maxLen, 44100);
 
-  // Music track at ~70% volume
+  // Music track at ~60% volume (lower to let vocals shine)
   const musicSrc = offCtx.createBufferSource();
   musicSrc.buffer = musicBuffer;
   const musicGain = offCtx.createGain();
-  musicGain.gain.value = 0.65;
+  musicGain.gain.value = 0.55;
   musicSrc.connect(musicGain).connect(offCtx.destination);
   musicSrc.start(0);
 
-  // Vocals at ~90% volume with slight delay for natural feel
+  // === SINGING VOCAL PROCESSING ===
   const vocalSrc = offCtx.createBufferSource();
   vocalSrc.buffer = vocalBuffer;
+  
+  // Main vocal gain (louder for singing prominence)
   const vocalGain = offCtx.createGain();
-  vocalGain.gain.value = 0.85;
+  vocalGain.gain.value = 0.95;
 
-  // Add reverb to vocals
+  // Pitch-shifted harmony layer (up 3 semitones for singing harmony)
+  const harmonySrc = offCtx.createBufferSource();
+  harmonySrc.buffer = vocalBuffer;
+  harmonySrc.playbackRate.value = Math.pow(2, 3/12); // +3 semitones
+  const harmonyGain = offCtx.createGain();
+  harmonyGain.gain.value = 0.18; // Subtle harmony
+
+  // Lower octave doubling for depth
+  const octaveSrc = offCtx.createBufferSource();
+  octaveSrc.buffer = vocalBuffer;
+  octaveSrc.playbackRate.value = Math.pow(2, -5/12); // -5 semitones (lower)
+  const octaveGain = offCtx.createGain();
+  octaveGain.gain.value = 0.12;
+
+  // Reverb for vocals (larger, concert hall style)
   const convolver = offCtx.createConvolver();
-  const irLength = 44100 * 1.5;
+  const irLength = 44100 * 2.5;
   const irBuffer = offCtx.createBuffer(2, irLength, 44100);
   for (let ch = 0; ch < 2; ch++) {
     const data = irBuffer.getChannelData(ch);
     for (let i = 0; i < irLength; i++) {
-      data[i] = (Math.random() * 2 - 1) * Math.exp(-4 * i / irLength) * 0.3;
+      data[i] = (Math.random() * 2 - 1) * Math.exp(-2.5 * i / irLength) * 0.4;
     }
   }
   convolver.buffer = irBuffer;
 
-  // Dry vocals
+  // Dry vocals (main)
   const dryGain = offCtx.createGain();
-  dryGain.gain.value = 0.75;
+  dryGain.gain.value = 0.65;
   vocalSrc.connect(vocalGain).connect(dryGain).connect(offCtx.destination);
 
-  // Wet (reverb) vocals
+  // Wet (reverb) vocals  
   const wetGain = offCtx.createGain();
-  wetGain.gain.value = 0.25;
+  wetGain.gain.value = 0.35;
   vocalSrc.connect(vocalGain).connect(convolver).connect(wetGain).connect(offCtx.destination);
 
-  vocalSrc.start(0.3); // Slight delay
+  // Harmony layer with its own reverb
+  harmonySrc.connect(harmonyGain).connect(convolver).connect(offCtx.destination);
 
-  // Master compressor
-  const comp = offCtx.createDynamicsCompressor();
-  comp.threshold.value = -12;
-  comp.ratio.value = 4;
-  comp.attack.value = 0.003;
-  comp.release.value = 0.25;
+  // Octave doubling dry
+  octaveSrc.connect(octaveGain).connect(offCtx.destination);
+
+  // Chorus effect via slight detuning
+  const chorusSrc = offCtx.createBufferSource();
+  chorusSrc.buffer = vocalBuffer;
+  chorusSrc.detune.value = 12; // Slight detune for chorus width
+  const chorusGain = offCtx.createGain();
+  chorusGain.gain.value = 0.15;
+  chorusSrc.connect(chorusGain).connect(convolver).connect(offCtx.destination);
+
+  // Start all vocal layers with slight delay for musical feel
+  vocalSrc.start(0.4);
+  harmonySrc.start(0.4);
+  octaveSrc.start(0.4);
+  chorusSrc.start(0.4);
 
   const rendered = await offCtx.startRendering();
   audioCtx.close();
