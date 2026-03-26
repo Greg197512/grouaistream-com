@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Maximize2, Minimize2, Volume2, VolumeX } from "lucide-react";
 import { usePlayer } from "@/contexts/PlayerContext";
@@ -13,37 +13,66 @@ export const VideoPlayer = ({ isVisible, onClose }: VideoPlayerProps) => {
   const { currentTrack, isPlaying, volume, isMuted, toggleMute, isVideoMode, onYouTubeTimeUpdate, onYouTubeEnded } = usePlayer();
   const [isFullscreen, setIsFullscreen] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const lastSrcRef = useRef<string | null>(null);
   
   const videoId = currentTrack?.video_url ? extractYouTubeId(currentTrack.video_url) : null;
-  const isNativeVideo = isVideoMode && !videoId && currentTrack?.video_url && !extractYouTubeId(currentTrack.video_url);
+  
+  // Determine native video URL
+  const nativeVideoUrl = (() => {
+    if (!isVideoMode || videoId) return null;
+    const url = currentTrack?.video_url;
+    if (!url) return null;
+    if (extractYouTubeId(url)) return null;
+    return url;
+  })();
 
-  // Sync native video playback state
+  // Load source only when URL actually changes
   useEffect(() => {
-    if (!videoRef.current || !isNativeVideo) return;
+    const video = videoRef.current;
+    if (!video || !nativeVideoUrl) return;
+    
+    if (lastSrcRef.current === nativeVideoUrl) return;
+    lastSrcRef.current = nativeVideoUrl;
+    
+    // Reset and load new source
+    video.pause();
+    video.removeAttribute('src');
+    video.load();
+    
+    // Use source element approach for better codec negotiation
+    video.src = nativeVideoUrl;
+    video.load();
+    
     if (isPlaying) {
-      videoRef.current.play().catch(() => {});
-    } else {
-      videoRef.current.pause();
+      video.play().catch(() => {});
     }
-  }, [isPlaying, isNativeVideo]);
+  }, [nativeVideoUrl]);
+
+  // Sync play/pause state
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !nativeVideoUrl) return;
+    
+    if (isPlaying) {
+      if (video.paused && video.readyState >= 2) {
+        video.play().catch(() => {});
+      }
+    } else {
+      if (!video.paused) {
+        video.pause();
+      }
+    }
+  }, [isPlaying, nativeVideoUrl]);
 
   // Sync volume
   useEffect(() => {
-    if (!videoRef.current || !isNativeVideo) return;
+    if (!videoRef.current || !nativeVideoUrl) return;
     videoRef.current.volume = isMuted ? 0 : volume / 100;
-  }, [volume, isMuted, isNativeVideo]);
+  }, [volume, isMuted, nativeVideoUrl]);
 
-  // Load native video source
+  // Handle seek events
   useEffect(() => {
-    if (!videoRef.current || !isNativeVideo || !currentTrack?.video_url) return;
-    videoRef.current.src = currentTrack.video_url;
-    videoRef.current.load();
-    if (isPlaying) videoRef.current.play().catch(() => {});
-  }, [currentTrack?.video_url, isNativeVideo]);
-
-  // Listen for seek events
-  useEffect(() => {
-    if (!isNativeVideo) return;
+    if (!nativeVideoUrl) return;
     const handleSeek = (e: Event) => {
       const detail = (e as CustomEvent).detail;
       if (videoRef.current && detail?.time !== undefined) {
@@ -52,10 +81,35 @@ export const VideoPlayer = ({ isVisible, onClose }: VideoPlayerProps) => {
     };
     window.addEventListener('native-video-seek', handleSeek);
     return () => window.removeEventListener('native-video-seek', handleSeek);
-  }, [isNativeVideo]);
+  }, [nativeVideoUrl]);
+
+  // Handle canplay to auto-start
+  const handleCanPlay = useCallback(() => {
+    if (videoRef.current && isPlaying && videoRef.current.paused) {
+      videoRef.current.play().catch(() => {});
+    }
+  }, [isPlaying]);
+
+  const handleTimeUpdate = useCallback(() => {
+    if (videoRef.current) {
+      onYouTubeTimeUpdate(videoRef.current.currentTime, videoRef.current.duration || 0);
+    }
+  }, [onYouTubeTimeUpdate]);
+
+  const handleLoadedMetadata = useCallback(() => {
+    if (videoRef.current) {
+      onYouTubeTimeUpdate(0, videoRef.current.duration || 0);
+      // Sync volume on load
+      videoRef.current.volume = isMuted ? 0 : volume / 100;
+    }
+  }, [onYouTubeTimeUpdate, isMuted, volume]);
+
+  const handleEnded = useCallback(() => {
+    onYouTubeEnded();
+  }, [onYouTubeEnded]);
 
   if (!isVisible || !isVideoMode) return null;
-  if (!videoId && !isNativeVideo) return null;
+  if (!videoId && !nativeVideoUrl) return null;
 
   const toggleFullscreen = () => setIsFullscreen(!isFullscreen);
 
@@ -84,25 +138,24 @@ export const VideoPlayer = ({ isVisible, onClose }: VideoPlayerProps) => {
             />
           )}
 
-          {/* Native video player (all formats) */}
-          {isNativeVideo && (
+          {/* Native video player — persistent element keyed by track ID */}
+          {nativeVideoUrl && (
             <video
+              key={currentTrack?.id}
               ref={videoRef}
               className="w-full h-full object-contain"
               controls={false}
               playsInline
-              onTimeUpdate={() => {
-                if (videoRef.current) {
-                  onYouTubeTimeUpdate(videoRef.current.currentTime, videoRef.current.duration || 0);
-                }
-              }}
-              onEnded={() => onYouTubeEnded()}
-              onLoadedMetadata={() => {
-                if (videoRef.current) {
-                  onYouTubeTimeUpdate(0, videoRef.current.duration || 0);
-                }
-              }}
-            />
+              preload="auto"
+              disablePictureInPicture
+              onContextMenu={e => e.preventDefault()}
+              onCanPlay={handleCanPlay}
+              onTimeUpdate={handleTimeUpdate}
+              onEnded={handleEnded}
+              onLoadedMetadata={handleLoadedMetadata}
+            >
+              <source src={`${nativeVideoUrl}#t=0.1`} type="video/mp4" />
+            </video>
           )}
 
           {/* Controls overlay */}
