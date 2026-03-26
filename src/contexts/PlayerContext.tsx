@@ -218,8 +218,10 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
 
   const isNativeVideoUrl = (url?: string | null): boolean => {
     if (!url) return false;
-    return /\.(mp4|webm|mov|avi|mkv|ogv|3gp|3gpp)(\?.*)?$/i.test(url) || 
-           (url.includes('/music/') && /\.(mp4|webm|mov|avi|mkv)(\?.*)?/i.test(url));
+    // Match common video extensions anywhere in URL (before query params)
+    const videoExtPattern = /\.(mp4|webm|mov|avi|mkv|ogv|3gp|3gpp|m4v|flv|wmv|mpg|mpeg|ts|mts|m2ts|vob|divx|f4v|asf|rm|rmvb)(\?.*)?$/i;
+    const videoExtAnywhere = /\.(mp4|webm|mov|avi|mkv|ogv|3gp|3gpp|m4v|flv|wmv|mpg|mpeg|ts|mts|m2ts|vob|divx|f4v|asf|rm|rmvb)(\?|$|#)/i;
+    return videoExtPattern.test(url) || videoExtAnywhere.test(url);
   };
 
   const getPlayableYouTubeId = (track: Track): string | null =>
