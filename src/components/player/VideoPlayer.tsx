@@ -91,7 +91,6 @@ export const VideoPlayer = ({ isVisible, onClose }: VideoPlayerProps) => {
               className="w-full h-full object-contain"
               controls={false}
               playsInline
-              crossOrigin="anonymous"
               onTimeUpdate={() => {
                 if (videoRef.current) {
                   onYouTubeTimeUpdate(videoRef.current.currentTime, videoRef.current.duration || 0);
