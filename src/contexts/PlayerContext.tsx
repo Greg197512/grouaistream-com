@@ -228,8 +228,18 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     track.video_url ? extractYouTubeId(track.video_url) : null;
 
   const getNativeVideoUrl = (track: Track): string | null => {
-    if (track.video_url && isPlayableUrl(track.video_url) && !extractYouTubeId(track.video_url) && isNativeVideoUrl(track.video_url)) {
-      return track.video_url;
+    // Check video_url first
+    if (track.video_url && isPlayableUrl(track.video_url) && !extractYouTubeId(track.video_url)) {
+      // If it has a video extension OR is not a YouTube link, treat as native video
+      if (isNativeVideoUrl(track.video_url)) return track.video_url;
+      // If video_url is set but no YouTube ID and no known audio extension, assume it's a video
+      if (!/\.(mp3|wav|ogg|flac|m4a|aac|wma|opus|webm)(\?|$|#)/i.test(track.video_url)) {
+        return track.video_url;
+      }
+    }
+    // Also check audio_url — some video files get stored there
+    if (track.audio_url && isPlayableUrl(track.audio_url) && isNativeVideoUrl(track.audio_url)) {
+      return track.audio_url;
     }
     return null;
   };
