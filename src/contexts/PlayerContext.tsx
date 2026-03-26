@@ -218,16 +218,28 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
 
   const isNativeVideoUrl = (url?: string | null): boolean => {
     if (!url) return false;
-    return /\.(mp4|webm|mov|avi|mkv|ogv|3gp|3gpp)(\?.*)?$/i.test(url) || 
-           (url.includes('/music/') && /\.(mp4|webm|mov|avi|mkv)(\?.*)?/i.test(url));
+    // Match common video extensions anywhere in URL (before query params)
+    const videoExtPattern = /\.(mp4|webm|mov|avi|mkv|ogv|3gp|3gpp|m4v|flv|wmv|mpg|mpeg|ts|mts|m2ts|vob|divx|f4v|asf|rm|rmvb)(\?.*)?$/i;
+    const videoExtAnywhere = /\.(mp4|webm|mov|avi|mkv|ogv|3gp|3gpp|m4v|flv|wmv|mpg|mpeg|ts|mts|m2ts|vob|divx|f4v|asf|rm|rmvb)(\?|$|#)/i;
+    return videoExtPattern.test(url) || videoExtAnywhere.test(url);
   };
 
   const getPlayableYouTubeId = (track: Track): string | null =>
     track.video_url ? extractYouTubeId(track.video_url) : null;
 
   const getNativeVideoUrl = (track: Track): string | null => {
-    if (track.video_url && isPlayableUrl(track.video_url) && !extractYouTubeId(track.video_url) && isNativeVideoUrl(track.video_url)) {
-      return track.video_url;
+    // Check video_url first
+    if (track.video_url && isPlayableUrl(track.video_url) && !extractYouTubeId(track.video_url)) {
+      // If it has a video extension OR is not a YouTube link, treat as native video
+      if (isNativeVideoUrl(track.video_url)) return track.video_url;
+      // If video_url is set but no YouTube ID and no known audio extension, assume it's a video
+      if (!/\.(mp3|wav|ogg|flac|m4a|aac|wma|opus|webm)(\?|$|#)/i.test(track.video_url)) {
+        return track.video_url;
+      }
+    }
+    // Also check audio_url — some video files get stored there
+    if (track.audio_url && isPlayableUrl(track.audio_url) && isNativeVideoUrl(track.audio_url)) {
+      return track.audio_url;
     }
     return null;
   };
@@ -265,7 +277,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
         audioRef.current.src = "";
       }
     } else if (nativeVideoUrl) {
-      // Native video file (MP4/WEBM) — use isVideoMode but no youtubeVideoId
+      // Native video file (MP4/WEBM/MKV/AVI/MOV/FLV/WMV etc.) — use isVideoMode
       setIsVideoMode(true);
       setYoutubeVideoId(null);
       setIsPlaying(true);

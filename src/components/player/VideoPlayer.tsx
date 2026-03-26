@@ -84,13 +84,14 @@ export const VideoPlayer = ({ isVisible, onClose }: VideoPlayerProps) => {
             />
           )}
 
-          {/* Native video player (MP4/WEBM) */}
+          {/* Native video player (all formats) */}
           {isNativeVideo && (
             <video
               ref={videoRef}
               className="w-full h-full object-contain"
               controls={false}
               playsInline
+              crossOrigin="anonymous"
               onTimeUpdate={() => {
                 if (videoRef.current) {
                   onYouTubeTimeUpdate(videoRef.current.currentTime, videoRef.current.duration || 0);
