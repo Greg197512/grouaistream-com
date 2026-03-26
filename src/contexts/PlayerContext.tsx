@@ -277,7 +277,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
         audioRef.current.src = "";
       }
     } else if (nativeVideoUrl) {
-      // Native video file (MP4/WEBM) — use isVideoMode but no youtubeVideoId
+      // Native video file (MP4/WEBM/MKV/AVI/MOV/FLV/WMV etc.) — use isVideoMode
       setIsVideoMode(true);
       setYoutubeVideoId(null);
       setIsPlaying(true);
