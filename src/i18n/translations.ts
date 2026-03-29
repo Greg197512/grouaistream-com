@@ -1839,6 +1839,7 @@ const en: TranslationKeys = {
   "album.minTracks": "Add at least 2 tracks to the album",
   "album.enterTitle": "Enter album title",
 
+  "auth.backHome": "Back to home",
   "auth.welcomeBack": "Welcome back",
   "auth.createAccount": "Create your account",
   "auth.nickLabel": "Nickname *",
