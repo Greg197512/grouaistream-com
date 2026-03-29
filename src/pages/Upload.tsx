@@ -465,22 +465,13 @@ const Upload = () => {
               </div>
             </div>
 
-            {/* AI Cover option */}
-            <div className="flex items-start gap-3 p-4 bg-secondary/30 rounded-xl border border-border/50">
-              <Checkbox
-                id="ai-cover"
-                checked={aiCover}
-                onCheckedChange={(v) => setAiCover(v === true)}
-                className="mt-0.5"
-              />
-              <div className="flex-1">
-                <Label htmlFor="ai-cover" className="flex items-center gap-2 cursor-pointer text-sm font-semibold">
-                  <ImageIcon className="h-4 w-4 text-primary" />
-                  {t("upload.aiCoverLabel")}
-                </Label>
-                <p className="text-xs text-muted-foreground mt-1">{t("upload.aiCoverDesc")}</p>
-              </div>
-            </div>
+            {/* Cover Designer */}
+            <CoverDesigner
+              title={title}
+              genre={genre}
+              onCoverReady={setCoverUrl}
+              coverUrl={coverUrl}
+            />
 
             <div className="flex items-center gap-3 pt-2">
               <Checkbox
