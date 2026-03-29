@@ -1161,6 +1161,20 @@ export const AutoVoiceListener = () => {
   // Keep ref in sync so safeSpeakAndResume can restart listening
   useEffect(() => { startListeningRef.current = startListening; }, [startListening]);
 
+  // Restart recognition when app language changes so it listens in the correct locale
+  useEffect(() => {
+    const onLangChange = () => {
+      if (recognitionRef.current && isListening) {
+        console.log("[Voice] Language changed, restarting recognition");
+        try { recognitionRef.current.abort(); } catch {}
+        recognitionRef.current = null;
+        setTimeout(() => startListeningRef.current?.(), 300);
+      }
+    };
+    window.addEventListener("grooveai-language-change", onLangChange);
+    return () => window.removeEventListener("grooveai-language-change", onLangChange);
+  }, [isListening]);
+
   useEffect(() => {
     return () => {
       if (recognitionRef.current) { try { recognitionRef.current.abort(); } catch {} }
