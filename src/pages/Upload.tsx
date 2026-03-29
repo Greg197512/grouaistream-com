@@ -8,11 +8,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { motion } from "framer-motion";
-import { Upload as UploadIcon, Music, CheckCircle, Loader2, ShieldCheck, XCircle, AlertTriangle, FileAudio, ImageIcon, LogIn, Gift } from "lucide-react";
+import { Upload as UploadIcon, Music, CheckCircle, Loader2, ShieldCheck, XCircle, AlertTriangle, FileAudio, LogIn, Gift } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { CoverDesigner } from "@/components/cover/CoverDesigner";
 
 const genres = [
   "Pop", "Rock", "Electronic", "EDM", "House", "Trance", "Hip-Hop", "R&B",
@@ -59,7 +60,7 @@ const Upload = () => {
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [audioDuration, setAudioDuration] = useState<number | null>(null);
   const [durationError, setDurationError] = useState(false);
-  const [aiCover, setAiCover] = useState(true);
+  const [coverUrl, setCoverUrl] = useState("");
 
   const displayName = user?.user_metadata?.display_name || user?.email?.split("@")[0] || "Artist";
 
@@ -146,13 +147,14 @@ const Upload = () => {
         genre,
         duration: Math.round(audioDuration || 180),
         audio_url: finalAudioUrl,
+        cover_url: coverUrl || null,
         user_id: user?.id || null,
       }).select("id").single();
 
       if (trackInsertErr) throw trackInsertErr;
 
-      // If AI cover is enabled, trigger cover search
-      if (aiCover && insertedTrack?.id) {
+      // If no custom cover, trigger AI cover search
+      if (!coverUrl && insertedTrack?.id) {
         supabase.functions.invoke("ai-cover", {
           body: { trackId: insertedTrack.id },
         }).catch(() => {/* silent */});
@@ -181,7 +183,7 @@ const Upload = () => {
     setAudioFile(null);
     setAudioDuration(null);
     setDurationError(false);
-    setAiCover(true);
+    setCoverUrl("");
   };
 
   // Require login
@@ -463,22 +465,13 @@ const Upload = () => {
               </div>
             </div>
 
-            {/* AI Cover option */}
-            <div className="flex items-start gap-3 p-4 bg-secondary/30 rounded-xl border border-border/50">
-              <Checkbox
-                id="ai-cover"
-                checked={aiCover}
-                onCheckedChange={(v) => setAiCover(v === true)}
-                className="mt-0.5"
-              />
-              <div className="flex-1">
-                <Label htmlFor="ai-cover" className="flex items-center gap-2 cursor-pointer text-sm font-semibold">
-                  <ImageIcon className="h-4 w-4 text-primary" />
-                  {t("upload.aiCoverLabel")}
-                </Label>
-                <p className="text-xs text-muted-foreground mt-1">{t("upload.aiCoverDesc")}</p>
-              </div>
-            </div>
+            {/* Cover Designer */}
+            <CoverDesigner
+              title={title}
+              genre={genre}
+              onCoverReady={setCoverUrl}
+              coverUrl={coverUrl}
+            />
 
             <div className="flex items-center gap-3 pt-2">
               <Checkbox
