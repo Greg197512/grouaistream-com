@@ -193,11 +193,11 @@ const Upload = () => {
         <div className="max-w-md mx-auto px-6 py-20 text-center">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
             <LogIn className="h-16 w-16 text-primary mx-auto mb-6" />
-            <h1 className="text-2xl font-bold mb-3">{t("upload.loginRequired") || "Zaloguj się, aby wrzucić utwór"}</h1>
-            <p className="text-muted-foreground mb-6">{t("upload.loginRequiredDesc") || "Tylko zarejestrowani użytkownicy mogą przesyłać muzykę."}</p>
+            <h1 className="text-2xl font-bold mb-3">{t("upload.loginRequired")}</h1>
+            <p className="text-muted-foreground mb-6">{t("upload.loginRequiredDesc")}</p>
             <Button onClick={() => navigate("/auth")} className="gap-2">
               <LogIn className="h-4 w-4" />
-              {t("auth.signIn") || "Zaloguj się"}
+              {t("auth.signIn")}
             </Button>
           </motion.div>
         </div>
@@ -312,8 +312,8 @@ const Upload = () => {
           <div className="mb-6 p-4 rounded-xl bg-primary/10 border border-primary/20 flex items-center gap-3">
             <Gift className="h-6 w-6 text-primary shrink-0" />
             <div>
-              <p className="text-sm font-semibold text-primary">🎉 Promocja do końca maja 2026!</p>
-              <p className="text-xs text-muted-foreground">Wszystkie funkcje uploadu dostępne za darmo — wrzucaj bez limitu!</p>
+              <p className="text-sm font-semibold text-primary">{t("upload.promoTitle")}</p>
+              <p className="text-xs text-muted-foreground">{t("upload.promoDesc")}</p>
             </div>
           </div>
 
@@ -458,10 +458,10 @@ const Upload = () => {
 
             {/* Artist info (read-only from profile) */}
             <div className="space-y-2">
-              <Label>{t("upload.artistLabel") || "Artysta"}</Label>
+              <Label>{t("upload.artistLabel")}</Label>
               <div className="flex items-center gap-2 px-3 py-2 bg-card/60 border border-muted rounded-md text-sm">
                 <span className="font-medium">{displayName}</span>
-                <span className="text-muted-foreground text-xs">({t("upload.fromProfile") || "z profilu"})</span>
+                <span className="text-muted-foreground text-xs">({t("upload.fromProfile")})</span>
               </div>
             </div>
 

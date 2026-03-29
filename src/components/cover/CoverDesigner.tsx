@@ -1,12 +1,12 @@
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ImageIcon, Wand2, Upload, Loader2, Disc3 } from "lucide-react";
+import { Wand2, Upload, Loader2, Disc3 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { CDJewelCase } from "./CDJewelCase";
 
 interface CoverDesignerProps {
@@ -17,6 +17,7 @@ interface CoverDesignerProps {
 }
 
 export const CoverDesigner = ({ title, genre, onCoverReady, coverUrl }: CoverDesignerProps) => {
+  const { t } = useLanguage();
   const [tab, setTab] = useState<string>("ai");
   const [prompt, setPrompt] = useState("");
   const [generating, setGenerating] = useState(false);
@@ -29,11 +30,11 @@ export const CoverDesigner = ({ title, genre, onCoverReady, coverUrl }: CoverDes
     const file = e.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith("image/")) {
-      toast.error("Wybierz plik graficzny (JPG, PNG, WEBP)");
+      toast.error(t("cover.selectImage"));
       return;
     }
     if (file.size > 10 * 1024 * 1024) {
-      toast.error("Maksymalny rozmiar okładki: 10 MB");
+      toast.error(t("cover.maxSize"));
       return;
     }
 
@@ -46,19 +47,19 @@ export const CoverDesigner = ({ title, genre, onCoverReady, coverUrl }: CoverDes
       upsert: true,
     });
     if (error) {
-      toast.error("Błąd uploadu okładki");
+      toast.error(t("cover.errorUpload"));
       return;
     }
 
     const { data } = supabase.storage.from("music").getPublicUrl(filePath);
     setPreviewUrl(data.publicUrl);
     onCoverReady(data.publicUrl);
-    toast.success("Okładka wgrana!");
+    toast.success(t("cover.uploaded"));
   };
 
   const generateAICover = async (side: "front" | "back" = "front") => {
     if (!prompt.trim() && !title) {
-      toast.error("Wpisz opis okładki lub tytuł utworu");
+      toast.error(t("cover.enterPrompt"));
       return;
     }
 
@@ -83,18 +84,18 @@ export const CoverDesigner = ({ title, genre, onCoverReady, coverUrl }: CoverDes
       if (data?.cover_url) {
         if (side === "back") {
           setBackCoverUrl(data.cover_url);
-          toast.success("Tylna okładka wygenerowana!");
+          toast.success(t("cover.backGenerated"));
         } else {
           setPreviewUrl(data.cover_url);
           onCoverReady(data.cover_url);
-          toast.success("Okładka wygenerowana!");
+          toast.success(t("cover.generated"));
         }
       } else {
-        toast.error("Nie udało się wygenerować okładki");
+        toast.error(t("cover.errorGen"));
       }
     } catch (err: any) {
       console.error("Cover gen error:", err);
-      toast.error("Błąd generowania okładki");
+      toast.error(t("cover.errorGen"));
     } finally {
       setGenerating(false);
       setGeneratingBack(false);
@@ -105,33 +106,33 @@ export const CoverDesigner = ({ title, genre, onCoverReady, coverUrl }: CoverDes
     <div className="space-y-4">
       <Label className="flex items-center gap-2 text-base font-semibold">
         <Disc3 className="h-5 w-5 text-primary" />
-        Okładka albumu
+        {t("cover.title")}
       </Label>
 
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="ai" className="gap-1.5">
-            <Wand2 className="h-3.5 w-3.5" /> AI Generator
+            <Wand2 className="h-3.5 w-3.5" /> {t("cover.aiTab")}
           </TabsTrigger>
           <TabsTrigger value="upload" className="gap-1.5">
-            <Upload className="h-3.5 w-3.5" /> Własna grafika
+            <Upload className="h-3.5 w-3.5" /> {t("cover.uploadTab")}
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="ai" className="space-y-3 mt-3">
           <div className="space-y-2">
             <Label htmlFor="cover-prompt" className="text-sm">
-              Opisz jak ma wyglądać okładka (opcjonalnie)
+              {t("cover.promptLabel")}
             </Label>
             <Textarea
               id="cover-prompt"
-              placeholder="np. Ciemny las nocą z neonowymi światłami, klimat cyberpunk, deszcz, odbicia w kałużach..."
+              placeholder={t("cover.promptPlaceholder")}
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               className="bg-card/60 border-muted min-h-[80px]"
             />
             <p className="text-[11px] text-muted-foreground">
-              Zostaw puste — AI sam dobierze motyw na podstawie tytułu i gatunku
+              {t("cover.promptHint")}
             </p>
           </div>
 
@@ -144,7 +145,7 @@ export const CoverDesigner = ({ title, genre, onCoverReady, coverUrl }: CoverDes
               variant="outline"
             >
               {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
-              {generating ? "Generuję przód..." : "Generuj przód"}
+              {generating ? t("cover.genFrontLoading") : t("cover.genFront")}
             </Button>
             <Button
               type="button"
@@ -154,7 +155,7 @@ export const CoverDesigner = ({ title, genre, onCoverReady, coverUrl }: CoverDes
               variant="outline"
             >
               {generatingBack ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
-              {generatingBack ? "Generuję tył..." : "Generuj tył"}
+              {generatingBack ? t("cover.genBackLoading") : t("cover.genBack")}
             </Button>
           </div>
         </TabsContent>
@@ -164,9 +165,9 @@ export const CoverDesigner = ({ title, genre, onCoverReady, coverUrl }: CoverDes
             onClick={() => fileInputRef.current?.click()}
             className="border-2 border-dashed border-border hover:border-primary/50 rounded-xl p-6 text-center cursor-pointer transition-all hover:bg-secondary/30"
           >
-            <ImageIcon className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-            <p className="text-sm text-muted-foreground">Kliknij aby wybrać okładkę</p>
-            <p className="text-xs text-muted-foreground/60 mt-1">JPG, PNG, WEBP • max 10 MB</p>
+            <Upload className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+            <p className="text-sm text-muted-foreground">{t("cover.uploadClick")}</p>
+            <p className="text-xs text-muted-foreground/60 mt-1">{t("cover.uploadHint")}</p>
           </div>
           <input
             ref={fileInputRef}
@@ -181,7 +182,7 @@ export const CoverDesigner = ({ title, genre, onCoverReady, coverUrl }: CoverDes
       {/* CD Jewel Case Preview */}
       {(previewUrl || backCoverUrl) && (
         <div className="mt-4">
-          <Label className="text-sm text-muted-foreground mb-2 block">Podgląd CD Jewel Case</Label>
+          <Label className="text-sm text-muted-foreground mb-2 block">{t("cover.preview")}</Label>
           <CDJewelCase
             frontCover={previewUrl}
             backCover={backCoverUrl}

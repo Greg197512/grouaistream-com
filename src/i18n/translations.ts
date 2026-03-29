@@ -579,6 +579,52 @@ type TranslationKeys = {
   "upload.submitError": string;
   "upload.aiCoverLabel": string;
   "upload.aiCoverDesc": string;
+  "upload.loginRequired": string;
+  "upload.loginRequiredDesc": string;
+  "upload.artistLabel": string;
+  "upload.fromProfile": string;
+  "upload.promoTitle": string;
+  "upload.promoDesc": string;
+  "cover.title": string;
+  "cover.aiTab": string;
+  "cover.uploadTab": string;
+  "cover.promptLabel": string;
+  "cover.promptPlaceholder": string;
+  "cover.promptHint": string;
+  "cover.genFront": string;
+  "cover.genFrontLoading": string;
+  "cover.genBack": string;
+  "cover.genBackLoading": string;
+  "cover.uploadClick": string;
+  "cover.uploadHint": string;
+  "cover.preview": string;
+  "cover.clickToFlip": string;
+  "cover.backCover": string;
+  "cover.genBackSide": string;
+  "cover.selectImage": string;
+  "cover.maxSize": string;
+  "cover.uploaded": string;
+  "cover.generated": string;
+  "cover.backGenerated": string;
+  "cover.errorGen": string;
+  "cover.errorUpload": string;
+  "cover.enterPrompt": string;
+  "album.pageTitle": string;
+  "album.subtitle": string;
+  "album.albumTitle": string;
+  "album.albumPlaceholder": string;
+  "album.tracklist": string;
+  "album.tracks": string;
+  "album.selectTracks": string;
+  "album.searchTrack": string;
+  "album.noTracks": string;
+  "album.save": string;
+  "album.saving": string;
+  "album.saved": string;
+  "album.loginRequired": string;
+  "album.loginDesc": string;
+  "album.minTracks": string;
+  "album.enterTitle": string;
 
   // Auth page
   "auth.backHome": string;
@@ -1140,6 +1186,52 @@ const pl: TranslationKeys = {
   "upload.submitError": "Błąd podczas wysyłania",
   "upload.aiCoverLabel": "AI wygeneruje okładkę",
   "upload.aiCoverDesc": "AI automatycznie znajdzie lub wygeneruje profesjonalną okładkę dla Twojego utworu",
+  "upload.loginRequired": "Zaloguj się, aby wrzucić utwór",
+  "upload.loginRequiredDesc": "Tylko zarejestrowani użytkownicy mogą przesyłać muzykę.",
+  "upload.artistLabel": "Artysta",
+  "upload.fromProfile": "z profilu",
+  "upload.promoTitle": "🎉 Promocja do końca maja 2026!",
+  "upload.promoDesc": "Wszystkie funkcje uploadu dostępne za darmo — wrzucaj bez limitu!",
+  "cover.title": "Okładka albumu",
+  "cover.aiTab": "AI Generator",
+  "cover.uploadTab": "Własna grafika",
+  "cover.promptLabel": "Opisz jak ma wyglądać okładka (opcjonalnie)",
+  "cover.promptPlaceholder": "np. Ciemny las nocą z neonowymi światłami, klimat cyberpunk, deszcz...",
+  "cover.promptHint": "Zostaw puste — AI sam dobierze motyw na podstawie tytułu i gatunku",
+  "cover.genFront": "Generuj przód",
+  "cover.genFrontLoading": "Generuję przód...",
+  "cover.genBack": "Generuj tył",
+  "cover.genBackLoading": "Generuję tył...",
+  "cover.uploadClick": "Kliknij aby wybrać okładkę",
+  "cover.uploadHint": "JPG, PNG, WEBP • max 10 MB",
+  "cover.preview": "Podgląd CD Jewel Case",
+  "cover.clickToFlip": "Kliknij aby obrócić",
+  "cover.backCover": "Tylna okładka",
+  "cover.genBackSide": "Wygeneruj tylną stronę",
+  "cover.selectImage": "Wybierz plik graficzny (JPG, PNG, WEBP)",
+  "cover.maxSize": "Maksymalny rozmiar okładki: 10 MB",
+  "cover.uploaded": "Okładka wgrana!",
+  "cover.generated": "Okładka wygenerowana!",
+  "cover.backGenerated": "Tylna okładka wygenerowana!",
+  "cover.errorGen": "Błąd generowania okładki",
+  "cover.errorUpload": "Błąd uploadu okładki",
+  "cover.enterPrompt": "Wpisz opis okładki lub tytuł utworu",
+  "album.pageTitle": "Kreator Płyty CD",
+  "album.subtitle": "Stwórz własny album z okładką",
+  "album.albumTitle": "Tytuł albumu",
+  "album.albumPlaceholder": "np. Nocne Sesje Vol. 1",
+  "album.tracklist": "Tracklista",
+  "album.tracks": "utworów",
+  "album.selectTracks": "Wybierz utwory na płytę",
+  "album.searchTrack": "Szukaj utworu...",
+  "album.noTracks": "Brak utworów. Najpierw wrzuć muzykę!",
+  "album.save": "Zapisz album",
+  "album.saving": "Zapisuję album...",
+  "album.saved": "Album zapisany!",
+  "album.loginRequired": "Zaloguj się",
+  "album.loginDesc": "Kreator albumu wymaga konta.",
+  "album.minTracks": "Dodaj co najmniej 2 utwory do albumu",
+  "album.enterTitle": "Podaj tytuł albumu",
 
   "auth.backHome": "Powrót do strony głównej",
   "auth.welcomeBack": "Witaj ponownie",
@@ -1700,6 +1792,52 @@ const en: TranslationKeys = {
   "upload.submitError": "Error while submitting",
   "upload.aiCoverLabel": "AI will generate a cover",
   "upload.aiCoverDesc": "AI will automatically find or generate a professional cover for your track",
+  "upload.loginRequired": "Log in to upload a track",
+  "upload.loginRequiredDesc": "Only registered users can upload music.",
+  "upload.artistLabel": "Artist",
+  "upload.fromProfile": "from profile",
+  "upload.promoTitle": "🎉 Promo until end of May 2026!",
+  "upload.promoDesc": "All upload features free — upload without limits!",
+  "cover.title": "Album cover",
+  "cover.aiTab": "AI Generator",
+  "cover.uploadTab": "Custom image",
+  "cover.promptLabel": "Describe how the cover should look (optional)",
+  "cover.promptPlaceholder": "e.g. Dark forest at night with neon lights, cyberpunk vibe, rain...",
+  "cover.promptHint": "Leave empty — AI will match the theme based on title and genre",
+  "cover.genFront": "Generate front",
+  "cover.genFrontLoading": "Generating front...",
+  "cover.genBack": "Generate back",
+  "cover.genBackLoading": "Generating back...",
+  "cover.uploadClick": "Click to select a cover image",
+  "cover.uploadHint": "JPG, PNG, WEBP • max 10 MB",
+  "cover.preview": "CD Jewel Case Preview",
+  "cover.clickToFlip": "Click to flip",
+  "cover.backCover": "Back cover",
+  "cover.genBackSide": "Generate back side",
+  "cover.selectImage": "Select an image file (JPG, PNG, WEBP)",
+  "cover.maxSize": "Maximum cover size: 10 MB",
+  "cover.uploaded": "Cover uploaded!",
+  "cover.generated": "Cover generated!",
+  "cover.backGenerated": "Back cover generated!",
+  "cover.errorGen": "Cover generation error",
+  "cover.errorUpload": "Cover upload error",
+  "cover.enterPrompt": "Enter a cover description or song title",
+  "album.pageTitle": "CD Creator",
+  "album.subtitle": "Create your own album with cover art",
+  "album.albumTitle": "Album title",
+  "album.albumPlaceholder": "e.g. Night Sessions Vol. 1",
+  "album.tracklist": "Tracklist",
+  "album.tracks": "tracks",
+  "album.selectTracks": "Select tracks for the disc",
+  "album.searchTrack": "Search track...",
+  "album.noTracks": "No tracks yet. Upload music first!",
+  "album.save": "Save album",
+  "album.saving": "Saving album...",
+  "album.saved": "Album saved!",
+  "album.loginRequired": "Log in",
+  "album.loginDesc": "Album creator requires an account.",
+  "album.minTracks": "Add at least 2 tracks to the album",
+  "album.enterTitle": "Enter album title",
 
   "auth.backHome": "Back to home",
   "auth.welcomeBack": "Welcome back",
@@ -2260,6 +2398,52 @@ const nl: TranslationKeys = {
   "upload.submitError": "Fout bij het indienen",
   "upload.aiCoverLabel": "AI genereert een hoes",
   "upload.aiCoverDesc": "AI vindt of genereert automatisch een professionele hoes voor je nummer",
+  "upload.loginRequired": "Log in om een nummer te uploaden",
+  "upload.loginRequiredDesc": "Alleen geregistreerde gebruikers kunnen muziek uploaden.",
+  "upload.artistLabel": "Artiest",
+  "upload.fromProfile": "uit profiel",
+  "upload.promoTitle": "🎉 Promotie tot eind mei 2026!",
+  "upload.promoDesc": "Alle uploadfuncties gratis — upload zonder limiet!",
+  "cover.title": "Albumhoes",
+  "cover.aiTab": "AI Generator",
+  "cover.uploadTab": "Eigen afbeelding",
+  "cover.promptLabel": "Beschrijf hoe de hoes eruit moet zien (optioneel)",
+  "cover.promptPlaceholder": "bijv. Donker bos 's nachts met neonlichten, cyberpunk sfeer, regen...",
+  "cover.promptHint": "Laat leeg — AI kiest het thema op basis van titel en genre",
+  "cover.genFront": "Genereer voorkant",
+  "cover.genFrontLoading": "Voorkant genereren...",
+  "cover.genBack": "Genereer achterkant",
+  "cover.genBackLoading": "Achterkant genereren...",
+  "cover.uploadClick": "Klik om een hoesafbeelding te selecteren",
+  "cover.uploadHint": "JPG, PNG, WEBP • max 10 MB",
+  "cover.preview": "CD Jewel Case Preview",
+  "cover.clickToFlip": "Klik om te draaien",
+  "cover.backCover": "Achterkant",
+  "cover.genBackSide": "Genereer achterkant",
+  "cover.selectImage": "Selecteer een afbeelding (JPG, PNG, WEBP)",
+  "cover.maxSize": "Maximale hoesgrootte: 10 MB",
+  "cover.uploaded": "Hoes geüpload!",
+  "cover.generated": "Hoes gegenereerd!",
+  "cover.backGenerated": "Achterkant gegenereerd!",
+  "cover.errorGen": "Fout bij genereren hoes",
+  "cover.errorUpload": "Fout bij uploaden hoes",
+  "cover.enterPrompt": "Voer een hoesbeschrijving of songtitel in",
+  "album.pageTitle": "CD Creator",
+  "album.subtitle": "Maak je eigen album met hoes",
+  "album.albumTitle": "Albumtitel",
+  "album.albumPlaceholder": "bijv. Nachtsessies Vol. 1",
+  "album.tracklist": "Tracklist",
+  "album.tracks": "nummers",
+  "album.selectTracks": "Selecteer nummers voor de schijf",
+  "album.searchTrack": "Zoek nummer...",
+  "album.noTracks": "Nog geen nummers. Upload eerst muziek!",
+  "album.save": "Album opslaan",
+  "album.saving": "Album opslaan...",
+  "album.saved": "Album opgeslagen!",
+  "album.loginRequired": "Inloggen",
+  "album.loginDesc": "Albumcreator vereist een account.",
+  "album.minTracks": "Voeg minimaal 2 nummers toe aan het album",
+  "album.enterTitle": "Voer albumtitel in",
 
   "auth.backHome": "Terug naar home",
   "auth.welcomeBack": "Welkom terug",
@@ -2820,6 +3004,52 @@ const ua: TranslationKeys = {
   "upload.submitError": "Помилка при надсиланні",
   "upload.aiCoverLabel": "AI згенерує обкладинку",
   "upload.aiCoverDesc": "AI автоматично знайде або згенерує професійну обкладинку для вашого треку",
+  "upload.loginRequired": "Увійдіть, щоб завантажити трек",
+  "upload.loginRequiredDesc": "Лише зареєстровані користувачі можуть завантажувати музику.",
+  "upload.artistLabel": "Виконавець",
+  "upload.fromProfile": "з профілю",
+  "upload.promoTitle": "🎉 Акція до кінця травня 2026!",
+  "upload.promoDesc": "Усі функції завантаження безкоштовні — завантажуйте без обмежень!",
+  "cover.title": "Обкладинка альбому",
+  "cover.aiTab": "AI Генератор",
+  "cover.uploadTab": "Власне зображення",
+  "cover.promptLabel": "Опишіть як має виглядати обкладинка (необов'язково)",
+  "cover.promptPlaceholder": "напр. Темний ліс вночі з неоновими вогнями, кіберпанк, дощ...",
+  "cover.promptHint": "Залиште порожнім — AI підбере тему на основі назви та жанру",
+  "cover.genFront": "Згенерувати перед",
+  "cover.genFrontLoading": "Генерую перед...",
+  "cover.genBack": "Згенерувати зад",
+  "cover.genBackLoading": "Генерую зад...",
+  "cover.uploadClick": "Натисніть щоб вибрати обкладинку",
+  "cover.uploadHint": "JPG, PNG, WEBP • макс 10 МБ",
+  "cover.preview": "Попередній перегляд CD Jewel Case",
+  "cover.clickToFlip": "Натисніть щоб перевернути",
+  "cover.backCover": "Задня обкладинка",
+  "cover.genBackSide": "Згенерувати задню сторону",
+  "cover.selectImage": "Виберіть зображення (JPG, PNG, WEBP)",
+  "cover.maxSize": "Максимальний розмір обкладинки: 10 МБ",
+  "cover.uploaded": "Обкладинку завантажено!",
+  "cover.generated": "Обкладинку згенеровано!",
+  "cover.backGenerated": "Задню обкладинку згенеровано!",
+  "cover.errorGen": "Помилка генерації обкладинки",
+  "cover.errorUpload": "Помилка завантаження обкладинки",
+  "cover.enterPrompt": "Введіть опис обкладинки або назву треку",
+  "album.pageTitle": "Конструктор CD",
+  "album.subtitle": "Створіть власний альбом з обкладинкою",
+  "album.albumTitle": "Назва альбому",
+  "album.albumPlaceholder": "напр. Нічні Сесії Том 1",
+  "album.tracklist": "Треклист",
+  "album.tracks": "треків",
+  "album.selectTracks": "Оберіть треки для диска",
+  "album.searchTrack": "Шукати трек...",
+  "album.noTracks": "Немає треків. Спочатку завантажте музику!",
+  "album.save": "Зберегти альбом",
+  "album.saving": "Зберігаю альбом...",
+  "album.saved": "Альбом збережено!",
+  "album.loginRequired": "Увійти",
+  "album.loginDesc": "Конструктор альбому потребує акаунту.",
+  "album.minTracks": "Додайте щонайменше 2 треки до альбому",
+  "album.enterTitle": "Введіть назву альбому",
 
   "auth.backHome": "Повернутися на головну",
   "auth.welcomeBack": "З поверненням",
