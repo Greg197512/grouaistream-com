@@ -92,7 +92,7 @@ const Upload = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title || !genre || !email || !agreed) {
+    if (!title || !genre || !agreed) {
       toast.error(t("upload.fillRequired"));
       return;
     }
