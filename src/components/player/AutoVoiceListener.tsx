@@ -163,8 +163,10 @@ const getWeatherSummary = async (command: string) => {
 
 export const AutoVoiceListener = () => {
   const { user } = useAuth();
-  const aiContext = useAI();
-  const { processVoiceCommand, isAIEnabled, isProcessing } = aiContext;
+  const aiContext = useContext(AIContextRaw);
+  const processVoiceCommand = aiContext?.processVoiceCommand;
+  const isAIEnabled = aiContext?.isAIEnabled ?? false;
+  const isProcessing = aiContext?.isProcessing ?? false;
   const { playPlaylist, nextTrack, prevTrack, setVolume, pausePlayback, resumePlayback, restartCurrentTrack } = usePlayer();
   const navigate = useNavigate();
   const { assistantName, needsNaming, saveAssistantName } = useAssistantConfig();
