@@ -1,0 +1,2 @@
+UPDATE tracks SET cover_url = 'https://bvstvawnigyczvofzhps.supabase.co/storage/v1/object/public/music/covers/ai-suno-fluo-1774821562515.png' WHERE id = 'a3c527f8-f072-42a7-bd50-715586356705';
+UPDATE tracks SET cover_url = 'https://bvstvawnigyczvofzhps.supabase.co/storage/v1/object/public/music/covers/ai-suno-euphoria-drop-1774821560677.png' WHERE id = '2e184280-d1d8-4d12-8901-958b88c61f95';
