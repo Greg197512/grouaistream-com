@@ -1218,8 +1218,8 @@ export const AutoVoiceListener = () => {
 
   const playSuggestion = async (track: any) => {
     playPlaylist([{ id: track.id, title: track.title, artist: track.artist, album: null, audio_url: null, cover_url: null, genre: track.genre, mood: track.mood, duration: 180 }], 0);
-    speak(`Odtwarzam ${track.title}`);
     setShowSuggestions(false);
+    await safeSpeakAndResume(`Odtwarzam ${track.title}`);
   };
 
   if (!user) return null;
