@@ -91,6 +91,7 @@ const App = () => (
                   <Route path="/upload" element={<Upload />} />
                   <Route path="/my-tracks" element={<MyTracks />} />
                   <Route path="/unsubscribe" element={<Unsubscribe />} />
+                  <Route path="/album-creator" element={<AlbumCreator />} />
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>
