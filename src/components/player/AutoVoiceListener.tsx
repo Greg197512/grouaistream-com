@@ -180,6 +180,7 @@ export const AutoVoiceListener = () => {
 
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const restartTimeoutRef = useRef<number | null>(null);
+  const lastProcessedRef = useRef<{ text: string; time: number }>({ text: "", time: 0 });
   const silenceTimerRef = useRef<number | null>(null);
   const startListeningRef = useRef<(() => void) | null>(null);
   const autoListenRef = useRef(false);
