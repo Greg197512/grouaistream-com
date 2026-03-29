@@ -1274,11 +1274,11 @@ export const AutoVoiceListener = () => {
               </motion.button>
             ))}
             <motion.button
-              onClick={() => {
+              onClick={async () => {
                 const tracks = aiSuggestions.map((s: any) => ({ id: s.id, title: s.title, artist: s.artist, album: null, audio_url: null, cover_url: null, genre: s.genre, mood: s.mood, duration: 180 }));
                 playPlaylist(tracks, 0);
-                speak("Odtwarzam wszystkie propozycje!");
                 setShowSuggestions(false);
+                await safeSpeakAndResume("Odtwarzam wszystkie propozycje!");
               }}
               className="w-full py-1.5 rounded-xl text-[10px] font-semibold text-primary-foreground"
               style={{
