@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { extractYouTubeId } from "@/components/player/YouTubePlayer";
 import { useSkipAdaptation } from "@/hooks/useSkipAdaptation";
+import { isLikelyAudioUrl, isNativeVideoUrl } from "@/lib/mediaPlayback";
 
 export interface Track {
   id: string;
@@ -216,14 +217,6 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   const isBlockedStreamUrl = (value: string) =>
     value.includes("open.spotify.com") || value.startsWith("spotify:");
 
-  const isNativeVideoUrl = (url?: string | null): boolean => {
-    if (!url) return false;
-    // Match common video extensions anywhere in URL (before query params)
-    const videoExtPattern = /\.(mp4|webm|mov|avi|mkv|ogv|3gp|3gpp|m4v|flv|wmv|mpg|mpeg|ts|mts|m2ts|vob|divx|f4v|asf|rm|rmvb)(\?.*)?$/i;
-    const videoExtAnywhere = /\.(mp4|webm|mov|avi|mkv|ogv|3gp|3gpp|m4v|flv|wmv|mpg|mpeg|ts|mts|m2ts|vob|divx|f4v|asf|rm|rmvb)(\?|$|#)/i;
-    return videoExtPattern.test(url) || videoExtAnywhere.test(url);
-  };
-
   const getPlayableYouTubeId = (track: Track): string | null =>
     track.video_url ? extractYouTubeId(track.video_url) : null;
 
@@ -233,7 +226,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
       // If it has a video extension OR is not a YouTube link, treat as native video
       if (isNativeVideoUrl(track.video_url)) return track.video_url;
       // If video_url is set but no YouTube ID and no known audio extension, assume it's a video
-      if (!/\.(mp3|wav|ogg|flac|m4a|aac|wma|opus|webm)(\?|$|#)/i.test(track.video_url)) {
+        if (!isLikelyAudioUrl(track.video_url)) {
         return track.video_url;
       }
     }
@@ -462,6 +455,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     if (isVideoMode) {
       setProgress(0);
       setCurrentTime(0);
+      window.dispatchEvent(new CustomEvent('native-video-seek', { detail: { time: 0 } }));
       setIsPlaying(true);
       return;
     }
@@ -529,6 +523,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
       if (isVideoMode) {
         setProgress(0);
         setCurrentTime(0);
+        window.dispatchEvent(new CustomEvent('native-video-seek', { detail: { time: 0 } }));
       } else if (audioRef.current) {
         audioRef.current.currentTime = 0;
       }

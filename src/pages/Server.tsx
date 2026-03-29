@@ -16,23 +16,15 @@ import { usePlayer, Track } from "@/contexts/PlayerContext";
 import { useUnlock } from "@/contexts/UnlockContext";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-
-const ALLOWED_AUDIO = [
-  "audio/mpeg", "audio/wav", "audio/mp3", "audio/x-wav", "audio/mp4", "audio/x-m4a",
-  "audio/ogg", "audio/flac", "audio/aac", "audio/opus", "audio/webm", "audio/x-flac",
-  "audio/x-aac", "audio/vnd.wave", "audio/wave", "audio/x-ms-wma",
-];
-const ALLOWED_VIDEO = [
-  "video/mp4", "video/webm", "video/ogg", "video/quicktime", "video/x-matroska",
-  "video/x-msvideo", "video/avi", "video/3gpp", "video/3gpp2",
-];
-const ALLOWED_IMAGE = ["image/jpeg", "image/png", "image/webp", "image/gif"];
-const ALLOWED_EXTENSIONS = [
-  ".mp3", ".wav", ".m4a", ".ogg", ".flac", ".aac", ".opus", ".wma", ".weba",
-  ".mp4", ".webm", ".mkv", ".avi", ".mov", ".3gp", ".ogv",
-];
-const ALL_ALLOWED = [...ALLOWED_AUDIO, ...ALLOWED_VIDEO];
-const MAX_SIZE = 500 * 1024 * 1024;
+import {
+  ALLOWED_IMAGE_TYPES,
+  getFileExtension,
+  getMediaContentType,
+  isAllowedMediaFile,
+  isVideoLikeFile,
+  MAX_UPLOAD_SIZE_BYTES,
+  MEDIA_FILE_ACCEPT,
+} from "@/lib/mediaFormats";
 
 interface QueuedFile {
   id: string;
@@ -122,9 +114,8 @@ const Server = () => {
   });
 
   const validateFile = (f: File): string | null => {
-    const ext = "." + f.name.split(".").pop()?.toLowerCase();
-    if (!ALL_ALLOWED.includes(f.type) && !ALLOWED_EXTENSIONS.includes(ext)) return "Nieobsługiwany format pliku";
-    if (f.size > MAX_SIZE) return "Max: 500MB";
+    if (!isAllowedMediaFile(f, MAX_UPLOAD_SIZE_BYTES)) return "Nieobsługiwany format pliku";
+    if (f.size > MAX_UPLOAD_SIZE_BYTES) return "Max: 500MB";
     return null;
   };
 
@@ -177,8 +168,7 @@ const Server = () => {
                 if (entry.isFile) {
                   await new Promise<void>((res) => {
                     entry.file((file: File) => {
-                      const ext = "." + file.name.split(".").pop()?.toLowerCase();
-                      if (ALL_ALLOWED.includes(file.type) || ALLOWED_EXTENSIONS.includes(ext)) {
+                      if (isAllowedMediaFile(file, MAX_UPLOAD_SIZE_BYTES)) {
                         files.push(file);
                         paths.push(`${path}/${file.name}`);
                       }
@@ -198,8 +188,7 @@ const Server = () => {
           if (entry.isDirectory) return readDirectory(entry, entry.name);
           return new Promise<void>((res) => {
             entry.file((file: File) => {
-              const ext = "." + file.name.split(".").pop()?.toLowerCase();
-              if (ALL_ALLOWED.includes(file.type) || ALLOWED_EXTENSIONS.includes(ext)) {
+              if (isAllowedMediaFile(file, MAX_UPLOAD_SIZE_BYTES)) {
                 files.push(file);
                 paths.push(file.name);
               }
@@ -236,15 +225,15 @@ const Server = () => {
     for (const item of pending) {
       updateQueueItem(item.id, { status: "uploading", progress: 10 });
       try {
-        const isVideo = ALLOWED_VIDEO.includes(item.file.type);
-        const ext = item.file.name.split('.').pop();
+        const isVideo = isVideoLikeFile(item.file);
+        const ext = getFileExtension(item.file.name).replace('.', '');
         const safeName = item.title.replace(/[^a-zA-Z0-9\-_]/g, '_').substring(0, 80);
         const filePath = `shared/${Date.now()}-${safeName}.${ext}`;
 
         updateQueueItem(item.id, { progress: 30 });
         const { error: uploadError } = await supabase.storage
           .from("music")
-          .upload(filePath, item.file, { contentType: item.file.type });
+          .upload(filePath, item.file, { contentType: getMediaContentType(item.file) });
         if (uploadError) throw uploadError;
 
         updateQueueItem(item.id, { progress: 60 });
@@ -664,7 +653,7 @@ const Server = () => {
                                 className="hidden"
                                 onChange={(e) => {
                                   const f = e.target.files?.[0];
-                                  if (f && ALLOWED_IMAGE.includes(f.type)) {
+                                  if (f && ALLOWED_IMAGE_TYPES.includes(f.type)) {
                                     const preview = URL.createObjectURL(f);
                                     updateQueueItem(item.id, { coverFile: f, coverPreview: preview } as any);
                                   }
@@ -683,7 +672,7 @@ const Server = () => {
                           )}
                         </div>
 
-                        {ALLOWED_VIDEO.includes(item.file.type)
+                        {isVideoLikeFile(item.file)
                           ? <FileVideo className="h-4 w-4 text-accent flex-shrink-0" />
                           : <FileAudio className="h-4 w-4 text-primary flex-shrink-0" />
                         }
