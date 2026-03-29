@@ -3051,6 +3051,7 @@ const ua: TranslationKeys = {
   "album.minTracks": "Додайте щонайменше 2 треки до альбому",
   "album.enterTitle": "Введіть назву альбому",
 
+  "auth.backHome": "Повернутися на головну",
   "auth.welcomeBack": "З поверненням",
   "auth.createAccount": "Створіть акаунт",
   "auth.nickLabel": "Нікнейм *",
