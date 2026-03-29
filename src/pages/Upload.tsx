@@ -312,8 +312,8 @@ const Upload = () => {
           <div className="mb-6 p-4 rounded-xl bg-primary/10 border border-primary/20 flex items-center gap-3">
             <Gift className="h-6 w-6 text-primary shrink-0" />
             <div>
-              <p className="text-sm font-semibold text-primary">🎉 Promocja do końca maja 2026!</p>
-              <p className="text-xs text-muted-foreground">Wszystkie funkcje uploadu dostępne za darmo — wrzucaj bez limitu!</p>
+              <p className="text-sm font-semibold text-primary">{t("upload.promoTitle")}</p>
+              <p className="text-xs text-muted-foreground">{t("upload.promoDesc")}</p>
             </div>
           </div>
 
