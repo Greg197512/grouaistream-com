@@ -8,7 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { motion } from "framer-motion";
-import { Upload as UploadIcon, Music, CheckCircle, Loader2, ShieldCheck, XCircle, AlertTriangle, FileAudio, ImageIcon } from "lucide-react";
+import { Upload as UploadIcon, Music, CheckCircle, Loader2, ShieldCheck, XCircle, AlertTriangle, FileAudio, ImageIcon, LogIn, Gift } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -46,12 +47,12 @@ function getAudioDuration(file: File): Promise<number> {
 const Upload = () => {
   const { t } = useLanguage();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [sunoLink, setSunoLink] = useState("");
   const [title, setTitle] = useState("");
   const [genre, setGenre] = useState("");
   const [description, setDescription] = useState("");
-  const [email, setEmail] = useState("");
   const [agreed, setAgreed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [moderationResult, setModerationResult] = useState<any>(null);
@@ -59,6 +60,8 @@ const Upload = () => {
   const [audioDuration, setAudioDuration] = useState<number | null>(null);
   const [durationError, setDurationError] = useState(false);
   const [aiCover, setAiCover] = useState(true);
+
+  const displayName = user?.user_metadata?.display_name || user?.email?.split("@")[0] || "Artist";
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -89,7 +92,7 @@ const Upload = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title || !genre || !email || !agreed) {
+    if (!title || !genre || !agreed) {
       toast.error(t("upload.fillRequired"));
       return;
     }
@@ -139,7 +142,7 @@ const Upload = () => {
       const finalAudioUrl = audioUrl || sunoLink || null;
       const { data: insertedTrack, error: trackInsertErr } = await supabase.from("tracks").insert({
         title,
-        artist: email.split("@")[0],
+        artist: displayName,
         genre,
         duration: Math.round(audioDuration || 180),
         audio_url: finalAudioUrl,
@@ -172,7 +175,7 @@ const Upload = () => {
     setTitle("");
     setGenre("");
     setDescription("");
-    setEmail("");
+    // email field removed
     setAgreed(false);
     setModerationResult(null);
     setAudioFile(null);
@@ -180,6 +183,25 @@ const Upload = () => {
     setDurationError(false);
     setAiCover(true);
   };
+
+  // Require login
+  if (!user) {
+    return (
+      <MainLayout>
+        <div className="max-w-md mx-auto px-6 py-20 text-center">
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+            <LogIn className="h-16 w-16 text-primary mx-auto mb-6" />
+            <h1 className="text-2xl font-bold mb-3">{t("upload.loginRequired") || "Zaloguj się, aby wrzucić utwór"}</h1>
+            <p className="text-muted-foreground mb-6">{t("upload.loginRequiredDesc") || "Tylko zarejestrowani użytkownicy mogą przesyłać muzykę."}</p>
+            <Button onClick={() => navigate("/auth")} className="gap-2">
+              <LogIn className="h-4 w-4" />
+              {t("auth.signIn") || "Zaloguj się"}
+            </Button>
+          </motion.div>
+        </div>
+      </MainLayout>
+    );
+  }
 
   if (moderationResult) {
     const isApproved = moderationResult.status === "approved";
@@ -284,6 +306,15 @@ const Upload = () => {
     <MainLayout>
       <div className="max-w-2xl mx-auto px-6 py-12">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+          {/* Promo banner */}
+          <div className="mb-6 p-4 rounded-xl bg-primary/10 border border-primary/20 flex items-center gap-3">
+            <Gift className="h-6 w-6 text-primary shrink-0" />
+            <div>
+              <p className="text-sm font-semibold text-primary">🎉 Promocja do końca maja 2026!</p>
+              <p className="text-xs text-muted-foreground">Wszystkie funkcje uploadu dostępne za darmo — wrzucaj bez limitu!</p>
+            </div>
+          </div>
+
           <div className="flex items-center gap-3 mb-2">
             <div className="h-12 w-12 rounded-xl bg-green-500/20 border border-green-500/30 flex items-center justify-center">
               <UploadIcon className="h-6 w-6 text-green-400" />
@@ -423,16 +454,13 @@ const Upload = () => {
               />
             </div>
 
+            {/* Artist info (read-only from profile) */}
             <div className="space-y-2">
-              <Label htmlFor="email">{t("upload.emailLabel")}</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder={t("upload.emailPlaceholder")}
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="bg-card/60 border-muted"
-              />
+              <Label>{t("upload.artistLabel") || "Artysta"}</Label>
+              <div className="flex items-center gap-2 px-3 py-2 bg-card/60 border border-muted rounded-md text-sm">
+                <span className="font-medium">{displayName}</span>
+                <span className="text-muted-foreground text-xs">({t("upload.fromProfile") || "z profilu"})</span>
+              </div>
             </div>
 
             {/* AI Cover option */}
