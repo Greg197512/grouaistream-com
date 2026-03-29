@@ -68,8 +68,8 @@ async function generateAICover(title: string, artist: string, genre: string | nu
     return null;
   }
 
-  const genreStyle = genre ? ` in ${genre} music style` : "";
-  const prompt = `Create a stunning, professional album cover art${genreStyle}. The artwork should be for a song called "${title}" by "${artist}". Make it cinematic, high-contrast, with rich colors and artistic composition. Modern music industry quality. No text or letters on the image. Abstract or semi-abstract artistic interpretation of the music mood. On a clean background.`;
+  const genreStyle = genre ? ` The music style is ${genre}.` : "";
+  const prompt = `Create a breathtaking, photographic-quality album cover art for a song called "${title}" by "${artist}".${genreStyle} The image must look like a professional photograph or cinematic movie still — NOT cartoon, NOT illustration, NOT abstract art. Think: Hasselblad camera quality, dramatic natural or studio lighting, rich vivid colors, shallow depth of field with beautiful bokeh. The scene should emotionally represent the mood and theme of the song title. Ultra-realistic, high-resolution, award-winning photography style. No text, no letters, no words, no logos on the image. On a clean background.`;
 
   try {
     console.log(`Generating AI cover for "${title}" by ${artist}...`);
