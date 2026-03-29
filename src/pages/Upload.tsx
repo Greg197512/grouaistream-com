@@ -47,12 +47,12 @@ function getAudioDuration(file: File): Promise<number> {
 const Upload = () => {
   const { t } = useLanguage();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [sunoLink, setSunoLink] = useState("");
   const [title, setTitle] = useState("");
   const [genre, setGenre] = useState("");
   const [description, setDescription] = useState("");
-  const [email, setEmail] = useState("");
   const [agreed, setAgreed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [moderationResult, setModerationResult] = useState<any>(null);
@@ -60,6 +60,8 @@ const Upload = () => {
   const [audioDuration, setAudioDuration] = useState<number | null>(null);
   const [durationError, setDurationError] = useState(false);
   const [aiCover, setAiCover] = useState(true);
+
+  const displayName = user?.user_metadata?.display_name || user?.email?.split("@")[0] || "Artist";
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
