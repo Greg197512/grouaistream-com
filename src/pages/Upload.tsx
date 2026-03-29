@@ -147,13 +147,14 @@ const Upload = () => {
         genre,
         duration: Math.round(audioDuration || 180),
         audio_url: finalAudioUrl,
+        cover_url: coverUrl || null,
         user_id: user?.id || null,
       }).select("id").single();
 
       if (trackInsertErr) throw trackInsertErr;
 
-      // If AI cover is enabled, trigger cover search
-      if (aiCover && insertedTrack?.id) {
+      // If no custom cover, trigger AI cover search
+      if (!coverUrl && insertedTrack?.id) {
         supabase.functions.invoke("ai-cover", {
           body: { trackId: insertedTrack.id },
         }).catch(() => {/* silent */});
