@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, Maximize2, Minimize2, Volume2, VolumeX } from "lucide-react";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { extractYouTubeId } from "./YouTubePlayer";
+import { isLikelyAudioUrl, isNativeVideoUrl } from "@/lib/mediaPlayback";
 
 interface VideoPlayerProps {
   isVisible: boolean;
@@ -12,18 +13,23 @@ interface VideoPlayerProps {
 export const VideoPlayer = ({ isVisible, onClose }: VideoPlayerProps) => {
   const { currentTrack, isPlaying, volume, isMuted, toggleMute, isVideoMode, onYouTubeTimeUpdate, onYouTubeEnded } = usePlayer();
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isBuffering, setIsBuffering] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const lastSrcRef = useRef<string | null>(null);
+  const lastProgressSyncRef = useRef(0);
   
   const videoId = currentTrack?.video_url ? extractYouTubeId(currentTrack.video_url) : null;
   
   // Determine native video URL
   const nativeVideoUrl = (() => {
     if (!isVideoMode || videoId) return null;
-    const url = currentTrack?.video_url;
-    if (!url) return null;
-    if (extractYouTubeId(url)) return null;
-    return url;
+    const candidates = [currentTrack?.video_url, currentTrack?.audio_url];
+    for (const url of candidates) {
+      if (!url || extractYouTubeId(url)) continue;
+      if (isNativeVideoUrl(url)) return url;
+      if (url === currentTrack?.video_url && !isLikelyAudioUrl(url)) return url;
+    }
+    return null;
   })();
 
   // Load source only when URL actually changes
@@ -34,12 +40,11 @@ export const VideoPlayer = ({ isVisible, onClose }: VideoPlayerProps) => {
     if (lastSrcRef.current === nativeVideoUrl) return;
     lastSrcRef.current = nativeVideoUrl;
     
-    // Reset and load new source
+    setIsBuffering(true);
     video.pause();
     video.removeAttribute('src');
     video.load();
-    
-    // Use source element approach for better codec negotiation
+
     video.src = nativeVideoUrl;
     video.load();
     
@@ -84,25 +89,32 @@ export const VideoPlayer = ({ isVisible, onClose }: VideoPlayerProps) => {
   }, [nativeVideoUrl]);
 
   // Handle canplay to auto-start
+  const syncProgress = useCallback((force = false) => {
+    if (!videoRef.current) return;
+    const now = performance.now();
+    if (!force && now - lastProgressSyncRef.current < 250) return;
+    lastProgressSyncRef.current = now;
+    onYouTubeTimeUpdate(videoRef.current.currentTime, videoRef.current.duration || 0);
+  }, [onYouTubeTimeUpdate]);
+
   const handleCanPlay = useCallback(() => {
+    setIsBuffering(false);
     if (videoRef.current && isPlaying && videoRef.current.paused) {
       videoRef.current.play().catch(() => {});
     }
   }, [isPlaying]);
 
   const handleTimeUpdate = useCallback(() => {
-    if (videoRef.current) {
-      onYouTubeTimeUpdate(videoRef.current.currentTime, videoRef.current.duration || 0);
-    }
-  }, [onYouTubeTimeUpdate]);
+    syncProgress();
+  }, [syncProgress]);
 
   const handleLoadedMetadata = useCallback(() => {
     if (videoRef.current) {
-      onYouTubeTimeUpdate(0, videoRef.current.duration || 0);
+      syncProgress(true);
       // Sync volume on load
       videoRef.current.volume = isMuted ? 0 : volume / 100;
     }
-  }, [onYouTubeTimeUpdate, isMuted, volume]);
+  }, [syncProgress, isMuted, volume]);
 
   const handleEnded = useCallback(() => {
     onYouTubeEnded();
@@ -150,12 +162,26 @@ export const VideoPlayer = ({ isVisible, onClose }: VideoPlayerProps) => {
               disablePictureInPicture
               onContextMenu={e => e.preventDefault()}
               onCanPlay={handleCanPlay}
+              onPlaying={() => setIsBuffering(false)}
+              onWaiting={() => setIsBuffering(true)}
+              onStalled={() => setIsBuffering(true)}
+              onSeeking={() => setIsBuffering(true)}
+              onSeeked={() => {
+                setIsBuffering(false);
+                syncProgress(true);
+              }}
               onTimeUpdate={handleTimeUpdate}
               onEnded={handleEnded}
               onLoadedMetadata={handleLoadedMetadata}
-            >
-              <source src={`${nativeVideoUrl}#t=0.1`} type="video/mp4" />
-            </video>
+            />
+          )}
+
+          {nativeVideoUrl && isBuffering && (
+            <div className="absolute inset-0 flex items-center justify-center bg-background/30 backdrop-blur-[2px] pointer-events-none">
+              <div className="rounded-full border border-border bg-card/80 px-3 py-1 text-xs text-foreground shadow-lg">
+                Buforowanie wideo...
+              </div>
+            </div>
           )}
 
           {/* Controls overlay */}
