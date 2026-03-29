@@ -604,10 +604,7 @@ const Server = () => {
                           multiple
                           onChange={(e) => {
                             if (e.target.files) {
-                              const files = Array.from(e.target.files).filter(f => {
-                                const ext = "." + f.name.split(".").pop()?.toLowerCase();
-                                return ALL_ALLOWED.includes(f.type) || ALLOWED_EXTENSIONS.includes(ext);
-                              });
+                              const files = Array.from(e.target.files).filter(f => isAllowedMediaFile(f, MAX_UPLOAD_SIZE_BYTES));
                               const paths = files.map(f => (f as any).webkitRelativePath || f.name);
                               addFilesToQueue(files as any, paths);
                             }
@@ -687,7 +684,7 @@ const Server = () => {
                           </div>
                           {item.status === "uploading" && <Progress value={item.progress} className="h-1 mt-1" />}
                         </div>
-                        {item.status === "done" && <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />}
+                        {item.status === "done" && <CheckCircle className="h-4 w-4 text-primary flex-shrink-0" />}
                         {item.status === "error" && (
                           <span className="text-[10px] text-destructive flex-shrink-0">{item.error}</span>
                         )}
@@ -767,7 +764,7 @@ const Server = () => {
         <div className="flex gap-4 mb-6 text-sm text-muted-foreground flex-wrap">
           <span className="flex items-center gap-1"><Music className="h-4 w-4" /> {filtered.length} plików</span>
           {uncategorizedCount > 0 && (
-            <span className="flex items-center gap-1 text-amber-400">
+            <span className="flex items-center gap-1 text-muted-foreground">
               <AlertCircle className="h-4 w-4" /> {uncategorizedCount} bez kategorii
             </span>
           )}
