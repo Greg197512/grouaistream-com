@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Music, Loader2, X, Play, Download, Wand2, Guitar } from "lucide-react";
+import { Sparkles, Music, Loader2, X, Play, Download, Wand2, Guitar, ImagePlus, Upload, Palette } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,6 +33,8 @@ const STYLE_PRESETS = [
   "Ambient", "Trap", "House", "Disco",
 ];
 
+type CoverMode = "auto" | "custom" | "upload";
+
 export const SunoGenerateModal = ({ isOpen, onClose }: SunoGenerateModalProps) => {
   const { playTrack } = usePlayer();
   const [prompt, setPrompt] = useState("");
@@ -46,12 +48,88 @@ export const SunoGenerateModal = ({ isOpen, onClose }: SunoGenerateModalProps) =
   const [statusMsg, setStatusMsg] = useState("");
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Cover art state
+  const [coverMode, setCoverMode] = useState<CoverMode>("auto");
+  const [coverDescription, setCoverDescription] = useState("");
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  const coverInputRef = useRef<HTMLInputElement>(null);
+
   // Cleanup polling on unmount
   useEffect(() => {
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
     };
   }, []);
+
+  // Handle cover file selection
+  const handleCoverFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (!file.type.startsWith("image/")) {
+        toast.error("Wybierz plik graficzny (JPG, PNG, WEBP)");
+        return;
+      }
+      setCoverFile(file);
+      setCoverPreview(URL.createObjectURL(file));
+    }
+  };
+
+  const removeCoverFile = () => {
+    if (coverPreview?.startsWith("blob:")) URL.revokeObjectURL(coverPreview);
+    setCoverFile(null);
+    setCoverPreview(null);
+  };
+
+  // Upload custom cover to storage
+  const uploadCoverToStorage = async (file: File): Promise<string | null> => {
+    try {
+      const ext = file.name.split(".").pop() || "jpg";
+      const safeName = `covers/suno-custom-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const { error } = await supabase.storage.from("music").upload(safeName, file, {
+        contentType: file.type,
+        upsert: true,
+      });
+      if (error) throw error;
+      const { data } = supabase.storage.from("music").getPublicUrl(safeName);
+      return data.publicUrl;
+    } catch (err) {
+      console.error("Cover upload error:", err);
+      return null;
+    }
+  };
+
+  // Generate AI cover based on text description
+  const generateAICover = async (songTitle: string, songStyle: string): Promise<string | null> => {
+    try {
+      toast.loading("🎨 Generuję okładkę AI...", { id: "ai-cover" });
+      
+      const descriptionPart = coverMode === "custom" && coverDescription.trim()
+        ? coverDescription.trim()
+        : `profesjonalna, kinowa okładka albumu muzycznego dla utworu "${songTitle}" w stylu ${songStyle || "muzycznym"}`;
+
+      const { data, error } = await supabase.functions.invoke("ai-cover-generate", {
+        body: {
+          title: songTitle,
+          style: songStyle,
+          description: descriptionPart,
+          mode: coverMode,
+        }
+      });
+
+      if (error) throw error;
+      if (data?.cover_url) {
+        toast.success("🎨 Okładka wygenerowana!", { id: "ai-cover" });
+        return data.cover_url;
+      }
+      toast.dismiss("ai-cover");
+      return null;
+    } catch (err) {
+      console.error("AI cover gen error:", err);
+      toast.error("Błąd generowania okładki", { id: "ai-cover" });
+      return null;
+    }
+  };
 
   const generate = async () => {
     if (!prompt.trim() && !customMode) {
@@ -185,13 +263,25 @@ export const SunoGenerateModal = ({ isOpen, onClose }: SunoGenerateModalProps) =
     if (!url) return;
 
     try {
+      let finalCoverUrl = song.imageUrl || null;
+
+      // Determine cover based on mode
+      if (coverMode === "upload" && coverFile) {
+        const uploaded = await uploadCoverToStorage(coverFile);
+        if (uploaded) finalCoverUrl = uploaded;
+      } else if (coverMode === "custom" || coverMode === "auto") {
+        // Generate AI cover
+        const aiCover = await generateAICover(song.title, song.style || style || "");
+        if (aiCover) finalCoverUrl = aiCover;
+      }
+
       const { error } = await supabase.from("tracks").insert({
         title: song.title,
         artist: "Suno AI",
         album: "AI Generated",
         duration: song.duration || 180,
         audio_url: url,
-        cover_url: song.imageUrl || null,
+        cover_url: finalCoverUrl,
         genre: song.style || "AI",
         mood: "generated",
       });
@@ -285,6 +375,96 @@ export const SunoGenerateModal = ({ isOpen, onClose }: SunoGenerateModalProps) =
               <Label className="text-sm">Tylko instrumentalny (bez wokalu)</Label>
             </div>
             <Switch checked={instrumental} onCheckedChange={setInstrumental} />
+          </div>
+
+          {/* Cover Art Section */}
+          <div className="p-3 rounded-lg bg-secondary/30 border border-border space-y-3">
+            <div className="flex items-center gap-2">
+              <ImagePlus className="h-4 w-4 text-primary" />
+              <Label className="text-sm font-medium">Okładka utworu</Label>
+            </div>
+
+            {/* Cover mode selector */}
+            <div className="flex gap-1.5">
+              <Badge
+                variant={coverMode === "auto" ? "default" : "outline"}
+                className="cursor-pointer text-xs hover:bg-primary/20 transition-colors"
+                onClick={() => setCoverMode("auto")}
+              >
+                🤖 Auto AI
+              </Badge>
+              <Badge
+                variant={coverMode === "custom" ? "default" : "outline"}
+                className="cursor-pointer text-xs hover:bg-primary/20 transition-colors"
+                onClick={() => setCoverMode("custom")}
+              >
+                <Palette className="h-3 w-3 mr-1" /> Opisz AI
+              </Badge>
+              <Badge
+                variant={coverMode === "upload" ? "default" : "outline"}
+                className="cursor-pointer text-xs hover:bg-primary/20 transition-colors"
+                onClick={() => setCoverMode("upload")}
+              >
+                <Upload className="h-3 w-3 mr-1" /> Własna
+              </Badge>
+            </div>
+
+            {/* Auto mode description */}
+            {coverMode === "auto" && (
+              <p className="text-[11px] text-muted-foreground">
+                AI automatycznie wygeneruje profesjonalną okładkę w jakości fotograficznej, dopasowaną do tytułu i stylu utworu.
+              </p>
+            )}
+
+            {/* Custom AI description */}
+            {coverMode === "custom" && (
+              <div>
+                <Textarea
+                  placeholder="Opisz jak ma wyglądać okładka, np: ciemna fotografia neonowego miasta nocą z deszczem, efekt kinowy, bokeh..."
+                  value={coverDescription}
+                  onChange={(e) => setCoverDescription(e.target.value)}
+                  rows={2}
+                  className="resize-none text-sm"
+                />
+                <p className="text-[10px] text-muted-foreground mt-1">
+                  Opisz styl, kolory, scenę — AI wygeneruje okładkę na podstawie Twojego opisu.
+                </p>
+              </div>
+            )}
+
+            {/* Upload own cover */}
+            {coverMode === "upload" && (
+              <div>
+                <input
+                  ref={coverInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleCoverFile}
+                />
+                {coverPreview ? (
+                  <div className="relative w-24 h-24 rounded-lg overflow-hidden border border-border">
+                    <img src={coverPreview} alt="Cover" className="w-full h-full object-cover" />
+                    <button
+                      onClick={removeCoverFile}
+                      className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/70 flex items-center justify-center"
+                    >
+                      <X className="h-3 w-3 text-white" />
+                    </button>
+                  </div>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                    onClick={() => coverInputRef.current?.click()}
+                  >
+                    <Upload className="h-3.5 w-3.5" />
+                    Wybierz grafikę
+                  </Button>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Generate button */}

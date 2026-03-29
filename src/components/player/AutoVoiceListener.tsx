@@ -180,6 +180,7 @@ export const AutoVoiceListener = () => {
 
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const restartTimeoutRef = useRef<number | null>(null);
+  const lastProcessedRef = useRef<{ text: string; time: number }>({ text: "", time: 0 });
   const silenceTimerRef = useRef<number | null>(null);
   const startListeningRef = useRef<(() => void) | null>(null);
   const autoListenRef = useRef(false);
@@ -1104,8 +1105,15 @@ export const AutoVoiceListener = () => {
 
         const last = event.results[event.results.length - 1];
         if (last?.isFinal) {
-          console.log("[Voice] Final transcript:", last[0].transcript);
-          processCommand(last[0].transcript);
+          const transcript = last[0].transcript.trim();
+          // Deduplicate: ignore if same text as last processed command within 3s
+          if (transcript === lastProcessedRef.current.text && Date.now() - lastProcessedRef.current.time < 3000) {
+            console.log("[Voice] Duplicate ignored:", transcript);
+            return;
+          }
+          lastProcessedRef.current = { text: transcript, time: Date.now() };
+          console.log("[Voice] Final transcript:", transcript);
+          processCommand(transcript);
         }
       };
       rec.onerror = (event: SpeechRecognitionErrorEvent) => {
@@ -1210,8 +1218,8 @@ export const AutoVoiceListener = () => {
 
   const playSuggestion = async (track: any) => {
     playPlaylist([{ id: track.id, title: track.title, artist: track.artist, album: null, audio_url: null, cover_url: null, genre: track.genre, mood: track.mood, duration: 180 }], 0);
-    speak(`Odtwarzam ${track.title}`);
     setShowSuggestions(false);
+    await safeSpeakAndResume(`Odtwarzam ${track.title}`);
   };
 
   if (!user) return null;
@@ -1266,11 +1274,11 @@ export const AutoVoiceListener = () => {
               </motion.button>
             ))}
             <motion.button
-              onClick={() => {
+              onClick={async () => {
                 const tracks = aiSuggestions.map((s: any) => ({ id: s.id, title: s.title, artist: s.artist, album: null, audio_url: null, cover_url: null, genre: s.genre, mood: s.mood, duration: 180 }));
                 playPlaylist(tracks, 0);
-                speak("Odtwarzam wszystkie propozycje!");
                 setShowSuggestions(false);
+                await safeSpeakAndResume("Odtwarzam wszystkie propozycje!");
               }}
               className="w-full py-1.5 rounded-xl text-[10px] font-semibold text-primary-foreground"
               style={{
