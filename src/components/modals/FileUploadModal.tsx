@@ -6,25 +6,20 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import {
+  getFileExtension,
+  getMediaContentType,
+  isAllowedMediaFile,
+  isVideoLikeFile,
+  MAX_UPLOAD_SIZE_BYTES,
+  MEDIA_FILE_ACCEPT,
+} from "@/lib/mediaFormats";
 
 interface FileUploadModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: () => void;
 }
-
-const ALLOWED_EXTENSIONS = [
-  ".mp3", ".wav", ".m4a", ".ogg", ".flac", ".aac", ".opus", ".wma", ".weba",
-  ".mp4", ".webm", ".mkv", ".avi", ".mov", ".3gp", ".ogv",
-];
-const ALLOWED_TYPES = [
-  "audio/mpeg", "audio/wav", "audio/mp3", "audio/x-wav", "audio/mp4", "audio/x-m4a",
-  "audio/ogg", "audio/flac", "audio/aac", "audio/opus", "audio/webm", "audio/x-flac",
-  "audio/x-aac", "audio/vnd.wave", "audio/wave", "audio/x-ms-wma",
-  "video/mp4", "video/webm", "video/ogg", "video/quicktime", "video/x-matroska",
-  "video/x-msvideo", "video/avi", "video/3gpp",
-];
-const MAX_SIZE = 100 * 1024 * 1024;
 
 interface UploadItem {
   file: File;
@@ -44,9 +39,7 @@ function parseFilename(file: File): { title: string; artist: string } {
 }
 
 function isAllowedFile(file: File): boolean {
-  if (ALLOWED_TYPES.includes(file.type)) return true;
-  const ext = "." + file.name.split(".").pop()?.toLowerCase();
-  return ALLOWED_EXTENSIONS.includes(ext);
+  return isAllowedMediaFile(file, MAX_UPLOAD_SIZE_BYTES);
 }
 
 export const FileUploadModal = ({ isOpen, onClose, onSuccess }: FileUploadModalProps) => {
@@ -63,13 +56,13 @@ export const FileUploadModal = ({ isOpen, onClose, onSuccess }: FileUploadModalP
     const newItems: UploadItem[] = [];
     for (const file of Array.from(files)) {
       if (!isAllowedFile(file)) continue;
-      if (file.size > MAX_SIZE) continue;
+      if (file.size > MAX_UPLOAD_SIZE_BYTES) continue;
       if (file.size < 1000) continue; // skip tiny/empty files
       const { title, artist } = parseFilename(file);
       newItems.push({ file, title, artist, status: "pending" });
     }
     if (newItems.length === 0) {
-      toast.error("Brak obsługiwanych plików audio (MP3, WAV, M4A, OGG, FLAC, MP4)");
+      toast.error("Brak obsługiwanych plików audio lub wideo");
       return;
     }
     setItems(prev => [...prev, ...newItems]);
@@ -134,20 +127,20 @@ export const FileUploadModal = ({ isOpen, onClose, onSuccess }: FileUploadModalP
       setItems(prev => prev.map((it, idx) => idx === i ? { ...it, status: "uploading" } : it));
 
       try {
-        const ext = item.file.name.split(".").pop()?.toLowerCase() || "mp3";
+        const ext = getFileExtension(item.file.name).replace(".", "") || "mp3";
         const safeName = item.title.replace(/[^a-zA-Z0-9\-_]/g, '_').substring(0, 80);
         const filePath = `shared/${Date.now()}-${safeName}.${ext}`;
 
         const { error: uploadError } = await supabase.storage
           .from("music")
-          .upload(filePath, item.file, { contentType: item.file.type || "audio/mpeg" });
+          .upload(filePath, item.file, { contentType: getMediaContentType(item.file) });
 
         if (uploadError) throw uploadError;
 
         const { data: urlData } = supabase.storage.from("music").getPublicUrl(filePath);
         const publicUrl = urlData.publicUrl;
 
-        const isVideo = item.file.type.startsWith("video/");
+        const isVideo = isVideoLikeFile(item.file);
         const { error: insertError } = await supabase.from("tracks").insert({
           title: item.title,
           artist: item.artist,
@@ -245,7 +238,7 @@ export const FileUploadModal = ({ isOpen, onClose, onSuccess }: FileUploadModalP
                 <div>
                   <p className="font-medium text-sm">Przeciągnij pliki lub katalogi tutaj</p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    MP3, WAV, M4A, OGG, FLAC, MP4 — do 100MB/plik
+                    MP3, WAV, FLAC, MP4, MOV, MKV, AVI, WMV, FLV, TS, M2TS — do 500MB/plik
                   </p>
                 </div>
                 <div className="flex gap-2 mt-1">
@@ -273,7 +266,7 @@ export const FileUploadModal = ({ isOpen, onClose, onSuccess }: FileUploadModalP
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".mp3,.wav,.m4a,.ogg,.flac,.aac,.opus,.wma,.weba,.mp4,.webm,.mkv,.avi,.mov,.3gp,.ogv"
+                 accept={MEDIA_FILE_ACCEPT}
                 multiple
                 onChange={handleFileSelect}
                 className="hidden"
