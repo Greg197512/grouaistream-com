@@ -13,6 +13,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { CoverDesigner } from "@/components/cover/CoverDesigner";
 
 const genres = [
   "Pop", "Rock", "Electronic", "EDM", "House", "Trance", "Hip-Hop", "R&B",
