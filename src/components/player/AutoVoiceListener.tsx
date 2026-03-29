@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Mic, MicOff, Sparkles, Music } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { useAI } from "@/contexts/AIContext";
+import { useAISafe } from "@/contexts/AIContext";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { useAssistantConfig } from "@/hooks/useAssistantConfig";
 import { AssistantNamingModal } from "@/components/modals/AssistantNamingModal";
@@ -163,7 +163,10 @@ const getWeatherSummary = async (command: string) => {
 
 export const AutoVoiceListener = () => {
   const { user } = useAuth();
-  const { processVoiceCommand, isAIEnabled, isProcessing } = useAI();
+  const aiContext = useAISafe();
+  const processVoiceCommand = aiContext?.processVoiceCommand;
+  const isAIEnabled = aiContext?.isAIEnabled ?? false;
+  const isProcessing = aiContext?.isProcessing ?? false;
   const { playPlaylist, nextTrack, prevTrack, setVolume, pausePlayback, resumePlayback, restartCurrentTrack } = usePlayer();
   const navigate = useNavigate();
   const { assistantName, needsNaming, saveAssistantName } = useAssistantConfig();
