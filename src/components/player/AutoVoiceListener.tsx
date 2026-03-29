@@ -1104,8 +1104,15 @@ export const AutoVoiceListener = () => {
 
         const last = event.results[event.results.length - 1];
         if (last?.isFinal) {
-          console.log("[Voice] Final transcript:", last[0].transcript);
-          processCommand(last[0].transcript);
+          const transcript = last[0].transcript.trim();
+          // Deduplicate: ignore if same text as last processed command within 3s
+          if (transcript === lastProcessedRef.current.text && Date.now() - lastProcessedRef.current.time < 3000) {
+            console.log("[Voice] Duplicate ignored:", transcript);
+            return;
+          }
+          lastProcessedRef.current = { text: transcript, time: Date.now() };
+          console.log("[Voice] Final transcript:", transcript);
+          processCommand(transcript);
         }
       };
       rec.onerror = (event: SpeechRecognitionErrorEvent) => {
