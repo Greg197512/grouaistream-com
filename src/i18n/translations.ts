@@ -2445,6 +2445,7 @@ const nl: TranslationKeys = {
   "album.minTracks": "Voeg minimaal 2 nummers toe aan het album",
   "album.enterTitle": "Voer albumtitel in",
 
+  "auth.backHome": "Terug naar home",
   "auth.welcomeBack": "Welkom terug",
   "auth.createAccount": "Maak je account aan",
   "auth.nickLabel": "Bijnaam *",
