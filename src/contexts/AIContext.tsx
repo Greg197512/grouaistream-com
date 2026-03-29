@@ -43,6 +43,10 @@ export const useAI = () => {
   return context;
 };
 
+export const useAISafe = () => {
+  return useContext(AIContext);
+};
+
 export const AIProvider = ({ children }: { children: ReactNode }) => {
   const [isAIEnabled, setIsAIEnabled] = useState(true);
   
