@@ -60,7 +60,7 @@ const Upload = () => {
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [audioDuration, setAudioDuration] = useState<number | null>(null);
   const [durationError, setDurationError] = useState(false);
-  const [aiCover, setAiCover] = useState(true);
+  const [coverUrl, setCoverUrl] = useState("");
 
   const displayName = user?.user_metadata?.display_name || user?.email?.split("@")[0] || "Artist";
 
