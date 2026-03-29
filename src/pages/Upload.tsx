@@ -426,16 +426,13 @@ const Upload = () => {
               />
             </div>
 
+            {/* Artist info (read-only from profile) */}
             <div className="space-y-2">
-              <Label htmlFor="email">{t("upload.emailLabel")}</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder={t("upload.emailPlaceholder")}
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="bg-card/60 border-muted"
-              />
+              <Label>{t("upload.artistLabel") || "Artysta"}</Label>
+              <div className="flex items-center gap-2 px-3 py-2 bg-card/60 border border-muted rounded-md text-sm">
+                <span className="font-medium">{displayName}</span>
+                <span className="text-muted-foreground text-xs">({t("upload.fromProfile") || "z profilu"})</span>
+              </div>
             </div>
 
             {/* AI Cover option */}
