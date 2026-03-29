@@ -1233,6 +1233,7 @@ const pl: TranslationKeys = {
   "album.minTracks": "Dodaj co najmniej 2 utwory do albumu",
   "album.enterTitle": "Podaj tytuł albumu",
 
+  "auth.backHome": "Powrót do strony głównej",
   "auth.welcomeBack": "Witaj ponownie",
   "auth.createAccount": "Utwórz konto",
   "auth.nickLabel": "Nick / Przezwisko *",
