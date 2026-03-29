@@ -142,7 +142,7 @@ const Upload = () => {
       const finalAudioUrl = audioUrl || sunoLink || null;
       const { data: insertedTrack, error: trackInsertErr } = await supabase.from("tracks").insert({
         title,
-        artist: email.split("@")[0],
+        artist: displayName,
         genre,
         duration: Math.round(audioDuration || 180),
         audio_url: finalAudioUrl,
