@@ -175,7 +175,7 @@ const Upload = () => {
     setTitle("");
     setGenre("");
     setDescription("");
-    setEmail("");
+    // email field removed
     setAgreed(false);
     setModerationResult(null);
     setAudioFile(null);
