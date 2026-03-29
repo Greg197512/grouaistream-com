@@ -183,7 +183,7 @@ const Upload = () => {
     setAudioFile(null);
     setAudioDuration(null);
     setDurationError(false);
-    setAiCover(true);
+    setCoverUrl("");
   };
 
   // Require login
