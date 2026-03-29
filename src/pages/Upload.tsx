@@ -458,10 +458,10 @@ const Upload = () => {
 
             {/* Artist info (read-only from profile) */}
             <div className="space-y-2">
-              <Label>{t("upload.artistLabel") || "Artysta"}</Label>
+              <Label>{t("upload.artistLabel")}</Label>
               <div className="flex items-center gap-2 px-3 py-2 bg-card/60 border border-muted rounded-md text-sm">
                 <span className="font-medium">{displayName}</span>
-                <span className="text-muted-foreground text-xs">({t("upload.fromProfile") || "z profilu"})</span>
+                <span className="text-muted-foreground text-xs">({t("upload.fromProfile")})</span>
               </div>
             </div>
 
