@@ -3378,6 +3378,7 @@ const ua: TranslationKeys = {
   "earnPage.faq4a": "Так — треки з Suno AI, що пройшли модерацію якості, можуть бути монетизовані. Умова: ви повинні мати права на розповсюдження.",
   "earnPage.footer": "GrouAI Stream — платформа, яка справді платить артистам.",
   "earnPage.terms": "умовами платформи",
+  "earnPage.sunoMonetize": "Якщо ваш трек створений у Suno Pro або Premier — ви можете монетизувати його на GrouAI Stream та розповсюджувати через Spotify, YouTube, Apple Music тощо.",
   "cover.title": "Обкладинка альбому",
   "cover.aiTab": "AI Генератор",
   "cover.uploadTab": "Власне зображення",
