@@ -19,6 +19,7 @@ const Index = () => {
     <MainLayout>
       <HeroSection />
       <UploadCTA />
+      <PromotedTracksSection />
       <NewOnServer />
       <RecentlyPlayed />
       
