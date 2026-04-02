@@ -508,6 +508,24 @@ const Upload = () => {
               </Button>
             </div>
 
+            {/* Upload Progress Bar */}
+            {uploadProgress !== null && isSubmitting && (
+              <div className="space-y-1.5">
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>Przesyłanie pliku do R2...</span>
+                  <span>{uploadProgress}%</span>
+                </div>
+                <div className="h-2.5 bg-secondary rounded-full overflow-hidden">
+                  <motion.div
+                    className="h-full bg-primary rounded-full"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${uploadProgress}%` }}
+                    transition={{ duration: 0.3 }}
+                  />
+                </div>
+              </div>
+            )}
+
             <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }} className="pt-2">
               <Button
                 type="submit"
