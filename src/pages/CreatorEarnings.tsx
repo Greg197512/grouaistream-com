@@ -152,7 +152,7 @@ const CreatorEarnings = () => {
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs text-muted-foreground uppercase tracking-wide">Ten miesiąc</p>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide">{t("earnings.thisMonth")}</p>
                     <p className="text-2xl font-bold text-accent">{monthlyEarnings.toFixed(2)} zł</p>
                   </div>
                   <TrendingUp className="h-8 w-8 text-accent/40" />
