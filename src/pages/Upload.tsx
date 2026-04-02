@@ -528,7 +528,7 @@ const Upload = () => {
                     )}
                   >
                     <CheckCircle className={cn("h-4 w-4", wantMonetize ? "text-emerald-400" : "text-muted-foreground")} />
-                    Tak, chcę zarabiać
+                    {t("upload.monetizeYes")}
                   </button>
                   <button
                     type="button"
