@@ -547,6 +547,22 @@ const Upload = () => {
               </div>
             </div>
 
+            {/* Suno Pro checkbox */}
+            {isSunoTrack && (
+              <div className="flex items-start gap-3 p-3 rounded-lg border border-purple-500/20 bg-purple-500/5">
+                <Checkbox
+                  id="suno-pro"
+                  checked={isSunoPro}
+                  onCheckedChange={(v) => setIsSunoPro(v === true)}
+                  className="mt-0.5"
+                />
+                <Label htmlFor="suno-pro" className="text-sm text-muted-foreground leading-relaxed cursor-pointer flex items-center gap-2">
+                  <Bot className="h-4 w-4 text-purple-400 shrink-0" />
+                  {t("upload.sunoProCheckbox")}
+                </Label>
+              </div>
+            )}
+
             {/* Cover Designer */}
             <CoverDesigner
               title={title}
