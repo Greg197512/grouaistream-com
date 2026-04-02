@@ -177,13 +177,14 @@ const Upload = () => {
     setTitle("");
     setGenre("");
     setDescription("");
-    // email field removed
     setAgreed(false);
     setModerationResult(null);
     setAudioFile(null);
     setAudioDuration(null);
     setDurationError(false);
     setCoverUrl("");
+    setUploadProgress(null);
+    setInsertedTrackId(null);
   };
 
   // Require login
