@@ -233,16 +233,11 @@ const CreatorEarnings = () => {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <p className="font-medium text-sm truncate">{track.title}</p>
-                          {track.is_monetized && (
-                            <Badge className="bg-green-500/20 text-green-400 border-green-500/30 text-[10px]">
-                              💰 Monetyzowany
-                            </Badge>
-                          )}
-                          {track.audio_url?.includes("suno") && (
-                            <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30 text-[10px]">
-                              🤖 AI-Assisted
-                            </Badge>
-                          )}
+                          <TrackBadges
+                            isMonetized={track.is_monetized}
+                            isBoosted={(track as any).is_boosted}
+                            isAIAssisted={track.audio_url?.includes("suno")}
+                          />
                         </div>
                         <p className="text-xs text-muted-foreground truncate">{track.artist}</p>
                       </div>
