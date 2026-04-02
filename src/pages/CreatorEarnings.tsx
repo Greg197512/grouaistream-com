@@ -185,19 +185,19 @@ const CreatorEarnings = () => {
         >
           <div className="flex items-center gap-1.5 text-xs text-emerald-400">
             <Lock className="h-3.5 w-3.5" />
-            <span>Szyfrowanie SSL/TLS</span>
+            <span>{t("security.ssl")}</span>
           </div>
           <div className="flex items-center gap-1.5 text-xs text-emerald-400">
             <ShieldCheck className="h-3.5 w-3.5" />
-            <span>Bezpieczne płatności Stripe</span>
+            <span>{t("security.stripe")}</span>
           </div>
           <div className="flex items-center gap-1.5 text-xs text-emerald-400">
             <BadgeCheck className="h-3.5 w-3.5" />
-            <span>Zgodność z RODO</span>
+            <span>{t("security.gdpr")}</span>
           </div>
           <div className="flex items-center gap-1.5 text-xs text-emerald-400">
             <Globe className="h-3.5 w-3.5" />
-            <span>Serwery EU/NL</span>
+            <span>{t("security.euServers")}</span>
           </div>
         </motion.div>
 
