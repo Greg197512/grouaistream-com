@@ -36,6 +36,9 @@ const TrackRowComponent = forwardRef<HTMLDivElement, TrackRowProps>(({
   imageUrl,
   trackUrl,
   genre,
+  isMonetized,
+  isBoosted,
+  isAIAssisted,
   onPlay
 }, ref) => {
   const [isHovered, setIsHovered] = useState(false);
