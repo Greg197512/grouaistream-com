@@ -1275,6 +1275,7 @@ const en: TranslationKeys = {
   "nav.legalDocs": "Legal Documents",
   "nav.aiFeatures": "AI Features",
   "nav.myTracks": "My Tracks",
+  "nav.earnings": "My Earnings",
 
   "topbar.searchPlaceholder": "What do you want to listen to?",
   "topbar.signIn": "Sign In",
