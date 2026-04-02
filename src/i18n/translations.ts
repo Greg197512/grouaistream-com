@@ -2489,6 +2489,7 @@ const ua: TranslationKeys = {
   "nav.legalDocs": "Юридичні Документи",
   "nav.aiFeatures": "Функції AI",
   "nav.myTracks": "Мої Треки",
+  "nav.earnings": "Мої Заробітки",
 
   "topbar.searchPlaceholder": "Що хочеш послухати?",
   "topbar.signIn": "Увійти",
