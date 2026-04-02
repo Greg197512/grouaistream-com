@@ -4,6 +4,7 @@ import { Play, Pause, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TrackOptionsMenu, LikeButton } from "@/components/menus/TrackOptionsMenu";
 import { HQCover } from "@/components/ui/HQCover";
+import { TrackBadges } from "@/components/ui/TrackBadges";
 
 interface TrackRowProps {
   id: string;
@@ -17,6 +18,9 @@ interface TrackRowProps {
   imageUrl?: string;
   trackUrl?: string | null;
   genre?: string | null;
+  isMonetized?: boolean;
+  isBoosted?: boolean;
+  isAIAssisted?: boolean;
   onPlay?: () => void;
 }
 
@@ -32,6 +36,9 @@ const TrackRowComponent = forwardRef<HTMLDivElement, TrackRowProps>(({
   imageUrl,
   trackUrl,
   genre,
+  isMonetized,
+  isBoosted,
+  isAIAssisted,
   onPlay
 }, ref) => {
   const [isHovered, setIsHovered] = useState(false);
@@ -102,6 +109,7 @@ const TrackRowComponent = forwardRef<HTMLDivElement, TrackRowProps>(({
             <p className="text-xs text-muted-foreground truncate hover:underline cursor-pointer">
               {artist}
             </p>
+            <TrackBadges isMonetized={isMonetized} isBoosted={isBoosted} isAIAssisted={isAIAssisted} />
             <span className="text-[8px] font-bold text-primary/70 whitespace-nowrap">Grouarock®</span>
           </div>
         </div>

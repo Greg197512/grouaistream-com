@@ -11,8 +11,10 @@ import { HQCover } from "@/components/ui/HQCover";
 import { motion } from "framer-motion";
 import { 
   DollarSign, TrendingUp, Music, BarChart3, 
-  Wallet, ArrowUpRight, LogIn, Eye 
+  Wallet, ArrowUpRight, LogIn, Eye, Rocket 
 } from "lucide-react";
+import { BoostPurchaseModal } from "@/components/boost/BoostPurchaseModal";
+import { TrackBadges } from "@/components/ui/TrackBadges";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -37,6 +39,7 @@ const CreatorEarnings = () => {
   const [monthlyEarnings, setMonthlyEarnings] = useState(0);
   const [totalStreams, setTotalStreams] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [boostTrack, setBoostTrack] = useState<{ id: string; title: string } | null>(null);
 
   const loadData = useCallback(async () => {
     if (!user) return;
@@ -230,16 +233,11 @@ const CreatorEarnings = () => {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <p className="font-medium text-sm truncate">{track.title}</p>
-                          {track.is_monetized && (
-                            <Badge className="bg-green-500/20 text-green-400 border-green-500/30 text-[10px]">
-                              💰 Monetyzowany
-                            </Badge>
-                          )}
-                          {track.audio_url?.includes("suno") && (
-                            <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30 text-[10px]">
-                              🤖 AI-Assisted
-                            </Badge>
-                          )}
+                          <TrackBadges
+                            isMonetized={track.is_monetized}
+                            isBoosted={(track as any).is_boosted}
+                            isAIAssisted={track.audio_url?.includes("suno")}
+                          />
                         </div>
                         <p className="text-xs text-muted-foreground truncate">{track.artist}</p>
                       </div>
@@ -261,8 +259,17 @@ const CreatorEarnings = () => {
                         </div>
                       </div>
 
-                      {/* Toggle */}
+                      {/* Boost + Toggle */}
                       <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-amber-400 hover:text-amber-300 hidden sm:flex"
+                          onClick={() => setBoostTrack({ id: track.id, title: track.title })}
+                        >
+                          <Rocket className="h-3.5 w-3.5 mr-1" />
+                          Boost
+                        </Button>
                         <span className="text-[10px] text-muted-foreground hidden md:inline">
                           {track.is_monetized ? "ON" : "OFF"}
                         </span>
@@ -279,6 +286,15 @@ const CreatorEarnings = () => {
           )}
         </div>
       </div>
+      {/* Boost Modal */}
+      {boostTrack && (
+        <BoostPurchaseModal
+          isOpen={!!boostTrack}
+          onClose={() => setBoostTrack(null)}
+          trackId={boostTrack.id}
+          trackTitle={boostTrack.title}
+        />
+      )}
     </MainLayout>
   );
 };
