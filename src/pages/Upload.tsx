@@ -173,7 +173,9 @@ const Upload = () => {
         audio_url: finalAudioUrl,
         cover_url: coverUrl || null,
         user_id: user?.id || null,
-      }).select("id").single();
+        is_monetized: wantMonetize,
+        monetization_enabled_at: wantMonetize ? new Date().toISOString() : null,
+      } as any).select("id").single();
 
       if (trackInsertErr) throw trackInsertErr;
 
