@@ -1886,6 +1886,7 @@ const nl: TranslationKeys = {
   "nav.aiFeatures": "AI Functies",
   "nav.myTracks": "Mijn Nummers",
   "nav.earnings": "Mijn Inkomsten",
+  "nav.earnWithUs": "Verdien met ons",
 
   "topbar.searchPlaceholder": "Waar wil je naar luisteren?",
   "topbar.signIn": "Inloggen",
