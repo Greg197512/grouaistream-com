@@ -12,6 +12,7 @@ import { Upload as UploadIcon, Music, CheckCircle, Loader2, ShieldCheck, XCircle
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { uploadToR2 } from "@/lib/r2Upload";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { CoverDesigner } from "@/components/cover/CoverDesigner";
 
