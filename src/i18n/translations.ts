@@ -1341,6 +1341,7 @@ const pl: TranslationKeys = {
   "earnPage.faq4a": "Tak — utwory wygenerowane z Suno AI, które przejdą moderację jakości, mogą być monetyzowane. Warunek: musisz mieć prawa do dystrybucji.",
   "earnPage.footer": "GrouAI Stream — platforma, która naprawdę płaci artystom.",
   "earnPage.terms": "regulaminowi platformy",
+  "earnPage.sunoMonetize": "Jeśli Twój utwór pochodzi z Suno Pro lub Premier — możesz go monetyzować na GrouAI Stream oraz dystrybuować na Spotify, YouTube, Apple Music itp.",
   "cover.title": "Okładka albumu",
   "cover.aiTab": "AI Generator",
   "cover.uploadTab": "Własna grafika",
