@@ -18,6 +18,9 @@ interface TrackRowProps {
   imageUrl?: string;
   trackUrl?: string | null;
   genre?: string | null;
+  isMonetized?: boolean;
+  isBoosted?: boolean;
+  isAIAssisted?: boolean;
   onPlay?: () => void;
 }
 
