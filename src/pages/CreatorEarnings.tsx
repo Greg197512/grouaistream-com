@@ -296,7 +296,7 @@ const CreatorEarnings = () => {
                           onClick={() => setBoostTrack({ id: track.id, title: track.title })}
                         >
                           <Rocket className="h-3.5 w-3.5 mr-1" />
-                          Boost
+                          {t("earnings.boost")}
                         </Button>
                         <span className="text-[10px] text-muted-foreground hidden md:inline">
                           {track.is_monetized ? "ON" : "OFF"}
