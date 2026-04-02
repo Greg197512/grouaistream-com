@@ -7,13 +7,12 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
-  getFileExtension,
-  getMediaContentType,
   isAllowedMediaFile,
   isVideoLikeFile,
   MAX_UPLOAD_SIZE_BYTES,
   MEDIA_FILE_ACCEPT,
 } from "@/lib/mediaFormats";
+import { uploadToR2 } from "@/lib/r2Upload";
 
 interface FileUploadModalProps {
   isOpen: boolean;
