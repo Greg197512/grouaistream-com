@@ -259,8 +259,17 @@ const CreatorEarnings = () => {
                         </div>
                       </div>
 
-                      {/* Toggle */}
+                      {/* Boost + Toggle */}
                       <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-amber-400 hover:text-amber-300 hidden sm:flex"
+                          onClick={() => setBoostTrack({ id: track.id, title: track.title })}
+                        >
+                          <Rocket className="h-3.5 w-3.5 mr-1" />
+                          Boost
+                        </Button>
                         <span className="text-[10px] text-muted-foreground hidden md:inline">
                           {track.is_monetized ? "ON" : "OFF"}
                         </span>
