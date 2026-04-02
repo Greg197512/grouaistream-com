@@ -1091,6 +1091,10 @@ export default function Admin() {
               <TabsContent value="storage">
                 <StorageStats />
               </TabsContent>
+
+              <TabsContent value="ai-rankings">
+                <AIModeratorRankings />
+              </TabsContent>
             </Tabs>
 
             {/* Quick Actions */}
