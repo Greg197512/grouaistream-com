@@ -265,9 +265,9 @@ const Upload = () => {
                   <CheckCircle className="h-5 w-5 text-green-400" />
                   <span className="text-green-300 font-semibold">{t("upload.confirmed")}</span>
                 </motion.div>
-                {isSunoTrack && (
-                  <span className="inline-flex items-center gap-1.5 bg-primary/20 border border-primary/30 rounded-full px-4 py-1.5 text-xs font-semibold text-primary">
-                    <Music className="h-3.5 w-3.5" /> AI-Assisted (Suno)
+                {(isSunoTrack || isSunoPro) && (
+                  <span className="inline-flex items-center gap-1.5 bg-purple-500/15 border border-purple-500/25 rounded-full px-4 py-1.5 text-xs font-semibold text-purple-400">
+                    <Bot className="h-3.5 w-3.5" /> 🤖 AI-Assisted {isSunoPro && "(Suno Pro)"}
                   </span>
                 )}
                 {insertedTrackId && (
