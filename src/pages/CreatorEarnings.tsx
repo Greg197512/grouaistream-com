@@ -11,7 +11,8 @@ import { HQCover } from "@/components/ui/HQCover";
 import { motion } from "framer-motion";
 import { 
   DollarSign, TrendingUp, Music, BarChart3, 
-  Wallet, ArrowUpRight, LogIn, Eye, Rocket 
+  Wallet, ArrowUpRight, LogIn, Eye, Rocket,
+  ShieldCheck, Lock, BadgeCheck, Globe
 } from "lucide-react";
 import { BoostPurchaseModal } from "@/components/boost/BoostPurchaseModal";
 import { TrackBadges } from "@/components/ui/TrackBadges";
@@ -172,6 +173,31 @@ const CreatorEarnings = () => {
             </Card>
           </motion.div>
         </div>
+
+        {/* Security Trust Bar */}
+        <motion.div 
+          initial={{ opacity: 0 }} 
+          animate={{ opacity: 1 }} 
+          transition={{ delay: 0.4 }}
+          className="flex flex-wrap items-center justify-center gap-4 py-3 px-4 rounded-xl bg-emerald-500/5 border border-emerald-500/15"
+        >
+          <div className="flex items-center gap-1.5 text-xs text-emerald-400">
+            <Lock className="h-3.5 w-3.5" />
+            <span>Szyfrowanie SSL/TLS</span>
+          </div>
+          <div className="flex items-center gap-1.5 text-xs text-emerald-400">
+            <ShieldCheck className="h-3.5 w-3.5" />
+            <span>Bezpieczne płatności Stripe</span>
+          </div>
+          <div className="flex items-center gap-1.5 text-xs text-emerald-400">
+            <BadgeCheck className="h-3.5 w-3.5" />
+            <span>Zgodność z RODO</span>
+          </div>
+          <div className="flex items-center gap-1.5 text-xs text-emerald-400">
+            <Globe className="h-3.5 w-3.5" />
+            <span>Serwery EU/NL</span>
+          </div>
+        </motion.div>
 
         {/* Info Banner */}
         <Card className="bg-primary/5 border-primary/20">

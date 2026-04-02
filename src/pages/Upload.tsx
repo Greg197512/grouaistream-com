@@ -8,7 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { motion } from "framer-motion";
-import { Upload as UploadIcon, Music, CheckCircle, Loader2, ShieldCheck, XCircle, AlertTriangle, FileAudio, LogIn, Gift } from "lucide-react";
+import { Upload as UploadIcon, Music, CheckCircle, Loader2, ShieldCheck, XCircle, AlertTriangle, FileAudio, LogIn, Gift, DollarSign } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -505,19 +506,45 @@ const Upload = () => {
               </div>
             </div>
 
-            {/* Monetization checkbox */}
-            <div className="flex items-center gap-3 p-4 rounded-xl bg-green-500/5 border border-green-500/20">
-              <Checkbox
-                id="monetize"
-                checked={wantMonetize}
-                onCheckedChange={(v) => setWantMonetize(v === true)}
-              />
-              <Label htmlFor="monetize" className="text-sm cursor-pointer leading-relaxed">
-                💰 Chcę zarabiać na tym utworze
-                <span className="block text-xs text-muted-foreground mt-0.5">
-                  Każde odsłuchanie &gt; 30s = 1 stream × 0.003 zł (65% dla Ciebie)
-                </span>
-              </Label>
+            {/* Monetization opt-in */}
+            <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 overflow-hidden">
+              <div className="p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <DollarSign className="h-5 w-5 text-emerald-400" />
+                  <p className="font-semibold text-sm">Czy chcesz zarabiać na tym utworze?</p>
+                </div>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Każde odsłuchanie powyżej 30 sekund = 1 stream × 0.003 zł (65% trafia do Ciebie).
+                  Wypłaty co miesiąc na konto bankowe. Możesz to zmienić w każdej chwili.
+                </p>
+                <div className="flex items-center gap-4">
+                  <button
+                    type="button"
+                    onClick={() => setWantMonetize(true)}
+                    className={cn(
+                      "flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium transition-all",
+                      wantMonetize
+                        ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-400"
+                        : "border-white/10 text-muted-foreground hover:border-white/20"
+                    )}
+                  >
+                    <CheckCircle className={cn("h-4 w-4", wantMonetize ? "text-emerald-400" : "text-muted-foreground")} />
+                    Tak, chcę zarabiać
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setWantMonetize(false)}
+                    className={cn(
+                      "flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium transition-all",
+                      !wantMonetize
+                        ? "bg-white/10 border-white/20 text-foreground"
+                        : "border-white/10 text-muted-foreground hover:border-white/20"
+                    )}
+                  >
+                    Nie teraz
+                  </button>
+                </div>
+              </div>
             </div>
 
             {/* Cover Designer */}
