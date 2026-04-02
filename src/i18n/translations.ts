@@ -592,6 +592,9 @@ type TranslationKeys = {
   "upload.monetizeDesc": string;
   "upload.monetizeYes": string;
   "upload.monetizeNo": string;
+  "upload.sunoProCheckbox": string;
+  "upload.rightsDisclaimer": string;
+  "upload.distributorDisclaimer": string;
   // Earnings page
   "earnings.title": string;
   "earnings.subtitle": string;
@@ -658,6 +661,7 @@ type TranslationKeys = {
   "earnPage.faq4a": string;
   "earnPage.footer": string;
   "earnPage.terms": string;
+  "earnPage.sunoMonetize": string;
   "cover.title": string;
   "cover.aiTab": string;
   "cover.uploadTab": string;
@@ -1271,6 +1275,9 @@ const pl: TranslationKeys = {
   "upload.monetizeDesc": "Każde odsłuchanie powyżej 30 sekund = 1 stream × 0.003 zł (65% trafia do Ciebie). Wypłaty co miesiąc na konto bankowe. Możesz to zmienić w każdej chwili.",
   "upload.monetizeYes": "Tak, chcę zarabiać",
   "upload.monetizeNo": "Nie teraz",
+  "upload.sunoProCheckbox": "Ten utwór został stworzony na moim koncie Suno Pro / Premier",
+  "upload.rightsDisclaimer": "Wrzucając utwór potwierdzasz, że posiadasz prawa komercyjne do niego (np. Suno Pro/Premier). GrouAI Stream nie ponosi odpowiedzialności za naruszenia praw autorskich.",
+  "upload.distributorDisclaimer": "GrouAI Stream nie jest dystrybutorem do Spotify, Apple Music itp. Aby dystrybuować utwór na zewnętrznych platformach, użyj serwisów takich jak DistroKid, TuneCore lub CD Baby.",
   "earnings.title": "Moje Zarobki",
   "earnings.subtitle": "Zarządzaj monetyzacją swoich utworów i śledź zarobki",
   "earnings.totalEarnings": "Zarobki ogółem",
@@ -1334,6 +1341,7 @@ const pl: TranslationKeys = {
   "earnPage.faq4a": "Tak — utwory wygenerowane z Suno AI, które przejdą moderację jakości, mogą być monetyzowane. Warunek: musisz mieć prawa do dystrybucji.",
   "earnPage.footer": "GrouAI Stream — platforma, która naprawdę płaci artystom.",
   "earnPage.terms": "regulaminowi platformy",
+  "earnPage.sunoMonetize": "Jeśli Twój utwór pochodzi z Suno Pro lub Premier — możesz go monetyzować na GrouAI Stream oraz dystrybuować na Spotify, YouTube, Apple Music itp.",
   "cover.title": "Okładka albumu",
   "cover.aiTab": "AI Generator",
   "cover.uploadTab": "Własna grafika",
@@ -1946,6 +1954,9 @@ const en: TranslationKeys = {
   "upload.monetizeDesc": "Every listen over 30 seconds = 1 stream × 0.003 PLN (65% goes to you). Monthly payouts to your bank. You can change this anytime.",
   "upload.monetizeYes": "Yes, I want to earn",
   "upload.monetizeNo": "Not now",
+  "upload.sunoProCheckbox": "This track was created on my Suno Pro / Premier account",
+  "upload.rightsDisclaimer": "By uploading a track you confirm that you own the commercial rights to it (e.g. Suno Pro/Premier). GrouAI Stream is not liable for copyright infringements.",
+  "upload.distributorDisclaimer": "GrouAI Stream is not a distributor for Spotify, Apple Music, etc. To distribute your track on external platforms, use services like DistroKid, TuneCore or CD Baby.",
   "earnings.title": "My Earnings",
   "earnings.subtitle": "Manage monetization of your tracks and track earnings",
   "earnings.totalEarnings": "Total Earnings",
@@ -2009,6 +2020,7 @@ const en: TranslationKeys = {
   "earnPage.faq4a": "Yes — Suno AI tracks that pass quality moderation can be monetized. Condition: you must have distribution rights.",
   "earnPage.footer": "GrouAI Stream — a platform that truly pays artists.",
   "earnPage.terms": "platform terms",
+  "earnPage.sunoMonetize": "If your track comes from Suno Pro or Premier — you can monetise it on GrouAI Stream and distribute it on Spotify, YouTube, Apple Music, etc.",
   "cover.title": "Album cover",
   "cover.aiTab": "AI Generator",
   "cover.uploadTab": "Custom image",
@@ -2621,6 +2633,9 @@ const nl: TranslationKeys = {
   "upload.monetizeDesc": "Elke luisterbeurt van meer dan 30 seconden = 1 stream × 0,003 PLN (65% gaat naar jou). Maandelijkse uitbetalingen. Je kunt dit altijd wijzigen.",
   "upload.monetizeYes": "Ja, ik wil verdienen",
   "upload.monetizeNo": "Niet nu",
+  "upload.sunoProCheckbox": "Dit nummer is gemaakt op mijn Suno Pro / Premier account",
+  "upload.rightsDisclaimer": "Door een nummer te uploaden bevestig je dat je de commerciële rechten bezit (bijv. Suno Pro/Premier). GrouAI Stream is niet aansprakelijk voor auteursrechtschendingen.",
+  "upload.distributorDisclaimer": "GrouAI Stream is geen distributeur voor Spotify, Apple Music, enz. Gebruik diensten zoals DistroKid, TuneCore of CD Baby om je nummer op externe platforms te distribueren.",
   "earnings.title": "Mijn Inkomsten",
   "earnings.subtitle": "Beheer de monetisatie van je nummers en volg je inkomsten",
   "earnings.totalEarnings": "Totale Inkomsten",
@@ -2684,6 +2699,7 @@ const nl: TranslationKeys = {
   "earnPage.faq4a": "Ja — Suno AI-nummers die door de kwaliteitsmoderatie komen, kunnen worden gemonetiseerd. Voorwaarde: je moet distributierechten hebben.",
   "earnPage.footer": "GrouAI Stream — een platform dat artiesten echt betaalt.",
   "earnPage.terms": "platformvoorwaarden",
+  "earnPage.sunoMonetize": "Als je nummer afkomstig is van Suno Pro of Premier — kun je het monetiseren op GrouAI Stream en distribueren via Spotify, YouTube, Apple Music, enz.",
   "cover.title": "Albumhoes",
   "cover.aiTab": "AI Generator",
   "cover.uploadTab": "Eigen afbeelding",
@@ -3296,6 +3312,9 @@ const ua: TranslationKeys = {
   "upload.monetizeDesc": "Кожне прослуховування понад 30 секунд = 1 стрім × 0,003 PLN (65% отримуєте ви). Щомісячні виплати на рахунок. Можна змінити будь-коли.",
   "upload.monetizeYes": "Так, хочу заробляти",
   "upload.monetizeNo": "Не зараз",
+  "upload.sunoProCheckbox": "Цей трек створений на моєму акаунті Suno Pro / Premier",
+  "upload.rightsDisclaimer": "Завантажуючи трек, ви підтверджуєте, що маєте комерційні права на нього (напр. Suno Pro/Premier). GrouAI Stream не несе відповідальності за порушення авторських прав.",
+  "upload.distributorDisclaimer": "GrouAI Stream не є дистриб'ютором для Spotify, Apple Music тощо. Для поширення треку на зовнішніх платформах використовуйте сервіси DistroKid, TuneCore або CD Baby.",
   "earnings.title": "Мої Заробітки",
   "earnings.subtitle": "Керуйте монетизацією своїх треків та відстежуйте заробітки",
   "earnings.totalEarnings": "Загальний заробіток",
@@ -3359,6 +3378,7 @@ const ua: TranslationKeys = {
   "earnPage.faq4a": "Так — треки з Suno AI, що пройшли модерацію якості, можуть бути монетизовані. Умова: ви повинні мати права на розповсюдження.",
   "earnPage.footer": "GrouAI Stream — платформа, яка справді платить артистам.",
   "earnPage.terms": "умовами платформи",
+  "earnPage.sunoMonetize": "Якщо ваш трек створений у Suno Pro або Premier — ви можете монетизувати його на GrouAI Stream та розповсюджувати через Spotify, YouTube, Apple Music тощо.",
   "cover.title": "Обкладинка альбому",
   "cover.aiTab": "AI Генератор",
   "cover.uploadTab": "Власне зображення",

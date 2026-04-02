@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { motion } from "framer-motion";
-import { Upload as UploadIcon, Music, CheckCircle, Loader2, ShieldCheck, XCircle, AlertTriangle, FileAudio, LogIn, Gift, DollarSign } from "lucide-react";
+import { Upload as UploadIcon, Music, CheckCircle, Loader2, ShieldCheck, XCircle, AlertTriangle, FileAudio, LogIn, Gift, DollarSign, Bot, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -66,6 +66,7 @@ const Upload = () => {
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [insertedTrackId, setInsertedTrackId] = useState<string | null>(null);
   const [wantMonetize, setWantMonetize] = useState(true);
+  const [isSunoPro, setIsSunoPro] = useState(false);
 
   const displayName = user?.user_metadata?.display_name || user?.email?.split("@")[0] || "Artist";
   const isSunoTrack = sunoLink.trim().length > 0;
@@ -212,6 +213,7 @@ const Upload = () => {
     setCoverUrl("");
     setUploadProgress(null);
     setInsertedTrackId(null);
+    setIsSunoPro(false);
   };
 
   // Require login
@@ -263,9 +265,9 @@ const Upload = () => {
                   <CheckCircle className="h-5 w-5 text-green-400" />
                   <span className="text-green-300 font-semibold">{t("upload.confirmed")}</span>
                 </motion.div>
-                {isSunoTrack && (
-                  <span className="inline-flex items-center gap-1.5 bg-primary/20 border border-primary/30 rounded-full px-4 py-1.5 text-xs font-semibold text-primary">
-                    <Music className="h-3.5 w-3.5" /> AI-Assisted (Suno)
+                {(isSunoTrack || isSunoPro) && (
+                  <span className="inline-flex items-center gap-1.5 bg-purple-500/15 border border-purple-500/25 rounded-full px-4 py-1.5 text-xs font-semibold text-purple-400">
+                    <Bot className="h-3.5 w-3.5" /> 🤖 AI-Assisted {isSunoPro && "(Suno Pro)"}
                   </span>
                 )}
                 {insertedTrackId && (
@@ -546,6 +548,22 @@ const Upload = () => {
               </div>
             </div>
 
+            {/* Suno Pro checkbox */}
+            {isSunoTrack && (
+              <div className="flex items-start gap-3 p-3 rounded-lg border border-purple-500/20 bg-purple-500/5">
+                <Checkbox
+                  id="suno-pro"
+                  checked={isSunoPro}
+                  onCheckedChange={(v) => setIsSunoPro(v === true)}
+                  className="mt-0.5"
+                />
+                <Label htmlFor="suno-pro" className="text-sm text-muted-foreground leading-relaxed cursor-pointer flex items-center gap-2">
+                  <Bot className="h-4 w-4 text-purple-400 shrink-0" />
+                  {t("upload.sunoProCheckbox")}
+                </Label>
+              </div>
+            )}
+
             {/* Cover Designer */}
             <CoverDesigner
               title={title}
@@ -575,7 +593,21 @@ const Upload = () => {
               </Button>
             </div>
 
-            {/* Upload Progress Bar */}
+            {/* Rights disclaimer */}
+            <div className="flex items-start gap-2.5 p-3 rounded-lg bg-secondary/40 border border-border/50">
+              <ShieldCheck className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+              <p className="text-[11px] text-muted-foreground leading-relaxed">
+                {t("upload.rightsDisclaimer")}
+              </p>
+            </div>
+
+            {/* Distributor disclaimer */}
+            <div className="flex items-start gap-2.5 p-3 rounded-lg bg-secondary/40 border border-border/50">
+              <Info className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+              <p className="text-[11px] text-muted-foreground leading-relaxed">
+                {t("upload.distributorDisclaimer")}
+              </p>
+            </div>
             {uploadProgress !== null && isSubmitting && (
               <div className="space-y-1.5">
                 <div className="flex justify-between text-xs text-muted-foreground">

@@ -276,6 +276,24 @@ const EarnWithUs = () => {
           </div>
         </motion.section>
 
+        {/* Suno monetization info */}
+        <motion.section
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, amount: 0.3 }}
+        >
+          <motion.div
+            variants={fadeUp}
+            custom={0}
+            className="max-w-2xl mx-auto flex items-start gap-3 p-5 rounded-xl border border-purple-500/20 bg-purple-500/5"
+          >
+            <Sparkles className="h-5 w-5 text-purple-400 mt-0.5 shrink-0" />
+            <div className="space-y-1">
+              <p className="text-sm font-medium">{t("earnPage.sunoMonetize")}</p>
+            </div>
+          </motion.div>
+        </motion.section>
+
         {/* Footer note */}
         <p className="text-center text-xs text-muted-foreground">
           💎 {t("earnPage.footer")}
