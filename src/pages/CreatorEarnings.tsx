@@ -124,10 +124,10 @@ const CreatorEarnings = () => {
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
           <h1 className="text-3xl font-bold flex items-center gap-3">
             <Wallet className="h-8 w-8 text-primary" />
-            Moje Zarobki
+            {t("earnings.title")}
           </h1>
           <p className="text-muted-foreground mt-1">
-            Zarządzaj monetyzacją swoich utworów i śledź zarobki
+            {t("earnings.subtitle")}
           </p>
         </motion.div>
 
