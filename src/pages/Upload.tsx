@@ -66,6 +66,7 @@ const Upload = () => {
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [insertedTrackId, setInsertedTrackId] = useState<string | null>(null);
   const [wantMonetize, setWantMonetize] = useState(true);
+  const [isSunoPro, setIsSunoPro] = useState(false);
 
   const displayName = user?.user_metadata?.display_name || user?.email?.split("@")[0] || "Artist";
   const isSunoTrack = sunoLink.trim().length > 0;
