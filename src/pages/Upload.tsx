@@ -62,8 +62,11 @@ const Upload = () => {
   const [audioDuration, setAudioDuration] = useState<number | null>(null);
   const [durationError, setDurationError] = useState(false);
   const [coverUrl, setCoverUrl] = useState("");
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [insertedTrackId, setInsertedTrackId] = useState<string | null>(null);
 
   const displayName = user?.user_metadata?.display_name || user?.email?.split("@")[0] || "Artist";
+  const isSunoTrack = sunoLink.trim().length > 0;
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -108,17 +111,20 @@ const Upload = () => {
     }
 
     setIsSubmitting(true);
-    setModerationResult(null);
+    setUploadProgress(null);
 
     try {
       let audioUrl = "";
 
       if (audioFile) {
+        setUploadProgress(0);
         const { publicUrl } = await uploadToR2({
           file: audioFile,
           folder: "tracks",
+          onProgress: (pct) => setUploadProgress(pct),
         });
         audioUrl = publicUrl;
+        setUploadProgress(100);
       }
 
       const result = {
@@ -147,7 +153,7 @@ const Upload = () => {
 
       if (trackInsertErr) throw trackInsertErr;
 
-      // If no custom cover, trigger AI cover search
+      setInsertedTrackId(insertedTrack?.id || null);
       if (!coverUrl && insertedTrack?.id) {
         supabase.functions.invoke("ai-cover", {
           body: { trackId: insertedTrack.id },
@@ -171,13 +177,14 @@ const Upload = () => {
     setTitle("");
     setGenre("");
     setDescription("");
-    // email field removed
     setAgreed(false);
     setModerationResult(null);
     setAudioFile(null);
     setAudioDuration(null);
     setDurationError(false);
     setCoverUrl("");
+    setUploadProgress(null);
+    setInsertedTrackId(null);
   };
 
   // Require login
@@ -219,15 +226,28 @@ const Upload = () => {
               {isApproved ? t("upload.successDesc") : isReview ? t("upload.reviewDesc") : t("upload.rejectedDesc")}
             </p>
             {isApproved && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.5 }}
-                className="mt-6 inline-flex items-center gap-2 bg-green-500/20 border border-green-500/30 rounded-full px-6 py-3"
-              >
-                <CheckCircle className="h-5 w-5 text-green-400" />
-                <span className="text-green-300 font-semibold">{t("upload.confirmed")}</span>
-              </motion.div>
+              <div className="mt-6 space-y-3 flex flex-col items-center">
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.5 }}
+                  className="inline-flex items-center gap-2 bg-green-500/20 border border-green-500/30 rounded-full px-6 py-3"
+                >
+                  <CheckCircle className="h-5 w-5 text-green-400" />
+                  <span className="text-green-300 font-semibold">{t("upload.confirmed")}</span>
+                </motion.div>
+                {isSunoTrack && (
+                  <span className="inline-flex items-center gap-1.5 bg-primary/20 border border-primary/30 rounded-full px-4 py-1.5 text-xs font-semibold text-primary">
+                    <Music className="h-3.5 w-3.5" /> AI-Assisted (Suno)
+                  </span>
+                )}
+                {insertedTrackId && (
+                  <Button variant="outline" size="sm" onClick={() => navigate("/")} className="gap-2">
+                    <Music className="h-4 w-4" />
+                    Przejdź do biblioteki
+                  </Button>
+                )}
+              </div>
             )}
           </motion.div>
 
@@ -487,6 +507,24 @@ const Upload = () => {
                 {t("upload.agreeRules")}
               </Button>
             </div>
+
+            {/* Upload Progress Bar */}
+            {uploadProgress !== null && isSubmitting && (
+              <div className="space-y-1.5">
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>Przesyłanie pliku do R2...</span>
+                  <span>{uploadProgress}%</span>
+                </div>
+                <div className="h-2.5 bg-secondary rounded-full overflow-hidden">
+                  <motion.div
+                    className="h-full bg-primary rounded-full"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${uploadProgress}%` }}
+                    transition={{ duration: 0.3 }}
+                  />
+                </div>
+              </div>
+            )}
 
             <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }} className="pt-2">
               <Button
