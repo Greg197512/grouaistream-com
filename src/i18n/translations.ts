@@ -36,7 +36,8 @@ type TranslationKeys = {
   "nav.settings": string;
   "nav.legalDocs": string;
   "nav.aiFeatures": string;
-  "nav.myTracks": string;
+   "nav.myTracks": string;
+   "nav.earnings": string;
 
   // TopBar
   "topbar.searchPlaceholder": string;
