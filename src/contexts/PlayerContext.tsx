@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { extractYouTubeId } from "@/components/player/YouTubePlayer";
 import { useSkipAdaptation } from "@/hooks/useSkipAdaptation";
+import { useStreamCounter } from "@/hooks/useStreamCounter";
 import { isLikelyAudioUrl, isNativeVideoUrl } from "@/lib/mediaPlayback";
 
 export interface Track {
@@ -86,6 +87,9 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   const [skipAnalysis, setSkipAnalysis] = useState({ avoidGenres: [] as string[], avoidMoods: [] as string[], recentSkipCount: 0, consecutiveSkips: 0 });
 
   const { recordSkip, getSkipAnalysis, triggerAIAdaptation } = useSkipAdaptation();
+
+  // Stream counter — counts a stream after 30s of continuous playback
+  useStreamCounter(currentTrack?.id ?? null, isPlaying, userId);
 
   // Keep refs in sync
   useEffect(() => { isVideoModeRef.current = isVideoMode; }, [isVideoMode]);

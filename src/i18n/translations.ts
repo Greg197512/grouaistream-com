@@ -36,7 +36,8 @@ type TranslationKeys = {
   "nav.settings": string;
   "nav.legalDocs": string;
   "nav.aiFeatures": string;
-  "nav.myTracks": string;
+   "nav.myTracks": string;
+   "nav.earnings": string;
 
   // TopBar
   "topbar.searchPlaceholder": string;
@@ -667,6 +668,7 @@ const pl: TranslationKeys = {
   "nav.legalDocs": "Dokumenty prawne",
   "nav.aiFeatures": "Funkcje AI",
   "nav.myTracks": "Moje Utwory",
+  "nav.earnings": "Moje Zarobki",
 
   "topbar.searchPlaceholder": "Czego chcesz posłuchać?",
   "topbar.signIn": "Zaloguj się",
@@ -1273,6 +1275,7 @@ const en: TranslationKeys = {
   "nav.legalDocs": "Legal Documents",
   "nav.aiFeatures": "AI Features",
   "nav.myTracks": "My Tracks",
+  "nav.earnings": "My Earnings",
 
   "topbar.searchPlaceholder": "What do you want to listen to?",
   "topbar.signIn": "Sign In",
@@ -1879,6 +1882,7 @@ const nl: TranslationKeys = {
   "nav.legalDocs": "Juridische Documenten",
   "nav.aiFeatures": "AI Functies",
   "nav.myTracks": "Mijn Nummers",
+  "nav.earnings": "Mijn Inkomsten",
 
   "topbar.searchPlaceholder": "Waar wil je naar luisteren?",
   "topbar.signIn": "Inloggen",
@@ -2485,6 +2489,7 @@ const ua: TranslationKeys = {
   "nav.legalDocs": "Юридичні Документи",
   "nav.aiFeatures": "Функції AI",
   "nav.myTracks": "Мої Треки",
+  "nav.earnings": "Мої Заробітки",
 
   "topbar.searchPlaceholder": "Що хочеш послухати?",
   "topbar.signIn": "Увійти",

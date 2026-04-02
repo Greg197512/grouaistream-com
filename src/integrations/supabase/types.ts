@@ -38,6 +38,44 @@ export type Database = {
         }
         Relationships: []
       }
+      creator_earnings: {
+        Row: {
+          amount: number
+          created_at: string
+          description: string | null
+          earning_type: string
+          id: string
+          track_id: string
+          user_id: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          description?: string | null
+          earning_type?: string
+          id?: string
+          track_id: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          description?: string | null
+          earning_type?: string
+          id?: string
+          track_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "creator_earnings_track_id_fkey"
+            columns: ["track_id"]
+            isOneToOne: false
+            referencedRelation: "tracks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       dj_session_guests: {
         Row: {
           guest_name: string | null
@@ -582,6 +620,36 @@ export type Database = {
         }
         Relationships: []
       }
+      payout_requests: {
+        Row: {
+          amount: number
+          id: string
+          processed_at: string | null
+          requested_at: string
+          status: string
+          stripe_payout_id: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          id?: string
+          processed_at?: string | null
+          requested_at?: string
+          status?: string
+          stripe_payout_id?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          id?: string
+          processed_at?: string | null
+          requested_at?: string
+          status?: string
+          stripe_payout_id?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       playlist_tracks: {
         Row: {
           added_at: string
@@ -817,6 +885,41 @@ export type Database = {
           },
         ]
       }
+      stream_events: {
+        Row: {
+          counted: boolean
+          duration_played: number
+          id: string
+          streamed_at: string
+          track_id: string
+          user_id: string
+        }
+        Insert: {
+          counted?: boolean
+          duration_played?: number
+          id?: string
+          streamed_at?: string
+          track_id: string
+          user_id: string
+        }
+        Update: {
+          counted?: boolean
+          duration_played?: number
+          id?: string
+          streamed_at?: string
+          track_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stream_events_track_id_fkey"
+            columns: ["track_id"]
+            isOneToOne: false
+            referencedRelation: "tracks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       suppressed_emails: {
         Row: {
           created_at: string
@@ -914,8 +1017,12 @@ export type Database = {
           duration: number
           genre: string | null
           id: string
+          is_monetized: boolean
+          monetization_enabled_at: string | null
           mood: string | null
           title: string
+          total_earnings: number
+          total_streams: number
           user_id: string | null
           video_url: string | null
         }
@@ -928,8 +1035,12 @@ export type Database = {
           duration?: number
           genre?: string | null
           id?: string
+          is_monetized?: boolean
+          monetization_enabled_at?: string | null
           mood?: string | null
           title: string
+          total_earnings?: number
+          total_streams?: number
           user_id?: string | null
           video_url?: string | null
         }
@@ -942,8 +1053,12 @@ export type Database = {
           duration?: number
           genre?: string | null
           id?: string
+          is_monetized?: boolean
+          monetization_enabled_at?: string | null
           mood?: string | null
           title?: string
+          total_earnings?: number
+          total_streams?: number
           user_id?: string | null
           video_url?: string | null
         }
@@ -1120,6 +1235,10 @@ export type Database = {
           msg_id: number
           read_ct: number
         }[]
+      }
+      record_stream: {
+        Args: { _duration_played: number; _track_id: string; _user_id: string }
+        Returns: undefined
       }
       verify_unlock_code: { Args: { candidate: string }; Returns: boolean }
     }

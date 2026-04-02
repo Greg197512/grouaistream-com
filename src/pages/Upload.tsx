@@ -64,6 +64,7 @@ const Upload = () => {
   const [coverUrl, setCoverUrl] = useState("");
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [insertedTrackId, setInsertedTrackId] = useState<string | null>(null);
+  const [wantMonetize, setWantMonetize] = useState(true);
 
   const displayName = user?.user_metadata?.display_name || user?.email?.split("@")[0] || "Artist";
   const isSunoTrack = sunoLink.trim().length > 0;
@@ -172,7 +173,9 @@ const Upload = () => {
         audio_url: finalAudioUrl,
         cover_url: coverUrl || null,
         user_id: user?.id || null,
-      }).select("id").single();
+        is_monetized: wantMonetize,
+        monetization_enabled_at: wantMonetize ? new Date().toISOString() : null,
+      } as any).select("id").single();
 
       if (trackInsertErr) throw trackInsertErr;
 
@@ -500,6 +503,21 @@ const Upload = () => {
                 <span className="font-medium">{displayName}</span>
                 <span className="text-muted-foreground text-xs">({t("upload.fromProfile")})</span>
               </div>
+            </div>
+
+            {/* Monetization checkbox */}
+            <div className="flex items-center gap-3 p-4 rounded-xl bg-green-500/5 border border-green-500/20">
+              <Checkbox
+                id="monetize"
+                checked={wantMonetize}
+                onCheckedChange={(v) => setWantMonetize(v === true)}
+              />
+              <Label htmlFor="monetize" className="text-sm cursor-pointer leading-relaxed">
+                💰 Chcę zarabiać na tym utworze
+                <span className="block text-xs text-muted-foreground mt-0.5">
+                  Każde odsłuchanie &gt; 30s = 1 stream × 0.003 zł (65% dla Ciebie)
+                </span>
+              </Label>
             </div>
 
             {/* Cover Designer */}
