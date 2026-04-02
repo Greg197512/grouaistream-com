@@ -226,15 +226,28 @@ const Upload = () => {
               {isApproved ? t("upload.successDesc") : isReview ? t("upload.reviewDesc") : t("upload.rejectedDesc")}
             </p>
             {isApproved && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.5 }}
-                className="mt-6 inline-flex items-center gap-2 bg-green-500/20 border border-green-500/30 rounded-full px-6 py-3"
-              >
-                <CheckCircle className="h-5 w-5 text-green-400" />
-                <span className="text-green-300 font-semibold">{t("upload.confirmed")}</span>
-              </motion.div>
+              <div className="mt-6 space-y-3 flex flex-col items-center">
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.5 }}
+                  className="inline-flex items-center gap-2 bg-green-500/20 border border-green-500/30 rounded-full px-6 py-3"
+                >
+                  <CheckCircle className="h-5 w-5 text-green-400" />
+                  <span className="text-green-300 font-semibold">{t("upload.confirmed")}</span>
+                </motion.div>
+                {isSunoTrack && (
+                  <span className="inline-flex items-center gap-1.5 bg-primary/20 border border-primary/30 rounded-full px-4 py-1.5 text-xs font-semibold text-primary">
+                    <Music className="h-3.5 w-3.5" /> AI-Assisted (Suno)
+                  </span>
+                )}
+                {insertedTrackId && (
+                  <Button variant="outline" size="sm" onClick={() => navigate("/")} className="gap-2">
+                    <Music className="h-4 w-4" />
+                    Przejdź do biblioteki
+                  </Button>
+                )}
+              </div>
             )}
           </motion.div>
 
