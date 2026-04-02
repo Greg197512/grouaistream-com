@@ -1,10 +1,51 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { S3Client, PutObjectCommand } from "npm:@aws-sdk/client-s3@3.600.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
+
+const R2_PUBLIC_BASE = "https://pub-46ecdc3a5ae341fcb16454d732eb9bcd.r2.dev";
+
+function getR2Client() {
+  const endpoint = Deno.env.get("S3_ENDPOINT");
+  const accessKeyId = Deno.env.get("S3_ACCESS_KEY_ID");
+  const secretAccessKey = Deno.env.get("S3_SECRET_ACCESS_KEY");
+  if (!endpoint || !accessKeyId || !secretAccessKey) return null;
+  return new S3Client({
+    region: Deno.env.get("S3_REGION") || "auto",
+    endpoint,
+    credentials: { accessKeyId, secretAccessKey },
+    forcePathStyle: true,
+  });
+}
+
+async function uploadToR2(key: string, data: Uint8Array, contentType: string): Promise<string | null> {
+  const client = getR2Client();
+  const bucket = Deno.env.get("S3_BUCKET_NAME");
+  if (!client || !bucket) {
+    console.error("R2 not configured");
+    return null;
+  }
+  await client.send(new PutObjectCommand({
+    Bucket: bucket,
+    Key: key,
+    Body: data,
+    ContentType: contentType,
+  }));
+  return `${R2_PUBLIC_BASE}/${key}`;
+}
+
+function sanitizeFilename(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 60);
+}
 
 async function findOriginalCover(title: string, artist: string): Promise<string | null> {
   // 1. iTunes
@@ -106,15 +147,6 @@ async function generateAICover(title: string, artist: string, genre: string | nu
   }
 }
 
-function sanitizeFilename(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9]/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "")
-    .slice(0, 60);
-}
-
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -155,36 +187,26 @@ serve(async (req) => {
     let coverUrl = await findOriginalCover(track.title, track.artist);
     let source = "original";
 
-    // 2. If not found, generate AI cover
+    // 2. If not found, generate AI cover and upload to R2
     if (!coverUrl) {
       console.log(`No original found, generating AI cover for "${track.title}"...`);
       const aiBase64 = await generateAICover(track.title, track.artist, track.genre);
       
       if (aiBase64) {
-        // Upload base64 image to Supabase storage
         try {
           const base64Data = aiBase64.replace(/^data:image\/\w+;base64,/, "");
           const binaryData = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
           
-          const filename = `covers/ai-${sanitizeFilename(track.artist)}-${sanitizeFilename(track.title)}-${Date.now()}.png`;
+          const key = `covers/ai-${sanitizeFilename(track.artist)}-${sanitizeFilename(track.title)}-${Date.now()}.png`;
           
-          const { error: uploadErr } = await supabase.storage
-            .from("music")
-            .upload(filename, binaryData, {
-              contentType: "image/png",
-              upsert: true,
-            });
-
-          if (!uploadErr) {
-            const { data: publicUrl } = supabase.storage.from("music").getPublicUrl(filename);
-            coverUrl = publicUrl.publicUrl;
+          const r2Url = await uploadToR2(key, binaryData, "image/png");
+          if (r2Url) {
+            coverUrl = r2Url;
             source = "ai-generated";
-            console.log(`AI cover uploaded: ${coverUrl}`);
-          } else {
-            console.error("Upload error:", uploadErr);
+            console.log(`AI cover uploaded to R2: ${coverUrl}`);
           }
         } catch (e) {
-          console.error("Failed to upload AI cover:", e);
+          console.error("Failed to upload AI cover to R2:", e);
         }
       }
     }

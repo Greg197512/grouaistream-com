@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Wand2, Upload, Loader2, Disc3 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { uploadToR2 } from "@/lib/r2Upload";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { CDJewelCase } from "./CDJewelCase";
 
@@ -38,23 +39,18 @@ export const CoverDesigner = ({ title, genre, onCoverReady, coverUrl }: CoverDes
       return;
     }
 
-    const safeName = (title || "cover").replace(/[^a-zA-Z0-9\-_]/g, "_").substring(0, 60);
-    const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
-    const filePath = `covers/custom-${safeName}-${Date.now()}.${ext}`;
-
-    const { error } = await supabase.storage.from("music").upload(filePath, file, {
-      contentType: file.type,
-      upsert: true,
-    });
-    if (error) {
+    try {
+      const { publicUrl } = await uploadToR2({
+        file,
+        folder: "covers",
+      });
+      setPreviewUrl(publicUrl);
+      onCoverReady(publicUrl);
+      toast.success(t("cover.uploaded"));
+    } catch (err: any) {
+      console.error("Cover upload error:", err);
       toast.error(t("cover.errorUpload"));
-      return;
     }
-
-    const { data } = supabase.storage.from("music").getPublicUrl(filePath);
-    setPreviewUrl(data.publicUrl);
-    onCoverReady(data.publicUrl);
-    toast.success(t("cover.uploaded"));
   };
 
   const generateAICover = async (side: "front" | "back" = "front") => {
