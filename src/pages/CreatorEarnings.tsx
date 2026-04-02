@@ -273,14 +273,14 @@ const CreatorEarnings = () => {
                       {/* Stats */}
                       <div className="hidden sm:flex items-center gap-6 text-right">
                         <div>
-                          <p className="text-xs text-muted-foreground">Streamy</p>
+                         <p className="text-xs text-muted-foreground">{t("earnings.streams")}</p>
                           <p className="text-sm font-semibold flex items-center gap-1">
                             <Eye className="h-3 w-3" />
                             {Number(track.total_streams).toLocaleString()}
                           </p>
                         </div>
                         <div>
-                          <p className="text-xs text-muted-foreground">Zarobek</p>
+                          <p className="text-xs text-muted-foreground">{t("earnings.earned")}</p>
                           <p className="text-sm font-semibold text-primary">
                             {Number(track.total_earnings).toFixed(2)} zł
                           </p>
