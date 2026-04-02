@@ -88,6 +88,9 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
 
   const { recordSkip, getSkipAnalysis, triggerAIAdaptation } = useSkipAdaptation();
 
+  // Stream counter — counts a stream after 30s of continuous playback
+  useStreamCounter(currentTrack?.id ?? null, isPlaying, userId);
+
   // Keep refs in sync
   useEffect(() => { isVideoModeRef.current = isVideoMode; }, [isVideoMode]);
 
