@@ -1,39 +1,34 @@
-import { createClient } from "jsr:@supabase/supabase-js@2";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-Deno.serve(async (req) => {
+interface ModerationInput {
+  title: string;
+  artist: string;
+  genre: string;
+  description?: string;
+  duration?: number;
+  hasSunoLink?: boolean;
+  hasAudioFile?: boolean;
+}
+
+serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { submission_id } = await req.json();
-    if (!submission_id) {
-      return new Response(JSON.stringify({ error: "submission_id required" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    const input: ModerationInput = await req.json();
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
-
-    // Fetch the submission
-    const { data: submission, error: fetchErr } = await supabase
-      .from("track_submissions")
-      .select("*")
-      .eq("id", submission_id)
-      .single();
-
-    if (fetchErr || !submission) {
-      return new Response(JSON.stringify({ error: "Submission not found" }), {
-        status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    if (!input.title || !input.genre) {
+      return new Response(
+        JSON.stringify({ error: "title and genre are required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
@@ -41,48 +36,155 @@ Deno.serve(async (req) => {
       throw new Error("LOVABLE_API_KEY not configured");
     }
 
-    // Auto-approve all submissions for now
-    const result = {
-      score_length: 18,
-      score_lyrics: 17,
-      score_vocal: 16,
-      score_production: 17,
-      score_originality: 16,
-      total_score: 84,
-      status: "approved",
-      rejection_reasons: [],
-      analysis: "Utwór spełnia standardy jakości GrouAI Stream. Zatwierdzony automatycznie.",
-      recommendations: "Świetna robota! Utwór zostanie dodany do platformy z badge'em AI-Assisted.",
-    };
-    // Update the submission with moderation results
-    const { error: updateErr } = await supabase
-      .from("track_submissions")
-      .update({
-        status: result.status || "review",
-        score_length: result.score_length || 0,
-        score_lyrics: result.score_lyrics || 0,
-        score_vocal: result.score_vocal || 0,
-        score_production: result.score_production || 0,
-        score_originality: result.score_originality || 0,
-        total_score: result.total_score || 0,
-        rejection_reasons: result.rejection_reasons || [],
-        moderation_result: result,
-        moderator_notes: `${result.analysis || ""}\n\nRekomendacje: ${result.recommendations || ""}`,
-        moderated_at: new Date().toISOString(),
-      })
-      .eq("id", submission_id);
+    const durationMin = input.duration
+      ? `${Math.floor(input.duration / 60)}:${String(Math.floor(input.duration % 60)).padStart(2, "0")}`
+      : "unknown";
 
-    if (updateErr) {
-      throw new Error(`DB update error: ${updateErr.message}`);
+    const systemPrompt = `You are a professional music quality evaluator for GrouAI Stream platform.
+You must evaluate a submitted track based on the metadata provided.
+Score each category from 0 to 20 points. Be fair but critical.
+
+Categories:
+1. score_length – Track length adequacy (min 3:00 for max score, shorter = lower)
+2. score_lyrics – Title/description quality, creativity, emotional depth
+3. score_vocal – Expected vocal quality based on genre and production context
+4. score_production – Expected production quality, dynamics, arrangement
+5. score_originality – Originality of concept, title, genre combination
+
+Rules:
+- Total score = sum of all 5 scores (max 100)
+- If total >= 60: status = "approved"
+- If total 40-59: status = "review"
+- If total < 40: status = "rejected"
+- Provide a brief analysis in Polish
+- Provide recommendations in Polish
+- If track has issues, list rejection_reasons in Polish`;
+
+    const userPrompt = `Evaluate this track submission:
+- Title: "${input.title}"
+- Artist: "${input.artist}"
+- Genre: ${input.genre}
+- Description: ${input.description || "none"}
+- Duration: ${durationMin}
+- Source: ${input.hasSunoLink ? "Suno AI" : input.hasAudioFile ? "uploaded audio file" : "unknown"}
+
+Return your evaluation using the evaluate_track tool.`;
+
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-3-flash-preview",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+        tools: [
+          {
+            type: "function",
+            function: {
+              name: "evaluate_track",
+              description: "Return the structured evaluation of a music track",
+              parameters: {
+                type: "object",
+                properties: {
+                  score_length: { type: "integer", minimum: 0, maximum: 20, description: "Length adequacy score" },
+                  score_lyrics: { type: "integer", minimum: 0, maximum: 20, description: "Lyrics/title quality score" },
+                  score_vocal: { type: "integer", minimum: 0, maximum: 20, description: "Vocal quality score" },
+                  score_production: { type: "integer", minimum: 0, maximum: 20, description: "Production quality score" },
+                  score_originality: { type: "integer", minimum: 0, maximum: 20, description: "Originality score" },
+                  analysis: { type: "string", description: "Brief analysis in Polish" },
+                  recommendations: { type: "string", description: "Recommendations in Polish" },
+                  rejection_reasons: {
+                    type: "array",
+                    items: { type: "string" },
+                    description: "List of rejection reasons in Polish (empty if approved)",
+                  },
+                },
+                required: [
+                  "score_length", "score_lyrics", "score_vocal",
+                  "score_production", "score_originality",
+                  "analysis", "recommendations", "rejection_reasons",
+                ],
+                additionalProperties: false,
+              },
+            },
+          },
+        ],
+        tool_choice: { type: "function", function: { name: "evaluate_track" } },
+      }),
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error("AI Gateway error:", response.status, errText);
+
+      if (response.status === 429) {
+        return new Response(
+          JSON.stringify({ error: "Zbyt wiele zapytań AI. Spróbuj ponownie za chwilę." }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      if (response.status === 402) {
+        return new Response(
+          JSON.stringify({ error: "Brak kredytów AI. Skontaktuj się z administratorem." }),
+          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      throw new Error(`AI Gateway error: ${response.status}`);
     }
+
+    const aiData = await response.json();
+    const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
+
+    if (!toolCall?.function?.arguments) {
+      console.error("No tool call in AI response:", JSON.stringify(aiData));
+      throw new Error("AI did not return structured evaluation");
+    }
+
+    const evaluation = typeof toolCall.function.arguments === "string"
+      ? JSON.parse(toolCall.function.arguments)
+      : toolCall.function.arguments;
+
+    const totalScore =
+      (evaluation.score_length || 0) +
+      (evaluation.score_lyrics || 0) +
+      (evaluation.score_vocal || 0) +
+      (evaluation.score_production || 0) +
+      (evaluation.score_originality || 0);
+
+    let status: string;
+    if (totalScore >= 60) status = "approved";
+    else if (totalScore >= 40) status = "review";
+    else status = "rejected";
+
+    const result = {
+      score_length: evaluation.score_length,
+      score_lyrics: evaluation.score_lyrics,
+      score_vocal: evaluation.score_vocal,
+      score_production: evaluation.score_production,
+      score_originality: evaluation.score_originality,
+      total_score: totalScore,
+      status,
+      analysis: evaluation.analysis || "",
+      recommendations: evaluation.recommendations || "",
+      rejection_reasons: evaluation.rejection_reasons || [],
+    };
+
+    console.log("Moderation result:", JSON.stringify(result));
 
     return new Response(JSON.stringify({ success: true, result }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
     console.error("Moderation error:", error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({ error: error instanceof Error ? error.message : "Internal error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
   }
 });
