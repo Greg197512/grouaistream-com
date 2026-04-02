@@ -109,6 +109,7 @@ const TrackRowComponent = forwardRef<HTMLDivElement, TrackRowProps>(({
             <p className="text-xs text-muted-foreground truncate hover:underline cursor-pointer">
               {artist}
             </p>
+            <TrackBadges isMonetized={isMonetized} isBoosted={isBoosted} isAIAssisted={isAIAssisted} />
             <span className="text-[8px] font-bold text-primary/70 whitespace-nowrap">Grouarock®</span>
           </div>
         </div>
