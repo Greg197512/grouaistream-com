@@ -326,6 +326,13 @@ export const PlayerBar = () => {
               <p className="text-[10px] text-white/50 truncate hover:text-white/70 cursor-pointer">
                 {currentTrack?.artist || "Select a track"}
               </p>
+              {currentTrack && (
+                <TrackBadges
+                  isMonetized={(currentTrack as any).is_monetized}
+                  isBoosted={(currentTrack as any).is_boosted}
+                  isAIAssisted={currentTrack.audio_url?.includes("suno")}
+                />
+              )}
               {currentTrack && <span className="text-[7px] font-bold text-primary/70 whitespace-nowrap">Grouarock®</span>}
             </div>
           </div>
