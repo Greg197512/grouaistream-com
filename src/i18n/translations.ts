@@ -1882,6 +1882,7 @@ const nl: TranslationKeys = {
   "nav.legalDocs": "Juridische Documenten",
   "nav.aiFeatures": "AI Functies",
   "nav.myTracks": "Mijn Nummers",
+  "nav.earnings": "Mijn Inkomsten",
 
   "topbar.searchPlaceholder": "Waar wil je naar luisteren?",
   "topbar.signIn": "Inloggen",
