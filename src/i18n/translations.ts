@@ -668,6 +668,7 @@ const pl: TranslationKeys = {
   "nav.legalDocs": "Dokumenty prawne",
   "nav.aiFeatures": "Funkcje AI",
   "nav.myTracks": "Moje Utwory",
+  "nav.earnings": "Moje Zarobki",
 
   "topbar.searchPlaceholder": "Czego chcesz posłuchać?",
   "topbar.signIn": "Zaloguj się",
