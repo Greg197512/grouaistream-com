@@ -286,6 +286,15 @@ const CreatorEarnings = () => {
           )}
         </div>
       </div>
+      {/* Boost Modal */}
+      {boostTrack && (
+        <BoostPurchaseModal
+          isOpen={!!boostTrack}
+          onClose={() => setBoostTrack(null)}
+          trackId={boostTrack.id}
+          trackTitle={boostTrack.title}
+        />
+      )}
     </MainLayout>
   );
 };
