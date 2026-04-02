@@ -62,8 +62,11 @@ const Upload = () => {
   const [audioDuration, setAudioDuration] = useState<number | null>(null);
   const [durationError, setDurationError] = useState(false);
   const [coverUrl, setCoverUrl] = useState("");
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [insertedTrackId, setInsertedTrackId] = useState<string | null>(null);
 
   const displayName = user?.user_metadata?.display_name || user?.email?.split("@")[0] || "Artist";
+  const isSunoTrack = sunoLink.trim().length > 0;
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
