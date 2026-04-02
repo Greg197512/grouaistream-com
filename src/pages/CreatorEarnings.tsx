@@ -220,18 +220,18 @@ const CreatorEarnings = () => {
         <div>
           <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
             <Music className="h-5 w-5" />
-            Twoje utwory ({tracks.length})
+            {t("earnings.yourTracks")} ({tracks.length})
           </h2>
 
           {loading ? (
-            <div className="text-center py-12 text-muted-foreground">Ładowanie...</div>
+            <div className="text-center py-12 text-muted-foreground">{t("earnings.loading")}</div>
           ) : tracks.length === 0 ? (
             <Card className="bg-card/50 border-white/10">
               <CardContent className="py-12 text-center">
                 <Music className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">Nie masz jeszcze żadnych utworów</p>
+                <p className="text-muted-foreground">{t("earnings.noTracks")}</p>
                 <Button onClick={() => navigate("/upload")} className="mt-4">
-                  Dodaj pierwszy utwór
+                  {t("earnings.addFirst")}
                 </Button>
               </CardContent>
             </Card>
