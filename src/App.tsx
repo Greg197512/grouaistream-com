@@ -38,6 +38,7 @@ import MyTracks from "./pages/MyTracks";
 import Unsubscribe from "./pages/Unsubscribe";
 import AlbumCreator from "./pages/AlbumCreator";
 import CreatorEarnings from "./pages/CreatorEarnings";
+import EarnWithUs from "./pages/EarnWithUs";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
