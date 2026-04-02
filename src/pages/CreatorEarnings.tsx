@@ -101,7 +101,7 @@ const CreatorEarnings = () => {
     setTracks(prev => prev.map(t => 
       t.id === trackId ? { ...t, is_monetized: enabled } : t
     ));
-    toast.success(enabled ? "Monetyzacja włączona ✨" : "Monetyzacja wyłączona");
+    toast.success(enabled ? t("earnings.monetizationOn") : t("earnings.monetizationOff"));
   };
 
   if (!user) {
