@@ -2020,6 +2020,7 @@ const en: TranslationKeys = {
   "earnPage.faq4a": "Yes — Suno AI tracks that pass quality moderation can be monetized. Condition: you must have distribution rights.",
   "earnPage.footer": "GrouAI Stream — a platform that truly pays artists.",
   "earnPage.terms": "platform terms",
+  "earnPage.sunoMonetize": "If your track comes from Suno Pro or Premier — you can monetise it on GrouAI Stream and distribute it on Spotify, YouTube, Apple Music, etc.",
   "cover.title": "Album cover",
   "cover.aiTab": "AI Generator",
   "cover.uploadTab": "Custom image",
