@@ -138,7 +138,7 @@ const CreatorEarnings = () => {
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs text-muted-foreground uppercase tracking-wide">Zarobki ogółem</p>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide">{t("earnings.totalEarnings")}</p>
                     <p className="text-2xl font-bold text-primary">{totalEarnings.toFixed(2)} zł</p>
                   </div>
                   <DollarSign className="h-8 w-8 text-primary/40" />
