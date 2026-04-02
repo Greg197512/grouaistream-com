@@ -114,18 +114,11 @@ const Upload = () => {
       let audioUrl = "";
 
       if (audioFile) {
-        const ext = audioFile.name.split(".").pop()?.toLowerCase() || "mp3";
-        const safeName = title.replace(/[^a-zA-Z0-9\-_]/g, '_').substring(0, 80);
-        const filePath = `submissions/${Date.now()}-${safeName}.${ext}`;
-
-        const { error: uploadError } = await supabase.storage
-          .from("music")
-          .upload(filePath, audioFile, { contentType: audioFile.type || "audio/mpeg" });
-
-        if (uploadError) throw uploadError;
-
-        const { data: urlData } = supabase.storage.from("music").getPublicUrl(filePath);
-        audioUrl = urlData.publicUrl;
+        const { publicUrl } = await uploadToR2({
+          file: audioFile,
+          folder: "tracks",
+        });
+        audioUrl = publicUrl;
       }
 
       const result = {
