@@ -166,7 +166,7 @@ const CreatorEarnings = () => {
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs text-muted-foreground uppercase tracking-wide">Streamy łącznie</p>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide">{t("earnings.totalStreams")}</p>
                     <p className="text-2xl font-bold">{totalStreams.toLocaleString()}</p>
                   </div>
                   <BarChart3 className="h-8 w-8 text-muted-foreground/40" />
