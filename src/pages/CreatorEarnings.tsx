@@ -11,7 +11,8 @@ import { HQCover } from "@/components/ui/HQCover";
 import { motion } from "framer-motion";
 import { 
   DollarSign, TrendingUp, Music, BarChart3, 
-  Wallet, ArrowUpRight, LogIn, Eye, Rocket 
+  Wallet, ArrowUpRight, LogIn, Eye, Rocket,
+  ShieldCheck, Lock, BadgeCheck, Globe
 } from "lucide-react";
 import { BoostPurchaseModal } from "@/components/boost/BoostPurchaseModal";
 import { TrackBadges } from "@/components/ui/TrackBadges";
