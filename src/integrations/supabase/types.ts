@@ -944,6 +944,53 @@ export type Database = {
         }
         Relationships: []
       }
+      track_boosts: {
+        Row: {
+          amount_paid: number
+          created_at: string
+          expires_at: string
+          id: string
+          impressions_total: number
+          impressions_used: number
+          is_active: boolean
+          package_type: string
+          track_id: string
+          user_id: string
+        }
+        Insert: {
+          amount_paid?: number
+          created_at?: string
+          expires_at?: string
+          id?: string
+          impressions_total?: number
+          impressions_used?: number
+          is_active?: boolean
+          package_type?: string
+          track_id: string
+          user_id: string
+        }
+        Update: {
+          amount_paid?: number
+          created_at?: string
+          expires_at?: string
+          id?: string
+          impressions_total?: number
+          impressions_used?: number
+          is_active?: boolean
+          package_type?: string
+          track_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "track_boosts_track_id_fkey"
+            columns: ["track_id"]
+            isOneToOne: false
+            referencedRelation: "tracks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       track_submissions: {
         Row: {
           created_at: string
@@ -1012,11 +1059,13 @@ export type Database = {
           album: string | null
           artist: string
           audio_url: string | null
+          boost_expires_at: string | null
           cover_url: string | null
           created_at: string
           duration: number
           genre: string | null
           id: string
+          is_boosted: boolean
           is_monetized: boolean
           monetization_enabled_at: string | null
           mood: string | null
@@ -1030,11 +1079,13 @@ export type Database = {
           album?: string | null
           artist: string
           audio_url?: string | null
+          boost_expires_at?: string | null
           cover_url?: string | null
           created_at?: string
           duration?: number
           genre?: string | null
           id?: string
+          is_boosted?: boolean
           is_monetized?: boolean
           monetization_enabled_at?: string | null
           mood?: string | null
@@ -1048,11 +1099,13 @@ export type Database = {
           album?: string | null
           artist?: string
           audio_url?: string | null
+          boost_expires_at?: string | null
           cover_url?: string | null
           created_at?: string
           duration?: number
           genre?: string | null
           id?: string
+          is_boosted?: boolean
           is_monetized?: boolean
           monetization_enabled_at?: string | null
           mood?: string | null
