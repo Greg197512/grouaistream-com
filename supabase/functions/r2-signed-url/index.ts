@@ -58,9 +58,8 @@ serve(async (req) => {
 
     const uploadUrl = await getSignedUrl(client, command, { expiresIn: 600 });
 
-    // R2 public URL via the bucket's public development URL
-    const accountId = endpoint.replace("https://", "").split(".")[0];
-    const publicUrl = `https://pub-${accountId}.r2.dev/${key}`;
+    // R2 public URL - hardcoded public bucket URL
+    const publicUrl = `https://pub-46ecdc3a5ae341fcb16454d732eb9bcd.r2.dev/${key}`;
 
     return new Response(
       JSON.stringify({ uploadUrl, publicUrl, key }),
