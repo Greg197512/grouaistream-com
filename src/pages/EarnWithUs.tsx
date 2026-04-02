@@ -46,7 +46,7 @@ const earningMethods = [
     iconColor: "text-amber-400",
     details: [
       "Dostajesz 90% z każdej dobrowolnej wpłaty",
-      "Przycisk „Wesprzyj artystę" przy każdym utworze",
+      'Przycisk „Wesprzyj artystę" przy każdym utworze',
       "Słuchacze mogą dać 5 zł, 10 zł, 20 zł lub dowolną kwotę",
     ],
   },
