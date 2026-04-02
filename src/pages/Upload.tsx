@@ -127,18 +127,41 @@ const Upload = () => {
         setUploadProgress(100);
       }
 
-      const result = {
-        score_length: 18,
-        score_lyrics: 17,
-        score_vocal: 16,
-        score_production: 17,
-        score_originality: 16,
-        total_score: 84,
-        status: "approved",
-        rejection_reasons: [],
-        analysis: t("upload.successDesc"),
-        recommendations: "",
-      };
+      // AI moderation - real analysis
+      setUploadProgress(null);
+      toast.info("🤖 Analiza AI w toku...");
+
+      const { data: moderationData, error: moderationError } = await supabase.functions.invoke(
+        "ai-moderate-track",
+        {
+          body: {
+            title,
+            artist: displayName,
+            genre,
+            description,
+            duration: audioDuration || 180,
+            hasSunoLink: isSunoTrack,
+            hasAudioFile: !!audioFile,
+          },
+        }
+      );
+
+      if (moderationError) {
+        console.error("Moderation error:", moderationError);
+        throw new Error("Błąd analizy AI: " + (moderationError.message || ""));
+      }
+
+      const result = moderationData?.result;
+      if (!result) {
+        throw new Error("AI nie zwróciło wyniku analizy");
+      }
+
+      // Only insert track if approved or review
+      if (result.status === "rejected") {
+        setModerationResult(result);
+        toast.error("Utwór nie przeszedł weryfikacji AI");
+        return;
+      }
 
       const finalAudioUrl = audioUrl || sunoLink || null;
       const { data: insertedTrack, error: trackInsertErr } = await supabase.from("tracks").insert({
@@ -163,7 +186,7 @@ const Upload = () => {
       window.dispatchEvent(new Event("track-list-changed"));
 
       setModerationResult(result);
-      toast.success(t("upload.accepted"));
+      toast.success(result.status === "approved" ? t("upload.accepted") : "Utwór skierowany do ręcznej weryfikacji");
     } catch (err: any) {
       console.error("Submit error:", err);
       toast.error(t("upload.submitError") + ": " + (err.message || ""));
