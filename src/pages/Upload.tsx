@@ -153,7 +153,7 @@ const Upload = () => {
 
       if (trackInsertErr) throw trackInsertErr;
 
-      // If no custom cover, trigger AI cover search
+      setInsertedTrackId(insertedTrack?.id || null);
       if (!coverUrl && insertedTrack?.id) {
         supabase.functions.invoke("ai-cover", {
           body: { trackId: insertedTrack.id },
