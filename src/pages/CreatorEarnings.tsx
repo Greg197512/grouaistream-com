@@ -19,6 +19,7 @@ import { TrackBadges } from "@/components/ui/TrackBadges";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface MonetizedTrack {
   id: string;
