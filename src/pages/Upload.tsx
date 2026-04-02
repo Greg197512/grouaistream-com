@@ -540,7 +540,7 @@ const Upload = () => {
                         : "border-white/10 text-muted-foreground hover:border-white/20"
                     )}
                   >
-                    Nie teraz
+                    {t("upload.monetizeNo")}
                   </button>
                 </div>
               </div>
