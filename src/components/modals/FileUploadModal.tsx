@@ -126,20 +126,14 @@ export const FileUploadModal = ({ isOpen, onClose, onSuccess }: FileUploadModalP
       setItems(prev => prev.map((it, idx) => idx === i ? { ...it, status: "uploading" } : it));
 
       try {
-        const ext = getFileExtension(item.file.name).replace(".", "") || "mp3";
-        const safeName = item.title.replace(/[^a-zA-Z0-9\-_]/g, '_').substring(0, 80);
-        const filePath = `shared/${Date.now()}-${safeName}.${ext}`;
-
-        const { error: uploadError } = await supabase.storage
-          .from("music")
-          .upload(filePath, item.file, { contentType: getMediaContentType(item.file) });
-
-        if (uploadError) throw uploadError;
-
-        const { data: urlData } = supabase.storage.from("music").getPublicUrl(filePath);
-        const publicUrl = urlData.publicUrl;
-
+        // Upload to R2
         const isVideo = isVideoLikeFile(item.file);
+        const folder = isVideo ? "videos" : "tracks";
+        const { publicUrl } = await uploadToR2({
+          file: item.file,
+          folder,
+        });
+
         const { error: insertError } = await supabase.from("tracks").insert({
           title: item.title,
           artist: item.artist,
