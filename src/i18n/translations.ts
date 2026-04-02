@@ -661,6 +661,7 @@ type TranslationKeys = {
   "earnPage.faq4a": string;
   "earnPage.footer": string;
   "earnPage.terms": string;
+  "earnPage.sunoMonetize": string;
   "cover.title": string;
   "cover.aiTab": string;
   "cover.uploadTab": string;
