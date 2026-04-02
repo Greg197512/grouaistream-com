@@ -592,6 +592,9 @@ type TranslationKeys = {
   "upload.monetizeDesc": string;
   "upload.monetizeYes": string;
   "upload.monetizeNo": string;
+  "upload.sunoProCheckbox": string;
+  "upload.rightsDisclaimer": string;
+  "upload.distributorDisclaimer": string;
   // Earnings page
   "earnings.title": string;
   "earnings.subtitle": string;
