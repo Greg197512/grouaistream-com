@@ -213,6 +213,7 @@ const Upload = () => {
     setCoverUrl("");
     setUploadProgress(null);
     setInsertedTrackId(null);
+    setIsSunoPro(false);
   };
 
   // Require login
