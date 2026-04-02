@@ -2699,6 +2699,7 @@ const nl: TranslationKeys = {
   "earnPage.faq4a": "Ja — Suno AI-nummers die door de kwaliteitsmoderatie komen, kunnen worden gemonetiseerd. Voorwaarde: je moet distributierechten hebben.",
   "earnPage.footer": "GrouAI Stream — een platform dat artiesten echt betaalt.",
   "earnPage.terms": "platformvoorwaarden",
+  "earnPage.sunoMonetize": "Als je nummer afkomstig is van Suno Pro of Premier — kun je het monetiseren op GrouAI Stream en distribueren via Spotify, YouTube, Apple Music, enz.",
   "cover.title": "Albumhoes",
   "cover.aiTab": "AI Generator",
   "cover.uploadTab": "Eigen afbeelding",
