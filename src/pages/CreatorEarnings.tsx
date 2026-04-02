@@ -35,6 +35,7 @@ interface MonetizedTrack {
 
 const CreatorEarnings = () => {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const [tracks, setTracks] = useState<MonetizedTrack[]>([]);
   const [totalEarnings, setTotalEarnings] = useState(0);
