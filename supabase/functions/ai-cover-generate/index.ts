@@ -105,7 +105,6 @@ No text, no letters, no words, no logos on the image. On a clean background.`;
       region: Deno.env.get("S3_REGION") || "auto",
       endpoint,
       credentials: { accessKeyId, secretAccessKey },
-      forcePathStyle: true,
     });
 
     await client.send(new PutObjectCommand({

@@ -18,7 +18,6 @@ function getR2Client() {
     region: Deno.env.get("S3_REGION") || "auto",
     endpoint,
     credentials: { accessKeyId, secretAccessKey },
-    forcePathStyle: true,
   });
 }
 

@@ -41,7 +41,6 @@ serve(async (req) => {
       region,
       endpoint,
       credentials: { accessKeyId, secretAccessKey },
-      forcePathStyle: true,
     });
 
     const prefix = folder || "tracks";
