@@ -111,17 +111,20 @@ const Upload = () => {
     }
 
     setIsSubmitting(true);
-    setModerationResult(null);
+    setUploadProgress(null);
 
     try {
       let audioUrl = "";
 
       if (audioFile) {
+        setUploadProgress(0);
         const { publicUrl } = await uploadToR2({
           file: audioFile,
           folder: "tracks",
+          onProgress: (pct) => setUploadProgress(pct),
         });
         audioUrl = publicUrl;
+        setUploadProgress(100);
       }
 
       const result = {
