@@ -1,0 +1,1 @@
+UPDATE public.tracks SET cover_url = 'https://pub-46ecdc3a5ae341fcb16454d732eb9bcd.r2.dev/covers/1775164024461-nie-dajmy-sie-cover.jpg' WHERE id = '7f47584a-8a9b-4dda-a07d-f743b446c4ec';
