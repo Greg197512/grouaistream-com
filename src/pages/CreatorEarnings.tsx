@@ -39,6 +39,7 @@ const CreatorEarnings = () => {
   const [monthlyEarnings, setMonthlyEarnings] = useState(0);
   const [totalStreams, setTotalStreams] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [boostTrack, setBoostTrack] = useState<{ id: string; title: string } | null>(null);
 
   const loadData = useCallback(async () => {
     if (!user) return;
