@@ -206,9 +206,9 @@ const CreatorEarnings = () => {
           <CardContent className="py-4 flex items-start gap-3">
             <ArrowUpRight className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
             <div>
-              <p className="text-sm font-medium">Stawka: 0.003 zł / stream (65% dla twórcy)</p>
+              <p className="text-sm font-medium">{t("earnings.rate")}</p>
               <p className="text-xs text-muted-foreground mt-1">
-                Każde odsłuchanie powyżej 30 sekund = 1 stream. Wypłaty przez Stripe Connect (wkrótce).
+                {t("earnings.rateDesc")}
               </p>
             </div>
           </CardContent>
