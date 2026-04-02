@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { extractYouTubeId } from "@/components/player/YouTubePlayer";
 import { useSkipAdaptation } from "@/hooks/useSkipAdaptation";
+import { useStreamCounter } from "@/hooks/useStreamCounter";
 import { isLikelyAudioUrl, isNativeVideoUrl } from "@/lib/mediaPlayback";
 
 export interface Track {
