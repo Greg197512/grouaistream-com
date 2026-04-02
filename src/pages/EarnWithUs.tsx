@@ -70,7 +70,7 @@ const benefits = [
   { icon: CreditCard, text: "Wypłaty co miesiąc bezpośrednio na konto bankowe (Stripe)" },
   { icon: DollarSign, text: "Minimalna wypłata tylko 50 zł" },
   { icon: BarChart3, text: "Szczegółowe statystyki zarobków i streamów" },
-  { icon: ShieldCheck, text: "Badge „Monetyzowany" przy Twoich utworach" },
+  { icon: ShieldCheck, text: 'Badge „Monetyzowany" przy Twoich utworach' },
   { icon: Star, text: "Priorytet w playlistach i rekomendacjach" },
   { icon: Sparkles, text: "Wsparcie AI w promocji Twojej muzyki" },
 ];
