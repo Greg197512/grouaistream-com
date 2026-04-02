@@ -11,8 +11,10 @@ import { HQCover } from "@/components/ui/HQCover";
 import { motion } from "framer-motion";
 import { 
   DollarSign, TrendingUp, Music, BarChart3, 
-  Wallet, ArrowUpRight, LogIn, Eye 
+  Wallet, ArrowUpRight, LogIn, Eye, Rocket 
 } from "lucide-react";
+import { BoostPurchaseModal } from "@/components/boost/BoostPurchaseModal";
+import { TrackBadges } from "@/components/ui/TrackBadges";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
