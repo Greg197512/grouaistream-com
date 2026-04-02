@@ -11,6 +11,25 @@ interface R2UploadResult {
   key: string;
 }
 
+interface SignedUploadResponse {
+  uploadUrl: string;
+  publicUrl: string;
+  key: string;
+  method?: string;
+  error?: string;
+}
+
+function parseUploadError(responseText: string, status: number): string {
+  const code = responseText.match(/<Code>([^<]+)<\/Code>/)?.[1];
+  const message = responseText.match(/<Message>([^<]+)<\/Message>/)?.[1];
+
+  if (code || message) {
+    return `Upload failed (${status}): ${code ?? "R2Error"}${message ? ` — ${message}` : ""}`;
+  }
+
+  return `Upload failed with status ${status}`;
+}
+
 /**
  * Upload a file to Cloudflare R2 via pre-signed URL.
  * 1. Calls the edge function to get a signed upload URL
@@ -22,8 +41,7 @@ export async function uploadToR2({
   folder = "tracks",
   onProgress,
 }: R2UploadOptions): Promise<R2UploadResult> {
-  // Step 1: Get pre-signed URL from edge function
-  const { data, error } = await supabase.functions.invoke("r2-signed-url", {
+  const { data, error } = await supabase.functions.invoke<SignedUploadResponse>("r2-signed-url", {
     body: {
       fileName: file.name,
       contentType: file.type || "application/octet-stream",
@@ -35,12 +53,15 @@ export async function uploadToR2({
     throw new Error(error?.message || data?.error || "Failed to get upload URL");
   }
 
-  const { uploadUrl, publicUrl, key } = data;
+  const { uploadUrl, publicUrl, key, method = "PUT" } = data;
 
-  // Step 2: Upload directly to R2
+  if (method !== "PUT") {
+    throw new Error(`Unsupported upload method: ${method}`);
+  }
+
   await new Promise<void>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
-    xhr.open("PUT", uploadUrl, true);
+    xhr.open(method, uploadUrl, true);
     xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream");
 
     if (onProgress) {
@@ -55,11 +76,11 @@ export async function uploadToR2({
       if (xhr.status >= 200 && xhr.status < 300) {
         resolve();
       } else {
-        reject(new Error(`Upload failed with status ${xhr.status}`));
+        reject(new Error(parseUploadError(xhr.responseText, xhr.status)));
       }
     };
 
-    xhr.onerror = () => reject(new Error("Network error during upload"));
+    xhr.onerror = () => reject(new Error("Network error during upload — zwykle oznacza błędny podpis URL albo odpowiedź blokowaną przez CORS po stronie R2"));
     xhr.ontimeout = () => reject(new Error("Upload timed out"));
     xhr.timeout = 600000; // 10 min for large files
 
