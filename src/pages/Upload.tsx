@@ -511,11 +511,10 @@ const Upload = () => {
               <div className="p-4 space-y-3">
                 <div className="flex items-center gap-2">
                   <DollarSign className="h-5 w-5 text-emerald-400" />
-                  <p className="font-semibold text-sm">Czy chcesz zarabiać na tym utworze?</p>
+                  <p className="font-semibold text-sm">{t("upload.monetizeQuestion")}</p>
                 </div>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  Każde odsłuchanie powyżej 30 sekund = 1 stream × 0.003 zł (65% trafia do Ciebie).
-                  Wypłaty co miesiąc na konto bankowe. Możesz to zmienić w każdej chwili.
+                  {t("upload.monetizeDesc")}
                 </p>
                 <div className="flex items-center gap-4">
                   <button
@@ -529,7 +528,7 @@ const Upload = () => {
                     )}
                   >
                     <CheckCircle className={cn("h-4 w-4", wantMonetize ? "text-emerald-400" : "text-muted-foreground")} />
-                    Tak, chcę zarabiać
+                    {t("upload.monetizeYes")}
                   </button>
                   <button
                     type="button"
@@ -541,7 +540,7 @@ const Upload = () => {
                         : "border-white/10 text-muted-foreground hover:border-white/20"
                     )}
                   >
-                    Nie teraz
+                    {t("upload.monetizeNo")}
                   </button>
                 </div>
               </div>

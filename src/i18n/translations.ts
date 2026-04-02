@@ -587,6 +587,77 @@ type TranslationKeys = {
   "upload.fromProfile": string;
   "upload.promoTitle": string;
   "upload.promoDesc": string;
+  // Monetization prompt on upload
+  "upload.monetizeQuestion": string;
+  "upload.monetizeDesc": string;
+  "upload.monetizeYes": string;
+  "upload.monetizeNo": string;
+  // Earnings page
+  "earnings.title": string;
+  "earnings.subtitle": string;
+  "earnings.totalEarnings": string;
+  "earnings.thisMonth": string;
+  "earnings.totalStreams": string;
+  "earnings.rate": string;
+  "earnings.rateDesc": string;
+  "earnings.yourTracks": string;
+  "earnings.noTracks": string;
+  "earnings.addFirst": string;
+  "earnings.streams": string;
+  "earnings.earned": string;
+  "earnings.boost": string;
+  "earnings.loginTitle": string;
+  "earnings.loginDesc": string;
+  "earnings.loading": string;
+  "earnings.monetizationOn": string;
+  "earnings.monetizationOff": string;
+  // Security trust bar
+  "security.ssl": string;
+  "security.stripe": string;
+  "security.gdpr": string;
+  "security.euServers": string;
+  // EarnWithUs page
+  "earnPage.badge": string;
+  "earnPage.title1": string;
+  "earnPage.title2": string;
+  "earnPage.subtitle": string;
+  "earnPage.creatorsCount": string;
+  "earnPage.threeWays": string;
+  "earnPage.royalties": string;
+  "earnPage.royaltiesD1": string;
+  "earnPage.royaltiesD2": string;
+  "earnPage.royaltiesD3": string;
+  "earnPage.tips": string;
+  "earnPage.tipsD1": string;
+  "earnPage.tipsD2": string;
+  "earnPage.tipsD3": string;
+  "earnPage.verified": string;
+  "earnPage.verifiedD1": string;
+  "earnPage.verifiedD2": string;
+  "earnPage.verifiedD3": string;
+  "earnPage.forYou": string;
+  "earnPage.benefits": string;
+  "earnPage.b1": string;
+  "earnPage.b2": string;
+  "earnPage.b3": string;
+  "earnPage.b4": string;
+  "earnPage.b5": string;
+  "earnPage.b6": string;
+  "earnPage.ctaTitle": string;
+  "earnPage.ctaDesc": string;
+  "earnPage.ctaButton": string;
+  "earnPage.ctaUpload": string;
+  "earnPage.faq": string;
+  "earnPage.faq1q": string;
+  "earnPage.faq1a": string;
+  "earnPage.faq2q": string;
+  "earnPage.faq2a": string;
+  "earnPage.faq3q": string;
+  "earnPage.faq3a": string;
+  "earnPage.faq4q": string;
+  "earnPage.faq4a": string;
+  "earnPage.footer": string;
+  "earnPage.terms": string;
   "cover.title": string;
   "cover.aiTab": string;
   "cover.uploadTab": string;
@@ -1196,6 +1267,73 @@ const pl: TranslationKeys = {
   "upload.fromProfile": "z profilu",
   "upload.promoTitle": "🎉 Promocja do końca maja 2026!",
   "upload.promoDesc": "Wszystkie funkcje uploadu dostępne za darmo — wrzucaj bez limitu!",
+  "upload.monetizeQuestion": "Czy chcesz zarabiać na tym utworze?",
+  "upload.monetizeDesc": "Każde odsłuchanie powyżej 30 sekund = 1 stream × 0.003 zł (65% trafia do Ciebie). Wypłaty co miesiąc na konto bankowe. Możesz to zmienić w każdej chwili.",
+  "upload.monetizeYes": "Tak, chcę zarabiać",
+  "upload.monetizeNo": "Nie teraz",
+  "earnings.title": "Moje Zarobki",
+  "earnings.subtitle": "Zarządzaj monetyzacją swoich utworów i śledź zarobki",
+  "earnings.totalEarnings": "Zarobki ogółem",
+  "earnings.thisMonth": "Ten miesiąc",
+  "earnings.totalStreams": "Streamy łącznie",
+  "earnings.rate": "Stawka: 0.003 zł / stream (65% dla twórcy)",
+  "earnings.rateDesc": "Każde odsłuchanie powyżej 30 sekund = 1 stream. Wypłaty przez Stripe Connect (wkrótce).",
+  "earnings.yourTracks": "Twoje utwory",
+  "earnings.noTracks": "Nie masz jeszcze żadnych utworów",
+  "earnings.addFirst": "Dodaj pierwszy utwór",
+  "earnings.streams": "Streamy",
+  "earnings.earned": "Zarobek",
+  "earnings.boost": "Boost",
+  "earnings.loginTitle": "Zaloguj się",
+  "earnings.loginDesc": "Musisz być zalogowany, aby zobaczyć swoje zarobki",
+  "earnings.loading": "Ładowanie...",
+  "earnings.monetizationOn": "Monetyzacja włączona ✨",
+  "earnings.monetizationOff": "Monetyzacja wyłączona",
+  "security.ssl": "Szyfrowanie SSL/TLS",
+  "security.stripe": "Bezpieczne płatności Stripe",
+  "security.gdpr": "Zgodność z RODO",
+  "security.euServers": "Serwery EU/NL",
+  "earnPage.badge": "Program monetyzacji",
+  "earnPage.title1": "Zarabiaj na swojej muzyce",
+  "earnPage.title2": "— naprawdę i regularnie",
+  "earnPage.subtitle": "Dołącz do twórców, którzy już zarabiają na GrouAI Stream. Dostawaj pieniądze za każdy odsłuch, tipy i promocję swoich utworów.",
+  "earnPage.creatorsCount": "twórców już zarabia",
+  "earnPage.threeWays": "Trzy sposoby na zarobek",
+  "earnPage.royalties": "Royalties ze streamów",
+  "earnPage.royaltiesD1": "Dostajesz 65% z każdego odsłuchania swojego utworu",
+  "earnPage.royaltiesD2": "Im więcej słuchają → tym więcej zarabiasz",
+  "earnPage.royaltiesD3": "Automatyczne naliczanie co miesiąc",
+  "earnPage.tips": "Tipy od słuchaczy",
+  "earnPage.tipsD1": "Dostajesz 90% z każdej dobrowolnej wpłaty",
+  "earnPage.tipsD2": 'Przycisk „Wesprzyj artystę" przy każdym utworze',
+  "earnPage.tipsD3": "Słuchacze mogą dać 5 zł, 10 zł, 20 zł lub dowolną kwotę",
+  "earnPage.verified": "Pakiety Verified Streams",
+  "earnPage.verifiedD1": "Kupujesz promocję swojego utworu",
+  "earnPage.verifiedD2": "Dostajesz 100% zysku z pakietu",
+  "earnPage.verifiedD3": "Przyspieszasz wzrost odsłuchań i widoczności",
+  "earnPage.forYou": "dla Ciebie",
+  "earnPage.benefits": "Dodatkowe korzyści",
+  "earnPage.b1": "Wypłaty co miesiąc bezpośrednio na konto bankowe (Stripe)",
+  "earnPage.b2": "Minimalna wypłata tylko 50 zł",
+  "earnPage.b3": "Szczegółowe statystyki zarobków i streamów",
+  "earnPage.b4": 'Badge „Monetyzowany" przy Twoich utworach',
+  "earnPage.b5": "Priorytet w playlistach i rekomendacjach",
+  "earnPage.b6": "Wsparcie AI w promocji Twojej muzyki",
+  "earnPage.ctaTitle": "Gotowy, żeby zarabiać?",
+  "earnPage.ctaDesc": "Włącz monetyzację swoich utworów i zacznij otrzymywać pieniądze za każdy stream i tip od słuchaczy.",
+  "earnPage.ctaButton": "Włącz monetyzację teraz",
+  "earnPage.ctaUpload": "Wrzuć swój utwór",
+  "earnPage.faq": "Najczęściej zadawane pytania",
+  "earnPage.faq1q": "Ile naprawdę mogę zarobić?",
+  "earnPage.faq1a": "To zależy od liczby streamów i tipów. Przy 10 000 odsłuchań miesięcznie zarobisz ok. 19,50 zł z royalties. Dodaj do tego tipy od fanów i promocję — realne zarobki rosną szybko.",
+  "earnPage.faq2q": "Kiedy dostaję pieniądze?",
+  "earnPage.faq2a": "Wypłaty realizujemy co miesiąc przez Stripe. Minimalna kwota do wypłaty to 50 zł.",
+  "earnPage.faq3q": "Czy mogę wyłączyć monetyzację w każdej chwili?",
+  "earnPage.faq3a": "Tak! W panelu zarobków możesz włączyć lub wyłączyć monetyzację dla każdego utworu osobno. Nie ma żadnych zobowiązań ani umów.",
+  "earnPage.faq4q": "Czy muzyka z Suno też może zarabiać?",
+  "earnPage.faq4a": "Tak — utwory wygenerowane z Suno AI, które przejdą moderację jakości, mogą być monetyzowane. Warunek: musisz mieć prawa do dystrybucji.",
+  "earnPage.footer": "GrouAI Stream — platforma, która naprawdę płaci artystom.",
+  "earnPage.terms": "regulaminowi platformy",
   "cover.title": "Okładka albumu",
   "cover.aiTab": "AI Generator",
   "cover.uploadTab": "Własna grafika",
@@ -1804,6 +1942,73 @@ const en: TranslationKeys = {
   "upload.fromProfile": "from profile",
   "upload.promoTitle": "🎉 Promo until end of May 2026!",
   "upload.promoDesc": "All upload features free — upload without limits!",
+  "upload.monetizeQuestion": "Do you want to earn from this track?",
+  "upload.monetizeDesc": "Every listen over 30 seconds = 1 stream × 0.003 PLN (65% goes to you). Monthly payouts to your bank. You can change this anytime.",
+  "upload.monetizeYes": "Yes, I want to earn",
+  "upload.monetizeNo": "Not now",
+  "earnings.title": "My Earnings",
+  "earnings.subtitle": "Manage monetization of your tracks and track earnings",
+  "earnings.totalEarnings": "Total Earnings",
+  "earnings.thisMonth": "This Month",
+  "earnings.totalStreams": "Total Streams",
+  "earnings.rate": "Rate: 0.003 PLN / stream (65% for creator)",
+  "earnings.rateDesc": "Every listen over 30 seconds = 1 stream. Payouts via Stripe Connect (coming soon).",
+  "earnings.yourTracks": "Your tracks",
+  "earnings.noTracks": "You don't have any tracks yet",
+  "earnings.addFirst": "Add your first track",
+  "earnings.streams": "Streams",
+  "earnings.earned": "Earned",
+  "earnings.boost": "Boost",
+  "earnings.loginTitle": "Sign In",
+  "earnings.loginDesc": "You need to be logged in to view your earnings",
+  "earnings.loading": "Loading...",
+  "earnings.monetizationOn": "Monetization enabled ✨",
+  "earnings.monetizationOff": "Monetization disabled",
+  "security.ssl": "SSL/TLS Encryption",
+  "security.stripe": "Secure Stripe Payments",
+  "security.gdpr": "GDPR Compliant",
+  "security.euServers": "EU/NL Servers",
+  "earnPage.badge": "Monetization Program",
+  "earnPage.title1": "Earn from your music",
+  "earnPage.title2": "— for real, regularly",
+  "earnPage.subtitle": "Join creators already earning on GrouAI Stream. Get paid for every listen, tips, and promotion of your tracks.",
+  "earnPage.creatorsCount": "creators already earning",
+  "earnPage.threeWays": "Three ways to earn",
+  "earnPage.royalties": "Stream Royalties",
+  "earnPage.royaltiesD1": "Get 65% from every listen of your track",
+  "earnPage.royaltiesD2": "More listens → more earnings",
+  "earnPage.royaltiesD3": "Automatic monthly calculation",
+  "earnPage.tips": "Listener Tips",
+  "earnPage.tipsD1": "Get 90% of every voluntary payment",
+  "earnPage.tipsD2": '"Support artist" button on every track',
+  "earnPage.tipsD3": "Listeners can give 5, 10, 20 PLN or any amount",
+  "earnPage.verified": "Verified Streams Packages",
+  "earnPage.verifiedD1": "Buy promotion for your track",
+  "earnPage.verifiedD2": "Get 100% profit from the package",
+  "earnPage.verifiedD3": "Accelerate your listens and visibility",
+  "earnPage.forYou": "for you",
+  "earnPage.benefits": "Additional Benefits",
+  "earnPage.b1": "Monthly payouts directly to your bank account (Stripe)",
+  "earnPage.b2": "Minimum payout only 50 PLN",
+  "earnPage.b3": "Detailed earnings and streams statistics",
+  "earnPage.b4": '"Monetized" badge on your tracks',
+  "earnPage.b5": "Priority in playlists and recommendations",
+  "earnPage.b6": "AI support for promoting your music",
+  "earnPage.ctaTitle": "Ready to earn?",
+  "earnPage.ctaDesc": "Enable monetization for your tracks and start receiving money for every stream and tip from listeners.",
+  "earnPage.ctaButton": "Enable monetization now",
+  "earnPage.ctaUpload": "Upload your track",
+  "earnPage.faq": "Frequently Asked Questions",
+  "earnPage.faq1q": "How much can I really earn?",
+  "earnPage.faq1a": "It depends on stream count and tips. With 10,000 monthly listens you'll earn about 19.50 PLN from royalties. Add tips and promotion — real earnings grow fast.",
+  "earnPage.faq2q": "When do I get paid?",
+  "earnPage.faq2a": "We process payouts monthly via Stripe. Minimum payout amount is 50 PLN.",
+  "earnPage.faq3q": "Can I disable monetization at any time?",
+  "earnPage.faq3a": "Yes! In the earnings panel you can toggle monetization per track. No obligations or contracts.",
+  "earnPage.faq4q": "Can Suno-generated music also earn?",
+  "earnPage.faq4a": "Yes — Suno AI tracks that pass quality moderation can be monetized. Condition: you must have distribution rights.",
+  "earnPage.footer": "GrouAI Stream — a platform that truly pays artists.",
+  "earnPage.terms": "platform terms",
   "cover.title": "Album cover",
   "cover.aiTab": "AI Generator",
   "cover.uploadTab": "Custom image",
@@ -2412,6 +2617,73 @@ const nl: TranslationKeys = {
   "upload.fromProfile": "uit profiel",
   "upload.promoTitle": "🎉 Promotie tot eind mei 2026!",
   "upload.promoDesc": "Alle uploadfuncties gratis — upload zonder limiet!",
+  "upload.monetizeQuestion": "Wil je verdienen aan dit nummer?",
+  "upload.monetizeDesc": "Elke luisterbeurt van meer dan 30 seconden = 1 stream × 0,003 PLN (65% gaat naar jou). Maandelijkse uitbetalingen. Je kunt dit altijd wijzigen.",
+  "upload.monetizeYes": "Ja, ik wil verdienen",
+  "upload.monetizeNo": "Niet nu",
+  "earnings.title": "Mijn Inkomsten",
+  "earnings.subtitle": "Beheer de monetisatie van je nummers en volg je inkomsten",
+  "earnings.totalEarnings": "Totale Inkomsten",
+  "earnings.thisMonth": "Deze Maand",
+  "earnings.totalStreams": "Totaal Streams",
+  "earnings.rate": "Tarief: 0,003 PLN / stream (65% voor de artiest)",
+  "earnings.rateDesc": "Elke luisterbeurt van meer dan 30 seconden = 1 stream. Uitbetalingen via Stripe Connect (binnenkort).",
+  "earnings.yourTracks": "Jouw nummers",
+  "earnings.noTracks": "Je hebt nog geen nummers",
+  "earnings.addFirst": "Voeg je eerste nummer toe",
+  "earnings.streams": "Streams",
+  "earnings.earned": "Verdiend",
+  "earnings.boost": "Boost",
+  "earnings.loginTitle": "Inloggen",
+  "earnings.loginDesc": "Je moet ingelogd zijn om je inkomsten te zien",
+  "earnings.loading": "Laden...",
+  "earnings.monetizationOn": "Monetisatie ingeschakeld ✨",
+  "earnings.monetizationOff": "Monetisatie uitgeschakeld",
+  "security.ssl": "SSL/TLS Versleuteling",
+  "security.stripe": "Veilige Stripe Betalingen",
+  "security.gdpr": "AVG-conform",
+  "security.euServers": "EU/NL Servers",
+  "earnPage.badge": "Monetisatieprogramma",
+  "earnPage.title1": "Verdien aan je muziek",
+  "earnPage.title2": "— echt en regelmatig",
+  "earnPage.subtitle": "Sluit je aan bij artiesten die al verdienen op GrouAI Stream. Ontvang geld voor elke luisterbeurt, tips en promotie van je nummers.",
+  "earnPage.creatorsCount": "artiesten verdienen al",
+  "earnPage.threeWays": "Drie manieren om te verdienen",
+  "earnPage.royalties": "Stream Royalties",
+  "earnPage.royaltiesD1": "Ontvang 65% van elke luisterbeurt van je nummer",
+  "earnPage.royaltiesD2": "Meer luisteraars → meer inkomsten",
+  "earnPage.royaltiesD3": "Automatische maandelijkse berekening",
+  "earnPage.tips": "Tips van luisteraars",
+  "earnPage.tipsD1": "Ontvang 90% van elke vrijwillige betaling",
+  "earnPage.tipsD2": '"Steun artiest" knop bij elk nummer',
+  "earnPage.tipsD3": "Luisteraars kunnen 5, 10, 20 PLN of elk bedrag geven",
+  "earnPage.verified": "Verified Streams Pakketten",
+  "earnPage.verifiedD1": "Koop promotie voor je nummer",
+  "earnPage.verifiedD2": "Ontvang 100% winst uit het pakket",
+  "earnPage.verifiedD3": "Versnel je luisterbeurten en zichtbaarheid",
+  "earnPage.forYou": "voor jou",
+  "earnPage.benefits": "Extra voordelen",
+  "earnPage.b1": "Maandelijkse uitbetalingen rechtstreeks op je bankrekening (Stripe)",
+  "earnPage.b2": "Minimale uitbetaling slechts 50 PLN",
+  "earnPage.b3": "Gedetailleerde inkomsten- en streamstatistieken",
+  "earnPage.b4": '"Gemonetiseerd" badge bij je nummers',
+  "earnPage.b5": "Prioriteit in playlists en aanbevelingen",
+  "earnPage.b6": "AI-ondersteuning bij het promoten van je muziek",
+  "earnPage.ctaTitle": "Klaar om te verdienen?",
+  "earnPage.ctaDesc": "Schakel monetisatie in voor je nummers en begin geld te ontvangen voor elke stream en tip van luisteraars.",
+  "earnPage.ctaButton": "Schakel monetisatie nu in",
+  "earnPage.ctaUpload": "Upload je nummer",
+  "earnPage.faq": "Veelgestelde Vragen",
+  "earnPage.faq1q": "Hoeveel kan ik echt verdienen?",
+  "earnPage.faq1a": "Het hangt af van het aantal streams en tips. Met 10.000 maandelijkse luisterbeurten verdien je ongeveer 19,50 PLN aan royalties.",
+  "earnPage.faq2q": "Wanneer word ik betaald?",
+  "earnPage.faq2a": "We verwerken uitbetalingen maandelijks via Stripe. Minimaal uitbetalingsbedrag is 50 PLN.",
+  "earnPage.faq3q": "Kan ik monetisatie op elk moment uitschakelen?",
+  "earnPage.faq3a": "Ja! In het inkomstenpaneel kun je monetisatie per nummer schakelen. Geen verplichtingen of contracten.",
+  "earnPage.faq4q": "Kan Suno-gegenereerde muziek ook verdienen?",
+  "earnPage.faq4a": "Ja — Suno AI-nummers die door de kwaliteitsmoderatie komen, kunnen worden gemonetiseerd. Voorwaarde: je moet distributierechten hebben.",
+  "earnPage.footer": "GrouAI Stream — een platform dat artiesten echt betaalt.",
+  "earnPage.terms": "platformvoorwaarden",
   "cover.title": "Albumhoes",
   "cover.aiTab": "AI Generator",
   "cover.uploadTab": "Eigen afbeelding",
@@ -3020,6 +3292,73 @@ const ua: TranslationKeys = {
   "upload.fromProfile": "з профілю",
   "upload.promoTitle": "🎉 Акція до кінця травня 2026!",
   "upload.promoDesc": "Усі функції завантаження безкоштовні — завантажуйте без обмежень!",
+  "upload.monetizeQuestion": "Чи хочете ви заробляти на цьому треку?",
+  "upload.monetizeDesc": "Кожне прослуховування понад 30 секунд = 1 стрім × 0,003 PLN (65% отримуєте ви). Щомісячні виплати на рахунок. Можна змінити будь-коли.",
+  "upload.monetizeYes": "Так, хочу заробляти",
+  "upload.monetizeNo": "Не зараз",
+  "earnings.title": "Мої Заробітки",
+  "earnings.subtitle": "Керуйте монетизацією своїх треків та відстежуйте заробітки",
+  "earnings.totalEarnings": "Загальний заробіток",
+  "earnings.thisMonth": "Цей місяць",
+  "earnings.totalStreams": "Всього стрімів",
+  "earnings.rate": "Ставка: 0,003 PLN / стрім (65% для автора)",
+  "earnings.rateDesc": "Кожне прослуховування понад 30 секунд = 1 стрім. Виплати через Stripe Connect (незабаром).",
+  "earnings.yourTracks": "Ваші треки",
+  "earnings.noTracks": "У вас ще немає треків",
+  "earnings.addFirst": "Додайте перший трек",
+  "earnings.streams": "Стріми",
+  "earnings.earned": "Заробіток",
+  "earnings.boost": "Буст",
+  "earnings.loginTitle": "Увійти",
+  "earnings.loginDesc": "Щоб переглянути заробітки, потрібно увійти",
+  "earnings.loading": "Завантаження...",
+  "earnings.monetizationOn": "Монетизацію ввімкнено ✨",
+  "earnings.monetizationOff": "Монетизацію вимкнено",
+  "security.ssl": "Шифрування SSL/TLS",
+  "security.stripe": "Безпечні платежі Stripe",
+  "security.gdpr": "Відповідність GDPR",
+  "security.euServers": "Сервери EU/NL",
+  "earnPage.badge": "Програма монетизації",
+  "earnPage.title1": "Заробляйте на своїй музиці",
+  "earnPage.title2": "— реально і регулярно",
+  "earnPage.subtitle": "Приєднуйтесь до авторів, які вже заробляють на GrouAI Stream. Отримуйте гроші за кожне прослуховування, чайові та просування ваших треків.",
+  "earnPage.creatorsCount": "авторів вже заробляють",
+  "earnPage.threeWays": "Три способи заробітку",
+  "earnPage.royalties": "Роялті зі стрімів",
+  "earnPage.royaltiesD1": "Отримуйте 65% від кожного прослуховування вашого треку",
+  "earnPage.royaltiesD2": "Більше слухають → більше заробляєте",
+  "earnPage.royaltiesD3": "Автоматичне нарахування щомісяця",
+  "earnPage.tips": "Чайові від слухачів",
+  "earnPage.tipsD1": "Отримуйте 90% від кожної добровільної оплати",
+  "earnPage.tipsD2": 'Кнопка „Підтримати артиста" біля кожного треку',
+  "earnPage.tipsD3": "Слухачі можуть дати 5, 10, 20 PLN або будь-яку суму",
+  "earnPage.verified": "Пакети Verified Streams",
+  "earnPage.verifiedD1": "Купуйте просування вашого треку",
+  "earnPage.verifiedD2": "Отримуйте 100% прибутку з пакету",
+  "earnPage.verifiedD3": "Прискоруйте зростання прослуховувань і видимості",
+  "earnPage.forYou": "для вас",
+  "earnPage.benefits": "Додаткові переваги",
+  "earnPage.b1": "Щомісячні виплати безпосередньо на банківський рахунок (Stripe)",
+  "earnPage.b2": "Мінімальна виплата лише 50 PLN",
+  "earnPage.b3": "Детальна статистика заробітків і стрімів",
+  "earnPage.b4": 'Бейдж „Монетизований" біля ваших треків',
+  "earnPage.b5": "Пріоритет у плейлістах і рекомендаціях",
+  "earnPage.b6": "Підтримка AI у просуванні вашої музики",
+  "earnPage.ctaTitle": "Готові заробляти?",
+  "earnPage.ctaDesc": "Увімкніть монетизацію ваших треків і почніть отримувати гроші за кожен стрім і чайові від слухачів.",
+  "earnPage.ctaButton": "Увімкнути монетизацію зараз",
+  "earnPage.ctaUpload": "Завантажити свій трек",
+  "earnPage.faq": "Часті запитання",
+  "earnPage.faq1q": "Скільки реально можна заробити?",
+  "earnPage.faq1a": "Залежить від кількості стрімів і чайових. При 10 000 прослуховувань на місяць заробите близько 19,50 PLN з роялті.",
+  "earnPage.faq2q": "Коли я отримаю гроші?",
+  "earnPage.faq2a": "Виплати здійснюємо щомісяця через Stripe. Мінімальна сума виплати — 50 PLN.",
+  "earnPage.faq3q": "Чи можу я вимкнути монетизацію в будь-який момент?",
+  "earnPage.faq3a": "Так! У панелі заробітків можна перемикати монетизацію для кожного треку окремо. Жодних зобов'язань чи договорів.",
+  "earnPage.faq4q": "Чи може музика з Suno також заробляти?",
+  "earnPage.faq4a": "Так — треки з Suno AI, що пройшли модерацію якості, можуть бути монетизовані. Умова: ви повинні мати права на розповсюдження.",
+  "earnPage.footer": "GrouAI Stream — платформа, яка справді платить артистам.",
+  "earnPage.terms": "умовами платформи",
   "cover.title": "Обкладинка альбому",
   "cover.aiTab": "AI Генератор",
   "cover.uploadTab": "Власне зображення",
