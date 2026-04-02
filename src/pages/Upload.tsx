@@ -592,7 +592,21 @@ const Upload = () => {
               </Button>
             </div>
 
-            {/* Upload Progress Bar */}
+            {/* Rights disclaimer */}
+            <div className="flex items-start gap-2.5 p-3 rounded-lg bg-secondary/40 border border-border/50">
+              <ShieldCheck className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+              <p className="text-[11px] text-muted-foreground leading-relaxed">
+                {t("upload.rightsDisclaimer")}
+              </p>
+            </div>
+
+            {/* Distributor disclaimer */}
+            <div className="flex items-start gap-2.5 p-3 rounded-lg bg-secondary/40 border border-border/50">
+              <Info className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+              <p className="text-[11px] text-muted-foreground leading-relaxed">
+                {t("upload.distributorDisclaimer")}
+              </p>
+            </div>
             {uploadProgress !== null && isSubmitting && (
               <div className="space-y-1.5">
                 <div className="flex justify-between text-xs text-muted-foreground">
