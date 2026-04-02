@@ -4,6 +4,7 @@ import { Play, Pause, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TrackOptionsMenu, LikeButton } from "@/components/menus/TrackOptionsMenu";
 import { HQCover } from "@/components/ui/HQCover";
+import { TrackBadges } from "@/components/ui/TrackBadges";
 
 interface TrackRowProps {
   id: string;
