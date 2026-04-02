@@ -109,9 +109,9 @@ const CreatorEarnings = () => {
       <MainLayout>
         <div className="max-w-md mx-auto px-6 py-20 text-center">
           <LogIn className="h-16 w-16 text-primary mx-auto mb-6" />
-          <h1 className="text-2xl font-bold mb-3">Zaloguj się</h1>
-          <p className="text-muted-foreground mb-6">Musisz być zalogowany, aby zobaczyć swoje zarobki</p>
-          <Button onClick={() => navigate("/auth")}>Zaloguj się</Button>
+          <h1 className="text-2xl font-bold mb-3">{t("earnings.loginTitle")}</h1>
+          <p className="text-muted-foreground mb-6">{t("earnings.loginDesc")}</p>
+          <Button onClick={() => navigate("/auth")}>{t("earnings.loginTitle")}</Button>
         </div>
       </MainLayout>
     );
