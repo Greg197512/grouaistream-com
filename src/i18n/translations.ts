@@ -2494,6 +2494,7 @@ const ua: TranslationKeys = {
   "nav.aiFeatures": "Функції AI",
   "nav.myTracks": "Мої Треки",
   "nav.earnings": "Мої Заробітки",
+  "nav.earnWithUs": "Заробляй з нами",
 
   "topbar.searchPlaceholder": "Що хочеш послухати?",
   "topbar.signIn": "Увійти",
