@@ -664,6 +664,10 @@ export default function Admin() {
                   <HardDrive className="h-4 w-4" />
                   Dysk
                 </TabsTrigger>
+                <TabsTrigger value="ai-rankings" className="gap-2">
+                  <Award className="h-4 w-4" />
+                  Analiza AI
+                </TabsTrigger>
               </TabsList>
 
               {/* Genres Tab */}
