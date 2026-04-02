@@ -1,10 +1,12 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "jsr:@supabase/supabase-js@2";
+import { S3Client, PutObjectCommand } from "npm:@aws-sdk/client-s3@3.600.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
+
+const R2_PUBLIC_BASE = "https://pub-46ecdc3a5ae341fcb16454d732eb9bcd.r2.dev";
 
 function sanitizeFilename(name: string): string {
   return name
@@ -33,13 +35,11 @@ serve(async (req) => {
     let prompt: string;
 
     if (mode === "custom" && description) {
-      // User-guided AI cover
       prompt = `Create a stunning, photographic-quality album cover art. User description: "${description}". 
 The artwork should feel like a high-end professional photography or cinematic still. 
 Ultra-realistic, high-resolution, dramatic lighting, rich colors, depth of field. 
 No text, no letters, no words on the image. Clean artistic composition.`;
     } else {
-      // Auto mode — professional photographic cover based on song title/style
       const styleHint = style ? ` The music style is ${style}.` : "";
       prompt = `Create a breathtaking, photographic-quality album cover art for a song called "${title || "Untitled"}".${styleHint}
 The image must look like a professional photograph or cinematic movie still — NOT cartoon, NOT illustration, NOT abstract art.
@@ -83,37 +83,43 @@ No text, no letters, no words, no logos on the image. On a clean background.`;
       );
     }
 
-    // Upload base64 to Supabase storage
-    const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    // Upload base64 to R2
+    const endpoint = Deno.env.get("S3_ENDPOINT");
+    const accessKeyId = Deno.env.get("S3_ACCESS_KEY_ID");
+    const secretAccessKey = Deno.env.get("S3_SECRET_ACCESS_KEY");
+    const bucket = Deno.env.get("S3_BUCKET_NAME");
 
-    const base64Data = imageUrl.replace(/^data:image\/\w+;base64,/, "");
-    const binaryData = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
-
-    const filename = `covers/ai-suno-${sanitizeFilename(title || "track")}-${Date.now()}.png`;
-
-    const { error: uploadErr } = await supabase.storage
-      .from("music")
-      .upload(filename, binaryData, {
-        contentType: "image/png",
-        upsert: true,
-      });
-
-    if (uploadErr) {
-      console.error("Upload error:", uploadErr);
+    if (!endpoint || !accessKeyId || !secretAccessKey || !bucket) {
       return new Response(
-        JSON.stringify({ error: "Failed to upload cover" }),
+        JSON.stringify({ error: "R2 storage not configured" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const { data: publicUrl } = supabase.storage.from("music").getPublicUrl(filename);
+    const base64Data = imageUrl.replace(/^data:image\/\w+;base64,/, "");
+    const binaryData = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
 
-    console.log(`[ai-cover-generate] Cover uploaded: ${publicUrl.publicUrl}`);
+    const key = `covers/ai-${sanitizeFilename(title || "track")}-${Date.now()}.png`;
+
+    const client = new S3Client({
+      region: Deno.env.get("S3_REGION") || "auto",
+      endpoint,
+      credentials: { accessKeyId, secretAccessKey },
+      forcePathStyle: true,
+    });
+
+    await client.send(new PutObjectCommand({
+      Bucket: bucket,
+      Key: key,
+      Body: binaryData,
+      ContentType: "image/png",
+    }));
+
+    const publicUrl = `${R2_PUBLIC_BASE}/${key}`;
+    console.log(`[ai-cover-generate] Cover uploaded to R2: ${publicUrl}`);
 
     return new Response(
-      JSON.stringify({ cover_url: publicUrl.publicUrl }),
+      JSON.stringify({ cover_url: publicUrl }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
