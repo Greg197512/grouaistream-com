@@ -54,7 +54,8 @@ import { Track, usePlayer } from "@/contexts/PlayerContext";
 import { RadioStationManager } from "@/components/admin/RadioStationManager";
 import { StorageStats } from "@/components/admin/StorageStats";
 import { AdminEmailDashboard } from "@/components/admin/AdminEmailDashboard";
-import { Radio as RadioIcon, HardDrive } from "lucide-react";
+import { AIModeratorRankings } from "@/components/admin/AIModeratorRankings";
+import { Radio as RadioIcon, HardDrive, Award } from "lucide-react";
 
 interface UserStats {
   totalUsers: number;
@@ -663,6 +664,10 @@ export default function Admin() {
                   <HardDrive className="h-4 w-4" />
                   Dysk
                 </TabsTrigger>
+                <TabsTrigger value="ai-rankings" className="gap-2">
+                  <Award className="h-4 w-4" />
+                  Analiza AI
+                </TabsTrigger>
               </TabsList>
 
               {/* Genres Tab */}
@@ -1085,6 +1090,10 @@ export default function Admin() {
               {/* Storage Tab */}
               <TabsContent value="storage">
                 <StorageStats />
+              </TabsContent>
+
+              <TabsContent value="ai-rankings">
+                <AIModeratorRankings />
               </TabsContent>
             </Tabs>
 
