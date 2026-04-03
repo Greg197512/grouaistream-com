@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, Music, Guitar, Waves, Blend, Type, Zap, Mic } from "lucide-react";
+import { Sparkles, Music, Guitar, Waves, Blend, Type, Zap, Mic, Wand2 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
 import { motion, AnimatePresence } from "framer-motion";
@@ -18,6 +18,7 @@ import { NeonWavesLoader } from "@/components/studio/NeonWavesLoader";
 import { GenerationHistory } from "@/components/studio/GenerationHistory";
 import { LyricsDisplay, generateLyrics, parseLyricsFromText } from "@/components/studio/LyricsDisplay";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { SunoGeneratePanel } from "@/components/studio/SunoGeneratePanel";
 
 const GENRES = [
   "Pop", "Rock", "Electronic", "Hip-Hop", "Jazz", "Classical",
@@ -184,7 +185,7 @@ function audioBufferToWav(buffer: AudioBuffer): string {
 
 const Suno = () => {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<"generate" | "mix">("generate");
+  const [activeTab, setActiveTab] = useState<"generate" | "mix" | "suno">("generate");
   const [genre, setGenre] = useState("Pop");
   const [genre2, setGenre2] = useState<string | null>(null);
   const [blendRatio, setBlendRatio] = useState(50);
@@ -381,6 +382,15 @@ const Suno = () => {
               <Sparkles className="h-4 w-4" /> Generator
             </button>
             <button
+              onClick={() => setActiveTab("suno")}
+              className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${
+                activeTab === "suno" ? "text-white" : "text-gray-400 hover:text-gray-200"
+              }`}
+              style={activeTab === "suno" ? { background: "linear-gradient(135deg, #FF6B00, #9333EA)", boxShadow: "0 0 15px #FF6B0040" } : undefined}
+            >
+              <Wand2 className="h-4 w-4" /> Suno AI
+            </button>
+            <button
               onClick={() => setActiveTab("mix")}
               className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${
                 activeTab === "mix" ? "text-white" : "text-gray-400 hover:text-gray-200"
@@ -393,6 +403,8 @@ const Suno = () => {
 
           {activeTab === "mix" ? (
             <TrackMixer />
+          ) : activeTab === "suno" ? (
+            <SunoGeneratePanel />
           ) : (
           <>
           {/* Genre Selection */}

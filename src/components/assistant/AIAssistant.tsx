@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { motion, AnimatePresence, useDragControls } from "framer-motion";
-import { Send, Loader2, ExternalLink, Music, Power, GripHorizontal, Sparkles, Maximize2, Minimize2, Radio, Waves, Copy, Check, Paperclip, Image, X, FileAudio, Film, Wand2 } from "lucide-react";
+import { Send, Loader2, ExternalLink, Music, Power, GripHorizontal, Sparkles, Maximize2, Minimize2, Radio, Waves, Copy, Check, Paperclip, Image, X, FileAudio, Film } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -15,7 +15,7 @@ import { generateMusic, type GeneratedTrack } from "@/utils/musicGenerator";
 import { mixAudioFiles, type MixStyle } from "@/utils/audioMixer";
 import { WaveformPlayer } from "@/components/studio/WaveformPlayer";
 import { toast } from "sonner";
-import { SunoGenerateModal } from "@/components/modals/SunoGenerateModal";
+
 
 interface ChatAttachment {
   type: "image" | "audio" | "video";
@@ -89,7 +89,7 @@ export const AIAssistant = () => {
   const [userName, setUserName] = useState("Użytkownik");
   const [attachments, setAttachments] = useState<ChatAttachment[]>([]);
   const [isDragOver, setIsDragOver] = useState(false);
-  const [sunoModalOpen, setSunoModalOpen] = useState(false);
+  
   const [listeningStats, setListeningStats] = useState<{ topGenres: string[]; topMoods: string[]; recentTracks: number } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -1055,17 +1055,6 @@ export const AIAssistant = () => {
                 >
                   <Paperclip className="h-4 w-4" />
                 </Button>
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="ghost"
-                  onClick={() => setSunoModalOpen(true)}
-                  className="shrink-0 h-9 w-9 rounded-xl text-primary/70 hover:text-primary hover:bg-primary/10"
-                  disabled={isLoading}
-                  title="Generuj muzykę z Suno AI"
-                >
-                  <Wand2 className="h-4 w-4" />
-                </Button>
                 <Input
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
@@ -1083,8 +1072,6 @@ export const AIAssistant = () => {
         )}
       </AnimatePresence>
 
-      {/* Suno Generate Modal */}
-      <SunoGenerateModal isOpen={sunoModalOpen} onClose={() => setSunoModalOpen(false)} />
     </>
   );
 };
