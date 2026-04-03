@@ -40,12 +40,19 @@ serve(async (req) => {
       ? `${Math.floor(input.duration / 60)}:${String(Math.floor(input.duration % 60)).padStart(2, "0")}`
       : "unknown";
 
-    const systemPrompt = `You are a professional music quality evaluator for GrouAI Stream platform.
+    const systemPrompt = `You are a strict, professional music quality evaluator for GrouAI Stream platform.
 You must evaluate a submitted track based on the metadata provided.
-Score each category from 0 to 20 points. Be fair but critical.
+Score each category from 0 to 20 points. Be STRICT and critical.
 
 Categories:
-1. score_length – Track length adequacy (min 3:00 for max score, shorter = lower)
+1. score_length – Track length adequacy. STRICT RULES:
+   - Under 1:30 = 0 points (auto-reject)
+   - 1:30–2:00 = max 3 points
+   - 2:00–2:30 = max 5 points
+   - 2:30–3:00 = max 8 points
+   - 3:00–3:30 = max 12 points
+   - 3:30–4:00 = max 16 points
+   - 4:00+ = up to 20 points
 2. score_lyrics – Title/description quality, creativity, emotional depth
 3. score_vocal – Expected vocal quality based on genre and production context
 4. score_production – Expected production quality, dynamics, arrangement
@@ -53,12 +60,14 @@ Categories:
 
 Rules:
 - Total score = sum of all 5 scores (max 100)
-- If total >= 60: status = "approved"
-- If total 40-59: status = "review"
-- If total < 40: status = "rejected"
+- If track is under 2:00, status MUST be "rejected" regardless of total score
+- If total >= 65: status = "approved"
+- If total 45-64: status = "review"
+- If total < 45: status = "rejected"
 - Provide a brief analysis in Polish
 - Provide recommendations in Polish
-- If track has issues, list rejection_reasons in Polish`;
+- If track has issues, list rejection_reasons in Polish
+- Always mention track length issues in rejection_reasons if under 3:00`;
 
     const userPrompt = `Evaluate this track submission:
 - Title: "${input.title}"
