@@ -615,6 +615,17 @@ export const PlayerBar = () => {
       {/* Mood Detector Modal */}
       <QuickMoodDetector isOpen={showMoodDetector} onClose={() => setShowMoodDetector(false)} />
 
+      {/* Tip Modal */}
+      {currentTrack && (
+        <TipModal
+          isOpen={showTipModal}
+          onClose={() => setShowTipModal(false)}
+          trackId={currentTrack.id}
+          trackTitle={currentTrack.title}
+          trackArtist={currentTrack.artist}
+        />
+      )}
+
     </>
   );
 };
