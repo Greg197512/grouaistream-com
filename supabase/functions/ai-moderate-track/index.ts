@@ -159,17 +159,38 @@ Return your evaluation using the evaluate_track tool.`;
       ? JSON.parse(toolCall.function.arguments)
       : toolCall.function.arguments;
 
+    // Server-side enforcement of duration rules
+    const durationSec = input.duration || 0;
+    
+    // Cap score_length based on actual duration
+    let cappedScoreLength = evaluation.score_length || 0;
+    if (durationSec > 0) {
+      if (durationSec < 90) cappedScoreLength = 0;
+      else if (durationSec < 120) cappedScoreLength = Math.min(cappedScoreLength, 3);
+      else if (durationSec < 150) cappedScoreLength = Math.min(cappedScoreLength, 5);
+      else if (durationSec < 180) cappedScoreLength = Math.min(cappedScoreLength, 8);
+      else if (durationSec < 210) cappedScoreLength = Math.min(cappedScoreLength, 12);
+      else if (durationSec < 240) cappedScoreLength = Math.min(cappedScoreLength, 16);
+    }
+
     const totalScore =
-      (evaluation.score_length || 0) +
+      cappedScoreLength +
       (evaluation.score_lyrics || 0) +
       (evaluation.score_vocal || 0) +
       (evaluation.score_production || 0) +
       (evaluation.score_originality || 0);
 
     let status: string;
-    if (totalScore >= 60) status = "approved";
-    else if (totalScore >= 40) status = "review";
-    else status = "rejected";
+    // Hard reject if under 2 minutes
+    if (durationSec > 0 && durationSec < 120) {
+      status = "rejected";
+    } else if (totalScore >= 65) {
+      status = "approved";
+    } else if (totalScore >= 45) {
+      status = "review";
+    } else {
+      status = "rejected";
+    }
 
     const result = {
       score_length: evaluation.score_length,
