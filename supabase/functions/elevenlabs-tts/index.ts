@@ -57,6 +57,22 @@ serve(async (req) => {
     if (!response.ok) {
       const errText = await response.text();
       console.error("ElevenLabs API error:", response.status, errText);
+      
+      // Parse quota exceeded specifically
+      try {
+        const errJson = JSON.parse(errText);
+        if (errJson?.detail?.status === "quota_exceeded") {
+          return new Response(JSON.stringify({ 
+            error: "Voice quota exceeded", 
+            quota_exceeded: true,
+            message: errJson.detail.message 
+          }), {
+            status: 429,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      } catch {}
+      
       throw new Error(`ElevenLabs API error: ${response.status}`);
     }
 
