@@ -193,7 +193,7 @@ Return your evaluation using the evaluate_track tool.`;
     }
 
     const result = {
-      score_length: evaluation.score_length,
+      score_length: cappedScoreLength,
       score_lyrics: evaluation.score_lyrics,
       score_vocal: evaluation.score_vocal,
       score_production: evaluation.score_production,
