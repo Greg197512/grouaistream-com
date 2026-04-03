@@ -17,7 +17,7 @@ import { toast } from "sonner";
 import {
   Mail, Send, Sparkles, Eye, Loader2, RefreshCw,
   CheckCircle, XCircle, AlertTriangle, Clock, Inbox,
-  UserPlus, Trophy, Newspaper, Bell,
+  UserPlus, Trophy, Newspaper, Bell, Gift,
 } from "lucide-react";
 
 interface EmailLog {
