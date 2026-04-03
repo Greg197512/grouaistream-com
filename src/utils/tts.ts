@@ -251,7 +251,14 @@ export const speak = async (text: string, opts?: {
       body: JSON.stringify({ text, mode }),
     });
 
-    if (!response.ok) throw new Error(`TTS API error: ${response.status}`);
+    if (!response.ok) {
+      const errorBody = await response.text().catch(() => "");
+      const isQuotaExceeded = errorBody.includes("quota_exceeded");
+      if (isQuotaExceeded) {
+        console.warn("ElevenLabs quota exceeded, using browser TTS fallback");
+      }
+      throw new Error(`TTS API error: ${response.status}${isQuotaExceeded ? " (quota exceeded)" : ""}`);
+    }
 
     const contentType = response.headers.get("content-type");
     if (!contentType?.includes("audio")) throw new Error("Not audio response");
