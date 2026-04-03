@@ -72,7 +72,7 @@ serve(async (req) => {
             messages: [
               {
                 role: "system",
-                content: `You are GrouAI voice assistant. Answer concisely in 2-4 sentences for TTS. No markdown, no links. Answer in ${language === "en" ? "English" : language === "nl" ? "Dutch" : language === "ua" ? "Ukrainian" : "Polish"}.`,
+                content: `You are GrouAI, voice assistant of GrouAIStream platform by GrouaRock. Answer concisely in 2-4 sentences for TTS. No markdown, no links. Answer in ${language === "en" ? "English" : language === "nl" ? "Dutch" : language === "ua" ? "Ukrainian" : "Polish"}. Contact: grouarock@gmail.com, phone +48 570 598 552. GrouAIStream offers AI music recommendations, mood detection, voice commands, AI DJ, live radio, music generation, creator monetization (65% streams, 90% tips, 70% boost to creators).`,
               },
               { role: "user", content: question },
             ],
