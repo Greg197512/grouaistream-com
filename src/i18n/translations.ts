@@ -662,6 +662,47 @@ type TranslationKeys = {
   "earnPage.footer": string;
   "earnPage.terms": string;
   "earnPage.sunoMonetize": string;
+  "earnPage.premiumTitle": string;
+  "earnPage.premiumSubtitle": string;
+  "earnPage.mostPopular": string;
+  "earnPage.maxEarnings": string;
+  "earnPage.month": string;
+  "earnPage.choosePlan": string;
+  "earnPage.creatorPro1": string;
+  "earnPage.creatorPro2": string;
+  "earnPage.creatorPro3": string;
+  "earnPage.creatorPro4": string;
+  "earnPage.creatorUlt1": string;
+  "earnPage.creatorUlt2": string;
+  "earnPage.creatorUlt3": string;
+  "earnPage.creatorUlt4": string;
+  "earnPage.creatorUlt5": string;
+  // Tip modal
+  "tip.title": string;
+  "tip.desc": string;
+  "tip.loginRequired": string;
+  "tip.noOwner": string;
+  "tip.sent": string;
+  "tip.error": string;
+  "tip.sending": string;
+  "tip.send": string;
+  "tip.creatorGets": string;
+  // Earnings extras
+  "earnings.tipsTotal": string;
+  "earnings.revenueSplit": string;
+  "earnings.fromStreams": string;
+  "earnings.fromTips": string;
+  "earnings.fromBoost": string;
+  "earnings.payouts": string;
+  "earnings.availableForPayout": string;
+  "earnings.minPayoutInfo": string;
+  "earnings.minPayout": string;
+  "earnings.requestPayout": string;
+  "earnings.payoutRequested": string;
+  "earnings.payoutHistory": string;
+  "earnings.paid": string;
+  "earnings.pending": string;
+  "earnings.rejected": string;
   "cover.title": string;
   "cover.aiTab": string;
   "cover.uploadTab": string;
@@ -1342,6 +1383,45 @@ const pl: TranslationKeys = {
   "earnPage.footer": "GrouAI Stream — platforma, która naprawdę płaci artystom.",
   "earnPage.terms": "regulaminowi platformy",
   "earnPage.sunoMonetize": "Jeśli Twój utwór pochodzi z Suno Pro lub Premier — możesz go monetyzować na GrouAI Stream oraz dystrybuować na Spotify, YouTube, Apple Music itp.",
+  "earnPage.premiumTitle": "Plany dla twórców",
+  "earnPage.premiumSubtitle": "Odblokuj więcej narzędzi i wyższe zarobki jako twórca na GrouAI Stream.",
+  "earnPage.mostPopular": "Najpopularniejszy",
+  "earnPage.maxEarnings": "Maks. zarobki",
+  "earnPage.month": "mies.",
+  "earnPage.choosePlan": "Wybierz plan",
+  "earnPage.creatorPro1": "Szczegółowe statystyki streamów i zarobków",
+  "earnPage.creatorPro2": "Priorytetowa moderacja utworów (< 1h)",
+  "earnPage.creatorPro3": "Badge 'Creator Pro' przy profilu",
+  "earnPage.creatorPro4": "Wypłaty co 2 tygodnie zamiast co miesiąc",
+  "earnPage.creatorUlt1": "Wszystko z Creator Pro",
+  "earnPage.creatorUlt2": "Dedykowany opiekun artysty",
+  "earnPage.creatorUlt3": "Priorytet w rekomendacjach AI i playlistach",
+  "earnPage.creatorUlt4": "Darmowy pakiet Boost Pro co miesiąc",
+  "earnPage.creatorUlt5": "Dostęp do zaawansowanego API i analityki",
+  "tip.title": "Wesprzyj artystę",
+  "tip.desc": "Twój tip bezpośrednio wspiera twórcę. 90% trafia do artysty.",
+  "tip.loginRequired": "Zaloguj się, aby wysłać tip",
+  "tip.noOwner": "Nie znaleziono właściciela utworu",
+  "tip.sent": "Tip wysłany!",
+  "tip.error": "Błąd wysyłania tipu",
+  "tip.sending": "Wysyłanie...",
+  "tip.send": "Wyślij",
+  "tip.creatorGets": "90% Twojego tipu trafia bezpośrednio do artysty. Bezpieczna płatność Stripe.",
+  "earnings.tipsTotal": "Tipy łącznie",
+  "earnings.revenueSplit": "Podział przychodów — Twój udział",
+  "earnings.fromStreams": "Streamy (royalties)",
+  "earnings.fromTips": "Tipy od słuchaczy",
+  "earnings.fromBoost": "Pakiety Boost",
+  "earnings.payouts": "Wypłaty",
+  "earnings.availableForPayout": "Dostępne do wypłaty",
+  "earnings.minPayoutInfo": "Minimalna kwota wypłaty: 50 zł",
+  "earnings.minPayout": "Minimalna kwota wypłaty to 50 zł",
+  "earnings.requestPayout": "Wypłać środki",
+  "earnings.payoutRequested": "Wniosek o wypłatę złożony!",
+  "earnings.payoutHistory": "Historia wypłat",
+  "earnings.paid": "Wypłacone",
+  "earnings.pending": "Oczekujące",
+  "earnings.rejected": "Odrzucone",
   "cover.title": "Okładka albumu",
   "cover.aiTab": "AI Generator",
   "cover.uploadTab": "Własna grafika",
@@ -2021,6 +2101,45 @@ const en: TranslationKeys = {
   "earnPage.footer": "GrouAI Stream — a platform that truly pays artists.",
   "earnPage.terms": "platform terms",
   "earnPage.sunoMonetize": "If your track comes from Suno Pro or Premier — you can monetise it on GrouAI Stream and distribute it on Spotify, YouTube, Apple Music, etc.",
+  "earnPage.premiumTitle": "Creator Plans",
+  "earnPage.premiumSubtitle": "Unlock more tools and higher earnings as a creator on GrouAI Stream.",
+  "earnPage.mostPopular": "Most popular",
+  "earnPage.maxEarnings": "Max earnings",
+  "earnPage.month": "mo",
+  "earnPage.choosePlan": "Choose plan",
+  "earnPage.creatorPro1": "Detailed stream and earnings statistics",
+  "earnPage.creatorPro2": "Priority track moderation (< 1h)",
+  "earnPage.creatorPro3": "'Creator Pro' badge on your profile",
+  "earnPage.creatorPro4": "Bi-weekly payouts instead of monthly",
+  "earnPage.creatorUlt1": "Everything from Creator Pro",
+  "earnPage.creatorUlt2": "Dedicated artist manager",
+  "earnPage.creatorUlt3": "Priority in AI recommendations and playlists",
+  "earnPage.creatorUlt4": "Free Boost Pro package every month",
+  "earnPage.creatorUlt5": "Access to advanced API and analytics",
+  "tip.title": "Support artist",
+  "tip.desc": "Your tip directly supports the creator. 90% goes to the artist.",
+  "tip.loginRequired": "Sign in to send a tip",
+  "tip.noOwner": "Track owner not found",
+  "tip.sent": "Tip sent!",
+  "tip.error": "Failed to send tip",
+  "tip.sending": "Sending...",
+  "tip.send": "Send",
+  "tip.creatorGets": "90% of your tip goes directly to the artist. Secure Stripe payment.",
+  "earnings.tipsTotal": "Total tips",
+  "earnings.revenueSplit": "Revenue split — Your share",
+  "earnings.fromStreams": "Streams (royalties)",
+  "earnings.fromTips": "Listener tips",
+  "earnings.fromBoost": "Boost packages",
+  "earnings.payouts": "Payouts",
+  "earnings.availableForPayout": "Available for payout",
+  "earnings.minPayoutInfo": "Minimum payout: 50 PLN",
+  "earnings.minPayout": "Minimum payout is 50 PLN",
+  "earnings.requestPayout": "Request payout",
+  "earnings.payoutRequested": "Payout request submitted!",
+  "earnings.payoutHistory": "Payout history",
+  "earnings.paid": "Paid",
+  "earnings.pending": "Pending",
+  "earnings.rejected": "Rejected",
   "cover.title": "Album cover",
   "cover.aiTab": "AI Generator",
   "cover.uploadTab": "Custom image",
@@ -2700,6 +2819,45 @@ const nl: TranslationKeys = {
   "earnPage.footer": "GrouAI Stream — een platform dat artiesten echt betaalt.",
   "earnPage.terms": "platformvoorwaarden",
   "earnPage.sunoMonetize": "Als je nummer afkomstig is van Suno Pro of Premier — kun je het monetiseren op GrouAI Stream en distribueren via Spotify, YouTube, Apple Music, enz.",
+  "earnPage.premiumTitle": "Creator-abonnementen",
+  "earnPage.premiumSubtitle": "Ontgrendel meer tools en hogere inkomsten als creator op GrouAI Stream.",
+  "earnPage.mostPopular": "Populairst",
+  "earnPage.maxEarnings": "Max inkomsten",
+  "earnPage.month": "mnd",
+  "earnPage.choosePlan": "Kies abonnement",
+  "earnPage.creatorPro1": "Gedetailleerde stream- en inkomstenstatistieken",
+  "earnPage.creatorPro2": "Prioriteitsmoderatie van nummers (< 1u)",
+  "earnPage.creatorPro3": "'Creator Pro'-badge op je profiel",
+  "earnPage.creatorPro4": "Tweewekelijkse uitbetalingen i.p.v. maandelijks",
+  "earnPage.creatorUlt1": "Alles van Creator Pro",
+  "earnPage.creatorUlt2": "Toegewijd artiestenmanager",
+  "earnPage.creatorUlt3": "Prioriteit in AI-aanbevelingen en afspeellijsten",
+  "earnPage.creatorUlt4": "Gratis Boost Pro-pakket elke maand",
+  "earnPage.creatorUlt5": "Toegang tot geavanceerde API en analyses",
+  "tip.title": "Steun de artiest",
+  "tip.desc": "Je tip ondersteunt de creator rechtstreeks. 90% gaat naar de artiest.",
+  "tip.loginRequired": "Log in om een tip te sturen",
+  "tip.noOwner": "Eigenaar van het nummer niet gevonden",
+  "tip.sent": "Tip verzonden!",
+  "tip.error": "Fout bij het verzenden van tip",
+  "tip.sending": "Verzenden...",
+  "tip.send": "Verzenden",
+  "tip.creatorGets": "90% van je tip gaat direct naar de artiest. Veilige Stripe-betaling.",
+  "earnings.tipsTotal": "Totaal tips",
+  "earnings.revenueSplit": "Omzetverdeling — Jouw aandeel",
+  "earnings.fromStreams": "Streams (royalties)",
+  "earnings.fromTips": "Tips van luisteraars",
+  "earnings.fromBoost": "Boost-pakketten",
+  "earnings.payouts": "Uitbetalingen",
+  "earnings.availableForPayout": "Beschikbaar voor uitbetaling",
+  "earnings.minPayoutInfo": "Minimale uitbetaling: 50 PLN",
+  "earnings.minPayout": "Minimale uitbetaling is 50 PLN",
+  "earnings.requestPayout": "Uitbetaling aanvragen",
+  "earnings.payoutRequested": "Uitbetalingsverzoek ingediend!",
+  "earnings.payoutHistory": "Uitbetalingsgeschiedenis",
+  "earnings.paid": "Betaald",
+  "earnings.pending": "In behandeling",
+  "earnings.rejected": "Afgewezen",
   "cover.title": "Albumhoes",
   "cover.aiTab": "AI Generator",
   "cover.uploadTab": "Eigen afbeelding",
@@ -3379,6 +3537,45 @@ const ua: TranslationKeys = {
   "earnPage.footer": "GrouAI Stream — платформа, яка справді платить артистам.",
   "earnPage.terms": "умовами платформи",
   "earnPage.sunoMonetize": "Якщо ваш трек створений у Suno Pro або Premier — ви можете монетизувати його на GrouAI Stream та розповсюджувати через Spotify, YouTube, Apple Music тощо.",
+  "earnPage.premiumTitle": "Плани для авторів",
+  "earnPage.premiumSubtitle": "Розблокуйте більше інструментів та вищий заробіток як автор на GrouAI Stream.",
+  "earnPage.mostPopular": "Найпопулярніший",
+  "earnPage.maxEarnings": "Макс. заробіток",
+  "earnPage.month": "міс.",
+  "earnPage.choosePlan": "Обрати план",
+  "earnPage.creatorPro1": "Детальна статистика стримів та заробітку",
+  "earnPage.creatorPro2": "Пріоритетна модерація треків (< 1 год)",
+  "earnPage.creatorPro3": "Бейдж 'Creator Pro' на вашому профілі",
+  "earnPage.creatorPro4": "Виплати кожні 2 тижні замість щомісяця",
+  "earnPage.creatorUlt1": "Все з Creator Pro",
+  "earnPage.creatorUlt2": "Персональний менеджер артиста",
+  "earnPage.creatorUlt3": "Пріоритет в AI рекомендаціях та плейлистах",
+  "earnPage.creatorUlt4": "Безкоштовний пакет Boost Pro щомісяця",
+  "earnPage.creatorUlt5": "Доступ до розширеного API та аналітики",
+  "tip.title": "Підтримати артиста",
+  "tip.desc": "Ваш тіп безпосередньо підтримує автора. 90% отримує артист.",
+  "tip.loginRequired": "Увійдіть, щоб надіслати тіп",
+  "tip.noOwner": "Власника треку не знайдено",
+  "tip.sent": "Тіп надіслано!",
+  "tip.error": "Помилка надсилання тіпу",
+  "tip.sending": "Надсилання...",
+  "tip.send": "Надіслати",
+  "tip.creatorGets": "90% вашого тіпу йде безпосередньо артисту. Безпечна оплата Stripe.",
+  "earnings.tipsTotal": "Всього тіпів",
+  "earnings.revenueSplit": "Розподіл доходів — Ваша частка",
+  "earnings.fromStreams": "Стріми (роялті)",
+  "earnings.fromTips": "Тіпи від слухачів",
+  "earnings.fromBoost": "Пакети Boost",
+  "earnings.payouts": "Виплати",
+  "earnings.availableForPayout": "Доступно до виплати",
+  "earnings.minPayoutInfo": "Мінімальна виплата: 50 PLN",
+  "earnings.minPayout": "Мінімальна сума виплати — 50 PLN",
+  "earnings.requestPayout": "Запросити виплату",
+  "earnings.payoutRequested": "Запит на виплату подано!",
+  "earnings.payoutHistory": "Історія виплат",
+  "earnings.paid": "Виплачено",
+  "earnings.pending": "Очікується",
+  "earnings.rejected": "Відхилено",
   "cover.title": "Обкладинка альбому",
   "cover.aiTab": "AI Генератор",
   "cover.uploadTab": "Власне зображення",

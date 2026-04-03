@@ -20,7 +20,8 @@ import {
   GripHorizontal,
   ScanFace,
   Smile,
-  Camera
+  Camera,
+  DollarSign
 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
@@ -36,6 +37,7 @@ import { FullscreenPlayer } from "@/components/player/FullscreenPlayer";
 import { QuickMoodDetector } from "@/components/mood/QuickMoodDetector";
 import { HQCover } from "@/components/ui/HQCover";
 import { TrackBadges } from "@/components/ui/TrackBadges";
+import { TipModal } from "@/components/modals/TipModal";
 
 // Video visibility state - shared via window for simplicity
 declare global {
@@ -85,6 +87,7 @@ export const PlayerBar = () => {
   const [showQueue, setShowQueue] = useState(false);
   const [showFullscreen, setShowFullscreen] = useState(false);
   const [showMoodDetector, setShowMoodDetector] = useState(false);
+  const [showTipModal, setShowTipModal] = useState(false);
 
   // Check if current track is liked
   useEffect(() => {
@@ -348,6 +351,19 @@ export const PlayerBar = () => {
             )} />
           </button>
 
+          {/* Tip button */}
+          {currentTrack && (
+            <motion.button
+              whileHover={{ scale: 1.2 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={() => setShowTipModal(true)}
+              className="flex-shrink-0 p-1 text-pink-400/60 hover:text-pink-400 transition-colors"
+              title="Wesprzyj artystę"
+            >
+              <DollarSign className="h-3.5 w-3.5" />
+            </motion.button>
+          )}
+
         </div>
 
         {/* Player Controls */}
@@ -599,6 +615,17 @@ export const PlayerBar = () => {
 
       {/* Mood Detector Modal */}
       <QuickMoodDetector isOpen={showMoodDetector} onClose={() => setShowMoodDetector(false)} />
+
+      {/* Tip Modal */}
+      {currentTrack && (
+        <TipModal
+          isOpen={showTipModal}
+          onClose={() => setShowTipModal(false)}
+          trackId={currentTrack.id}
+          trackTitle={currentTrack.title}
+          trackArtist={currentTrack.artist}
+        />
+      )}
 
     </>
   );

@@ -276,6 +276,95 @@ const EarnWithUs = () => {
           </div>
         </motion.section>
 
+        {/* Creator Premium Plans */}
+        <motion.section
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, amount: 0.2 }}
+          className="space-y-6"
+        >
+          <motion.h2 variants={fadeUp} custom={0} className="text-2xl font-bold text-center">
+            {t("earnPage.premiumTitle")}
+          </motion.h2>
+          <motion.p variants={fadeUp} custom={1} className="text-center text-muted-foreground text-sm max-w-xl mx-auto">
+            {t("earnPage.premiumSubtitle")}
+          </motion.p>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 max-w-3xl mx-auto">
+            {/* Creator Pro */}
+            <motion.div variants={fadeUp} custom={2}>
+              <Card className="relative overflow-hidden border border-primary/30 bg-card/80 backdrop-blur">
+                <div className="absolute -top-20 -right-20 h-40 w-40 rounded-full blur-3xl opacity-20 bg-primary/10" />
+                <CardContent className="relative p-6 space-y-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-3 rounded-xl bg-gradient-to-br from-primary to-accent">
+                      <Zap className="h-6 w-6 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-lg">Creator Pro</h3>
+                      <Badge className="bg-primary/15 text-primary border-primary/25 text-[10px]">
+                        {t("earnPage.mostPopular")}
+                      </Badge>
+                    </div>
+                  </div>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-3xl font-black text-primary">19</span>
+                    <span className="text-sm text-muted-foreground">zł/{t("earnPage.month")}</span>
+                  </div>
+                  <ul className="space-y-2">
+                    {["earnPage.creatorPro1", "earnPage.creatorPro2", "earnPage.creatorPro3", "earnPage.creatorPro4"].map((key) => (
+                      <li key={key} className="flex items-start gap-2 text-sm text-muted-foreground">
+                        <CheckCircle className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                        {t(key)}
+                      </li>
+                    ))}
+                  </ul>
+                  <Button className="w-full gap-2" onClick={() => user ? navigate("/earnings") : navigate("/auth")}>
+                    <Zap className="h-4 w-4" />
+                    {t("earnPage.choosePlan")}
+                  </Button>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Creator Ultimate */}
+            <motion.div variants={fadeUp} custom={3}>
+              <Card className="relative overflow-hidden border border-amber-500/30 bg-card/80 backdrop-blur">
+                <div className="absolute -top-20 -right-20 h-40 w-40 rounded-full blur-3xl opacity-20 bg-amber-500/10" />
+                <CardContent className="relative p-6 space-y-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-3 rounded-xl bg-gradient-to-br from-amber-500 to-yellow-500">
+                      <Crown className="h-6 w-6 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-lg">Creator Ultimate</h3>
+                      <Badge className="bg-amber-500/15 text-amber-400 border-amber-500/25 text-[10px]">
+                        {t("earnPage.maxEarnings")}
+                      </Badge>
+                    </div>
+                  </div>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-3xl font-black text-amber-400">39</span>
+                    <span className="text-sm text-muted-foreground">zł/{t("earnPage.month")}</span>
+                  </div>
+                  <ul className="space-y-2">
+                    {["earnPage.creatorUlt1", "earnPage.creatorUlt2", "earnPage.creatorUlt3", "earnPage.creatorUlt4", "earnPage.creatorUlt5"].map((key) => (
+                      <li key={key} className="flex items-start gap-2 text-sm text-muted-foreground">
+                        <CheckCircle className="h-4 w-4 text-amber-400 mt-0.5 flex-shrink-0" />
+                        {t(key)}
+                      </li>
+                    ))}
+                  </ul>
+                  <Button className="w-full gap-2 bg-gradient-to-r from-amber-500 to-yellow-500 text-black hover:from-amber-600 hover:to-yellow-600" onClick={() => user ? navigate("/earnings") : navigate("/auth")}>
+                    <Crown className="h-4 w-4" />
+                    {t("earnPage.choosePlan")}
+                  </Button>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </div>
+        </motion.section>
+
         {/* Suno monetization info */}
         <motion.section
           initial="hidden"
