@@ -6,7 +6,7 @@ const corsHeaders = {
 };
 
 interface EmailRequest {
-  type: "invitation" | "challenge" | "newsletter" | "weekly_digest";
+  type: "invitation" | "challenge" | "newsletter" | "weekly_digest" | "easter";
   recipientName?: string;
   customMessage?: string;
   stats?: {
