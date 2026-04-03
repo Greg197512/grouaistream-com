@@ -36,6 +36,7 @@ import { FullscreenPlayer } from "@/components/player/FullscreenPlayer";
 import { QuickMoodDetector } from "@/components/mood/QuickMoodDetector";
 import { HQCover } from "@/components/ui/HQCover";
 import { TrackBadges } from "@/components/ui/TrackBadges";
+import { TipModal } from "@/components/modals/TipModal";
 
 // Video visibility state - shared via window for simplicity
 declare global {
