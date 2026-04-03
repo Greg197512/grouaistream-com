@@ -1,8 +1,10 @@
+import { useEffect } from "react";
 import { motion } from "framer-motion";
 import { Radio as RadioIcon, Wifi, ExternalLink } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { Link } from "react-router-dom";
 
 const PLAYER_URL = "https://play.radioking.io/grouarock-radio1";
 
