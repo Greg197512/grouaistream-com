@@ -20,7 +20,8 @@ import {
   GripHorizontal,
   ScanFace,
   Smile,
-  Camera
+  Camera,
+  DollarSign
 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
