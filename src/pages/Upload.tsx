@@ -67,9 +67,59 @@ const Upload = () => {
   const [insertedTrackId, setInsertedTrackId] = useState<string | null>(null);
   const [wantMonetize, setWantMonetize] = useState(true);
   const [isSunoPro, setIsSunoPro] = useState(false);
+  const [sunoResolving, setSunoResolving] = useState(false);
+  const [sunoResolved, setSunoResolved] = useState<{ audioUrl: string; imageUrl: string; duration: number } | null>(null);
 
   const displayName = user?.user_metadata?.display_name || user?.email?.split("@")[0] || "Artist";
   const isSunoTrack = sunoLink.trim().length > 0;
+
+  const handleSunoLinkChange = async (value: string) => {
+    setSunoLink(value);
+    setSunoResolved(null);
+
+    // Check if it's a valid Suno link
+    const isSunoUrl = /suno\.(com|ai)\/(s|song)\//.test(value);
+    if (!isSunoUrl) return;
+
+    setSunoResolving(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('suno-resolve', {
+        body: { url: value.trim() },
+      });
+
+      if (error) throw error;
+      if (data?.error) {
+        toast.error(data.error);
+        return;
+      }
+
+      if (data?.success) {
+        setSunoResolved({
+          audioUrl: data.audioUrl,
+          imageUrl: data.imageUrl,
+          duration: data.duration || 180,
+        });
+
+        // Auto-fill title if empty
+        if (!title && data.title) {
+          setTitle(data.title);
+        }
+        // Auto-fill cover if empty
+        if (!coverUrl && data.imageUrl) {
+          setCoverUrl(data.imageUrl);
+        }
+        // Set duration
+        setAudioDuration(data.duration || 180);
+
+        toast.success("✅ Rozpoznano utwór Suno! Audio URL i metadane pobrane.");
+      }
+    } catch (err: any) {
+      console.error("Suno resolve error:", err);
+      toast.error("Nie udało się rozpoznać linku Suno: " + (err.message || ""));
+    } finally {
+      setSunoResolving(false);
+    }
+  };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -166,7 +216,7 @@ const Upload = () => {
         return;
       }
 
-      const finalAudioUrl = audioUrl || sunoLink || null;
+      const finalAudioUrl = audioUrl || (sunoResolved?.audioUrl) || sunoLink || null;
       const { data: insertedTrack, error: trackInsertErr } = await supabase.from("tracks").insert({
         title,
         artist: displayName,
@@ -214,6 +264,7 @@ const Upload = () => {
     setUploadProgress(null);
     setInsertedTrackId(null);
     setIsSunoPro(false);
+    setSunoResolved(null);
   };
 
   // Require login
@@ -390,13 +441,27 @@ const Upload = () => {
               <Label htmlFor="suno-link" className="flex items-center gap-1.5">
                 <Music className="h-4 w-4 text-primary" /> {t("upload.sunoLabel")}
               </Label>
-              <Input
-                id="suno-link"
-                placeholder={t("upload.sunoPlaceholder")}
-                value={sunoLink}
-                onChange={(e) => setSunoLink(e.target.value)}
-                className="bg-card/60 border-muted"
-              />
+              <div className="relative">
+                <Input
+                  id="suno-link"
+                  placeholder={t("upload.sunoPlaceholder")}
+                  value={sunoLink}
+                  onChange={(e) => handleSunoLinkChange(e.target.value)}
+                  className="bg-card/60 border-muted pr-10"
+                  disabled={sunoResolving}
+                />
+                {sunoResolving && (
+                  <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-primary" />
+                )}
+                {sunoResolved && (
+                  <CheckCircle className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-green-500" />
+                )}
+              </div>
+              {sunoResolved && (
+                <p className="text-xs text-green-500 flex items-center gap-1">
+                  <CheckCircle className="h-3 w-3" /> Audio MP3 rozpoznane — gotowe do uploadu
+                </p>
+              )}
             </div>
 
             {/* Audio file upload */}
