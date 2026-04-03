@@ -185,7 +185,7 @@ function audioBufferToWav(buffer: AudioBuffer): string {
 
 const Suno = () => {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<"generate" | "mix">("generate");
+  const [activeTab, setActiveTab] = useState<"generate" | "mix" | "suno">("generate");
   const [genre, setGenre] = useState("Pop");
   const [genre2, setGenre2] = useState<string | null>(null);
   const [blendRatio, setBlendRatio] = useState(50);
