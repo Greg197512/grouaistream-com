@@ -89,10 +89,5 @@ const Radio = () => {
 };
 
 export default Radio;
-        </motion.div>
-      </div>
-    </MainLayout>
-  );
-};
 
 export default Radio;
