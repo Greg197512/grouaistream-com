@@ -40,12 +40,19 @@ serve(async (req) => {
       ? `${Math.floor(input.duration / 60)}:${String(Math.floor(input.duration % 60)).padStart(2, "0")}`
       : "unknown";
 
-    const systemPrompt = `You are a professional music quality evaluator for GrouAI Stream platform.
+    const systemPrompt = `You are a strict, professional music quality evaluator for GrouAI Stream platform.
 You must evaluate a submitted track based on the metadata provided.
-Score each category from 0 to 20 points. Be fair but critical.
+Score each category from 0 to 20 points. Be STRICT and critical.
 
 Categories:
-1. score_length – Track length adequacy (min 3:00 for max score, shorter = lower)
+1. score_length – Track length adequacy. STRICT RULES:
+   - Under 1:30 = 0 points (auto-reject)
+   - 1:30–2:00 = max 3 points
+   - 2:00–2:30 = max 5 points
+   - 2:30–3:00 = max 8 points
+   - 3:00–3:30 = max 12 points
+   - 3:30–4:00 = max 16 points
+   - 4:00+ = up to 20 points
 2. score_lyrics – Title/description quality, creativity, emotional depth
 3. score_vocal – Expected vocal quality based on genre and production context
 4. score_production – Expected production quality, dynamics, arrangement
@@ -53,12 +60,14 @@ Categories:
 
 Rules:
 - Total score = sum of all 5 scores (max 100)
-- If total >= 60: status = "approved"
-- If total 40-59: status = "review"
-- If total < 40: status = "rejected"
+- If track is under 2:00, status MUST be "rejected" regardless of total score
+- If total >= 65: status = "approved"
+- If total 45-64: status = "review"
+- If total < 45: status = "rejected"
 - Provide a brief analysis in Polish
 - Provide recommendations in Polish
-- If track has issues, list rejection_reasons in Polish`;
+- If track has issues, list rejection_reasons in Polish
+- Always mention track length issues in rejection_reasons if under 3:00`;
 
     const userPrompt = `Evaluate this track submission:
 - Title: "${input.title}"
@@ -150,20 +159,41 @@ Return your evaluation using the evaluate_track tool.`;
       ? JSON.parse(toolCall.function.arguments)
       : toolCall.function.arguments;
 
+    // Server-side enforcement of duration rules
+    const durationSec = input.duration || 0;
+    
+    // Cap score_length based on actual duration
+    let cappedScoreLength = evaluation.score_length || 0;
+    if (durationSec > 0) {
+      if (durationSec < 90) cappedScoreLength = 0;
+      else if (durationSec < 120) cappedScoreLength = Math.min(cappedScoreLength, 3);
+      else if (durationSec < 150) cappedScoreLength = Math.min(cappedScoreLength, 5);
+      else if (durationSec < 180) cappedScoreLength = Math.min(cappedScoreLength, 8);
+      else if (durationSec < 210) cappedScoreLength = Math.min(cappedScoreLength, 12);
+      else if (durationSec < 240) cappedScoreLength = Math.min(cappedScoreLength, 16);
+    }
+
     const totalScore =
-      (evaluation.score_length || 0) +
+      cappedScoreLength +
       (evaluation.score_lyrics || 0) +
       (evaluation.score_vocal || 0) +
       (evaluation.score_production || 0) +
       (evaluation.score_originality || 0);
 
     let status: string;
-    if (totalScore >= 60) status = "approved";
-    else if (totalScore >= 40) status = "review";
-    else status = "rejected";
+    // Hard reject if under 2 minutes
+    if (durationSec > 0 && durationSec < 120) {
+      status = "rejected";
+    } else if (totalScore >= 65) {
+      status = "approved";
+    } else if (totalScore >= 45) {
+      status = "review";
+    } else {
+      status = "rejected";
+    }
 
     const result = {
-      score_length: evaluation.score_length,
+      score_length: cappedScoreLength,
       score_lyrics: evaluation.score_lyrics,
       score_vocal: evaluation.score_vocal,
       score_production: evaluation.score_production,
