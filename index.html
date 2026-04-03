@@ -152,8 +152,48 @@
       "name": "GrouAI Stream",
       "url": "https://grouaistream.com",
       "description": "AI-powered music streaming with mood detection, live radio, and verified human streams.",
-      "genre": ["Electronic", "Pop", "Hip-Hop", "Lo-Fi", "Jazz", "Ambient", "Classical"],
+      "genre": ["Electronic", "Pop", "Hip-Hop", "Lo-Fi", "Jazz", "Ambient", "Classical", "EDM", "House", "Trance", "Rock", "Punk", "Disco", "R&B"],
       "sameAs": []
+    }
+    </script>
+
+    <!-- JSON-LD MusicPlaylist -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "MusicPlaylist",
+      "name": "GrouAI Stream – AI-Curated Playlists",
+      "url": "https://grouaistream.com/",
+      "description": "AI-generated and community-curated playlists across 15+ genres. Mood detection adapts your playlist in real time.",
+      "numTracks": 1000,
+      "genre": ["EDM", "House", "Trance", "Rock", "Pop", "Hip-Hop", "R&B", "Disco", "Punk", "Lo-Fi", "Jazz", "Ambient"],
+      "creator": {
+        "@type": "Organization",
+        "name": "GrouAI",
+        "url": "https://grouaistream.com"
+      }
+    }
+    </script>
+
+    <!-- JSON-LD RadioStation -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "RadioStation",
+      "name": "GrouaRadio",
+      "url": "https://grouaistream.com/radio",
+      "description": "GrouaRock Radio – 24/7 live radio station with community chat, real-time likes, and AI-curated programming.",
+      "broadcastDisplayName": "GrouaRadio Live",
+      "broadcastTimezone": "Europe/Warsaw",
+      "parentOrganization": {
+        "@type": "Organization",
+        "name": "GrouAI",
+        "url": "https://grouaistream.com"
+      },
+      "areaServed": {
+        "@type": "Place",
+        "name": "Worldwide"
+      }
     }
     </script>
 

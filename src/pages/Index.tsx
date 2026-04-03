@@ -45,6 +45,7 @@ const Index = () => {
         title={t("section.trendingNow")} 
         subtitle={t("section.trendingNowDesc")}
       />
+      <SEOContentSection />
       <SupportSection />
     </MainLayout>
   );
