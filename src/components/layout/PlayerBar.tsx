@@ -350,6 +350,19 @@ export const PlayerBar = () => {
             )} />
           </button>
 
+          {/* Tip button */}
+          {currentTrack && (
+            <motion.button
+              whileHover={{ scale: 1.2 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={() => setShowTipModal(true)}
+              className="flex-shrink-0 p-1 text-pink-400/60 hover:text-pink-400 transition-colors"
+              title="Wesprzyj artystę"
+            >
+              <DollarSign className="h-3.5 w-3.5" />
+            </motion.button>
+          )}
+
         </div>
 
         {/* Player Controls */}
