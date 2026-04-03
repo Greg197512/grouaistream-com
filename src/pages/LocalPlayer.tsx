@@ -2,7 +2,7 @@ import { useState, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   FolderOpen, Music, Play, Pause, SkipBack, SkipForward, 
-  Trash2, ListMusic, X, Plus, Library
+  Trash2, ListMusic, X, Plus, Library, Upload, Loader2, CheckCircle
 } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,10 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { usePlayer, Track } from "@/contexts/PlayerContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { uploadToR2 } from "@/lib/r2Upload";
+import { toast } from "sonner";
 
 const formatSize = (bytes: number) => {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
@@ -26,18 +30,22 @@ const parseName = (filename: string) => {
 interface LocalFile {
   id: string;
   name: string;
+  file: File;
   url: string;
   size: string;
 }
 
 const LocalPlayer = () => {
   const { t } = useLanguage();
+  const { user } = useAuth();
   const { playTrack, playPlaylist, currentTrack, isPlaying, togglePlay } = usePlayer();
   const [localFiles, setLocalFiles] = useState<LocalFile[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number; fileName: string }>({ current: 0, total: 0, fileName: "" });
+  const [uploadedIds, setUploadedIds] = useState<Set<string>>(new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
 
-  // Convert local file to Track for main player
   const fileToTrack = useCallback((file: LocalFile): Track => {
     const parsed = parseName(file.name);
     return {
@@ -61,6 +69,7 @@ const LocalPlayer = () => {
     const newFiles: LocalFile[] = audioFiles.map(f => ({
       id: crypto.randomUUID(),
       name: f.name,
+      file: f,
       url: URL.createObjectURL(f),
       size: formatSize(f.size),
     }));
@@ -72,7 +81,6 @@ const LocalPlayer = () => {
     if (currentTrack?.id === track.id) {
       togglePlay();
     } else {
-      // Play all local files as playlist starting from clicked index
       const allTracks = localFiles.map(fileToTrack);
       playPlaylist(allTracks, index);
     }
@@ -93,12 +101,75 @@ const LocalPlayer = () => {
   const clearAll = () => {
     localFiles.forEach(f => URL.revokeObjectURL(f.url));
     setLocalFiles([]);
+    setUploadedIds(new Set());
+  };
+
+  const getAudioDuration = (file: File): Promise<number> => {
+    return new Promise((resolve) => {
+      const url = URL.createObjectURL(file);
+      const audio = new Audio();
+      audio.preload = "metadata";
+      audio.onloadedmetadata = () => { URL.revokeObjectURL(url); resolve(Math.round(audio.duration)); };
+      audio.onerror = () => { URL.revokeObjectURL(url); resolve(180); };
+      audio.src = url;
+    });
+  };
+
+  const uploadAllToServer = async () => {
+    if (!user) { toast.error("Musisz być zalogowany, aby przesłać pliki na serwer"); return; }
+    
+    const filesToUpload = localFiles.filter(f => !uploadedIds.has(f.id));
+    if (filesToUpload.length === 0) { toast.info("Wszystkie pliki już przesłane!"); return; }
+
+    setUploading(true);
+    let successCount = 0;
+    const newUploaded = new Set(uploadedIds);
+    const displayName = user.user_metadata?.display_name || user.email?.split("@")[0] || "Artist";
+
+    for (let i = 0; i < filesToUpload.length; i++) {
+      const localFile = filesToUpload[i];
+      const parsed = parseName(localFile.name);
+      setUploadProgress({ current: i + 1, total: filesToUpload.length, fileName: parsed.title });
+
+      try {
+        const duration = await getAudioDuration(localFile.file);
+        const { publicUrl } = await uploadToR2({ file: localFile.file, folder: "tracks" });
+
+        const { error } = await supabase.from("tracks").insert({
+          title: parsed.title,
+          artist: parsed.artist !== "Nieznany" ? parsed.artist : displayName,
+          album: null,
+          duration,
+          audio_url: publicUrl,
+          genre: "Other",
+          mood: null,
+          user_id: user.id,
+        });
+
+        if (error) throw error;
+        successCount++;
+        newUploaded.add(localFile.id);
+      } catch (err: any) {
+        console.error(`[Upload] Failed: ${localFile.name}`, err);
+        toast.error(`Błąd: ${parsed.title} — ${err.message}`);
+      }
+    }
+
+    setUploadedIds(newUploaded);
+    setUploading(false);
+    setUploadProgress({ current: 0, total: 0, fileName: "" });
+
+    if (successCount > 0) {
+      toast.success(`✅ Przesłano ${successCount}/${filesToUpload.length} plików na serwer!`);
+    }
   };
 
   const onDrop = (e: React.DragEvent) => {
     e.preventDefault();
     if (e.dataTransfer.files.length) addFiles(e.dataTransfer.files);
   };
+
+  const notUploadedCount = localFiles.filter(f => !uploadedIds.has(f.id)).length;
 
   return (
     <MainLayout>
@@ -130,12 +201,45 @@ const LocalPlayer = () => {
               <Button onClick={handlePlayAll} className="gap-2 groove-gradient-bg text-primary-foreground hover:opacity-90">
                 <Play className="h-4 w-4 fill-current" /> Odtwórz wszystko ({localFiles.length})
               </Button>
+              {notUploadedCount > 0 && (
+                <Button
+                  onClick={uploadAllToServer}
+                  disabled={uploading || !user}
+                  variant="outline"
+                  className="gap-2 border-[#FF6B00]/40 text-[#FF9500] hover:bg-[#FF6B00]/10 hover:text-[#FF6B00]"
+                >
+                  {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                  {uploading
+                    ? `Przesyłam ${uploadProgress.current}/${uploadProgress.total}...`
+                    : `Prześlij na serwer (${notUploadedCount})`
+                  }
+                </Button>
+              )}
               <Button onClick={clearAll} variant="ghost" className="gap-2 text-destructive hover:text-destructive ml-auto">
                 <Trash2 className="h-4 w-4" /> Wyczyść
               </Button>
             </>
           )}
         </div>
+
+        {/* Upload progress bar */}
+        {uploading && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mb-4 p-3 rounded-xl border border-[#FF6B00]/20 bg-[#1a1a2e]/60">
+            <div className="flex items-center gap-2 mb-2">
+              <Loader2 className="h-4 w-4 animate-spin text-[#FF9500]" />
+              <span className="text-sm text-gray-300">
+                Przesyłam: <strong>{uploadProgress.fileName}</strong> ({uploadProgress.current}/{uploadProgress.total})
+              </span>
+            </div>
+            <div className="w-full h-2 bg-secondary rounded-full overflow-hidden">
+              <motion.div
+                className="h-full rounded-full"
+                style={{ background: "linear-gradient(90deg, #FF6B00, #FF9500)" }}
+                animate={{ width: `${(uploadProgress.current / uploadProgress.total) * 100}%` }}
+              />
+            </div>
+          </motion.div>
+        )}
 
         {/* Track list or drop zone */}
         {localFiles.length === 0 ? (
@@ -149,7 +253,7 @@ const LocalPlayer = () => {
           >
             <ListMusic className="h-16 w-16 mx-auto mb-4 text-muted-foreground/50" />
             <p className="text-lg font-medium text-muted-foreground mb-2">Przeciągnij pliki muzyczne tutaj</p>
-            <p className="text-sm text-muted-foreground/70">MP3, WAV, OGG, FLAC, M4A • bez uploadu na serwer</p>
+            <p className="text-sm text-muted-foreground/70">MP3, WAV, OGG, FLAC, M4A • odtwarzaj lokalnie lub prześlij na serwer</p>
             <p className="text-xs text-muted-foreground/50 mt-4">Utwory będą odtwarzane przez główny player — DJ i asystent głosowy je widzą!</p>
           </motion.div>
         ) : (
@@ -160,6 +264,7 @@ const LocalPlayer = () => {
                 const p = parseName(file.name);
                 const trackId = `local-${file.id}`;
                 const active = currentTrack?.id === trackId;
+                const isUploaded = uploadedIds.has(file.id);
                 return (
                   <motion.div
                     key={file.id}
@@ -189,7 +294,13 @@ const LocalPlayer = () => {
                       <p className={cn("text-sm truncate", active && "text-primary font-medium")}>{p.title}</p>
                       <p className="text-xs text-muted-foreground truncate">{p.artist}</p>
                     </div>
-                    <span className="text-xs text-muted-foreground/70 px-1.5 py-0.5 rounded bg-secondary/50">LOCAL</span>
+                    {isUploaded ? (
+                      <span className="text-xs text-emerald-400 px-1.5 py-0.5 rounded bg-emerald-500/10 flex items-center gap-1">
+                        <CheckCircle className="h-3 w-3" /> SERWER
+                      </span>
+                    ) : (
+                      <span className="text-xs text-muted-foreground/70 px-1.5 py-0.5 rounded bg-secondary/50">LOCAL</span>
+                    )}
                     <span className="text-xs text-muted-foreground">{file.size}</span>
                     <button
                       onClick={e => { e.stopPropagation(); removeFile(idx); }}
@@ -205,7 +316,7 @@ const LocalPlayer = () => {
         )}
 
         <p className="text-xs text-muted-foreground/50 mt-4 text-center">
-          Pliki odtwarzane lokalnie przez główny player — DJ, asystent i kolejka je obsługują. Jak Winamp! 🎵
+          Pliki odtwarzane lokalnie przez główny player — DJ, asystent i kolejka je obsługują. Kliknij „Prześlij na serwer" aby zachować na stałe 🎵
         </p>
       </div>
     </MainLayout>
