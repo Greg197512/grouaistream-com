@@ -1072,8 +1072,6 @@ export const AIAssistant = () => {
         )}
       </AnimatePresence>
 
-      {/* Suno Generate Modal */}
-      <SunoGenerateModal isOpen={sunoModalOpen} onClose={() => setSunoModalOpen(false)} />
     </>
   );
 };
