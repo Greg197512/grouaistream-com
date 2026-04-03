@@ -86,6 +86,7 @@ export const PlayerBar = () => {
   const [showQueue, setShowQueue] = useState(false);
   const [showFullscreen, setShowFullscreen] = useState(false);
   const [showMoodDetector, setShowMoodDetector] = useState(false);
+  const [showTipModal, setShowTipModal] = useState(false);
 
   // Check if current track is liked
   useEffect(() => {
