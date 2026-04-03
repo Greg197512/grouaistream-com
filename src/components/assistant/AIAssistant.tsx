@@ -89,6 +89,7 @@ export const AIAssistant = () => {
   const [userName, setUserName] = useState("Użytkownik");
   const [attachments, setAttachments] = useState<ChatAttachment[]>([]);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [sunoModalOpen, setSunoModalOpen] = useState(false);
   const [listeningStats, setListeningStats] = useState<{ topGenres: string[]; topMoods: string[]; recentTracks: number } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
