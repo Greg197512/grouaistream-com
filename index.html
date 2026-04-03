@@ -48,11 +48,25 @@
     <!-- Additional SEO for non-Google engines -->
     <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
     <meta name="googlebot" content="index, follow" />
-    <meta name="bingbot" content="index, follow" />
+    <meta name="bingbot" content="index, follow, max-snippet:-1, max-image-preview:large" />
     <meta name="yandex-verification" content="" />
+    <meta name="msvalidate.01" content="" />
     <link rel="alternate" hreflang="pl" href="https://grouaistream.com/" />
     <link rel="alternate" hreflang="en" href="https://grouaistream.com/" />
     <link rel="alternate" hreflang="x-default" href="https://grouaistream.com/" />
+
+    <!-- JSON-LD MusicGroup for Bing rich results -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "MusicGroup",
+      "name": "GrouAI Stream",
+      "url": "https://grouaistream.com",
+      "description": "AI-powered music streaming with mood detection, live radio, and verified human streams.",
+      "genre": ["Electronic", "Pop", "Hip-Hop", "Lo-Fi", "Jazz"],
+      "sameAs": []
+    }
+    </script>
 
     <!-- JSON-LD Structured Data -->
     <script type="application/ld+json">
