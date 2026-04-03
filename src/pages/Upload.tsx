@@ -440,13 +440,27 @@ const Upload = () => {
               <Label htmlFor="suno-link" className="flex items-center gap-1.5">
                 <Music className="h-4 w-4 text-primary" /> {t("upload.sunoLabel")}
               </Label>
-              <Input
-                id="suno-link"
-                placeholder={t("upload.sunoPlaceholder")}
-                value={sunoLink}
-                onChange={(e) => setSunoLink(e.target.value)}
-                className="bg-card/60 border-muted"
-              />
+              <div className="relative">
+                <Input
+                  id="suno-link"
+                  placeholder={t("upload.sunoPlaceholder")}
+                  value={sunoLink}
+                  onChange={(e) => handleSunoLinkChange(e.target.value)}
+                  className="bg-card/60 border-muted pr-10"
+                  disabled={sunoResolving}
+                />
+                {sunoResolving && (
+                  <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-primary" />
+                )}
+                {sunoResolved && (
+                  <CheckCircle className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-green-500" />
+                )}
+              </div>
+              {sunoResolved && (
+                <p className="text-xs text-green-500 flex items-center gap-1">
+                  <CheckCircle className="h-3 w-3" /> Audio MP3 rozpoznane — gotowe do uploadu
+                </p>
+              )}
             </div>
 
             {/* Audio file upload */}
