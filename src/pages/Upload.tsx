@@ -216,7 +216,7 @@ const Upload = () => {
         return;
       }
 
-      const finalAudioUrl = audioUrl || sunoLink || null;
+      const finalAudioUrl = audioUrl || (sunoResolved?.audioUrl) || sunoLink || null;
       const { data: insertedTrack, error: trackInsertErr } = await supabase.from("tracks").insert({
         title,
         artist: displayName,
