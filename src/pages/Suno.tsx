@@ -382,6 +382,15 @@ const Suno = () => {
               <Sparkles className="h-4 w-4" /> Generator
             </button>
             <button
+              onClick={() => setActiveTab("suno")}
+              className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${
+                activeTab === "suno" ? "text-white" : "text-gray-400 hover:text-gray-200"
+              }`}
+              style={activeTab === "suno" ? { background: "linear-gradient(135deg, #FF6B00, #9333EA)", boxShadow: "0 0 15px #FF6B0040" } : undefined}
+            >
+              <Wand2 className="h-4 w-4" /> Suno AI
+            </button>
+            <button
               onClick={() => setActiveTab("mix")}
               className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${
                 activeTab === "mix" ? "text-white" : "text-gray-400 hover:text-gray-200"
@@ -394,6 +403,8 @@ const Suno = () => {
 
           {activeTab === "mix" ? (
             <TrackMixer />
+          ) : activeTab === "suno" ? (
+            <SunoGeneratePanel />
           ) : (
           <>
           {/* Genre Selection */}
