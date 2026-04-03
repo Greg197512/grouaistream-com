@@ -15,6 +15,7 @@ import { generateMusic, type GeneratedTrack } from "@/utils/musicGenerator";
 import { mixAudioFiles, type MixStyle } from "@/utils/audioMixer";
 import { WaveformPlayer } from "@/components/studio/WaveformPlayer";
 import { toast } from "sonner";
+import { SunoGenerateModal } from "@/components/modals/SunoGenerateModal";
 
 interface ChatAttachment {
   type: "image" | "audio" | "video";
