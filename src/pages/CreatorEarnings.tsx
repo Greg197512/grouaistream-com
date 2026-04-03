@@ -12,7 +12,8 @@ import { motion } from "framer-motion";
 import { 
   DollarSign, TrendingUp, Music, BarChart3, 
   Wallet, ArrowUpRight, LogIn, Eye, Rocket,
-  ShieldCheck, Lock, BadgeCheck, Globe
+  ShieldCheck, Lock, BadgeCheck, Globe, Clock,
+  Download, Heart, Percent
 } from "lucide-react";
 import { BoostPurchaseModal } from "@/components/boost/BoostPurchaseModal";
 import { TrackBadges } from "@/components/ui/TrackBadges";
@@ -33,6 +34,14 @@ interface MonetizedTrack {
   audio_url: string | null;
 }
 
+interface PayoutRequest {
+  id: string;
+  amount: number;
+  status: string;
+  requested_at: string;
+  processed_at: string | null;
+}
+
 const CreatorEarnings = () => {
   const { user } = useAuth();
   const { t } = useLanguage();
@@ -41,14 +50,16 @@ const CreatorEarnings = () => {
   const [totalEarnings, setTotalEarnings] = useState(0);
   const [monthlyEarnings, setMonthlyEarnings] = useState(0);
   const [totalStreams, setTotalStreams] = useState(0);
+  const [tipEarnings, setTipEarnings] = useState(0);
   const [loading, setLoading] = useState(true);
   const [boostTrack, setBoostTrack] = useState<{ id: string; title: string } | null>(null);
+  const [payouts, setPayouts] = useState<PayoutRequest[]>([]);
+  const [requestingPayout, setRequestingPayout] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!user) return;
     setLoading(true);
 
-    // Load user tracks with monetization info
     const { data: tracksData } = await supabase
       .from("tracks")
       .select("id, title, artist, genre, cover_url, is_monetized, total_streams, total_earnings, audio_url")
@@ -74,6 +85,28 @@ const CreatorEarnings = () => {
 
     if (monthData) {
       setMonthlyEarnings(monthData.reduce((sum, e) => sum + Number(e.amount), 0));
+    }
+
+    // Tip earnings total
+    const { data: tipData } = await supabase
+      .from("creator_earnings")
+      .select("amount")
+      .eq("user_id", user.id)
+      .eq("earning_type", "tip");
+
+    if (tipData) {
+      setTipEarnings(tipData.reduce((sum, e) => sum + Number(e.amount), 0));
+    }
+
+    // Payout requests
+    const { data: payoutData } = await supabase
+      .from("payout_requests")
+      .select("id, amount, status, requested_at, processed_at")
+      .eq("user_id", user.id)
+      .order("requested_at", { ascending: false });
+
+    if (payoutData) {
+      setPayouts(payoutData as PayoutRequest[]);
     }
 
     setLoading(false);
@@ -104,6 +137,41 @@ const CreatorEarnings = () => {
     toast.success(enabled ? t("earnings.monetizationOn") : t("earnings.monetizationOff"));
   };
 
+  const handleRequestPayout = async () => {
+    if (!user) return;
+    if (totalEarnings < 50) {
+      toast.error(t("earnings.minPayout"));
+      return;
+    }
+
+    // Check pending payouts
+    const paidOut = payouts
+      .filter(p => p.status === "pending" || p.status === "processing")
+      .reduce((sum, p) => sum + Number(p.amount), 0);
+    
+    const available = totalEarnings - paidOut;
+    if (available < 50) {
+      toast.error(t("earnings.minPayout"));
+      return;
+    }
+
+    setRequestingPayout(true);
+    try {
+      const { error } = await supabase.from("payout_requests").insert({
+        user_id: user.id,
+        amount: available,
+      });
+
+      if (error) throw error;
+      toast.success(t("earnings.payoutRequested"));
+      loadData();
+    } catch (err: any) {
+      toast.error(err.message || "Error");
+    } finally {
+      setRequestingPayout(false);
+    }
+  };
+
   if (!user) {
     return (
       <MainLayout>
@@ -126,55 +194,58 @@ const CreatorEarnings = () => {
             <Wallet className="h-8 w-8 text-primary" />
             {t("earnings.title")}
           </h1>
-          <p className="text-muted-foreground mt-1">
-            {t("earnings.subtitle")}
-          </p>
+          <p className="text-muted-foreground mt-1">{t("earnings.subtitle")}</p>
         </motion.div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-            <Card className="bg-card/50 backdrop-blur border-white/10">
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs text-muted-foreground uppercase tracking-wide">{t("earnings.totalEarnings")}</p>
-                    <p className="text-2xl font-bold text-primary">{totalEarnings.toFixed(2)} zł</p>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {[
+            { label: t("earnings.totalEarnings"), value: `${totalEarnings.toFixed(2)} zł`, icon: DollarSign, color: "text-primary" },
+            { label: t("earnings.thisMonth"), value: `${monthlyEarnings.toFixed(2)} zł`, icon: TrendingUp, color: "text-accent" },
+            { label: t("earnings.totalStreams"), value: totalStreams.toLocaleString(), icon: BarChart3, color: "text-muted-foreground" },
+            { label: t("earnings.tipsTotal"), value: `${tipEarnings.toFixed(2)} zł`, icon: Heart, color: "text-pink-400" },
+          ].map((stat, i) => (
+            <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}>
+              <Card className="bg-card/50 backdrop-blur border-white/10">
+                <CardContent className="pt-5 pb-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wide">{stat.label}</p>
+                      <p className={cn("text-xl font-bold", stat.color)}>{stat.value}</p>
+                    </div>
+                    <stat.icon className={cn("h-6 w-6 opacity-40", stat.color)} />
                   </div>
-                  <DollarSign className="h-8 w-8 text-primary/40" />
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-            <Card className="bg-card/50 backdrop-blur border-white/10">
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs text-muted-foreground uppercase tracking-wide">{t("earnings.thisMonth")}</p>
-                    <p className="text-2xl font-bold text-accent">{monthlyEarnings.toFixed(2)} zł</p>
-                  </div>
-                  <TrendingUp className="h-8 w-8 text-accent/40" />
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-            <Card className="bg-card/50 backdrop-blur border-white/10">
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs text-muted-foreground uppercase tracking-wide">{t("earnings.totalStreams")}</p>
-                    <p className="text-2xl font-bold">{totalStreams.toLocaleString()}</p>
-                  </div>
-                  <BarChart3 className="h-8 w-8 text-muted-foreground/40" />
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          ))}
         </div>
+
+        {/* Revenue Split Info */}
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
+          <Card className="bg-card/50 backdrop-blur border-white/10">
+            <CardContent className="py-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Percent className="h-4 w-4 text-primary" />
+                <span className="text-sm font-semibold">{t("earnings.revenueSplit")}</span>
+              </div>
+              <div className="grid grid-cols-3 gap-3 text-center">
+                <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/15">
+                  <p className="text-lg font-bold text-emerald-400">65%</p>
+                  <p className="text-[10px] text-muted-foreground">{t("earnings.fromStreams")}</p>
+                </div>
+                <div className="p-3 rounded-lg bg-pink-500/10 border border-pink-500/15">
+                  <p className="text-lg font-bold text-pink-400">90%</p>
+                  <p className="text-[10px] text-muted-foreground">{t("earnings.fromTips")}</p>
+                </div>
+                <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/15">
+                  <p className="text-lg font-bold text-amber-400">70%</p>
+                  <p className="text-[10px] text-muted-foreground">{t("earnings.fromBoost")}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
 
         {/* Security Trust Bar */}
         <motion.div 
@@ -201,16 +272,56 @@ const CreatorEarnings = () => {
           </div>
         </motion.div>
 
-        {/* Info Banner */}
-        <Card className="bg-primary/5 border-primary/20">
-          <CardContent className="py-4 flex items-start gap-3">
-            <ArrowUpRight className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-            <div>
-              <p className="text-sm font-medium">{t("earnings.rate")}</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                {t("earnings.rateDesc")}
-              </p>
+        {/* Payout Section */}
+        <Card className="bg-card/50 backdrop-blur border-white/10">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Download className="h-5 w-5 text-primary" />
+              {t("earnings.payouts")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">{t("earnings.availableForPayout")}</p>
+                <p className="text-xl font-bold text-primary">
+                  {Math.max(0, totalEarnings - payouts.filter(p => p.status !== "rejected").reduce((s, p) => s + Number(p.amount), 0)).toFixed(2)} zł
+                </p>
+                <p className="text-[10px] text-muted-foreground">{t("earnings.minPayoutInfo")}</p>
+              </div>
+              <Button 
+                onClick={handleRequestPayout}
+                disabled={requestingPayout || totalEarnings < 50}
+                className="bg-gradient-to-r from-emerald-500 to-green-600 text-white gap-2"
+              >
+                <Wallet className="h-4 w-4" />
+                {t("earnings.requestPayout")}
+              </Button>
             </div>
+
+            {payouts.length > 0 && (
+              <div className="space-y-2 pt-2">
+                <p className="text-xs font-semibold text-muted-foreground uppercase">{t("earnings.payoutHistory")}</p>
+                {payouts.map((p) => (
+                  <div key={p.id} className="flex items-center justify-between py-2 px-3 rounded-lg bg-secondary/30 border border-border/50">
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span className="text-sm">{new Date(p.requested_at).toLocaleDateString()}</span>
+                    </div>
+                    <span className="text-sm font-semibold">{Number(p.amount).toFixed(2)} zł</span>
+                    <Badge className={cn(
+                      "text-[10px]",
+                      p.status === "completed" ? "bg-green-500/15 text-green-400 border-green-500/25" :
+                      p.status === "pending" ? "bg-amber-500/15 text-amber-400 border-amber-500/25" :
+                      "bg-red-500/15 text-red-400 border-red-500/25"
+                    )}>
+                      {p.status === "completed" ? t("earnings.paid") : 
+                       p.status === "pending" ? t("earnings.pending") : t("earnings.rejected")}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -246,18 +357,9 @@ const CreatorEarnings = () => {
                 >
                   <Card className="bg-card/30 backdrop-blur border-white/5 hover:border-white/15 transition-colors">
                     <CardContent className="p-4 flex items-center gap-4">
-                      {/* Cover */}
                       <div className="h-12 w-12 rounded-lg overflow-hidden flex-shrink-0 bg-white/10">
-                        <HQCover
-                          src={track.cover_url}
-                          alt={track.title}
-                          genre={track.genre}
-                          artist={track.artist}
-                          className="h-full w-full"
-                        />
+                        <HQCover src={track.cover_url} alt={track.title} genre={track.genre} artist={track.artist} className="h-full w-full" />
                       </div>
-
-                      {/* Info */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <p className="font-medium text-sm truncate">{track.title}</p>
@@ -269,11 +371,9 @@ const CreatorEarnings = () => {
                         </div>
                         <p className="text-xs text-muted-foreground truncate">{track.artist}</p>
                       </div>
-
-                      {/* Stats */}
                       <div className="hidden sm:flex items-center gap-6 text-right">
                         <div>
-                         <p className="text-xs text-muted-foreground">{t("earnings.streams")}</p>
+                          <p className="text-xs text-muted-foreground">{t("earnings.streams")}</p>
                           <p className="text-sm font-semibold flex items-center gap-1">
                             <Eye className="h-3 w-3" />
                             {Number(track.total_streams).toLocaleString()}
@@ -281,13 +381,9 @@ const CreatorEarnings = () => {
                         </div>
                         <div>
                           <p className="text-xs text-muted-foreground">{t("earnings.earned")}</p>
-                          <p className="text-sm font-semibold text-primary">
-                            {Number(track.total_earnings).toFixed(2)} zł
-                          </p>
+                          <p className="text-sm font-semibold text-primary">{Number(track.total_earnings).toFixed(2)} zł</p>
                         </div>
                       </div>
-
-                      {/* Boost + Toggle */}
                       <div className="flex items-center gap-2">
                         <Button
                           variant="ghost"
@@ -314,7 +410,6 @@ const CreatorEarnings = () => {
           )}
         </div>
       </div>
-      {/* Boost Modal */}
       {boostTrack && (
         <BoostPurchaseModal
           isOpen={!!boostTrack}
