@@ -1055,17 +1055,6 @@ export const AIAssistant = () => {
                 >
                   <Paperclip className="h-4 w-4" />
                 </Button>
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="ghost"
-                  onClick={() => setSunoModalOpen(true)}
-                  className="shrink-0 h-9 w-9 rounded-xl text-primary/70 hover:text-primary hover:bg-primary/10"
-                  disabled={isLoading}
-                  title="Generuj muzykę z Suno AI"
-                >
-                  <Wand2 className="h-4 w-4" />
-                </Button>
                 <Input
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
