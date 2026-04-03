@@ -301,6 +301,9 @@ export function AdminEmailDashboard({ stats, genreStats }: AdminEmailDashboardPr
                   <SelectItem value="weekly_digest">
                     <div className="flex items-center gap-2"><Mail className="h-4 w-4" />Podsumowanie tygodnia</div>
                   </SelectItem>
+                  <SelectItem value="easter">
+                    <div className="flex items-center gap-2"><Gift className="h-4 w-4" />Życzenia wielkanocne</div>
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
