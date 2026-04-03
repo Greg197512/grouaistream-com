@@ -77,6 +77,13 @@ ${customMessage ? `Główny temat: ${customMessage}` : ""}`;
 Struktura: (1) podziękowanie za bycie częścią społeczności, (2) odkrywcza rekomendacja — zaproponuj eksplorację nowego gatunku lub funkcji (np. sesje DJ, generowanie muzyki, mood detection), (3) inspirująca myśl o muzyce na nowy tydzień.
 ${stats ? `Dane platformy: ${stats.totalTracks} utworów dostępnych w ${stats.topGenres.length} gatunkach` : ""}`;
         break;
+      case "easter":
+        userPrompt = `Wygeneruj piękny, ciepły e-mail z życzeniami wielkanocnymi od zespołu GrouAI Stream dla ${recipientName ? `${recipientName}` : "użytkownika"}.
+Struktura: (1) serdeczne życzenia świąteczne — nawiąż do muzyki, harmonii i wspólnego słuchania jako metafory świąt, (2) krótkie podziękowanie za bycie częścią społeczności GrouAI Stream, (3) życzenie spokoju, radości i pięknych dźwięków na Wielkanoc.
+Ton: ciepły, poetycki, premium — jak kartka od bliskiego przyjaciela, nie od korporacji. Użyj subtelnych motywów wielkanocnych (wiosna, odrodzenie, światło, nadzieja) wplecionych w kontekst muzyczny.
+Dodaj emoji wielkanocne jako delikatne akcenty (🐣 🌷 ✨), max 3.
+${customMessage ? `Dodatkowy kontekst: ${customMessage}` : ""}`;
+        break;
     }
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {

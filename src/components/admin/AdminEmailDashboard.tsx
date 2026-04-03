@@ -184,7 +184,7 @@ export function AdminEmailDashboard({ stats, genreStats }: AdminEmailDashboardPr
             title: generatedEmail.subject,
             message: generatedEmail.body.replace(/<[^>]*>/g, ""),
             recipientName: recipientName || undefined,
-            emailType: emailType === "invitation" ? "Zaproszenie" : emailType === "challenge" ? "Wyzwanie" : emailType === "newsletter" ? "Newsletter" : "Podsumowanie",
+            emailType: emailType === "invitation" ? "Zaproszenie" : emailType === "challenge" ? "Wyzwanie" : emailType === "newsletter" ? "Newsletter" : emailType === "easter" ? "Życzenia wielkanocne" : "Podsumowanie",
           },
         },
       });
