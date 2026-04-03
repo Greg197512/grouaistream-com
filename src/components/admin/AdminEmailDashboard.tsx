@@ -60,7 +60,7 @@ export function AdminEmailDashboard({ stats, genreStats }: AdminEmailDashboardPr
   const [loadingLogs, setLoadingLogs] = useState(true);
   const [timeRange, setTimeRange] = useState<"24h" | "7d" | "30d">("7d");
 
-  const [emailType, setEmailType] = useState<"invitation" | "challenge" | "newsletter" | "weekly_digest">("invitation");
+  const [emailType, setEmailType] = useState<"invitation" | "challenge" | "newsletter" | "weekly_digest" | "easter">("invitation");
   const [recipientName, setRecipientName] = useState("");
   const [recipientEmail, setRecipientEmail] = useState("");
   const [customMessage, setCustomMessage] = useState("");
