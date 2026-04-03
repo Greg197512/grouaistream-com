@@ -67,9 +67,59 @@ const Upload = () => {
   const [insertedTrackId, setInsertedTrackId] = useState<string | null>(null);
   const [wantMonetize, setWantMonetize] = useState(true);
   const [isSunoPro, setIsSunoPro] = useState(false);
+  const [sunoResolving, setSunoResolving] = useState(false);
+  const [sunoResolved, setSunoResolved] = useState<{ audioUrl: string; imageUrl: string; duration: number } | null>(null);
 
   const displayName = user?.user_metadata?.display_name || user?.email?.split("@")[0] || "Artist";
   const isSunoTrack = sunoLink.trim().length > 0;
+
+  const handleSunoLinkChange = async (value: string) => {
+    setSunoLink(value);
+    setSunoResolved(null);
+
+    // Check if it's a valid Suno link
+    const isSunoUrl = /suno\.(com|ai)\/(s|song)\//.test(value);
+    if (!isSunoUrl) return;
+
+    setSunoResolving(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('suno-resolve', {
+        body: { url: value.trim() },
+      });
+
+      if (error) throw error;
+      if (data?.error) {
+        toast.error(data.error);
+        return;
+      }
+
+      if (data?.success) {
+        setSunoResolved({
+          audioUrl: data.audioUrl,
+          imageUrl: data.imageUrl,
+          duration: data.duration || 180,
+        });
+
+        // Auto-fill title if empty
+        if (!title && data.title) {
+          setTitle(data.title);
+        }
+        // Auto-fill cover if empty
+        if (!coverUrl && data.imageUrl) {
+          setCoverUrl(data.imageUrl);
+        }
+        // Set duration
+        setAudioDuration(data.duration || 180);
+
+        toast.success("✅ Rozpoznano utwór Suno! Audio URL i metadane pobrane.");
+      }
+    } catch (err: any) {
+      console.error("Suno resolve error:", err);
+      toast.error("Nie udało się rozpoznać linku Suno: " + (err.message || ""));
+    } finally {
+      setSunoResolving(false);
+    }
+  };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
