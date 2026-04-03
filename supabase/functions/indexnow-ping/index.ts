@@ -52,47 +52,44 @@ serve(async (req) => {
       }
     }
 
-    // Ping Bing IndexNow
-    const bingPayload = {
+    const indexNowPayload = {
       host: HOST,
       key: INDEXNOW_KEY,
       keyLocation: KEY_LOCATION,
       urlList: urlsToPing,
     };
 
-    const bingResponse = await fetch("https://api.indexnow.org/indexnow", {
-      method: "POST",
-      headers: { "Content-Type": "application/json; charset=utf-8" },
-      body: JSON.stringify(bingPayload),
-    });
+    // Ping all IndexNow endpoints + Google sitemap in parallel
+    const [bingResponse, yandexResponse, naverResponse, googleResponse] = await Promise.all([
+      fetch("https://api.indexnow.org/indexnow", {
+        method: "POST",
+        headers: { "Content-Type": "application/json; charset=utf-8" },
+        body: JSON.stringify(indexNowPayload),
+      }),
+      fetch("https://yandex.com/indexnow", {
+        method: "POST",
+        headers: { "Content-Type": "application/json; charset=utf-8" },
+        body: JSON.stringify(indexNowPayload),
+      }),
+      fetch("https://searchadvisor.naver.com/indexnow", {
+        method: "POST",
+        headers: { "Content-Type": "application/json; charset=utf-8" },
+        body: JSON.stringify(indexNowPayload),
+      }),
+      // Google Sitemap ping
+      fetch(`https://www.google.com/ping?sitemap=https://${HOST}/sitemap.xml`),
+    ]);
 
     const bingStatus = bingResponse.status;
     const bingText = await bingResponse.text().catch(() => "");
-
-    // Also ping Yandex IndexNow
-    const yandexResponse = await fetch("https://yandex.com/indexnow", {
-      method: "POST",
-      headers: { "Content-Type": "application/json; charset=utf-8" },
-      body: JSON.stringify(bingPayload),
-    });
-
-    const yandexStatus = yandexResponse.status;
-
-    // Ping Naver IndexNow
-    const naverResponse = await fetch("https://searchadvisor.naver.com/indexnow", {
-      method: "POST",
-      headers: { "Content-Type": "application/json; charset=utf-8" },
-      body: JSON.stringify(bingPayload),
-    });
-
-    const naverStatus = naverResponse.status;
 
     const result = {
       success: bingStatus === 200 || bingStatus === 202,
       urls_submitted: urlsToPing.length,
       bing: { status: bingStatus, response: bingText },
-      yandex: { status: yandexStatus },
-      naver: { status: naverStatus },
+      yandex: { status: yandexResponse.status },
+      naver: { status: naverResponse.status },
+      google_sitemap_ping: { status: googleResponse.status },
       timestamp: new Date().toISOString(),
     };
 

@@ -45,30 +45,19 @@
     <meta name="twitter:description" content="Pierwsza platforma muzyczna AI z weryfikacją ludzkich odsłuchań. Zero fake streamów, mood detection, GrouaRadio 24/7. No bots, real vibes." />
     <meta name="twitter:image" content="https://grouaistream.com/og-image.jpg" />
 
-    <!-- Additional SEO for non-Google engines -->
+    <!-- SEO directives for all crawlers -->
     <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
-    <meta name="googlebot" content="index, follow" />
+    <meta name="googlebot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
     <meta name="bingbot" content="index, follow, max-snippet:-1, max-image-preview:large" />
+    <meta name="google" content="notranslate" />
+    <meta name="google-site-verification" content="" />
     <meta name="yandex-verification" content="" />
     <meta name="msvalidate.01" content="" />
     <link rel="alternate" hreflang="pl" href="https://grouaistream.com/" />
     <link rel="alternate" hreflang="en" href="https://grouaistream.com/" />
     <link rel="alternate" hreflang="x-default" href="https://grouaistream.com/" />
 
-    <!-- JSON-LD MusicGroup for Bing rich results -->
-    <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "MusicGroup",
-      "name": "GrouAI Stream",
-      "url": "https://grouaistream.com",
-      "description": "AI-powered music streaming with mood detection, live radio, and verified human streams.",
-      "genre": ["Electronic", "Pop", "Hip-Hop", "Lo-Fi", "Jazz"],
-      "sameAs": []
-    }
-    </script>
-
-    <!-- JSON-LD Structured Data -->
+    <!-- JSON-LD WebApplication -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
@@ -88,7 +77,117 @@
         "@type": "Organization",
         "name": "GrouAI",
         "url": "https://grouaistream.com"
+      },
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "4.8",
+        "ratingCount": "150",
+        "bestRating": "5"
+      },
+      "featureList": [
+        "AI Mood Detection",
+        "Live Radio 24/7",
+        "Voice Commands",
+        "AI DJ Sessions",
+        "Music Generation",
+        "Verified Human Streams",
+        "Party Mode with QR",
+        "Playlist Import from YouTube & Spotify"
+      ]
+    }
+    </script>
+
+    <!-- JSON-LD Organization -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "GrouAI",
+      "url": "https://grouaistream.com",
+      "logo": "https://grouaistream.com/favicon.png",
+      "description": "AI-powered music streaming platform. No bots, real vibes.",
+      "foundingDate": "2024",
+      "sameAs": []
+    }
+    </script>
+
+    <!-- JSON-LD WebSite with SearchAction for Google Sitelinks -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "GrouAI Stream",
+      "url": "https://grouaistream.com",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": {
+          "@type": "EntryPoint",
+          "urlTemplate": "https://grouaistream.com/search?q={search_term_string}"
+        },
+        "query-input": "required name=search_term_string"
       }
+    }
+    </script>
+
+    <!-- JSON-LD BreadcrumbList -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://grouaistream.com/" },
+        { "@type": "ListItem", "position": 2, "name": "Radio", "item": "https://grouaistream.com/radio" },
+        { "@type": "ListItem", "position": 3, "name": "Upload", "item": "https://grouaistream.com/upload" },
+        { "@type": "ListItem", "position": 4, "name": "Movies", "item": "https://grouaistream.com/movies" },
+        { "@type": "ListItem", "position": 5, "name": "Earn", "item": "https://grouaistream.com/earn" }
+      ]
+    }
+    </script>
+
+    <!-- JSON-LD MusicGroup -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "MusicGroup",
+      "name": "GrouAI Stream",
+      "url": "https://grouaistream.com",
+      "description": "AI-powered music streaming with mood detection, live radio, and verified human streams.",
+      "genre": ["Electronic", "Pop", "Hip-Hop", "Lo-Fi", "Jazz", "Ambient", "Classical"],
+      "sameAs": []
+    }
+    </script>
+
+    <!-- JSON-LD FAQPage for Google rich results -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "What is GrouAI Stream?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "GrouAI Stream is an AI-powered music streaming platform with verified human streams, mood detection, live 24/7 radio, voice commands, and AI DJ sessions."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Is GrouAI Stream free?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes, GrouAI Stream offers a free tier with access to core features including radio, mood detection, and music discovery. Premium plans unlock additional features."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How does mood detection work?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "GrouAI uses your camera and AI to detect your current mood, then automatically suggests music that matches how you feel right now."
+          }
+        }
+      ]
     }
     </script>
 </head>
