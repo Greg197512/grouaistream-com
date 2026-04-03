@@ -264,6 +264,7 @@ const Upload = () => {
     setUploadProgress(null);
     setInsertedTrackId(null);
     setIsSunoPro(false);
+    setSunoResolved(null);
   };
 
   // Require login
