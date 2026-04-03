@@ -167,8 +167,36 @@ export const SunoGeneratePanel = () => {
     } catch (err: any) { toast.error("Błąd zapisu: " + err.message); }
   };
 
+  const openSunoPopup = () => {
+    const w = 480;
+    const h = 720;
+    const left = window.screenX + (window.outerWidth - w) / 2;
+    const top = window.screenY + (window.outerHeight - h) / 2;
+    window.open(
+      "https://suno.com/create",
+      "suno_popup",
+      `width=${w},height=${h},left=${left},top=${top},resizable=yes,scrollbars=yes`
+    );
+  };
+
   return (
     <div className="space-y-5">
+      {/* Open Suno in popup */}
+      <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}>
+        <Button
+          onClick={openSunoPopup}
+          variant="outline"
+          className="w-full h-12 gap-3 font-semibold border-[#9333EA]/30 text-white hover:text-white hover:border-[#9333EA]/60"
+          style={{
+            background: "linear-gradient(135deg, #1a1a2e, #2a1a3e)",
+            boxShadow: "0 0 20px #9333EA20",
+          }}
+        >
+          <ExternalLink className="h-4 w-4 text-[#9333EA]" />
+          🎵 Otwórz Suno w oknie (twórz na suno.com)
+        </Button>
+      </motion.div>
+
       {/* Mode toggle */}
       <div className="flex items-center justify-between p-4 rounded-xl border border-[#FF6B00]/20 bg-[#1a1a2e]/60">
         <Label className="text-sm text-gray-200">Tryb zaawansowany (custom)</Label>
