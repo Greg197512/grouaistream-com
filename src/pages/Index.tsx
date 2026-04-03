@@ -10,6 +10,7 @@ import { NewOnServer } from "@/components/sections/NewOnServer";
 import { UploadCTA } from "@/components/sections/UploadCTA";
 import { SupportSection } from "@/components/sections/SupportSection";
 import { PromotedTracksSection } from "@/components/sections/PromotedTracks";
+import { SEOContentSection } from "@/components/sections/SEOContentSection";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 const Index = () => {
