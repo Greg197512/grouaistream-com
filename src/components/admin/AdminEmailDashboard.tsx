@@ -17,7 +17,7 @@ import { toast } from "sonner";
 import {
   Mail, Send, Sparkles, Eye, Loader2, RefreshCw,
   CheckCircle, XCircle, AlertTriangle, Clock, Inbox,
-  UserPlus, Trophy, Newspaper, Bell,
+  UserPlus, Trophy, Newspaper, Bell, Gift,
 } from "lucide-react";
 
 interface EmailLog {
@@ -60,7 +60,7 @@ export function AdminEmailDashboard({ stats, genreStats }: AdminEmailDashboardPr
   const [loadingLogs, setLoadingLogs] = useState(true);
   const [timeRange, setTimeRange] = useState<"24h" | "7d" | "30d">("7d");
 
-  const [emailType, setEmailType] = useState<"invitation" | "challenge" | "newsletter" | "weekly_digest">("invitation");
+  const [emailType, setEmailType] = useState<"invitation" | "challenge" | "newsletter" | "weekly_digest" | "easter">("invitation");
   const [recipientName, setRecipientName] = useState("");
   const [recipientEmail, setRecipientEmail] = useState("");
   const [customMessage, setCustomMessage] = useState("");
@@ -184,7 +184,7 @@ export function AdminEmailDashboard({ stats, genreStats }: AdminEmailDashboardPr
             title: generatedEmail.subject,
             message: generatedEmail.body.replace(/<[^>]*>/g, ""),
             recipientName: recipientName || undefined,
-            emailType: emailType === "invitation" ? "Zaproszenie" : emailType === "challenge" ? "Wyzwanie" : emailType === "newsletter" ? "Newsletter" : "Podsumowanie",
+            emailType: emailType === "invitation" ? "Zaproszenie" : emailType === "challenge" ? "Wyzwanie" : emailType === "newsletter" ? "Newsletter" : emailType === "easter" ? "Życzenia wielkanocne" : "Podsumowanie",
           },
         },
       });
@@ -300,6 +300,9 @@ export function AdminEmailDashboard({ stats, genreStats }: AdminEmailDashboardPr
                   </SelectItem>
                   <SelectItem value="weekly_digest">
                     <div className="flex items-center gap-2"><Mail className="h-4 w-4" />Podsumowanie tygodnia</div>
+                  </SelectItem>
+                  <SelectItem value="easter">
+                    <div className="flex items-center gap-2"><Gift className="h-4 w-4" />Życzenia wielkanocne</div>
                   </SelectItem>
                 </SelectContent>
               </Select>
