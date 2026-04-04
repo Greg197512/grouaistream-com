@@ -20,7 +20,7 @@ export const NewOnServer = () => {
   const [tracks, setTracks] = useState<ServerTrack[]>([]);
   const [loading, setLoading] = useState(true);
   const { playPlaylist, currentTrack, isPlaying } = usePlayer();
-  const { applyUnlockFilter } = useUnlock();
+  
   
   const navigate = useNavigate();
 
