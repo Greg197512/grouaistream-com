@@ -51,7 +51,6 @@ const WelcomeOverlay = () => {
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <LanguageProvider>
-    <UnlockProvider>
     <AuthProvider>
       <SubscriptionProvider>
       <PlayerProvider>
