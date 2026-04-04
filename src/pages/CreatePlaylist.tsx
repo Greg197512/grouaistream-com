@@ -26,7 +26,7 @@ const gradients = [
 const CreatePlaylist = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { filterTracks } = useUnlock();
+  
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [selectedGradient, setSelectedGradient] = useState(gradients[0]);
