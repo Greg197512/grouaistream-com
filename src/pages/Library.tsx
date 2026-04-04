@@ -16,7 +16,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { usePlayer, Track } from "@/contexts/PlayerContext";
 import { useNavigate } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { useUnlock } from "@/contexts/UnlockContext";
+
 import { toast } from "sonner";
 import { ImportTrackModal } from "@/components/modals/ImportTrackModal";
 import { FileUploadModal } from "@/components/modals/FileUploadModal";
