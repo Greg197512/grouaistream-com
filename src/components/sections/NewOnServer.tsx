@@ -29,16 +29,18 @@ export const NewOnServer = () => {
   useEffect(() => {
     const fetchLatest = async () => {
       setLoading(true);
-      let query = supabase
+      const { data } = await supabase
         .from("tracks")
         .select("*")
-        .or("audio_url.not.is.null,video_url.not.is.null");
-      
-      const { data } = await query
+        .or("audio_url.not.is.null,video_url.not.is.null")
         .order("created_at", { ascending: false })
-        .limit(8);
+        .limit(12);
 
-      setTracks((data || []) as ServerTrack[]);
+      const all = (data || []) as ServerTrack[];
+      // Pin Reset 404 first
+      const pinned = all.filter(t => t.id === PINNED_TRACK_ID);
+      const rest = all.filter(t => t.id !== PINNED_TRACK_ID);
+      setTracks([...pinned, ...rest].slice(0, 8));
       setLoading(false);
     };
 
