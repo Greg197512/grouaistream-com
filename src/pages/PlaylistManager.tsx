@@ -9,7 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { Track, usePlayer } from "@/contexts/PlayerContext";
-import { useUnlock } from "@/contexts/UnlockContext";
+
 import { toast } from "sonner";
 
 interface Playlist {
