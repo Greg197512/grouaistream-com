@@ -85,7 +85,7 @@ const Library = () => {
   const navigate = useNavigate();
   const { t } = useLanguage();
   const { playTrack, playPlaylist, currentTrack, isPlaying, togglePlay } = usePlayer();
-  const { filterTracks } = useUnlock();
+  
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [likedCount, setLikedCount] = useState(0);
   const [historyCount, setHistoryCount] = useState(0);
