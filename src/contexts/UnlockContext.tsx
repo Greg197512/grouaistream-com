@@ -19,21 +19,9 @@ export const UnlockProvider = ({ children }: { children: ReactNode }) => {
   const [isUnlocked, setIsUnlocked] = useState(() => {
     return sessionStorage.getItem(STORAGE_KEY) === "true";
   });
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setIsAuthenticated(!!session?.user);
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setIsAuthenticated(!!session?.user);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
 
   const unlock = async (password: string): Promise<boolean> => {
+    // Verify code via secure RPC (codes are never exposed to client)
     const { data, error } = await supabase
       .rpc("verify_unlock_code", { candidate: password });
 
@@ -46,8 +34,7 @@ export const UnlockProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const filterTracks = <T extends { artist?: string }>(tracks: T[]): T[] => {
-    // Authenticated users or unlocked guests see everything
-    if (isUnlocked || isAuthenticated) return tracks;
+    if (isUnlocked) return tracks;
     return tracks.filter((t) => {
       const artist = (t.artist || "").toLowerCase().trim();
       return artist === "unknown artist" || artist === "unknown" || artist === "";
@@ -55,7 +42,7 @@ export const UnlockProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <UnlockContext.Provider value={{ isUnlocked: isUnlocked || isAuthenticated, unlock, filterTracks }}>
+    <UnlockContext.Provider value={{ isUnlocked, unlock, filterTracks }}>
       {children}
     </UnlockContext.Provider>
   );

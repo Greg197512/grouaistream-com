@@ -5,20 +5,18 @@ import { componentTagger } from "lovable-tagger";
 import { VitePWA } from "vite-plugin-pwa";
 
 // https://vitejs.dev/config/
-export default defineConfig(({ mode }) => {
-  const isLovableSandbox = Boolean(process.env.LOVABLE || process.env.LOVABLE_SANDBOX);
-
-  return ({
+export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
-    hmr: isLovableSandbox ? false : { overlay: false },
+    hmr: {
+      overlay: false,
+    },
   },
   plugins: [
     react(),
     mode === "development" && componentTagger(),
-    // Only enable PWA in production builds to prevent stale cache in dev/preview
-    mode === "production" && VitePWA({
+    VitePWA({
       registerType: "autoUpdate",
       includeAssets: ["logo-icon.png", "favicon.ico"],
       workbox: {
@@ -65,5 +63,4 @@ export default defineConfig(({ mode }) => {
       "@": path.resolve(__dirname, "./src"),
     },
   },
-  });
-});
+}));
