@@ -29,8 +29,6 @@ export const GenreSection = ({ genre, title, icon, color, limit = 8 }: GenreSect
         // Build genre filter based on base genre
         let query = supabase.from("tracks").select("*");
         
-        // Apply unlock filter at query level so LIMIT works correctly
-        query = applyUnlockFilter(query);
         
         if (genre === "Rock") {
           query = query.or("genre.eq.Rock,genre.eq.Pop-Rock,genre.ilike.%rock%");
