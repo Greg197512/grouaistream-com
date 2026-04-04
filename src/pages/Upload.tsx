@@ -167,6 +167,11 @@ const Upload = () => {
     setUploadProgress(null);
 
     try {
+      const ownerUserId = user?.id;
+      if (!ownerUserId) {
+        throw new Error("Brak aktywnej sesji użytkownika");
+      }
+
       let audioUrl = "";
 
       if (audioFile) {
@@ -224,7 +229,7 @@ const Upload = () => {
         duration: Math.round(audioDuration || 180),
         audio_url: finalAudioUrl,
         cover_url: coverUrl || null,
-        user_id: user?.id || null,
+        user_id: ownerUserId,
         is_monetized: wantMonetize,
         monetization_enabled_at: wantMonetize ? new Date().toISOString() : null,
       } as any).select("id").single();

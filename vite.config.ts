@@ -5,13 +5,22 @@ import { componentTagger } from "lovable-tagger";
 import { VitePWA } from "vite-plugin-pwa";
 
 // https://vitejs.dev/config/
-export default defineConfig(({ mode }) => ({
+export default defineConfig(({ mode }) => {
+  const isLovableSandbox = Boolean(process.env.LOVABLE || process.env.LOVABLE_SANDBOX);
+
+  return ({
   server: {
     host: "::",
     port: 8080,
-    hmr: {
-      overlay: false,
-    },
+    hmr: isLovableSandbox
+      ? {
+          overlay: false,
+          protocol: "wss",
+          clientPort: 443,
+        }
+      : {
+          overlay: false,
+        },
   },
   plugins: [
     react(),
@@ -63,4 +72,5 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
-}));
+  });
+});
