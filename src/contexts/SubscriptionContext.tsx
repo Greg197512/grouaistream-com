@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 export type SubscriptionPlan = "free" | "pro" | "ultimate";
 
@@ -50,6 +51,7 @@ export const useSubscription = () => {
 };
 
 export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
+  const { user, profile } = useAuth();
   const [plan, setPlan] = useState<SubscriptionPlan>("free");
   const [isLoading, setIsLoading] = useState(true);
   const [trialEndsAt, setTrialEndsAt] = useState<string | null>(null);
@@ -58,62 +60,56 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
 
   const fetchSubscription = useCallback(async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) {
+      if (!user) {
         setPlan("free");
+        setTrialEndsAt(null);
+        localStorage.setItem("grooveai-current-plan", "free");
         setIsLoading(false);
         return;
       }
 
-      // Check if user is admin — admins always get ultimate
-      const { data: roleData } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", session.user.id)
-        .eq("role", "admin")
-        .maybeSingle();
-
-      if (roleData) {
-        setPlan("ultimate");
-        localStorage.setItem("grooveai-current-plan", "ultimate");
-        setIsLoading(false);
-        return;
-      }
+      const isAdmin = profile?.role === "pro" && user.email === "grzegorzkaron553@gmail.com";
+      const hasCreatorAccess = profile?.role === "artist" || profile?.role === "pro";
 
       const { data, error } = await supabase
         .from("user_subscriptions")
         .select("plan, status, trial_ends_at")
-        .eq("user_id", session.user.id)
+        .eq("user_id", user.id)
         .eq("status", "active")
         .maybeSingle();
 
       if (error) {
         console.error("Error fetching subscription:", error);
-        setPlan("free");
-        localStorage.setItem("grooveai-current-plan", "free");
-      } else if (data) {
-        setPlan(data.plan as SubscriptionPlan);
-        setTrialEndsAt((data as any).trial_ends_at || null);
-        localStorage.setItem("grooveai-current-plan", data.plan as string);
-      } else {
-        const trialEnd = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-        await supabase.from("user_subscriptions").insert({
-          user_id: session.user.id,
-          plan: "free",
-          status: "active",
-          trial_ends_at: trialEnd,
-        } as any);
-        setPlan("free");
-        setTrialEndsAt(trialEnd);
-        localStorage.setItem("grooveai-current-plan", "free");
       }
+
+      const subscriptionPlan = (data?.plan as SubscriptionPlan | undefined) ?? "free";
+      const resolvedPlan: SubscriptionPlan = isAdmin
+        ? "ultimate"
+        : hasCreatorAccess
+          ? (subscriptionPlan === "ultimate" ? "ultimate" : "pro")
+          : subscriptionPlan;
+
+      setPlan(resolvedPlan);
+      setTrialEndsAt((data as any)?.trial_ends_at || null);
+      localStorage.setItem("grooveai-current-plan", resolvedPlan);
+
+      console.log("[Subscription] resolved access:", {
+        userId: user.id,
+        email: user.email,
+        profileRole: profile?.role ?? "free",
+        subscriptionStatus: profile?.subscriptionStatus ?? "free",
+        subscriptionPlan,
+        resolvedPlan,
+      });
     } catch (err) {
       console.error("Subscription fetch error:", err);
       setPlan("free");
+      setTrialEndsAt(null);
+      localStorage.setItem("grooveai-current-plan", "free");
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [profile?.role, profile?.subscriptionStatus, user, user?.email, user?.id]);
 
   useEffect(() => {
     fetchSubscription();
@@ -125,7 +121,6 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
     return () => subscription.unsubscribe();
   }, [fetchSubscription]);
 
-  // Reset daily AI playlist count at midnight
   useEffect(() => {
     const stored = localStorage.getItem("grooveai-ai-playlists-date");
     const today = new Date().toDateString();
@@ -139,7 +134,6 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
-  // Trial logic
   const isTrialActive = Boolean(
     plan === "free" && trialEndsAt && new Date(trialEndsAt) > new Date()
   );
@@ -156,7 +150,6 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
   const isPro = plan === "pro" || plan === "ultimate" || isTrialActive;
   const isUltimate = plan === "ultimate";
 
-  // Feature access — trial gives Pro-level access
   const canUseAIDJ = isPro;
   const canUseMoodDetection = isPro;
   const canGenerateAIPlaylist = isPro;
@@ -167,7 +160,6 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
   const canUseHQAudio = isPro;
   const canUseLossless = isUltimate;
 
-  // Pro gets 5/day, Ultimate gets unlimited
   const maxDailyPlaylists = isUltimate ? Infinity : (isPro ? 5 : 0);
   const dailyAIPlaylistsLeft = Math.max(0, maxDailyPlaylists - dailyAIPlaylistsUsed);
 
