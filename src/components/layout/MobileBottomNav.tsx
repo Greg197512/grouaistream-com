@@ -94,15 +94,24 @@ export const MobileBottomNav = () => {
       >
         {navItems.map((item) => {
           const isActive = location.pathname === item.href;
+          const isNeon = (item as any).neon;
           return (
             <button
               key={item.href}
               onClick={() => navigate(item.href)}
               className={cn(
                 "flex flex-col items-center gap-0.5 py-1 px-3 transition-colors flex-shrink-0",
-                isActive ? "text-primary" : "text-muted-foreground"
+                isActive ? "text-primary" : isNeon ? "text-accent" : "text-muted-foreground"
               )}
-              style={{ scrollSnapAlign: "center", minWidth: "4rem" }}
+              style={{
+                scrollSnapAlign: "center",
+                minWidth: "4rem",
+                ...(isNeon ? {
+                  filter: isActive
+                    ? "drop-shadow(0 0 8px hsl(38 100% 50% / 0.8))"
+                    : "drop-shadow(0 0 5px hsl(38 100% 50% / 0.45))",
+                } : {}),
+              }}
             >
               <span className="material-icons-outlined text-xl">{item.icon}</span>
               <span className="text-[9px] font-medium whitespace-nowrap">{t(item.labelKey)}</span>
