@@ -5,6 +5,8 @@ interface UnlockContextType {
   isUnlocked: boolean;
   unlock: (password: string) => Promise<boolean>;
   filterTracks: <T extends { artist?: string }>(tracks: T[]) => T[];
+  /** Apply artist filter at the Supabase query level for correct LIMIT behavior */
+  applyUnlockFilter: (query: any) => any;
 }
 
 const UnlockContext = createContext<UnlockContextType>({
