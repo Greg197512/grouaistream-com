@@ -29,7 +29,7 @@ export const HeroSection = () => {
   const navigate = useNavigate();
   const { playPlaylist, isPlaying, audioElement, isVideoMode, currentTrack } = usePlayer();
   const { t } = useLanguage();
-  const { filterTracks } = useUnlock();
+  
   const [isLoading, setIsLoading] = useState(false);
   const levels = useAudioAnalyser(audioElement, isPlaying, isVideoMode);
   const timeTheme = useTimeRotation();
