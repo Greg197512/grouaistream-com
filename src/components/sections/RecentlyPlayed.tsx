@@ -87,18 +87,19 @@ export const RecentlyPlayed = () => {
             setRecentTracks(filterTracks(unique).slice(0, 6));
           }
         } else {
-          const { data, error } = await supabase
+          let query = supabase
             .from("tracks")
-            .select("*")
-            .limit(6);
+            .select("*");
+          query = applyUnlockFilter(query);
+          const { data, error } = await query.limit(6);
 
           if (error) throw error;
 
           if (data) {
-            setRecentTracks(filterTracks(data.map(t => ({
+            setRecentTracks(data.map(t => ({
               ...t,
               played_at: new Date().toISOString(),
-            }))));
+            })));
           }
         }
       } catch (error) {
