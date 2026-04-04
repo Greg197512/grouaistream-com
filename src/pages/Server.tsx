@@ -65,7 +65,7 @@ const GENRE_COLORS: Record<string, string> = {
 const Server = () => {
   const { user } = useAuth();
   const { playTrack, currentTrack, isPlaying, togglePlay, playPlaylist } = usePlayer();
-  const { filterTracks } = useUnlock();
+  
   const [tracks, setTracks] = useState<Track[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
