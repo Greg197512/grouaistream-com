@@ -64,32 +64,6 @@ export const TopBar = () => {
     return user?.user_metadata?.display_name || user?.email?.split("@")[0] || "User";
   };
 
-  const handleLockMouseEnter = () => {
-    if (hideTimeoutRef.current) clearTimeout(hideTimeoutRef.current);
-    setShowPasswordField(true);
-  };
-
-  const handleLockMouseLeave = () => {
-    hideTimeoutRef.current = window.setTimeout(() => {
-      if (!passwordInput) setShowPasswordField(false);
-    }, 1500);
-  };
-
-  const handleUnlockSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setUnlocking(true);
-    const success = await unlock(passwordInput);
-    setUnlocking(false);
-    if (success) {
-      toast.success(t("topbar.unlocked") || "Odblokowano pełną bibliotekę!");
-      setShowPasswordField(false);
-    } else {
-      toast.error(t("topbar.wrongPassword") || "Nieprawidłowe hasło");
-      setPasswordInput("");
-    }
-  };
-
-  return (
     <header className="sticky top-0 z-40 flex h-16 items-center justify-between gap-4 border-b border-border bg-background/80 backdrop-blur-groove px-6">
       {/* Navigation */}
       <div className="flex items-center gap-2">
