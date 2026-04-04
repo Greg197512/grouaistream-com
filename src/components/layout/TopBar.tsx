@@ -23,7 +23,7 @@ export const TopBar = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [hasNotifications, setHasNotifications] = useState(true);
   const [showUpgrade, setShowUpgrade] = useState(false);
-  const hideTimeoutRef = useRef<number | null>(null);
+  
   const { user, signOut, loading } = useAuth();
   const { language, setLanguage, t, languageNames, languageFlags } = useLanguage();
   
