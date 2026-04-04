@@ -23,6 +23,23 @@ export default defineConfig(({ mode }) => ({
         navigateFallbackDenylist: [/^\/~oauth/],
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
+        skipWaiting: true,
+        clientsClaim: true,
+        cleanupOutdatedCaches: true,
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/grouaistream\.com\/.*/i,
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "pages-cache",
+              expiration: {
+                maxEntries: 50,
+                maxAgeSeconds: 60 * 60,
+              },
+              networkTimeoutSeconds: 3,
+            },
+          },
+        ],
       },
       manifest: {
         name: "GrouAI Stream — DJ Parkiet",
