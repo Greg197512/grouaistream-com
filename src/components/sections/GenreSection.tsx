@@ -20,7 +20,7 @@ export const GenreSection = ({ genre, title, icon, color, limit = 8 }: GenreSect
   const [tracks, setTracks] = useState<Track[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { playPlaylist, currentTrack, isPlaying } = usePlayer();
-  const { filterTracks } = useUnlock();
+  const { filterTracks, applyUnlockFilter } = useUnlock();
 
   useEffect(() => {
     const fetchTracks = async () => {
@@ -28,6 +28,9 @@ export const GenreSection = ({ genre, title, icon, color, limit = 8 }: GenreSect
       try {
         // Build genre filter based on base genre
         let query = supabase.from("tracks").select("*");
+        
+        // Apply unlock filter at query level so LIMIT works correctly
+        query = applyUnlockFilter(query);
         
         if (genre === "Rock") {
           query = query.or("genre.eq.Rock,genre.eq.Pop-Rock,genre.ilike.%rock%");
@@ -53,9 +56,9 @@ export const GenreSection = ({ genre, title, icon, color, limit = 8 }: GenreSect
     };
 
     fetchTracks();
-  }, [genre, limit]);
+  }, [genre, limit, applyUnlockFilter]);
 
-  const visibleTracks = filterTracks(tracks);
+  const visibleTracks = tracks;
 
   const handlePlayAll = () => {
     if (visibleTracks.length > 0) {

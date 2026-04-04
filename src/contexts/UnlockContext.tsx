@@ -5,12 +5,15 @@ interface UnlockContextType {
   isUnlocked: boolean;
   unlock: (password: string) => Promise<boolean>;
   filterTracks: <T extends { artist?: string }>(tracks: T[]) => T[];
+  /** Apply artist filter at the Supabase query level for correct LIMIT behavior */
+  applyUnlockFilter: (query: any) => any;
 }
 
 const UnlockContext = createContext<UnlockContextType>({
   isUnlocked: false,
   unlock: async () => false,
   filterTracks: (t) => t,
+  applyUnlockFilter: (q) => q,
 });
 
 const STORAGE_KEY = "grouai_unlocked";
@@ -41,8 +44,13 @@ export const UnlockProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
+  const applyUnlockFilter = (query: any) => {
+    if (isUnlocked) return query;
+    return query.eq("artist", "Unknown Artist");
+  };
+
   return (
-    <UnlockContext.Provider value={{ isUnlocked, unlock, filterTracks }}>
+    <UnlockContext.Provider value={{ isUnlocked, unlock, filterTracks, applyUnlockFilter }}>
       {children}
     </UnlockContext.Provider>
   );
