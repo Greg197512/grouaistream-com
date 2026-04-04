@@ -1,12 +1,12 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   ChevronLeft, ChevronRight, Search, Bell, User, Crown, LogOut,
-  Settings, Sparkles, UserCircle, Heart, Library, Power, Globe, Lock, LockOpen, Music
+  Settings, Sparkles, UserCircle, Heart, Library, Power, Globe, Music
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { useUnlock } from "@/contexts/UnlockContext";
+
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
@@ -23,13 +23,10 @@ export const TopBar = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [hasNotifications, setHasNotifications] = useState(true);
   const [showUpgrade, setShowUpgrade] = useState(false);
-  const [passwordInput, setPasswordInput] = useState("");
-  const [showPasswordField, setShowPasswordField] = useState(false);
-  const [unlocking, setUnlocking] = useState(false);
-  const hideTimeoutRef = useRef<number | null>(null);
+  
   const { user, signOut, loading } = useAuth();
   const { language, setLanguage, t, languageNames, languageFlags } = useLanguage();
-  const { isUnlocked, unlock } = useUnlock();
+  
   const navigate = useNavigate();
 
   const handleSignOut = async () => {
@@ -67,31 +64,6 @@ export const TopBar = () => {
     return user?.user_metadata?.display_name || user?.email?.split("@")[0] || "User";
   };
 
-  const handleLockMouseEnter = () => {
-    if (hideTimeoutRef.current) clearTimeout(hideTimeoutRef.current);
-    setShowPasswordField(true);
-  };
-
-  const handleLockMouseLeave = () => {
-    hideTimeoutRef.current = window.setTimeout(() => {
-      if (!passwordInput) setShowPasswordField(false);
-    }, 1500);
-  };
-
-  const handleUnlockSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setUnlocking(true);
-    const success = await unlock(passwordInput);
-    setUnlocking(false);
-    if (success) {
-      toast.success(t("topbar.unlocked") || "Odblokowano pełną bibliotekę!");
-      setShowPasswordField(false);
-    } else {
-      toast.error(t("topbar.wrongPassword") || "Nieprawidłowe hasło");
-      setPasswordInput("");
-    }
-  };
-
   return (
     <header className="sticky top-0 z-40 flex h-16 items-center justify-between gap-4 border-b border-border bg-background/80 backdrop-blur-groove px-6">
       {/* Navigation */}
@@ -108,49 +80,6 @@ export const TopBar = () => {
         >
           <ChevronRight className="h-4 w-4" />
         </button>
-      </div>
-
-      {/* Password Unlock - hover to reveal */}
-      <div
-        className="relative flex items-center"
-        onMouseEnter={handleLockMouseEnter}
-        onMouseLeave={handleLockMouseLeave}
-      >
-        {isUnlocked ? (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="flex items-center gap-1 text-xs text-emerald-500"
-          >
-            <LockOpen className="h-3.5 w-3.5" />
-          </motion.div>
-        ) : (
-          <>
-            <Lock className="h-4 w-4 text-muted-foreground cursor-pointer hover:text-foreground transition-colors" />
-            <AnimatePresence>
-              {showPasswordField && (
-                <motion.form
-                  initial={{ opacity: 0, width: 0, marginLeft: 0 }}
-                  animate={{ opacity: 1, width: 120, marginLeft: 8 }}
-                  exit={{ opacity: 0, width: 0, marginLeft: 0 }}
-                  transition={{ duration: 0.2 }}
-                  onSubmit={handleUnlockSubmit}
-                  className="overflow-hidden"
-                >
-                  <Input
-                    type="password"
-                    placeholder="••••••"
-                    value={passwordInput}
-                    onChange={(e) => setPasswordInput(e.target.value)}
-                    className="w-28 h-7 text-xs bg-secondary/40 border border-white/[0.06] rounded-full focus-visible:ring-1 focus-visible:ring-primary/30"
-                    autoFocus
-                    disabled={unlocking}
-                  />
-                </motion.form>
-              )}
-            </AnimatePresence>
-          </>
-        )}
       </div>
 
       {/* Search */}

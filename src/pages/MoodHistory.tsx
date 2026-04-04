@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePlayer } from "@/contexts/PlayerContext";
-import { useUnlock } from "@/contexts/UnlockContext";
+
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
@@ -123,7 +123,7 @@ export default function MoodHistory() {
   const { user } = useAuth();
   const { playPlaylist } = usePlayer();
   const navigate = useNavigate();
-  const { filterTracks } = useUnlock();
+  
   
   const [selectedDays, setSelectedDays] = useState<2 | 4 | 6>(2);
   const [moodSessions, setMoodSessions] = useState<MoodSession[]>([]);
@@ -311,15 +311,14 @@ export default function MoodHistory() {
         .limit(20);
 
       if (tracks && tracks.length > 0) {
-        const filtered = filterTracks(tracks);
-        const shuffled = [...filtered].sort(() => Math.random() - 0.5);
+        const shuffled = [...tracks].sort(() => Math.random() - 0.5);
         setRecommendedTracks(shuffled);
       } else {
         const { data: fallback } = await supabase
           .from("tracks")
           .select("*")
           .limit(15);
-        setRecommendedTracks(filterTracks(fallback || []));
+        setRecommendedTracks(fallback || []);
       }
     } catch (error) {
       console.error("Error fetching tracks:", error);

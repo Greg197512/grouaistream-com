@@ -5,7 +5,7 @@ import { Droppable, Draggable } from "@hello-pangea/dnd";
 import { supabase } from "@/integrations/supabase/client";
 import { usePlayer, Track } from "@/contexts/PlayerContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { useUnlock } from "@/contexts/UnlockContext";
+
 import { formatDistanceToNow } from "date-fns";
 import { TrackOptionsMenu, LikeButton } from "@/components/menus/TrackOptionsMenu";
 import { cn } from "@/lib/utils";
@@ -30,7 +30,7 @@ export const RecentlyPlayed = () => {
   const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
   const { playPlaylist, currentTrack, isPlaying } = usePlayer();
-  const { filterTracks, applyUnlockFilter } = useUnlock();
+  
 
   useEffect(() => {
     const fetchRecentTracks = async () => {
@@ -84,13 +84,13 @@ export const RecentlyPlayed = () => {
               seen.add(t.id);
               return true;
             });
-            setRecentTracks(filterTracks(unique).slice(0, 6));
+            setRecentTracks(unique.slice(0, 6));
           }
         } else {
           let query = supabase
             .from("tracks")
             .select("*");
-          query = applyUnlockFilter(query);
+          
           const { data, error } = await query.limit(6);
 
           if (error) throw error;

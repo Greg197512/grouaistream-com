@@ -8,7 +8,7 @@ import { WelcomeConfetti } from "@/components/effects/WelcomeConfetti";
 import { PlayerProvider } from "@/contexts/PlayerContext";
 import { AIProvider } from "@/contexts/AIContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
-import { UnlockProvider } from "@/contexts/UnlockContext";
+
 import { SubscriptionProvider } from "@/contexts/SubscriptionContext";
 import { AutoVoiceListener } from "@/components/player/AutoVoiceListener";
 import { PWAInstallPrompt } from "@/components/pwa/PWAInstallPrompt";
@@ -51,7 +51,6 @@ const WelcomeOverlay = () => {
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <LanguageProvider>
-    <UnlockProvider>
     <AuthProvider>
       <SubscriptionProvider>
       <PlayerProvider>
@@ -106,7 +105,6 @@ const App = () => (
       </PlayerProvider>
       </SubscriptionProvider>
     </AuthProvider>
-    </UnlockProvider>
     </LanguageProvider>
   </QueryClientProvider>
 );

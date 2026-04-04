@@ -4,7 +4,7 @@ import { Play, Loader2 } from "lucide-react";
 import { Droppable } from "@hello-pangea/dnd";
 import { supabase } from "@/integrations/supabase/client";
 import { usePlayer, Track } from "@/contexts/PlayerContext";
-import { useUnlock } from "@/contexts/UnlockContext";
+
 import { cn } from "@/lib/utils";
 import { DraggableTrackCard } from "@/components/dnd/DraggableTrackCard";
 
@@ -20,7 +20,7 @@ export const GenreSection = ({ genre, title, icon, color, limit = 8 }: GenreSect
   const [tracks, setTracks] = useState<Track[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { playPlaylist, currentTrack, isPlaying } = usePlayer();
-  const { filterTracks, applyUnlockFilter } = useUnlock();
+  
 
   useEffect(() => {
     const fetchTracks = async () => {
@@ -29,8 +29,6 @@ export const GenreSection = ({ genre, title, icon, color, limit = 8 }: GenreSect
         // Build genre filter based on base genre
         let query = supabase.from("tracks").select("*");
         
-        // Apply unlock filter at query level so LIMIT works correctly
-        query = applyUnlockFilter(query);
         
         if (genre === "Rock") {
           query = query.or("genre.eq.Rock,genre.eq.Pop-Rock,genre.ilike.%rock%");
@@ -56,7 +54,7 @@ export const GenreSection = ({ genre, title, icon, color, limit = 8 }: GenreSect
     };
 
     fetchTracks();
-  }, [genre, limit, applyUnlockFilter]);
+  }, [genre, limit]);
 
   const visibleTracks = tracks;
 

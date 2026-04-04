@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { useUnlock } from "@/contexts/UnlockContext";
+
 import { useAudioAnalyser } from "@/hooks/useAudioAnalyser";
 import { useTimeRotation } from "@/hooks/useTimeRotation";
 import { supabase } from "@/integrations/supabase/client";
@@ -29,7 +29,7 @@ export const HeroSection = () => {
   const navigate = useNavigate();
   const { playPlaylist, isPlaying, audioElement, isVideoMode, currentTrack } = usePlayer();
   const { t } = useLanguage();
-  const { filterTracks } = useUnlock();
+  
   const [isLoading, setIsLoading] = useState(false);
   const levels = useAudioAnalyser(audioElement, isPlaying, isVideoMode);
   const timeTheme = useTimeRotation();
@@ -70,8 +70,7 @@ export const HeroSection = () => {
         .limit(10);
       if (error) throw error;
       if (tracks && tracks.length > 0) {
-        const filtered = filterTracks(tracks);
-        const shuffled = [...filtered].sort(() => Math.random() - 0.5);
+        const shuffled = [...tracks].sort(() => Math.random() - 0.5);
         playPlaylist(shuffled);
         toast.success(t("hero.nowPlaying"));
       } else {

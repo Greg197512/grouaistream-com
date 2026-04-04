@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { Play, HardDrive, Loader2, Flame } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePlayer, Track } from "@/contexts/PlayerContext";
-import { useUnlock } from "@/contexts/UnlockContext";
+
 
 import { useNavigate } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
@@ -20,7 +20,7 @@ export const NewOnServer = () => {
   const [tracks, setTracks] = useState<ServerTrack[]>([]);
   const [loading, setLoading] = useState(true);
   const { playPlaylist, currentTrack, isPlaying } = usePlayer();
-  const { applyUnlockFilter } = useUnlock();
+  
   
   const navigate = useNavigate();
 
@@ -31,8 +31,6 @@ export const NewOnServer = () => {
         .from("tracks")
         .select("*")
         .or("audio_url.not.is.null,video_url.not.is.null");
-      
-      query = applyUnlockFilter(query);
       
       const { data } = await query
         .order("created_at", { ascending: false })
@@ -52,7 +50,7 @@ export const NewOnServer = () => {
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [applyUnlockFilter]);
+  }, []);
 
   const handlePlay = (track: Track, index: number) => {
     playPlaylist(tracks, index);

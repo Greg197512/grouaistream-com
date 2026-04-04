@@ -16,7 +16,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { usePlayer, Track } from "@/contexts/PlayerContext";
 import { useNavigate } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { useUnlock } from "@/contexts/UnlockContext";
+
 import { toast } from "sonner";
 import { ImportTrackModal } from "@/components/modals/ImportTrackModal";
 import { FileUploadModal } from "@/components/modals/FileUploadModal";
@@ -85,7 +85,7 @@ const Library = () => {
   const navigate = useNavigate();
   const { t } = useLanguage();
   const { playTrack, playPlaylist, currentTrack, isPlaying, togglePlay } = usePlayer();
-  const { filterTracks } = useUnlock();
+  
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [likedCount, setLikedCount] = useState(0);
   const [historyCount, setHistoryCount] = useState(0);
@@ -175,9 +175,9 @@ const Library = () => {
       .select("track_id, tracks(*)")
       .eq("user_id", user.id);
 
-    const filtered = filterTracks((likedTracks || [])
+    const filtered = (likedTracks || [])
       .filter((lt: any) => lt.tracks?.genre === genre)
-      .map((lt: any) => lt.tracks as Track));
+      .map((lt: any) => lt.tracks as Track);
     
     setGenreTracks(filtered);
     setGenreLoading(false);

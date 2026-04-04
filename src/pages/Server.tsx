@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePlayer, Track } from "@/contexts/PlayerContext";
-import { useUnlock } from "@/contexts/UnlockContext";
+
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
@@ -65,7 +65,7 @@ const GENRE_COLORS: Record<string, string> = {
 const Server = () => {
   const { user } = useAuth();
   const { playTrack, currentTrack, isPlaying, togglePlay, playPlaylist } = usePlayer();
-  const { filterTracks } = useUnlock();
+  
   const [tracks, setTracks] = useState<Track[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -101,7 +101,7 @@ const Server = () => {
     }
 
     const { data } = await query;
-    setTracks(filterTracks((data as Track[]) || []));
+    setTracks((data as Track[]) || []);
     setLoading(false);
   }, [filter]);
 
