@@ -12,6 +12,8 @@ import { HQCover } from "@/components/ui/HQCover";
 import { LikeButton, TrackOptionsMenu } from "@/components/menus/TrackOptionsMenu";
 import { cn } from "@/lib/utils";
 
+const PINNED_TRACK_ID = "043749a5-1e86-4d2d-8846-a41a90cc5a38";
+
 interface ServerTrack extends Track {
   created_at: string;
 }
