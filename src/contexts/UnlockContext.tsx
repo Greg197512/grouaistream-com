@@ -13,6 +13,7 @@ const UnlockContext = createContext<UnlockContextType>({
   isUnlocked: false,
   unlock: async () => false,
   filterTracks: (t) => t,
+  applyUnlockFilter: (q) => q,
 });
 
 const STORAGE_KEY = "grouai_unlocked";
