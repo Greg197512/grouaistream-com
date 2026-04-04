@@ -64,6 +64,7 @@ export const TopBar = () => {
     return user?.user_metadata?.display_name || user?.email?.split("@")[0] || "User";
   };
 
+  return (
     <header className="sticky top-0 z-40 flex h-16 items-center justify-between gap-4 border-b border-border bg-background/80 backdrop-blur-groove px-6">
       {/* Navigation */}
       <div className="flex items-center gap-2">
@@ -79,49 +80,6 @@ export const TopBar = () => {
         >
           <ChevronRight className="h-4 w-4" />
         </button>
-      </div>
-
-      {/* Password Unlock - hover to reveal */}
-      <div
-        className="relative flex items-center"
-        onMouseEnter={handleLockMouseEnter}
-        onMouseLeave={handleLockMouseLeave}
-      >
-        {isUnlocked ? (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="flex items-center gap-1 text-xs text-emerald-500"
-          >
-            <LockOpen className="h-3.5 w-3.5" />
-          </motion.div>
-        ) : (
-          <>
-            <Lock className="h-4 w-4 text-muted-foreground cursor-pointer hover:text-foreground transition-colors" />
-            <AnimatePresence>
-              {showPasswordField && (
-                <motion.form
-                  initial={{ opacity: 0, width: 0, marginLeft: 0 }}
-                  animate={{ opacity: 1, width: 120, marginLeft: 8 }}
-                  exit={{ opacity: 0, width: 0, marginLeft: 0 }}
-                  transition={{ duration: 0.2 }}
-                  onSubmit={handleUnlockSubmit}
-                  className="overflow-hidden"
-                >
-                  <Input
-                    type="password"
-                    placeholder="••••••"
-                    value={passwordInput}
-                    onChange={(e) => setPasswordInput(e.target.value)}
-                    className="w-28 h-7 text-xs bg-secondary/40 border border-white/[0.06] rounded-full focus-visible:ring-1 focus-visible:ring-primary/30"
-                    autoFocus
-                    disabled={unlocking}
-                  />
-                </motion.form>
-              )}
-            </AnimatePresence>
-          </>
-        )}
       </div>
 
       {/* Search */}
