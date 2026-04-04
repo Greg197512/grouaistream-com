@@ -46,7 +46,7 @@ export const UnlockProvider = ({ children }: { children: ReactNode }) => {
 
   const applyUnlockFilter = (query: any) => {
     if (isUnlocked) return query;
-    return query.or("artist.eq.Unknown Artist,artist.eq.unknown,artist.eq.,artist.is.null");
+    return query.eq("artist", "Unknown Artist");
   };
 
   return (
