@@ -17,6 +17,8 @@ const navItems = [
   { icon: "playlist_play", labelKey: "nav.managePlaylists", href: "/playlists" },
   { icon: "favorite", labelKey: "nav.likedSongs", href: "/liked" },
   { icon: "psychology", labelKey: "nav.moodHistory", href: "/mood-history" },
+  { icon: "payments", labelKey: "nav.earnings", href: "/earnings", neon: true },
+  { icon: "rocket_launch", labelKey: "nav.earnWithUs", href: "/earn", neon: true },
 ];
 
 export const MobileBottomNav = () => {
