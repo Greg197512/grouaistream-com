@@ -123,7 +123,7 @@ export default function MoodHistory() {
   const { user } = useAuth();
   const { playPlaylist } = usePlayer();
   const navigate = useNavigate();
-  const { filterTracks } = useUnlock();
+  
   
   const [selectedDays, setSelectedDays] = useState<2 | 4 | 6>(2);
   const [moodSessions, setMoodSessions] = useState<MoodSession[]>([]);
