@@ -14,7 +14,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePlayer, Track } from "@/contexts/PlayerContext";
-import { useUnlock } from "@/contexts/UnlockContext";
+
 import { TrackOptionsMenu } from "@/components/menus/TrackOptionsMenu";
 import { toast } from "sonner";
 import {
