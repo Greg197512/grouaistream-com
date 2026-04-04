@@ -1,5 +1,6 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface UnlockContextType {
   isUnlocked: boolean;
@@ -21,7 +22,6 @@ export const UnlockProvider = ({ children }: { children: ReactNode }) => {
   });
 
   const unlock = async (password: string): Promise<boolean> => {
-    // Verify code via secure RPC (codes are never exposed to client)
     const { data, error } = await supabase
       .rpc("verify_unlock_code", { candidate: password });
 
@@ -34,6 +34,7 @@ export const UnlockProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const filterTracks = <T extends { artist?: string }>(tracks: T[]): T[] => {
+    // Authenticated users or unlocked guests see everything
     if (isUnlocked) return tracks;
     return tracks.filter((t) => {
       const artist = (t.artist || "").toLowerCase().trim();
