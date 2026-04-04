@@ -32,8 +32,6 @@ export const NewOnServer = () => {
         .select("*")
         .or("audio_url.not.is.null,video_url.not.is.null");
       
-      query = applyUnlockFilter(query);
-      
       const { data } = await query
         .order("created_at", { ascending: false })
         .limit(8);
