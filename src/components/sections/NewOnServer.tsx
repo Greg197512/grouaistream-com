@@ -50,7 +50,7 @@ export const NewOnServer = () => {
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [applyUnlockFilter]);
+  }, []);
 
   const handlePlay = (track: Track, index: number) => {
     playPlaylist(tracks, index);

@@ -47,7 +47,7 @@ const CreatePlaylist = () => {
         .select("*")
         .order("title", { ascending: true });
 
-      setAllTracks(filterTracks(data || []));
+      setAllTracks(data || []);
     };
 
     loadTracks();

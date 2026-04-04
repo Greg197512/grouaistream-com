@@ -149,7 +149,7 @@ export const PlaylistGrid = ({ title, subtitle, showAll = true }: PlaylistGridPr
       let query = supabase
         .from("tracks")
         .select("*");
-      query = applyUnlockFilter(query);
+      
       const { data: tracks } = await query.limit(20);
       
       if (tracks && tracks.length > 0) {

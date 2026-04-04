@@ -54,7 +54,7 @@ export const GenreSection = ({ genre, title, icon, color, limit = 8 }: GenreSect
     };
 
     fetchTracks();
-  }, [genre, limit, applyUnlockFilter]);
+  }, [genre, limit]);
 
   const visibleTracks = tracks;
 

@@ -105,7 +105,6 @@ const App = () => (
       </PlayerProvider>
       </SubscriptionProvider>
     </AuthProvider>
-    </UnlockProvider>
     </LanguageProvider>
   </QueryClientProvider>
 );

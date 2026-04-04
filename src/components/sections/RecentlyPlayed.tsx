@@ -90,7 +90,7 @@ export const RecentlyPlayed = () => {
           let query = supabase
             .from("tracks")
             .select("*");
-          query = applyUnlockFilter(query);
+          
           const { data, error } = await query.limit(6);
 
           if (error) throw error;

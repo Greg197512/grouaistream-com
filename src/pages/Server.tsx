@@ -101,7 +101,7 @@ const Server = () => {
     }
 
     const { data } = await query;
-    setTracks(filterTracks((data as Track[]) || []));
+    setTracks((data as Track[]) || []);
     setLoading(false);
   }, [filter]);
 

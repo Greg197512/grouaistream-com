@@ -175,7 +175,7 @@ const Library = () => {
       .select("track_id, tracks(*)")
       .eq("user_id", user.id);
 
-    const filtered = filterTracks((likedTracks || [])
+    const filtered = (likedTracks || [])
       .filter((lt: any) => lt.tracks?.genre === genre)
       .map((lt: any) => lt.tracks as Track));
     

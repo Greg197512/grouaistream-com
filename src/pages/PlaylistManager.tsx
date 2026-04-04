@@ -46,7 +46,7 @@ const PlaylistManager = () => {
       supabase.from("tracks").select("*").order("title").limit(500),
     ]);
 
-    const tracks: Track[] = filterTracks((tracksRes.data || []).map((t) => ({
+    const tracks: Track[] = (tracksRes.data || []).map((t) => ({
       id: t.id, title: t.title, artist: t.artist, album: t.album,
       duration: t.duration, audio_url: t.audio_url, video_url: t.video_url,
       cover_url: t.cover_url, genre: t.genre, mood: t.mood,
