@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface UnlockContextType {
@@ -23,8 +23,7 @@ export const UnlockProvider = ({ children }: { children: ReactNode }) => {
     return sessionStorage.getItem(STORAGE_KEY) === "true";
   });
 
-  const unlock = async (password: string): Promise<boolean> => {
-    // Verify code via secure RPC (codes are never exposed to client)
+  const unlock = useCallback(async (password: string): Promise<boolean> => {
     const { data, error } = await supabase
       .rpc("verify_unlock_code", { candidate: password });
 
@@ -34,20 +33,20 @@ export const UnlockProvider = ({ children }: { children: ReactNode }) => {
       return true;
     }
     return false;
-  };
+  }, []);
 
-  const filterTracks = <T extends { artist?: string }>(tracks: T[]): T[] => {
+  const filterTracks = useCallback(<T extends { artist?: string }>(tracks: T[]): T[] => {
     if (isUnlocked) return tracks;
     return tracks.filter((t) => {
       const artist = (t.artist || "").toLowerCase().trim();
       return artist === "unknown artist" || artist === "unknown" || artist === "";
     });
-  };
+  }, [isUnlocked]);
 
-  const applyUnlockFilter = (query: any) => {
+  const applyUnlockFilter = useCallback((query: any) => {
     if (isUnlocked) return query;
     return query.eq("artist", "Unknown Artist");
-  };
+  }, [isUnlocked]);
 
   return (
     <UnlockContext.Provider value={{ isUnlocked, unlock, filterTracks, applyUnlockFilter }}>
