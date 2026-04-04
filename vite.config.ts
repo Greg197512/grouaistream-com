@@ -12,15 +12,7 @@ export default defineConfig(({ mode }) => {
   server: {
     host: "::",
     port: 8080,
-    hmr: isLovableSandbox
-      ? {
-          overlay: false,
-          protocol: "wss",
-          clientPort: 443,
-        }
-      : {
-          overlay: false,
-        },
+    hmr: isLovableSandbox ? false : { overlay: false },
   },
   plugins: [
     react(),
