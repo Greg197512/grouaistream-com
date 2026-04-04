@@ -17,7 +17,8 @@ export default defineConfig(({ mode }) => {
   plugins: [
     react(),
     mode === "development" && componentTagger(),
-    VitePWA({
+    // Only enable PWA in production builds to prevent stale cache in dev/preview
+    mode === "production" && VitePWA({
       registerType: "autoUpdate",
       includeAssets: ["logo-icon.png", "favicon.ico"],
       workbox: {
@@ -66,4 +67,3 @@ export default defineConfig(({ mode }) => {
   },
   });
 });
-
