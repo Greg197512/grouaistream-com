@@ -177,7 +177,7 @@ const Library = () => {
 
     const filtered = (likedTracks || [])
       .filter((lt: any) => lt.tracks?.genre === genre)
-      .map((lt: any) => lt.tracks as Track));
+      .map((lt: any) => lt.tracks as Track);
     
     setGenreTracks(filtered);
     setGenreLoading(false);

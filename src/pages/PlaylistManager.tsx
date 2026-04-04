@@ -50,7 +50,7 @@ const PlaylistManager = () => {
       id: t.id, title: t.title, artist: t.artist, album: t.album,
       duration: t.duration, audio_url: t.audio_url, video_url: t.video_url,
       cover_url: t.cover_url, genre: t.genre, mood: t.mood,
-    })));
+    }));
 
     const playlistsWithTracks: Playlist[] = [];
     for (const pl of playlistsRes.data || []) {

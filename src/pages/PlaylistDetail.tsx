@@ -97,7 +97,7 @@ const PlaylistDetail = () => {
       // Sort tracks by position
       const sortedTracks = trackIds
         .map((trackId) => tracksData?.find((t) => t.id === trackId))
-        .filter(Boolean) as Track[]);
+        .filter(Boolean) as Track[];
 
       setTracks(sortedTracks);
     }
