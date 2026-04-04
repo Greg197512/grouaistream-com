@@ -146,14 +146,14 @@ export const PlaylistGrid = ({ title, subtitle, showAll = true }: PlaylistGridPr
     toast.loading("Loading playlist...", { id: "trending-playlist" });
     
     try {
-      const { data: tracks } = await supabase
+      let query = supabase
         .from("tracks")
-        .select("*")
-        .limit(20);
+        .select("*");
+      query = applyUnlockFilter(query);
+      const { data: tracks } = await query.limit(20);
       
       if (tracks && tracks.length > 0) {
-        const filtered = filterTracks(tracks);
-        const shuffled = [...filtered].sort(() => Math.random() - 0.5);
+        const shuffled = [...tracks].sort(() => Math.random() - 0.5);
         playPlaylist(shuffled);
         toast.success(`Playing ${shuffled.length} tracks`, { id: "trending-playlist" });
       } else {
