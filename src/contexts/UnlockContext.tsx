@@ -1,55 +1,27 @@
-import { createContext, useContext, useState, useCallback, ReactNode } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { createContext, useContext, ReactNode } from "react";
 
 interface UnlockContextType {
   isUnlocked: boolean;
   unlock: (password: string) => Promise<boolean>;
   filterTracks: <T extends { artist?: string }>(tracks: T[]) => T[];
-  /** Apply artist filter at the Supabase query level for correct LIMIT behavior */
   applyUnlockFilter: (query: any) => any;
 }
 
 const UnlockContext = createContext<UnlockContextType>({
-  isUnlocked: false,
-  unlock: async () => false,
+  isUnlocked: true,
+  unlock: async () => true,
   filterTracks: (t) => t,
   applyUnlockFilter: (q) => q,
 });
 
-const STORAGE_KEY = "grouai_unlocked";
-
 export const UnlockProvider = ({ children }: { children: ReactNode }) => {
-  const [isUnlocked, setIsUnlocked] = useState(() => {
-    return sessionStorage.getItem(STORAGE_KEY) === "true";
-  });
-
-  const unlock = useCallback(async (password: string): Promise<boolean> => {
-    const { data, error } = await supabase
-      .rpc("verify_unlock_code", { candidate: password });
-
-    if (!error && data === true) {
-      setIsUnlocked(true);
-      sessionStorage.setItem(STORAGE_KEY, "true");
-      return true;
-    }
-    return false;
-  }, []);
-
-  const filterTracks = useCallback(<T extends { artist?: string }>(tracks: T[]): T[] => {
-    if (isUnlocked) return tracks;
-    return tracks.filter((t) => {
-      const artist = (t.artist || "").toLowerCase().trim();
-      return artist === "unknown artist" || artist === "unknown" || artist === "";
-    });
-  }, [isUnlocked]);
-
-  const applyUnlockFilter = useCallback((query: any) => {
-    if (isUnlocked) return query;
-    return query.eq("artist", "Unknown Artist");
-  }, [isUnlocked]);
-
   return (
-    <UnlockContext.Provider value={{ isUnlocked, unlock, filterTracks, applyUnlockFilter }}>
+    <UnlockContext.Provider value={{
+      isUnlocked: true,
+      unlock: async () => true,
+      filterTracks: (t) => t,
+      applyUnlockFilter: (q) => q,
+    }}>
       {children}
     </UnlockContext.Provider>
   );
