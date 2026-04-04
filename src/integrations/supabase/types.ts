@@ -735,6 +735,8 @@ export type Database = {
           display_name: string | null
           first_login_completed: boolean | null
           id: string
+          role: string
+          subscription_status: string
           updated_at: string
           user_id: string
         }
@@ -744,6 +746,8 @@ export type Database = {
           display_name?: string | null
           first_login_completed?: boolean | null
           id?: string
+          role?: string
+          subscription_status?: string
           updated_at?: string
           user_id: string
         }
@@ -753,6 +757,8 @@ export type Database = {
           display_name?: string | null
           first_login_completed?: boolean | null
           id?: string
+          role?: string
+          subscription_status?: string
           updated_at?: string
           user_id?: string
         }
@@ -1262,6 +1268,14 @@ export type Database = {
         Args: { payload: Json; queue_name: string }
         Returns: number
       }
+      ensure_profile_for_user: {
+        Args: { _display_name?: string; _user_id: string }
+        Returns: {
+          display_name: string
+          role: string
+          subscription_status: string
+        }[]
+      }
       get_admin_stats: { Args: never; Returns: Json }
       get_all_users_for_admin: { Args: never; Returns: Json }
       get_user_id_by_email: { Args: { _email: string }; Returns: string }
@@ -1292,6 +1306,13 @@ export type Database = {
       record_stream: {
         Args: { _duration_played: number; _track_id: string; _user_id: string }
         Returns: undefined
+      }
+      sync_profile_membership: {
+        Args: { _user_id: string }
+        Returns: {
+          role: string
+          subscription_status: string
+        }[]
       }
       verify_unlock_code: { Args: { candidate: string }; Returns: boolean }
     }
