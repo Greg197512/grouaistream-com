@@ -106,7 +106,7 @@ export const PlaylistGrid = ({ title, subtitle, showAll = true }: PlaylistGridPr
   const isAISection = title.toLowerCase().includes("ai");
   const playlists = isAISection ? aiPlaylists : trendingPlaylists;
   const { playPlaylist } = usePlayer();
-  const { filterTracks } = useUnlock();
+  const { filterTracks, applyUnlockFilter } = useUnlock();
   const { generateAIPlaylist, isProcessing, lastRecommendation } = useAI();
   const [generatingId, setGeneratingId] = useState<string | null>(null);
 
