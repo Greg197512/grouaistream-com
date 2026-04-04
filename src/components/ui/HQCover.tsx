@@ -390,7 +390,9 @@ export const HQCover = ({
   const mountedRef = useRef(true);
 
   const isLowQuality = src ? isPlaceholder(src) : true;
-  const needsFetch = (!src || error || isLowQuality) && !fetchAttempted;
+  const normalizedArtist = (artist || "").trim().toLowerCase();
+  const shouldSkipExternalFetch = normalizedArtist === "unknown artist" || normalizedArtist === "unknown";
+  const needsFetch = !shouldSkipExternalFetch && ((!src || error || isLowQuality) && !fetchAttempted);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -442,7 +444,7 @@ export const HQCover = ({
     <img
       src={hqSrc}
       alt={alt}
-      loading="eager"
+        loading="lazy"
       decoding="async"
       draggable={false}
       onError={() => {

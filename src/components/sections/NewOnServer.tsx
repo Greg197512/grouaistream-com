@@ -40,15 +40,6 @@ export const NewOnServer = () => {
 
       setTracks((data || []) as ServerTrack[]);
       setLoading(false);
-
-      // Auto-generate covers for tracks without them
-      (data || []).forEach(async (track: any) => {
-        if (!track.cover_url || track.cover_url.includes("placeholder") || track.cover_url.includes("picsum")) {
-          try {
-            await supabase.functions.invoke("ai-cover", { body: { trackId: track.id } });
-          } catch { /* silent */ }
-        }
-      });
     };
 
     fetchLatest();
