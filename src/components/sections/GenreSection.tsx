@@ -20,7 +20,7 @@ export const GenreSection = ({ genre, title, icon, color, limit = 8 }: GenreSect
   const [tracks, setTracks] = useState<Track[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { playPlaylist, currentTrack, isPlaying } = usePlayer();
-  const { filterTracks, applyUnlockFilter } = useUnlock();
+  
 
   useEffect(() => {
     const fetchTracks = async () => {
