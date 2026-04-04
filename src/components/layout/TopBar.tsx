@@ -26,7 +26,7 @@ export const TopBar = () => {
   const hideTimeoutRef = useRef<number | null>(null);
   const { user, signOut, loading } = useAuth();
   const { language, setLanguage, t, languageNames, languageFlags } = useLanguage();
-  const { isUnlocked, unlock } = useUnlock();
+  
   const navigate = useNavigate();
 
   const handleSignOut = async () => {
