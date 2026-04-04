@@ -22,7 +22,7 @@ interface Playlist {
 const PlaylistManager = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { filterTracks } = useUnlock();
+  
   const { playTrack, currentTrack, isPlaying } = usePlayer();
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [allTracks, setAllTracks] = useState<Track[]>([]);
