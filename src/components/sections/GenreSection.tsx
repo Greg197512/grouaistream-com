@@ -4,7 +4,7 @@ import { Play, Loader2 } from "lucide-react";
 import { Droppable } from "@hello-pangea/dnd";
 import { supabase } from "@/integrations/supabase/client";
 import { usePlayer, Track } from "@/contexts/PlayerContext";
-
+import { useLazyLoad } from "@/hooks/useLazyLoad";
 import { cn } from "@/lib/utils";
 import { DraggableTrackCard } from "@/components/dnd/DraggableTrackCard";
 
