@@ -64,16 +64,18 @@ export const GenreSection = ({ genre, title, icon, color, limit = 8 }: GenreSect
     }
   };
 
-  if (isLoading) {
+  if (!isVisible || isLoading) {
     return (
-      <section className="px-6 py-6">
+      <section ref={lazyRef} className="px-6 py-6">
         <div className="flex items-center gap-3 mb-4">
           <span className={cn("material-icons text-2xl", color)}>{icon}</span>
           <h2 className="font-display text-xl font-bold">{title}</h2>
         </div>
-        <div className="flex items-center justify-center py-8">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-        </div>
+        {isVisible && (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        )}
       </section>
     );
   }
