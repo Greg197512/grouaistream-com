@@ -4,6 +4,8 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRef, useState, useEffect } from "react";
 
+import { toast } from "sonner";
+
 const navItems = [
   { icon: "home", labelKey: "nav.home", href: "/" },
   { icon: "search", labelKey: "nav.search", href: "/search" },
