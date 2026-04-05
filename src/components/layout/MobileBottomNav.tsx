@@ -142,6 +142,22 @@ export const MobileBottomNav = () => {
             {user ? t("nav.settings") : t("topbar.signIn")}
           </span>
         </button>
+
+        {/* Logout button - only when logged in */}
+        {user && (
+          <button
+            onClick={async () => {
+              await signOut();
+              toast.success(t("settings.signOutSuccess"));
+              navigate("/");
+            }}
+            className="flex flex-col items-center gap-0.5 py-1 px-3 transition-colors flex-shrink-0 text-destructive"
+            style={{ scrollSnapAlign: "center", minWidth: "4rem" }}
+          >
+            <span className="material-icons-outlined text-xl">logout</span>
+            <span className="text-[9px] font-medium whitespace-nowrap">{t("topbar.signOut")}</span>
+          </button>
+        )}
       </div>
     </nav>
   );

@@ -28,20 +28,36 @@ export const NewOnServer = () => {
 
   useEffect(() => {
     const fetchLatest = async () => {
-      setLoading(true);
-      const { data } = await supabase
-        .from("tracks")
-        .select("*")
-        .or("audio_url.not.is.null,video_url.not.is.null")
-        .order("created_at", { ascending: false })
-        .limit(12);
+      try {
+        setLoading(true);
+        
+        // Fetch pinned track separately to guarantee it's always included
+        const [latestRes, pinnedRes] = await Promise.all([
+          supabase
+            .from("tracks")
+            .select("*")
+            .or("audio_url.not.is.null,video_url.not.is.null")
+            .order("created_at", { ascending: false })
+            .limit(12),
+          supabase
+            .from("tracks")
+            .select("*")
+            .eq("id", PINNED_TRACK_ID)
+            .maybeSingle(),
+        ]);
 
-      const all = (data || []) as ServerTrack[];
-      // Pin Reset 404 first
-      const pinned = all.filter(t => t.id === PINNED_TRACK_ID);
-      const rest = all.filter(t => t.id !== PINNED_TRACK_ID);
-      setTracks([...pinned, ...rest].slice(0, 8));
-      setLoading(false);
+        const latest = (latestRes.data || []) as ServerTrack[];
+        const pinned = pinnedRes.data as ServerTrack | null;
+
+        // Build final list: pinned first (if exists), then rest (deduplicated)
+        const rest = latest.filter(t => t.id !== PINNED_TRACK_ID);
+        const combined = pinned ? [pinned, ...rest] : rest;
+        setTracks(combined.slice(0, 8));
+      } catch (err) {
+        console.error("[NewOnServer] fetch error:", err);
+      } finally {
+        setLoading(false);
+      }
     };
 
     fetchLatest();

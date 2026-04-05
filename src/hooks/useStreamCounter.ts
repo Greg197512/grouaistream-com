@@ -32,8 +32,8 @@ export function useStreamCounter(
     intervalRef.current = setInterval(() => {
       elapsedRef.current += 1;
 
-      // After 30 seconds, record the stream
-      if (elapsedRef.current >= 30 && countedRef.current !== trackId) {
+      // After 30 seconds, record the stream (only for logged-in users)
+      if (elapsedRef.current >= 30 && countedRef.current !== trackId && userId) {
         countedRef.current = trackId;
         supabase.rpc("record_stream", {
           _track_id: trackId,
@@ -41,6 +41,7 @@ export function useStreamCounter(
           _duration_played: elapsedRef.current,
         }).then(({ error }) => {
           if (error) console.error("[StreamCounter] Error:", error);
+          else console.log("[StreamCounter] Stream recorded for track:", trackId);
         });
       }
     }, 1000);
