@@ -83,14 +83,14 @@ export const TopBar = () => {
       </div>
 
       {/* Search */}
-      <form onSubmit={handleSearch} className="flex-1 max-w-md">
+      <form onSubmit={handleSearch} className="flex-1 max-w-xs sm:max-w-md">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder={t("topbar.searchPlaceholder")}
-            className="pl-10 bg-secondary border-0 focus-visible:ring-1 focus-visible:ring-primary rounded-full h-10"
+            className="pl-10 bg-secondary border-0 focus-visible:ring-1 focus-visible:ring-primary rounded-full h-9 sm:h-10 text-sm"
           />
         </div>
       </form>
