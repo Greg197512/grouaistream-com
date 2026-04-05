@@ -23,12 +23,12 @@ export const GenreSection = ({ genre, title, icon, color, limit = 8 }: GenreSect
   const { ref: lazyRef, isVisible } = useLazyLoad("300px");
 
   useEffect(() => {
+    if (!isVisible) return;
+    
     const fetchTracks = async () => {
       setIsLoading(true);
       try {
-        // Build genre filter based on base genre
         let query = supabase.from("tracks").select("*");
-        
         
         if (genre === "Rock") {
           query = query.or("genre.eq.Rock,genre.eq.Pop-Rock,genre.ilike.%rock%");
@@ -54,7 +54,7 @@ export const GenreSection = ({ genre, title, icon, color, limit = 8 }: GenreSect
     };
 
     fetchTracks();
-  }, [genre, limit]);
+  }, [genre, limit, isVisible]);
 
   const visibleTracks = tracks;
 
