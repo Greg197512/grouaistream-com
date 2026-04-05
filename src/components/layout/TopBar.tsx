@@ -140,7 +140,7 @@ export const TopBar = () => {
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+        <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="hidden sm:block">
           <Button 
             variant="outline" 
             size="sm"
