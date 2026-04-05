@@ -4,7 +4,7 @@ import { Play, Loader2 } from "lucide-react";
 import { Droppable } from "@hello-pangea/dnd";
 import { supabase } from "@/integrations/supabase/client";
 import { usePlayer, Track } from "@/contexts/PlayerContext";
-
+import { useLazyLoad } from "@/hooks/useLazyLoad";
 import { cn } from "@/lib/utils";
 import { DraggableTrackCard } from "@/components/dnd/DraggableTrackCard";
 
@@ -20,15 +20,15 @@ export const GenreSection = ({ genre, title, icon, color, limit = 8 }: GenreSect
   const [tracks, setTracks] = useState<Track[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { playPlaylist, currentTrack, isPlaying } = usePlayer();
-  
+  const { ref: lazyRef, isVisible } = useLazyLoad("300px");
 
   useEffect(() => {
+    if (!isVisible) return;
+    
     const fetchTracks = async () => {
       setIsLoading(true);
       try {
-        // Build genre filter based on base genre
         let query = supabase.from("tracks").select("*");
-        
         
         if (genre === "Rock") {
           query = query.or("genre.eq.Rock,genre.eq.Pop-Rock,genre.ilike.%rock%");
@@ -54,7 +54,7 @@ export const GenreSection = ({ genre, title, icon, color, limit = 8 }: GenreSect
     };
 
     fetchTracks();
-  }, [genre, limit]);
+  }, [genre, limit, isVisible]);
 
   const visibleTracks = tracks;
 
@@ -64,16 +64,18 @@ export const GenreSection = ({ genre, title, icon, color, limit = 8 }: GenreSect
     }
   };
 
-  if (isLoading) {
+  if (!isVisible || isLoading) {
     return (
-      <section className="px-6 py-6">
+      <section ref={lazyRef} className="px-6 py-6">
         <div className="flex items-center gap-3 mb-4">
           <span className={cn("material-icons text-2xl", color)}>{icon}</span>
           <h2 className="font-display text-xl font-bold">{title}</h2>
         </div>
-        <div className="flex items-center justify-center py-8">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-        </div>
+        {isVisible && (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        )}
       </section>
     );
   }

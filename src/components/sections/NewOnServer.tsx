@@ -31,7 +31,6 @@ export const NewOnServer = () => {
       try {
         setLoading(true);
         
-        // Fetch pinned track separately to guarantee it's always included
         const [latestRes, pinnedRes] = await Promise.all([
           supabase
             .from("tracks")
@@ -49,7 +48,6 @@ export const NewOnServer = () => {
         const latest = (latestRes.data || []) as ServerTrack[];
         const pinned = pinnedRes.data as ServerTrack | null;
 
-        // Build final list: pinned first (if exists), then rest (deduplicated)
         const rest = latest.filter(t => t.id !== PINNED_TRACK_ID);
         const combined = pinned ? [pinned, ...rest] : rest;
         setTracks(combined.slice(0, 8));
