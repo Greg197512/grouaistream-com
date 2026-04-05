@@ -65,7 +65,7 @@ export const TopBar = () => {
   };
 
   return (
-    <header className="sticky top-0 z-40 flex h-16 items-center justify-between gap-4 border-b border-border bg-background/80 backdrop-blur-groove px-6">
+    <header className="sticky top-0 z-40 flex h-14 sm:h-16 items-center justify-between gap-2 sm:gap-4 border-b border-border bg-background/80 backdrop-blur-groove px-3 sm:px-6">
       {/* Navigation */}
       <div className="flex items-center gap-2">
         <button 
@@ -83,20 +83,20 @@ export const TopBar = () => {
       </div>
 
       {/* Search */}
-      <form onSubmit={handleSearch} className="flex-1 max-w-md">
+      <form onSubmit={handleSearch} className="flex-1 max-w-xs sm:max-w-md">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder={t("topbar.searchPlaceholder")}
-            className="pl-10 bg-secondary border-0 focus-visible:ring-1 focus-visible:ring-primary rounded-full h-10"
+            className="pl-10 bg-secondary border-0 focus-visible:ring-1 focus-visible:ring-primary rounded-full h-9 sm:h-10 text-sm"
           />
         </div>
       </form>
 
       {/* Right Actions */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-1.5 sm:gap-3">
         {!user && !loading && (
           <Button 
             onClick={() => navigate("/auth")}
@@ -140,7 +140,7 @@ export const TopBar = () => {
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+        <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="hidden sm:block">
           <Button 
             variant="outline" 
             size="sm"
