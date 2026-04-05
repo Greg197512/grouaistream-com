@@ -27,7 +27,7 @@ export function useStreamCounter(
       intervalRef.current = null;
     }
 
-    if (!isPlaying || !trackId || !userId) return;
+    if (!isPlaying || !trackId) return;
 
     intervalRef.current = setInterval(() => {
       elapsedRef.current += 1;
