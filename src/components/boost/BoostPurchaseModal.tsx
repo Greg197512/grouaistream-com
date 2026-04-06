@@ -157,7 +157,7 @@ export const BoostPurchaseModal = ({ isOpen, onClose, trackId, trackTitle }: Boo
                       <Icon className={cn("h-8 w-8 mb-3", pkg.color)} />
                       <h3 className="font-bold text-lg">{pkg.name}</h3>
                       <p className="text-2xl font-bold mt-1">
-                        {pkg.price} <span className="text-sm font-normal text-muted-foreground">zł</span>
+                        {pkg.price} <span className="text-sm font-normal text-muted-foreground">€</span>
                       </p>
                       <ul className="mt-4 space-y-2 flex-1">
                         {pkg.features.map((f, i) => (

@@ -144,7 +144,7 @@ export const TipModal = ({ isOpen, onClose, trackId, trackTitle, trackArtist }: 
                 ) : (
                   <Heart className="h-4 w-4" />
                 )}
-                {sending ? t("tip.sending") : `${t("tip.send")} ${selected} zł`}
+                {sending ? t("tip.sending") : `${t("tip.send")} ${selected} €`}
               </Button>
             </CardContent>
           </Card>

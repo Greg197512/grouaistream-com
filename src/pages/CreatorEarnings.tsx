@@ -381,7 +381,7 @@ const CreatorEarnings = () => {
                         </div>
                         <div>
                           <p className="text-xs text-muted-foreground">{t("earnings.earned")}</p>
-                          <p className="text-sm font-semibold text-primary">{Number(track.total_earnings).toFixed(2)} zł</p>
+                          <p className="text-sm font-semibold text-primary">{Number(track.total_earnings).toFixed(2)} €</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
