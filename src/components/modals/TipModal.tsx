@@ -9,7 +9,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
-const TIP_AMOUNTS = [5, 10, 20, 50];
+const TIP_AMOUNTS = [1, 2, 5, 10];
 
 interface TipModalProps {
   isOpen: boolean;
