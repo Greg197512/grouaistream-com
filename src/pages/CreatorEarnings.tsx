@@ -285,7 +285,7 @@ const CreatorEarnings = () => {
               <div>
                 <p className="text-sm text-muted-foreground">{t("earnings.availableForPayout")}</p>
                 <p className="text-xl font-bold text-primary">
-                  {Math.max(0, totalEarnings - payouts.filter(p => p.status !== "rejected").reduce((s, p) => s + Number(p.amount), 0)).toFixed(2)} zł
+                  {Math.max(0, totalEarnings - payouts.filter(p => p.status !== "rejected").reduce((s, p) => s + Number(p.amount), 0)).toFixed(2)} €
                 </p>
                 <p className="text-[10px] text-muted-foreground">{t("earnings.minPayoutInfo")}</p>
               </div>
