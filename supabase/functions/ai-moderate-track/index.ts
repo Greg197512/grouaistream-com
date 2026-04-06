@@ -162,12 +162,11 @@ Score each category from 0 to 20 points. Be STRICT and critical.
 
 Categories:
 1. score_length – Track length adequacy. STRICT RULES:
-   - Under 1:30 = 0 points (auto-reject)
-   - 1:30–2:00 = max 3 points
+   - Under 2:00 = 0 points
    - 2:00–2:30 = max 5 points
-   - 2:30–3:00 = max 8 points
-   - 3:00–3:30 = max 12 points
-   - 3:30–4:00 = max 16 points
+   - 2:30–3:00 = max 10 points
+   - 3:00–3:30 = max 14 points
+   - 3:30–4:00 = max 17 points
    - 4:00+ = up to 20 points
 2. score_lyrics – Title/description quality, creativity, emotional depth
 3. score_vocal – Expected vocal quality based on genre and production context
@@ -176,14 +175,13 @@ Categories:
 
 Rules:
 - Total score = sum of all 5 scores (max 100)
-- If track is under 2:00, status MUST be "rejected" regardless of total score
 - If total >= 65: status = "approved"
 - If total 45-64: status = "review"
 - If total < 45: status = "rejected"
 - Provide a brief analysis in Polish
 - Provide recommendations in Polish
 - If track has issues, list rejection_reasons in Polish
-- Always mention track length issues in rejection_reasons if under 3:00`;
+- Always mention track length issues in rejection_reasons if under 2:00`;
 
     const userPrompt = `Evaluate this track submission:
 - Title: "${input.title}"
