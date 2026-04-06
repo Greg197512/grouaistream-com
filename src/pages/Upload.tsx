@@ -184,9 +184,8 @@ const Upload = () => {
       setUploadProgress(null);
       toast.info("🤖 Analiza AI w toku...");
 
-      const { data: moderationData, error: moderationError } = await supabase.functions.invoke(
-        "ai-moderate-track",
-        {
+      const moderationResponse = await Promise.race([
+        supabase.functions.invoke("ai-moderate-track", {
           body: {
             title,
             artist: displayName,
@@ -196,8 +195,18 @@ const Upload = () => {
             hasSunoLink: isSunoTrack,
             hasAudioFile: !!audioFile,
           },
-        }
-      );
+        }),
+        new Promise<never>((_, reject) => {
+          window.setTimeout(() => {
+            reject(new Error("Analiza AI przekroczyła limit czasu. Spróbuj ponownie za chwilę."));
+          }, 35000);
+        }),
+      ]);
+
+      const { data: moderationData, error: moderationError } = moderationResponse as {
+        data: any;
+        error: { message?: string } | null;
+      };
 
       if (moderationError) {
         console.error("Moderation error:", moderationError);
