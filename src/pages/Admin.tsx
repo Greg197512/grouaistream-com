@@ -669,6 +669,10 @@ export default function Admin() {
                   <Award className="h-4 w-4" />
                   Analiza AI
                 </TabsTrigger>
+                <TabsTrigger value="top-earners" className="gap-2">
+                  <DollarSign className="h-4 w-4" />
+                  Top Zarobki
+                </TabsTrigger>
               </TabsList>
 
               {/* Genres Tab */}
