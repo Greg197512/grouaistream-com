@@ -264,6 +264,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     const nativeVideoUrl = getNativeVideoUrl(currentTrack);
 
     if (videoId) {
+      isVideoModeRef.current = true;
       setIsVideoMode(true);
       setYoutubeVideoId(videoId);
       setIsPlaying(true);
@@ -271,7 +272,8 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
 
       if (audioRef.current) {
         audioRef.current.pause();
-        audioRef.current.src = "";
+        audioRef.current.removeAttribute('src');
+        audioRef.current.load();
       }
     } else if (nativeVideoUrl) {
       // Native video file (MP4/WEBM/MKV/AVI/MOV/FLV/WMV etc.) — use isVideoMode
