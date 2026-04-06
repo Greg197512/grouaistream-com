@@ -1373,7 +1373,7 @@ const pl: TranslationKeys = {
   "earnPage.ctaUpload": "Wrzuć swój utwór",
   "earnPage.faq": "Najczęściej zadawane pytania",
   "earnPage.faq1q": "Ile naprawdę mogę zarobić?",
-  "earnPage.faq1a": "To zależy od liczby streamów i tipów. Przy 10 000 odsłuchań miesięcznie zarobisz ok. 19,50 zł z royalties. Dodaj do tego tipy od fanów i promocję — realne zarobki rosną szybko.",
+  "earnPage.faq1a": "To zależy od liczby streamów i tipów. Przy 10 000 odsłuchań miesięcznie zarobisz ok. 4,55 € z royalties. Dodaj do tego tipy od fanów i promocję — realne zarobki rosną szybko.",
   "earnPage.faq2q": "Kiedy dostaję pieniądze?",
   "earnPage.faq2a": "Wypłaty realizujemy co miesiąc przez Stripe. Minimalna kwota do wypłaty to 50 zł.",
   "earnPage.faq3q": "Czy mogę wyłączyć monetyzację w każdej chwili?",
