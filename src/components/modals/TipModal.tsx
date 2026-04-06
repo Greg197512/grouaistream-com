@@ -53,7 +53,7 @@ export const TipModal = ({ isOpen, onClose, trackId, trackTitle, trackArtist }: 
         track_id: trackId,
         amount: creatorAmount,
         earning_type: "tip",
-        description: `Tip ${selected} zł from listener (90% = ${creatorAmount.toFixed(2)} zł)`,
+        description: `Tip ${selected} € from listener (90% = ${creatorAmount.toFixed(2)} €)`,
       } as any);
 
       if (error) throw error;
