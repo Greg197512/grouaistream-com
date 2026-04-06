@@ -102,9 +102,7 @@ function finalizeEvaluation(input: ModerationInput, evaluation: EvaluationPayloa
   const totalScore = scoreLength + scoreLyrics + scoreVocal + scoreProduction + scoreOriginality;
 
   let status: string;
-  if (durationSec > 0 && durationSec < 120) {
-    status = "rejected";
-  } else if (totalScore >= 65) {
+  if (totalScore >= 65) {
     status = "approved";
   } else if (totalScore >= 45) {
     status = "review";
