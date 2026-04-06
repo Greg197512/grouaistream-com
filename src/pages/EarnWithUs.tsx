@@ -344,8 +344,8 @@ const EarnWithUs = () => {
                     </div>
                   </div>
                   <div className="flex items-baseline gap-1">
-                    <span className="text-3xl font-black text-amber-400">39</span>
-                    <span className="text-sm text-muted-foreground">zł/{t("earnPage.month")}</span>
+                    <span className="text-3xl font-black text-amber-400">8.99</span>
+                    <span className="text-sm text-muted-foreground">€/{t("earnPage.month")}</span>
                   </div>
                   <ul className="space-y-2">
                     {["earnPage.creatorUlt1", "earnPage.creatorUlt2", "earnPage.creatorUlt3", "earnPage.creatorUlt4", "earnPage.creatorUlt5"].map((key) => (

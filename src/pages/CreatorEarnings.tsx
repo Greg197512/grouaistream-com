@@ -200,10 +200,10 @@ const CreatorEarnings = () => {
         {/* Stats Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
-            { label: t("earnings.totalEarnings"), value: `${totalEarnings.toFixed(2)} zł`, icon: DollarSign, color: "text-primary" },
-            { label: t("earnings.thisMonth"), value: `${monthlyEarnings.toFixed(2)} zł`, icon: TrendingUp, color: "text-accent" },
+            { label: t("earnings.totalEarnings"), value: `${totalEarnings.toFixed(2)} €`, icon: DollarSign, color: "text-primary" },
+            { label: t("earnings.thisMonth"), value: `${monthlyEarnings.toFixed(2)} €`, icon: TrendingUp, color: "text-accent" },
             { label: t("earnings.totalStreams"), value: totalStreams.toLocaleString(), icon: BarChart3, color: "text-muted-foreground" },
-            { label: t("earnings.tipsTotal"), value: `${tipEarnings.toFixed(2)} zł`, icon: Heart, color: "text-pink-400" },
+            { label: t("earnings.tipsTotal"), value: `${tipEarnings.toFixed(2)} €`, icon: Heart, color: "text-pink-400" },
           ].map((stat, i) => (
             <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}>
               <Card className="bg-card/50 backdrop-blur border-white/10">
