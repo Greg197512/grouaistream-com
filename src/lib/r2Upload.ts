@@ -206,32 +206,36 @@ async function uploadToR2ViaProxy({
 
 /**
   * Upload a file to Cloudflare R2.
-  * Primary: proxy upload through edge function (avoids CORS issues).
-  * Fallback: signed URL direct PUT (faster for large files if CORS is configured).
- */
+  * Primary: direct signed URL upload (fastest and avoids proxy timeouts).
+  * Fallback: proxy upload through edge function for environments where direct PUT is blocked.
+  */
 export async function uploadToR2({
   file,
   folder = "tracks",
   onProgress,
 }: R2UploadOptions): Promise<R2UploadResult> {
   const normalizedFolder = folder || "tracks";
-  const shouldPreferProxy = file.size <= EDGE_PROXY_MAX_BYTES;
-
-  if (shouldPreferProxy) {
-    try {
-      return await uploadToR2ViaProxy({ file, folder: normalizedFolder, onProgress });
-    } catch (proxyUploadError) {
-      console.warn("Proxy R2 upload failed, switching to direct signed upload", proxyUploadError);
-      return uploadToSignedUrl({ file, folder: normalizedFolder, onProgress });
-    }
-  }
 
   try {
     return await uploadToSignedUrl({ file, folder: normalizedFolder, onProgress });
   } catch (directUploadError) {
-    console.warn("Direct R2 upload failed for large file", directUploadError);
-    throw directUploadError instanceof Error
-      ? directUploadError
-      : new Error("Nie udało się wysłać pliku na dysk");
+    console.warn("Direct R2 upload failed, switching to proxy upload", directUploadError);
+
+    if (file.size > EDGE_PROXY_MAX_BYTES) {
+      throw directUploadError instanceof Error
+        ? directUploadError
+        : new Error("Nie udało się wysłać pliku na dysk");
+    }
+
+    try {
+      return await uploadToR2ViaProxy({ file, folder: normalizedFolder, onProgress });
+    } catch (proxyUploadError) {
+      console.warn("Proxy R2 upload also failed", proxyUploadError);
+      throw proxyUploadError instanceof Error
+        ? proxyUploadError
+        : directUploadError instanceof Error
+          ? directUploadError
+          : new Error("Nie udało się wysłać pliku na dysk");
+    }
   }
 }
