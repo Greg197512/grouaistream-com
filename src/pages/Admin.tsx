@@ -55,7 +55,8 @@ import { RadioStationManager } from "@/components/admin/RadioStationManager";
 import { StorageStats } from "@/components/admin/StorageStats";
 import { AdminEmailDashboard } from "@/components/admin/AdminEmailDashboard";
 import { AIModeratorRankings } from "@/components/admin/AIModeratorRankings";
-import { Radio as RadioIcon, HardDrive, Award } from "lucide-react";
+import { TopEarners } from "@/components/admin/TopEarners";
+import { Radio as RadioIcon, HardDrive, Award, DollarSign } from "lucide-react";
 
 interface UserStats {
   totalUsers: number;
@@ -668,6 +669,10 @@ export default function Admin() {
                   <Award className="h-4 w-4" />
                   Analiza AI
                 </TabsTrigger>
+                <TabsTrigger value="top-earners" className="gap-2">
+                  <DollarSign className="h-4 w-4" />
+                  Top Zarobki
+                </TabsTrigger>
               </TabsList>
 
               {/* Genres Tab */}
@@ -1094,6 +1099,10 @@ export default function Admin() {
 
               <TabsContent value="ai-rankings">
                 <AIModeratorRankings />
+              </TabsContent>
+
+              <TabsContent value="top-earners">
+                <TopEarners />
               </TabsContent>
             </Tabs>
 

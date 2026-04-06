@@ -139,7 +139,7 @@ const CreatorEarnings = () => {
 
   const handleRequestPayout = async () => {
     if (!user) return;
-    if (totalEarnings < 50) {
+    if (totalEarnings < 12) {
       toast.error(t("earnings.minPayout"));
       return;
     }
@@ -150,7 +150,7 @@ const CreatorEarnings = () => {
       .reduce((sum, p) => sum + Number(p.amount), 0);
     
     const available = totalEarnings - paidOut;
-    if (available < 50) {
+    if (available < 12) {
       toast.error(t("earnings.minPayout"));
       return;
     }
@@ -200,10 +200,10 @@ const CreatorEarnings = () => {
         {/* Stats Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
-            { label: t("earnings.totalEarnings"), value: `${totalEarnings.toFixed(2)} zł`, icon: DollarSign, color: "text-primary" },
-            { label: t("earnings.thisMonth"), value: `${monthlyEarnings.toFixed(2)} zł`, icon: TrendingUp, color: "text-accent" },
+            { label: t("earnings.totalEarnings"), value: `${totalEarnings.toFixed(2)} €`, icon: DollarSign, color: "text-primary" },
+            { label: t("earnings.thisMonth"), value: `${monthlyEarnings.toFixed(2)} €`, icon: TrendingUp, color: "text-accent" },
             { label: t("earnings.totalStreams"), value: totalStreams.toLocaleString(), icon: BarChart3, color: "text-muted-foreground" },
-            { label: t("earnings.tipsTotal"), value: `${tipEarnings.toFixed(2)} zł`, icon: Heart, color: "text-pink-400" },
+            { label: t("earnings.tipsTotal"), value: `${tipEarnings.toFixed(2)} €`, icon: Heart, color: "text-pink-400" },
           ].map((stat, i) => (
             <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}>
               <Card className="bg-card/50 backdrop-blur border-white/10">
@@ -285,13 +285,13 @@ const CreatorEarnings = () => {
               <div>
                 <p className="text-sm text-muted-foreground">{t("earnings.availableForPayout")}</p>
                 <p className="text-xl font-bold text-primary">
-                  {Math.max(0, totalEarnings - payouts.filter(p => p.status !== "rejected").reduce((s, p) => s + Number(p.amount), 0)).toFixed(2)} zł
+                  {Math.max(0, totalEarnings - payouts.filter(p => p.status !== "rejected").reduce((s, p) => s + Number(p.amount), 0)).toFixed(2)} €
                 </p>
                 <p className="text-[10px] text-muted-foreground">{t("earnings.minPayoutInfo")}</p>
               </div>
               <Button 
                 onClick={handleRequestPayout}
-                disabled={requestingPayout || totalEarnings < 50}
+                disabled={requestingPayout || totalEarnings < 12}
                 className="bg-gradient-to-r from-emerald-500 to-green-600 text-white gap-2"
               >
                 <Wallet className="h-4 w-4" />
@@ -308,7 +308,7 @@ const CreatorEarnings = () => {
                       <Clock className="h-3.5 w-3.5 text-muted-foreground" />
                       <span className="text-sm">{new Date(p.requested_at).toLocaleDateString()}</span>
                     </div>
-                    <span className="text-sm font-semibold">{Number(p.amount).toFixed(2)} zł</span>
+                    <span className="text-sm font-semibold">{Number(p.amount).toFixed(2)} €</span>
                     <Badge className={cn(
                       "text-[10px]",
                       p.status === "completed" ? "bg-green-500/15 text-green-400 border-green-500/25" :
@@ -381,7 +381,7 @@ const CreatorEarnings = () => {
                         </div>
                         <div>
                           <p className="text-xs text-muted-foreground">{t("earnings.earned")}</p>
-                          <p className="text-sm font-semibold text-primary">{Number(track.total_earnings).toFixed(2)} zł</p>
+                          <p className="text-sm font-semibold text-primary">{Number(track.total_earnings).toFixed(2)} €</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">

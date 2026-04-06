@@ -9,7 +9,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
-const TIP_AMOUNTS = [5, 10, 20, 50];
+const TIP_AMOUNTS = [1, 2, 5, 10];
 
 interface TipModalProps {
   isOpen: boolean;
@@ -53,12 +53,12 @@ export const TipModal = ({ isOpen, onClose, trackId, trackTitle, trackArtist }: 
         track_id: trackId,
         amount: creatorAmount,
         earning_type: "tip",
-        description: `Tip ${selected} zł from listener (90% = ${creatorAmount.toFixed(2)} zł)`,
+        description: `Tip ${selected} € from listener (90% = ${creatorAmount.toFixed(2)} €)`,
       } as any);
 
       if (error) throw error;
 
-      toast.success(`${t("tip.sent")} ${selected} zł ❤️`);
+      toast.success(`${t("tip.sent")} ${selected} € ❤️`);
       onClose();
     } catch (err: any) {
       console.error("Tip error:", err);
@@ -122,7 +122,7 @@ export const TipModal = ({ isOpen, onClose, trackId, trackTitle, trackArtist }: 
                     )}
                   >
                     {amount}
-                    <span className="text-xs font-normal block">zł</span>
+                    <span className="text-xs font-normal block">€</span>
                   </motion.button>
                 ))}
               </div>
@@ -144,7 +144,7 @@ export const TipModal = ({ isOpen, onClose, trackId, trackTitle, trackArtist }: 
                 ) : (
                   <Heart className="h-4 w-4" />
                 )}
-                {sending ? t("tip.sending") : `${t("tip.send")} ${selected} zł`}
+                {sending ? t("tip.sending") : `${t("tip.send")} ${selected} €`}
               </Button>
             </CardContent>
           </Card>
