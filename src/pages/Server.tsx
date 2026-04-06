@@ -40,11 +40,73 @@ interface QueuedFile {
   coverPreview?: string;
 }
 
+interface TrackInsertPayload {
+  id: string;
+  title: string;
+  artist: string;
+  duration: number;
+  audio_url: string | null;
+  video_url: string | null;
+  cover_url: string | null;
+  user_id: string;
+}
+
+const TRACK_INSERT_TIMEOUT_MS = 15000;
+
 const parseFileName = (name: string) => {
   const clean = name.replace(/\.[^/.]+$/, "");
   const parts = clean.split(" - ");
   if (parts.length >= 2) return { artist: parts[0].trim(), title: parts.slice(1).join(" - ").trim() };
   return { artist: "", title: clean };
+};
+
+const extractInsertErrorMessage = (raw: string) => {
+  try {
+    const parsed = JSON.parse(raw);
+    return parsed.message || parsed.error || parsed.details || raw;
+  } catch {
+    return raw;
+  }
+};
+
+const insertTrackRecord = async (payload: TrackInsertPayload) => {
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token;
+
+  if (!token) {
+    throw new Error("Sesja wygasła. Zaloguj się ponownie i spróbuj jeszcze raz.");
+  }
+
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), TRACK_INSERT_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/tracks`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        "Authorization": `Bearer ${token}`,
+        "Prefer": "return=minimal",
+      },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      const rawError = await response.text();
+      const message = extractInsertErrorMessage(rawError);
+      throw new Error(`Nie udało się zapisać utworu (${response.status})${message ? ` — ${message}` : ""}`);
+    }
+  } catch (error: any) {
+    if (error?.name === "AbortError") {
+      throw new Error("Zapis utworu do bazy przekroczył limit czasu.");
+    }
+
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 };
 
 const GENRE_COLORS: Record<string, string> = {
@@ -222,6 +284,7 @@ const Server = () => {
 
     setIsUploading(true);
     const uploadedIds: string[] = [];
+    let successCount = 0;
 
     for (const item of pending) {
       updateQueueItem(item.id, { status: "uploading", progress: 10 });
@@ -249,10 +312,10 @@ const Server = () => {
           }
         }
 
-        updateQueueItem(item.id, { progress: 96 });
+        updateQueueItem(item.id, { progress: 98 });
 
         const trackId = crypto.randomUUID();
-        const { error: insertError } = await supabase.from("tracks").insert({
+        await insertTrackRecord({
           id: trackId,
           title: item.title,
           artist: item.artist,
@@ -260,11 +323,11 @@ const Server = () => {
           audio_url: isVideo ? null : mediaUrl,
           video_url: isVideo ? mediaUrl : null,
           cover_url: coverUrl,
-          user_id: user?.id || null,
+          user_id: user.id,
         });
-        if (insertError) throw insertError;
         
         uploadedIds.push(trackId);
+        successCount++;
         updateQueueItem(item.id, { status: "done", progress: 100 });
       } catch (err: any) {
         updateQueueItem(item.id, { status: "error", error: err.message || "Błąd", progress: 0 });
@@ -272,8 +335,7 @@ const Server = () => {
     }
 
     setIsUploading(false);
-    const doneCount = pending.filter(p => uploadQueue.find(q => q.id === p.id)?.status !== "error").length;
-    toast.success(`Przesłano ${doneCount} plików na serwer!`);
+    toast.success(`Przesłano ${successCount} plików na serwer!`);
     loadTracks();
     window.dispatchEvent(new Event("track-list-changed"));
 
