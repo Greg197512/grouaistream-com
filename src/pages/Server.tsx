@@ -251,7 +251,9 @@ const Server = () => {
 
         updateQueueItem(item.id, { progress: 96 });
 
-        const { data: insertData, error: insertError } = await supabase.from("tracks").insert({
+        const trackId = crypto.randomUUID();
+        const { error: insertError } = await supabase.from("tracks").insert({
+          id: trackId,
           title: item.title,
           artist: item.artist,
           duration: 0,
@@ -259,10 +261,10 @@ const Server = () => {
           video_url: isVideo ? mediaUrl : null,
           cover_url: coverUrl,
           user_id: user?.id || null,
-        }).select("id").single();
+        });
         if (insertError) throw insertError;
         
-        if (insertData) uploadedIds.push(insertData.id);
+        uploadedIds.push(trackId);
         updateQueueItem(item.id, { status: "done", progress: 100 });
       } catch (err: any) {
         updateQueueItem(item.id, { status: "error", error: err.message || "Błąd", progress: 0 });
