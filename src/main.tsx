@@ -2,22 +2,32 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 
-// Force PWA cache refresh on new deployments
+// PWA: iframe/preview guard + force refresh on new deployments
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.getRegistrations().then(registrations => {
-    registrations.forEach(reg => {
-      reg.update();
-    });
-  });
+  const isInIframe = (() => {
+    try { return window.self !== window.top; } catch { return true; }
+  })();
+  const isPreviewHost =
+    window.location.hostname.includes("id-preview--") ||
+    window.location.hostname.includes("lovableproject.com");
 
-  // Listen for new service worker and force activation
-  navigator.serviceWorker.addEventListener('controllerchange', () => {
-    // New SW took control, reload once to get fresh content
-    if (!sessionStorage.getItem('sw-refreshed')) {
-      sessionStorage.setItem('sw-refreshed', '1');
-      window.location.reload();
-    }
-  });
+  if (isPreviewHost || isInIframe) {
+    // Unregister SWs in preview/iframe to avoid stale cache in editor
+    navigator.serviceWorker.getRegistrations().then(regs =>
+      regs.forEach(r => r.unregister())
+    );
+  } else {
+    // Production: force SW update + auto-reload on new version
+    navigator.serviceWorker.getRegistrations().then(regs =>
+      regs.forEach(reg => reg.update())
+    );
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!sessionStorage.getItem('sw-refreshed')) {
+        sessionStorage.setItem('sw-refreshed', '1');
+        window.location.reload();
+      }
+    });
+  }
 }
 
 createRoot(document.getElementById("root")!).render(<App />);
