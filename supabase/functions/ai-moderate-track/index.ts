@@ -63,8 +63,8 @@ function buildFallbackEvaluation(input: ModerationInput, reason?: string): Evalu
   const scoreOriginality = clampScore(hasGenericMetadata ? 4 : hasDetailedDescription ? 14 : 10);
 
   const rejectionReasons: string[] = [];
-  if (durationSec > 0 && durationSec < 180) {
-    rejectionReasons.push("Utwór jest zbyt krótki lub balansuje na granicy minimalnej długości platformy.");
+  if (durationSec > 0 && durationSec < 120) {
+    rejectionReasons.push("Utwór jest zbyt krótki – minimum to 2:00.");
   }
   if (hasGenericMetadata) {
     rejectionReasons.push("Tytuł lub opis są zbyt generyczne i wymagają dopracowania.");
