@@ -122,7 +122,7 @@ export const TipModal = ({ isOpen, onClose, trackId, trackTitle, trackArtist }: 
                     )}
                   >
                     {amount}
-                    <span className="text-xs font-normal block">zł</span>
+                    <span className="text-xs font-normal block">€</span>
                   </motion.button>
                 ))}
               </div>
