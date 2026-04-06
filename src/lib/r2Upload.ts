@@ -1,5 +1,3 @@
-import { supabase } from "@/integrations/supabase/client";
-
 interface R2UploadOptions {
   file: File;
   folder?: string;
@@ -27,6 +25,29 @@ interface ProxyUploadResponse {
 
 const EDGE_PROXY_MAX_BYTES = 20 * 1024 * 1024;
 
+function getSupabaseUrl(): string {
+  return import.meta.env.VITE_SUPABASE_URL;
+}
+
+function getAnonKey(): string {
+  return import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+}
+
+async function getAuthToken(): Promise<string> {
+  // Try to get the current session token from localStorage
+  const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID || "bvstvawnigyczvofzhps";
+  const storageKey = `sb-${projectId}-auth-token`;
+  try {
+    const raw = localStorage.getItem(storageKey);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      const token = parsed?.access_token;
+      if (token) return token;
+    }
+  } catch { /* ignore */ }
+  return getAnonKey();
+}
+
 function parseUploadError(responseText: string, status: number): string {
   const code = responseText.match(/<Code>([^<]+)<\/Code>/)?.[1];
   const message = responseText.match(/<Message>([^<]+)<\/Message>/)?.[1];
@@ -48,26 +69,49 @@ function parseJsonResponse<T>(responseText: string, fallbackMessage: string): T 
 
 async function createSignedUpload({ file, folder }: R2UploadOptions): Promise<SignedUploadResponse> {
   const contentType = file.type || "application/octet-stream";
+  const url = `${getSupabaseUrl()}/functions/v1/r2-signed-url`;
+  const token = await getAuthToken();
 
-  const { data, error } = await supabase.functions.invoke("r2-signed-url", {
-    body: {
-      fileName: file.name,
-      contentType,
-      folder: folder || "tracks",
-    },
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30000);
 
-  if (error) {
-    throw new Error(error.message || "Nie udało się przygotować uploadu na dysk");
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": getAnonKey(),
+        "Authorization": `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        fileName: file.name,
+        contentType,
+        folder: folder || "tracks",
+      }),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error(`r2-signed-url error (${response.status}): ${errText.substring(0, 200)}`);
+    }
+
+    const payload = await response.json() as SignedUploadResponse;
+
+    if (!payload?.uploadUrl || !payload.publicUrl || !payload.key) {
+      throw new Error(payload?.error || "Brak podpisanego adresu uploadu");
+    }
+
+    return payload;
+  } catch (err: any) {
+    clearTimeout(timeoutId);
+    if (err.name === "AbortError") {
+      throw new Error("Połączenie z serwerem przekroczyło limit czasu (30s). Sprawdź połączenie internetowe.");
+    }
+    throw err;
   }
-
-  const payload = data as SignedUploadResponse | null;
-
-  if (!payload?.uploadUrl || !payload.publicUrl || !payload.key) {
-    throw new Error(payload?.error || "Brak podpisanego adresu uploadu");
-  }
-
-  return payload;
 }
 
 async function uploadToSignedUrl({
@@ -114,23 +158,18 @@ async function uploadToR2ViaProxy({
   folder,
   onProgress,
 }: R2UploadOptions): Promise<R2UploadResult> {
-  const { data: sessionData } = await supabase.auth.getSession();
-  const endpoint = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/r2-upload-proxy`;
+  const token = await getAuthToken();
+  const endpoint = `${getSupabaseUrl()}/functions/v1/r2-upload-proxy`;
   const formData = new FormData();
 
   formData.append("file", file, file.name);
-  formData.append("folder", folder);
+  formData.append("folder", folder || "tracks");
 
   return new Promise<R2UploadResult>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open("POST", endpoint, true);
-    xhr.setRequestHeader("apikey", import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY);
-
-    const accessToken = sessionData.session?.access_token;
-    xhr.setRequestHeader(
-      "Authorization",
-      `Bearer ${accessToken || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`
-    );
+    xhr.setRequestHeader("apikey", getAnonKey());
+    xhr.setRequestHeader("Authorization", `Bearer ${token}`);
 
     if (onProgress) {
       xhr.upload.onprogress = (e) => {
