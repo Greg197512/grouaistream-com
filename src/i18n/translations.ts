@@ -1324,7 +1324,7 @@ const pl: TranslationKeys = {
   "earnings.totalEarnings": "Zarobki ogółem",
   "earnings.thisMonth": "Ten miesiąc",
   "earnings.totalStreams": "Streamy łącznie",
-  "earnings.rate": "Stawka: 0.003 zł / stream (65% dla twórcy)",
+  "earnings.rate": "Stawka: 0.0007 € / stream (65% dla twórcy)",
   "earnings.rateDesc": "Każde odsłuchanie powyżej 30 sekund = 1 stream. Wypłaty przez Stripe Connect (wkrótce).",
   "earnings.yourTracks": "Twoje utwory",
   "earnings.noTracks": "Nie masz jeszcze żadnych utworów",
