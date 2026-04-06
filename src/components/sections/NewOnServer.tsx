@@ -31,26 +31,19 @@ export const NewOnServer = () => {
       try {
         setLoading(true);
         
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000);
-
         const [latestRes, pinnedRes] = await Promise.all([
           supabase
             .from("tracks")
             .select("*")
             .or("audio_url.not.is.null,video_url.not.is.null")
             .order("created_at", { ascending: false })
-            .limit(12)
-            .abortSignal(controller.signal),
+            .limit(12),
           supabase
             .from("tracks")
             .select("*")
             .eq("id", PINNED_TRACK_ID)
-            .maybeSingle()
-            .abortSignal(controller.signal),
+            .maybeSingle(),
         ]);
-
-        clearTimeout(timeoutId);
 
         const latest = (latestRes.data || []) as ServerTrack[];
         const pinned = pinnedRes.data as ServerTrack | null;
