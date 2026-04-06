@@ -232,7 +232,7 @@ const Server = () => {
         const { publicUrl: mediaUrl } = await uploadToR2({
           file: item.file,
           folder: isVideo ? "tracks" : "tracks",
-          onProgress: (pct) => updateQueueItem(item.id, { progress: Math.round(pct * 0.8) }),
+          onProgress: (pct) => updateQueueItem(item.id, { progress: Math.min(10 + Math.round(pct * 0.85), 95) }),
         });
 
         // Upload cover image to R2 if provided
