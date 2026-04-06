@@ -58,7 +58,7 @@ export const TipModal = ({ isOpen, onClose, trackId, trackTitle, trackArtist }: 
 
       if (error) throw error;
 
-      toast.success(`${t("tip.sent")} ${selected} zł ❤️`);
+      toast.success(`${t("tip.sent")} ${selected} € ❤️`);
       onClose();
     } catch (err: any) {
       console.error("Tip error:", err);
