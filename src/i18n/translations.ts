@@ -1375,7 +1375,7 @@ const pl: TranslationKeys = {
   "earnPage.faq1q": "Ile naprawdę mogę zarobić?",
   "earnPage.faq1a": "To zależy od liczby streamów i tipów. Przy 10 000 odsłuchań miesięcznie zarobisz ok. 4,55 € z royalties. Dodaj do tego tipy od fanów i promocję — realne zarobki rosną szybko.",
   "earnPage.faq2q": "Kiedy dostaję pieniądze?",
-  "earnPage.faq2a": "Wypłaty realizujemy co miesiąc przez Stripe. Minimalna kwota do wypłaty to 50 zł.",
+  "earnPage.faq2a": "Wypłaty realizujemy co miesiąc przez Stripe. Minimalna kwota do wypłaty to 12 €.",
   "earnPage.faq3q": "Czy mogę wyłączyć monetyzację w każdej chwili?",
   "earnPage.faq3a": "Tak! W panelu zarobków możesz włączyć lub wyłączyć monetyzację dla każdego utworu osobno. Nie ma żadnych zobowiązań ani umów.",
   "earnPage.faq4q": "Czy muzyka z Suno też może zarabiać?",
