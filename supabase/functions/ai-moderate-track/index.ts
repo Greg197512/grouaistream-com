@@ -37,12 +37,11 @@ function clampScore(value: unknown, min = 0, max = 20): number {
 
 function getLengthScoreCap(durationSec: number): number {
   if (durationSec <= 0) return 8;
-  if (durationSec < 90) return 0;
-  if (durationSec < 120) return 3;
+  if (durationSec < 120) return 0;
   if (durationSec < 150) return 5;
-  if (durationSec < 180) return 8;
-  if (durationSec < 210) return 12;
-  if (durationSec < 240) return 16;
+  if (durationSec < 180) return 10;
+  if (durationSec < 210) return 14;
+  if (durationSec < 240) return 17;
   return 20;
 }
 
@@ -64,8 +63,8 @@ function buildFallbackEvaluation(input: ModerationInput, reason?: string): Evalu
   const scoreOriginality = clampScore(hasGenericMetadata ? 4 : hasDetailedDescription ? 14 : 10);
 
   const rejectionReasons: string[] = [];
-  if (durationSec > 0 && durationSec < 180) {
-    rejectionReasons.push("Utwór jest zbyt krótki lub balansuje na granicy minimalnej długości platformy.");
+  if (durationSec > 0 && durationSec < 120) {
+    rejectionReasons.push("Utwór jest zbyt krótki – minimum to 2:00.");
   }
   if (hasGenericMetadata) {
     rejectionReasons.push("Tytuł lub opis są zbyt generyczne i wymagają dopracowania.");
@@ -103,9 +102,7 @@ function finalizeEvaluation(input: ModerationInput, evaluation: EvaluationPayloa
   const totalScore = scoreLength + scoreLyrics + scoreVocal + scoreProduction + scoreOriginality;
 
   let status: string;
-  if (durationSec > 0 && durationSec < 120) {
-    status = "rejected";
-  } else if (totalScore >= 65) {
+  if (totalScore >= 65) {
     status = "approved";
   } else if (totalScore >= 45) {
     status = "review";
@@ -117,11 +114,8 @@ function finalizeEvaluation(input: ModerationInput, evaluation: EvaluationPayloa
     ? [...evaluation.rejection_reasons]
     : [];
 
-  if (durationSec > 0 && durationSec < 180) {
-    rejectionReasons.push("Utwór ma mniej niż 3:00, co obniża ocenę długości i struktury.");
-  }
   if (durationSec > 0 && durationSec < 120) {
-    rejectionReasons.push("Utwór ma mniej niż 2:00 i automatycznie nie spełnia minimalnego progu jakości.");
+    rejectionReasons.push("Utwór ma mniej niż 2:00, co znacząco obniża ocenę długości.");
   }
 
   return {
@@ -168,12 +162,11 @@ Score each category from 0 to 20 points. Be STRICT and critical.
 
 Categories:
 1. score_length – Track length adequacy. STRICT RULES:
-   - Under 1:30 = 0 points (auto-reject)
-   - 1:30–2:00 = max 3 points
+   - Under 2:00 = 0 points
    - 2:00–2:30 = max 5 points
-   - 2:30–3:00 = max 8 points
-   - 3:00–3:30 = max 12 points
-   - 3:30–4:00 = max 16 points
+   - 2:30–3:00 = max 10 points
+   - 3:00–3:30 = max 14 points
+   - 3:30–4:00 = max 17 points
    - 4:00+ = up to 20 points
 2. score_lyrics – Title/description quality, creativity, emotional depth
 3. score_vocal – Expected vocal quality based on genre and production context
@@ -182,14 +175,13 @@ Categories:
 
 Rules:
 - Total score = sum of all 5 scores (max 100)
-- If track is under 2:00, status MUST be "rejected" regardless of total score
 - If total >= 65: status = "approved"
 - If total 45-64: status = "review"
 - If total < 45: status = "rejected"
 - Provide a brief analysis in Polish
 - Provide recommendations in Polish
 - If track has issues, list rejection_reasons in Polish
-- Always mention track length issues in rejection_reasons if under 3:00`;
+- Always mention track length issues in rejection_reasons if under 2:00`;
 
     const userPrompt = `Evaluate this track submission:
 - Title: "${input.title}"
