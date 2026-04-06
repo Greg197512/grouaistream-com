@@ -1354,7 +1354,7 @@ const pl: TranslationKeys = {
   "earnPage.tips": "Tipy od słuchaczy",
   "earnPage.tipsD1": "Dostajesz 90% z każdej dobrowolnej wpłaty",
   "earnPage.tipsD2": 'Przycisk „Wesprzyj artystę" przy każdym utworze',
-  "earnPage.tipsD3": "Słuchacze mogą dać 5 zł, 10 zł, 20 zł lub dowolną kwotę",
+  "earnPage.tipsD3": "Słuchacze mogą dać 1 €, 2 €, 5 € lub dowolną kwotę",
   "earnPage.verified": "Pakiety Verified Streams",
   "earnPage.verifiedD1": "Kupujesz promocję swojego utworu",
   "earnPage.verifiedD2": "Dostajesz 100% zysku z pakietu",
