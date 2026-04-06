@@ -291,7 +291,7 @@ const CreatorEarnings = () => {
               </div>
               <Button 
                 onClick={handleRequestPayout}
-                disabled={requestingPayout || totalEarnings < 50}
+                disabled={requestingPayout || totalEarnings < 12}
                 className="bg-gradient-to-r from-emerald-500 to-green-600 text-white gap-2"
               >
                 <Wallet className="h-4 w-4" />
