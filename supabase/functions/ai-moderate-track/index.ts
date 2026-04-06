@@ -37,12 +37,11 @@ function clampScore(value: unknown, min = 0, max = 20): number {
 
 function getLengthScoreCap(durationSec: number): number {
   if (durationSec <= 0) return 8;
-  if (durationSec < 90) return 0;
-  if (durationSec < 120) return 3;
+  if (durationSec < 120) return 0;
   if (durationSec < 150) return 5;
-  if (durationSec < 180) return 8;
-  if (durationSec < 210) return 12;
-  if (durationSec < 240) return 16;
+  if (durationSec < 180) return 10;
+  if (durationSec < 210) return 14;
+  if (durationSec < 240) return 17;
   return 20;
 }
 
