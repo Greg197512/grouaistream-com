@@ -1100,6 +1100,10 @@ export default function Admin() {
               <TabsContent value="ai-rankings">
                 <AIModeratorRankings />
               </TabsContent>
+
+              <TabsContent value="top-earners">
+                <TopEarners />
+              </TabsContent>
             </Tabs>
 
             {/* Quick Actions */}
