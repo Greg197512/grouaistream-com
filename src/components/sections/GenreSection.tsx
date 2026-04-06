@@ -19,6 +19,7 @@ interface GenreSectionProps {
 export const GenreSection = ({ genre, title, icon, color, limit = 8 }: GenreSectionProps) => {
   const [tracks, setTracks] = useState<Track[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
   const { playPlaylist, currentTrack, isPlaying } = usePlayer();
   const { ref: lazyRef, isVisible } = useLazyLoad("300px");
 
@@ -27,6 +28,7 @@ export const GenreSection = ({ genre, title, icon, color, limit = 8 }: GenreSect
     
     const fetchTracks = async () => {
       setIsLoading(true);
+      setHasError(false);
       try {
         let query = supabase.from("tracks").select("*");
         
@@ -48,12 +50,19 @@ export const GenreSection = ({ genre, title, icon, color, limit = 8 }: GenreSect
         setTracks(data || []);
       } catch (error) {
         console.error(`Error fetching ${genre} tracks:`, error);
+        setHasError(true);
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchTracks();
+    // Add timeout to prevent infinite loading
+    const timeout = setTimeout(() => {
+      setIsLoading(false);
+      setHasError(true);
+    }, 10000);
+
+    fetchTracks().finally(() => clearTimeout(timeout));
   }, [genre, limit, isVisible]);
 
   const visibleTracks = tracks;
@@ -64,7 +73,7 @@ export const GenreSection = ({ genre, title, icon, color, limit = 8 }: GenreSect
     }
   };
 
-  if (!isVisible || isLoading) {
+  if (!isVisible || (isLoading && !hasError)) {
     return (
       <section ref={lazyRef} className="px-6 py-6">
         <div className="flex items-center gap-3 mb-4">
@@ -80,8 +89,22 @@ export const GenreSection = ({ genre, title, icon, color, limit = 8 }: GenreSect
     );
   }
 
-  if (visibleTracks.length === 0) {
+  if (visibleTracks.length === 0 && !hasError) {
     return null;
+  }
+
+  if (hasError && visibleTracks.length === 0) {
+    return (
+      <section className="px-6 py-6">
+        <div className="flex items-center gap-3 mb-4">
+          <span className={cn("material-icons text-2xl", color)}>{icon}</span>
+          <h2 className="font-display text-xl font-bold">{title}</h2>
+        </div>
+        <p className="text-sm text-muted-foreground text-center py-4">
+          Nie udało się załadować — odśwież stronę
+        </p>
+      </section>
+    );
   }
 
   return (
