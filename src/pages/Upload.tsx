@@ -184,9 +184,23 @@ const Upload = () => {
       setUploadProgress(null);
       toast.info("🤖 Analiza AI w toku...");
 
-      const moderationResponse = await Promise.race([
-        supabase.functions.invoke("ai-moderate-track", {
-          body: {
+      const moderationController = new AbortController();
+      const moderationTimeout = window.setTimeout(() => moderationController.abort(), 45000);
+
+      let moderationData: any = null;
+      let moderationError: { message?: string } | null = null;
+
+      try {
+        const modUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-moderate-track`;
+        const { data: sessionData } = await supabase.auth.getSession();
+        const modResponse = await fetch(modUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            "Authorization": `Bearer ${sessionData.session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({
             title,
             artist: displayName,
             genre,
@@ -194,19 +208,26 @@ const Upload = () => {
             duration: audioDuration || 180,
             hasSunoLink: isSunoTrack,
             hasAudioFile: !!audioFile,
-          },
-        }),
-        new Promise<never>((_, reject) => {
-          window.setTimeout(() => {
-            reject(new Error("Analiza AI przekroczyła limit czasu. Spróbuj ponownie za chwilę."));
-          }, 35000);
-        }),
-      ]);
+          }),
+          signal: moderationController.signal,
+        });
 
-      const { data: moderationData, error: moderationError } = moderationResponse as {
-        data: any;
-        error: { message?: string } | null;
-      };
+        clearTimeout(moderationTimeout);
+
+        if (!modResponse.ok) {
+          const errBody = await modResponse.text();
+          moderationError = { message: `Status ${modResponse.status}: ${errBody.substring(0, 200)}` };
+        } else {
+          moderationData = await modResponse.json();
+        }
+      } catch (fetchErr: any) {
+        clearTimeout(moderationTimeout);
+        if (fetchErr.name === "AbortError") {
+          moderationError = { message: "Analiza AI przekroczyła limit czasu (45s). Spróbuj ponownie." };
+        } else {
+          moderationError = { message: fetchErr.message || "Błąd połączenia z AI" };
+        }
+      }
 
       if (moderationError) {
         console.error("Moderation error:", moderationError);
