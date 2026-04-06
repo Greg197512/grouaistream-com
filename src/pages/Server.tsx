@@ -25,6 +25,7 @@ import {
   MAX_UPLOAD_SIZE_BYTES,
   MEDIA_FILE_ACCEPT,
 } from "@/lib/mediaFormats";
+import { uploadToR2 } from "@/lib/r2Upload";
 
 interface QueuedFile {
   id: string;
@@ -226,41 +227,36 @@ const Server = () => {
       updateQueueItem(item.id, { status: "uploading", progress: 10 });
       try {
         const isVideo = isVideoLikeFile(item.file);
-        const ext = getFileExtension(item.file.name).replace('.', '');
-        const safeName = item.title.replace(/[^a-zA-Z0-9\-_]/g, '_').substring(0, 80);
-        const filePath = `shared/${Date.now()}-${safeName}.${ext}`;
 
-        updateQueueItem(item.id, { progress: 30 });
-        const { error: uploadError } = await supabase.storage
-          .from("music")
-          .upload(filePath, item.file, { contentType: getMediaContentType(item.file) });
-        if (uploadError) throw uploadError;
+        // Upload media to R2
+        const { publicUrl: mediaUrl } = await uploadToR2({
+          file: item.file,
+          folder: isVideo ? "tracks" : "tracks",
+          onProgress: (pct) => updateQueueItem(item.id, { progress: Math.round(pct * 0.8) }),
+        });
 
-        updateQueueItem(item.id, { progress: 60 });
-        const { data: urlData } = supabase.storage.from("music").getPublicUrl(filePath);
-
-        // Upload cover image if provided
+        // Upload cover image to R2 if provided
         let coverUrl: string | null = null;
         if (item.coverFile) {
-          const coverExt = item.coverFile.name.split('.').pop();
-          const coverPath = `covers/${Date.now()}-${safeName}.${coverExt}`;
-          const { error: coverErr } = await supabase.storage
-            .from("music")
-            .upload(coverPath, item.coverFile, { contentType: item.coverFile.type });
-          if (!coverErr) {
-            const { data: coverUrlData } = supabase.storage.from("music").getPublicUrl(coverPath);
-            coverUrl = coverUrlData.publicUrl;
+          try {
+            const { publicUrl: coverPublicUrl } = await uploadToR2({
+              file: item.coverFile,
+              folder: "covers",
+            });
+            coverUrl = coverPublicUrl;
+          } catch (e) {
+            console.error("Cover upload failed:", e);
           }
         }
 
-        updateQueueItem(item.id, { progress: 80 });
+        updateQueueItem(item.id, { progress: 85 });
 
         const { data: insertData, error: insertError } = await supabase.from("tracks").insert({
           title: item.title,
           artist: item.artist,
           duration: 0,
-          audio_url: isVideo ? null : urlData.publicUrl,
-          video_url: isVideo ? urlData.publicUrl : null,
+          audio_url: isVideo ? null : mediaUrl,
+          video_url: isVideo ? mediaUrl : null,
           cover_url: coverUrl,
           user_id: user?.id || null,
         }).select("id").single();
