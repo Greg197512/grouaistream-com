@@ -25,7 +25,7 @@ interface ProxyUploadResponse {
   error?: string;
 }
 
-const PROXY_FALLBACK_MAX_BYTES = 20 * 1024 * 1024;
+const EDGE_PROXY_MAX_BYTES = 20 * 1024 * 1024;
 
 function parseUploadError(responseText: string, status: number): string {
   const code = responseText.match(/<Code>([^<]+)<\/Code>/)?.[1];
@@ -175,17 +175,24 @@ export async function uploadToR2({
   folder = "tracks",
   onProgress,
 }: R2UploadOptions): Promise<R2UploadResult> {
-  try {
-    return await uploadToSignedUrl({ file, folder: folder || "tracks", onProgress });
-  } catch (directUploadError) {
-    console.warn("Direct R2 upload failed, switching to proxy fallback", directUploadError);
+  const normalizedFolder = folder || "tracks";
+  const shouldPreferProxy = file.size <= EDGE_PROXY_MAX_BYTES;
 
-    if (file.size > PROXY_FALLBACK_MAX_BYTES) {
-      throw directUploadError instanceof Error
-        ? directUploadError
-        : new Error("Nie udało się wysłać dużego pliku na dysk");
+  if (shouldPreferProxy) {
+    try {
+      return await uploadToR2ViaProxy({ file, folder: normalizedFolder, onProgress });
+    } catch (proxyUploadError) {
+      console.warn("Proxy R2 upload failed, switching to direct signed upload", proxyUploadError);
+      return uploadToSignedUrl({ file, folder: normalizedFolder, onProgress });
     }
+  }
 
-    return uploadToR2ViaProxy({ file, folder: folder || "tracks", onProgress });
+  try {
+    return await uploadToSignedUrl({ file, folder: normalizedFolder, onProgress });
+  } catch (directUploadError) {
+    console.warn("Direct R2 upload failed for large file", directUploadError);
+    throw directUploadError instanceof Error
+      ? directUploadError
+      : new Error("Nie udało się wysłać pliku na dysk");
   }
 }
