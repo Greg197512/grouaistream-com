@@ -150,7 +150,7 @@ const CreatorEarnings = () => {
       .reduce((sum, p) => sum + Number(p.amount), 0);
     
     const available = totalEarnings - paidOut;
-    if (available < 50) {
+    if (available < 12) {
       toast.error(t("earnings.minPayout"));
       return;
     }
