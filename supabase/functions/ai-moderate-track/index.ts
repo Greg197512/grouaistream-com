@@ -27,7 +27,7 @@ interface EvaluationPayload {
   rejection_reasons?: string[];
 }
 
-const AI_TIMEOUT_MS = 20000;
+const AI_TIMEOUT_MS = 8000;
 
 function clampScore(value: unknown, min = 0, max = 20): number {
   const numeric = Number(value);
@@ -206,7 +206,7 @@ Return your evaluation using the evaluate_track tool.`;
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "google/gemini-3-flash-preview",
+          model: "google/gemini-2.5-flash-lite",
           messages: [
             { role: "system", content: systemPrompt },
             { role: "user", content: userPrompt },
