@@ -30,6 +30,7 @@ const AUDIO_TYPES = [
 ];
 const MIN_DURATION_SEC = 10;
 const DURATION_FALLBACK_SEC = 180;
+const MODERATION_TIMEOUT_MS = 15000;
 
 function getAudioDurationFromMediaSource(source: string): Promise<number> {
   return new Promise((resolve, reject) => {
@@ -294,10 +295,10 @@ const Upload = () => {
 
       // AI moderation - real analysis
       setUploadProgress(null);
-      toast.info("🤖 Analiza AI w toku...");
+      toast.info("🤖 Szybka analiza AI w toku...");
 
       const moderationController = new AbortController();
-      const moderationTimeout = window.setTimeout(() => moderationController.abort(), 45000);
+      const moderationTimeout = window.setTimeout(() => moderationController.abort(), MODERATION_TIMEOUT_MS);
 
       let moderationData: any = null;
       let moderationError: { message?: string } | null = null;
@@ -334,7 +335,7 @@ const Upload = () => {
       } catch (fetchErr: any) {
         clearTimeout(moderationTimeout);
         if (fetchErr.name === "AbortError") {
-          moderationError = { message: "Analiza AI przekroczyła limit czasu (45s). Spróbuj ponownie." };
+          moderationError = { message: `Analiza AI przekroczyła limit czasu (${Math.round(MODERATION_TIMEOUT_MS / 1000)}s). Spróbuj ponownie.` };
         } else {
           moderationError = { message: fetchErr.message || "Błąd połączenia z AI" };
         }
