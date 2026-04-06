@@ -249,7 +249,7 @@ const Server = () => {
           }
         }
 
-        updateQueueItem(item.id, { progress: 85 });
+        updateQueueItem(item.id, { progress: 96 });
 
         const { data: insertData, error: insertError } = await supabase.from("tracks").insert({
           title: item.title,
