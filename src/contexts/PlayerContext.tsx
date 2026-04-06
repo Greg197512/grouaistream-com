@@ -275,6 +275,9 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
       }
     } else if (nativeVideoUrl) {
       // Native video file (MP4/WEBM/MKV/AVI/MOV/FLV/WMV etc.) — use isVideoMode
+      // CRITICAL: Update ref synchronously BEFORE clearing audio src,
+      // because setting src="" fires a synchronous error event in the browser.
+      isVideoModeRef.current = true;
       setIsVideoMode(true);
       setYoutubeVideoId(null);
       setIsPlaying(true);
@@ -282,7 +285,8 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
 
       if (audioRef.current) {
         audioRef.current.pause();
-        audioRef.current.src = "";
+        audioRef.current.removeAttribute('src');
+        audioRef.current.load();
       }
     } else {
       const audioUrl = getPlayableAudioUrl(currentTrack);
