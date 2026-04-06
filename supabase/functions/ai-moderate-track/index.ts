@@ -16,6 +16,128 @@ interface ModerationInput {
   hasAudioFile?: boolean;
 }
 
+interface EvaluationPayload {
+  score_length?: number;
+  score_lyrics?: number;
+  score_vocal?: number;
+  score_production?: number;
+  score_originality?: number;
+  analysis?: string;
+  recommendations?: string;
+  rejection_reasons?: string[];
+}
+
+const AI_TIMEOUT_MS = 20000;
+
+function clampScore(value: unknown, min = 0, max = 20): number {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return min;
+  return Math.max(min, Math.min(max, Math.round(numeric)));
+}
+
+function getLengthScoreCap(durationSec: number): number {
+  if (durationSec <= 0) return 8;
+  if (durationSec < 90) return 0;
+  if (durationSec < 120) return 3;
+  if (durationSec < 150) return 5;
+  if (durationSec < 180) return 8;
+  if (durationSec < 210) return 12;
+  if (durationSec < 240) return 16;
+  return 20;
+}
+
+function buildFallbackEvaluation(input: ModerationInput, reason?: string): EvaluationPayload {
+  const title = input.title?.trim() || "";
+  const description = input.description?.trim() || "";
+  const durationSec = input.duration || 0;
+  const combined = `${title} ${description}`.toLowerCase();
+  const genericMarkers = ["test", "track", "untitled", "demo", "sample"];
+  const hasGenericMetadata = genericMarkers.some((marker) => combined.includes(marker));
+  const hasDetailedDescription = description.length >= 40;
+  const hasDecentTitle = title.length >= 4 && !hasGenericMetadata;
+  const scoreLength = getLengthScoreCap(durationSec);
+  const scoreLyrics = clampScore(
+    hasDetailedDescription ? 13 : description.length >= 10 ? 9 : hasDecentTitle ? 7 : 3
+  );
+  const scoreVocal = clampScore(input.hasAudioFile ? 12 : input.hasSunoLink ? 10 : 8);
+  const scoreProduction = clampScore(input.hasAudioFile ? 13 : 10);
+  const scoreOriginality = clampScore(hasGenericMetadata ? 4 : hasDetailedDescription ? 14 : 10);
+
+  const rejectionReasons: string[] = [];
+  if (durationSec > 0 && durationSec < 180) {
+    rejectionReasons.push("Utwór jest zbyt krótki lub balansuje na granicy minimalnej długości platformy.");
+  }
+  if (hasGenericMetadata) {
+    rejectionReasons.push("Tytuł lub opis są zbyt generyczne i wymagają dopracowania.");
+  }
+  if (reason) {
+    rejectionReasons.push("Automatyczna analiza awaryjna została użyta z powodu chwilowego problemu z silnikiem AI.");
+  }
+
+  return {
+    score_length: scoreLength,
+    score_lyrics: scoreLyrics,
+    score_vocal: scoreVocal,
+    score_production: scoreProduction,
+    score_originality: scoreOriginality,
+    analysis: reason
+      ? "Użyto trybu awaryjnej oceny metadanych, ponieważ główny moduł AI nie odpowiedział na czas. Wynik opiera się na długości utworu, jakości tytułu i opisu oraz typie źródła pliku."
+      : "Ocena została wyliczona na podstawie metadanych utworu, długości, jakości tytułu i opisu oraz sposobu dostarczenia materiału.",
+    recommendations: hasDetailedDescription && hasDecentTitle
+      ? "Dopracuj finalny miks i zachowaj spójność między tytułem, opisem oraz brzmieniem utworu."
+      : "Rozbuduj opis, dopracuj tytuł i upewnij się, że prezentacja utworu jasno pokazuje jego klimat oraz jakość.",
+    rejection_reasons: rejectionReasons,
+  };
+}
+
+function finalizeEvaluation(input: ModerationInput, evaluation: EvaluationPayload) {
+  const durationSec = input.duration || 0;
+  const lengthCap = getLengthScoreCap(durationSec);
+  const scoreLength = durationSec > 0
+    ? Math.min(clampScore(evaluation.score_length), lengthCap)
+    : clampScore(evaluation.score_length, 0, 20);
+  const scoreLyrics = clampScore(evaluation.score_lyrics);
+  const scoreVocal = clampScore(evaluation.score_vocal);
+  const scoreProduction = clampScore(evaluation.score_production);
+  const scoreOriginality = clampScore(evaluation.score_originality);
+  const totalScore = scoreLength + scoreLyrics + scoreVocal + scoreProduction + scoreOriginality;
+
+  let status: string;
+  if (durationSec > 0 && durationSec < 120) {
+    status = "rejected";
+  } else if (totalScore >= 65) {
+    status = "approved";
+  } else if (totalScore >= 45) {
+    status = "review";
+  } else {
+    status = "rejected";
+  }
+
+  const rejectionReasons = Array.isArray(evaluation.rejection_reasons)
+    ? [...evaluation.rejection_reasons]
+    : [];
+
+  if (durationSec > 0 && durationSec < 180) {
+    rejectionReasons.push("Utwór ma mniej niż 3:00, co obniża ocenę długości i struktury.");
+  }
+  if (durationSec > 0 && durationSec < 120) {
+    rejectionReasons.push("Utwór ma mniej niż 2:00 i automatycznie nie spełnia minimalnego progu jakości.");
+  }
+
+  return {
+    score_length: scoreLength,
+    score_lyrics: scoreLyrics,
+    score_vocal: scoreVocal,
+    score_production: scoreProduction,
+    score_originality: scoreOriginality,
+    total_score: totalScore,
+    status,
+    analysis: evaluation.analysis || "",
+    recommendations: evaluation.recommendations || "",
+    rejection_reasons: [...new Set(rejectionReasons)],
+  };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -79,131 +201,103 @@ Rules:
 
 Return your evaluation using the evaluate_track tool.`;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        tools: [
-          {
-            type: "function",
-            function: {
-              name: "evaluate_track",
-              description: "Return the structured evaluation of a music track",
-              parameters: {
-                type: "object",
-                properties: {
-                  score_length: { type: "integer", minimum: 0, maximum: 20, description: "Length adequacy score" },
-                  score_lyrics: { type: "integer", minimum: 0, maximum: 20, description: "Lyrics/title quality score" },
-                  score_vocal: { type: "integer", minimum: 0, maximum: 20, description: "Vocal quality score" },
-                  score_production: { type: "integer", minimum: 0, maximum: 20, description: "Production quality score" },
-                  score_originality: { type: "integer", minimum: 0, maximum: 20, description: "Originality score" },
-                  analysis: { type: "string", description: "Brief analysis in Polish" },
-                  recommendations: { type: "string", description: "Recommendations in Polish" },
-                  rejection_reasons: {
-                    type: "array",
-                    items: { type: "string" },
-                    description: "List of rejection reasons in Polish (empty if approved)",
+    let evaluation: EvaluationPayload;
+
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort("AI moderation timeout"), AI_TIMEOUT_MS);
+
+      const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-3-flash-preview",
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt },
+          ],
+          tools: [
+            {
+              type: "function",
+              function: {
+                name: "evaluate_track",
+                description: "Return the structured evaluation of a music track",
+                parameters: {
+                  type: "object",
+                  properties: {
+                    score_length: { type: "integer", minimum: 0, maximum: 20, description: "Length adequacy score" },
+                    score_lyrics: { type: "integer", minimum: 0, maximum: 20, description: "Lyrics/title quality score" },
+                    score_vocal: { type: "integer", minimum: 0, maximum: 20, description: "Vocal quality score" },
+                    score_production: { type: "integer", minimum: 0, maximum: 20, description: "Production quality score" },
+                    score_originality: { type: "integer", minimum: 0, maximum: 20, description: "Originality score" },
+                    analysis: { type: "string", description: "Brief analysis in Polish" },
+                    recommendations: { type: "string", description: "Recommendations in Polish" },
+                    rejection_reasons: {
+                      type: "array",
+                      items: { type: "string" },
+                      description: "List of rejection reasons in Polish (empty if approved)",
+                    },
                   },
+                  required: [
+                    "score_length", "score_lyrics", "score_vocal",
+                    "score_production", "score_originality",
+                    "analysis", "recommendations", "rejection_reasons",
+                  ],
+                  additionalProperties: false,
                 },
-                required: [
-                  "score_length", "score_lyrics", "score_vocal",
-                  "score_production", "score_originality",
-                  "analysis", "recommendations", "rejection_reasons",
-                ],
-                additionalProperties: false,
               },
             },
-          },
-        ],
-        tool_choice: { type: "function", function: { name: "evaluate_track" } },
-      }),
-    });
+          ],
+          tool_choice: { type: "function", function: { name: "evaluate_track" } },
+        }),
+        signal: controller.signal,
+      });
 
-    if (!response.ok) {
-      const errText = await response.text();
-      console.error("AI Gateway error:", response.status, errText);
+      clearTimeout(timeoutId);
 
-      if (response.status === 429) {
-        return new Response(
-          JSON.stringify({ error: "Zbyt wiele zapytań AI. Spróbuj ponownie za chwilę." }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+      if (!response.ok) {
+        const errText = await response.text();
+        console.error("AI Gateway error:", response.status, errText);
+
+        if (response.status === 429) {
+          return new Response(
+            JSON.stringify({ error: "Zbyt wiele zapytań AI. Spróbuj ponownie za chwilę." }),
+            { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        if (response.status === 402) {
+          return new Response(
+            JSON.stringify({ error: "Brak kredytów AI. Skontaktuj się z administratorem." }),
+            { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        throw new Error(`AI Gateway error: ${response.status}`);
       }
-      if (response.status === 402) {
-        return new Response(
-          JSON.stringify({ error: "Brak kredytów AI. Skontaktuj się z administratorem." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+
+      const aiData = await response.json();
+      const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
+
+      if (!toolCall?.function?.arguments) {
+        console.error("No tool call in AI response:", JSON.stringify(aiData));
+        throw new Error("AI did not return structured evaluation");
       }
 
-      throw new Error(`AI Gateway error: ${response.status}`);
+      evaluation = typeof toolCall.function.arguments === "string"
+        ? JSON.parse(toolCall.function.arguments)
+        : toolCall.function.arguments;
+    } catch (aiError) {
+      console.error("AI moderation fallback triggered:", aiError);
+      evaluation = buildFallbackEvaluation(
+        input,
+        aiError instanceof Error ? aiError.message : "unknown_error"
+      );
     }
 
-    const aiData = await response.json();
-    const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
-
-    if (!toolCall?.function?.arguments) {
-      console.error("No tool call in AI response:", JSON.stringify(aiData));
-      throw new Error("AI did not return structured evaluation");
-    }
-
-    const evaluation = typeof toolCall.function.arguments === "string"
-      ? JSON.parse(toolCall.function.arguments)
-      : toolCall.function.arguments;
-
-    // Server-side enforcement of duration rules
-    const durationSec = input.duration || 0;
-    
-    // Cap score_length based on actual duration
-    let cappedScoreLength = evaluation.score_length || 0;
-    if (durationSec > 0) {
-      if (durationSec < 90) cappedScoreLength = 0;
-      else if (durationSec < 120) cappedScoreLength = Math.min(cappedScoreLength, 3);
-      else if (durationSec < 150) cappedScoreLength = Math.min(cappedScoreLength, 5);
-      else if (durationSec < 180) cappedScoreLength = Math.min(cappedScoreLength, 8);
-      else if (durationSec < 210) cappedScoreLength = Math.min(cappedScoreLength, 12);
-      else if (durationSec < 240) cappedScoreLength = Math.min(cappedScoreLength, 16);
-    }
-
-    const totalScore =
-      cappedScoreLength +
-      (evaluation.score_lyrics || 0) +
-      (evaluation.score_vocal || 0) +
-      (evaluation.score_production || 0) +
-      (evaluation.score_originality || 0);
-
-    let status: string;
-    // Hard reject if under 2 minutes
-    if (durationSec > 0 && durationSec < 120) {
-      status = "rejected";
-    } else if (totalScore >= 65) {
-      status = "approved";
-    } else if (totalScore >= 45) {
-      status = "review";
-    } else {
-      status = "rejected";
-    }
-
-    const result = {
-      score_length: cappedScoreLength,
-      score_lyrics: evaluation.score_lyrics,
-      score_vocal: evaluation.score_vocal,
-      score_production: evaluation.score_production,
-      score_originality: evaluation.score_originality,
-      total_score: totalScore,
-      status,
-      analysis: evaluation.analysis || "",
-      recommendations: evaluation.recommendations || "",
-      rejection_reasons: evaluation.rejection_reasons || [],
-    };
+    const result = finalizeEvaluation(input, evaluation);
 
     console.log("Moderation result:", JSON.stringify(result));
 
