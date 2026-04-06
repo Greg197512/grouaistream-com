@@ -255,8 +255,8 @@ const Server = () => {
           title: item.title,
           artist: item.artist,
           duration: 0,
-          audio_url: isVideo ? null : urlData.publicUrl,
-          video_url: isVideo ? urlData.publicUrl : null,
+          audio_url: isVideo ? null : mediaUrl,
+          video_url: isVideo ? mediaUrl : null,
           cover_url: coverUrl,
           user_id: user?.id || null,
         }).select("id").single();
