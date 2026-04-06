@@ -28,15 +28,33 @@ export default defineConfig(({ mode }) => ({
         cleanupOutdatedCaches: true,
         runtimeCaching: [
           {
-            urlPattern: /^https:\/\/grouaistream\.com\/.*/i,
+            urlPattern: /^https:\/\/(www\.)?grouaistream\.com\/.*/i,
             handler: "NetworkFirst",
             options: {
               cacheName: "pages-cache",
               expiration: {
                 maxEntries: 50,
-                maxAgeSeconds: 60 * 60,
+                maxAgeSeconds: 30 * 60,
               },
-              networkTimeoutSeconds: 3,
+              networkTimeoutSeconds: 5,
+            },
+          },
+          {
+            urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
+            handler: "NetworkOnly",
+            options: {
+              cacheName: "supabase-api",
+            },
+          },
+          {
+            urlPattern: /^https:\/\/pub-.*\.r2\.dev\/.*/i,
+            handler: "CacheFirst",
+            options: {
+              cacheName: "r2-media-cache",
+              expiration: {
+                maxEntries: 200,
+                maxAgeSeconds: 7 * 24 * 60 * 60,
+              },
             },
           },
         ],
