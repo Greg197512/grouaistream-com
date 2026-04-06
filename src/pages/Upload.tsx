@@ -29,22 +29,116 @@ const AUDIO_TYPES = [
   "audio/ogg", "audio/flac", "audio/aac", "audio/opus", "audio/webm",
 ];
 const MIN_DURATION_SEC = 10;
+const DURATION_FALLBACK_SEC = 180;
 
-function getAudioDuration(file: File): Promise<number> {
+function getAudioDurationFromMediaSource(source: string): Promise<number> {
   return new Promise((resolve, reject) => {
-    const url = URL.createObjectURL(file);
-    const audio = new Audio();
-    audio.preload = "metadata";
-    audio.onloadedmetadata = () => {
-      URL.revokeObjectURL(url);
-      resolve(audio.duration);
+    const audio = document.createElement("audio");
+    let settled = false;
+
+    const cleanup = () => {
+      audio.onloadedmetadata = null;
+      audio.ondurationchange = null;
+      audio.ontimeupdate = null;
+      audio.onerror = null;
+      audio.removeAttribute("src");
+      audio.load();
     };
-    audio.onerror = () => {
-      URL.revokeObjectURL(url);
+
+    const finish = (duration: number) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      resolve(duration);
+    };
+
+    const fail = () => {
+      if (settled) return;
+      settled = true;
+      cleanup();
       reject(new Error("Cannot read audio file"));
     };
-    audio.src = url;
+
+    const tryResolveDuration = () => {
+      if (Number.isFinite(audio.duration) && audio.duration > 0) {
+        finish(audio.duration);
+      }
+    };
+
+    const timeoutId = window.setTimeout(fail, 8000);
+    const clearAndFinish = (duration: number) => {
+      window.clearTimeout(timeoutId);
+      finish(duration);
+    };
+    const clearAndFail = () => {
+      window.clearTimeout(timeoutId);
+      fail();
+    };
+
+    audio.preload = "metadata";
+    audio.crossOrigin = "anonymous";
+    audio.onloadedmetadata = () => {
+      if (Number.isFinite(audio.duration) && audio.duration > 0) {
+        clearAndFinish(audio.duration);
+        return;
+      }
+
+      try {
+        audio.currentTime = Number.MAX_SAFE_INTEGER;
+      } catch {
+        clearAndFail();
+      }
+    };
+    audio.ondurationchange = () => {
+      if (Number.isFinite(audio.duration) && audio.duration > 0) {
+        clearAndFinish(audio.duration);
+      }
+    };
+    audio.ontimeupdate = () => {
+      if (Number.isFinite(audio.duration) && audio.duration > 0) {
+        clearAndFinish(audio.duration);
+      }
+    };
+    audio.onerror = clearAndFail;
+    audio.src = source;
+    audio.load();
+    tryResolveDuration();
   });
+}
+
+async function getAudioDuration(file: File): Promise<number | null> {
+  const objectUrl = URL.createObjectURL(file);
+
+  try {
+    return await getAudioDurationFromMediaSource(objectUrl);
+  } catch {
+    const AudioContextCtor = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+
+    if (!AudioContextCtor) {
+      return null;
+    }
+
+    try {
+      const audioContext = new AudioContextCtor();
+      const arrayBuffer = await file.arrayBuffer();
+      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer.slice(0));
+      const duration = audioBuffer.duration;
+      await audioContext.close();
+      return Number.isFinite(duration) && duration > 0 ? duration : null;
+    } catch {
+      return null;
+    }
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
+
+async function getUploadedAudioDuration(audioUrl: string): Promise<number | null> {
+  try {
+    return await getAudioDurationFromMediaSource(audioUrl);
+  } catch {
+    return null;
+  }
 }
 
 const Upload = () => {
@@ -132,19 +226,25 @@ const Upload = () => {
       return;
     }
 
+    setAudioFile(file);
+    setAudioDuration(null);
+    setDurationError(false);
+
     try {
       const dur = await getAudioDuration(file);
-      setAudioFile(file);
+
+      if (dur === null) {
+        toast.info("Na tym telefonie nie udało się odczytać długości pliku przed wysyłką — spróbuję odczytać ją po uploadzie.");
+        return;
+      }
+
       setAudioDuration(dur);
       if (dur < MIN_DURATION_SEC) {
         setDurationError(true);
         toast.error(`${Math.floor(dur / 60)}:${String(Math.floor(dur % 60)).padStart(2, "0")} — ${t("upload.fileTooShort")}`);
-      } else {
-        setDurationError(false);
       }
     } catch {
-      toast.error(t("upload.unsupportedFormat"));
-      e.target.value = "";
+      toast.info("Telefon nie podał metadanych pliku, ale upload będzie kontynuowany.");
     }
   };
 
@@ -168,6 +268,7 @@ const Upload = () => {
 
     try {
       let audioUrl = "";
+      let resolvedDuration = audioDuration;
 
       if (audioFile) {
         setUploadProgress(0);
@@ -178,6 +279,17 @@ const Upload = () => {
         });
         audioUrl = publicUrl;
         setUploadProgress(100);
+
+        if (!resolvedDuration) {
+          resolvedDuration = await getUploadedAudioDuration(publicUrl);
+          if (resolvedDuration) {
+            setAudioDuration(resolvedDuration);
+            if (resolvedDuration < MIN_DURATION_SEC) {
+              setDurationError(true);
+              throw new Error(t("upload.tooShort"));
+            }
+          }
+        }
       }
 
       // AI moderation - real analysis
@@ -204,7 +316,7 @@ const Upload = () => {
             artist: displayName,
             genre,
             description,
-            duration: audioDuration || 180,
+            duration: resolvedDuration || DURATION_FALLBACK_SEC,
             hasSunoLink: isSunoTrack,
             hasAudioFile: !!audioFile,
           }),
@@ -250,7 +362,7 @@ const Upload = () => {
         title,
         artist: displayName,
         genre,
-        duration: Math.round(audioDuration || 180),
+        duration: Math.round(resolvedDuration || DURATION_FALLBACK_SEC),
         audio_url: finalAudioUrl,
         cover_url: coverUrl || null,
         user_id: user?.id || null,
