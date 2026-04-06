@@ -114,11 +114,8 @@ function finalizeEvaluation(input: ModerationInput, evaluation: EvaluationPayloa
     ? [...evaluation.rejection_reasons]
     : [];
 
-  if (durationSec > 0 && durationSec < 180) {
-    rejectionReasons.push("Utwór ma mniej niż 3:00, co obniża ocenę długości i struktury.");
-  }
   if (durationSec > 0 && durationSec < 120) {
-    rejectionReasons.push("Utwór ma mniej niż 2:00 i automatycznie nie spełnia minimalnego progu jakości.");
+    rejectionReasons.push("Utwór ma mniej niż 2:00, co znacząco obniża ocenę długości.");
   }
 
   return {
