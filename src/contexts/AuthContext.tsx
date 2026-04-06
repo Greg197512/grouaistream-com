@@ -26,6 +26,18 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const clearStoredAuthSession = () => {
+  if (typeof window === "undefined") return;
+
+  const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+  const keysToRemove = Object.keys(window.localStorage).filter((key) => {
+    if (projectId && key.startsWith(`sb-${projectId}`)) return true;
+    return key.includes("supabase.auth") || key.includes("auth-token");
+  });
+
+  keysToRemove.forEach((key) => window.localStorage.removeItem(key));
+};
+
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
@@ -170,8 +182,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    setUser(null);
+    setSession(null);
     setProfile(null);
+    setIsFirstLogin(false);
+
+    try {
+      const { error } = await supabase.auth.signOut({ scope: "local" });
+      if (error) {
+        console.error("Sign out failed:", error);
+      }
+    } finally {
+      clearStoredAuthSession();
+      setLoading(false);
+    }
   };
 
   return (
