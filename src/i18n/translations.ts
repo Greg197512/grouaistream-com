@@ -1313,7 +1313,7 @@ const pl: TranslationKeys = {
   "upload.promoTitle": "🎉 Promocja do końca maja 2026!",
   "upload.promoDesc": "Wszystkie funkcje uploadu dostępne za darmo — wrzucaj bez limitu!",
   "upload.monetizeQuestion": "Czy chcesz zarabiać na tym utworze?",
-  "upload.monetizeDesc": "Każde odsłuchanie powyżej 30 sekund = 1 stream × 0.003 zł (65% trafia do Ciebie). Wypłaty co miesiąc na konto bankowe. Możesz to zmienić w każdej chwili.",
+  "upload.monetizeDesc": "Każde odsłuchanie powyżej 30 sekund = 1 stream × 0.0007 € (65% trafia do Ciebie). Wypłaty co miesiąc na konto bankowe. Możesz to zmienić w każdej chwili.",
   "upload.monetizeYes": "Tak, chcę zarabiać",
   "upload.monetizeNo": "Nie teraz",
   "upload.sunoProCheckbox": "Ten utwór został stworzony na moim koncie Suno Pro / Premier",
