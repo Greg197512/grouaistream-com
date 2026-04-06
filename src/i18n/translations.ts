@@ -1362,7 +1362,7 @@ const pl: TranslationKeys = {
   "earnPage.forYou": "dla Ciebie",
   "earnPage.benefits": "Dodatkowe korzyści",
   "earnPage.b1": "Wypłaty co miesiąc bezpośrednio na konto bankowe (Stripe)",
-  "earnPage.b2": "Minimalna wypłata tylko 50 zł",
+  "earnPage.b2": "Minimalna wypłata tylko 12 €",
   "earnPage.b3": "Szczegółowe statystyki zarobków i streamów",
   "earnPage.b4": 'Badge „Monetyzowany" przy Twoich utworach',
   "earnPage.b5": "Priorytet w playlistach i rekomendacjach",
