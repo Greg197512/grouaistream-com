@@ -25,6 +25,8 @@ interface ProxyUploadResponse {
   error?: string;
 }
 
+const PROXY_FALLBACK_MAX_BYTES = 20 * 1024 * 1024;
+
 function parseUploadError(responseText: string, status: number): string {
   const code = responseText.match(/<Code>([^<]+)<\/Code>/)?.[1];
   const message = responseText.match(/<Message>([^<]+)<\/Message>/)?.[1];
@@ -42,6 +44,69 @@ function parseJsonResponse<T>(responseText: string, fallbackMessage: string): T 
   } catch {
     throw new Error(fallbackMessage);
   }
+}
+
+async function createSignedUpload({ file, folder }: R2UploadOptions): Promise<SignedUploadResponse> {
+  const contentType = file.type || "application/octet-stream";
+
+  const { data, error } = await supabase.functions.invoke("r2-signed-url", {
+    body: {
+      fileName: file.name,
+      contentType,
+      folder: folder || "tracks",
+    },
+  });
+
+  if (error) {
+    throw new Error(error.message || "Nie udało się przygotować uploadu na dysk");
+  }
+
+  const payload = data as SignedUploadResponse | null;
+
+  if (!payload?.uploadUrl || !payload.publicUrl || !payload.key) {
+    throw new Error(payload?.error || "Brak podpisanego adresu uploadu");
+  }
+
+  return payload;
+}
+
+async function uploadToSignedUrl({
+  file,
+  folder,
+  onProgress,
+}: R2UploadOptions): Promise<R2UploadResult> {
+  const signedUpload = await createSignedUpload({ file, folder });
+
+  return new Promise<R2UploadResult>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open(signedUpload.method || "PUT", signedUpload.uploadUrl, true);
+
+    if (file.type) {
+      xhr.setRequestHeader("Content-Type", file.type);
+    }
+
+    if (onProgress) {
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) {
+          onProgress(Math.round((e.loaded / e.total) * 100));
+        }
+      };
+    }
+
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve({ publicUrl: signedUpload.publicUrl, key: signedUpload.key });
+        return;
+      }
+
+      reject(new Error(parseUploadError(xhr.responseText, xhr.status)));
+    };
+
+    xhr.onerror = () => reject(new Error("Bezpośredni upload na dysk nie powiódł się"));
+    xhr.ontimeout = () => reject(new Error("Bezpośredni upload przekroczył limit czasu"));
+    xhr.timeout = 600000;
+    xhr.send(file);
+  });
 }
 
 async function uploadToR2ViaProxy({
@@ -110,6 +175,17 @@ export async function uploadToR2({
   folder = "tracks",
   onProgress,
 }: R2UploadOptions): Promise<R2UploadResult> {
-  // Always use proxy — avoids CORS issues with direct R2 PUT
-  return uploadToR2ViaProxy({ file, folder: folder || "tracks", onProgress });
+  try {
+    return await uploadToSignedUrl({ file, folder: folder || "tracks", onProgress });
+  } catch (directUploadError) {
+    console.warn("Direct R2 upload failed, switching to proxy fallback", directUploadError);
+
+    if (file.size > PROXY_FALLBACK_MAX_BYTES) {
+      throw directUploadError instanceof Error
+        ? directUploadError
+        : new Error("Nie udało się wysłać dużego pliku na dysk");
+    }
+
+    return uploadToR2ViaProxy({ file, folder: folder || "tracks", onProgress });
+  }
 }
