@@ -139,7 +139,7 @@ const CreatorEarnings = () => {
 
   const handleRequestPayout = async () => {
     if (!user) return;
-    if (totalEarnings < 50) {
+    if (totalEarnings < 12) {
       toast.error(t("earnings.minPayout"));
       return;
     }
