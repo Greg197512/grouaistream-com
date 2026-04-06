@@ -308,7 +308,7 @@ const CreatorEarnings = () => {
                       <Clock className="h-3.5 w-3.5 text-muted-foreground" />
                       <span className="text-sm">{new Date(p.requested_at).toLocaleDateString()}</span>
                     </div>
-                    <span className="text-sm font-semibold">{Number(p.amount).toFixed(2)} zł</span>
+                    <span className="text-sm font-semibold">{Number(p.amount).toFixed(2)} €</span>
                     <Badge className={cn(
                       "text-[10px]",
                       p.status === "completed" ? "bg-green-500/15 text-green-400 border-green-500/25" :
