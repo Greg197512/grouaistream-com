@@ -458,9 +458,15 @@ const Server = () => {
               <h1 className="font-display text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
                 Serwer Mediów
               </h1>
-              <p className="text-sm text-muted-foreground">
-                Wspólny dysk — pełne piosenki i teledyski • AI automatycznie kategoryzuje
-              </p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm text-muted-foreground">
+                  Wspólny dysk — pełne piosenki i teledyski • AI automatycznie kategoryzuje
+                </p>
+                <Badge variant="outline" className="text-[10px] gap-1 border-emerald-500/50 text-emerald-400 bg-emerald-500/10">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  R2 Cloud
+                </Badge>
+              </div>
             </div>
           </div>
           <div className="flex gap-2">
