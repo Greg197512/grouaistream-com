@@ -1,22 +1,53 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+function getCorsHeaders(req: Request) {
+  const allowedOrigins = [
+    "https://grouaistream-com.lovable.app",
+    "https://id-preview--462bddcb-d545-4f42-bc51-5f437cb12bbe.lovable.app",
+  ];
+  const origin = req.headers.get("origin") || "";
+  return {
+    "Access-Control-Allow-Origin": allowedOrigins.includes(origin) ? origin : allowedOrigins[0],
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  };
+}
 
 serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req);
+
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { userId } = await req.json();
-    if (!userId) throw new Error("userId required");
+    // --- Authentication check ---
+    const authHeader = req.headers.get("authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: claimsError } = await supabaseAuth.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const userId = claimsData.claims.sub as string;
+    // --- End authentication ---
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
@@ -56,9 +87,7 @@ serve(async (req) => {
     const genreCounts: Record<string, { total: number; completed: number; skipped: number; liked: number }> = {};
     const moodCounts: Record<string, { total: number; completed: number; skipped: number }> = {};
 
-    // Time-based patterns (hour of day -> genre preferences)
     const hourlyGenres: Record<number, Record<string, number>> = {};
-    // Day of week patterns
     const dayGenres: Record<number, Record<string, number>> = {};
 
     for (const h of history) {
@@ -71,34 +100,28 @@ serve(async (req) => {
       const wasCompleted = !wasSkipped && (h.duration_played || 0) > (track.duration || 180) * 0.5;
       const isLiked = likedIds.has(h.track_id);
 
-      // Genre weights
       if (!genreCounts[genre]) genreCounts[genre] = { total: 0, completed: 0, skipped: 0, liked: 0 };
       genreCounts[genre].total++;
       if (wasCompleted) genreCounts[genre].completed++;
       if (wasSkipped) genreCounts[genre].skipped++;
       if (isLiked) genreCounts[genre].liked++;
 
-      // Mood weights
       if (!moodCounts[mood]) moodCounts[mood] = { total: 0, completed: 0, skipped: 0 };
       moodCounts[mood].total++;
       if (wasCompleted) moodCounts[mood].completed++;
       if (wasSkipped) moodCounts[mood].skipped++;
 
-      // Hourly patterns
       const hour = new Date(h.played_at).getHours();
       if (!hourlyGenres[hour]) hourlyGenres[hour] = {};
       hourlyGenres[hour][genre] = (hourlyGenres[hour][genre] || 0) + 1;
 
-      // Day of week patterns
       const day = new Date(h.played_at).getDay();
       if (!dayGenres[day]) dayGenres[day] = {};
       dayGenres[day][genre] = (dayGenres[day][genre] || 0) + 1;
     }
 
-    // Calculate weighted scores per genre
     const genreWeights: Record<string, number> = {};
     for (const [genre, counts] of Object.entries(genreCounts)) {
-      // Formula: completed listens * 2 + liked * 3 - skipped * 1.5
       genreWeights[genre] = Math.round(
         (counts.completed * 2 + counts.liked * 3 - counts.skipped * 1.5) * 100
       ) / 100;
@@ -111,7 +134,6 @@ serve(async (req) => {
       ) / 100;
     }
 
-    // Determine avoid lists (genres/moods with high skip rates)
     const avoidGenres = Object.entries(genreCounts)
       .filter(([, c]) => c.total >= 3 && c.skipped / c.total > 0.6)
       .map(([g]) => g);
@@ -120,7 +142,6 @@ serve(async (req) => {
       .filter(([, c]) => c.total >= 3 && c.skipped / c.total > 0.6)
       .map(([m]) => m);
 
-    // Determine energy preference from top genres
     const topGenres = Object.entries(genreWeights)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 5)
@@ -133,7 +154,6 @@ serve(async (req) => {
     const preferredEnergy = highCount > lowCount ? "high" : lowCount > highCount ? "low" : "medium";
     const preferredTempo = preferredEnergy === "high" ? "fast" : preferredEnergy === "low" ? "slow" : "medium";
 
-    // Build daily patterns (simplified: morning/afternoon/evening/night preferences)
     const dailyPatterns: Record<string, string[]> = {};
     const timeSlots = { morning: [6,7,8,9,10,11], afternoon: [12,13,14,15,16,17], evening: [18,19,20,21,22,23], night: [0,1,2,3,4,5] };
     for (const [slot, hours] of Object.entries(timeSlots)) {
@@ -151,7 +171,6 @@ serve(async (req) => {
         .map(([g]) => g);
     }
 
-    // Build weekly patterns
     const dayNames = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
     const weeklyPatterns: Record<string, string[]> = {};
     for (const [day, genres] of Object.entries(dayGenres)) {
@@ -161,7 +180,6 @@ serve(async (req) => {
         .map(([g]) => g);
     }
 
-    // Generate AI profile summary
     let aiProfileSummary = "";
     if (LOVABLE_API_KEY) {
       try {
@@ -200,7 +218,6 @@ serve(async (req) => {
       }
     }
 
-    // Upsert preferences using service role (bypasses RLS)
     const { error } = await supabase
       .from("user_preferences")
       .upsert({
@@ -244,8 +261,8 @@ serve(async (req) => {
   } catch (error) {
     console.error("AI Learn error:", error);
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
     );
   }
 });
