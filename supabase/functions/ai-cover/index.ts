@@ -2,10 +2,17 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { S3Client, PutObjectCommand } from "npm:@aws-sdk/client-s3@3.600.0";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+function getCorsHeaders(req: Request) {
+  const allowedOrigins = [
+    "https://grouaistream-com.lovable.app",
+    "https://id-preview--462bddcb-d545-4f42-bc51-5f437cb12bbe.lovable.app",
+  ];
+  const origin = req.headers.get("origin") || "";
+  return {
+    "Access-Control-Allow-Origin": allowedOrigins.includes(origin) ? origin : allowedOrigins[0],
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  };
+}
 
 const R2_PUBLIC_BASE = "https://pub-46ecdc3a5ae341fcb16454d732eb9bcd.r2.dev";
 
@@ -47,7 +54,6 @@ function sanitizeFilename(name: string): string {
 }
 
 async function findOriginalCover(title: string, artist: string): Promise<string | null> {
-  // 1. iTunes
   try {
     const query = encodeURIComponent(`${artist} ${title}`);
     const itunesRes = await fetch(`https://itunes.apple.com/search?term=${query}&media=music&limit=5`);
@@ -60,7 +66,6 @@ async function findOriginalCover(title: string, artist: string): Promise<string 
     }
   } catch (e) { console.log("iTunes search failed:", e); }
 
-  // 2. MusicBrainz + Cover Art Archive
   try {
     const query = encodeURIComponent(`recording:"${title}" AND artist:"${artist}"`);
     const mbRes = await fetch(`https://musicbrainz.org/ws/2/recording?query=${query}&limit=3&fmt=json`, {
@@ -85,7 +90,6 @@ async function findOriginalCover(title: string, artist: string): Promise<string 
     }
   } catch (e) { console.log("MusicBrainz search failed:", e); }
 
-  // 3. Deezer
   try {
     const query = encodeURIComponent(`${artist} ${title}`);
     const deezerRes = await fetch(`https://api.deezer.com/search?q=${query}&limit=3`);
@@ -103,16 +107,12 @@ async function findOriginalCover(title: string, artist: string): Promise<string 
 
 async function generateAICover(title: string, artist: string, genre: string | null): Promise<string | null> {
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-  if (!LOVABLE_API_KEY) {
-    console.log("LOVABLE_API_KEY not set, skipping AI cover generation");
-    return null;
-  }
+  if (!LOVABLE_API_KEY) return null;
 
   const genreStyle = genre ? ` The music style is ${genre}.` : "";
   const prompt = `Create a breathtaking, photographic-quality album cover art for a song called "${title}" by "${artist}".${genreStyle} The image must look like a professional photograph or cinematic movie still — NOT cartoon, NOT illustration, NOT abstract art. Think: Hasselblad camera quality, dramatic natural or studio lighting, rich vivid colors, shallow depth of field with beautiful bokeh. The scene should emotionally represent the mood and theme of the song title. Ultra-realistic, high-resolution, award-winning photography style. No text, no letters, no words, no logos on the image. On a clean background.`;
 
   try {
-    console.log(`Generating AI cover for "${title}" by ${artist}...`);
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -126,20 +126,10 @@ async function generateAICover(title: string, artist: string, genre: string | nu
       }),
     });
 
-    if (!response.ok) {
-      console.error("AI image generation failed:", response.status, await response.text());
-      return null;
-    }
+    if (!response.ok) return null;
 
     const data = await response.json();
-    const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-    
-    if (!imageUrl) {
-      console.log("No image in AI response");
-      return null;
-    }
-
-    return imageUrl; // base64 data URL
+    return data.choices?.[0]?.message?.images?.[0]?.image_url?.url || null;
   } catch (e) {
     console.error("AI cover generation error:", e);
     return null;
@@ -147,18 +137,44 @@ async function generateAICover(title: string, artist: string, genre: string | nu
 }
 
 serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req);
+
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    // --- Authentication check ---
+    const authHeader = req.headers.get("authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: claimsError } = await supabaseAuth.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    // --- End authentication ---
+
     const { trackId } = await req.json();
-    const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
     if (!trackId) throw new Error("trackId is required");
 
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    const supabase = createClient(supabaseUrl, SUPABASE_SERVICE_ROLE_KEY);
 
     const { data: track, error: fetchError } = await supabase
       .from("tracks")
@@ -173,7 +189,6 @@ serve(async (req) => {
       );
     }
 
-    // Skip if already has a real cover
     if (track.cover_url && !track.cover_url.includes("picsum.photos") && !track.cover_url.includes("placeholder")) {
       return new Response(
         JSON.stringify({ success: true, skipped: true, message: "Already has cover" }),
@@ -181,28 +196,21 @@ serve(async (req) => {
       );
     }
 
-    // 1. Try finding original cover from music databases
-    console.log(`Searching original cover for: "${track.title}" by ${track.artist}`);
     let coverUrl = await findOriginalCover(track.title, track.artist);
     let source = "original";
 
-    // 2. If not found, generate AI cover and upload to R2
     if (!coverUrl) {
-      console.log(`No original found, generating AI cover for "${track.title}"...`);
       const aiBase64 = await generateAICover(track.title, track.artist, track.genre);
       
       if (aiBase64) {
         try {
           const base64Data = aiBase64.replace(/^data:image\/\w+;base64,/, "");
           const binaryData = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
-          
           const key = `covers/ai-${sanitizeFilename(track.artist)}-${sanitizeFilename(track.title)}-${Date.now()}.png`;
-          
           const r2Url = await uploadToR2(key, binaryData, "image/png");
           if (r2Url) {
             coverUrl = r2Url;
             source = "ai-generated";
-            console.log(`AI cover uploaded to R2: ${coverUrl}`);
           }
         } catch (e) {
           console.error("Failed to upload AI cover to R2:", e);
@@ -217,15 +225,12 @@ serve(async (req) => {
       );
     }
 
-    // Update track with cover
     const { error: updateErr } = await supabase
       .from("tracks")
       .update({ cover_url: coverUrl })
       .eq("id", track.id);
 
     if (updateErr) throw updateErr;
-
-    console.log(`Cover set for "${track.title}": ${source}`);
 
     return new Response(
       JSON.stringify({ success: true, cover_url: coverUrl, source }),
@@ -234,8 +239,8 @@ serve(async (req) => {
   } catch (error) {
     console.error("AI Cover error:", error);
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
     );
   }
 });
