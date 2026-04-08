@@ -1017,6 +1017,7 @@ export type Database = {
           title: string
           total_score: number | null
           user_email: string
+          user_id: string | null
         }
         Insert: {
           created_at?: string
@@ -1037,6 +1038,7 @@ export type Database = {
           title: string
           total_score?: number | null
           user_email: string
+          user_id?: string | null
         }
         Update: {
           created_at?: string
@@ -1057,6 +1059,7 @@ export type Database = {
           title?: string
           total_score?: number | null
           user_email?: string
+          user_id?: string | null
         }
         Relationships: []
       }
