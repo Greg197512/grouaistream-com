@@ -742,6 +742,15 @@ export const AIAssistant = () => {
                 <motion.button
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
+                  onClick={() => { setMessages([]); hasGreeted.current = false; }}
+                  className="w-7 h-7 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors"
+                  title="Wyczyść czat"
+                >
+                  <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
+                </motion.button>
+                <motion.button
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
                   onClick={() => setIsExpanded(!isExpanded)}
                   className="w-7 h-7 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors"
                 >
