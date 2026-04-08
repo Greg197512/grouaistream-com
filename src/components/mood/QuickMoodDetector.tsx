@@ -234,17 +234,15 @@ export const QuickMoodDetector = ({ isOpen, onClose }: QuickMoodDetectorProps) =
 
     let progress = 0;
     progressIntervalRef.current = setInterval(() => {
-      progress += 1.5;
+      progress += 8;
       setAnalysisProgress(Math.min(progress, 95));
-      if (progress > 10 && progress < 30) setAnalysisStep(t("moodDet.detectingFace"));
-      else if (progress > 30 && progress < 60) setAnalysisStep(t("moodDet.analyzingExpression"));
-      else if (progress > 60 && progress < 85) setAnalysisStep(t("moodDet.recognizingEmotions"));
-      else if (progress > 85) setAnalysisStep(t("moodDet.finalizing"));
-    }, 75);
+      if (progress < 40) setAnalysisStep(t("moodDet.detectingFace"));
+      else if (progress < 70) setAnalysisStep(t("moodDet.analyzingExpression"));
+      else setAnalysisStep(t("moodDet.finalizing"));
+    }, 60);
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 500));
-      const result = await detectWithSampling(videoRef.current, 5, 800);
+      const result = await detectWithSampling(videoRef.current, 2, 150);
 
       if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
       setAnalysisProgress(100);
@@ -271,8 +269,9 @@ export const QuickMoodDetector = ({ isOpen, onClose }: QuickMoodDetectorProps) =
       }
       if (videoRef.current) videoRef.current.srcObject = null;
 
-      const analysis = await fetchDeepAnalysis(detectedMood, emotionKey);
-      await playMoodPlaylist(detectedMood, analysis);
+      // Play music immediately, deep analysis runs in background
+      playMoodPlaylist(detectedMood, null);
+      fetchDeepAnalysis(detectedMood, emotionKey);
 
     } catch (error) {
       console.error("Face detection error:", error);
