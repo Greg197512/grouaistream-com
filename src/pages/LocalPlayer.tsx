@@ -41,7 +41,12 @@ const LocalPlayer = () => {
   const { playTrack, playPlaylist, currentTrack, isPlaying, togglePlay } = usePlayer();
   const [localFiles, setLocalFiles] = useState<LocalFile[]>([]);
   const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number; fileName: string }>({ current: 0, total: 0, fileName: "" });
+  const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number; fileName: string; percent: number }>({
+    current: 0,
+    total: 0,
+    fileName: "",
+    percent: 0,
+  });
   const [uploadedIds, setUploadedIds] = useState<Set<string>>(new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
@@ -108,9 +113,38 @@ const LocalPlayer = () => {
     return new Promise((resolve) => {
       const url = URL.createObjectURL(file);
       const audio = new Audio();
+      let settled = false;
+
+      const cleanup = () => {
+        audio.onloadedmetadata = null;
+        audio.ondurationchange = null;
+        audio.onerror = null;
+        audio.removeAttribute("src");
+        audio.load();
+        URL.revokeObjectURL(url);
+      };
+
+      const finish = (duration: number) => {
+        if (settled) return;
+        settled = true;
+        window.clearTimeout(timeoutId);
+        cleanup();
+        resolve(duration);
+      };
+
+      const resolveDuration = () => {
+        const duration = Math.round(audio.duration);
+        if (Number.isFinite(duration) && duration > 0) {
+          finish(duration);
+        }
+      };
+
+      const timeoutId = window.setTimeout(() => finish(180), 5000);
+
       audio.preload = "metadata";
-      audio.onloadedmetadata = () => { URL.revokeObjectURL(url); resolve(Math.round(audio.duration)); };
-      audio.onerror = () => { URL.revokeObjectURL(url); resolve(180); };
+      audio.onloadedmetadata = resolveDuration;
+      audio.ondurationchange = resolveDuration;
+      audio.onerror = () => finish(180);
       audio.src = url;
     });
   };
@@ -129,11 +163,22 @@ const LocalPlayer = () => {
     for (let i = 0; i < filesToUpload.length; i++) {
       const localFile = filesToUpload[i];
       const parsed = parseName(localFile.name);
-      setUploadProgress({ current: i + 1, total: filesToUpload.length, fileName: parsed.title });
+      setUploadProgress({ current: i + 1, total: filesToUpload.length, fileName: parsed.title, percent: 0 });
 
       try {
         const duration = await getAudioDuration(localFile.file);
-        const { publicUrl } = await uploadToR2({ file: localFile.file, folder: "tracks" });
+        const { publicUrl } = await uploadToR2({
+          file: localFile.file,
+          folder: "tracks",
+          onProgress: (percent) => {
+            setUploadProgress({
+              current: i + 1,
+              total: filesToUpload.length,
+              fileName: parsed.title,
+              percent,
+            });
+          },
+        });
 
         const { error } = await supabase.from("tracks").insert({
           title: parsed.title,
@@ -149,6 +194,7 @@ const LocalPlayer = () => {
         if (error) throw error;
         successCount++;
         newUploaded.add(localFile.id);
+        setUploadProgress({ current: i + 1, total: filesToUpload.length, fileName: parsed.title, percent: 100 });
       } catch (err: any) {
         console.error(`[Upload] Failed: ${localFile.name}`, err);
         toast.error(`Błąd: ${parsed.title} — ${err.message}`);
@@ -157,7 +203,7 @@ const LocalPlayer = () => {
 
     setUploadedIds(newUploaded);
     setUploading(false);
-    setUploadProgress({ current: 0, total: 0, fileName: "" });
+    setUploadProgress({ current: 0, total: 0, fileName: "", percent: 0 });
 
     if (successCount > 0) {
       toast.success(`✅ Przesłano ${successCount}/${filesToUpload.length} plików na serwer!`);
@@ -210,7 +256,7 @@ const LocalPlayer = () => {
                 >
                   {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
                   {uploading
-                    ? `Przesyłam ${uploadProgress.current}/${uploadProgress.total}...`
+                    ? `Przesyłam ${uploadProgress.current}/${uploadProgress.total} • ${uploadProgress.percent}%`
                     : `Prześlij na serwer (${notUploadedCount})`
                   }
                 </Button>
@@ -228,14 +274,14 @@ const LocalPlayer = () => {
             <div className="flex items-center gap-2 mb-2">
               <Loader2 className="h-4 w-4 animate-spin text-[#FF9500]" />
               <span className="text-sm text-gray-300">
-                Przesyłam: <strong>{uploadProgress.fileName}</strong> ({uploadProgress.current}/{uploadProgress.total})
+                Przesyłam: <strong>{uploadProgress.fileName}</strong> ({uploadProgress.current}/{uploadProgress.total}) — {uploadProgress.percent}%
               </span>
             </div>
             <div className="w-full h-2 bg-secondary rounded-full overflow-hidden">
               <motion.div
                 className="h-full rounded-full"
                 style={{ background: "linear-gradient(90deg, #FF6B00, #FF9500)" }}
-                animate={{ width: `${(uploadProgress.current / uploadProgress.total) * 100}%` }}
+                animate={{ width: `${uploadProgress.percent}%` }}
               />
             </div>
           </motion.div>
