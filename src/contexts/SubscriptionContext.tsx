@@ -68,15 +68,21 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
 
-      const isAdmin = profile?.role === "pro" && user.email === "grzegorzkaron553@gmail.com";
       const hasCreatorAccess = profile?.role === "artist" || profile?.role === "pro";
 
-      const { data, error } = await supabase
-        .from("user_subscriptions")
-        .select("plan, status, trial_ends_at")
-        .eq("user_id", user.id)
-        .eq("status", "active")
-        .maybeSingle();
+      const [{ data: isAdmin, error: adminError }, { data, error }] = await Promise.all([
+        supabase.rpc("has_role", { _user_id: user.id, _role: "admin" }),
+        supabase
+          .from("user_subscriptions")
+          .select("plan, status, trial_ends_at")
+          .eq("user_id", user.id)
+          .eq("status", "active")
+          .maybeSingle(),
+      ]);
+
+      if (adminError) {
+        console.error("Error checking admin role:", adminError);
+      }
 
       if (error) {
         console.error("Error fetching subscription:", error);
@@ -96,6 +102,7 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
       console.log("[Subscription] resolved access:", {
         userId: user.id,
         email: user.email,
+        isAdmin: Boolean(isAdmin),
         profileRole: profile?.role ?? "free",
         subscriptionStatus: profile?.subscriptionStatus ?? "free",
         subscriptionPlan,
