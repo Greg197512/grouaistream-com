@@ -304,15 +304,8 @@ const Upload = () => {
       let moderationError: { message?: string } | null = null;
 
       try {
-        const modUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-moderate-track`;
-        const modResponse = await fetch(modUrl, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-            "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          },
-          body: JSON.stringify({
+        const modPromise = supabase.functions.invoke("ai-moderate-track", {
+          body: {
             title,
             artist: displayName,
             genre,
@@ -320,25 +313,27 @@ const Upload = () => {
             duration: resolvedDuration || DURATION_FALLBACK_SEC,
             hasSunoLink: isSunoTrack,
             hasAudioFile: !!audioFile,
-          }),
-          signal: moderationController.signal,
+          },
         });
 
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          moderationTimeout = window.setTimeout(
+            () => reject(new Error(`Analiza AI przekroczyła limit czasu (${Math.round(MODERATION_TIMEOUT_MS / 1000)}s). Spróbuj ponownie.`)),
+            MODERATION_TIMEOUT_MS
+          );
+        });
+
+        const { data, error: invokeError } = await Promise.race([modPromise, timeoutPromise]);
         clearTimeout(moderationTimeout);
 
-        if (!modResponse.ok) {
-          const errBody = await modResponse.text();
-          moderationError = { message: `Status ${modResponse.status}: ${errBody.substring(0, 200)}` };
+        if (invokeError) {
+          moderationError = { message: invokeError.message || "Błąd połączenia z AI" };
         } else {
-          moderationData = await modResponse.json();
+          moderationData = data;
         }
       } catch (fetchErr: any) {
         clearTimeout(moderationTimeout);
-        if (fetchErr.name === "AbortError") {
-          moderationError = { message: `Analiza AI przekroczyła limit czasu (${Math.round(MODERATION_TIMEOUT_MS / 1000)}s). Spróbuj ponownie.` };
-        } else {
-          moderationError = { message: fetchErr.message || "Błąd połączenia z AI" };
-        }
+        moderationError = { message: fetchErr.message || "Błąd połączenia z AI" };
       }
 
       if (moderationError) {
