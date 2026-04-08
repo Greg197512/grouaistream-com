@@ -590,13 +590,8 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     toast.success(`Added "${track.title}" to queue`);
   };
 
-  // Auto-play language-specific track on app start (no login required)
-  const hasAutoPlayed = useRef(false);
-  useEffect(() => {
-    if (hasAutoPlayed.current || currentTrack) return;
-    hasAutoPlayed.current = true;
-
-    const lang = localStorage.getItem("grooveai-language") || "en";
+  // Shared: load language-specific track into player
+  const loadLangTrack = useCallback((lang: string) => {
     const langTrackMap: Record<string, string> = {
       pl: '%Holenderski Club Peak%',
       en: '%Neon Floor Directions%',
@@ -637,6 +632,28 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
           });
       });
   }, []);
+
+  // Auto-play language-specific track on app start (no login required)
+  const hasAutoPlayed = useRef(false);
+  useEffect(() => {
+    if (hasAutoPlayed.current || currentTrack) return;
+    hasAutoPlayed.current = true;
+    const lang = localStorage.getItem("grooveai-language") || "en";
+    loadLangTrack(lang);
+  }, []);
+
+  // Auto-play language track on first login (SIGNED_IN event)
+  const hasPlayedOnLogin = useRef(false);
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_IN" && !hasPlayedOnLogin.current) {
+        hasPlayedOnLogin.current = true;
+        const lang = localStorage.getItem("grooveai-language") || "en";
+        loadLangTrack(lang);
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [loadLangTrack]);
 
   // Auto-play specific track when language changes
   useEffect(() => {
