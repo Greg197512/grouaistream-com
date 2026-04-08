@@ -1,10 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
-import { Play, HardDrive, Loader2, Flame } from "lucide-react";
+import { Play, Flame, Loader2, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePlayer, Track } from "@/contexts/PlayerContext";
-
-
 import { useNavigate } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
 import { pl } from "date-fns/locale";
@@ -13,6 +11,7 @@ import { LikeButton, TrackOptionsMenu } from "@/components/menus/TrackOptionsMen
 import { cn } from "@/lib/utils";
 
 const PINNED_TRACK_ID = "043749a5-1e86-4d2d-8846-a41a90cc5a38";
+const FETCH_TIMEOUT_MS = 10_000;
 
 interface ServerTrack extends Track {
   created_at: string;
@@ -21,16 +20,21 @@ interface ServerTrack extends Track {
 export const NewOnServer = () => {
   const [tracks, setTracks] = useState<ServerTrack[]>([]);
   const [loading, setLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
   const { playPlaylist, currentTrack, isPlaying } = usePlayer();
-  
-  
   const navigate = useNavigate();
+  const mountedRef = useRef(true);
 
   useEffect(() => {
+    mountedRef.current = true;
+
     const fetchLatest = async () => {
       try {
-        setLoading(true);
-        
+        if (mountedRef.current) {
+          setLoading(true);
+          setHasError(false);
+        }
+
         const [latestRes, pinnedRes] = await Promise.all([
           supabase
             .from("tracks")
@@ -45,6 +49,10 @@ export const NewOnServer = () => {
             .maybeSingle(),
         ]);
 
+        if (!mountedRef.current) return;
+
+        if (latestRes.error) throw latestRes.error;
+
         const latest = (latestRes.data || []) as ServerTrack[];
         const pinned = pinnedRes.data as ServerTrack | null;
 
@@ -53,25 +61,66 @@ export const NewOnServer = () => {
         setTracks(combined.slice(0, 8));
       } catch (err) {
         console.error("[NewOnServer] fetch error:", err);
+        if (mountedRef.current) setHasError(true);
       } finally {
-        setLoading(false);
+        if (mountedRef.current) setLoading(false);
       }
     };
 
-    fetchLatest();
+    // Safety timeout — force-stop loader after FETCH_TIMEOUT_MS
+    const timeout = setTimeout(() => {
+      if (mountedRef.current && loading) {
+        console.warn("[NewOnServer] fetch timed out after", FETCH_TIMEOUT_MS, "ms");
+        setLoading(false);
+        setHasError(true);
+      }
+    }, FETCH_TIMEOUT_MS);
+
+    fetchLatest().finally(() => clearTimeout(timeout));
 
     const channel = supabase
       .channel("new-tracks-home")
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "tracks" }, () => {
-        fetchLatest();
+        if (mountedRef.current) fetchLatest();
       })
-      .subscribe();
+      .subscribe((status, err) => {
+        if (err) console.error("[NewOnServer] realtime error:", err);
+      });
 
-    return () => { supabase.removeChannel(channel); };
+    return () => {
+      mountedRef.current = false;
+      clearTimeout(timeout);
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const handlePlay = (track: Track, index: number) => {
     playPlaylist(tracks, index);
+  };
+
+  const handleRetry = () => {
+    setLoading(true);
+    setHasError(false);
+    // Re-mount effect by forcing state change — simpler: just refetch inline
+    const refetch = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("tracks")
+          .select("*")
+          .or("audio_url.not.is.null,video_url.not.is.null")
+          .order("created_at", { ascending: false })
+          .limit(12);
+
+        if (error) throw error;
+        setTracks((data || []) as ServerTrack[]);
+      } catch (err) {
+        console.error("[NewOnServer] retry error:", err);
+        setHasError(true);
+      } finally {
+        setLoading(false);
+      }
+    };
+    refetch();
   };
 
   if (loading) {
@@ -83,6 +132,27 @@ export const NewOnServer = () => {
         </div>
         <div className="flex items-center justify-center py-8">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </section>
+    );
+  }
+
+  if (hasError) {
+    return (
+      <section className="px-6 py-8">
+        <div className="flex items-center gap-3 mb-6">
+          <Flame className="h-5 w-5 text-primary" />
+          <h2 className="font-display text-xl font-bold">🔥 Nowe na serwerze</h2>
+        </div>
+        <div className="flex flex-col items-center justify-center py-8 gap-3">
+          <p className="text-sm text-muted-foreground">Nie udało się załadować — spróbuj ponownie</p>
+          <button
+            onClick={handleRetry}
+            className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium bg-primary/10 hover:bg-primary/20 text-primary transition-colors"
+          >
+            <RefreshCw className="h-4 w-4" />
+            Ponów
+          </button>
         </div>
       </section>
     );
@@ -115,7 +185,6 @@ export const NewOnServer = () => {
             className="group relative rounded-xl overflow-hidden bg-secondary/50 hover:bg-secondary transition-colors cursor-pointer"
             onClick={() => handlePlay(track, index)}
           >
-            {/* Cover Art - Square aspect ratio like Suno/Facebook posts */}
             <div className="relative aspect-square overflow-hidden">
               <HQCover
                 src={track.cover_url}
@@ -124,7 +193,6 @@ export const NewOnServer = () => {
                 artist={track.artist}
                 className="h-full w-full object-cover"
               />
-              {/* Play overlay */}
               <div className={cn(
                 "absolute inset-0 flex items-center justify-center bg-black/40 transition-opacity",
                 currentTrack?.id === track.id && isPlaying ? "opacity-100" : "opacity-0 group-hover:opacity-100"
@@ -147,14 +215,12 @@ export const NewOnServer = () => {
                 )}
               </div>
 
-              {/* NEW badge */}
               <div className="absolute top-2 left-2">
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary text-primary-foreground uppercase tracking-wider">
                   New
                 </span>
               </div>
 
-              {/* Time ago */}
               <div className="absolute bottom-2 right-2">
                 <span className="text-[10px] px-1.5 py-0.5 rounded bg-black/60 text-white/80 backdrop-blur-sm">
                   {formatDistanceToNow(new Date(track.created_at), { addSuffix: true, locale: pl })}
@@ -162,7 +228,6 @@ export const NewOnServer = () => {
               </div>
             </div>
 
-            {/* Track info */}
             <div className="p-3">
               <p className="font-semibold text-sm truncate">{track.title}</p>
               <div className="flex items-center gap-1">
@@ -176,7 +241,6 @@ export const NewOnServer = () => {
               )}
             </div>
 
-            {/* Action buttons */}
             <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
               <LikeButton trackId={track.id} />
               <TrackOptionsMenu
