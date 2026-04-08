@@ -297,7 +297,7 @@ const Upload = () => {
       setUploadProgress(null);
       toast.info("🤖 Szybka analiza AI w toku...");
 
-      let moderationTimeout: ReturnType<typeof setTimeout> | undefined;
+      let moderationTimeout: number | undefined;
 
       let moderationData: any = null;
       let moderationError: { message?: string } | null = null;
