@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { motion, AnimatePresence, useDragControls } from "framer-motion";
-import { Send, Loader2, ExternalLink, Music, Power, GripHorizontal, Sparkles, Maximize2, Minimize2, Radio, Waves, Copy, Check, Paperclip, Image, X, FileAudio, Film } from "lucide-react";
+import { Send, Loader2, ExternalLink, Music, Power, GripHorizontal, Sparkles, Maximize2, Minimize2, Radio, Waves, Copy, Check, Paperclip, Image, X, FileAudio, Film, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -739,6 +739,15 @@ export const AIAssistant = () => {
                 </p>
               </div>
               <div className="flex items-center gap-1">
+                <motion.button
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() => { setMessages([]); hasGreeted.current = false; }}
+                  className="w-7 h-7 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors"
+                  title="Wyczyść czat"
+                >
+                  <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
+                </motion.button>
                 <motion.button
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
