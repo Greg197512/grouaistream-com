@@ -297,8 +297,7 @@ const Upload = () => {
       setUploadProgress(null);
       toast.info("🤖 Szybka analiza AI w toku...");
 
-      const moderationController = new AbortController();
-      const moderationTimeout = window.setTimeout(() => moderationController.abort(), MODERATION_TIMEOUT_MS);
+      let moderationTimeout: ReturnType<typeof setTimeout> | undefined;
 
       let moderationData: any = null;
       let moderationError: { message?: string } | null = null;
