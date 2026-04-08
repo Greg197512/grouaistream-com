@@ -269,8 +269,9 @@ export const QuickMoodDetector = ({ isOpen, onClose }: QuickMoodDetectorProps) =
       }
       if (videoRef.current) videoRef.current.srcObject = null;
 
-      const analysis = await fetchDeepAnalysis(detectedMood, emotionKey);
-      await playMoodPlaylist(detectedMood, analysis);
+      // Play music immediately, deep analysis runs in background
+      playMoodPlaylist(detectedMood, null);
+      fetchDeepAnalysis(detectedMood, emotionKey);
 
     } catch (error) {
       console.error("Face detection error:", error);
