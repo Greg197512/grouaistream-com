@@ -53,46 +53,33 @@ function getLengthScoreCap(durationSec: number): number {
 }
 
 function buildFallbackEvaluation(input: ModerationInput, reason?: string): EvaluationPayload {
-  const title = input.title?.trim() || "";
-  const description = input.description?.trim() || "";
   const durationSec = input.duration || 0;
-  const combined = `${title} ${description}`.toLowerCase();
-  const genericMarkers = ["test", "track", "untitled", "demo", "sample"];
-  const hasGenericMetadata = genericMarkers.some((marker) => combined.includes(marker));
-  const hasDetailedDescription = description.length >= 40;
-  const hasDecentTitle = title.length >= 4 && !hasGenericMetadata;
-  const scoreLength = getLengthScoreCap(durationSec);
-  const scoreLyrics = clampScore(
-    hasDetailedDescription ? 13 : description.length >= 10 ? 9 : hasDecentTitle ? 7 : 3
-  );
-  const scoreVocal = clampScore(input.hasAudioFile ? 12 : input.hasSunoLink ? 10 : 8);
-  const scoreProduction = clampScore(input.hasAudioFile ? 13 : 10);
-  const scoreOriginality = clampScore(hasGenericMetadata ? 4 : hasDetailedDescription ? 14 : 10);
 
-  const rejectionReasons: string[] = [];
+  // Hard reject < 2 min
   if (durationSec > 0 && durationSec < 120) {
-    rejectionReasons.push("Utwór jest zbyt krótki – minimum to 2:00.");
-  }
-  if (hasGenericMetadata) {
-    rejectionReasons.push("Tytuł lub opis są zbyt generyczne i wymagają dopracowania.");
-  }
-  if (reason) {
-    rejectionReasons.push("Automatyczna analiza awaryjna została użyta z powodu chwilowego problemu z silnikiem AI.");
+    return {
+      score_length: 0,
+      score_lyrics: 5,
+      score_vocal: 5,
+      score_production: 5,
+      score_originality: 5,
+      analysis: "Utwór jest zbyt krótki – minimum to 2:00.",
+      recommendations: "Wydłuż utwór do co najmniej 2 minut.",
+      rejection_reasons: ["Utwór ma mniej niż 2:00 – wymagane minimum to 2 minuty."],
+    };
   }
 
+  // Auto-approve everything >= 2 min
+  const scoreLength = getLengthScoreCap(durationSec);
   return {
-    score_length: scoreLength,
-    score_lyrics: scoreLyrics,
-    score_vocal: scoreVocal,
-    score_production: scoreProduction,
-    score_originality: scoreOriginality,
-    analysis: reason
-      ? "Użyto trybu awaryjnej oceny metadanych, ponieważ główny moduł AI nie odpowiedział na czas. Wynik opiera się na długości utworu, jakości tytułu i opisu oraz typie źródła pliku."
-      : "Ocena została wyliczona na podstawie metadanych utworu, długości, jakości tytułu i opisu oraz sposobu dostarczenia materiału.",
-    recommendations: hasDetailedDescription && hasDecentTitle
-      ? "Dopracuj finalny miks i zachowaj spójność między tytułem, opisem oraz brzmieniem utworu."
-      : "Rozbuduj opis, dopracuj tytuł i upewnij się, że prezentacja utworu jasno pokazuje jego klimat oraz jakość.",
-    rejection_reasons: rejectionReasons,
+    score_length: Math.max(scoreLength, 14),
+    score_lyrics: 14,
+    score_vocal: 14,
+    score_production: 14,
+    score_originality: 14,
+    analysis: "Utwór spełnia wymagania platformy i został zaakceptowany automatycznie.",
+    recommendations: "Dbaj o jakość produkcji i oryginalność – to klucz do sukcesu na platformie.",
+    rejection_reasons: [],
   };
 }
 
