@@ -24,8 +24,9 @@ interface UploadItem {
   file: File;
   title: string;
   artist: string;
-  status: "pending" | "uploading" | "done" | "error";
+  status: "uploading" | "done" | "error";
   error?: string;
+  percent: number;
 }
 
 function parseFilename(file: File): { title: string; artist: string } {
@@ -37,8 +38,31 @@ function parseFilename(file: File): { title: string; artist: string } {
   return { title: name, artist: "Unknown Artist" };
 }
 
-function isAllowedFile(file: File): boolean {
-  return isAllowedMediaFile(file, MAX_UPLOAD_SIZE_BYTES);
+function getAudioDuration(file: File): Promise<number> {
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(file);
+    const audio = new Audio();
+    let settled = false;
+    const finish = (d: number) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(tid);
+      audio.onloadedmetadata = null;
+      audio.onerror = null;
+      audio.removeAttribute("src");
+      audio.load();
+      URL.revokeObjectURL(url);
+      resolve(d);
+    };
+    const tid = setTimeout(() => finish(180), 3000);
+    audio.preload = "metadata";
+    audio.onloadedmetadata = () => {
+      const d = Math.round(audio.duration);
+      finish(Number.isFinite(d) && d > 0 ? d : 180);
+    };
+    audio.onerror = () => finish(180);
+    audio.src = url;
+  });
 }
 
 export const FileUploadModal = ({ isOpen, onClose, onSuccess }: FileUploadModalProps) => {
@@ -49,23 +73,92 @@ export const FileUploadModal = ({ isOpen, onClose, onSuccess }: FileUploadModalP
   const [items, setItems] = useState<UploadItem[]>([]);
   const [uploading, setUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
-  const [uploadedCount, setUploadedCount] = useState(0);
 
-  const addFiles = useCallback((files: FileList | File[]) => {
-    const newItems: UploadItem[] = [];
-    for (const file of Array.from(files)) {
-      if (!isAllowedFile(file)) continue;
-      if (file.size > MAX_UPLOAD_SIZE_BYTES) continue;
-      if (file.size < 1000) continue; // skip tiny/empty files
-      const { title, artist } = parseFilename(file);
-      newItems.push({ file, title, artist, status: "pending" });
+  const uploadSingleFile = useCallback(async (file: File, index: number) => {
+    if (!user) return;
+    const { title, artist } = parseFilename(file);
+    const isVideo = isVideoLikeFile(file);
+    const folder = isVideo ? "videos" : "tracks";
+    const displayName = user.user_metadata?.display_name || user.email?.split("@")[0] || "Artist";
+
+    try {
+      const duration = await getAudioDuration(file);
+
+      const { publicUrl } = await uploadToR2({
+        file,
+        folder,
+        onProgress: (percent) => {
+          setItems(prev => prev.map((it, idx) => idx === index ? { ...it, percent } : it));
+        },
+      });
+
+      await supabase.from("tracks").insert({
+        title,
+        artist: artist !== "Unknown Artist" ? artist : displayName,
+        duration,
+        audio_url: isVideo ? null : publicUrl,
+        video_url: isVideo ? publicUrl : null,
+        cover_url: null,
+        genre: null,
+        mood: null,
+        user_id: user.id,
+      });
+
+      setItems(prev => prev.map((it, idx) => idx === index ? { ...it, status: "done", percent: 100 } : it));
+      return true;
+    } catch (err: any) {
+      console.error("Upload error:", file.name, err);
+      setItems(prev => prev.map((it, idx) => idx === index
+        ? { ...it, status: "error", error: err.message || "Błąd" } : it));
+      return false;
     }
-    if (newItems.length === 0) {
+  }, [user]);
+
+  const startUpload = useCallback(async (files: File[]) => {
+    if (!user) {
+      toast.error("Zaloguj się, aby przesyłać pliki");
+      return;
+    }
+
+    const validFiles = files.filter(f => {
+      if (!isAllowedMediaFile(f, MAX_UPLOAD_SIZE_BYTES)) return false;
+      if (f.size > MAX_UPLOAD_SIZE_BYTES || f.size < 1000) return false;
+      return true;
+    });
+
+    if (validFiles.length === 0) {
       toast.error("Brak obsługiwanych plików audio lub wideo");
       return;
     }
+
+    const newItems: UploadItem[] = validFiles.map(f => {
+      const { title, artist } = parseFilename(f);
+      return { file: f, title, artist, status: "uploading" as const, percent: 0 };
+    });
+
+    const startIndex = items.length;
     setItems(prev => [...prev, ...newItems]);
-  }, []);
+    setUploading(true);
+
+    let successCount = 0;
+    for (let i = 0; i < validFiles.length; i++) {
+      const ok = await uploadSingleFile(validFiles[i], startIndex + i);
+      if (ok) successCount++;
+    }
+
+    setUploading(false);
+    if (successCount > 0) {
+      toast.success(`Przesłano ${successCount} ${successCount === 1 ? "utwór" : "utworów"}!`);
+      onSuccess?.();
+    }
+    if (successCount === validFiles.length) {
+      setTimeout(() => handleClose(), 1500);
+    }
+  }, [user, items.length, uploadSingleFile, onSuccess]);
+
+  const addFiles = useCallback((fileList: FileList | File[]) => {
+    startUpload(Array.from(fileList));
+  }, [startUpload]);
 
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -77,23 +170,17 @@ export const FileUploadModal = ({ isOpen, onClose, onSuccess }: FileUploadModalP
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
-
     const fileList: File[] = [];
     if (e.dataTransfer.items) {
       for (const item of Array.from(e.dataTransfer.items)) {
-        const entry = item.webkitGetAsEntry?.();
-        if (entry) {
-          // For drag-drop folders we collect files from dataTransfer.files
-          // webkitGetAsEntry doesn't easily give us files recursively in sync
-        }
         const f = item.getAsFile();
         if (f) fileList.push(f);
       }
     }
-    if (fileList.length === 0 && e.dataTransfer.files.length > 0) {
-      addFiles(e.dataTransfer.files);
-    } else if (fileList.length > 0) {
+    if (fileList.length > 0) {
       addFiles(fileList);
+    } else if (e.dataTransfer.files.length > 0) {
+      addFiles(e.dataTransfer.files);
     }
   }, [addFiles]);
 
@@ -104,79 +191,14 @@ export const FileUploadModal = ({ isOpen, onClose, onSuccess }: FileUploadModalP
     e.target.value = "";
   };
 
-  const removeItem = (index: number) => {
-    setItems(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const handleUploadAll = async () => {
-    if (!user) {
-      toast.error("Zaloguj się, aby przesyłać pliki");
-      return;
-    }
-    if (items.length === 0) return;
-
-    setUploading(true);
-    setUploadedCount(0);
-    let successCount = 0;
-
-    for (let i = 0; i < items.length; i++) {
-      const item = items[i];
-      if (item.status === "done") { successCount++; continue; }
-
-      setItems(prev => prev.map((it, idx) => idx === i ? { ...it, status: "uploading" } : it));
-
-      try {
-        // Upload to R2
-        const isVideo = isVideoLikeFile(item.file);
-        const folder = isVideo ? "videos" : "tracks";
-        const { publicUrl } = await uploadToR2({
-          file: item.file,
-          folder,
-        });
-
-        const { error: insertError } = await supabase.from("tracks").insert({
-          title: item.title,
-          artist: item.artist,
-          genre: null,
-          duration: 180,
-          audio_url: isVideo ? null : publicUrl,
-          video_url: isVideo ? publicUrl : null,
-          cover_url: null,
-          mood: null,
-        });
-
-        if (insertError) throw insertError;
-
-        setItems(prev => prev.map((it, idx) => idx === i ? { ...it, status: "done" } : it));
-        successCount++;
-        setUploadedCount(successCount);
-      } catch (err: any) {
-        console.error("Upload error for", item.file.name, err);
-        setItems(prev => prev.map((it, idx) => idx === i 
-          ? { ...it, status: "error", error: err.message || "Błąd" } : it));
-      }
-    }
-
-    setUploading(false);
-    if (successCount > 0) {
-      toast.success(`Przesłano ${successCount} ${successCount === 1 ? "utwór" : "utworów"} do biblioteki!`);
-      onSuccess?.();
-    }
-    if (successCount === items.length) {
-      setTimeout(() => handleClose(), 1200);
-    }
-  };
-
   const handleClose = () => {
     if (uploading) return;
     setItems([]);
-    setUploadedCount(0);
     onClose();
   };
 
   if (!isOpen) return null;
 
-  const pendingCount = items.filter(i => i.status === "pending" || i.status === "error").length;
   const doneCount = items.filter(i => i.status === "done").length;
   const totalProgress = items.length > 0 ? Math.round((doneCount / items.length) * 100) : 0;
 
@@ -202,7 +224,7 @@ export const FileUploadModal = ({ isOpen, onClose, onSuccess }: FileUploadModalP
               <div className="p-1.5 rounded-lg bg-primary/10">
                 <Upload className="h-4 w-4 text-primary" />
               </div>
-              <h2 className="text-lg font-bold">Prześlij muzykę</h2>
+              <h2 className="text-lg font-bold">Wrzuć na serwer</h2>
             </div>
             <button onClick={handleClose} disabled={uploading} className="p-1.5 rounded-lg hover:bg-secondary transition-colors">
               <X className="h-4 w-4" />
@@ -229,9 +251,9 @@ export const FileUploadModal = ({ isOpen, onClose, onSuccess }: FileUploadModalP
                   <Music className="h-10 w-10 text-muted-foreground" />
                 </motion.div>
                 <div>
-                  <p className="font-medium text-sm">Przeciągnij pliki lub katalogi tutaj</p>
+                  <p className="font-medium text-sm">Wybierz pliki — upload startuje od razu</p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    MP3, WAV, FLAC, MP4, MOV, MKV, AVI, WMV, FLV, TS, M2TS — do 500MB/plik
+                    MP3, WAV, FLAC, MP4, MOV, MKV — do 500MB/plik
                   </p>
                 </div>
                 <div className="flex gap-2 mt-1">
@@ -239,6 +261,7 @@ export const FileUploadModal = ({ isOpen, onClose, onSuccess }: FileUploadModalP
                     size="sm"
                     variant="outline"
                     className="gap-1.5 text-xs"
+                    disabled={uploading}
                     onClick={() => fileInputRef.current?.click()}
                   >
                     <Upload className="h-3.5 w-3.5" />
@@ -248,6 +271,7 @@ export const FileUploadModal = ({ isOpen, onClose, onSuccess }: FileUploadModalP
                     size="sm"
                     variant="outline"
                     className="gap-1.5 text-xs"
+                    disabled={uploading}
                     onClick={() => folderInputRef.current?.click()}
                   >
                     <FolderOpen className="h-3.5 w-3.5" />
@@ -259,7 +283,7 @@ export const FileUploadModal = ({ isOpen, onClose, onSuccess }: FileUploadModalP
               <input
                 ref={fileInputRef}
                 type="file"
-                 accept={MEDIA_FILE_ACCEPT}
+                accept={MEDIA_FILE_ACCEPT}
                 multiple
                 onChange={handleFileSelect}
                 className="hidden"
@@ -267,7 +291,7 @@ export const FileUploadModal = ({ isOpen, onClose, onSuccess }: FileUploadModalP
               <input
                 ref={folderInputRef}
                 type="file"
-                // @ts-ignore - webkitdirectory is not in types
+                // @ts-ignore
                 webkitdirectory=""
                 // @ts-ignore
                 directory=""
@@ -281,7 +305,7 @@ export const FileUploadModal = ({ isOpen, onClose, onSuccess }: FileUploadModalP
             {items.length > 0 && (
               <div className="space-y-1.5 max-h-48 overflow-y-auto">
                 <p className="text-xs font-medium text-muted-foreground">
-                  {items.length} {items.length === 1 ? "plik" : "plików"} • {doneCount} gotowe
+                  {doneCount}/{items.length} gotowe {uploading && "• przesyłanie..."}
                 </p>
                 {items.map((item, idx) => (
                   <div
@@ -291,36 +315,28 @@ export const FileUploadModal = ({ isOpen, onClose, onSuccess }: FileUploadModalP
                       item.status === "done" && "bg-green-500/10",
                       item.status === "error" && "bg-destructive/10",
                       item.status === "uploading" && "bg-primary/10",
-                      item.status === "pending" && "bg-secondary/50",
                     )}
                   >
                     {item.status === "uploading" && <Loader2 className="h-3.5 w-3.5 animate-spin text-primary shrink-0" />}
                     {item.status === "done" && <CheckCircle className="h-3.5 w-3.5 text-green-500 shrink-0" />}
                     {item.status === "error" && <AlertCircle className="h-3.5 w-3.5 text-destructive shrink-0" />}
-                    {item.status === "pending" && <Music className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
                     <span className="truncate flex-1">
                       {item.artist !== "Unknown Artist" ? `${item.artist} — ${item.title}` : item.title}
                     </span>
+                    {item.status === "uploading" && (
+                      <span className="text-primary shrink-0 font-medium">{item.percent}%</span>
+                    )}
                     <span className="text-muted-foreground shrink-0">
                       {(item.file.size / 1024 / 1024).toFixed(1)}MB
                     </span>
-                    {!uploading && item.status !== "uploading" && (
-                      <button onClick={() => removeItem(idx)} className="shrink-0 hover:text-destructive">
-                        <X className="h-3 w-3" />
-                      </button>
-                    )}
                   </div>
                 ))}
               </div>
             )}
 
             {/* Progress */}
-            {uploading && (
+            {items.length > 0 && (
               <div className="space-y-1">
-                <div className="flex justify-between text-xs">
-                  <span>Przesyłanie... {uploadedCount}/{items.length}</span>
-                  <span>{totalProgress}%</span>
-                </div>
                 <div className="h-2 bg-secondary rounded-full overflow-hidden">
                   <motion.div
                     className="h-full bg-primary"
@@ -333,27 +349,9 @@ export const FileUploadModal = ({ isOpen, onClose, onSuccess }: FileUploadModalP
           </div>
 
           {/* Footer */}
-          <div className="flex justify-between gap-2 p-4 border-t border-border bg-secondary/30 shrink-0">
+          <div className="flex justify-end p-4 border-t border-border bg-secondary/30 shrink-0">
             <Button variant="outline" size="sm" onClick={handleClose} disabled={uploading}>
-              Anuluj
-            </Button>
-            <Button
-              size="sm"
-              onClick={handleUploadAll}
-              disabled={uploading || pendingCount === 0}
-              className="gap-2"
-            >
-              {uploading ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Przesyłanie...
-                </>
-              ) : (
-                <>
-                  <Upload className="h-4 w-4" />
-                  Prześlij {pendingCount > 0 ? `(${pendingCount})` : ""}
-                </>
-              )}
+              {uploading ? "Przesyłanie..." : "Zamknij"}
             </Button>
           </div>
         </motion.div>
