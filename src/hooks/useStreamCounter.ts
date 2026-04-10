@@ -9,7 +9,8 @@ import { supabase } from "@/integrations/supabase/client";
 export function useStreamCounter(
   trackId: string | null,
   isPlaying: boolean,
-  userId: string | null
+  userId: string | null,
+  source: string = "direct"
 ) {
   const elapsedRef = useRef(0);
   const countedRef = useRef<string | null>(null);
@@ -39,9 +40,10 @@ export function useStreamCounter(
           _track_id: trackId,
           _user_id: userId,
           _duration_played: elapsedRef.current,
+          _source: source,
         }).then(({ error }) => {
           if (error) console.error("[StreamCounter] Error:", error);
-          else console.log("[StreamCounter] Stream recorded for track:", trackId);
+          else console.log("[StreamCounter] Stream recorded for track:", trackId, "source:", source);
         });
       }
     }, 1000);
@@ -49,5 +51,5 @@ export function useStreamCounter(
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [isPlaying, trackId, userId]);
+  }, [isPlaying, trackId, userId, source]);
 }
