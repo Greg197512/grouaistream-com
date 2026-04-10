@@ -28,8 +28,8 @@ interface PlayerContextType {
   isShuffled: boolean;
   repeatMode: 'off' | 'all' | 'one';
   queue: Track[];
-  playTrack: (track: Track) => void;
-  playPlaylist: (tracks: Track[], startIndex?: number) => void;
+  playTrack: (track: Track, source?: string) => void;
+  playPlaylist: (tracks: Track[], startIndex?: number, source?: string) => void;
   togglePlay: () => void;
   pausePlayback: () => void;
   resumePlayback: () => void;
@@ -376,18 +376,19 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [repeatMode, nextTrackInternal]);
 
-  const playTrack = (track: Track) => {
+  const playTrack = (track: Track, source: string = "direct") => {
     if (!hasPlayableSource(track)) {
       toast.error("Ten utwór nie ma dostępnego źródła audio/video");
       return;
     }
 
+    setStreamSource(source);
     setCurrentTrack(track);
     setQueue([track]);
     setQueueIndex(0);
   };
 
-  const playPlaylist = (tracks: Track[], startIndex = 0) => {
+  const playPlaylist = (tracks: Track[], startIndex = 0, source: string = "playlist") => {
     const playableTracks = tracks.filter(hasPlayableSource);
     if (playableTracks.length === 0) {
       toast.error("Brak odtwarzalnych utworów w tej liście");
@@ -399,6 +400,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
       ? playableTracks.findIndex((track) => track.id === requestedTrack.id)
       : 0;
 
+    setStreamSource(source);
     setQueue(playableTracks);
     setQueueIndex(playableStartIndex >= 0 ? playableStartIndex : 0);
     setCurrentTrack(playableTracks[playableStartIndex >= 0 ? playableStartIndex : 0]);
