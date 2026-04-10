@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { BoostPurchaseModal } from "@/components/boost/BoostPurchaseModal";
 import { TrackBadges } from "@/components/ui/TrackBadges";
+import { StreamBreakdown } from "@/components/earnings/StreamBreakdown";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -324,6 +325,9 @@ const CreatorEarnings = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* Stream Breakdown */}
+        <StreamBreakdown userId={user.id} />
 
         <Separator className="bg-white/10" />
 
