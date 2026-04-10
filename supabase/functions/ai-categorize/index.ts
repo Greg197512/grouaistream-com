@@ -194,10 +194,15 @@ Be fast. Polish punk bands (Para Wino, Nauka O Gównie, The Analogs) → Punk.`
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
-    console.error("AI Categorize error:", error);
+    const isAbort = error instanceof DOMException && error.name === "AbortError";
+    console.error("AI Categorize error:", isAbort ? "TIMEOUT after 12s" : error);
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({ 
+        error: isAbort ? "AI analysis timed out – try again" : (error instanceof Error ? error.message : "Unknown error"),
+        categorized: 0,
+        total: 0,
+      }),
+      { status: isAbort ? 504 : 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
