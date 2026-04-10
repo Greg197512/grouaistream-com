@@ -76,32 +76,38 @@ serve(async (req) => {
       `- "${t.title}" by ${t.artist} (genre: ${t.genre || "unknown"}, mood: ${t.mood || "unknown"}, duration: ${t.duration || 0}s)`
     ).join("\n");
 
+    // 12s timeout for AI gateway call
+    const controller = new AbortController();
+    const aiTimeout = setTimeout(() => controller.abort(), 12000);
+
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
+      signal: controller.signal,
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "google/gemini-2.5-flash-lite",
         messages: [
           {
             role: "system",
-            content: `You are a music metadata expert and DJ. For EVERY track, you MUST provide:
-1. genre - Use standard genres: Rock, Pop, Punk, Pop-Punk, Metal, Electronic, Hip-Hop, R&B, Jazz, Classical, Country, Reggae, Blues, Folk, Indie, Alternative, Dance, Ambient, Soundtrack, Latin, Rap, Trap, Techno, House, Drum & Bass, Lo-Fi, Grunge, Emo, Hardcore, Ska, Funk, Soul, Disco, Synthwave, New Wave, Other
+            content: `You are a music metadata expert. For EVERY track provide:
+1. genre - Standard genres: Rock, Pop, Punk, Pop-Punk, Metal, Electronic, Hip-Hop, R&B, Jazz, Classical, Country, Reggae, Blues, Folk, Indie, Alternative, Dance, Ambient, Soundtrack, Latin, Rap, Trap, Techno, House, Drum & Bass, Lo-Fi, Grunge, Emo, Hardcore, Ska, Funk, Soul, Disco, Synthwave, New Wave, Other
 2. mood - One of: happy, sad, energetic, calm, romantic, aggressive, melancholic, uplifting, dark, chill, nostalgic, party, focus, dreamy
-3. estimated_duration - Estimated duration in seconds based on song title/artist (typical song: 180-300s, punk: 120-200s, album/compilation: 2400-3600s). If duration is already > 30, keep existing.
-4. cover_prompt - A detailed image generation prompt for album cover art, artistic and matching the genre/mood. Example: "dark gothic punk album art with skulls and chains, neon colors, grunge texture"
-
-IMPORTANT: Always categorize even Polish punk, street punk, oi punk bands correctly. Bands like "Para Wino", "Nauka O Gównie", "The Analogs" are Punk/Street Punk/Oi.`
+3. estimated_duration - Estimated seconds (typical: 180-300s, punk: 120-200s). If duration already > 30, keep existing.
+4. cover_prompt - Short image prompt for album cover art matching genre/mood.
+Be fast. Polish punk bands (Para Wino, Nauka O Gównie, The Analogs) → Punk.`
           },
           {
             role: "user",
-            content: `Categorize ALL these tracks. Return JSON array:\n${trackList}\n\nFormat: [{"title": "...", "genre": "Punk", "mood": "aggressive", "estimated_duration": 180, "cover_prompt": "punk album art..."}]`
+            content: `Categorize:\n${trackList}\n\nReturn JSON array: [{"title":"...","genre":"...","mood":"...","estimated_duration":180,"cover_prompt":"..."}]`
           }
         ],
       }),
     });
+
+    clearTimeout(aiTimeout);
 
     if (!response.ok) {
       if (response.status === 429) {
