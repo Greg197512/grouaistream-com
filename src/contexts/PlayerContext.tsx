@@ -85,11 +85,12 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   const [isVideoMode, setIsVideoMode] = useState(false);
   const [youtubeVideoId, setYoutubeVideoId] = useState<string | null>(null);
   const [skipAnalysis, setSkipAnalysis] = useState({ avoidGenres: [] as string[], avoidMoods: [] as string[], recentSkipCount: 0, consecutiveSkips: 0 });
+  const [streamSource, setStreamSource] = useState<string>("direct");
 
   const { recordSkip, getSkipAnalysis, triggerAIAdaptation } = useSkipAdaptation();
 
   // Stream counter — counts a stream after 30s of continuous playback
-  useStreamCounter(currentTrack?.id ?? null, isPlaying, userId);
+  useStreamCounter(currentTrack?.id ?? null, isPlaying, userId, streamSource);
 
   // Keep refs in sync
   useEffect(() => { isVideoModeRef.current = isVideoMode; }, [isVideoMode]);
