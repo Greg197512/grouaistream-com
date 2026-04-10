@@ -894,24 +894,30 @@ export type Database = {
       stream_events: {
         Row: {
           counted: boolean
+          country: string | null
           duration_played: number
           id: string
+          source: string | null
           streamed_at: string
           track_id: string
           user_id: string
         }
         Insert: {
           counted?: boolean
+          country?: string | null
           duration_played?: number
           id?: string
+          source?: string | null
           streamed_at?: string
           track_id: string
           user_id: string
         }
         Update: {
           counted?: boolean
+          country?: string | null
           duration_played?: number
           id?: string
+          source?: string | null
           streamed_at?: string
           track_id?: string
           user_id?: string
@@ -1306,10 +1312,24 @@ export type Database = {
           read_ct: number
         }[]
       }
-      record_stream: {
-        Args: { _duration_played: number; _track_id: string; _user_id: string }
-        Returns: undefined
-      }
+      record_stream:
+        | {
+            Args: {
+              _duration_played: number
+              _track_id: string
+              _user_id: string
+            }
+            Returns: undefined
+          }
+        | {
+            Args: {
+              _duration_played: number
+              _source?: string
+              _track_id: string
+              _user_id: string
+            }
+            Returns: undefined
+          }
       sync_profile_membership: {
         Args: { _user_id: string }
         Returns: {
