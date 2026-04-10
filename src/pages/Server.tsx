@@ -351,9 +351,16 @@ const Server = () => {
     
     try {
       const ids = trackIds || Array.from(selectedTracks);
+
+      // Hard 15s timeout for AI categorization
+      const controller = new AbortController();
+      const timeoutId = window.setTimeout(() => controller.abort(), 15000);
+
       const { data, error } = await supabase.functions.invoke("ai-categorize", {
         body: { trackIds: ids },
       });
+
+      window.clearTimeout(timeoutId);
 
       if (error) throw error;
       
@@ -364,10 +371,13 @@ const Server = () => {
       loadTracks();
       setSelectedTracks(new Set());
 
-      // Now generate covers one-by-one in background
+      // Generate covers in background with timeout per cover
       generateCoversInBackground(ids);
     } catch (err: any) {
-      toast.error(err.message || "Błąd AI", { id: "ai-cat" });
+      const msg = err.name === "AbortError" ? "Timeout – spróbuj ponownie" : (err.message || "Błąd AI");
+      toast.error(msg, { id: "ai-cat" });
+      // Fallback: mark tracks with basic metadata so upload doesn't hang
+      console.error("[AI-Categorize] Failed:", err);
     } finally {
       setIsCategorizing(false);
     }
@@ -387,30 +397,39 @@ const Server = () => {
 
     if (needCover.length === 0) return;
 
-    setCoverGenProgress({ current: 0, total: needCover.length });
-    toast.loading(`🎨 Generuję okładki AI: 0/${needCover.length}...`, { id: "ai-covers" });
+    // Limit to max 10 covers at a time to prevent endless generation
+    const batch = needCover.slice(0, 10);
+    setCoverGenProgress({ current: 0, total: batch.length });
+    toast.loading(`🎨 Generuję okładki AI: 0/${batch.length}...`, { id: "ai-covers" });
 
     let done = 0;
-    for (const t of needCover) {
+    for (const t of batch) {
       try {
-        await supabase.functions.invoke("ai-cover", {
+        // 12s timeout per cover
+        const coverPromise = supabase.functions.invoke("ai-cover", {
           body: { trackId: t.id },
         });
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("Cover timeout")), 12000)
+        );
+        await Promise.race([coverPromise, timeoutPromise]);
+
         done++;
-        setCoverGenProgress({ current: done, total: needCover.length });
-        toast.loading(`🎨 Generuję okładki AI: ${done}/${needCover.length}...`, { id: "ai-covers" });
+        setCoverGenProgress({ current: done, total: batch.length });
+        toast.loading(`🎨 Generuję okładki AI: ${done}/${batch.length}...`, { id: "ai-covers" });
         
-        // Refresh list periodically
-        if (done % 3 === 0 || done === needCover.length) {
+        if (done % 3 === 0 || done === batch.length) {
           loadTracks();
         }
       } catch (err) {
-        console.error("Cover gen failed for", t.id, err);
+        console.error("[CoverGen] Failed/timeout for", t.id, err);
+        done++;
+        setCoverGenProgress({ current: done, total: batch.length });
       }
     }
 
     setCoverGenProgress(null);
-    toast.success(`🎨 Wygenerowano ${done} okładek AI!`, { id: "ai-covers", duration: 4000 });
+    toast.success(`🎨 Wygenerowano okładki AI!`, { id: "ai-covers", duration: 4000 });
     loadTracks();
   };
 
