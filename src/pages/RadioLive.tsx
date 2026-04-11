@@ -117,15 +117,19 @@ const RadioLive = () => {
   // Fetch config + schedule
   useEffect(() => {
     const fetchData = async () => {
-      const [configRes, scheduleRes] = await Promise.all([
-        supabase.from("radio_config").select("*").limit(1).single(),
-        supabase
-          .from("radio_schedule")
-          .select("position, item_type, custom_title, custom_duration, custom_audio_url, track:tracks(id, title, artist, duration, audio_url, cover_url)")
-          .order("position", { ascending: true }),
-      ]);
-      if (configRes.data) setConfig(configRes.data as any);
-      if (scheduleRes.data) setSchedule(scheduleRes.data as any);
+      try {
+        const [configRes, scheduleRes] = await Promise.all([
+          supabase.from("radio_config").select("*").limit(1).single(),
+          supabase
+            .from("radio_schedule")
+            .select("position, item_type, custom_title, custom_duration, custom_audio_url, track:tracks(id, title, artist, duration, audio_url, cover_url)")
+            .order("position", { ascending: true }),
+        ]);
+        if (configRes.data) setConfig(configRes.data as any);
+        if (scheduleRes.data) setSchedule(scheduleRes.data as any);
+      } finally {
+        setIsLoading(false);
+      }
     };
     fetchData();
   }, []);
