@@ -769,13 +769,17 @@ const RadioLive = () => {
           </div>
         )}
 
-        {/* Mood Detection Module */}
-        <RadioMoodDetector />
-
-        {/* Verified Human Streams */}
-        <VerifiedStreamsCard />
-
         <p className="text-center text-xs text-muted-foreground">{t("radio.poweredBy")}</p>
+        </div>
+
+        {/* Right column: AI panels */}
+        <div className="space-y-4">
+          {/* Mood Detection Module */}
+          <RadioMoodDetector />
+
+          {/* Verified Human Streams */}
+          <VerifiedStreamsCard />
+        </div>
       </motion.div>
     </div>
   );
