@@ -123,7 +123,8 @@ const RadioLive = () => {
           supabase
             .from("radio_schedule")
             .select("position, item_type, custom_title, custom_duration, custom_audio_url, track:tracks(id, title, artist, duration, audio_url, cover_url)")
-            .order("position", { ascending: true }),
+            .order("position", { ascending: true })
+            .limit(500),
         ]);
         if (configRes.data) setConfig(configRes.data as any);
         if (scheduleRes.data) setSchedule(scheduleRes.data as any);
