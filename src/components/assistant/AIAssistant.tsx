@@ -452,11 +452,24 @@ export const AIAssistant = () => {
 
     try {
       const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-assistant`;
+      const {
+        data: { session: activeSession },
+      } = await supabase.auth.getSession();
+
+      if (!activeSession?.access_token) {
+        setMessages(prev => [...prev, {
+          role: "assistant",
+          content: "Zaloguj się, aby korzystać z asystenta tekstowego. 🔐"
+        }]);
+        return;
+      }
+
       const resp = await fetch(url, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          Authorization: `Bearer ${activeSession.access_token}`,
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
         },
         body: JSON.stringify({ 
           message: userMessage + saveInfoForAI, 
@@ -467,6 +480,13 @@ export const AIAssistant = () => {
       });
 
       if (!resp.ok) {
+        if (resp.status === 401) {
+          setMessages(prev => [...prev, {
+            role: "assistant",
+            content: "Twoja sesja wygasła albo nie jest aktywna. Zaloguj się ponownie. 🔐"
+          }]);
+          return;
+        }
         throw new Error(`Error ${resp.status}`);
       }
 
