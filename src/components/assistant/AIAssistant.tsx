@@ -452,11 +452,21 @@ export const AIAssistant = () => {
 
     try {
       const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-assistant`;
+      
+      // Use session token if logged in, fallback to anon key
+      let authToken = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.access_token) {
+          authToken = session.access_token;
+        }
+      } catch {}
+      
       const resp = await fetch(url, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          Authorization: `Bearer ${authToken}`,
         },
         body: JSON.stringify({ 
           message: userMessage + saveInfoForAI, 
