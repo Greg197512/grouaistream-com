@@ -411,6 +411,19 @@ const RadioLive = () => {
     return `${d.getHours().toString().padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")}`;
   };
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center space-y-4">
+          <div className="h-16 w-16 rounded-full groove-gradient-bg flex items-center justify-center mx-auto animate-pulse">
+            <Radio className="h-8 w-8 text-primary-foreground" />
+          </div>
+          <p className="text-muted-foreground text-sm">Ładowanie radia...</p>
+        </motion.div>
+      </div>
+    );
+  }
+
   if (isOffAir || !isInSchedule()) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
