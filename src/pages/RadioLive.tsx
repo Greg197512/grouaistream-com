@@ -76,6 +76,7 @@ const RadioLive = () => {
   const { t } = useLanguage();
   const [config, setConfig] = useState<RadioConfig | null>(null);
   const [schedule, setSchedule] = useState<ScheduleTrack[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [autoplayBlocked, setAutoplayBlocked] = useState(false);
@@ -115,18 +116,33 @@ const RadioLive = () => {
 
   // Fetch config + schedule
   useEffect(() => {
+    let cancelled = false;
+    const timeout = setTimeout(() => {
+      if (!cancelled) setIsLoading(false);
+    }, 10000);
+
     const fetchData = async () => {
-      const [configRes, scheduleRes] = await Promise.all([
-        supabase.from("radio_config").select("*").limit(1).single(),
-        supabase
+      try {
+        const configRes = await supabase.from("radio_config").select("*").limit(1).single();
+        if (cancelled) return;
+        if (configRes.data) setConfig(configRes.data as any);
+
+        const scheduleRes = await supabase
           .from("radio_schedule")
           .select("position, item_type, custom_title, custom_duration, custom_audio_url, track:tracks(id, title, artist, duration, audio_url, cover_url)")
-          .order("position", { ascending: true }),
-      ]);
-      if (configRes.data) setConfig(configRes.data as any);
-      if (scheduleRes.data) setSchedule(scheduleRes.data as any);
+          .order("position", { ascending: true })
+          .limit(200);
+        if (cancelled) return;
+        if (scheduleRes.data) setSchedule(scheduleRes.data as any);
+      } catch (err) {
+        console.error("[RadioLive] Fetch error:", err);
+      } finally {
+        clearTimeout(timeout);
+        if (!cancelled) setIsLoading(false);
+      }
     };
     fetchData();
+    return () => { cancelled = true; clearTimeout(timeout); };
   }, []);
 
   // Fetch likes count for current track
@@ -405,6 +421,19 @@ const RadioLive = () => {
     const d = new Date(dateStr);
     return `${d.getHours().toString().padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")}`;
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center space-y-4">
+          <div className="h-16 w-16 rounded-full groove-gradient-bg flex items-center justify-center mx-auto animate-pulse">
+            <Radio className="h-8 w-8 text-primary-foreground" />
+          </div>
+          <p className="text-muted-foreground text-sm">Ładowanie radia...</p>
+        </motion.div>
+      </div>
+    );
+  }
 
   if (isOffAir || !isInSchedule()) {
     return (
