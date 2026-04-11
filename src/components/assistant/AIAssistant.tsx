@@ -456,14 +456,22 @@ export const AIAssistant = () => {
         data: { session: activeSession },
       } = await supabase.auth.getSession();
 
-      if (!activeSession?.access_token) {
-        setMessages(prev => [...prev, {
-          role: "assistant",
-          content: "Zaloguj się, aby korzystać z asystenta tekstowego. 🔐"
-        }]);
-        setIsLoading(false);
-        return;
-      }
+      const authToken = activeSession?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
+      const resp = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        },
+        body: JSON.stringify({ 
+          message: userMessage + saveInfoForAI, 
+          history: messages, 
+          userContext,
+          attachments: uploadedAttachments.length > 0 ? uploadedAttachments.map(a => ({ type: a.type, url: a.url, name: a.name })) : undefined,
+        }),
+      });
 
       const resp = await fetch(url, {
         method: "POST",
