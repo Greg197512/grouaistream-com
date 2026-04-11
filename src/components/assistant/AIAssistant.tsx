@@ -461,6 +461,7 @@ export const AIAssistant = () => {
           role: "assistant",
           content: "Zaloguj się, aby korzystać z asystenta tekstowego. 🔐"
         }]);
+        setIsLoading(false);
         return;
       }
 
