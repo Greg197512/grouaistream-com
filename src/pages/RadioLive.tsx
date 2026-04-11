@@ -116,28 +116,28 @@ const RadioLive = () => {
 
   // Fetch config + schedule
   useEffect(() => {
+    let cancelled = false;
     const fetchData = async () => {
       try {
-        console.log("[RadioLive] Fetching config + schedule...");
-        const [configRes, scheduleRes] = await Promise.all([
-          supabase.from("radio_config").select("*").limit(1).single(),
-          supabase
-            .from("radio_schedule")
-            .select("position, item_type, custom_title, custom_duration, custom_audio_url, track:tracks(id, title, artist, duration, audio_url, cover_url)")
-            .order("position", { ascending: true })
-            .limit(500),
-        ]);
-        console.log("[RadioLive] Config:", configRes.data ? "OK" : configRes.error?.message);
-        console.log("[RadioLive] Schedule:", scheduleRes.data?.length || 0, "items", scheduleRes.error?.message || "");
+        const configRes = await supabase.from("radio_config").select("*").limit(1).single();
+        if (cancelled) return;
         if (configRes.data) setConfig(configRes.data as any);
+
+        const scheduleRes = await supabase
+          .from("radio_schedule")
+          .select("position, item_type, custom_title, custom_duration, custom_audio_url, track:tracks(id, title, artist, duration, audio_url, cover_url)")
+          .order("position", { ascending: true })
+          .limit(200);
+        if (cancelled) return;
         if (scheduleRes.data) setSchedule(scheduleRes.data as any);
       } catch (err) {
         console.error("[RadioLive] Fetch error:", err);
       } finally {
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       }
     };
     fetchData();
+    return () => { cancelled = true; };
   }, []);
 
   // Fetch likes count for current track
