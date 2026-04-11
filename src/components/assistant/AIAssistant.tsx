@@ -473,29 +473,7 @@ export const AIAssistant = () => {
         }),
       });
 
-      const resp = await fetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${activeSession.access_token}`,
-          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-        },
-        body: JSON.stringify({ 
-          message: userMessage + saveInfoForAI, 
-          history: messages, 
-          userContext,
-          attachments: uploadedAttachments.length > 0 ? uploadedAttachments.map(a => ({ type: a.type, url: a.url, name: a.name })) : undefined,
-        }),
-      });
-
       if (!resp.ok) {
-        if (resp.status === 401) {
-          setMessages(prev => [...prev, {
-            role: "assistant",
-            content: "Twoja sesja wygasła albo nie jest aktywna. Zaloguj się ponownie. 🔐"
-          }]);
-          return;
-        }
         throw new Error(`Error ${resp.status}`);
       }
 
