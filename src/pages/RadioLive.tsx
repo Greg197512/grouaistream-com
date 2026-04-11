@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import { Radio, Wifi, Music, Volume2, VolumeX, ArrowLeft, Heart, Sparkles, MessageCircle, Send, X, Trash2, Smile, Play } from "lucide-react";
+import { RadioMoodDetector } from "@/components/radio/RadioMoodDetector";
+import { VerifiedStreamsCard } from "@/components/radio/VerifiedStreamsCard";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -735,6 +737,12 @@ const RadioLive = () => {
             </div>
           </div>
         )}
+
+        {/* Mood Detection Module */}
+        <RadioMoodDetector />
+
+        {/* Verified Human Streams */}
+        <VerifiedStreamsCard />
 
         <p className="text-center text-xs text-muted-foreground">{t("radio.poweredBy")}</p>
       </motion.div>
