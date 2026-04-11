@@ -118,6 +118,7 @@ const RadioLive = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        console.log("[RadioLive] Fetching config + schedule...");
         const [configRes, scheduleRes] = await Promise.all([
           supabase.from("radio_config").select("*").limit(1).single(),
           supabase
@@ -126,8 +127,12 @@ const RadioLive = () => {
             .order("position", { ascending: true })
             .limit(500),
         ]);
+        console.log("[RadioLive] Config:", configRes.data ? "OK" : configRes.error?.message);
+        console.log("[RadioLive] Schedule:", scheduleRes.data?.length || 0, "items", scheduleRes.error?.message || "");
         if (configRes.data) setConfig(configRes.data as any);
         if (scheduleRes.data) setSchedule(scheduleRes.data as any);
+      } catch (err) {
+        console.error("[RadioLive] Fetch error:", err);
       } finally {
         setIsLoading(false);
       }
