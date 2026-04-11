@@ -639,7 +639,9 @@ const RadioLive = () => {
         </div>
       )}
 
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-sm space-y-6 pb-12">
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-4xl grid grid-cols-1 md:grid-cols-[1fr_320px] gap-6 pb-12 items-start">
+        {/* Left column: Radio player */}
+        <div className="max-w-sm mx-auto md:mx-0 md:max-w-none space-y-6">
         {/* Station Header */}
         <div className="text-center space-y-2">
           <motion.div
@@ -767,13 +769,17 @@ const RadioLive = () => {
           </div>
         )}
 
-        {/* Mood Detection Module */}
-        <RadioMoodDetector />
-
-        {/* Verified Human Streams */}
-        <VerifiedStreamsCard />
-
         <p className="text-center text-xs text-muted-foreground">{t("radio.poweredBy")}</p>
+        </div>
+
+        {/* Right column: AI panels */}
+        <div className="space-y-4">
+          {/* Mood Detection Module */}
+          <RadioMoodDetector />
+
+          {/* Verified Human Streams */}
+          <VerifiedStreamsCard />
+        </div>
       </motion.div>
     </div>
   );
