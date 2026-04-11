@@ -117,6 +117,10 @@ const RadioLive = () => {
   // Fetch config + schedule
   useEffect(() => {
     let cancelled = false;
+    const timeout = setTimeout(() => {
+      if (!cancelled) setIsLoading(false);
+    }, 10000);
+
     const fetchData = async () => {
       try {
         const configRes = await supabase.from("radio_config").select("*").limit(1).single();
@@ -133,11 +137,12 @@ const RadioLive = () => {
       } catch (err) {
         console.error("[RadioLive] Fetch error:", err);
       } finally {
+        clearTimeout(timeout);
         if (!cancelled) setIsLoading(false);
       }
     };
     fetchData();
-    return () => { cancelled = true; };
+    return () => { cancelled = true; clearTimeout(timeout); };
   }, []);
 
   // Fetch likes count for current track
