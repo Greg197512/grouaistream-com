@@ -43,8 +43,8 @@ export const AuroraBackground = () => {
         className="absolute inset-0 bg-gradient-to-tr from-primary/10 via-transparent to-accent/10"
       />
 
-      {/* Floating particles */}
-      {Array.from({ length: 20 }).map((_, i) => (
+      {/* Floating particles — reduced from 20 to 8 for memory savings */}
+      {Array.from({ length: 8 }).map((_, i) => (
         <motion.div
           key={i}
           animate={{
@@ -53,17 +53,17 @@ export const AuroraBackground = () => {
             opacity: [0, 0.6, 0],
           }}
           transition={{
-            duration: 8 + Math.random() * 12,
+            duration: 10 + i * 2,
             repeat: Infinity,
-            delay: Math.random() * 10,
+            delay: i * 1.5,
             ease: "linear",
           }}
           className="absolute rounded-full"
           style={{
-            left: `${Math.random() * 100}%`,
-            bottom: `-${Math.random() * 50}px`,
-            width: `${1 + Math.random() * 3}px`,
-            height: `${1 + Math.random() * 3}px`,
+            left: `${(i / 8) * 100}%`,
+            bottom: `-${i * 5}px`,
+            width: `${1 + (i % 3)}px`,
+            height: `${1 + (i % 3)}px`,
             background: i % 2 === 0 
               ? 'hsl(var(--primary))' 
               : 'hsl(var(--accent))',
