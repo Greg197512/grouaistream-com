@@ -227,7 +227,7 @@ export const RadioStationManager = () => {
     }
   };
 
-
+  const addTrackToSchedule = async (track: any) => {
     const maxPos = schedule.length > 0 ? Math.max(...schedule.map((s) => s.position)) + 1 : 0;
     const { error } = await supabase.from("radio_schedule").insert({
       track_id: track.id,
