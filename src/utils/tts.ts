@@ -341,7 +341,7 @@ const speakBrowser = (text: string, opts?: {
   const mode = opts?.mode || "assistant";
   const requestedLang = opts?.lang || "pl-PL";
   const djDefaults = { rate: 1.22, pitch: 1.08 };
-  const assistantDefaults = { rate: 1.0, pitch: 0.85 };
+  const assistantDefaults = { rate: 0.95, pitch: 0.75 };
   const defaults = mode === "dj" ? djDefaults : assistantDefaults;
 
   const trySpeak = (voices: SpeechSynthesisVoice[]) => {
@@ -364,8 +364,8 @@ const speakBrowser = (text: string, opts?: {
         utterance.voice = selectedVoice;
         const isFemale = femaleKeywords.test(selectedVoice.name);
         if (isFemale || (!langMaleVoice && !langNonFemaleVoice && langAnyVoice === selectedVoice)) {
-          utterance.pitch = Math.min(opts?.pitch ?? 0.55, 0.55);
-          utterance.rate = opts?.rate ?? 0.92;
+          utterance.pitch = Math.min(opts?.pitch ?? 0.45, 0.45);
+          utterance.rate = opts?.rate ?? 0.90;
         }
       }
 
