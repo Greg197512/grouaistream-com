@@ -364,8 +364,8 @@ const speakBrowser = (text: string, opts?: {
         utterance.voice = selectedVoice;
         const isFemale = femaleKeywords.test(selectedVoice.name);
         if (isFemale || (!langMaleVoice && !langNonFemaleVoice && langAnyVoice === selectedVoice)) {
-          utterance.pitch = Math.min(opts?.pitch ?? 0.55, 0.55);
-          utterance.rate = opts?.rate ?? 0.92;
+          utterance.pitch = Math.min(opts?.pitch ?? 0.45, 0.45);
+          utterance.rate = opts?.rate ?? 0.90;
         }
       }
 
