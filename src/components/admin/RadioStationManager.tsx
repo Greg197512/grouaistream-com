@@ -459,6 +459,18 @@ export const RadioStationManager = () => {
                   {catalogLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Music className="h-4 w-4" />}
                   Z katalogu
                 </Button>
+                <Button onClick={() => fileInputRef.current?.click()} disabled={diskUploading} variant="outline" className="gap-1 shrink-0">
+                  {diskUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                  Z dysku
+                </Button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept={MEDIA_FILE_ACCEPT}
+                  multiple
+                  onChange={handleDiskUpload}
+                  className="hidden"
+                />
               </div>
 
               {/* Catalog browser */}
