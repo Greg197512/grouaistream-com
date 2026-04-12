@@ -253,11 +253,13 @@ export const speak = async (text: string, opts?: {
 
     if (!response.ok) {
       const errorBody = await response.text().catch(() => "");
+      const isFallback = errorBody.includes('"fallback":true') || errorBody.includes("fallback");
       const isQuotaExceeded = errorBody.includes("quota_exceeded");
-      if (isQuotaExceeded) {
-        console.warn("ElevenLabs quota exceeded, using browser TTS fallback");
+      if (isFallback || isQuotaExceeded) {
+        console.warn("ElevenLabs unavailable, using browser TTS fallback");
+        throw new Error("fallback_to_browser");
       }
-      throw new Error(`TTS API error: ${response.status}${isQuotaExceeded ? " (quota exceeded)" : ""}`);
+      throw new Error(`TTS API error: ${response.status}`);
     }
 
     const contentType = response.headers.get("content-type");
