@@ -212,8 +212,8 @@ export const RadioStationManager = () => {
           continue;
         }
 
-        // Add to radio schedule
-        await addTrackToSchedule(trackData);
+        // Add to radio schedule at position 0 (first place) — shift others down
+        await addTrackToScheduleFirst(trackData);
         added++;
       } catch (err: any) {
         console.error("Disk upload error:", file.name, err);
