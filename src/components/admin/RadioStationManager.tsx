@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -23,7 +23,11 @@ import {
   Mic,
   Megaphone,
   MessageSquare,
+  Upload,
 } from "lucide-react";
+import { uploadToR2 } from "@/lib/r2Upload";
+import { useAuth } from "@/contexts/AuthContext";
+import { isAllowedMediaFile, MAX_UPLOAD_SIZE_BYTES, MEDIA_FILE_ACCEPT } from "@/lib/mediaFormats";
 import { RadioTimeline } from "./RadioTimeline";
 import {
   Select,
@@ -63,6 +67,8 @@ interface ScheduleTrack {
 }
 
 export const RadioStationManager = () => {
+  const { user } = useAuth();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [config, setConfig] = useState<RadioConfig | null>(null);
   const [schedule, setSchedule] = useState<ScheduleTrack[]>([]);
   const [loading, setLoading] = useState(true);
@@ -74,6 +80,7 @@ export const RadioStationManager = () => {
   const [catalogOpen, setCatalogOpen] = useState(false);
   const [catalogPage, setCatalogPage] = useState(0);
   const CATALOG_PAGE_SIZE = 50;
+  const [diskUploading, setDiskUploading] = useState(false);
 
   // Custom item form
   const [customTitle, setCustomTitle] = useState("");
@@ -150,6 +157,74 @@ export const RadioStationManager = () => {
     setCatalogPage(page);
     setCatalogLoading(false);
     setCatalogOpen(true);
+  };
+
+  const handleDiskUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0 || !user) return;
+    e.target.value = "";
+
+    setDiskUploading(true);
+    let added = 0;
+
+    for (const file of Array.from(files)) {
+      if (!isAllowedMediaFile(file, MAX_UPLOAD_SIZE_BYTES)) continue;
+
+      try {
+        // Parse title from filename
+        const name = file.name.replace(/\.[^/.]+$/, "");
+        const parts = name.split(" - ");
+        const artist = parts.length >= 2 ? parts[0].trim() : "Unknown Artist";
+        const title = parts.length >= 2 ? parts.slice(1).join(" - ").trim() : name;
+
+        // Get duration
+        const duration = await new Promise<number>((resolve) => {
+          const url = URL.createObjectURL(file);
+          const audio = new Audio();
+          const tid = setTimeout(() => { URL.revokeObjectURL(url); resolve(180); }, 3000);
+          audio.preload = "metadata";
+          audio.onloadedmetadata = () => {
+            clearTimeout(tid);
+            const d = Math.round(audio.duration);
+            URL.revokeObjectURL(url);
+            resolve(Number.isFinite(d) && d > 0 ? d : 180);
+          };
+          audio.onerror = () => { clearTimeout(tid); URL.revokeObjectURL(url); resolve(180); };
+          audio.src = url;
+        });
+
+        // Upload to R2
+        toast.info(`Przesyłanie: ${title}...`);
+        const { publicUrl } = await uploadToR2({ file, folder: "tracks" });
+
+        // Create track in DB
+        const displayName = user.user_metadata?.display_name || user.email?.split("@")[0] || "Admin";
+        const { data: trackData, error: insertErr } = await supabase.from("tracks").insert({
+          title,
+          artist: artist !== "Unknown Artist" ? artist : displayName,
+          duration,
+          audio_url: publicUrl,
+          user_id: user.id,
+        }).select("id, title, artist, duration, audio_url, cover_url, genre").single();
+
+        if (insertErr || !trackData) {
+          toast.error(`Błąd zapisu: ${file.name}`);
+          continue;
+        }
+
+        // Add to radio schedule
+        await addTrackToSchedule(trackData);
+        added++;
+      } catch (err: any) {
+        console.error("Disk upload error:", file.name, err);
+        toast.error(`Błąd: ${file.name} — ${err.message || "nieznany"}`);
+      }
+    }
+
+    setDiskUploading(false);
+    if (added > 0) {
+      toast.success(`Dodano ${added} ${added === 1 ? "utwór" : "utworów"} z dysku do programu!`);
+    }
   };
 
   const addTrackToSchedule = async (track: any) => {
@@ -384,6 +459,18 @@ export const RadioStationManager = () => {
                   {catalogLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Music className="h-4 w-4" />}
                   Z katalogu
                 </Button>
+                <Button onClick={() => fileInputRef.current?.click()} disabled={diskUploading} variant="outline" className="gap-1 shrink-0">
+                  {diskUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                  Z dysku
+                </Button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept={MEDIA_FILE_ACCEPT}
+                  multiple
+                  onChange={handleDiskUpload}
+                  className="hidden"
+                />
               </div>
 
               {/* Catalog browser */}
