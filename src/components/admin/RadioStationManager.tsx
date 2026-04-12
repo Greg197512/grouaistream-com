@@ -69,6 +69,11 @@ export const RadioStationManager = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searching, setSearching] = useState(false);
+  const [catalogTracks, setCatalogTracks] = useState<any[]>([]);
+  const [catalogLoading, setCatalogLoading] = useState(false);
+  const [catalogOpen, setCatalogOpen] = useState(false);
+  const [catalogPage, setCatalogPage] = useState(0);
+  const CATALOG_PAGE_SIZE = 50;
 
   // Custom item form
   const [customTitle, setCustomTitle] = useState("");
@@ -129,6 +134,22 @@ export const RadioStationManager = () => {
       .limit(20);
     setSearchResults(data || []);
     setSearching(false);
+  };
+
+  const loadCatalog = async (page = 0) => {
+    setCatalogLoading(true);
+    const from = page * CATALOG_PAGE_SIZE;
+    const to = from + CATALOG_PAGE_SIZE - 1;
+    const { data } = await supabase
+      .from("tracks")
+      .select("id, title, artist, duration, audio_url, cover_url, genre")
+      .not("audio_url", "is", null)
+      .order("created_at", { ascending: false })
+      .range(from, to);
+    setCatalogTracks(data || []);
+    setCatalogPage(page);
+    setCatalogLoading(false);
+    setCatalogOpen(true);
   };
 
   const addTrackToSchedule = async (track: any) => {
@@ -359,7 +380,62 @@ export const RadioStationManager = () => {
                   {searching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
                   Szukaj
                 </Button>
+                <Button onClick={() => loadCatalog(0)} disabled={catalogLoading} variant="outline" className="gap-1 shrink-0">
+                  {catalogLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Music className="h-4 w-4" />}
+                  Z katalogu
+                </Button>
               </div>
+
+              {/* Catalog browser */}
+              {catalogOpen && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs text-muted-foreground font-medium">
+                      Katalog utworów (strona {catalogPage + 1})
+                    </p>
+                    <div className="flex gap-1">
+                      <Button size="sm" variant="ghost" disabled={catalogPage === 0} onClick={() => loadCatalog(catalogPage - 1)}>
+                        ← Poprzednia
+                      </Button>
+                      <Button size="sm" variant="ghost" disabled={catalogTracks.length < CATALOG_PAGE_SIZE} onClick={() => loadCatalog(catalogPage + 1)}>
+                        Następna →
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => setCatalogOpen(false)}>
+                        ✕
+                      </Button>
+                    </div>
+                  </div>
+                  <ScrollArea className="h-64 rounded border border-primary/20 bg-primary/5">
+                    <div className="space-y-1 p-2">
+                      {catalogTracks.map((track) => (
+                        <div
+                          key={track.id}
+                          className="flex items-center justify-between rounded-md px-3 py-2 hover:bg-muted/50 transition-colors"
+                        >
+                          <div className="flex items-center gap-2 min-w-0 flex-1">
+                            {track.cover_url && (
+                              <img src={track.cover_url} alt="" className="w-8 h-8 rounded object-cover shrink-0" />
+                            )}
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-medium truncate">{track.title}</p>
+                              <p className="text-xs text-muted-foreground truncate">
+                                {track.artist} • {formatDuration(track.duration)} • {track.genre || "—"}
+                              </p>
+                            </div>
+                          </div>
+                          <Button size="sm" variant="ghost" onClick={() => addTrackToSchedule(track)} className="shrink-0 text-primary hover:text-primary">
+                            <Plus className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                      {catalogTracks.length === 0 && !catalogLoading && (
+                        <p className="text-sm text-muted-foreground text-center py-4">Brak utworów</p>
+                      )}
+                    </div>
+                  </ScrollArea>
+                </div>
+              )}
+
               {searchResults.length > 0 && (
                 <ScrollArea className="h-48 rounded border border-border/30">
                   <div className="space-y-1 p-2">
