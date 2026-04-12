@@ -227,6 +227,25 @@ export const RadioStationManager = () => {
     }
   };
 
+  const addTrackToScheduleFirst = async (track: any) => {
+    // Shift all existing items down by 1
+    const updates = schedule.map((s) =>
+      supabase.from("radio_schedule").update({ position: s.position + 1 } as any).eq("id", s.id)
+    );
+    await Promise.all(updates);
+    const { error } = await supabase.from("radio_schedule").insert({
+      track_id: track.id,
+      position: 0,
+      item_type: "track",
+    } as any);
+    if (error) {
+      toast.error("Błąd dodawania: " + error.message);
+      return;
+    }
+    toast.success(`Dodano "${track.title}" na 1. miejsce`);
+    fetchData();
+  };
+
   const addTrackToSchedule = async (track: any) => {
     const maxPos = schedule.length > 0 ? Math.max(...schedule.map((s) => s.position)) + 1 : 0;
     const { error } = await supabase.from("radio_schedule").insert({
