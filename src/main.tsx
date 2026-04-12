@@ -2,6 +2,16 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 
+// Global unhandled error/rejection catcher — prevents silent blank screens
+window.addEventListener("error", (event) => {
+  console.error("[Global] Unhandled error:", event.error);
+});
+window.addEventListener("unhandledrejection", (event) => {
+  console.error("[Global] Unhandled promise rejection:", event.reason);
+  // Prevent blank screen from unhandled async errors
+  event.preventDefault();
+});
+
 // PWA: iframe/preview guard + force refresh on new deployments
 if ('serviceWorker' in navigator) {
   const isInIframe = (() => {
