@@ -67,6 +67,8 @@ interface ScheduleTrack {
 }
 
 export const RadioStationManager = () => {
+  const { user } = useAuth();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [config, setConfig] = useState<RadioConfig | null>(null);
   const [schedule, setSchedule] = useState<ScheduleTrack[]>([]);
   const [loading, setLoading] = useState(true);
@@ -78,6 +80,7 @@ export const RadioStationManager = () => {
   const [catalogOpen, setCatalogOpen] = useState(false);
   const [catalogPage, setCatalogPage] = useState(0);
   const CATALOG_PAGE_SIZE = 50;
+  const [diskUploading, setDiskUploading] = useState(false);
 
   // Custom item form
   const [customTitle, setCustomTitle] = useState("");
