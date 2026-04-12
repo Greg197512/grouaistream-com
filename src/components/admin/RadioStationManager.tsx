@@ -136,6 +136,22 @@ export const RadioStationManager = () => {
     setSearching(false);
   };
 
+  const loadCatalog = async (page = 0) => {
+    setCatalogLoading(true);
+    const from = page * CATALOG_PAGE_SIZE;
+    const to = from + CATALOG_PAGE_SIZE - 1;
+    const { data } = await supabase
+      .from("tracks")
+      .select("id, title, artist, duration, audio_url, cover_url, genre")
+      .not("audio_url", "is", null)
+      .order("created_at", { ascending: false })
+      .range(from, to);
+    setCatalogTracks(data || []);
+    setCatalogPage(page);
+    setCatalogLoading(false);
+    setCatalogOpen(true);
+  };
+
   const addTrackToSchedule = async (track: any) => {
     const maxPos = schedule.length > 0 ? Math.max(...schedule.map((s) => s.position)) + 1 : 0;
     const { error } = await supabase.from("radio_schedule").insert({
