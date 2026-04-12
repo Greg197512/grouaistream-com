@@ -25,17 +25,17 @@ serve(async (req) => {
     }
 
     // Voice selection based on mode
-    // Chris - young charismatic male voice for assistant (energetic speaker vibe)
+    // Daniel (onwK4e9ZLuTAKqWW03F9) - deep, warm, natural male voice for assistant
     // Brian - energetic male voice for DJ (springy, disco, booming)
-    const voiceId = mode === "dj" ? "nPczCjzI2devNBz1zQrb" : "iP95p4xoKVk53GoZ742B";
+    const voiceId = mode === "dj" ? "nPczCjzI2devNBz1zQrb" : "onwK4e9ZLuTAKqWW03F9";
     
     // DJ voice: Ultra-expressive, springy disco DJ character
-    // Assistant voice: Young, charismatic speaker — confident, warm, engaging
-    // stability 0.35 = expressive but consistent, similarity_boost 0.80 = strong character
-    // style 0.6 = stylized but natural, speed 1.05 = slightly upbeat delivery
+    // Assistant voice: Natural, warm, conversational — like talking to a real person
+    // stability 0.50 = balanced expressiveness, similarity_boost 0.75 = natural character
+    // style 0.3 = subtle stylization, speed 1.0 = natural pace
     const voiceSettings = mode === "dj" 
       ? { stability: 0.12, similarity_boost: 0.92, style: 1.0, use_speaker_boost: true, speed: 1.1 }
-      : { stability: 0.35, similarity_boost: 0.80, style: 0.6, use_speaker_boost: true, speed: 1.05 };
+      : { stability: 0.50, similarity_boost: 0.75, style: 0.3, use_speaker_boost: true, speed: 1.0 };
 
     const response = await fetch(
       `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_128`,

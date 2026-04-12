@@ -341,7 +341,7 @@ const speakBrowser = (text: string, opts?: {
   const mode = opts?.mode || "assistant";
   const requestedLang = opts?.lang || "pl-PL";
   const djDefaults = { rate: 1.22, pitch: 1.08 };
-  const assistantDefaults = { rate: 1.0, pitch: 0.85 };
+  const assistantDefaults = { rate: 0.95, pitch: 0.75 };
   const defaults = mode === "dj" ? djDefaults : assistantDefaults;
 
   const trySpeak = (voices: SpeechSynthesisVoice[]) => {
