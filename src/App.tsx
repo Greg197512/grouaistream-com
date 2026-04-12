@@ -5,7 +5,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import ErrorBoundary from "@/components/ErrorBoundary";
-import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { WelcomeConfetti } from "@/components/effects/WelcomeConfetti";
 import { PlayerProvider } from "@/contexts/PlayerContext";
 import { AIProvider } from "@/contexts/AIContext";
