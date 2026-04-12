@@ -212,8 +212,8 @@ export const RadioStationManager = () => {
           continue;
         }
 
-        // Add to radio schedule
-        await addTrackToSchedule(trackData);
+        // Add to radio schedule at position 0 (first place) — shift others down
+        await addTrackToScheduleFirst(trackData);
         added++;
       } catch (err: any) {
         console.error("Disk upload error:", file.name, err);
@@ -225,6 +225,25 @@ export const RadioStationManager = () => {
     if (added > 0) {
       toast.success(`Dodano ${added} ${added === 1 ? "utwór" : "utworów"} z dysku do programu!`);
     }
+  };
+
+  const addTrackToScheduleFirst = async (track: any) => {
+    // Shift all existing items down by 1
+    const updates = schedule.map((s) =>
+      supabase.from("radio_schedule").update({ position: s.position + 1 } as any).eq("id", s.id)
+    );
+    await Promise.all(updates);
+    const { error } = await supabase.from("radio_schedule").insert({
+      track_id: track.id,
+      position: 0,
+      item_type: "track",
+    } as any);
+    if (error) {
+      toast.error("Błąd dodawania: " + error.message);
+      return;
+    }
+    toast.success(`Dodano "${track.title}" na 1. miejsce`);
+    fetchData();
   };
 
   const addTrackToSchedule = async (track: any) => {
