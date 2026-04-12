@@ -69,6 +69,11 @@ export const RadioStationManager = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searching, setSearching] = useState(false);
+  const [catalogTracks, setCatalogTracks] = useState<any[]>([]);
+  const [catalogLoading, setCatalogLoading] = useState(false);
+  const [catalogOpen, setCatalogOpen] = useState(false);
+  const [catalogPage, setCatalogPage] = useState(0);
+  const CATALOG_PAGE_SIZE = 50;
 
   // Custom item form
   const [customTitle, setCustomTitle] = useState("");
