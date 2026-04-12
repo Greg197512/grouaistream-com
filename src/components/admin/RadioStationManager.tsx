@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -23,7 +23,11 @@ import {
   Mic,
   Megaphone,
   MessageSquare,
+  Upload,
 } from "lucide-react";
+import { uploadToR2 } from "@/lib/r2Upload";
+import { useAuth } from "@/contexts/AuthContext";
+import { isAllowedMediaFile, MAX_UPLOAD_SIZE_BYTES, MEDIA_FILE_ACCEPT } from "@/lib/mediaFormats";
 import { RadioTimeline } from "./RadioTimeline";
 import {
   Select,
