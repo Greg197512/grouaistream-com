@@ -244,6 +244,12 @@ const Suno = () => {
   // Cloned voice from user's recording (overrides genre-based voice)
   const [clonedVoiceId, setClonedVoiceId] = useState<string | null>(null);
   const [clonedVoiceLabel, setClonedVoiceLabel] = useState<string | null>(null);
+  // New advanced options
+  const [mood, setMood] = useState<string>("happy");
+  const [tempo, setTempo] = useState<string>("medium");
+  const [vocalStyle, setVocalStyle] = useState<string>("singing");
+  const [intensity, setIntensity] = useState<string>("balanced");
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [result, setResult] = useState<{
     audioUrl: string;
     title: string;
