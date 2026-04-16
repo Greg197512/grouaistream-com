@@ -238,6 +238,7 @@ function audioBufferToWav(buffer: AudioBuffer): string {
 
 const Suno = () => {
   const { user } = useAuth();
+  const { isPro, showUpgradeFor } = useSubscription();
   const [activeTab, setActiveTab] = useState<"generate" | "mix" | "suno">("generate");
   const [genre, setGenre] = useState("Pop");
   const [genre2, setGenre2] = useState<string | null>(null);
@@ -251,6 +252,10 @@ const Suno = () => {
   // Cloned voice from user's recording (overrides genre-based voice)
   const [clonedVoiceId, setClonedVoiceId] = useState<string | null>(null);
   const [clonedVoiceLabel, setClonedVoiceLabel] = useState<string | null>(null);
+  const [voiceLibKey, setVoiceLibKey] = useState(0); // bump to force VoiceLibrary refetch
+  // Free-tier generation tracking
+  const [freeUsed, setFreeUsed] = useState(0);
+  const [showPaywall, setShowPaywall] = useState(false);
   // New advanced options
   const [mood, setMood] = useState<string>("happy");
   const [tempo, setTempo] = useState<string>("medium");
@@ -270,6 +275,14 @@ const Suno = () => {
   const [playbackTime, setPlaybackTime] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Load free-tier usage count on mount/login
+  useEffect(() => {
+    if (!user || isPro) { setFreeUsed(0); return; }
+    supabase.rpc("get_user_generation_count", { _user_id: user.id })
+      .then(({ data }) => setFreeUsed(typeof data === "number" ? data : 0));
+  }, [user?.id, isPro]);
+
 
   // Track playback time for lyrics sync
   useEffect(() => {
