@@ -295,8 +295,12 @@ const Suno = () => {
     setGenStatus("🎵 Generuję muzykę z ElevenLabs...");
 
     try {
-      const genreBlend = genre2 ? `${genre} mixed with ${genre2}` : genre;
-      const musicPrompt = `${genreBlend} ${title ? `"${title}"` : ""} track, professional studio quality, rich production`.trim();
+      const genreBlend = genre2 ? `${genre} mixed with ${genre2} (${blendRatio}% / ${100 - blendRatio}%)` : genre;
+      const moodDesc = MOODS.find(m => m.id === mood)?.desc || "";
+      const tempoDesc = TEMPOS.find(t => t.id === tempo)?.desc || "";
+      const intensityDesc = INTENSITIES.find(i => i.id === intensity)?.desc || "";
+      const vocalDesc = !instrumental ? VOCAL_STYLES.find(v => v.id === vocalStyle)?.desc || "" : "";
+      const musicPrompt = `${genreBlend} ${title ? `"${title}"` : ""} track, ${moodDesc}, ${tempoDesc}, ${intensityDesc}${vocalDesc ? `, with ${vocalDesc}` : ""}, professional studio quality`.trim().replace(/\s+,/g, ",");
 
       const body: any = {
         prompt: musicPrompt,
