@@ -269,6 +269,18 @@ const Suno = () => {
 
       if (!response.ok) {
         const errData = await response.json().catch(() => ({ error: "Unknown error" }));
+
+        // Handle quota exceeded gracefully
+        if (response.status === 402 || errData.error === "quota_exceeded") {
+          toast.error("💳 Brak kredytów ElevenLabs Music", {
+            description: errData.message || "Twoje konto wyczerpało limit. Doładuj plan na elevenlabs.io.",
+            duration: 8000,
+          });
+          setGenStatus("");
+          setGenerating(false);
+          return;
+        }
+
         throw new Error(errData.error || `HTTP ${response.status}`);
       }
 
