@@ -19,6 +19,7 @@ import { GenerationHistory } from "@/components/studio/GenerationHistory";
 import { LyricsDisplay, generateLyrics, parseLyricsFromText } from "@/components/studio/LyricsDisplay";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { SunoGeneratePanel } from "@/components/studio/SunoGeneratePanel";
+import { VoiceRecorder } from "@/components/studio/VoiceRecorder";
 
 const GENRES = [
   "Pop", "Rock", "Electronic", "Hip-Hop", "Jazz", "Classical",
@@ -195,7 +196,9 @@ const Suno = () => {
   const [generating, setGenerating] = useState(false);
   const [genStatus, setGenStatus] = useState("");
   const [duration, setDuration] = useState(30);
-  // Voice auto-selected based on genre
+  // Cloned voice from user's recording (overrides genre-based voice)
+  const [clonedVoiceId, setClonedVoiceId] = useState<string | null>(null);
+  const [clonedVoiceLabel, setClonedVoiceLabel] = useState<string | null>(null);
   const [result, setResult] = useState<{
     audioUrl: string;
     title: string;
@@ -249,7 +252,8 @@ const Suno = () => {
         duration,
         vocals: !instrumental && customLyrics.trim().length > 0,
         vocalText: !instrumental ? customLyrics.trim() : null,
-        vocalVoiceId: getVoiceForGenre(genre),
+        // Use cloned user voice if available, otherwise auto-pick by genre
+        vocalVoiceId: clonedVoiceId || getVoiceForGenre(genre),
       };
 
       setGenStatus("🎼 ElevenLabs generuje instrumenty...");
@@ -543,9 +547,31 @@ const Suno = () => {
                 <div className="p-3 rounded-xl border border-[#9333EA]/20 bg-[#1a1a2e]/40 flex items-center gap-3">
                   <Mic className="h-4 w-4 text-[#9333EA]" />
                   <p className="text-xs text-gray-400">
-                    Głos wokalisty zostanie automatycznie dobrany do stylu <span className="text-[#FF9500] font-medium">{genre}</span>
+                    {clonedVoiceId
+                      ? <>Wokal zostanie zaśpiewany <span className="text-[#FF9500] font-medium">Twoim sklonowanym głosem</span></>
+                      : <>Głos wokalisty zostanie automatycznie dobrany do stylu <span className="text-[#FF9500] font-medium">{genre}</span></>
+                    }
                   </p>
                 </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Voice Recorder — clone user's voice for AI singing */}
+          <AnimatePresence>
+            {!instrumental && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="overflow-hidden"
+              >
+                <VoiceRecorder
+                  clonedVoiceId={clonedVoiceId}
+                  clonedVoiceLabel={clonedVoiceLabel}
+                  onVoiceCloned={(id, label) => { setClonedVoiceId(id); setClonedVoiceLabel(label); }}
+                  onCleared={() => { setClonedVoiceId(null); setClonedVoiceLabel(null); }}
+                />
               </motion.div>
             )}
           </AnimatePresence>
