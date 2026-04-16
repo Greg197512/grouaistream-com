@@ -607,6 +607,124 @@ const Suno = () => {
             </div>
           </div>
 
+          {/* Mood Selection */}
+          <div className="space-y-2">
+            <Label className="text-sm text-gray-300 flex items-center gap-2">
+              <Heart className="h-4 w-4 text-[#FF9500]" />
+              Nastrój / Atmosfera
+            </Label>
+            <div className="grid grid-cols-3 gap-2">
+              {MOODS.map((m) => {
+                const Icon = m.icon;
+                const active = mood === m.id;
+                return (
+                  <button
+                    key={m.id}
+                    onClick={() => setMood(m.id)}
+                    className={`flex flex-col items-center gap-1 p-2.5 rounded-xl border transition-all ${
+                      active
+                        ? "border-transparent text-white"
+                        : "border-[#FF6B00]/15 bg-[#1a1a2e]/60 text-gray-400 hover:border-[#FF6B00]/40"
+                    }`}
+                    style={active ? { background: `linear-gradient(135deg, ${m.color}, ${m.color}99)`, boxShadow: `0 0 14px ${m.color}50` } : undefined}
+                  >
+                    <Icon className="h-4 w-4" style={!active ? { color: m.color } : undefined} />
+                    <span className="text-[11px] font-medium">{m.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Advanced Toggle */}
+          <button
+            onClick={() => setShowAdvanced(v => !v)}
+            className="w-full flex items-center justify-between p-3 rounded-xl border border-[#9333EA]/20 bg-[#1a1a2e]/40 text-sm text-gray-300 hover:border-[#9333EA]/40 transition-all"
+          >
+            <span className="flex items-center gap-2">
+              <Gauge className="h-4 w-4 text-[#9333EA]" />
+              Opcje zaawansowane (tempo, wokal, produkcja)
+            </span>
+            <span className="text-xs text-gray-500">{showAdvanced ? "Ukryj ▲" : "Pokaż ▼"}</span>
+          </button>
+
+          <AnimatePresence>
+            {showAdvanced && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="space-y-4 overflow-hidden"
+              >
+                {/* Tempo */}
+                <div className="space-y-2">
+                  <Label className="text-sm text-gray-300">Tempo</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {TEMPOS.map((t) => (
+                      <button
+                        key={t.id}
+                        onClick={() => setTempo(t.id)}
+                        className={`p-2.5 rounded-lg border text-left transition-all ${
+                          tempo === t.id
+                            ? "border-transparent text-white"
+                            : "border-[#FF6B00]/15 bg-[#1a1a2e]/60 text-gray-400 hover:border-[#FF6B00]/40"
+                        }`}
+                        style={tempo === t.id ? { background: "linear-gradient(135deg, #FF6B00, #FF9500)" } : undefined}
+                      >
+                        <div className="text-xs font-medium">{t.label}</div>
+                        <div className="text-[10px] opacity-70">{t.bpm}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Vocal Style — only if not instrumental */}
+                {!instrumental && (
+                  <div className="space-y-2">
+                    <Label className="text-sm text-gray-300">Styl wokalu</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {VOCAL_STYLES.map((v) => (
+                        <Badge
+                          key={v.id}
+                          className={`cursor-pointer text-xs px-3 py-1.5 transition-all ${
+                            vocalStyle === v.id
+                              ? "text-white border-transparent"
+                              : "bg-transparent border-[#9333EA]/25 text-gray-400 hover:border-[#9333EA]/50"
+                          }`}
+                          style={vocalStyle === v.id ? { background: "linear-gradient(135deg, #9333EA, #FF6B00)" } : undefined}
+                          onClick={() => setVocalStyle(v.id)}
+                        >
+                          {v.label}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Intensity */}
+                <div className="space-y-2">
+                  <Label className="text-sm text-gray-300">Intensywność produkcji</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {INTENSITIES.map((i) => (
+                      <button
+                        key={i.id}
+                        onClick={() => setIntensity(i.id)}
+                        className={`p-2.5 rounded-lg border text-xs font-medium transition-all ${
+                          intensity === i.id
+                            ? "border-transparent text-white"
+                            : "border-[#FF6B00]/15 bg-[#1a1a2e]/60 text-gray-400 hover:border-[#FF6B00]/40"
+                        }`}
+                        style={intensity === i.id ? { background: "linear-gradient(135deg, #9333EA, #FF6B00)" } : undefined}
+                      >
+                        {i.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           {/* Instrumental Toggle */}
           <div className="flex items-center justify-between p-4 rounded-xl border border-[#FF6B00]/20 bg-[#1a1a2e]/60">
             <div className="flex items-center gap-3">
