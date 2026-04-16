@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, Music, Guitar, Waves, Blend, Type, Zap, Mic } from "lucide-react";
+import { Sparkles, Music, Guitar, Waves, Blend, Type, Zap, Mic, Heart, Gauge, Flame, Wand2, Sun, Moon, Cloud, Coffee } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
 import { motion, AnimatePresence } from "framer-motion";
@@ -37,6 +37,51 @@ const getVoiceForGenre = (genre: string): string => {
 };
 
 const DURATION_OPTIONS = [15, 30, 60, 120];
+
+// Mood / atmosphere presets — affects prompt context
+const MOODS = [
+  { id: "happy", label: "Radosny", icon: Sun, color: "#FFD700", desc: "uplifting, joyful, bright" },
+  { id: "sad", label: "Melancholijny", icon: Cloud, color: "#6B8FFF", desc: "melancholic, emotional, deep" },
+  { id: "energetic", label: "Energetyczny", icon: Flame, color: "#FF4500", desc: "high-energy, intense, driving" },
+  { id: "chill", label: "Chillout", icon: Coffee, color: "#A78BFA", desc: "relaxed, smooth, mellow" },
+  { id: "romantic", label: "Romantyczny", icon: Heart, color: "#FF69B4", desc: "romantic, tender, intimate" },
+  { id: "dark", label: "Mroczny", icon: Moon, color: "#9333EA", desc: "dark, cinematic, mysterious" },
+];
+
+// Tempo presets — BPM ranges
+const TEMPOS = [
+  { id: "slow", label: "Wolne", bpm: "60-80 BPM", desc: "slow tempo, gentle" },
+  { id: "medium", label: "Średnie", bpm: "90-110 BPM", desc: "medium tempo, groovy" },
+  { id: "fast", label: "Szybkie", bpm: "120-140 BPM", desc: "fast tempo, upbeat" },
+  { id: "very-fast", label: "Bardzo szybkie", bpm: "150+ BPM", desc: "very fast tempo, driving rhythm" },
+];
+
+// Vocal style — affects how AI sings
+const VOCAL_STYLES = [
+  { id: "singing", label: "Śpiew", desc: "melodic singing voice" },
+  { id: "rap", label: "Rap", desc: "rap flow, rhythmic spoken delivery" },
+  { id: "whisper", label: "Szept", desc: "whispered intimate vocals" },
+  { id: "powerful", label: "Mocny", desc: "powerful belting vocals" },
+  { id: "soft", label: "Delikatny", desc: "soft, breathy vocals" },
+];
+
+// Production intensity
+const INTENSITIES = [
+  { id: "minimal", label: "Minimal", desc: "minimal production, sparse arrangement" },
+  { id: "balanced", label: "Zbalansowany", desc: "balanced production" },
+  { id: "rich", label: "Bogata", desc: "rich, layered production with multiple instruments" },
+  { id: "epic", label: "Epicka", desc: "epic, cinematic, orchestral production" },
+];
+
+// Quick prompt presets — full track ideas
+const QUICK_PRESETS = [
+  { label: "🌙 Lo-fi do nauki", genre: "Lo-fi", mood: "chill", tempo: "slow", intensity: "minimal", title: "Late Night Study" },
+  { label: "💪 Trening na siłce", genre: "Hip-Hop", mood: "energetic", tempo: "fast", intensity: "rich", title: "Beast Mode" },
+  { label: "❤️ Pierwszy taniec", genre: "R&B", mood: "romantic", tempo: "slow", intensity: "balanced", title: "Forever Yours" },
+  { label: "🎉 Impreza", genre: "House", mood: "energetic", tempo: "fast", intensity: "rich", title: "Friday Night" },
+  { label: "🌧️ Deszczowy poranek", genre: "Jazz", mood: "sad", tempo: "slow", intensity: "minimal", title: "Rainy Window" },
+  { label: "🚀 Epicki finał", genre: "Classical", mood: "dark", tempo: "medium", intensity: "epic", title: "Last Stand" },
+];
 
 // Mix two base64 audio tracks in browser using Web Audio API
 async function mixAudioTracks(musicBase64: string, vocalsBase64: string | null): Promise<string> {
@@ -199,6 +244,12 @@ const Suno = () => {
   // Cloned voice from user's recording (overrides genre-based voice)
   const [clonedVoiceId, setClonedVoiceId] = useState<string | null>(null);
   const [clonedVoiceLabel, setClonedVoiceLabel] = useState<string | null>(null);
+  // New advanced options
+  const [mood, setMood] = useState<string>("happy");
+  const [tempo, setTempo] = useState<string>("medium");
+  const [vocalStyle, setVocalStyle] = useState<string>("singing");
+  const [intensity, setIntensity] = useState<string>("balanced");
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [result, setResult] = useState<{
     audioUrl: string;
     title: string;
@@ -244,8 +295,12 @@ const Suno = () => {
     setGenStatus("🎵 Generuję muzykę z ElevenLabs...");
 
     try {
-      const genreBlend = genre2 ? `${genre} mixed with ${genre2}` : genre;
-      const musicPrompt = `${genreBlend} ${title ? `"${title}"` : ""} track, professional studio quality, rich production`.trim();
+      const genreBlend = genre2 ? `${genre} mixed with ${genre2} (${blendRatio}% / ${100 - blendRatio}%)` : genre;
+      const moodDesc = MOODS.find(m => m.id === mood)?.desc || "";
+      const tempoDesc = TEMPOS.find(t => t.id === tempo)?.desc || "";
+      const intensityDesc = INTENSITIES.find(i => i.id === intensity)?.desc || "";
+      const vocalDesc = !instrumental ? VOCAL_STYLES.find(v => v.id === vocalStyle)?.desc || "" : "";
+      const musicPrompt = `${genreBlend} ${title ? `"${title}"` : ""} track, ${moodDesc}, ${tempoDesc}, ${intensityDesc}${vocalDesc ? `, with ${vocalDesc}` : ""}, professional studio quality`.trim().replace(/\s+,/g, ",");
 
       const body: any = {
         prompt: musicPrompt,
@@ -420,6 +475,32 @@ const Suno = () => {
             <TrackMixer />
           ) : (
           <>
+          {/* Quick Preset Pills — one-click full setup */}
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-2">
+            <Label className="text-sm text-gray-300 flex items-center gap-2">
+              <Wand2 className="h-4 w-4 text-[#FF9500]" />
+              Szybkie presety (jedno kliknięcie)
+            </Label>
+            <div className="flex flex-wrap gap-2">
+              {QUICK_PRESETS.map((p) => (
+                <button
+                  key={p.label}
+                  onClick={() => {
+                    setGenre(p.genre);
+                    setMood(p.mood);
+                    setTempo(p.tempo);
+                    setIntensity(p.intensity);
+                    setTitle(p.title);
+                    toast.success(`Zastosowano preset: ${p.label}`);
+                  }}
+                  className="text-xs px-3 py-1.5 rounded-lg border border-[#9333EA]/25 bg-[#1a1a2e]/60 text-gray-200 hover:border-[#FF9500]/60 hover:bg-[#FF6B00]/10 transition-all"
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          </motion.div>
+
           {/* Genre Selection */}
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }} className="space-y-2">
             <Label className="text-sm text-gray-300">Styl muzyczny</Label>
@@ -525,6 +606,124 @@ const Suno = () => {
               ))}
             </div>
           </div>
+
+          {/* Mood Selection */}
+          <div className="space-y-2">
+            <Label className="text-sm text-gray-300 flex items-center gap-2">
+              <Heart className="h-4 w-4 text-[#FF9500]" />
+              Nastrój / Atmosfera
+            </Label>
+            <div className="grid grid-cols-3 gap-2">
+              {MOODS.map((m) => {
+                const Icon = m.icon;
+                const active = mood === m.id;
+                return (
+                  <button
+                    key={m.id}
+                    onClick={() => setMood(m.id)}
+                    className={`flex flex-col items-center gap-1 p-2.5 rounded-xl border transition-all ${
+                      active
+                        ? "border-transparent text-white"
+                        : "border-[#FF6B00]/15 bg-[#1a1a2e]/60 text-gray-400 hover:border-[#FF6B00]/40"
+                    }`}
+                    style={active ? { background: `linear-gradient(135deg, ${m.color}, ${m.color}99)`, boxShadow: `0 0 14px ${m.color}50` } : undefined}
+                  >
+                    <Icon className="h-4 w-4" style={!active ? { color: m.color } : undefined} />
+                    <span className="text-[11px] font-medium">{m.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Advanced Toggle */}
+          <button
+            onClick={() => setShowAdvanced(v => !v)}
+            className="w-full flex items-center justify-between p-3 rounded-xl border border-[#9333EA]/20 bg-[#1a1a2e]/40 text-sm text-gray-300 hover:border-[#9333EA]/40 transition-all"
+          >
+            <span className="flex items-center gap-2">
+              <Gauge className="h-4 w-4 text-[#9333EA]" />
+              Opcje zaawansowane (tempo, wokal, produkcja)
+            </span>
+            <span className="text-xs text-gray-500">{showAdvanced ? "Ukryj ▲" : "Pokaż ▼"}</span>
+          </button>
+
+          <AnimatePresence>
+            {showAdvanced && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="space-y-4 overflow-hidden"
+              >
+                {/* Tempo */}
+                <div className="space-y-2">
+                  <Label className="text-sm text-gray-300">Tempo</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {TEMPOS.map((t) => (
+                      <button
+                        key={t.id}
+                        onClick={() => setTempo(t.id)}
+                        className={`p-2.5 rounded-lg border text-left transition-all ${
+                          tempo === t.id
+                            ? "border-transparent text-white"
+                            : "border-[#FF6B00]/15 bg-[#1a1a2e]/60 text-gray-400 hover:border-[#FF6B00]/40"
+                        }`}
+                        style={tempo === t.id ? { background: "linear-gradient(135deg, #FF6B00, #FF9500)" } : undefined}
+                      >
+                        <div className="text-xs font-medium">{t.label}</div>
+                        <div className="text-[10px] opacity-70">{t.bpm}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Vocal Style — only if not instrumental */}
+                {!instrumental && (
+                  <div className="space-y-2">
+                    <Label className="text-sm text-gray-300">Styl wokalu</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {VOCAL_STYLES.map((v) => (
+                        <Badge
+                          key={v.id}
+                          className={`cursor-pointer text-xs px-3 py-1.5 transition-all ${
+                            vocalStyle === v.id
+                              ? "text-white border-transparent"
+                              : "bg-transparent border-[#9333EA]/25 text-gray-400 hover:border-[#9333EA]/50"
+                          }`}
+                          style={vocalStyle === v.id ? { background: "linear-gradient(135deg, #9333EA, #FF6B00)" } : undefined}
+                          onClick={() => setVocalStyle(v.id)}
+                        >
+                          {v.label}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Intensity */}
+                <div className="space-y-2">
+                  <Label className="text-sm text-gray-300">Intensywność produkcji</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {INTENSITIES.map((i) => (
+                      <button
+                        key={i.id}
+                        onClick={() => setIntensity(i.id)}
+                        className={`p-2.5 rounded-lg border text-xs font-medium transition-all ${
+                          intensity === i.id
+                            ? "border-transparent text-white"
+                            : "border-[#FF6B00]/15 bg-[#1a1a2e]/60 text-gray-400 hover:border-[#FF6B00]/40"
+                        }`}
+                        style={intensity === i.id ? { background: "linear-gradient(135deg, #9333EA, #FF6B00)" } : undefined}
+                      >
+                        {i.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Instrumental Toggle */}
           <div className="flex items-center justify-between p-4 rounded-xl border border-[#FF6B00]/20 bg-[#1a1a2e]/60">
