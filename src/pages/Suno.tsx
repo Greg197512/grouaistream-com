@@ -475,6 +475,32 @@ const Suno = () => {
             <TrackMixer />
           ) : (
           <>
+          {/* Quick Preset Pills — one-click full setup */}
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-2">
+            <Label className="text-sm text-gray-300 flex items-center gap-2">
+              <Wand2 className="h-4 w-4 text-[#FF9500]" />
+              Szybkie presety (jedno kliknięcie)
+            </Label>
+            <div className="flex flex-wrap gap-2">
+              {QUICK_PRESETS.map((p) => (
+                <button
+                  key={p.label}
+                  onClick={() => {
+                    setGenre(p.genre);
+                    setMood(p.mood);
+                    setTempo(p.tempo);
+                    setIntensity(p.intensity);
+                    setTitle(p.title);
+                    toast.success(`Zastosowano preset: ${p.label}`);
+                  }}
+                  className="text-xs px-3 py-1.5 rounded-lg border border-[#9333EA]/25 bg-[#1a1a2e]/60 text-gray-200 hover:border-[#FF9500]/60 hover:bg-[#FF6B00]/10 transition-all"
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          </motion.div>
+
           {/* Genre Selection */}
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }} className="space-y-2">
             <Label className="text-sm text-gray-300">Styl muzyczny</Label>
