@@ -547,9 +547,31 @@ const Suno = () => {
                 <div className="p-3 rounded-xl border border-[#9333EA]/20 bg-[#1a1a2e]/40 flex items-center gap-3">
                   <Mic className="h-4 w-4 text-[#9333EA]" />
                   <p className="text-xs text-gray-400">
-                    Głos wokalisty zostanie automatycznie dobrany do stylu <span className="text-[#FF9500] font-medium">{genre}</span>
+                    {clonedVoiceId
+                      ? <>Wokal zostanie zaśpiewany <span className="text-[#FF9500] font-medium">Twoim sklonowanym głosem</span></>
+                      : <>Głos wokalisty zostanie automatycznie dobrany do stylu <span className="text-[#FF9500] font-medium">{genre}</span></>
+                    }
                   </p>
                 </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Voice Recorder — clone user's voice for AI singing */}
+          <AnimatePresence>
+            {!instrumental && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="overflow-hidden"
+              >
+                <VoiceRecorder
+                  clonedVoiceId={clonedVoiceId}
+                  clonedVoiceLabel={clonedVoiceLabel}
+                  onVoiceCloned={(id, label) => { setClonedVoiceId(id); setClonedVoiceLabel(label); }}
+                  onCleared={() => { setClonedVoiceId(null); setClonedVoiceLabel(null); }}
+                />
               </motion.div>
             )}
           </AnimatePresence>
