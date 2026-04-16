@@ -38,6 +38,51 @@ const getVoiceForGenre = (genre: string): string => {
 
 const DURATION_OPTIONS = [15, 30, 60, 120];
 
+// Mood / atmosphere presets — affects prompt context
+const MOODS = [
+  { id: "happy", label: "Radosny", icon: Sun, color: "#FFD700", desc: "uplifting, joyful, bright" },
+  { id: "sad", label: "Melancholijny", icon: Cloud, color: "#6B8FFF", desc: "melancholic, emotional, deep" },
+  { id: "energetic", label: "Energetyczny", icon: Flame, color: "#FF4500", desc: "high-energy, intense, driving" },
+  { id: "chill", label: "Chillout", icon: Coffee, color: "#A78BFA", desc: "relaxed, smooth, mellow" },
+  { id: "romantic", label: "Romantyczny", icon: Heart, color: "#FF69B4", desc: "romantic, tender, intimate" },
+  { id: "dark", label: "Mroczny", icon: Moon, color: "#9333EA", desc: "dark, cinematic, mysterious" },
+];
+
+// Tempo presets — BPM ranges
+const TEMPOS = [
+  { id: "slow", label: "Wolne", bpm: "60-80 BPM", desc: "slow tempo, gentle" },
+  { id: "medium", label: "Średnie", bpm: "90-110 BPM", desc: "medium tempo, groovy" },
+  { id: "fast", label: "Szybkie", bpm: "120-140 BPM", desc: "fast tempo, upbeat" },
+  { id: "very-fast", label: "Bardzo szybkie", bpm: "150+ BPM", desc: "very fast tempo, driving rhythm" },
+];
+
+// Vocal style — affects how AI sings
+const VOCAL_STYLES = [
+  { id: "singing", label: "Śpiew", desc: "melodic singing voice" },
+  { id: "rap", label: "Rap", desc: "rap flow, rhythmic spoken delivery" },
+  { id: "whisper", label: "Szept", desc: "whispered intimate vocals" },
+  { id: "powerful", label: "Mocny", desc: "powerful belting vocals" },
+  { id: "soft", label: "Delikatny", desc: "soft, breathy vocals" },
+];
+
+// Production intensity
+const INTENSITIES = [
+  { id: "minimal", label: "Minimal", desc: "minimal production, sparse arrangement" },
+  { id: "balanced", label: "Zbalansowany", desc: "balanced production" },
+  { id: "rich", label: "Bogata", desc: "rich, layered production with multiple instruments" },
+  { id: "epic", label: "Epicka", desc: "epic, cinematic, orchestral production" },
+];
+
+// Quick prompt presets — full track ideas
+const QUICK_PRESETS = [
+  { label: "🌙 Lo-fi do nauki", genre: "Lo-fi", mood: "chill", tempo: "slow", intensity: "minimal", title: "Late Night Study" },
+  { label: "💪 Trening na siłce", genre: "Hip-Hop", mood: "energetic", tempo: "fast", intensity: "rich", title: "Beast Mode" },
+  { label: "❤️ Pierwszy taniec", genre: "R&B", mood: "romantic", tempo: "slow", intensity: "balanced", title: "Forever Yours" },
+  { label: "🎉 Impreza", genre: "House", mood: "energetic", tempo: "fast", intensity: "rich", title: "Friday Night" },
+  { label: "🌧️ Deszczowy poranek", genre: "Jazz", mood: "sad", tempo: "slow", intensity: "minimal", title: "Rainy Window" },
+  { label: "🚀 Epicki finał", genre: "Classical", mood: "dark", tempo: "medium", intensity: "epic", title: "Last Stand" },
+];
+
 // Mix two base64 audio tracks in browser using Web Audio API
 async function mixAudioTracks(musicBase64: string, vocalsBase64: string | null): Promise<string> {
   const audioCtx = new AudioContext({ sampleRate: 44100 });
