@@ -19,6 +19,7 @@ import { GenerationHistory } from "@/components/studio/GenerationHistory";
 import { LyricsDisplay, generateLyrics, parseLyricsFromText } from "@/components/studio/LyricsDisplay";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { SunoGeneratePanel } from "@/components/studio/SunoGeneratePanel";
+import { VoiceRecorder } from "@/components/studio/VoiceRecorder";
 
 const GENRES = [
   "Pop", "Rock", "Electronic", "Hip-Hop", "Jazz", "Classical",
@@ -195,7 +196,9 @@ const Suno = () => {
   const [generating, setGenerating] = useState(false);
   const [genStatus, setGenStatus] = useState("");
   const [duration, setDuration] = useState(30);
-  // Voice auto-selected based on genre
+  // Cloned voice from user's recording (overrides genre-based voice)
+  const [clonedVoiceId, setClonedVoiceId] = useState<string | null>(null);
+  const [clonedVoiceLabel, setClonedVoiceLabel] = useState<string | null>(null);
   const [result, setResult] = useState<{
     audioUrl: string;
     title: string;
@@ -249,7 +252,8 @@ const Suno = () => {
         duration,
         vocals: !instrumental && customLyrics.trim().length > 0,
         vocalText: !instrumental ? customLyrics.trim() : null,
-        vocalVoiceId: getVoiceForGenre(genre),
+        // Use cloned user voice if available, otherwise auto-pick by genre
+        vocalVoiceId: clonedVoiceId || getVoiceForGenre(genre),
       };
 
       setGenStatus("🎼 ElevenLabs generuje instrumenty...");
