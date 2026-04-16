@@ -931,9 +931,37 @@ const Suno = () => {
             <p className="text-sm text-center text-gray-400">{genStatus}</p>
           )}
 
+          {/* Free-tier usage badge */}
+          {user && !isPro && (
+            <div className={`flex items-center justify-between p-3 rounded-xl border ${
+              freeUsed >= FREE_GENERATION_LIMIT
+                ? "border-[#FF6B00]/50 bg-[#FF6B00]/10"
+                : "border-[#9333EA]/30 bg-[#1a1a2e]/60"
+            }`}>
+              <div className="flex items-center gap-2 text-xs">
+                {freeUsed >= FREE_GENERATION_LIMIT ? (
+                  <Lock className="h-4 w-4 text-[#FF9500]" />
+                ) : (
+                  <Sparkles className="h-4 w-4 text-[#9333EA]" />
+                )}
+                <span className="text-gray-300">
+                  Free: <span className="font-bold text-white">{freeUsed} / {FREE_GENERATION_LIMIT}</span> utworów wykorzystanych
+                </span>
+              </div>
+              {freeUsed >= FREE_GENERATION_LIMIT && (
+                <Link
+                  to="/settings"
+                  className="text-xs text-[#FF9500] hover:text-white font-semibold flex items-center gap-1"
+                >
+                  <Crown className="h-3 w-3" /> Upgrade
+                </Link>
+              )}
+            </div>
+          )}
+
           {!user && (
             <p className="text-center text-xs text-gray-500">
-              <a href="/auth" className="text-[#FF9500] underline">Zaloguj się</a>, aby zapisywać utwory do biblioteki
+              <a href="/auth" className="text-[#FF9500] underline">Zaloguj się</a>, aby generować i zapisywać utwory
             </p>
           )}
 
@@ -1023,6 +1051,66 @@ const Suno = () => {
           </Button>
         </DialogContent>
       </Dialog>
+
+      {/* Paywall Modal — free tier limit reached */}
+      <Dialog open={showPaywall} onOpenChange={setShowPaywall}>
+        <DialogContent className="bg-[#1a1a2e] border-[#FF6B00]/40 text-white max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-2xl text-center flex flex-col items-center gap-3">
+              <div
+                className="w-16 h-16 rounded-2xl flex items-center justify-center"
+                style={{
+                  background: "linear-gradient(135deg, #FF6B00, #FF9500, #9333EA)",
+                  boxShadow: "0 0 30px #FF6B0060",
+                }}
+              >
+                <Crown className="h-8 w-8 text-white" />
+              </div>
+              <span style={{ background: "linear-gradient(135deg, #FF6B00, #FF9500)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+                Wykorzystałeś darmowy utwór
+              </span>
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-sm text-gray-300 text-center leading-relaxed">
+              Każdy nowy użytkownik ma <span className="text-[#FF9500] font-semibold">1 darmowy utwór</span> w GrouAI Studio.
+              Aby tworzyć kolejne — wybierz plan Pro lub Ultimate.
+            </p>
+            <div className="space-y-2 text-xs text-gray-400">
+              <div className="flex items-center gap-2 p-2 rounded-lg bg-[#FF6B00]/10 border border-[#FF6B00]/20">
+                <Sparkles className="h-4 w-4 text-[#FF9500] flex-shrink-0" />
+                <span>Nielimitowane generowanie utworów</span>
+              </div>
+              <div className="flex items-center gap-2 p-2 rounded-lg bg-[#9333EA]/10 border border-[#9333EA]/20">
+                <Mic className="h-4 w-4 text-[#9333EA] flex-shrink-0" />
+                <span>Klonowanie nielimitowanej liczby głosów</span>
+              </div>
+              <div className="flex items-center gap-2 p-2 rounded-lg bg-[#FF6B00]/10 border border-[#FF6B00]/20">
+                <Music className="h-4 w-4 text-[#FF9500] flex-shrink-0" />
+                <span>Pełna biblioteka utworów w chmurze</span>
+              </div>
+            </div>
+            <Link to="/settings" onClick={() => setShowPaywall(false)}>
+              <Button
+                className="w-full h-12 text-white border-0 font-bold gap-2"
+                style={{
+                  background: "linear-gradient(135deg, #FF6B00, #FF9500)",
+                  boxShadow: "0 0 25px #FF6B0050",
+                }}
+              >
+                <Crown className="h-5 w-5" /> Zobacz plany
+              </Button>
+            </Link>
+            <button
+              onClick={() => setShowPaywall(false)}
+              className="w-full text-center text-xs text-gray-500 hover:text-gray-300"
+            >
+              Może później
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
     </MainLayout>
   );
 };
