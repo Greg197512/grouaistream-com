@@ -370,6 +370,14 @@ const Suno = () => {
             </p>
           </motion.div>
 
+          {/* Engine badge */}
+          <div className="flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-gradient-to-r from-[#FF6B00]/10 to-[#9333EA]/10 border border-[#FF6B00]/20">
+            <Sparkles className="h-3.5 w-3.5 text-[#FF9500]" />
+            <span className="text-xs text-gray-300">
+              Napędzany przez <span className="text-[#FF9500] font-semibold">ElevenLabs Music v1</span> — studyjna jakość, śpiewane wokale
+            </span>
+          </div>
+
           {/* Tabs */}
           <div className="flex gap-2 p-1 rounded-xl bg-[#1a1a2e]/80 border border-[#FF6B00]/10">
             <button
@@ -380,15 +388,6 @@ const Suno = () => {
               style={activeTab === "generate" ? { background: "linear-gradient(135deg, #FF6B00, #FF9500)", boxShadow: "0 0 15px #FF6B0040" } : undefined}
             >
               <Sparkles className="h-4 w-4" /> Generator
-            </button>
-            <button
-              onClick={() => setActiveTab("suno")}
-              className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${
-                activeTab === "suno" ? "text-white" : "text-gray-400 hover:text-gray-200"
-              }`}
-              style={activeTab === "suno" ? { background: "linear-gradient(135deg, #FF6B00, #9333EA)", boxShadow: "0 0 15px #FF6B0040" } : undefined}
-            >
-              <Wand2 className="h-4 w-4" /> Suno AI
             </button>
             <button
               onClick={() => setActiveTab("mix")}
@@ -403,8 +402,6 @@ const Suno = () => {
 
           {activeTab === "mix" ? (
             <TrackMixer />
-          ) : activeTab === "suno" ? (
-            <SunoGeneratePanel />
           ) : (
           <>
           {/* Genre Selection */}
