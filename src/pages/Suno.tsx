@@ -20,6 +20,13 @@ import { LyricsDisplay, generateLyrics, parseLyricsFromText } from "@/components
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { SunoGeneratePanel } from "@/components/studio/SunoGeneratePanel";
 import { VoiceRecorder } from "@/components/studio/VoiceRecorder";
+import { VoiceLibrary } from "@/components/studio/VoiceLibrary";
+import { useSubscription } from "@/contexts/SubscriptionContext";
+import { uploadToR2 } from "@/lib/r2Upload";
+import { Lock, Crown } from "lucide-react";
+import { Link } from "react-router-dom";
+
+const FREE_GENERATION_LIMIT = 1;
 
 const GENRES = [
   "Pop", "Rock", "Electronic", "Hip-Hop", "Jazz", "Classical",
@@ -231,6 +238,7 @@ function audioBufferToWav(buffer: AudioBuffer): string {
 
 const Suno = () => {
   const { user } = useAuth();
+  const { isPro, showUpgradeFor } = useSubscription();
   const [activeTab, setActiveTab] = useState<"generate" | "mix" | "suno">("generate");
   const [genre, setGenre] = useState("Pop");
   const [genre2, setGenre2] = useState<string | null>(null);
@@ -244,6 +252,10 @@ const Suno = () => {
   // Cloned voice from user's recording (overrides genre-based voice)
   const [clonedVoiceId, setClonedVoiceId] = useState<string | null>(null);
   const [clonedVoiceLabel, setClonedVoiceLabel] = useState<string | null>(null);
+  const [voiceLibKey, setVoiceLibKey] = useState(0); // bump to force VoiceLibrary refetch
+  // Free-tier generation tracking
+  const [freeUsed, setFreeUsed] = useState(0);
+  const [showPaywall, setShowPaywall] = useState(false);
   // New advanced options
   const [mood, setMood] = useState<string>("happy");
   const [tempo, setTempo] = useState<string>("medium");
@@ -263,6 +275,14 @@ const Suno = () => {
   const [playbackTime, setPlaybackTime] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Load free-tier usage count on mount/login
+  useEffect(() => {
+    if (!user || isPro) { setFreeUsed(0); return; }
+    supabase.rpc("get_user_generation_count", { _user_id: user.id })
+      .then(({ data }) => setFreeUsed(typeof data === "number" ? data : 0));
+  }, [user?.id, isPro]);
+
 
   // Track playback time for lyrics sync
   useEffect(() => {
@@ -290,6 +310,18 @@ const Suno = () => {
   }, [result?.audioUrl]);
 
   const generate = async () => {
+    // === GATE 1: must be logged in to generate (so we can track usage) ===
+    if (!user) {
+      toast.error("Zaloguj się, aby generować utwory");
+      return;
+    }
+
+    // === GATE 2: free users get only 1 generation, then paywall ===
+    if (!isPro && freeUsed >= FREE_GENERATION_LIMIT) {
+      setShowPaywall(true);
+      return;
+    }
+
     setGenerating(true);
     setResult(null);
     setGenStatus("🎵 Generuję muzykę z ElevenLabs...");
@@ -329,7 +361,6 @@ const Suno = () => {
       if (!response.ok) {
         const errData = await response.json().catch(() => ({ error: "Unknown error" }));
 
-        // Handle quota exceeded gracefully
         if (response.status === 402 || errData.error === "quota_exceeded") {
           toast.error("💳 Brak kredytów ElevenLabs Music", {
             description: errData.message || "Twoje konto wyczerpało limit. Doładuj plan na elevenlabs.io.",
@@ -351,16 +382,34 @@ const Suno = () => {
 
       setGenStatus(data.vocals ? "🎤 Miksowanie wokalu z muzyką..." : "🔊 Finalizuję utwór...");
 
-      // Mix music + vocals in browser
-      const audioUrl = await mixAudioTracks(data.music, data.vocals);
+      // Mix music + vocals in browser → returns blob URL of WAV
+      const audioBlobUrl = await mixAudioTracks(data.music, data.vocals);
 
       const trackTitle = title || `${genre} Track`;
       const lyrics = customLyrics.trim()
         ? parseLyricsFromText(customLyrics, duration)
         : generateLyrics(genre, trackTitle, duration, instrumental);
 
+      // === Upload mixed WAV to R2 so it works across devices + persists ===
+      setGenStatus("☁️ Wysyłam utwór na chmurę...");
+      let publicAudioUrl = audioBlobUrl; // fallback: keep blob if upload fails
+      try {
+        const wavResp = await fetch(audioBlobUrl);
+        const wavBlob = await wavResp.blob();
+        const safeTitle = trackTitle.replace(/[^a-zA-Z0-9]/g, "_").substring(0, 40);
+        const wavFile = new File([wavBlob], `${safeTitle}_${Date.now()}.wav`, { type: "audio/wav" });
+        const uploadRes = await uploadToR2({ file: wavFile, folder: `studio/${user.id}` });
+        publicAudioUrl = uploadRes.publicUrl;
+        console.log("[Studio] Uploaded to R2:", publicAudioUrl);
+      } catch (uploadErr: any) {
+        console.warn("[Studio] R2 upload failed, using local blob:", uploadErr);
+        toast.warning("Utwór dostępny tylko lokalnie", {
+          description: "Nie udało się wysłać na chmurę — odtwarzaj na tym urządzeniu.",
+        });
+      }
+
       setResult({
-        audioUrl,
+        audioUrl: publicAudioUrl,
         title: trackTitle,
         genre,
         durationSeconds: duration,
@@ -370,18 +419,33 @@ const Suno = () => {
       setGenStatus("✅ Wygenerowano!");
       toast.success(`🎶 "${trackTitle}" — gotowy!`);
 
-      // Save to generations if logged in
-      if (user) {
-        supabase.from("generations").insert({
+      // Save to generations + auto-add to user's tracks library
+      const { data: genRow } = await supabase.from("generations").insert({
+        user_id: user.id,
+        title: trackTitle,
+        genre,
+        prompt: customLyrics || `ElevenLabs: ${musicPrompt}`,
+        instrumental,
+        status: "completed",
+        audio_url: publicAudioUrl,
+      }).select().single();
+
+      // Auto-save to tracks (user's personal studio catalog)
+      if (publicAudioUrl.startsWith("http")) {
+        await supabase.from("tracks").insert({
           user_id: user.id,
           title: trackTitle,
+          artist: "GrouAI Studio",
+          album: "AI Generated",
+          duration,
+          audio_url: publicAudioUrl,
           genre,
-          prompt: customLyrics || `ElevenLabs: ${musicPrompt}`,
-          instrumental,
-          status: "completed",
-          audio_url: audioUrl,
-        }).then();
+          mood,
+        });
       }
+
+      // Increment free counter
+      if (!isPro) setFreeUsed(prev => prev + 1);
     } catch (err: any) {
       console.error("[GrouAI Studio] Generate error:", err);
       toast.error("Błąd generowania: " + (err.message || "Nieznany błąd"));
@@ -756,7 +820,25 @@ const Suno = () => {
             )}
           </AnimatePresence>
 
-          {/* Voice Recorder — clone user's voice for AI singing */}
+          {/* Voice Library — saved cloned voices selector */}
+          <AnimatePresence>
+            {!instrumental && user && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="overflow-hidden"
+              >
+                <VoiceLibrary
+                  selectedVoiceId={clonedVoiceId}
+                  onSelect={(id, label) => { setClonedVoiceId(id); setClonedVoiceLabel(label); }}
+                  refreshKey={voiceLibKey}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Voice Recorder — clone NEW voice for AI singing */}
           <AnimatePresence>
             {!instrumental && (
               <motion.div
@@ -768,7 +850,11 @@ const Suno = () => {
                 <VoiceRecorder
                   clonedVoiceId={clonedVoiceId}
                   clonedVoiceLabel={clonedVoiceLabel}
-                  onVoiceCloned={(id, label) => { setClonedVoiceId(id); setClonedVoiceLabel(label); }}
+                  onVoiceCloned={(id, label) => {
+                    setClonedVoiceId(id);
+                    setClonedVoiceLabel(label);
+                    setVoiceLibKey(k => k + 1); // refresh saved voices list
+                  }}
                   onCleared={() => { setClonedVoiceId(null); setClonedVoiceLabel(null); }}
                 />
               </motion.div>
@@ -845,9 +931,37 @@ const Suno = () => {
             <p className="text-sm text-center text-gray-400">{genStatus}</p>
           )}
 
+          {/* Free-tier usage badge */}
+          {user && !isPro && (
+            <div className={`flex items-center justify-between p-3 rounded-xl border ${
+              freeUsed >= FREE_GENERATION_LIMIT
+                ? "border-[#FF6B00]/50 bg-[#FF6B00]/10"
+                : "border-[#9333EA]/30 bg-[#1a1a2e]/60"
+            }`}>
+              <div className="flex items-center gap-2 text-xs">
+                {freeUsed >= FREE_GENERATION_LIMIT ? (
+                  <Lock className="h-4 w-4 text-[#FF9500]" />
+                ) : (
+                  <Sparkles className="h-4 w-4 text-[#9333EA]" />
+                )}
+                <span className="text-gray-300">
+                  Free: <span className="font-bold text-white">{freeUsed} / {FREE_GENERATION_LIMIT}</span> utworów wykorzystanych
+                </span>
+              </div>
+              {freeUsed >= FREE_GENERATION_LIMIT && (
+                <Link
+                  to="/settings"
+                  className="text-xs text-[#FF9500] hover:text-white font-semibold flex items-center gap-1"
+                >
+                  <Crown className="h-3 w-3" /> Upgrade
+                </Link>
+              )}
+            </div>
+          )}
+
           {!user && (
             <p className="text-center text-xs text-gray-500">
-              <a href="/auth" className="text-[#FF9500] underline">Zaloguj się</a>, aby zapisywać utwory do biblioteki
+              <a href="/auth" className="text-[#FF9500] underline">Zaloguj się</a>, aby generować i zapisywać utwory
             </p>
           )}
 
@@ -937,6 +1051,66 @@ const Suno = () => {
           </Button>
         </DialogContent>
       </Dialog>
+
+      {/* Paywall Modal — free tier limit reached */}
+      <Dialog open={showPaywall} onOpenChange={setShowPaywall}>
+        <DialogContent className="bg-[#1a1a2e] border-[#FF6B00]/40 text-white max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-2xl text-center flex flex-col items-center gap-3">
+              <div
+                className="w-16 h-16 rounded-2xl flex items-center justify-center"
+                style={{
+                  background: "linear-gradient(135deg, #FF6B00, #FF9500, #9333EA)",
+                  boxShadow: "0 0 30px #FF6B0060",
+                }}
+              >
+                <Crown className="h-8 w-8 text-white" />
+              </div>
+              <span style={{ background: "linear-gradient(135deg, #FF6B00, #FF9500)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+                Wykorzystałeś darmowy utwór
+              </span>
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-sm text-gray-300 text-center leading-relaxed">
+              Każdy nowy użytkownik ma <span className="text-[#FF9500] font-semibold">1 darmowy utwór</span> w GrouAI Studio.
+              Aby tworzyć kolejne — wybierz plan Pro lub Ultimate.
+            </p>
+            <div className="space-y-2 text-xs text-gray-400">
+              <div className="flex items-center gap-2 p-2 rounded-lg bg-[#FF6B00]/10 border border-[#FF6B00]/20">
+                <Sparkles className="h-4 w-4 text-[#FF9500] flex-shrink-0" />
+                <span>Nielimitowane generowanie utworów</span>
+              </div>
+              <div className="flex items-center gap-2 p-2 rounded-lg bg-[#9333EA]/10 border border-[#9333EA]/20">
+                <Mic className="h-4 w-4 text-[#9333EA] flex-shrink-0" />
+                <span>Klonowanie nielimitowanej liczby głosów</span>
+              </div>
+              <div className="flex items-center gap-2 p-2 rounded-lg bg-[#FF6B00]/10 border border-[#FF6B00]/20">
+                <Music className="h-4 w-4 text-[#FF9500] flex-shrink-0" />
+                <span>Pełna biblioteka utworów w chmurze</span>
+              </div>
+            </div>
+            <Link to="/settings" onClick={() => setShowPaywall(false)}>
+              <Button
+                className="w-full h-12 text-white border-0 font-bold gap-2"
+                style={{
+                  background: "linear-gradient(135deg, #FF6B00, #FF9500)",
+                  boxShadow: "0 0 25px #FF6B0050",
+                }}
+              >
+                <Crown className="h-5 w-5" /> Zobacz plany
+              </Button>
+            </Link>
+            <button
+              onClick={() => setShowPaywall(false)}
+              className="w-full text-center text-xs text-gray-500 hover:text-gray-300"
+            >
+              Może później
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
     </MainLayout>
   );
 };
