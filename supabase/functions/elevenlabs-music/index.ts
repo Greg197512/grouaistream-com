@@ -44,6 +44,25 @@ serve(async (req) => {
     if (!musicResponse.ok) {
       const errText = await musicResponse.text();
       console.error("[ElevenLabs Music] API error:", musicResponse.status, errText);
+
+      // Detect insufficient credits / quota / payment errors
+      const isQuotaError =
+        musicResponse.status === 401 ||
+        musicResponse.status === 402 ||
+        errText.includes("insufficient_credits") ||
+        errText.includes("quota_exceeded") ||
+        errText.includes("payment_required");
+
+      if (isQuotaError) {
+        return new Response(JSON.stringify({
+          error: "quota_exceeded",
+          message: "Brak kredytów ElevenLabs Music. Twoje konto wyczerpało limit generowania muzyki. Doładuj plan na elevenlabs.io lub spróbuj ponownie po odnowieniu kwoty.",
+        }), {
+          status: 402,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       throw new Error(`ElevenLabs Music API error: ${musicResponse.status} - ${errText}`);
     }
 
