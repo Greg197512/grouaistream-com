@@ -820,7 +820,25 @@ const Suno = () => {
             )}
           </AnimatePresence>
 
-          {/* Voice Recorder — clone user's voice for AI singing */}
+          {/* Voice Library — saved cloned voices selector */}
+          <AnimatePresence>
+            {!instrumental && user && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="overflow-hidden"
+              >
+                <VoiceLibrary
+                  selectedVoiceId={clonedVoiceId}
+                  onSelect={(id, label) => { setClonedVoiceId(id); setClonedVoiceLabel(label); }}
+                  refreshKey={voiceLibKey}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Voice Recorder — clone NEW voice for AI singing */}
           <AnimatePresence>
             {!instrumental && (
               <motion.div
@@ -832,7 +850,11 @@ const Suno = () => {
                 <VoiceRecorder
                   clonedVoiceId={clonedVoiceId}
                   clonedVoiceLabel={clonedVoiceLabel}
-                  onVoiceCloned={(id, label) => { setClonedVoiceId(id); setClonedVoiceLabel(label); }}
+                  onVoiceCloned={(id, label) => {
+                    setClonedVoiceId(id);
+                    setClonedVoiceLabel(label);
+                    setVoiceLibKey(k => k + 1); // refresh saved voices list
+                  }}
                   onCleared={() => { setClonedVoiceId(null); setClonedVoiceLabel(null); }}
                 />
               </motion.div>
