@@ -20,6 +20,13 @@ import { LyricsDisplay, generateLyrics, parseLyricsFromText } from "@/components
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { SunoGeneratePanel } from "@/components/studio/SunoGeneratePanel";
 import { VoiceRecorder } from "@/components/studio/VoiceRecorder";
+import { VoiceLibrary } from "@/components/studio/VoiceLibrary";
+import { useSubscription } from "@/contexts/SubscriptionContext";
+import { uploadToR2 } from "@/lib/r2Upload";
+import { Lock, Crown } from "lucide-react";
+import { Link } from "react-router-dom";
+
+const FREE_GENERATION_LIMIT = 1;
 
 const GENRES = [
   "Pop", "Rock", "Electronic", "Hip-Hop", "Jazz", "Classical",
