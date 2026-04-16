@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,9 +13,10 @@ serve(async (req) => {
 
   try {
     const ELEVENLABS_API_KEY = Deno.env.get("ELEVENLABS_API_KEY");
-    if (!ELEVENLABS_API_KEY) {
-      throw new Error("ELEVENLABS_API_KEY is not configured");
-    }
+    if (!ELEVENLABS_API_KEY) throw new Error("ELEVENLABS_API_KEY is not configured");
+
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
     const { audioBase64, name, description } = await req.json();
 
@@ -25,13 +27,18 @@ serve(async (req) => {
       });
     }
 
-    console.log("[VoiceClone] Cloning voice:", name, "audio size:", audioBase64.length);
+    // Identify user from JWT
+    const authHeader = req.headers.get("Authorization") || "";
+    const jwt = authHeader.replace("Bearer ", "");
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    const { data: userData } = await supabase.auth.getUser(jwt);
+    const userId = userData?.user?.id;
 
-    // Decode base64 → Uint8Array → Blob
+    console.log("[VoiceClone] Cloning voice:", name, "user:", userId, "size:", audioBase64.length);
+
     const binary = Uint8Array.from(atob(audioBase64), c => c.charCodeAt(0));
     const audioBlob = new Blob([binary], { type: "audio/webm" });
 
-    // ElevenLabs Instant Voice Clone (multipart/form-data)
     const formData = new FormData();
     formData.append("name", (name || "GrouAI User Voice").substring(0, 100));
     formData.append("description", (description || "Voice cloned via GrouAI Studio for AI singing").substring(0, 500));
@@ -48,7 +55,6 @@ serve(async (req) => {
       const errText = await cloneResponse.text();
       console.error("[VoiceClone] API error:", cloneResponse.status, errText);
 
-      // Detect quota / payment errors (cloning requires Creator+ plan)
       const isQuotaError =
         cloneResponse.status === 401 ||
         cloneResponse.status === 402 ||
@@ -71,12 +77,41 @@ serve(async (req) => {
     }
 
     const result = await cloneResponse.json();
-    console.log("[VoiceClone] Voice cloned:", result.voice_id);
+    const voiceId = result.voice_id;
+    console.log("[VoiceClone] Voice cloned:", voiceId);
+
+    // Save to user_voices table (so user doesn't have to clone again)
+    let savedRecord = null;
+    if (userId && voiceId) {
+      const label = (name || "Mój głos").substring(0, 80);
+      const { data: inserted, error: insertErr } = await supabase
+        .from("user_voices")
+        .upsert(
+          { user_id: userId, voice_id: voiceId, label, is_default: true },
+          { onConflict: "user_id,voice_id" }
+        )
+        .select()
+        .single();
+
+      if (insertErr) {
+        console.error("[VoiceClone] DB save error:", insertErr);
+      } else {
+        savedRecord = inserted;
+        // Reset other voices' default flag
+        await supabase
+          .from("user_voices")
+          .update({ is_default: false })
+          .eq("user_id", userId)
+          .neq("id", inserted.id);
+      }
+    }
 
     return new Response(JSON.stringify({
       success: true,
-      voiceId: result.voice_id,
+      voiceId,
       name: name || "GrouAI User Voice",
+      saved: !!savedRecord,
+      record: savedRecord,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
