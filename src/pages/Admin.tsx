@@ -58,6 +58,7 @@ import { AIModeratorRankings } from "@/components/admin/AIModeratorRankings";
 import { TopEarners } from "@/components/admin/TopEarners";
 import { Radio as RadioIcon, HardDrive, Award, DollarSign, Megaphone } from "lucide-react";
 import { MarqueeManager } from "@/components/admin/MarqueeManager";
+import { BonusMonitor } from "@/components/admin/BonusMonitor";
 
 interface UserStats {
   totalUsers: number;
