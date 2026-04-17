@@ -131,9 +131,9 @@ export const RadioMoodDetector = () => {
     setShrinkAnalysis(null);
     setBonusGranted(null);
 
-    // Load models BEFORE asking for camera so we can await it
     let loaded = isModelLoaded;
     if (!loaded) {
+      toast.info("⏳ Ładuję model AI...");
       loaded = await loadModels();
     }
     if (!loaded) {
@@ -143,10 +143,13 @@ export const RadioMoodDetector = () => {
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "user", width: 320, height: 240 },
+        video: { facingMode: "user", width: 640, height: 480 },
       });
 
-      if (!videoRef.current) return;
+      if (!videoRef.current) {
+        stream.getTracks().forEach(t => t.stop());
+        return;
+      }
       videoRef.current.srcObject = stream;
       streamRef.current = stream;
       setCameraActive(true);
@@ -154,10 +157,10 @@ export const RadioMoodDetector = () => {
       setAnalysisProgress(5);
       toast.info("📷 Kamera aktywna — analizuję emocje...");
 
-      // Wait for video to be ready
+      // Wait for video to be ready & playing
       await new Promise<void>((resolve) => {
         const v = videoRef.current!;
-        if (v.readyState >= 2) return resolve();
+        if (v.readyState >= 3) return resolve();
         const onReady = () => {
           v.removeEventListener("loadeddata", onReady);
           resolve();
@@ -165,13 +168,17 @@ export const RadioMoodDetector = () => {
         v.addEventListener("loadeddata", onReady);
       });
 
-      // Smooth progress 5 → 90 over ~3s while detection runs
+      // Give camera 600ms to autofocus & expose
+      await new Promise(r => setTimeout(r, 600));
+
       stopProgressTimer();
       progressTimerRef.current = setInterval(() => {
-        setAnalysisProgress(prev => (prev < 90 ? prev + 3 : prev));
-      }, 120);
+        setAnalysisProgress(prev => (prev < 90 ? prev + 2 : prev));
+      }, 100);
 
-      const result = await detectWithSampling(videoRef.current, 3, 250);
+      console.log("[mood-detector] starting detection sampling");
+      const result = await detectWithSampling(videoRef.current, 5, 400);
+      console.log("[mood-detector] sampling done:", result);
 
       stopProgressTimer();
       setAnalysisProgress(100);
@@ -179,20 +186,24 @@ export const RadioMoodDetector = () => {
       if (result?.faceDetected) {
         const emotionKey = result.dominantEmotion;
         const matched = EMOTION_TO_MOOD[emotionKey] || EMOTION_TO_MOOD.neutral;
-        await applyMood(matched, result.confidence, "webcam", result.emotions);
+        try {
+          await applyMood(matched, result.confidence, "webcam", result.emotions);
+        } catch (e) {
+          console.error("[mood-detector] applyMood error:", e);
+          toast.error("Wykryto nastrój, ale analiza AI się nie udała");
+        }
       } else {
-        toast.error("😕 Nie wykryto twarzy — ustaw się na wprost kamery i spróbuj ponownie");
+        toast.error("😕 Nie wykryto twarzy — popraw oświetlenie i ustaw się na wprost kamery");
       }
 
       stopCamera();
-      // small delay so user sees 100% briefly
       setTimeout(() => {
         setIsAnalyzing(false);
         setAnalysisProgress(0);
-      }, 400);
+      }, 600);
     } catch (error) {
-      console.error("Camera error:", error);
-      toast.error("Brak dostępu do kamery");
+      console.error("[mood-detector] camera error:", error);
+      toast.error("Brak dostępu do kamery lub błąd analizy");
       stopCamera();
       setIsAnalyzing(false);
       setAnalysisProgress(0);
