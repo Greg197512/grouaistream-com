@@ -10,7 +10,6 @@ import { HQCover } from "@/components/ui/HQCover";
 import { LikeButton, TrackOptionsMenu } from "@/components/menus/TrackOptionsMenu";
 import { cn } from "@/lib/utils";
 
-const PINNED_TRACK_ID = "043749a5-1e86-4d2d-8846-a41a90cc5a38";
 const FETCH_TIMEOUT_MS = 10_000;
 
 interface ServerTrack extends Track {
@@ -35,30 +34,17 @@ export const NewOnServer = () => {
           setHasError(false);
         }
 
-        const [latestRes, pinnedRes] = await Promise.all([
-          supabase
-            .from("tracks")
-            .select("*")
-            .or("audio_url.not.is.null,video_url.not.is.null")
-            .order("created_at", { ascending: false })
-            .limit(12),
-          supabase
-            .from("tracks")
-            .select("*")
-            .eq("id", PINNED_TRACK_ID)
-            .maybeSingle(),
-        ]);
+        const { data, error } = await supabase
+          .from("tracks")
+          .select("*")
+          .or("audio_url.not.is.null,video_url.not.is.null")
+          .order("created_at", { ascending: false })
+          .limit(8);
 
         if (!mountedRef.current) return;
+        if (error) throw error;
 
-        if (latestRes.error) throw latestRes.error;
-
-        const latest = (latestRes.data || []) as ServerTrack[];
-        const pinned = pinnedRes.data as ServerTrack | null;
-
-        const rest = latest.filter(t => t.id !== PINNED_TRACK_ID);
-        const combined = pinned ? [pinned, ...rest] : rest;
-        setTracks(combined.slice(0, 8));
+        setTracks((data || []) as ServerTrack[]);
       } catch (err) {
         console.error("[NewOnServer] fetch error:", err);
         if (mountedRef.current) setHasError(true);
