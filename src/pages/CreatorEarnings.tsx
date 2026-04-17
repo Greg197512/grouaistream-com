@@ -135,8 +135,59 @@ const CreatorEarnings = () => {
       setPayouts(payoutData as PayoutRequest[]);
     }
 
+    // Milestone bonus progress
+    const { count: trackCount } = await supabase
+      .from("tracks")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id);
+    setUploadCount(trackCount ?? 0);
+
+    const trackIds = (tracksData ?? []).map(t => t.id);
+    if (trackIds.length > 0) {
+      const { count: lc } = await supabase
+        .from("liked_songs")
+        .select("id", { count: "exact", head: true })
+        .in("track_id", trackIds)
+        .neq("user_id", user.id);
+      setLikesCount(lc ?? 0);
+    } else {
+      setLikesCount(0);
+    }
+
+    const { data: milestoneData } = await (supabase as any)
+      .from("creator_milestone_bonuses")
+      .select("bonus_type")
+      .eq("user_id", user.id);
+    if (milestoneData) {
+      setUploadBonusClaimed(milestoneData.some((m: any) => m.bonus_type === "uploads_50"));
+      setLikesBonusClaimed(milestoneData.some((m: any) => m.bonus_type === "likes_50"));
+    }
+
     setLoading(false);
   }, [user]);
+
+  const claimMilestone = async (type: "uploads" | "likes") => {
+    setClaimingMilestone(type);
+    try {
+      const fnName = type === "uploads" ? "claim_upload_milestone_bonus" : "claim_likes_milestone_bonus";
+      const { data, error } = await (supabase as any).rpc(fnName);
+      if (error) throw error;
+      if (data?.success) {
+        toast.success(`🎁 +${Number(data.amount).toFixed(2)} € trafiło do Twoich zarobków!`);
+        loadData();
+      } else if (data?.error === "not_eligible") {
+        toast.error(`Potrzebujesz ${data.required}, masz ${data.current}`);
+      } else if (data?.error === "already_claimed") {
+        toast.info("Ten bonus został już odebrany");
+      } else {
+        toast.error("Nie udało się odebrać bonusu");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Błąd");
+    } finally {
+      setClaimingMilestone(null);
+    }
+  };
 
   useEffect(() => {
     loadData();
