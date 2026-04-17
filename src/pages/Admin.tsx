@@ -1109,6 +1109,10 @@ export default function Admin() {
               <TabsContent value="top-earners">
                 <TopEarners />
               </TabsContent>
+
+              <TabsContent value="marquee">
+                <MarqueeManager />
+              </TabsContent>
             </Tabs>
 
             {/* Quick Actions */}
