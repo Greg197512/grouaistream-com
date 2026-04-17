@@ -52,6 +52,7 @@ const CreatorEarnings = () => {
   const [monthlyEarnings, setMonthlyEarnings] = useState(0);
   const [totalStreams, setTotalStreams] = useState(0);
   const [tipEarnings, setTipEarnings] = useState(0);
+  const [bonusEarnings, setBonusEarnings] = useState(0);
   const [loading, setLoading] = useState(true);
   const [boostTrack, setBoostTrack] = useState<{ id: string; title: string } | null>(null);
   const [payouts, setPayouts] = useState<PayoutRequest[]>([]);
@@ -97,6 +98,17 @@ const CreatorEarnings = () => {
 
     if (tipData) {
       setTipEarnings(tipData.reduce((sum, e) => sum + Number(e.amount), 0));
+    }
+
+    // Bonus earnings (mood analysis bonus etc.)
+    const { data: bonusData } = await supabase
+      .from("creator_earnings")
+      .select("amount")
+      .eq("user_id", user.id)
+      .eq("earning_type", "bonus");
+
+    if (bonusData) {
+      setBonusEarnings(bonusData.reduce((sum, e) => sum + Number(e.amount), 0));
     }
 
     // Payout requests
