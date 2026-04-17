@@ -40,6 +40,44 @@ interface QuickMoodDetectorProps {
   onClose: () => void;
 }
 
+const createFallbackDeepAnalysis = (mood: MoodResult, emotion: string, language: string): DeepAnalysis => {
+  if (language === "pl") {
+    return {
+      diagnosis: `Widzę dziś u Ciebie wyraźny profil ${mood.mood.toLowerCase()} z nutą emocji „${emotion}”. Organizm nie prosi o przypadkowy hałas, tylko o muzykę, która poprowadzi Cię krok dalej i domknie napięcie.`,
+      emotionalState: `Stan wskazuje na potrzebę łagodnego przejścia z obecnego nastroju do bardziej stabilnej i lżejszej energii poprzez rytm, przewidywalny groove i cieplejszą harmonię.`,
+      microExpressions: `Mikroekspresje sugerują, że Twoja uwaga i emocje są aktywne, ale potrzebują muzycznego kierunku zamiast przeciążenia.`,
+      psychologicalInsight: `Najlepiej zadziała teraz sekwencja utworów, która najpierw uzna Twój aktualny stan, a dopiero potem powoli podbije komfort i poczucie kontroli.`,
+      riskLevel: "niski",
+      riskNote: "To wygląda bardziej na chwilowy stan niż alarm — dobra muzyka powinna szybko pomóc wrócić do równowagi.",
+      therapeuticAdvice: `Zalecam 5-utworową ścieżkę w klimacie ${mood.genre} z tempem rosnącym stopniowo i miękkim wejściem perkusji, bez gwałtownych skoków energii.`,
+      musicTherapy: `Taki dobór pomaga ustabilizować emocje i płynnie przenieść uwagę z napięcia na przyjemność i poczucie lekkości.`,
+      moodBoostStrategy: "Start od utworu-kotwicy, potem most emocjonalny, następnie wyraźniejszy impuls energii, punkt kulminacyjny i na końcu spokojne domknięcie.",
+      healingFrequency: "432 Hz / 528 Hz — miękka harmonizacja i delikatne podniesienie nastroju.",
+      personalMessage: "Masz prawo czuć to, co czujesz — teraz pozwól muzyce zrobić resztę i poprowadzić Cię w lepszą stronę.",
+      suggestedGenres: [mood.genre, "Pop", "Electronic", "R&B", "Dance"],
+      suggestedMoods: ["Happy", "Relaxed", "Energetic"],
+      targetEmotion: "lekkość i ulga",
+    };
+  }
+
+  return {
+    diagnosis: `Your current profile points to a ${mood.mood.toLowerCase()} state with traces of ${emotion}. You do not need random noise right now — you need music that can carry the mood to a better place.`,
+    emotionalState: "The best response now is a gradual emotional lift using rhythm, warmer harmony, and a predictable groove.",
+    microExpressions: "Your expression suggests active emotion and attention that will respond best to guided musical progression rather than overload.",
+    psychologicalInsight: "The right sequence should first acknowledge your current state and then gently move you toward relief, clarity, and momentum.",
+    riskLevel: "low",
+    riskNote: "This looks like a temporary emotional state rather than a high-risk pattern.",
+    therapeuticAdvice: `Use a 5-track arc around ${mood.genre} with a smooth intro, rising tempo, and controlled energy build.`,
+    musicTherapy: "This sequence supports emotional regulation by moving from recognition to release and then toward a brighter state.",
+    moodBoostStrategy: "Start with an anchor track, then a bridge, then an energy catalyst, a peak moment, and a calm integration finish.",
+    healingFrequency: "432 Hz / 528 Hz for gentle balance and uplift.",
+    personalMessage: "What you feel is valid — let the music take the next step with you.",
+    suggestedGenres: [mood.genre, "Pop", "Electronic", "R&B", "Dance"],
+    suggestedMoods: ["Happy", "Relaxed", "Energetic"],
+    targetEmotion: "relief and uplift",
+  };
+};
+
 export const QuickMoodDetector = ({ isOpen, onClose }: QuickMoodDetectorProps) => {
   const { handleMoodDetected: aiHandleMood } = useAI();
   const { playPlaylist } = usePlayer();
@@ -102,11 +140,16 @@ export const QuickMoodDetector = ({ isOpen, onClose }: QuickMoodDetectorProps) =
       }
     } catch (error) {
       console.error("Deep analysis error:", error);
+      const fallbackAnalysis = createFallbackDeepAnalysis(mood, emotion, language);
+      setDeepAnalysis(fallbackAnalysis);
       toast.error(t("moodDet.analysisError"));
+      return fallbackAnalysis;
     } finally {
       setIsDeepAnalyzing(false);
     }
-    return null;
+    const fallbackAnalysis = createFallbackDeepAnalysis(mood, emotion, language);
+    setDeepAnalysis(fallbackAnalysis);
+    return fallbackAnalysis;
   }, [language, t]);
 
   const claimBonus = useCallback(async () => {
@@ -293,7 +336,9 @@ export const QuickMoodDetector = ({ isOpen, onClose }: QuickMoodDetectorProps) =
       setAnalysisStep(t("moodDet.professorAnalyzing"));
 
       const analysis = await fetchDeepAnalysis(detectedMood, emotionKey);
-      await claimBonus();
+      if (analysis) {
+        await claimBonus();
+      }
 
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());

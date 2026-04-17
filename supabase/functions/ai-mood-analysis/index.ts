@@ -5,6 +5,11 @@ function getCorsHeaders(req: Request) {
   const allowedOrigins = [
     "https://grouaistream-com.lovable.app",
     "https://id-preview--462bddcb-d545-4f42-bc51-5f437cb12bbe.lovable.app",
+    "https://462bddcb-d545-4f42-bc51-5f437cb12bbe.lovableproject.com",
+    "https://grouaistream.com",
+    "https://www.grouaistream.com",
+    "http://localhost:3000",
+    "http://localhost:5173",
   ];
   const origin = req.headers.get("origin") || "";
   return {
