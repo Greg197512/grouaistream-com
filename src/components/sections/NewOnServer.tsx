@@ -8,12 +8,20 @@ import { formatDistanceToNow } from "date-fns";
 import { pl } from "date-fns/locale";
 import { HQCover } from "@/components/ui/HQCover";
 import { LikeButton, TrackOptionsMenu } from "@/components/menus/TrackOptionsMenu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 
 const FETCH_TIMEOUT_MS = 10_000;
 
+interface UploaderProfile {
+  display_name: string | null;
+  avatar_url: string | null;
+}
+
 interface ServerTrack extends Track {
   created_at: string;
+  user_id: string | null;
+  uploader?: UploaderProfile | null;
 }
 
 export const NewOnServer = () => {
