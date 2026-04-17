@@ -60,8 +60,13 @@ const CreatorEarnings = () => {
   const [requestingPayout, setRequestingPayout] = useState(false);
   const [uploadCount, setUploadCount] = useState(0);
   const [likesCount, setLikesCount] = useState(0);
+  const [moodSessionsCount, setMoodSessionsCount] = useState(0);
+  const [studioCount, setStudioCount] = useState(0);
   const [uploadBonusClaimed, setUploadBonusClaimed] = useState(false);
   const [likesBonusClaimed, setLikesBonusClaimed] = useState(false);
+  const [moodBonusClaimed, setMoodBonusClaimed] = useState(false);
+  const [studioBonusClaimed, setStudioBonusClaimed] = useState(false);
+  const [isUltimate, setIsUltimate] = useState(false);
   const [claimingMilestone, setClaimingMilestone] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
@@ -154,6 +159,30 @@ const CreatorEarnings = () => {
       setLikesCount(0);
     }
 
+    // Mood sessions count
+    const { count: moodCount } = await supabase
+      .from("mood_sessions")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id);
+    setMoodSessionsCount(moodCount ?? 0);
+
+    // Studio AI tracks count (audio_url contains suno/replicate)
+    const { count: studioC } = await supabase
+      .from("tracks")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .or("audio_url.ilike.%suno%,audio_url.ilike.%replicate%");
+    setStudioCount(studioC ?? 0);
+
+    // Ultimate subscription check
+    const { data: subData } = await supabase
+      .from("user_subscriptions")
+      .select("plan, status")
+      .eq("user_id", user.id)
+      .eq("status", "active")
+      .maybeSingle();
+    setIsUltimate(subData?.plan === "ultimate");
+
     const { data: milestoneData } = await (supabase as any)
       .from("creator_milestone_bonuses")
       .select("bonus_type")
@@ -161,16 +190,23 @@ const CreatorEarnings = () => {
     if (milestoneData) {
       setUploadBonusClaimed(milestoneData.some((m: any) => m.bonus_type === "uploads_50"));
       setLikesBonusClaimed(milestoneData.some((m: any) => m.bonus_type === "likes_50"));
+      setMoodBonusClaimed(milestoneData.some((m: any) => m.bonus_type === "mood_sessions_5"));
+      setStudioBonusClaimed(milestoneData.some((m: any) => m.bonus_type === "studio_5"));
     }
 
     setLoading(false);
   }, [user]);
 
-  const claimMilestone = async (type: "uploads" | "likes") => {
+  const claimMilestone = async (type: "uploads" | "likes" | "mood" | "studio") => {
     setClaimingMilestone(type);
     try {
-      const fnName = type === "uploads" ? "claim_upload_milestone_bonus" : "claim_likes_milestone_bonus";
-      const { data, error } = await (supabase as any).rpc(fnName);
+      const fnMap: Record<string, string> = {
+        uploads: "claim_upload_milestone_bonus",
+        likes: "claim_likes_milestone_bonus",
+        mood: "claim_mood_sessions_milestone_bonus",
+        studio: "claim_studio_milestone_bonus",
+      };
+      const { data, error } = await (supabase as any).rpc(fnMap[type]);
       if (error) throw error;
       if (data?.success) {
         toast.success(`🎁 +${Number(data.amount).toFixed(2)} € trafiło do Twoich zarobków!`);
@@ -179,6 +215,8 @@ const CreatorEarnings = () => {
         toast.error(`Potrzebujesz ${data.required}, masz ${data.current}`);
       } else if (data?.error === "already_claimed") {
         toast.info("Ten bonus został już odebrany");
+      } else if (data?.error === "requires_ultimate") {
+        toast.error("Ten bonus wymaga subskrypcji Ultimate (9.99 €/mc)");
       } else {
         toast.error("Nie udało się odebrać bonusu");
       }
@@ -387,6 +425,85 @@ const CreatorEarnings = () => {
                 >
                   {likesBonusClaimed ? "✓ Odebrane" : likesCount < 50 ? `Brakuje ${50 - likesCount}` : "Odbierz 12 €"}
                 </Button>
+              </div>
+
+              {/* 5 sesji nastroju */}
+              <div className="p-4 rounded-lg bg-purple-500/5 border border-purple-500/15">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <BarChart3 className="h-4 w-4 text-purple-400" />
+                    <span className="text-sm font-semibold">5 analiz nastroju = +5 €</span>
+                  </div>
+                  <Badge className="bg-purple-500/15 text-purple-400 border-purple-500/25 text-[10px]">
+                    {Math.min(moodSessionsCount, 5)}/5
+                  </Badge>
+                </div>
+                <div className="h-1.5 rounded-full bg-secondary/50 mb-3 overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-purple-500 to-violet-500 transition-all"
+                    style={{ width: `${Math.min(100, (moodSessionsCount / 5) * 100)}%` }}
+                  />
+                </div>
+                <Button
+                  size="sm"
+                  disabled={moodBonusClaimed || moodSessionsCount < 5 || claimingMilestone === "mood"}
+                  onClick={() => claimMilestone("mood")}
+                  className="w-full bg-purple-600 hover:bg-purple-500 text-white"
+                >
+                  {moodBonusClaimed ? "✓ Odebrane" : moodSessionsCount < 5 ? `Jeszcze ${5 - moodSessionsCount} analiz` : "Odbierz 5 €"}
+                </Button>
+              </div>
+
+              {/* 5 utworów Studio - Ultimate */}
+              <div className={cn(
+                "p-4 rounded-lg border relative overflow-hidden",
+                isUltimate
+                  ? "bg-amber-500/5 border-amber-500/20"
+                  : "bg-secondary/20 border-border/40"
+              )}>
+                {!isUltimate && (
+                  <div className="absolute top-2 right-2">
+                    <Badge className="bg-amber-500/20 text-amber-300 border-amber-500/30 text-[9px] gap-1">
+                      <Lock className="h-2.5 w-2.5" /> ULTIMATE
+                    </Badge>
+                  </div>
+                )}
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Rocket className={cn("h-4 w-4", isUltimate ? "text-amber-400" : "text-muted-foreground")} />
+                    <span className="text-sm font-semibold">5 utworów AI = +12 €</span>
+                  </div>
+                  {isUltimate && (
+                    <Badge className="bg-amber-500/15 text-amber-400 border-amber-500/25 text-[10px]">
+                      {Math.min(studioCount, 5)}/5
+                    </Badge>
+                  )}
+                </div>
+                <div className="h-1.5 rounded-full bg-secondary/50 mb-3 overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-amber-500 to-orange-500 transition-all"
+                    style={{ width: `${isUltimate ? Math.min(100, (studioCount / 5) * 100) : 0}%` }}
+                  />
+                </div>
+                {isUltimate ? (
+                  <Button
+                    size="sm"
+                    disabled={studioBonusClaimed || studioCount < 5 || claimingMilestone === "studio"}
+                    onClick={() => claimMilestone("studio")}
+                    className="w-full bg-amber-600 hover:bg-amber-500 text-white"
+                  >
+                    {studioBonusClaimed ? "✓ Odebrane" : studioCount < 5 ? `Stwórz jeszcze ${5 - studioCount}` : "Odbierz 12 €"}
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    onClick={() => navigate("/settings")}
+                    className="w-full bg-gradient-to-r from-amber-500 to-orange-600 text-white gap-1"
+                  >
+                    <Lock className="h-3 w-3" />
+                    Ulepsz do Ultimate (9.99 €)
+                  </Button>
+                )}
               </div>
             </CardContent>
           </Card>
