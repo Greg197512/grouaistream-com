@@ -1,10 +1,12 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Brain, Sparkles, Eye, Camera, CameraOff, Loader2 } from "lucide-react";
+import { Brain, Sparkles, Eye, Camera, CameraOff, Loader2, Gift } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAISafe } from "@/contexts/AIContext";
 import { useFaceDetection } from "@/hooks/useFaceDetection";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 const QUICK_MOODS = [
@@ -29,32 +31,80 @@ const EMOTION_TO_MOOD: Record<string, typeof QUICK_MOODS[0]> = {
 export const RadioMoodDetector = () => {
   const ai = useAISafe();
   const { t } = useLanguage();
+  const { user } = useAuth();
   const { isModelLoaded, isLoadingModel, loadModels, detectWithSampling } = useFaceDetection();
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const progressTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const [activeMood, setActiveMood] = useState<string | null>(null);
   const [cameraActive, setCameraActive] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisProgress, setAnalysisProgress] = useState(0);
   const [detectedConfidence, setDetectedConfidence] = useState<number | null>(null);
+  const [shrinkAnalysis, setShrinkAnalysis] = useState<string | null>(null);
+  const [bonusGranted, setBonusGranted] = useState<number | null>(null);
+
+  const stopProgressTimer = () => {
+    if (progressTimerRef.current) {
+      clearInterval(progressTimerRef.current);
+      progressTimerRef.current = null;
+    }
+  };
 
   const stopCamera = useCallback(() => {
+    stopProgressTimer();
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
     }
     if (videoRef.current) videoRef.current.srcObject = null;
     setCameraActive(false);
-    setIsAnalyzing(false);
-    setAnalysisProgress(0);
   }, []);
 
   useEffect(() => {
-    return () => stopCamera();
-  }, [stopCamera]);
+    return () => {
+      stopProgressTimer();
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(t => t.stop());
+      }
+    };
+  }, []);
 
-  const applyMood = useCallback(async (mood: typeof QUICK_MOODS[0], confidence: number, source: "manual" | "webcam") => {
+  const claimBonus = useCallback(async () => {
+    if (!user) return;
+    try {
+      const { data, error } = await supabase.rpc("claim_mood_analysis_bonus");
+      if (error) {
+        console.warn("[bonus] rpc error", error);
+        return;
+      }
+      const result = data as { success: boolean; amount?: number; error?: string };
+      if (result?.success && result.amount) {
+        setBonusGranted(result.amount);
+        toast.success(`🎁 +${result.amount} zł na Twoje zarobki za pierwszą analizę!`, { duration: 6000 });
+      }
+    } catch (e) {
+      console.warn("[bonus] failed", e);
+    }
+  }, [user]);
+
+  const fetchShrinkAnalysis = useCallback(async (mood: string, confidence: number, emotions: any[]) => {
+    try {
+      const { data, error } = await supabase.functions.invoke("ai-music-shrink", {
+        body: { mood, confidence, emotions },
+      });
+      if (error) throw error;
+      if (data?.analysis) {
+        setShrinkAnalysis(data.analysis);
+      }
+    } catch (e) {
+      console.warn("[shrink] failed", e);
+      setShrinkAnalysis("Coś dziś jesteś tajemniczy 🤔 Daj sobie chwilę i wrzuć coś z dobrym basem.");
+    }
+  }, []);
+
+  const applyMood = useCallback(async (mood: typeof QUICK_MOODS[0], confidence: number, source: "manual" | "webcam", emotions?: any[]) => {
     setActiveMood(mood.mood);
     setDetectedConfidence(source === "webcam" ? confidence : null);
 
@@ -70,12 +120,25 @@ export const RadioMoodDetector = () => {
     }
 
     toast.success(`${mood.emoji} Nastrój: ${mood.mood} → gatunek: ${mood.genre}${source === "webcam" ? ` (${confidence}%)` : ""}`);
-  }, [ai]);
+
+    if (source === "webcam" && emotions) {
+      await fetchShrinkAnalysis(mood.mood, confidence, emotions);
+      await claimBonus();
+    }
+  }, [ai, fetchShrinkAnalysis, claimBonus]);
 
   const startCameraDetection = useCallback(async () => {
-    // Load models if needed
-    if (!isModelLoaded && !isLoadingModel) {
-      loadModels();
+    setShrinkAnalysis(null);
+    setBonusGranted(null);
+
+    // Load models BEFORE asking for camera so we can await it
+    let loaded = isModelLoaded;
+    if (!loaded) {
+      loaded = await loadModels();
+    }
+    if (!loaded) {
+      toast.error("Nie udało się załadować modelu AI. Spróbuj ponownie.");
+      return;
     }
 
     try {
@@ -83,57 +146,58 @@ export const RadioMoodDetector = () => {
         video: { facingMode: "user", width: 320, height: 240 },
       });
 
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        streamRef.current = stream;
-        setCameraActive(true);
-        toast.info("📷 Kamera aktywna — analizuję emocje...");
+      if (!videoRef.current) return;
+      videoRef.current.srcObject = stream;
+      streamRef.current = stream;
+      setCameraActive(true);
+      setIsAnalyzing(true);
+      setAnalysisProgress(5);
+      toast.info("📷 Kamera aktywna — analizuję emocje...");
 
-        // Wait for model + video ready
-        const waitForReady = async () => {
-          let attempts = 0;
-          while (attempts < 30) {
-            if (isModelLoaded && videoRef.current && videoRef.current.readyState >= 2) return true;
-            await new Promise(r => setTimeout(r, 300));
-            attempts++;
-          }
-          return false;
+      // Wait for video to be ready
+      await new Promise<void>((resolve) => {
+        const v = videoRef.current!;
+        if (v.readyState >= 2) return resolve();
+        const onReady = () => {
+          v.removeEventListener("loadeddata", onReady);
+          resolve();
         };
+        v.addEventListener("loadeddata", onReady);
+      });
 
-        setIsAnalyzing(true);
-        setAnalysisProgress(10);
+      // Smooth progress 5 → 90 over ~3s while detection runs
+      stopProgressTimer();
+      progressTimerRef.current = setInterval(() => {
+        setAnalysisProgress(prev => (prev < 90 ? prev + 3 : prev));
+      }, 120);
 
-        const ready = await waitForReady();
-        if (!ready) {
-          toast.error("AI model nie załadował się w czasie");
-          stopCamera();
-          return;
-        }
+      const result = await detectWithSampling(videoRef.current, 3, 250);
 
-        // Animate progress
-        setAnalysisProgress(30);
-        await new Promise(r => setTimeout(r, 200));
-        setAnalysisProgress(60);
+      stopProgressTimer();
+      setAnalysisProgress(100);
 
-        const result = await detectWithSampling(videoRef.current, 2, 150);
-        setAnalysisProgress(100);
-
-        if (result?.faceDetected) {
-          const emotionKey = result.dominantEmotion;
-          const matched = EMOTION_TO_MOOD[emotionKey] || EMOTION_TO_MOOD.neutral;
-          await applyMood(matched, result.confidence, "webcam");
-        } else {
-          toast.error("😕 Nie wykryto twarzy — spróbuj ponownie");
-        }
-
-        stopCamera();
+      if (result?.faceDetected) {
+        const emotionKey = result.dominantEmotion;
+        const matched = EMOTION_TO_MOOD[emotionKey] || EMOTION_TO_MOOD.neutral;
+        await applyMood(matched, result.confidence, "webcam", result.emotions);
+      } else {
+        toast.error("😕 Nie wykryto twarzy — ustaw się na wprost kamery i spróbuj ponownie");
       }
+
+      stopCamera();
+      // small delay so user sees 100% briefly
+      setTimeout(() => {
+        setIsAnalyzing(false);
+        setAnalysisProgress(0);
+      }, 400);
     } catch (error) {
       console.error("Camera error:", error);
       toast.error("Brak dostępu do kamery");
       stopCamera();
+      setIsAnalyzing(false);
+      setAnalysisProgress(0);
     }
-  }, [isModelLoaded, isLoadingModel, loadModels, detectWithSampling, applyMood, stopCamera]);
+  }, [isModelLoaded, loadModels, detectWithSampling, applyMood, stopCamera]);
 
   return (
     <motion.div
@@ -148,14 +212,13 @@ export const RadioMoodDetector = () => {
         </div>
         <div>
           <h3 className="text-sm font-bold">AI Mood Detection</h3>
-          <p className="text-[10px] text-muted-foreground">Radio dopasowane do Twojego nastroju</p>
+          <p className="text-[10px] text-muted-foreground">Pierwsza analiza = +10 zł na zarobki 🎁</p>
         </div>
         <Sparkles className="h-3 w-3 text-primary ml-auto animate-pulse" />
       </div>
 
-      {/* Camera detection button */}
       <Button
-        onClick={cameraActive ? stopCamera : startCameraDetection}
+        onClick={cameraActive ? () => { stopCamera(); setIsAnalyzing(false); setAnalysisProgress(0); } : startCameraDetection}
         disabled={isAnalyzing}
         variant={cameraActive ? "destructive" : "default"}
         size="sm"
@@ -179,7 +242,6 @@ export const RadioMoodDetector = () => {
         )}
       </Button>
 
-      {/* Hidden video element for camera */}
       <video
         ref={videoRef}
         autoPlay
@@ -188,7 +250,6 @@ export const RadioMoodDetector = () => {
         className={`w-full rounded-lg ${cameraActive ? "block max-h-32 object-cover" : "hidden"}`}
       />
 
-      {/* Analysis progress bar */}
       <AnimatePresence>
         {isAnalyzing && (
           <motion.div
@@ -207,7 +268,6 @@ export const RadioMoodDetector = () => {
         )}
       </AnimatePresence>
 
-      {/* Current mood indicator */}
       <AnimatePresence>
         {activeMood && (
           <motion.div
@@ -217,20 +277,54 @@ export const RadioMoodDetector = () => {
             className="overflow-hidden"
           >
             <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/10 border border-primary/20">
-              <Eye className="h-3 w-3 text-primary" />
+              <Eye className="h-3 w-3 text-primary shrink-0" />
               <span className="text-xs text-primary font-medium">
                 Wykryty nastrój: <strong>{activeMood}</strong>
                 {detectedConfidence !== null && (
-                  <span className="text-muted-foreground"> ({detectedConfidence}% pewności)</span>
+                  <span className="text-muted-foreground"> ({detectedConfidence}%)</span>
                 )}
-                {" — "}AI dostosowuje playlistę
               </span>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Quick mood buttons */}
+      <AnimatePresence>
+        {shrinkAnalysis && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="px-3 py-2.5 rounded-lg bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20">
+              <div className="flex items-center gap-1.5 mb-1">
+                <Brain className="h-3 w-3 text-purple-400" />
+                <span className="text-[10px] font-bold uppercase tracking-wider text-purple-400">Muzyczny socjolog</span>
+              </div>
+              <p className="text-xs leading-relaxed text-foreground/90 italic">"{shrinkAnalysis}"</p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {bonusGranted && (
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.8, opacity: 0 }}
+          >
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border border-yellow-500/30">
+              <Gift className="h-4 w-4 text-yellow-400" />
+              <span className="text-xs font-bold text-yellow-200">
+                +{bonusGranted} zł trafiło na Twoje zarobki!
+              </span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="grid grid-cols-3 gap-2">
         {QUICK_MOODS.map((mood) => (
           <motion.button
@@ -239,8 +333,8 @@ export const RadioMoodDetector = () => {
             whileTap={{ scale: 0.95 }}
             onClick={() => applyMood(mood, 95, "manual")}
             className={`relative flex flex-col items-center gap-1 rounded-xl px-2 py-2.5 text-xs font-medium transition-all border ${
-              activeMood === mood.mood 
-                ? "border-primary bg-primary/10 shadow-md shadow-primary/20" 
+              activeMood === mood.mood
+                ? "border-primary bg-primary/10 shadow-md shadow-primary/20"
                 : "border-border/30 bg-card/50 hover:bg-card hover:border-border/60"
             }`}
           >
@@ -257,7 +351,7 @@ export const RadioMoodDetector = () => {
       </div>
 
       <p className="text-[10px] text-muted-foreground/60 text-center">
-        {isLoadingModel ? "⏳ Ładowanie modelu AI..." : "Kliknij 📷 lub wybierz nastrój ręcznie"}
+        {isLoadingModel ? "⏳ Ładuję model AI..." : "Kliknij 📷 lub wybierz nastrój ręcznie"}
       </p>
     </motion.div>
   );
