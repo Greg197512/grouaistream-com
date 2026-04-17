@@ -380,80 +380,70 @@ export const QuickMoodDetector = ({ isOpen, onClose }: QuickMoodDetectorProps) =
             <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center">
               <Brain className="h-4 w-4 text-white" />
             </div>
-            <div>
-              <h3 className="text-sm font-semibold text-white">{t("moodDet.title")}</h3>
-              <p className="text-[10px] text-white/50">
-                {isDeepAnalyzing ? t("moodDet.deepAnalyzing") : isLoadingModel ? t("moodDet.loadingModels") : isModelLoaded ? t("moodDet.subtitle") : "face-api.js"}
-              </p>
+              <div>
+                <h3 className="text-sm font-semibold text-white">{t("moodDet.title")}</h3>
+                <p className="text-[10px] text-white/50">
+                  {isDeepAnalyzing ? t("moodDet.deepAnalyzing") : "Lovable AI Vision aktywne"}
+                </p>
+              </div>
             </div>
+            <button
+              onClick={() => { resetAll(); onClose(); }}
+              className="p-1.5 rounded-full hover:bg-white/10 transition-colors"
+            >
+              <X className="h-4 w-4 text-white/60" />
+            </button>
           </div>
-          <button
-            onClick={() => { resetAll(); onClose(); }}
-            className="p-1.5 rounded-full hover:bg-white/10 transition-colors"
-          >
-            <X className="h-4 w-4 text-white/60" />
-          </button>
-        </div>
 
-        <div className="flex-1 overflow-y-auto">
-          {/* Video / Detection Area */}
-          {!deepAnalysis && !tracksPlaying && (
-            <div className="relative aspect-video bg-black/50">
-              <video
-                ref={videoRef}
-                autoPlay
-                playsInline
-                muted
-                className={`w-full h-full object-cover ${isActive ? "block" : "hidden"}`}
-              />
+          <div className="flex-1 overflow-y-auto">
+            {/* Video / Detection Area */}
+            {!deepAnalysis && !tracksPlaying && (
+              <div className="relative aspect-video bg-black/50">
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className={`w-full h-full object-cover ${isActive ? "block" : "hidden"}`}
+                />
 
-              {!isActive && !isLoadingModel && !currentMood && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
-                  <Brain className="h-10 w-10 text-white/30" />
-                  <p className="text-xs text-white/40 text-center px-4">
-                    {t("moodDet.aiDescription")}
-                  </p>
-                  {isModelLoaded && (
+                {!isActive && !currentMood && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
+                    <Brain className="h-10 w-10 text-white/30" />
+                    <p className="text-xs text-white/40 text-center px-4">
+                      {t("moodDet.aiDescription")}
+                    </p>
                     <span className="text-[10px] text-green-400/70 flex items-center gap-1">
                       <span className="h-1.5 w-1.5 bg-green-400 rounded-full animate-pulse" />
-                      {t("moodDet.tfReady")}
+                      Lovable AI Vision gotowe
                     </span>
-                  )}
-                </div>
-              )}
-
-              {!isActive && isLoadingModel && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
-                  <Loader2 className="h-10 w-10 text-primary animate-spin" />
-                  <p className="text-xs text-white/60 text-center px-4">{t("moodDet.loadingModels")}</p>
-                  <p className="text-[10px] text-white/40">{t("moodDet.loadingWait")}</p>
-                </div>
-              )}
-
-              {isActive && isAnalyzing && (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="absolute inset-0 flex flex-col items-center justify-center bg-black/40">
-                  <div className="relative">
-                    <Brain className="h-12 w-12 text-primary" />
-                    <motion.div className="absolute inset-0 border-2 border-primary rounded-full" animate={{ scale: [1, 1.3, 1], opacity: [1, 0, 1] }} transition={{ duration: 1.5, repeat: Infinity }} />
                   </div>
-                  <p className="text-white font-medium text-sm mt-4">{analysisStep || t("moodDet.initTf")}</p>
-                  <div className="w-48 h-2 bg-white/20 rounded-full mt-3 overflow-hidden">
-                    <motion.div className="h-full bg-gradient-to-r from-primary to-accent" animate={{ width: `${analysisProgress}%` }} transition={{ duration: 0.1 }} />
-                  </div>
-                  <p className="text-white/60 text-xs mt-2">{Math.round(analysisProgress)}%</p>
-                </motion.div>
-              )}
+                )}
 
-              {isActive && noFaceDetected && !isAnalyzing && (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="absolute inset-0 flex flex-col items-center justify-center bg-black/60">
-                  <AlertCircle className="h-12 w-12 text-yellow-400 mb-3" />
-                  <p className="text-white font-medium text-sm">{t("moodDet.noFace")}</p>
-                  <p className="text-white/60 text-xs text-center px-6 mt-1">{t("moodDet.noFaceHint")}</p>
-                  <Button onClick={startAnalysis} size="sm" className="mt-3 groove-gradient-bg">{t("moodDet.tryAgain")}</Button>
-                </motion.div>
-              )}
-            </div>
-          )}
+                {isActive && isAnalyzing && (
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="absolute inset-0 flex flex-col items-center justify-center bg-black/40">
+                    <div className="relative">
+                      <Brain className="h-12 w-12 text-primary" />
+                      <motion.div className="absolute inset-0 border-2 border-primary rounded-full" animate={{ scale: [1, 1.3, 1], opacity: [1, 0, 1] }} transition={{ duration: 1.5, repeat: Infinity }} />
+                    </div>
+                    <p className="text-white font-medium text-sm mt-4">{analysisStep || t("moodDet.initTf")}</p>
+                    <div className="w-48 h-2 bg-white/20 rounded-full mt-3 overflow-hidden">
+                      <motion.div className="h-full bg-gradient-to-r from-primary to-accent" animate={{ width: `${analysisProgress}%` }} transition={{ duration: 0.1 }} />
+                    </div>
+                    <p className="text-white/60 text-xs mt-2">{Math.round(analysisProgress)}%</p>
+                  </motion.div>
+                )}
+
+                {isActive && noFaceDetected && !isAnalyzing && (
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="absolute inset-0 flex flex-col items-center justify-center bg-black/60">
+                    <AlertCircle className="h-12 w-12 text-yellow-400 mb-3" />
+                    <p className="text-white font-medium text-sm">{t("moodDet.noFace")}</p>
+                    <p className="text-white/60 text-xs text-center px-6 mt-1">{t("moodDet.noFaceHint")}</p>
+                    <Button onClick={startAnalysis} size="sm" className="mt-3 groove-gradient-bg">{t("moodDet.tryAgain")}</Button>
+                  </motion.div>
+                )}
+              </div>
+            )}
 
           {/* Deep Analysis Loading */}
           {isDeepAnalyzing && currentMood && (
