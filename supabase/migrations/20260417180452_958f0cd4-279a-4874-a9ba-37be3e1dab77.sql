@@ -1,0 +1,2 @@
+UPDATE public.tracks SET cover_url = 'https://pub-46ecdc3a5ae341fcb16454d732eb9bcd.r2.dev/covers/ai-brak-slowa-kocham-1776449073749.jpg' WHERE id = 'b06d9df9-433c-4a4f-a871-cf0c4c780b82';
+UPDATE public.tracks SET cover_url = 'https://pub-46ecdc3a5ae341fcb16454d732eb9bcd.r2.dev/covers/ai-ash-mercy-1776449073750.jpg' WHERE id = '1b12faad-09bc-4876-8209-d1774abbf7d0';
