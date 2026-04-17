@@ -8,6 +8,13 @@ const corsHeaders = {
 
 const R2_PUBLIC_BASE = "https://pub-46ecdc3a5ae341fcb16454d732eb9bcd.r2.dev";
 
+function fetchWithTimeout(url: string, options: RequestInit, timeoutMs: number) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+  return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(timeout));
+}
+
 function sanitizeFilename(name: string): string {
   return name
     .toLowerCase()
@@ -15,6 +22,70 @@ function sanitizeFilename(name: string): string {
     .replace(/-+/g, "-")
     .replace(/^-|-$/g, "")
     .slice(0, 60);
+}
+
+function buildPrompt({ title, style, description, mode }: { title?: string; style?: string; description?: string; mode?: string }) {
+  const styleLower = (style || "").toLowerCase();
+  const isRap = /rap|hip[\s-]?hop|trap|drill|grime/.test(styleLower);
+
+  const rapRecipe = `
+GENRE-SPECIFIC DIRECTION — RAP / HIP-HOP TOP-TIER ALBUM COVER:
+Iconic premium rap artwork energy, luxury noir, neon amber reflections, wet asphalt, powerful central figure, dramatic low-angle composition, editorial fashion styling, cinematic haze, expensive atmosphere.
+Shot like a global album campaign on Hasselblad or ARRI, 50mm or 85mm lens, high dynamic range, ultra-premium color grading, deep blacks, hot amber highlights.`;
+
+  const premiumRules = `
+ABSOLUTE RULES:
+- NO text, NO letters, NO logos, NO watermark, NO typographic elements.
+- Realistic photographic image only — not cartoon, not illustration, not CGI-looking.
+- Square 1:1 cover, full bleed, sharp subject, rich texture, dramatic cinematic lighting.
+- Must look like a world-class, streaming-platform-ready commercial album cover.`;
+
+  if (mode === "custom" && description?.trim()) {
+    return `Create an extraordinary, highest-tier premium album cover. User direction: "${description.trim()}".${isRap ? rapRecipe : ""}
+The image must feel unforgettable, emotionally intense, luxurious, and instantly clickable on a music platform.${premiumRules}`;
+  }
+
+  const styleHint = style ? ` Music style: ${style}.` : "";
+  return `Create an extraordinary, highest-tier premium album cover for the song "${title || "Untitled"}".${styleHint}${isRap ? rapRecipe : ""}
+Visually interpret the title with bold cinematic storytelling, elite art direction, premium lighting, and magnetic composition.${premiumRules}`;
+}
+
+async function generateImageBase64(prompt: string, apiKey: string): Promise<string | null> {
+  const attempts = [
+    { model: "google/gemini-3.1-flash-image-preview", timeoutMs: 45000 },
+    { model: "google/gemini-2.5-flash-image", timeoutMs: 30000 },
+  ];
+
+  for (const attempt of attempts) {
+    try {
+      const response = await fetchWithTimeout("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: attempt.model,
+          messages: [{ role: "user", content: prompt }],
+          modalities: ["image", "text"],
+        }),
+      }, attempt.timeoutMs);
+
+      if (!response.ok) {
+        const errText = await response.text();
+        console.error(`[ai-cover-generate] ${attempt.model} failed:`, response.status, errText);
+        continue;
+      }
+
+      const data = await response.json();
+      const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+      if (imageUrl) return imageUrl;
+    } catch (error) {
+      console.error(`[ai-cover-generate] ${attempt.model} request error:`, error);
+    }
+  }
+
+  return null;
 }
 
 serve(async (req) => {
@@ -32,70 +103,16 @@ serve(async (req) => {
       );
     }
 
-    let prompt: string;
-    const styleLower = (style || "").toLowerCase();
-    const isRap = /rap|hip[\s-]?hop|trap|drill|grime/.test(styleLower);
-
-    // Genre-specific cinematic recipes — top-tier album cover direction
-    const rapRecipe = `
-GENRE-SPECIFIC DIRECTION — RAP / HIP-HOP TOP-TIER ALBUM COVER:
-Style reference: think Travis Scott "Astroworld", Kendrick Lamar "DAMN.", Drake "Scorpion", Pop Smoke "Shoot for the Stars", Future "DS2" — iconic, cinematic, instantly recognizable.
-Visual mood: gritty luxury, urban nocturne, smoke, neon reflections on wet asphalt, gold chains catching light, designer streetwear, vintage muscle cars, private jets, mansion balconies at golden hour, Miami / LA / NYC skylines at night.
-Composition: bold central subject, heroic low-angle or extreme close-up, dramatic chiaroscuro, deep blacks crushed to pure shadow, hot orange/amber rim lighting, lens flares, anamorphic bokeh.
-Camera: shot on ARRI Alexa or Hasselblad H6D, 50mm or 85mm prime lens, f/1.4, ISO 400 grain texture.
-Color grading: teal & orange Hollywood grade, deep magenta neon accents, crushed blacks, slight haze/fog for atmosphere.
-Finish: 8K resolution, museum-grade print quality, magazine cover finish, Pirelli calendar level production value.`;
-
-    const baseQualityRules = `
-ABSOLUTE RULES:
-- NO text, NO letters, NO words, NO logos, NO watermarks anywhere on the image.
-- NOT cartoon, NOT illustration, NOT 3D render, NOT AI-looking — must feel like a real photograph captured by a master photographer.
-- Ultra-sharp focus on subject, hyper-realistic skin/material textures, cinematic depth of field.
-- Square 1:1 album cover composition, full bleed, no borders.`;
-
-    if (mode === "custom" && description) {
-      prompt = `Create a stunning, photographic-quality album cover art. User description: "${description}".${isRap ? rapRecipe : ""}
-The artwork must feel like a high-end editorial photograph or cinematic movie still.
-Hasselblad / ARRI camera quality, dramatic lighting, rich saturated colors, shallow depth of field, beautiful bokeh.${baseQualityRules}`;
-    } else {
-      const styleHint = style ? ` The music style is ${style}.` : "";
-      prompt = `Create a breathtaking, top-tier professional album cover art for a song called "${title || "Untitled"}".${styleHint}${isRap ? rapRecipe : ""}
-The image must look like a professional photograph or cinematic movie still shot by a world-class director of photography.
-Think: Hasselblad H6D / ARRI Alexa quality, dramatic natural or studio lighting, rich vivid colors, shallow depth of field with beautiful anamorphic bokeh.
-The scene should emotionally represent the mood and theme of the song title with iconic visual storytelling.${baseQualityRules}`;
-    }
+    const prompt = buildPrompt({ title, style, description, mode });
 
     console.log(`[ai-cover-generate] Generating cover for "${title}" mode=${mode}`);
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-3.1-flash-image-preview",
-        messages: [{ role: "user", content: prompt }],
-        modalities: ["image", "text"],
-      }),
-    });
-
-    if (!response.ok) {
-      const errText = await response.text();
-      console.error("AI image generation failed:", response.status, errText);
-      return new Response(
-        JSON.stringify({ error: "AI generation failed", status: response.status }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const data = await response.json();
-    const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+    const imageUrl = await generateImageBase64(prompt, LOVABLE_API_KEY);
 
     if (!imageUrl) {
       return new Response(
-        JSON.stringify({ error: "No image generated" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: "AI generation timed out or returned no image" }),
+        { status: 504, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
