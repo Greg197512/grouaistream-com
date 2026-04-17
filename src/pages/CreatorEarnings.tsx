@@ -563,7 +563,7 @@ const CreatorEarnings = () => {
                 <p className="text-[10px] text-muted-foreground">{t("earnings.minPayoutInfo")}</p>
               </div>
               <Button 
-                onClick={handleRequestPayout}
+                onClick={() => setPayoutModalOpen(true)}
                 disabled={requestingPayout || (totalEarnings + bonusPayoutFallback) < 12}
                 className="bg-gradient-to-r from-emerald-500 to-green-600 text-white gap-2"
               >
