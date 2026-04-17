@@ -21,6 +21,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { SunoGeneratePanel } from "@/components/studio/SunoGeneratePanel";
 import { VoiceRecorder } from "@/components/studio/VoiceRecorder";
 import { VoiceLibrary } from "@/components/studio/VoiceLibrary";
+import { FloatingMusicChat } from "@/components/studio/FloatingMusicChat";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { uploadToR2 } from "@/lib/r2Upload";
 import { Lock, Crown } from "lucide-react";
