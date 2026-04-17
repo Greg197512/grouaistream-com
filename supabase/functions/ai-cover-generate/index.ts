@@ -33,20 +33,36 @@ serve(async (req) => {
     }
 
     let prompt: string;
+    const styleLower = (style || "").toLowerCase();
+    const isRap = /rap|hip[\s-]?hop|trap|drill|grime/.test(styleLower);
+
+    // Genre-specific cinematic recipes — top-tier album cover direction
+    const rapRecipe = `
+GENRE-SPECIFIC DIRECTION — RAP / HIP-HOP TOP-TIER ALBUM COVER:
+Style reference: think Travis Scott "Astroworld", Kendrick Lamar "DAMN.", Drake "Scorpion", Pop Smoke "Shoot for the Stars", Future "DS2" — iconic, cinematic, instantly recognizable.
+Visual mood: gritty luxury, urban nocturne, smoke, neon reflections on wet asphalt, gold chains catching light, designer streetwear, vintage muscle cars, private jets, mansion balconies at golden hour, Miami / LA / NYC skylines at night.
+Composition: bold central subject, heroic low-angle or extreme close-up, dramatic chiaroscuro, deep blacks crushed to pure shadow, hot orange/amber rim lighting, lens flares, anamorphic bokeh.
+Camera: shot on ARRI Alexa or Hasselblad H6D, 50mm or 85mm prime lens, f/1.4, ISO 400 grain texture.
+Color grading: teal & orange Hollywood grade, deep magenta neon accents, crushed blacks, slight haze/fog for atmosphere.
+Finish: 8K resolution, museum-grade print quality, magazine cover finish, Pirelli calendar level production value.`;
+
+    const baseQualityRules = `
+ABSOLUTE RULES:
+- NO text, NO letters, NO words, NO logos, NO watermarks anywhere on the image.
+- NOT cartoon, NOT illustration, NOT 3D render, NOT AI-looking — must feel like a real photograph captured by a master photographer.
+- Ultra-sharp focus on subject, hyper-realistic skin/material textures, cinematic depth of field.
+- Square 1:1 album cover composition, full bleed, no borders.`;
 
     if (mode === "custom" && description) {
-      prompt = `Create a stunning, photographic-quality album cover art. User description: "${description}". 
-The artwork should feel like a high-end professional photography or cinematic still. 
-Ultra-realistic, high-resolution, dramatic lighting, rich colors, depth of field. 
-No text, no letters, no words on the image. Clean artistic composition.`;
+      prompt = `Create a stunning, photographic-quality album cover art. User description: "${description}".${isRap ? rapRecipe : ""}
+The artwork must feel like a high-end editorial photograph or cinematic movie still.
+Hasselblad / ARRI camera quality, dramatic lighting, rich saturated colors, shallow depth of field, beautiful bokeh.${baseQualityRules}`;
     } else {
       const styleHint = style ? ` The music style is ${style}.` : "";
-      prompt = `Create a breathtaking, photographic-quality album cover art for a song called "${title || "Untitled"}".${styleHint}
-The image must look like a professional photograph or cinematic movie still — NOT cartoon, NOT illustration, NOT abstract art.
-Think: Hasselblad camera quality, dramatic natural or studio lighting, rich vivid colors, shallow depth of field with beautiful bokeh.
-The scene should emotionally represent the mood and theme of the song title.
-Ultra-realistic, high-resolution, award-winning photography style.
-No text, no letters, no words, no logos on the image. On a clean background.`;
+      prompt = `Create a breathtaking, top-tier professional album cover art for a song called "${title || "Untitled"}".${styleHint}${isRap ? rapRecipe : ""}
+The image must look like a professional photograph or cinematic movie still shot by a world-class director of photography.
+Think: Hasselblad H6D / ARRI Alexa quality, dramatic natural or studio lighting, rich vivid colors, shallow depth of field with beautiful anamorphic bokeh.
+The scene should emotionally represent the mood and theme of the song title with iconic visual storytelling.${baseQualityRules}`;
     }
 
     console.log(`[ai-cover-generate] Generating cover for "${title}" mode=${mode}`);
