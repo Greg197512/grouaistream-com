@@ -257,10 +257,7 @@ export const NewOnServer = () => {
 
             <div className="p-3">
               <p className="font-semibold text-sm truncate">{track.title}</p>
-              <div className="flex items-center gap-1">
-                <p className="text-xs text-muted-foreground truncate">{track.artist}</p>
-                <span className="text-[7px] font-bold text-primary/70 whitespace-nowrap">Grouarock®</span>
-              </div>
+              <p className="text-xs text-muted-foreground truncate">{track.artist}</p>
               {track.uploader?.display_name && (
                 <div className="flex items-center gap-1.5 mt-1.5">
                   <Avatar className="h-4 w-4">
