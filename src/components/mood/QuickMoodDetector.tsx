@@ -7,7 +7,6 @@ import { useAI } from "@/contexts/AIContext";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { supabase } from "@/integrations/supabase/client";
 import { DetectedMood } from "@/hooks/useAIOrchestrator";
-import { useFaceDetection } from "@/hooks/useFaceDetection";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 interface MoodResult {
@@ -44,7 +43,6 @@ interface QuickMoodDetectorProps {
 export const QuickMoodDetector = ({ isOpen, onClose }: QuickMoodDetectorProps) => {
   const { handleMoodDetected: aiHandleMood } = useAI();
   const { playPlaylist } = usePlayer();
-  const { isModelLoaded, isLoadingModel, modelError, loadModels, detectWithSampling } = useFaceDetection();
   const { t, language } = useLanguage();
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isActive, setIsActive] = useState(false);
@@ -64,7 +62,10 @@ export const QuickMoodDetector = ({ isOpen, onClose }: QuickMoodDetectorProps) =
   const dragControls = useDragControls();
   const [detectedEmotion, setDetectedEmotion] = useState<string>("");
 
-  // Build mood mapping using translations
+  const isModelLoaded = true;
+  const isLoadingModel = false;
+  const modelError = null;
+
   const getMoodMapping = useCallback((): Record<string, MoodResult> => ({
     happy: { mood: t("moodDet.happy"), confidence: 0, emoji: "😊", color: "from-yellow-400 to-orange-500", genre: "Pop", dayDescription: t("moodDet.happyDesc") },
     sad: { mood: t("moodDet.melancholic"), confidence: 0, emoji: "😢", color: "from-blue-400 to-indigo-500", genre: "R&B", dayDescription: t("moodDet.sadDesc") },
@@ -77,12 +78,6 @@ export const QuickMoodDetector = ({ isOpen, onClose }: QuickMoodDetectorProps) =
     romantic: { mood: t("moodDet.romantic"), confidence: 0, emoji: "💕", color: "from-pink-300 to-rose-400", genre: "R&B", dayDescription: t("moodDet.romanticDesc") },
     focused: { mood: t("moodDet.focused"), confidence: 0, emoji: "🎯", color: "from-indigo-400 to-purple-500", genre: "House", dayDescription: t("moodDet.focusedDesc") },
   }), [t]);
-
-  useEffect(() => {
-    if (isOpen && !isModelLoaded && !isLoadingModel) {
-      loadModels();
-    }
-  }, [isOpen, isModelLoaded, isLoadingModel, loadModels]);
 
   const fetchDeepAnalysis = useCallback(async (mood: MoodResult, emotion: string) => {
     setIsDeepAnalyzing(true);
@@ -114,7 +109,6 @@ export const QuickMoodDetector = ({ isOpen, onClose }: QuickMoodDetectorProps) =
     return null;
   }, [language, t]);
 
-  // Mood-boosting genre mapping
   const moodBoostGenres: Record<string, string[]> = {
     sad: ["Pop", "Dance", "Funk", "EDM", "Reggae"],
     angry: ["Chill", "R&B", "Soul", "Jazz", "Ambient"],
@@ -130,7 +124,6 @@ export const QuickMoodDetector = ({ isOpen, onClose }: QuickMoodDetectorProps) =
 
   const playMoodPlaylist = useCallback(async (mood: MoodResult, analysis: DeepAnalysis | null) => {
     try {
-      // First try AI-suggested genres, then boost map, then search ALL tracks
       const genres = analysis?.suggestedGenres?.length 
         ? analysis.suggestedGenres 
         : moodBoostGenres[detectedEmotion] || ["Pop", "Dance", "Funk"];
@@ -139,11 +132,9 @@ export const QuickMoodDetector = ({ isOpen, onClose }: QuickMoodDetectorProps) =
         ? analysis.suggestedMoods
         : ["Happy", "Energetic", "Excited"];
       
-      // Build OR query for uplifting genres/moods
       const genreFilters = genres.map(g => `genre.ilike.%${g}%`).join(",");
       const moodFilters = targetMoods.map(m => `mood.ilike.%${m}%`).join(",");
       
-      // First try filtered by genre/mood
       const { data: tracks } = await supabase
         .from("tracks")
         .select("*")
@@ -153,7 +144,6 @@ export const QuickMoodDetector = ({ isOpen, onClose }: QuickMoodDetectorProps) =
 
       let selectedTracks = (tracks || []).filter(t => t.audio_url);
       
-      // Fallback: get ALL playable tracks from the entire library
       if (selectedTracks.length < 5) {
         const { data: allTracks } = await supabase
           .from("tracks")
@@ -165,7 +155,6 @@ export const QuickMoodDetector = ({ isOpen, onClose }: QuickMoodDetectorProps) =
       }
 
       if (selectedTracks.length > 0) {
-        // Shuffle and take exactly 5
         const shuffled = [...selectedTracks].sort(() => Math.random() - 0.5).slice(0, 5);
         playPlaylist(shuffled);
         setTracksPlaying(true);
@@ -221,8 +210,22 @@ export const QuickMoodDetector = ({ isOpen, onClose }: QuickMoodDetectorProps) =
     setDetectedEmotion("");
   }, [stopCamera]);
 
+  const captureSnapshot = useCallback(() => {
+    const video = videoRef.current;
+    if (!video) return null;
+    const width = video.videoWidth || 640;
+    const height = video.videoHeight || 480;
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return null;
+    ctx.drawImage(video, 0, 0, width, height);
+    return canvas.toDataURL("image/jpeg", 0.85);
+  }, []);
+
   const startAnalysis = useCallback(async () => {
-    if (!videoRef.current || !isModelLoaded) {
+    if (!videoRef.current) {
       toast.error(t("moodDet.loadingAI"));
       return;
     }
@@ -242,23 +245,34 @@ export const QuickMoodDetector = ({ isOpen, onClose }: QuickMoodDetectorProps) =
     }, 60);
 
     try {
-      const result = await detectWithSampling(videoRef.current, 2, 150);
+      await new Promise((resolve) => setTimeout(resolve, 700));
+      const snapshot = captureSnapshot();
+      if (!snapshot) throw new Error("snapshot_failed");
+
+      const { data, error } = await supabase.functions.invoke("ai-vision-mood", {
+        body: { imageBase64: snapshot },
+      });
 
       if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
       setAnalysisProgress(100);
 
-      if (!result || !result.faceDetected) {
+      if (error) throw error;
+
+      if (!data || !data.faceDetected) {
         setNoFaceDetected(true);
         setIsAnalyzing(false);
         toast.error(t("moodDet.noFace"));
         return;
       }
 
-      const emotionKey = result.dominantEmotion;
+      const emotionKey = data.dominantEmotion;
       setDetectedEmotion(emotionKey);
       const moodMapping = getMoodMapping();
       const baseMood = moodMapping[emotionKey] || moodMapping.neutral;
-      const detectedMood: MoodResult = { ...baseMood, confidence: result.confidence };
+      const detectedMood: MoodResult = {
+        ...baseMood,
+        confidence: typeof data.confidence === "number" ? data.confidence : 90,
+      };
 
       setCurrentMood(detectedMood);
       setIsAnalyzing(false);
@@ -269,28 +283,39 @@ export const QuickMoodDetector = ({ isOpen, onClose }: QuickMoodDetectorProps) =
       }
       if (videoRef.current) videoRef.current.srcObject = null;
 
-      // Play music immediately, deep analysis runs in background
       playMoodPlaylist(detectedMood, null);
       fetchDeepAnalysis(detectedMood, emotionKey);
-
     } catch (error) {
-      console.error("Face detection error:", error);
+      console.error("Vision mood detection error:", error);
       if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
       setIsAnalyzing(false);
       toast.error(t("moodDet.faceError"));
     }
-  }, [isModelLoaded, detectWithSampling, fetchDeepAnalysis, playMoodPlaylist, getMoodMapping, t]);
+  }, [captureSnapshot, fetchDeepAnalysis, playMoodPlaylist, getMoodMapping, t]);
 
   const startCamera = async () => {
     setIsLoading(true);
     resetAll();
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "user", width: 320, height: 240 },
+        video: { facingMode: "user", width: 640, height: 480 },
       });
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         streamRef.current = stream;
+        await new Promise<void>((resolve) => {
+          const video = videoRef.current!;
+          if (video.readyState >= 3) {
+            resolve();
+            return;
+          }
+          const onReady = () => {
+            video.removeEventListener("loadeddata", onReady);
+            resolve();
+          };
+          video.addEventListener("loadeddata", onReady);
+        });
+        await new Promise((resolve) => setTimeout(resolve, 500));
         setHasPermission(true);
         setIsActive(true);
         toast.success(t("moodDet.cameraActive"));
