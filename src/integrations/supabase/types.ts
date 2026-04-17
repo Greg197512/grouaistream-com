@@ -106,6 +106,30 @@ export type Database = {
           },
         ]
       }
+      creator_milestone_bonuses: {
+        Row: {
+          amount: number
+          bonus_type: string
+          granted_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          amount?: number
+          bonus_type: string
+          granted_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          bonus_type?: string
+          granted_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       dj_session_guests: {
         Row: {
           guest_name: string | null
@@ -1364,7 +1388,9 @@ export type Database = {
       }
     }
     Functions: {
+      claim_likes_milestone_bonus: { Args: never; Returns: Json }
       claim_mood_analysis_bonus: { Args: never; Returns: Json }
+      claim_upload_milestone_bonus: { Args: never; Returns: Json }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
