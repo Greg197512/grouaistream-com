@@ -60,12 +60,24 @@ export const useFaceDetection = () => {
     }
 
     try {
-      const detections = await faceapi
+      // Try with looser threshold first - more permissive
+      let detections = await faceapi
         .detectSingleFace(videoElement, new faceapi.TinyFaceDetectorOptions({
-          inputSize: 224,
-          scoreThreshold: 0.5,
+          inputSize: 320,
+          scoreThreshold: 0.3,
         }))
         .withFaceExpressions();
+
+      if (!detections) {
+        console.log("[face-detection] no face on first try, retrying with smaller input");
+        // Fallback with smaller input
+        detections = await faceapi
+          .detectSingleFace(videoElement, new faceapi.TinyFaceDetectorOptions({
+            inputSize: 160,
+            scoreThreshold: 0.2,
+          }))
+          .withFaceExpressions();
+      }
 
       if (!detections) {
         return {
@@ -75,6 +87,8 @@ export const useFaceDetection = () => {
           faceDetected: false,
         };
       }
+
+      console.log("[face-detection] face detected, expressions:", detections.expressions);
 
       const expressions = detections.expressions;
       const emotions: EmotionResult[] = [
