@@ -103,6 +103,17 @@ serve(async (req) => {
         });
       }
 
+      // Detect prompt-policy violation → return friendly 400 instead of 500
+      if (errText.includes("bad_prompt") || errText.includes("Terms of Service")) {
+        return new Response(JSON.stringify({
+          error: "bad_prompt",
+          message: "ElevenLabs odrzucił prompt jako niezgodny z polityką treści. Spróbuj prostszego, neutralnego opisu (np. „melodyjny pop z gitarą akustyczną”). Unikaj słów typu intense, beast, fight, dark.",
+        }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       throw new Error(`ElevenLabs Music API error: ${musicResponse.status} - ${errText}`);
     }
 
