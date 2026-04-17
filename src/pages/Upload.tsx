@@ -30,7 +30,7 @@ const AUDIO_TYPES = [
 ];
 const MIN_DURATION_SEC = 10;
 const DURATION_FALLBACK_SEC = 180;
-const MODERATION_TIMEOUT_MS = 15000;
+const MODERATION_TIMEOUT_MS = 30000;
 const MODERATION_MIN_APPROVED_SEC = 120;
 
 function buildLocalModerationFallback(durationSec?: number | null) {
@@ -364,9 +364,9 @@ const Upload = () => {
       }
 
       if (moderationError) {
-        console.error("Moderation error:", moderationError);
+        console.warn("Moderation fallback used:", moderationError);
         moderationData = buildLocalModerationFallback(resolvedDuration || DURATION_FALLBACK_SEC);
-        toast.info("Sieć mobilna opóźniła analizę — użyto lokalnej weryfikacji długości utworu.");
+        // Cichy fallback — utwór i tak przechodzi, nie straszymy usera
       }
 
       const result = moderationData?.result;

@@ -11,7 +11,7 @@ import { LikeButton, TrackOptionsMenu } from "@/components/menus/TrackOptionsMen
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 
-const FETCH_TIMEOUT_MS = 10_000;
+const FETCH_TIMEOUT_MS = 25_000;
 
 interface UploaderProfile {
   display_name: string | null;
