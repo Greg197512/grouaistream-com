@@ -8,35 +8,36 @@ window.addEventListener("error", (event) => {
 });
 window.addEventListener("unhandledrejection", (event) => {
   console.error("[Global] Unhandled promise rejection:", event.reason);
-  // Prevent blank screen from unhandled async errors
   event.preventDefault();
 });
 
-// PWA: iframe/preview guard + force refresh on new deployments
-if ('serviceWorker' in navigator) {
-  const isInIframe = (() => {
-    try { return window.self !== window.top; } catch { return true; }
-  })();
-  const isPreviewHost =
-    window.location.hostname.includes("id-preview--") ||
-    window.location.hostname.includes("lovableproject.com");
+/**
+ * KILL SWITCH dla starego Service Workera.
+ *
+ * Stary kod robił `window.location.reload()` przy każdym
+ * `controllerchange`, co u części użytkowników na produkcji
+ * powodowało nieskończoną pętlę odświeżeń i pustą stronę
+ * (utwory „pruboją się wgrywać" i się nie wgrywają, bo upload
+ *  jest przerywany kolejnym reloadem).
+ *
+ * Tutaj BEZWARUNKOWO:
+ *  1. wyrejestrowujemy WSZYSTKIE service workery,
+ *  2. czyścimy WSZYSTKIE cache Workboxa,
+ *  3. NIE rejestrujemy nowego SW (PWA wyłączone do odwołania).
+ *
+ * Aktywowane jest na każdej domenie — preview, prod i custom domain.
+ */
+if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
+  navigator.serviceWorker
+    .getRegistrations()
+    .then((regs) => Promise.all(regs.map((r) => r.unregister())))
+    .catch(() => {});
 
-  if (isPreviewHost || isInIframe) {
-    // Unregister SWs in preview/iframe to avoid stale cache in editor
-    navigator.serviceWorker.getRegistrations().then(regs =>
-      regs.forEach(r => r.unregister())
-    );
-  } else {
-    // Production: force SW update + auto-reload on new version
-    navigator.serviceWorker.getRegistrations().then(regs =>
-      regs.forEach(reg => reg.update())
-    );
-    navigator.serviceWorker.addEventListener('controllerchange', () => {
-      if (!sessionStorage.getItem('sw-refreshed')) {
-        sessionStorage.setItem('sw-refreshed', '1');
-        window.location.reload();
-      }
-    });
+  if (typeof caches !== "undefined") {
+    caches
+      .keys()
+      .then((keys) => Promise.all(keys.map((k) => caches.delete(k))))
+      .catch(() => {});
   }
 }
 
