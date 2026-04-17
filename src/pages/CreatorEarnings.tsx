@@ -53,6 +53,7 @@ const CreatorEarnings = () => {
   const [totalStreams, setTotalStreams] = useState(0);
   const [tipEarnings, setTipEarnings] = useState(0);
   const [bonusEarnings, setBonusEarnings] = useState(0);
+  const [bonusPayoutFallback, setBonusPayoutFallback] = useState(0);
   const [loading, setLoading] = useState(true);
   const [boostTrack, setBoostTrack] = useState<{ id: string; title: string } | null>(null);
   const [payouts, setPayouts] = useState<PayoutRequest[]>([]);
@@ -107,9 +108,16 @@ const CreatorEarnings = () => {
       .eq("user_id", user.id)
       .eq("earning_type", "bonus");
 
-    if (bonusData) {
-      setBonusEarnings(bonusData.reduce((sum, e) => sum + Number(e.amount), 0));
-    }
+    const creatorBonusTotal = bonusData?.reduce((sum, e) => sum + Number(e.amount), 0) ?? 0;
+
+    const { data: moodBonusData } = await supabase
+      .from("mood_analysis_bonuses")
+      .select("amount")
+      .eq("user_id", user.id);
+
+    const moodBonusTotal = moodBonusData?.reduce((sum, e) => sum + Number(e.amount), 0) ?? 0;
+    setBonusEarnings(Math.max(creatorBonusTotal, moodBonusTotal));
+    setBonusPayoutFallback(creatorBonusTotal > 0 ? 0 : moodBonusTotal);
 
     // Payout requests
     const { data: payoutData } = await supabase
@@ -152,7 +160,8 @@ const CreatorEarnings = () => {
 
   const handleRequestPayout = async () => {
     if (!user) return;
-    if (totalEarnings < 12) {
+    const totalAvailableBalance = totalEarnings + bonusPayoutFallback;
+    if (totalAvailableBalance < 12) {
       toast.error(t("earnings.minPayout"));
       return;
     }
@@ -162,7 +171,7 @@ const CreatorEarnings = () => {
       .filter(p => p.status === "pending" || p.status === "processing")
       .reduce((sum, p) => sum + Number(p.amount), 0);
     
-    const available = totalEarnings - paidOut;
+    const available = totalAvailableBalance - paidOut;
     if (available < 12) {
       toast.error(t("earnings.minPayout"));
       return;
@@ -300,7 +309,7 @@ const CreatorEarnings = () => {
                 <p className="text-xl font-bold text-primary">
                   {(() => {
                     // Combined balance = tracks earnings + standalone bonuses (in case user has no own tracks)
-                    const totalCredited = totalEarnings + (tracks.length === 0 ? bonusEarnings : 0);
+                     const totalCredited = totalEarnings + bonusPayoutFallback;
                     const reserved = payouts.filter(p => p.status !== "rejected").reduce((s, p) => s + Number(p.amount), 0);
                     return Math.max(0, totalCredited - reserved).toFixed(2);
                   })()} €
@@ -314,7 +323,7 @@ const CreatorEarnings = () => {
               </div>
               <Button 
                 onClick={handleRequestPayout}
-                disabled={requestingPayout || (totalEarnings + (tracks.length === 0 ? bonusEarnings : 0)) < 12}
+                disabled={requestingPayout || (totalEarnings + bonusPayoutFallback) < 12}
                 className="bg-gradient-to-r from-emerald-500 to-green-600 text-white gap-2"
               >
                 <Wallet className="h-4 w-4" />

@@ -109,6 +109,20 @@ export const QuickMoodDetector = ({ isOpen, onClose }: QuickMoodDetectorProps) =
     return null;
   }, [language, t]);
 
+  const claimBonus = useCallback(async () => {
+    try {
+      const { data, error } = await supabase.rpc("claim_mood_analysis_bonus");
+      if (error) throw error;
+
+      const result = data as { success?: boolean; amount?: number; error?: string } | null;
+      if (result?.success && typeof result.amount === "number" && result.amount > 0) {
+        toast.success(`🎁 +${result.amount.toFixed(2)} € trafiło do Twoich zarobków`);
+      }
+    } catch (error) {
+      console.error("Mood bonus claim error:", error);
+    }
+  }, []);
+
   const moodBoostGenres: Record<string, string[]> = {
     sad: ["Pop", "Dance", "Funk", "EDM", "Reggae"],
     angry: ["Chill", "R&B", "Soul", "Jazz", "Ambient"],
@@ -276,22 +290,27 @@ export const QuickMoodDetector = ({ isOpen, onClose }: QuickMoodDetectorProps) =
 
       setCurrentMood(detectedMood);
       setIsAnalyzing(false);
+      setAnalysisStep(t("moodDet.professorAnalyzing"));
+
+      const analysis = await fetchDeepAnalysis(detectedMood, emotionKey);
+      await claimBonus();
 
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
         streamRef.current = null;
       }
       if (videoRef.current) videoRef.current.srcObject = null;
+      setIsActive(false);
+      setAnalysisStep("");
 
-      playMoodPlaylist(detectedMood, null);
-      fetchDeepAnalysis(detectedMood, emotionKey);
+      await playMoodPlaylist(detectedMood, analysis);
     } catch (error) {
       console.error("Vision mood detection error:", error);
       if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
       setIsAnalyzing(false);
       toast.error(t("moodDet.faceError"));
     }
-  }, [captureSnapshot, fetchDeepAnalysis, playMoodPlaylist, getMoodMapping, t]);
+  }, [captureSnapshot, fetchDeepAnalysis, claimBonus, playMoodPlaylist, getMoodMapping, t]);
 
   const startCamera = async () => {
     setIsLoading(true);
