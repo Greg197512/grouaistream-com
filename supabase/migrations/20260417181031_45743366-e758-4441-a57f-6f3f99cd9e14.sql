@@ -1,0 +1,2 @@
+UPDATE public.tracks SET cover_url = 'https://pub-46ecdc3a5ae341fcb16454d732eb9bcd.r2.dev/covers/ai-fight-1776449420573.jpg' WHERE id = '20799ffa-3d11-44a3-a3e4-f923e15f1a3e';
+UPDATE public.tracks SET cover_url = 'https://pub-46ecdc3a5ae341fcb16454d732eb9bcd.r2.dev/covers/ai-our-ruins-1776449420574.jpg' WHERE id = '324b8e4f-c955-4c05-8f65-a5f1a7f2692a';
