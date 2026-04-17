@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { restoreSessionSafely } from "@/lib/authSession";
 
 export type SubscriptionPlan = "free" | "pro" | "ultimate";
 
@@ -51,7 +52,7 @@ export const useSubscription = () => {
 };
 
 export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
-  const { user, profile } = useAuth();
+  const { user, profile, loading: authLoading } = useAuth();
   const [plan, setPlan] = useState<SubscriptionPlan>("free");
   const [isLoading, setIsLoading] = useState(true);
   const [trialEndsAt, setTrialEndsAt] = useState<string | null>(null);
@@ -60,6 +61,8 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
 
   const fetchSubscription = useCallback(async () => {
     try {
+      if (authLoading) return;
+
       if (!user) {
         setPlan("free");
         setTrialEndsAt(null);
@@ -116,13 +119,15 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setIsLoading(false);
     }
-  }, [profile?.role, profile?.subscriptionStatus, user, user?.email, user?.id]);
+  }, [authLoading, profile?.role, profile?.subscriptionStatus, user, user?.email, user?.id]);
 
   useEffect(() => {
-    fetchSubscription();
+    void restoreSessionSafely().then(() => {
+      void fetchSubscription();
+    });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
-      fetchSubscription();
+      void fetchSubscription();
     });
 
     return () => subscription.unsubscribe();

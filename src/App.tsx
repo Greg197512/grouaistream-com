@@ -58,6 +58,62 @@ const WelcomeOverlay = () => {
   return <WelcomeConfetti show={isFirstLogin} onComplete={clearFirstLogin} />;
 };
 
+const AppShell = () => {
+  const { loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="dark min-h-screen bg-background text-foreground flex items-center justify-center">
+        <div className="text-sm text-muted-foreground">Przywracanie sesji…</div>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <WelcomeOverlay />
+      <PWAInstallPrompt />
+      <BrowserRouter>
+        <AutoVoiceListener />
+        <Routes>
+          <Route path="/" element={<Index />} />
+          <Route path="/auth" element={<Auth />} />
+          <Route path="/search" element={<Search />} />
+          <Route path="/library" element={<Library />} />
+          <Route path="/liked" element={<LikedSongs />} />
+          <Route path="/create-playlist" element={<CreatePlaylist />} />
+          <Route path="/radio" element={<Radio />} />
+          <Route path="/radio-live" element={<RadioLive />} />
+          <Route path="/radio-live/embed" element={<RadioEmbed />} />
+          <Route path="/import-youtube" element={<ImportYouTube />} />
+          <Route path="/settings" element={<Settings />} />
+          <Route path="/playlist-manager" element={<PlaylistManager />} />
+          <Route path="/playlist/:id" element={<PlaylistDetail />} />
+          <Route path="/mood-history" element={<MoodHistory />} />
+          <Route path="/ai-dj" element={<Index />} />
+          <Route path="/mood" element={<MoodHistory />} />
+          <Route path="/daily-mix" element={<Index />} />
+          <Route path="/social" element={<Index />} />
+          <Route path="/movies" element={<Movies />} />
+          <Route path="/server" element={<Server />} />
+          <Route path="/admin" element={<Admin />} />
+          <Route path="/legal" element={<Legal />} />
+          <Route path="/party/:code" element={<PartyPulpit />} />
+          <Route path="/suno" element={<Suno />} />
+          <Route path="/local-player" element={<LocalPlayer />} />
+          <Route path="/upload" element={<Upload />} />
+          <Route path="/my-tracks" element={<MyTracks />} />
+          <Route path="/unsubscribe" element={<Unsubscribe />} />
+          <Route path="/album-creator" element={<AlbumCreator />} />
+          <Route path="/earnings" element={<CreatorEarnings />} />
+          <Route path="/earn" element={<EarnWithUs />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </BrowserRouter>
+    </>
+  );
+};
+
 const App = () => (
   <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
@@ -70,46 +126,7 @@ const App = () => (
               <div className="dark">
                 <Toaster />
                 <Sonner />
-                <WelcomeOverlay />
-                <PWAInstallPrompt />
-                <BrowserRouter>
-                  <AutoVoiceListener />
-                  <Routes>
-                    <Route path="/" element={<Index />} />
-                    <Route path="/auth" element={<Auth />} />
-                    <Route path="/search" element={<Search />} />
-                    <Route path="/library" element={<Library />} />
-                    <Route path="/liked" element={<LikedSongs />} />
-                    <Route path="/create-playlist" element={<CreatePlaylist />} />
-                    <Route path="/radio" element={<Radio />} />
-                    <Route path="/radio-live" element={<RadioLive />} />
-                    <Route path="/radio-live/embed" element={<RadioEmbed />} />
-                    <Route path="/import-youtube" element={<ImportYouTube />} />
-                    <Route path="/settings" element={<Settings />} />
-                    <Route path="/playlist-manager" element={<PlaylistManager />} />
-                    <Route path="/playlist/:id" element={<PlaylistDetail />} />
-                    <Route path="/mood-history" element={<MoodHistory />} />
-                    <Route path="/ai-dj" element={<Index />} />
-                    <Route path="/mood" element={<MoodHistory />} />
-                    <Route path="/daily-mix" element={<Index />} />
-                    <Route path="/social" element={<Index />} />
-                    <Route path="/movies" element={<Movies />} />
-                    <Route path="/server" element={<Server />} />
-                    <Route path="/admin" element={<Admin />} />
-                    <Route path="/legal" element={<Legal />} />
-                    <Route path="/party/:code" element={<PartyPulpit />} />
-                    <Route path="/suno" element={<Suno />} />
-                    <Route path="/local-player" element={<LocalPlayer />} />
-                    <Route path="/upload" element={<Upload />} />
-                    <Route path="/my-tracks" element={<MyTracks />} />
-                    <Route path="/unsubscribe" element={<Unsubscribe />} />
-                    <Route path="/album-creator" element={<AlbumCreator />} />
-                    <Route path="/earnings" element={<CreatorEarnings />} />
-                    <Route path="/earn" element={<EarnWithUs />} />
-                    {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
-                </BrowserRouter>
+                <AppShell />
               </div>
             </TooltipProvider>
           </AIProvider>
