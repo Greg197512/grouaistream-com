@@ -504,6 +504,27 @@ export type Database = {
           },
         ]
       }
+      mood_analysis_bonuses: {
+        Row: {
+          amount: number
+          granted_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          amount?: number
+          granted_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          granted_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       mood_sessions: {
         Row: {
           confidence: number | null
@@ -1343,6 +1364,7 @@ export type Database = {
       }
     }
     Functions: {
+      claim_mood_analysis_bonus: { Args: never; Returns: Json }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
