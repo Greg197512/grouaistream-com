@@ -7,6 +7,10 @@ import { usePlayer, Track } from "@/contexts/PlayerContext";
 import { useLazyLoad } from "@/hooks/useLazyLoad";
 import { cn } from "@/lib/utils";
 import { DraggableTrackCard } from "@/components/dnd/DraggableTrackCard";
+import { withTimeout } from "@/lib/withTimeout";
+
+const FETCH_TIMEOUT_MS = 20_000;
+const TRACK_SELECT = "id,title,artist,album,duration,cover_url,audio_url,video_url,genre,mood";
 
 interface GenreSectionProps {
   genre: string;
@@ -20,18 +24,21 @@ export const GenreSection = ({ genre, title, icon, color, limit = 8 }: GenreSect
   const [tracks, setTracks] = useState<Track[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
-  const { playPlaylist, currentTrack, isPlaying } = usePlayer();
+  const { playPlaylist } = usePlayer();
   const { ref: lazyRef, isVisible } = useLazyLoad("300px");
 
   useEffect(() => {
     if (!isVisible) return;
-    
+
+    let isMounted = true;
+
     const fetchTracks = async () => {
       setIsLoading(true);
       setHasError(false);
+
       try {
-        let query = supabase.from("tracks").select("*");
-        
+        let query = supabase.from("tracks").select(TRACK_SELECT).or("audio_url.not.is.null,video_url.not.is.null");
+
         if (genre === "Rock") {
           query = query.or("genre.eq.Rock,genre.eq.Pop-Rock,genre.ilike.%rock%");
         } else if (genre === "Punk") {
@@ -41,28 +48,28 @@ export const GenreSection = ({ genre, title, icon, color, limit = 8 }: GenreSect
         } else {
           query = query.or(`genre.ilike.%${genre}%,genre.eq.${genre}`);
         }
-        
-        const { data, error } = await query
-          .order("created_at", { ascending: false })
-          .limit(limit);
+
+        const { data, error } = await withTimeout(
+          query.order("created_at", { ascending: false }).limit(limit),
+          FETCH_TIMEOUT_MS,
+          `${genre} tracks`
+        );
 
         if (error) throw error;
-        setTracks(data || []);
+        if (isMounted) setTracks((data || []) as Track[]);
       } catch (error) {
         console.error(`Error fetching ${genre} tracks:`, error);
-        setHasError(true);
+        if (isMounted) setHasError(true);
       } finally {
-        setIsLoading(false);
+        if (isMounted) setIsLoading(false);
       }
     };
 
-    // Add timeout to prevent infinite loading
-    const timeout = setTimeout(() => {
-      setIsLoading(false);
-      setHasError(true);
-    }, 10000);
+    void fetchTracks();
 
-    fetchTracks().finally(() => clearTimeout(timeout));
+    return () => {
+      isMounted = false;
+    };
   }, [genre, limit, isVisible]);
 
   const visibleTracks = tracks;
@@ -95,7 +102,7 @@ export const GenreSection = ({ genre, title, icon, color, limit = 8 }: GenreSect
 
   if (hasError && visibleTracks.length === 0) {
     return (
-      <section className="px-6 py-6">
+      <section ref={lazyRef} className="px-6 py-6">
         <div className="flex items-center gap-3 mb-4">
           <span className={cn("material-icons text-2xl", color)}>{icon}</span>
           <h2 className="font-display text-xl font-bold">{title}</h2>
@@ -108,10 +115,10 @@ export const GenreSection = ({ genre, title, icon, color, limit = 8 }: GenreSect
   }
 
   return (
-    <section className="px-6 py-6">
+    <section ref={lazyRef} className="px-6 py-6">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
-          <motion.span 
+          <motion.span
             className={cn("material-icons text-2xl", color)}
             whileHover={{ scale: 1.2, rotate: 10 }}
           >
