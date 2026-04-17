@@ -52,7 +52,27 @@ export const NewOnServer = () => {
         if (!mountedRef.current) return;
         if (error) throw error;
 
-        setTracks((data || []) as ServerTrack[]);
+        const tracksData = (data || []) as ServerTrack[];
+        const userIds = Array.from(new Set(tracksData.map(t => t.user_id).filter(Boolean))) as string[];
+
+        let profilesMap: Record<string, UploaderProfile> = {};
+        if (userIds.length > 0) {
+          const { data: profiles } = await supabase
+            .from("profiles")
+            .select("user_id, display_name, avatar_url")
+            .in("user_id", userIds);
+          profilesMap = (profiles || []).reduce((acc, p) => {
+            acc[p.user_id] = { display_name: p.display_name, avatar_url: p.avatar_url };
+            return acc;
+          }, {} as Record<string, UploaderProfile>);
+        }
+
+        const enriched = tracksData.map(t => ({
+          ...t,
+          uploader: t.user_id ? profilesMap[t.user_id] || null : null,
+        }));
+
+        if (mountedRef.current) setTracks(enriched);
       } catch (err) {
         console.error("[NewOnServer] fetch error:", err);
         if (mountedRef.current) setHasError(true);
