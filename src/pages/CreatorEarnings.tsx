@@ -159,6 +159,30 @@ const CreatorEarnings = () => {
       setLikesCount(0);
     }
 
+    // Mood sessions count
+    const { count: moodCount } = await supabase
+      .from("mood_sessions")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id);
+    setMoodSessionsCount(moodCount ?? 0);
+
+    // Studio AI tracks count (audio_url contains suno/replicate)
+    const { count: studioC } = await supabase
+      .from("tracks")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .or("audio_url.ilike.%suno%,audio_url.ilike.%replicate%");
+    setStudioCount(studioC ?? 0);
+
+    // Ultimate subscription check
+    const { data: subData } = await supabase
+      .from("user_subscriptions")
+      .select("plan, status")
+      .eq("user_id", user.id)
+      .eq("status", "active")
+      .maybeSingle();
+    setIsUltimate(subData?.plan === "ultimate");
+
     const { data: milestoneData } = await (supabase as any)
       .from("creator_milestone_bonuses")
       .select("bonus_type")
@@ -166,16 +190,23 @@ const CreatorEarnings = () => {
     if (milestoneData) {
       setUploadBonusClaimed(milestoneData.some((m: any) => m.bonus_type === "uploads_50"));
       setLikesBonusClaimed(milestoneData.some((m: any) => m.bonus_type === "likes_50"));
+      setMoodBonusClaimed(milestoneData.some((m: any) => m.bonus_type === "mood_sessions_5"));
+      setStudioBonusClaimed(milestoneData.some((m: any) => m.bonus_type === "studio_5"));
     }
 
     setLoading(false);
   }, [user]);
 
-  const claimMilestone = async (type: "uploads" | "likes") => {
+  const claimMilestone = async (type: "uploads" | "likes" | "mood" | "studio") => {
     setClaimingMilestone(type);
     try {
-      const fnName = type === "uploads" ? "claim_upload_milestone_bonus" : "claim_likes_milestone_bonus";
-      const { data, error } = await (supabase as any).rpc(fnName);
+      const fnMap: Record<string, string> = {
+        uploads: "claim_upload_milestone_bonus",
+        likes: "claim_likes_milestone_bonus",
+        mood: "claim_mood_sessions_milestone_bonus",
+        studio: "claim_studio_milestone_bonus",
+      };
+      const { data, error } = await (supabase as any).rpc(fnMap[type]);
       if (error) throw error;
       if (data?.success) {
         toast.success(`🎁 +${Number(data.amount).toFixed(2)} € trafiło do Twoich zarobków!`);
@@ -184,6 +215,8 @@ const CreatorEarnings = () => {
         toast.error(`Potrzebujesz ${data.required}, masz ${data.current}`);
       } else if (data?.error === "already_claimed") {
         toast.info("Ten bonus został już odebrany");
+      } else if (data?.error === "requires_ultimate") {
+        toast.error("Ten bonus wymaga subskrypcji Ultimate (9.99 €/mc)");
       } else {
         toast.error("Nie udało się odebrać bonusu");
       }
