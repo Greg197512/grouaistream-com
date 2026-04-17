@@ -16,6 +16,7 @@ import {
   Download, Heart, Percent
 } from "lucide-react";
 import { BoostPurchaseModal } from "@/components/boost/BoostPurchaseModal";
+import { PayoutRequestModal } from "@/components/earnings/PayoutRequestModal";
 import { TrackBadges } from "@/components/ui/TrackBadges";
 import { StreamBreakdown } from "@/components/earnings/StreamBreakdown";
 import { useNavigate } from "react-router-dom";
