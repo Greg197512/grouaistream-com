@@ -694,6 +694,12 @@ const CreatorEarnings = () => {
           trackTitle={boostTrack.title}
         />
       )}
+      <PayoutRequestModal
+        open={payoutModalOpen}
+        onOpenChange={setPayoutModalOpen}
+        availableAmount={Math.max(0, (totalEarnings + bonusPayoutFallback) - payouts.filter(p => p.status !== "rejected").reduce((s, p) => s + Number(p.amount), 0))}
+        onSuccess={loadData}
+      />
     </MainLayout>
   );
 };
