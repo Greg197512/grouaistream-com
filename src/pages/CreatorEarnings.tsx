@@ -58,6 +58,11 @@ const CreatorEarnings = () => {
   const [boostTrack, setBoostTrack] = useState<{ id: string; title: string } | null>(null);
   const [payouts, setPayouts] = useState<PayoutRequest[]>([]);
   const [requestingPayout, setRequestingPayout] = useState(false);
+  const [uploadCount, setUploadCount] = useState(0);
+  const [likesCount, setLikesCount] = useState(0);
+  const [uploadBonusClaimed, setUploadBonusClaimed] = useState(false);
+  const [likesBonusClaimed, setLikesBonusClaimed] = useState(false);
+  const [claimingMilestone, setClaimingMilestone] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     if (!user) return;
