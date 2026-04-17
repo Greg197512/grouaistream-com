@@ -685,6 +685,11 @@ export default function Admin() {
                 </TabsTrigger>
               </TabsList>
 
+              {/* Bonuses & Payouts Tab */}
+              <TabsContent value="bonuses">
+                <BonusMonitor />
+              </TabsContent>
+
               {/* Genres Tab */}
               <TabsContent value="genres">
                 <Card className="border-border/50 bg-card/50 backdrop-blur">
