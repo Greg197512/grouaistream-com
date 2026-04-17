@@ -60,5 +60,8 @@ verify_jwt = false
 [functions.ai-music-shrink]
 verify_jwt = false
 
+[functions.ai-mood-analysis]
+verify_jwt = false
+
 [functions.ai-vision-mood]
 verify_jwt = false
