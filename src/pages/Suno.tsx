@@ -1112,6 +1112,9 @@ const Suno = () => {
         </DialogContent>
       </Dialog>
 
+      {/* Floating AI music chat — describe a track, ElevenLabs makes it */}
+      <FloatingMusicChat />
+
     </MainLayout>
   );
 };
