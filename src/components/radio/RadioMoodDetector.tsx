@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Brain, Sparkles, Eye, Camera, CameraOff, Loader2, Gift } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAISafe } from "@/contexts/AIContext";
-import { useFaceDetection } from "@/hooks/useFaceDetection";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -32,7 +31,6 @@ export const RadioMoodDetector = () => {
   const ai = useAISafe();
   const { t } = useLanguage();
   const { user } = useAuth();
-  const { isModelLoaded, isLoadingModel, loadModels, detectWithSampling } = useFaceDetection();
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const progressTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -89,7 +87,7 @@ export const RadioMoodDetector = () => {
     }
   }, [user]);
 
-  const fetchShrinkAnalysis = useCallback(async (mood: string, confidence: number, emotions: any[]) => {
+  const fetchShrinkAnalysis = useCallback(async (mood: string, confidence: number, emotions: any) => {
     try {
       const { data, error } = await supabase.functions.invoke("ai-music-shrink", {
         body: { mood, confidence, emotions },
@@ -104,7 +102,7 @@ export const RadioMoodDetector = () => {
     }
   }, []);
 
-  const applyMood = useCallback(async (mood: typeof QUICK_MOODS[0], confidence: number, source: "manual" | "webcam", emotions?: any[]) => {
+  const applyMood = useCallback(async (mood: typeof QUICK_MOODS[0], confidence: number, source: "manual" | "webcam", emotions?: any) => {
     setActiveMood(mood.mood);
     setDetectedConfidence(source === "webcam" ? confidence : null);
 
@@ -127,19 +125,23 @@ export const RadioMoodDetector = () => {
     }
   }, [ai, fetchShrinkAnalysis, claimBonus]);
 
+  // Capture a snapshot from the video element as JPEG base64
+  const captureSnapshot = (video: HTMLVideoElement): string | null => {
+    const w = video.videoWidth || 640;
+    const h = video.videoHeight || 480;
+    if (!w || !h) return null;
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return null;
+    ctx.drawImage(video, 0, 0, w, h);
+    return canvas.toDataURL("image/jpeg", 0.85);
+  };
+
   const startCameraDetection = useCallback(async () => {
     setShrinkAnalysis(null);
     setBonusGranted(null);
-
-    let loaded = isModelLoaded;
-    if (!loaded) {
-      toast.info("⏳ Ładuję model AI...");
-      loaded = await loadModels();
-    }
-    if (!loaded) {
-      toast.error("Nie udało się załadować modelu AI. Spróbuj ponownie.");
-      return;
-    }
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -168,29 +170,48 @@ export const RadioMoodDetector = () => {
         v.addEventListener("loadeddata", onReady);
       });
 
-      // Give camera 600ms to autofocus & expose
-      await new Promise(r => setTimeout(r, 600));
+      // Give camera 800ms to autofocus & expose
+      await new Promise(r => setTimeout(r, 800));
+      setAnalysisProgress(20);
 
       stopProgressTimer();
       progressTimerRef.current = setInterval(() => {
-        setAnalysisProgress(prev => (prev < 90 ? prev + 2 : prev));
-      }, 100);
+        setAnalysisProgress(prev => (prev < 90 ? prev + 3 : prev));
+      }, 200);
 
-      console.log("[mood-detector] starting detection sampling");
-      const result = await detectWithSampling(videoRef.current, 5, 400);
-      console.log("[mood-detector] sampling done:", result);
+      // Capture snapshot
+      const snapshot = captureSnapshot(videoRef.current);
+      if (!snapshot) {
+        throw new Error("Nie udało się przechwycić obrazu z kamery");
+      }
+      console.log("[mood-detector] snapshot captured, size:", snapshot.length);
+
+      // Send to Lovable AI Vision
+      const { data, error } = await supabase.functions.invoke("ai-vision-mood", {
+        body: { imageBase64: snapshot },
+      });
 
       stopProgressTimer();
       setAnalysisProgress(100);
 
-      if (result?.faceDetected) {
-        const emotionKey = result.dominantEmotion;
+      if (error) {
+        console.error("[mood-detector] vision error:", error);
+        toast.error(error.message || "Błąd analizy AI Vision");
+        stopCamera();
+        setTimeout(() => { setIsAnalyzing(false); setAnalysisProgress(0); }, 600);
+        return;
+      }
+
+      console.log("[mood-detector] vision result:", data);
+
+      if (data?.faceDetected) {
+        const emotionKey = data.dominantEmotion;
         const matched = EMOTION_TO_MOOD[emotionKey] || EMOTION_TO_MOOD.neutral;
         try {
-          await applyMood(matched, result.confidence, "webcam", result.emotions);
+          await applyMood(matched, data.confidence || 90, "webcam", data.emotions);
         } catch (e) {
           console.error("[mood-detector] applyMood error:", e);
-          toast.error("Wykryto nastrój, ale analiza AI się nie udała");
+          toast.error("Wykryto nastrój, ale wystąpił błąd");
         }
       } else {
         toast.error("😕 Nie wykryto twarzy — popraw oświetlenie i ustaw się na wprost kamery");
@@ -201,14 +222,14 @@ export const RadioMoodDetector = () => {
         setIsAnalyzing(false);
         setAnalysisProgress(0);
       }, 600);
-    } catch (error) {
+    } catch (error: any) {
       console.error("[mood-detector] camera error:", error);
-      toast.error("Brak dostępu do kamery lub błąd analizy");
+      toast.error(error?.message || "Brak dostępu do kamery lub błąd analizy");
       stopCamera();
       setIsAnalyzing(false);
       setAnalysisProgress(0);
     }
-  }, [isModelLoaded, loadModels, detectWithSampling, applyMood, stopCamera]);
+  }, [applyMood, stopCamera]);
 
   return (
     <motion.div
@@ -362,7 +383,7 @@ export const RadioMoodDetector = () => {
       </div>
 
       <p className="text-[10px] text-muted-foreground/60 text-center">
-        {isLoadingModel ? "⏳ Ładuję model AI..." : "Kliknij 📷 lub wybierz nastrój ręcznie"}
+        Powered by Lovable AI Vision · Kliknij 📷 lub wybierz nastrój ręcznie
       </p>
     </motion.div>
   );
