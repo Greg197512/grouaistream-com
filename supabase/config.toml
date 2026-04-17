@@ -56,3 +56,6 @@ verify_jwt = false
 
 [functions.handle-email-suppression]
 verify_jwt = false
+
+[functions.ai-music-shrink]
+verify_jwt = false
