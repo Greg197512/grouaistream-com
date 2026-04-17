@@ -58,6 +58,7 @@ import { AIModeratorRankings } from "@/components/admin/AIModeratorRankings";
 import { TopEarners } from "@/components/admin/TopEarners";
 import { Radio as RadioIcon, HardDrive, Award, DollarSign, Megaphone } from "lucide-react";
 import { MarqueeManager } from "@/components/admin/MarqueeManager";
+import { BonusMonitor } from "@/components/admin/BonusMonitor";
 
 interface UserStats {
   totalUsers: number;
@@ -636,8 +637,12 @@ export default function Admin() {
             </div>
 
             {/* Tabs */}
-            <Tabs defaultValue="genres" className="space-y-4">
-              <TabsList>
+            <Tabs defaultValue="bonuses" className="space-y-4">
+              <TabsList className="flex-wrap h-auto">
+                <TabsTrigger value="bonuses" className="gap-2">
+                  <DollarSign className="h-4 w-4" />
+                  Bonusy & Wypłaty
+                </TabsTrigger>
                 <TabsTrigger value="genres" className="gap-2">
                   <BarChart3 className="h-4 w-4" />
                   Gatunki
@@ -679,6 +684,11 @@ export default function Admin() {
                   Pasek
                 </TabsTrigger>
               </TabsList>
+
+              {/* Bonuses & Payouts Tab */}
+              <TabsContent value="bonuses">
+                <BonusMonitor />
+              </TabsContent>
 
               {/* Genres Tab */}
               <TabsContent value="genres">

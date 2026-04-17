@@ -16,6 +16,7 @@ import {
   Download, Heart, Percent
 } from "lucide-react";
 import { BoostPurchaseModal } from "@/components/boost/BoostPurchaseModal";
+import { PayoutRequestModal } from "@/components/earnings/PayoutRequestModal";
 import { TrackBadges } from "@/components/ui/TrackBadges";
 import { StreamBreakdown } from "@/components/earnings/StreamBreakdown";
 import { useNavigate } from "react-router-dom";
@@ -58,6 +59,7 @@ const CreatorEarnings = () => {
   const [boostTrack, setBoostTrack] = useState<{ id: string; title: string } | null>(null);
   const [payouts, setPayouts] = useState<PayoutRequest[]>([]);
   const [requestingPayout, setRequestingPayout] = useState(false);
+  const [payoutModalOpen, setPayoutModalOpen] = useState(false);
   const [uploadCount, setUploadCount] = useState(0);
   const [likesCount, setLikesCount] = useState(0);
   const [moodSessionsCount, setMoodSessionsCount] = useState(0);
@@ -561,7 +563,7 @@ const CreatorEarnings = () => {
                 <p className="text-[10px] text-muted-foreground">{t("earnings.minPayoutInfo")}</p>
               </div>
               <Button 
-                onClick={handleRequestPayout}
+                onClick={() => setPayoutModalOpen(true)}
                 disabled={requestingPayout || (totalEarnings + bonusPayoutFallback) < 12}
                 className="bg-gradient-to-r from-emerald-500 to-green-600 text-white gap-2"
               >
@@ -692,6 +694,12 @@ const CreatorEarnings = () => {
           trackTitle={boostTrack.title}
         />
       )}
+      <PayoutRequestModal
+        open={payoutModalOpen}
+        onOpenChange={setPayoutModalOpen}
+        availableAmount={Math.max(0, (totalEarnings + bonusPayoutFallback) - payouts.filter(p => p.status !== "rejected").reduce((s, p) => s + Number(p.amount), 0))}
+        onSuccess={loadData}
+      />
     </MainLayout>
   );
 };
