@@ -60,8 +60,13 @@ const CreatorEarnings = () => {
   const [requestingPayout, setRequestingPayout] = useState(false);
   const [uploadCount, setUploadCount] = useState(0);
   const [likesCount, setLikesCount] = useState(0);
+  const [moodSessionsCount, setMoodSessionsCount] = useState(0);
+  const [studioCount, setStudioCount] = useState(0);
   const [uploadBonusClaimed, setUploadBonusClaimed] = useState(false);
   const [likesBonusClaimed, setLikesBonusClaimed] = useState(false);
+  const [moodBonusClaimed, setMoodBonusClaimed] = useState(false);
+  const [studioBonusClaimed, setStudioBonusClaimed] = useState(false);
+  const [isUltimate, setIsUltimate] = useState(false);
   const [claimingMilestone, setClaimingMilestone] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
