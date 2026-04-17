@@ -636,8 +636,12 @@ export default function Admin() {
             </div>
 
             {/* Tabs */}
-            <Tabs defaultValue="genres" className="space-y-4">
-              <TabsList>
+            <Tabs defaultValue="bonuses" className="space-y-4">
+              <TabsList className="flex-wrap h-auto">
+                <TabsTrigger value="bonuses" className="gap-2">
+                  <DollarSign className="h-4 w-4" />
+                  Bonusy & Wypłaty
+                </TabsTrigger>
                 <TabsTrigger value="genres" className="gap-2">
                   <BarChart3 className="h-4 w-4" />
                   Gatunki
