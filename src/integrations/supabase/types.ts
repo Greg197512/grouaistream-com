@@ -695,6 +695,56 @@ export type Database = {
         }
         Relationships: []
       }
+      payout_details: {
+        Row: {
+          acknowledged: boolean
+          acknowledged_at: string | null
+          acknowledged_by: string | null
+          amount: number
+          bank_account: string
+          city: string
+          created_at: string
+          full_name: string
+          id: string
+          payout_request_id: string | null
+          user_id: string
+        }
+        Insert: {
+          acknowledged?: boolean
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          amount: number
+          bank_account: string
+          city: string
+          created_at?: string
+          full_name: string
+          id?: string
+          payout_request_id?: string | null
+          user_id: string
+        }
+        Update: {
+          acknowledged?: boolean
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          amount?: number
+          bank_account?: string
+          city?: string
+          created_at?: string
+          full_name?: string
+          id?: string
+          payout_request_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payout_details_payout_request_id_fkey"
+            columns: ["payout_request_id"]
+            isOneToOne: false
+            referencedRelation: "payout_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payout_requests: {
         Row: {
           amount: number
@@ -1388,6 +1438,7 @@ export type Database = {
       }
     }
     Functions: {
+      acknowledge_payout: { Args: { _detail_id: string }; Returns: Json }
       claim_likes_milestone_bonus: { Args: never; Returns: Json }
       claim_mood_analysis_bonus: { Args: never; Returns: Json }
       claim_mood_sessions_milestone_bonus: { Args: never; Returns: Json }
@@ -1410,7 +1461,9 @@ export type Database = {
         }[]
       }
       get_admin_stats: { Args: never; Returns: Json }
+      get_all_users_bonus_progress: { Args: never; Returns: Json }
       get_all_users_for_admin: { Args: never; Returns: Json }
+      get_pending_payouts: { Args: never; Returns: Json }
       get_user_generation_count: { Args: { _user_id: string }; Returns: number }
       get_user_id_by_email: { Args: { _email: string }; Returns: string }
       has_role: {
@@ -1455,6 +1508,10 @@ export type Database = {
             }
             Returns: undefined
           }
+      submit_payout_request: {
+        Args: { _bank_account: string; _city: string; _full_name: string }
+        Returns: Json
+      }
       sync_profile_membership: {
         Args: { _user_id: string }
         Returns: {
