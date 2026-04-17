@@ -10,6 +10,10 @@ import { formatDistanceToNow } from "date-fns";
 import { TrackOptionsMenu, LikeButton } from "@/components/menus/TrackOptionsMenu";
 import { cn } from "@/lib/utils";
 import { HQCover } from "@/components/ui/HQCover";
+import { withTimeout } from "@/lib/withTimeout";
+
+const FETCH_TIMEOUT_MS = 15_000;
+const TRACK_SELECT = "id,title,artist,album,duration,cover_url,audio_url,video_url,genre,mood";
 
 interface RecentTrack {
   id: string;
@@ -30,41 +34,67 @@ export const RecentlyPlayed = () => {
   const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
   const { playPlaylist, currentTrack, isPlaying } = usePlayer();
-  
 
   useEffect(() => {
+    let isMounted = true;
+
+    const fetchLatestTracks = async () => {
+      const { data, error } = await withTimeout(
+        supabase
+          .from("tracks")
+          .select(TRACK_SELECT)
+          .or("audio_url.not.is.null,video_url.not.is.null")
+          .order("created_at", { ascending: false })
+          .limit(6),
+        FETCH_TIMEOUT_MS,
+        "RecentlyPlayed fallback"
+      );
+
+      if (error) throw error;
+
+      return (data || []).map((track) => ({
+        ...track,
+        played_at: new Date().toISOString(),
+      })) as RecentTrack[];
+    };
+
     const fetchRecentTracks = async () => {
       setIsLoading(true);
+
       try {
         if (user) {
-          const { data, error } = await supabase
-            .from("listening_history")
-            .select(`
-              id,
-              played_at,
-              tracks (
-                id,
-                title,
-                artist,
-                album,
-                duration,
-                cover_url,
-                audio_url,
-                video_url,
-                genre,
-                mood
-              )
-            `)
-            .eq("user_id", user.id)
-            .order("played_at", { ascending: false })
-            .limit(30);
+          try {
+            const { data, error } = await withTimeout(
+              supabase
+                .from("listening_history")
+                .select(`
+                  id,
+                  played_at,
+                  tracks (
+                    id,
+                    title,
+                    artist,
+                    album,
+                    duration,
+                    cover_url,
+                    audio_url,
+                    video_url,
+                    genre,
+                    mood
+                  )
+                `)
+                .eq("user_id", user.id)
+                .order("played_at", { ascending: false })
+                .limit(30),
+              FETCH_TIMEOUT_MS,
+              "RecentlyPlayed history"
+            );
 
-          if (error) throw error;
+            if (error) throw error;
 
-          if (data) {
-            const allTracks = data
-              .filter(item => item.tracks)
-              .map(item => ({
+            const uniqueTracks = (data || [])
+              .filter((item) => item.tracks)
+              .map((item) => ({
                 id: item.tracks!.id,
                 title: item.tracks!.title,
                 artist: item.tracks!.artist,
@@ -76,59 +106,57 @@ export const RecentlyPlayed = () => {
                 genre: item.tracks!.genre,
                 mood: item.tracks!.mood,
                 played_at: item.played_at,
-              }));
-            // Deduplicate by track id — keep only the most recent play
-            const seen = new Set<string>();
-            const unique = allTracks.filter(t => {
-              if (seen.has(t.id)) return false;
-              seen.add(t.id);
-              return true;
-            });
-            setRecentTracks(unique.slice(0, 6));
-          }
-        } else {
-          let query = supabase
-            .from("tracks")
-            .select("*");
-          
-          const { data, error } = await query.limit(6);
+              }))
+              .filter((track, index, array) => array.findIndex((candidate) => candidate.id === track.id) === index)
+              .slice(0, 6);
 
-          if (error) throw error;
-
-          if (data) {
-            setRecentTracks(data.map(t => ({
-              ...t,
-              played_at: new Date().toISOString(),
-            })));
+            if (uniqueTracks.length > 0) {
+              if (isMounted) setRecentTracks(uniqueTracks);
+              return;
+            }
+          } catch (error) {
+            console.warn("[RecentlyPlayed] history fetch failed, using latest tracks:", error);
           }
         }
+
+        const fallbackTracks = await fetchLatestTracks();
+        if (isMounted) setRecentTracks(fallbackTracks);
       } catch (error) {
         console.error("Error fetching recent tracks:", error);
+        if (isMounted) setRecentTracks([]);
       } finally {
-        setIsLoading(false);
+        if (isMounted) setIsLoading(false);
       }
     };
 
-    fetchRecentTracks();
+    void fetchRecentTracks();
 
-    const handler = () => fetchRecentTracks();
+    const handler = () => {
+      void fetchRecentTracks();
+    };
+
     window.addEventListener("track-list-changed", handler);
-    return () => window.removeEventListener("track-list-changed", handler);
+
+    return () => {
+      isMounted = false;
+      window.removeEventListener("track-list-changed", handler);
+    };
   }, [user]);
 
   const handlePlayTrack = (track: RecentTrack, index: number) => {
-    const tracksForPlayer: Track[] = recentTracks.map(t => ({
-      id: t.id,
-      title: t.title,
-      artist: t.artist,
-      album: t.album,
-      duration: t.duration,
-      cover_url: t.cover_url,
-      audio_url: t.audio_url,
-      video_url: t.video_url,
-      genre: t.genre,
-      mood: t.mood,
+    const tracksForPlayer: Track[] = recentTracks.map((item) => ({
+      id: item.id,
+      title: item.title,
+      artist: item.artist,
+      album: item.album,
+      duration: item.duration,
+      cover_url: item.cover_url,
+      audio_url: item.audio_url,
+      video_url: item.video_url,
+      genre: item.genre,
+      mood: item.mood,
     }));
+
     playPlaylist(tracksForPlayer, index);
   };
 
@@ -189,8 +217,8 @@ export const RecentlyPlayed = () => {
                       ref={provided.innerRef}
                       {...provided.draggableProps}
                       initial={{ opacity: 0, x: -20 }}
-                      animate={{ 
-                        opacity: 1, 
+                      animate={{
+                        opacity: 1,
                         x: 0,
                         scale: snapshot.isDragging ? 1.05 : 1,
                         boxShadow: snapshot.isDragging ? "0 20px 40px rgba(0,0,0,0.4)" : "none",
@@ -203,7 +231,6 @@ export const RecentlyPlayed = () => {
                         snapshot.isDragging && "ring-2 ring-accent rotate-1"
                       )}
                     >
-                      {/* Drag Handle */}
                       <div
                         {...provided.dragHandleProps}
                         className="p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing hover:bg-muted"
@@ -211,18 +238,16 @@ export const RecentlyPlayed = () => {
                         <GripVertical className="h-4 w-4 text-muted-foreground" />
                       </div>
 
-                      <div 
+                      <div
                         className="relative h-12 w-12 rounded overflow-hidden flex-shrink-0"
                         onClick={() => handlePlayTrack(track, index)}
                       >
-                        {track.cover_url ? (
-                          <HQCover src={track.cover_url} alt={track.title} genre={track.genre} artist={track.artist} className="h-full w-full" />
-                        ) : (
-                          <HQCover src={null} alt={track.title} genre={track.genre} artist={track.artist} className="h-full w-full" />
-                        )}
-                        <div className={`absolute inset-0 flex items-center justify-center transition-opacity bg-black/40 ${
-                          currentTrack?.id === track.id && isPlaying ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-                        }`}>
+                        <HQCover src={track.cover_url} alt={track.title} genre={track.genre} artist={track.artist} className="h-full w-full" />
+                        <div
+                          className={`absolute inset-0 flex items-center justify-center transition-opacity bg-black/40 ${
+                            currentTrack?.id === track.id && isPlaying ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                          }`}
+                        >
                           {currentTrack?.id === track.id && isPlaying ? (
                             <div className="flex gap-0.5">
                               {[1, 2, 3].map((i) => (
@@ -241,7 +266,7 @@ export const RecentlyPlayed = () => {
                       </div>
                       <div className="flex-1 min-w-0" onClick={() => handlePlayTrack(track, index)}>
                         <p className="font-medium text-sm truncate">{track.title}</p>
-                        <div className="flex items-center gap-1"><p className="text-xs text-muted-foreground truncate">{track.artist}</p><span className="text-[7px] font-bold text-primary/70 whitespace-nowrap">Grouarock®</span></div>
+                        <p className="text-xs text-muted-foreground truncate">{track.artist}</p>
                       </div>
                       <div className="flex items-center gap-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                         {user && (

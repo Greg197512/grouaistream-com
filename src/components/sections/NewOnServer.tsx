@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { Play, Flame, Loader2, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,8 +10,11 @@ import { HQCover } from "@/components/ui/HQCover";
 import { LikeButton, TrackOptionsMenu } from "@/components/menus/TrackOptionsMenu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
+import { withTimeout } from "@/lib/withTimeout";
 
 const FETCH_TIMEOUT_MS = 25_000;
+const PROFILE_FETCH_TIMEOUT_MS = 8_000;
+const TRACK_SELECT = "id,title,artist,album,duration,cover_url,audio_url,video_url,genre,mood,created_at,user_id";
 
 interface UploaderProfile {
   display_name: string | null;
@@ -32,70 +35,83 @@ export const NewOnServer = () => {
   const navigate = useNavigate();
   const mountedRef = useRef(true);
 
-  useEffect(() => {
-    mountedRef.current = true;
+  const fetchLatest = useCallback(async () => {
+    if (!mountedRef.current) return;
 
-    const fetchLatest = async () => {
-      try {
-        if (mountedRef.current) {
-          setLoading(true);
-          setHasError(false);
-        }
+    setLoading(true);
+    setHasError(false);
 
-        const { data, error } = await supabase
+    try {
+      const { data, error } = await withTimeout(
+        supabase
           .from("tracks")
-          .select("*")
+          .select(TRACK_SELECT)
           .or("audio_url.not.is.null,video_url.not.is.null")
           .order("created_at", { ascending: false })
-          .limit(8);
+          .limit(8),
+        FETCH_TIMEOUT_MS,
+        "NewOnServer tracks"
+      );
 
-        if (!mountedRef.current) return;
-        if (error) throw error;
+      if (!mountedRef.current) return;
+      if (error) throw error;
 
-        const tracksData = (data || []) as ServerTrack[];
-        const userIds = Array.from(new Set(tracksData.map(t => t.user_id).filter(Boolean))) as string[];
+      const tracksData = (data || []) as ServerTrack[];
+      const userIds = Array.from(new Set(tracksData.map((track) => track.user_id).filter(Boolean))) as string[];
 
-        let profilesMap: Record<string, UploaderProfile> = {};
-        if (userIds.length > 0) {
-          const { data: profiles } = await supabase
-            .from("profiles")
-            .select("user_id, display_name, avatar_url")
-            .in("user_id", userIds);
-          profilesMap = (profiles || []).reduce((acc, p) => {
-            acc[p.user_id] = { display_name: p.display_name, avatar_url: p.avatar_url };
+      let profilesMap: Record<string, UploaderProfile> = {};
+
+      if (userIds.length > 0) {
+        try {
+          const { data: profiles, error: profilesError } = await withTimeout(
+            supabase
+              .from("profiles")
+              .select("user_id, display_name, avatar_url")
+              .in("user_id", userIds),
+            PROFILE_FETCH_TIMEOUT_MS,
+            "NewOnServer profiles"
+          );
+
+          if (profilesError) throw profilesError;
+
+          profilesMap = (profiles || []).reduce((acc, profile) => {
+            if (profile.user_id) {
+              acc[profile.user_id] = {
+                display_name: profile.display_name,
+                avatar_url: profile.avatar_url,
+              };
+            }
             return acc;
           }, {} as Record<string, UploaderProfile>);
+        } catch (profileError) {
+          console.warn("[NewOnServer] profiles fetch skipped:", profileError);
         }
-
-        const enriched = tracksData.map(t => ({
-          ...t,
-          uploader: t.user_id ? profilesMap[t.user_id] || null : null,
-        }));
-
-        if (mountedRef.current) setTracks(enriched);
-      } catch (err) {
-        console.error("[NewOnServer] fetch error:", err);
-        if (mountedRef.current) setHasError(true);
-      } finally {
-        if (mountedRef.current) setLoading(false);
       }
-    };
 
-    // Safety timeout — force-stop loader after FETCH_TIMEOUT_MS
-    const timeout = setTimeout(() => {
-      if (mountedRef.current && loading) {
-        console.warn("[NewOnServer] fetch timed out after", FETCH_TIMEOUT_MS, "ms");
-        setLoading(false);
-        setHasError(true);
+      if (mountedRef.current) {
+        setTracks(
+          tracksData.map((track) => ({
+            ...track,
+            uploader: track.user_id ? profilesMap[track.user_id] || null : null,
+          }))
+        );
       }
-    }, FETCH_TIMEOUT_MS);
+    } catch (err) {
+      console.error("[NewOnServer] fetch error:", err);
+      if (mountedRef.current) setHasError(true);
+    } finally {
+      if (mountedRef.current) setLoading(false);
+    }
+  }, []);
 
-    fetchLatest().finally(() => clearTimeout(timeout));
+  useEffect(() => {
+    mountedRef.current = true;
+    void fetchLatest();
 
     const channel = supabase
       .channel("new-tracks-home")
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "tracks" }, () => {
-        if (mountedRef.current) fetchLatest();
+        void fetchLatest();
       })
       .subscribe((status, err) => {
         if (err) console.error("[NewOnServer] realtime error:", err);
@@ -103,51 +119,16 @@ export const NewOnServer = () => {
 
     return () => {
       mountedRef.current = false;
-      clearTimeout(timeout);
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [fetchLatest]);
 
   const handlePlay = (track: Track, index: number) => {
     playPlaylist(tracks, index);
   };
 
   const handleRetry = () => {
-    setLoading(true);
-    setHasError(false);
-    // Re-mount effect by forcing state change — simpler: just refetch inline
-    const refetch = async () => {
-      try {
-        const { data, error } = await supabase
-          .from("tracks")
-          .select("*")
-          .or("audio_url.not.is.null,video_url.not.is.null")
-          .order("created_at", { ascending: false })
-          .limit(12);
-
-        if (error) throw error;
-        const tracksData = (data || []) as ServerTrack[];
-        const userIds = Array.from(new Set(tracksData.map(t => t.user_id).filter(Boolean))) as string[];
-        let profilesMap: Record<string, UploaderProfile> = {};
-        if (userIds.length > 0) {
-          const { data: profiles } = await supabase
-            .from("profiles")
-            .select("user_id, display_name, avatar_url")
-            .in("user_id", userIds);
-          profilesMap = (profiles || []).reduce((acc, p) => {
-            acc[p.user_id] = { display_name: p.display_name, avatar_url: p.avatar_url };
-            return acc;
-          }, {} as Record<string, UploaderProfile>);
-        }
-        setTracks(tracksData.map(t => ({ ...t, uploader: t.user_id ? profilesMap[t.user_id] || null : null })));
-      } catch (err) {
-        console.error("[NewOnServer] retry error:", err);
-        setHasError(true);
-      } finally {
-        setLoading(false);
-      }
-    };
-    refetch();
+    void fetchLatest();
   };
 
   if (loading) {
@@ -220,10 +201,12 @@ export const NewOnServer = () => {
                 artist={track.artist}
                 className="h-full w-full object-cover"
               />
-              <div className={cn(
-                "absolute inset-0 flex items-center justify-center bg-black/40 transition-opacity",
-                currentTrack?.id === track.id && isPlaying ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-              )}>
+              <div
+                className={cn(
+                  "absolute inset-0 flex items-center justify-center bg-black/40 transition-opacity",
+                  currentTrack?.id === track.id && isPlaying ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                )}
+              >
                 {currentTrack?.id === track.id && isPlaying ? (
                   <div className="flex gap-1">
                     {[1, 2, 3].map((i) => (
@@ -278,7 +261,7 @@ export const NewOnServer = () => {
               )}
             </div>
 
-            <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
+            <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
               <LikeButton trackId={track.id} />
               <TrackOptionsMenu
                 trackId={track.id}
