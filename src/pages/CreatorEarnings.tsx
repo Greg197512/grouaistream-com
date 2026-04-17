@@ -58,6 +58,11 @@ const CreatorEarnings = () => {
   const [boostTrack, setBoostTrack] = useState<{ id: string; title: string } | null>(null);
   const [payouts, setPayouts] = useState<PayoutRequest[]>([]);
   const [requestingPayout, setRequestingPayout] = useState(false);
+  const [uploadCount, setUploadCount] = useState(0);
+  const [likesCount, setLikesCount] = useState(0);
+  const [uploadBonusClaimed, setUploadBonusClaimed] = useState(false);
+  const [likesBonusClaimed, setLikesBonusClaimed] = useState(false);
+  const [claimingMilestone, setClaimingMilestone] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     if (!user) return;
@@ -130,8 +135,59 @@ const CreatorEarnings = () => {
       setPayouts(payoutData as PayoutRequest[]);
     }
 
+    // Milestone bonus progress
+    const { count: trackCount } = await supabase
+      .from("tracks")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id);
+    setUploadCount(trackCount ?? 0);
+
+    const trackIds = (tracksData ?? []).map(t => t.id);
+    if (trackIds.length > 0) {
+      const { count: lc } = await supabase
+        .from("liked_songs")
+        .select("id", { count: "exact", head: true })
+        .in("track_id", trackIds)
+        .neq("user_id", user.id);
+      setLikesCount(lc ?? 0);
+    } else {
+      setLikesCount(0);
+    }
+
+    const { data: milestoneData } = await (supabase as any)
+      .from("creator_milestone_bonuses")
+      .select("bonus_type")
+      .eq("user_id", user.id);
+    if (milestoneData) {
+      setUploadBonusClaimed(milestoneData.some((m: any) => m.bonus_type === "uploads_50"));
+      setLikesBonusClaimed(milestoneData.some((m: any) => m.bonus_type === "likes_50"));
+    }
+
     setLoading(false);
   }, [user]);
+
+  const claimMilestone = async (type: "uploads" | "likes") => {
+    setClaimingMilestone(type);
+    try {
+      const fnName = type === "uploads" ? "claim_upload_milestone_bonus" : "claim_likes_milestone_bonus";
+      const { data, error } = await (supabase as any).rpc(fnName);
+      if (error) throw error;
+      if (data?.success) {
+        toast.success(`🎁 +${Number(data.amount).toFixed(2)} € trafiło do Twoich zarobków!`);
+        loadData();
+      } else if (data?.error === "not_eligible") {
+        toast.error(`Potrzebujesz ${data.required}, masz ${data.current}`);
+      } else if (data?.error === "already_claimed") {
+        toast.info("Ten bonus został już odebrany");
+      } else {
+        toast.error("Nie udało się odebrać bonusu");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Błąd");
+    } finally {
+      setClaimingMilestone(null);
+    }
+  };
 
   useEffect(() => {
     loadData();
@@ -269,7 +325,73 @@ const CreatorEarnings = () => {
           </Card>
         </motion.div>
 
-        {/* Security Trust Bar */}
+        {/* Milestone Bonuses */}
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.35 }}>
+          <Card className="bg-card/50 backdrop-blur border-white/10">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Rocket className="h-5 w-5 text-amber-400" />
+                Bonusy za osiągnięcia
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* 50 uploadów */}
+              <div className="p-4 rounded-lg bg-emerald-500/5 border border-emerald-500/15">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Music className="h-4 w-4 text-emerald-400" />
+                    <span className="text-sm font-semibold">50 utworów = +12 €</span>
+                  </div>
+                  <Badge className="bg-emerald-500/15 text-emerald-400 border-emerald-500/25 text-[10px]">
+                    {Math.min(uploadCount, 50)}/50
+                  </Badge>
+                </div>
+                <div className="h-1.5 rounded-full bg-secondary/50 mb-3 overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-emerald-500 to-green-500 transition-all"
+                    style={{ width: `${Math.min(100, (uploadCount / 50) * 100)}%` }}
+                  />
+                </div>
+                <Button
+                  size="sm"
+                  disabled={uploadBonusClaimed || uploadCount < 50 || claimingMilestone === "uploads"}
+                  onClick={() => claimMilestone("uploads")}
+                  className="w-full bg-emerald-600 hover:bg-emerald-500 text-white"
+                >
+                  {uploadBonusClaimed ? "✓ Odebrane" : uploadCount < 50 ? `Dodaj jeszcze ${50 - uploadCount}` : "Odbierz 12 €"}
+                </Button>
+              </div>
+
+              {/* 50 polubień */}
+              <div className="p-4 rounded-lg bg-pink-500/5 border border-pink-500/15">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Heart className="h-4 w-4 text-pink-400" />
+                    <span className="text-sm font-semibold">50 polubień = +12 €</span>
+                  </div>
+                  <Badge className="bg-pink-500/15 text-pink-400 border-pink-500/25 text-[10px]">
+                    {Math.min(likesCount, 50)}/50
+                  </Badge>
+                </div>
+                <div className="h-1.5 rounded-full bg-secondary/50 mb-3 overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-pink-500 to-rose-500 transition-all"
+                    style={{ width: `${Math.min(100, (likesCount / 50) * 100)}%` }}
+                  />
+                </div>
+                <Button
+                  size="sm"
+                  disabled={likesBonusClaimed || likesCount < 50 || claimingMilestone === "likes"}
+                  onClick={() => claimMilestone("likes")}
+                  className="w-full bg-pink-600 hover:bg-pink-500 text-white"
+                >
+                  {likesBonusClaimed ? "✓ Odebrane" : likesCount < 50 ? `Brakuje ${50 - likesCount}` : "Odbierz 12 €"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
         <motion.div 
           initial={{ opacity: 0 }} 
           animate={{ opacity: 1 }} 
