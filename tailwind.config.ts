@@ -103,6 +103,10 @@ export default {
           "0%, 100%": { transform: "translateY(0)" },
           "50%": { transform: "translateY(-10px)" },
         },
+        "marquee": {
+          "0%": { transform: "translateX(0%)" },
+          "100%": { transform: "translateX(-50%)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -112,6 +116,7 @@ export default {
         "scale-in": "scale-in 0.2s ease-out",
         "shimmer": "shimmer 2s infinite linear",
         "float": "float 6s ease-in-out infinite",
+        "marquee": "marquee 35s linear infinite",
       },
     },
   },

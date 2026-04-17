@@ -56,7 +56,8 @@ import { StorageStats } from "@/components/admin/StorageStats";
 import { AdminEmailDashboard } from "@/components/admin/AdminEmailDashboard";
 import { AIModeratorRankings } from "@/components/admin/AIModeratorRankings";
 import { TopEarners } from "@/components/admin/TopEarners";
-import { Radio as RadioIcon, HardDrive, Award, DollarSign } from "lucide-react";
+import { Radio as RadioIcon, HardDrive, Award, DollarSign, Megaphone } from "lucide-react";
+import { MarqueeManager } from "@/components/admin/MarqueeManager";
 
 interface UserStats {
   totalUsers: number;
@@ -672,6 +673,10 @@ export default function Admin() {
                 <TabsTrigger value="top-earners" className="gap-2">
                   <DollarSign className="h-4 w-4" />
                   Top Zarobki
+                </TabsTrigger>
+                <TabsTrigger value="marquee" className="gap-2">
+                  <Megaphone className="h-4 w-4" />
+                  Pasek
                 </TabsTrigger>
               </TabsList>
 

@@ -7,6 +7,7 @@ import { LiveRadioCard } from "@/components/sections/LiveRadioCard";
 import { TopArtists } from "@/components/sections/TopArtists";
 import { GenreSection } from "@/components/sections/GenreSection";
 import { NewOnServer } from "@/components/sections/NewOnServer";
+import { AdminMarquee } from "@/components/sections/AdminMarquee";
 import { UploadCTA } from "@/components/sections/UploadCTA";
 import { SupportSection } from "@/components/sections/SupportSection";
 import { PromotedTracksSection } from "@/components/sections/PromotedTracks";
@@ -26,6 +27,7 @@ const Index = () => {
       <Section name="hero"><HeroSection /></Section>
       <Section name="upload-cta"><UploadCTA /></Section>
       <Section name="promoted"><PromotedTracksSection /></Section>
+      <Section name="marquee"><AdminMarquee /></Section>
       <Section name="new-on-server"><NewOnServer /></Section>
       <Section name="recently-played"><RecentlyPlayed /></Section>
 
