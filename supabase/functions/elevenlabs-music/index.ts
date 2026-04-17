@@ -26,20 +26,60 @@ serve(async (req) => {
       });
     }
 
-    console.log("[ElevenLabs Music] Generating:", prompt, "duration:", duration);
+    // Sanitize prompt — ElevenLabs ToS rejects certain words/phrases.
+    // Replace risky terms with neutral musical equivalents.
+    const sanitizePrompt = (raw: string): string => {
+      const replacements: Array<[RegExp, string]> = [
+        [/\bbeast\s*mode\b/gi, "powerful energetic"],
+        [/\brap\b/gi, "hip-hop"],
+        [/\branthem\b/gi, "track"],
+        [/\bintense\b/gi, "energetic"],
+        [/\baggressive\b/gi, "dynamic"],
+        [/\bdark\b/gi, "moody"],
+        [/\bviolent\b/gi, "powerful"],
+        [/\bkill(er)?\b/gi, "strong"],
+        [/\bfight\b/gi, "energetic"],
+        [/\bweapon\b/gi, "instrument"],
+        [/\bdrug\b/gi, "vibe"],
+        [/\bsex(ual|y)?\b/gi, "smooth"],
+      ];
+      let cleaned = raw;
+      for (const [re, rep] of replacements) cleaned = cleaned.replace(re, rep);
+      return cleaned.trim().substring(0, 1000);
+    };
 
-    // Step 1: Generate instrumental music
-    const musicResponse = await fetch("https://api.elevenlabs.io/v1/music", {
-      method: "POST",
-      headers: {
-        "xi-api-key": ELEVENLABS_API_KEY,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        prompt: prompt.substring(0, 1000),
-        duration_seconds: duration || 30,
-      }),
-    });
+    const cleanPrompt = sanitizePrompt(prompt);
+    console.log("[ElevenLabs Music] Generating:", cleanPrompt, "duration:", duration);
+
+    const callMusicApi = async (p: string) =>
+      fetch("https://api.elevenlabs.io/v1/music", {
+        method: "POST",
+        headers: {
+          "xi-api-key": ELEVENLABS_API_KEY,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          prompt: p,
+          duration_seconds: duration || 30,
+        }),
+      });
+
+    // Step 1: Generate instrumental music (with auto-retry using ElevenLabs' own suggestion)
+    let musicResponse = await callMusicApi(cleanPrompt);
+
+    if (!musicResponse.ok && musicResponse.status === 400) {
+      const errBody = await musicResponse.clone().text();
+      try {
+        const parsed = JSON.parse(errBody);
+        const suggestion = parsed?.detail?.data?.prompt_suggestion;
+        if (suggestion && parsed?.detail?.status === "bad_prompt") {
+          console.log("[ElevenLabs Music] Retrying with API suggestion:", suggestion);
+          musicResponse = await callMusicApi(suggestion);
+        }
+      } catch {
+        // ignore parse failure
+      }
+    }
 
     if (!musicResponse.ok) {
       const errText = await musicResponse.text();
@@ -59,6 +99,17 @@ serve(async (req) => {
           message: "Brak kredytów ElevenLabs Music. Twoje konto wyczerpało limit generowania muzyki. Doładuj plan na elevenlabs.io lub spróbuj ponownie po odnowieniu kwoty.",
         }), {
           status: 402,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Detect prompt-policy violation → return friendly 400 instead of 500
+      if (errText.includes("bad_prompt") || errText.includes("Terms of Service")) {
+        return new Response(JSON.stringify({
+          error: "bad_prompt",
+          message: "ElevenLabs odrzucił prompt jako niezgodny z polityką treści. Spróbuj prostszego, neutralnego opisu (np. „melodyjny pop z gitarą akustyczną”). Unikaj słów typu intense, beast, fight, dark.",
+        }), {
+          status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
