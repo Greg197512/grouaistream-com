@@ -261,6 +261,19 @@ export const NewOnServer = () => {
                 <p className="text-xs text-muted-foreground truncate">{track.artist}</p>
                 <span className="text-[7px] font-bold text-primary/70 whitespace-nowrap">Grouarock®</span>
               </div>
+              {track.uploader?.display_name && (
+                <div className="flex items-center gap-1.5 mt-1.5">
+                  <Avatar className="h-4 w-4">
+                    {track.uploader.avatar_url && <AvatarImage src={track.uploader.avatar_url} alt={track.uploader.display_name} />}
+                    <AvatarFallback className="text-[8px] bg-primary/20 text-primary">
+                      {track.uploader.display_name.charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="text-[10px] text-muted-foreground truncate">
+                    @{track.uploader.display_name}
+                  </span>
+                </div>
+              )}
               {track.genre && (
                 <span className="inline-block mt-1.5 text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary">
                   {track.genre}
