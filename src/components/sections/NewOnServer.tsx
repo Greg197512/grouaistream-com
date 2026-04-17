@@ -8,12 +8,20 @@ import { formatDistanceToNow } from "date-fns";
 import { pl } from "date-fns/locale";
 import { HQCover } from "@/components/ui/HQCover";
 import { LikeButton, TrackOptionsMenu } from "@/components/menus/TrackOptionsMenu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 
 const FETCH_TIMEOUT_MS = 10_000;
 
+interface UploaderProfile {
+  display_name: string | null;
+  avatar_url: string | null;
+}
+
 interface ServerTrack extends Track {
   created_at: string;
+  user_id: string | null;
+  uploader?: UploaderProfile | null;
 }
 
 export const NewOnServer = () => {
@@ -44,7 +52,27 @@ export const NewOnServer = () => {
         if (!mountedRef.current) return;
         if (error) throw error;
 
-        setTracks((data || []) as ServerTrack[]);
+        const tracksData = (data || []) as ServerTrack[];
+        const userIds = Array.from(new Set(tracksData.map(t => t.user_id).filter(Boolean))) as string[];
+
+        let profilesMap: Record<string, UploaderProfile> = {};
+        if (userIds.length > 0) {
+          const { data: profiles } = await supabase
+            .from("profiles")
+            .select("user_id, display_name, avatar_url")
+            .in("user_id", userIds);
+          profilesMap = (profiles || []).reduce((acc, p) => {
+            acc[p.user_id] = { display_name: p.display_name, avatar_url: p.avatar_url };
+            return acc;
+          }, {} as Record<string, UploaderProfile>);
+        }
+
+        const enriched = tracksData.map(t => ({
+          ...t,
+          uploader: t.user_id ? profilesMap[t.user_id] || null : null,
+        }));
+
+        if (mountedRef.current) setTracks(enriched);
       } catch (err) {
         console.error("[NewOnServer] fetch error:", err);
         if (mountedRef.current) setHasError(true);
@@ -98,7 +126,20 @@ export const NewOnServer = () => {
           .limit(12);
 
         if (error) throw error;
-        setTracks((data || []) as ServerTrack[]);
+        const tracksData = (data || []) as ServerTrack[];
+        const userIds = Array.from(new Set(tracksData.map(t => t.user_id).filter(Boolean))) as string[];
+        let profilesMap: Record<string, UploaderProfile> = {};
+        if (userIds.length > 0) {
+          const { data: profiles } = await supabase
+            .from("profiles")
+            .select("user_id, display_name, avatar_url")
+            .in("user_id", userIds);
+          profilesMap = (profiles || []).reduce((acc, p) => {
+            acc[p.user_id] = { display_name: p.display_name, avatar_url: p.avatar_url };
+            return acc;
+          }, {} as Record<string, UploaderProfile>);
+        }
+        setTracks(tracksData.map(t => ({ ...t, uploader: t.user_id ? profilesMap[t.user_id] || null : null })));
       } catch (err) {
         console.error("[NewOnServer] retry error:", err);
         setHasError(true);
@@ -220,6 +261,19 @@ export const NewOnServer = () => {
                 <p className="text-xs text-muted-foreground truncate">{track.artist}</p>
                 <span className="text-[7px] font-bold text-primary/70 whitespace-nowrap">Grouarock®</span>
               </div>
+              {track.uploader?.display_name && (
+                <div className="flex items-center gap-1.5 mt-1.5">
+                  <Avatar className="h-4 w-4">
+                    {track.uploader.avatar_url && <AvatarImage src={track.uploader.avatar_url} alt={track.uploader.display_name} />}
+                    <AvatarFallback className="text-[8px] bg-primary/20 text-primary">
+                      {track.uploader.display_name.charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="text-[10px] text-muted-foreground truncate">
+                    @{track.uploader.display_name}
+                  </span>
+                </div>
+              )}
               {track.genre && (
                 <span className="inline-block mt-1.5 text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary">
                   {track.genre}
