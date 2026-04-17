@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { clearStoredAuthSession, restoreSessionSafely } from "@/lib/authSession";
 
 export type ProfileRole = "free" | "artist" | "pro";
 
@@ -25,18 +26,6 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-const clearStoredAuthSession = () => {
-  if (typeof window === "undefined") return;
-
-  const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
-  const keysToRemove = Object.keys(window.localStorage).filter((key) => {
-    if (projectId && key.startsWith(`sb-${projectId}`)) return true;
-    return key.includes("supabase.auth") || key.includes("auth-token");
-  });
-
-  keysToRemove.forEach((key) => window.localStorage.removeItem(key));
-};
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -100,7 +89,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
         console.log("Auth state changed:", event, session?.user?.email);
         setSession(session);
         setUser(session?.user ?? null);
@@ -111,7 +100,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           return;
         }
 
-        await fetchProfile(session.user.id);
+        void fetchProfile(session.user.id);
 
         if (event === "SIGNED_IN") {
           setTimeout(async () => {
@@ -139,7 +128,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     );
 
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
+    restoreSessionSafely().then(async (session) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
