@@ -15,8 +15,9 @@ export const AdminMarquee = () => {
       .from("admin_marquee_messages")
       .select("id, message")
       .eq("is_active", true)
+      .gt("expires_at", new Date().toISOString())
       .order("created_at", { ascending: false });
-    if (data) setMessages(data);
+    setMessages(data || []);
   };
 
   useEffect(() => {
@@ -25,7 +26,9 @@ export const AdminMarquee = () => {
       .channel("admin-marquee")
       .on("postgres_changes", { event: "*", schema: "public", table: "admin_marquee_messages" }, load)
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    // Re-check expiration every 30s to auto-hide when time runs out
+    const interval = setInterval(load, 30000);
+    return () => { supabase.removeChannel(ch); clearInterval(interval); };
   }, []);
 
   if (messages.length === 0) return null;
