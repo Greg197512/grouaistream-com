@@ -298,13 +298,23 @@ const CreatorEarnings = () => {
               <div>
                 <p className="text-sm text-muted-foreground">{t("earnings.availableForPayout")}</p>
                 <p className="text-xl font-bold text-primary">
-                  {Math.max(0, totalEarnings - payouts.filter(p => p.status !== "rejected").reduce((s, p) => s + Number(p.amount), 0)).toFixed(2)} €
+                  {(() => {
+                    // Combined balance = tracks earnings + standalone bonuses (in case user has no own tracks)
+                    const totalCredited = totalEarnings + (tracks.length === 0 ? bonusEarnings : 0);
+                    const reserved = payouts.filter(p => p.status !== "rejected").reduce((s, p) => s + Number(p.amount), 0);
+                    return Math.max(0, totalCredited - reserved).toFixed(2);
+                  })()} €
                 </p>
+                {bonusEarnings > 0 && (
+                  <p className="text-[10px] text-emerald-400">
+                    🎁 W tym {bonusEarnings.toFixed(2)} € z bonusów
+                  </p>
+                )}
                 <p className="text-[10px] text-muted-foreground">{t("earnings.minPayoutInfo")}</p>
               </div>
               <Button 
                 onClick={handleRequestPayout}
-                disabled={requestingPayout || totalEarnings < 12}
+                disabled={requestingPayout || (totalEarnings + (tracks.length === 0 ? bonusEarnings : 0)) < 12}
                 className="bg-gradient-to-r from-emerald-500 to-green-600 text-white gap-2"
               >
                 <Wallet className="h-4 w-4" />
