@@ -149,6 +149,7 @@ export const PlayerBar = () => {
           .eq("user_id", user.id)
           .eq("track_id", currentTrack.id);
         setIsLiked(false);
+        window.dispatchEvent(new CustomEvent("track-like-changed", { detail: { trackId: currentTrack.id, liked: false } }));
         toast.success("Removed from Liked Songs");
       } catch (error) {
         console.error("Error toggling like:", error);
