@@ -23,6 +23,7 @@ import { VoiceRecorder } from "@/components/studio/VoiceRecorder";
 import { VoiceLibrary } from "@/components/studio/VoiceLibrary";
 import { FloatingMusicChat } from "@/components/studio/FloatingMusicChat";
 import { useSubscription } from "@/contexts/SubscriptionContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { uploadToR2 } from "@/lib/r2Upload";
 import { Lock, Crown } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -240,6 +241,7 @@ function audioBufferToWav(buffer: AudioBuffer): string {
 const Suno = () => {
   const { user } = useAuth();
   const { isPro, isUltimate, showUpgradeFor } = useSubscription();
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<"generate" | "mix" | "suno">("generate");
   const [genre, setGenre] = useState("Pop");
   const [genre2, setGenre2] = useState<string | null>(null);
