@@ -1689,6 +1689,7 @@ export type Database = {
       get_active_weekend_challenge: { Args: never; Returns: Json }
       get_admin_cost_overview: { Args: never; Returns: Json }
       get_admin_financial_overview: { Args: never; Returns: Json }
+      get_admin_likes_overview: { Args: never; Returns: Json }
       get_admin_stats: { Args: never; Returns: Json }
       get_admin_tip_overview: { Args: never; Returns: Json }
       get_all_ratings_for_admin: {
@@ -1697,6 +1698,7 @@ export type Database = {
       }
       get_all_users_bonus_progress: { Args: never; Returns: Json }
       get_all_users_for_admin: { Args: never; Returns: Json }
+      get_my_likes_stats: { Args: never; Returns: Json }
       get_pending_payouts: { Args: never; Returns: Json }
       get_tip_wallet: { Args: never; Returns: Json }
       get_user_generation_count: { Args: { _user_id: string }; Returns: number }

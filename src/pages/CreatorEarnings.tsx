@@ -20,6 +20,7 @@ import { PayoutRequestModal } from "@/components/earnings/PayoutRequestModal";
 import { TrackBadges } from "@/components/ui/TrackBadges";
 import { StreamBreakdown } from "@/components/earnings/StreamBreakdown";
 import { WeekendChallengeCard } from "@/components/earnings/WeekendChallengeCard";
+import { MyLikesCard } from "@/components/earnings/MyLikesCard";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -377,6 +378,9 @@ const CreatorEarnings = () => {
 
         {/* Wyzwanie weekendowe AI */}
         <WeekendChallengeCard />
+
+        {/* Statystyki polubień usera */}
+        <MyLikesCard />
 
         {/* Stats Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
