@@ -129,7 +129,7 @@ export const BurningButton = ({
           </span>
 
           {/* Półprzezroczysty napis – ogień przebija przez literki */}
-          <span className="burning-btn__text relative z-10 text-center font-extrabold text-base md:text-xl tracking-tight">
+          <span className="burning-btn__text relative z-10 text-center font-extrabold text-base md:text-xl tracking-tight pr-12 md:pr-16">
             {children}
           </span>
         </span>
