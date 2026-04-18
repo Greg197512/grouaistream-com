@@ -56,77 +56,84 @@ export const TopArtists = () => {
     navigate(`/search?q=${encodeURIComponent(artist.name)}`);
   };
 
-  useEffect(() => {
-    const fetchTopArtists = async () => {
-      setIsLoading(true);
-      try {
-        // Only registered users with uploaded tracks
-        const { data: tracksData } = await supabase
-          .from('tracks')
-          .select('user_id, artist')
-          .not('user_id', 'is', null);
+  const fetchTopArtists = async () => {
+    setIsLoading(true);
+    try {
+      const { data: tracksData } = await supabase
+        .from('tracks')
+        .select('user_id, artist')
+        .not('user_id', 'is', null);
 
-        if (!tracksData || tracksData.length === 0) {
-          setArtists([]);
-          return;
-        }
-
-        // Count tracks per user_id
-        const userTrackMap: Record<string, { count: number; artistName: string }> = {};
-        tracksData.forEach(t => {
-          if (!t.user_id) return;
-          if (!userTrackMap[t.user_id]) {
-            userTrackMap[t.user_id] = { count: 0, artistName: t.artist };
-          }
-          userTrackMap[t.user_id].count += 1;
-        });
-
-        const userIds = Object.keys(userTrackMap);
-        if (userIds.length === 0) {
-          setArtists([]);
-          return;
-        }
-
-        // Fetch profiles for these users
-        const { data: profiles } = await supabase
-          .from('profiles')
-          .select('user_id, display_name, avatar_url')
-          .in('user_id', userIds);
-
-        const profileMap: Record<string, { name: string | null; avatar: string | null }> = {};
-        profiles?.forEach(p => {
-          profileMap[p.user_id] = {
-            name: p.display_name,
-            avatar: p.avatar_url,
-          };
-        });
-
-        const finalArtists: ArtistData[] = userIds
-          .map((uid, index) => {
-            const profile = profileMap[uid];
-            // Prefer artist name from tracks (real publishing name) over display_name
-            const name = userTrackMap[uid].artistName || profile?.name || 'Artist';
-            return {
-              id: uid,
-              userId: uid,
-              name,
-              trackCount: userTrackMap[uid].count,
-              gradient: gradients[index % gradients.length],
-              imageUrl: profile?.avatar || generateUniqueAvatar(name),
-            };
-          })
-          .sort((a, b) => b.trackCount - a.trackCount)
-          .slice(0, 16);
-
-        setArtists(finalArtists);
-      } catch (error) {
-        console.error('Error fetching top artists:', error);
-      } finally {
-        setIsLoading(false);
+      if (!tracksData || tracksData.length === 0) {
+        setArtists([]);
+        return;
       }
-    };
 
+      const userTrackMap: Record<string, { count: number; artistName: string }> = {};
+      tracksData.forEach(t => {
+        if (!t.user_id) return;
+        if (!userTrackMap[t.user_id]) {
+          userTrackMap[t.user_id] = { count: 0, artistName: t.artist };
+        }
+        userTrackMap[t.user_id].count += 1;
+      });
+
+      const userIds = Object.keys(userTrackMap);
+      if (userIds.length === 0) {
+        setArtists([]);
+        return;
+      }
+
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('user_id, display_name, avatar_url')
+        .in('user_id', userIds);
+
+      const profileMap: Record<string, { name: string | null; avatar: string | null }> = {};
+      profiles?.forEach(p => {
+        profileMap[p.user_id] = {
+          name: p.display_name,
+          avatar: p.avatar_url,
+        };
+      });
+
+      const finalArtists: ArtistData[] = userIds
+        .map((uid, index) => {
+          const profile = profileMap[uid];
+          const name = userTrackMap[uid].artistName || profile?.name || 'Artist';
+          return {
+            id: uid,
+            userId: uid,
+            name,
+            trackCount: userTrackMap[uid].count,
+            gradient: gradients[index % gradients.length],
+            imageUrl: profile?.avatar || generateUniqueAvatar(name),
+          };
+        })
+        .sort((a, b) => b.trackCount - a.trackCount)
+        .slice(0, 16);
+
+      setArtists(finalArtists);
+    } catch (error) {
+      console.error('Error fetching top artists:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchTopArtists();
+
+    // Realtime: gdy ktoś wgra utwór lub zmieni avatar → lista odświeża się automatycznie
+    const channel = supabase
+      .channel('trending-artists-live')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'tracks' }, () => fetchTopArtists())
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles' }, () => fetchTopArtists())
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user]);
 
   if (isLoading) {
