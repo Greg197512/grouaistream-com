@@ -50,11 +50,13 @@ export const RatingLikeModal = ({
           track_not_found: "Utwór nie istnieje",
           invalid_stars: "Nieprawidłowa liczba gwiazdek",
           unauthorized: "Musisz być zalogowany",
+          listen_too_short: `Posłuchaj minimum 30 sekund, aby polubić ⏱`,
         };
         toast.error(errMap[res?.error || ""] || res?.error || "Nie udało się zapisać oceny");
         return;
       }
-      toast.success(`Oceniono ${stars}★ — dodano do polubionych ❤️`);
+      const bonus = (data as any)?.bonus_granted ? ` (+0,10 € dla artysty 🎁)` : "";
+      toast.success(`Oceniono ${stars}★ — dodano do polubionych ❤️${bonus}`);
       onSuccess?.();
       handleClose();
     } catch (e: any) {
