@@ -83,6 +83,17 @@ export const BurningButton = ({
       {/* Poświata / oddech ognia */}
       <div className="burning-frame__glow pointer-events-none absolute -inset-2 rounded-2xl" />
 
+      {/* Animowana rączka klikająca w przycisk – z prawej strony */}
+      <div
+        className="tap-hand pointer-events-none absolute z-20 right-3 md:right-6 top-1/2 -translate-y-1/2 select-none"
+        aria-hidden="true"
+      >
+        <span className="tap-hand__ripple absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 md:w-12 md:h-12 rounded-full" />
+        <span className="tap-hand__emoji relative block text-3xl md:text-4xl drop-shadow-[0_0_10px_hsl(14_100%_57%/0.7)]">
+          👆
+        </span>
+      </div>
+
       {/* Sam przycisk */}
       <button
         type="button"
