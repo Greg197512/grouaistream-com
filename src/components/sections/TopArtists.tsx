@@ -5,23 +5,21 @@ import { ArtistCard } from "@/components/cards/ArtistCard";
 import { supabase } from "@/integrations/supabase/client";
 import { usePlayer, Track } from "@/contexts/PlayerContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { Loader2, TrendingUp } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 interface ArtistData {
   id: string;
+  userId: string;
   name: string;
-  playCount: number;
   trackCount: number;
   gradient: string;
   imageUrl?: string;
-  isTrending?: boolean;
 }
 
 // Generate unique DiceBear avatar based on artist name (deterministic, fun, unique)
 const generateUniqueAvatar = (name: string): string => {
   const styles = ["bottts-neutral", "shapes", "thumbs", "rings", "glass", "identicon"];
   const seed = encodeURIComponent(name.trim().toLowerCase());
-  // Hash style by name length so each artist gets a consistent style
   const style = styles[name.length % styles.length];
   return `https://api.dicebear.com/7.x/${style}/svg?seed=${seed}&backgroundType=gradientLinear&backgroundColor=ff6b35,f7931e,ffd23f,06ffa5,118ab2,7209b7,b5179e&radius=50`;
 };
@@ -37,12 +35,6 @@ const gradients = [
   "from-teal-500 to-green-500",
 ];
 
-const formatPlayCount = (count: number): string => {
-  if (count >= 1000000) return `${(count / 1000000).toFixed(1)}M plays`;
-  if (count >= 1000) return `${(count / 1000).toFixed(1)}K plays`;
-  return `${count} plays`;
-};
-
 export const TopArtists = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -50,160 +42,80 @@ export const TopArtists = () => {
   const [artists, setArtists] = useState<ArtistData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const handleArtistClick = async (artistName: string) => {
+  const handleArtistClick = async (artist: ArtistData) => {
     const { data } = await supabase
       .from('tracks')
       .select('*')
-      .ilike('artist', `%${artistName}%`)
+      .eq('user_id', artist.userId)
       .order('created_at', { ascending: false })
       .limit(50);
 
     if (data && data.length > 0) {
       playPlaylist(data as Track[], 0);
     }
-    navigate(`/search?q=${encodeURIComponent(artistName)}`);
-  };
-
-  // Fetch avatar URLs for artist names by matching display_name in profiles
-  const fetchArtistAvatars = async (artistNames: string[]): Promise<Record<string, string>> => {
-    const avatarMap: Record<string, string> = {};
-    if (artistNames.length === 0) return avatarMap;
-
-    // Try to match artist names to profiles via tracks.user_id -> profiles
-    const { data: tracksWithUsers } = await supabase
-      .from('tracks')
-      .select('artist, user_id')
-      .in('artist', artistNames)
-      .not('user_id', 'is', null);
-
-    if (tracksWithUsers && tracksWithUsers.length > 0) {
-      const userIds = [...new Set(tracksWithUsers.filter(t => t.user_id).map(t => t.user_id!))];
-      
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('user_id, avatar_url, display_name')
-        .in('user_id', userIds);
-
-      if (profiles) {
-        // Map user_id to avatar
-        const userAvatarMap: Record<string, string> = {};
-        profiles.forEach(p => {
-          if (p.avatar_url) userAvatarMap[p.user_id] = p.avatar_url;
-        });
-
-        // Map artist name to avatar via tracks
-        tracksWithUsers.forEach(track => {
-          if (track.user_id && userAvatarMap[track.user_id] && !avatarMap[track.artist]) {
-            avatarMap[track.artist] = userAvatarMap[track.user_id];
-          }
-        });
-      }
-    }
-
-    // Also try matching by cover_url from tracks as fallback
-    for (const name of artistNames) {
-      if (!avatarMap[name]) {
-        const { data: trackWithCover } = await supabase
-          .from('tracks')
-          .select('cover_url')
-          .ilike('artist', name)
-          .not('cover_url', 'is', null)
-          .limit(1)
-          .single();
-
-        if (trackWithCover?.cover_url) {
-          avatarMap[name] = trackWithCover.cover_url;
-        }
-      }
-    }
-
-    return avatarMap;
+    navigate(`/search?q=${encodeURIComponent(artist.name)}`);
   };
 
   useEffect(() => {
     const fetchTopArtists = async () => {
       setIsLoading(true);
       try {
-        let artistEntries: { name: string; playCount: number }[] = [];
+        // Only registered users with uploaded tracks
+        const { data: tracksData } = await supabase
+          .from('tracks')
+          .select('user_id, artist')
+          .not('user_id', 'is', null);
 
-        if (user) {
-          const { data: historyData, error } = await supabase
-            .from('listening_history')
-            .select('track_id')
-            .eq('user_id', user.id)
-            .order('played_at', { ascending: false })
-            .limit(500);
+        if (!tracksData || tracksData.length === 0) {
+          setArtists([]);
+          return;
+        }
 
-          if (!error && historyData && historyData.length > 0) {
-            const trackIds = historyData.map(h => h.track_id);
-            
-            const { data: tracksData } = await supabase
-              .from('tracks')
-              .select('artist')
-              .in('id', trackIds);
-
-            if (tracksData && tracksData.length > 0) {
-              const artistCounts: Record<string, number> = {};
-              tracksData.forEach(track => {
-                artistCounts[track.artist] = (artistCounts[track.artist] || 0) + 1;
-              });
-
-              artistEntries = Object.entries(artistCounts)
-                .sort(([, a], [, b]) => b - a)
-                .slice(0, 12)
-                .map(([name, playCount]) => ({ name, playCount }));
-            }
+        // Count tracks per user_id
+        const userTrackMap: Record<string, { count: number; artistName: string }> = {};
+        tracksData.forEach(t => {
+          if (!t.user_id) return;
+          if (!userTrackMap[t.user_id]) {
+            userTrackMap[t.user_id] = { count: 0, artistName: t.artist };
           }
+          userTrackMap[t.user_id].count += 1;
+        });
+
+        const userIds = Object.keys(userTrackMap);
+        if (userIds.length === 0) {
+          setArtists([]);
+          return;
         }
 
-        // Fallback: popular artists from all tracks
-        if (artistEntries.length === 0) {
-          const { data: tracksData } = await supabase
-            .from('tracks')
-            .select('artist')
-            .limit(500);
+        // Fetch profiles for these users
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('user_id, display_name, avatar_url')
+          .in('user_id', userIds);
 
-          if (tracksData && tracksData.length > 0) {
-            const artistCounts: Record<string, number> = {};
-            tracksData.forEach(track => {
-              artistCounts[track.artist] = (artistCounts[track.artist] || 0) + 1;
-            });
-
-            artistEntries = Object.entries(artistCounts)
-              .sort(([, a], [, b]) => b - a)
-              .slice(0, 12)
-              .map(([name, playCount]) => ({ name, playCount: playCount * 1000 }));
-          }
-        }
-
-        // Fetch real track counts per artist (for trending icon)
-        const artistNames = artistEntries.map(a => a.name);
-        const trackCountMap: Record<string, number> = {};
-        if (artistNames.length > 0) {
-          const { data: allTracks } = await supabase
-            .from('tracks')
-            .select('artist')
-            .in('artist', artistNames);
-          allTracks?.forEach(t => {
-            trackCountMap[t.artist] = (trackCountMap[t.artist] || 0) + 1;
-          });
-        }
-
-        // Fetch avatars for all artist names
-        const avatarMap = await fetchArtistAvatars(artistNames);
-
-        const finalArtists: ArtistData[] = artistEntries.map((entry, index) => {
-          const trackCount = trackCountMap[entry.name] || 0;
-          return {
-            id: `${index}`,
-            name: entry.name,
-            playCount: entry.playCount,
-            trackCount,
-            gradient: gradients[index % gradients.length],
-            imageUrl: avatarMap[entry.name] || generateUniqueAvatar(entry.name),
-            isTrending: trackCount >= 1,
+        const profileMap: Record<string, { name: string; avatar: string | null }> = {};
+        profiles?.forEach(p => {
+          profileMap[p.user_id] = {
+            name: p.display_name || userTrackMap[p.user_id]?.artistName || 'Artist',
+            avatar: p.avatar_url,
           };
         });
+
+        const finalArtists: ArtistData[] = userIds
+          .map((uid, index) => {
+            const profile = profileMap[uid];
+            const name = profile?.name || userTrackMap[uid].artistName;
+            return {
+              id: uid,
+              userId: uid,
+              name,
+              trackCount: userTrackMap[uid].count,
+              gradient: gradients[index % gradients.length],
+              imageUrl: profile?.avatar || generateUniqueAvatar(name),
+            };
+          })
+          .sort((a, b) => b.trackCount - a.trackCount)
+          .slice(0, 16);
 
         setArtists(finalArtists);
       } catch (error) {
@@ -234,14 +146,11 @@ export const TopArtists = () => {
     <section className="px-4 sm:px-6 py-8">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="font-display text-2xl font-bold">Popular Artists</h2>
+          <h2 className="font-display text-2xl font-bold">Trending Artists</h2>
           <p className="text-sm text-muted-foreground mt-1">
-            {user ? "Based on your listening history" : "Trending artists"}
+            Twórcy z utworami w GrouAI Stream
           </p>
         </div>
-        <button className="text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors">
-          Show all
-        </button>
       </div>
 
       <motion.div 
@@ -266,12 +175,12 @@ export const TopArtists = () => {
           >
             <ArtistCard
               name={artist.name}
-              followers={formatPlayCount(artist.playCount)}
+              followers={artist.trackCount === 1 ? '1 utwór' : `${artist.trackCount} utworów`}
               gradient={artist.gradient}
               imageUrl={artist.imageUrl}
-              isTrending={artist.isTrending}
+              isTrending={true}
               trackCount={artist.trackCount}
-              onClick={() => handleArtistClick(artist.name)}
+              onClick={() => handleArtistClick(artist)}
             />
           </motion.div>
         ))}
