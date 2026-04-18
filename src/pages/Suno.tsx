@@ -315,7 +315,7 @@ const Suno = () => {
   const generate = async () => {
     // === GATE 1: must be logged in to generate (so we can track usage) ===
     if (!user) {
-      toast.error("Zaloguj się, aby generować utwory");
+      toast.error(t("studio.toast.loginRequired"));
       return;
     }
 
@@ -327,7 +327,7 @@ const Suno = () => {
 
     setGenerating(true);
     setResult(null);
-    setGenStatus("🎵 Generuję muzykę z ElevenLabs...");
+    setGenStatus(t("studio.status.generating"));
 
     try {
       const genreBlend = genre2 ? `${genre} mixed with ${genre2} (${blendRatio}% / ${100 - blendRatio}%)` : genre;
@@ -346,7 +346,7 @@ const Suno = () => {
         vocalVoiceId: clonedVoiceId || getVoiceForGenre(genre),
       };
 
-      setGenStatus("🎼 ElevenLabs generuje instrumenty...");
+      setGenStatus(t("studio.status.instruments"));
 
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-music`,
@@ -365,8 +365,8 @@ const Suno = () => {
         const errData = await response.json().catch(() => ({ error: "Unknown error" }));
 
         if (response.status === 402 || errData.error === "quota_exceeded") {
-          toast.error("💳 Brak kredytów ElevenLabs Music", {
-            description: errData.message || "Twoje konto wyczerpało limit. Doładuj plan na elevenlabs.io.",
+          toast.error(t("studio.toast.noCredits"), {
+            description: errData.message || t("studio.toast.noCreditsDesc"),
             duration: 8000,
           });
           setGenStatus("");
@@ -383,7 +383,7 @@ const Suno = () => {
         throw new Error("Brak danych audio z ElevenLabs");
       }
 
-      setGenStatus(data.vocals ? "🎤 Miksowanie wokalu z muzyką..." : "🔊 Finalizuję utwór...");
+      setGenStatus(data.vocals ? t("studio.status.mixing") : t("studio.status.finalizing"));
 
       // Mix music + vocals in browser → returns blob URL of WAV
       const audioBlobUrl = await mixAudioTracks(data.music, data.vocals);
@@ -394,7 +394,7 @@ const Suno = () => {
         : generateLyrics(genre, trackTitle, duration, instrumental);
 
       // === Upload mixed WAV to R2 so it works across devices + persists ===
-      setGenStatus("☁️ Wysyłam utwór na chmurę...");
+      setGenStatus(t("studio.status.uploading"));
       let publicAudioUrl = audioBlobUrl; // fallback: keep blob if upload fails
       try {
         const wavResp = await fetch(audioBlobUrl);
@@ -406,8 +406,8 @@ const Suno = () => {
         console.log("[Studio] Uploaded to R2:", publicAudioUrl);
       } catch (uploadErr: any) {
         console.warn("[Studio] R2 upload failed, using local blob:", uploadErr);
-        toast.warning("Utwór dostępny tylko lokalnie", {
-          description: "Nie udało się wysłać na chmurę — odtwarzaj na tym urządzeniu.",
+        toast.warning(t("studio.toast.localOnly"), {
+          description: t("studio.toast.localOnlyDesc"),
         });
       }
 
@@ -419,7 +419,7 @@ const Suno = () => {
         lyrics,
       });
 
-      setGenStatus("✅ Wygenerowano!");
+      setGenStatus(t("studio.status.done"));
       toast.success(`🎶 "${trackTitle}" — gotowy!`);
 
       // Save to generations + auto-add to user's tracks library
@@ -451,7 +451,7 @@ const Suno = () => {
       if (!isPro) setFreeUsed(prev => prev + 1);
     } catch (err: any) {
       console.error("[GrouAI Studio] Generate error:", err);
-      toast.error("Błąd generowania: " + (err.message || "Nieznany błąd"));
+      toast.error(t("studio.toast.genError") + ": " + (err.message || ""));
       setGenStatus("");
       setErrorModal(err.message);
     } finally {
@@ -472,9 +472,9 @@ const Suno = () => {
         mood: "generated",
       });
       if (error) throw error;
-      toast.success("Utwór zapisany w Twojej bibliotece! 📀");
+      toast.success(t("studio.toast.savedToLib"));
     } catch (err: any) {
-      toast.error("Błąd zapisu: " + err.message);
+      toast.error(t("studio.toast.saveError") + ": " + err.message);
     }
   };
 
