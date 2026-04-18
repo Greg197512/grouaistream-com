@@ -460,6 +460,7 @@ const LikeButtonComponent = (
   const [loading, setLoading] = useState(false);
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [trackMeta, setTrackMeta] = useState<{ title: string; artist: string } | null>(null);
+  const [isOwn, setIsOwn] = useState(false);
   const { hearts, spawnHearts } = useFloatingHearts();
 
   const fetchData = async () => {
@@ -470,6 +471,18 @@ const LikeButtonComponent = (
         .eq("track_id", trackId);
       setLikeCount(count || 0);
     }
+    // Sprawdź właściciela utworu
+    const { data: trackOwner } = await supabase
+      .from("tracks")
+      .select("user_id")
+      .eq("id", trackId)
+      .maybeSingle();
+    if (user?.id && trackOwner?.user_id === user.id) {
+      setIsOwn(true);
+      setIsLiked(false);
+      return;
+    }
+    setIsOwn(false);
     if (user?.id) {
       const { data } = await supabase
         .from("liked_songs")
@@ -530,6 +543,10 @@ const LikeButtonComponent = (
       toast.error("Sign in to like songs");
       return;
     }
+    if (isOwn) {
+      toast.error("Nie możesz polubić własnego utworu 🎵");
+      return;
+    }
 
     if (isLiked) {
       handleUnlike();
@@ -561,11 +578,13 @@ const LikeButtonComponent = (
       <button
         ref={ref}
         onClick={handleLike}
-        disabled={loading}
+        disabled={loading || isOwn}
+        title={isOwn ? "To Twój utwór — nie możesz go polubić" : undefined}
         className={cn(
           "flex items-center gap-1 p-1.5 rounded-full transition-all",
           "hover:bg-secondary/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary",
           "active:scale-95",
+          isOwn && "opacity-40 cursor-not-allowed",
           className
         )}
       >

@@ -45,7 +45,13 @@ export const RatingLikeModal = ({
       if (error) throw error;
       const res = data as { success: boolean; error?: string };
       if (!res?.success) {
-        toast.error(res?.error || "Nie udało się zapisać oceny");
+        const errMap: Record<string, string> = {
+          cannot_rate_own_track: "Nie możesz ocenić własnego utworu 🎵",
+          track_not_found: "Utwór nie istnieje",
+          invalid_stars: "Nieprawidłowa liczba gwiazdek",
+          unauthorized: "Musisz być zalogowany",
+        };
+        toast.error(errMap[res?.error || ""] || res?.error || "Nie udało się zapisać oceny");
         return;
       }
       toast.success(`Oceniono ${stars}★ — dodano do polubionych ❤️`);
