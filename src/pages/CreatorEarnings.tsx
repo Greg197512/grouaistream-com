@@ -55,6 +55,7 @@ const CreatorEarnings = () => {
   const [monthlyEarnings, setMonthlyEarnings] = useState(0);
   const [totalStreams, setTotalStreams] = useState(0);
   const [tipEarnings, setTipEarnings] = useState(0);
+  const [likeBonusEarnings, setLikeBonusEarnings] = useState(0);
   const [bonusEarnings, setBonusEarnings] = useState(0);
   const [bonusPayoutFallback, setBonusPayoutFallback] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -115,6 +116,17 @@ const CreatorEarnings = () => {
 
     if (tipData) {
       setTipEarnings(tipData.reduce((sum, e) => sum + Number(e.amount), 0));
+    }
+
+    // Like bonuses (0,10 € za każde polubienie od fana po 30s odsłuchu)
+    const { data: likeBonusData } = await supabase
+      .from("creator_earnings")
+      .select("amount")
+      .eq("user_id", user.id)
+      .eq("earning_type", "like_bonus");
+
+    if (likeBonusData) {
+      setLikeBonusEarnings(likeBonusData.reduce((sum, e) => sum + Number(e.amount), 0));
     }
 
     // Bonus earnings (mood analysis bonus etc.)
@@ -383,12 +395,13 @@ const CreatorEarnings = () => {
         <MyLikesCard />
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
           {[
             { label: t("earnings.totalEarnings"), value: `${totalEarnings.toFixed(2)} €`, icon: DollarSign, color: "text-primary" },
             { label: t("earnings.thisMonth"), value: `${monthlyEarnings.toFixed(2)} €`, icon: TrendingUp, color: "text-accent" },
             { label: t("earnings.totalStreams"), value: totalStreams.toLocaleString(), icon: BarChart3, color: "text-muted-foreground" },
             { label: t("earnings.tipsTotal"), value: `${tipEarnings.toFixed(2)} €`, icon: Heart, color: "text-pink-400" },
+            { label: "Z polubień", value: `${likeBonusEarnings.toFixed(2)} €`, icon: Heart, color: "text-rose-400" },
           ].map((stat, i) => (
             <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}>
               <Card className="bg-card/50 backdrop-blur border-white/10">
@@ -414,7 +427,7 @@ const CreatorEarnings = () => {
                 <Percent className="h-4 w-4 text-primary" />
                 <span className="text-sm font-semibold">{t("earnings.revenueSplit")}</span>
               </div>
-              <div className="grid grid-cols-3 gap-3 text-center">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
                 <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/15">
                   <p className="text-lg font-bold text-emerald-400">65%</p>
                   <p className="text-[10px] text-muted-foreground">{t("earnings.fromStreams")}</p>
@@ -423,8 +436,12 @@ const CreatorEarnings = () => {
                   <p className="text-lg font-bold text-pink-400">90%</p>
                   <p className="text-[10px] text-muted-foreground">{t("earnings.fromTips")}</p>
                 </div>
+                <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/15">
+                  <p className="text-lg font-bold text-rose-400">0,10 €</p>
+                  <p className="text-[10px] text-muted-foreground">za polubienie ❤️ (po 30s)</p>
+                </div>
                 <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/15">
-                  <p className="text-lg font-bold text-amber-400">70%</p>
+                  <p className="text-lg font-bold text-amber-400">100%</p>
                   <p className="text-[10px] text-muted-foreground">{t("earnings.fromBoost")}</p>
                 </div>
               </div>
