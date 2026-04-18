@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, Gift, Wallet, CheckCircle2, RefreshCw, Banknote, Copy, Crown } from "lucide-react";
+import { Loader2, Gift, Wallet, CheckCircle2, RefreshCw, Banknote, Copy, Crown, Star } from "lucide-react";
 import { toast } from "sonner";
+import { RatingsAuditTable } from "./RatingsAuditTable";
 
 interface UserBonusRow {
   user_id: string;
@@ -16,10 +17,12 @@ interface UserBonusRow {
   likes_count: number;
   mood_sessions_count: number;
   studio_count: number;
+  ratings_count: number;
   uploads_claimed: boolean;
   likes_claimed: boolean;
   mood_claimed: boolean;
   studio_claimed: boolean;
+  ratings_claimed: boolean;
   mood_first_claimed: boolean;
   total_earned: number;
   total_requested: number;
@@ -44,6 +47,7 @@ const MILESTONES = [
   { key: "likes", label: "50 polubień", target: 50, countField: "likes_count" as const, claimedField: "likes_claimed" as const, amount: 12 },
   { key: "mood", label: "5 sesji nastroju", target: 5, countField: "mood_sessions_count" as const, claimedField: "mood_claimed" as const, amount: 5 },
   { key: "studio", label: "5 utw. Studio", target: 5, countField: "studio_count" as const, claimedField: "studio_claimed" as const, amount: 12 },
+  { key: "ratings", label: "50 ocen ★", target: 50, countField: "ratings_count" as const, claimedField: "ratings_claimed" as const, amount: 12 },
 ];
 
 export const BonusMonitor = () => {
@@ -261,6 +265,9 @@ export const BonusMonitor = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Audyt ocen 1-5★ */}
+      <RatingsAuditTable />
     </div>
   );
 };

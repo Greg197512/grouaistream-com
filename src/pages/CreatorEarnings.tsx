@@ -68,6 +68,8 @@ const CreatorEarnings = () => {
   const [likesBonusClaimed, setLikesBonusClaimed] = useState(false);
   const [moodBonusClaimed, setMoodBonusClaimed] = useState(false);
   const [studioBonusClaimed, setStudioBonusClaimed] = useState(false);
+  const [ratingsCount, setRatingsCount] = useState(0);
+  const [ratingsBonusClaimed, setRatingsBonusClaimed] = useState(false);
   const [isUltimate, setIsUltimate] = useState(false);
   const [claimingMilestone, setClaimingMilestone] = useState<string | null>(null);
 
@@ -185,6 +187,13 @@ const CreatorEarnings = () => {
       .maybeSingle();
     setIsUltimate(subData?.plan === "ultimate");
 
+    // Ratings count (track_ratings)
+    const { count: ratingsC } = await (supabase as any)
+      .from("track_ratings")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id);
+    setRatingsCount(ratingsC ?? 0);
+
     const { data: milestoneData } = await (supabase as any)
       .from("creator_milestone_bonuses")
       .select("bonus_type")
@@ -194,12 +203,13 @@ const CreatorEarnings = () => {
       setLikesBonusClaimed(milestoneData.some((m: any) => m.bonus_type === "likes_50"));
       setMoodBonusClaimed(milestoneData.some((m: any) => m.bonus_type === "mood_sessions_5"));
       setStudioBonusClaimed(milestoneData.some((m: any) => m.bonus_type === "studio_5"));
+      setRatingsBonusClaimed(milestoneData.some((m: any) => m.bonus_type === "ratings_50"));
     }
 
     setLoading(false);
   }, [user]);
 
-  const claimMilestone = async (type: "uploads" | "likes" | "mood" | "studio") => {
+  const claimMilestone = async (type: "uploads" | "likes" | "mood" | "studio" | "ratings") => {
     setClaimingMilestone(type);
     try {
       const fnMap: Record<string, string> = {
@@ -207,6 +217,7 @@ const CreatorEarnings = () => {
         likes: "claim_likes_milestone_bonus",
         mood: "claim_mood_sessions_milestone_bonus",
         studio: "claim_studio_milestone_bonus",
+        ratings: "claim_ratings_50_milestone_bonus",
       };
       const { data, error } = await (supabase as any).rpc(fnMap[type]);
       if (error) throw error;
