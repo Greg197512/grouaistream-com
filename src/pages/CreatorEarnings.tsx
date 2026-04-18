@@ -55,6 +55,7 @@ const CreatorEarnings = () => {
   const [monthlyEarnings, setMonthlyEarnings] = useState(0);
   const [totalStreams, setTotalStreams] = useState(0);
   const [tipEarnings, setTipEarnings] = useState(0);
+  const [likeBonusEarnings, setLikeBonusEarnings] = useState(0);
   const [bonusEarnings, setBonusEarnings] = useState(0);
   const [bonusPayoutFallback, setBonusPayoutFallback] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -115,6 +116,17 @@ const CreatorEarnings = () => {
 
     if (tipData) {
       setTipEarnings(tipData.reduce((sum, e) => sum + Number(e.amount), 0));
+    }
+
+    // Like bonuses (0,10 € za każde polubienie od fana po 30s odsłuchu)
+    const { data: likeBonusData } = await supabase
+      .from("creator_earnings")
+      .select("amount")
+      .eq("user_id", user.id)
+      .eq("earning_type", "like_bonus");
+
+    if (likeBonusData) {
+      setLikeBonusEarnings(likeBonusData.reduce((sum, e) => sum + Number(e.amount), 0));
     }
 
     // Bonus earnings (mood analysis bonus etc.)
@@ -383,12 +395,13 @@ const CreatorEarnings = () => {
         <MyLikesCard />
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
           {[
             { label: t("earnings.totalEarnings"), value: `${totalEarnings.toFixed(2)} €`, icon: DollarSign, color: "text-primary" },
             { label: t("earnings.thisMonth"), value: `${monthlyEarnings.toFixed(2)} €`, icon: TrendingUp, color: "text-accent" },
             { label: t("earnings.totalStreams"), value: totalStreams.toLocaleString(), icon: BarChart3, color: "text-muted-foreground" },
             { label: t("earnings.tipsTotal"), value: `${tipEarnings.toFixed(2)} €`, icon: Heart, color: "text-pink-400" },
+            { label: "Z polubień", value: `${likeBonusEarnings.toFixed(2)} €`, icon: Heart, color: "text-rose-400" },
           ].map((stat, i) => (
             <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}>
               <Card className="bg-card/50 backdrop-blur border-white/10">
