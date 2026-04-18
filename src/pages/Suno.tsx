@@ -498,15 +498,41 @@ const Suno = () => {
               </p>
             </div>
             <p className="text-foreground/80 leading-relaxed">
-              Generowanie utworów AI, miksowanie ścieżek, voice cloning, lyrics i pełne studio produkcyjne — wszystko dostępne <span className="font-bold text-primary">wyłącznie w planie Ultimate</span>.
+              GrouAI Studio to pełne studio produkcyjne AI — generowanie utworów, voice cloning, miksowanie i mastering. Dostępne <span className="font-bold text-primary">wyłącznie w planie Ultimate (19,99€/mc)</span>.
             </p>
+
+            {/* Powered by — partnerzy AI */}
+            <div className="space-y-2 text-left bg-background/30 rounded-xl p-4 border border-primary/20">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-primary/80">Połączone z silnikami AI:</p>
+              <div className="grid grid-cols-2 gap-2 text-xs text-foreground/80">
+                <div className="flex items-center gap-2"><Sparkles className="h-3.5 w-3.5 text-primary" /> <span><b>Suno v4</b> — muzyka</span></div>
+                <div className="flex items-center gap-2"><Mic className="h-3.5 w-3.5 text-primary" /> <span><b>ElevenLabs</b> — wokal</span></div>
+                <div className="flex items-center gap-2"><Wand2 className="h-3.5 w-3.5 text-primary" /> <span><b>Replicate</b> — mastering</span></div>
+                <div className="flex items-center gap-2"><Type className="h-3.5 w-3.5 text-primary" /> <span><b>Gemini 2.5</b> — lyrics</span></div>
+              </div>
+            </div>
+
+            {/* Jakość audio */}
+            <div className="space-y-2 text-left bg-background/30 rounded-xl p-4 border border-amber-500/20">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-amber-400">Jakość studyjna:</p>
+              <div className="space-y-1.5 text-xs text-foreground/80">
+                <div className="flex items-center justify-between"><span>🎚️ Format</span><span className="font-mono font-bold text-amber-400">WAV / FLAC Lossless</span></div>
+                <div className="flex items-center justify-between"><span>🔊 Sample rate</span><span className="font-mono font-bold text-amber-400">48 kHz / 24-bit</span></div>
+                <div className="flex items-center justify-between"><span>📡 Bitrate</span><span className="font-mono font-bold text-amber-400">do 1411 kbps</span></div>
+                <div className="flex items-center justify-between"><span>🎤 Wokal</span><span className="font-mono font-bold text-amber-400">HD Voice Clone</span></div>
+              </div>
+            </div>
+
+            {/* Co dostajesz */}
             <div className="space-y-2 text-left text-sm text-foreground/70 bg-background/30 rounded-xl p-4 border border-white/5">
-              <div className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-primary" /> Generowanie AI (Suno + ElevenLabs)</div>
-              <div className="flex items-center gap-2"><Mic className="h-4 w-4 text-primary" /> Voice cloning &amp; library</div>
-              <div className="flex items-center gap-2"><Blend className="h-4 w-4 text-primary" /> Track Mixer + crossfade</div>
-              <div className="flex items-center gap-2"><Type className="h-4 w-4 text-primary" /> Auto-lyrics + tłumaczenia</div>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-foreground/50 mb-2">W pakiecie Ultimate:</p>
+              <div className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-primary" /> Nielimitowane generowanie AI</div>
+              <div className="flex items-center gap-2"><Mic className="h-4 w-4 text-primary" /> Voice cloning &amp; biblioteka głosów</div>
+              <div className="flex items-center gap-2"><Blend className="h-4 w-4 text-primary" /> Track Mixer + crossfade + mastering</div>
+              <div className="flex items-center gap-2"><Type className="h-4 w-4 text-primary" /> Auto-lyrics + tłumaczenia (4 języki)</div>
               <div className="flex items-center gap-2"><Wand2 className="h-4 w-4 text-primary" /> Bonus 12€ za 5 utworów Studio</div>
             </div>
+
             <div className="flex flex-col sm:flex-row gap-3 pt-2">
               <Button
                 onClick={() => showUpgradeFor("GrouAI Studio")}
@@ -514,14 +540,14 @@ const Suno = () => {
                 size="lg"
               >
                 <Crown className="h-4 w-4" />
-                Odblokuj Ultimate
+                Opłać Ultimate — 19,99€/mc
               </Button>
               <Button asChild variant="outline" size="lg" className="flex-1 border-primary/30">
                 <Link to="/">Wróć do strony głównej</Link>
               </Button>
             </div>
             <p className="text-[11px] text-foreground/40 pt-2">
-              Ultimate = pełny dostęp do AI Studio, AI Psychologist, lossless audio i wszystkie bonusy creatorów.
+              Ultimate = pełny dostęp do AI Studio (Suno + ElevenLabs + Replicate), AI Psychologist, lossless audio 48kHz/24-bit i wszystkie bonusy creatorów.
             </p>
           </motion.div>
         </div>
