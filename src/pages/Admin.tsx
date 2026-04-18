@@ -59,6 +59,7 @@ import { TopEarners } from "@/components/admin/TopEarners";
 import { Radio as RadioIcon, HardDrive, Award, DollarSign, Megaphone } from "lucide-react";
 import { MarqueeManager } from "@/components/admin/MarqueeManager";
 import { BonusMonitor } from "@/components/admin/BonusMonitor";
+import { FinancialOverview } from "@/components/admin/FinancialOverview";
 
 interface UserStats {
   totalUsers: number;
@@ -643,6 +644,10 @@ export default function Admin() {
                   <DollarSign className="h-4 w-4" />
                   Bonusy & Wypłaty
                 </TabsTrigger>
+                <TabsTrigger value="finance" className="gap-2">
+                  <TrendingUp className="h-4 w-4" />
+                  Finanse & Weekend AI
+                </TabsTrigger>
                 <TabsTrigger value="genres" className="gap-2">
                   <BarChart3 className="h-4 w-4" />
                   Gatunki
@@ -688,6 +693,11 @@ export default function Admin() {
               {/* Bonuses & Payouts Tab */}
               <TabsContent value="bonuses">
                 <BonusMonitor />
+              </TabsContent>
+
+              {/* Financial Overview Tab */}
+              <TabsContent value="finance">
+                <FinancialOverview />
               </TabsContent>
 
               {/* Genres Tab */}
