@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { BurningFrame } from "@/components/effects/BurningFrame";
 
 // Render **bold** within a string, returning React fragments
 const renderRich = (text: string) => {
@@ -53,10 +54,14 @@ export const SEOContentSection = () => {
   return (
     <section className="px-6 py-12 max-w-4xl mx-auto">
       <div className="prose prose-invert max-w-none text-muted-foreground text-sm leading-relaxed space-y-6">
-        <h2 className="text-2xl md:text-3xl font-bold text-foreground">
-          {t("seo.hero.title")}
-        </h2>
-        <p className="text-base">{renderRich(t("seo.hero.lead"))}</p>
+        <BurningFrame className="not-prose mb-8">
+          <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-4 leading-tight">
+            {t("seo.hero.title")}
+          </h2>
+          <p className="text-base text-muted-foreground leading-relaxed m-0">
+            {renderRich(t("seo.hero.lead"))}
+          </p>
+        </BurningFrame>
 
         <h2 className="text-xl md:text-2xl font-bold text-foreground">
           {t("seo.features.title")}
