@@ -126,6 +126,7 @@ const TrackOptionsMenuComponent = (
         
         setIsLiked(false);
         setLikeCount(prev => Math.max(0, prev - 1));
+        window.dispatchEvent(new CustomEvent("track-like-changed", { detail: { trackId, liked: false } }));
         toast.success("Removed from Liked Songs");
         onLikeChange?.(false);
       } else {
@@ -135,6 +136,7 @@ const TrackOptionsMenuComponent = (
         
         setIsLiked(true);
         setLikeCount(prev => prev + 1);
+        window.dispatchEvent(new CustomEvent("track-like-changed", { detail: { trackId, liked: true } }));
         toast.success("Added to Liked Songs");
         onLikeChange?.(true);
       }
