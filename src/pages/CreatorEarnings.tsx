@@ -427,7 +427,7 @@ const CreatorEarnings = () => {
                 <Percent className="h-4 w-4 text-primary" />
                 <span className="text-sm font-semibold">{t("earnings.revenueSplit")}</span>
               </div>
-              <div className="grid grid-cols-3 gap-3 text-center">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
                 <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/15">
                   <p className="text-lg font-bold text-emerald-400">65%</p>
                   <p className="text-[10px] text-muted-foreground">{t("earnings.fromStreams")}</p>
@@ -436,8 +436,12 @@ const CreatorEarnings = () => {
                   <p className="text-lg font-bold text-pink-400">90%</p>
                   <p className="text-[10px] text-muted-foreground">{t("earnings.fromTips")}</p>
                 </div>
+                <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/15">
+                  <p className="text-lg font-bold text-rose-400">0,10 €</p>
+                  <p className="text-[10px] text-muted-foreground">za polubienie ❤️ (po 30s)</p>
+                </div>
                 <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/15">
-                  <p className="text-lg font-bold text-amber-400">70%</p>
+                  <p className="text-lg font-bold text-amber-400">100%</p>
                   <p className="text-[10px] text-muted-foreground">{t("earnings.fromBoost")}</p>
                 </div>
               </div>
