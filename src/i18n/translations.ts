@@ -808,6 +808,59 @@ type TranslationKeys = {
   "common.confirmDelete": string;
   "common.refreshed": string;
   "common.noPermission": string;
+
+  // SEO Landing content
+  "seo.hero.title": string;
+  "seo.hero.lead": string;
+  "seo.features.title": string;
+  "seo.features.list": string; // pipe-separated bullets, each "Bold|description"
+  "seo.earn.title": string;
+  "seo.earn.intro": string;
+  "seo.earn.item1.title": string;
+  "seo.earn.item1.desc": string;
+  "seo.earn.item2.title": string;
+  "seo.earn.item2.desc": string;
+  "seo.earn.item3.title": string;
+  "seo.earn.item3.desc": string;
+  "seo.earn.item4.title": string;
+  "seo.earn.item4.desc": string;
+  "seo.earn.item5.title": string;
+  "seo.earn.item5.desc": string;
+  "seo.earn.item6.title": string;
+  "seo.earn.item6.desc": string;
+  "seo.earn.item7.title": string;
+  "seo.earn.item7.desc": string;
+  "seo.earn.item8.title": string;
+  "seo.earn.item8.desc": string;
+  "seo.earn.item9.title": string;
+  "seo.earn.item9.desc": string;
+  "seo.weekly.title": string;
+  "seo.weekly.beginner.title": string;
+  "seo.weekly.beginner.desc": string;
+  "seo.weekly.beginner.total": string;
+  "seo.weekly.active.title": string;
+  "seo.weekly.active.desc": string;
+  "seo.weekly.active.total": string;
+  "seo.weekly.pro.title": string;
+  "seo.weekly.pro.desc": string;
+  "seo.weekly.pro.total": string;
+  "seo.weekly.disclaimer": string;
+  "seo.why.title": string;
+  "seo.why.list": string; // pipe-separated bullets
+  "seo.cta.title": string;
+  "seo.cta.earn": string;
+  "seo.cta.earnings": string;
+  "seo.cta.upload": string;
+  "seo.cta.studio": string;
+  "seo.cta.radio": string;
+  "seo.cta.radioLive": string;
+  "seo.cta.library": string;
+  "seo.cta.movies": string;
+  "seo.cta.mood": string;
+  "seo.cta.community": string;
+  "seo.cta.signup": string;
+  "seo.cta.legal": string;
+  "seo.footer": string;
 };
 
 const pl: TranslationKeys = {
