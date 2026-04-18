@@ -93,10 +93,10 @@ export const TopArtists = () => {
           .select('user_id, display_name, avatar_url')
           .in('user_id', userIds);
 
-        const profileMap: Record<string, { name: string; avatar: string | null }> = {};
+        const profileMap: Record<string, { name: string | null; avatar: string | null }> = {};
         profiles?.forEach(p => {
           profileMap[p.user_id] = {
-            name: p.display_name || userTrackMap[p.user_id]?.artistName || 'Artist',
+            name: p.display_name,
             avatar: p.avatar_url,
           };
         });
@@ -104,7 +104,8 @@ export const TopArtists = () => {
         const finalArtists: ArtistData[] = userIds
           .map((uid, index) => {
             const profile = profileMap[uid];
-            const name = profile?.name || userTrackMap[uid].artistName;
+            // Prefer artist name from tracks (real publishing name) over display_name
+            const name = userTrackMap[uid].artistName || profile?.name || 'Artist';
             return {
               id: uid,
               userId: uid,
