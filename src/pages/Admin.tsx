@@ -62,6 +62,7 @@ import { BonusMonitor } from "@/components/admin/BonusMonitor";
 import { FinancialOverview } from "@/components/admin/FinancialOverview";
 import { TipsOverview } from "@/components/admin/TipsOverview";
 import { OperationalCosts } from "@/components/admin/OperationalCosts";
+import { LikesOverview } from "@/components/admin/LikesOverview";
 
 interface UserStats {
   totalUsers: number;
@@ -694,6 +695,10 @@ export default function Admin() {
                   <DollarSign className="h-4 w-4" />
                   Top Zarobki
                 </TabsTrigger>
+                <TabsTrigger value="likes" className="gap-2">
+                  <DollarSign className="h-4 w-4" />
+                  Polubienia ❤️
+                </TabsTrigger>
                 <TabsTrigger value="marquee" className="gap-2">
                   <Megaphone className="h-4 w-4" />
                   Pasek
@@ -718,6 +723,11 @@ export default function Admin() {
               {/* Operational Costs Tab */}
               <TabsContent value="costs">
                 <OperationalCosts />
+              </TabsContent>
+
+              {/* Likes Overview Tab */}
+              <TabsContent value="likes">
+                <LikesOverview />
               </TabsContent>
 
               {/* Genres Tab */}
