@@ -208,6 +208,26 @@ type TranslationKeys = {
   "createPlaylist.aiSuccess": string;
   "createPlaylist.allTracks": string;
   "createPlaylist.selected": string;
+
+  // Playlist Manager page
+  "playlistManager.title": string;
+  "playlistManager.subtitle": string;
+  "playlistManager.newPlaylist": string;
+  "playlistManager.allTracks": string;
+  "playlistManager.searchPlaceholder": string;
+  "playlistManager.noResults": string;
+  "playlistManager.tracksCount": string;
+  "playlistManager.open": string;
+  "playlistManager.dropHere": string;
+  "playlistManager.emptyDrop": string;
+  "playlistManager.empty": string;
+  "playlistManager.emptyDesc": string;
+  "playlistManager.createFirst": string;
+  "playlistManager.alreadyInPlaylist": string;
+  "playlistManager.addError": string;
+  "playlistManager.moveError": string;
+  "playlistManager.added": string;
+  "playlistManager.moved": string;
   "library.fetchingSpotify": string;
   "library.spotifyDone": string;
   "library.spotifyAddedSuccess": string;
@@ -1078,6 +1098,24 @@ const pl: TranslationKeys = {
   "createPlaylist.aiSuccess": "AI wygenerowało szczegóły playlisty!",
   "createPlaylist.allTracks": "Wszystkie utwory",
   "createPlaylist.selected": "Wybrane",
+  "playlistManager.title": "Zarządzaj Playlistami",
+  "playlistManager.subtitle": "Chwyć utwór i upuść na wybraną playlistę",
+  "playlistManager.newPlaylist": "Nowa playlista",
+  "playlistManager.allTracks": "Wszystkie Utwory",
+  "playlistManager.searchPlaceholder": "Szukaj utworu...",
+  "playlistManager.noResults": "Brak wyników",
+  "playlistManager.tracksCount": "utworów",
+  "playlistManager.open": "Otwórz",
+  "playlistManager.dropHere": "Upuść tutaj!",
+  "playlistManager.emptyDrop": "Przeciągnij utwory tutaj",
+  "playlistManager.empty": "Brak playlist",
+  "playlistManager.emptyDesc": "Utwórz playlistę, aby rozpocząć",
+  "playlistManager.createFirst": "Utwórz Playlistę",
+  "playlistManager.alreadyInPlaylist": "Ten utwór już jest w tej playliście",
+  "playlistManager.addError": "Błąd dodawania",
+  "playlistManager.moveError": "Błąd przenoszenia",
+  "playlistManager.added": "dodano do",
+  "playlistManager.moved": "przeniesiono do",
   "library.fetchingSpotify": "Pobieram utwory ze Spotify...",
   "library.spotifyDone": "Gotowe! Pobrano",
   "library.spotifyAddedSuccess": "Dodano utworów ze Spotify",
@@ -1922,6 +1960,24 @@ const en: TranslationKeys = {
   "createPlaylist.aiSuccess": "AI generated playlist details!",
   "createPlaylist.allTracks": "All tracks",
   "createPlaylist.selected": "Selected",
+  "playlistManager.title": "Manage Playlists",
+  "playlistManager.subtitle": "Grab a track and drop it on the playlist of your choice",
+  "playlistManager.newPlaylist": "New playlist",
+  "playlistManager.allTracks": "All Tracks",
+  "playlistManager.searchPlaceholder": "Search a track...",
+  "playlistManager.noResults": "No results",
+  "playlistManager.tracksCount": "tracks",
+  "playlistManager.open": "Open",
+  "playlistManager.dropHere": "Drop here!",
+  "playlistManager.emptyDrop": "Drag tracks here",
+  "playlistManager.empty": "No playlists yet",
+  "playlistManager.emptyDesc": "Create a playlist to get started",
+  "playlistManager.createFirst": "Create Playlist",
+  "playlistManager.alreadyInPlaylist": "This track is already in this playlist",
+  "playlistManager.addError": "Failed to add",
+  "playlistManager.moveError": "Failed to move",
+  "playlistManager.added": "added to",
+  "playlistManager.moved": "moved to",
   "library.fetchingSpotify": "Fetching tracks from Spotify...",
   "library.spotifyDone": "Done! Fetched",
   "library.spotifyAddedSuccess": "tracks added from Spotify",
@@ -2766,6 +2822,24 @@ const nl: TranslationKeys = {
   "createPlaylist.aiSuccess": "AI heeft details gegenereerd!",
   "createPlaylist.allTracks": "Alle nummers",
   "createPlaylist.selected": "Geselecteerd",
+  "playlistManager.title": "Beheer Afspeellijsten",
+  "playlistManager.subtitle": "Pak een nummer en zet het op de gewenste afspeellijst",
+  "playlistManager.newPlaylist": "Nieuwe afspeellijst",
+  "playlistManager.allTracks": "Alle Nummers",
+  "playlistManager.searchPlaceholder": "Zoek een nummer...",
+  "playlistManager.noResults": "Geen resultaten",
+  "playlistManager.tracksCount": "nummers",
+  "playlistManager.open": "Openen",
+  "playlistManager.dropHere": "Hier loslaten!",
+  "playlistManager.emptyDrop": "Sleep nummers hierheen",
+  "playlistManager.empty": "Nog geen afspeellijsten",
+  "playlistManager.emptyDesc": "Maak een afspeellijst om te beginnen",
+  "playlistManager.createFirst": "Afspeellijst Maken",
+  "playlistManager.alreadyInPlaylist": "Dit nummer staat al in deze afspeellijst",
+  "playlistManager.addError": "Toevoegen mislukt",
+  "playlistManager.moveError": "Verplaatsen mislukt",
+  "playlistManager.added": "toegevoegd aan",
+  "playlistManager.moved": "verplaatst naar",
   "library.fetchingSpotify": "Nummers ophalen van Spotify...",
   "library.spotifyDone": "Klaar! Opgehaald",
   "library.spotifyAddedSuccess": "nummers toegevoegd van Spotify",
@@ -3610,6 +3684,24 @@ const ua: TranslationKeys = {
   "createPlaylist.aiSuccess": "AI згенерував деталі плейлиста!",
   "createPlaylist.allTracks": "Усі треки",
   "createPlaylist.selected": "Вибрані",
+  "playlistManager.title": "Керування Плейлистами",
+  "playlistManager.subtitle": "Схопи трек і кинь у потрібний плейлист",
+  "playlistManager.newPlaylist": "Новий плейлист",
+  "playlistManager.allTracks": "Усі Треки",
+  "playlistManager.searchPlaceholder": "Шукати трек...",
+  "playlistManager.noResults": "Немає результатів",
+  "playlistManager.tracksCount": "треків",
+  "playlistManager.open": "Відкрити",
+  "playlistManager.dropHere": "Кинь сюди!",
+  "playlistManager.emptyDrop": "Перетягни треки сюди",
+  "playlistManager.empty": "Немає плейлистів",
+  "playlistManager.emptyDesc": "Створи плейлист, щоб почати",
+  "playlistManager.createFirst": "Створити Плейлист",
+  "playlistManager.alreadyInPlaylist": "Цей трек уже у плейлисті",
+  "playlistManager.addError": "Помилка додавання",
+  "playlistManager.moveError": "Помилка переміщення",
+  "playlistManager.added": "додано до",
+  "playlistManager.moved": "переміщено до",
   "library.fetchingSpotify": "Завантажую треки зі Spotify...",
   "library.spotifyDone": "Готово! Завантажено",
   "library.spotifyAddedSuccess": "треків додано зі Spotify",
