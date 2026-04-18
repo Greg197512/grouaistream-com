@@ -630,6 +630,39 @@ export type Database = {
         }
         Relationships: []
       }
+      operational_costs: {
+        Row: {
+          billing_day: number
+          created_at: string
+          id: string
+          is_active: boolean
+          monthly_amount: number
+          notes: string | null
+          service_name: string
+          updated_at: string
+        }
+        Insert: {
+          billing_day?: number
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          monthly_amount: number
+          notes?: string | null
+          service_name: string
+          updated_at?: string
+        }
+        Update: {
+          billing_day?: number
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          monthly_amount?: number
+          notes?: string | null
+          service_name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       party_commands: {
         Row: {
           command: string
@@ -1654,6 +1687,7 @@ export type Database = {
         }[]
       }
       get_active_weekend_challenge: { Args: never; Returns: Json }
+      get_admin_cost_overview: { Args: never; Returns: Json }
       get_admin_financial_overview: { Args: never; Returns: Json }
       get_admin_stats: { Args: never; Returns: Json }
       get_admin_tip_overview: { Args: never; Returns: Json }
