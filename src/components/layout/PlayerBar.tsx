@@ -110,6 +110,16 @@ export const PlayerBar = () => {
     };
 
     checkLiked();
+
+    // Sync from other LikeButtons (track grids, dropdowns)
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { trackId: string; liked: boolean };
+      if (currentTrack && detail?.trackId === currentTrack.id) {
+        setIsLiked(detail.liked);
+      }
+    };
+    window.addEventListener("track-like-changed", handler);
+    return () => window.removeEventListener("track-like-changed", handler);
   }, [user, currentTrack]);
 
   // Handle seeking for YouTube
@@ -139,6 +149,7 @@ export const PlayerBar = () => {
           .eq("user_id", user.id)
           .eq("track_id", currentTrack.id);
         setIsLiked(false);
+        window.dispatchEvent(new CustomEvent("track-like-changed", { detail: { trackId: currentTrack.id, liked: false } }));
         toast.success("Removed from Liked Songs");
       } catch (error) {
         console.error("Error toggling like:", error);
@@ -637,7 +648,10 @@ export const PlayerBar = () => {
           trackTitle={currentTrack.title}
           trackArtist={currentTrack.artist}
           listenedSeconds={currentTime}
-          onSuccess={() => setIsLiked(true)}
+          onSuccess={() => {
+            setIsLiked(true);
+            window.dispatchEvent(new CustomEvent("track-like-changed", { detail: { trackId: currentTrack.id, liked: true } }));
+          }}
         />
       )}
 
