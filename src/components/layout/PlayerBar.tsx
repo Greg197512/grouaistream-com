@@ -38,6 +38,7 @@ import { QuickMoodDetector } from "@/components/mood/QuickMoodDetector";
 import { HQCover } from "@/components/ui/HQCover";
 import { TrackBadges } from "@/components/ui/TrackBadges";
 import { TipModal } from "@/components/modals/TipModal";
+import { RatingLikeModal } from "@/components/modals/RatingLikeModal";
 
 // Video visibility state - shared via window for simplicity
 declare global {
@@ -88,6 +89,7 @@ export const PlayerBar = () => {
   const [showFullscreen, setShowFullscreen] = useState(false);
   const [showMoodDetector, setShowMoodDetector] = useState(false);
   const [showTipModal, setShowTipModal] = useState(false);
+  const [showRatingModal, setShowRatingModal] = useState(false);
 
   // Check if current track is liked
   useEffect(() => {
@@ -128,8 +130,9 @@ export const PlayerBar = () => {
 
     if (!currentTrack) return;
 
-    try {
-      if (isLiked) {
+    // Jeśli już polubione → usuń (bez modala oceny)
+    if (isLiked) {
+      try {
         await supabase
           .from("liked_songs")
           .delete()
@@ -137,17 +140,15 @@ export const PlayerBar = () => {
           .eq("track_id", currentTrack.id);
         setIsLiked(false);
         toast.success("Removed from Liked Songs");
-      } else {
-        await supabase
-          .from("liked_songs")
-          .insert({ user_id: user.id, track_id: currentTrack.id });
-        setIsLiked(true);
-        toast.success("Added to Liked Songs");
+      } catch (error) {
+        console.error("Error toggling like:", error);
+        toast.error("Failed to update liked songs");
       }
-    } catch (error) {
-      console.error("Error toggling like:", error);
-      toast.error("Failed to update liked songs");
+      return;
     }
+
+    // Nowe polubienie → wymaga oceny gwiazdkowej
+    setShowRatingModal(true);
   };
 
   const handleDownload = () => {
@@ -624,6 +625,19 @@ export const PlayerBar = () => {
           trackId={currentTrack.id}
           trackTitle={currentTrack.title}
           trackArtist={currentTrack.artist}
+        />
+      )}
+
+      {/* Rating + Like Modal */}
+      {currentTrack && (
+        <RatingLikeModal
+          isOpen={showRatingModal}
+          onClose={() => setShowRatingModal(false)}
+          trackId={currentTrack.id}
+          trackTitle={currentTrack.title}
+          trackArtist={currentTrack.artist}
+          listenedSeconds={currentTime}
+          onSuccess={() => setIsLiked(true)}
         />
       )}
 

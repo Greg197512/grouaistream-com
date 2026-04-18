@@ -13,7 +13,7 @@ import {
   DollarSign, TrendingUp, Music, BarChart3, 
   Wallet, ArrowUpRight, LogIn, Eye, Rocket,
   ShieldCheck, Lock, BadgeCheck, Globe, Clock,
-  Download, Heart, Percent
+  Download, Heart, Percent, Star
 } from "lucide-react";
 import { BoostPurchaseModal } from "@/components/boost/BoostPurchaseModal";
 import { PayoutRequestModal } from "@/components/earnings/PayoutRequestModal";
@@ -517,6 +517,36 @@ const CreatorEarnings = () => {
                     Ulepsz do Ultimate (9.99 €)
                   </Button>
                 )}
+              </div>
+
+              {/* 50 ocen 1-5★ */}
+              <div className="p-4 rounded-lg bg-yellow-500/5 border border-yellow-500/15 sm:col-span-2">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />
+                    <span className="text-sm font-semibold">50 ocen utworów (1-5★) = +12 €</span>
+                  </div>
+                  <Badge className="bg-yellow-500/15 text-yellow-400 border-yellow-500/25 text-[10px]">
+                    {Math.min(ratingsCount, 50)}/50
+                  </Badge>
+                </div>
+                <p className="text-[11px] text-muted-foreground mb-2">
+                  Każde polubienie wymaga oceny 1-5★. Admin weryfikuje (musisz odsłuchać min. 30s, inaczej oznaczamy jako podejrzane).
+                </p>
+                <div className="h-1.5 rounded-full bg-secondary/50 mb-3 overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-yellow-500 to-amber-500 transition-all"
+                    style={{ width: `${Math.min(100, (ratingsCount / 50) * 100)}%` }}
+                  />
+                </div>
+                <Button
+                  size="sm"
+                  disabled={ratingsBonusClaimed || ratingsCount < 50 || claimingMilestone === "ratings"}
+                  onClick={() => claimMilestone("ratings")}
+                  className="w-full bg-yellow-600 hover:bg-yellow-500 text-white"
+                >
+                  {ratingsBonusClaimed ? "✓ Odebrane" : ratingsCount < 50 ? `Brakuje ${50 - ratingsCount} ocen` : "Odbierz 12 €"}
+                </Button>
               </div>
             </CardContent>
           </Card>
