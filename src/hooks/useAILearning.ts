@@ -72,16 +72,31 @@ export const useAILearning = () => {
     setIsLearning(true);
 
     try {
+      // Ensure we have a valid session before invoking (avoids 401)
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData?.session?.access_token) {
+        return;
+      }
+
       const { data, error } = await supabase.functions.invoke("ai-learn", {
         body: { userId: user.id },
       });
 
-      if (!error && data?.success) {
+      if (error) {
+        // Silently skip auth errors — session may be refreshing
+        if (error.message?.includes("401") || error.message?.includes("Unauthorized")) {
+          return;
+        }
+        console.warn("AI learning skipped:", error.message);
+        return;
+      }
+
+      if (data?.success) {
         localStorage.setItem(LEARN_STORAGE_KEY, String(Date.now()));
         await loadPreferences();
       }
     } catch (e) {
-      console.error("AI learning failed:", e);
+      // Don't spam console for transient auth issues
     } finally {
       setIsLearning(false);
       learningRef.current = false;
