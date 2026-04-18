@@ -154,7 +154,7 @@ export const FinancialOverview = () => {
               <Input placeholder="Szukaj usera, opisu..." value={filter} onChange={e => setFilter(e.target.value)} className="pl-7 h-8 text-xs" />
             </div>
             <div className="flex gap-1 flex-wrap">
-              {["all", "stream", "bonus", "weekend_bonus", "payout"].map(t => (
+              {["all", "stream", "bonus", "weekend_bonus", "like_bonus", "tip", "payout"].map(t => (
                 <Button key={t} size="sm" variant={typeFilter === t ? "default" : "outline"} onClick={() => setTypeFilter(t)} className="h-8 text-xs">
                   {t === "all" ? "Wszystkie" : TYPE_LABELS[t]}
                 </Button>
