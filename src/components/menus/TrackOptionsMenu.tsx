@@ -440,38 +440,75 @@ const LikeButtonComponent = (
   ref: React.ForwardedRef<HTMLButtonElement>
 ) => {
   const { user } = useAuth();
+  const player = (() => { try { return usePlayer(); } catch { return null; } })();
   const [isLiked, setIsLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [showRatingModal, setShowRatingModal] = useState(false);
+  const [trackMeta, setTrackMeta] = useState<{ title: string; artist: string } | null>(null);
   const { hearts, spawnHearts } = useFloatingHearts();
 
+  const fetchData = async () => {
+    if (showCount) {
+      const { count } = await supabase
+        .from("liked_songs")
+        .select("*", { count: "exact", head: true })
+        .eq("track_id", trackId);
+      setLikeCount(count || 0);
+    }
+    if (user?.id) {
+      const { data } = await supabase
+        .from("liked_songs")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("track_id", trackId)
+        .maybeSingle();
+      setIsLiked(!!data);
+    } else {
+      setIsLiked(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchData = async () => {
-      if (showCount) {
-        const { count } = await supabase
-          .from("liked_songs")
-          .select("*", { count: "exact", head: true })
-          .eq("track_id", trackId);
+    fetchData();
 
-        setLikeCount(count || 0);
-      }
-
-      if (user?.id) {
-        const { data } = await supabase
-          .from("liked_songs")
-          .select("id")
-          .eq("user_id", user.id)
-          .eq("track_id", trackId)
-          .maybeSingle();
-
-        setIsLiked(!!data);
-      } else {
-        setIsLiked(false);
+    // Sync with player + other LikeButtons via global event
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { trackId: string; liked: boolean };
+      if (detail?.trackId === trackId) {
+        setIsLiked(detail.liked);
+        if (showCount) {
+          setLikeCount((prev) => Math.max(0, prev + (detail.liked ? 1 : -1)));
+        }
       }
     };
-
-    fetchData();
+    window.addEventListener("track-like-changed", handler);
+    return () => window.removeEventListener("track-like-changed", handler);
   }, [trackId, user?.id, showCount]);
+
+  const broadcast = (liked: boolean) => {
+    window.dispatchEvent(new CustomEvent("track-like-changed", { detail: { trackId, liked } }));
+  };
+
+  const handleUnlike = async () => {
+    if (!user) return;
+    setLoading(true);
+    try {
+      await supabase
+        .from("liked_songs")
+        .delete()
+        .eq("user_id", user.id)
+        .eq("track_id", trackId);
+      setIsLiked(false);
+      setLikeCount((prev) => Math.max(0, prev - 1));
+      broadcast(false);
+      toast.success("Removed from Liked Songs");
+    } catch {
+      toast.error("Failed to update");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleLike = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -480,33 +517,30 @@ const LikeButtonComponent = (
       return;
     }
 
-    setLoading(true);
-    try {
-      if (isLiked) {
-        await supabase
-          .from("liked_songs")
-          .delete()
-          .eq("user_id", user.id)
-          .eq("track_id", trackId);
-        
-        setIsLiked(false);
-        setLikeCount(prev => Math.max(0, prev - 1));
-      } else {
-        // Spawn hearts on like
-        spawnHearts(e);
-        await supabase
-          .from("liked_songs")
-          .insert({ user_id: user.id, track_id: trackId });
-        
-        setIsLiked(true);
-        setLikeCount(prev => prev + 1);
-      }
-    } catch (error) {
-      toast.error("Failed to update");
-    } finally {
-      setLoading(false);
+    if (isLiked) {
+      handleUnlike();
+      return;
     }
+
+    // Nowe polubienie → wymaga oceny gwiazdkowej (jak w playerze)
+    spawnHearts(e);
+    // Pobierz tytuł/artystę utworu, jeśli nie znamy
+    let meta = trackMeta;
+    if (!meta) {
+      const { data } = await supabase
+        .from("tracks")
+        .select("title, artist")
+        .eq("id", trackId)
+        .maybeSingle();
+      meta = { title: data?.title || "Utwór", artist: data?.artist || "Artysta" };
+      setTrackMeta(meta);
+    }
+    setShowRatingModal(true);
   };
+
+  // Listened seconds — z playera jeśli to aktualny utwór, inaczej 30s (próg minimalny)
+  const listenedSeconds =
+    player?.currentTrack?.id === trackId ? player.currentTime : 30;
 
   return (
     <>
@@ -534,6 +568,21 @@ const LikeButtonComponent = (
         )}
       </button>
       <FloatingHeartsOverlay hearts={hearts} />
+      {trackMeta && (
+        <RatingLikeModal
+          isOpen={showRatingModal}
+          onClose={() => setShowRatingModal(false)}
+          trackId={trackId}
+          trackTitle={trackMeta.title}
+          trackArtist={trackMeta.artist}
+          listenedSeconds={listenedSeconds}
+          onSuccess={() => {
+            setIsLiked(true);
+            setLikeCount((prev) => prev + 1);
+            broadcast(true);
+          }}
+        />
+      )}
     </>
   );
 };
