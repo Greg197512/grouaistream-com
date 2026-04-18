@@ -460,6 +460,7 @@ const LikeButtonComponent = (
   const [loading, setLoading] = useState(false);
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [trackMeta, setTrackMeta] = useState<{ title: string; artist: string } | null>(null);
+  const [isOwn, setIsOwn] = useState(false);
   const { hearts, spawnHearts } = useFloatingHearts();
 
   const fetchData = async () => {
@@ -470,6 +471,18 @@ const LikeButtonComponent = (
         .eq("track_id", trackId);
       setLikeCount(count || 0);
     }
+    // Sprawdź właściciela utworu
+    const { data: trackOwner } = await supabase
+      .from("tracks")
+      .select("user_id")
+      .eq("id", trackId)
+      .maybeSingle();
+    if (user?.id && trackOwner?.user_id === user.id) {
+      setIsOwn(true);
+      setIsLiked(false);
+      return;
+    }
+    setIsOwn(false);
     if (user?.id) {
       const { data } = await supabase
         .from("liked_songs")
