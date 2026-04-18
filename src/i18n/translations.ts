@@ -178,6 +178,36 @@ type TranslationKeys = {
   "library.populatedSuccess": string;
   "library.populateError": string;
   "library.pasteTokenError": string;
+
+  // Create Playlist page
+  "createPlaylist.title": string;
+  "createPlaylist.subtitle": string;
+  "createPlaylist.coverLabel": string;
+  "createPlaylist.coverGallery": string;
+  "createPlaylist.coverGradients": string;
+  "createPlaylist.nameLabel": string;
+  "createPlaylist.namePlaceholder": string;
+  "createPlaylist.descLabel": string;
+  "createPlaylist.descPlaceholder": string;
+  "createPlaylist.aiGenerate": string;
+  "createPlaylist.aiGenerating": string;
+  "createPlaylist.create": string;
+  "createPlaylist.creating": string;
+  "createPlaylist.tracksLabel": string;
+  "createPlaylist.tracksSelected": string;
+  "createPlaylist.searchTracks": string;
+  "createPlaylist.dragHint": string;
+  "createPlaylist.dropZone": string;
+  "createPlaylist.dropHere": string;
+  "createPlaylist.emptyDrop": string;
+  "createPlaylist.removeTrack": string;
+  "createPlaylist.created": string;
+  "createPlaylist.errorName": string;
+  "createPlaylist.errorCreate": string;
+  "createPlaylist.errorAi": string;
+  "createPlaylist.aiSuccess": string;
+  "createPlaylist.allTracks": string;
+  "createPlaylist.selected": string;
   "library.fetchingSpotify": string;
   "library.spotifyDone": string;
   "library.spotifyAddedSuccess": string;
