@@ -269,6 +269,8 @@ export const TopArtists = () => {
               followers={formatPlayCount(artist.playCount)}
               gradient={artist.gradient}
               imageUrl={artist.imageUrl}
+              isTrending={artist.isTrending}
+              trackCount={artist.trackCount}
               onClick={() => handleArtistClick(artist.name)}
             />
           </motion.div>
