@@ -95,6 +95,18 @@ const TrackOptionsMenuComponent = (
     };
 
     fetchLikeData();
+
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { trackId: string; liked: boolean };
+      if (detail?.trackId === trackId) {
+        setIsLiked(detail.liked);
+        if (showLikeCount) {
+          setLikeCount((prev) => Math.max(0, prev + (detail.liked ? 1 : -1)));
+        }
+      }
+    };
+    window.addEventListener("track-like-changed", handler);
+    return () => window.removeEventListener("track-like-changed", handler);
   }, [trackId, user?.id, showLikeCount]);
 
   const handleLike = async () => {
