@@ -24,6 +24,8 @@ interface Summary {
   total_streams_paid: number;
   total_bonuses_paid: number;
   total_weekend_paid: number;
+  total_like_bonuses_paid?: number;
+  total_tips_paid?: number;
   total_earnings_all: number;
   total_payouts_paid: number;
   total_payouts_pending: number;
@@ -34,6 +36,8 @@ const TYPE_LABELS: Record<string, string> = {
   stream: "Stream",
   bonus: "Bonus milowy",
   weekend_bonus: "Weekend AI",
+  like_bonus: "Polubienie ❤️",
+  tip: "Tip",
   payout: "Wypłata",
 };
 
@@ -41,6 +45,8 @@ const TYPE_COLORS: Record<string, string> = {
   stream: "bg-blue-500/20 text-blue-300 border-blue-500/30",
   bonus: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30",
   weekend_bonus: "bg-amber-500/20 text-amber-300 border-amber-500/30",
+  like_bonus: "bg-pink-500/20 text-pink-300 border-pink-500/30",
+  tip: "bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/30",
   payout: "bg-red-500/20 text-red-300 border-red-500/30",
 };
 
