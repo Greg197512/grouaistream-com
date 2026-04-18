@@ -24,6 +24,8 @@ interface Summary {
   total_streams_paid: number;
   total_bonuses_paid: number;
   total_weekend_paid: number;
+  total_like_bonuses_paid?: number;
+  total_tips_paid?: number;
   total_earnings_all: number;
   total_payouts_paid: number;
   total_payouts_pending: number;
@@ -34,6 +36,8 @@ const TYPE_LABELS: Record<string, string> = {
   stream: "Stream",
   bonus: "Bonus milowy",
   weekend_bonus: "Weekend AI",
+  like_bonus: "Polubienie ❤️",
+  tip: "Tip",
   payout: "Wypłata",
 };
 
@@ -41,6 +45,8 @@ const TYPE_COLORS: Record<string, string> = {
   stream: "bg-blue-500/20 text-blue-300 border-blue-500/30",
   bonus: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30",
   weekend_bonus: "bg-amber-500/20 text-amber-300 border-amber-500/30",
+  like_bonus: "bg-pink-500/20 text-pink-300 border-pink-500/30",
+  tip: "bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/30",
   payout: "bg-red-500/20 text-red-300 border-red-500/30",
 };
 
@@ -92,7 +98,7 @@ export const FinancialOverview = () => {
     <div className="space-y-4">
       {/* Summary cards */}
       {summary && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
           <Card><CardContent className="p-4">
             <div className="flex items-center gap-2 text-xs text-muted-foreground"><TrendingUp className="h-3 w-3" />Streamy</div>
             <div className="text-xl font-bold text-blue-300">{Number(summary.total_streams_paid).toFixed(2)}€</div>
@@ -104,6 +110,15 @@ export const FinancialOverview = () => {
           <Card><CardContent className="p-4">
             <div className="flex items-center gap-2 text-xs text-muted-foreground"><Sparkles className="h-3 w-3" />Weekend</div>
             <div className="text-xl font-bold text-amber-300">{Number(summary.total_weekend_paid).toFixed(2)}€</div>
+          </CardContent></Card>
+          <Card><CardContent className="p-4">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">❤️ Polubienia</div>
+            <div className="text-xl font-bold text-pink-300">{Number(summary.total_like_bonuses_paid || 0).toFixed(2)}€</div>
+            <div className="text-[10px] text-muted-foreground">0,10 € / like</div>
+          </CardContent></Card>
+          <Card><CardContent className="p-4">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">💜 Tipy</div>
+            <div className="text-xl font-bold text-fuchsia-300">{Number(summary.total_tips_paid || 0).toFixed(2)}€</div>
           </CardContent></Card>
           <Card><CardContent className="p-4">
             <div className="flex items-center gap-2 text-xs text-muted-foreground"><TrendingDown className="h-3 w-3" />Wypłacone</div>
@@ -139,7 +154,7 @@ export const FinancialOverview = () => {
               <Input placeholder="Szukaj usera, opisu..." value={filter} onChange={e => setFilter(e.target.value)} className="pl-7 h-8 text-xs" />
             </div>
             <div className="flex gap-1 flex-wrap">
-              {["all", "stream", "bonus", "weekend_bonus", "payout"].map(t => (
+              {["all", "stream", "bonus", "weekend_bonus", "like_bonus", "tip", "payout"].map(t => (
                 <Button key={t} size="sm" variant={typeFilter === t ? "default" : "outline"} onClick={() => setTypeFilter(t)} className="h-8 text-xs">
                   {t === "all" ? "Wszystkie" : TYPE_LABELS[t]}
                 </Button>
