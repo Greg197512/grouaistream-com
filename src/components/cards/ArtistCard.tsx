@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Play, Music2, Disc3 } from "lucide-react";
+import { Play, Disc3, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ArtistCardProps {
@@ -7,6 +7,8 @@ interface ArtistCardProps {
   followers: string;
   imageUrl?: string;
   gradient?: string;
+  isTrending?: boolean;
+  trackCount?: number;
   onClick?: () => void;
 }
 
@@ -15,6 +17,8 @@ export const ArtistCard = ({
   followers,
   imageUrl,
   gradient = "from-primary to-accent",
+  isTrending = false,
+  trackCount = 0,
   onClick
 }: ArtistCardProps) => {
   return (
@@ -24,6 +28,15 @@ export const ArtistCard = ({
       whileTap={{ scale: 0.96 }}
       className="group cursor-pointer p-3 sm:p-4 text-center relative overflow-hidden rounded-2xl bg-card/60 backdrop-blur-sm border border-border/30 hover:border-primary/40 transition-all duration-500"
     >
+      {/* Trending Artist badge */}
+      {isTrending && (
+        <div className="absolute top-2 left-2 z-30 flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-primary to-accent shadow-[0_0_12px_hsl(var(--primary)/0.6)]">
+          <TrendingUp className="h-3 w-3 text-primary-foreground" />
+          <span className="text-[9px] font-bold uppercase tracking-wider text-primary-foreground">
+            {trackCount > 1 ? `${trackCount} tracks` : "Artist"}
+          </span>
+        </div>
+      )}
       {/* Ambient glow */}
       <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none">
         <div className={cn(
