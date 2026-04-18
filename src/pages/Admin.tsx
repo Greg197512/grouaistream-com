@@ -60,6 +60,7 @@ import { Radio as RadioIcon, HardDrive, Award, DollarSign, Megaphone } from "luc
 import { MarqueeManager } from "@/components/admin/MarqueeManager";
 import { BonusMonitor } from "@/components/admin/BonusMonitor";
 import { FinancialOverview } from "@/components/admin/FinancialOverview";
+import { TipsOverview } from "@/components/admin/TipsOverview";
 
 interface UserStats {
   totalUsers: number;
@@ -648,6 +649,10 @@ export default function Admin() {
                   <TrendingUp className="h-4 w-4" />
                   Finanse & Weekend AI
                 </TabsTrigger>
+                <TabsTrigger value="tips" className="gap-2">
+                  <DollarSign className="h-4 w-4" />
+                  Tipy & Portfele
+                </TabsTrigger>
                 <TabsTrigger value="genres" className="gap-2">
                   <BarChart3 className="h-4 w-4" />
                   Gatunki
@@ -698,6 +703,11 @@ export default function Admin() {
               {/* Financial Overview Tab */}
               <TabsContent value="finance">
                 <FinancialOverview />
+              </TabsContent>
+
+              {/* Tips & Wallets Tab */}
+              <TabsContent value="tips">
+                <TipsOverview />
               </TabsContent>
 
               {/* Genres Tab */}
