@@ -13,12 +13,13 @@ import {
   DollarSign, TrendingUp, Music, BarChart3, 
   Wallet, ArrowUpRight, LogIn, Eye, Rocket,
   ShieldCheck, Lock, BadgeCheck, Globe, Clock,
-  Download, Heart, Percent, Star
+  Download, Heart, Percent, Star, X
 } from "lucide-react";
 import { BoostPurchaseModal } from "@/components/boost/BoostPurchaseModal";
 import { PayoutRequestModal } from "@/components/earnings/PayoutRequestModal";
 import { TrackBadges } from "@/components/ui/TrackBadges";
 import { StreamBreakdown } from "@/components/earnings/StreamBreakdown";
+import { WeekendChallengeCard } from "@/components/earnings/WeekendChallengeCard";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -315,8 +316,17 @@ const CreatorEarnings = () => {
   }
 
   // Recent paid payouts within last 24h (for red confirmation banner)
+  const [dismissedBanners, setDismissedBanners] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem("dismissed_payout_banners") || "[]"); } catch { return []; }
+  });
+  const dismissBanner = (id: string) => {
+    const next = [...dismissedBanners, id];
+    setDismissedBanners(next);
+    localStorage.setItem("dismissed_payout_banners", JSON.stringify(next));
+  };
   const recentPaidPayouts = payouts.filter(p => {
     if (p.status !== "paid" || !p.processed_at) return false;
+    if (dismissedBanners.includes(p.id)) return false;
     const ageMs = Date.now() - new Date(p.processed_at).getTime();
     return ageMs < 24 * 60 * 60 * 1000;
   });
@@ -354,9 +364,19 @@ const CreatorEarnings = () => {
                   Potwierdzono: {new Date(p.processed_at!).toLocaleString("pl-PL")} • Komunikat zniknie po 24h
                 </p>
               </div>
+              <button
+                onClick={() => dismissBanner(p.id)}
+                aria-label="Zamknij"
+                className="relative h-8 w-8 rounded-full bg-red-500/10 hover:bg-red-500/30 border border-red-500/40 flex items-center justify-center transition-colors flex-shrink-0"
+              >
+                <X className="h-4 w-4 text-red-300" />
+              </button>
             </div>
           </motion.div>
         ))}
+
+        {/* Wyzwanie weekendowe AI */}
+        <WeekendChallengeCard />
 
         {/* Stats Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
