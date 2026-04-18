@@ -61,6 +61,7 @@ import { MarqueeManager } from "@/components/admin/MarqueeManager";
 import { BonusMonitor } from "@/components/admin/BonusMonitor";
 import { FinancialOverview } from "@/components/admin/FinancialOverview";
 import { TipsOverview } from "@/components/admin/TipsOverview";
+import { OperationalCosts } from "@/components/admin/OperationalCosts";
 
 interface UserStats {
   totalUsers: number;
@@ -653,6 +654,10 @@ export default function Admin() {
                   <DollarSign className="h-4 w-4" />
                   Tipy & Portfele
                 </TabsTrigger>
+                <TabsTrigger value="costs" className="gap-2">
+                  <AlertTriangle className="h-4 w-4" />
+                  Koszty & Pomysły
+                </TabsTrigger>
                 <TabsTrigger value="genres" className="gap-2">
                   <BarChart3 className="h-4 w-4" />
                   Gatunki
@@ -708,6 +713,11 @@ export default function Admin() {
               {/* Tips & Wallets Tab */}
               <TabsContent value="tips">
                 <TipsOverview />
+              </TabsContent>
+
+              {/* Operational Costs Tab */}
+              <TabsContent value="costs">
+                <OperationalCosts />
               </TabsContent>
 
               {/* Genres Tab */}
