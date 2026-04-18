@@ -543,6 +543,10 @@ const LikeButtonComponent = (
       toast.error("Sign in to like songs");
       return;
     }
+    if (isOwn) {
+      toast.error("Nie możesz polubić własnego utworu 🎵");
+      return;
+    }
 
     if (isLiked) {
       handleUnlike();
@@ -574,11 +578,13 @@ const LikeButtonComponent = (
       <button
         ref={ref}
         onClick={handleLike}
-        disabled={loading}
+        disabled={loading || isOwn}
+        title={isOwn ? "To Twój utwór — nie możesz go polubić" : undefined}
         className={cn(
           "flex items-center gap-1 p-1.5 rounded-full transition-all",
           "hover:bg-secondary/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary",
           "active:scale-95",
+          isOwn && "opacity-40 cursor-not-allowed",
           className
         )}
       >
