@@ -1443,6 +1443,83 @@ export type Database = {
         }
         Relationships: []
       }
+      weekend_challenge_claims: {
+        Row: {
+          amount: number
+          challenge_id: string
+          claimed_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          challenge_id: string
+          claimed_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          challenge_id?: string
+          claimed_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "weekend_challenge_claims_challenge_id_fkey"
+            columns: ["challenge_id"]
+            isOneToOne: false
+            referencedRelation: "weekend_challenges"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      weekend_challenges: {
+        Row: {
+          activity_type: string
+          created_at: string
+          created_by: string | null
+          description: string
+          ends_at: string
+          generated_by_ai: boolean
+          id: string
+          is_active: boolean
+          reward_amount: number
+          starts_at: string
+          target_count: number
+          title: string
+        }
+        Insert: {
+          activity_type: string
+          created_at?: string
+          created_by?: string | null
+          description: string
+          ends_at: string
+          generated_by_ai?: boolean
+          id?: string
+          is_active?: boolean
+          reward_amount: number
+          starts_at?: string
+          target_count: number
+          title: string
+        }
+        Update: {
+          activity_type?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          ends_at?: string
+          generated_by_ai?: boolean
+          id?: string
+          is_active?: boolean
+          reward_amount?: number
+          starts_at?: string
+          target_count?: number
+          title?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       public_profiles: {
@@ -1466,12 +1543,27 @@ export type Database = {
     }
     Functions: {
       acknowledge_payout: { Args: { _detail_id: string }; Returns: Json }
+      admin_create_weekend_challenge: {
+        Args: {
+          _activity_type: string
+          _description: string
+          _duration_hours?: number
+          _reward_amount: number
+          _target_count: number
+          _title: string
+        }
+        Returns: Json
+      }
       claim_likes_milestone_bonus: { Args: never; Returns: Json }
       claim_mood_analysis_bonus: { Args: never; Returns: Json }
       claim_mood_sessions_milestone_bonus: { Args: never; Returns: Json }
       claim_ratings_50_milestone_bonus: { Args: never; Returns: Json }
       claim_studio_milestone_bonus: { Args: never; Returns: Json }
       claim_upload_milestone_bonus: { Args: never; Returns: Json }
+      claim_weekend_challenge: {
+        Args: { _challenge_id: string }
+        Returns: Json
+      }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
@@ -1488,6 +1580,8 @@ export type Database = {
           subscription_status: string
         }[]
       }
+      get_active_weekend_challenge: { Args: never; Returns: Json }
+      get_admin_financial_overview: { Args: never; Returns: Json }
       get_admin_stats: { Args: never; Returns: Json }
       get_all_ratings_for_admin: {
         Args: { _only_suspicious?: boolean }
