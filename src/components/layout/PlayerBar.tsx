@@ -158,7 +158,11 @@ export const PlayerBar = () => {
       return;
     }
 
-    // Nowe polubienie → wymaga oceny gwiazdkowej
+    // Nowe polubienie → wymaga 30s odsłuchania + oceny gwiazdkowej
+    if (currentTime < 30) {
+      toast.error(`Posłuchaj minimum 30 sekund, aby polubić (masz ${Math.floor(currentTime)}s) ⏱`);
+      return;
+    }
     setShowRatingModal(true);
   };
 
