@@ -496,27 +496,27 @@ const Suno = () => {
                 GrouAI Studio
               </h1>
               <p className="text-sm font-semibold text-amber-400 uppercase tracking-wider">
-                🔒 Tylko dla Ultimate
+                🔒 {t("studio.gate.title")}
               </p>
             </div>
             <p className="text-foreground/80 leading-relaxed">
-              GrouAI Studio to pełne studio produkcyjne AI — generowanie utworów, voice cloning, miksowanie i mastering. Dostępne <span className="font-bold text-primary">wyłącznie w planie Ultimate (19,99€/mc)</span>.
+              {t("studio.gate.subtitle")}
             </p>
 
             {/* Powered by — partnerzy AI */}
             <div className="space-y-2 text-left bg-background/30 rounded-xl p-4 border border-primary/20">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-primary/80">Połączone z silnikami AI:</p>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-primary/80">{t("studio.gate.poweredBy")}:</p>
               <div className="grid grid-cols-2 gap-2 text-xs text-foreground/80">
-                <div className="flex items-center gap-2"><Sparkles className="h-3.5 w-3.5 text-primary" /> <span><b>Suno v4</b> — muzyka</span></div>
-                <div className="flex items-center gap-2"><Mic className="h-3.5 w-3.5 text-primary" /> <span><b>ElevenLabs</b> — wokal</span></div>
-                <div className="flex items-center gap-2"><Wand2 className="h-3.5 w-3.5 text-primary" /> <span><b>Replicate</b> — mastering</span></div>
-                <div className="flex items-center gap-2"><Type className="h-3.5 w-3.5 text-primary" /> <span><b>Gemini 2.5</b> — lyrics</span></div>
+                <div className="flex items-center gap-2"><Sparkles className="h-3.5 w-3.5 text-primary" /> <span><b>Suno v4</b> — {t("studio.gate.engineMusic")}</span></div>
+                <div className="flex items-center gap-2"><Mic className="h-3.5 w-3.5 text-primary" /> <span><b>ElevenLabs</b> — {t("studio.gate.engineVocal")}</span></div>
+                <div className="flex items-center gap-2"><Wand2 className="h-3.5 w-3.5 text-primary" /> <span><b>Replicate</b> — {t("studio.gate.engineMaster")}</span></div>
+                <div className="flex items-center gap-2"><Type className="h-3.5 w-3.5 text-primary" /> <span><b>Gemini 2.5</b> — {t("studio.gate.engineLyrics")}</span></div>
               </div>
             </div>
 
             {/* Jakość audio */}
             <div className="space-y-2 text-left bg-background/30 rounded-xl p-4 border border-amber-500/20">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-amber-400">Jakość studyjna:</p>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-amber-400">{t("studio.gate.quality")}:</p>
               <div className="space-y-1.5 text-xs text-foreground/80">
                 <div className="flex items-center justify-between"><span>🎚️ Format</span><span className="font-mono font-bold text-amber-400">WAV / FLAC Lossless</span></div>
                 <div className="flex items-center justify-between"><span>🔊 Sample rate</span><span className="font-mono font-bold text-amber-400">48 kHz / 24-bit</span></div>
@@ -542,10 +542,10 @@ const Suno = () => {
                 size="lg"
               >
                 <Crown className="h-4 w-4" />
-                Opłać Ultimate — 19,99€/mc
+                {t("studio.gate.cta")}
               </Button>
               <Button asChild variant="outline" size="lg" className="flex-1 border-primary/30">
-                <Link to="/">Wróć do strony głównej</Link>
+                <Link to="/">{t("studio.gate.later")}</Link>
               </Button>
             </div>
             <p className="text-[11px] text-foreground/40 pt-2">
