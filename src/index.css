@@ -311,4 +311,29 @@
       drop-shadow(0 0 8px hsl(38 100% 55% / 0.55))
       drop-shadow(0 0 18px hsl(14 100% 57% / 0.35));
   }
+
+  /* ===== Animowana rączka klikająca w przycisk ===== */
+  .tap-hand__emoji {
+    display: inline-block;
+    transform-origin: 50% 90%;
+    animation: tap-hand-press 1.8s ease-in-out infinite;
+  }
+
+  .tap-hand__ripple {
+    background: radial-gradient(circle, hsl(38 100% 60% / 0.55) 0%, hsl(14 100% 57% / 0.25) 50%, transparent 70%);
+    opacity: 0;
+    animation: tap-hand-ripple 1.8s ease-out infinite;
+  }
+
+  @keyframes tap-hand-press {
+    0%, 100% { transform: translateY(-6px) rotate(-8deg) scale(1); }
+    40%, 55% { transform: translateY(2px) rotate(0deg) scale(0.92); }
+    70% { transform: translateY(-6px) rotate(-8deg) scale(1); }
+  }
+
+  @keyframes tap-hand-ripple {
+    0%, 35% { transform: translate(-50%, -50%) scale(0.4); opacity: 0; }
+    45% { opacity: 0.9; }
+    100% { transform: translate(-50%, -50%) scale(2.4); opacity: 0; }
+  }
 }
