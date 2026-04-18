@@ -239,7 +239,7 @@ function audioBufferToWav(buffer: AudioBuffer): string {
 
 const Suno = () => {
   const { user } = useAuth();
-  const { isPro, showUpgradeFor } = useSubscription();
+  const { isPro, isUltimate, showUpgradeFor } = useSubscription();
   const [activeTab, setActiveTab] = useState<"generate" | "mix" | "suno">("generate");
   const [genre, setGenre] = useState("Pop");
   const [genre2, setGenre2] = useState<string | null>(null);
@@ -475,6 +475,59 @@ const Suno = () => {
       toast.error("Błąd zapisu: " + err.message);
     }
   };
+
+  // === ULTIMATE GATE: GrouAI Studio dostępne tylko dla Ultimate ===
+  if (user && !isUltimate) {
+    return (
+      <MainLayout>
+        <div className="min-h-screen flex items-center justify-center px-4" style={{ background: "#0F0F1A" }}>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="max-w-lg w-full text-center space-y-6 p-8 rounded-2xl border border-primary/30 bg-background/40 backdrop-blur-xl"
+          >
+            <div className="mx-auto w-20 h-20 rounded-2xl flex items-center justify-center bg-gradient-to-br from-primary to-amber-500 shadow-[0_0_40px_hsl(var(--primary)/0.5)]">
+              <Crown className="h-10 w-10 text-background" />
+            </div>
+            <div className="space-y-2">
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-amber-400 bg-clip-text text-transparent">
+                GrouAI Studio
+              </h1>
+              <p className="text-sm font-semibold text-amber-400 uppercase tracking-wider">
+                🔒 Tylko dla Ultimate
+              </p>
+            </div>
+            <p className="text-foreground/80 leading-relaxed">
+              Generowanie utworów AI, miksowanie ścieżek, voice cloning, lyrics i pełne studio produkcyjne — wszystko dostępne <span className="font-bold text-primary">wyłącznie w planie Ultimate</span>.
+            </p>
+            <div className="space-y-2 text-left text-sm text-foreground/70 bg-background/30 rounded-xl p-4 border border-white/5">
+              <div className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-primary" /> Generowanie AI (Suno + ElevenLabs)</div>
+              <div className="flex items-center gap-2"><Mic className="h-4 w-4 text-primary" /> Voice cloning &amp; library</div>
+              <div className="flex items-center gap-2"><Blend className="h-4 w-4 text-primary" /> Track Mixer + crossfade</div>
+              <div className="flex items-center gap-2"><Type className="h-4 w-4 text-primary" /> Auto-lyrics + tłumaczenia</div>
+              <div className="flex items-center gap-2"><Wand2 className="h-4 w-4 text-primary" /> Bonus 12€ za 5 utworów Studio</div>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-3 pt-2">
+              <Button
+                onClick={() => showUpgradeFor("GrouAI Studio")}
+                className="flex-1 bg-gradient-to-r from-primary to-amber-500 hover:opacity-90 text-background font-bold gap-2"
+                size="lg"
+              >
+                <Crown className="h-4 w-4" />
+                Odblokuj Ultimate
+              </Button>
+              <Button asChild variant="outline" size="lg" className="flex-1 border-primary/30">
+                <Link to="/">Wróć do strony głównej</Link>
+              </Button>
+            </div>
+            <p className="text-[11px] text-foreground/40 pt-2">
+              Ultimate = pełny dostęp do AI Studio, AI Psychologist, lossless audio i wszystkie bonusy creatorów.
+            </p>
+          </motion.div>
+        </div>
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout>
