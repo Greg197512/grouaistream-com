@@ -35,6 +35,10 @@ export const RatingLikeModal = ({
       toast.error("Wybierz ocenę 1-5 gwiazdek");
       return;
     }
+    if (listenedSeconds < 30) {
+      toast.error(`Posłuchaj minimum 30 sekund (masz ${Math.floor(listenedSeconds)}s) ⏱`);
+      return;
+    }
     setSubmitting(true);
     try {
       const { data, error } = await supabase.rpc("submit_rating_with_like", {
