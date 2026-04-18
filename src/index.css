@@ -259,4 +259,56 @@
       opacity: 0;
     }
   }
+
+  /* ===== Ogień wewnątrz płonącego przycisku ===== */
+  .burning-btn__inner-fire {
+    background:
+      radial-gradient(ellipse 80% 60% at 30% 100%, hsl(14 100% 57% / 0.55) 0%, transparent 60%),
+      radial-gradient(ellipse 70% 55% at 70% 100%, hsl(38 100% 50% / 0.5) 0%, transparent 60%),
+      radial-gradient(ellipse 100% 70% at 50% 110%, hsl(24 100% 55% / 0.45) 0%, transparent 65%),
+      linear-gradient(180deg, hsl(14 100% 30% / 0.25) 0%, hsl(24 100% 45% / 0.4) 60%, hsl(38 100% 55% / 0.55) 100%);
+    background-size: 200% 200%, 220% 220%, 180% 180%, 100% 100%;
+    animation: burning-inner-flow 5s ease-in-out infinite;
+    mix-blend-mode: screen;
+  }
+
+  .burning-btn__flames {
+    background:
+      radial-gradient(ellipse 18% 80% at 20% 100%, hsl(38 100% 60% / 0.7) 0%, transparent 70%),
+      radial-gradient(ellipse 14% 70% at 40% 100%, hsl(14 100% 57% / 0.65) 0%, transparent 70%),
+      radial-gradient(ellipse 16% 90% at 55% 100%, hsl(24 100% 60% / 0.7) 0%, transparent 70%),
+      radial-gradient(ellipse 12% 75% at 72% 100%, hsl(38 100% 55% / 0.6) 0%, transparent 70%),
+      radial-gradient(ellipse 18% 85% at 88% 100%, hsl(14 100% 57% / 0.65) 0%, transparent 70%);
+    filter: blur(2px);
+    animation: burning-flames-flicker 1.6s ease-in-out infinite;
+    mix-blend-mode: screen;
+  }
+
+  @keyframes burning-inner-flow {
+    0%, 100% { background-position: 0% 100%, 100% 100%, 50% 100%, 0 0; }
+    50% { background-position: 100% 80%, 0% 80%, 50% 60%, 0 0; }
+  }
+
+  @keyframes burning-flames-flicker {
+    0%, 100% { transform: translateY(0) scaleY(1); opacity: 0.85; }
+    25% { transform: translateY(-2px) scaleY(1.08); opacity: 1; }
+    50% { transform: translateY(1px) scaleY(0.94); opacity: 0.7; }
+    75% { transform: translateY(-1px) scaleY(1.05); opacity: 0.95; }
+  }
+
+  /* Półprzezroczysty napis – ogień przebija przez literki */
+  .burning-btn__text {
+    background: linear-gradient(
+      180deg,
+      hsl(48 100% 88% / 0.95) 0%,
+      hsl(38 100% 72% / 0.85) 45%,
+      hsl(14 100% 62% / 0.7) 100%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter:
+      drop-shadow(0 0 8px hsl(38 100% 55% / 0.55))
+      drop-shadow(0 0 18px hsl(14 100% 57% / 0.35));
+  }
 }
