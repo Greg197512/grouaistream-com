@@ -98,7 +98,7 @@ export const FinancialOverview = () => {
     <div className="space-y-4">
       {/* Summary cards */}
       {summary && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
           <Card><CardContent className="p-4">
             <div className="flex items-center gap-2 text-xs text-muted-foreground"><TrendingUp className="h-3 w-3" />Streamy</div>
             <div className="text-xl font-bold text-blue-300">{Number(summary.total_streams_paid).toFixed(2)}€</div>
@@ -110,6 +110,15 @@ export const FinancialOverview = () => {
           <Card><CardContent className="p-4">
             <div className="flex items-center gap-2 text-xs text-muted-foreground"><Sparkles className="h-3 w-3" />Weekend</div>
             <div className="text-xl font-bold text-amber-300">{Number(summary.total_weekend_paid).toFixed(2)}€</div>
+          </CardContent></Card>
+          <Card><CardContent className="p-4">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">❤️ Polubienia</div>
+            <div className="text-xl font-bold text-pink-300">{Number(summary.total_like_bonuses_paid || 0).toFixed(2)}€</div>
+            <div className="text-[10px] text-muted-foreground">0,10 € / like</div>
+          </CardContent></Card>
+          <Card><CardContent className="p-4">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">💜 Tipy</div>
+            <div className="text-xl font-bold text-fuchsia-300">{Number(summary.total_tips_paid || 0).toFixed(2)}€</div>
           </CardContent></Card>
           <Card><CardContent className="p-4">
             <div className="flex items-center gap-2 text-xs text-muted-foreground"><TrendingDown className="h-3 w-3" />Wypłacone</div>
