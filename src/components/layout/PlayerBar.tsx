@@ -110,6 +110,16 @@ export const PlayerBar = () => {
     };
 
     checkLiked();
+
+    // Sync from other LikeButtons (track grids, dropdowns)
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { trackId: string; liked: boolean };
+      if (currentTrack && detail?.trackId === currentTrack.id) {
+        setIsLiked(detail.liked);
+      }
+    };
+    window.addEventListener("track-like-changed", handler);
+    return () => window.removeEventListener("track-like-changed", handler);
   }, [user, currentTrack]);
 
   // Handle seeking for YouTube
