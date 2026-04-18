@@ -449,6 +449,9 @@ const CreatorEarnings = () => {
                     {Math.min(uploadCount, 50)}/50
                   </Badge>
                 </div>
+                <p className="text-[11px] text-amber-400/90 mb-2 font-medium">
+                  🏆 Tylko 3 pierwsze osoby, które dobiją do 50 utworów — kasa leci!
+                </p>
                 <div className="h-1.5 rounded-full bg-secondary/50 mb-3 overflow-hidden">
                   <div
                     className="h-full bg-gradient-to-r from-emerald-500 to-green-500 transition-all"
