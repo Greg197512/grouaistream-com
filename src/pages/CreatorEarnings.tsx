@@ -314,6 +314,13 @@ const CreatorEarnings = () => {
     );
   }
 
+  // Recent paid payouts within last 24h (for red confirmation banner)
+  const recentPaidPayouts = payouts.filter(p => {
+    if (p.status !== "paid" || !p.processed_at) return false;
+    const ageMs = Date.now() - new Date(p.processed_at).getTime();
+    return ageMs < 24 * 60 * 60 * 1000;
+  });
+
   return (
     <MainLayout>
       <div className="max-w-5xl mx-auto px-4 py-8 space-y-8">
@@ -325,6 +332,31 @@ const CreatorEarnings = () => {
           </h1>
           <p className="text-muted-foreground mt-1">{t("earnings.subtitle")}</p>
         </motion.div>
+
+        {/* Czerwony banner: wypłata zrealizowana (znika po 24h) */}
+        {recentPaidPayouts.map(p => (
+          <motion.div
+            key={p.id}
+            initial={{ opacity: 0, scale: 0.95, y: -10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            className="relative overflow-hidden rounded-xl border-2 border-red-500/60 bg-gradient-to-r from-red-600/20 via-red-500/15 to-red-600/20 p-4 shadow-[0_0_30px_rgba(239,68,68,0.3)]"
+          >
+            <div className="absolute inset-0 bg-red-500/5 animate-pulse pointer-events-none" />
+            <div className="relative flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-red-500/20 border border-red-500/40 flex items-center justify-center flex-shrink-0">
+                <BadgeCheck className="h-5 w-5 text-red-400" />
+              </div>
+              <div className="flex-1">
+                <p className="text-base font-bold text-red-300">
+                  Twoja wypłata {Number(p.amount).toFixed(2)} € została zrealizowana ✅
+                </p>
+                <p className="text-xs text-red-400/80 mt-0.5">
+                  Potwierdzono: {new Date(p.processed_at!).toLocaleString("pl-PL")} • Komunikat zniknie po 24h
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        ))}
 
         {/* Stats Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
