@@ -178,6 +178,36 @@ type TranslationKeys = {
   "library.populatedSuccess": string;
   "library.populateError": string;
   "library.pasteTokenError": string;
+
+  // Create Playlist page
+  "createPlaylist.title": string;
+  "createPlaylist.subtitle": string;
+  "createPlaylist.coverLabel": string;
+  "createPlaylist.coverGallery": string;
+  "createPlaylist.coverGradients": string;
+  "createPlaylist.nameLabel": string;
+  "createPlaylist.namePlaceholder": string;
+  "createPlaylist.descLabel": string;
+  "createPlaylist.descPlaceholder": string;
+  "createPlaylist.aiGenerate": string;
+  "createPlaylist.aiGenerating": string;
+  "createPlaylist.create": string;
+  "createPlaylist.creating": string;
+  "createPlaylist.tracksLabel": string;
+  "createPlaylist.tracksSelected": string;
+  "createPlaylist.searchTracks": string;
+  "createPlaylist.dragHint": string;
+  "createPlaylist.dropZone": string;
+  "createPlaylist.dropHere": string;
+  "createPlaylist.emptyDrop": string;
+  "createPlaylist.removeTrack": string;
+  "createPlaylist.created": string;
+  "createPlaylist.errorName": string;
+  "createPlaylist.errorCreate": string;
+  "createPlaylist.errorAi": string;
+  "createPlaylist.aiSuccess": string;
+  "createPlaylist.allTracks": string;
+  "createPlaylist.selected": string;
   "library.fetchingSpotify": string;
   "library.spotifyDone": string;
   "library.spotifyAddedSuccess": string;
@@ -1020,6 +1050,34 @@ const pl: TranslationKeys = {
   "library.populatedSuccess": "Biblioteka wypełniona!",
   "library.populateError": "Błąd podczas wypełniania",
   "library.pasteTokenError": "Wklej token Spotify!",
+  "createPlaylist.title": "Utwórz Playlistę",
+  "createPlaylist.subtitle": "Twoja muzyka, Twój świat — złóż go z najlepszych kawałków.",
+  "createPlaylist.coverLabel": "Okładka",
+  "createPlaylist.coverGallery": "Galeria okładek",
+  "createPlaylist.coverGradients": "Gradienty",
+  "createPlaylist.nameLabel": "Nazwa playlisty",
+  "createPlaylist.namePlaceholder": "Moja niesamowita playlista",
+  "createPlaylist.descLabel": "Opis (opcjonalnie)",
+  "createPlaylist.descPlaceholder": "O czym jest ta playlista?",
+  "createPlaylist.aiGenerate": "Wygeneruj z AI",
+  "createPlaylist.aiGenerating": "Generuję...",
+  "createPlaylist.create": "Utwórz Playlistę",
+  "createPlaylist.creating": "Tworzę...",
+  "createPlaylist.tracksLabel": "Utwory",
+  "createPlaylist.tracksSelected": "wybrano",
+  "createPlaylist.searchTracks": "Szukaj utworów...",
+  "createPlaylist.dragHint": "Złap utwór i upuść tutaj 👇",
+  "createPlaylist.dropZone": "Twoja playlista",
+  "createPlaylist.dropHere": "Upuść tutaj!",
+  "createPlaylist.emptyDrop": "Przeciągnij utwory tutaj, aby je dodać",
+  "createPlaylist.removeTrack": "Usuń",
+  "createPlaylist.created": "Playlista utworzona!",
+  "createPlaylist.errorName": "Wpisz nazwę playlisty",
+  "createPlaylist.errorCreate": "Nie udało się utworzyć playlisty",
+  "createPlaylist.errorAi": "Nie udało się wygenerować przez AI",
+  "createPlaylist.aiSuccess": "AI wygenerowało szczegóły playlisty!",
+  "createPlaylist.allTracks": "Wszystkie utwory",
+  "createPlaylist.selected": "Wybrane",
   "library.fetchingSpotify": "Pobieram utwory ze Spotify...",
   "library.spotifyDone": "Gotowe! Pobrano",
   "library.spotifyAddedSuccess": "Dodano utworów ze Spotify",
@@ -1836,6 +1894,34 @@ const en: TranslationKeys = {
   "library.populatedSuccess": "Library populated!",
   "library.populateError": "Error during population",
   "library.pasteTokenError": "Paste Spotify token!",
+  "createPlaylist.title": "Create Playlist",
+  "createPlaylist.subtitle": "Your music, your world — build it from the best tracks.",
+  "createPlaylist.coverLabel": "Cover",
+  "createPlaylist.coverGallery": "Cover gallery",
+  "createPlaylist.coverGradients": "Gradients",
+  "createPlaylist.nameLabel": "Playlist name",
+  "createPlaylist.namePlaceholder": "My awesome playlist",
+  "createPlaylist.descLabel": "Description (optional)",
+  "createPlaylist.descPlaceholder": "What's this playlist about?",
+  "createPlaylist.aiGenerate": "Generate with AI",
+  "createPlaylist.aiGenerating": "Generating...",
+  "createPlaylist.create": "Create Playlist",
+  "createPlaylist.creating": "Creating...",
+  "createPlaylist.tracksLabel": "Tracks",
+  "createPlaylist.tracksSelected": "selected",
+  "createPlaylist.searchTracks": "Search tracks...",
+  "createPlaylist.dragHint": "Grab a track and drop it here 👇",
+  "createPlaylist.dropZone": "Your playlist",
+  "createPlaylist.dropHere": "Drop here!",
+  "createPlaylist.emptyDrop": "Drag tracks here to add them",
+  "createPlaylist.removeTrack": "Remove",
+  "createPlaylist.created": "Playlist created!",
+  "createPlaylist.errorName": "Enter a playlist name",
+  "createPlaylist.errorCreate": "Failed to create playlist",
+  "createPlaylist.errorAi": "AI generation failed",
+  "createPlaylist.aiSuccess": "AI generated playlist details!",
+  "createPlaylist.allTracks": "All tracks",
+  "createPlaylist.selected": "Selected",
   "library.fetchingSpotify": "Fetching tracks from Spotify...",
   "library.spotifyDone": "Done! Fetched",
   "library.spotifyAddedSuccess": "tracks added from Spotify",
@@ -2652,6 +2738,34 @@ const nl: TranslationKeys = {
   "library.populatedSuccess": "Bibliotheek gevuld!",
   "library.populateError": "Fout bij vullen",
   "library.pasteTokenError": "Plak Spotify token!",
+  "createPlaylist.title": "Afspeellijst Maken",
+  "createPlaylist.subtitle": "Jouw muziek, jouw wereld — bouw hem op uit de beste nummers.",
+  "createPlaylist.coverLabel": "Cover",
+  "createPlaylist.coverGallery": "Covergalerij",
+  "createPlaylist.coverGradients": "Gradiënten",
+  "createPlaylist.nameLabel": "Naam afspeellijst",
+  "createPlaylist.namePlaceholder": "Mijn geweldige afspeellijst",
+  "createPlaylist.descLabel": "Beschrijving (optioneel)",
+  "createPlaylist.descPlaceholder": "Waar gaat deze afspeellijst over?",
+  "createPlaylist.aiGenerate": "Genereer met AI",
+  "createPlaylist.aiGenerating": "Bezig met genereren...",
+  "createPlaylist.create": "Afspeellijst Maken",
+  "createPlaylist.creating": "Bezig met maken...",
+  "createPlaylist.tracksLabel": "Nummers",
+  "createPlaylist.tracksSelected": "geselecteerd",
+  "createPlaylist.searchTracks": "Zoek nummers...",
+  "createPlaylist.dragHint": "Pak een nummer en zet het hier neer 👇",
+  "createPlaylist.dropZone": "Jouw afspeellijst",
+  "createPlaylist.dropHere": "Zet hier neer!",
+  "createPlaylist.emptyDrop": "Sleep nummers hierheen om ze toe te voegen",
+  "createPlaylist.removeTrack": "Verwijderen",
+  "createPlaylist.created": "Afspeellijst gemaakt!",
+  "createPlaylist.errorName": "Vul een naam in",
+  "createPlaylist.errorCreate": "Kon afspeellijst niet maken",
+  "createPlaylist.errorAi": "AI-generatie mislukt",
+  "createPlaylist.aiSuccess": "AI heeft details gegenereerd!",
+  "createPlaylist.allTracks": "Alle nummers",
+  "createPlaylist.selected": "Geselecteerd",
   "library.fetchingSpotify": "Nummers ophalen van Spotify...",
   "library.spotifyDone": "Klaar! Opgehaald",
   "library.spotifyAddedSuccess": "nummers toegevoegd van Spotify",
@@ -3468,6 +3582,34 @@ const ua: TranslationKeys = {
   "library.populatedSuccess": "Бібліотеку заповнено!",
   "library.populateError": "Помилка заповнення",
   "library.pasteTokenError": "Вставте токен Spotify!",
+  "createPlaylist.title": "Створити Плейлист",
+  "createPlaylist.subtitle": "Твоя музика, твій світ — збери його з найкращих треків.",
+  "createPlaylist.coverLabel": "Обкладинка",
+  "createPlaylist.coverGallery": "Галерея обкладинок",
+  "createPlaylist.coverGradients": "Градієнти",
+  "createPlaylist.nameLabel": "Назва плейлиста",
+  "createPlaylist.namePlaceholder": "Мій неймовірний плейлист",
+  "createPlaylist.descLabel": "Опис (необов'язково)",
+  "createPlaylist.descPlaceholder": "Про що цей плейлист?",
+  "createPlaylist.aiGenerate": "Згенерувати з AI",
+  "createPlaylist.aiGenerating": "Генерую...",
+  "createPlaylist.create": "Створити Плейлист",
+  "createPlaylist.creating": "Створюю...",
+  "createPlaylist.tracksLabel": "Треки",
+  "createPlaylist.tracksSelected": "вибрано",
+  "createPlaylist.searchTracks": "Пошук треків...",
+  "createPlaylist.dragHint": "Схопи трек і перетягни сюди 👇",
+  "createPlaylist.dropZone": "Твій плейлист",
+  "createPlaylist.dropHere": "Кинь сюди!",
+  "createPlaylist.emptyDrop": "Перетягуй треки сюди, щоб додати",
+  "createPlaylist.removeTrack": "Видалити",
+  "createPlaylist.created": "Плейлист створено!",
+  "createPlaylist.errorName": "Введіть назву плейлиста",
+  "createPlaylist.errorCreate": "Не вдалося створити плейлист",
+  "createPlaylist.errorAi": "Помилка AI",
+  "createPlaylist.aiSuccess": "AI згенерував деталі плейлиста!",
+  "createPlaylist.allTracks": "Усі треки",
+  "createPlaylist.selected": "Вибрані",
   "library.fetchingSpotify": "Завантажую треки зі Spotify...",
   "library.spotifyDone": "Готово! Завантажено",
   "library.spotifyAddedSuccess": "треків додано зі Spotify",
