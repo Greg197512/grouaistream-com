@@ -1,6 +1,8 @@
 import { useState, useEffect, forwardRef } from "react";
 import { motion } from "framer-motion";
 import { useFloatingHearts, FloatingHeartsOverlay } from "@/components/effects/FloatingHearts";
+import { RatingLikeModal } from "@/components/modals/RatingLikeModal";
+import { usePlayer } from "@/contexts/PlayerContext";
 import { 
   MoreHorizontal, 
   Heart, 
