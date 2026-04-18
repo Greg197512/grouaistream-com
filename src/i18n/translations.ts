@@ -761,6 +761,53 @@ type TranslationKeys = {
   "auth.hasAccount": string;
   "auth.welcomeBackMsg": string;
   "auth.accountCreated": string;
+
+  // GrouAI Studio (Suno page)
+  "studio.gate.title": string;
+  "studio.gate.subtitle": string;
+  "studio.gate.poweredBy": string;
+  "studio.gate.engineMusic": string;
+  "studio.gate.engineVocal": string;
+  "studio.gate.engineMaster": string;
+  "studio.gate.engineLyrics": string;
+  "studio.gate.quality": string;
+  "studio.gate.format": string;
+  "studio.gate.sampleRate": string;
+  "studio.gate.bitrate": string;
+  "studio.gate.feature1": string;
+  "studio.gate.feature2": string;
+  "studio.gate.feature3": string;
+  "studio.gate.feature4": string;
+  "studio.gate.cta": string;
+  "studio.gate.later": string;
+  "studio.toast.loginRequired": string;
+  "studio.status.generating": string;
+  "studio.status.instruments": string;
+  "studio.status.mixing": string;
+  "studio.status.finalizing": string;
+  "studio.status.uploading": string;
+  "studio.status.done": string;
+  "studio.toast.noCredits": string;
+  "studio.toast.noCreditsDesc": string;
+  "studio.toast.localOnly": string;
+  "studio.toast.localOnlyDesc": string;
+  "studio.toast.savedToLib": string;
+  "studio.toast.genError": string;
+  "studio.toast.saveError": string;
+  "studio.btn.generate": string;
+  "studio.btn.generating": string;
+  "studio.btn.withVocal": string;
+  "studio.advanced.show": string;
+  "studio.advanced.hide": string;
+  "studio.lyrics.placeholder": string;
+
+  // Common toasts shared across pages
+  "common.loginRequired": string;
+  "common.errorLoading": string;
+  "common.deleted": string;
+  "common.confirmDelete": string;
+  "common.refreshed": string;
+  "common.noPermission": string;
 };
 
 const pl: TranslationKeys = {
