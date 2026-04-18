@@ -128,10 +128,15 @@ export const RatingLikeModal = ({
           </AnimatePresence>
 
           <div className="mt-4 text-center text-xs">
-            <span className={cn("font-mono", tooShort ? "text-yellow-500" : "text-green-500")}>
-              ⏱ Odsłuchano: {Math.floor(listenedSeconds)}s {tooShort && "(za krótko — admin oznaczy jako podejrzane)"}
+            <span className={cn("font-mono", tooShort ? "text-destructive" : "text-primary")}>
+              ⏱ Odsłuchano: {Math.floor(listenedSeconds)}s / 30s {tooShort && "— wymagane minimum 30s aby polubić"}
             </span>
           </div>
+          {!tooShort && (
+            <p className="mt-2 text-center text-[11px] text-muted-foreground">
+              💝 Artysta dostanie <span className="text-primary font-semibold">+0,10 €</span> za Twoje polubienie
+            </p>
+          )}
         </div>
 
         <div className="flex gap-2 justify-end">
@@ -140,10 +145,10 @@ export const RatingLikeModal = ({
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={stars < 1 || submitting}
+            disabled={stars < 1 || submitting || tooShort}
             className="bg-primary hover:bg-primary/80"
           >
-            {submitting ? "Zapisuję..." : `Polub z ${stars || "?"}★`}
+            {submitting ? "Zapisuję..." : tooShort ? `Posłuchaj jeszcze ${30 - Math.floor(listenedSeconds)}s` : `Polub z ${stars || "?"}★`}
           </Button>
         </div>
       </DialogContent>
