@@ -13,7 +13,7 @@ import {
   DollarSign, TrendingUp, Music, BarChart3, 
   Wallet, ArrowUpRight, LogIn, Eye, Rocket,
   ShieldCheck, Lock, BadgeCheck, Globe, Clock,
-  Download, Heart, Percent
+  Download, Heart, Percent, Star
 } from "lucide-react";
 import { BoostPurchaseModal } from "@/components/boost/BoostPurchaseModal";
 import { PayoutRequestModal } from "@/components/earnings/PayoutRequestModal";
@@ -68,6 +68,8 @@ const CreatorEarnings = () => {
   const [likesBonusClaimed, setLikesBonusClaimed] = useState(false);
   const [moodBonusClaimed, setMoodBonusClaimed] = useState(false);
   const [studioBonusClaimed, setStudioBonusClaimed] = useState(false);
+  const [ratingsCount, setRatingsCount] = useState(0);
+  const [ratingsBonusClaimed, setRatingsBonusClaimed] = useState(false);
   const [isUltimate, setIsUltimate] = useState(false);
   const [claimingMilestone, setClaimingMilestone] = useState<string | null>(null);
 
@@ -185,6 +187,13 @@ const CreatorEarnings = () => {
       .maybeSingle();
     setIsUltimate(subData?.plan === "ultimate");
 
+    // Ratings count (track_ratings)
+    const { count: ratingsC } = await (supabase as any)
+      .from("track_ratings")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id);
+    setRatingsCount(ratingsC ?? 0);
+
     const { data: milestoneData } = await (supabase as any)
       .from("creator_milestone_bonuses")
       .select("bonus_type")
@@ -194,12 +203,13 @@ const CreatorEarnings = () => {
       setLikesBonusClaimed(milestoneData.some((m: any) => m.bonus_type === "likes_50"));
       setMoodBonusClaimed(milestoneData.some((m: any) => m.bonus_type === "mood_sessions_5"));
       setStudioBonusClaimed(milestoneData.some((m: any) => m.bonus_type === "studio_5"));
+      setRatingsBonusClaimed(milestoneData.some((m: any) => m.bonus_type === "ratings_50"));
     }
 
     setLoading(false);
   }, [user]);
 
-  const claimMilestone = async (type: "uploads" | "likes" | "mood" | "studio") => {
+  const claimMilestone = async (type: "uploads" | "likes" | "mood" | "studio" | "ratings") => {
     setClaimingMilestone(type);
     try {
       const fnMap: Record<string, string> = {
@@ -207,6 +217,7 @@ const CreatorEarnings = () => {
         likes: "claim_likes_milestone_bonus",
         mood: "claim_mood_sessions_milestone_bonus",
         studio: "claim_studio_milestone_bonus",
+        ratings: "claim_ratings_50_milestone_bonus",
       };
       const { data, error } = await (supabase as any).rpc(fnMap[type]);
       if (error) throw error;
@@ -506,6 +517,36 @@ const CreatorEarnings = () => {
                     Ulepsz do Ultimate (9.99 €)
                   </Button>
                 )}
+              </div>
+
+              {/* 50 ocen 1-5★ */}
+              <div className="p-4 rounded-lg bg-yellow-500/5 border border-yellow-500/15 sm:col-span-2">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />
+                    <span className="text-sm font-semibold">50 ocen utworów (1-5★) = +12 €</span>
+                  </div>
+                  <Badge className="bg-yellow-500/15 text-yellow-400 border-yellow-500/25 text-[10px]">
+                    {Math.min(ratingsCount, 50)}/50
+                  </Badge>
+                </div>
+                <p className="text-[11px] text-muted-foreground mb-2">
+                  Każde polubienie wymaga oceny 1-5★. Admin weryfikuje (musisz odsłuchać min. 30s, inaczej oznaczamy jako podejrzane).
+                </p>
+                <div className="h-1.5 rounded-full bg-secondary/50 mb-3 overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-yellow-500 to-amber-500 transition-all"
+                    style={{ width: `${Math.min(100, (ratingsCount / 50) * 100)}%` }}
+                  />
+                </div>
+                <Button
+                  size="sm"
+                  disabled={ratingsBonusClaimed || ratingsCount < 50 || claimingMilestone === "ratings"}
+                  onClick={() => claimMilestone("ratings")}
+                  className="w-full bg-yellow-600 hover:bg-yellow-500 text-white"
+                >
+                  {ratingsBonusClaimed ? "✓ Odebrane" : ratingsCount < 50 ? `Brakuje ${50 - ratingsCount} ocen` : "Odbierz 12 €"}
+                </Button>
               </div>
             </CardContent>
           </Card>

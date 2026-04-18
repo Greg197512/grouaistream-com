@@ -1128,6 +1128,33 @@ export type Database = {
           },
         ]
       }
+      track_ratings: {
+        Row: {
+          created_at: string
+          id: string
+          listened_seconds: number
+          stars: number
+          track_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          listened_seconds?: number
+          stars: number
+          track_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          listened_seconds?: number
+          stars?: number
+          track_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       track_submissions: {
         Row: {
           created_at: string
@@ -1442,6 +1469,7 @@ export type Database = {
       claim_likes_milestone_bonus: { Args: never; Returns: Json }
       claim_mood_analysis_bonus: { Args: never; Returns: Json }
       claim_mood_sessions_milestone_bonus: { Args: never; Returns: Json }
+      claim_ratings_50_milestone_bonus: { Args: never; Returns: Json }
       claim_studio_milestone_bonus: { Args: never; Returns: Json }
       claim_upload_milestone_bonus: { Args: never; Returns: Json }
       delete_email: {
@@ -1461,6 +1489,10 @@ export type Database = {
         }[]
       }
       get_admin_stats: { Args: never; Returns: Json }
+      get_all_ratings_for_admin: {
+        Args: { _only_suspicious?: boolean }
+        Returns: Json
+      }
       get_all_users_bonus_progress: { Args: never; Returns: Json }
       get_all_users_for_admin: { Args: never; Returns: Json }
       get_pending_payouts: { Args: never; Returns: Json }
@@ -1510,6 +1542,10 @@ export type Database = {
           }
       submit_payout_request: {
         Args: { _bank_account: string; _city: string; _full_name: string }
+        Returns: Json
+      }
+      submit_rating_with_like: {
+        Args: { _listened_seconds: number; _stars: number; _track_id: string }
         Returns: Json
       }
       sync_profile_membership: {
