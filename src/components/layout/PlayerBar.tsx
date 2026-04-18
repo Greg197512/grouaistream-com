@@ -648,7 +648,10 @@ export const PlayerBar = () => {
           trackTitle={currentTrack.title}
           trackArtist={currentTrack.artist}
           listenedSeconds={currentTime}
-          onSuccess={() => setIsLiked(true)}
+          onSuccess={() => {
+            setIsLiked(true);
+            window.dispatchEvent(new CustomEvent("track-like-changed", { detail: { trackId: currentTrack.id, liked: true } }));
+          }}
         />
       )}
 
