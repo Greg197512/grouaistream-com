@@ -23,6 +23,7 @@ import { VoiceRecorder } from "@/components/studio/VoiceRecorder";
 import { VoiceLibrary } from "@/components/studio/VoiceLibrary";
 import { FloatingMusicChat } from "@/components/studio/FloatingMusicChat";
 import { useSubscription } from "@/contexts/SubscriptionContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { uploadToR2 } from "@/lib/r2Upload";
 import { Lock, Crown } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -240,6 +241,7 @@ function audioBufferToWav(buffer: AudioBuffer): string {
 const Suno = () => {
   const { user } = useAuth();
   const { isPro, isUltimate, showUpgradeFor } = useSubscription();
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<"generate" | "mix" | "suno">("generate");
   const [genre, setGenre] = useState("Pop");
   const [genre2, setGenre2] = useState<string | null>(null);
@@ -313,7 +315,7 @@ const Suno = () => {
   const generate = async () => {
     // === GATE 1: must be logged in to generate (so we can track usage) ===
     if (!user) {
-      toast.error("Zaloguj się, aby generować utwory");
+      toast.error(t("studio.toast.loginRequired"));
       return;
     }
 
@@ -325,7 +327,7 @@ const Suno = () => {
 
     setGenerating(true);
     setResult(null);
-    setGenStatus("🎵 Generuję muzykę z ElevenLabs...");
+    setGenStatus(t("studio.status.generating"));
 
     try {
       const genreBlend = genre2 ? `${genre} mixed with ${genre2} (${blendRatio}% / ${100 - blendRatio}%)` : genre;
@@ -344,7 +346,7 @@ const Suno = () => {
         vocalVoiceId: clonedVoiceId || getVoiceForGenre(genre),
       };
 
-      setGenStatus("🎼 ElevenLabs generuje instrumenty...");
+      setGenStatus(t("studio.status.instruments"));
 
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-music`,
@@ -363,8 +365,8 @@ const Suno = () => {
         const errData = await response.json().catch(() => ({ error: "Unknown error" }));
 
         if (response.status === 402 || errData.error === "quota_exceeded") {
-          toast.error("💳 Brak kredytów ElevenLabs Music", {
-            description: errData.message || "Twoje konto wyczerpało limit. Doładuj plan na elevenlabs.io.",
+          toast.error(t("studio.toast.noCredits"), {
+            description: errData.message || t("studio.toast.noCreditsDesc"),
             duration: 8000,
           });
           setGenStatus("");
@@ -381,7 +383,7 @@ const Suno = () => {
         throw new Error("Brak danych audio z ElevenLabs");
       }
 
-      setGenStatus(data.vocals ? "🎤 Miksowanie wokalu z muzyką..." : "🔊 Finalizuję utwór...");
+      setGenStatus(data.vocals ? t("studio.status.mixing") : t("studio.status.finalizing"));
 
       // Mix music + vocals in browser → returns blob URL of WAV
       const audioBlobUrl = await mixAudioTracks(data.music, data.vocals);
@@ -392,7 +394,7 @@ const Suno = () => {
         : generateLyrics(genre, trackTitle, duration, instrumental);
 
       // === Upload mixed WAV to R2 so it works across devices + persists ===
-      setGenStatus("☁️ Wysyłam utwór na chmurę...");
+      setGenStatus(t("studio.status.uploading"));
       let publicAudioUrl = audioBlobUrl; // fallback: keep blob if upload fails
       try {
         const wavResp = await fetch(audioBlobUrl);
@@ -404,8 +406,8 @@ const Suno = () => {
         console.log("[Studio] Uploaded to R2:", publicAudioUrl);
       } catch (uploadErr: any) {
         console.warn("[Studio] R2 upload failed, using local blob:", uploadErr);
-        toast.warning("Utwór dostępny tylko lokalnie", {
-          description: "Nie udało się wysłać na chmurę — odtwarzaj na tym urządzeniu.",
+        toast.warning(t("studio.toast.localOnly"), {
+          description: t("studio.toast.localOnlyDesc"),
         });
       }
 
@@ -417,7 +419,7 @@ const Suno = () => {
         lyrics,
       });
 
-      setGenStatus("✅ Wygenerowano!");
+      setGenStatus(t("studio.status.done"));
       toast.success(`🎶 "${trackTitle}" — gotowy!`);
 
       // Save to generations + auto-add to user's tracks library
@@ -449,7 +451,7 @@ const Suno = () => {
       if (!isPro) setFreeUsed(prev => prev + 1);
     } catch (err: any) {
       console.error("[GrouAI Studio] Generate error:", err);
-      toast.error("Błąd generowania: " + (err.message || "Nieznany błąd"));
+      toast.error(t("studio.toast.genError") + ": " + (err.message || ""));
       setGenStatus("");
       setErrorModal(err.message);
     } finally {
@@ -470,9 +472,9 @@ const Suno = () => {
         mood: "generated",
       });
       if (error) throw error;
-      toast.success("Utwór zapisany w Twojej bibliotece! 📀");
+      toast.success(t("studio.toast.savedToLib"));
     } catch (err: any) {
-      toast.error("Błąd zapisu: " + err.message);
+      toast.error(t("studio.toast.saveError") + ": " + err.message);
     }
   };
 
@@ -494,27 +496,27 @@ const Suno = () => {
                 GrouAI Studio
               </h1>
               <p className="text-sm font-semibold text-amber-400 uppercase tracking-wider">
-                🔒 Tylko dla Ultimate
+                🔒 {t("studio.gate.title")}
               </p>
             </div>
             <p className="text-foreground/80 leading-relaxed">
-              GrouAI Studio to pełne studio produkcyjne AI — generowanie utworów, voice cloning, miksowanie i mastering. Dostępne <span className="font-bold text-primary">wyłącznie w planie Ultimate (19,99€/mc)</span>.
+              {t("studio.gate.subtitle")}
             </p>
 
             {/* Powered by — partnerzy AI */}
             <div className="space-y-2 text-left bg-background/30 rounded-xl p-4 border border-primary/20">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-primary/80">Połączone z silnikami AI:</p>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-primary/80">{t("studio.gate.poweredBy")}:</p>
               <div className="grid grid-cols-2 gap-2 text-xs text-foreground/80">
-                <div className="flex items-center gap-2"><Sparkles className="h-3.5 w-3.5 text-primary" /> <span><b>Suno v4</b> — muzyka</span></div>
-                <div className="flex items-center gap-2"><Mic className="h-3.5 w-3.5 text-primary" /> <span><b>ElevenLabs</b> — wokal</span></div>
-                <div className="flex items-center gap-2"><Wand2 className="h-3.5 w-3.5 text-primary" /> <span><b>Replicate</b> — mastering</span></div>
-                <div className="flex items-center gap-2"><Type className="h-3.5 w-3.5 text-primary" /> <span><b>Gemini 2.5</b> — lyrics</span></div>
+                <div className="flex items-center gap-2"><Sparkles className="h-3.5 w-3.5 text-primary" /> <span><b>Suno v4</b> — {t("studio.gate.engineMusic")}</span></div>
+                <div className="flex items-center gap-2"><Mic className="h-3.5 w-3.5 text-primary" /> <span><b>ElevenLabs</b> — {t("studio.gate.engineVocal")}</span></div>
+                <div className="flex items-center gap-2"><Wand2 className="h-3.5 w-3.5 text-primary" /> <span><b>Replicate</b> — {t("studio.gate.engineMaster")}</span></div>
+                <div className="flex items-center gap-2"><Type className="h-3.5 w-3.5 text-primary" /> <span><b>Gemini 2.5</b> — {t("studio.gate.engineLyrics")}</span></div>
               </div>
             </div>
 
             {/* Jakość audio */}
             <div className="space-y-2 text-left bg-background/30 rounded-xl p-4 border border-amber-500/20">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-amber-400">Jakość studyjna:</p>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-amber-400">{t("studio.gate.quality")}:</p>
               <div className="space-y-1.5 text-xs text-foreground/80">
                 <div className="flex items-center justify-between"><span>🎚️ Format</span><span className="font-mono font-bold text-amber-400">WAV / FLAC Lossless</span></div>
                 <div className="flex items-center justify-between"><span>🔊 Sample rate</span><span className="font-mono font-bold text-amber-400">48 kHz / 24-bit</span></div>
@@ -540,10 +542,10 @@ const Suno = () => {
                 size="lg"
               >
                 <Crown className="h-4 w-4" />
-                Opłać Ultimate — 19,99€/mc
+                {t("studio.gate.cta")}
               </Button>
               <Button asChild variant="outline" size="lg" className="flex-1 border-primary/30">
-                <Link to="/">Wróć do strony głównej</Link>
+                <Link to="/">{t("studio.gate.later")}</Link>
               </Button>
             </div>
             <p className="text-[11px] text-foreground/40 pt-2">
