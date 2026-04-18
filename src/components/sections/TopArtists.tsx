@@ -150,7 +150,7 @@ export const TopArtists = () => {
 
               artistEntries = Object.entries(artistCounts)
                 .sort(([, a], [, b]) => b - a)
-                .slice(0, 8)
+                .slice(0, 12)
                 .map(([name, playCount]) => ({ name, playCount }));
             }
           }
@@ -161,7 +161,7 @@ export const TopArtists = () => {
           const { data: tracksData } = await supabase
             .from('tracks')
             .select('artist')
-            .limit(200);
+            .limit(500);
 
           if (tracksData && tracksData.length > 0) {
             const artistCounts: Record<string, number> = {};
@@ -171,21 +171,39 @@ export const TopArtists = () => {
 
             artistEntries = Object.entries(artistCounts)
               .sort(([, a], [, b]) => b - a)
-              .slice(0, 8)
+              .slice(0, 12)
               .map(([name, playCount]) => ({ name, playCount: playCount * 1000 }));
           }
         }
 
-        // Fetch avatars for all artist names
-        const avatarMap = await fetchArtistAvatars(artistEntries.map(a => a.name));
+        // Fetch real track counts per artist (for trending icon)
+        const artistNames = artistEntries.map(a => a.name);
+        const trackCountMap: Record<string, number> = {};
+        if (artistNames.length > 0) {
+          const { data: allTracks } = await supabase
+            .from('tracks')
+            .select('artist')
+            .in('artist', artistNames);
+          allTracks?.forEach(t => {
+            trackCountMap[t.artist] = (trackCountMap[t.artist] || 0) + 1;
+          });
+        }
 
-        const finalArtists: ArtistData[] = artistEntries.map((entry, index) => ({
-          id: `${index}`,
-          name: entry.name,
-          playCount: entry.playCount,
-          gradient: gradients[index % gradients.length],
-          imageUrl: avatarMap[entry.name],
-        }));
+        // Fetch avatars for all artist names
+        const avatarMap = await fetchArtistAvatars(artistNames);
+
+        const finalArtists: ArtistData[] = artistEntries.map((entry, index) => {
+          const trackCount = trackCountMap[entry.name] || 0;
+          return {
+            id: `${index}`,
+            name: entry.name,
+            playCount: entry.playCount,
+            trackCount,
+            gradient: gradients[index % gradients.length],
+            imageUrl: avatarMap[entry.name] || generateUniqueAvatar(entry.name),
+            isTrending: trackCount >= 1,
+          };
+        });
 
         setArtists(finalArtists);
       } catch (error) {
