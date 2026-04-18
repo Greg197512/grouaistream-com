@@ -1081,6 +1081,75 @@ export type Database = {
         }
         Relationships: []
       }
+      tip_transactions: {
+        Row: {
+          amount: number
+          artist_amount: number
+          created_at: string
+          id: string
+          platform_fee: number
+          recipient_id: string
+          sender_id: string
+          track_id: string | null
+          tx_type: string
+        }
+        Insert: {
+          amount: number
+          artist_amount: number
+          created_at?: string
+          id?: string
+          platform_fee: number
+          recipient_id: string
+          sender_id: string
+          track_id?: string | null
+          tx_type?: string
+        }
+        Update: {
+          amount?: number
+          artist_amount?: number
+          created_at?: string
+          id?: string
+          platform_fee?: number
+          recipient_id?: string
+          sender_id?: string
+          track_id?: string | null
+          tx_type?: string
+        }
+        Relationships: []
+      }
+      tip_wallets: {
+        Row: {
+          balance: number
+          created_at: string
+          id: string
+          total_received: number
+          total_sent: number
+          updated_at: string
+          user_id: string
+          welcome_seen: boolean
+        }
+        Insert: {
+          balance?: number
+          created_at?: string
+          id?: string
+          total_received?: number
+          total_sent?: number
+          updated_at?: string
+          user_id: string
+          welcome_seen?: boolean
+        }
+        Update: {
+          balance?: number
+          created_at?: string
+          id?: string
+          total_received?: number
+          total_sent?: number
+          updated_at?: string
+          user_id?: string
+          welcome_seen?: boolean
+        }
+        Relationships: []
+      }
       track_boosts: {
         Row: {
           amount_paid: number
@@ -1554,6 +1623,10 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_topup_tip_credits: {
+        Args: { _amount: number; _user_id: string }
+        Returns: Json
+      }
       claim_likes_milestone_bonus: { Args: never; Returns: Json }
       claim_mood_analysis_bonus: { Args: never; Returns: Json }
       claim_mood_sessions_milestone_bonus: { Args: never; Returns: Json }
@@ -1583,6 +1656,7 @@ export type Database = {
       get_active_weekend_challenge: { Args: never; Returns: Json }
       get_admin_financial_overview: { Args: never; Returns: Json }
       get_admin_stats: { Args: never; Returns: Json }
+      get_admin_tip_overview: { Args: never; Returns: Json }
       get_all_ratings_for_admin: {
         Args: { _only_suspicious?: boolean }
         Returns: Json
@@ -1590,6 +1664,7 @@ export type Database = {
       get_all_users_bonus_progress: { Args: never; Returns: Json }
       get_all_users_for_admin: { Args: never; Returns: Json }
       get_pending_payouts: { Args: never; Returns: Json }
+      get_tip_wallet: { Args: never; Returns: Json }
       get_user_generation_count: { Args: { _user_id: string }; Returns: number }
       get_user_id_by_email: { Args: { _email: string }; Returns: string }
       has_role: {
@@ -1599,6 +1674,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      mark_tip_welcome_seen: { Args: never; Returns: Json }
       move_to_dlq: {
         Args: {
           dlq_name: string
@@ -1634,6 +1710,7 @@ export type Database = {
             }
             Returns: undefined
           }
+      send_tip: { Args: { _amount: number; _track_id: string }; Returns: Json }
       submit_payout_request: {
         Args: { _bank_account: string; _city: string; _full_name: string }
         Returns: Json
