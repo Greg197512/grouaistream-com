@@ -5,15 +5,26 @@ import { ArtistCard } from "@/components/cards/ArtistCard";
 import { supabase } from "@/integrations/supabase/client";
 import { usePlayer, Track } from "@/contexts/PlayerContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { Loader2 } from "lucide-react";
+import { Loader2, TrendingUp } from "lucide-react";
 
 interface ArtistData {
   id: string;
   name: string;
   playCount: number;
+  trackCount: number;
   gradient: string;
   imageUrl?: string;
+  isTrending?: boolean;
 }
+
+// Generate unique DiceBear avatar based on artist name (deterministic, fun, unique)
+const generateUniqueAvatar = (name: string): string => {
+  const styles = ["bottts-neutral", "shapes", "thumbs", "rings", "glass", "identicon"];
+  const seed = encodeURIComponent(name.trim().toLowerCase());
+  // Hash style by name length so each artist gets a consistent style
+  const style = styles[name.length % styles.length];
+  return `https://api.dicebear.com/7.x/${style}/svg?seed=${seed}&backgroundType=gradientLinear&backgroundColor=ff6b35,f7931e,ffd23f,06ffa5,118ab2,7209b7,b5179e&radius=50`;
+};
 
 const gradients = [
   "from-pink-500 to-rose-500",
