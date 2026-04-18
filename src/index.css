@@ -193,4 +193,70 @@
     backdrop-filter: blur(24px) saturate(180%);
     border: 1px solid hsl(var(--border) / 0.5);
   }
+
+  /* ===== Burning Frame – delikatnie płonąca pomarańczowa ramka ===== */
+  .burning-frame__border {
+    background: linear-gradient(
+      130deg,
+      hsl(14 100% 57% / 0.9) 0%,
+      hsl(38 100% 55% / 0.6) 25%,
+      hsl(24 100% 60% / 0.95) 50%,
+      hsl(38 100% 50% / 0.6) 75%,
+      hsl(14 100% 57% / 0.9) 100%
+    );
+    background-size: 300% 300%;
+    animation: burning-flow 6s ease-in-out infinite;
+    box-shadow:
+      0 0 24px hsl(14 100% 57% / 0.45),
+      0 0 60px hsl(38 100% 50% / 0.25),
+      inset 0 0 20px hsl(24 100% 55% / 0.15);
+  }
+
+  .burning-frame__glow {
+    background: radial-gradient(
+      ellipse at center,
+      hsl(14 100% 57% / 0.35) 0%,
+      hsl(38 100% 50% / 0.2) 40%,
+      transparent 70%
+    );
+    filter: blur(22px);
+    animation: burning-breathe 4s ease-in-out infinite;
+    z-index: 0;
+  }
+
+  @keyframes burning-flow {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+  }
+
+  @keyframes burning-breathe {
+    0%, 100% { opacity: 0.55; transform: scale(1); }
+    50% { opacity: 0.85; transform: scale(1.02); }
+  }
+
+  .burning-spark {
+    bottom: -6px;
+    opacity: 0;
+    animation-name: burning-spark-rise;
+    animation-iteration-count: infinite;
+    animation-timing-function: ease-out;
+    will-change: transform, opacity;
+  }
+
+  @keyframes burning-spark-rise {
+    0% {
+      transform: translate(0, 0) scale(1);
+      opacity: 0;
+    }
+    15% {
+      opacity: 1;
+    }
+    80% {
+      opacity: 0.8;
+    }
+    100% {
+      transform: translate(var(--drift, 0px), -100%) scale(0.4);
+      opacity: 0;
+    }
+  }
 }
