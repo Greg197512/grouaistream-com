@@ -37,6 +37,24 @@ export const BurningButton = ({
     []
   );
 
+  // Iskry wewnątrz przycisku – mniejsze, gęstsze, przebijają się przez napis
+  const innerSparks = useMemo(
+    () =>
+      Array.from({ length: 35 }).map((_, i) => ({
+        id: i,
+        left: Math.random() * 100,
+        size: 1 + Math.random() * 2.5,
+        delay: Math.random() * 4,
+        duration: 2.5 + Math.random() * 3.5,
+        drift: (Math.random() - 0.5) * 40,
+        hue:
+          Math.random() > 0.5
+            ? "hsl(38 100% 65%)"
+            : "hsl(24 100% 60%)",
+      })),
+    []
+  );
+
   return (
     <div className={`burning-btn-wrap relative ${className}`}>
       {/* Iskry unoszące się wokół całego przycisku */}
