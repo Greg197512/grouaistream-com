@@ -1720,6 +1720,10 @@ export type Database = {
         }
         Returns: number
       }
+      purchase_boost: {
+        Args: { _package?: string; _track_id: string }
+        Returns: Json
+      }
       read_email_batch: {
         Args: { batch_size: number; queue_name: string; vt: number }
         Returns: {

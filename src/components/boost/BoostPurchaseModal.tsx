@@ -1,53 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Rocket, Zap, Crown, Star, Check, X } from "lucide-react";
+import { Rocket, Check, X, Sparkles, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTipWallet } from "@/hooks/useTipWallet";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
-
-interface BoostPackage {
-  id: string;
-  name: string;
-  impressions: number;
-  price: number;
-  icon: typeof Rocket;
-  color: string;
-  features: string[];
-}
-
-const PACKAGES: BoostPackage[] = [
-  {
-    id: "basic",
-    name: "Starter",
-    impressions: 5000,
-    price: 4.99,
-    icon: Zap,
-    color: "text-blue-400",
-    features: ["5 000 wyświetleń", "7 dni promocji", "Badge 'Promowany'"],
-  },
-  {
-    id: "pro",
-    name: "Pro",
-    impressions: 25000,
-    price: 11.99,
-    icon: Rocket,
-    color: "text-amber-400",
-    features: ["25 000 wyświetleń", "14 dni promocji", "Badge 'Promowany'", "Sekcja 'Promowane' na głównej"],
-  },
-  {
-    id: "ultra",
-    name: "Ultra",
-    impressions: 100000,
-    price: 34.99,
-    icon: Crown,
-    color: "text-primary",
-    features: ["100 000 wyświetleń", "30 dni promocji", "Badge 'Promowany'", "Sekcja 'Promowane' na głównej", "Priorytet w rekomendacjach AI"],
-  },
-];
 
 interface BoostPurchaseModalProps {
   isOpen: boolean;
@@ -58,47 +16,56 @@ interface BoostPurchaseModalProps {
 
 export const BoostPurchaseModal = ({ isOpen, onClose, trackId, trackTitle }: BoostPurchaseModalProps) => {
   const { user } = useAuth();
-  const [purchasing, setPurchasing] = useState<string | null>(null);
+  const { wallet, refresh } = useTipWallet();
+  const [purchasing, setPurchasing] = useState(false);
+  const [done, setDone] = useState<null | { expires: string }>(null);
 
-  const handlePurchase = async (pkg: BoostPackage) => {
+  const PRICE = 5;
+  const balance = wallet?.balance ?? 0;
+  const canAfford = balance >= PRICE;
+
+  const handlePurchase = async () => {
     if (!user) {
-      toast.error("Zaloguj się, aby kupić pakiet Boost");
+      toast.error("Zaloguj się, aby kupić boost");
+      return;
+    }
+    if (!canAfford) {
+      toast.error(`Za mało środków w portfelu (masz ${balance.toFixed(2)} €)`);
       return;
     }
 
-    setPurchasing(pkg.id);
-
+    setPurchasing(true);
     try {
-      const daysMap: Record<string, number> = { basic: 7, pro: 14, ultra: 30 };
-      const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + (daysMap[pkg.id] || 30));
+      const { data, error } = await supabase.rpc("purchase_boost" as any, {
+        _track_id: trackId,
+        _package: "basic",
+      });
 
-      // Insert boost record
-      const { error: boostError } = await supabase.from("track_boosts").insert({
-        track_id: trackId,
-        user_id: user.id,
-        package_type: pkg.id,
-        impressions_total: pkg.impressions,
-        amount_paid: pkg.price,
-        expires_at: expiresAt.toISOString(),
-      } as any);
+      if (error) throw error;
+      const result = data as any;
+      if (!result?.success) {
+        if (result?.error === "insufficient_balance") {
+          toast.error(`Za mało środków (masz ${result.balance} €, trzeba ${result.required} €)`);
+        } else {
+          toast.error("Nie udało się kupić boosta: " + (result?.error || "unknown"));
+        }
+        return;
+      }
 
-      if (boostError) throw boostError;
-
-      // Update track boost status
-      await supabase.from("tracks").update({
-        is_boosted: true,
-        boost_expires_at: expiresAt.toISOString(),
-      } as any).eq("id", trackId).eq("user_id", user.id);
-
-      toast.success(`🚀 Pakiet ${pkg.name} aktywowany dla "${trackTitle}"!`);
-      onClose();
+      await refresh();
+      setDone({ expires: result.expires_at });
+      toast.success(`🚀 Boost aktywny dla "${trackTitle}"!`);
     } catch (err: any) {
       console.error("Boost purchase error:", err);
       toast.error("Błąd zakupu: " + (err.message || ""));
     } finally {
-      setPurchasing(null);
+      setPurchasing(false);
     }
+  };
+
+  const handleClose = () => {
+    setDone(null);
+    onClose();
   };
 
   if (!isOpen) return null;
@@ -109,81 +76,139 @@ export const BoostPurchaseModal = ({ isOpen, onClose, trackId, trackTitle }: Boo
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[60] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
-        onClick={onClose}
+        className="fixed inset-0 z-[60] bg-background/80 backdrop-blur-sm flex items-center justify-center p-4"
+        onClick={handleClose}
       >
         <motion.div
-          initial={{ scale: 0.9, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          exit={{ scale: 0.9, opacity: 0 }}
+          initial={{ scale: 0.92, y: 12, opacity: 0 }}
+          animate={{ scale: 1, y: 0, opacity: 1 }}
+          exit={{ scale: 0.92, y: 12, opacity: 0 }}
           onClick={(e) => e.stopPropagation()}
-          className="w-full max-w-3xl"
+          className="w-full max-w-md relative rounded-3xl overflow-hidden border border-amber-500/30 bg-gradient-to-br from-amber-500/10 via-card/95 to-orange-500/10 backdrop-blur-xl shadow-2xl shadow-amber-500/20"
         >
-          <Card className="bg-card/95 backdrop-blur border-white/10">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle className="flex items-center gap-2">
-                  <Rocket className="h-5 w-5 text-primary" />
-                  Boost: {trackTitle}
-                </CardTitle>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Promuj swój utwór — więcej wyświetleń, wyższe pozycje
+          {/* Glow */}
+          <div className="absolute inset-0 pointer-events-none">
+            <div className="absolute -top-20 -right-20 w-60 h-60 rounded-full bg-amber-500/20 blur-3xl" />
+            <div className="absolute -bottom-20 -left-20 w-60 h-60 rounded-full bg-orange-500/20 blur-3xl" />
+          </div>
+
+          <button
+            onClick={handleClose}
+            className="absolute top-3 right-3 z-10 p-2 rounded-full bg-background/40 hover:bg-background/70 transition"
+            aria-label="Zamknij"
+          >
+            <X className="h-4 w-4" />
+          </button>
+
+          <div className="relative p-6 sm:p-8">
+            {!done ? (
+              <>
+                <div className="flex items-center gap-3 mb-1">
+                  <motion.div
+                    animate={{ rotate: [0, -8, 8, 0], y: [0, -2, 0] }}
+                    transition={{ duration: 2.4, repeat: Infinity }}
+                    className="p-2.5 rounded-2xl bg-amber-500/20"
+                  >
+                    <Rocket className="h-6 w-6 text-amber-400" />
+                  </motion.div>
+                  <div>
+                    <h2 className="font-bold text-xl">Basic Boost</h2>
+                    <p className="text-xs text-muted-foreground">Promuj swój utwór</p>
+                  </div>
+                </div>
+
+                <p className="text-sm text-muted-foreground mt-3 mb-5 truncate">
+                  🎵 <span className="text-foreground font-medium">{trackTitle}</span>
                 </p>
-              </div>
-              <Button variant="ghost" size="icon" onClick={onClose}>
-                <X className="h-4 w-4" />
-              </Button>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                {PACKAGES.map((pkg) => {
-                  const Icon = pkg.icon;
-                  return (
-                    <motion.div
-                      key={pkg.id}
-                      whileHover={{ scale: 1.03 }}
-                      className={cn(
-                        "relative rounded-xl border p-5 flex flex-col",
-                        pkg.id === "pro"
-                          ? "border-amber-500/40 bg-amber-500/5"
-                          : "border-white/10 bg-white/5"
-                      )}
-                    >
-                      {pkg.id === "pro" && (
-                        <Badge className="absolute -top-2 left-1/2 -translate-x-1/2 bg-amber-500 text-black text-[10px]">
-                          Najpopularniejszy
-                        </Badge>
-                      )}
-                      <Icon className={cn("h-8 w-8 mb-3", pkg.color)} />
-                      <h3 className="font-bold text-lg">{pkg.name}</h3>
-                      <p className="text-2xl font-bold mt-1">
-                        {pkg.price} <span className="text-sm font-normal text-muted-foreground">€</span>
-                      </p>
-                      <ul className="mt-4 space-y-2 flex-1">
-                        {pkg.features.map((f, i) => (
-                          <li key={i} className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <Check className="h-3.5 w-3.5 text-green-400 flex-shrink-0" />
-                            {f}
-                          </li>
-                        ))}
-                      </ul>
-                      <Button
-                        className="mt-4 w-full"
-                        variant={pkg.id === "pro" ? "default" : "outline"}
-                        disabled={purchasing !== null}
-                        onClick={() => handlePurchase(pkg)}
-                      >
-                        {purchasing === pkg.id ? "Przetwarzanie..." : "Kup pakiet"}
-                      </Button>
-                    </motion.div>
-                  );
-                })}
-              </div>
-              <p className="text-xs text-muted-foreground text-center mt-4">
-                💳 Płatności Stripe wkrótce. Obecnie pakiety są aktywowane natychmiast (tryb testowy).
-              </p>
-            </CardContent>
-          </Card>
+
+                <div className="rounded-2xl bg-background/40 border border-white/5 p-5 mb-5">
+                  <div className="flex items-baseline gap-1 mb-3">
+                    <span className="text-4xl font-bold">5</span>
+                    <span className="text-lg text-muted-foreground">€</span>
+                    <span className="ml-auto text-[10px] uppercase tracking-wider text-amber-400 font-bold">
+                      Jednorazowo
+                    </span>
+                  </div>
+                  <ul className="space-y-2 text-sm">
+                    {[
+                      "5 000 wyświetleń promocyjnych",
+                      "7 dni promocji utworu",
+                      "Badge „Promowany” na okładce",
+                      "Sekcja „Promowane” na głównej",
+                    ].map((f) => (
+                      <li key={f} className="flex items-center gap-2 text-muted-foreground">
+                        <Check className="h-3.5 w-3.5 text-amber-400 flex-shrink-0" />
+                        {f}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div className="flex items-center justify-between text-xs text-muted-foreground mb-3 px-1">
+                  <span className="flex items-center gap-1.5">
+                    <Wallet className="h-3.5 w-3.5" />
+                    Twój portfel
+                  </span>
+                  <span className={canAfford ? "text-foreground font-medium" : "text-destructive font-medium"}>
+                    {balance.toFixed(2)} €
+                  </span>
+                </div>
+
+                <Button
+                  onClick={handlePurchase}
+                  disabled={purchasing || !canAfford}
+                  className="w-full h-12 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-black font-bold hover:from-amber-400 hover:to-orange-400 disabled:opacity-50"
+                >
+                  {purchasing ? (
+                    <>
+                      <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }}>
+                        <Sparkles className="h-4 w-4" />
+                      </motion.div>
+                      Aktywuję boost…
+                    </>
+                  ) : !canAfford ? (
+                    "Za mało środków w portfelu"
+                  ) : (
+                    <>
+                      <Rocket className="h-4 w-4" />
+                      Kup Basic Boost — 5€
+                    </>
+                  )}
+                </Button>
+
+                <p className="text-[11px] text-center text-muted-foreground mt-3">
+                  Płatność z portfela tipów. Zwiększa widoczność i streamy.
+                </p>
+              </>
+            ) : (
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="text-center py-4"
+              >
+                <motion.div
+                  animate={{ y: [0, -8, 0], rotate: [0, -10, 10, 0] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                  className="inline-flex p-4 rounded-full bg-amber-500/20 mb-4"
+                >
+                  <Rocket className="h-10 w-10 text-amber-400" />
+                </motion.div>
+                <h2 className="font-bold text-2xl mb-2">Boost aktywny! 🚀</h2>
+                <p className="text-sm text-muted-foreground mb-1">
+                  „{trackTitle}” promowany przez 7 dni
+                </p>
+                <p className="text-xs text-muted-foreground/70 mb-6">
+                  do {new Date(done.expires).toLocaleDateString("pl-PL")}
+                </p>
+                <Button
+                  onClick={handleClose}
+                  className="w-full h-11 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-black font-bold"
+                >
+                  Świetnie, lecę dalej 🎶
+                </Button>
+              </motion.div>
+            )}
+          </div>
         </motion.div>
       </motion.div>
     </AnimatePresence>
