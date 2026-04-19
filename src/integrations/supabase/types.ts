@@ -161,6 +161,88 @@ export type Database = {
           },
         ]
       }
+      blog_newsletter_log: {
+        Row: {
+          created_at: string
+          error_count: number
+          id: string
+          metadata: Json | null
+          post_id: string | null
+          recipients_count: number
+          status: string
+          success_count: number
+          triggered_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          error_count?: number
+          id?: string
+          metadata?: Json | null
+          post_id?: string | null
+          recipients_count?: number
+          status?: string
+          success_count?: number
+          triggered_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          error_count?: number
+          id?: string
+          metadata?: Json | null
+          post_id?: string | null
+          recipients_count?: number
+          status?: string
+          success_count?: number
+          triggered_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blog_newsletter_log_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "seo_blog_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      blog_post_hooks: {
+        Row: {
+          created_at: string
+          email_hook: string | null
+          email_subject: string | null
+          id: string
+          post_id: string
+          telegram_hook: string | null
+          x_hook: string | null
+        }
+        Insert: {
+          created_at?: string
+          email_hook?: string | null
+          email_subject?: string | null
+          id?: string
+          post_id: string
+          telegram_hook?: string | null
+          x_hook?: string | null
+        }
+        Update: {
+          created_at?: string
+          email_hook?: string | null
+          email_subject?: string | null
+          id?: string
+          post_id?: string
+          telegram_hook?: string | null
+          x_hook?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blog_post_hooks_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: true
+            referencedRelation: "seo_blog_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       blog_post_likes: {
         Row: {
           created_at: string
@@ -1093,6 +1175,7 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          blog_newsletter_opt_out: boolean
           created_at: string
           display_name: string | null
           first_login_completed: boolean | null
@@ -1104,6 +1187,7 @@ export type Database = {
         }
         Insert: {
           avatar_url?: string | null
+          blog_newsletter_opt_out?: boolean
           created_at?: string
           display_name?: string | null
           first_login_completed?: boolean | null
@@ -1115,6 +1199,7 @@ export type Database = {
         }
         Update: {
           avatar_url?: string | null
+          blog_newsletter_opt_out?: boolean
           created_at?: string
           display_name?: string | null
           first_login_completed?: boolean | null
