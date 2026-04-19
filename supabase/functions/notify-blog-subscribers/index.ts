@@ -203,9 +203,9 @@ serve(async (req) => {
     await supabase.rpc("log_seo_activity", {
       _action_type: "newsletter_send",
       _level: errors === 0 ? "success" : "warning",
-      _message: `Newsletter wysłany: ${success}/${finalRecipients.length} (błędy: ${errors})`,
-      _metadata: { post_id: postId, slug: post.slug },
-      _triggered_by: "manual",
+      _message: `Newsletter wysłany (${triggerSource}): ${success}/${finalRecipients.length} (błędy: ${errors})`,
+      _metadata: { post_id: postId, slug: post.slug, source: triggerSource, triggered_by: triggeredBy },
+      _triggered_by: triggerSource,
     });
 
     return new Response(
