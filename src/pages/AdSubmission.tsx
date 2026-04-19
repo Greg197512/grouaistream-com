@@ -205,7 +205,7 @@ export default function AdSubmission() {
               </ol>
             </div>
 
-            <Button onClick={submit} disabled={submitting} size="lg" className="w-full">
+            <Button onClick={handleSubmit} disabled={submitting} size="lg" className="w-full">
               {submitting ? "Publikuję…" : "▶ Opublikuj reklamę i przejdź do płatności"}
             </Button>
           </div>
