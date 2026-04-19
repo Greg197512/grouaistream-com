@@ -26,6 +26,11 @@ const Index = () => {
   return (
     <MainLayout>
       <Section name="hero"><HeroSection /></Section>
+      <Section name="blog-promo">
+        <div className="px-6 -mt-2 mb-2 flex justify-center md:justify-start">
+          <BlogPromoButton />
+        </div>
+      </Section>
       <Section name="upload-cta"><UploadCTA /></Section>
       <Section name="promoted"><PromotedTracksSection /></Section>
       <Section name="marquee"><AdminMarquee /></Section>
