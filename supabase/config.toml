@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.ad-campaign-submit]
 verify_jwt = false
+
+[functions.n8n-music-ingest]
+verify_jwt = false
