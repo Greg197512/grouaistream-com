@@ -71,10 +71,26 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
 
+      // Derive env from Paddle client token to keep test-mode purchases out of live entitlement
+      const clientToken = (import.meta.env.VITE_PAYMENTS_CLIENT_TOKEN as string | undefined) || "";
+      const paddleEnv: "sandbox" | "live" = clientToken.startsWith("test_") ? "sandbox" : "live";
       const hasCreatorAccess = profile?.role === "artist" || profile?.role === "pro";
 
-      const [{ data: isAdmin, error: adminError }, { data, error }] = await Promise.all([
+      const [
+        { data: isAdmin, error: adminError },
+        { data: paddleSub, error: paddleErr },
+        { data: legacySub, error: legacyErr },
+      ] = await Promise.all([
         supabase.rpc("has_role", { _user_id: user.id, _role: "admin" }),
+        // Source of truth: Paddle-synced subscriptions table (filtered by env)
+        supabase
+          .from("subscriptions")
+          .select("product_id, status, current_period_end, cancel_at_period_end")
+          .eq("user_id", user.id)
+          .eq("environment", paddleEnv)
+          .in("status", ["active", "trialing", "past_due"])
+          .maybeSingle(),
+        // Fallback: legacy mirror (admin overrides + trial)
         supabase
           .from("user_subscriptions")
           .select("plan, status, trial_ends_at")
@@ -83,32 +99,44 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
           .maybeSingle(),
       ]);
 
-      if (adminError) {
-        console.error("Error checking admin role:", adminError);
-      }
+      if (adminError) console.error("Error checking admin role:", adminError);
+      if (paddleErr) console.error("Error fetching paddle subscription:", paddleErr);
+      if (legacyErr) console.error("Error fetching legacy subscription:", legacyErr);
 
-      if (error) {
-        console.error("Error fetching subscription:", error);
-      }
+      // Map Paddle product → plan
+      const paddlePlan: SubscriptionPlan | null = paddleSub
+        ? (paddleSub.product_id === "grouai_ultimate"
+            ? "ultimate"
+            : paddleSub.product_id === "grouai_pro"
+              ? "pro"
+              : null)
+        : null;
 
-      const subscriptionPlan = (data?.plan as SubscriptionPlan | undefined) ?? "free";
+      const legacyPlan = (legacySub?.plan as SubscriptionPlan | undefined) ?? "free";
+
+      // Pick the higher tier between paddle (env-filtered) and legacy (admin/trial)
+      const baseSubscriptionPlan: SubscriptionPlan =
+        paddlePlan && PLAN_LEVELS[paddlePlan] >= PLAN_LEVELS[legacyPlan]
+          ? paddlePlan
+          : legacyPlan;
+
       const resolvedPlan: SubscriptionPlan = isAdmin
         ? "ultimate"
         : hasCreatorAccess
-          ? (subscriptionPlan === "ultimate" ? "ultimate" : "pro")
-          : subscriptionPlan;
+          ? (baseSubscriptionPlan === "ultimate" ? "ultimate" : "pro")
+          : baseSubscriptionPlan;
 
       setPlan(resolvedPlan);
-      setTrialEndsAt((data as any)?.trial_ends_at || null);
+      setTrialEndsAt((legacySub as any)?.trial_ends_at || null);
       localStorage.setItem("grooveai-current-plan", resolvedPlan);
 
       console.log("[Subscription] resolved access:", {
         userId: user.id,
         email: user.email,
         isAdmin: Boolean(isAdmin),
-        profileRole: profile?.role ?? "free",
-        subscriptionStatus: profile?.subscriptionStatus ?? "free",
-        subscriptionPlan,
+        paddleEnv,
+        paddlePlan,
+        legacyPlan,
         resolvedPlan,
       });
     } catch (err) {

@@ -1960,6 +1960,13 @@ export type Database = {
       get_all_users_for_admin: { Args: never; Returns: Json }
       get_my_likes_stats: { Args: never; Returns: Json }
       get_pending_payouts: { Args: never; Returns: Json }
+      get_random_tippable_track: {
+        Args: never
+        Returns: {
+          owner_user_id: string
+          track_id: string
+        }[]
+      }
       get_seo_dashboard_stats: { Args: never; Returns: Json }
       get_tip_wallet: { Args: never; Returns: Json }
       get_user_generation_count: { Args: { _user_id: string }; Returns: number }

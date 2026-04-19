@@ -13,6 +13,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { SubscriptionManager } from "@/components/settings/SubscriptionManager";
 
 const Settings = () => {
   const { user, signOut } = useAuth();
@@ -216,6 +217,15 @@ const Settings = () => {
               {saving ? t("settings.saving") : t("settings.saveChanges")}
             </Button>
           </div>
+        </section>
+
+        {/* Subscription Management */}
+        <section className="groove-card p-6 mb-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Shield className="h-5 w-5 text-primary" />
+            <h2 className="font-semibold">Subskrypcja</h2>
+          </div>
+          <SubscriptionManager />
         </section>
 
         {/* AI & Privacy Section */}
