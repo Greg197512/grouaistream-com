@@ -14,6 +14,7 @@ import { BlogPostActions } from "@/components/blog/BlogPostActions";
 import { BlogComments } from "@/components/blog/BlogComments";
 import { RelatedPosts } from "@/components/blog/RelatedPosts";
 import { AffiliateSidebar } from "@/components/blog/AffiliateSidebar";
+import { NewsletterCapture } from "@/components/blog/NewsletterCapture";
 import { headingComponents } from "@/lib/markdownHeadingId";
 
 interface BlogPost {
@@ -223,16 +224,25 @@ export default function BlogPost() {
               <BlogPostActions postId={post.id} postUrl={url} postTitle={post.title} onScrollToComments={scrollToComments} />
             </div>
 
-            {/* CTA */}
-            <div className="mt-12 p-6 sm:p-8 rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/15 via-card/40 to-accent/10 text-center shadow-[0_0_40px_hsl(var(--primary)/0.15)]">
-              <Sparkles className="w-9 h-9 text-primary mx-auto mb-3" />
-              <h3 className="text-2xl font-black text-foreground mb-2">Wypróbuj GrouAI Stream</h3>
-              <p className="text-sm text-muted-foreground mb-5 max-w-md mx-auto">
-                AI DJ, mood detection, voice control. Twórcy zarabiają 65%.
-              </p>
-              <div className="flex gap-2 justify-center flex-wrap">
-                <Link to="/auth"><Button>Załóż darmowe konto</Button></Link>
-                <Link to="/earn"><Button variant="outline">Zarabiaj z nami</Button></Link>
+            {/* Newsletter Capture */}
+            <NewsletterCapture variant="card" source={`blog_post:${post.slug}`} />
+
+            {/* Pro/Ultimate CTA */}
+            <div className="mt-8 p-6 sm:p-10 rounded-2xl border border-primary/40 bg-gradient-to-br from-primary/20 via-card/30 to-accent/15 text-center shadow-[0_0_60px_hsl(var(--primary)/0.25)] relative overflow-hidden">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,hsl(var(--primary)/0.3),transparent_70%)] pointer-events-none" />
+              <div className="relative">
+                <Sparkles className="w-10 h-10 text-primary mx-auto mb-3" />
+                <h3 className="text-2xl sm:text-3xl font-black text-foreground mb-2">Wypróbuj GrouAI Stream Pro</h3>
+                <p className="text-sm sm:text-base text-muted-foreground mb-6 max-w-lg mx-auto">
+                  AI DJ, mood detection, voice control, generowanie muzyki w 30s, 65% dla twórców. <strong className="text-foreground">7-dniowy trial bez karty.</strong>
+                </p>
+                <div className="flex gap-3 justify-center flex-wrap">
+                  <Link to="/auth"><Button size="lg" className="shadow-[0_0_30px_hsl(var(--primary)/0.5)]">Załóż darmowe konto</Button></Link>
+                  <Link to="/settings"><Button size="lg" variant="outline">Zobacz plany Pro / Ultimate</Button></Link>
+                </div>
+                <p className="text-[10px] text-muted-foreground mt-4 uppercase tracking-widest">
+                  Trial • Anuluj w 1 click • Zero zobowiązań
+                </p>
               </div>
             </div>
 
