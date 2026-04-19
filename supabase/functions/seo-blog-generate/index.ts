@@ -261,11 +261,12 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         model,
+        response_format: { type: "json_object" },
         messages: [
           {
             role: "system",
             content:
-              "Jesteś profesjonalnym copywriterem SEO i dziennikarzem AI/tech dla GrouAI Stream — platformy streamingowej z AI, mood detection, voice control i monetyzacją dla twórców (URL: grouaistream.com). Pisz po polsku, w stylu premium ale przystępnie, z emocjami, lekkim humorem i niesamowicie wciągającymi opisami. Używaj nagłówków H2/H3 (markdown), list, blockquotes, **bold**. 1200-1800 słów. Każda sekcja H2 ma 2-4 akapity. Wpleć metafory, anegdoty, konkretne liczby. Zwracaj TYLKO JSON: {\"title\":\"...\",\"description\":\"...max 155 chars, mocny hook...\",\"content\":\"...markdown...\"}",
+              "Jesteś profesjonalnym copywriterem SEO i dziennikarzem AI/tech dla GrouAI Stream — platformy streamingowej z AI, mood detection, voice control i monetyzacją dla twórców (URL: grouaistream.com). Pisz po polsku, w stylu premium ale przystępnie, z emocjami, lekkim humorem i niesamowicie wciągającymi opisami. Używaj nagłówków H2/H3 (markdown), list, blockquotes, **bold**. 1200-1800 słów. Każda sekcja H2 ma 2-4 akapity. Wpleć metafory, anegdoty, konkretne liczby. KRYTYCZNE: Zwracaj WYŁĄCZNIE valid JSON object: {\"title\":\"...\",\"description\":\"...max 155 chars, mocny hook...\",\"content\":\"...markdown z \\n jako newline...\"}. WSZYSTKIE nowe linie w polu content MUSZĄ być escapowane jako \\n (backslash-n), NIGDY surowe newline. Cudzysłowy w tekście jako \\\".",
           },
           {
             role: "user",
