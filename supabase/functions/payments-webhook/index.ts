@@ -36,6 +36,10 @@ Deno.serve(async (req) => {
       case EventName.TransactionPaymentFailed:
         console.log('[payments-webhook] payment failed:', event.data.id);
         break;
+      case 'adjustment.created' as any:
+      case 'adjustment.updated' as any:
+        await handleAdjustment(event.data, env);
+        break;
       default:
         console.log('[payments-webhook] unhandled:', event.eventType);
     }
@@ -89,7 +93,6 @@ async function handleSubscriptionCanceled(data: any, env: PaddleEnv) {
 }
 
 async function handleTransactionCompleted(data: any, env: PaddleEnv) {
-  // Handle one-time purchases (coffee tips). Skip subscription transactions.
   if (data.subscriptionId) return;
 
   const { id, customerId, items, customData, details } = data;
@@ -97,7 +100,6 @@ async function handleTransactionCompleted(data: any, env: PaddleEnv) {
   if (!item) return;
 
   const priceExternal = item.price?.importMeta?.externalId || item.price?.id;
-  // Only process our coffee products
   if (!priceExternal?.startsWith('grouai_coffee')) return;
 
   const userId = customData?.userId || null;
@@ -106,7 +108,6 @@ async function handleTransactionCompleted(data: any, env: PaddleEnv) {
   const totalCents = Number(details?.totals?.grandTotal || item.price?.unitPrice?.amount || 0);
   const amount = totalCents / 100;
 
-  // Homepage tips: no explicit recipient → rotate to a random monetized track owner
   if (!recipientUserId || !recipientTrackId) {
     const { data: rnd } = await supabase.rpc('get_random_tippable_track');
     if (rnd && rnd.length > 0) {
@@ -131,7 +132,6 @@ async function handleTransactionCompleted(data: any, env: PaddleEnv) {
     environment: env,
   });
 
-  // Add to creator earnings if recipient resolved
   if (recipientUserId && recipientTrackId) {
     await supabase.from('creator_earnings').insert({
       user_id: recipientUserId,
@@ -143,6 +143,48 @@ async function handleTransactionCompleted(data: any, env: PaddleEnv) {
   }
 
   console.log('[payments-webhook] coffee tip recorded:', amount, '→', recipientUserId);
+}
+
+/**
+ * Refund / chargeback handling.
+ * When Paddle issues an adjustment (refund or chargeback) for a one_time_purchase,
+ * mark it refunded and reverse the creator earning.
+ */
+async function handleAdjustment(data: any, env: PaddleEnv) {
+  const { transactionId, action, status } = data;
+  if (action !== 'refund' && action !== 'chargeback') return;
+  if (status !== 'approved' && status !== 'pending_approval') return;
+
+  // Find the original purchase
+  const { data: purchase } = await supabase
+    .from('one_time_purchases')
+    .select('id, recipient_user_id, recipient_track_id, amount, refunded_at')
+    .eq('paddle_transaction_id', transactionId)
+    .eq('environment', env)
+    .maybeSingle();
+
+  if (!purchase || purchase.refunded_at) {
+    console.log('[payments-webhook] adjustment: no purchase or already refunded:', transactionId);
+    return;
+  }
+
+  // Mark refunded
+  await supabase.from('one_time_purchases')
+    .update({ refunded_at: new Date().toISOString() })
+    .eq('id', purchase.id);
+
+  // Reverse creator earning (negative entry — keeps audit trail)
+  if (purchase.recipient_user_id && purchase.recipient_track_id) {
+    await supabase.from('creator_earnings').insert({
+      user_id: purchase.recipient_user_id,
+      track_id: purchase.recipient_track_id,
+      amount: -(Number(purchase.amount) * 0.9),
+      earning_type: 'refund',
+      description: `Zwrot kawy ☕ ${purchase.amount}€ (cofnięto 90% twórcy)`,
+    });
+  }
+
+  console.log('[payments-webhook] adjustment processed:', transactionId, action);
 }
 
 async function getProductExternalId(paddleProductId: string, env: PaddleEnv): Promise<string | null> {

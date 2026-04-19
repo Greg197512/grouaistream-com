@@ -14,6 +14,18 @@ export function getPaddleEnvironment(): "sandbox" | "live" {
   return clientToken?.startsWith("test_") ? "sandbox" : "live";
 }
 
+/**
+ * Live Paddle account is still in automated review.
+ * While true, the published app shows "Coming soon" instead of opening checkout
+ * for paid subscriptions. Coffee tips are still allowed (one-off, low risk).
+ */
+export function isLiveCheckoutEnabled(): boolean {
+  // Sandbox always works in preview
+  if (getPaddleEnvironment() === "sandbox") return true;
+  // TODO: flip to true once Paddle approves the live account
+  return false;
+}
+
 export async function initializePaddle() {
   if (paddleInitialized) return;
   if (!clientToken) throw new Error("VITE_PAYMENTS_CLIENT_TOKEN is not set");

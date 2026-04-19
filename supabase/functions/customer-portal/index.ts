@@ -25,7 +25,6 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
 
-    // Authenticate user from the JWT in Authorization header
     const userClient = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_ANON_KEY')!,
@@ -43,10 +42,9 @@ Deno.serve(async (req) => {
     const action: 'portal' | 'cancel' = body.action || 'portal';
     const env: PaddleEnv = (body.environment === 'live' ? 'live' : 'sandbox') as PaddleEnv;
 
-    // Lookup the user's subscription for this env
     const { data: sub, error: subErr } = await supabase
       .from('subscriptions')
-      .select('paddle_subscription_id, paddle_customer_id, status')
+      .select('paddle_subscription_id, paddle_customer_id, status, current_period_end')
       .eq('user_id', user.id)
       .eq('environment', env)
       .maybeSingle();
@@ -61,30 +59,41 @@ Deno.serve(async (req) => {
     const paddle = getPaddleClient(env);
 
     if (action === 'cancel') {
-      // Cancel at end of billing period (grace period)
       await paddle.subscriptions.cancel(sub.paddle_subscription_id, {
         effectiveFrom: 'next_billing_period',
       });
-      // Reflect locally; webhook will arrive shortly with the canonical state
       await supabase.from('subscriptions')
         .update({ cancel_at_period_end: true, updated_at: new Date().toISOString() })
         .eq('paddle_subscription_id', sub.paddle_subscription_id)
         .eq('environment', env);
+
+      // Fire transactional cancel-confirmation email (idempotent on subscription id)
+      await supabase.functions.invoke('send-transactional-email', {
+        body: {
+          templateName: 'subscription-canceled',
+          recipientEmail: user.email,
+          idempotencyKey: `sub-canceled-${sub.paddle_subscription_id}`,
+          templateData: {
+            displayName: user.user_metadata?.display_name || user.email?.split('@')[0] || 'Tam',
+            periodEnd: sub.current_period_end,
+          },
+        },
+      }).catch((e) => console.error('[customer-portal] cancel email failed:', e));
 
       return new Response(JSON.stringify({ ok: true, action: 'cancel_scheduled' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // Default: portal
+    // Default: portal — return overview URL (not the cancel URL)
     const session = await paddle.customerPortalSessions.create(
       sub.paddle_customer_id,
       [sub.paddle_subscription_id]
     );
 
-    const url = session.urls?.subscriptions?.[0]?.cancelSubscription
+    const url = session.urls?.general?.overview
       || session.urls?.subscriptions?.[0]?.updateSubscriptionPaymentMethod
-      || session.urls?.general?.overview;
+      || session.urls?.subscriptions?.[0]?.cancelSubscription;
 
     return new Response(JSON.stringify({ url }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
