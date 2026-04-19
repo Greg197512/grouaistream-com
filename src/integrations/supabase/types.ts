@@ -346,6 +346,33 @@ export type Database = {
           },
         ]
       }
+      blog_newsletter_subscribers: {
+        Row: {
+          confirmed: boolean
+          created_at: string
+          email: string
+          id: string
+          source: string
+          unsubscribed_at: string | null
+        }
+        Insert: {
+          confirmed?: boolean
+          created_at?: string
+          email: string
+          id?: string
+          source?: string
+          unsubscribed_at?: string | null
+        }
+        Update: {
+          confirmed?: boolean
+          created_at?: string
+          email?: string
+          id?: string
+          source?: string
+          unsubscribed_at?: string | null
+        }
+        Relationships: []
+      }
       blog_post_hooks: {
         Row: {
           created_at: string

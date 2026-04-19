@@ -6,7 +6,21 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// AI/Tech news source URLs to scrape via Firecrawl when in news_hunt mode
+const NEWS_SOURCES = [
+  "https://techcrunch.com/category/artificial-intelligence/",
+  "https://www.theverge.com/ai-artificial-intelligence",
+  "https://news.ycombinator.com/",
+  "https://venturebeat.com/category/ai/",
+];
+
 const TOPICS = [
+  // AI News (NEW)
+  { topic: "Najnowsze przełomy w AI w tym tygodniu — co musisz wiedzieć", category: "ai_news", tags: ["AI","news","weekly"] },
+  { topic: "OpenAI vs Google vs Anthropic — wyścig modeli AI 2026", category: "ai_news", tags: ["openai","google","anthropic"] },
+  { topic: "Nowe modele AI dla muzyki — co wyszło w tym miesiącu", category: "ai_news", tags: ["AI","music","models"] },
+  { topic: "Tech newsy z świata AI — co zmienia się tu i teraz", category: "tech_news", tags: ["tech","AI","update"] },
+  { topic: "Jak nowinki AI wpływają na branżę muzyczną — najświeższe wieści", category: "ai_news", tags: ["AI","music industry","news"] },
   // Trends
   { topic: "Jak AI zmienia sposób, w jaki słuchamy muzyki w 2026", category: "trends", tags: ["AI","music","technology"] },
   { topic: "Top gatunki muzyczne dominujące na platformach streamingowych w 2026", category: "trends", tags: ["genres","trends","streaming"] },
@@ -101,26 +115,76 @@ function injectAffiliateLinks(content: string, links: Array<{ display_text: stri
 }
 
 async function generateCoverImage(LOVABLE_API_KEY: string, title: string, category: string): Promise<string | null> {
+  const isNews = category === "ai_news" || category === "tech_news";
+  const sceneHint = isNews
+    ? "futuristic AI laboratory with glowing neural networks, holographic data streams, server racks with neon orange LEDs, cinematic depth of field"
+    : "moody music studio with vinyl records glowing under neon, audio waveforms in the air, professional DJ equipment, cinematic atmosphere";
+
+  const prompt = `Create a HYPERREALISTIC, 4K, photorealistic editorial hero image for blog article: "${title}".
+SCENE: ${sceneHint}.
+STYLE: Shot on Hasselblad H6D-100c, 50mm prime lens, f/1.4 aperture, dramatic cinematic lighting, deep blacks, neon orange and amber accents, aurora borealis ambient glow, ultra-sharp focus on subject, premium magazine cover quality, 16:9 aspect ratio.
+MOOD: Premium, intelligent, futuristic, emotionally captivating — like a National Geographic meets Wired magazine cover.
+ABSOLUTE RULES: NO text, NO letters, NO logos, NO watermarks, NO typography. Pure photorealistic image only.`;
+
+  const attempts = [
+    "google/gemini-3-pro-image-preview",
+    "google/gemini-3.1-flash-image-preview",
+    "google/gemini-2.5-flash-image",
+  ];
+
+  for (const model of attempts) {
+    try {
+      const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model,
+          messages: [{ role: "user", content: prompt }],
+          modalities: ["image", "text"],
+        }),
+      });
+      if (!res.ok) {
+        console.error(`Cover gen ${model} failed`, res.status);
+        continue;
+      }
+      const data = await res.json();
+      const dataUrl = data?.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+      if (dataUrl) {
+        console.log(`Cover generated with ${model}`);
+        return dataUrl;
+      }
+    } catch (e) {
+      console.error(`Cover gen ${model} exception`, e);
+    }
+  }
+  return null;
+}
+
+// Fetch trending AI/tech news via Firecrawl search (best effort)
+async function huntLatestNews(FIRECRAWL_API_KEY: string | undefined): Promise<string | null> {
+  if (!FIRECRAWL_API_KEY) return null;
   try {
-    const prompt = `Cinematic neon cyberpunk hero image for blog article titled "${title}". Category: ${category}. Style: dark moody background, vibrant neon orange and electric purple accents, aurora borealis effect, glowing particles, futuristic music technology aesthetic, ultra detailed, 16:9, no text, no watermarks.`;
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const res = await fetch("https://api.firecrawl.dev/v2/search", {
       method: "POST",
-      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+      headers: { Authorization: `Bearer ${FIRECRAWL_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash-image",
-        messages: [{ role: "user", content: prompt }],
-        modalities: ["image", "text"],
+        query: "latest AI music technology breakthrough this week",
+        limit: 5,
+        tbs: "qdr:w",
       }),
     });
     if (!res.ok) {
-      console.error("Cover gen failed", res.status, await res.text());
+      console.error("Firecrawl search failed", res.status);
       return null;
     }
     const data = await res.json();
-    const dataUrl = data?.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-    return dataUrl || null;
+    const results = data?.data || data?.web?.results || [];
+    if (!results.length) return null;
+    return results.slice(0, 5).map((r: any) =>
+      `- ${r.title || ""}: ${r.description || r.snippet || ""} (${r.url || ""})`
+    ).join("\n");
   } catch (e) {
-    console.error("Cover gen exception", e);
+    console.error("News hunt failed", e);
     return null;
   }
 }
@@ -174,7 +238,21 @@ serve(async (req) => {
     const available = TOPICS.filter((t) => !recentTitles.has(t.topic));
     const pick = (available.length > 0 ? available : TOPICS)[Math.floor(Math.random() * (available.length || TOPICS.length))];
 
-    // Generate text content via Lovable AI
+    // For news categories, hunt fresh news via Firecrawl
+    const isNews = pick.category === "ai_news" || pick.category === "tech_news";
+    let newsContext = "";
+    if (isNews) {
+      const FIRECRAWL_API_KEY = Deno.env.get("FIRECRAWL_API_KEY");
+      const news = await huntLatestNews(FIRECRAWL_API_KEY);
+      if (news) {
+        newsContext = `\n\nŚWIEŻE NEWSY Z OSTATNIEGO TYGODNIA (użyj ich jako inspirację, parafrazuj, dodaj swój komentarz):\n${news}`;
+        console.log("News context loaded");
+      }
+    }
+
+    // Use stronger model for news (Gemini Pro), Flash for evergreen topics
+    const model = isNews ? "google/gemini-2.5-pro" : "google/gemini-2.5-flash";
+
     const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -182,16 +260,16 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model,
         messages: [
           {
             role: "system",
             content:
-              "Jesteś profesjonalnym copywriterem SEO dla GrouAI Stream — platformy streamingowej z AI, mood detection, voice control i monetyzacją dla twórców (URL: grouaistream.com). Pisz po polsku, w stylu premium ale przystępnie, z lekkim humorem. Używaj nagłówków H2/H3 (markdown), list, blockquotes, **bold**. 1000-1500 słów. Każda sekcja H2 ma 2-4 akapity. Zwracaj TYLKO JSON: {\"title\":\"...\",\"description\":\"...max 155 chars...\",\"content\":\"...markdown...\"}",
+              "Jesteś profesjonalnym copywriterem SEO i dziennikarzem AI/tech dla GrouAI Stream — platformy streamingowej z AI, mood detection, voice control i monetyzacją dla twórców (URL: grouaistream.com). Pisz po polsku, w stylu premium ale przystępnie, z emocjami, lekkim humorem i niesamowicie wciągającymi opisami. Używaj nagłówków H2/H3 (markdown), list, blockquotes, **bold**. 1200-1800 słów. Każda sekcja H2 ma 2-4 akapity. Wpleć metafory, anegdoty, konkretne liczby. Zwracaj TYLKO JSON: {\"title\":\"...\",\"description\":\"...max 155 chars, mocny hook...\",\"content\":\"...markdown...\"}",
           },
           {
             role: "user",
-            content: `Napisz artykuł blogowy SEO na temat: "${pick.topic}". Naturalnie wpleć linki do GrouAI Stream (https://grouaistream.com), wymień funkcje (mood detection, AI DJ, voice commands, GrouaRadio, monetyzacja 65% dla twórców). Wymień też powiązane narzędzia (Suno, ElevenLabs, Spotify) — będą one zlinkowane affiliate automatycznie. Zachęć do rejestracji na końcu.`,
+            content: `Napisz artykuł blogowy SEO na temat: "${pick.topic}". Naturalnie wpleć linki do GrouAI Stream (https://grouaistream.com), wymień funkcje (mood detection, AI DJ, voice commands, GrouaRadio, monetyzacja 65% dla twórców). Wymień też powiązane narzędzia (Suno, ElevenLabs, Spotify) — będą one zlinkowane affiliate automatycznie. Zachęć do rejestracji na końcu.${newsContext}`,
           },
         ],
       }),
