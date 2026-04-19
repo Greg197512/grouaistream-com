@@ -412,6 +412,69 @@ export function AdminEmailDashboard({ stats, genreStats }: AdminEmailDashboardPr
         </Card>
       </div>
 
+      {/* === Mass dispatch via n8n === */}
+      <Card className="border-primary/30 bg-gradient-to-br from-card/80 to-primary/5 backdrop-blur">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Zap className="h-5 w-5 text-primary" />
+            Masowa wysyłka przez n8n
+          </CardTitle>
+          <CardDescription>
+            Generuje treść AI + grafikę hero (Nano Banana) z fontami Playfair + Inter, a następnie wypycha gotowy payload do Twojego workflowa n8n.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2"><Webhook className="h-4 w-4" />URL webhooka n8n (override)</Label>
+            <div className="flex gap-2">
+              <Input
+                placeholder="https://twoj-n8n.app/webhook/abc123"
+                value={n8nWebhookUrl}
+                onChange={(e) => setN8nWebhookUrl(e.target.value)}
+              />
+              <Button variant="outline" onClick={saveWebhookUrl} disabled={savingWebhook}>
+                {savingWebhook ? <Loader2 className="h-4 w-4 animate-spin" /> : "Zapisz"}
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">Pozostaw puste, aby użyć domyślnego sekretu N8N_WEBHOOK_URL.</p>
+          </div>
+
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2"><Users className="h-4 w-4" />Audiencja</Label>
+            <Select value={audience} onValueChange={(v: typeof audience) => setAudience(v)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="blog_subscribers">Subskrybenci bloga (z opt-in)</SelectItem>
+                <SelectItem value="all_users">Wszyscy zarejestrowani użytkownicy</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <Button
+            onClick={massDispatch}
+            disabled={dispatching}
+            className="w-full gap-2 bg-gradient-to-r from-primary to-amber-500 hover:opacity-90 text-primary-foreground"
+            size="lg"
+          >
+            {dispatching ? <Loader2 className="h-5 w-5 animate-spin" /> : <Zap className="h-5 w-5" />}
+            {dispatching ? "Generuję AI grafikę i wysyłam do n8n..." : "Wyślij do wszystkich (n8n)"}
+          </Button>
+
+          {lastDispatch && (
+            <div className="rounded-lg border border-primary/30 bg-background/50 p-4 space-y-3">
+              <div className="flex items-center gap-2 text-sm text-emerald-400">
+                <CheckCircle className="h-4 w-4" />
+                Wysłano do n8n: <strong>{lastDispatch.recipientCount}</strong> odbiorców
+              </div>
+              <div className="text-sm"><span className="text-muted-foreground">Temat: </span>{lastDispatch.subject}</div>
+              {lastDispatch.heroImageUrl && (
+                <img src={lastDispatch.heroImageUrl} alt="Hero" className="w-full max-w-md rounded-lg border border-border/50" />
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       <Card className="border-border/50 bg-card/50 backdrop-blur">
         <CardHeader>
           <div className="flex items-center justify-between">
