@@ -12,6 +12,7 @@ import { UploadCTA } from "@/components/sections/UploadCTA";
 import { SupportSection } from "@/components/sections/SupportSection";
 import { PromotedTracksSection } from "@/components/sections/PromotedTracks";
 import { SEOContentSection } from "@/components/sections/SEOContentSection";
+import { BlogPromoButton } from "@/components/sections/BlogPromoButton";
 import SectionErrorBoundary from "@/components/SectionErrorBoundary";
 import { useLanguage } from "@/contexts/LanguageContext";
 
