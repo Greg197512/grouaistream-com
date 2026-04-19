@@ -36,17 +36,22 @@ export default function AdSubmission() {
     document.title = "Wrzuć reklamę na GrouAI Stream — 10€/miesiąc";
     if (!token) { setLoading(false); return; }
     (async () => {
-      const { data } = await supabase.functions.invoke("ad-lead-lookup", { body: { token } });
-      if (data?.lead) {
-        setLead(data.lead);
-        setForm(f => ({
-          ...f,
-          company_name: data.lead.company_name || "",
-          contact_email: data.lead.email || "",
-          industry: data.lead.industry || "",
-        }));
+      try {
+        const { data } = await supabase.functions.invoke("ad-lead-lookup", { body: { token } });
+        if (data?.lead) {
+          setLead(data.lead);
+          setForm(f => ({
+            ...f,
+            company_name: data.lead.company_name || "",
+            contact_email: data.lead.email || "",
+            industry: data.lead.industry || "",
+          }));
+        }
+      } catch (e) {
+        console.warn("Lead lookup failed (token may be test/expired):", e);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     })();
   }, [token]);
 
