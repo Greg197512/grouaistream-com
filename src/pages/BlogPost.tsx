@@ -121,12 +121,12 @@ export default function BlogPost() {
   }, [slug]);
 
   useEffect(() => {
-    if (!post) return;
+    if (!post || !localized) return;
     const url = `https://grouaistream.com/blog/${post.slug}`;
-    document.title = `${post.title} | GrouAI Stream`;
-    setMeta("description", post.description);
-    setMeta("og:title", post.title, "property");
-    setMeta("og:description", post.description, "property");
+    document.title = `${localized.title} | GrouAI Stream`;
+    setMeta("description", localized.description);
+    setMeta("og:title", localized.title, "property");
+    setMeta("og:description", localized.description, "property");
     setMeta("og:type", "article", "property");
     setMeta("og:url", url, "property");
     if (post.cover_url) setMeta("og:image", post.cover_url, "property");
@@ -135,9 +135,10 @@ export default function BlogPost() {
     setJsonLd({
       "@context": "https://schema.org",
       "@type": "BlogPosting",
-      headline: post.title,
-      description: post.description,
+      headline: localized.title,
+      description: localized.description,
       datePublished: post.created_at,
+      inLanguage: language === "ua" ? "uk" : language,
       author: { "@type": "Organization", name: "GrouAI Stream" },
       publisher: {
         "@type": "Organization",
@@ -148,7 +149,7 @@ export default function BlogPost() {
       ...(post.cover_url ? { image: post.cover_url } : {}),
       keywords: (post.tags || []).join(", "),
     });
-  }, [post]);
+  }, [post, language, localized]);
 
   const scrollToComments = () => {
     commentsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -184,7 +185,12 @@ export default function BlogPost() {
   }
 
   const url = `https://grouaistream.com/blog/${post.slug}`;
-  const minutes = readingMinutes(post.content);
+  const displayContent = localized?.content || post.content;
+  const displayTitle = localized?.title || post.title;
+  const displayDescription = localized?.description || post.description;
+  const minutes = readingMinutes(displayContent);
+  const dateLocale = language === "ua" ? "uk-UA" : language === "nl" ? "nl-NL" : language === "en" ? "en-US" : "pl-PL";
+  const backLabel = language === "en" ? "All articles" : language === "nl" ? "Alle artikelen" : language === "ua" ? "Усі статті" : "Wszystkie artykuły";
 
   return (
     <MainLayout>
@@ -192,19 +198,19 @@ export default function BlogPost() {
       <article className="px-4 sm:px-6 py-8">
         <div className="max-w-7xl mx-auto grid grid-cols-1 xl:grid-cols-[220px_minmax(0,1fr)_240px] gap-8">
           {/* TOC */}
-          <TableOfContents markdown={post.content} />
+          <TableOfContents markdown={displayContent} />
 
           {/* MAIN */}
           <div className="min-w-0 max-w-3xl mx-auto w-full">
             <Link to="/blog" className="inline-flex items-center text-sm text-muted-foreground hover:text-primary mb-6 transition-colors">
-              <ArrowLeft className="w-4 h-4 mr-1" /> Wszystkie artykuły
+              <ArrowLeft className="w-4 h-4 mr-1" /> {backLabel}
             </Link>
 
             <header className="mb-6">
               <div className="flex items-center gap-2 mb-4 flex-wrap">
                 <Badge className="bg-primary/15 text-primary border-primary/30">{post.category}</Badge>
                 <span className="text-xs text-muted-foreground">
-                  {new Date(post.created_at).toLocaleDateString("pl-PL", { day: "numeric", month: "long", year: "numeric" })}
+                  {new Date(post.created_at).toLocaleDateString(dateLocale, { day: "numeric", month: "long", year: "numeric" })}
                 </span>
                 <span className="text-xs text-muted-foreground flex items-center gap-1">
                   <Clock className="w-3 h-3" /> {minutes} min
@@ -214,24 +220,24 @@ export default function BlogPost() {
                 </span>
               </div>
               <h1 className="text-3xl sm:text-5xl font-black text-foreground leading-[1.1] tracking-tight mb-4">
-                {post.title}
+                {displayTitle}
               </h1>
-              <p className="text-base sm:text-lg text-muted-foreground leading-relaxed">{post.description}</p>
+              <p className="text-base sm:text-lg text-muted-foreground leading-relaxed">{displayDescription}</p>
             </header>
 
             {post.cover_url && (
               <div className="relative mb-8 rounded-2xl overflow-hidden border border-primary/20 shadow-[0_0_60px_hsl(var(--primary)/0.15)]">
-                <img src={post.cover_url} alt={post.title} className="w-full" loading="eager" />
+                <img src={post.cover_url} alt={displayTitle} className="w-full" loading="eager" />
               </div>
             )}
 
             <div className="mb-8">
-              <BlogPostActions postId={post.id} postUrl={url} postTitle={post.title} onScrollToComments={scrollToComments} />
+              <BlogPostActions postId={post.id} postUrl={url} postTitle={displayTitle} onScrollToComments={scrollToComments} />
             </div>
 
             <div className="prose prose-invert max-w-none prose-lg prose-headings:text-foreground prose-headings:font-bold prose-h2:text-2xl prose-h2:mt-10 prose-h2:mb-4 prose-h2:scroll-mt-24 prose-h3:text-xl prose-h3:mt-8 prose-h3:scroll-mt-24 prose-p:text-foreground/85 prose-p:leading-relaxed prose-strong:text-foreground prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-li:text-foreground/85 prose-blockquote:border-l-primary prose-blockquote:bg-primary/5 prose-blockquote:py-1 prose-blockquote:px-4 prose-blockquote:rounded-r prose-code:text-primary prose-code:bg-muted/50 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:before:content-[''] prose-code:after:content-['']">
               <ReactMarkdown remarkPlugins={[remarkGfm]} components={headingComponents}>
-                {post.content}
+                {displayContent}
               </ReactMarkdown>
             </div>
 
@@ -246,7 +252,7 @@ export default function BlogPost() {
             )}
 
             <div className="mt-8">
-              <BlogPostActions postId={post.id} postUrl={url} postTitle={post.title} onScrollToComments={scrollToComments} />
+              <BlogPostActions postId={post.id} postUrl={url} postTitle={displayTitle} onScrollToComments={scrollToComments} />
             </div>
 
             {/* Newsletter Capture */}
