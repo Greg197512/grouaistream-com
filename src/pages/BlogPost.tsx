@@ -16,6 +16,7 @@ import { RelatedPosts } from "@/components/blog/RelatedPosts";
 import { AffiliateSidebar } from "@/components/blog/AffiliateSidebar";
 import { NewsletterCapture } from "@/components/blog/NewsletterCapture";
 import { headingComponents } from "@/lib/markdownHeadingId";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface BlogPost {
   id: string;
@@ -28,7 +29,29 @@ interface BlogPost {
   created_at: string;
   cover_url: string | null;
   view_count: number;
+  title_en?: string | null;
+  title_nl?: string | null;
+  title_ua?: string | null;
+  description_en?: string | null;
+  description_nl?: string | null;
+  description_ua?: string | null;
+  content_en?: string | null;
+  content_nl?: string | null;
+  content_ua?: string | null;
+  translation_status?: string | null;
 }
+
+const pickLocalized = (post: BlogPost, lang: string) => {
+  if (lang === "pl") return { title: post.title, description: post.description, content: post.content };
+  const t = (post as any)[`title_${lang}`] as string | null | undefined;
+  const d = (post as any)[`description_${lang}`] as string | null | undefined;
+  const c = (post as any)[`content_${lang}`] as string | null | undefined;
+  return {
+    title: t || post.title,
+    description: d || post.description,
+    content: c || post.content,
+  };
+};
 
 const setMeta = (name: string, content: string, attr: "name" | "property" = "name") => {
   let el = document.querySelector(`meta[${attr}="${name}"]`) as HTMLMetaElement | null;
@@ -65,10 +88,12 @@ const readingMinutes = (text: string) => Math.max(1, Math.round(text.split(/\s+/
 
 export default function BlogPost() {
   const { slug } = useParams<{ slug: string }>();
+  const { language } = useLanguage();
   const [post, setPost] = useState<BlogPost | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const commentsRef = useRef<HTMLDivElement>(null);
+  const localized = post ? pickLocalized(post, language) : null;
 
   useEffect(() => {
     if (!slug) return;
