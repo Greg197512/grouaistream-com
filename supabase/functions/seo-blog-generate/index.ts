@@ -6,7 +6,21 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// AI/Tech news source URLs to scrape via Firecrawl when in news_hunt mode
+const NEWS_SOURCES = [
+  "https://techcrunch.com/category/artificial-intelligence/",
+  "https://www.theverge.com/ai-artificial-intelligence",
+  "https://news.ycombinator.com/",
+  "https://venturebeat.com/category/ai/",
+];
+
 const TOPICS = [
+  // AI News (NEW)
+  { topic: "Najnowsze przełomy w AI w tym tygodniu — co musisz wiedzieć", category: "ai_news", tags: ["AI","news","weekly"] },
+  { topic: "OpenAI vs Google vs Anthropic — wyścig modeli AI 2026", category: "ai_news", tags: ["openai","google","anthropic"] },
+  { topic: "Nowe modele AI dla muzyki — co wyszło w tym miesiącu", category: "ai_news", tags: ["AI","music","models"] },
+  { topic: "Tech newsy z świata AI — co zmienia się tu i teraz", category: "tech_news", tags: ["tech","AI","update"] },
+  { topic: "Jak nowinki AI wpływają na branżę muzyczną — najświeższe wieści", category: "ai_news", tags: ["AI","music industry","news"] },
   // Trends
   { topic: "Jak AI zmienia sposób, w jaki słuchamy muzyki w 2026", category: "trends", tags: ["AI","music","technology"] },
   { topic: "Top gatunki muzyczne dominujące na platformach streamingowych w 2026", category: "trends", tags: ["genres","trends","streaming"] },
