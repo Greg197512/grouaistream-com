@@ -528,11 +528,16 @@ export const StudioGrokDock = () => {
               <Mic className="h-4 w-4" /> Voice Clone
             </DialogTitle>
           </DialogHeader>
-          <VoiceRecorder onVoiceCloned={(voiceId, name) => {
-            setAttachments((p) => [...p, { kind: "voice", label: name || "Mój głos", url: voiceId }]);
-            setShowVoice(false);
-            toast.success("Voice clone dodany do promptu");
-          }} />
+          <VoiceRecorder
+            clonedVoiceId={null}
+            clonedVoiceLabel={null}
+            onCleared={() => {}}
+            onVoiceCloned={(voiceId, name) => {
+              setAttachments((p) => [...p, { kind: "voice", label: name || "Mój głos", url: voiceId }]);
+              setShowVoice(false);
+              toast.success("Voice clone dodany do promptu");
+            }}
+          />
         </DialogContent>
       </Dialog>
     </>
