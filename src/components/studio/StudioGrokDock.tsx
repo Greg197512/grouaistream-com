@@ -52,7 +52,7 @@ export const StudioGrokDock = () => {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) return JSON.parse(raw);
     } catch {}
-    return { x: typeof window !== "undefined" ? window.innerWidth - DOCK_W - 24 : 24, y: 80 };
+    return { x: typeof window !== "undefined" ? Math.max(24, (window.innerWidth - DOCK_W) / 2) : 24, y: typeof window !== "undefined" ? window.innerHeight - DOCK_H_DEFAULT - 120 : 80 };
   });
   const dragging = useRef<{ dx: number; dy: number } | null>(null);
 
