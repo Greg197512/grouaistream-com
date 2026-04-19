@@ -295,11 +295,12 @@ export const StudioChatSidebar = ({ isOpen, onToggle }: Props) => {
                     className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
                   >
                     <div
-                      className={`max-w-[85%] rounded-2xl px-3.5 py-2 text-sm ${
-                        msg.role === "user"
+                      className={
+                        "max-w-[85%] rounded-2xl px-3.5 py-2 text-sm " +
+                        (msg.role === "user"
                           ? "bg-primary text-primary-foreground"
-                          : "bg-muted/60 text-foreground"
-                      }`}
+                          : "bg-muted/60 text-foreground")
+                      }
                     >
                       {msg.role === "assistant" ? (
                         <div className="prose prose-sm prose-invert max-w-none text-sm [&_p]:my-1 [&_p]:leading-relaxed">
