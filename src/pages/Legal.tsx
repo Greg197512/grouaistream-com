@@ -154,6 +154,210 @@ const Legal = () => {
               <Section title={t("legal.priv.s6.title")}><p>{t("legal.priv.s6.p1")}</p></Section>
               <Section title={t("legal.priv.s7.title")}><p>{t("legal.priv.s7.p1")}</p></Section>
               <Section title={t("legal.priv.s8.title")}><p>{t("legal.priv.s8.p1")}</p></Section>
+
+              {/* Paddle as data processor — required for Paddle approval */}
+              <Section title="Payment data & Paddle / Dane płatnicze i Paddle">
+                <p>
+                  <strong>EN:</strong> When you make a purchase or donation, payment information
+                  (card details, billing address, email, IP address, transaction metadata) is
+                  collected and processed by <strong>Paddle.com Market Limited</strong> acting as
+                  our Merchant of Record and independent data controller for payment, fraud-
+                  prevention, tax-compliance and invoicing purposes. GrouaRock receives only
+                  limited transaction metadata (transaction ID, amount, plan, customer ID, country)
+                  to provision your subscription and credits — we never see or store your full
+                  card number.
+                </p>
+                <p>
+                  <strong>PL:</strong> Przy dokonywaniu płatności lub darowizny dane płatnicze
+                  (numer karty, adres rozliczeniowy, e-mail, adres IP, metadane transakcji) są
+                  zbierane i przetwarzane przez <strong>Paddle.com Market Limited</strong>, działającą
+                  jako Sprzedawca Rejestrowy i niezależny administrator danych w celach płatności,
+                  zapobiegania oszustwom, rozliczeń podatkowych i fakturowania. GrouaRock otrzymuje
+                  jedynie ograniczone metadane (ID transakcji, kwota, plan, ID klienta, kraj),
+                  niezbędne do aktywacji subskrypcji — nigdy nie widzimy ani nie przechowujemy
+                  pełnego numeru karty.
+                </p>
+                <p>
+                  Paddle's privacy notice / Polityka prywatności Paddle:{" "}
+                  <a href="https://www.paddle.com/legal/privacy" target="_blank" rel="noopener noreferrer" className="text-primary underline">
+                    paddle.com/legal/privacy
+                  </a>
+                </p>
+              </Section>
+            </div>
+          </TabsContent>
+
+          {/* REFUNDS — required by Paddle */}
+          <TabsContent value="refunds">
+            <div className="groove-card p-6 space-y-6">
+              <div className="flex items-center gap-2 mb-2">
+                <RefreshCw className="h-5 w-5 text-primary" />
+                <h2 className="text-xl font-bold">Refund Policy / Polityka zwrotów</h2>
+              </div>
+              <p className="text-xs text-muted-foreground">{t("legal.lastUpdate")}</p>
+
+              <div className="p-4 rounded-lg bg-primary/10 border border-primary/20">
+                <p className="font-semibold text-primary text-sm">30-day money-back guarantee</p>
+                <p className="text-xs mt-2">
+                  We offer a <strong>30-day money-back guarantee</strong> on all paid plans (Pro,
+                  Ultimate) and one-time purchases (coffee tips). If you are not satisfied with
+                  your purchase, you may request a full refund within 30 days of the order date —
+                  no questions asked.
+                </p>
+                <p className="text-xs mt-2">
+                  Oferujemy <strong>30-dniową gwarancję zwrotu pieniędzy</strong> na wszystkie
+                  plany płatne i zakupy jednorazowe. W ciągu 30 dni od zakupu możesz zażądać
+                  pełnego zwrotu bez podawania przyczyny.
+                </p>
+              </div>
+
+              <Section title="How to request a refund / Jak zażądać zwrotu">
+                <p>
+                  <strong>EN:</strong> All payments are processed by Paddle (our Merchant of
+                  Record). To request a refund, simply visit{" "}
+                  <a href="https://paddle.net" target="_blank" rel="noopener noreferrer" className="text-primary underline">
+                    paddle.net
+                  </a>
+                  , locate your transaction (use the email address you used at checkout), and
+                  click "Request a refund". Alternatively, contact us at{" "}
+                  <a href="mailto:support@grouaistream.com" className="text-primary underline">
+                    support@grouaistream.com
+                  </a>{" "}
+                  and we will forward your request to Paddle.
+                </p>
+                <p>
+                  <strong>PL:</strong> Wszystkie płatności obsługuje Paddle (nasz Merchant of
+                  Record). Aby zażądać zwrotu, odwiedź{" "}
+                  <a href="https://paddle.net" target="_blank" rel="noopener noreferrer" className="text-primary underline">
+                    paddle.net
+                  </a>
+                  , odszukaj swoją transakcję (używając e-maila z zakupu) i kliknij „Request a
+                  refund". Możesz też napisać na{" "}
+                  <a href="mailto:support@grouaistream.com" className="text-primary underline">
+                    support@grouaistream.com
+                  </a>{" "}
+                  — przekażemy Twoją prośbę do Paddle.
+                </p>
+              </Section>
+
+              <Section title="Processing time / Czas realizacji">
+                <p>
+                  Approved refunds are issued back to your original payment method, typically
+                  within 5–10 business days depending on your bank or card issuer.
+                </p>
+                <p>
+                  Zatwierdzone zwroty trafiają z powrotem na Twoją kartę / konto w ciągu 5–10
+                  dni roboczych, w zależności od banku.
+                </p>
+              </Section>
+
+              <Section title="Subscription cancellations / Anulowanie subskrypcji">
+                <p>
+                  You may cancel your subscription at any time. After cancellation, you retain
+                  access to paid features until the end of the current billing period — no
+                  partial refunds are issued for unused time within an active billing period
+                  (except under the 30-day guarantee above).
+                </p>
+                <p>
+                  Subskrypcję możesz anulować w dowolnym momencie. Po anulowaniu zachowujesz
+                  dostęp do funkcji premium do końca opłaconego okresu rozliczeniowego.
+                </p>
+              </Section>
+
+              <Section title="Chargebacks / Obciążenia zwrotne">
+                <p>
+                  Please contact us or Paddle before initiating a chargeback — we will resolve
+                  most issues within 48 hours. Skontaktuj się z nami przed rozpoczęciem
+                  procedury chargeback w banku — większość spraw rozwiążemy w 48 godzin.
+                </p>
+              </Section>
+            </div>
+          </TabsContent>
+
+          {/* PAYMENTS — Paddle MoR disclosure as standalone tab */}
+          <TabsContent value="payments">
+            <div className="groove-card p-6 space-y-6">
+              <div className="flex items-center gap-2 mb-2">
+                <CreditCard className="h-5 w-5 text-primary" />
+                <h2 className="text-xl font-bold">Payments & Billing / Płatności i rozliczenia</h2>
+              </div>
+              <p className="text-xs text-muted-foreground">{t("legal.lastUpdate")}</p>
+
+              <div className="p-4 rounded-lg bg-accent/10 border border-accent/20">
+                <p className="font-semibold text-accent text-sm">Powered by Paddle — Merchant of Record</p>
+                <p className="text-xs mt-2">
+                  Our order process is conducted by our online reseller{" "}
+                  <strong>Paddle.com Market Limited</strong> (a company registered in England &
+                  Wales, company no. 08172165). Paddle.com is the Merchant of Record for all our
+                  orders. Paddle provides all customer service inquiries and handles returns,
+                  refunds, billing, invoicing, tax compliance and chargebacks.
+                </p>
+                <p className="text-xs mt-2">
+                  Proces zamówień obsługuje nasz internetowy sprzedawca{" "}
+                  <strong>Paddle.com Market Limited</strong>. Paddle jest Sprzedawcą Rejestrowym
+                  dla wszystkich naszych zamówień — odpowiada za zwroty, fakturowanie, podatki
+                  i obsługę klienta w sprawach płatności.
+                </p>
+              </div>
+
+              <Section title="Available plans / Dostępne plany">
+                <p><strong>Free</strong> — €0 — basic playback, limited generations.</p>
+                <p><strong>Pro</strong> — €9.99 / month — unlimited generations, AI DJ, mood radio.</p>
+                <p><strong>Ultimate</strong> — €19.99 / month — everything in Pro + commercial license, priority support.</p>
+                <p><strong>Coffee tips</strong> — €1 / €3 / €5 — one-time donations supporting the project and creators.</p>
+              </Section>
+
+              <Section title="Billing cycle / Cykl rozliczeniowy">
+                <p>
+                  Subscription plans are billed monthly in advance and renew automatically on the
+                  same day each month until cancelled. You will receive an email invoice from
+                  Paddle for every successful charge.
+                </p>
+                <p>
+                  Plany subskrypcyjne są pobierane miesięcznie z góry i odnawiają się
+                  automatycznie tego samego dnia każdego miesiąca. Faktura wysyłana jest e-mailem
+                  z Paddle po każdej udanej płatności.
+                </p>
+              </Section>
+
+              <Section title="Accepted payment methods / Akceptowane metody płatności">
+                <p>
+                  Credit & debit cards (Visa, Mastercard, American Express), Apple Pay, Google
+                  Pay, PayPal, and local methods supported by Paddle in your country (iDEAL,
+                  Bancontact, SEPA, etc.).
+                </p>
+              </Section>
+
+              <Section title="Taxes / Podatki">
+                <p>
+                  Applicable VAT, GST or sales tax is calculated by Paddle based on your billing
+                  address and shown on the checkout and invoice. Paddle remits taxes on our behalf.
+                </p>
+                <p>
+                  Podatek VAT/GST obliczany jest automatycznie przez Paddle na podstawie adresu
+                  rozliczeniowego i widoczny na fakturze.
+                </p>
+              </Section>
+
+              <Section title="Manage your subscription / Zarządzaj subskrypcją">
+                <p>
+                  Visit{" "}
+                  <a href="https://paddle.net" target="_blank" rel="noopener noreferrer" className="text-primary underline">
+                    paddle.net
+                  </a>{" "}
+                  to view invoices, update your payment method, change plans or cancel. Use the
+                  email address you used during checkout.
+                </p>
+              </Section>
+
+              <Section title="Contact / Kontakt">
+                <p>
+                  For payment questions: <a href="mailto:support@grouaistream.com" className="text-primary underline">support@grouaistream.com</a>
+                </p>
+                <p>
+                  Operator: <strong>GrouaRock</strong> (sole proprietorship, Netherlands)
+                </p>
+              </Section>
             </div>
           </TabsContent>
 
