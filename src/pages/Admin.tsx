@@ -65,6 +65,7 @@ import { OperationalCosts } from "@/components/admin/OperationalCosts";
 import { LikesOverview } from "@/components/admin/LikesOverview";
 import { SEODashboard } from "@/components/admin/SEODashboard";
 import { TikTokStoriesPanel } from "@/components/admin/TikTokStoriesPanel";
+import { TikTokReelsStudio } from "@/components/admin/TikTokReelsStudio";
 
 interface UserStats {
   totalUsers: number;
@@ -719,7 +720,8 @@ export default function Admin() {
                 <SEODashboard />
               </TabsContent>
 
-              <TabsContent value="tiktok">
+              <TabsContent value="tiktok" className="space-y-6">
+                <TikTokReelsStudio />
                 <TikTokStoriesPanel />
               </TabsContent>
 
