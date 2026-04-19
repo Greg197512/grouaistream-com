@@ -217,6 +217,23 @@ export default function AdSubmission() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* Hero */}
+      {/* Top nav */}
+      <div className="border-b border-border bg-background/80 backdrop-blur sticky top-0 z-20">
+        <div className="max-w-5xl mx-auto px-6 py-3 flex items-center justify-between">
+          <Link to="/" className="font-bold text-lg tracking-tight hover:text-primary transition-colors">
+            GrouAI <span className="text-primary">Stream</span>
+          </Link>
+          <div className="flex items-center gap-2">
+            <Button asChild variant="ghost" size="sm">
+              <Link to="/"><Home className="w-4 h-4 mr-1" /> Strona główna</Link>
+            </Button>
+            <Button asChild variant="ghost" size="sm">
+              <Link to="/blog"><Newspaper className="w-4 h-4 mr-1" /> Blog</Link>
+            </Button>
+          </div>
+        </div>
+      </div>
+
       <div className="relative overflow-hidden bg-gradient-to-br from-primary/20 via-background to-background border-b border-border">
         <div className="max-w-3xl mx-auto px-6 py-16 text-center relative z-10">
           <div className="inline-flex items-center gap-2 bg-primary/10 border border-primary/30 px-4 py-1.5 rounded-full text-sm text-primary mb-6">
