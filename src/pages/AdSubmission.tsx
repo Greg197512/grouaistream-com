@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,9 +7,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
-import { Copy, CheckCircle2, Sparkles, Clock, Building2 } from "lucide-react";
+import { Copy, CheckCircle2, Sparkles, Clock, Building2, Home, Newspaper, Wallet, ShieldCheck, ExternalLink } from "lucide-react";
 
 const REVOLUT_IBAN = "LT32 5002 2576 7256 99";
+const REVOLUT_BIC = "REVOLT21";
 const REVOLUT_NAME = "GrouaRock / GrouAI Stream";
 const AMOUNT = "10,00 EUR";
 
