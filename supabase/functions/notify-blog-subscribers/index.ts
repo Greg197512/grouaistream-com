@@ -168,9 +168,10 @@ serve(async (req) => {
             Authorization: `Bearer ${serviceKey}`,
           },
           body: JSON.stringify({
-            template: "new-blog-post",
-            to: r.email,
-            data: {
+            templateName: "new-blog-post",
+            recipientEmail: r.email,
+            idempotencyKey: `newsletter-${postId}-${r.id}`,
+            templateData: {
               recipientName: optOutMap.get(r.id)?.display_name || null,
               postTitle: post.title,
               postDescription: post.description,
