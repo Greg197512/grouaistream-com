@@ -29,7 +29,7 @@ const NewBlogPostEmail = ({
   category,
   unsubscribeUrl,
 }: NewBlogPostProps) => {
-  const postUrl = postSlug ? `${SITE_URL}/blog/${postSlug}` : `${SITE_URL}/blog`
+  const postUrl = SITE_URL
   const blogIndexUrl = `${SITE_URL}/blog`
 
   return (
