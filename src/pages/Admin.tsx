@@ -63,6 +63,7 @@ import { FinancialOverview } from "@/components/admin/FinancialOverview";
 import { TipsOverview } from "@/components/admin/TipsOverview";
 import { OperationalCosts } from "@/components/admin/OperationalCosts";
 import { LikesOverview } from "@/components/admin/LikesOverview";
+import { SEODashboard } from "@/components/admin/SEODashboard";
 
 interface UserStats {
   totalUsers: number;
@@ -703,7 +704,15 @@ export default function Admin() {
                   <Megaphone className="h-4 w-4" />
                   Pasek
                 </TabsTrigger>
+                <TabsTrigger value="seo" className="gap-2">
+                  <TrendingUp className="h-4 w-4" />
+                  SEO Bot
+                </TabsTrigger>
               </TabsList>
+
+              <TabsContent value="seo">
+                <SEODashboard />
+              </TabsContent>
 
               {/* Bonuses & Payouts Tab */}
               <TabsContent value="bonuses">
