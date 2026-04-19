@@ -22,7 +22,7 @@ import { SunoGeneratePanel } from "@/components/studio/SunoGeneratePanel";
 import { VoiceRecorder } from "@/components/studio/VoiceRecorder";
 import { VoiceLibrary } from "@/components/studio/VoiceLibrary";
 import { FloatingMusicChat } from "@/components/studio/FloatingMusicChat";
-import { StudioChatPortal } from "@/components/studio/StudioChatPortal";
+import { StudioGrokDock } from "@/components/studio/StudioGrokDock";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { uploadToR2 } from "@/lib/r2Upload";
