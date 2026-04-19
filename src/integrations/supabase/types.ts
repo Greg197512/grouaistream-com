@@ -630,6 +630,59 @@ export type Database = {
         }
         Relationships: []
       }
+      one_time_purchases: {
+        Row: {
+          amount: number
+          created_at: string | null
+          currency: string
+          environment: string
+          id: string
+          paddle_customer_id: string | null
+          paddle_transaction_id: string
+          price_id: string
+          product_id: string
+          recipient_track_id: string | null
+          recipient_user_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          currency?: string
+          environment?: string
+          id?: string
+          paddle_customer_id?: string | null
+          paddle_transaction_id: string
+          price_id: string
+          product_id: string
+          recipient_track_id?: string | null
+          recipient_user_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          currency?: string
+          environment?: string
+          id?: string
+          paddle_customer_id?: string | null
+          paddle_transaction_id?: string
+          price_id?: string
+          product_id?: string
+          recipient_track_id?: string | null
+          recipient_user_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "one_time_purchases_recipient_track_id_fkey"
+            columns: ["recipient_track_id"]
+            isOneToOne: false
+            referencedRelation: "tracks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       operational_costs: {
         Row: {
           billing_day: number
@@ -1248,6 +1301,54 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      subscriptions: {
+        Row: {
+          cancel_at_period_end: boolean | null
+          created_at: string | null
+          current_period_end: string | null
+          current_period_start: string | null
+          environment: string
+          id: string
+          paddle_customer_id: string
+          paddle_subscription_id: string
+          price_id: string
+          product_id: string
+          status: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          cancel_at_period_end?: boolean | null
+          created_at?: string | null
+          current_period_end?: string | null
+          current_period_start?: string | null
+          environment?: string
+          id?: string
+          paddle_customer_id: string
+          paddle_subscription_id: string
+          price_id: string
+          product_id: string
+          status?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          cancel_at_period_end?: boolean | null
+          created_at?: string | null
+          current_period_end?: string | null
+          current_period_start?: string | null
+          environment?: string
+          id?: string
+          paddle_customer_id?: string
+          paddle_subscription_id?: string
+          price_id?: string
+          product_id?: string
+          status?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
       suppressed_emails: {
         Row: {
