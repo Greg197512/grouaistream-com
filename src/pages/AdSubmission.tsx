@@ -119,10 +119,10 @@ export default function AdSubmission() {
             </div>
 
             <div className="p-6">
-              <div className="flex items-start gap-3 bg-amber-500/10 border border-amber-500/30 rounded-lg p-4 mb-5">
-                <Clock className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+              <div className="flex items-start gap-3 bg-primary/10 border border-primary/30 rounded-lg p-4 mb-5">
+                <Clock className="w-5 h-5 text-primary shrink-0 mt-0.5" />
                 <div className="text-sm">
-                  <div className="font-semibold text-amber-500 mb-1">Płatność w ciągu 24 godzin</div>
+                  <div className="font-semibold text-primary mb-1">Płatność w ciągu 24 godzin</div>
                   <div className="text-muted-foreground">
                     Termin do <strong className="text-foreground">{new Date(submitted.deadline).toLocaleString("pl-PL", { dateStyle: "full", timeStyle: "short" })}</strong>.
                     Po tym czasie reklama zostanie zdjęta z bloga.
