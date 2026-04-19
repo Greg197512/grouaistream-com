@@ -16,9 +16,11 @@ const Legal = () => {
         <p className="text-muted-foreground mb-8">{t("legal.subtitle")}</p>
 
         <Tabs defaultValue="terms" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 mb-6">
+          <TabsList className="grid w-full grid-cols-3 md:grid-cols-7 mb-6 h-auto">
             <TabsTrigger value="terms" className="gap-1 text-xs"><FileText className="h-3 w-3" />{t("legal.terms")}</TabsTrigger>
             <TabsTrigger value="privacy" className="gap-1 text-xs"><Shield className="h-3 w-3" />{t("legal.privacy")}</TabsTrigger>
+            <TabsTrigger value="refunds" className="gap-1 text-xs"><RefreshCw className="h-3 w-3" />Refunds</TabsTrigger>
+            <TabsTrigger value="payments" className="gap-1 text-xs"><CreditCard className="h-3 w-3" />Payments</TabsTrigger>
             <TabsTrigger value="copyright" className="gap-1 text-xs"><Copyright className="h-3 w-3" />{t("legal.copyright")}</TabsTrigger>
             <TabsTrigger value="cookies" className="gap-1 text-xs"><Cookie className="h-3 w-3" />{t("legal.cookies")}</TabsTrigger>
             <TabsTrigger value="gdpr" className="gap-1 text-xs"><Globe className="h-3 w-3" />{t("legal.gdpr")}</TabsTrigger>
