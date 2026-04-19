@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { BlogDistributionPanel } from "./BlogDistributionPanel";
+import AdOutreachPanel from "./AdOutreachPanel";
 import {
   ResponsiveContainer,
   BarChart,

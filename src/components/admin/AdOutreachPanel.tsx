@@ -91,12 +91,12 @@ export default function AdOutreachPanel() {
           <div className="text-xs text-muted-foreground uppercase">Leady</div>
           <div className="text-2xl font-bold">{stats.totalLeads}</div>
         </Card>
-        <Card className="p-4 border-orange-500/30">
-          <div className="text-xs text-orange-400 uppercase">Czekają na opłatę</div>
+        <Card className="p-4 border-primary/30">
+          <div className="text-xs text-primary uppercase">Czekają na opłatę</div>
           <div className="text-2xl font-bold">{stats.pendingPayments}</div>
         </Card>
-        <Card className="p-4 border-green-500/30">
-          <div className="text-xs text-green-400 uppercase">Przychód (potwierdzony)</div>
+        <Card className="p-4 border-primary/30">
+          <div className="text-xs text-primary uppercase">Przychód (potwierdzony)</div>
           <div className="text-2xl font-bold">{stats.confirmedRevenue.toFixed(2)} €</div>
         </Card>
       </div>
