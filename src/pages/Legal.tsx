@@ -1,6 +1,6 @@
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Shield, FileText, Scale, Cookie, Copyright, Globe } from "lucide-react";
+import { Shield, FileText, Scale, Cookie, Copyright, Globe, RefreshCw, CreditCard } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 const Legal = () => {
