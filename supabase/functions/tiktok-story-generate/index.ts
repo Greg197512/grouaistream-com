@@ -18,6 +18,7 @@ const S3_BUCKET = Deno.env.get("S3_BUCKET_NAME")!;
 const S3_ACCESS_KEY = Deno.env.get("S3_ACCESS_KEY_ID")!;
 const S3_SECRET = Deno.env.get("S3_SECRET_ACCESS_KEY")!;
 const S3_REGION = Deno.env.get("S3_REGION") || "auto";
+const R2_PUBLIC_BASE = "https://pub-46ecdc3a5ae341fcb16454d732eb9bcd.r2.dev";
 
 // Domyślny voice — kobiecy, energetyczny DJ ("Sarah")
 const DJ_VOICE_ID = "EXAVITQu4vr4xnSDxMaL";
@@ -70,7 +71,8 @@ async function uploadToR2(key: string, data: Uint8Array, contentType: string): P
     const text = await res.text();
     throw new Error(`R2 upload failed [${res.status}]: ${text}`);
   }
-  return url;
+  // Zwracamy publiczny URL (r2.dev), a nie prywatny S3 endpoint — żeby przeglądarka mogła pobierać assety (CORS + dostęp).
+  return `${R2_PUBLIC_BASE}/${key}`;
 }
 
 async function generateScript(artist: { name: string; era: string; genre: string; story_hook: string }) {
