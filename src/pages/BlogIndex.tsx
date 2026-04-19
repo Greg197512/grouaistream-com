@@ -182,7 +182,15 @@ export default function BlogIndex() {
           </div>
         ) : filtered.length === 0 ? (
           <p className="text-center text-muted-foreground py-16">
-            {search ? `Brak wyników dla „${search}"` : "Pierwszy post pojawi się wkrótce."}
+            {search
+              ? language === "en" ? `No results for "${search}"` :
+                language === "nl" ? `Geen resultaten voor "${search}"` :
+                language === "ua" ? `Немає результатів для "${search}"` :
+                `Brak wyników dla „${search}"`
+              : language === "en" ? "First post coming soon." :
+                language === "nl" ? "Eerste post komt binnenkort." :
+                language === "ua" ? "Перший пост скоро з'явиться." :
+                "Pierwszy post pojawi się wkrótce."}
           </p>
         ) : (
           <>
@@ -193,7 +201,7 @@ export default function BlogIndex() {
                   <div className="grid md:grid-cols-2 gap-0">
                     <div className="aspect-[16/10] md:aspect-auto overflow-hidden bg-muted">
                       {featured.cover_url ? (
-                        <img src={featured.cover_url} alt={featured.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                        <img src={featured.cover_url} alt={localizedField(featured, "title", language)} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
                       ) : (
                         <div className="w-full h-full bg-gradient-to-br from-primary/30 to-accent/20 flex items-center justify-center">
                           <Sparkles className="w-16 h-16 text-primary/40" />
@@ -203,16 +211,16 @@ export default function BlogIndex() {
                     <div className="p-6 sm:p-8 flex flex-col justify-center">
                       <div className="flex items-center gap-2 mb-3">
                         <Badge className="bg-primary/20 text-primary border-primary/30 text-[10px] uppercase tracking-wider">
-                          <TrendingUp className="w-3 h-3 mr-1" /> Najnowszy
+                          <TrendingUp className="w-3 h-3 mr-1" /> {language === "en" ? "Latest" : language === "nl" ? "Nieuwste" : language === "ua" ? "Найновіше" : "Najnowszy"}
                         </Badge>
                         <Badge variant="secondary" className="text-[10px]">{featured.category}</Badge>
                       </div>
                       <h2 className="text-2xl sm:text-3xl font-black text-foreground mb-3 leading-tight group-hover:text-primary transition-colors">
-                        {featured.title}
+                        {localizedField(featured, "title", language)}
                       </h2>
-                      <p className="text-sm text-muted-foreground line-clamp-3 mb-4">{featured.description}</p>
+                      <p className="text-sm text-muted-foreground line-clamp-3 mb-4">{localizedField(featured, "description", language)}</p>
                       <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                        <span>{new Date(featured.created_at).toLocaleDateString("pl-PL", { day: "numeric", month: "long", year: "numeric" })}</span>
+                        <span>{new Date(featured.created_at).toLocaleDateString(language === "ua" ? "uk-UA" : language === "nl" ? "nl-NL" : language === "en" ? "en-US" : "pl-PL", { day: "numeric", month: "long", year: "numeric" })}</span>
                         <span className="flex items-center gap-1"><Eye className="w-3 h-3" /> {featured.view_count}</span>
                       </div>
                     </div>
@@ -228,7 +236,7 @@ export default function BlogIndex() {
                   <Card className="h-full overflow-hidden bg-card/40 border-border hover:border-primary/50 transition-all hover:shadow-[0_0_30px_hsl(var(--primary)/0.2)]">
                     <div className="aspect-[16/9] overflow-hidden bg-muted">
                       {p.cover_url ? (
-                        <img src={p.cover_url} alt={p.title} loading="lazy" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                        <img src={p.cover_url} alt={localizedField(p, "title", language)} loading="lazy" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                       ) : (
                         <div className="w-full h-full bg-gradient-to-br from-primary/20 to-accent/15 flex items-center justify-center">
                           <Sparkles className="w-10 h-10 text-primary/40" />
@@ -239,13 +247,13 @@ export default function BlogIndex() {
                       <div className="flex items-center gap-2 mb-2">
                         <Badge variant="secondary" className="text-[10px]">{p.category}</Badge>
                         <span className="text-[10px] text-muted-foreground">
-                          {new Date(p.created_at).toLocaleDateString("pl-PL", { day: "numeric", month: "short" })}
+                          {new Date(p.created_at).toLocaleDateString(language === "ua" ? "uk-UA" : language === "nl" ? "nl-NL" : language === "en" ? "en-US" : "pl-PL", { day: "numeric", month: "short" })}
                         </span>
                       </div>
                       <h3 className="font-bold text-foreground group-hover:text-primary transition-colors leading-snug line-clamp-2 mb-2">
-                        {p.title}
+                        {localizedField(p, "title", language)}
                       </h3>
-                      <p className="text-xs text-muted-foreground line-clamp-2">{p.description}</p>
+                      <p className="text-xs text-muted-foreground line-clamp-2">{localizedField(p, "description", language)}</p>
                       {p.tags && p.tags.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-3">
                           {p.tags.slice(0, 3).map((t) => (
