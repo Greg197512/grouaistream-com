@@ -484,6 +484,9 @@ export const SEODashboard = () => {
 
       {/* Blog distribution: hooks + newsletter */}
       <BlogDistributionPanel />
+
+      {/* Ad outreach bot */}
+      <AdOutreachPanel />
     </div>
   );
 };

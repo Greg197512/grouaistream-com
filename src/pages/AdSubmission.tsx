@@ -56,7 +56,7 @@ export default function AdSubmission() {
     setTimeout(() => setCopied(null), 2000);
   };
 
-  const submit = async () => {
+  const handleSubmit = async () => {
     if (!form.company_name || !form.contact_email || !form.ad_title || !form.ad_description || !form.ad_url) {
       toast({ title: "Uzupełnij wszystkie wymagane pola", variant: "destructive" });
       return;
