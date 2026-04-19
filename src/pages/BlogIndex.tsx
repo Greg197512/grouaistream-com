@@ -42,6 +42,8 @@ const setCanonical = (href: string) => {
 
 const CATEGORIES = [
   { id: "all", label: "Wszystkie" },
+  { id: "ai_news", label: "🔥 AI News" },
+  { id: "tech_news", label: "💻 Tech" },
   { id: "trends", label: "Trendy" },
   { id: "feature", label: "Funkcje" },
   { id: "monetization", label: "Zarobki" },
