@@ -6,11 +6,14 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+type EmailType = "invitation" | "challenge" | "newsletter" | "weekly_digest" | "easter";
+
 interface Payload {
-  emailType: "invitation" | "challenge" | "newsletter" | "weekly_digest" | "easter";
+  emailType: EmailType;
   customMessage?: string;
   webhookOverride?: string;
   audience?: "all_users" | "blog_subscribers";
+  mode?: "n8n" | "direct"; // direct = bezpośrednia wysyłka przez naszą kolejkę
 }
 
 const TYPE_LABELS: Record<string, string> = {
@@ -19,6 +22,15 @@ const TYPE_LABELS: Record<string, string> = {
   newsletter: "Newsletter GrouAI Stream",
   weekly_digest: "Twoje muzyczne podsumowanie tygodnia",
   easter: "Wesołych Świąt od GrouAI Stream",
+};
+
+// Mapowanie typu na zarejestrowany szablon transakcyjny
+const TYPE_TO_TEMPLATE: Record<EmailType, string> = {
+  invitation: "invite-musicians",
+  challenge: "admin-notification",
+  newsletter: "new-blog-post",
+  weekly_digest: "admin-notification",
+  easter: "admin-notification",
 };
 
 const IMAGE_PROMPTS: Record<string, string> = {
@@ -114,9 +126,6 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
-
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const authHeader = req.headers.get("Authorization");
@@ -132,9 +141,112 @@ serve(async (req) => {
     const { data: isAdminData } = await supaAdmin.rpc("has_role", { _user_id: user.id, _role: "admin" });
     if (!isAdminData) return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: corsHeaders });
 
-    const { emailType, customMessage, webhookOverride, audience = "all_users" }: Payload = await req.json();
+    const { emailType, customMessage, webhookOverride, audience = "all_users", mode = "direct" }: Payload = await req.json();
 
-    // Get webhook
+    // Pobierz odbiorców
+    let recipients: { email: string; name?: string }[] = [];
+    if (audience === "blog_subscribers") {
+      const { data } = await supaAdmin.from("blog_newsletter_subscribers")
+        .select("email").eq("confirmed", true).is("unsubscribed_at", null);
+      recipients = (data || []).map((r) => ({ email: r.email }));
+    } else {
+      const { data } = await supaAdmin.rpc("get_all_users_for_admin");
+      recipients = (data || []).filter((u: any) => u.email).map((u: any) => ({ email: u.email, name: u.display_name }));
+    }
+
+    // Filtruj suppressed
+    const { data: suppressed } = await supaAdmin.from("suppressed_emails").select("email");
+    const suppressedSet = new Set((suppressed || []).map((s: any) => s.email.toLowerCase()));
+    recipients = recipients.filter((r) => !suppressedSet.has(r.email.toLowerCase()));
+
+    // ============= TRYB DIRECT — bezpośrednia wysyłka przez naszą kolejkę =============
+    if (mode === "direct") {
+      const templateName = TYPE_TO_TEMPLATE[emailType];
+      const stamp = Date.now();
+      let queued = 0;
+      let errors = 0;
+
+      // Dla typów innych niż invitation: wygeneruj copy AI raz i przekaż przez templateData (admin-notification)
+      let sharedCopy: any = null;
+      let heroUrl: string | null = null;
+      if (emailType !== "invitation") {
+        const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+        if (LOVABLE_API_KEY) {
+          try {
+            [sharedCopy, heroUrl] = await Promise.all([
+              generateEmailCopy(emailType, customMessage, LOVABLE_API_KEY),
+              generateHeroImage(emailType, LOVABLE_API_KEY),
+            ]);
+          } catch (e) {
+            console.error("AI copy/image failed, using fallback:", e);
+          }
+        }
+        if (!sharedCopy) {
+          sharedCopy = {
+            subject: TYPE_LABELS[emailType],
+            headline: TYPE_LABELS[emailType],
+            body: customMessage || "Cześć! Mamy dla Ciebie coś nowego na GrouAI Stream.",
+            cta: "Otwórz GrouAI Stream",
+            ctaUrl: "https://grouaistream.com",
+          };
+        }
+      }
+
+      // Wysyłaj sekwencyjnie z małym odstępem
+      for (const r of recipients) {
+        try {
+          const idempotencyKey = `mass-${emailType}-${stamp}-${r.email}`;
+          const templateData: any = emailType === "invitation"
+            ? { recipientName: r.name }
+            : {
+                title: sharedCopy.subject || TYPE_LABELS[emailType],
+                message: sharedCopy.body,
+                recipientName: r.name,
+                emailType: TYPE_LABELS[emailType],
+              };
+
+          const res = await fetch(`${SUPABASE_URL}/functions/v1/send-transactional-email`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${SERVICE_KEY}`,
+            },
+            body: JSON.stringify({
+              templateName,
+              recipientEmail: r.email,
+              idempotencyKey,
+              templateData,
+            }),
+          });
+          if (res.ok) queued++;
+          else {
+            errors++;
+            console.error(`Failed for ${r.email}:`, res.status, await res.text().catch(() => ""));
+          }
+        } catch (e) {
+          errors++;
+          console.error(`Exception for ${r.email}:`, e);
+        }
+        // 300 ms odstępu — łagodne tempo, kolejka i tak buforuje
+        await new Promise((rs) => setTimeout(rs, 300));
+      }
+
+      return new Response(JSON.stringify({
+        success: true,
+        mode: "direct",
+        recipientCount: recipients.length,
+        queued,
+        errors,
+        templateName,
+        subject: sharedCopy?.subject || TYPE_LABELS[emailType],
+        heroImageUrl: heroUrl,
+      }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    // ============= TRYB N8N (oryginalny) =============
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+
     let webhookUrl = webhookOverride;
     if (!webhookUrl) {
       const { data: settings } = await supaAdmin.from("admin_settings").select("n8n_webhook_url").eq("id", 1).maybeSingle();
@@ -146,7 +258,6 @@ serve(async (req) => {
       });
     }
 
-    // Generate copy + image in parallel
     const [copy, heroUrl] = await Promise.all([
       generateEmailCopy(emailType, customMessage, LOVABLE_API_KEY),
       generateHeroImage(emailType, LOVABLE_API_KEY),
@@ -154,18 +265,6 @@ serve(async (req) => {
 
     const html = buildHtml(copy, heroUrl);
 
-    // Get recipients
-    let recipients: { email: string; name?: string }[] = [];
-    if (audience === "blog_subscribers") {
-      const { data } = await supaAdmin.from("blog_newsletter_subscribers")
-        .select("email").eq("confirmed", true).is("unsubscribed_at", null);
-      recipients = (data || []).map((r) => ({ email: r.email }));
-    } else {
-      const { data } = await supaAdmin.rpc("get_all_users_for_admin");
-      recipients = (data || []).filter((u: any) => u.email).map((u: any) => ({ email: u.email, name: u.display_name }));
-    }
-
-    // Forward to n8n
     const n8nRes = await fetch(webhookUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -186,6 +285,7 @@ serve(async (req) => {
 
     return new Response(JSON.stringify({
       success: n8nRes.ok,
+      mode: "n8n",
       recipientCount: recipients.length,
       heroImageUrl: heroUrl,
       subject: copy.subject,
