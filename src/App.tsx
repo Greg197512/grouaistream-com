@@ -45,6 +45,7 @@ import CreatorEarnings from "./pages/CreatorEarnings";
 import EarnWithUs from "./pages/EarnWithUs";
 import BlogIndex from "./pages/BlogIndex";
 import BlogPost from "./pages/BlogPost";
+import AdSubmission from "./pages/AdSubmission";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -117,6 +118,7 @@ const AppShell = () => {
           <Route path="/earn" element={<EarnWithUs />} />
           <Route path="/blog" element={<BlogIndex />} />
           <Route path="/blog/:slug" element={<BlogPost />} />
+          <Route path="/reklama/:token" element={<AdSubmission />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
