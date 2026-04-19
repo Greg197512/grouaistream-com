@@ -17,7 +17,7 @@ import { toast } from "sonner";
 import {
   Mail, Send, Sparkles, Eye, Loader2, RefreshCw,
   CheckCircle, XCircle, AlertTriangle, Clock, Inbox,
-  UserPlus, Trophy, Newspaper, Bell, Gift,
+  UserPlus, Trophy, Newspaper, Bell, Gift, Zap, Webhook, Users,
 } from "lucide-react";
 
 interface EmailLog {
@@ -68,6 +68,53 @@ export function AdminEmailDashboard({ stats, genreStats }: AdminEmailDashboardPr
   const [sendingEmail, setSendingEmail] = useState(false);
   const [generatedEmail, setGeneratedEmail] = useState<GeneratedEmail | null>(null);
   const [newEmailCount, setNewEmailCount] = useState(0);
+
+  // n8n mass dispatch state
+  const [n8nWebhookUrl, setN8nWebhookUrl] = useState("");
+  const [savingWebhook, setSavingWebhook] = useState(false);
+  const [dispatching, setDispatching] = useState(false);
+  const [audience, setAudience] = useState<"all_users" | "blog_subscribers">("blog_subscribers");
+  const [lastDispatch, setLastDispatch] = useState<{ recipientCount: number; heroImageUrl: string | null; subject: string } | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase.from("admin_settings").select("n8n_webhook_url").eq("id", 1).maybeSingle();
+      if (data?.n8n_webhook_url) setN8nWebhookUrl(data.n8n_webhook_url);
+    })();
+  }, []);
+
+  const saveWebhookUrl = async () => {
+    setSavingWebhook(true);
+    try {
+      const { error } = await supabase.from("admin_settings")
+        .upsert({ id: 1, n8n_webhook_url: n8nWebhookUrl.trim() || null, updated_at: new Date().toISOString() });
+      if (error) throw error;
+      toast.success("URL webhooka zapisany");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Błąd zapisu");
+    } finally {
+      setSavingWebhook(false);
+    }
+  };
+
+  const massDispatch = async () => {
+    if (!confirm(`Wysłać "${emailType}" do wszystkich (${audience === "all_users" ? "użytkownicy" : "subskrybenci bloga"}) przez n8n?`)) return;
+    setDispatching(true);
+    setLastDispatch(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("mass-email-dispatch", {
+        body: { emailType, customMessage: customMessage || undefined, audience, webhookOverride: n8nWebhookUrl.trim() || undefined },
+      });
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || `n8n status: ${data?.n8nStatus}`);
+      setLastDispatch({ recipientCount: data.recipientCount, heroImageUrl: data.heroImageUrl, subject: data.subject });
+      toast.success(`🚀 Wysłano do n8n: ${data.recipientCount} odbiorców`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Błąd masowej wysyłki");
+    } finally {
+      setDispatching(false);
+    }
+  };
 
   const fetchEmailLogs = useCallback(async () => {
     setLoadingLogs(true);
