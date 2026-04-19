@@ -1049,6 +1049,165 @@ export type Database = {
           },
         ]
       }
+      seo_activity_log: {
+        Row: {
+          action_type: string
+          created_at: string
+          id: string
+          level: string
+          message: string
+          metadata: Json | null
+          triggered_by: string
+        }
+        Insert: {
+          action_type: string
+          created_at?: string
+          id?: string
+          level?: string
+          message: string
+          metadata?: Json | null
+          triggered_by?: string
+        }
+        Update: {
+          action_type?: string
+          created_at?: string
+          id?: string
+          level?: string
+          message?: string
+          metadata?: Json | null
+          triggered_by?: string
+        }
+        Relationships: []
+      }
+      seo_blog_posts: {
+        Row: {
+          category: string
+          content: string
+          cover_url: string | null
+          created_at: string
+          description: string
+          generated_by_ai: boolean
+          id: string
+          is_published: boolean
+          slug: string
+          tags: string[] | null
+          title: string
+          updated_at: string
+          view_count: number
+        }
+        Insert: {
+          category?: string
+          content: string
+          cover_url?: string | null
+          created_at?: string
+          description: string
+          generated_by_ai?: boolean
+          id?: string
+          is_published?: boolean
+          slug: string
+          tags?: string[] | null
+          title: string
+          updated_at?: string
+          view_count?: number
+        }
+        Update: {
+          category?: string
+          content?: string
+          cover_url?: string | null
+          created_at?: string
+          description?: string
+          generated_by_ai?: boolean
+          id?: string
+          is_published?: boolean
+          slug?: string
+          tags?: string[] | null
+          title?: string
+          updated_at?: string
+          view_count?: number
+        }
+        Relationships: []
+      }
+      seo_keywords: {
+        Row: {
+          category: string
+          created_at: string
+          id: string
+          is_active: boolean
+          keyword: string
+          last_checked_at: string | null
+          last_position: number | null
+          priority: number
+          total_clicks: number
+          total_impressions: number
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          keyword: string
+          last_checked_at?: string | null
+          last_position?: number | null
+          priority?: number
+          total_clicks?: number
+          total_impressions?: number
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          keyword?: string
+          last_checked_at?: string | null
+          last_position?: number | null
+          priority?: number
+          total_clicks?: number
+          total_impressions?: number
+        }
+        Relationships: []
+      }
+      seo_settings: {
+        Row: {
+          auto_blog_enabled: boolean
+          auto_indexnow_enabled: boolean
+          auto_meta_enabled: boolean
+          auto_sitemap_enabled: boolean
+          blog_frequency_days: number
+          id: number
+          last_blog_at: string | null
+          last_indexnow_at: string | null
+          last_sitemap_at: string | null
+          ping_frequency_hours: number
+          updated_at: string
+        }
+        Insert: {
+          auto_blog_enabled?: boolean
+          auto_indexnow_enabled?: boolean
+          auto_meta_enabled?: boolean
+          auto_sitemap_enabled?: boolean
+          blog_frequency_days?: number
+          id?: number
+          last_blog_at?: string | null
+          last_indexnow_at?: string | null
+          last_sitemap_at?: string | null
+          ping_frequency_hours?: number
+          updated_at?: string
+        }
+        Update: {
+          auto_blog_enabled?: boolean
+          auto_indexnow_enabled?: boolean
+          auto_meta_enabled?: boolean
+          auto_sitemap_enabled?: boolean
+          blog_frequency_days?: number
+          id?: number
+          last_blog_at?: string | null
+          last_indexnow_at?: string | null
+          last_sitemap_at?: string | null
+          ping_frequency_hours?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       stream_events: {
         Row: {
           counted: boolean
@@ -1700,6 +1859,7 @@ export type Database = {
       get_all_users_for_admin: { Args: never; Returns: Json }
       get_my_likes_stats: { Args: never; Returns: Json }
       get_pending_payouts: { Args: never; Returns: Json }
+      get_seo_dashboard_stats: { Args: never; Returns: Json }
       get_tip_wallet: { Args: never; Returns: Json }
       get_user_generation_count: { Args: { _user_id: string }; Returns: number }
       get_user_id_by_email: { Args: { _email: string }; Returns: string }
@@ -1709,6 +1869,16 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      log_seo_activity: {
+        Args: {
+          _action_type: string
+          _level: string
+          _message: string
+          _metadata?: Json
+          _triggered_by?: string
+        }
+        Returns: string
       }
       mark_tip_welcome_seen: { Args: never; Returns: Json }
       move_to_dlq: {
