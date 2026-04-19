@@ -3014,7 +3014,7 @@ const nl: TranslationKeys = {
   "legal.priv.s7.title": "7. Beveiliging — we nemen het serieus",
   "legal.priv.s7.p1": "TLS/SSL-encryptie op elke verbinding, bcrypt-gehashte wachtwoorden (zelfs wij kunnen ze niet zien), geanonimiseerde analytics, regelmatige beveiligingsaudits. Je gegevens blijven in de EU en reizen niet onbeschermd.",
   "legal.priv.s8.title": "8. Met wie we samenwerken",
-  "legal.priv.s8.p1": "Alleen vertrouwde infrastructuurleveranciers (hosting, storage), strikt onder ondertekende Verwerkersovereenkomsten (DPA) en Standaard Contractbepalingen (SCC). De lijst is openbaar — vraag ernaar voor de volledige versie.",
+  "legal.priv.s8.p1": "Alleen vertrouwde infrastructuurleveranciers (hosting, storage), strikt onder ondertekende Verwerkersovereenkomsten (DPA) en Standaard Contractbepalingen (SCC). BETALINGSGEGEVENS EN PADDLE: Alle betalingen (Pro/Ultimate abonnementen, koffietips) worden verwerkt door Paddle.com Market Limited (VK), die optreedt als onze Merchant of Record en onafhankelijke verwerkingsverantwoordelijke voor betalingsgegevens. Paddle verwerkt je kaartgegevens, factuuradres, e-mail en IP-adres voor betalingsverwerking, fraudepreventie, facturatie en belastingnaleving. Karon ziet of bewaart nooit je volledige kaartnummer. Paddle's privacy notice: https://www.paddle.com/legal/privacy",
 
   // Copyright
   "legal.copy.heading": "Auteursrecht & Licenties — Maker-Vriendelijk",
