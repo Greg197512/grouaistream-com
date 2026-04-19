@@ -129,9 +129,76 @@ export default function AdSubmission() {
           <Card className="overflow-hidden border-2 border-primary/40 bg-gradient-to-br from-card via-card to-primary/5 shadow-[0_0_60px_-15px_hsl(var(--primary)/0.4)]">
             <div className="bg-primary/10 border-b border-primary/20 px-6 py-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <Wallet className="w-6 h-6 text-primary" />
+                <CreditCard className="w-6 h-6 text-primary" />
                 <div>
-                  <h2 className="text-xl font-bold">Płatność · Revolut</h2>
+                  <h2 className="text-xl font-bold">Płatność online · Karta / Apple Pay / Google Pay</h2>
+                  <p className="text-xs text-muted-foreground">Bezpieczna płatność w 30 sekund · Faktura na maila</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-3xl font-bold text-primary">{submitted.amount ?? AD_PRICE_EUR} €</div>
+                <div className="text-xs text-muted-foreground">jednorazowo · 30 dni</div>
+              </div>
+            </div>
+
+            <div className="p-6 space-y-5">
+              <div className="grid sm:grid-cols-2 gap-3">
+                {[
+                  { icon: TrendingUp, title: "Ruch SEO + długie życie", desc: "Twoja reklama to pełnoprawny artykuł zaindeksowany w Google — pracuje na Ciebie miesiącami, nawet po wygaśnięciu." },
+                  { icon: Search, title: "Indeksacja w 24h", desc: "Automatyczny IndexNow ping do Google i Bing zaraz po opłacie." },
+                  { icon: Zap, title: "Pasek „Promowane” na głównej", desc: "Tysiące słuchaczy GrouAI Stream zobaczy Twoją markę na stronie startowej." },
+                  { icon: Globe, title: "Backlink z autorytetu", desc: "Dofollow link z bloga muzycznego o szybko rosnącym DR — wzmocnienie SEO Twojej strony." },
+                ].map(b => (
+                  <div key={b.title} className="flex gap-3 p-3 rounded-lg bg-muted/30 border border-border/50">
+                    <b.icon className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                    <div>
+                      <div className="font-semibold text-sm">{b.title}</div>
+                      <div className="text-xs text-muted-foreground leading-relaxed">{b.desc}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <Button
+                onClick={handlePayWithCard}
+                disabled={payingCard}
+                size="lg"
+                className="w-full h-14 text-base font-bold bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg shadow-primary/30"
+              >
+                <CreditCard className="w-5 h-5 mr-2" />
+                {payingCard ? "Otwieram płatność…" : `Zapłać 5 € kartą — natychmiast aktywuj reklamę`}
+              </Button>
+              <p className="text-[11px] text-center text-muted-foreground">
+                Płatność obsługiwana przez Paddle (Merchant of Record) · Faktura VAT od razu na maila · Zwrot do 14 dni
+              </p>
+            </div>
+          </Card>
+
+          <Card className="overflow-hidden border border-border/60 bg-card/50">
+            <div className="bg-muted/30 border-b border-border/60 px-6 py-3 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Wallet className="w-5 h-5 text-muted-foreground" />
+                <div>
+                  <h3 className="text-sm font-bold">Lub przelewem SEPA · Revolut</h3>
+                  <p className="text-[11px] text-muted-foreground">Bez prowizji · Termin 24h</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-xl font-bold">{submitted.amount ?? AD_PRICE_EUR} €</div>
+              </div>
+            </div>
+
+            <div className="p-6">
+              <div className="flex items-start gap-3 bg-primary/10 border border-primary/30 rounded-lg p-4 mb-5">
+                <Clock className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                <div className="text-sm">
+                  <div className="font-semibold text-primary mb-1">Płatność w ciągu 24 godzin</div>
+                  <div className="text-muted-foreground">
+                    Termin do <strong className="text-foreground">{new Date(submitted.deadline).toLocaleString("pl-PL", { dateStyle: "full", timeStyle: "short" })}</strong>.
+                    Po tym czasie reklama zostanie zdjęta z bloga.
+                  </div>
+                </div>
+              </div>
                   <p className="text-xs text-muted-foreground">Bezpieczny przelew SEPA · Bez prowizji</p>
                 </div>
               </div>
