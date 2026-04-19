@@ -1,91 +1,10 @@
 project_id = "bvstvawnigyczvofzhps"
 
-[functions.ccmixter-proxy]
-verify_jwt = false
-
-[functions.ai-playlist]
-verify_jwt = false
-
-[functions.daily-cc-fetch]
-verify_jwt = false
-
-[functions.generate-email]
-verify_jwt = false
-
-[functions.ai-categorize]
-verify_jwt = false
-
-[functions.ai-cover]
-verify_jwt = false
-
-[functions.spotify-import]
-verify_jwt = false
-
-[functions.ai-suggest-tracks]
-verify_jwt = false
-
-[functions.ai-assistant]
-verify_jwt = false
-
-[functions.suno-generate]
-verify_jwt = false
-
-[functions.ai-mix-suggest]
-verify_jwt = false
-
-[functions.send-email]
-verify_jwt = false
-
-[functions.ai-learn]
-verify_jwt = false
-
-[functions.ai-moderate-track]
-verify_jwt = false
-
-[functions.process-email-queue]
+[functions.r2-upload-proxy]
 verify_jwt = true
 
-[functions.send-transactional-email]
-verify_jwt = false
-
-[functions.preview-transactional-email]
-verify_jwt = false
-
-[functions.handle-email-unsubscribe]
-verify_jwt = false
-
-[functions.handle-email-suppression]
-verify_jwt = false
-
-[functions.ai-music-shrink]
-verify_jwt = false
-
-[functions.ai-mood-analysis]
-verify_jwt = false
-
-[functions.ai-vision-mood]
-verify_jwt = false
-
-[functions.seo-sitemap-generate]
-verify_jwt = false
-
-[functions.seo-blog-generate]
-verify_jwt = false
-
-[functions.seo-orchestrator]
-verify_jwt = false
-
-[functions.indexnow-ping]
-verify_jwt = false
-
-[functions.notify-blog-subscribers]
+[functions.r2-signed-url]
 verify_jwt = true
 
-[functions.ad-outreach-process]
-verify_jwt = false
-
-[functions.ad-campaign-submit]
-verify_jwt = false
-
-[functions.ad-lead-lookup]
+[functions.tiktok-story-generate]
 verify_jwt = false
