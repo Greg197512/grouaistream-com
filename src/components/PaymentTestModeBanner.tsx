@@ -5,7 +5,7 @@ export function PaymentTestModeBanner() {
 
   return (
     <div className="w-full bg-accent/20 border-b border-accent/40 px-4 py-2 text-center text-xs text-accent-foreground">
-      🧪 Tryb testowy płatności — to jest podgląd. Po publikacji aplikacja przyjmuje prawdziwe pieniądze.
+      🔄 Aktualizacja strony
     </div>
   );
 }
