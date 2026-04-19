@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,9 +7,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
-import { Copy, CheckCircle2, Sparkles, Clock, Building2 } from "lucide-react";
+import { Copy, CheckCircle2, Sparkles, Clock, Building2, Home, Newspaper, Wallet, ShieldCheck, ExternalLink } from "lucide-react";
 
 const REVOLUT_IBAN = "LT32 5002 2576 7256 99";
+const REVOLUT_BIC = "REVOLT21";
 const REVOLUT_NAME = "GrouaRock / GrouAI Stream";
 const AMOUNT = "10,00 EUR";
 
@@ -35,17 +36,22 @@ export default function AdSubmission() {
     document.title = "Wrzuć reklamę na GrouAI Stream — 10€/miesiąc";
     if (!token) { setLoading(false); return; }
     (async () => {
-      const { data } = await supabase.functions.invoke("ad-lead-lookup", { body: { token } });
-      if (data?.lead) {
-        setLead(data.lead);
-        setForm(f => ({
-          ...f,
-          company_name: data.lead.company_name || "",
-          contact_email: data.lead.email || "",
-          industry: data.lead.industry || "",
-        }));
+      try {
+        const { data } = await supabase.functions.invoke("ad-lead-lookup", { body: { token } });
+        if (data?.lead) {
+          setLead(data.lead);
+          setForm(f => ({
+            ...f,
+            company_name: data.lead.company_name || "",
+            contact_email: data.lead.email || "",
+            industry: data.lead.industry || "",
+          }));
+        }
+      } catch (e) {
+        console.warn("Lead lookup failed (token may be test/expired):", e);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     })();
   }, [token]);
 
@@ -77,53 +83,133 @@ export default function AdSubmission() {
 
   if (submitted) {
     return (
-      <div className="min-h-screen bg-background text-foreground flex items-center justify-center p-6">
-        <Card className="max-w-2xl w-full p-8 border-primary/30 bg-gradient-to-br from-primary/5 to-transparent">
-          <div className="text-center mb-6">
-            <CheckCircle2 className="w-16 h-16 mx-auto text-primary mb-4" />
-            <h1 className="text-3xl font-bold mb-2">🎉 Reklama opublikowana!</h1>
-            <p className="text-muted-foreground">Jest już widoczna na naszym blogu.</p>
-          </div>
-
-          <div className="bg-card border border-border rounded-xl p-6 mb-6">
-            <h2 className="font-semibold mb-4 flex items-center gap-2">
-              <Clock className="w-4 h-4 text-primary" />
-              Ostatni krok: opłata 10 € (24h)
-            </h2>
-            <p className="text-sm text-muted-foreground mb-4">
-              Aby reklama pozostała aktywna przez 30 dni, prosimy o przelew Revolut do{" "}
-              <strong className="text-foreground">{new Date(submitted.deadline).toLocaleString("pl-PL")}</strong>:
-            </p>
-
-            <div className="space-y-3">
-              {[
-                { label: "IBAN Revolut", value: REVOLUT_IBAN, key: "iban" },
-                { label: "Odbiorca", value: REVOLUT_NAME, key: "name" },
-                { label: "Kwota", value: AMOUNT, key: "amount" },
-                { label: "Tytuł przelewu", value: `Reklama ${form.company_name}`, key: "title" },
-              ].map(item => (
-                <div key={item.key} className="flex items-center justify-between gap-2 bg-muted/40 rounded-lg p-3">
-                  <div className="flex-1 min-w-0">
-                    <div className="text-xs text-muted-foreground">{item.label}</div>
-                    <div className="font-mono text-sm truncate">{item.value}</div>
-                  </div>
-                  <Button size="sm" variant="ghost" onClick={() => copy(item.value, item.key)}>
-                    {copied === item.key ? <CheckCircle2 className="w-4 h-4 text-primary" /> : <Copy className="w-4 h-4" />}
-                  </Button>
-                </div>
-              ))}
+      <div className="min-h-screen bg-background text-foreground">
+        {/* Hero sukcesu */}
+        <div className="relative overflow-hidden bg-gradient-to-br from-primary/30 via-primary/5 to-background border-b border-primary/20">
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/20 via-transparent to-transparent" />
+          <div className="max-w-3xl mx-auto px-6 py-12 text-center relative z-10">
+            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-primary/20 border-2 border-primary/40 mb-6 animate-pulse">
+              <CheckCircle2 className="w-12 h-12 text-primary" />
             </div>
+            <h1 className="text-4xl md:text-5xl font-bold mb-3 tracking-tight">
+              🎉 Reklama opublikowana!
+            </h1>
+            <p className="text-lg text-muted-foreground max-w-xl mx-auto">
+              Jest już widoczna na blogu <span className="text-primary font-semibold">GrouAI Stream</span>.
+              Zostań z nami przez ostatni krok — opłatę.
+            </p>
+          </div>
+        </div>
+
+        <div className="max-w-3xl mx-auto px-6 py-10 space-y-6">
+          {/* BRAMKA PŁATNICZA */}
+          <Card className="overflow-hidden border-2 border-primary/40 bg-gradient-to-br from-card via-card to-primary/5 shadow-[0_0_60px_-15px_hsl(var(--primary)/0.4)]">
+            <div className="bg-primary/10 border-b border-primary/20 px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Wallet className="w-6 h-6 text-primary" />
+                <div>
+                  <h2 className="text-xl font-bold">Bramka płatności · Revolut</h2>
+                  <p className="text-xs text-muted-foreground">Bezpieczny przelew SEPA · Bez prowizji</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-3xl font-bold text-primary">10 €</div>
+                <div className="text-xs text-muted-foreground">jednorazowo · 30 dni</div>
+              </div>
+            </div>
+
+            <div className="p-6">
+              <div className="flex items-start gap-3 bg-primary/10 border border-primary/30 rounded-lg p-4 mb-5">
+                <Clock className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                <div className="text-sm">
+                  <div className="font-semibold text-primary mb-1">Płatność w ciągu 24 godzin</div>
+                  <div className="text-muted-foreground">
+                    Termin do <strong className="text-foreground">{new Date(submitted.deadline).toLocaleString("pl-PL", { dateStyle: "full", timeStyle: "short" })}</strong>.
+                    Po tym czasie reklama zostanie zdjęta z bloga.
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid gap-3">
+                {[
+                  { label: "Numer konta (IBAN)", value: REVOLUT_IBAN, key: "iban", highlight: true },
+                  { label: "BIC / SWIFT", value: REVOLUT_BIC, key: "bic" },
+                  { label: "Odbiorca", value: REVOLUT_NAME, key: "name" },
+                  { label: "Kwota", value: AMOUNT, key: "amount", highlight: true },
+                  { label: "Tytuł przelewu (BARDZO WAŻNE)", value: `Reklama ${form.company_name}`, key: "title", highlight: true },
+                ].map(item => (
+                  <div
+                    key={item.key}
+                    className={`flex items-center justify-between gap-3 rounded-xl p-4 border transition-all hover:border-primary/50 ${
+                      item.highlight ? "bg-primary/5 border-primary/30" : "bg-muted/30 border-border"
+                    }`}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1">{item.label}</div>
+                      <div className="font-mono text-base font-semibold truncate">{item.value}</div>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant={item.highlight ? "default" : "outline"}
+                      onClick={() => copy(item.value, item.key)}
+                      className="shrink-0"
+                    >
+                      {copied === item.key ? (
+                        <><CheckCircle2 className="w-4 h-4 mr-1" /> Skopiowane</>
+                      ) : (
+                        <><Copy className="w-4 h-4 mr-1" /> Kopiuj</>
+                      )}
+                    </Button>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex items-center gap-2 mt-5 text-xs text-muted-foreground">
+                <ShieldCheck className="w-4 h-4 text-primary" />
+                Płatność weryfikowana ręcznie w ciągu 1h roboczej. Otrzymasz email z potwierdzeniem.
+              </div>
+            </div>
+          </Card>
+
+          {/* LINKI */}
+          <div className="grid sm:grid-cols-2 gap-4">
+            <Button asChild variant="outline" size="lg" className="h-auto py-4 justify-start group">
+              <a href={`/blog/${submitted.slug}`} target="_blank" rel="noopener noreferrer">
+                <Newspaper className="w-5 h-5 mr-3 text-primary" />
+                <div className="text-left">
+                  <div className="font-semibold">Zobacz swoją reklamę</div>
+                  <div className="text-xs text-muted-foreground">Otwórz wpis na blogu</div>
+                </div>
+                <ExternalLink className="w-4 h-4 ml-auto opacity-50 group-hover:opacity-100" />
+              </a>
+            </Button>
+
+            <Button asChild variant="outline" size="lg" className="h-auto py-4 justify-start group">
+              <Link to="/blog">
+                <Newspaper className="w-5 h-5 mr-3 text-primary" />
+                <div className="text-left">
+                  <div className="font-semibold">Wszystkie reklamy</div>
+                  <div className="text-xs text-muted-foreground">Blog GrouAI Stream</div>
+                </div>
+              </Link>
+            </Button>
+
+            <Button asChild variant="outline" size="lg" className="h-auto py-4 justify-start group sm:col-span-2">
+              <Link to="/">
+                <Home className="w-5 h-5 mr-3 text-primary" />
+                <div className="text-left">
+                  <div className="font-semibold">Wróć na grouaistream.com</div>
+                  <div className="text-xs text-muted-foreground">Strona główna platformy</div>
+                </div>
+              </Link>
+            </Button>
           </div>
 
-          <div className="text-center text-sm text-muted-foreground">
-            <p>📩 Wysłaliśmy potwierdzenie na <strong>{form.contact_email}</strong></p>
-            <p className="mt-2">Dziękujemy za zaufanie! — Zespół GrouaRock</p>
+          <div className="text-center text-sm text-muted-foreground pt-2">
+            <p>📩 Wysłaliśmy potwierdzenie na <strong className="text-foreground">{form.contact_email}</strong></p>
+            <p className="mt-1">Dziękujemy za zaufanie — Zespół GrouaRock 🎵</p>
           </div>
-
-          <Button asChild className="w-full mt-6" size="lg">
-            <a href={`/blog/${submitted.slug}`}>Zobacz swoją reklamę na blogu →</a>
-          </Button>
-        </Card>
+        </div>
       </div>
     );
   }
@@ -131,6 +217,23 @@ export default function AdSubmission() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* Hero */}
+      {/* Top nav */}
+      <div className="border-b border-border bg-background/80 backdrop-blur sticky top-0 z-20">
+        <div className="max-w-5xl mx-auto px-6 py-3 flex items-center justify-between">
+          <Link to="/" className="font-bold text-lg tracking-tight hover:text-primary transition-colors">
+            GrouAI <span className="text-primary">Stream</span>
+          </Link>
+          <div className="flex items-center gap-2">
+            <Button asChild variant="ghost" size="sm">
+              <Link to="/"><Home className="w-4 h-4 mr-1" /> Strona główna</Link>
+            </Button>
+            <Button asChild variant="ghost" size="sm">
+              <Link to="/blog"><Newspaper className="w-4 h-4 mr-1" /> Blog</Link>
+            </Button>
+          </div>
+        </div>
+      </div>
+
       <div className="relative overflow-hidden bg-gradient-to-br from-primary/20 via-background to-background border-b border-border">
         <div className="max-w-3xl mx-auto px-6 py-16 text-center relative z-10">
           <div className="inline-flex items-center gap-2 bg-primary/10 border border-primary/30 px-4 py-1.5 rounded-full text-sm text-primary mb-6">
