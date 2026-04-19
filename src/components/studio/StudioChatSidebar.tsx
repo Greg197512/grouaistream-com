@@ -87,10 +87,80 @@ export const StudioChatSidebar = ({ isOpen, onToggle }: Props) => {
     }
   }, [input]);
 
+  const generateFromFingerprint = useCallback(async () => {
+    if (isStreaming) return;
+    if (!user) {
+      toast.error("Zaloguj się żeby AI poznało Twój gust");
+      return;
+    }
+    setIsStreaming(true);
+    setMessages((prev) => [...prev, {
+      role: "user",
+      content: "🎯 Zrób utwór brzmiący jak moje top 10",
+    }]);
+
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      if (!token) throw new Error("brak sesji");
+
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/studio-generate`;
+      const resp = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        },
+        body: JSON.stringify({
+          use_fingerprint: true,
+          engine: "auto",
+          duration_seconds: 30,
+        }),
+      });
+
+      const data = await resp.json();
+      if (!resp.ok) {
+        toast.error(data.message || data.error || "Błąd generowania");
+        setMessages((prev) => [...prev, {
+          role: "assistant",
+          content: `❌ ${data.message || data.error || "Nie udało się"}\n\nPosłuchaj kilka utworów na GrouAI Stream — wtedy AI pozna Twój styl.`,
+        }]);
+        return;
+      }
+
+      const fp = data.fingerprint;
+      const summary = fp ? [
+        fp.dominant_genre && `**Gatunek:** ${fp.dominant_genre}`,
+        fp.dominant_mood && `**Mood:** ${fp.dominant_mood}`,
+        fp.avg_bpm && `**BPM:** ${fp.avg_bpm}`,
+        fp.dominant_key && `**Tonacja:** ${fp.dominant_key}`,
+        fp.top_artists?.length && `**Top artyści:** ${fp.top_artists.slice(0, 3).join(", ")}`,
+      ].filter(Boolean).join("\n") : "";
+
+      setMessages((prev) => [...prev, {
+        role: "assistant",
+        content: `🎧 **Generuję utwór dopasowany do Twojego DNA muzycznego** (silnik: ${data.engine})\n\n${summary}\n\n_Generacja w toku — pojawi się w historii Studia za 30-60s._`,
+      }]);
+      toast.success(`Generuję przez ${data.engine === "elevenlabs" ? "ElevenLabs Music" : "Suno V4"} 🎵`);
+    } catch (e) {
+      console.error("[fingerprint] err:", e);
+      toast.error(e instanceof Error ? e.message : "Błąd połączenia");
+    } finally {
+      setIsStreaming(false);
+    }
+  }, [isStreaming, user]);
+
   const send = useCallback(async (text: string) => {
     if (!text.trim() || isStreaming) return;
     if (!user) {
       toast.error("Zaloguj się żeby porozmawiać z AI");
+      return;
+    }
+
+    // Specjalny trigger: jeśli prompt zawiera "moje top 10" / "make_like_my_10"
+    if (text.includes("moich ostatnich 10") || text.includes("moje top 10") || text.includes("ulubionych — weź mój")) {
+      await generateFromFingerprint();
       return;
     }
 

@@ -3106,6 +3106,7 @@ export type Database = {
         }[]
       }
       get_tip_wallet: { Args: never; Returns: Json }
+      get_user_audio_fingerprint: { Args: never; Returns: Json }
       get_user_generation_count: { Args: { _user_id: string }; Returns: number }
       get_user_id_by_email: { Args: { _email: string }; Returns: string }
       get_user_top_tracks_for_ai: { Args: { _user_id: string }; Returns: Json }
