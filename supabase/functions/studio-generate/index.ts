@@ -80,15 +80,21 @@ serve(async (req) => {
       });
     }
 
-    // === STEP 2: Router — wybiera silnik na podstawie promptu i preferencji
+    // === STEP 2: Router — wybiera silnik na podstawie quality + promptu
     let engine = body.engine || "auto";
+    const quality = body.quality || "standard"; // default = tani MusicGen
     const duration = body.duration_seconds || 30;
-    const instrumental = body.instrumental ?? false;
+    const instrumental = body.instrumental ?? true; // MusicGen = instrumental by design
 
     if (engine === "auto") {
-      // Heurystyka: krótki wokal → ElevenLabs, długi pełny utwór → Suno
-      if (duration <= 30 && !instrumental) engine = "elevenlabs";
-      else engine = "suno";
+      // PREMIUM → ElevenLabs (krótki wokal) lub Suno (długi pełny)
+      if (quality === "premium") {
+        if (duration <= 30 && !instrumental) engine = "elevenlabs";
+        else engine = "suno";
+      } else {
+        // STANDARD → MusicGen (90% taniej, świetna jakość instrumentalna)
+        engine = "musicgen";
+      }
     }
 
     // === STEP 3: Stwórz wpis w studio_generations (status: pending)
@@ -109,6 +115,7 @@ serve(async (req) => {
           used_fingerprint: !!body.use_fingerprint,
           fingerprint_snapshot: fingerprint,
           engine_chosen: engine,
+          quality,
         },
       })
       .select()
@@ -121,15 +128,26 @@ serve(async (req) => {
       });
     }
 
-    // === STEP 4: Trigger generację w odpowiednim silniku (fire-and-forget)
-    // Wynik zostanie zapisany do studio_generations przez webhook lub poll
-    let triggerResult: any = { triggered: true, engine };
+    // === STEP 4: Trigger generację w odpowiednim silniku
+    let triggerResult: any = { triggered: true, engine, quality };
 
     try {
-      if (engine === "elevenlabs") {
+      if (engine === "musicgen") {
+        // MusicGen — wywołujemy synchronicznie (Prefer: wait), zwraca audio_url od razu
+        const mgResp = await supabase.functions.invoke("replicate-musicgen", {
+          body: { prompt: finalPrompt, duration, generation_id: gen.id },
+        });
+        if (mgResp.error) {
+          console.error("[musicgen] err:", mgResp.error);
+          triggerResult.error = "musicgen_failed";
+        } else {
+          triggerResult.audio_url = mgResp.data?.audio_url;
+          triggerResult.cost_estimate_usd = mgResp.data?.cost_estimate_usd;
+          triggerResult.completed = true;
+        }
+      } else if (engine === "elevenlabs") {
         const elKey = Deno.env.get("ELEVENLABS_API_KEY");
         if (elKey) {
-          // ElevenLabs Music API
           const elResp = await fetch("https://api.elevenlabs.io/v1/music/compositions", {
             method: "POST",
             headers: { "xi-api-key": elKey, "Content-Type": "application/json" },
