@@ -44,7 +44,7 @@ const STORAGE_KEY = "studio_grok_dock_pos_h";
 
 export const StudioGrokDock = () => {
   const { user } = useAuth();
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
 
   // Position (draggable)
   const [pos, setPos] = useState<{ x: number; y: number }>(() => {
