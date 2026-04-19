@@ -1,13 +1,12 @@
-// Edge Function: ad-campaign-submit
-// Publiczny endpoint — odbiera formularz reklamy z /reklama/:token
-// Tworzy ad_campaigns (pre-publish 24h) + post na blogu
-
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
+
+const SITE_URL = 'https://grouaistream.com'
+const AD_PRICE_EUR = 5
 
 function slugify(s: string) {
   return s.toLowerCase()
@@ -39,7 +38,6 @@ Deno.serve(async (req) => {
       industry,
     } = body
 
-    // Walidacja
     if (!token || !company_name || !contact_email || !ad_title || !ad_description || !ad_url) {
       return new Response(JSON.stringify({ error: 'missing_fields' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -52,23 +50,29 @@ Deno.serve(async (req) => {
       })
     }
 
-    // URL musi być http(s)
     try { new URL(ad_url) } catch {
       return new Response(JSON.stringify({ error: 'invalid_url' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
-    // Znajdź lead po tokenie (opcjonalnie)
+    if (ad_image_url) {
+      try { new URL(ad_image_url) } catch {
+        return new Response(JSON.stringify({ error: 'invalid_image_url' }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+    }
+
     const { data: lead } = await supabase
       .from('ad_leads')
       .select('id, email')
       .eq('outreach_token', token)
       .maybeSingle()
 
-    // Utwórz post na blogu (kategoria: reklama)
     const baseSlug = slugify(`${company_name}-${ad_title}`)
     const slug = `ad-${baseSlug}-${Date.now().toString(36)}`
+    const postUrl = `${SITE_URL}/blog/${slug}`
 
     const blogContent = `> 💡 **Reklama partnera** · ${company_name}\n\n` +
       `# ${ad_title}\n\n` +
@@ -101,7 +105,6 @@ Deno.serve(async (req) => {
       })
     }
 
-    // Utwórz kampanię
     const { data: campaign, error: campError } = await supabase
       .from('ad_campaigns')
       .insert({
@@ -114,7 +117,7 @@ Deno.serve(async (req) => {
         ad_url,
         ad_image_url: ad_image_url || null,
         industry: industry || null,
-        amount_eur: 10,
+        amount_eur: AD_PRICE_EUR,
         payment_status: 'pending',
         publish_status: 'live',
       })
@@ -128,29 +131,50 @@ Deno.serve(async (req) => {
       })
     }
 
-    // Update lead status
     if (lead?.id) {
       await supabase.from('ad_leads').update({ status: 'converted', reply_received_at: new Date().toISOString() }).eq('id', lead.id)
     }
 
-    // Powiadom admina
-    await supabase.functions.invoke('send-transactional-email', {
-      body: {
-        templateName: 'admin-notification',
-        recipientEmail: 'kontakt@grouaistream.com',
-        templateData: {
-          subject: `Nowa reklama: ${company_name}`,
-          message: `Firma "${company_name}" opublikowała reklamę "${ad_title}".\n\nKwota: 10 €\nDeadline płatności: ${campaign.payment_deadline}\nKontakt: ${contact_email}\n\nPotwierdź wpłatę w panelu admina.`,
+    await Promise.allSettled([
+      supabase.functions.invoke('send-transactional-email', {
+        body: {
+          templateName: 'admin-notification',
+          recipientEmail: 'kontakt@grouaistream.com',
+          templateData: {
+            title: `Nowa reklama: ${company_name}`,
+            message: `Firma "${company_name}" opublikowała reklamę "${ad_title}".\n\nKwota: ${AD_PRICE_EUR} €\nDeadline płatności: ${campaign.payment_deadline}\nKontakt: ${contact_email}\nLink do wpisu: ${postUrl}`,
+          },
+          idempotencyKey: `ad-campaign-admin-${campaign.id}`,
         },
-        idempotencyKey: `ad-campaign-${campaign.id}`,
-      },
-    }).catch(() => null)
+      }),
+      supabase.functions.invoke('send-transactional-email', {
+        body: {
+          templateName: 'ad-submission-confirmation',
+          recipientEmail: contact_email,
+          templateData: {
+            company_name,
+            contact_email,
+            ad_title,
+            ad_description,
+            ad_url,
+            ad_image_url: ad_image_url || null,
+            industry: industry || null,
+            amount_eur: AD_PRICE_EUR,
+            payment_deadline: campaign.payment_deadline,
+            post_url: postUrl,
+          },
+          idempotencyKey: `ad-campaign-confirmation-${campaign.id}`,
+        },
+      }),
+    ])
 
     return new Response(JSON.stringify({
       ok: true,
       campaign_id: campaign.id,
       post_slug: slug,
       payment_deadline: campaign.payment_deadline,
+      amount_eur: AD_PRICE_EUR,
+      post_url: postUrl,
     }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   } catch (e) {
     console.error('ad-campaign-submit error', e)
