@@ -1017,6 +1017,7 @@ export type Database = {
           product_id: string
           recipient_track_id: string | null
           recipient_user_id: string | null
+          refunded_at: string | null
           user_id: string | null
         }
         Insert: {
@@ -1031,6 +1032,7 @@ export type Database = {
           product_id: string
           recipient_track_id?: string | null
           recipient_user_id?: string | null
+          refunded_at?: string | null
           user_id?: string | null
         }
         Update: {
@@ -1045,6 +1047,7 @@ export type Database = {
           product_id?: string
           recipient_track_id?: string | null
           recipient_user_id?: string | null
+          refunded_at?: string | null
           user_id?: string | null
         }
         Relationships: [
