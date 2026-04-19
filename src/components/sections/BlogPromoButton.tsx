@@ -97,7 +97,7 @@ export const BlogPromoButton = () => {
       longPressFired.current = false;
       return;
     }
-    if (post) navigate(`/blog/${post.slug}`);
+    window.open(EXTERNAL_BLOG_URL, "_blank", "noopener,noreferrer");
   };
 
   if (loading || !post) return null;
