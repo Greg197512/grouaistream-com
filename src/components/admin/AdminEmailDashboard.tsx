@@ -99,17 +99,34 @@ export function AdminEmailDashboard({ stats, genreStats }: AdminEmailDashboardPr
   };
 
   const massDispatch = async () => {
-    if (!confirm(`Wysłać "${emailType}" do wszystkich (${audience === "all_users" ? "użytkownicy" : "subskrybenci bloga"}) przez n8n?`)) return;
+    const audienceLabel = audience === "all_users" ? "wszystkich użytkowników" : "subskrybentów bloga";
+    const modeLabel = dispatchMode === "direct" ? "BEZPOŚREDNIO (przez naszą kolejkę)" : "przez n8n";
+    if (!confirm(`Wysłać "${emailType}" do ${audienceLabel} ${modeLabel}?`)) return;
     setDispatching(true);
     setLastDispatch(null);
     try {
       const { data, error } = await supabase.functions.invoke("mass-email-dispatch", {
-        body: { emailType, customMessage: customMessage || undefined, audience, webhookOverride: n8nWebhookUrl.trim() || undefined },
+        body: {
+          emailType,
+          customMessage: customMessage || undefined,
+          audience,
+          mode: dispatchMode,
+          webhookOverride: dispatchMode === "n8n" ? (n8nWebhookUrl.trim() || undefined) : undefined,
+        },
       });
       if (error) throw error;
-      if (!data?.success) throw new Error(data?.error || `n8n status: ${data?.n8nStatus}`);
-      setLastDispatch({ recipientCount: data.recipientCount, heroImageUrl: data.heroImageUrl, subject: data.subject });
-      toast.success(`🚀 Wysłano do n8n: ${data.recipientCount} odbiorców`);
+      if (!data?.success) throw new Error(data?.error || `Status: ${data?.n8nStatus || "unknown"}`);
+      setLastDispatch({
+        recipientCount: data.recipientCount,
+        heroImageUrl: data.heroImageUrl,
+        subject: data.subject,
+        queued: data.queued,
+        errors: data.errors,
+        mode: data.mode,
+      });
+      const queuedMsg = data.mode === "direct" ? ` (zakolejkowano: ${data.queued}, błędy: ${data.errors})` : "";
+      toast.success(`🚀 ${data.recipientCount} odbiorców${queuedMsg}`);
+      fetchEmailLogs();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Błąd masowej wysyłki");
     } finally {
