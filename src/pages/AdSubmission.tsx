@@ -199,26 +199,8 @@ export default function AdSubmission() {
                   </div>
                 </div>
               </div>
-                  <p className="text-xs text-muted-foreground">Bezpieczny przelew SEPA · Bez prowizji</p>
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="text-3xl font-bold text-primary">{submitted.amount ?? AD_PRICE_EUR} €</div>
-                <div className="text-xs text-muted-foreground">jednorazowo · 30 dni</div>
-              </div>
-            </div>
 
-            <div className="p-6">
-              <div className="flex items-start gap-3 bg-primary/10 border border-primary/30 rounded-lg p-4 mb-5">
-                <Clock className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                <div className="text-sm">
-                  <div className="font-semibold text-primary mb-1">Płatność w ciągu 24 godzin</div>
-                  <div className="text-muted-foreground">
-                    Termin do <strong className="text-foreground">{new Date(submitted.deadline).toLocaleString("pl-PL", { dateStyle: "full", timeStyle: "short" })}</strong>.
-                    Po tym czasie reklama zostanie zdjęta z bloga.
-                  </div>
-                </div>
-              </div>
+              <div className="p-6">
 
               <div className="grid gap-3">
                 {[
