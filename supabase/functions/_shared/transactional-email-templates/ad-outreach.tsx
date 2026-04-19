@@ -6,6 +6,7 @@ import {
   Head,
   Heading,
   Html,
+  Img,
   Link,
   Preview,
   Section,
@@ -13,6 +14,8 @@ import {
   Hr,
   Button,
 } from 'npm:@react-email/components@0.0.22'
+
+const HERO_IMAGE_URL = 'https://bvstvawnigyczvofzhps.supabase.co/storage/v1/object/public/email-assets/ad-outreach-hero-v2.jpg'
 import type { TemplateEntry } from './registry.ts'
 
 interface Props {
@@ -28,10 +31,15 @@ export const AdOutreachEmail = ({ company_name, cta_url }: Props) => {
       <Preview>Reklama na GrouAI Stream — dotrzyj do tysięcy słuchaczy za 10 € / miesiąc</Preview>
       <Body style={body}>
         <Container style={container}>
-          {/* Neon header */}
-          <Section style={headerSection}>
-            <Heading style={brandTitle}>GrouAI Stream</Heading>
-            <Text style={brandSub}>by GrouaRock — AI Music Universe</Text>
+          {/* Hero banner — AI generated cosmic aurora */}
+          <Section style={heroSection}>
+            <Img
+              src={HERO_IMAGE_URL}
+              alt="GrouAI Stream — AI Music Universe"
+              width="600"
+              height="300"
+              style={heroImage}
+            />
           </Section>
 
           <Section style={contentSection}>
@@ -121,11 +129,10 @@ export const AdOutreachEmail = ({ company_name, cta_url }: Props) => {
 }
 
 // ====== Neon cyberpunk styles ======
-const body = { backgroundColor: '#0a0a0f', color: '#e6e6f0', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', margin: 0, padding: 0 }
+const body = { backgroundColor: '#ffffff', color: '#1a1a1f', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', margin: 0, padding: 0 }
 const container = { maxWidth: '620px', margin: '0 auto', padding: '0', backgroundColor: '#0f0f17' }
-const headerSection = { padding: '40px 32px 24px', textAlign: 'center' as const, background: 'linear-gradient(135deg, #ff6b1a 0%, #ff2d75 100%)', borderRadius: '0 0 24px 24px' }
-const brandTitle = { fontSize: '32px', fontWeight: 800, color: '#ffffff', margin: '0 0 4px', letterSpacing: '-0.5px' }
-const brandSub = { fontSize: '13px', color: 'rgba(255,255,255,0.85)', margin: 0, letterSpacing: '1px', textTransform: 'uppercase' as const }
+const heroSection = { padding: 0, margin: 0, lineHeight: 0 }
+const heroImage = { width: '100%', height: 'auto', display: 'block', margin: 0 }
 const contentSection = { padding: '32px 32px 16px' }
 const greetingText = { fontSize: '17px', fontWeight: 600, color: '#ffffff', margin: '0 0 20px' }
 const paragraph = { fontSize: '15px', lineHeight: '1.7', color: '#cfcfdc', margin: '0 0 16px' }
