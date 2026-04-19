@@ -65,3 +65,15 @@ verify_jwt = false
 
 [functions.ai-vision-mood]
 verify_jwt = false
+
+[functions.seo-sitemap-generate]
+verify_jwt = false
+
+[functions.seo-blog-generate]
+verify_jwt = false
+
+[functions.seo-orchestrator]
+verify_jwt = false
+
+[functions.indexnow-ping]
+verify_jwt = false
