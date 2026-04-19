@@ -115,26 +115,76 @@ function injectAffiliateLinks(content: string, links: Array<{ display_text: stri
 }
 
 async function generateCoverImage(LOVABLE_API_KEY: string, title: string, category: string): Promise<string | null> {
+  const isNews = category === "ai_news" || category === "tech_news";
+  const sceneHint = isNews
+    ? "futuristic AI laboratory with glowing neural networks, holographic data streams, server racks with neon orange LEDs, cinematic depth of field"
+    : "moody music studio with vinyl records glowing under neon, audio waveforms in the air, professional DJ equipment, cinematic atmosphere";
+
+  const prompt = `Create a HYPERREALISTIC, 4K, photorealistic editorial hero image for blog article: "${title}".
+SCENE: ${sceneHint}.
+STYLE: Shot on Hasselblad H6D-100c, 50mm prime lens, f/1.4 aperture, dramatic cinematic lighting, deep blacks, neon orange and amber accents, aurora borealis ambient glow, ultra-sharp focus on subject, premium magazine cover quality, 16:9 aspect ratio.
+MOOD: Premium, intelligent, futuristic, emotionally captivating — like a National Geographic meets Wired magazine cover.
+ABSOLUTE RULES: NO text, NO letters, NO logos, NO watermarks, NO typography. Pure photorealistic image only.`;
+
+  const attempts = [
+    "google/gemini-3-pro-image-preview",
+    "google/gemini-3.1-flash-image-preview",
+    "google/gemini-2.5-flash-image",
+  ];
+
+  for (const model of attempts) {
+    try {
+      const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model,
+          messages: [{ role: "user", content: prompt }],
+          modalities: ["image", "text"],
+        }),
+      });
+      if (!res.ok) {
+        console.error(`Cover gen ${model} failed`, res.status);
+        continue;
+      }
+      const data = await res.json();
+      const dataUrl = data?.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+      if (dataUrl) {
+        console.log(`Cover generated with ${model}`);
+        return dataUrl;
+      }
+    } catch (e) {
+      console.error(`Cover gen ${model} exception`, e);
+    }
+  }
+  return null;
+}
+
+// Fetch trending AI/tech news via Firecrawl search (best effort)
+async function huntLatestNews(FIRECRAWL_API_KEY: string | undefined): Promise<string | null> {
+  if (!FIRECRAWL_API_KEY) return null;
   try {
-    const prompt = `Cinematic neon cyberpunk hero image for blog article titled "${title}". Category: ${category}. Style: dark moody background, vibrant neon orange and electric purple accents, aurora borealis effect, glowing particles, futuristic music technology aesthetic, ultra detailed, 16:9, no text, no watermarks.`;
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const res = await fetch("https://api.firecrawl.dev/v2/search", {
       method: "POST",
-      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+      headers: { Authorization: `Bearer ${FIRECRAWL_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash-image",
-        messages: [{ role: "user", content: prompt }],
-        modalities: ["image", "text"],
+        query: "latest AI music technology breakthrough this week",
+        limit: 5,
+        tbs: "qdr:w",
       }),
     });
     if (!res.ok) {
-      console.error("Cover gen failed", res.status, await res.text());
+      console.error("Firecrawl search failed", res.status);
       return null;
     }
     const data = await res.json();
-    const dataUrl = data?.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-    return dataUrl || null;
+    const results = data?.data || data?.web?.results || [];
+    if (!results.length) return null;
+    return results.slice(0, 5).map((r: any) =>
+      `- ${r.title || ""}: ${r.description || r.snippet || ""} (${r.url || ""})`
+    ).join("\n");
   } catch (e) {
-    console.error("Cover gen exception", e);
+    console.error("News hunt failed", e);
     return null;
   }
 }
