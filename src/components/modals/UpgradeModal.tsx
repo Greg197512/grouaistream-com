@@ -1,7 +1,6 @@
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Crown, Check, Zap, Star, Sparkles, X, Infinity, Music, Radio, Brain } from "lucide-react";
-import { PaymentQRModal } from "./PaymentQRModal";
+import { motion } from "framer-motion";
+import { Crown, Check, Zap, Sparkles, X, Music, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -12,8 +11,9 @@ import {
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { supabase } from "@/integrations/supabase/client";
 import { useSubscription } from "@/contexts/SubscriptionContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { openPaddleCheckout } from "@/lib/paddle";
 
 interface UpgradeModalProps {
   open: boolean;
@@ -55,16 +55,35 @@ const planConfigs = [
 export const UpgradeModal = ({ open, onOpenChange }: UpgradeModalProps) => {
   const [selectedPlan, setSelectedPlan] = useState("pro");
   const [isProcessing, setIsProcessing] = useState(false);
-  const [paymentPlan, setPaymentPlan] = useState<"pro" | "ultimate" | null>(null);
   const { t } = useLanguage();
-  const { plan: currentPlan, refreshSubscription } = useSubscription();
+  const { plan: currentPlan } = useSubscription();
+  const { user } = useAuth();
 
-  const handleUpgrade = () => {
+  const handleUpgrade = async () => {
     if (selectedPlan === "free") {
       toast.info(t("upgrade.alreadyFree"));
       return;
     }
-    setPaymentPlan(selectedPlan as "pro" | "ultimate");
+    if (!user) {
+      toast.error("Zaloguj się, aby kupić plan");
+      return;
+    }
+    setIsProcessing(true);
+    try {
+      const priceId = selectedPlan === "ultimate" ? "grouai_ultimate_monthly" : "grouai_pro_monthly";
+      await openPaddleCheckout({
+        priceId,
+        customerEmail: user.email,
+        customData: { userId: user.id },
+        successUrl: `${window.location.origin}/?checkout=success`,
+      });
+      onOpenChange(false);
+    } catch (e: any) {
+      console.error("Checkout error:", e);
+      toast.error("Nie udało się otworzyć płatności: " + (e?.message || "spróbuj ponownie"));
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (
@@ -172,12 +191,7 @@ export const UpgradeModal = ({ open, onOpenChange }: UpgradeModalProps) => {
               >
                 {isProcessing ? (
                   <>
-                    <motion.div
-                      animate={{ rotate: 360 }}
-                      transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
-                    >
-                      <Sparkles className="h-4 w-4 sm:h-5 sm:w-5" />
-                    </motion.div>
+                    <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin" />
                     {t("upgrade.processing")}
                   </>
                 ) : selectedPlan === "free" ? (
@@ -197,20 +211,6 @@ export const UpgradeModal = ({ open, onOpenChange }: UpgradeModalProps) => {
           </div>
         </div>
       </DialogContent>
-
-      {/* Payment QR Modal */}
-      {paymentPlan && (
-        <PaymentQRModal
-          open={!!paymentPlan}
-          onOpenChange={(open) => {
-            if (!open) {
-              setPaymentPlan(null);
-              onOpenChange(false);
-            }
-          }}
-          plan={paymentPlan}
-        />
-      )}
     </Dialog>
   );
 };
