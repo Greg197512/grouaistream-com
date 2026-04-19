@@ -142,16 +142,32 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signUp = async (email: string, password: string, displayName?: string) => {
     try {
+      const finalDisplayName = displayName || email.split("@")[0];
       const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           emailRedirectTo: window.location.origin,
           data: {
-            display_name: displayName || email.split("@")[0],
+            display_name: finalDisplayName,
           },
         },
       });
+
+      // Fire-and-forget welcome email via n8n (non-blocking, errors silently ignored)
+      if (!error) {
+        const N8N_WELCOME_WEBHOOK =
+          "https://gregorypeek.app.n8n.cloud/webhook/grouai-signup";
+        fetch(N8N_WELCOME_WEBHOOK, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, displayName: finalDisplayName }),
+          keepalive: true,
+        }).catch((err) => {
+          console.warn("[Auth] welcome email webhook failed:", err);
+        });
+      }
+
       return { error: error as Error | null };
     } catch (error) {
       return { error: error as Error };
