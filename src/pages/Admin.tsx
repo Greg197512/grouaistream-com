@@ -64,6 +64,7 @@ import { TipsOverview } from "@/components/admin/TipsOverview";
 import { OperationalCosts } from "@/components/admin/OperationalCosts";
 import { LikesOverview } from "@/components/admin/LikesOverview";
 import { SEODashboard } from "@/components/admin/SEODashboard";
+import { TikTokStoriesPanel } from "@/components/admin/TikTokStoriesPanel";
 
 interface UserStats {
   totalUsers: number;
@@ -708,10 +709,18 @@ export default function Admin() {
                   <TrendingUp className="h-4 w-4" />
                   SEO Bot
                 </TabsTrigger>
+                <TabsTrigger value="tiktok" className="gap-2">
+                  <Music className="h-4 w-4" />
+                  Rolki TikTok 🎬
+                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="seo">
                 <SEODashboard />
+              </TabsContent>
+
+              <TabsContent value="tiktok">
+                <TikTokStoriesPanel />
               </TabsContent>
 
               {/* Bonuses & Payouts Tab */}

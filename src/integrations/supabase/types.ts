@@ -1781,6 +1781,125 @@ export type Database = {
         }
         Relationships: []
       }
+      tiktok_artists_pool: {
+        Row: {
+          created_at: string
+          era: string | null
+          genre: string | null
+          id: string
+          is_active: boolean
+          last_used_at: string | null
+          name: string
+          story_hook: string | null
+          used_count: number
+        }
+        Insert: {
+          created_at?: string
+          era?: string | null
+          genre?: string | null
+          id?: string
+          is_active?: boolean
+          last_used_at?: string | null
+          name: string
+          story_hook?: string | null
+          used_count?: number
+        }
+        Update: {
+          created_at?: string
+          era?: string | null
+          genre?: string | null
+          id?: string
+          is_active?: boolean
+          last_used_at?: string | null
+          name?: string
+          story_hook?: string | null
+          used_count?: number
+        }
+        Relationships: []
+      }
+      tiktok_stories: {
+        Row: {
+          artist_name: string
+          audio_url: string | null
+          blog_post_id: string | null
+          captions: Json
+          created_at: string
+          duration_seconds: number
+          era: string | null
+          generated_by_ai: boolean
+          genre: string | null
+          hook: string
+          id: string
+          image_urls: Json
+          metadata: Json
+          outro: string
+          published_youtube_at: string | null
+          script: string
+          status: string
+          updated_at: string
+          video_url: string | null
+          views_estimate: number
+          voice_id: string
+          youtube_video_id: string | null
+        }
+        Insert: {
+          artist_name: string
+          audio_url?: string | null
+          blog_post_id?: string | null
+          captions?: Json
+          created_at?: string
+          duration_seconds?: number
+          era?: string | null
+          generated_by_ai?: boolean
+          genre?: string | null
+          hook: string
+          id?: string
+          image_urls?: Json
+          metadata?: Json
+          outro?: string
+          published_youtube_at?: string | null
+          script: string
+          status?: string
+          updated_at?: string
+          video_url?: string | null
+          views_estimate?: number
+          voice_id?: string
+          youtube_video_id?: string | null
+        }
+        Update: {
+          artist_name?: string
+          audio_url?: string | null
+          blog_post_id?: string | null
+          captions?: Json
+          created_at?: string
+          duration_seconds?: number
+          era?: string | null
+          generated_by_ai?: boolean
+          genre?: string | null
+          hook?: string
+          id?: string
+          image_urls?: Json
+          metadata?: Json
+          outro?: string
+          published_youtube_at?: string | null
+          script?: string
+          status?: string
+          updated_at?: string
+          video_url?: string | null
+          views_estimate?: number
+          voice_id?: string
+          youtube_video_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tiktok_stories_blog_post_id_fkey"
+            columns: ["blog_post_id"]
+            isOneToOne: false
+            referencedRelation: "seo_blog_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tip_transactions: {
         Row: {
           amount: number
