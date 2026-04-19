@@ -22,6 +22,7 @@ import {
   Zap,
 } from "lucide-react";
 import { toast } from "sonner";
+import { BlogDistributionPanel } from "./BlogDistributionPanel";
 import {
   ResponsiveContainer,
   BarChart,
@@ -479,6 +480,9 @@ export const SEODashboard = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Blog distribution: hooks + newsletter */}
+      <BlogDistributionPanel />
     </div>
   );
 };
