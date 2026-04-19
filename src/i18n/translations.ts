@@ -2133,7 +2133,7 @@ const en: TranslationKeys = {
   "legal.terms.s7.p2": "2. Disputes are resolved by the court competent for the operator's registered office or place of residence (until formal registration).",
   "legal.terms.s8.title": "§8. Changes to Terms",
   "legal.terms.s8.p1": "1. The operator reserves the right to modify these Terms due to changes in registration status, Service functionality development, or legal changes.",
-  "legal.terms.s8.p2": "2. Users will be notified of changes 14 days in advance. Continued use of the Service after this period constitutes acceptance of the changes.",
+  "legal.terms.s8.p2": "2. Users will be notified of changes 14 days in advance. Continued use of the Service after this period constitutes acceptance of the changes. PAYMENTS & MERCHANT OF RECORD: Our order process is conducted by our online reseller Paddle.com Market Limited. Paddle.com is the Merchant of Record for all our orders. Paddle provides all customer service inquiries and handles returns, refunds, billing, invoicing and tax compliance. Paid plans (Pro €9.99/month, Ultimate €19.99/month) are billed monthly in advance and renew automatically until cancelled. We offer a 30-day money-back guarantee (refund) — see the Refunds tab for details. To request a refund, visit paddle.net or contact support@grouaistream.com. Full payment terms are governed by the Paddle Checkout Buyer Terms: https://www.paddle.com/legal/checkout-buyer-terms",
 
   // Privacy
   "legal.priv.heading": "Privacy Policy",
