@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Search, Sparkles, TrendingUp, Eye } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface BlogPost {
   id: string;
@@ -18,7 +19,19 @@ interface BlogPost {
   cover_url: string | null;
   created_at: string;
   view_count: number;
+  title_en?: string | null;
+  title_nl?: string | null;
+  title_ua?: string | null;
+  description_en?: string | null;
+  description_nl?: string | null;
+  description_ua?: string | null;
 }
+
+const localizedField = (post: BlogPost, field: "title" | "description", lang: string): string => {
+  if (lang === "pl") return post[field];
+  const v = (post as any)[`${field}_${lang}`] as string | null | undefined;
+  return v || post[field];
+};
 
 const setMeta = (name: string, content: string, attr: "name" | "property" = "name") => {
   let el = document.querySelector(`meta[${attr}="${name}"]`) as HTMLMetaElement | null;
@@ -54,30 +67,43 @@ const CATEGORIES = [
 ];
 
 export default function BlogIndex() {
+  const { language } = useLanguage();
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [activeCat, setActiveCat] = useState("all");
 
   useEffect(() => {
-    document.title = "Blog GrouAI Stream — AI, muzyka i przyszłość streamingu";
-    setMeta("description", "Artykuły o AI w muzyce, mood detection, monetyzacji dla twórców, AI DJ i przyszłości streamingu. Codziennie nowe inspiracje.");
-    setMeta("og:title", "Blog GrouAI Stream", "property");
-    setMeta("og:description", "AI, muzyka i przyszłość streamingu — codziennie nowe artykuły.", "property");
+    const titles: Record<string, string> = {
+      pl: "Blog GrouAI Stream — AI, muzyka i przyszłość streamingu",
+      en: "GrouAI Stream Blog — AI, music & the future of streaming",
+      nl: "GrouAI Stream Blog — AI, muziek en de toekomst van streaming",
+      ua: "Блог GrouAI Stream — AI, музика та майбутнє стрімінгу",
+    };
+    const descs: Record<string, string> = {
+      pl: "Artykuły o AI w muzyce, mood detection, monetyzacji dla twórców, AI DJ i przyszłości streamingu.",
+      en: "Articles about AI in music, mood detection, creator monetization, AI DJ and the future of streaming.",
+      nl: "Artikelen over AI in muziek, mood detection, monetisatie voor creators, AI DJ en streaming.",
+      ua: "Статті про AI у музиці, виявлення настрою, монетизацію для авторів, AI DJ та майбутнє стрімінгу.",
+    };
+    document.title = titles[language] || titles.pl;
+    setMeta("description", descs[language] || descs.pl);
+    setMeta("og:title", titles[language] || titles.pl, "property");
+    setMeta("og:description", descs[language] || descs.pl, "property");
     setMeta("og:type", "website", "property");
     setMeta("og:url", "https://grouaistream.com/blog", "property");
     setCanonical("https://grouaistream.com/blog");
-  }, []);
+  }, [language]);
 
   useEffect(() => {
     (async () => {
       const { data } = await supabase
         .from("seo_blog_posts")
-        .select("id, slug, title, description, category, tags, cover_url, created_at, view_count")
+        .select("id, slug, title, description, category, tags, cover_url, created_at, view_count, title_en, title_nl, title_ua, description_en, description_nl, description_ua")
         .eq("is_published", true)
         .order("created_at", { ascending: false })
         .limit(60);
-      setPosts(data || []);
+      setPosts((data as BlogPost[]) || []);
       setLoading(false);
     })();
   }, []);
@@ -87,13 +113,15 @@ export default function BlogIndex() {
     return posts.filter((p) => {
       if (activeCat !== "all" && p.category !== activeCat) return false;
       if (!q) return true;
+      const title = localizedField(p, "title", language).toLowerCase();
+      const desc = localizedField(p, "description", language).toLowerCase();
       return (
-        p.title.toLowerCase().includes(q) ||
-        p.description.toLowerCase().includes(q) ||
-        (p.tags || []).some((t) => t.toLowerCase().includes(q))
+        title.includes(q) ||
+        desc.includes(q) ||
+        (p.tags || []).some((tag) => tag.toLowerCase().includes(q))
       );
     });
-  }, [posts, search, activeCat]);
+  }, [posts, search, activeCat, language]);
 
   const featured = filtered[0];
   const rest = filtered.slice(1);
