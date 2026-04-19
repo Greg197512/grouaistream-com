@@ -38,9 +38,9 @@ const QUICK_ACTIONS = [
     prompt: "Zrób mi banger — pełna struktura (intro, verse, chorus, bridge, drop, outro), 30s, najmocniejszy gatunek z mojej historii." },
 ];
 
-const DOCK_W = 380;
-const DOCK_H_DEFAULT = 620;
-const STORAGE_KEY = "studio_grok_dock_pos";
+const DOCK_W = 880;
+const DOCK_H_DEFAULT = 280;
+const STORAGE_KEY = "studio_grok_dock_pos_h";
 
 export const StudioGrokDock = () => {
   const { user } = useAuth();
@@ -52,7 +52,7 @@ export const StudioGrokDock = () => {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) return JSON.parse(raw);
     } catch {}
-    return { x: typeof window !== "undefined" ? window.innerWidth - DOCK_W - 24 : 24, y: 80 };
+    return { x: typeof window !== "undefined" ? Math.max(24, (window.innerWidth - DOCK_W) / 2) : 24, y: typeof window !== "undefined" ? window.innerHeight - DOCK_H_DEFAULT - 120 : 80 };
   });
   const dragging = useRef<{ dx: number; dy: number } | null>(null);
 
@@ -282,7 +282,7 @@ export const StudioGrokDock = () => {
               onPointerDown={onDragStart}
               onPointerMove={onDragMove}
               onPointerUp={onDragEnd}
-              className="flex items-center justify-between border-b border-border/50 bg-gradient-to-r from-primary/15 via-purple-500/10 to-transparent px-3 py-2 cursor-move select-none"
+              className="flex items-center justify-between border-b border-border/50 bg-gradient-to-r from-primary/15 via-purple-500/10 to-transparent px-3 py-1.5 cursor-move select-none"
             >
               <div className="flex items-center gap-2">
                 <GripVertical className="h-4 w-4 text-muted-foreground" />
@@ -290,17 +290,8 @@ export const StudioGrokDock = () => {
                 <span className="text-xs font-semibold tracking-tight">GrouAI Studio</span>
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
               </div>
-              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setOpen(false)}>
-                <X className="h-3.5 w-3.5" />
-              </Button>
-            </div>
 
-            {/* Engine switch */}
-            <div className="flex items-center justify-between border-b border-border/30 px-3 py-2 bg-card/30">
-              <div className="flex items-center gap-1.5">
-                <Music2 className="h-3 w-3 text-muted-foreground" />
-                <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Silnik</span>
-              </div>
+              {/* Engine switch inline in header */}
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setEngine("our_ai")}
@@ -319,140 +310,149 @@ export const StudioGrokDock = () => {
                 >
                   ElevenLabs
                 </button>
+                <Button variant="ghost" size="icon" className="h-6 w-6 ml-1" onClick={() => setOpen(false)}>
+                  <X className="h-3.5 w-3.5" />
+                </Button>
               </div>
             </div>
 
-            {/* Messages */}
-            <ScrollArea className="flex-1 px-3 py-2" ref={scrollRef as any}>
-              <div className="space-y-2.5">
-                {messages.map((m, i) => (
-                  <motion.div
-                    key={i}
-                    initial={{ opacity: 0, y: 6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
-                  >
-                    <div className={`max-w-[88%] rounded-xl px-3 py-1.5 text-xs ${
-                      m.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted/60 text-foreground"
-                    }`}>
-                      {m.role === "assistant" ? (
-                        <div className="prose prose-xs prose-invert max-w-none [&_p]:my-0.5 [&_p]:leading-relaxed [&_a]:text-primary">
-                          <ReactMarkdown>{m.content}</ReactMarkdown>
-                        </div>
-                      ) : (
-                        <p className="whitespace-pre-wrap leading-relaxed">{m.content}</p>
-                      )}
+            {/* Horizontal body: messages | right-rail (quick + input) */}
+            <div className="flex flex-1 min-h-0">
+              {/* Left: Messages (takes most width) */}
+              <ScrollArea className="flex-1 px-3 py-2 border-r border-border/30" ref={scrollRef as any}>
+                <div className="space-y-2">
+                  {messages.map((m, i) => (
+                    <motion.div
+                      key={i}
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
+                    >
+                      <div className={`max-w-[80%] rounded-xl px-3 py-1.5 text-xs ${
+                        m.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted/60 text-foreground"
+                      }`}>
+                        {m.role === "assistant" ? (
+                          <div className="prose prose-xs prose-invert max-w-none [&_p]:my-0.5 [&_p]:leading-relaxed [&_a]:text-primary">
+                            <ReactMarkdown>{m.content}</ReactMarkdown>
+                          </div>
+                        ) : (
+                          <p className="whitespace-pre-wrap leading-relaxed">{m.content}</p>
+                        )}
+                      </div>
+                    </motion.div>
+                  ))}
+                  {streaming && (
+                    <div className="flex items-center gap-1.5 px-1 text-[10px] text-muted-foreground">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      <span>{engine === "our_ai" ? "Nasz AI" : "ElevenLabs"} myśli…</span>
                     </div>
-                  </motion.div>
-                ))}
-                {streaming && (
-                  <div className="flex items-center gap-1.5 px-1 text-[10px] text-muted-foreground">
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                    <span>{engine === "our_ai" ? "Nasz AI" : "ElevenLabs"} myśli…</span>
+                  )}
+                </div>
+              </ScrollArea>
+
+              {/* Right rail: quick actions + add-ons + input */}
+              <div className="flex w-[340px] shrink-0 flex-col bg-card/20">
+                {/* Quick actions */}
+                <div className="border-b border-border/30 px-2 py-1.5">
+                  <div className="flex flex-wrap gap-1">
+                    {QUICK_ACTIONS.map((a) => (
+                      <Badge
+                        key={a.id}
+                        variant="secondary"
+                        onClick={() => !streaming && send(a.prompt)}
+                        className="cursor-pointer hover:bg-primary hover:text-primary-foreground transition text-[9px] gap-0.5 py-0.5 px-1.5"
+                      >
+                        <a.icon className="h-2.5 w-2.5" />
+                        {a.label}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Add-ons (collapsible) */}
+                <AnimatePresence initial={false}>
+                  {addonsOpen && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="border-b border-border/30 bg-card/40 overflow-hidden"
+                    >
+                      <div className="grid grid-cols-2 gap-1.5 p-2">
+                        <Button variant="outline" size="sm" className="h-auto flex-col gap-1 py-2 text-[10px]"
+                          onClick={() => fileInputRef.current?.click()}>
+                          <Upload className="h-3.5 w-3.5 text-primary" />
+                          Wgraj sample
+                        </Button>
+                        <Button variant="outline" size="sm" className="h-auto flex-col gap-1 py-2 text-[10px]"
+                          onClick={() => { setShowLibrary(true); loadLibrary(); }}>
+                          <Library className="h-3.5 w-3.5 text-purple-400" />
+                          Z biblioteki
+                        </Button>
+                        <Button variant="outline" size="sm" className="h-auto flex-col gap-1 py-2 text-[10px]"
+                          onClick={() => setShowMixer(true)}>
+                          <Blend className="h-3.5 w-3.5 text-pink-400" />
+                          Mix A + B
+                        </Button>
+                        <Button variant="outline" size="sm" className="h-auto flex-col gap-1 py-2 text-[10px]"
+                          onClick={() => setShowVoice(true)}>
+                          <Mic className="h-3.5 w-3.5 text-emerald-400" />
+                          Voice clone
+                        </Button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* Attachments preview */}
+                {attachments.length > 0 && (
+                  <div className="border-b border-border/30 px-2 py-1.5 bg-primary/5">
+                    <div className="flex flex-wrap gap-1">
+                      {attachments.map((a, i) => (
+                        <Badge key={i} variant="outline" className="text-[9px] gap-1 pr-1 py-0.5">
+                          {a.kind === "sample" ? "🎚️" : a.kind === "track" ? "🎵" : "🎤"}
+                          <span className="max-w-[120px] truncate">{a.label}</span>
+                          <button onClick={() => removeAttachment(i)} className="hover:text-destructive">
+                            <X className="h-2.5 w-2.5" />
+                          </button>
+                        </Badge>
+                      ))}
+                    </div>
                   </div>
                 )}
-              </div>
-            </ScrollArea>
 
-            {/* Quick actions */}
-            <div className="border-t border-border/30 px-2 py-1.5 bg-card/20">
-              <div className="flex flex-wrap gap-1">
-                {QUICK_ACTIONS.map((a) => (
-                  <Badge
-                    key={a.id}
-                    variant="secondary"
-                    onClick={() => !streaming && send(a.prompt)}
-                    className="cursor-pointer hover:bg-primary hover:text-primary-foreground transition text-[9px] gap-0.5 py-0.5 px-1.5"
-                  >
-                    <a.icon className="h-2.5 w-2.5" />
-                    {a.label}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-
-            {/* Add-ons panel (collapsible) */}
-            <AnimatePresence initial={false}>
-              {addonsOpen && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: "auto", opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  className="border-t border-border/30 bg-card/40 overflow-hidden"
-                >
-                  <div className="grid grid-cols-2 gap-1.5 p-2">
-                    <Button variant="outline" size="sm" className="h-auto flex-col gap-1 py-2 text-[10px]"
-                      onClick={() => fileInputRef.current?.click()}>
-                      <Upload className="h-3.5 w-3.5 text-primary" />
-                      Wgraj sample
+                {/* Input */}
+                <form onSubmit={(e) => { e.preventDefault(); send(input); }}
+                  className="mt-auto border-t border-border/50 p-2 bg-background/95">
+                  <div className="flex items-end gap-1.5 rounded-xl border border-border bg-card/50 px-2 py-1.5 focus-within:border-primary/60 transition">
+                    <Button
+                      type="button" variant="ghost" size="icon"
+                      onClick={() => setAddonsOpen((v) => !v)}
+                      className={`h-7 w-7 shrink-0 rounded-full ${addonsOpen ? "bg-primary/20 text-primary" : ""}`}
+                      aria-label="Dodatki"
+                    >
+                      {addonsOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
                     </Button>
-                    <Button variant="outline" size="sm" className="h-auto flex-col gap-1 py-2 text-[10px]"
-                      onClick={() => { setShowLibrary(true); loadLibrary(); }}>
-                      <Library className="h-3.5 w-3.5 text-purple-400" />
-                      Z biblioteki
-                    </Button>
-                    <Button variant="outline" size="sm" className="h-auto flex-col gap-1 py-2 text-[10px]"
-                      onClick={() => setShowMixer(true)}>
-                      <Blend className="h-3.5 w-3.5 text-pink-400" />
-                      Mix A + B
-                    </Button>
-                    <Button variant="outline" size="sm" className="h-auto flex-col gap-1 py-2 text-[10px]"
-                      onClick={() => setShowVoice(true)}>
-                      <Mic className="h-3.5 w-3.5 text-emerald-400" />
-                      Voice clone
+                    <Textarea
+                      value={input}
+                      onChange={(e) => setInput(e.target.value)}
+                      onKeyDown={onKey}
+                      placeholder="Opisz utwór, miks lub remix…"
+                      rows={2}
+                      disabled={streaming}
+                      className="min-h-[40px] max-h-[120px] resize-none border-0 bg-transparent p-0 text-xs focus-visible:ring-0 focus-visible:ring-offset-0"
+                    />
+                    <Button type="submit" size="icon" disabled={(!input.trim() && attachments.length === 0) || streaming}
+                      className="h-7 w-7 shrink-0 rounded-full">
+                      {streaming ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
                     </Button>
                   </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {/* Attachments preview */}
-            {attachments.length > 0 && (
-              <div className="border-t border-border/30 px-2 py-1.5 bg-primary/5">
-                <div className="flex flex-wrap gap-1">
-                  {attachments.map((a, i) => (
-                    <Badge key={i} variant="outline" className="text-[9px] gap-1 pr-1 py-0.5">
-                      {a.kind === "sample" ? "🎚️" : a.kind === "track" ? "🎵" : "🎤"}
-                      <span className="max-w-[120px] truncate">{a.label}</span>
-                      <button onClick={() => removeAttachment(i)} className="hover:text-destructive">
-                        <X className="h-2.5 w-2.5" />
-                      </button>
-                    </Badge>
-                  ))}
-                </div>
+                  <p className="mt-1 text-center text-[8px] text-muted-foreground">
+                    Przeciągnij nagłówek · Shift+Enter = nowa linia
+                  </p>
+                </form>
               </div>
-            )}
-
-            {/* Input */}
-            <form onSubmit={(e) => { e.preventDefault(); send(input); }}
-              className="border-t border-border/50 p-2 bg-background/95">
-              <div className="flex items-end gap-1.5 rounded-xl border border-border bg-card/50 px-2 py-1.5 focus-within:border-primary/60 transition">
-                <Button
-                  type="button" variant="ghost" size="icon"
-                  onClick={() => setAddonsOpen((v) => !v)}
-                  className={`h-7 w-7 shrink-0 rounded-full ${addonsOpen ? "bg-primary/20 text-primary" : ""}`}
-                  aria-label="Dodatki"
-                >
-                  {addonsOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
-                </Button>
-                <Textarea
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={onKey}
-                  placeholder="Opisz utwór, miks lub remix…"
-                  rows={1}
-                  disabled={streaming}
-                  className="min-h-[20px] max-h-[100px] resize-none border-0 bg-transparent p-0 text-xs focus-visible:ring-0 focus-visible:ring-offset-0"
-                />
-                <Button type="submit" size="icon" disabled={(!input.trim() && attachments.length === 0) || streaming}
-                  className="h-7 w-7 shrink-0 rounded-full">
-                  {streaming ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
-                </Button>
-              </div>
-              <p className="mt-1 text-center text-[8px] text-muted-foreground">
-                Przeciągnij nagłówek · Shift+Enter = nowa linia
-              </p>
-            </form>
+            </div>
 
             {/* Hidden file input */}
             <input
