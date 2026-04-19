@@ -38,9 +38,9 @@ const QUICK_ACTIONS = [
     prompt: "Zrób mi banger — pełna struktura (intro, verse, chorus, bridge, drop, outro), 30s, najmocniejszy gatunek z mojej historii." },
 ];
 
-const DOCK_W = 380;
-const DOCK_H_DEFAULT = 620;
-const STORAGE_KEY = "studio_grok_dock_pos";
+const DOCK_W = 880;
+const DOCK_H_DEFAULT = 280;
+const STORAGE_KEY = "studio_grok_dock_pos_h";
 
 export const StudioGrokDock = () => {
   const { user } = useAuth();
