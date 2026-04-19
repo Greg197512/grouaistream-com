@@ -280,14 +280,53 @@ serve(async (req) => {
     const aiData = await aiRes.json();
     const raw = aiData.choices?.[0]?.message?.content || "";
     const cleaned = raw.replace(/^```json\s*/i, "").replace(/```\s*$/, "").trim();
-    let parsed: { title: string; description: string; content: string };
+
+    // Robust JSON parser — AI często wstawia surowe \n / \r / \t w stringach co łamie JSON.parse.
+    // Strategia: najpierw zwykły parse, potem field-by-field extraction regexami z multiline flagą.
+    const sanitizeForJson = (s: string) => s
+      .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "") // control chars
+      .replace(/\r\n/g, "\\n")
+      .replace(/\n/g, "\\n")
+      .replace(/\r/g, "\\n")
+      .replace(/\t/g, "\\t");
+
+    let parsed: { title: string; description: string; content: string } | null = null;
     try {
       parsed = JSON.parse(cleaned);
     } catch {
-      const m = cleaned.match(/\{[\s\S]*\}/);
-      if (!m) throw new Error("AI returned invalid JSON");
-      parsed = JSON.parse(m[0]);
+      try {
+        const m = cleaned.match(/\{[\s\S]*\}/);
+        if (m) parsed = JSON.parse(m[0]);
+      } catch {/* ignore */}
     }
+
+    if (!parsed) {
+      try {
+        const m = cleaned.match(/\{[\s\S]*\}/);
+        const candidate = m ? m[0] : cleaned;
+        parsed = JSON.parse(sanitizeForJson(candidate));
+      } catch {/* ignore */}
+    }
+
+    // Fallback: ekstrakcja pól regexem (najbardziej odporne)
+    if (!parsed) {
+      const titleMatch = cleaned.match(/"title"\s*:\s*"((?:\\.|[^"\\])*)"/);
+      const descMatch = cleaned.match(/"description"\s*:\s*"((?:\\.|[^"\\])*)"/);
+      const contentMatch = cleaned.match(/"content"\s*:\s*"([\s\S]*?)"\s*\}\s*$/);
+      if (titleMatch && descMatch && contentMatch) {
+        const unescape = (s: string) => s
+          .replace(/\\n/g, "\n").replace(/\\r/g, "\r").replace(/\\t/g, "\t")
+          .replace(/\\"/g, '"').replace(/\\\\/g, "\\");
+        parsed = {
+          title: unescape(titleMatch[1]),
+          description: unescape(descMatch[1]),
+          content: unescape(contentMatch[1]),
+        };
+        console.log("Recovered post via regex fallback");
+      }
+    }
+
+    if (!parsed) throw new Error("AI returned invalid JSON (all parsers failed)");
 
     const slug = slugify(parsed.title) + "-" + Math.random().toString(36).slice(2, 7);
 
