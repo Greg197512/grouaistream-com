@@ -200,8 +200,6 @@ export default function AdSubmission() {
                 </div>
               </div>
 
-              <div className="p-6">
-
               <div className="grid gap-3">
                 {[
                   { label: "Numer konta (IBAN)", value: REVOLUT_IBAN, key: "iban", highlight: true },
