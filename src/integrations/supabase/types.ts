@@ -14,6 +14,147 @@ export type Database = {
   }
   public: {
     Tables: {
+      ad_campaigns: {
+        Row: {
+          ad_description: string
+          ad_image_url: string | null
+          ad_title: string
+          ad_url: string
+          amount_eur: number
+          blog_post_id: string | null
+          company_name: string
+          contact_email: string
+          created_at: string
+          expires_at: string
+          id: string
+          industry: string | null
+          lead_id: string | null
+          metadata: Json | null
+          payment_confirmed_at: string | null
+          payment_confirmed_by: string | null
+          payment_deadline: string
+          payment_reference: string | null
+          payment_status: string
+          publish_status: string
+          updated_at: string
+        }
+        Insert: {
+          ad_description: string
+          ad_image_url?: string | null
+          ad_title: string
+          ad_url: string
+          amount_eur?: number
+          blog_post_id?: string | null
+          company_name: string
+          contact_email: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          industry?: string | null
+          lead_id?: string | null
+          metadata?: Json | null
+          payment_confirmed_at?: string | null
+          payment_confirmed_by?: string | null
+          payment_deadline?: string
+          payment_reference?: string | null
+          payment_status?: string
+          publish_status?: string
+          updated_at?: string
+        }
+        Update: {
+          ad_description?: string
+          ad_image_url?: string | null
+          ad_title?: string
+          ad_url?: string
+          amount_eur?: number
+          blog_post_id?: string | null
+          company_name?: string
+          contact_email?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          industry?: string | null
+          lead_id?: string | null
+          metadata?: Json | null
+          payment_confirmed_at?: string | null
+          payment_confirmed_by?: string | null
+          payment_deadline?: string
+          payment_reference?: string | null
+          payment_status?: string
+          publish_status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ad_campaigns_blog_post_id_fkey"
+            columns: ["blog_post_id"]
+            isOneToOne: false
+            referencedRelation: "seo_blog_posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ad_campaigns_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "ad_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ad_leads: {
+        Row: {
+          company_name: string | null
+          contacted_at: string | null
+          country: string | null
+          created_at: string
+          email: string
+          id: string
+          industry: string | null
+          metadata: Json | null
+          notes: string | null
+          outreach_token: string
+          reply_received_at: string | null
+          source: string
+          status: string
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          company_name?: string | null
+          contacted_at?: string | null
+          country?: string | null
+          created_at?: string
+          email: string
+          id?: string
+          industry?: string | null
+          metadata?: Json | null
+          notes?: string | null
+          outreach_token?: string
+          reply_received_at?: string | null
+          source?: string
+          status?: string
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          company_name?: string | null
+          contacted_at?: string | null
+          country?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          industry?: string | null
+          metadata?: Json | null
+          notes?: string | null
+          outreach_token?: string
+          reply_received_at?: string | null
+          source?: string
+          status?: string
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: []
+      }
       admin_marquee_messages: {
         Row: {
           created_at: string
@@ -2141,6 +2282,11 @@ export type Database = {
     }
     Functions: {
       acknowledge_payout: { Args: { _detail_id: string }; Returns: Json }
+      ad_outreach_daily_count: { Args: never; Returns: number }
+      admin_confirm_ad_payment: {
+        Args: { _campaign_id: string; _reference?: string }
+        Returns: Json
+      }
       admin_create_weekend_challenge: {
         Args: {
           _activity_type: string
@@ -2150,6 +2296,10 @@ export type Database = {
           _target_count: number
           _title: string
         }
+        Returns: Json
+      }
+      admin_remove_ad_campaign: {
+        Args: { _campaign_id: string }
         Returns: Json
       }
       admin_topup_tip_credits: {
@@ -2182,6 +2332,7 @@ export type Database = {
           subscription_status: string
         }[]
       }
+      expire_unpaid_ad_campaigns: { Args: never; Returns: number }
       get_active_weekend_challenge: { Args: never; Returns: Json }
       get_admin_cost_overview: { Args: never; Returns: Json }
       get_admin_financial_overview: { Args: never; Returns: Json }
