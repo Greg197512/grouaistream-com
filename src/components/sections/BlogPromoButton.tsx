@@ -14,8 +14,9 @@ interface LatestPost {
 
 const LONG_PRESS_MS = 600;
 
+const EXTERNAL_BLOG_URL = "https://lovable.dev/projects/462bddcb-d545-4f42-bc51-5f437cb12bbe";
+
 export const BlogPromoButton = () => {
-  const navigate = useNavigate();
   const { t } = useLanguage();
   const [post, setPost] = useState<LatestPost | null>(null);
   const [loading, setLoading] = useState(true);
