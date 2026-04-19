@@ -375,10 +375,46 @@ export const HeroSection = () => {
                 {t("hero.startListening")}
               </Button>
             </motion.div>
-            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-              <Button size="lg" variant="outline" className="groove-gradient-border hover:bg-muted gap-2 rounded-full px-6 h-14" onClick={() => navigate("/radio-live")}>
-                <Radio className="h-5 w-5" />
-                {t("hero.liveRadio")}
+            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="relative">
+              {/* Iskierki unoszące się znad przycisku */}
+              <div className="pointer-events-none absolute -inset-x-2 -top-8 bottom-0 overflow-visible" aria-hidden="true">
+                {Array.from({ length: 14 }).map((_, i) => {
+                  const left = (i / 14) * 100 + (Math.random() * 8 - 4);
+                  const size = 1.5 + Math.random() * 2.5;
+                  const delay = Math.random() * 4;
+                  const duration = 2.2 + Math.random() * 2.8;
+                  const drift = (Math.random() - 0.5) * 30;
+                  const hue =
+                    Math.random() > 0.6
+                      ? "hsl(38 100% 65%)"
+                      : Math.random() > 0.3
+                      ? "hsl(24 100% 60%)"
+                      : "hsl(14 100% 57%)";
+                  return (
+                    <span
+                      key={`liveradio-spark-${i}`}
+                      className="liveradio-spark absolute rounded-full"
+                      style={{
+                        left: `${left}%`,
+                        width: `${size}px`,
+                        height: `${size}px`,
+                        background: hue,
+                        boxShadow: `0 0 ${size * 4}px ${hue}`,
+                        animationDelay: `${delay}s`,
+                        animationDuration: `${duration}s`,
+                        ["--drift" as string]: `${drift}px`,
+                      }}
+                    />
+                  );
+                })}
+              </div>
+              <Button
+                size="lg"
+                className="liveradio-burning-btn relative gap-2 rounded-full px-6 h-14 font-semibold text-base text-primary-foreground border-0 overflow-hidden"
+                onClick={() => navigate("/radio-live")}
+              >
+                <Radio className="h-5 w-5 relative z-10" />
+                <span className="relative z-10">{t("hero.liveRadio")}</span>
               </Button>
             </motion.div>
             <BlogPromoButton />
