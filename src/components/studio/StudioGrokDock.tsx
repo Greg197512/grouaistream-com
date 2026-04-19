@@ -44,7 +44,7 @@ const STORAGE_KEY = "studio_grok_dock_pos_h";
 
 export const StudioGrokDock = () => {
   const { user } = useAuth();
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
 
   // Position (draggable)
   const [pos, setPos] = useState<{ x: number; y: number }>(() => {
@@ -253,6 +253,19 @@ export const StudioGrokDock = () => {
 
   return (
     <>
+      {/* Floating launcher */}
+      {!open && (
+        <motion.button
+          onClick={() => setOpen(true)}
+          className="fixed bottom-24 right-6 z-40 h-14 w-14 rounded-full bg-gradient-to-br from-primary via-purple-500 to-pink-500 shadow-2xl shadow-primary/40 flex items-center justify-center"
+          whileHover={{ scale: 1.1, rotate: 8 }}
+          whileTap={{ scale: 0.95 }}
+          aria-label="Otwórz GrouAI Studio Chat"
+        >
+          <Sparkles className="h-6 w-6 text-white" />
+          <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-emerald-400 animate-pulse ring-2 ring-background" />
+        </motion.button>
+      )}
 
       <AnimatePresence>
         {open && (
