@@ -18,7 +18,13 @@ import { TrackMixer } from "./TrackMixer";
 import { VoiceRecorder } from "./VoiceRecorder";
 import { uploadToR2 } from "@/lib/r2Upload";
 
-type AIEngine = "our_ai" | "elevenlabs";
+type AIEngine = "our_ai" | "suno" | "elevenlabs";
+
+const ENGINES: { id: AIEngine; label: string; backend: "auto" | "suno" | "elevenlabs" }[] = [
+  { id: "our_ai", label: "Nasz AI", backend: "auto" },
+  { id: "suno", label: "Suno", backend: "suno" },
+  { id: "elevenlabs", label: "ElevenLabs", backend: "elevenlabs" },
+];
 type Msg = { role: "user" | "assistant"; content: string; meta?: any };
 
 interface LibTrack {
@@ -154,16 +160,31 @@ export const StudioGrokDock = () => {
     ).join("\n");
     const fullText = [text.trim(), attachLines].filter(Boolean).join("\n\n");
 
-    // Fingerprint shortcut
-    if (text.includes("moich ostatnich 10") || text.includes("moje top 10") || text.includes("ulubionych — weź mój")) {
+    // === ROUTING: jeśli prompt brzmi jak "wygeneruj" → studio-generate, inaczej chat
+    const lower = text.toLowerCase();
+    const isGenerate =
+      text.includes("moich ostatnich 10") || text.includes("moje top 10") || text.includes("ulubionych — weź mój") ||
+      /\b(wygenerz|wygeneruj|stwórz|zr[oó]b|skomponuj|nagraj|generate|create|make)\b/.test(lower) ||
+      /\b(banger|utw[oó]r|piosenk|track|song|beat|melodi)/.test(lower);
+
+    if (isGenerate) {
       setMessages((p) => [...p, { role: "user", content: fullText }]);
       setInput(""); setAttachments([]); setStreaming(true);
       try {
+        const useFingerprint = text.includes("moich ostatnich 10") || text.includes("moje top 10") || text.includes("ulubionych — weź mój");
+        const backend = ENGINES.find((e) => e.id === engine)?.backend || "auto";
         const { data: s } = await supabase.auth.getSession();
         const r = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/studio-generate`, {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${s?.session?.access_token}`, apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
-          body: JSON.stringify({ use_fingerprint: true, engine: engine === "elevenlabs" ? "elevenlabs" : "auto", duration_seconds: 30 }),
+          body: JSON.stringify({
+            prompt: text,
+            use_fingerprint: useFingerprint,
+            engine: backend,
+            quality: backend === "auto" ? "standard" : "premium",
+            duration_seconds: 30,
+            instrumental: backend === "auto",
+          }),
         });
         const d = await r.json();
         if (!r.ok) {
@@ -175,8 +196,9 @@ export const StudioGrokDock = () => {
             fp.dominant_mood && `**Mood:** ${fp.dominant_mood}`,
             fp.avg_bpm && `**BPM:** ${fp.avg_bpm}`,
           ].filter(Boolean).join(" · ") : "";
-          setMessages((p) => [...p, { role: "assistant", content: `🎧 **Generuję** (silnik: ${d.engine})\n\n${sum}\n\n_Pojawi się w historii za 30-60s._` }]);
-          toast.success(`Generuję przez ${d.engine}`);
+          const audio = d.audio_url ? `\n\n🎵 [Posłuchaj](${d.audio_url})` : "\n\n_Pojawi się w historii za 30-60s._";
+          setMessages((p) => [...p, { role: "assistant", content: `🎧 **Generuję** (silnik: \`${d.engine}\`)${sum ? "\n\n" + sum : ""}${audio}` }]);
+          toast.success(`Silnik: ${d.engine}`);
         }
       } catch (e: any) {
         toast.error(e?.message || "Błąd");
@@ -279,26 +301,31 @@ export const StudioGrokDock = () => {
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
               </div>
 
-              {/* Engine switch inline in header */}
+              {/* Engine segmented control + close */}
               <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setEngine("our_ai")}
-                  className={`text-[10px] font-medium transition-colors ${engine === "our_ai" ? "text-primary" : "text-muted-foreground"}`}
+                <div className="flex items-center rounded-full border border-primary/30 bg-background/50 p-0.5">
+                  {ENGINES.map((e) => (
+                    <button
+                      key={e.id}
+                      type="button"
+                      onClick={() => setEngine(e.id)}
+                      className={`px-2 py-0.5 text-[10px] font-semibold rounded-full transition-all ${
+                        engine === e.id
+                          ? "bg-gradient-to-r from-primary to-purple-500 text-primary-foreground shadow"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {e.label}
+                    </button>
+                  ))}
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 rounded-full hover:bg-destructive/20 hover:text-destructive"
+                  onClick={() => setOpen(false)}
+                  aria-label="Zamknij"
                 >
-                  Nasz AI
-                </button>
-                <Switch
-                  checked={engine === "elevenlabs"}
-                  onCheckedChange={(c) => setEngine(c ? "elevenlabs" : "our_ai")}
-                  className="scale-75"
-                />
-                <button
-                  onClick={() => setEngine("elevenlabs")}
-                  className={`text-[10px] font-medium transition-colors ${engine === "elevenlabs" ? "text-primary" : "text-muted-foreground"}`}
-                >
-                  ElevenLabs
-                </button>
-                <Button variant="ghost" size="icon" className="h-6 w-6 ml-1" onClick={() => setOpen(false)}>
                   <X className="h-3.5 w-3.5" />
                 </Button>
               </div>

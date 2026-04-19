@@ -66,6 +66,7 @@ import { LikesOverview } from "@/components/admin/LikesOverview";
 import { SEODashboard } from "@/components/admin/SEODashboard";
 import { TikTokStoriesPanel } from "@/components/admin/TikTokStoriesPanel";
 import { TikTokReelsStudio } from "@/components/admin/TikTokReelsStudio";
+import { AIBuilderProgress } from "@/components/admin/AIBuilderProgress";
 
 interface UserStats {
   totalUsers: number;
