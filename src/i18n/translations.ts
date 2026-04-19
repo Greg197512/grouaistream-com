@@ -1271,7 +1271,7 @@ const pl: TranslationKeys = {
   "legal.terms.s7.p2": "2. Spory rozstrzygane są przez sąd właściwy dla siedziby operatora lub jego miejsca zamieszkania (do czasu formalnej rejestracji).",
   "legal.terms.s8.title": "§8. Zmiany Regulaminu",
   "legal.terms.s8.p1": "1. Operator zastrzega sobie prawo do zmiany niniejszego Regulaminu w związku ze zmianą statusu rejestracyjnego, rozwojem funkcjonalności Serwisu lub zmianami prawnymi.",
-  "legal.terms.s8.p2": "2. O zmianach użytkownicy zostaną powiadomieni z 14-dniowym wyprzedzeniem. Dalsze korzystanie z Serwisu po tym terminie oznacza akceptację zmian.",
+  "legal.terms.s8.p2": "2. O zmianach użytkownicy zostaną powiadomieni z 14-dniowym wyprzedzeniem. Dalsze korzystanie z Serwisu po tym terminie oznacza akceptację zmian. PŁATNOŚCI I MERCHANT OF RECORD: Proces zamówienia jest realizowany przez naszego internetowego sprzedawcę Paddle.com Market Limited. Paddle.com jest Sprzedawcą Rejestrowym (Merchant of Record) dla wszystkich naszych zamówień i obsługuje obsługę klienta, fakturowanie, podatki oraz zwroty (refunds). Plany płatne (Pro 9.99€/mc, Ultimate 19.99€/mc) są pobierane miesięcznie z góry i odnawiają się automatycznie do anulowania. Oferujemy 30-dniową gwarancję zwrotu pieniędzy (refund) — szczegóły w zakładce Refunds. Pełne warunki: https://www.paddle.com/legal/checkout-buyer-terms",
 
   // Privacy
   "legal.priv.heading": "Polityka Prywatności",
