@@ -68,6 +68,157 @@ export type Database = {
         }
         Relationships: []
       }
+      blog_affiliate_links: {
+        Row: {
+          brand: string
+          category: string
+          click_count: number
+          created_at: string
+          description: string | null
+          display_text: string
+          id: string
+          is_active: boolean
+          keywords: string[]
+          priority: number
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          brand: string
+          category?: string
+          click_count?: number
+          created_at?: string
+          description?: string | null
+          display_text: string
+          id?: string
+          is_active?: boolean
+          keywords?: string[]
+          priority?: number
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          brand?: string
+          category?: string
+          click_count?: number
+          created_at?: string
+          description?: string | null
+          display_text?: string
+          id?: string
+          is_active?: boolean
+          keywords?: string[]
+          priority?: number
+          updated_at?: string
+          url?: string
+        }
+        Relationships: []
+      }
+      blog_comments: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          is_hidden: boolean
+          parent_id: string | null
+          post_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          is_hidden?: boolean
+          parent_id?: string | null
+          post_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          is_hidden?: boolean
+          parent_id?: string | null
+          post_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blog_comments_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "blog_comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "blog_comments_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "seo_blog_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      blog_post_likes: {
+        Row: {
+          created_at: string
+          id: string
+          post_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          post_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          post_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blog_post_likes_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "seo_blog_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      blog_post_saves: {
+        Row: {
+          id: string
+          post_id: string
+          saved_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          post_id: string
+          saved_at?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          post_id?: string
+          saved_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blog_post_saves_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "seo_blog_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       creator_earnings: {
         Row: {
           amount: number
@@ -1978,6 +2129,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      increment_blog_view: { Args: { _post_id: string }; Returns: undefined }
       log_seo_activity: {
         Args: {
           _action_type: string
