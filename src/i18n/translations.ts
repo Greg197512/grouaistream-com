@@ -2152,7 +2152,7 @@ const en: TranslationKeys = {
   "legal.priv.s7.title": "7. Security — we take it seriously",
   "legal.priv.s7.p1": "TLS/SSL encryption on every connection, bcrypt-hashed passwords (even we can't see them), anonymized analytics, regular security audits. Your data stays in the EU and doesn't travel unprotected.",
   "legal.priv.s8.title": "8. Who we work with",
-  "legal.priv.s8.p1": "Only trusted infrastructure providers (hosting, storage), strictly under signed Data Processing Agreements (DPA) and Standard Contractual Clauses (SCC). The list is open — ask us for the full version.",
+  "legal.priv.s8.p1": "Only trusted infrastructure providers (hosting, storage), strictly under signed Data Processing Agreements (DPA) and Standard Contractual Clauses (SCC). PAYMENT DATA & PADDLE: All payments (Pro/Ultimate subscriptions, coffee tips) are processed by Paddle.com Market Limited (UK), acting as our Merchant of Record and independent data controller for payment data. Paddle processes your card details, billing address, email, and IP address for payment processing, fraud prevention, invoicing and tax compliance. Karon never sees or stores your full card number — we only receive limited transaction metadata (transaction ID, amount, plan, customer ID, country) needed to provision your subscription. Paddle's privacy notice: https://www.paddle.com/legal/privacy",
 
   // Copyright
   "legal.copy.heading": "Copyright & Licensing — Creator-Friendly",
