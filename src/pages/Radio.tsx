@@ -1,10 +1,10 @@
-import { useEffect } from "react";
 import { motion } from "framer-motion";
 import { Radio as RadioIcon, Wifi, ExternalLink } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Link } from "react-router-dom";
+import { BuyCoffeeButton } from "@/components/payments/BuyCoffeeButton";
 
 const PLAYER_URL = "https://play.radioking.io/grouarock-radio1";
 
@@ -35,12 +35,37 @@ const Radio = () => {
             <iframe src={PLAYER_URL} className="w-full border-0" style={{ height: "160px" }} allow="autoplay; encrypted-media" title="GrouaRadio Player" />
           </div>
 
-          <div className="flex justify-center mt-4 gap-3">
+          <div className="flex justify-center mt-4 gap-3 flex-wrap">
             <Button onClick={() => window.open(PLAYER_URL, "_blank")} variant="ghost" size="sm" className="gap-2 text-xs text-muted-foreground hover:text-foreground">
               <ExternalLink className="h-3 w-3" />
               {t("radio.openFullPlayer")}
             </Button>
+            <BuyCoffeeButton
+              variant="outline"
+              size="sm"
+              className="text-xs border-primary/40 text-primary hover:bg-primary/10"
+              label="Postaw nam kawę ☕"
+            />
           </div>
+
+          {/* Mini coffee CTA */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+            className="mt-6 rounded-xl border border-primary/20 bg-gradient-to-br from-primary/5 to-amber-500/5 p-4 text-center"
+          >
+            <div className="text-2xl mb-1">☕</div>
+            <p className="text-xs text-muted-foreground mb-2">
+              Lubisz GrouaRadio? Postaw nam kawę i graj dalej.
+            </p>
+            <BuyCoffeeButton
+              variant="default"
+              size="sm"
+              className="bg-gradient-to-r from-primary to-amber-500 text-primary-foreground"
+              label="Wspomagaj projekt"
+            />
+          </motion.div>
 
           {/* SEO crawlable links */}
           <nav className="flex flex-wrap justify-center gap-3 mt-6 text-xs" aria-label="Radio navigation">

@@ -14,12 +14,13 @@ interface BuyCoffeeButtonProps {
   variant?: "default" | "ghost" | "outline";
   size?: "default" | "sm" | "lg" | "icon";
   className?: string;
+  label?: string;
 }
 
 const COFFEE_OPTIONS = [
-  { id: "grouai_coffee_small", amount: 3, label: "Mała kawa", emoji: "☕" },
-  { id: "grouai_coffee_medium", amount: 5, label: "Duża kawa", emoji: "☕☕" },
-  { id: "grouai_coffee_large", amount: 10, label: "Cały dzbanek", emoji: "☕☕☕" },
+  { id: "grouai_coffee_black", amount: 1, label: "Czarna kawa", emoji: "☕", desc: "Mały gest, wielka moc" },
+  { id: "grouai_coffee_latte", amount: 3, label: "Latte", emoji: "☕🥛", desc: "Aksamitne wsparcie" },
+  { id: "grouai_coffee_irish", amount: 5, label: "Kawa irlandzka", emoji: "☕🥃", desc: "Z nutą whisky 🔥" },
 ];
 
 export function BuyCoffeeButton({
@@ -29,6 +30,7 @@ export function BuyCoffeeButton({
   variant = "outline",
   size = "sm",
   className,
+  label,
 }: BuyCoffeeButtonProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState<string | null>(null);
@@ -36,7 +38,7 @@ export function BuyCoffeeButton({
 
   const handleBuy = async (priceId: string) => {
     if (!user) {
-      toast.error("Zaloguj się, aby wesprzeć twórcę");
+      toast.error("Zaloguj się, aby postawić kawę");
       return;
     }
     setLoading(priceId);
@@ -68,7 +70,7 @@ export function BuyCoffeeButton({
         className={cn("gap-1.5", className)}
       >
         <Coffee className="h-4 w-4" />
-        <span className="hidden sm:inline">Kup kawę</span>
+        <span>{label || "Kup nam kawę"}</span>
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
@@ -76,10 +78,10 @@ export function BuyCoffeeButton({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Coffee className="h-5 w-5 text-primary" />
-              Wesprzyj {recipientName || "twórcę"}
+              Postaw kawę {recipientName ? `dla ${recipientName}` : "GrouAI"}
             </DialogTitle>
             <DialogDescription>
-              90% kwoty trafia bezpośrednio do twórcy. Płatność jednorazowa, bez subskrypcji.
+              Każda kawa pomaga nam budować coś większego. Płatność jednorazowa, bez subskrypcji.
             </DialogDescription>
           </DialogHeader>
 
@@ -95,13 +97,13 @@ export function BuyCoffeeButton({
                   <span className="text-2xl">{opt.emoji}</span>
                   <div>
                     <div className="font-semibold">{opt.label}</div>
-                    <div className="text-xs text-muted-foreground">${opt.amount}.00</div>
+                    <div className="text-xs text-muted-foreground">{opt.desc}</div>
                   </div>
                 </div>
                 {loading === opt.id ? (
                   <Loader2 className="h-5 w-5 animate-spin text-primary" />
                 ) : (
-                  <span className="text-lg font-bold text-primary">${opt.amount}</span>
+                  <span className="text-lg font-bold text-primary">{opt.amount}€</span>
                 )}
               </button>
             ))}
