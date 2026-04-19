@@ -91,6 +91,49 @@ const Legal = () => {
                 <p>{t("legal.terms.s8.p1")}</p>
                 <p>{t("legal.terms.s8.p2")}</p>
               </Section>
+
+              {/* Paddle MoR & Payment Terms — required for Paddle approval */}
+              <Section title="9. Payments, Subscriptions & Merchant of Record / Płatności i Sprzedawca">
+                <div className="p-4 rounded-lg bg-primary/10 border border-primary/20 mb-3">
+                  <p className="font-semibold text-primary text-sm">Merchant of Record</p>
+                  <p className="text-xs mt-2 text-foreground">
+                    <strong>EN:</strong> Our order process is conducted by our online reseller Paddle.com.
+                    Paddle.com is the Merchant of Record for all our orders. Paddle provides all customer
+                    service inquiries and handles returns, refunds, billing, invoicing and tax compliance.
+                  </p>
+                  <p className="text-xs mt-2 text-foreground">
+                    <strong>PL:</strong> Proces zamówienia jest realizowany przez naszego internetowego
+                    sprzedawcę Paddle.com. Paddle.com jest Sprzedawcą Rejestrowym (Merchant of Record)
+                    dla wszystkich zamówień, obsługuje zwroty, fakturowanie, podatki oraz zapytania
+                    klientów dotyczące płatności.
+                  </p>
+                </div>
+                <p>
+                  <strong>Subscriptions / Subskrypcje:</strong> Paid plans (Pro, Ultimate) are billed
+                  monthly in advance and renew automatically until cancelled. You may cancel any time
+                  via paddle.net or your account settings — access continues until the end of the
+                  current billing period. Subskrypcje są pobierane miesięcznie z góry i odnawiają
+                  się automatycznie do momentu anulowania.
+                </p>
+                <p>
+                  <strong>One-time purchases / Zakupy jednorazowe:</strong> Coffee tips and donations
+                  are non-recurring single charges processed by Paddle. Napiwki kawowe to płatności
+                  jednorazowe.
+                </p>
+                <p>
+                  <strong>Pricing & Taxes / Ceny i podatki:</strong> Prices are shown on the pricing
+                  and donation pages. Applicable taxes (VAT/sales tax) are calculated and collected
+                  by Paddle based on your billing location. Ceny zawierają lub doliczają podatek VAT
+                  zgodnie z lokalizacją kupującego.
+                </p>
+                <p>
+                  Detailed payment terms are governed by the{" "}
+                  <a href="https://www.paddle.com/legal/checkout-buyer-terms" target="_blank" rel="noopener noreferrer" className="text-primary underline">
+                    Paddle Checkout Buyer Terms
+                  </a>
+                  . Szczegółowe warunki płatności reguluje regulamin kupującego Paddle.
+                </p>
+              </Section>
             </div>
           </TabsContent>
 
