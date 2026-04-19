@@ -11,7 +11,8 @@ const corsHeaders = {
 interface GenerateRequest {
   prompt?: string;
   use_fingerprint?: boolean; // "Brzmiej jak moje top 10"
-  engine?: "auto" | "suno" | "elevenlabs"; // auto = router decyduje
+  engine?: "auto" | "musicgen" | "suno" | "elevenlabs"; // auto = router decyduje
+  quality?: "standard" | "premium"; // standard = MusicGen (tani), premium = Suno/ElevenLabs
   duration_seconds?: number;
   instrumental?: boolean;
 }
