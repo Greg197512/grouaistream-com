@@ -14,6 +14,7 @@ import { SubscriptionProvider } from "@/contexts/SubscriptionContext";
 import { AutoVoiceListener } from "@/components/player/AutoVoiceListener";
 import { PWAInstallPrompt } from "@/components/pwa/PWAInstallPrompt";
 import { TipWelcomeModal } from "@/components/modals/TipWelcomeModal";
+import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Search from "./pages/Search";
@@ -72,6 +73,7 @@ const AppShell = () => {
 
   return (
     <>
+      <PaymentTestModeBanner />
       <WelcomeOverlay />
       <TipWelcomeModal />
       <PWAInstallPrompt />
