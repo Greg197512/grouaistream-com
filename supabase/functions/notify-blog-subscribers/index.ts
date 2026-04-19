@@ -23,13 +23,18 @@ serve(async (req) => {
 
   try {
     const body = await req.json().catch(() => ({}));
-    const postId: string | undefined = body.post_id;
-    if (!postId) throw new Error("post_id required");
+    let postId: string | undefined = body.post_id;
+    const automationToken: string | undefined = body.automation_token || req.headers.get("x-automation-token") || undefined;
 
-    // Auth: must be admin
+    // Auth: either admin JWT OR automation token (for n8n cron)
     const authHeader = req.headers.get("Authorization");
     let triggeredBy: string | null = null;
-    if (authHeader) {
+    let triggerSource: "manual" | "automation" = "manual";
+
+    const expectedToken = Deno.env.get("NEWSLETTER_AUTOMATION_TOKEN");
+    if (automationToken && expectedToken && automationToken === expectedToken) {
+      triggerSource = "automation";
+    } else if (authHeader) {
       const userClient = createClient(
         Deno.env.get("SUPABASE_URL")!,
         Deno.env.get("SUPABASE_ANON_KEY")!,
@@ -48,6 +53,19 @@ serve(async (req) => {
       }
     } else {
       throw new Error("auth required");
+    }
+
+    // Auto-pick latest published post if no post_id provided (used by n8n cron)
+    if (!postId) {
+      const { data: latest } = await supabase
+        .from("seo_blog_posts")
+        .select("id")
+        .eq("is_published", true)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (!latest?.id) throw new Error("no published post available");
+      postId = latest.id as string;
     }
 
     // Load post + hook
