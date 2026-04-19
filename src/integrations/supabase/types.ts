@@ -1564,45 +1564,78 @@ export type Database = {
         Row: {
           category: string
           content: string
+          content_en: string | null
+          content_nl: string | null
+          content_ua: string | null
           cover_url: string | null
           created_at: string
           description: string
+          description_en: string | null
+          description_nl: string | null
+          description_ua: string | null
           generated_by_ai: boolean
           id: string
           is_published: boolean
           slug: string
           tags: string[] | null
           title: string
+          title_en: string | null
+          title_nl: string | null
+          title_ua: string | null
+          translation_status: string | null
+          translations_updated_at: string | null
           updated_at: string
           view_count: number
         }
         Insert: {
           category?: string
           content: string
+          content_en?: string | null
+          content_nl?: string | null
+          content_ua?: string | null
           cover_url?: string | null
           created_at?: string
           description: string
+          description_en?: string | null
+          description_nl?: string | null
+          description_ua?: string | null
           generated_by_ai?: boolean
           id?: string
           is_published?: boolean
           slug: string
           tags?: string[] | null
           title: string
+          title_en?: string | null
+          title_nl?: string | null
+          title_ua?: string | null
+          translation_status?: string | null
+          translations_updated_at?: string | null
           updated_at?: string
           view_count?: number
         }
         Update: {
           category?: string
           content?: string
+          content_en?: string | null
+          content_nl?: string | null
+          content_ua?: string | null
           cover_url?: string | null
           created_at?: string
           description?: string
+          description_en?: string | null
+          description_nl?: string | null
+          description_ua?: string | null
           generated_by_ai?: boolean
           id?: string
           is_published?: boolean
           slug?: string
           tags?: string[] | null
           title?: string
+          title_en?: string | null
+          title_nl?: string | null
+          title_ua?: string | null
+          translation_status?: string | null
+          translations_updated_at?: string | null
           updated_at?: string
           view_count?: number
         }
