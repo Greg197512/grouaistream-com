@@ -97,7 +97,7 @@ export const BlogPromoButton = () => {
       longPressFired.current = false;
       return;
     }
-    if (post) navigate(`/blog/${post.slug}`);
+    navigate("/blog");
   };
 
   if (loading || !post) return null;
