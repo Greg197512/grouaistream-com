@@ -715,6 +715,10 @@ export default function Admin() {
                   <Music className="h-4 w-4" />
                   Rolki TikTok 🎬
                 </TabsTrigger>
+                <TabsTrigger value="ai-builder" className="gap-2">
+                  <Activity className="h-4 w-4" />
+                  AI Builder 🤖
+                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="seo">
@@ -724,6 +728,10 @@ export default function Admin() {
               <TabsContent value="tiktok" className="space-y-6">
                 <TikTokReelsStudio />
                 <TikTokStoriesPanel />
+              </TabsContent>
+
+              <TabsContent value="ai-builder">
+                <AIBuilderProgress />
               </TabsContent>
 
               {/* Bonuses & Payouts Tab */}

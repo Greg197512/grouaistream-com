@@ -394,24 +394,24 @@ export const StudioGrokDock = () => {
                       className="border-b border-border/30 bg-card/40 overflow-hidden"
                     >
                       <div className="grid grid-cols-2 gap-1.5 p-2">
-                        <Button variant="outline" size="sm" className="h-auto flex-col gap-1 py-2 text-[10px]"
+                        <Button variant="outline" size="sm" className="h-auto flex-col gap-1 py-2 text-[10px] hover:border-primary/60 hover:bg-primary/5"
                           onClick={() => fileInputRef.current?.click()}>
-                          <Upload className="h-3.5 w-3.5 text-primary" />
+                          <Upload className="h-4 w-4 text-primary" />
                           Wgraj sample
                         </Button>
-                        <Button variant="outline" size="sm" className="h-auto flex-col gap-1 py-2 text-[10px]"
+                        <Button variant="outline" size="sm" className="h-auto flex-col gap-1 py-2 text-[10px] hover:border-primary/60 hover:bg-primary/5"
                           onClick={() => { setShowLibrary(true); loadLibrary(); }}>
-                          <Library className="h-3.5 w-3.5 text-purple-400" />
+                          <Library className="h-4 w-4 text-primary" />
                           Z biblioteki
                         </Button>
-                        <Button variant="outline" size="sm" className="h-auto flex-col gap-1 py-2 text-[10px]"
+                        <Button variant="outline" size="sm" className="h-auto flex-col gap-1 py-2 text-[10px] hover:border-primary/60 hover:bg-primary/5"
                           onClick={() => setShowMixer(true)}>
-                          <Blend className="h-3.5 w-3.5 text-pink-400" />
+                          <Blend className="h-4 w-4 text-primary" />
                           Mix A + B
                         </Button>
-                        <Button variant="outline" size="sm" className="h-auto flex-col gap-1 py-2 text-[10px]"
+                        <Button variant="outline" size="sm" className="h-auto flex-col gap-1 py-2 text-[10px] hover:border-primary/60 hover:bg-primary/5"
                           onClick={() => setShowVoice(true)}>
-                          <Mic className="h-3.5 w-3.5 text-emerald-400" />
+                          <Mic className="h-4 w-4 text-primary" />
                           Voice clone
                         </Button>
                       </div>
