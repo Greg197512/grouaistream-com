@@ -301,6 +301,26 @@ export const SEODashboard = () => {
             )}
             Uruchom wszystko
           </Button>
+          <Button
+            variant="outline"
+            disabled={!!running}
+            onClick={async () => {
+              setRunning("translate");
+              try {
+                const { data: r, error } = await supabase.functions.invoke("blog-translate", { body: { batch: true } });
+                if (error) throw error;
+                toast.success(`Przetłumaczono: ${r?.translated || 0} postów`, { description: "EN / NL / UA" });
+              } catch (e) {
+                toast.error("Błąd tłumaczenia: " + (e instanceof Error ? e.message : "unknown"));
+              } finally {
+                setRunning(null);
+              }
+            }}
+            className="gap-2 col-span-2 md:col-span-4 border-primary/40"
+          >
+            {running === "translate" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Globe className="h-4 w-4" />}
+            🌍 Przetłumacz blog (PL → EN/NL/UA) — batch 5 postów
+          </Button>
         </CardContent>
       </Card>
 
