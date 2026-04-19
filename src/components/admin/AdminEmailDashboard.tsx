@@ -73,8 +73,9 @@ export function AdminEmailDashboard({ stats, genreStats }: AdminEmailDashboardPr
   const [n8nWebhookUrl, setN8nWebhookUrl] = useState("");
   const [savingWebhook, setSavingWebhook] = useState(false);
   const [dispatching, setDispatching] = useState(false);
-  const [audience, setAudience] = useState<"all_users" | "blog_subscribers">("blog_subscribers");
-  const [lastDispatch, setLastDispatch] = useState<{ recipientCount: number; heroImageUrl: string | null; subject: string } | null>(null);
+  const [audience, setAudience] = useState<"all_users" | "blog_subscribers">("all_users");
+  const [dispatchMode, setDispatchMode] = useState<"direct" | "n8n">("direct");
+  const [lastDispatch, setLastDispatch] = useState<{ recipientCount: number; heroImageUrl: string | null; subject: string; queued?: number; errors?: number; mode?: string } | null>(null);
 
   useEffect(() => {
     (async () => {
