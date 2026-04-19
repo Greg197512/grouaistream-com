@@ -7,7 +7,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
-import { Copy, CheckCircle2, Sparkles, Clock, Building2, Home, Newspaper, Wallet, ShieldCheck, ExternalLink } from "lucide-react";
+import { Copy, CheckCircle2, Sparkles, Clock, Building2, Home, Newspaper, Wallet, ShieldCheck, ExternalLink, CreditCard, TrendingUp, Search, Zap, Globe } from "lucide-react";
+import { openPaddleCheckout } from "@/lib/paddle";
 
 const REVOLUT_IBAN = "LT32 5002 2576 7256 99";
 const REVOLUT_BIC = "REVOLT21";
@@ -55,6 +56,29 @@ export default function AdSubmission() {
       }
     })();
   }, [token]);
+
+  const [payingCard, setPayingCard] = useState(false);
+
+  const handlePayWithCard = async () => {
+    setPayingCard(true);
+    try {
+      await openPaddleCheckout({
+        priceId: "grouai_ad_30days_one",
+        customerEmail: form.contact_email || lead?.email,
+        customData: {
+          adToken: token || "",
+          companyName: form.company_name,
+          adTitle: form.ad_title,
+          postSlug: submitted?.slug || "",
+        },
+        successUrl: `${window.location.origin}/blog/${submitted?.slug || ""}?paid=1`,
+      });
+    } catch (e: any) {
+      toast({ title: "Nie udało się otworzyć płatności", description: e?.message || "Spróbuj przelewem Revolut.", variant: "destructive" });
+    } finally {
+      setPayingCard(false);
+    }
+  };
 
   const copy = (text: string, key: string) => {
     navigator.clipboard.writeText(text);
@@ -105,15 +129,62 @@ export default function AdSubmission() {
           <Card className="overflow-hidden border-2 border-primary/40 bg-gradient-to-br from-card via-card to-primary/5 shadow-[0_0_60px_-15px_hsl(var(--primary)/0.4)]">
             <div className="bg-primary/10 border-b border-primary/20 px-6 py-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <Wallet className="w-6 h-6 text-primary" />
+                <CreditCard className="w-6 h-6 text-primary" />
                 <div>
-                  <h2 className="text-xl font-bold">Płatność · Revolut</h2>
-                  <p className="text-xs text-muted-foreground">Bezpieczny przelew SEPA · Bez prowizji</p>
+                  <h2 className="text-xl font-bold">Płatność online · Karta / Apple Pay / Google Pay</h2>
+                  <p className="text-xs text-muted-foreground">Bezpieczna płatność w 30 sekund · Faktura na maila</p>
                 </div>
               </div>
               <div className="text-right">
                 <div className="text-3xl font-bold text-primary">{submitted.amount ?? AD_PRICE_EUR} €</div>
                 <div className="text-xs text-muted-foreground">jednorazowo · 30 dni</div>
+              </div>
+            </div>
+
+            <div className="p-6 space-y-5">
+              <div className="grid sm:grid-cols-2 gap-3">
+                {[
+                  { icon: TrendingUp, title: "Ruch SEO + długie życie", desc: "Twoja reklama to pełnoprawny artykuł zaindeksowany w Google — pracuje na Ciebie miesiącami, nawet po wygaśnięciu." },
+                  { icon: Search, title: "Indeksacja w 24h", desc: "Automatyczny IndexNow ping do Google i Bing zaraz po opłacie." },
+                  { icon: Zap, title: "Pasek „Promowane” na głównej", desc: "Tysiące słuchaczy GrouAI Stream zobaczy Twoją markę na stronie startowej." },
+                  { icon: Globe, title: "Backlink z autorytetu", desc: "Dofollow link z bloga muzycznego o szybko rosnącym DR — wzmocnienie SEO Twojej strony." },
+                ].map(b => (
+                  <div key={b.title} className="flex gap-3 p-3 rounded-lg bg-muted/30 border border-border/50">
+                    <b.icon className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                    <div>
+                      <div className="font-semibold text-sm">{b.title}</div>
+                      <div className="text-xs text-muted-foreground leading-relaxed">{b.desc}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <Button
+                onClick={handlePayWithCard}
+                disabled={payingCard}
+                size="lg"
+                className="w-full h-14 text-base font-bold bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg shadow-primary/30"
+              >
+                <CreditCard className="w-5 h-5 mr-2" />
+                {payingCard ? "Otwieram płatność…" : `Zapłać 5 € kartą — natychmiast aktywuj reklamę`}
+              </Button>
+              <p className="text-[11px] text-center text-muted-foreground">
+                Płatność obsługiwana przez Paddle (Merchant of Record) · Faktura VAT od razu na maila · Zwrot do 14 dni
+              </p>
+            </div>
+          </Card>
+
+          <Card className="overflow-hidden border border-border/60 bg-card/50">
+            <div className="bg-muted/30 border-b border-border/60 px-6 py-3 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Wallet className="w-5 h-5 text-muted-foreground" />
+                <div>
+                  <h3 className="text-sm font-bold">Lub przelewem SEPA · Revolut</h3>
+                  <p className="text-[11px] text-muted-foreground">Bez prowizji · Termin 24h</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-xl font-bold">{submitted.amount ?? AD_PRICE_EUR} €</div>
               </div>
             </div>
 
