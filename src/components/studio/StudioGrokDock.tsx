@@ -125,8 +125,8 @@ export const StudioGrokDock = () => {
     if (file.size > 25 * 1024 * 1024) { toast.error("Max 25MB"); return; }
     const t = toast.loading("Wgrywam sample...");
     try {
-      const url = await uploadToR2(file, user.id, "studio-samples");
-      setAttachments((p) => [...p, { kind: "sample", label: file.name, url }]);
+      const res = await uploadToR2({ file, folder: "studio-samples" });
+      setAttachments((p) => [...p, { kind: "sample", label: file.name, url: res.publicUrl }]);
       toast.success("Sample dodany do promptu", { id: t });
     } catch (e) {
       toast.error("Błąd uploadu", { id: t });
