@@ -43,6 +43,8 @@ import Unsubscribe from "./pages/Unsubscribe";
 import AlbumCreator from "./pages/AlbumCreator";
 import CreatorEarnings from "./pages/CreatorEarnings";
 import EarnWithUs from "./pages/EarnWithUs";
+import BlogIndex from "./pages/BlogIndex";
+import BlogPost from "./pages/BlogPost";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -113,6 +115,8 @@ const AppShell = () => {
           <Route path="/album-creator" element={<AlbumCreator />} />
           <Route path="/earnings" element={<CreatorEarnings />} />
           <Route path="/earn" element={<EarnWithUs />} />
+          <Route path="/blog" element={<BlogIndex />} />
+          <Route path="/blog/:slug" element={<BlogPost />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
