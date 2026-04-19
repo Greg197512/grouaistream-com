@@ -12,13 +12,14 @@ import { Copy, CheckCircle2, Sparkles, Clock, Building2, Home, Newspaper, Wallet
 const REVOLUT_IBAN = "LT32 5002 2576 7256 99";
 const REVOLUT_BIC = "REVOLT21";
 const REVOLUT_NAME = "GrouaRock / GrouAI Stream";
-const AMOUNT = "10,00 EUR";
+const AD_PRICE_EUR = 5;
+const AMOUNT = "5,00 EUR";
 
 export default function AdSubmission() {
   const { token } = useParams<{ token: string }>();
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState<{ slug: string; deadline: string } | null>(null);
+  const [submitted, setSubmitted] = useState<{ slug: string; deadline: string; amount?: number } | null>(null);
   const [lead, setLead] = useState<{ email?: string; company_name?: string; industry?: string } | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
 
@@ -33,7 +34,7 @@ export default function AdSubmission() {
   });
 
   useEffect(() => {
-    document.title = "Wrzuć reklamę na GrouAI Stream — 10€/miesiąc";
+    document.title = `Wrzuć reklamę na GrouAI Stream — ${AD_PRICE_EUR}€`;
     if (!token) { setLoading(false); return; }
     (async () => {
       try {
@@ -76,7 +77,7 @@ export default function AdSubmission() {
       toast({ title: "Błąd", description: error?.message || data?.error || "Spróbuj ponownie", variant: "destructive" });
       return;
     }
-    setSubmitted({ slug: data.post_slug, deadline: data.payment_deadline });
+    setSubmitted({ slug: data.post_slug, deadline: data.payment_deadline, amount: data.amount_eur });
   };
 
   if (loading) return <div className="min-h-screen bg-background flex items-center justify-center text-muted-foreground">Ładowanie…</div>;
@@ -84,7 +85,6 @@ export default function AdSubmission() {
   if (submitted) {
     return (
       <div className="min-h-screen bg-background text-foreground">
-        {/* Hero sukcesu */}
         <div className="relative overflow-hidden bg-gradient-to-br from-primary/30 via-primary/5 to-background border-b border-primary/20">
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/20 via-transparent to-transparent" />
           <div className="max-w-3xl mx-auto px-6 py-12 text-center relative z-10">
@@ -96,24 +96,23 @@ export default function AdSubmission() {
             </h1>
             <p className="text-lg text-muted-foreground max-w-xl mx-auto">
               Jest już widoczna na blogu <span className="text-primary font-semibold">GrouAI Stream</span>.
-              Zostań z nami przez ostatni krok — opłatę.
+              Teraz została już tylko płatność.
             </p>
           </div>
         </div>
 
         <div className="max-w-3xl mx-auto px-6 py-10 space-y-6">
-          {/* BRAMKA PŁATNICZA */}
           <Card className="overflow-hidden border-2 border-primary/40 bg-gradient-to-br from-card via-card to-primary/5 shadow-[0_0_60px_-15px_hsl(var(--primary)/0.4)]">
             <div className="bg-primary/10 border-b border-primary/20 px-6 py-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Wallet className="w-6 h-6 text-primary" />
                 <div>
-                  <h2 className="text-xl font-bold">Bramka płatności · Revolut</h2>
+                  <h2 className="text-xl font-bold">Płatność · Revolut</h2>
                   <p className="text-xs text-muted-foreground">Bezpieczny przelew SEPA · Bez prowizji</p>
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-3xl font-bold text-primary">10 €</div>
+                <div className="text-3xl font-bold text-primary">{submitted.amount ?? AD_PRICE_EUR} €</div>
                 <div className="text-xs text-muted-foreground">jednorazowo · 30 dni</div>
               </div>
             </div>
@@ -166,12 +165,11 @@ export default function AdSubmission() {
 
               <div className="flex items-center gap-2 mt-5 text-xs text-muted-foreground">
                 <ShieldCheck className="w-4 h-4 text-primary" />
-                Płatność weryfikowana ręcznie w ciągu 1h roboczej. Otrzymasz email z potwierdzeniem.
+                Na maila wysłaliśmy pełne podsumowanie zgłoszenia razem z linkiem do reklamy.
               </div>
             </div>
           </Card>
 
-          {/* LINKI */}
           <div className="grid sm:grid-cols-2 gap-4">
             <Button asChild variant="outline" size="lg" className="h-auto py-4 justify-start group">
               <a href={`/blog/${submitted.slug}`} target="_blank" rel="noopener noreferrer">
@@ -216,8 +214,6 @@ export default function AdSubmission() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      {/* Hero */}
-      {/* Top nav */}
       <div className="border-b border-border bg-background/80 backdrop-blur sticky top-0 z-20">
         <div className="max-w-5xl mx-auto px-6 py-3 flex items-center justify-between">
           <Link to="/" className="font-bold text-lg tracking-tight hover:text-primary transition-colors">
@@ -245,12 +241,11 @@ export default function AdSubmission() {
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
             Dotrzyj do tysięcy słuchaczy, twórców i odbiorców muzyki nowej generacji.
             <br />
-            <strong className="text-foreground">10 € jednorazowo · 30 dni publikacji · 24h na opłatę po dodaniu</strong>
+            <strong className="text-foreground">{AD_PRICE_EUR} € jednorazowo · 30 dni publikacji · 24h na opłatę po dodaniu</strong>
           </p>
         </div>
       </div>
 
-      {/* Formularz */}
       <div className="max-w-3xl mx-auto px-6 py-12">
         <Card className="p-6 md:p-8 border-border">
           <div className="flex items-center gap-2 mb-6">
@@ -302,9 +297,9 @@ export default function AdSubmission() {
               <strong className="text-primary">Jak to działa:</strong>
               <ol className="list-decimal pl-5 mt-2 space-y-1 text-muted-foreground">
                 <li>Wysyłasz formularz — reklama publikuje się natychmiast na blogu</li>
-                <li>W kolejnym kroku otrzymasz dane do przelewu Revolut (10 €)</li>
+                <li>W kolejnym kroku dostajesz dane do płatności Revolut ({AD_PRICE_EUR} €)</li>
+                <li>Na email dostajesz od razu pełne podsumowanie wysłanego zgłoszenia</li>
                 <li>Masz 24h na opłatę — w przeciwnym razie reklama zostanie usunięta</li>
-                <li>Po opłacie reklama jest aktywna przez 30 dni</li>
               </ol>
             </div>
 
