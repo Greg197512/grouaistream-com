@@ -1871,6 +1871,128 @@ export type Database = {
         }
         Relationships: []
       }
+      tiktok_reel_templates: {
+        Row: {
+          app_route: string | null
+          created_at: string
+          duration_seconds: number
+          feature_name: string
+          hook: string
+          id: string
+          is_active: boolean
+          last_used_at: string | null
+          outro: string
+          queue_order: number
+          screenshot_paths: string[]
+          slug: string
+          title: string
+          updated_at: string
+          used_count: number
+          voiceover_script: string
+        }
+        Insert: {
+          app_route?: string | null
+          created_at?: string
+          duration_seconds?: number
+          feature_name: string
+          hook: string
+          id?: string
+          is_active?: boolean
+          last_used_at?: string | null
+          outro?: string
+          queue_order?: number
+          screenshot_paths?: string[]
+          slug: string
+          title: string
+          updated_at?: string
+          used_count?: number
+          voiceover_script: string
+        }
+        Update: {
+          app_route?: string | null
+          created_at?: string
+          duration_seconds?: number
+          feature_name?: string
+          hook?: string
+          id?: string
+          is_active?: boolean
+          last_used_at?: string | null
+          outro?: string
+          queue_order?: number
+          screenshot_paths?: string[]
+          slug?: string
+          title?: string
+          updated_at?: string
+          used_count?: number
+          voiceover_script?: string
+        }
+        Relationships: []
+      }
+      tiktok_reels: {
+        Row: {
+          audio_url: string | null
+          captions: Json
+          created_at: string
+          duration_seconds: number
+          feature_name: string
+          generated_by: string | null
+          id: string
+          language: string
+          metadata: Json | null
+          screenshot_urls: string[]
+          status: string
+          template_id: string | null
+          title: string
+          updated_at: string
+          video_url: string | null
+          voiceover_script: string
+        }
+        Insert: {
+          audio_url?: string | null
+          captions?: Json
+          created_at?: string
+          duration_seconds?: number
+          feature_name: string
+          generated_by?: string | null
+          id?: string
+          language?: string
+          metadata?: Json | null
+          screenshot_urls?: string[]
+          status?: string
+          template_id?: string | null
+          title: string
+          updated_at?: string
+          video_url?: string | null
+          voiceover_script: string
+        }
+        Update: {
+          audio_url?: string | null
+          captions?: Json
+          created_at?: string
+          duration_seconds?: number
+          feature_name?: string
+          generated_by?: string | null
+          id?: string
+          language?: string
+          metadata?: Json | null
+          screenshot_urls?: string[]
+          status?: string
+          template_id?: string | null
+          title?: string
+          updated_at?: string
+          video_url?: string | null
+          voiceover_script?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tiktok_reels_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "tiktok_reel_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tiktok_stories: {
         Row: {
           artist_name: string
