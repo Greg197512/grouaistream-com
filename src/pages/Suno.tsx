@@ -21,7 +21,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { SunoGeneratePanel } from "@/components/studio/SunoGeneratePanel";
 import { VoiceRecorder } from "@/components/studio/VoiceRecorder";
 import { VoiceLibrary } from "@/components/studio/VoiceLibrary";
-import { FloatingMusicChat } from "@/components/studio/FloatingMusicChat";
 import { StudioGrokDock } from "@/components/studio/StudioGrokDock";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -1193,9 +1192,6 @@ const Suno = () => {
           </div>
         </DialogContent>
       </Dialog>
-
-      {/* Floating AI music chat — describe a track, ElevenLabs makes it */}
-      <FloatingMusicChat />
 
       {/* Wąskie, przeciągalne okno chat-Grok — wszystko w jednym */}
       <StudioGrokDock />
