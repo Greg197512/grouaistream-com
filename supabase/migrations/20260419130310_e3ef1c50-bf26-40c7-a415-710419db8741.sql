@@ -1,0 +1,1 @@
+UPDATE public.tracks SET cover_url = 'https://bvstvawnigyczvofzhps.supabase.co/storage/v1/object/public/music/covers/wyjebongo.png' WHERE id IN ('e12f7745-95ea-454a-be96-fdf47b530967', 'dac301a8-3b20-489f-bfb1-9e0dd0ee6baf');
