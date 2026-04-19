@@ -7,7 +7,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
-import { Copy, CheckCircle2, Sparkles, Clock, Building2, Home, Newspaper, Wallet, ShieldCheck, ExternalLink } from "lucide-react";
+import { Copy, CheckCircle2, Sparkles, Clock, Building2, Home, Newspaper, Wallet, ShieldCheck, ExternalLink, CreditCard, TrendingUp, Search, Zap, Globe } from "lucide-react";
+import { openPaddleCheckout } from "@/lib/paddle";
 
 const REVOLUT_IBAN = "LT32 5002 2576 7256 99";
 const REVOLUT_BIC = "REVOLT21";
@@ -55,6 +56,29 @@ export default function AdSubmission() {
       }
     })();
   }, [token]);
+
+  const [payingCard, setPayingCard] = useState(false);
+
+  const handlePayWithCard = async () => {
+    setPayingCard(true);
+    try {
+      await openPaddleCheckout({
+        priceId: "grouai_ad_30days_one",
+        customerEmail: form.contact_email || lead?.email,
+        customData: {
+          adToken: token || "",
+          companyName: form.company_name,
+          adTitle: form.ad_title,
+          postSlug: submitted?.slug || "",
+        },
+        successUrl: `${window.location.origin}/blog/${submitted?.slug || ""}?paid=1`,
+      });
+    } catch (e: any) {
+      toast({ title: "Nie udało się otworzyć płatności", description: e?.message || "Spróbuj przelewem Revolut.", variant: "destructive" });
+    } finally {
+      setPayingCard(false);
+    }
+  };
 
   const copy = (text: string, key: string) => {
     navigator.clipboard.writeText(text);
