@@ -1197,8 +1197,8 @@ const Suno = () => {
       {/* Floating AI music chat — describe a track, ElevenLabs makes it */}
       <FloatingMusicChat />
 
-      {/* Pełnowysoki chat AI — Nasz AI / ElevenLabs */}
-      <StudioChatPortal />
+      {/* Wąskie, przeciągalne okno chat-Grok — wszystko w jednym */}
+      <StudioGrokDock />
 
     </MainLayout>
   );
