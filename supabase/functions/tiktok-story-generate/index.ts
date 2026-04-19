@@ -1,8 +1,12 @@
-// Generuje 30s historię artysty: skrypt (Gemini) + audio (ElevenLabs) + 4 obrazy avatar AI
-// Cron uruchamia codziennie. Zwraca też gotowe captions zsynchronizowane z TTS.
+// Generuje 30s rolkę TikTok/Shorts na temat NAJNOWSZEGO posta bloga GrouAI Stream:
+// - skrypt (Gemini) na podstawie tytułu + treści posta
+// - głos DJ-ki (ElevenLabs TTS)
+// - podkład muzyczny pasujący do nastroju (ElevenLabs Music)
+// - 4 obrazy AI (Gemini image)
+// - captions zsynchronizowane z TTS
+// Bez outro reklamowego — sama treść.
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-import { encode as base64Encode } from "https://deno.land/std@0.168.0/encoding/base64.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -24,7 +28,6 @@ const R2_PUBLIC_BASE = "https://pub-46ecdc3a5ae341fcb16454d732eb9bcd.r2.dev";
 const DJ_VOICE_ID = "EXAVITQu4vr4xnSDxMaL";
 
 async function uploadToR2(key: string, data: Uint8Array, contentType: string): Promise<string> {
-  // Prosty PUT do R2 z AWS Sig V4
   const url = `${S3_ENDPOINT.replace(/\/$/, "")}/${S3_BUCKET}/${key}`;
   const now = new Date();
   const amzDate = now.toISOString().replace(/[:-]|\.\d{3}/g, "");
@@ -71,20 +74,35 @@ async function uploadToR2(key: string, data: Uint8Array, contentType: string): P
     const text = await res.text();
     throw new Error(`R2 upload failed [${res.status}]: ${text}`);
   }
-  // Zwracamy publiczny URL (r2.dev), a nie prywatny S3 endpoint — żeby przeglądarka mogła pobierać assety (CORS + dostęp).
   return `${R2_PUBLIC_BASE}/${key}`;
 }
 
-async function generateScript(artist: { name: string; era: string; genre: string; story_hook: string }) {
-  const sys = `Jesteś scenarzystą wirusowych rolek TikTok/Shorts o legendarnych muzykach. Tworzysz emocjonalne 30-sekundowe historie po polsku. Mówisz jak charyzmatyczna AI DJ-ka — dynamicznie, intymnie, z dramaturgią. Każda historia kończy się outro o GrouAIStream.`;
+function stripHtml(s: string): string {
+  return (s || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+}
 
-  const user = `Stwórz scenariusz 30-sekundowej rolki o artyście: ${artist.name} (${artist.era}, ${artist.genre}).
-Hook startowy: ${artist.story_hook}
+async function generateScript(post: { title: string; description: string; content: string; category: string; tags: string[] | null }) {
+  const excerpt = stripHtml(post.content).slice(0, 1800);
+  const tags = (post.tags || []).slice(0, 6).join(", ");
+
+  const sys = `Jesteś scenarzystą wirusowych rolek TikTok/Shorts o muzyce, AI i kulturze. Tworzysz emocjonalne 30-sekundowe historie po polsku na podstawie artykułów blogowych. Mówisz jak charyzmatyczna AI DJ-ka — dynamicznie, intymnie, z dramaturgią. Ekstrahujesz NAJBARDZIEJ INTRYGUJĄCY wątek z artykułu i robisz z niego rolkę. Nie reklamujesz, nie wymieniasz nazwy serwisu — tylko opowiadasz historię z artykułu.`;
+
+  const user = `Stwórz 30-sekundowy scenariusz rolki na podstawie artykułu z bloga GrouAI Stream:
+
+TYTUŁ: ${post.title}
+KATEGORIA: ${post.category}
+TAGI: ${tags || "brak"}
+OPIS: ${post.description}
+
+TREŚĆ ARTYKUŁU (skrót):
+${excerpt}
 
 WYMAGANIA:
-- Hook (pierwsze 3 sekundy, max 12 słów) — coś co zatrzyma scroll
-- Główna historia (20 sekund, ~55 słów) — zaskakujący fakt, dramat, emocja
-- Outro (7 sekund, ~22 słowa) — DOKŁADNIE ten format: "A wiesz gdzie najlepiej posłuchasz [artysty]? Na GrouAIStream — dziecku marki GrouaRock. Muzyka, która patrzy ci w oczy. grouaistream.com"
+- Hook (pierwsze 3 sekundy, max 12 słów) — coś, co zatrzyma scroll, najmocniejsza myśl/fakt z artykułu
+- Główna treść (~25 sekund, ~70 słów) — najciekawszy wątek z artykułu opowiedziany emocjonalnie
+- BEZ outro reklamowego — kończysz mocnym puentowym zdaniem na temat artykułu (~2s, max 8 słów)
+- mood: jedno słowo opisujące nastrój (np. "cinematic", "lo-fi chill", "dark electronic", "uplifting", "mysterious", "energetic")
+- 4 hyperrealistyczne prompty obrazów AI w pionie 9:16 pasujące do tematu artykułu (kinowe światło, neonowo-pomarańczowa atmosfera GrouAI Stream, bez tekstu na obrazach)
 
 Zwróć WYŁĄCZNIE JSON.`;
 
@@ -103,14 +121,15 @@ Zwróć WYŁĄCZNIE JSON.`;
             properties: {
               hook: { type: "string" },
               main: { type: "string" },
-              outro: { type: "string" },
+              outro: { type: "string", description: "Krótka, mocna puenta tematyczna (max 8 słów). NIE reklama." },
+              mood: { type: "string", description: "Jedno słowo: nastrój dla podkładu muzycznego" },
               image_prompts: {
                 type: "array",
                 items: { type: "string" },
-                description: "4 hyperrealistyczne prompty obrazów avatar AI DJ-ki + sceneria pasująca do artysty/ery, format pionowy 9:16, kinowe światło"
+                description: "4 prompty obrazów 9:16, tematycznie powiązane z artykułem",
               },
             },
-            required: ["hook", "main", "outro", "image_prompts"],
+            required: ["hook", "main", "outro", "mood", "image_prompts"],
             additionalProperties: false,
           },
         },
@@ -142,8 +161,27 @@ async function generateTTS(text: string, voiceId: string): Promise<Uint8Array> {
   return new Uint8Array(await res.arrayBuffer());
 }
 
+async function generateBackgroundMusic(mood: string, durationSeconds = 30): Promise<Uint8Array | null> {
+  try {
+    const prompt = `${mood} instrumental background music for a 30-second short-form video, modern production, subtle, no vocals, low-mid energy so a voiceover sits clearly on top, neon orange / dark cinematic GrouAI Stream vibe`;
+    const res = await fetch("https://api.elevenlabs.io/v1/music", {
+      method: "POST",
+      headers: { "xi-api-key": ELEVENLABS_API_KEY, "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt, music_length_ms: durationSeconds * 1000 }),
+    });
+    if (!res.ok) {
+      console.warn(`[tiktok-story] music gen failed ${res.status}: ${await res.text()}`);
+      return null;
+    }
+    return new Uint8Array(await res.arrayBuffer());
+  } catch (e) {
+    console.warn("[tiktok-story] music gen exception:", e);
+    return null;
+  }
+}
+
 async function generateImage(prompt: string): Promise<Uint8Array> {
-  const fullPrompt = `${prompt}. Vertical 9:16 aspect ratio, photorealistic 4K, cinematic lighting, neon orange and black GrouAIStream brand atmosphere, professional photography, depth of field, no text overlays.`;
+  const fullPrompt = `${prompt}. Vertical 9:16 aspect ratio, photorealistic 4K, cinematic lighting, neon orange and black GrouAI Stream brand atmosphere, professional photography, depth of field, no text overlays.`;
   const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
@@ -165,17 +203,17 @@ async function generateImage(prompt: string): Promise<Uint8Array> {
 }
 
 function buildCaptions(hook: string, main: string, outro: string) {
-  // Proste captions: dzielimy każdą część na ~3-słowne kawałki, równomiernie po czasie
   const parts = [
     { text: hook, start: 0, end: 3 },
-    { text: main, start: 3, end: 23 },
-    { text: outro, start: 23, end: 30 },
+    { text: main, start: 3, end: 28 },
+    { text: outro, start: 28, end: 30 },
   ];
   const captions: { text: string; start: number; end: number }[] = [];
   for (const p of parts) {
     const words = p.text.split(/\s+/).filter(Boolean);
     const chunks: string[] = [];
     for (let i = 0; i < words.length; i += 3) chunks.push(words.slice(i, i + 3).join(" "));
+    if (chunks.length === 0) continue;
     const dur = (p.end - p.start) / chunks.length;
     chunks.forEach((c, i) => captions.push({ text: c, start: p.start + i * dur, end: p.start + (i + 1) * dur }));
   }
@@ -188,31 +226,40 @@ serve(async (req) => {
   try {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // 1) Wybierz najmniej używanego aktywnego artystę
-    const { data: artistRow, error: artErr } = await supabase
-      .from("tiktok_artists_pool")
-      .select("*")
-      .eq("is_active", true)
-      .order("used_count", { ascending: true })
-      .order("last_used_at", { ascending: true, nullsFirst: true })
+    // 1) Najnowszy opublikowany post bloga
+    const { data: post, error: postErr } = await supabase
+      .from("seo_blog_posts")
+      .select("id, title, slug, description, content, category, tags")
+      .eq("is_published", true)
+      .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
 
-    if (artErr) throw artErr;
-    if (!artistRow) throw new Error("No active artist in pool");
+    if (postErr) throw postErr;
+    if (!post) throw new Error("No published blog post found");
 
-    console.log(`[tiktok-story] Generating story for ${artistRow.name}`);
+    console.log(`[tiktok-story] Generating story from blog post: "${post.title}"`);
 
-    // 2) Skrypt + prompty obrazów
-    const story = await generateScript(artistRow);
+    // 2) Skrypt + prompty obrazów + mood
+    const story = await generateScript(post);
     const fullText = `${story.hook}. ${story.main}. ${story.outro}`;
-
-    // 3) TTS
-    console.log("[tiktok-story] Generating TTS...");
-    const audio = await generateTTS(fullText, DJ_VOICE_ID);
     const storyId = crypto.randomUUID();
-    const audioKey = `tiktok/${storyId}/audio.mp3`;
+
+    // 3) TTS + Music równolegle
+    console.log(`[tiktok-story] Generating TTS + music (mood: ${story.mood})...`);
+    const [audio, music] = await Promise.all([
+      generateTTS(fullText, DJ_VOICE_ID),
+      generateBackgroundMusic(story.mood, 30),
+    ]);
+
+    const audioKey = `tiktok/${storyId}/voice.mp3`;
     const audioUrl = await uploadToR2(audioKey, audio, "audio/mpeg");
+
+    let musicUrl: string | null = null;
+    if (music) {
+      const musicKey = `tiktok/${storyId}/music.mp3`;
+      musicUrl = await uploadToR2(musicKey, music, "audio/mpeg");
+    }
 
     // 4) 4 obrazy równolegle
     console.log("[tiktok-story] Generating 4 images...");
@@ -231,9 +278,9 @@ serve(async (req) => {
       .from("tiktok_stories")
       .insert({
         id: storyId,
-        artist_name: artistRow.name,
-        era: artistRow.era,
-        genre: artistRow.genre,
+        artist_name: post.title.slice(0, 200),
+        era: post.category,
+        genre: story.mood,
         hook: story.hook,
         script: story.main,
         outro: story.outro,
@@ -242,20 +289,22 @@ serve(async (req) => {
         captions,
         voice_id: DJ_VOICE_ID,
         status: "ready",
-        metadata: { image_prompts: story.image_prompts },
+        blog_post_id: post.id,
+        metadata: {
+          source: "blog_post",
+          blog_post_slug: post.slug,
+          blog_post_title: post.title,
+          mood: story.mood,
+          music_url: musicUrl,
+          image_prompts: story.image_prompts,
+        },
       })
       .select()
       .single();
 
     if (insErr) throw insErr;
 
-    // 7) Aktualizuj pool
-    await supabase
-      .from("tiktok_artists_pool")
-      .update({ used_count: artistRow.used_count + 1, last_used_at: new Date().toISOString() })
-      .eq("id", artistRow.id);
-
-    return new Response(JSON.stringify({ success: true, story: inserted }), {
+    return new Response(JSON.stringify({ success: true, story: inserted, music_url: musicUrl }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e: any) {
