@@ -21,6 +21,10 @@ Deno.serve(async (req) => {
     switch (event.eventType) {
       case EventName.SubscriptionCreated:
       case EventName.SubscriptionUpdated:
+      case EventName.SubscriptionActivated:
+      case EventName.SubscriptionResumed:
+      case EventName.SubscriptionPastDue:
+      case EventName.SubscriptionPaused:
         await handleSubscription(event.data, env);
         break;
       case EventName.SubscriptionCanceled:
@@ -97,10 +101,22 @@ async function handleTransactionCompleted(data: any, env: PaddleEnv) {
   if (!priceExternal?.startsWith('grouai_coffee')) return;
 
   const userId = customData?.userId || null;
-  const recipientUserId = customData?.recipientUserId || null;
-  const recipientTrackId = customData?.recipientTrackId || null;
+  let recipientUserId: string | null = customData?.recipientUserId || null;
+  let recipientTrackId: string | null = customData?.recipientTrackId || null;
   const totalCents = Number(details?.totals?.grandTotal || item.price?.unitPrice?.amount || 0);
   const amount = totalCents / 100;
+
+  // Homepage tips: no explicit recipient → rotate to a random monetized track owner
+  if (!recipientUserId || !recipientTrackId) {
+    const { data: rnd } = await supabase.rpc('get_random_tippable_track');
+    if (rnd && rnd.length > 0) {
+      recipientTrackId = rnd[0].track_id;
+      recipientUserId = rnd[0].owner_user_id;
+      console.log('[payments-webhook] rotating tip → creator:', recipientUserId, 'track:', recipientTrackId);
+    } else {
+      console.log('[payments-webhook] no tippable tracks, tip stays with platform');
+    }
+  }
 
   await supabase.from('one_time_purchases').insert({
     user_id: userId,
@@ -115,14 +131,14 @@ async function handleTransactionCompleted(data: any, env: PaddleEnv) {
     environment: env,
   });
 
-  // Add to creator earnings if recipient is set
+  // Add to creator earnings if recipient resolved
   if (recipientUserId && recipientTrackId) {
     await supabase.from('creator_earnings').insert({
       user_id: recipientUserId,
       track_id: recipientTrackId,
       amount: amount * 0.9,
       earning_type: 'tip',
-      description: `Kup kawę ☕ ${amount.toFixed(2)}$ (90% twórcy)`,
+      description: `Kup kawę ☕ ${amount.toFixed(2)}€ (90% twórcy)`,
     });
   }
 
