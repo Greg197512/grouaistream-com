@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Newspaper, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,9 +15,8 @@ interface LatestPost {
 
 const LONG_PRESS_MS = 600;
 
-const EXTERNAL_BLOG_URL = "https://lovable.dev/projects/462bddcb-d545-4f42-bc51-5f437cb12bbe";
-
 export const BlogPromoButton = () => {
+  const navigate = useNavigate();
   const { t } = useLanguage();
   const [post, setPost] = useState<LatestPost | null>(null);
   const [loading, setLoading] = useState(true);
@@ -48,6 +48,7 @@ export const BlogPromoButton = () => {
   };
 
   const startPress = () => {
+    if (!post) return;
     longPressFired.current = false;
     setProgress(0);
 
@@ -59,14 +60,12 @@ export const BlogPromoButton = () => {
 
     pressTimer.current = window.setTimeout(async () => {
       longPressFired.current = true;
-      const url = EXTERNAL_BLOG_URL;
-      const title = post?.title ?? "GrouAI Stream Blog";
-      const description = post?.description ?? "";
-      const richMarkdown = `🔥 [${title}](${url})${description ? `\n\n${description}` : ""}`;
+      const url = `${window.location.origin}/blog/${post.slug}`;
+      const richMarkdown = `🔥 [${post.title}](${url})\n\n${post.description}`;
 
       try {
         if (navigator.clipboard && (window as any).ClipboardItem) {
-          const html = `<a href="${url}" style="font-weight:600;color:#ff6b1a;text-decoration:none">🔥 ${title}</a>${description ? `<br/><span style="color:#666">${description}</span>` : ""}`;
+          const html = `<a href="${url}" style="font-weight:600;color:#ff6b1a;text-decoration:none">🔥 ${post.title}</a><br/><span style="color:#666">${post.description}</span>`;
           const item = new ClipboardItem({
             "text/html": new Blob([html], { type: "text/html" }),
             "text/plain": new Blob([`${richMarkdown}\n${url}`], { type: "text/plain" }),
@@ -98,10 +97,10 @@ export const BlogPromoButton = () => {
       longPressFired.current = false;
       return;
     }
-    window.open(EXTERNAL_BLOG_URL, "_blank", "noopener,noreferrer");
+    if (post) navigate(`/blog/${post.slug}`);
   };
 
-  if (loading) return null;
+  if (loading || !post) return null;
 
   return (
     <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
