@@ -80,3 +80,12 @@ verify_jwt = false
 
 [functions.notify-blog-subscribers]
 verify_jwt = true
+
+[functions.ad-outreach-process]
+verify_jwt = false
+
+[functions.ad-campaign-submit]
+verify_jwt = false
+
+[functions.ad-lead-lookup]
+verify_jwt = false
