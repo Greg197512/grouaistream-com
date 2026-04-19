@@ -2995,7 +2995,7 @@ const nl: TranslationKeys = {
   "legal.terms.s7.p2": "2. Geschillen worden beslecht door de bevoegde rechtbank voor de vestigingsplaats of woonplaats van de beheerder (tot formele registratie).",
   "legal.terms.s8.title": "§8. Wijzigingen van Voorwaarden",
   "legal.terms.s8.p1": "1. De beheerder behoudt het recht om deze Voorwaarden te wijzigen wegens veranderingen in registratiestatus, ontwikkeling van de Dienst of wettelijke wijzigingen.",
-  "legal.terms.s8.p2": "2. Gebruikers worden 14 dagen van tevoren op de hoogte gesteld van wijzigingen. Voortgezet gebruik van de Dienst na deze periode betekent acceptatie van de wijzigingen.",
+  "legal.terms.s8.p2": "2. Gebruikers worden 14 dagen van tevoren op de hoogte gesteld van wijzigingen. Voortgezet gebruik van de Dienst na deze periode betekent acceptatie van de wijzigingen. BETALINGEN EN MERCHANT OF RECORD: Onze bestelprocedure wordt uitgevoerd door onze online reseller Paddle.com Market Limited. Paddle.com is de Merchant of Record voor al onze bestellingen en behandelt klantenservice, facturatie, belastingen en terugbetalingen (refunds). Betaalde plannen (Pro €9.99/mnd, Ultimate €19.99/mnd) worden maandelijks vooruit gefactureerd en automatisch verlengd tot opzegging. Wij bieden een 30 dagen geld-terug-garantie (refund). Volledige voorwaarden: https://www.paddle.com/legal/checkout-buyer-terms",
 
   // Privacy
   "legal.priv.heading": "Privacybeleid",
