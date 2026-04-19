@@ -1290,7 +1290,7 @@ const pl: TranslationKeys = {
   "legal.priv.s7.title": "7. Bezpieczeństwo — traktujemy je serio",
   "legal.priv.s7.p1": "Szyfrowanie TLS/SSL na wszystkich połączeniach, hasła hashowane bcrypt (nie znamy ich nawet my), anonimizacja danych analitycznych, regularne audyty bezpieczeństwa. Twoje dane są w UE, nie wędrują na inne kontynenty bez ochrony.",
   "legal.priv.s8.title": "8. Z kim współpracujemy",
-  "legal.priv.s8.p1": "Korzystamy tylko z zaufanych dostawców infrastruktury (hosting, storage), wyłącznie po podpisaniu umowy powierzenia przetwarzania (DPA) i zgodnie ze Standardowymi Klauzulami Umownymi (SCC). Lista jest jawna — napisz, jeśli chcesz pełną.",
+  "legal.priv.s8.p1": "Korzystamy tylko z zaufanych dostawców infrastruktury (hosting, storage), wyłącznie po podpisaniu umowy powierzenia przetwarzania (DPA) i zgodnie ze Standardowymi Klauzulami Umownymi (SCC). DANE PŁATNICZE I PADDLE: Wszystkie płatności (subskrypcje Pro/Ultimate, napiwki kawowe) są przetwarzane przez Paddle.com Market Limited (UK), działającą jako nasz Sprzedawca Rejestrowy (Merchant of Record) i niezależny administrator danych płatniczych. Paddle przetwarza Twoje dane karty, adres rozliczeniowy, e-mail i IP w celach: realizacji płatności, zapobiegania oszustwom, fakturowania i rozliczeń podatkowych. Karon nigdy nie widzi ani nie przechowuje pełnego numeru Twojej karty. Polityka Paddle: https://www.paddle.com/legal/privacy",
 
   // Copyright
   "legal.copy.heading": "Prawa autorskie i licencje — przyjazne twórcom",
