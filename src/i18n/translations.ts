@@ -86,6 +86,13 @@ type TranslationKeys = {
   "hero.subtitle": string;
   "hero.startListening": string;
   "hero.liveRadio": string;
+  "hero.blog": string;
+  "hero.blogLatest": string;
+  "hero.blogHoldToCopy": string;
+  "hero.blogCopied": string;
+  "hero.blogCopiedDesc": string;
+  "hero.blogCopyError": string;
+  "hero.blogTooltip": string;
   "hero.moodDetection": string;
   "hero.realtimeAdaptation": string;
   "hero.aiPlaylists": string;
@@ -981,6 +988,13 @@ const pl: TranslationKeys = {
   "hero.subtitle": "Doświadcz przyszłości streamingu muzycznego z AI, które uczy się Twojego nastroju, dostosowuje się do Twojego rytmu i tworzy idealną ścieżkę dźwiękową na każdą chwilę.",
   "hero.startListening": "Zacznij Słuchać Za Darmo",
   "hero.liveRadio": "Radio na żywo",
+  "hero.blog": "Blog",
+  "hero.blogLatest": "Najnowszy post · Blog",
+  "hero.blogHoldToCopy": "Przytrzymaj, by skopiować",
+  "hero.blogCopied": "🔗 Link skopiowany — wklej gdziekolwiek",
+  "hero.blogCopiedDesc": "Działa w mailach, czatach, social media",
+  "hero.blogCopyError": "Nie udało się skopiować linku",
+  "hero.blogTooltip": "Kliknij: otwórz · Przytrzymaj: skopiuj link do udostępniania",
   "hero.moodDetection": "Detekcja Nastroju",
   "hero.realtimeAdaptation": "Adaptacja w czasie rzeczywistym",
   "hero.aiPlaylists": "Playlisty AI",
@@ -1843,6 +1857,13 @@ const en: TranslationKeys = {
   "hero.subtitle": "Experience the future of music streaming with AI that learns your mood, adapts to your rhythm, and creates the perfect soundtrack for every moment.",
   "hero.startListening": "Start Listening Free",
   "hero.liveRadio": "Live Radio",
+  "hero.blog": "Blog",
+  "hero.blogLatest": "Latest post · Blog",
+  "hero.blogHoldToCopy": "Hold to copy",
+  "hero.blogCopied": "🔗 Link copied — paste anywhere",
+  "hero.blogCopiedDesc": "Works in emails, chats, social media",
+  "hero.blogCopyError": "Failed to copy link",
+  "hero.blogTooltip": "Click: open · Hold: copy share link",
   "hero.moodDetection": "Mood Detection",
   "hero.realtimeAdaptation": "Real-time Adaptation",
   "hero.aiPlaylists": "AI Playlists",
@@ -2705,6 +2726,13 @@ const nl: TranslationKeys = {
   "hero.subtitle": "Ervaar de toekomst van muziekstreaming met AI die je stemming leert, zich aanpast aan je ritme en de perfecte soundtrack creëert voor elk moment.",
   "hero.startListening": "Gratis Beginnen Met Luisteren",
   "hero.liveRadio": "Live Radio",
+  "hero.blog": "Blog",
+  "hero.blogLatest": "Nieuwste post · Blog",
+  "hero.blogHoldToCopy": "Houd vast om te kopiëren",
+  "hero.blogCopied": "🔗 Link gekopieerd — plak overal",
+  "hero.blogCopiedDesc": "Werkt in e-mails, chats, social media",
+  "hero.blogCopyError": "Kon link niet kopiëren",
+  "hero.blogTooltip": "Klik: openen · Vasthouden: deellink kopiëren",
   "hero.moodDetection": "Stemming Detectie",
   "hero.realtimeAdaptation": "Realtime Aanpassing",
   "hero.aiPlaylists": "AI Afspeellijsten",
@@ -3567,6 +3595,13 @@ const ua: TranslationKeys = {
   "hero.subtitle": "Відчуйте майбутнє музичного стримінгу з AI, яке вивчає ваш настрій, адаптується до вашого ритму та створює ідеальний саундтрек для кожного моменту.",
   "hero.startListening": "Почати Слухати Безкоштовно",
   "hero.liveRadio": "Живе Радіо",
+  "hero.blog": "Блог",
+  "hero.blogLatest": "Останній пост · Блог",
+  "hero.blogHoldToCopy": "Утримуйте, щоб скопіювати",
+  "hero.blogCopied": "🔗 Посилання скопійовано — вставте будь-де",
+  "hero.blogCopiedDesc": "Працює в листах, чатах, соцмережах",
+  "hero.blogCopyError": "Не вдалося скопіювати посилання",
+  "hero.blogTooltip": "Клік: відкрити · Утримання: копіювати посилання",
   "hero.moodDetection": "Визначення Настрою",
   "hero.realtimeAdaptation": "Адаптація в реальному часі",
   "hero.aiPlaylists": "AI Плейлисти",
