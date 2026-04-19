@@ -238,7 +238,21 @@ serve(async (req) => {
     const available = TOPICS.filter((t) => !recentTitles.has(t.topic));
     const pick = (available.length > 0 ? available : TOPICS)[Math.floor(Math.random() * (available.length || TOPICS.length))];
 
-    // Generate text content via Lovable AI
+    // For news categories, hunt fresh news via Firecrawl
+    const isNews = pick.category === "ai_news" || pick.category === "tech_news";
+    let newsContext = "";
+    if (isNews) {
+      const FIRECRAWL_API_KEY = Deno.env.get("FIRECRAWL_API_KEY");
+      const news = await huntLatestNews(FIRECRAWL_API_KEY);
+      if (news) {
+        newsContext = `\n\nŚWIEŻE NEWSY Z OSTATNIEGO TYGODNIA (użyj ich jako inspirację, parafrazuj, dodaj swój komentarz):\n${news}`;
+        console.log("News context loaded");
+      }
+    }
+
+    // Use stronger model for news (Gemini Pro), Flash for evergreen topics
+    const model = isNews ? "google/gemini-2.5-pro" : "google/gemini-2.5-flash";
+
     const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -246,16 +260,16 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model,
         messages: [
           {
             role: "system",
             content:
-              "Jesteś profesjonalnym copywriterem SEO dla GrouAI Stream — platformy streamingowej z AI, mood detection, voice control i monetyzacją dla twórców (URL: grouaistream.com). Pisz po polsku, w stylu premium ale przystępnie, z lekkim humorem. Używaj nagłówków H2/H3 (markdown), list, blockquotes, **bold**. 1000-1500 słów. Każda sekcja H2 ma 2-4 akapity. Zwracaj TYLKO JSON: {\"title\":\"...\",\"description\":\"...max 155 chars...\",\"content\":\"...markdown...\"}",
+              "Jesteś profesjonalnym copywriterem SEO i dziennikarzem AI/tech dla GrouAI Stream — platformy streamingowej z AI, mood detection, voice control i monetyzacją dla twórców (URL: grouaistream.com). Pisz po polsku, w stylu premium ale przystępnie, z emocjami, lekkim humorem i niesamowicie wciągającymi opisami. Używaj nagłówków H2/H3 (markdown), list, blockquotes, **bold**. 1200-1800 słów. Każda sekcja H2 ma 2-4 akapity. Wpleć metafory, anegdoty, konkretne liczby. Zwracaj TYLKO JSON: {\"title\":\"...\",\"description\":\"...max 155 chars, mocny hook...\",\"content\":\"...markdown...\"}",
           },
           {
             role: "user",
-            content: `Napisz artykuł blogowy SEO na temat: "${pick.topic}". Naturalnie wpleć linki do GrouAI Stream (https://grouaistream.com), wymień funkcje (mood detection, AI DJ, voice commands, GrouaRadio, monetyzacja 65% dla twórców). Wymień też powiązane narzędzia (Suno, ElevenLabs, Spotify) — będą one zlinkowane affiliate automatycznie. Zachęć do rejestracji na końcu.`,
+            content: `Napisz artykuł blogowy SEO na temat: "${pick.topic}". Naturalnie wpleć linki do GrouAI Stream (https://grouaistream.com), wymień funkcje (mood detection, AI DJ, voice commands, GrouaRadio, monetyzacja 65% dla twórców). Wymień też powiązane narzędzia (Suno, ElevenLabs, Spotify) — będą one zlinkowane affiliate automatycznie. Zachęć do rejestracji na końcu.${newsContext}`,
           },
         ],
       }),
