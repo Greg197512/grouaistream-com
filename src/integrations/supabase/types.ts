@@ -185,6 +185,27 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_settings: {
+        Row: {
+          id: number
+          n8n_webhook_url: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          id?: number
+          n8n_webhook_url?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          id?: number
+          n8n_webhook_url?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       ai_assistant_config: {
         Row: {
           assistant_name: string
