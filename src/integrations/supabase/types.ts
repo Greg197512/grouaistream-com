@@ -230,6 +230,74 @@ export type Database = {
         }
         Relationships: []
       }
+      audio_features: {
+        Row: {
+          acousticness: number | null
+          analyzed_by: string | null
+          bpm: number | null
+          catalog_id: string
+          created_at: string
+          danceability: number | null
+          energy: number | null
+          id: string
+          instrumentalness: number | null
+          liveness: number | null
+          loudness_db: number | null
+          music_key: string | null
+          music_mode: string | null
+          speechiness: number | null
+          tempo_confidence: number | null
+          time_signature: string | null
+          valence: number | null
+        }
+        Insert: {
+          acousticness?: number | null
+          analyzed_by?: string | null
+          bpm?: number | null
+          catalog_id: string
+          created_at?: string
+          danceability?: number | null
+          energy?: number | null
+          id?: string
+          instrumentalness?: number | null
+          liveness?: number | null
+          loudness_db?: number | null
+          music_key?: string | null
+          music_mode?: string | null
+          speechiness?: number | null
+          tempo_confidence?: number | null
+          time_signature?: string | null
+          valence?: number | null
+        }
+        Update: {
+          acousticness?: number | null
+          analyzed_by?: string | null
+          bpm?: number | null
+          catalog_id?: string
+          created_at?: string
+          danceability?: number | null
+          energy?: number | null
+          id?: string
+          instrumentalness?: number | null
+          liveness?: number | null
+          loudness_db?: number | null
+          music_key?: string | null
+          music_mode?: string | null
+          speechiness?: number | null
+          tempo_confidence?: number | null
+          time_signature?: string | null
+          valence?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audio_features_catalog_id_fkey"
+            columns: ["catalog_id"]
+            isOneToOne: true
+            referencedRelation: "song_catalog"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       blog_affiliate_links: {
         Row: {
           brand: string
@@ -893,6 +961,41 @@ export type Database = {
           },
         ]
       }
+      melody_embeddings: {
+        Row: {
+          catalog_id: string
+          created_at: string
+          embedding: string | null
+          embedding_model: string | null
+          embedding_source: string | null
+          id: string
+        }
+        Insert: {
+          catalog_id: string
+          created_at?: string
+          embedding?: string | null
+          embedding_model?: string | null
+          embedding_source?: string | null
+          id?: string
+        }
+        Update: {
+          catalog_id?: string
+          created_at?: string
+          embedding?: string | null
+          embedding_model?: string | null
+          embedding_source?: string | null
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "melody_embeddings_catalog_id_fkey"
+            columns: ["catalog_id"]
+            isOneToOne: true
+            referencedRelation: "song_catalog"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mix_preferences: {
         Row: {
           created_at: string
@@ -1049,6 +1152,45 @@ export type Database = {
           title?: string
           video_url?: string | null
           year?: number | null
+        }
+        Relationships: []
+      }
+      n8n_ingest_tokens: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean | null
+          label: string
+          last_used_at: string | null
+          rate_limit_per_hour: number | null
+          source_type: string
+          token: string
+          total_ingests: number | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          label: string
+          last_used_at?: string | null
+          rate_limit_per_hour?: number | null
+          source_type: string
+          token?: string
+          total_ingests?: number | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          label?: string
+          last_used_at?: string | null
+          rate_limit_per_hour?: number | null
+          source_type?: string
+          token?: string
+          total_ingests?: number | null
         }
         Relationships: []
       }
@@ -1722,6 +1864,78 @@ export type Database = {
         }
         Relationships: []
       }
+      song_catalog: {
+        Row: {
+          artist: string
+          audio_url: string | null
+          cover_url: string | null
+          created_at: string
+          duration_seconds: number | null
+          external_id: string | null
+          genre: string | null
+          id: string
+          ingested_by: string | null
+          is_training_eligible: boolean | null
+          language: string | null
+          license: string | null
+          lyrics: string | null
+          metadata: Json | null
+          moderation_status: string | null
+          mood: string | null
+          source: string
+          source_url: string | null
+          subgenre: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          artist: string
+          audio_url?: string | null
+          cover_url?: string | null
+          created_at?: string
+          duration_seconds?: number | null
+          external_id?: string | null
+          genre?: string | null
+          id?: string
+          ingested_by?: string | null
+          is_training_eligible?: boolean | null
+          language?: string | null
+          license?: string | null
+          lyrics?: string | null
+          metadata?: Json | null
+          moderation_status?: string | null
+          mood?: string | null
+          source?: string
+          source_url?: string | null
+          subgenre?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          artist?: string
+          audio_url?: string | null
+          cover_url?: string | null
+          created_at?: string
+          duration_seconds?: number | null
+          external_id?: string | null
+          genre?: string | null
+          id?: string
+          ingested_by?: string | null
+          is_training_eligible?: boolean | null
+          language?: string | null
+          license?: string | null
+          lyrics?: string | null
+          metadata?: Json | null
+          moderation_status?: string | null
+          mood?: string | null
+          source?: string
+          source_url?: string | null
+          subgenre?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       stream_events: {
         Row: {
           counted: boolean
@@ -1757,6 +1971,143 @@ export type Database = {
           {
             foreignKeyName: "stream_events_track_id_fkey"
             columns: ["track_id"]
+            isOneToOne: false
+            referencedRelation: "tracks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      studio_chat_messages: {
+        Row: {
+          ai_model: string | null
+          content: string
+          created_at: string
+          generation_id: string | null
+          id: string
+          metadata: Json | null
+          role: string
+          user_id: string
+        }
+        Insert: {
+          ai_model?: string | null
+          content: string
+          created_at?: string
+          generation_id?: string | null
+          id?: string
+          metadata?: Json | null
+          role: string
+          user_id: string
+        }
+        Update: {
+          ai_model?: string | null
+          content?: string
+          created_at?: string
+          generation_id?: string | null
+          id?: string
+          metadata?: Json | null
+          role?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      studio_generations: {
+        Row: {
+          ai_model: string
+          audio_url: string | null
+          bpm: number | null
+          completed_at: string | null
+          created_at: string
+          duration_seconds: number | null
+          error_message: string | null
+          genre: string | null
+          id: string
+          lyrics: string | null
+          metadata: Json | null
+          mood: string | null
+          music_key: string | null
+          platform_track_id: string | null
+          prompt: string
+          reference_audio_url: string | null
+          status: string | null
+          stem_bass_url: string | null
+          stem_drums_url: string | null
+          stem_other_url: string | null
+          stem_vocals_url: string | null
+          structure: Json | null
+          subgenre: string | null
+          time_signature: string | null
+          title: string | null
+          uploaded_to_platform: boolean | null
+          user_id: string
+          vocal_url: string | null
+          voice_clone_id: string | null
+        }
+        Insert: {
+          ai_model: string
+          audio_url?: string | null
+          bpm?: number | null
+          completed_at?: string | null
+          created_at?: string
+          duration_seconds?: number | null
+          error_message?: string | null
+          genre?: string | null
+          id?: string
+          lyrics?: string | null
+          metadata?: Json | null
+          mood?: string | null
+          music_key?: string | null
+          platform_track_id?: string | null
+          prompt: string
+          reference_audio_url?: string | null
+          status?: string | null
+          stem_bass_url?: string | null
+          stem_drums_url?: string | null
+          stem_other_url?: string | null
+          stem_vocals_url?: string | null
+          structure?: Json | null
+          subgenre?: string | null
+          time_signature?: string | null
+          title?: string | null
+          uploaded_to_platform?: boolean | null
+          user_id: string
+          vocal_url?: string | null
+          voice_clone_id?: string | null
+        }
+        Update: {
+          ai_model?: string
+          audio_url?: string | null
+          bpm?: number | null
+          completed_at?: string | null
+          created_at?: string
+          duration_seconds?: number | null
+          error_message?: string | null
+          genre?: string | null
+          id?: string
+          lyrics?: string | null
+          metadata?: Json | null
+          mood?: string | null
+          music_key?: string | null
+          platform_track_id?: string | null
+          prompt?: string
+          reference_audio_url?: string | null
+          status?: string | null
+          stem_bass_url?: string | null
+          stem_drums_url?: string | null
+          stem_other_url?: string | null
+          stem_vocals_url?: string | null
+          structure?: Json | null
+          subgenre?: string | null
+          time_signature?: string | null
+          title?: string | null
+          uploaded_to_platform?: boolean | null
+          user_id?: string
+          vocal_url?: string | null
+          voice_clone_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "studio_generations_platform_track_id_fkey"
+            columns: ["platform_track_id"]
             isOneToOne: false
             referencedRelation: "tracks"
             referencedColumns: ["id"]
@@ -2348,6 +2699,53 @@ export type Database = {
         }
         Relationships: []
       }
+      training_dataset: {
+        Row: {
+          audio_url: string
+          catalog_id: string
+          created_at: string
+          duration_seconds: number | null
+          export_batch: string | null
+          exported_at: string | null
+          id: string
+          opt_in: boolean | null
+          prompt_text: string
+          quality_score: number | null
+        }
+        Insert: {
+          audio_url: string
+          catalog_id: string
+          created_at?: string
+          duration_seconds?: number | null
+          export_batch?: string | null
+          exported_at?: string | null
+          id?: string
+          opt_in?: boolean | null
+          prompt_text: string
+          quality_score?: number | null
+        }
+        Update: {
+          audio_url?: string
+          catalog_id?: string
+          created_at?: string
+          duration_seconds?: number | null
+          export_batch?: string | null
+          exported_at?: string | null
+          id?: string
+          opt_in?: boolean | null
+          prompt_text?: string
+          quality_score?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_dataset_catalog_id_fkey"
+            columns: ["catalog_id"]
+            isOneToOne: true
+            referencedRelation: "song_catalog"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       unlock_codes: {
         Row: {
           code: string
@@ -2608,6 +3006,23 @@ export type Database = {
     Functions: {
       acknowledge_payout: { Args: { _detail_id: string }; Returns: Json }
       ad_outreach_daily_count: { Args: never; Returns: number }
+      add_to_song_catalog: {
+        Args: {
+          _artist: string
+          _audio_url?: string
+          _duration?: number
+          _external_id?: string
+          _genre?: string
+          _ingested_by?: string
+          _license?: string
+          _lyrics?: string
+          _metadata?: Json
+          _mood?: string
+          _source: string
+          _title: string
+        }
+        Returns: string
+      }
       admin_confirm_ad_payment: {
         Args: { _campaign_id: string; _reference?: string }
         Returns: Json
@@ -2680,9 +3095,20 @@ export type Database = {
         }[]
       }
       get_seo_dashboard_stats: { Args: never; Returns: Json }
+      get_similar_tracks_by_embedding: {
+        Args: { _limit?: number; _query_embedding: string }
+        Returns: {
+          artist: string
+          catalog_id: string
+          genre: string
+          similarity: number
+          title: string
+        }[]
+      }
       get_tip_wallet: { Args: never; Returns: Json }
       get_user_generation_count: { Args: { _user_id: string }; Returns: number }
       get_user_id_by_email: { Args: { _email: string }; Returns: string }
+      get_user_top_tracks_for_ai: { Args: { _user_id: string }; Returns: Json }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
