@@ -48,7 +48,6 @@ export const BlogPromoButton = () => {
   };
 
   const startPress = () => {
-    if (!post) return;
     longPressFired.current = false;
     setProgress(0);
 
@@ -60,12 +59,14 @@ export const BlogPromoButton = () => {
 
     pressTimer.current = window.setTimeout(async () => {
       longPressFired.current = true;
-      const url = `${window.location.origin}/blog/${post.slug}`;
-      const richMarkdown = `🔥 [${post.title}](${url})\n\n${post.description}`;
+      const url = EXTERNAL_BLOG_URL;
+      const title = post?.title ?? "GrouAI Stream Blog";
+      const description = post?.description ?? "";
+      const richMarkdown = `🔥 [${title}](${url})${description ? `\n\n${description}` : ""}`;
 
       try {
         if (navigator.clipboard && (window as any).ClipboardItem) {
-          const html = `<a href="${url}" style="font-weight:600;color:#ff6b1a;text-decoration:none">🔥 ${post.title}</a><br/><span style="color:#666">${post.description}</span>`;
+          const html = `<a href="${url}" style="font-weight:600;color:#ff6b1a;text-decoration:none">🔥 ${title}</a>${description ? `<br/><span style="color:#666">${description}</span>` : ""}`;
           const item = new ClipboardItem({
             "text/html": new Blob([html], { type: "text/html" }),
             "text/plain": new Blob([`${richMarkdown}\n${url}`], { type: "text/plain" }),
