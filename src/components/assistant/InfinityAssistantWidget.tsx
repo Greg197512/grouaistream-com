@@ -110,7 +110,7 @@ export const InfinityAssistantWidget = () => {
         top: -(window.innerHeight - 80),
         bottom: 0,
       }}
-      className="fixed bottom-36 md:bottom-32 right-3 z-40 select-none touch-none"
+      className="fixed bottom-36 md:bottom-32 right-3 z-[60] select-none touch-none"
       style={{ cursor: "grab" }}
     >
       {/* Drag handle */}
