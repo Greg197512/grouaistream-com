@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -7,7 +7,14 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Sparkles } from "lucide-react";
+import { ArrowLeft, Sparkles, Eye, Clock } from "lucide-react";
+import { ReadingProgress } from "@/components/blog/ReadingProgress";
+import { TableOfContents } from "@/components/blog/TableOfContents";
+import { BlogPostActions } from "@/components/blog/BlogPostActions";
+import { BlogComments } from "@/components/blog/BlogComments";
+import { RelatedPosts } from "@/components/blog/RelatedPosts";
+import { AffiliateSidebar } from "@/components/blog/AffiliateSidebar";
+import { headingComponents } from "@/lib/markdownHeadingId";
 
 interface BlogPost {
   id: string;
@@ -19,6 +26,7 @@ interface BlogPost {
   tags: string[] | null;
   created_at: string;
   cover_url: string | null;
+  view_count: number;
 }
 
 const setMeta = (name: string, content: string, attr: "name" | "property" = "name") => {
@@ -52,11 +60,14 @@ const setJsonLd = (data: object) => {
   el.textContent = JSON.stringify(data);
 };
 
+const readingMinutes = (text: string) => Math.max(1, Math.round(text.split(/\s+/).length / 200));
+
 export default function BlogPost() {
   const { slug } = useParams<{ slug: string }>();
   const [post, setPost] = useState<BlogPost | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const commentsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!slug) return;
@@ -78,12 +89,8 @@ export default function BlogPost() {
       setPost(data as BlogPost);
       setLoading(false);
 
-      // Increment view count (fire & forget)
-      supabase
-        .from("seo_blog_posts")
-        .update({ view_count: (data.view_count || 0) + 1 })
-        .eq("id", data.id)
-        .then(() => {});
+      // Safe view increment via RPC
+      supabase.rpc("increment_blog_view", { _post_id: data.id }).then(() => {});
     })();
   }, [slug]);
 
@@ -97,6 +104,7 @@ export default function BlogPost() {
     setMeta("og:type", "article", "property");
     setMeta("og:url", url, "property");
     if (post.cover_url) setMeta("og:image", post.cover_url, "property");
+    setMeta("twitter:card", "summary_large_image");
     setCanonical(url);
     setJsonLd({
       "@context": "https://schema.org",
@@ -112,8 +120,13 @@ export default function BlogPost() {
       },
       mainEntityOfPage: url,
       ...(post.cover_url ? { image: post.cover_url } : {}),
+      keywords: (post.tags || []).join(", "),
     });
   }, [post]);
+
+  const scrollToComments = () => {
+    commentsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   if (loading) {
     return (
@@ -133,9 +146,7 @@ export default function BlogPost() {
       <MainLayout>
         <div className="px-6 py-20 max-w-2xl mx-auto text-center">
           <h1 className="text-3xl font-bold text-foreground mb-3">Post nie znaleziony</h1>
-          <p className="text-muted-foreground mb-6">
-            Ten artykuł mógł zostać usunięty lub adres jest nieprawidłowy.
-          </p>
+          <p className="text-muted-foreground mb-6">Ten artykuł mógł zostać usunięty lub adres jest nieprawidłowy.</p>
           <Link to="/blog">
             <Button variant="outline">
               <ArrowLeft className="w-4 h-4 mr-2" /> Wróć do bloga
@@ -146,70 +157,94 @@ export default function BlogPost() {
     );
   }
 
+  const url = `https://grouaistream.com/blog/${post.slug}`;
+  const minutes = readingMinutes(post.content);
+
   return (
     <MainLayout>
-      <article className="px-6 py-10 max-w-3xl mx-auto">
-        <Link to="/blog" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-6 transition-colors">
-          <ArrowLeft className="w-4 h-4 mr-1" /> Wszystkie artykuły
-        </Link>
+      <ReadingProgress />
+      <article className="px-4 sm:px-6 py-8">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 xl:grid-cols-[220px_minmax(0,1fr)_240px] gap-8">
+          {/* TOC */}
+          <TableOfContents markdown={post.content} />
 
-        <header className="mb-8">
-          <div className="flex items-center gap-2 mb-4">
-            <Badge variant="secondary">{post.category}</Badge>
-            <span className="text-xs text-muted-foreground">
-              {new Date(post.created_at).toLocaleDateString("pl-PL", {
-                day: "numeric",
-                month: "long",
-                year: "numeric",
-              })}
-            </span>
-          </div>
-          <h1 className="text-3xl md:text-4xl font-bold text-foreground leading-tight mb-4">
-            {post.title}
-          </h1>
-          <p className="text-lg text-muted-foreground leading-relaxed">{post.description}</p>
-        </header>
-
-        {post.cover_url && (
-          <img
-            src={post.cover_url}
-            alt={post.title}
-            className="w-full rounded-xl mb-8 border border-border"
-            loading="lazy"
-          />
-        )}
-
-        <div className="prose prose-invert max-w-none prose-headings:text-foreground prose-p:text-muted-foreground prose-strong:text-foreground prose-a:text-primary prose-li:text-muted-foreground prose-code:text-foreground prose-code:bg-muted/50 prose-code:px-1 prose-code:rounded">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{post.content}</ReactMarkdown>
-        </div>
-
-        {post.tags && post.tags.length > 0 && (
-          <div className="flex flex-wrap gap-2 mt-10 pt-6 border-t border-border">
-            {post.tags.map((t) => (
-              <span key={t} className="text-xs px-2.5 py-1 rounded-full bg-muted/60 text-muted-foreground">
-                #{t}
-              </span>
-            ))}
-          </div>
-        )}
-
-        {/* CTA */}
-        <div className="mt-12 p-6 rounded-xl border border-primary/30 bg-gradient-to-br from-primary/10 to-accent/5 text-center">
-          <Sparkles className="w-8 h-8 text-primary mx-auto mb-3" />
-          <h3 className="text-xl font-bold text-foreground mb-2">
-            Wypróbuj GrouAI Stream za darmo
-          </h3>
-          <p className="text-sm text-muted-foreground mb-4">
-            AI DJ, mood detection, voice control, monetyzacja 65% dla twórców.
-          </p>
-          <div className="flex gap-2 justify-center flex-wrap">
-            <Link to="/auth">
-              <Button>Załóż konto</Button>
+          {/* MAIN */}
+          <div className="min-w-0 max-w-3xl mx-auto w-full">
+            <Link to="/blog" className="inline-flex items-center text-sm text-muted-foreground hover:text-primary mb-6 transition-colors">
+              <ArrowLeft className="w-4 h-4 mr-1" /> Wszystkie artykuły
             </Link>
-            <Link to="/earn">
-              <Button variant="outline">Zarabiaj z nami</Button>
-            </Link>
+
+            <header className="mb-6">
+              <div className="flex items-center gap-2 mb-4 flex-wrap">
+                <Badge className="bg-primary/15 text-primary border-primary/30">{post.category}</Badge>
+                <span className="text-xs text-muted-foreground">
+                  {new Date(post.created_at).toLocaleDateString("pl-PL", { day: "numeric", month: "long", year: "numeric" })}
+                </span>
+                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Clock className="w-3 h-3" /> {minutes} min
+                </span>
+                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Eye className="w-3 h-3" /> {post.view_count}
+                </span>
+              </div>
+              <h1 className="text-3xl sm:text-5xl font-black text-foreground leading-[1.1] tracking-tight mb-4">
+                {post.title}
+              </h1>
+              <p className="text-base sm:text-lg text-muted-foreground leading-relaxed">{post.description}</p>
+            </header>
+
+            {post.cover_url && (
+              <div className="relative mb-8 rounded-2xl overflow-hidden border border-primary/20 shadow-[0_0_60px_hsl(var(--primary)/0.15)]">
+                <img src={post.cover_url} alt={post.title} className="w-full" loading="eager" />
+              </div>
+            )}
+
+            <div className="mb-8">
+              <BlogPostActions postId={post.id} postUrl={url} postTitle={post.title} onScrollToComments={scrollToComments} />
+            </div>
+
+            <div className="prose prose-invert max-w-none prose-lg prose-headings:text-foreground prose-headings:font-bold prose-h2:text-2xl prose-h2:mt-10 prose-h2:mb-4 prose-h2:scroll-mt-24 prose-h3:text-xl prose-h3:mt-8 prose-h3:scroll-mt-24 prose-p:text-foreground/85 prose-p:leading-relaxed prose-strong:text-foreground prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-li:text-foreground/85 prose-blockquote:border-l-primary prose-blockquote:bg-primary/5 prose-blockquote:py-1 prose-blockquote:px-4 prose-blockquote:rounded-r prose-code:text-primary prose-code:bg-muted/50 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:before:content-[''] prose-code:after:content-['']">
+              <ReactMarkdown remarkPlugins={[remarkGfm]} components={headingComponents}>
+                {post.content}
+              </ReactMarkdown>
+            </div>
+
+            {post.tags && post.tags.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-10 pt-6 border-t border-border">
+                {post.tags.map((t) => (
+                  <span key={t} className="text-xs px-2.5 py-1 rounded-full bg-muted/60 text-muted-foreground border border-border">
+                    #{t}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            <div className="mt-8">
+              <BlogPostActions postId={post.id} postUrl={url} postTitle={post.title} onScrollToComments={scrollToComments} />
+            </div>
+
+            {/* CTA */}
+            <div className="mt-12 p-6 sm:p-8 rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/15 via-card/40 to-accent/10 text-center shadow-[0_0_40px_hsl(var(--primary)/0.15)]">
+              <Sparkles className="w-9 h-9 text-primary mx-auto mb-3" />
+              <h3 className="text-2xl font-black text-foreground mb-2">Wypróbuj GrouAI Stream</h3>
+              <p className="text-sm text-muted-foreground mb-5 max-w-md mx-auto">
+                AI DJ, mood detection, voice control. Twórcy zarabiają 65%.
+              </p>
+              <div className="flex gap-2 justify-center flex-wrap">
+                <Link to="/auth"><Button>Załóż darmowe konto</Button></Link>
+                <Link to="/earn"><Button variant="outline">Zarabiaj z nami</Button></Link>
+              </div>
+            </div>
+
+            <RelatedPosts currentPostId={post.id} category={post.category} tags={post.tags} />
+
+            <div ref={commentsRef}>
+              <BlogComments postId={post.id} />
+            </div>
           </div>
+
+          {/* SIDEBAR */}
+          <AffiliateSidebar category={post.category} />
         </div>
       </article>
     </MainLayout>
