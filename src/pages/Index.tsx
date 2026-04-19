@@ -12,7 +12,7 @@ import { UploadCTA } from "@/components/sections/UploadCTA";
 import { SupportSection } from "@/components/sections/SupportSection";
 import { PromotedTracksSection } from "@/components/sections/PromotedTracks";
 import { SEOContentSection } from "@/components/sections/SEOContentSection";
-import { BlogPromoButton } from "@/components/sections/BlogPromoButton";
+
 import SectionErrorBoundary from "@/components/SectionErrorBoundary";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -26,11 +26,6 @@ const Index = () => {
   return (
     <MainLayout>
       <Section name="hero"><HeroSection /></Section>
-      <Section name="blog-promo">
-        <div className="px-6 -mt-2 mb-2 flex justify-center md:justify-start">
-          <BlogPromoButton />
-        </div>
-      </Section>
       <Section name="upload-cta"><UploadCTA /></Section>
       <Section name="promoted"><PromotedTracksSection /></Section>
       <Section name="marquee"><AdminMarquee /></Section>

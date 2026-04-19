@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import heroBg from "@/assets/hero-bg.jpg";
 import { BassParticles } from "@/components/effects/BassParticles";
 import { getGenrePalette } from "@/utils/genreColors";
+import { BlogPromoButton } from "@/components/sections/BlogPromoButton";
 
 // Gentle idle equalizer frequencies
 function generateIdleFrequencies(barCount: number): number[] {
@@ -380,6 +381,7 @@ export const HeroSection = () => {
                 {t("hero.liveRadio")}
               </Button>
             </motion.div>
+            <BlogPromoButton />
           </div>
 
           {/* Manifest text */}
