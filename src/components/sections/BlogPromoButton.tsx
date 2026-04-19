@@ -101,7 +101,7 @@ export const BlogPromoButton = () => {
     window.open(EXTERNAL_BLOG_URL, "_blank", "noopener,noreferrer");
   };
 
-  if (loading || !post) return null;
+  if (loading) return null;
 
   return (
     <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
