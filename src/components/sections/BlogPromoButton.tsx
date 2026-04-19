@@ -1,22 +1,25 @@
 import { useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
-import { Newspaper, Copy, Sparkles } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Newspaper, Loader2 } from "lucide-react";
+import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
 
 interface LatestPost {
   slug: string;
   title: string;
   description: string;
-  cover_url: string | null;
 }
 
 const LONG_PRESS_MS = 600;
 
 export const BlogPromoButton = () => {
+  const navigate = useNavigate();
+  const { t } = useLanguage();
   const [post, setPost] = useState<LatestPost | null>(null);
-  const [pressing, setPressing] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [progress, setProgress] = useState(0);
   const pressTimer = useRef<number | null>(null);
   const progressTimer = useRef<number | null>(null);
@@ -26,12 +29,13 @@ export const BlogPromoButton = () => {
     (async () => {
       const { data } = await supabase
         .from("seo_blog_posts")
-        .select("slug, title, description, cover_url")
+        .select("slug, title, description")
         .eq("is_published", true)
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
       if (data) setPost(data as LatestPost);
+      setLoading(false);
     })();
   }, []);
 
@@ -40,14 +44,12 @@ export const BlogPromoButton = () => {
     if (progressTimer.current) window.clearInterval(progressTimer.current);
     pressTimer.current = null;
     progressTimer.current = null;
-    setPressing(false);
     setProgress(0);
   };
 
   const startPress = () => {
     if (!post) return;
     longPressFired.current = false;
-    setPressing(true);
     setProgress(0);
 
     const start = Date.now();
@@ -72,11 +74,11 @@ export const BlogPromoButton = () => {
         } else {
           await navigator.clipboard.writeText(`${richMarkdown}\n${url}`);
         }
-        toast.success("🔗 Link skopiowany — wklej gdziekolwiek", {
-          description: "Działa w mailach, czatach, social media",
+        toast.success(t("hero.blogCopied"), {
+          description: t("hero.blogCopiedDesc"),
         });
       } catch {
-        toast.error("Nie udało się skopiować linku");
+        toast.error(t("hero.blogCopyError"));
       }
       cleanup();
     }, LONG_PRESS_MS);
@@ -89,68 +91,39 @@ export const BlogPromoButton = () => {
     cleanup();
   };
 
-  if (!post) return null;
+  const handleClick = (e: React.MouseEvent) => {
+    if (longPressFired.current) {
+      e.preventDefault();
+      longPressFired.current = false;
+      return;
+    }
+    if (post) navigate(`/blog/${post.slug}`);
+  };
+
+  if (loading || !post) return null;
 
   return (
-    <Link
-      to={`/blog/${post.slug}`}
-      onMouseDown={startPress}
-      onMouseUp={endPress}
-      onMouseLeave={() => cleanup()}
-      onTouchStart={startPress}
-      onTouchEnd={endPress}
-      onContextMenu={(e) => e.preventDefault()}
-      onClick={(e) => {
-        if (longPressFired.current) {
-          e.preventDefault();
-          longPressFired.current = false;
-        }
-      }}
-      className={cn(
-        "group relative inline-flex items-center gap-3 select-none",
-        "px-5 py-3 rounded-2xl overflow-hidden",
-        "bg-gradient-to-r from-primary/20 via-accent/15 to-primary/20",
-        "border border-primary/40 hover:border-primary/70",
-        "shadow-[0_0_24px_-8px_hsl(var(--primary)/0.6)]",
-        "hover:shadow-[0_0_36px_-6px_hsl(var(--primary)/0.9)]",
-        "transition-all duration-300",
-        pressing && "scale-[0.98]"
-      )}
-      title="Kliknij: otwórz · Przytrzymaj: skopiuj link do udostępniania"
-    >
-      <div
-        className="absolute inset-0 bg-primary/30 origin-left transition-none pointer-events-none"
-        style={{ transform: `scaleX(${progress / 100})` }}
-        aria-hidden
-      />
-
-      {post.cover_url ? (
-        <img
-          src={post.cover_url}
-          alt=""
-          className="relative h-10 w-10 rounded-lg object-cover ring-1 ring-primary/40"
-          loading="lazy"
+    <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+      <Button
+        size="lg"
+        onClick={handleClick}
+        onMouseDown={startPress}
+        onMouseUp={endPress}
+        onMouseLeave={() => cleanup()}
+        onTouchStart={startPress}
+        onTouchEnd={endPress}
+        onContextMenu={(e) => e.preventDefault()}
+        title={t("hero.blogTooltip")}
+        className="relative overflow-hidden groove-gradient-bg text-primary-foreground hover:opacity-90 gap-2 rounded-full px-6 h-14 font-semibold text-base shadow-[0_0_30px_hsl(var(--primary)/0.3)] select-none"
+      >
+        <span
+          className="absolute inset-0 bg-primary-foreground/20 origin-left pointer-events-none"
+          style={{ transform: `scaleX(${progress / 100})`, transition: "transform 0.04s linear" }}
+          aria-hidden
         />
-      ) : (
-        <div className="relative h-10 w-10 rounded-lg bg-primary/20 flex items-center justify-center ring-1 ring-primary/40">
-          <Newspaper className="h-5 w-5 text-primary" />
-        </div>
-      )}
-
-      <div className="relative flex flex-col min-w-0">
-        <span className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.18em] font-semibold text-primary/90">
-          <Sparkles className="h-3 w-3" />
-          Najnowszy post · Blog
-        </span>
-        <span className="font-display text-sm md:text-base font-semibold text-foreground truncate max-w-[280px] md:max-w-[420px]">
-          {post.title}
-        </span>
-      </div>
-
-      <div className="relative ml-auto hidden md:flex items-center gap-1.5 text-[10px] text-muted-foreground/80 pl-3 border-l border-primary/20">
-        <Copy className="h-3 w-3" />
-        <span>Przytrzymaj, by skopiować</span>
-      </div>
-    </Link>
+        <Newspaper className="h-5 w-5 relative z-10" />
+        <span className="relative z-10">{t("hero.blog")}</span>
+      </Button>
+    </motion.div>
   );
 };
