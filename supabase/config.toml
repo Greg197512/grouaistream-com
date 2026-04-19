@@ -77,3 +77,6 @@ verify_jwt = false
 
 [functions.indexnow-ping]
 verify_jwt = false
+
+[functions.notify-blog-subscribers]
+verify_jwt = true

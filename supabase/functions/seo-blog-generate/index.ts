@@ -247,6 +247,51 @@ serve(async (req) => {
 
     if (insErr) throw insErr;
 
+    // Generate distribution hooks (X / Telegram / Email) — best effort
+    try {
+      const hookRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash",
+          messages: [
+            {
+              role: "system",
+              content:
+                "Jesteś social media copywriterem. Tworzysz krótkie, mocne hooki promujące artykuł blogowy. Zwracasz TYLKO JSON: {\"x_hook\":\"...max 240 znaków, bez hashtagów spam, 1-2 emoji ok\",\"telegram_hook\":\"...max 400 znaków, emoji ok, lekko bardziej rozwinięte niż x\",\"email_hook\":\"...1 zdanie hook do przeczytania w preview email, max 120 znaków, bez emoji\",\"email_subject\":\"...max 60 znaków, intrygujący\"}",
+            },
+            {
+              role: "user",
+              content: `Artykuł: "${parsed.title}"\nOpis: ${parsed.description}\nLink: https://grouaistream.com/blog/${slug}\nKategoria: ${pick.category}\n\nWygeneruj hooki.`,
+            },
+          ],
+        }),
+      });
+      if (hookRes.ok) {
+        const hd = await hookRes.json();
+        const hraw = hd.choices?.[0]?.message?.content || "";
+        const hclean = hraw.replace(/^```json\s*/i, "").replace(/```\s*$/, "").trim();
+        let hookData: any;
+        try {
+          hookData = JSON.parse(hclean);
+        } catch {
+          const m = hclean.match(/\{[\s\S]*\}/);
+          if (m) hookData = JSON.parse(m[0]);
+        }
+        if (hookData) {
+          await supabaseAdmin.from("blog_post_hooks").insert({
+            post_id: inserted.id,
+            x_hook: hookData.x_hook?.slice(0, 280) || null,
+            telegram_hook: hookData.telegram_hook?.slice(0, 500) || null,
+            email_hook: hookData.email_hook?.slice(0, 160) || null,
+            email_subject: hookData.email_subject?.slice(0, 80) || null,
+          });
+        }
+      }
+    } catch (e) {
+      console.error("Hook gen failed", e);
+    }
+
     await supabaseAdmin.from("seo_settings").update({ last_blog_at: new Date().toISOString() }).eq("id", 1);
     await supabaseAdmin.rpc("log_seo_activity", {
       _action_type: "blog_generate",
