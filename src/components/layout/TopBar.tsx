@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   ChevronLeft, ChevronRight, Search, Bell, User, Crown, LogOut,
-  Settings, Sparkles, UserCircle, Heart, Library, Power, Globe, Music
+  Settings, Sparkles, UserCircle, Heart, Library, Power, Globe, Music,
+  Coins, Trophy, MessageCircle, FileText, Flame, Radio, Gift
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -18,11 +19,23 @@ import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { UpgradeModal } from "@/components/modals/UpgradeModal";
 import { Language } from "@/i18n/translations";
+import { useNotificationsFeed, FeedItem } from "@/hooks/useNotificationsFeed";
+
+const ICONS: Record<FeedItem["icon"], React.ComponentType<{ className?: string }>> = {
+  heart: Heart,
+  coin: Coins,
+  trophy: Trophy,
+  comment: MessageCircle,
+  blog: FileText,
+  challenge: Flame,
+  stream: Radio,
+  tip: Gift,
+};
 
 export const TopBar = () => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [hasNotifications, setHasNotifications] = useState(true);
   const [showUpgrade, setShowUpgrade] = useState(false);
+  const { items, unreadCount, markAllSeen, since } = useNotificationsFeed();
   
   const { user, signOut, loading } = useAuth();
   const { language, setLanguage, t, languageNames, languageFlags } = useLanguage();
@@ -153,29 +166,55 @@ export const TopBar = () => {
         </motion.div>
 
         {/* Notifications */}
-        <DropdownMenu>
+        <DropdownMenu onOpenChange={(o) => o && markAllSeen()}>
           <DropdownMenuTrigger asChild>
             <button className="relative flex h-10 w-10 items-center justify-center rounded-full bg-secondary hover:bg-muted transition-colors">
               <Bell className="h-5 w-5" />
-              {hasNotifications && (
-                <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-primary" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-[10px] font-bold text-primary-foreground flex items-center justify-center shadow-[0_0_10px_hsl(var(--primary)/0.6)] animate-pulse">
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </span>
               )}
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-80">
-            <DropdownMenuLabel>{t("topbar.notifications")}</DropdownMenuLabel>
+          <DropdownMenuContent align="end" className="w-[340px] max-h-[480px] overflow-y-auto">
+            <DropdownMenuLabel className="flex items-center justify-between">
+              <span>{t("topbar.notifications")}</span>
+              {items.length > 0 && (
+                <span className="text-[10px] text-muted-foreground font-normal">ostatnie 7 dni</span>
+              )}
+            </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem 
-              className="flex flex-col items-start gap-1 py-3 cursor-pointer"
-              onClick={() => setHasNotifications(false)}
-            >
-              <p className="font-medium">{t("topbar.aiDjReady")}</p>
-              <p className="text-xs text-muted-foreground">{t("topbar.aiDjReadyDesc")}</p>
-            </DropdownMenuItem>
-            <DropdownMenuItem className="flex flex-col items-start gap-1 py-3 cursor-pointer">
-              <p className="font-medium">{t("topbar.newTracks")}</p>
-              <p className="text-xs text-muted-foreground">{t("topbar.newTracksDesc")}</p>
-            </DropdownMenuItem>
+            {items.length === 0 ? (
+              <div className="py-8 px-4 text-center text-sm text-muted-foreground">
+                Brak nowych aktywności.<br />
+                <span className="text-xs">Wszystko cicho — wracaj za chwilę 🌙</span>
+              </div>
+            ) : (
+              items.map((it) => {
+                const Icon = ICONS[it.icon];
+                return (
+                  <DropdownMenuItem
+                    key={it.id}
+                    className="flex items-start gap-2.5 py-2.5 cursor-pointer"
+                    onClick={() => it.href && navigate(it.href)}
+                  >
+                    <div className="mt-0.5 shrink-0 h-7 w-7 rounded-full bg-primary/15 flex items-center justify-center">
+                      <Icon className="h-3.5 w-3.5 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-baseline justify-between gap-2">
+                        <p className="text-sm font-medium truncate">{it.title}</p>
+                        <span className="text-[10px] text-muted-foreground shrink-0">{since(it.ts)}</span>
+                      </div>
+                      {it.body && (
+                        <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{it.body}</p>
+                      )}
+                    </div>
+                  </DropdownMenuItem>
+                );
+              })
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
 
