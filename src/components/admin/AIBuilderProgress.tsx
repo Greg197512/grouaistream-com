@@ -74,7 +74,46 @@ export const AIBuilderProgress = () => {
     }
   };
 
-  useEffect(() => { load(); }, []);
+  // Audio features builder state
+  const [featStats, setFeatStats] = useState<{ total: number; done: number; remaining: number } | null>(null);
+  const [building, setBuilding] = useState(false);
+  const [buildProgress, setBuildProgress] = useState({ batches: 0, processed: 0 });
+
+  const loadFeatStats = async () => {
+    try {
+      const { data } = await supabase.functions.invoke("bulk-audio-features", { body: { action: "stats" } });
+      if (data) setFeatStats(data);
+    } catch (e) { /* silent */ }
+  };
+
+  useEffect(() => { load(); loadFeatStats(); }, []);
+
+  const runBuilder = async () => {
+    if (building) return;
+    setBuilding(true);
+    setBuildProgress({ batches: 0, processed: 0 });
+    toast.info("🤖 Buduję profile audio dla wszystkich utworów…", { duration: 3000 });
+
+    try {
+      let safety = 0;
+      while (safety < 2000) { // max ~40k tracks
+        safety++;
+        const { data, error } = await supabase.functions.invoke("bulk-audio-features", { body: { action: "process_batch" } });
+        if (error) throw error;
+        if (!data || data.done) break;
+        setBuildProgress(p => ({ batches: p.batches + 1, processed: p.processed + (data.processed || 0) }));
+        await loadFeatStats();
+        // small delay to be nice to AI gateway
+        await new Promise(r => setTimeout(r, 800));
+      }
+      toast.success(`✅ Gotowe! Profile audio dorobione dla wszystkich utworów.`);
+      await loadFeatStats();
+    } catch (e: any) {
+      toast.error(`Błąd: ${e?.message || e}`);
+    } finally {
+      setBuilding(false);
+    }
+  };
 
   if (loading && !stats) {
     return <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>;
@@ -349,6 +388,61 @@ export const AIBuilderProgress = () => {
                 />
               ))}
             </div>
+          )}
+        </CardContent>
+      </Card>
+      {/* Audio Features Builder */}
+      <Card className="border-fuchsia-500/30">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-fuchsia-400" />
+            Audio Features Builder — BPM, Energy, Valence, Danceability
+            {featStats && (
+              <Badge variant="secondary" className="ml-auto">
+                {numberFmt(featStats.done)} / {numberFmt(featStats.total)}
+              </Badge>
+            )}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {featStats && (
+            <>
+              <div>
+                <div className="flex items-baseline justify-between mb-1 text-xs">
+                  <span className="text-muted-foreground">
+                    Pozostało: <span className="text-foreground font-bold">{numberFmt(featStats.remaining)}</span> utworów
+                  </span>
+                  <span className="text-2xl font-bold text-fuchsia-400">
+                    {featStats.total > 0 ? Math.round((featStats.done / featStats.total) * 100) : 0}%
+                  </span>
+                </div>
+                <Progress value={featStats.total > 0 ? (featStats.done / featStats.total) * 100 : 0} className="h-2" />
+              </div>
+              <p className="text-[11px] text-muted-foreground leading-relaxed">
+                AI szacuje BPM, energię, pozytywność i taneczność każdego utworu na podstawie tytułu, gatunku i nastroju.
+                Bez tego AI miksuje "na ślepo" — nie wie, czy crossfade pasuje rytmicznie. Po wypełnieniu radio AI, mix
+                i DJ będą dużo trafniejsze.
+              </p>
+              {building && (
+                <div className="rounded-lg bg-fuchsia-500/10 border border-fuchsia-500/30 p-2 text-xs">
+                  <Loader2 className="h-3 w-3 inline animate-spin mr-1 text-fuchsia-400" />
+                  Batch #{buildProgress.batches} • przetworzono {buildProgress.processed} utworów…
+                </div>
+              )}
+              <Button
+                onClick={runBuilder}
+                disabled={building || featStats.remaining === 0}
+                className="w-full bg-fuchsia-600 hover:bg-fuchsia-500"
+              >
+                {building ? (
+                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Buduję profile audio…</>
+                ) : featStats.remaining === 0 ? (
+                  <><CheckCircle2 className="h-4 w-4 mr-2" /> Wszystkie utwory mają profil ✨</>
+                ) : (
+                  <><Sparkles className="h-4 w-4 mr-2" /> Uruchom budowę dla {numberFmt(featStats.remaining)} utworów</>
+                )}
+              </Button>
+            </>
           )}
         </CardContent>
       </Card>
