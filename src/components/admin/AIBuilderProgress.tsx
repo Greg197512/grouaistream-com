@@ -391,6 +391,61 @@ export const AIBuilderProgress = () => {
           )}
         </CardContent>
       </Card>
+      {/* Audio Features Builder */}
+      <Card className="border-fuchsia-500/30">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-fuchsia-400" />
+            Audio Features Builder — BPM, Energy, Valence, Danceability
+            {featStats && (
+              <Badge variant="secondary" className="ml-auto">
+                {numberFmt(featStats.done)} / {numberFmt(featStats.total)}
+              </Badge>
+            )}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {featStats && (
+            <>
+              <div>
+                <div className="flex items-baseline justify-between mb-1 text-xs">
+                  <span className="text-muted-foreground">
+                    Pozostało: <span className="text-foreground font-bold">{numberFmt(featStats.remaining)}</span> utworów
+                  </span>
+                  <span className="text-2xl font-bold text-fuchsia-400">
+                    {featStats.total > 0 ? Math.round((featStats.done / featStats.total) * 100) : 0}%
+                  </span>
+                </div>
+                <Progress value={featStats.total > 0 ? (featStats.done / featStats.total) * 100 : 0} className="h-2" />
+              </div>
+              <p className="text-[11px] text-muted-foreground leading-relaxed">
+                AI szacuje BPM, energię, pozytywność i taneczność każdego utworu na podstawie tytułu, gatunku i nastroju.
+                Bez tego AI miksuje "na ślepo" — nie wie, czy crossfade pasuje rytmicznie. Po wypełnieniu radio AI, mix
+                i DJ będą dużo trafniejsze.
+              </p>
+              {building && (
+                <div className="rounded-lg bg-fuchsia-500/10 border border-fuchsia-500/30 p-2 text-xs">
+                  <Loader2 className="h-3 w-3 inline animate-spin mr-1 text-fuchsia-400" />
+                  Batch #{buildProgress.batches} • przetworzono {buildProgress.processed} utworów…
+                </div>
+              )}
+              <Button
+                onClick={runBuilder}
+                disabled={building || featStats.remaining === 0}
+                className="w-full bg-fuchsia-600 hover:bg-fuchsia-500"
+              >
+                {building ? (
+                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Buduję profile audio…</>
+                ) : featStats.remaining === 0 ? (
+                  <><CheckCircle2 className="h-4 w-4 mr-2" /> Wszystkie utwory mają profil ✨</>
+                ) : (
+                  <><Sparkles className="h-4 w-4 mr-2" /> Uruchom budowę dla {numberFmt(featStats.remaining)} utworów</>
+                )}
+              </Button>
+            </>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 };
