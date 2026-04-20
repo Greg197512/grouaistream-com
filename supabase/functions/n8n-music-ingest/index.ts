@@ -14,7 +14,7 @@ const MAX_AUDIO_BYTES = 50 * 1024 * 1024; // 50MB safety cap per track
 interface IngestPayload {
   title: string;
   artist: string;
-  source: "cc_mixter" | "fma" | "jamendo" | "ia" | "musicbrainz" | "suno_scraped" | "spotify_meta" | "youtube_meta" | "other";
+  source: "cc_mixter" | "fma" | "jamendo" | "ia" | "musicbrainz" | "spotify_meta" | "youtube_meta" | "other";
   audio_url?: string;
   external_id?: string;
   source_url?: string;
