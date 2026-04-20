@@ -1,0 +1,20 @@
+# GrouAI Music Engine - Inference Configuration
+
+checkpoints:
+  autoencoder: "./ckpts/autoencoder_best.pt"
+  diffusion:   "./ckpts/diffusion_best.pt"
+  vocoder:     "./ckpts/vocoder_best.pt"
+
+defaults:
+  duration_sec: 30
+  num_inference_steps: 50
+  guidance_scale: 7.5
+  seed: null                   # null = random
+  scheduler: "ddim"
+
+api:
+  host: "0.0.0.0"
+  port: 8000
+  max_concurrent: 4
+  rate_limit_per_minute: 30
+  cors_origins: ["*"]
