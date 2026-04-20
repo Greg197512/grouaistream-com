@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Sparkles, Send, Loader2, X, GripVertical, Plus, Music2, Upload,
+  Sparkles, Send, Loader2, X, Plus, Music2, Upload,
   Library, Blend, Mic, Wand2, Brain, Zap, ChevronDown,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
@@ -44,23 +44,14 @@ const QUICK_ACTIONS = [
     prompt: "Zrób mi banger — pełna struktura (intro, verse, chorus, bridge, drop, outro), 30s, najmocniejszy gatunek z mojej historii." },
 ];
 
-const DOCK_W = 880;
-const DOCK_H_DEFAULT = 280;
-const STORAGE_KEY = "studio_grok_dock_pos_h";
+const DOCK_W = 720;
+const DOCK_H = 480;
 
 export const StudioGrokDock = () => {
   const { user } = useAuth();
-  const [open, setOpen] = useState(true);
-
-  // Position (draggable)
-  const [pos, setPos] = useState<{ x: number; y: number }>(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) return JSON.parse(raw);
-    } catch {}
-    return { x: typeof window !== "undefined" ? Math.max(24, (window.innerWidth - DOCK_W) / 2) : 24, y: typeof window !== "undefined" ? window.innerHeight - DOCK_H_DEFAULT - 120 : 80 };
-  });
-  const dragging = useRef<{ dx: number; dy: number } | null>(null);
+  const [open, setOpen] = useState(false);
+  const [pinned, setPinned] = useState(false);
+  const closeTimer = useRef<number | null>(null);
 
   // Chat state
   const [messages, setMessages] = useState<Msg[]>([
@@ -84,33 +75,21 @@ export const StudioGrokDock = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Persist pos
-  useEffect(() => {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(pos)); } catch {}
-  }, [pos]);
-
   // Auto-scroll
   useEffect(() => {
     const el = scrollRef.current?.querySelector("[data-radix-scroll-area-viewport]") as HTMLElement | null;
     if (el) el.scrollTop = el.scrollHeight;
   }, [messages]);
 
-  // Drag handlers
-  const onDragStart = (e: React.PointerEvent) => {
-    const target = e.currentTarget as HTMLElement;
-    target.setPointerCapture(e.pointerId);
-    dragging.current = { dx: e.clientX - pos.x, dy: e.clientY - pos.y };
+  // Hover open/close with delay
+  const handleEnter = () => {
+    if (closeTimer.current) { window.clearTimeout(closeTimer.current); closeTimer.current = null; }
+    setOpen(true);
   };
-  const onDragMove = (e: React.PointerEvent) => {
-    if (!dragging.current) return;
-    const w = window.innerWidth, h = window.innerHeight;
-    const nx = Math.min(Math.max(0, e.clientX - dragging.current.dx), w - DOCK_W);
-    const ny = Math.min(Math.max(0, e.clientY - dragging.current.dy), h - 80);
-    setPos({ x: nx, y: ny });
-  };
-  const onDragEnd = (e: React.PointerEvent) => {
-    (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
-    dragging.current = null;
+  const handleLeave = () => {
+    if (pinned) return;
+    if (closeTimer.current) window.clearTimeout(closeTimer.current);
+    closeTimer.current = window.setTimeout(() => setOpen(false), 350);
   };
 
   const loadLibrary = useCallback(async () => {
@@ -275,27 +254,42 @@ export const StudioGrokDock = () => {
 
   return (
     <>
-
+      {/* Right-edge hover zone with vertical "GrAIstudio" tab */}
+      <div
+        onMouseEnter={handleEnter}
+        onMouseLeave={handleLeave}
+        className="fixed right-0 top-1/2 -translate-y-1/2 z-40 flex items-center"
+      >
+        <button
+          type="button"
+          onClick={() => { setOpen(true); setPinned(true); }}
+          className="group relative flex h-44 w-9 items-center justify-center rounded-l-xl border border-r-0 border-primary/40 bg-gradient-to-b from-primary/30 via-purple-500/20 to-primary/30 backdrop-blur-xl shadow-[0_0_20px_hsl(var(--primary)/0.4)] hover:shadow-[0_0_30px_hsl(var(--primary)/0.7)] transition-all"
+          aria-label="Otwórz GrAIstudio"
+        >
+          <span
+            className="text-[11px] font-bold tracking-[0.25em] text-primary-foreground select-none"
+            style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}
+          >
+            GrAIstudio
+          </span>
+          <Sparkles className="absolute top-1.5 left-1/2 -translate-x-1/2 h-3 w-3 text-primary animate-pulse" />
+        </button>
+      </div>
 
       <AnimatePresence>
         {open && (
           <motion.div
-            initial={{ opacity: 0, scale: 0.9, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            transition={{ type: "spring", damping: 22, stiffness: 240 }}
-            style={{ left: pos.x, top: pos.y, width: DOCK_W, height: DOCK_H_DEFAULT }}
-            className="fixed z-50 flex flex-col rounded-2xl border border-primary/30 bg-background/95 backdrop-blur-2xl shadow-2xl shadow-primary/20 overflow-hidden"
+            initial={{ opacity: 0, x: DOCK_W }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: DOCK_W }}
+            transition={{ type: "spring", damping: 26, stiffness: 240 }}
+            onMouseEnter={handleEnter}
+            onMouseLeave={handleLeave}
+            style={{ width: DOCK_W, height: DOCK_H }}
+            className="fixed right-9 top-1/2 -translate-y-1/2 z-50 flex flex-col rounded-2xl rounded-r-none border border-r-0 border-primary/30 bg-background/95 backdrop-blur-2xl shadow-2xl shadow-primary/20 overflow-hidden"
           >
-            {/* Drag handle / Header */}
-            <div
-              onPointerDown={onDragStart}
-              onPointerMove={onDragMove}
-              onPointerUp={onDragEnd}
-              className="flex items-center justify-between border-b border-border/50 bg-gradient-to-r from-primary/15 via-purple-500/10 to-transparent px-3 py-1.5 cursor-move select-none"
-            >
+            <div className="flex items-center justify-between border-b border-border/50 bg-gradient-to-r from-primary/15 via-purple-500/10 to-transparent px-3 py-1.5 select-none">
               <div className="flex items-center gap-2">
-                <GripVertical className="h-4 w-4 text-muted-foreground" />
                 <Sparkles className="h-4 w-4 text-primary" />
                 <span className="text-xs font-semibold tracking-tight">GrouAI Studio</span>
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
@@ -323,7 +317,7 @@ export const StudioGrokDock = () => {
                   variant="ghost"
                   size="icon"
                   className="h-6 w-6 rounded-full hover:bg-destructive/20 hover:text-destructive"
-                  onClick={() => setOpen(false)}
+                  onClick={() => { setPinned(false); setOpen(false); }}
                   aria-label="Zamknij"
                 >
                   <X className="h-3.5 w-3.5" />
@@ -463,7 +457,7 @@ export const StudioGrokDock = () => {
                     </Button>
                   </div>
                   <p className="mt-1 text-center text-[8px] text-muted-foreground">
-                    Przeciągnij nagłówek · Shift+Enter = nowa linia
+                    Najedź na zakładkę po prawej · Shift+Enter = nowa linia
                   </p>
                 </form>
               </div>
