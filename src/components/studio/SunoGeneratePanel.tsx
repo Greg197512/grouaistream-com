@@ -239,11 +239,73 @@ export const SunoGeneratePanel = () => {
 
   return (
     <div className="space-y-5">
-      {/* Mode toggle */}
-      <div className="flex items-center justify-between p-4 rounded-xl border border-[#FF6B00]/20 bg-[#1a1a2e]/60">
-        <Label className="text-sm text-gray-200">Tryb zaawansowany (custom)</Label>
-        <Switch checked={customMode} onCheckedChange={setCustomMode} className="data-[state=checked]:bg-[#FF6B00]" />
+      {/* Engine selector */}
+      <div className="p-4 rounded-xl border border-[#9333EA]/30 bg-gradient-to-br from-[#1a1a2e]/80 to-[#0f0f1e]/80 space-y-3">
+        <div className="flex items-center gap-2">
+          <Cpu className="h-4 w-4 text-[#FF9500]" />
+          <Label className="text-sm font-medium text-gray-200">Silnik generowania</Label>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => setEngine("suno")}
+            disabled={generating || polling}
+            className={`p-3 rounded-lg border-2 transition-all text-left ${
+              engine === "suno"
+                ? "border-[#FF6B00] bg-[#FF6B00]/10"
+                : "border-white/10 hover:border-[#FF6B00]/40 bg-transparent"
+            }`}
+          >
+            <div className="flex items-center gap-2 mb-1">
+              <Sparkles className="h-4 w-4 text-[#FF9500]" />
+              <span className="font-bold text-sm text-white">Suno AI</span>
+              <Badge className="text-[10px] px-1.5 py-0 bg-green-500/20 text-green-400 border-0">stabilny</Badge>
+            </div>
+            <p className="text-[11px] text-gray-400">Pełne piosenki z wokalem, ~60-120s</p>
+          </button>
+          <button
+            type="button"
+            onClick={() => setEngine("groua")}
+            disabled={generating || polling}
+            className={`p-3 rounded-lg border-2 transition-all text-left ${
+              engine === "groua"
+                ? "border-[#9333EA] bg-[#9333EA]/10"
+                : "border-white/10 hover:border-[#9333EA]/40 bg-transparent"
+            }`}
+          >
+            <div className="flex items-center gap-2 mb-1">
+              <Zap className="h-4 w-4 text-[#9333EA]" />
+              <span className="font-bold text-sm text-white">GrouAI Engine</span>
+              <Badge className="text-[10px] px-1.5 py-0 bg-purple-500/20 text-purple-400 border-0">beta</Badge>
+            </div>
+            <p className="text-[11px] text-gray-400">MusicGen, instrumentale, ~15-30s</p>
+          </button>
+        </div>
+        {engine === "groua" && (
+          <div className="pt-2 border-t border-white/5 space-y-2">
+            <div className="flex items-center justify-between">
+              <Label className="text-xs text-gray-400">Długość: {grouaDuration}s</Label>
+            </div>
+            <input
+              type="range"
+              min={4}
+              max={30}
+              step={1}
+              value={grouaDuration}
+              onChange={(e) => setGrouaDuration(parseInt(e.target.value))}
+              className="w-full accent-[#9333EA]"
+            />
+          </div>
+        )}
       </div>
+
+      {/* Mode toggle (Suno only) */}
+      {engine === "suno" && (
+        <div className="flex items-center justify-between p-4 rounded-xl border border-[#FF6B00]/20 bg-[#1a1a2e]/60">
+          <Label className="text-sm text-gray-200">Tryb zaawansowany (custom)</Label>
+          <Switch checked={customMode} onCheckedChange={setCustomMode} className="data-[state=checked]:bg-[#FF6B00]" />
+        </div>
+      )}
 
       {/* Prompt */}
       <div className="space-y-2">
