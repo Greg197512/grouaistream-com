@@ -340,7 +340,7 @@ export const AIBuilderProgress = () => {
           </div>
           {stats.ai_catalog.song_catalog === 0 && (
             <p className="text-[11px] text-muted-foreground mt-2 text-center">
-              Katalog AI jest pusty — boty n8n / SunoScraper jeszcze nie dosłały samples.
+              Katalog AI jest pusty — boty n8n jeszcze nie dosłały samples.
             </p>
           )}
         </CardContent>

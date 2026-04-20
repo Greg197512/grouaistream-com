@@ -1,0 +1,1 @@
+DELETE FROM public.n8n_ingest_tokens WHERE source_type = 'suno_scraped';
