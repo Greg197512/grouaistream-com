@@ -281,7 +281,9 @@ export const UpgradeModal = ({ open, onOpenChange }: UpgradeModalProps) => {
                 ) : (
                   <>
                     <Crown className="h-4 w-4 sm:h-5 sm:w-5" />
-                    {t("upgrade.upgradeTo")} {t(planConfigs.find(p => p.id === selectedPlan)?.nameKey || "")}
+                    {isExistingSubscriber
+                      ? `Zmień na ${t(planConfigs.find(p => p.id === selectedPlan)?.nameKey || "")}`
+                      : `${t("upgrade.upgradeTo")} ${t(planConfigs.find(p => p.id === selectedPlan)?.nameKey || "")}`}
                   </>
                 )}
               </Button>
