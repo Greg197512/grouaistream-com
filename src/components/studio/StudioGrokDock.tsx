@@ -457,7 +457,7 @@ export const StudioGrokDock = () => {
                     </Button>
                   </div>
                   <p className="mt-1 text-center text-[8px] text-muted-foreground">
-                    Przeciągnij nagłówek · Shift+Enter = nowa linia
+                    Najedź na zakładkę po prawej · Shift+Enter = nowa linia
                   </p>
                 </form>
               </div>
