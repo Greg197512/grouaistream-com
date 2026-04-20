@@ -101,6 +101,33 @@ export const SunoGeneratePanel = () => {
     if (!prompt.trim() && !customMode) { toast.error("Wpisz opis utworu"); return; }
     setGenerating(true);
     setSongs([]);
+
+    if (engine === "groua") {
+      setStatusMsg("🧠 GrouAI Engine (MusicGen) generuje...");
+      try {
+        const { data, error } = await supabase.functions.invoke("groua-music-engine", {
+          body: {
+            action: "generate",
+            prompt: prompt.trim(),
+            duration: grouaDuration,
+            instrumental,
+            model_version: instrumental ? "stereo-large" : "stereo-large",
+          },
+        });
+        if (error) throw error;
+        if (data?.error) throw new Error(data.error);
+        const predId = data?.id;
+        if (!predId) throw new Error("Brak prediction_id z silnika");
+        setStatusMsg(`⏳ GrouAI Engine pracuje... (~${Math.round(grouaDuration * 1.5)}s)`);
+        setPolling(true);
+        pollGrouaResult(predId);
+      } catch (err: any) {
+        toast.error("GrouAI Engine: " + (err.message || "błąd"));
+        setStatusMsg("");
+      } finally { setGenerating(false); }
+      return;
+    }
+
     setStatusMsg("🎵 Generuję muzykę z Suno AI...");
     try {
       const body: any = { action: "generate", prompt: prompt.trim(), instrumental };
@@ -116,6 +143,46 @@ export const SunoGeneratePanel = () => {
       toast.error("Błąd: " + (err.message || "Nieznany błąd"));
       setStatusMsg("");
     } finally { setGenerating(false); }
+  };
+
+  const pollGrouaResult = (predictionId: string) => {
+    let attempts = 0;
+    pollRef.current = setInterval(async () => {
+      attempts++;
+      if (attempts > 60) {
+        if (pollRef.current) clearInterval(pollRef.current);
+        setPolling(false);
+        setStatusMsg("⏰ Timeout GrouAI Engine");
+        return;
+      }
+      try {
+        const { data, error } = await supabase.functions.invoke("groua-music-engine", {
+          body: { action: "status", prediction_id: predictionId },
+        });
+        if (error) throw error;
+        const status = data?.status;
+        if (status === "succeeded") {
+          if (pollRef.current) clearInterval(pollRef.current);
+          setPolling(false);
+          const url = typeof data.output === "string" ? data.output : data.output?.[0];
+          if (!url) { setStatusMsg("❌ Brak audio z GrouAI Engine"); return; }
+          handleResult([{
+            id: data.id,
+            title: title || "GrouAI Track",
+            audio_url: url,
+            audioUrl: url,
+            tags: style || "GrouAI",
+            duration: grouaDuration,
+          }]);
+        } else if (status === "failed" || status === "canceled") {
+          if (pollRef.current) clearInterval(pollRef.current);
+          setPolling(false);
+          setStatusMsg("❌ GrouAI Engine: " + (data?.error || "nie powiodło się"));
+        } else {
+          setStatusMsg(`⏳ GrouAI Engine: ${status}... (${attempts * 3}s)`);
+        }
+      } catch {}
+    }, 3000);
   };
 
   const pollForResult = (taskId: string) => {
