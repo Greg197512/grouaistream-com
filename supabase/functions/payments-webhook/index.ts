@@ -23,9 +23,12 @@ Deno.serve(async (req) => {
       case EventName.SubscriptionUpdated:
       case EventName.SubscriptionActivated:
       case EventName.SubscriptionResumed:
-      case EventName.SubscriptionPastDue:
       case EventName.SubscriptionPaused:
+      case 'subscription.trialing' as any:
         await handleSubscription(event.data, env);
+        break;
+      case EventName.SubscriptionPastDue:
+        await handleSubscriptionPastDue(event.data, env);
         break;
       case EventName.SubscriptionCanceled:
         await handleSubscriptionCanceled(event.data, env);
@@ -34,7 +37,7 @@ Deno.serve(async (req) => {
         await handleTransactionCompleted(event.data, env);
         break;
       case EventName.TransactionPaymentFailed:
-        console.log('[payments-webhook] payment failed:', event.data.id);
+        await handleTransactionPaymentFailed(event.data, env);
         break;
       case 'adjustment.created' as any:
       case 'adjustment.updated' as any:
@@ -85,11 +88,52 @@ async function handleSubscription(data: any, env: PaddleEnv) {
   console.log('[payments-webhook] subscription synced:', userId, productId, status);
 }
 
+/**
+ * Past-due policy: immediate downgrade to free + email notification.
+ * (User chose: "Email + natychmiast free")
+ */
+async function handleSubscriptionPastDue(data: any, env: PaddleEnv) {
+  const { id, customData, items } = data;
+  const userId = customData?.userId;
+
+  // Mark as canceled locally — entitlement check filters status NOT IN ('canceled')
+  await supabase.from('subscriptions')
+    .update({ status: 'canceled', updated_at: new Date().toISOString() })
+    .eq('paddle_subscription_id', id)
+    .eq('environment', env);
+
+  if (!userId) return;
+
+  // Lookup user email + plan name
+  const { data: userRow } = await supabase.auth.admin.getUserById(userId);
+  const email = userRow?.user?.email;
+  const displayName = userRow?.user?.user_metadata?.display_name || email?.split('@')[0] || 'tam';
+  const priceExt = items?.[0]?.price?.importMeta?.externalId || '';
+  const planName = priceExt.includes('ultimate') ? 'Ultimate' : 'Pro';
+
+  if (email) {
+    await supabase.functions.invoke('send-transactional-email', {
+      body: {
+        templateName: 'payment-failed',
+        recipientEmail: email,
+        idempotencyKey: `payment-failed-${id}-${Date.now()}`,
+        templateData: { displayName, planName },
+      },
+    }).catch((e) => console.error('[payments-webhook] payment-failed email error:', e));
+  }
+  console.log('[payments-webhook] past_due → downgraded:', userId);
+}
+
 async function handleSubscriptionCanceled(data: any, env: PaddleEnv) {
   await supabase.from('subscriptions')
     .update({ status: 'canceled', updated_at: new Date().toISOString() })
     .eq('paddle_subscription_id', data.id)
     .eq('environment', env);
+}
+
+async function handleTransactionPaymentFailed(data: any, env: PaddleEnv) {
+  // Subscription past_due event handles the user notification — this is just a log
+  console.log('[payments-webhook] transaction.payment_failed:', data.id);
 }
 
 async function handleTransactionCompleted(data: any, env: PaddleEnv) {
@@ -107,6 +151,13 @@ async function handleTransactionCompleted(data: any, env: PaddleEnv) {
   let recipientTrackId: string | null = customData?.recipientTrackId || null;
   const totalCents = Number(details?.totals?.grandTotal || item.price?.unitPrice?.amount || 0);
   const amount = totalCents / 100;
+
+  // Pick emoji based on tier
+  const emoji = priceExternal === 'grouai_coffee_irish'
+    ? '☕🥃'
+    : priceExternal === 'grouai_coffee_latte'
+      ? '☕🥛'
+      : '☕';
 
   if (!recipientUserId || !recipientTrackId) {
     const { data: rnd } = await supabase.rpc('get_random_tippable_track');
@@ -138,24 +189,64 @@ async function handleTransactionCompleted(data: any, env: PaddleEnv) {
       track_id: recipientTrackId,
       amount: amount * 0.9,
       earning_type: 'tip',
-      description: `Kup kawę ☕ ${amount.toFixed(2)}€ (90% twórcy)`,
+      description: `Kup kawę ${emoji} ${amount.toFixed(2)}€ (90% twórcy)`,
     });
+  }
+
+  // ---- Emails: thanks (buyer) + received (creator) ----
+  // Look up buyer
+  let buyerEmail: string | null = null;
+  let buyerName: string | undefined;
+  if (userId) {
+    const { data: u } = await supabase.auth.admin.getUserById(userId);
+    buyerEmail = u?.user?.email ?? null;
+    buyerName = u?.user?.user_metadata?.display_name || buyerEmail?.split('@')[0];
+  }
+
+  // Look up creator + track title
+  let creatorEmail: string | null = null;
+  let creatorName: string | undefined;
+  let trackTitle: string | undefined;
+  if (recipientUserId) {
+    const { data: u } = await supabase.auth.admin.getUserById(recipientUserId);
+    creatorEmail = u?.user?.email ?? null;
+    creatorName = u?.user?.user_metadata?.display_name || creatorEmail?.split('@')[0];
+  }
+  if (recipientTrackId) {
+    const { data: t } = await supabase.from('tracks').select('title').eq('id', recipientTrackId).maybeSingle();
+    trackTitle = t?.title;
+  }
+
+  if (buyerEmail) {
+    await supabase.functions.invoke('send-transactional-email', {
+      body: {
+        templateName: 'coffee-tip-thanks',
+        recipientEmail: buyerEmail,
+        idempotencyKey: `coffee-thanks-${id}`,
+        templateData: { displayName: buyerName, amount, emoji, recipientName: creatorName },
+      },
+    }).catch((e) => console.error('[payments-webhook] thanks email error:', e));
+  }
+
+  if (creatorEmail && creatorEmail !== buyerEmail) {
+    await supabase.functions.invoke('send-transactional-email', {
+      body: {
+        templateName: 'coffee-tip-received',
+        recipientEmail: creatorEmail,
+        idempotencyKey: `coffee-received-${id}`,
+        templateData: { displayName: creatorName, amount, emoji, trackTitle, fromName: buyerName },
+      },
+    }).catch((e) => console.error('[payments-webhook] received email error:', e));
   }
 
   console.log('[payments-webhook] coffee tip recorded:', amount, '→', recipientUserId);
 }
 
-/**
- * Refund / chargeback handling.
- * When Paddle issues an adjustment (refund or chargeback) for a one_time_purchase,
- * mark it refunded and reverse the creator earning.
- */
 async function handleAdjustment(data: any, env: PaddleEnv) {
   const { transactionId, action, status } = data;
   if (action !== 'refund' && action !== 'chargeback') return;
   if (status !== 'approved' && status !== 'pending_approval') return;
 
-  // Find the original purchase
   const { data: purchase } = await supabase
     .from('one_time_purchases')
     .select('id, recipient_user_id, recipient_track_id, amount, refunded_at')
@@ -168,12 +259,10 @@ async function handleAdjustment(data: any, env: PaddleEnv) {
     return;
   }
 
-  // Mark refunded
   await supabase.from('one_time_purchases')
     .update({ refunded_at: new Date().toISOString() })
     .eq('id', purchase.id);
 
-  // Reverse creator earning (negative entry — keeps audit trail)
   if (purchase.recipient_user_id && purchase.recipient_track_id) {
     await supabase.from('creator_earnings').insert({
       user_id: purchase.recipient_user_id,

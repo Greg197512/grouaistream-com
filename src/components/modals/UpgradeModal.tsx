@@ -14,6 +14,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { openPaddleCheckout, isLiveCheckoutEnabled, getPaddleEnvironment } from "@/lib/paddle";
+import { supabase } from "@/integrations/supabase/client";
 
 interface UpgradeModalProps {
   open: boolean;
@@ -59,11 +60,12 @@ export const UpgradeModal = ({ open, onOpenChange }: UpgradeModalProps) => {
   const [cycle, setCycle] = useState<Cycle>("monthly");
   const [isProcessing, setIsProcessing] = useState(false);
   const { t } = useLanguage();
-  const { plan: currentPlan } = useSubscription();
+  const { plan: currentPlan, refreshSubscription } = useSubscription();
   const { user } = useAuth();
 
   const liveEnabled = isLiveCheckoutEnabled();
   const env = getPaddleEnvironment();
+  const isExistingSubscriber = currentPlan === "pro" || currentPlan === "ultimate";
 
   const handleUpgrade = async () => {
     if (selectedPlan === "free") {
@@ -74,6 +76,10 @@ export const UpgradeModal = ({ open, onOpenChange }: UpgradeModalProps) => {
       toast.error("Zaloguj się, aby kupić plan");
       return;
     }
+    if (selectedPlan === currentPlan) {
+      toast.info("To jest Twój aktualny plan.");
+      return;
+    }
     if (!liveEnabled) {
       toast.info("Płatne plany wracają wkrótce — finalizujemy weryfikację dostawcy płatności. Postaw nam kawę ☕ aby wesprzeć projekt teraz!");
       return;
@@ -82,6 +88,21 @@ export const UpgradeModal = ({ open, onOpenChange }: UpgradeModalProps) => {
     try {
       const suffix = cycle === "yearly" ? "_yearly" : "_monthly";
       const priceId = `grouai_${selectedPlan}${suffix}`;
+
+      // Existing subscriber → switch plan with proration via portal
+      if (isExistingSubscriber) {
+        const { data, error } = await supabase.functions.invoke("customer-portal", {
+          body: { action: "change_plan", environment: env, newPriceId: priceId },
+        });
+        if (error) throw error;
+        if ((data as any)?.error) throw new Error((data as any).error);
+        toast.success("Plan zmieniony! Paddle naliczy proporcjonalną różnicę.");
+        await refreshSubscription();
+        onOpenChange(false);
+        return;
+      }
+
+      // New subscriber → fresh checkout
       await openPaddleCheckout({
         priceId,
         customerEmail: user.email,
@@ -91,7 +112,7 @@ export const UpgradeModal = ({ open, onOpenChange }: UpgradeModalProps) => {
       onOpenChange(false);
     } catch (e: any) {
       console.error("Checkout error:", e);
-      toast.error("Nie udało się otworzyć płatności: " + (e?.message || "spróbuj ponownie"));
+      toast.error("Nie udało się: " + (e?.message || "spróbuj ponownie"));
     } finally {
       setIsProcessing(false);
     }
@@ -260,7 +281,9 @@ export const UpgradeModal = ({ open, onOpenChange }: UpgradeModalProps) => {
                 ) : (
                   <>
                     <Crown className="h-4 w-4 sm:h-5 sm:w-5" />
-                    {t("upgrade.upgradeTo")} {t(planConfigs.find(p => p.id === selectedPlan)?.nameKey || "")}
+                    {isExistingSubscriber
+                      ? `Zmień na ${t(planConfigs.find(p => p.id === selectedPlan)?.nameKey || "")}`
+                      : `${t("upgrade.upgradeTo")} ${t(planConfigs.find(p => p.id === selectedPlan)?.nameKey || "")}`}
                   </>
                 )}
               </Button>

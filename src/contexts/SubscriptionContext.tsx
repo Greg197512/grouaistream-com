@@ -88,7 +88,10 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
           .select("product_id, status, current_period_end, cancel_at_period_end")
           .eq("user_id", user.id)
           .eq("environment", paddleEnv)
-          .in("status", ["active", "trialing", "past_due"])
+          // past_due is filtered out — webhook downgrades it to canceled per policy
+          .in("status", ["active", "trialing"])
+          // grace period: if current_period_end already passed, exclude
+          .or(`current_period_end.is.null,current_period_end.gt.${new Date().toISOString()}`)
           .maybeSingle(),
         // Fallback: legacy mirror (admin overrides + trial)
         supabase

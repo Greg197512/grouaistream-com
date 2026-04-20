@@ -15,6 +15,9 @@ import { template as adOutreach } from './ad-outreach.tsx'
 import { template as adSubmissionConfirmation } from './ad-submission-confirmation.tsx'
 import { template as subscriptionCanceled } from './subscription-canceled.tsx'
 import { template as inviteMusicians } from './invite-musicians.tsx'
+import { template as coffeeTipThanks } from './coffee-tip-thanks.tsx'
+import { template as coffeeTipReceived } from './coffee-tip-received.tsx'
+import { template as paymentFailed } from './payment-failed.tsx'
 
 export const TEMPLATES: Record<string, TemplateEntry> = {
   'admin-notification': adminNotification,
@@ -23,4 +26,7 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   'ad-submission-confirmation': adSubmissionConfirmation,
   'subscription-canceled': subscriptionCanceled,
   'invite-musicians': inviteMusicians,
+  'coffee-tip-thanks': coffeeTipThanks,
+  'coffee-tip-received': coffeeTipReceived,
+  'payment-failed': paymentFailed,
 }

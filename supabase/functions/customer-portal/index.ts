@@ -1,5 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
-import { getPaddleClient, type PaddleEnv } from '../_shared/paddle.ts';
+import { getPaddleClient, gatewayFetch, type PaddleEnv } from '../_shared/paddle.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -39,12 +39,12 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json().catch(() => ({}));
-    const action: 'portal' | 'cancel' = body.action || 'portal';
+    const action: 'portal' | 'cancel' | 'change_plan' = body.action || 'portal';
     const env: PaddleEnv = (body.environment === 'live' ? 'live' : 'sandbox') as PaddleEnv;
 
     const { data: sub, error: subErr } = await supabase
       .from('subscriptions')
-      .select('paddle_subscription_id, paddle_customer_id, status, current_period_end')
+      .select('paddle_subscription_id, paddle_customer_id, status, current_period_end, price_id')
       .eq('user_id', user.id)
       .eq('environment', env)
       .maybeSingle();
@@ -58,6 +58,7 @@ Deno.serve(async (req) => {
 
     const paddle = getPaddleClient(env);
 
+    // -------- CANCEL --------
     if (action === 'cancel') {
       await paddle.subscriptions.cancel(sub.paddle_subscription_id, {
         effectiveFrom: 'next_billing_period',
@@ -67,7 +68,6 @@ Deno.serve(async (req) => {
         .eq('paddle_subscription_id', sub.paddle_subscription_id)
         .eq('environment', env);
 
-      // Fire transactional cancel-confirmation email (idempotent on subscription id)
       await supabase.functions.invoke('send-transactional-email', {
         body: {
           templateName: 'subscription-canceled',
@@ -85,7 +85,47 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Default: portal — return overview URL (not the cancel URL)
+    // -------- CHANGE PLAN (proration) --------
+    if (action === 'change_plan') {
+      const newPriceExternalId: string = body.newPriceId; // e.g. grouai_ultimate_monthly
+      if (!newPriceExternalId) {
+        return new Response(JSON.stringify({ error: 'newPriceId required' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      if (newPriceExternalId === sub.price_id) {
+        return new Response(JSON.stringify({ error: 'already_on_this_plan' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      // Resolve external_id → Paddle internal id
+      const lookup = await gatewayFetch(env, `/prices?external_id=${encodeURIComponent(newPriceExternalId)}`);
+      const lookupJson = await lookup.json();
+      const newPaddlePriceId = lookupJson?.data?.[0]?.id;
+      if (!newPaddlePriceId) {
+        return new Response(JSON.stringify({ error: 'price_not_found', priceId: newPriceExternalId }), {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      // Update subscription with proration (immediate switch + pro-rated charge)
+      await paddle.subscriptions.update(sub.paddle_subscription_id, {
+        items: [{ priceId: newPaddlePriceId, quantity: 1 }],
+        prorationBillingMode: 'prorated_immediately',
+      } as any);
+
+      console.log('[customer-portal] plan changed:', user.id, sub.price_id, '→', newPriceExternalId);
+
+      return new Response(JSON.stringify({ ok: true, action: 'plan_changed', newPriceId: newPriceExternalId }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // -------- PORTAL --------
     const session = await paddle.customerPortalSessions.create(
       sub.paddle_customer_id,
       [sub.paddle_subscription_id]
