@@ -148,13 +148,30 @@ uvicorn app.api:app --host 0.0.0.0 --port 8000
 
 ---
 
-## 🔧 Następne kroki integracji z GrouAI Stream
+## 🔗 Resources & References (open-source baselines)
+
+| Komponent | Repo / Docs | Po co |
+|-----------|-------------|-------|
+| **MusicGen** (Meta) | https://github.com/facebookresearch/audiocraft | Open-source text→music, najbliższy klon Suno. Bazowy model do fine-tuningu. |
+| **AudioLDM / AudioLDM2** | https://github.com/haoheliu/AudioLDM | Latent diffusion dla audio — referencja dla naszego `autoencoder.py` + `diffusion.py`. |
+| **HiFi-GAN** | https://github.com/jik876/hifi-gan | Najpopularniejszy vocoder mel→waveform — bazowa implementacja `vocoder.py`. |
+| **Stable Audio Open** | https://github.com/Stability-AI/stable-audio-tools | Pełny pipeline treningowy diffusion-audio do podpatrzenia best practices. |
+| **Fréchet Audio Distance (FAD)** | https://github.com/microsoft/AudioSet | Metryka jakości — używana w `scripts/evaluate.py`. |
+| **Suno API (beta)** | https://docs.suno.ai | Referencja dla designu naszego endpointu `/generate` w `app/api.py`. |
+
+---
+
+## 🚀 Następne kroki integracji z GrouAI Stream
 
 Po wytrenowaniu modelu:
 1. Eksport do ONNX → upload na **Replicate** lub **HuggingFace Hub**
-2. Stworzenie edge function `groua-music-engine` w głównym projekcie
+2. Stworzenie edge function `groua-music-engine` w głównym projekcie (sekret `REPLICATE_API_TOKEN` jest już skonfigurowany ✅)
 3. Podmiana `suno-generate` na własny model w UI
 4. Telemetria + cache w bazie GrouAI
+
+### Szybki start MVP — zanim model jest wytrenowany
+Zamiast czekać tygodnie na trening od zera, możemy jutro odpalić **fine-tuning MusicGen na Replicate** (`meta/musicgen` lub `sakemin/musicgen-fine-tuner`), używając już dostępnego klucza `REPLICATE_API_TOKEN`.
+To da realne, generowane utwory w GrouAI Stream w ciągu 1–3 dni, podczas gdy własny silnik dojrzewa równolegle.
 
 ---
 
