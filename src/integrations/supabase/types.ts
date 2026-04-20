@@ -2642,9 +2642,13 @@ export type Database = {
           artist: string
           audio_url: string | null
           boost_expires_at: string | null
+          bpm: number | null
           cover_url: string | null
           created_at: string
+          danceability: number | null
           duration: number
+          energy: number | null
+          features_analyzed_at: string | null
           genre: string | null
           id: string
           is_boosted: boolean
@@ -2655,6 +2659,7 @@ export type Database = {
           total_earnings: number
           total_streams: number
           user_id: string | null
+          valence: number | null
           video_url: string | null
         }
         Insert: {
@@ -2662,9 +2667,13 @@ export type Database = {
           artist: string
           audio_url?: string | null
           boost_expires_at?: string | null
+          bpm?: number | null
           cover_url?: string | null
           created_at?: string
+          danceability?: number | null
           duration?: number
+          energy?: number | null
+          features_analyzed_at?: string | null
           genre?: string | null
           id?: string
           is_boosted?: boolean
@@ -2675,6 +2684,7 @@ export type Database = {
           total_earnings?: number
           total_streams?: number
           user_id?: string | null
+          valence?: number | null
           video_url?: string | null
         }
         Update: {
@@ -2682,9 +2692,13 @@ export type Database = {
           artist?: string
           audio_url?: string | null
           boost_expires_at?: string | null
+          bpm?: number | null
           cover_url?: string | null
           created_at?: string
+          danceability?: number | null
           duration?: number
+          energy?: number | null
+          features_analyzed_at?: string | null
           genre?: string | null
           id?: string
           is_boosted?: boolean
@@ -2695,6 +2709,7 @@ export type Database = {
           total_earnings?: number
           total_streams?: number
           user_id?: string | null
+          valence?: number | null
           video_url?: string | null
         }
         Relationships: []
