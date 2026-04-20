@@ -1,0 +1,43 @@
+# Core ML
+torch>=2.1.0
+torchaudio>=2.1.0
+torchvision>=0.16.0
+
+# Transformers (text encoder)
+transformers>=4.35.0
+sentencepiece>=0.1.99
+einops>=0.7.0
+
+# Audio processing
+librosa>=0.10.1
+soundfile>=0.12.1
+ffmpeg-python>=0.2.0
+
+# Data
+pandas>=2.0.0
+numpy>=1.24.0
+pyyaml>=6.0
+tqdm>=4.66.0
+
+# Diffusion utilities
+diffusers>=0.24.0
+accelerate>=0.25.0
+
+# Evaluation
+torchmetrics[audio]>=1.2.0
+frechet-audio-distance>=0.1.2
+scipy>=1.11.0
+
+# API
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+python-multipart>=0.0.6
+pydantic>=2.5.0
+
+# Export
+onnx>=1.15.0
+onnxruntime-gpu>=1.16.0
+
+# Logging / monitoring
+wandb>=0.16.0
+tensorboard>=2.15.0

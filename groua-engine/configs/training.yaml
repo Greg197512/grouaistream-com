@@ -1,0 +1,50 @@
+# GrouAI Music Engine - Training Configuration
+
+autoencoder:
+  batch_size: 16
+  epochs: 100
+  learning_rate: 1.0e-4
+  weight_decay: 1.0e-5
+  scheduler: "cosine"
+  warmup_steps: 1000
+  ckpt_every: 10
+  log_every: 50
+  val_every: 5
+
+diffusion:
+  batch_size: 8
+  epochs: 200
+  learning_rate: 2.0e-4
+  weight_decay: 1.0e-5
+  scheduler: "cosine"
+  warmup_steps: 5000
+  ema_decay: 0.9999
+  cfg_dropout: 0.1            # classifier-free guidance dropout
+  ckpt_every: 10
+  log_every: 100
+
+vocoder:
+  batch_size: 16
+  epochs: 50
+  learning_rate: 2.0e-4
+  betas: [0.8, 0.99]
+  lambda_mel: 45.0
+  lambda_feat: 2.0
+  ckpt_every: 5
+
+dataloader:
+  num_workers: 8
+  pin_memory: true
+  persistent_workers: true
+  prefetch_factor: 2
+
+logging:
+  use_wandb: false
+  wandb_project: "groua-music-engine"
+  use_tensorboard: true
+  log_dir: "./runs"
+
+checkpoint:
+  out_dir: "./ckpts"
+  resume_from: null            # path to .pt file or null
+  save_top_k: 3
