@@ -45,7 +45,8 @@ const QUICK_ACTIONS = [
 ];
 
 const DOCK_W = 720;
-const DOCK_H = 480;
+const DOCK_H = 460;
+const DOCK_BOTTOM_OFFSET = 140; // odstęp od dołu, żeby nie zasłaniać PlayerBar
 
 export const StudioGrokDock = () => {
   const { user } = useAuth();
