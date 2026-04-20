@@ -290,7 +290,6 @@ export const StudioGrokDock = () => {
           >
             <div className="flex items-center justify-between border-b border-border/50 bg-gradient-to-r from-primary/15 via-purple-500/10 to-transparent px-3 py-1.5 select-none">
               <div className="flex items-center gap-2">
-                <GripVertical className="h-4 w-4 text-muted-foreground" />
                 <Sparkles className="h-4 w-4 text-primary" />
                 <span className="text-xs font-semibold tracking-tight">GrouAI Studio</span>
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
@@ -318,7 +317,7 @@ export const StudioGrokDock = () => {
                   variant="ghost"
                   size="icon"
                   className="h-6 w-6 rounded-full hover:bg-destructive/20 hover:text-destructive"
-                  onClick={() => setOpen(false)}
+                  onClick={() => { setPinned(false); setOpen(false); }}
                   aria-label="Zamknij"
                 >
                   <X className="h-3.5 w-3.5" />
