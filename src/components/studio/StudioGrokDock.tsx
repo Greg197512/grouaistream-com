@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Sparkles, Send, Loader2, X, GripVertical, Plus, Music2, Upload,
+  Sparkles, Send, Loader2, X, Plus, Music2, Upload,
   Library, Blend, Mic, Wand2, Brain, Zap, ChevronDown,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
@@ -44,23 +44,14 @@ const QUICK_ACTIONS = [
     prompt: "Zrób mi banger — pełna struktura (intro, verse, chorus, bridge, drop, outro), 30s, najmocniejszy gatunek z mojej historii." },
 ];
 
-const DOCK_W = 880;
-const DOCK_H_DEFAULT = 280;
-const STORAGE_KEY = "studio_grok_dock_pos_h";
+const DOCK_W = 720;
+const DOCK_H = 480;
 
 export const StudioGrokDock = () => {
   const { user } = useAuth();
-  const [open, setOpen] = useState(true);
-
-  // Position (draggable)
-  const [pos, setPos] = useState<{ x: number; y: number }>(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) return JSON.parse(raw);
-    } catch {}
-    return { x: typeof window !== "undefined" ? Math.max(24, (window.innerWidth - DOCK_W) / 2) : 24, y: typeof window !== "undefined" ? window.innerHeight - DOCK_H_DEFAULT - 120 : 80 };
-  });
-  const dragging = useRef<{ dx: number; dy: number } | null>(null);
+  const [open, setOpen] = useState(false);
+  const [pinned, setPinned] = useState(false);
+  const closeTimer = useRef<number | null>(null);
 
   // Chat state
   const [messages, setMessages] = useState<Msg[]>([
@@ -84,33 +75,21 @@ export const StudioGrokDock = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Persist pos
-  useEffect(() => {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(pos)); } catch {}
-  }, [pos]);
-
   // Auto-scroll
   useEffect(() => {
     const el = scrollRef.current?.querySelector("[data-radix-scroll-area-viewport]") as HTMLElement | null;
     if (el) el.scrollTop = el.scrollHeight;
   }, [messages]);
 
-  // Drag handlers
-  const onDragStart = (e: React.PointerEvent) => {
-    const target = e.currentTarget as HTMLElement;
-    target.setPointerCapture(e.pointerId);
-    dragging.current = { dx: e.clientX - pos.x, dy: e.clientY - pos.y };
+  // Hover open/close with delay
+  const handleEnter = () => {
+    if (closeTimer.current) { window.clearTimeout(closeTimer.current); closeTimer.current = null; }
+    setOpen(true);
   };
-  const onDragMove = (e: React.PointerEvent) => {
-    if (!dragging.current) return;
-    const w = window.innerWidth, h = window.innerHeight;
-    const nx = Math.min(Math.max(0, e.clientX - dragging.current.dx), w - DOCK_W);
-    const ny = Math.min(Math.max(0, e.clientY - dragging.current.dy), h - 80);
-    setPos({ x: nx, y: ny });
-  };
-  const onDragEnd = (e: React.PointerEvent) => {
-    (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
-    dragging.current = null;
+  const handleLeave = () => {
+    if (pinned) return;
+    if (closeTimer.current) window.clearTimeout(closeTimer.current);
+    closeTimer.current = window.setTimeout(() => setOpen(false), 350);
   };
 
   const loadLibrary = useCallback(async () => {
