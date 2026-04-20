@@ -254,25 +254,41 @@ export const StudioGrokDock = () => {
 
   return (
     <>
-
+      {/* Right-edge hover zone with vertical "GrAIstudio" tab */}
+      <div
+        onMouseEnter={handleEnter}
+        onMouseLeave={handleLeave}
+        className="fixed right-0 top-1/2 -translate-y-1/2 z-40 flex items-center"
+      >
+        <button
+          type="button"
+          onClick={() => { setOpen(true); setPinned(true); }}
+          className="group relative flex h-44 w-9 items-center justify-center rounded-l-xl border border-r-0 border-primary/40 bg-gradient-to-b from-primary/30 via-purple-500/20 to-primary/30 backdrop-blur-xl shadow-[0_0_20px_hsl(var(--primary)/0.4)] hover:shadow-[0_0_30px_hsl(var(--primary)/0.7)] transition-all"
+          aria-label="Otwórz GrAIstudio"
+        >
+          <span
+            className="text-[11px] font-bold tracking-[0.25em] text-primary-foreground select-none"
+            style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}
+          >
+            GrAIstudio
+          </span>
+          <Sparkles className="absolute top-1.5 left-1/2 -translate-x-1/2 h-3 w-3 text-primary animate-pulse" />
+        </button>
+      </div>
 
       <AnimatePresence>
         {open && (
           <motion.div
-            initial={{ opacity: 0, scale: 0.9, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            transition={{ type: "spring", damping: 22, stiffness: 240 }}
-            style={{ left: pos.x, top: pos.y, width: DOCK_W, height: DOCK_H_DEFAULT }}
-            className="fixed z-50 flex flex-col rounded-2xl border border-primary/30 bg-background/95 backdrop-blur-2xl shadow-2xl shadow-primary/20 overflow-hidden"
+            initial={{ opacity: 0, x: DOCK_W }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: DOCK_W }}
+            transition={{ type: "spring", damping: 26, stiffness: 240 }}
+            onMouseEnter={handleEnter}
+            onMouseLeave={handleLeave}
+            style={{ width: DOCK_W, height: DOCK_H }}
+            className="fixed right-9 top-1/2 -translate-y-1/2 z-50 flex flex-col rounded-2xl rounded-r-none border border-r-0 border-primary/30 bg-background/95 backdrop-blur-2xl shadow-2xl shadow-primary/20 overflow-hidden"
           >
-            {/* Drag handle / Header */}
-            <div
-              onPointerDown={onDragStart}
-              onPointerMove={onDragMove}
-              onPointerUp={onDragEnd}
-              className="flex items-center justify-between border-b border-border/50 bg-gradient-to-r from-primary/15 via-purple-500/10 to-transparent px-3 py-1.5 cursor-move select-none"
-            >
+            <div className="flex items-center justify-between border-b border-border/50 bg-gradient-to-r from-primary/15 via-purple-500/10 to-transparent px-3 py-1.5 select-none">
               <div className="flex items-center gap-2">
                 <GripVertical className="h-4 w-4 text-muted-foreground" />
                 <Sparkles className="h-4 w-4 text-primary" />
