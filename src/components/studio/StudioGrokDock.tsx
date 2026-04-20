@@ -45,7 +45,8 @@ const QUICK_ACTIONS = [
 ];
 
 const DOCK_W = 720;
-const DOCK_H = 480;
+const DOCK_H = 460;
+const DOCK_BOTTOM_OFFSET = 140; // odstęp od dołu, żeby nie zasłaniać PlayerBar
 
 export const StudioGrokDock = () => {
   const { user } = useAuth();
@@ -258,7 +259,8 @@ export const StudioGrokDock = () => {
       <div
         onMouseEnter={handleEnter}
         onMouseLeave={handleLeave}
-        className="fixed right-0 top-1/2 -translate-y-1/2 z-40 flex items-center"
+        style={{ bottom: DOCK_BOTTOM_OFFSET + (DOCK_H - 176) / 2 }}
+        className="fixed right-0 z-40 flex items-center"
       >
         <button
           type="button"
@@ -285,8 +287,8 @@ export const StudioGrokDock = () => {
             transition={{ type: "spring", damping: 26, stiffness: 240 }}
             onMouseEnter={handleEnter}
             onMouseLeave={handleLeave}
-            style={{ width: DOCK_W, height: DOCK_H }}
-            className="fixed right-9 top-1/2 -translate-y-1/2 z-50 flex flex-col rounded-2xl rounded-r-none border border-r-0 border-primary/30 bg-background/95 backdrop-blur-2xl shadow-2xl shadow-primary/20 overflow-hidden"
+            style={{ width: DOCK_W, height: DOCK_H, bottom: DOCK_BOTTOM_OFFSET }}
+            className="fixed right-9 z-50 flex flex-col rounded-2xl rounded-r-none border border-r-0 border-primary/30 bg-background/95 backdrop-blur-2xl shadow-2xl shadow-primary/20 overflow-hidden"
           >
             <div className="flex items-center justify-between border-b border-border/50 bg-gradient-to-r from-primary/15 via-purple-500/10 to-transparent px-3 py-1.5 select-none">
               <div className="flex items-center gap-2">
