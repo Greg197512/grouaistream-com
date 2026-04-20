@@ -74,7 +74,46 @@ export const AIBuilderProgress = () => {
     }
   };
 
-  useEffect(() => { load(); }, []);
+  // Audio features builder state
+  const [featStats, setFeatStats] = useState<{ total: number; done: number; remaining: number } | null>(null);
+  const [building, setBuilding] = useState(false);
+  const [buildProgress, setBuildProgress] = useState({ batches: 0, processed: 0 });
+
+  const loadFeatStats = async () => {
+    try {
+      const { data } = await supabase.functions.invoke("bulk-audio-features", { body: { action: "stats" } });
+      if (data) setFeatStats(data);
+    } catch (e) { /* silent */ }
+  };
+
+  useEffect(() => { load(); loadFeatStats(); }, []);
+
+  const runBuilder = async () => {
+    if (building) return;
+    setBuilding(true);
+    setBuildProgress({ batches: 0, processed: 0 });
+    toast.info("🤖 Buduję profile audio dla wszystkich utworów…", { duration: 3000 });
+
+    try {
+      let safety = 0;
+      while (safety < 2000) { // max ~40k tracks
+        safety++;
+        const { data, error } = await supabase.functions.invoke("bulk-audio-features", { body: { action: "process_batch" } });
+        if (error) throw error;
+        if (!data || data.done) break;
+        setBuildProgress(p => ({ batches: p.batches + 1, processed: p.processed + (data.processed || 0) }));
+        await loadFeatStats();
+        // small delay to be nice to AI gateway
+        await new Promise(r => setTimeout(r, 800));
+      }
+      toast.success(`✅ Gotowe! Profile audio dorobione dla wszystkich utworów.`);
+      await loadFeatStats();
+    } catch (e: any) {
+      toast.error(`Błąd: ${e?.message || e}`);
+    } finally {
+      setBuilding(false);
+    }
+  };
 
   if (loading && !stats) {
     return <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>;
