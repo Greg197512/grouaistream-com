@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Music, Loader2, Play, Download, Wand2, Guitar, ImagePlus, Upload, Palette, X } from "lucide-react";
+import { Sparkles, Music, Loader2, Play, Download, Wand2, Guitar, ImagePlus, Upload, Palette, X, Cpu, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -28,14 +28,17 @@ const STYLE_PRESETS = [
 ];
 
 type CoverMode = "auto" | "custom" | "upload";
+type Engine = "suno" | "groua";
 
 export const SunoGeneratePanel = () => {
   const { playTrack } = usePlayer();
+  const [engine, setEngine] = useState<Engine>("suno");
   const [prompt, setPrompt] = useState("");
   const [title, setTitle] = useState("");
   const [style, setStyle] = useState("");
   const [instrumental, setInstrumental] = useState(false);
   const [customMode, setCustomMode] = useState(false);
+  const [grouaDuration, setGrouaDuration] = useState(15);
   const [generating, setGenerating] = useState(false);
   const [polling, setPolling] = useState(false);
   const [songs, setSongs] = useState<GeneratedSong[]>([]);
@@ -98,6 +101,33 @@ export const SunoGeneratePanel = () => {
     if (!prompt.trim() && !customMode) { toast.error("Wpisz opis utworu"); return; }
     setGenerating(true);
     setSongs([]);
+
+    if (engine === "groua") {
+      setStatusMsg("🧠 GrouAI Engine (MusicGen) generuje...");
+      try {
+        const { data, error } = await supabase.functions.invoke("groua-music-engine", {
+          body: {
+            action: "generate",
+            prompt: prompt.trim(),
+            duration: grouaDuration,
+            instrumental,
+            model_version: instrumental ? "stereo-large" : "stereo-large",
+          },
+        });
+        if (error) throw error;
+        if (data?.error) throw new Error(data.error);
+        const predId = data?.id;
+        if (!predId) throw new Error("Brak prediction_id z silnika");
+        setStatusMsg(`⏳ GrouAI Engine pracuje... (~${Math.round(grouaDuration * 1.5)}s)`);
+        setPolling(true);
+        pollGrouaResult(predId);
+      } catch (err: any) {
+        toast.error("GrouAI Engine: " + (err.message || "błąd"));
+        setStatusMsg("");
+      } finally { setGenerating(false); }
+      return;
+    }
+
     setStatusMsg("🎵 Generuję muzykę z Suno AI...");
     try {
       const body: any = { action: "generate", prompt: prompt.trim(), instrumental };
@@ -113,6 +143,46 @@ export const SunoGeneratePanel = () => {
       toast.error("Błąd: " + (err.message || "Nieznany błąd"));
       setStatusMsg("");
     } finally { setGenerating(false); }
+  };
+
+  const pollGrouaResult = (predictionId: string) => {
+    let attempts = 0;
+    pollRef.current = setInterval(async () => {
+      attempts++;
+      if (attempts > 60) {
+        if (pollRef.current) clearInterval(pollRef.current);
+        setPolling(false);
+        setStatusMsg("⏰ Timeout GrouAI Engine");
+        return;
+      }
+      try {
+        const { data, error } = await supabase.functions.invoke("groua-music-engine", {
+          body: { action: "status", prediction_id: predictionId },
+        });
+        if (error) throw error;
+        const status = data?.status;
+        if (status === "succeeded") {
+          if (pollRef.current) clearInterval(pollRef.current);
+          setPolling(false);
+          const url = typeof data.output === "string" ? data.output : data.output?.[0];
+          if (!url) { setStatusMsg("❌ Brak audio z GrouAI Engine"); return; }
+          handleResult([{
+            id: data.id,
+            title: title || "GrouAI Track",
+            audio_url: url,
+            audioUrl: url,
+            tags: style || "GrouAI",
+            duration: grouaDuration,
+          }]);
+        } else if (status === "failed" || status === "canceled") {
+          if (pollRef.current) clearInterval(pollRef.current);
+          setPolling(false);
+          setStatusMsg("❌ GrouAI Engine: " + (data?.error || "nie powiodło się"));
+        } else {
+          setStatusMsg(`⏳ GrouAI Engine: ${status}... (${attempts * 3}s)`);
+        }
+      } catch {}
+    }, 3000);
   };
 
   const pollForResult = (taskId: string) => {
@@ -169,11 +239,73 @@ export const SunoGeneratePanel = () => {
 
   return (
     <div className="space-y-5">
-      {/* Mode toggle */}
-      <div className="flex items-center justify-between p-4 rounded-xl border border-[#FF6B00]/20 bg-[#1a1a2e]/60">
-        <Label className="text-sm text-gray-200">Tryb zaawansowany (custom)</Label>
-        <Switch checked={customMode} onCheckedChange={setCustomMode} className="data-[state=checked]:bg-[#FF6B00]" />
+      {/* Engine selector */}
+      <div className="p-4 rounded-xl border border-[#9333EA]/30 bg-gradient-to-br from-[#1a1a2e]/80 to-[#0f0f1e]/80 space-y-3">
+        <div className="flex items-center gap-2">
+          <Cpu className="h-4 w-4 text-[#FF9500]" />
+          <Label className="text-sm font-medium text-gray-200">Silnik generowania</Label>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => setEngine("suno")}
+            disabled={generating || polling}
+            className={`p-3 rounded-lg border-2 transition-all text-left ${
+              engine === "suno"
+                ? "border-[#FF6B00] bg-[#FF6B00]/10"
+                : "border-white/10 hover:border-[#FF6B00]/40 bg-transparent"
+            }`}
+          >
+            <div className="flex items-center gap-2 mb-1">
+              <Sparkles className="h-4 w-4 text-[#FF9500]" />
+              <span className="font-bold text-sm text-white">Suno AI</span>
+              <Badge className="text-[10px] px-1.5 py-0 bg-green-500/20 text-green-400 border-0">stabilny</Badge>
+            </div>
+            <p className="text-[11px] text-gray-400">Pełne piosenki z wokalem, ~60-120s</p>
+          </button>
+          <button
+            type="button"
+            onClick={() => setEngine("groua")}
+            disabled={generating || polling}
+            className={`p-3 rounded-lg border-2 transition-all text-left ${
+              engine === "groua"
+                ? "border-[#9333EA] bg-[#9333EA]/10"
+                : "border-white/10 hover:border-[#9333EA]/40 bg-transparent"
+            }`}
+          >
+            <div className="flex items-center gap-2 mb-1">
+              <Zap className="h-4 w-4 text-[#9333EA]" />
+              <span className="font-bold text-sm text-white">GrouAI Engine</span>
+              <Badge className="text-[10px] px-1.5 py-0 bg-purple-500/20 text-purple-400 border-0">beta</Badge>
+            </div>
+            <p className="text-[11px] text-gray-400">MusicGen, instrumentale, ~15-30s</p>
+          </button>
+        </div>
+        {engine === "groua" && (
+          <div className="pt-2 border-t border-white/5 space-y-2">
+            <div className="flex items-center justify-between">
+              <Label className="text-xs text-gray-400">Długość: {grouaDuration}s</Label>
+            </div>
+            <input
+              type="range"
+              min={4}
+              max={30}
+              step={1}
+              value={grouaDuration}
+              onChange={(e) => setGrouaDuration(parseInt(e.target.value))}
+              className="w-full accent-[#9333EA]"
+            />
+          </div>
+        )}
       </div>
+
+      {/* Mode toggle (Suno only) */}
+      {engine === "suno" && (
+        <div className="flex items-center justify-between p-4 rounded-xl border border-[#FF6B00]/20 bg-[#1a1a2e]/60">
+          <Label className="text-sm text-gray-200">Tryb zaawansowany (custom)</Label>
+          <Switch checked={customMode} onCheckedChange={setCustomMode} className="data-[state=checked]:bg-[#FF6B00]" />
+        </div>
+      )}
 
       {/* Prompt */}
       <div className="space-y-2">
