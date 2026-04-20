@@ -28,14 +28,17 @@ const STYLE_PRESETS = [
 ];
 
 type CoverMode = "auto" | "custom" | "upload";
+type Engine = "suno" | "groua";
 
 export const SunoGeneratePanel = () => {
   const { playTrack } = usePlayer();
+  const [engine, setEngine] = useState<Engine>("suno");
   const [prompt, setPrompt] = useState("");
   const [title, setTitle] = useState("");
   const [style, setStyle] = useState("");
   const [instrumental, setInstrumental] = useState(false);
   const [customMode, setCustomMode] = useState(false);
+  const [grouaDuration, setGrouaDuration] = useState(15);
   const [generating, setGenerating] = useState(false);
   const [polling, setPolling] = useState(false);
   const [songs, setSongs] = useState<GeneratedSong[]>([]);
