@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.n8n-music-ingest]
 verify_jwt = false
+
+[functions.grouai-brain]
+verify_jwt = false
