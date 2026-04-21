@@ -265,6 +265,14 @@ const Suno = () => {
   const [vocalStyle, setVocalStyle] = useState<string>("singing");
   const [intensity, setIntensity] = useState<string>("balanced");
   const [showAdvanced, setShowAdvanced] = useState(false);
+  // ElevenLabs engine toggle — default ON. When OFF → uses n8n router (multi-engine).
+  const [useElevenLabs, setUseElevenLabs] = useState<boolean>(() => {
+    const stored = typeof window !== "undefined" ? localStorage.getItem("studio-use-elevenlabs") : null;
+    return stored === null ? true : stored === "true";
+  });
+  useEffect(() => {
+    if (typeof window !== "undefined") localStorage.setItem("studio-use-elevenlabs", String(useElevenLabs));
+  }, [useElevenLabs]);
   const [result, setResult] = useState<{
     audioUrl: string;
     title: string;
@@ -348,18 +356,30 @@ const Suno = () => {
 
       setGenStatus(t("studio.status.instruments"));
 
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-music`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          },
-          body: JSON.stringify(body),
-        }
-      );
+      // === ROUTING: ElevenLabs (toggle ON) vs n8n Multi-Engine Router (toggle OFF) ===
+      const endpoint = useElevenLabs
+        ? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-music`
+        : `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/studio-router`;
+
+      const routerBody = useElevenLabs ? body : {
+        prompt: musicPrompt,
+        title: title || `${genre} Track`,
+        duration,
+        instrumental,
+        hasVocals: !instrumental && customLyrics.trim().length > 0,
+        quality: "premium",
+        lyrics: !instrumental ? customLyrics.trim() : undefined,
+      };
+
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify(routerBody),
+      });
 
       if (!response.ok) {
         const errData = await response.json().catch(() => ({ error: "Unknown error" }));
@@ -379,6 +399,34 @@ const Suno = () => {
 
       const data = await response.json();
 
+      // === n8n router branch — returns { engine, audio_url, status, task_id } ===
+      if (!useElevenLabs) {
+        if (data.audio_url) {
+          // Synchronous engine (MusicGen) returned ready URL
+          setResult({
+            audioUrl: data.audio_url,
+            title: title || `${genre} Track`,
+            genre,
+            durationSeconds: duration,
+            lyrics: customLyrics.trim()
+              ? parseLyricsFromText(customLyrics, duration)
+              : generateLyrics(genre, title || `${genre} Track`, duration, instrumental),
+          });
+          setGenStatus(t("studio.status.done"));
+          toast.success(`🎶 Wygenerowane przez ${data.engine || "n8n router"}`);
+          if (!isPro) setFreeUsed(p => p + 1);
+          return;
+        }
+        if (data.task_id || data.status === "processing") {
+          toast.success(`⏳ Router uruchomił ${data.engine || "silnik"} — utwór będzie gotowy za chwilę. Zobaczysz go w "Historia".`);
+          setGenStatus("");
+          if (!isPro) setFreeUsed(p => p + 1);
+          return;
+        }
+        throw new Error(data.error || "Router n8n nie zwrócił audio");
+      }
+
+      // === ElevenLabs branch (default) — base64 music + vocals ===
       if (!data.success || !data.music) {
         throw new Error("Brak danych audio z ElevenLabs");
       }
@@ -970,16 +1018,29 @@ const Suno = () => {
             )}
           </AnimatePresence>
 
-          {/* Engine Info */}
-          <div className="p-4 rounded-xl border border-[#9333EA]/30 bg-[#1a1a2e]/60 space-y-2">
-            <div className="flex items-center gap-3">
-              <Zap className="h-5 w-5 text-[#9333EA]" />
-              <div>
-                <Label className="text-sm text-gray-200">GrouAI Engine (ElevenLabs HQ)</Label>
-                <p className="text-xs text-gray-500">Profesjonalna muzyka AI + śpiewany wokal — jakość studyjna</p>
+          {/* Engine Info + ElevenLabs Toggle */}
+          <div className="p-4 rounded-xl border border-[#9333EA]/30 bg-[#1a1a2e]/60 space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <Zap className="h-5 w-5 text-[#9333EA] shrink-0" />
+                <div className="min-w-0">
+                  <Label className="text-sm text-gray-200">
+                    {useElevenLabs ? "ElevenLabs HQ Engine" : "GrouAI Multi-Engine Router"}
+                  </Label>
+                  <p className="text-xs text-gray-500 truncate">
+                    {useElevenLabs
+                      ? "Studyjna jakość ElevenLabs Music v1 + śpiewany wokal"
+                      : "Auto-routing: Suno · ElevenLabs · MusicGen (przez n8n)"}
+                  </p>
+                </div>
               </div>
+              <Switch
+                checked={useElevenLabs}
+                onCheckedChange={setUseElevenLabs}
+                className="data-[state=checked]:bg-[#FF6B00]"
+              />
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <Badge className="text-xs bg-[#9333EA] text-white border-transparent">
                 <Music className="h-3 w-3 mr-1" /> Instrumenty AI
               </Badge>
@@ -988,6 +1049,12 @@ const Suno = () => {
                   <Mic className="h-3 w-3 mr-1" /> Wokal AI
                 </Badge>
               )}
+              <Badge
+                className="text-xs border-transparent text-white"
+                style={{ background: useElevenLabs ? "linear-gradient(135deg,#FF6B00,#FF9500)" : "linear-gradient(135deg,#9333EA,#FF6B00)" }}
+              >
+                {useElevenLabs ? "🎤 ElevenLabs" : "🤖 n8n Router"}
+              </Badge>
             </div>
           </div>
 
