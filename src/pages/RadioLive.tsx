@@ -25,6 +25,7 @@ interface ScheduleTrack {
   custom_title: string | null;
   custom_duration: number;
   custom_audio_url: string | null;
+  lang: string | null;
   track: {
     id: string;
     title: string;
