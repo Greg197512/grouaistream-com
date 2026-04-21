@@ -39,6 +39,7 @@ export const SunoGeneratePanel = () => {
   const [instrumental, setInstrumental] = useState(false);
   const [customMode, setCustomMode] = useState(false);
   const [grouaDuration, setGrouaDuration] = useState(15);
+  const [useFingerprint, setUseFingerprint] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [polling, setPolling] = useState(false);
   const [songs, setSongs] = useState<GeneratedSong[]>([]);
@@ -111,16 +112,23 @@ export const SunoGeneratePanel = () => {
             prompt: prompt.trim(),
             duration: grouaDuration,
             instrumental,
-            model_version: instrumental ? "stereo-large" : "stereo-large",
+            use_fingerprint: useFingerprint,
+            title: title || undefined,
           },
         });
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
         const predId = data?.id;
+        const genId = data?.generation_id;
         if (!predId) throw new Error("Brak prediction_id z silnika");
-        setStatusMsg(`⏳ GrouAI Engine pracuje... (~${Math.round(grouaDuration * 1.5)}s)`);
+        if (data?.fingerprint_applied) {
+          const fp = data.fingerprint_summary;
+          setStatusMsg(`🧠 GrouAI Engine + Twój fingerprint (${fp?.genre || "—"}, ${fp?.bpm || "—"} BPM)...`);
+        } else {
+          setStatusMsg(`⏳ GrouAI Engine pracuje... (~${Math.round(grouaDuration * 1.5)}s)`);
+        }
         setPolling(true);
-        pollGrouaResult(predId);
+        pollGrouaResult(predId, genId);
       } catch (err: any) {
         toast.error("GrouAI Engine: " + (err.message || "błąd"));
         setStatusMsg("");
@@ -145,7 +153,7 @@ export const SunoGeneratePanel = () => {
     } finally { setGenerating(false); }
   };
 
-  const pollGrouaResult = (predictionId: string) => {
+  const pollGrouaResult = (predictionId: string, generationId?: string) => {
     let attempts = 0;
     pollRef.current = setInterval(async () => {
       attempts++;
@@ -157,7 +165,7 @@ export const SunoGeneratePanel = () => {
       }
       try {
         const { data, error } = await supabase.functions.invoke("groua-music-engine", {
-          body: { action: "status", prediction_id: predictionId },
+          body: { action: "status", prediction_id: predictionId, generation_id: generationId },
         });
         if (error) throw error;
         const status = data?.status;
