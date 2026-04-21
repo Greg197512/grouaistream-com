@@ -154,7 +154,7 @@ export const RadioTimeline = ({ schedule, onMove, onRemove, onReorder }: Props) 
           <span className="text-xs">({schedule.length} el.)</span>
         </div>
         <div className="flex gap-1">
-          {["track", "jingle", "ad", "talk"].map((type) => {
+          {["track", "announcement", "jingle", "ad", "talk"].map((type) => {
             const count = schedule.filter((s) => (s.item_type || "track") === type).length;
             if (count === 0) return null;
             const cfg = TYPE_CONFIG[type];
