@@ -356,18 +356,30 @@ const Suno = () => {
 
       setGenStatus(t("studio.status.instruments"));
 
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-music`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          },
-          body: JSON.stringify(body),
-        }
-      );
+      // === ROUTING: ElevenLabs (toggle ON) vs n8n Multi-Engine Router (toggle OFF) ===
+      const endpoint = useElevenLabs
+        ? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-music`
+        : `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/studio-router`;
+
+      const routerBody = useElevenLabs ? body : {
+        prompt: musicPrompt,
+        title: title || `${genre} Track`,
+        duration,
+        instrumental,
+        hasVocals: !instrumental && customLyrics.trim().length > 0,
+        quality: "premium",
+        lyrics: !instrumental ? customLyrics.trim() : undefined,
+      };
+
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify(routerBody),
+      });
 
       if (!response.ok) {
         const errData = await response.json().catch(() => ({ error: "Unknown error" }));
