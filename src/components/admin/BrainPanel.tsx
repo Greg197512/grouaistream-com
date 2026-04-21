@@ -202,11 +202,12 @@ export const BrainPanel = () => {
       </div>
 
       <Tabs defaultValue="events" className="w-full">
-        <TabsList>
+        <TabsList className="flex-wrap h-auto">
           <TabsTrigger value="events"><Activity className="h-4 w-4 mr-1" /> Puls platformy</TabsTrigger>
           <TabsTrigger value="memory"><Lightbulb className="h-4 w-4 mr-1" /> Pamięć</TabsTrigger>
           <TabsTrigger value="decisions"><Brain className="h-4 w-4 mr-1" /> Decyzje</TabsTrigger>
           <TabsTrigger value="agents"><Cpu className="h-4 w-4 mr-1" /> Agenci</TabsTrigger>
+          <TabsTrigger value="health"><HeartPulse className="h-4 w-4 mr-1" /> Zdrowie</TabsTrigger>
         </TabsList>
 
         <TabsContent value="events">
