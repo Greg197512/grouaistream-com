@@ -17,6 +17,7 @@ import { AffiliateSidebar } from "@/components/blog/AffiliateSidebar";
 import { NewsletterCapture } from "@/components/blog/NewsletterCapture";
 import { headingComponents } from "@/lib/markdownHeadingId";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { getCategoryLabel } from "@/lib/blogCategories";
 
 interface BlogPost {
   id: string;
@@ -208,7 +209,7 @@ export default function BlogPost() {
 
             <header className="mb-6">
               <div className="flex items-center gap-2 mb-4 flex-wrap">
-                <Badge className="bg-primary/15 text-primary border-primary/30">{post.category}</Badge>
+                <Badge className="bg-primary/15 text-primary border-primary/30">{getCategoryLabel(post.category, language)}</Badge>
                 <span className="text-xs text-muted-foreground">
                   {new Date(post.created_at).toLocaleDateString(dateLocale, { day: "numeric", month: "long", year: "numeric" })}
                 </span>

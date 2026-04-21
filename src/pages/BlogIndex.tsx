@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Search, Sparkles, TrendingUp, Eye } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { BLOG_CATEGORIES as CATEGORIES, getCategoryLabel as catLabel } from "@/lib/blogCategories";
 
 interface BlogPost {
   id: string;
@@ -53,18 +54,6 @@ const setCanonical = (href: string) => {
   el.href = href;
 };
 
-const CATEGORIES = [
-  { id: "all", label: "Wszystkie" },
-  { id: "ai_news", label: "🔥 AI News" },
-  { id: "tech_news", label: "💻 Tech" },
-  { id: "trends", label: "Trendy" },
-  { id: "feature", label: "Funkcje" },
-  { id: "monetization", label: "Zarobki" },
-  { id: "tutorial", label: "Tutoriale" },
-  { id: "psychology", label: "Psychologia" },
-  { id: "tools", label: "Narzędzia" },
-  { id: "industry", label: "Branża" },
-];
 
 export default function BlogIndex() {
   const { language } = useLanguage();
@@ -169,7 +158,7 @@ export default function BlogIndex() {
                     : "bg-card/30 text-muted-foreground border-border hover:border-primary/40 hover:text-foreground"
                 }`}
               >
-                {c.label}
+                {catLabel(c.id, language)}
               </button>
             ))}
           </div>
@@ -213,7 +202,7 @@ export default function BlogIndex() {
                         <Badge className="bg-primary/20 text-primary border-primary/30 text-[10px] uppercase tracking-wider">
                           <TrendingUp className="w-3 h-3 mr-1" /> {language === "en" ? "Latest" : language === "nl" ? "Nieuwste" : language === "ua" ? "Найновіше" : "Najnowszy"}
                         </Badge>
-                        <Badge variant="secondary" className="text-[10px]">{featured.category}</Badge>
+                        <Badge variant="secondary" className="text-[10px]">{catLabel(featured.category, language)}</Badge>
                       </div>
                       <h2 className="text-2xl sm:text-3xl font-black text-foreground mb-3 leading-tight group-hover:text-primary transition-colors">
                         {localizedField(featured, "title", language)}
@@ -245,7 +234,7 @@ export default function BlogIndex() {
                     </div>
                     <div className="p-4">
                       <div className="flex items-center gap-2 mb-2">
-                        <Badge variant="secondary" className="text-[10px]">{p.category}</Badge>
+                        <Badge variant="secondary" className="text-[10px]">{catLabel(p.category, language)}</Badge>
                         <span className="text-[10px] text-muted-foreground">
                           {new Date(p.created_at).toLocaleDateString(language === "ua" ? "uk-UA" : language === "nl" ? "nl-NL" : language === "en" ? "en-US" : "pl-PL", { day: "numeric", month: "short" })}
                         </span>

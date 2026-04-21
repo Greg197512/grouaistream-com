@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Sparkles } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { getCategoryLabel } from "@/lib/blogCategories";
 
 interface Post {
   id: string;
@@ -94,7 +95,7 @@ export const RelatedPosts = ({ currentPostId, category, tags }: Props) => {
                 </div>
               )}
               <div className="p-4">
-                <Badge variant="secondary" className="text-[10px] mb-2">{p.category}</Badge>
+                <Badge variant="secondary" className="text-[10px] mb-2">{getCategoryLabel(p.category, language)}</Badge>
                 <h3 className="font-bold text-foreground group-hover:text-primary transition-colors leading-snug line-clamp-2">
                   {pick(p, "title", language)}
                 </h3>

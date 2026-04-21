@@ -249,10 +249,11 @@ serve(async (req) => {
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY missing");
 
     // Pick artist not used in last 60 posts of this category
+    // (also looks at legacy 'music_stories' category for migration period)
     const { data: recent } = await supabaseAdmin
       .from("seo_blog_posts")
       .select("title, tags")
-      .eq("category", "music_stories")
+      .in("category", ["sound_chronicles", "music_stories"])
       .order("created_at", { ascending: false })
       .limit(60);
 
@@ -370,8 +371,8 @@ serve(async (req) => {
         slug,
         description: parsed.description.slice(0, 160),
         content: enrichedContent,
-        category: "music_stories",
-        tags: [...pick.tags, "music-history", "electronic-music", pick.era.replace(/\s+/g, "-")],
+        category: "sound_chronicles",
+        tags: [...pick.tags, "kroniki-dzwieku", "music-history", "electronic-music", pick.era.replace(/\s+/g, "-")],
         cover_url: coverUrl,
         is_published: true,
         generated_by_ai: true,
