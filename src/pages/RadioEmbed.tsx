@@ -30,7 +30,7 @@ interface ScheduleTrack {
 
 const RadioEmbed = () => {
   const [config, setConfig] = useState<RadioConfig | null>(null);
-  const [schedule, setSchedule] = useState<ScheduleTrack[]>([]);
+  const [rawSchedule, setRawSchedule] = useState<ScheduleTrack[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [userStarted, setUserStarted] = useState(false);
@@ -39,17 +39,33 @@ const RadioEmbed = () => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const silentTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Embed language: ?lang=pl|en|nl|ua, fallback to localStorage, fallback to "pl"
+  const embedLang = (() => {
+    const params = new URLSearchParams(window.location.search);
+    const fromUrl = params.get("lang")?.toLowerCase();
+    if (fromUrl && ["pl", "en", "nl", "ua"].includes(fromUrl)) return fromUrl;
+    const stored = localStorage.getItem("grooveai-language");
+    if (stored && ["pl", "en", "nl", "ua"].includes(stored)) return stored;
+    return "pl";
+  })();
+
+  // Filter announcements by embed language; tracks always included
+  const schedule = rawSchedule.filter((item) => {
+    if (item.item_type === "announcement" && item.lang && item.lang !== embedLang) return false;
+    return true;
+  });
+
   useEffect(() => {
     const fetchData = async () => {
       const [configRes, scheduleRes] = await Promise.all([
         supabase.from("radio_config").select("*").limit(1).single(),
         supabase
           .from("radio_schedule")
-          .select("position, item_type, custom_title, custom_duration, custom_audio_url, track:tracks(id, title, artist, duration, audio_url, cover_url)")
+          .select("position, item_type, custom_title, custom_duration, custom_audio_url, lang, track:tracks(id, title, artist, duration, audio_url, cover_url)")
           .order("position", { ascending: true }),
       ]);
       if (configRes.data) setConfig(configRes.data as any);
-      if (scheduleRes.data) setSchedule(scheduleRes.data as any);
+      if (scheduleRes.data) setRawSchedule(scheduleRes.data as any);
     };
     fetchData();
   }, []);
