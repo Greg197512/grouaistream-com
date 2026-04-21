@@ -59,15 +59,15 @@ export const RadioAnnouncementsLog = () => {
     };
   }, []);
 
-  const triggerNow = async () => {
+  const triggerNow = async (fn: "daily-blog-audio-announce" | "music-stories-generate" | "music-story-radio-announce") => {
     setTriggering(true);
     try {
-      const { data, error } = await supabase.functions.invoke("daily-blog-audio-announce", {
+      const { data, error } = await supabase.functions.invoke(fn, {
         body: { trigger: "manual-admin" },
       });
       if (error) throw error;
-      toast.success("Zapowiedź wygenerowana", {
-        description: data?.title || "Sprawdź listę poniżej",
+      toast.success("Wygenerowano", {
+        description: data?.title || data?.artist || "Sprawdź listę poniżej",
       });
       await load();
     } catch (e: any) {
@@ -92,9 +92,16 @@ export const RadioAnnouncementsLog = () => {
   };
 
   const kindColor = (kind: string) => {
-    if (kind === "blog") return "text-primary border-primary/30 bg-primary/5";
+    if (kind === "blog" || kind === "blog_daily") return "text-primary border-primary/30 bg-primary/5";
     if (kind === "news") return "text-blue-400 border-blue-400/30 bg-blue-400/5";
+    if (kind === "music_story_radio") return "text-amber-400 border-amber-400/40 bg-amber-400/5";
     return "text-muted-foreground border-border";
+  };
+
+  const kindLabel = (kind: string) => {
+    if (kind === "music_story_radio") return "🎹 historia muz.";
+    if (kind === "blog_daily" || kind === "blog") return "📝 blog";
+    return kind;
   };
 
   return (
@@ -103,19 +110,27 @@ export const RadioAnnouncementsLog = () => {
         <div className="flex items-center justify-between flex-wrap gap-2">
           <CardTitle className="flex items-center gap-2 text-base">
             <Mic className="h-4 w-4 text-primary" />
-            Zapowiedzi blogowe w radiu
+            Zapowiedzi w radiu
             <Badge variant="outline" className="text-[10px] ml-1">
-              auto: 08:00 & 14:00
+              blog: 08/14 · historie: 17/23
             </Badge>
           </CardTitle>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <Button size="sm" variant="outline" onClick={load} disabled={loading} className="gap-1">
               <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin" : ""}`} />
               Odśwież
             </Button>
-            <Button size="sm" onClick={triggerNow} disabled={triggering} className="gap-1">
+            <Button size="sm" variant="outline" onClick={() => triggerNow("daily-blog-audio-announce")} disabled={triggering} className="gap-1">
+              <Volume2 className="h-3 w-3" />
+              Blog audio
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => triggerNow("music-stories-generate")} disabled={triggering} className="gap-1">
+              <Mic className="h-3 w-3" />
+              Nowa historia
+            </Button>
+            <Button size="sm" onClick={() => triggerNow("music-story-radio-announce")} disabled={triggering} className="gap-1">
               <Volume2 className={`h-3 w-3 ${triggering ? "animate-pulse" : ""}`} />
-              {triggering ? "Generuję..." : "Wygeneruj teraz"}
+              {triggering ? "Generuję..." : "Historia → radio"}
             </Button>
           </div>
         </div>
