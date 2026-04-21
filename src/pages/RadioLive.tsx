@@ -9,6 +9,7 @@ import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { usePlayer } from "@/contexts/PlayerContext";
 
 interface RadioConfig {
   is_active: boolean;
@@ -75,6 +76,7 @@ const RadioLive = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { t, language } = useLanguage();
+  const { pausePlayback } = usePlayer();
   const [config, setConfig] = useState<RadioConfig | null>(null);
   const [rawSchedule, setRawSchedule] = useState<ScheduleTrack[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -436,6 +438,10 @@ const RadioLive = () => {
   useEffect(() => {
     if (audioRef.current) audioRef.current.volume = muted ? 0 : volume / 100;
   }, [volume, muted]);
+
+  useEffect(() => {
+    pausePlayback();
+  }, [pausePlayback]);
 
   useEffect(() => {
     return () => { audioRef.current?.pause(); };
