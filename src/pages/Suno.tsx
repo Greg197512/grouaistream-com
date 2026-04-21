@@ -399,6 +399,34 @@ const Suno = () => {
 
       const data = await response.json();
 
+      // === n8n router branch — returns { engine, audio_url, status, task_id } ===
+      if (!useElevenLabs) {
+        if (data.audio_url) {
+          // Synchronous engine (MusicGen) returned ready URL
+          setResult({
+            audioUrl: data.audio_url,
+            title: title || `${genre} Track`,
+            genre,
+            durationSeconds: duration,
+            lyrics: customLyrics.trim()
+              ? parseLyricsFromText(customLyrics, duration)
+              : generateLyrics(genre, title || `${genre} Track`, duration, instrumental),
+          });
+          setGenStatus(t("studio.status.done"));
+          toast.success(`🎶 Wygenerowane przez ${data.engine || "n8n router"}`);
+          if (!isPro) setFreeUsed(p => p + 1);
+          return;
+        }
+        if (data.task_id || data.status === "processing") {
+          toast.success(`⏳ Router uruchomił ${data.engine || "silnik"} — utwór będzie gotowy za chwilę. Zobaczysz go w "Historia".`);
+          setGenStatus("");
+          if (!isPro) setFreeUsed(p => p + 1);
+          return;
+        }
+        throw new Error(data.error || "Router n8n nie zwrócił audio");
+      }
+
+      // === ElevenLabs branch (default) — base64 music + vocals ===
       if (!data.success || !data.music) {
         throw new Error("Brak danych audio z ElevenLabs");
       }
