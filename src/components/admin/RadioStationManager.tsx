@@ -29,6 +29,7 @@ import { uploadToR2 } from "@/lib/r2Upload";
 import { useAuth } from "@/contexts/AuthContext";
 import { isAllowedMediaFile, MAX_UPLOAD_SIZE_BYTES, MEDIA_FILE_ACCEPT } from "@/lib/mediaFormats";
 import { RadioTimeline } from "./RadioTimeline";
+import { RadioAnnouncementsLog } from "./RadioAnnouncementsLog";
 import {
   Select,
   SelectContent,
@@ -652,6 +653,9 @@ export const RadioStationManager = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Daily Blog Announcements Log */}
+      <RadioAnnouncementsLog />
     </div>
   );
 };
