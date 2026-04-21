@@ -1785,6 +1785,56 @@ export type Database = {
         }
         Relationships: []
       }
+      radio_announcements: {
+        Row: {
+          audio_url: string
+          created_at: string
+          id: string
+          kind: string
+          played_count: number
+          post_id: string | null
+          post_slug: string | null
+          post_title: string | null
+          scheduled_for: string
+          script: string
+          voice_id: string | null
+        }
+        Insert: {
+          audio_url: string
+          created_at?: string
+          id?: string
+          kind?: string
+          played_count?: number
+          post_id?: string | null
+          post_slug?: string | null
+          post_title?: string | null
+          scheduled_for?: string
+          script: string
+          voice_id?: string | null
+        }
+        Update: {
+          audio_url?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          played_count?: number
+          post_id?: string | null
+          post_slug?: string | null
+          post_title?: string | null
+          scheduled_for?: string
+          script?: string
+          voice_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "radio_announcements_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "seo_blog_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       radio_config: {
         Row: {
           end_time: string | null
