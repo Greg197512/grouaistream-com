@@ -17,6 +17,7 @@ import {
   Mic,
   Megaphone,
   MessageSquare,
+  Radio,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -57,6 +58,7 @@ const TYPE_CONFIG: Record<string, { label: string; icon: typeof Music; color: st
   jingle: { label: "Jingiel", icon: Mic, color: "text-yellow-500", bgColor: "bg-yellow-500/5" },
   ad: { label: "Reklama", icon: Megaphone, color: "text-red-400", bgColor: "bg-red-500/5" },
   talk: { label: "Rozmowa", icon: MessageSquare, color: "text-blue-400", bgColor: "bg-blue-500/5" },
+  announcement: { label: "🎹 Historia muz.", icon: Radio, color: "text-amber-400", bgColor: "bg-amber-500/5" },
 };
 
 export const RadioTimeline = ({ schedule, onMove, onRemove, onReorder }: Props) => {
