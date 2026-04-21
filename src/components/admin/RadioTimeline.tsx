@@ -35,6 +35,7 @@ interface TrackItem {
   custom_title: string | null;
   custom_duration: number;
   custom_audio_url: string | null;
+  lang?: string | null;
   track?: {
     id: string;
     title: string;
@@ -45,6 +46,8 @@ interface TrackItem {
     genre: string | null;
   };
 }
+
+const LANG_FLAGS: Record<string, string> = { pl: "🇵🇱", en: "🇬🇧", nl: "🇳🇱", ua: "🇺🇦" };
 
 interface Props {
   schedule: TrackItem[];
