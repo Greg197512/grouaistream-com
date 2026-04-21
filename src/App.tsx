@@ -31,6 +31,7 @@ import PlaylistManager from "./pages/PlaylistManager";
 import PlaylistDetail from "./pages/PlaylistDetail";
 import MoodHistory from "./pages/MoodHistory";
 import Admin from "./pages/Admin";
+import AdminBrain from "./pages/AdminBrain";
 import Movies from "./pages/Movies";
 import Server from "./pages/Server";
 import Legal from "./pages/Legal";
@@ -106,6 +107,7 @@ const AppShell = () => {
           <Route path="/movies" element={<Movies />} />
           <Route path="/server" element={<Server />} />
           <Route path="/admin" element={<Admin />} />
+          <Route path="/admin/brain" element={<AdminBrain />} />
           <Route path="/legal" element={<Legal />} />
           <Route path="/party/:code" element={<PartyPulpit />} />
           <Route path="/suno" element={<Suno />} />

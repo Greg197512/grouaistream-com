@@ -45,6 +45,16 @@ export function useStreamCounter(
           if (error) console.error("[StreamCounter] Error:", error);
           else console.log("[StreamCounter] Stream recorded for track:", trackId, "source:", source);
         });
+        // Emit to brain event bus (fire-and-forget)
+        supabase.rpc("emit_agent_event", {
+          _event_type: "stream.recorded",
+          _source: "stream-counter",
+          _actor_user_id: userId,
+          _target_type: "track",
+          _target_id: trackId,
+          _payload: { duration_played: elapsedRef.current, source },
+          _priority: 6,
+        }).then(() => {}, () => {});
       }
     }, 1000);
 
