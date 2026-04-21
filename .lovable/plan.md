@@ -1,8 +1,10 @@
 # Plan: GrouAI Ekosystem — Serce, Mózg i Agenci
 
-## Status: ETAP 1 ✅ + ETAP 2 (newsfeed) ✅ ZBUDOWANE (2026-04-21)
+## Status: ETAP 1 ✅ + ETAP 2 (newsfeed ✅ + a-r-scout ✅) ZBUDOWANE (2026-04-21)
 
 **ETAP 2 newsfeed**: n8n workflow `GrouAI Brain — Newsfeed Listener` (ID: 2BGWMNP6JFfvwwk9) — aktywny, co 1h pobiera RSS (Pitchfork/RA/Mixmag) + Reddit (r/Music, r/edmproduction) + HackerNews → POST do edge function `brain-newsfeed-ingest` → embedduje przez `text-embedding-004` → zapisuje do `brain_memory` jako `external_signal` z TTL 30 dni. Token autoryzacyjny w tabeli `n8n_ingest_tokens`.
+
+**ETAP 2 a-r-scout**: Edge function `a-r-scout` codziennie 06:00 UTC (cron 'a-r-scout-daily', id 12) liczy "smak platformy" (top gatunki/BPM/mood z 7 dni `listening_history`), skanuje świeże utwory CCMixter w dominujących gatunkach, scoruje (genre match, licencja CC, tagi, mp3 dostępne, mood match), filtruje już posiadane, top 5 wstawia jako `agent_decisions` (`decision_type=import_external_track`) do akceptacji w `/admin/brain` + emituje event `agent.recommendation` dla Mózgu.
 
 
 Platforma jako **żywy organizm**: każde zdarzenie (upload, stream, tip, mood detection, generacja) trafia do centralnego *Event Busa*, **Mózg** (LLM z pamięcią pgvector) analizuje to w tle i decyduje co zrobić, a wyspecjalizowani **agenci** wykonują konkretne zadania (kuratorowanie, A&R, monitoring, marketing, optymalizacja).
