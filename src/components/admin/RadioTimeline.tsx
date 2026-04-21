@@ -220,7 +220,12 @@ export const RadioTimeline = ({ schedule, onMove, onRemove, onReorder }: Props) 
 
                   <Icon className={`h-3.5 w-3.5 ${cfg.color} shrink-0`} />
 
-                  <p className="text-sm font-medium truncate">{getItemTitle(item)}</p>
+                  <p className="text-sm font-medium truncate">
+                    {item.lang && item.item_type === "announcement" && (
+                      <span className="mr-1">{LANG_FLAGS[item.lang] || "🌐"}</span>
+                    )}
+                    {getItemTitle(item)}
+                  </p>
 
                   <p className="text-xs text-muted-foreground truncate">{getItemSubtitle(item)}</p>
 
