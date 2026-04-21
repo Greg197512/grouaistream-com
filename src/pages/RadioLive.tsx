@@ -379,44 +379,58 @@ const RadioLive = () => {
     (index: number, offset = 0) => {
       const item = schedule[index];
       if (!item) return;
+      const token = ++playbackTokenRef.current;
       const audioUrl = getItemAudioUrl(item);
-      if (audioRef.current) audioRef.current.pause();
+      stopCurrentAudio();
       if (!audioUrl) {
         setIsPlaying(true);
-        const remaining = getItemDuration(item) - offset;
-        const timer = setTimeout(() => {
+        setProgress(Math.min(100, (offset / getItemDuration(item)) * 100));
+        const remaining = Math.max(0.25, getItemDuration(item) - offset);
+        fallbackTimerRef.current = window.setTimeout(() => {
+          if (playbackTokenRef.current !== token) return;
           const nextIndex = (index + 1) % schedule.length;
           setCurrentIndex(nextIndex);
           startPlayback(nextIndex);
         }, remaining * 1000);
-        return () => clearTimeout(timer);
+        return;
       }
       const audio = new Audio(audioUrl);
       audio.crossOrigin = "anonymous";
       audio.preload = "auto";
+      audio.preservesPitch = false;
       audio.volume = muted ? 0 : volume / 100;
       audioRef.current = audio;
-      audio.addEventListener("loadeddata", () => {
-        audio.currentTime = offset;
+      audio.addEventListener("loadedmetadata", () => {
+        if (playbackTokenRef.current !== token) return;
+        if (Number.isFinite(offset) && offset > 0 && Number.isFinite(audio.duration)) {
+          audio.currentTime = Math.min(offset, Math.max(0, audio.duration - 0.25));
+        }
+      }, { once: true });
+      audio.addEventListener("canplay", () => {
+        if (playbackTokenRef.current !== token) return;
         audio.play().then(() => {
+          if (playbackTokenRef.current !== token) return;
           setIsPlaying(true);
           setAutoplayBlocked(false);
         }).catch(() => {
+          if (playbackTokenRef.current !== token) return;
           setAutoplayBlocked(true);
           setIsPlaying(false);
         });
-      });
+      }, { once: true });
       audio.addEventListener("timeupdate", () => {
+        if (playbackTokenRef.current !== token) return;
         if (audio.duration) setProgress((audio.currentTime / audio.duration) * 100);
       });
       audio.addEventListener("ended", () => {
+        if (playbackTokenRef.current !== token) return;
         const nextIndex = (index + 1) % schedule.length;
         setCurrentIndex(nextIndex);
         startPlayback(nextIndex);
       });
       audio.load();
     },
-    [schedule, volume, muted]
+    [schedule, volume, muted, stopCurrentAudio]
   );
 
   useEffect(() => {
