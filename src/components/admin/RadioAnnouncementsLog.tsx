@@ -144,8 +144,8 @@ export const RadioAnnouncementsLog = () => {
         </div>
       </CardHeader>
       <CardContent>
-        {/* Filter chips */}
-        <div className="flex gap-1 mb-3 flex-wrap">
+        {/* Filter chips - kind */}
+        <div className="flex gap-1 mb-2 flex-wrap">
           {([
             { key: "all", label: `Wszystkie (${items.length})` },
             { key: "music_story_radio", label: `🎹 Historie (${items.filter(i => i.kind === "music_story_radio").length})` },
@@ -163,12 +163,38 @@ export const RadioAnnouncementsLog = () => {
           ))}
         </div>
 
+        {/* Filter chips - language */}
+        <div className="flex gap-1 mb-3 flex-wrap items-center">
+          <span className="text-[10px] text-muted-foreground mr-1">Język:</span>
+          {([
+            { key: "all", label: `Wszystkie` },
+            { key: "pl", label: `🇵🇱 PL` },
+            { key: "en", label: `🇬🇧 EN` },
+            { key: "nl", label: `🇳🇱 NL` },
+            { key: "ua", label: `🇺🇦 UA` },
+          ] as { key: FilterLang; label: string }[]).map((f) => {
+            const count = f.key === "all" ? items.length : items.filter(i => (i.lang || "pl") === f.key).length;
+            return (
+              <Button
+                key={f.key}
+                size="sm"
+                variant={langFilter === f.key ? "default" : "outline"}
+                onClick={() => setLangFilter(f.key)}
+                className="h-6 text-[10px] px-2"
+              >
+                {f.label} ({count})
+              </Button>
+            );
+          })}
+        </div>
+
         {(() => {
-          const filtered = filter === "all"
+          const byKind = filter === "all"
             ? items
             : filter === "blog"
               ? items.filter(i => i.kind === "blog" || i.kind === "blog_daily")
               : items.filter(i => i.kind === filter);
+          const filtered = langFilter === "all" ? byKind : byKind.filter(i => (i.lang || "pl") === langFilter);
 
           if (loading && filtered.length === 0) {
             return <p className="text-sm text-muted-foreground text-center py-8">Ładowanie…</p>;
