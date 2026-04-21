@@ -653,6 +653,9 @@ export const RadioStationManager = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Daily Blog Announcements Log */}
+      <RadioAnnouncementsLog />
     </div>
   );
 };
