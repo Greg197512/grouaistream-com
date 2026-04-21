@@ -22,11 +22,14 @@ interface Announcement {
   voice_id: string | null;
 }
 
+type FilterKind = "all" | "music_story_radio" | "blog";
+
 export const RadioAnnouncementsLog = () => {
   const [items, setItems] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
   const [triggering, setTriggering] = useState(false);
   const [playingId, setPlayingId] = useState<string | null>(null);
+  const [filter, setFilter] = useState<FilterKind>("all");
 
   const load = async () => {
     setLoading(true);
@@ -34,7 +37,7 @@ export const RadioAnnouncementsLog = () => {
       .from("radio_announcements")
       .select("*")
       .order("created_at", { ascending: false })
-      .limit(30);
+      .limit(50);
 
     if (error) {
       toast.error("Nie udało się pobrać zapowiedzi");
