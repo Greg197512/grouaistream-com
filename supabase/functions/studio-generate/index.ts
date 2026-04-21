@@ -201,6 +201,26 @@ serve(async (req) => {
       triggerResult.error = e instanceof Error ? e.message : "trigger_failed";
     }
 
+    // Emit brain event (fire-and-forget)
+    try {
+      await supabase.rpc("emit_agent_event", {
+        _event_type: triggerResult.error ? "generation.failed" : "generation.finished",
+        _source: "studio-generate",
+        _actor_user_id: user_id ?? null,
+        _target_type: "studio_generation",
+        _target_id: gen.id,
+        _payload: {
+          engine,
+          quality,
+          duration,
+          completed: !!triggerResult.completed,
+          error: triggerResult.error ?? null,
+          cost_estimate_usd: triggerResult.cost_estimate_usd ?? null,
+        },
+        _priority: triggerResult.error ? 3 : 6,
+      });
+    } catch (_) { /* non-blocking */ }
+
     return new Response(JSON.stringify({
       success: true,
       generation_id: gen.id,
