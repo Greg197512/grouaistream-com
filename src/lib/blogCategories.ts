@@ -6,7 +6,6 @@ export type BlogCategoryLabel = { pl: string; en: string; nl: string; ua: string
 export const BLOG_CATEGORIES: { id: string; label: BlogCategoryLabel }[] = [
   { id: "all",              label: { pl: "Wszystkie",          en: "All",                 nl: "Alles",               ua: "Усі" } },
   { id: "sound_chronicles", label: { pl: "🎼 Kroniki Dźwięku", en: "🎼 Sound Chronicles", nl: "🎼 Geluidskronieken", ua: "🎼 Хроніки Звуку" } },
-  { id: "music_stories",    label: { pl: "🎹 Historie muz.",   en: "🎹 Music stories",    nl: "🎹 Muziekverhalen",   ua: "🎹 Музичні історії" } },
   { id: "ai_news",          label: { pl: "🔥 AI News",         en: "🔥 AI News",          nl: "🔥 AI Nieuws",        ua: "🔥 AI Новини" } },
   { id: "tech_news",        label: { pl: "💻 Tech",            en: "💻 Tech",             nl: "💻 Tech",             ua: "💻 Tech" } },
   { id: "trends",           label: { pl: "Trendy",             en: "Trends",              nl: "Trends",              ua: "Тренди" } },
