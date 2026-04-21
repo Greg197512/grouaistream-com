@@ -251,6 +251,22 @@ const RadioLive = () => {
     return labels[item.item_type] || item.item_type;
   };
 
+  const clearFallbackTimer = useCallback(() => {
+    if (fallbackTimerRef.current !== null) {
+      window.clearTimeout(fallbackTimerRef.current);
+      fallbackTimerRef.current = null;
+    }
+  }, []);
+
+  const stopCurrentAudio = useCallback(() => {
+    clearFallbackTimer();
+    if (!audioRef.current) return;
+    audioRef.current.pause();
+    audioRef.current.removeAttribute("src");
+    audioRef.current.load();
+    audioRef.current = null;
+  }, [clearFallbackTimer]);
+
   const spawnHearts = () => {
     const newHearts: FloatingHeart[] = [];
     const count = 18 + Math.floor(Math.random() * 15);
