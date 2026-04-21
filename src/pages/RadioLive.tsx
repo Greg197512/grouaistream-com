@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
@@ -96,15 +96,17 @@ const RadioLive = () => {
   const [showEmojis, setShowEmojis] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const playbackTokenRef = useRef(0);
+  const fallbackTimerRef = useRef<number | null>(null);
   const heartIdRef = useRef(0);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
   // Filter announcements by selected language. Tracks (lang === null) are always kept.
   // Announcement items with `lang` set are kept ONLY when matching the user's UI language.
-  const schedule = rawSchedule.filter((item) => {
+  const schedule = useMemo(() => rawSchedule.filter((item) => {
     if (item.item_type === "announcement" && item.lang && item.lang !== language) return false;
     return true;
-  });
+  }), [rawSchedule, language]);
 
   // Auth
   useEffect(() => {
