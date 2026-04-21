@@ -170,6 +170,30 @@ serve(async (req) => {
       kind: "music_story_radio",
     });
 
+    // 5b. Inject into radio_schedule so the live radio plays it between tracks
+    try {
+      // Estimate spoken duration: ~14 chars/sec for Polish speech, min 45s, max 120s
+      const estimatedDuration = Math.min(120, Math.max(45, Math.round(script.length / 14)));
+
+      const { data: maxRow } = await supabase
+        .from("radio_schedule")
+        .select("position")
+        .order("position", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      const nextPosition = ((maxRow?.position as number | undefined) ?? 0) + 1;
+
+      await supabase.from("radio_schedule").insert({
+        item_type: "announcement",
+        custom_title: `🎹 Historia: ${post.title}`,
+        custom_audio_url: audioUrl,
+        custom_duration: estimatedDuration,
+        position: nextPosition,
+      });
+    } catch (schedErr) {
+      console.warn("Could not insert into radio_schedule:", schedErr);
+    }
+
     // 6. Emit agent event
     await supabase.from("agent_events").insert({
       source: "music-story-radio-announce",

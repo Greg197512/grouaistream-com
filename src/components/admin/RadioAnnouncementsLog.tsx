@@ -22,11 +22,14 @@ interface Announcement {
   voice_id: string | null;
 }
 
+type FilterKind = "all" | "music_story_radio" | "blog";
+
 export const RadioAnnouncementsLog = () => {
   const [items, setItems] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
   const [triggering, setTriggering] = useState(false);
   const [playingId, setPlayingId] = useState<string | null>(null);
+  const [filter, setFilter] = useState<FilterKind>("all");
 
   const load = async () => {
     setLoading(true);
@@ -34,7 +37,7 @@ export const RadioAnnouncementsLog = () => {
       .from("radio_announcements")
       .select("*")
       .order("created_at", { ascending: false })
-      .limit(30);
+      .limit(50);
 
     if (error) {
       toast.error("Nie udało się pobrać zapowiedzi");
@@ -136,81 +139,112 @@ export const RadioAnnouncementsLog = () => {
         </div>
       </CardHeader>
       <CardContent>
-        {loading && items.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-8">Ładowanie…</p>
-        ) : items.length === 0 ? (
-          <div className="text-center py-8 space-y-2">
-            <p className="text-sm text-muted-foreground">Jeszcze nic nie wygenerowano.</p>
-            <p className="text-xs text-muted-foreground">
-              Codziennie o 08:00 i 14:00 (Europe/Warsaw) AI nagrywa zapowiedź najnowszego posta.
-            </p>
-          </div>
-        ) : (
-          <ScrollArea className="h-[420px]">
-            <div className="space-y-2 pr-3">
-              {items.map((item) => (
-                <div
-                  key={item.id}
-                  className="rounded-lg border border-border/50 p-3 hover:bg-muted/30 transition-colors"
-                >
-                  <div className="flex items-start justify-between gap-2 mb-2">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap mb-1">
-                        <Badge variant="outline" className={`text-[10px] ${kindColor(item.kind)}`}>
-                          {item.kind}
-                        </Badge>
-                        <span className="text-xs text-muted-foreground flex items-center gap-1">
-                          <Calendar className="h-3 w-3" />
-                          {formatDistanceToNow(new Date(item.created_at), {
-                            addSuffix: true,
-                            locale: pl,
-                          })}
-                        </span>
-                        {item.played_count > 0 && (
-                          <Badge variant="secondary" className="text-[10px]">
-                            ▶ {item.played_count}×
+        {/* Filter chips */}
+        <div className="flex gap-1 mb-3 flex-wrap">
+          {([
+            { key: "all", label: `Wszystkie (${items.length})` },
+            { key: "music_story_radio", label: `🎹 Historie (${items.filter(i => i.kind === "music_story_radio").length})` },
+            { key: "blog", label: `📝 Blog (${items.filter(i => i.kind === "blog" || i.kind === "blog_daily").length})` },
+          ] as { key: FilterKind; label: string }[]).map((f) => (
+            <Button
+              key={f.key}
+              size="sm"
+              variant={filter === f.key ? "default" : "outline"}
+              onClick={() => setFilter(f.key)}
+              className="h-7 text-[11px] px-2"
+            >
+              {f.label}
+            </Button>
+          ))}
+        </div>
+
+        {(() => {
+          const filtered = filter === "all"
+            ? items
+            : filter === "blog"
+              ? items.filter(i => i.kind === "blog" || i.kind === "blog_daily")
+              : items.filter(i => i.kind === filter);
+
+          if (loading && filtered.length === 0) {
+            return <p className="text-sm text-muted-foreground text-center py-8">Ładowanie…</p>;
+          }
+          if (filtered.length === 0) {
+            return (
+              <div className="text-center py-8 space-y-2">
+                <p className="text-sm text-muted-foreground">Brak zapowiedzi w tej kategorii.</p>
+                <p className="text-xs text-muted-foreground">
+                  Blog audio: 08:00 / 14:00 · Historie muz.: 17:00 / 23:00 (Europe/Warsaw).
+                </p>
+              </div>
+            );
+          }
+          return (
+            <ScrollArea className="h-[420px]">
+              <div className="space-y-2 pr-3">
+                {filtered.map((item) => (
+                  <div
+                    key={item.id}
+                    className="rounded-lg border border-border/50 p-3 hover:bg-muted/30 transition-colors"
+                  >
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap mb-1">
+                          <Badge variant="outline" className={`text-[10px] ${kindColor(item.kind)}`}>
+                            {kindLabel(item.kind)}
                           </Badge>
+                          <span className="text-xs text-muted-foreground flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            {formatDistanceToNow(new Date(item.created_at), {
+                              addSuffix: true,
+                              locale: pl,
+                            })}
+                          </span>
+                          {item.played_count > 0 && (
+                            <Badge variant="secondary" className="text-[10px]">
+                              ▶ {item.played_count}×
+                            </Badge>
+                          )}
+                        </div>
+                        {item.post_title && (
+                          <p className="text-sm font-medium truncate">{item.post_title}</p>
                         )}
+                        <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
+                          {item.script}
+                        </p>
                       </div>
-                      {item.post_title && (
-                        <p className="text-sm font-medium truncate">{item.post_title}</p>
-                      )}
-                      <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
-                        {item.script}
-                      </p>
-                    </div>
-                    <div className="flex flex-col gap-1 shrink-0">
-                      <Button
-                        size="icon"
-                        variant={playingId === item.id ? "default" : "outline"}
-                        className="h-8 w-8"
-                        onClick={() => playAudio(item)}
-                      >
-                        <Play className={`h-3.5 w-3.5 ${playingId === item.id ? "animate-pulse" : ""}`} />
-                      </Button>
-                      {item.post_slug && (
+                      <div className="flex flex-col gap-1 shrink-0">
                         <Button
                           size="icon"
-                          variant="ghost"
+                          variant={playingId === item.id ? "default" : "outline"}
                           className="h-8 w-8"
-                          asChild
+                          onClick={() => playAudio(item)}
                         >
-                          <a
-                            href={`/blog/${item.post_slug}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            <ExternalLink className="h-3.5 w-3.5" />
-                          </a>
+                          <Play className={`h-3.5 w-3.5 ${playingId === item.id ? "animate-pulse" : ""}`} />
                         </Button>
-                      )}
+                        {item.post_slug && (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8"
+                            asChild
+                          >
+                            <a
+                              href={`/blog/${item.post_slug}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              <ExternalLink className="h-3.5 w-3.5" />
+                            </a>
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          </ScrollArea>
-        )}
+                ))}
+              </div>
+            </ScrollArea>
+          );
+        })()}
       </CardContent>
     </Card>
   );
