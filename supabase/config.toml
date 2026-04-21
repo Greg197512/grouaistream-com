@@ -32,3 +32,6 @@ verify_jwt = false
 
 [functions.health-monitor]
 verify_jwt = false
+
+[functions.revenue-optimizer]
+verify_jwt = false
