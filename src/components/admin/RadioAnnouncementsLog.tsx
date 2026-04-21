@@ -34,6 +34,7 @@ export const RadioAnnouncementsLog = () => {
   const [triggering, setTriggering] = useState(false);
   const [playingId, setPlayingId] = useState<string | null>(null);
   const [filter, setFilter] = useState<FilterKind>("all");
+  const [langFilter, setLangFilter] = useState<FilterLang>("all");
 
   const load = async () => {
     setLoading(true);
