@@ -35,3 +35,6 @@ verify_jwt = false
 
 [functions.revenue-optimizer]
 verify_jwt = false
+
+[functions.daily-blog-audio-announce]
+verify_jwt = false
