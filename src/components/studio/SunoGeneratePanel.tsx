@@ -39,6 +39,7 @@ export const SunoGeneratePanel = () => {
   const [instrumental, setInstrumental] = useState(false);
   const [customMode, setCustomMode] = useState(false);
   const [grouaDuration, setGrouaDuration] = useState(15);
+  const [useFingerprint, setUseFingerprint] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [polling, setPolling] = useState(false);
   const [songs, setSongs] = useState<GeneratedSong[]>([]);
@@ -111,16 +112,23 @@ export const SunoGeneratePanel = () => {
             prompt: prompt.trim(),
             duration: grouaDuration,
             instrumental,
-            model_version: instrumental ? "stereo-large" : "stereo-large",
+            use_fingerprint: useFingerprint,
+            title: title || undefined,
           },
         });
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
         const predId = data?.id;
+        const genId = data?.generation_id;
         if (!predId) throw new Error("Brak prediction_id z silnika");
-        setStatusMsg(`⏳ GrouAI Engine pracuje... (~${Math.round(grouaDuration * 1.5)}s)`);
+        if (data?.fingerprint_applied) {
+          const fp = data.fingerprint_summary;
+          setStatusMsg(`🧠 GrouAI Engine + Twój fingerprint (${fp?.genre || "—"}, ${fp?.bpm || "—"} BPM)...`);
+        } else {
+          setStatusMsg(`⏳ GrouAI Engine pracuje... (~${Math.round(grouaDuration * 1.5)}s)`);
+        }
         setPolling(true);
-        pollGrouaResult(predId);
+        pollGrouaResult(predId, genId);
       } catch (err: any) {
         toast.error("GrouAI Engine: " + (err.message || "błąd"));
         setStatusMsg("");
@@ -145,7 +153,7 @@ export const SunoGeneratePanel = () => {
     } finally { setGenerating(false); }
   };
 
-  const pollGrouaResult = (predictionId: string) => {
+  const pollGrouaResult = (predictionId: string, generationId?: string) => {
     let attempts = 0;
     pollRef.current = setInterval(async () => {
       attempts++;
@@ -157,7 +165,7 @@ export const SunoGeneratePanel = () => {
       }
       try {
         const { data, error } = await supabase.functions.invoke("groua-music-engine", {
-          body: { action: "status", prediction_id: predictionId },
+          body: { action: "status", prediction_id: predictionId, generation_id: generationId },
         });
         if (error) throw error;
         const status = data?.status;
@@ -282,7 +290,7 @@ export const SunoGeneratePanel = () => {
           </button>
         </div>
         {engine === "groua" && (
-          <div className="pt-2 border-t border-white/5 space-y-2">
+          <div className="pt-2 border-t border-white/5 space-y-3">
             <div className="flex items-center justify-between">
               <Label className="text-xs text-gray-400">Długość: {grouaDuration}s</Label>
             </div>
@@ -295,6 +303,20 @@ export const SunoGeneratePanel = () => {
               onChange={(e) => setGrouaDuration(parseInt(e.target.value))}
               className="w-full accent-[#9333EA]"
             />
+            <div className="flex items-center justify-between p-2.5 rounded-lg bg-[#9333EA]/5 border border-[#9333EA]/20">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-3.5 w-3.5 text-[#9333EA]" />
+                <div>
+                  <Label className="text-xs text-gray-200 cursor-pointer">Brzmiej jak ja</Label>
+                  <p className="text-[10px] text-gray-500">AI doda Twój BPM, gatunek i mood do promptu</p>
+                </div>
+              </div>
+              <Switch
+                checked={useFingerprint}
+                onCheckedChange={setUseFingerprint}
+                className="data-[state=checked]:bg-[#9333EA]"
+              />
+            </div>
           </div>
         )}
       </div>
