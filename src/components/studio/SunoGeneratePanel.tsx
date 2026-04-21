@@ -290,7 +290,7 @@ export const SunoGeneratePanel = () => {
           </button>
         </div>
         {engine === "groua" && (
-          <div className="pt-2 border-t border-white/5 space-y-2">
+          <div className="pt-2 border-t border-white/5 space-y-3">
             <div className="flex items-center justify-between">
               <Label className="text-xs text-gray-400">Długość: {grouaDuration}s</Label>
             </div>
@@ -303,6 +303,20 @@ export const SunoGeneratePanel = () => {
               onChange={(e) => setGrouaDuration(parseInt(e.target.value))}
               className="w-full accent-[#9333EA]"
             />
+            <div className="flex items-center justify-between p-2.5 rounded-lg bg-[#9333EA]/5 border border-[#9333EA]/20">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-3.5 w-3.5 text-[#9333EA]" />
+                <div>
+                  <Label className="text-xs text-gray-200 cursor-pointer">Brzmiej jak ja</Label>
+                  <p className="text-[10px] text-gray-500">AI doda Twój BPM, gatunek i mood do promptu</p>
+                </div>
+              </div>
+              <Switch
+                checked={useFingerprint}
+                onCheckedChange={setUseFingerprint}
+                className="data-[state=checked]:bg-[#9333EA]"
+              />
+            </div>
           </div>
         )}
       </div>
