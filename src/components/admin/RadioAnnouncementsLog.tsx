@@ -223,6 +223,11 @@ export const RadioAnnouncementsLog = () => {
                           <Badge variant="outline" className={`text-[10px] ${kindColor(item.kind)}`}>
                             {kindLabel(item.kind)}
                           </Badge>
+                          {item.lang && (
+                            <Badge variant="outline" className="text-[10px]">
+                              {LANG_FLAGS[item.lang] || "🌐"} {item.lang.toUpperCase()}
+                            </Badge>
+                          )}
                           <span className="text-xs text-muted-foreground flex items-center gap-1">
                             <Calendar className="h-3 w-3" />
                             {formatDistanceToNow(new Date(item.created_at), {
