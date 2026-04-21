@@ -137,11 +137,11 @@ const RadioLive = () => {
 
         const scheduleRes = await supabase
           .from("radio_schedule")
-          .select("position, item_type, custom_title, custom_duration, custom_audio_url, track:tracks(id, title, artist, duration, audio_url, cover_url)")
+          .select("position, item_type, custom_title, custom_duration, custom_audio_url, lang, track:tracks(id, title, artist, duration, audio_url, cover_url)")
           .order("position", { ascending: true })
           .limit(200);
         if (cancelled) return;
-        if (scheduleRes.data) setSchedule(scheduleRes.data as any);
+        if (scheduleRes.data) setRawSchedule(scheduleRes.data as any);
       } catch (err) {
         console.error("[RadioLive] Fetch error:", err);
       } finally {
