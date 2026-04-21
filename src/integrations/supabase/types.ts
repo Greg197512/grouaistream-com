@@ -1791,6 +1791,7 @@ export type Database = {
           created_at: string
           id: string
           kind: string
+          lang: string
           played_count: number
           post_id: string | null
           post_slug: string | null
@@ -1804,6 +1805,7 @@ export type Database = {
           created_at?: string
           id?: string
           kind?: string
+          lang?: string
           played_count?: number
           post_id?: string | null
           post_slug?: string | null
@@ -1817,6 +1819,7 @@ export type Database = {
           created_at?: string
           id?: string
           kind?: string
+          lang?: string
           played_count?: number
           post_id?: string | null
           post_slug?: string | null
@@ -1929,6 +1932,7 @@ export type Database = {
           custom_title: string | null
           id: string
           item_type: string
+          lang: string | null
           position: number
           track_id: string | null
         }
@@ -1939,6 +1943,7 @@ export type Database = {
           custom_title?: string | null
           id?: string
           item_type?: string
+          lang?: string | null
           position?: number
           track_id?: string | null
         }
@@ -1949,6 +1954,7 @@ export type Database = {
           custom_title?: string | null
           id?: string
           item_type?: string
+          lang?: string | null
           position?: number
           track_id?: string | null
         }

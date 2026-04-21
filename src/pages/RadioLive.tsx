@@ -25,6 +25,7 @@ interface ScheduleTrack {
   custom_title: string | null;
   custom_duration: number;
   custom_audio_url: string | null;
+  lang: string | null;
   track: {
     id: string;
     title: string;
@@ -73,9 +74,9 @@ const HEART_COLORS = [
 const RadioLive = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [config, setConfig] = useState<RadioConfig | null>(null);
-  const [schedule, setSchedule] = useState<ScheduleTrack[]>([]);
+  const [rawSchedule, setRawSchedule] = useState<ScheduleTrack[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -97,6 +98,13 @@ const RadioLive = () => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const heartIdRef = useRef(0);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+
+  // Filter announcements by selected language. Tracks (lang === null) are always kept.
+  // Announcement items with `lang` set are kept ONLY when matching the user's UI language.
+  const schedule = rawSchedule.filter((item) => {
+    if (item.item_type === "announcement" && item.lang && item.lang !== language) return false;
+    return true;
+  });
 
   // Auth
   useEffect(() => {
@@ -129,11 +137,11 @@ const RadioLive = () => {
 
         const scheduleRes = await supabase
           .from("radio_schedule")
-          .select("position, item_type, custom_title, custom_duration, custom_audio_url, track:tracks(id, title, artist, duration, audio_url, cover_url)")
+          .select("position, item_type, custom_title, custom_duration, custom_audio_url, lang, track:tracks(id, title, artist, duration, audio_url, cover_url)")
           .order("position", { ascending: true })
           .limit(200);
         if (cancelled) return;
-        if (scheduleRes.data) setSchedule(scheduleRes.data as any);
+        if (scheduleRes.data) setRawSchedule(scheduleRes.data as any);
       } catch (err) {
         console.error("[RadioLive] Fetch error:", err);
       } finally {

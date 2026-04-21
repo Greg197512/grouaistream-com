@@ -1,14 +1,44 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-import { encode as base64Encode } from "https://deno.land/std@0.168.0/encoding/base64.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Brian — energetic male voice (also used by DJ)
-const VOICE_ID_BRIAN = "nPczCjzI2devNBz1zQrb";
+// George — single multilingual voice (consistent brand across PL/EN/NL/UA)
+const VOICE_ID_GEORGE = "JBFqnCBsd6RMkjVDRZzb";
+
+type Lang = "pl" | "en" | "nl" | "ua";
+const SUPPORTED_LANGS: Lang[] = ["pl", "en", "nl", "ua"];
+
+const LANG_FLAGS: Record<Lang, string> = {
+  pl: "🇵🇱",
+  en: "🇬🇧",
+  nl: "🇳🇱",
+  ua: "🇺🇦",
+};
+
+const LANG_LABELS: Record<Lang, string> = {
+  pl: "Blog",
+  en: "Blog",
+  nl: "Blog",
+  ua: "Блог",
+};
+
+const SYSTEM_PROMPTS: Record<Lang, string> = {
+  pl: "Jesteś radiowym lektorem GrouAIStream. Stwórz KRÓTKĄ (max 4 zdania, ~25 sekund mowy) zapowiedź wpisu z bloga w stylu DJ-a radiowego. Zacznij od 'Cześć, tu GrouAI Stream. Świeży wpis na blogu:'. Bez markdown, bez linków, tylko tekst do czytania na żywo. Zachęć do kliknięcia.",
+  en: "You are a radio host for GrouAIStream. Write a SHORT (max 4 sentences, ~25 seconds of speech) blog post announcement in radio-DJ style. Start with 'Hi, this is GrouAI Stream. A fresh post on the blog:'. No markdown, no links, just text to read live. Encourage listeners to check it out.",
+  nl: "Je bent een radio-host van GrouAIStream. Schrijf een KORTE (max 4 zinnen, ~25 seconden spraak) aankondiging van een blogpost in radio-DJ stijl. Begin met 'Hoi, dit is GrouAI Stream. Een nieuwe post op de blog:'. Geen markdown, geen links, alleen tekst om live voor te lezen. Moedig luisteraars aan om te kijken.",
+  ua: "Ти радіоведучий GrouAIStream. Напиши КОРОТКЕ (макс. 4 речення, ~25 секунд мовлення) оголошення допису з блогу у стилі радіо-діджея. Починай зі слів 'Привіт, це GrouAI Stream. Свіжий допис у блозі:'. Без markdown, без посилань, тільки текст для зачитування наживо. Запроси послухати.",
+};
+
+const FALLBACKS: Record<Lang, (t: string, d: string) => string> = {
+  pl: (t, d) => `Cześć, tu GrouAI Stream. Świeży wpis na blogu: ${t}. ${d} Sprawdź teraz na grouaistream.com!`,
+  en: (t, d) => `Hi, this is GrouAI Stream. A fresh post on the blog: ${t}. ${d} Check it out now at grouaistream.com!`,
+  nl: (t, d) => `Hoi, dit is GrouAI Stream. Een nieuwe post op de blog: ${t}. ${d} Bekijk het nu op grouaistream.com!`,
+  ua: (t, d) => `Привіт, це GrouAI Stream. Свіжий допис у блозі: ${t}. ${d} Зайди зараз на grouaistream.com!`,
+};
 
 const stripMarkdown = (md: string): string =>
   md
@@ -21,6 +51,17 @@ const stripMarkdown = (md: string): string =>
     .replace(/\n+/g, " ")
     .replace(/\s+/g, " ")
     .trim();
+
+const parseLang = (raw: string | null | undefined): Lang => {
+  const v = (raw || "pl").toLowerCase();
+  return (SUPPORTED_LANGS as string[]).includes(v) ? (v as Lang) : "pl";
+};
+
+const pickLocalizedField = (post: any, base: "title" | "description" | "content", lang: Lang): string => {
+  if (lang === "pl") return post[base] || "";
+  const localized = post[`${base}_${lang}`];
+  return (localized && String(localized).trim().length > 0) ? localized : (post[base] || "");
+};
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -36,11 +77,22 @@ serve(async (req) => {
     if (!ELEVENLABS_API_KEY) throw new Error("ELEVENLABS_API_KEY missing");
 
     const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
+    const triggeredBy = req.headers.get("x-trigger") || "cron";
+
+    // Resolve language
+    const url = new URL(req.url);
+    let lang: Lang = parseLang(url.searchParams.get("lang"));
+    try {
+      if (req.method === "POST") {
+        const body = await req.clone().json().catch(() => null);
+        if (body?.lang) lang = parseLang(body.lang);
+      }
+    } catch (_) { /* ignore */ }
 
     // 1. Get latest published blog post
     const { data: post, error: postErr } = await supabase
       .from("seo_blog_posts")
-      .select("id, title, slug, description, content, cover_url, category")
+      .select("id, title, title_en, title_nl, title_ua, slug, description, description_en, description_nl, description_ua, content, content_en, content_nl, content_ua, cover_url, category")
       .eq("is_published", true)
       .order("created_at", { ascending: false })
       .limit(1)
@@ -48,15 +100,18 @@ serve(async (req) => {
 
     if (postErr || !post) {
       return new Response(
-        JSON.stringify({ skipped: true, reason: "no_published_post" }),
+        JSON.stringify({ skipped: true, reason: "no_published_post", lang }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // 2. Build short Polish radio announcement script via Lovable AI
-    const cleanContent = stripMarkdown(post.content || "").slice(0, 1200);
-    let script = "";
+    const localizedTitle = pickLocalizedField(post, "title", lang);
+    const localizedDesc = pickLocalizedField(post, "description", lang);
+    const localizedContent = pickLocalizedField(post, "content", lang);
+    const cleanContent = stripMarkdown(localizedContent).slice(0, 1200);
 
+    // 2. Build short radio announcement script via Lovable AI in target language
+    let script = "";
     if (LOVABLE_API_KEY) {
       try {
         const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -68,14 +123,10 @@ serve(async (req) => {
           body: JSON.stringify({
             model: "google/gemini-2.5-flash",
             messages: [
-              {
-                role: "system",
-                content:
-                  "Jesteś radiowym lektorem GrouAIStream. Stwórz KRÓTKĄ (max 4 zdania, ~25 sekund mowy) zapowiedź wpisu z bloga w stylu DJ-a radiowego. Zacznij od 'Cześć, tu GrouAI Stream. Świeży wpis na blogu:'. Bez markdown, bez linków, tylko tekst do czytania na żywo. Zachęć do kliknięcia.",
-              },
+              { role: "system", content: SYSTEM_PROMPTS[lang] },
               {
                 role: "user",
-                content: `Tytuł: ${post.title}\nKategoria: ${post.category || "ogólne"}\nLead: ${post.description || ""}\nFragment: ${cleanContent}`,
+                content: `Title: ${localizedTitle}\nCategory: ${post.category || "general"}\nLead: ${localizedDesc || ""}\nExcerpt: ${cleanContent}`,
               },
             ],
           }),
@@ -90,7 +141,7 @@ serve(async (req) => {
     }
 
     if (!script) {
-      script = `Cześć, tu GrouAI Stream. Świeży wpis na blogu: ${post.title}. ${post.description || ""} Sprawdź teraz na grouaistream.com!`;
+      script = FALLBACKS[lang](localizedTitle, localizedDesc || "");
     }
 
     // Clean for TTS
@@ -101,9 +152,9 @@ serve(async (req) => {
       .trim()
       .slice(0, 1500);
 
-    // 3. ElevenLabs TTS — Brian (male)
+    // 3. ElevenLabs TTS — George (multilingual_v2 handles all 4 languages)
     const ttsResp = await fetch(
-      `https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID_BRIAN}?output_format=mp3_44100_128`,
+      `https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID_GEORGE}?output_format=mp3_44100_128`,
       {
         method: "POST",
         headers: {
@@ -132,11 +183,10 @@ serve(async (req) => {
     const audioBuffer = await ttsResp.arrayBuffer();
     const audioBytes = new Uint8Array(audioBuffer);
 
-    // 4. Upload to storage
+    // 4. Upload to storage (lang-suffixed filename)
     const today = new Date().toISOString().slice(0, 10);
-    const filePath = `blog-announcements/${today}-${post.slug}.mp3`;
+    const filePath = `blog-announcements/${today}-${post.slug}-${lang}.mp3`;
 
-    // ensure bucket exists
     const { data: buckets } = await supabase.storage.listBuckets();
     if (!buckets?.find((b) => b.name === "radio-audio")) {
       await supabase.storage.createBucket("radio-audio", { public: true });
@@ -153,19 +203,45 @@ serve(async (req) => {
     const { data: pub } = supabase.storage.from("radio-audio").getPublicUrl(filePath);
     const audioUrl = pub.publicUrl;
 
-    // 5. Save to radio_announcements table
+    // 5. Save to radio_announcements (with language)
     await supabase.from("radio_announcements").insert({
       post_id: post.id,
-      post_title: post.title,
+      post_title: localizedTitle,
       post_slug: post.slug,
       script,
       audio_url: audioUrl,
-      voice_id: VOICE_ID_BRIAN,
+      voice_id: VOICE_ID_GEORGE,
       scheduled_for: new Date().toISOString(),
       kind: "blog_daily",
+      lang,
     });
 
-    // 6. Emit agent event so Brain / Radio can react
+    // 5b. Inject into radio_schedule (per-language slot)
+    try {
+      // Estimate duration ~14 chars/sec, min 15s, max 45s for short blog announce
+      const estimatedDuration = Math.min(45, Math.max(15, Math.round(script.length / 14)));
+
+      const { data: maxRow } = await supabase
+        .from("radio_schedule")
+        .select("position")
+        .order("position", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      const nextPosition = ((maxRow?.position as number | undefined) ?? 0) + 1;
+
+      await supabase.from("radio_schedule").insert({
+        item_type: "announcement",
+        custom_title: `${LANG_FLAGS[lang]} ${LANG_LABELS[lang]}: ${localizedTitle}`,
+        custom_audio_url: audioUrl,
+        custom_duration: estimatedDuration,
+        position: nextPosition,
+        lang,
+      });
+    } catch (schedErr) {
+      console.warn("Could not insert into radio_schedule:", schedErr);
+    }
+
+    // 6. Emit agent event
     await supabase.from("agent_events").insert({
       source: "daily-blog-audio-announce",
       event_type: "radio.announcement",
@@ -174,22 +250,24 @@ serve(async (req) => {
       target_id: post.id,
       payload: {
         audio_url: audioUrl,
-        title: post.title,
+        title: localizedTitle,
         slug: post.slug,
         kind: "blog_daily",
+        lang,
         script_preview: script.slice(0, 160),
       },
     });
 
-    console.log("✅ Blog audio announce ready:", audioUrl);
+    console.log(`✅ Blog audio announce ready [${lang}]:`, audioUrl);
 
     return new Response(
       JSON.stringify({
         success: true,
         post_id: post.id,
-        title: post.title,
+        title: localizedTitle,
         audio_url: audioUrl,
         script_length: script.length,
+        lang,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
