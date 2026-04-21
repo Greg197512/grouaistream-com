@@ -20,9 +20,13 @@ interface Announcement {
   post_title: string | null;
   post_slug: string | null;
   voice_id: string | null;
+  lang?: string | null;
 }
 
 type FilterKind = "all" | "music_story_radio" | "blog";
+type FilterLang = "all" | "pl" | "en" | "nl" | "ua";
+
+const LANG_FLAGS: Record<string, string> = { pl: "🇵🇱", en: "🇬🇧", nl: "🇳🇱", ua: "🇺🇦" };
 
 export const RadioAnnouncementsLog = () => {
   const [items, setItems] = useState<Announcement[]>([]);
@@ -30,6 +34,7 @@ export const RadioAnnouncementsLog = () => {
   const [triggering, setTriggering] = useState(false);
   const [playingId, setPlayingId] = useState<string | null>(null);
   const [filter, setFilter] = useState<FilterKind>("all");
+  const [langFilter, setLangFilter] = useState<FilterLang>("all");
 
   const load = async () => {
     setLoading(true);
@@ -115,7 +120,7 @@ export const RadioAnnouncementsLog = () => {
             <Mic className="h-4 w-4 text-primary" />
             Zapowiedzi w radiu
             <Badge variant="outline" className="text-[10px] ml-1">
-              blog: 08/14 · historie: 17/23
+              4 lang × blog 08/14 + historie 17/23 (PL :00, EN :15, NL :30, UA :45)
             </Badge>
           </CardTitle>
           <div className="flex gap-2 flex-wrap">
@@ -139,8 +144,8 @@ export const RadioAnnouncementsLog = () => {
         </div>
       </CardHeader>
       <CardContent>
-        {/* Filter chips */}
-        <div className="flex gap-1 mb-3 flex-wrap">
+        {/* Filter chips - kind */}
+        <div className="flex gap-1 mb-2 flex-wrap">
           {([
             { key: "all", label: `Wszystkie (${items.length})` },
             { key: "music_story_radio", label: `🎹 Historie (${items.filter(i => i.kind === "music_story_radio").length})` },
@@ -158,12 +163,38 @@ export const RadioAnnouncementsLog = () => {
           ))}
         </div>
 
+        {/* Filter chips - language */}
+        <div className="flex gap-1 mb-3 flex-wrap items-center">
+          <span className="text-[10px] text-muted-foreground mr-1">Język:</span>
+          {([
+            { key: "all", label: `Wszystkie` },
+            { key: "pl", label: `🇵🇱 PL` },
+            { key: "en", label: `🇬🇧 EN` },
+            { key: "nl", label: `🇳🇱 NL` },
+            { key: "ua", label: `🇺🇦 UA` },
+          ] as { key: FilterLang; label: string }[]).map((f) => {
+            const count = f.key === "all" ? items.length : items.filter(i => (i.lang || "pl") === f.key).length;
+            return (
+              <Button
+                key={f.key}
+                size="sm"
+                variant={langFilter === f.key ? "default" : "outline"}
+                onClick={() => setLangFilter(f.key)}
+                className="h-6 text-[10px] px-2"
+              >
+                {f.label} ({count})
+              </Button>
+            );
+          })}
+        </div>
+
         {(() => {
-          const filtered = filter === "all"
+          const byKind = filter === "all"
             ? items
             : filter === "blog"
               ? items.filter(i => i.kind === "blog" || i.kind === "blog_daily")
               : items.filter(i => i.kind === filter);
+          const filtered = langFilter === "all" ? byKind : byKind.filter(i => (i.lang || "pl") === langFilter);
 
           if (loading && filtered.length === 0) {
             return <p className="text-sm text-muted-foreground text-center py-8">Ładowanie…</p>;
@@ -192,6 +223,11 @@ export const RadioAnnouncementsLog = () => {
                           <Badge variant="outline" className={`text-[10px] ${kindColor(item.kind)}`}>
                             {kindLabel(item.kind)}
                           </Badge>
+                          {item.lang && (
+                            <Badge variant="outline" className="text-[10px]">
+                              {LANG_FLAGS[item.lang] || "🌐"} {item.lang.toUpperCase()}
+                            </Badge>
+                          )}
                           <span className="text-xs text-muted-foreground flex items-center gap-1">
                             <Calendar className="h-3 w-3" />
                             {formatDistanceToNow(new Date(item.created_at), {
