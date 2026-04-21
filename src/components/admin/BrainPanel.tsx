@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Brain, Activity, Lightbulb, Cpu, RefreshCw, Loader2, CheckCircle2, XCircle, Zap } from "lucide-react";
+import { Brain, Activity, Lightbulb, Cpu, RefreshCw, Loader2, CheckCircle2, XCircle, Zap, HeartPulse, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { pl } from "date-fns/locale";
@@ -202,11 +202,12 @@ export const BrainPanel = () => {
       </div>
 
       <Tabs defaultValue="events" className="w-full">
-        <TabsList>
+        <TabsList className="flex-wrap h-auto">
           <TabsTrigger value="events"><Activity className="h-4 w-4 mr-1" /> Puls platformy</TabsTrigger>
           <TabsTrigger value="memory"><Lightbulb className="h-4 w-4 mr-1" /> Pamięć</TabsTrigger>
           <TabsTrigger value="decisions"><Brain className="h-4 w-4 mr-1" /> Decyzje</TabsTrigger>
           <TabsTrigger value="agents"><Cpu className="h-4 w-4 mr-1" /> Agenci</TabsTrigger>
+          <TabsTrigger value="health"><HeartPulse className="h-4 w-4 mr-1" /> Zdrowie</TabsTrigger>
         </TabsList>
 
         <TabsContent value="events">
@@ -359,7 +360,146 @@ export const BrainPanel = () => {
             </CardContent>
           </Card>
         </TabsContent>
+        <TabsContent value="health">
+          <HealthSnapshotCard events={events} />
+        </TabsContent>
       </Tabs>
+    </div>
+  );
+};
+
+// ─── Health snapshot panel ──────────────────────────────────────────
+const HealthSnapshotCard = ({ events }: { events: AgentEvent[] }) => {
+  const lastSnapshot = events.find((e) => e.event_type === "health.snapshot");
+  const recentAlerts = events
+    .filter((e) => e.event_type.startsWith("alert."))
+    .slice(0, 10);
+  const lastRevenue = events.find((e) => e.event_type === "revenue.report");
+
+  if (!lastSnapshot) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Zdrowie systemu</CardTitle>
+          <CardDescription>Health-monitor jeszcze nie wystartował (cron co 5 min).</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">Czekam na pierwszy heartbeat...</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const snap = lastSnapshot.payload || {};
+  const pings: Array<{ fn: string; ok: boolean; status: number; ms: number }> = snap.pings || [];
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <HeartPulse className="h-5 w-5 text-primary" /> Ostatni heartbeat
+          </CardTitle>
+          <CardDescription>
+            {formatDistanceToNow(new Date(lastSnapshot.created_at), { addSuffix: true, locale: pl })} • cykl {snap.duration_ms}ms
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+            <div className="border border-border rounded p-2">
+              <div className="text-xs text-muted-foreground">Down</div>
+              <div className={`text-xl font-bold ${snap.down_count > 0 ? "text-destructive" : ""}`}>{snap.down_count ?? 0}</div>
+            </div>
+            <div className="border border-border rounded p-2">
+              <div className="text-xs text-muted-foreground">Slow</div>
+              <div className={`text-xl font-bold ${snap.slow_count > 0 ? "text-orange-400" : ""}`}>{snap.slow_count ?? 0}</div>
+            </div>
+            <div className="border border-border rounded p-2">
+              <div className="text-xs text-muted-foreground">Email fail %</div>
+              <div className="text-xl font-bold">
+                {snap.email?.failure_rate != null
+                  ? `${(snap.email.failure_rate * 100).toFixed(1)}%`
+                  : "—"}
+              </div>
+              <div className="text-[10px] text-muted-foreground">
+                {snap.email?.failed_1h ?? 0}/{snap.email?.total_1h ?? 0} (1h)
+              </div>
+            </div>
+            <div className="border border-border rounded p-2">
+              <div className="text-xs text-muted-foreground">Payouty &gt;7d</div>
+              <div className={`text-xl font-bold ${(snap.overdue_payouts ?? 0) > 0 ? "text-destructive" : ""}`}>
+                {snap.overdue_payouts ?? 0}
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+            {pings.map((p) => (
+              <div
+                key={p.fn}
+                className={`text-xs border rounded p-2 ${
+                  !p.ok ? "border-destructive/50 bg-destructive/10" : p.ms > 3000 ? "border-orange-500/50 bg-orange-500/10" : "border-border bg-card/50"
+                }`}
+              >
+                <div className="font-mono truncate">{p.fn}</div>
+                <div className="text-muted-foreground flex items-center gap-1">
+                  {p.ok ? <CheckCircle2 className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
+                  {p.status} • {p.ms}ms
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {snap.stale_agents?.length > 0 && (
+            <div className="mt-3 p-2 border border-orange-500/40 bg-orange-500/10 rounded text-xs">
+              <span className="font-semibold text-orange-300">Stale agents:</span> {snap.stale_agents.join(", ")}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {recentAlerts.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-orange-400" /> Ostatnie alarmy
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {recentAlerts.map((a) => (
+                <div key={a.id} className="text-xs border border-orange-500/30 bg-orange-500/5 rounded p-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Badge variant="destructive">{a.event_type}</Badge>
+                    <span className="text-muted-foreground ml-auto">
+                      {formatDistanceToNow(new Date(a.created_at), { addSuffix: true, locale: pl })}
+                    </span>
+                  </div>
+                  {a.payload && (
+                    <pre className="mt-1 text-[10px] overflow-x-auto">{JSON.stringify(a.payload, null, 0).slice(0, 300)}</pre>
+                  )}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {lastRevenue && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Ostatni raport finansowy</CardTitle>
+            <CardDescription>
+              {formatDistanceToNow(new Date(lastRevenue.created_at), { addSuffix: true, locale: pl })}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <pre className="text-[10px] overflow-x-auto bg-muted/30 p-2 rounded">
+              {JSON.stringify(lastRevenue.payload?.snapshot ?? lastRevenue.payload, null, 2)}
+            </pre>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };
