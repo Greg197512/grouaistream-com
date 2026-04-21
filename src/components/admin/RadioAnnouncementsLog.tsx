@@ -20,9 +20,13 @@ interface Announcement {
   post_title: string | null;
   post_slug: string | null;
   voice_id: string | null;
+  lang?: string | null;
 }
 
 type FilterKind = "all" | "music_story_radio" | "blog";
+type FilterLang = "all" | "pl" | "en" | "nl" | "ua";
+
+const LANG_FLAGS: Record<string, string> = { pl: "🇵🇱", en: "🇬🇧", nl: "🇳🇱", ua: "🇺🇦" };
 
 export const RadioAnnouncementsLog = () => {
   const [items, setItems] = useState<Announcement[]>([]);
