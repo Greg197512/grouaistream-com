@@ -690,6 +690,72 @@ export type Database = {
           },
         ]
       }
+      brain_external_sources: {
+        Row: {
+          created_at: string
+          enabled: boolean
+          filter_keywords: string[] | null
+          id: string
+          items_ingested_total: number
+          last_error: string | null
+          last_fetched_at: string | null
+          last_status: string | null
+          name: string
+          source_type: string
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          enabled?: boolean
+          filter_keywords?: string[] | null
+          id?: string
+          items_ingested_total?: number
+          last_error?: string | null
+          last_fetched_at?: string | null
+          last_status?: string | null
+          name: string
+          source_type: string
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          created_at?: string
+          enabled?: boolean
+          filter_keywords?: string[] | null
+          id?: string
+          items_ingested_total?: number
+          last_error?: string | null
+          last_fetched_at?: string | null
+          last_status?: string | null
+          name?: string
+          source_type?: string
+          updated_at?: string
+          url?: string
+        }
+        Relationships: []
+      }
+      brain_ingest_dedup: {
+        Row: {
+          expires_at: string
+          ingested_at: string
+          source_name: string | null
+          url_hash: string
+        }
+        Insert: {
+          expires_at?: string
+          ingested_at?: string
+          source_name?: string | null
+          url_hash: string
+        }
+        Update: {
+          expires_at?: string
+          ingested_at?: string
+          source_name?: string | null
+          url_hash?: string
+        }
+        Relationships: []
+      }
       brain_memory: {
         Row: {
           content: string
@@ -3245,6 +3311,7 @@ export type Database = {
         Args: { _challenge_id: string }
         Returns: Json
       }
+      cleanup_brain_ingest_dedup: { Args: never; Returns: number }
       cleanup_expired_brain_memory: { Args: never; Returns: number }
       delete_email: {
         Args: { message_id: number; queue_name: string }
