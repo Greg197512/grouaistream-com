@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Brain, Activity, Lightbulb, Cpu, RefreshCw, Loader2, CheckCircle2, XCircle, Zap } from "lucide-react";
+import { Brain, Activity, Lightbulb, Cpu, RefreshCw, Loader2, CheckCircle2, XCircle, Zap, HeartPulse, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { pl } from "date-fns/locale";
