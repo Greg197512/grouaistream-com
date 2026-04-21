@@ -23,3 +23,6 @@ verify_jwt = false
 
 [functions.grouai-brain]
 verify_jwt = false
+
+[functions.brain-newsfeed-ingest]
+verify_jwt = false
