@@ -120,7 +120,7 @@ export const RadioAnnouncementsLog = () => {
             <Mic className="h-4 w-4 text-primary" />
             Zapowiedzi w radiu
             <Badge variant="outline" className="text-[10px] ml-1">
-              blog: 08/14 · historie: 17/23
+              4 lang × blog 08/14 + historie 17/23 (PL :00, EN :15, NL :30, UA :45)
             </Badge>
           </CardTitle>
           <div className="flex gap-2 flex-wrap">
