@@ -111,7 +111,7 @@ serve(async (req) => {
       .from("seo_blog_posts")
       .select("id, title, title_en, title_nl, title_ua, slug, description, description_en, description_nl, description_ua, content, content_en, content_nl, content_ua, cover_url")
       .eq("is_published", true)
-      .eq("category", "music_stories")
+      .in("category", ["sound_chronicles", "music_stories"])
       .order("created_at", { ascending: false })
       .limit(10);
 
