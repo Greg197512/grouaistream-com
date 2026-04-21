@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Search, Sparkles, TrendingUp, Eye } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { BLOG_CATEGORIES as CATEGORIES, getCategoryLabel as catLabel } from "@/lib/blogCategories";
 
 interface BlogPost {
   id: string;

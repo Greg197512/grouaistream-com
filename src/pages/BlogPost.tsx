@@ -17,6 +17,7 @@ import { AffiliateSidebar } from "@/components/blog/AffiliateSidebar";
 import { NewsletterCapture } from "@/components/blog/NewsletterCapture";
 import { headingComponents } from "@/lib/markdownHeadingId";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { getCategoryLabel } from "@/lib/blogCategories";
 
 interface BlogPost {
   id: string;
