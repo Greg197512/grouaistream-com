@@ -26,3 +26,6 @@ verify_jwt = false
 
 [functions.brain-newsfeed-ingest]
 verify_jwt = false
+
+[functions.a-r-scout]
+verify_jwt = false
