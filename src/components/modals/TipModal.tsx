@@ -72,6 +72,16 @@ export const TipModal = ({ isOpen, onClose, trackId, trackTitle, trackArtist }: 
       }
 
       toast.success(`Wysłano ${selected}€ ❤️ → artysta dostał ${result.artist_received.toFixed(2)}€`);
+      // Brain event
+      supabase.rpc("emit_agent_event", {
+        _event_type: "tip.sent",
+        _source: "tip-modal",
+        _actor_user_id: user.id,
+        _target_type: "track",
+        _target_id: trackId,
+        _payload: { amount: selected, artist_received: result.artist_received },
+        _priority: 4,
+      }).then(() => {}, () => {});
       await refresh();
       onClose();
     } catch (err: any) {

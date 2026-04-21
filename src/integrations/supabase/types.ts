@@ -206,6 +206,138 @@ export type Database = {
         }
         Relationships: []
       }
+      agent_decisions: {
+        Row: {
+          action_taken: Json
+          agent_name: string
+          created_at: string
+          decision_type: string
+          event_ids: string[] | null
+          executed: boolean
+          executed_at: string | null
+          id: string
+          reasoning: string | null
+          rejected: boolean
+          rejected_at: string | null
+          rejected_by: string | null
+        }
+        Insert: {
+          action_taken?: Json
+          agent_name: string
+          created_at?: string
+          decision_type: string
+          event_ids?: string[] | null
+          executed?: boolean
+          executed_at?: string | null
+          id?: string
+          reasoning?: string | null
+          rejected?: boolean
+          rejected_at?: string | null
+          rejected_by?: string | null
+        }
+        Update: {
+          action_taken?: Json
+          agent_name?: string
+          created_at?: string
+          decision_type?: string
+          event_ids?: string[] | null
+          executed?: boolean
+          executed_at?: string | null
+          id?: string
+          reasoning?: string | null
+          rejected?: boolean
+          rejected_at?: string | null
+          rejected_by?: string | null
+        }
+        Relationships: []
+      }
+      agent_events: {
+        Row: {
+          actor_user_id: string | null
+          created_at: string
+          event_type: string
+          id: string
+          payload: Json
+          priority: number
+          processed_at: string | null
+          processed_by_brain: boolean
+          source: string
+          target_id: string | null
+          target_type: string | null
+        }
+        Insert: {
+          actor_user_id?: string | null
+          created_at?: string
+          event_type: string
+          id?: string
+          payload?: Json
+          priority?: number
+          processed_at?: string | null
+          processed_by_brain?: boolean
+          source: string
+          target_id?: string | null
+          target_type?: string | null
+        }
+        Update: {
+          actor_user_id?: string | null
+          created_at?: string
+          event_type?: string
+          id?: string
+          payload?: Json
+          priority?: number
+          processed_at?: string | null
+          processed_by_brain?: boolean
+          source?: string
+          target_id?: string | null
+          target_type?: string | null
+        }
+        Relationships: []
+      }
+      agent_registry: {
+        Row: {
+          created_at: string
+          cron_schedule: string | null
+          description: string | null
+          enabled: boolean
+          error_count: number
+          id: string
+          last_error: string | null
+          last_run_at: string | null
+          last_status: string | null
+          name: string
+          success_count: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          cron_schedule?: string | null
+          description?: string | null
+          enabled?: boolean
+          error_count?: number
+          id?: string
+          last_error?: string | null
+          last_run_at?: string | null
+          last_status?: string | null
+          name: string
+          success_count?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          cron_schedule?: string | null
+          description?: string | null
+          enabled?: boolean
+          error_count?: number
+          id?: string
+          last_error?: string | null
+          last_run_at?: string | null
+          last_status?: string | null
+          name?: string
+          success_count?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       ai_assistant_config: {
         Row: {
           assistant_name: string
@@ -557,6 +689,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      brain_memory: {
+        Row: {
+          content: string
+          created_at: string
+          embedding: string | null
+          expires_at: string | null
+          id: string
+          importance: number
+          memory_type: string
+          metadata: Json
+          source_url: string | null
+          summary: string | null
+          title: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          embedding?: string | null
+          expires_at?: string | null
+          id?: string
+          importance?: number
+          memory_type: string
+          metadata?: Json
+          source_url?: string | null
+          summary?: string | null
+          title: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          embedding?: string | null
+          expires_at?: string | null
+          id?: string
+          importance?: number
+          memory_type?: string
+          metadata?: Json
+          source_url?: string | null
+          summary?: string | null
+          title?: string
+        }
+        Relationships: []
       }
       creator_earnings: {
         Row: {
@@ -3071,9 +3245,22 @@ export type Database = {
         Args: { _challenge_id: string }
         Returns: Json
       }
+      cleanup_expired_brain_memory: { Args: never; Returns: number }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
+      }
+      emit_agent_event: {
+        Args: {
+          _actor_user_id?: string
+          _event_type: string
+          _payload?: Json
+          _priority?: number
+          _source: string
+          _target_id?: string
+          _target_type?: string
+        }
+        Returns: string
       }
       enqueue_email: {
         Args: { payload: Json; queue_name: string }
@@ -3183,6 +3370,26 @@ export type Database = {
             }
             Returns: undefined
           }
+      search_brain_memory: {
+        Args: {
+          _match_count?: number
+          _memory_types?: string[]
+          _min_importance?: number
+          _query_embedding: string
+        }
+        Returns: {
+          content: string
+          created_at: string
+          id: string
+          importance: number
+          memory_type: string
+          metadata: Json
+          similarity: number
+          source_url: string
+          summary: string
+          title: string
+        }[]
+      }
       send_tip: { Args: { _amount: number; _track_id: string }; Returns: Json }
       submit_payout_request: {
         Args: { _bank_account: string; _city: string; _full_name: string }

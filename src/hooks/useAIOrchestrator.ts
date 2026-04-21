@@ -194,6 +194,16 @@ export const useAIOrchestrator = () => {
           confidence: mood.confidence,
           source: mood.source,
         });
+        // Brain event
+        supabase.rpc("emit_agent_event", {
+          _event_type: "mood.detected",
+          _source: mood.source || "mood-detector",
+          _actor_user_id: user.id,
+          _target_type: null,
+          _target_id: null,
+          _payload: { mood: mood.mood, confidence: mood.confidence, genre: mood.genre },
+          _priority: 5,
+        }).then(() => {}, () => {});
       } catch (error) {
         console.error("Failed to save mood:", error);
       }

@@ -403,6 +403,25 @@ const Upload = () => {
         }).catch(() => {/* silent */});
       }
 
+      // Emit brain event
+      if (insertedTrack?.id) {
+        supabase.rpc("emit_agent_event", {
+          _event_type: "track.uploaded",
+          _source: "upload-page",
+          _actor_user_id: user?.id || null,
+          _target_type: "track",
+          _target_id: insertedTrack.id,
+          _payload: {
+            title: title.slice(0, 100),
+            genre,
+            duration: Math.round(resolvedDuration || DURATION_FALLBACK_SEC),
+            monetized: wantMonetize,
+            moderation_status: result?.status,
+          },
+          _priority: 3,
+        }).then(() => {}, () => {});
+      }
+
       window.dispatchEvent(new Event("track-list-changed"));
 
       setModerationResult(result);

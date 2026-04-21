@@ -1,6 +1,7 @@
 # Plan: GrouAI Ekosystem — Serce, Mózg i Agenci
 
-## Wizja
+## Status: ETAP 1 ✅ ZBUDOWANY (2026-04-21)
+
 
 Platforma jako **żywy organizm**: każde zdarzenie (upload, stream, tip, mood detection, generacja) trafia do centralnego *Event Busa*, **Mózg** (LLM z pamięcią pgvector) analizuje to w tle i decyduje co zrobić, a wyspecjalizowani **agenci** wykonują konkretne zadania (kuratorowanie, A&R, monitoring, marketing, optymalizacja).
 
