@@ -1,10 +1,12 @@
 # Plan: GrouAI Ekosystem — Serce, Mózg i Agenci
 
-## Status: ETAP 1 ✅ + ETAP 2 (newsfeed ✅ + a-r-scout ✅) ZBUDOWANE (2026-04-21)
+## Status: ETAP 1 ✅ + ETAP 2 ✅ + ETAP 3 (health-monitor ✅) (2026-04-21)
 
 **ETAP 2 newsfeed**: n8n workflow `GrouAI Brain — Newsfeed Listener` (ID: 2BGWMNP6JFfvwwk9) — aktywny, co 1h pobiera RSS (Pitchfork/RA/Mixmag) + Reddit (r/Music, r/edmproduction) + HackerNews → POST do edge function `brain-newsfeed-ingest` → embedduje przez `text-embedding-004` → zapisuje do `brain_memory` jako `external_signal` z TTL 30 dni. Token autoryzacyjny w tabeli `n8n_ingest_tokens`.
 
 **ETAP 2 a-r-scout**: Edge function `a-r-scout` codziennie 06:00 UTC (cron 'a-r-scout-daily', id 12) liczy "smak platformy" (top gatunki/BPM/mood z 7 dni `listening_history`), skanuje świeże utwory CCMixter w dominujących gatunkach, scoruje (genre match, licencja CC, tagi, mp3 dostępne, mood match), filtruje już posiadane, top 5 wstawia jako `agent_decisions` (`decision_type=import_external_track`) do akceptacji w `/admin/brain` + emituje event `agent.recommendation` dla Mózgu.
+
+**ETAP 3 health-monitor**: Edge function `health-monitor` co 5 min (cron `health-monitor-5min`, id 13). Pinguje 8 krytycznych edge functions (studio-router, ai-mood-analysis, grouai-brain, send-transactional-email, process-email-queue, ai-assistant, r2-signed-url, payments-webhook), sprawdza email failure rate (próg 5% przy ≥10 maili/h), payouty pending >7 dni, agentów stale >24h. Emituje `health.snapshot` (heartbeat, priority 8) zawsze + `alert.functions_down|functions_slow|email_degraded|payout_overdue|agent_stale` (priority 2) przy problemach — Mózg buduje baseline normalnego stanu i reaguje na anomalie.
 
 
 Platforma jako **żywy organizm**: każde zdarzenie (upload, stream, tip, mood detection, generacja) trafia do centralnego *Event Busa*, **Mózg** (LLM z pamięcią pgvector) analizuje to w tle i decyduje co zrobić, a wyspecjalizowani **agenci** wykonują konkretne zadania (kuratorowanie, A&R, monitoring, marketing, optymalizacja).
