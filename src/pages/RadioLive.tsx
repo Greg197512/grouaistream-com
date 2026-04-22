@@ -453,6 +453,10 @@ const RadioLive = () => {
   const currentCover = currentItem?.track?.cover_url || null;
   const isOffAir = !config?.is_active || schedule.length === 0;
   const isTrack = currentItem?.item_type === "track" || !currentItem?.item_type;
+  const isAnnouncement = currentItem?.item_type === "announcement";
+  const announcementLang = currentItem?.lang || null;
+  const LANG_FLAG: Record<string, string> = { pl: "🇵🇱", en: "🇬🇧", nl: "🇳🇱", ua: "🇺🇦" };
+  const LANG_LABEL: Record<string, string> = { pl: "Polski", en: "English", nl: "Nederlands", ua: "Українська" };
 
   const isInSchedule = () => {
     if (!config || config.mode !== "scheduled" || !config.start_time || !config.end_time) return true;
