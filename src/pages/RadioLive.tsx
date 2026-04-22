@@ -866,6 +866,49 @@ const RadioLive = () => {
 
         <p className="text-center text-xs text-muted-foreground">{t("radio.poweredBy")}</p>
       </motion.div>
+
+      {/* Sticky now-playing schedule bar (always visible) */}
+      {currentItem && (
+        <motion.div
+          initial={{ y: 100, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          className={`fixed bottom-0 left-0 right-0 z-[55] backdrop-blur-xl border-t px-4 py-2.5 ${
+            isAnnouncement
+              ? "bg-primary/20 border-primary/50 shadow-[0_-4px_20px_hsl(var(--primary)/0.3)]"
+              : "bg-card/90 border-border/40"
+          }`}
+          style={messages.length > 0 ? { bottom: "52px" } : undefined}
+        >
+          <div className="max-w-3xl mx-auto flex items-center gap-3">
+            {isAnnouncement ? (
+              <motion.div
+                animate={{ scale: [1, 1.2, 1] }}
+                transition={{ duration: 1.2, repeat: Infinity }}
+                className="h-8 w-8 rounded-full bg-primary flex items-center justify-center shrink-0"
+              >
+                <Radio className="h-4 w-4 text-primary-foreground" />
+              </motion.div>
+            ) : (
+              <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center shrink-0">
+                <Music className="h-4 w-4 text-muted-foreground" />
+              </div>
+            )}
+            <div className="min-w-0 flex-1">
+              <p className={`text-[10px] uppercase tracking-wider font-bold ${isAnnouncement ? "text-primary" : "text-muted-foreground"}`}>
+                {isAnnouncement
+                  ? `🎙️ AUDYCJA NA ŻYWO ${announcementLang ? `· ${LANG_FLAG[announcementLang] || ""} ${LANG_LABEL[announcementLang] || announcementLang.toUpperCase()}` : ""}`
+                  : "🎵 W ROZKŁADZIE DNIA · UTWÓR"}
+              </p>
+              <p className="text-sm font-semibold truncate">{currentTitle}</p>
+              <p className="text-xs text-muted-foreground truncate">{currentArtist}</p>
+            </div>
+            <div className="text-right shrink-0">
+              <p className="text-[10px] text-muted-foreground uppercase">Pozycja</p>
+              <p className="text-sm font-bold tabular-nums">{currentIndex + 1}/{schedule.length}</p>
+            </div>
+          </div>
+        </motion.div>
+      )}
     </div>
   );
 };
