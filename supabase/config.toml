@@ -3,6 +3,9 @@ project_id = "bvstvawnigyczvofzhps"
 [functions.r2-upload-proxy]
 verify_jwt = false
 
+[functions.ai-cover-generate]
+verify_jwt = false
+
 [functions.r2-signed-url]
 verify_jwt = false
 

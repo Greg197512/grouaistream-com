@@ -34,11 +34,14 @@ Iconic premium rap artwork energy, luxury noir, neon amber reflections, wet asph
 Shot like a global album campaign on Hasselblad or ARRI, 50mm or 85mm lens, high dynamic range, ultra-premium color grading, deep blacks, hot amber highlights.`;
 
   const premiumRules = `
-ABSOLUTE RULES:
-- NO text, NO letters, NO logos, NO watermark, NO typographic elements.
-- Realistic photographic image only — not cartoon, not illustration, not CGI-looking.
-- Square 1:1 cover, full bleed, sharp subject, rich texture, dramatic cinematic lighting.
-- Must look like a world-class, streaming-platform-ready commercial album cover.`;
+ABSOLUTE PHOTOGRAPHIC QUALITY RULES:
+- Hyper-realistic PHOTOGRAPH, shot on Hasselblad H6D-100c or Phase One IQ4, 80mm prime lens, f/1.8, ISO 100.
+- 8K resolution, RAW photo, ultra-sharp focus, micro-detail in skin / texture / fabric / surface.
+- Cinematic lighting: dramatic chiaroscuro, golden-hour or neon rim light, volumetric haze, lens flare subtle.
+- Professional color grading: deep true blacks, rich saturation, filmic contrast, Kodak Portra / Fuji 400H look.
+- NO text, NO letters, NO logos, NO watermark, NO typography, NO captions, NO numbers anywhere in the image.
+- NOT cartoon, NOT illustration, NOT 3D render, NOT CGI, NOT anime — must look like a real photograph taken by a top-tier commercial photographer.
+- Square 1:1 composition, full bleed, magazine-cover quality, world-class commercial album artwork.`;
 
   if (mode === "custom" && description?.trim()) {
     return `Create an extraordinary, highest-tier premium album cover. User direction: "${description.trim()}".${isRap ? rapRecipe : ""}
@@ -51,9 +54,11 @@ Visually interpret the title with bold cinematic storytelling, elite art directi
 }
 
 async function generateImageBase64(prompt: string, apiKey: string): Promise<string | null> {
+  // Flash Image jako pierwszy (szybki + bardzo wysoka jakość foto), Pro jako luksusowy fallback
   const attempts = [
-    { model: "google/gemini-3.1-flash-image-preview", timeoutMs: 45000 },
-    { model: "google/gemini-2.5-flash-image", timeoutMs: 30000 },
+    { model: "google/gemini-3.1-flash-image-preview", timeoutMs: 60000 },
+    { model: "google/gemini-3-pro-image-preview", timeoutMs: 90000 },
+    { model: "google/gemini-2.5-flash-image", timeoutMs: 45000 },
   ];
 
   for (const attempt of attempts) {
