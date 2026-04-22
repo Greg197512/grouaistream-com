@@ -1,3 +1,5 @@
+import { supabase } from "@/integrations/supabase/client";
+
 interface R2UploadOptions {
   file: File;
   folder?: string;
@@ -34,14 +36,19 @@ function getAnonKey(): string {
 }
 
 async function getAuthToken(): Promise<string> {
-  // Try to get the current session token from localStorage
-  const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID || "bvstvawnigyczvofzhps";
-  const storageKey = `sb-${projectId}-auth-token`;
   try {
+    const { data, error } = await supabase.auth.getSession();
+    if (!error) {
+      const token = data.session?.access_token;
+      if (token) return token;
+    }
+
+    const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID || "bvstvawnigyczvofzhps";
+    const storageKey = `sb-${projectId}-auth-token`;
     const raw = localStorage.getItem(storageKey);
     if (raw) {
       const parsed = JSON.parse(raw);
-      const token = parsed?.access_token;
+      const token = parsed?.access_token ?? parsed?.currentSession?.access_token;
       if (token) return token;
     }
   } catch { /* ignore */ }
