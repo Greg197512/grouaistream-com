@@ -721,15 +721,44 @@ const RadioLive = () => {
 
         {/* Now Playing */}
         {currentItem && (
-          <div className="rounded-2xl overflow-hidden border border-border/50 bg-card">
+          <div className={`rounded-2xl overflow-hidden border bg-card transition-all ${isAnnouncement ? "border-primary/60 shadow-[0_0_30px_hsl(var(--primary)/0.4)]" : "border-border/50"}`}>
             <div className="h-1 w-full groove-gradient-bg" />
-            {currentCover && (
+            {isAnnouncement ? (
+              <div className="relative w-full h-48 groove-gradient-bg flex flex-col items-center justify-center overflow-hidden">
+                <motion.div
+                  animate={{ scale: [1, 1.15, 1], opacity: [0.7, 1, 0.7] }}
+                  transition={{ duration: 1.6, repeat: Infinity }}
+                  className="absolute inset-0 flex items-center justify-center"
+                >
+                  <Radio className="h-24 w-24 text-primary-foreground/30" />
+                </motion.div>
+                {/* Animated EQ bars */}
+                <div className="absolute bottom-4 left-0 right-0 flex items-end justify-center gap-1.5 h-10">
+                  {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
+                    <motion.div
+                      key={i}
+                      className="w-1.5 bg-primary-foreground rounded-full"
+                      animate={{ height: ["20%", "100%", "30%", "80%", "20%"] }}
+                      transition={{ duration: 0.8 + i * 0.1, repeat: Infinity, delay: i * 0.05 }}
+                    />
+                  ))}
+                </div>
+                <div className="relative z-10 text-center px-4">
+                  <p className="text-xs font-bold uppercase tracking-widest text-primary-foreground/80 mb-1">
+                    🎙️ Audycja na żywo {announcementLang && `· ${LANG_FLAG[announcementLang] || ""} ${LANG_LABEL[announcementLang] || announcementLang.toUpperCase()}`}
+                  </p>
+                  <p className="text-sm font-semibold text-primary-foreground/90">George · GrouAI Stream</p>
+                </div>
+              </div>
+            ) : currentCover ? (
               <img src={currentCover} alt={currentTitle} className="w-full h-48 object-cover" />
-            )}
+            ) : null}
             <div className="p-4 space-y-3">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider">{t("radio.nowPlaying")}</p>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider">
+                    {isAnnouncement ? "🎙️ Teraz w eterze (audycja)" : t("radio.nowPlaying")}
+                  </p>
                   <h2 className="font-bold text-lg truncate">{currentTitle}</h2>
                   <p className="text-sm text-muted-foreground truncate">{currentArtist}</p>
                 </div>
@@ -752,7 +781,7 @@ const RadioLive = () => {
 
               {/* Progress */}
               <div className="h-1 w-full rounded-full bg-muted overflow-hidden">
-                <motion.div className="h-full groove-gradient-bg" style={{ width: `${progress}%` }} />
+                <motion.div className={`h-full ${isAnnouncement ? "bg-primary" : "groove-gradient-bg"}`} style={{ width: `${progress}%` }} />
               </div>
 
               {/* Volume */}
