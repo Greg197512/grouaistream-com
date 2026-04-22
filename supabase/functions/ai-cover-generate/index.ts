@@ -54,10 +54,10 @@ Visually interpret the title with bold cinematic storytelling, elite art directi
 }
 
 async function generateImageBase64(prompt: string, apiKey: string): Promise<string | null> {
-  // Najwyższa jakość foto -> najpierw Pro Image, potem Flash Image jako fallback
+  // Flash Image jako pierwszy (szybki + bardzo wysoka jakość foto), Pro jako luksusowy fallback
   const attempts = [
-    { model: "google/gemini-3-pro-image-preview", timeoutMs: 90000 },
     { model: "google/gemini-3.1-flash-image-preview", timeoutMs: 60000 },
+    { model: "google/gemini-3-pro-image-preview", timeoutMs: 90000 },
     { model: "google/gemini-2.5-flash-image", timeoutMs: 45000 },
   ];
 
