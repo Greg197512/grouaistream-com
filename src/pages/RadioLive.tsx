@@ -833,15 +833,27 @@ const RadioLive = () => {
                 .slice(currentIndex + 1, currentIndex + 4)
                 .concat(schedule.slice(0, Math.max(0, 3 - (schedule.length - currentIndex - 1))))
                 .slice(0, 3)
-                .map((item, i) => (
-                  <div key={(item.track?.id || item.custom_title || "") + "-" + i} className="flex items-center gap-3 rounded-lg px-3 py-2 bg-card/50 border border-border/30">
-                    <Music className="h-3 w-3 text-muted-foreground shrink-0" />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm truncate">{getItemTitle(item)}</p>
-                      <p className="text-xs text-muted-foreground truncate">{getItemArtist(item)}</p>
+                .map((item, i) => {
+                  const itemIsAnnouncement = item.item_type === "announcement";
+                  return (
+                    <div
+                      key={(item.track?.id || item.custom_title || "") + "-" + i}
+                      className={`flex items-center gap-3 rounded-lg px-3 py-2 border ${itemIsAnnouncement ? "bg-primary/10 border-primary/30" : "bg-card/50 border-border/30"}`}
+                    >
+                      {itemIsAnnouncement ? (
+                        <Radio className="h-3 w-3 text-primary shrink-0" />
+                      ) : (
+                        <Music className="h-3 w-3 text-muted-foreground shrink-0" />
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className={`text-sm truncate ${itemIsAnnouncement ? "font-semibold text-primary" : ""}`}>
+                          {itemIsAnnouncement && "🎙️ "}{getItemTitle(item)}
+                        </p>
+                        <p className="text-xs text-muted-foreground truncate">{getItemArtist(item)}</p>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
             </div>
           </div>
         )}
