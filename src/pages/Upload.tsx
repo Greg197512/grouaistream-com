@@ -400,11 +400,13 @@ const Upload = () => {
 
       setInsertedTrackId(insertedTrack?.id || null);
       if (!coverUrl && insertedTrack?.id) {
+        const trimmedDesc = (description || "").trim();
         const autoCoverPromise = supabase.functions.invoke("ai-cover-generate", {
           body: {
             title,
             style: genre,
-            mode: "auto",
+            description: trimmedDesc || undefined,
+            mode: trimmedDesc ? "custom" : "auto",
           },
         });
 
