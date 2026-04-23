@@ -163,7 +163,7 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { trackId, allow_ai_fallback, source } = body;
+    const { trackId, allow_ai_fallback, source: callSource } = body;
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
