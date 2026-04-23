@@ -474,6 +474,83 @@ const RadioLive = () => {
     pausePlayback();
   }, [pausePlayback]);
 
+  // 🕐 Scheduled announcements & music stories per language
+  // Blog audio: 08:00/14:00 PL · 08:15/14:15 EN · 08:30/14:30 NL · 08:45/14:45 UA
+  // Music story: 17:00/23:00 PL · 17:15/23:15 EN · 17:30/23:30 NL · 17:45/23:45 UA
+  const scheduledFiredRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!schedule.length) return;
+
+    const LANG_OFFSET: Record<string, number> = { pl: 0, en: 15, nl: 30, ua: 45 };
+    const offset = LANG_OFFSET[language] ?? 0;
+    // hour:minute pairs in Europe/Warsaw local time
+    const slots = [
+      { h: 8, m: offset, kind: "blog" },
+      { h: 14, m: offset, kind: "blog" },
+      { h: 17, m: offset, kind: "story" },
+      { h: 23, m: offset, kind: "story" },
+    ];
+
+    const fadeAudio = (target: number, duration = 1500): Promise<void> => {
+      return new Promise((resolve) => {
+        const audio = audioRef.current;
+        if (!audio) return resolve();
+        const start = audio.volume;
+        const startTime = performance.now();
+        const step = (now: number) => {
+          const t = Math.min(1, (now - startTime) / duration);
+          if (audioRef.current) audioRef.current.volume = start + (target - start) * t;
+          if (t < 1) requestAnimationFrame(step);
+          else resolve();
+        };
+        requestAnimationFrame(step);
+      });
+    };
+
+    const tick = async () => {
+      const now = new Date();
+      // Convert to Europe/Warsaw via Intl
+      const fmt = new Intl.DateTimeFormat("pl-PL", {
+        timeZone: "Europe/Warsaw",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      }).format(now);
+      const [hStr, mStr] = fmt.split(":");
+      const h = parseInt(hStr, 10);
+      const m = parseInt(mStr, 10);
+      const hit = slots.find((s) => s.h === h && s.m === m);
+      if (!hit) return;
+
+      const dayKey = now.toISOString().slice(0, 10);
+      const fireKey = `${dayKey}-${hit.h}:${hit.m}-${language}`;
+      if (scheduledFiredRef.current.has(fireKey)) return;
+      scheduledFiredRef.current.add(fireKey);
+
+      const annIndex = findNextAnnouncementIndex(currentIndex - 1);
+      if (annIndex === null) {
+        console.warn("[RadioLive] ⏰ scheduled slot but no announcement in queue", hit);
+        return;
+      }
+
+      console.log(`[RadioLive] ⏰ ${hit.kind} slot ${hit.h}:${String(hit.m).padStart(2, "0")} [${language}] → fade out + play announcement`);
+
+      // Fade out current music
+      await fadeAudio(0, 1200);
+      setCurrentIndex(annIndex);
+      startPlayback(annIndex);
+      // Restore volume after a brief delay so the announcement plays at full level
+      setTimeout(() => {
+        if (audioRef.current) audioRef.current.volume = muted ? 0 : volume / 100;
+      }, 1500);
+    };
+
+    // Run immediately, then every 20s (catches the minute window reliably)
+    tick();
+    const id = window.setInterval(tick, 20_000);
+    return () => window.clearInterval(id);
+  }, [schedule, language, currentIndex, findNextAnnouncementIndex, startPlayback, volume, muted]);
+
   useEffect(() => {
     return () => { audioRef.current?.pause(); };
   }, []);
