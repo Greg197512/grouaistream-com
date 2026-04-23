@@ -18,6 +18,7 @@ import { template as inviteMusicians } from './invite-musicians.tsx'
 import { template as coffeeTipThanks } from './coffee-tip-thanks.tsx'
 import { template as coffeeTipReceived } from './coffee-tip-received.tsx'
 import { template as paymentFailed } from './payment-failed.tsx'
+import { template as subscriptionReceipt } from './subscription-receipt.tsx'
 
 export const TEMPLATES: Record<string, TemplateEntry> = {
   'admin-notification': adminNotification,
@@ -29,4 +30,5 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   'coffee-tip-thanks': coffeeTipThanks,
   'coffee-tip-received': coffeeTipReceived,
   'payment-failed': paymentFailed,
+  'subscription-receipt': subscriptionReceipt,
 }

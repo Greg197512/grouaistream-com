@@ -1523,6 +1523,60 @@ export type Database = {
         }
         Relationships: []
       }
+      paddle_transactions: {
+        Row: {
+          amount: number
+          billed_at: string
+          created_at: string
+          currency: string
+          environment: string
+          id: string
+          invoice_url: string | null
+          paddle_customer_id: string | null
+          paddle_subscription_id: string | null
+          paddle_transaction_id: string
+          plan: string | null
+          price_id: string | null
+          product_id: string | null
+          status: string
+          user_id: string | null
+        }
+        Insert: {
+          amount?: number
+          billed_at?: string
+          created_at?: string
+          currency?: string
+          environment?: string
+          id?: string
+          invoice_url?: string | null
+          paddle_customer_id?: string | null
+          paddle_subscription_id?: string | null
+          paddle_transaction_id: string
+          plan?: string | null
+          price_id?: string | null
+          product_id?: string | null
+          status?: string
+          user_id?: string | null
+        }
+        Update: {
+          amount?: number
+          billed_at?: string
+          created_at?: string
+          currency?: string
+          environment?: string
+          id?: string
+          invoice_url?: string | null
+          paddle_customer_id?: string | null
+          paddle_subscription_id?: string | null
+          paddle_transaction_id?: string
+          plan?: string | null
+          price_id?: string | null
+          product_id?: string | null
+          status?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       party_commands: {
         Row: {
           command: string
