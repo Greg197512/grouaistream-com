@@ -15,15 +15,10 @@ export function getPaddleEnvironment(): "sandbox" | "live" {
 }
 
 /**
- * Live Paddle account is still in automated review.
- * While true, the published app shows "Coming soon" instead of opening checkout
- * for paid subscriptions. Coffee tips are still allowed (one-off, low risk).
+ * Paddle account is approved — checkout is enabled in both sandbox and live.
  */
 export function isLiveCheckoutEnabled(): boolean {
-  // Sandbox always works in preview
-  if (getPaddleEnvironment() === "sandbox") return true;
-  // TODO: flip to true once Paddle approves the live account
-  return false;
+  return true;
 }
 
 export async function initializePaddle() {
