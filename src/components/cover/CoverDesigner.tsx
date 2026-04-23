@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -26,6 +26,10 @@ export const CoverDesigner = ({ title, genre, onCoverReady, coverUrl }: CoverDes
   const [backCoverUrl, setBackCoverUrl] = useState("");
   const [generatingBack, setGeneratingBack] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setPreviewUrl(coverUrl || "");
+  }, [coverUrl]);
 
   const handleUploadCover = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

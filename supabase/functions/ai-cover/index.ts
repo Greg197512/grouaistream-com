@@ -2,6 +2,12 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { S3Client, PutObjectCommand } from "npm:@aws-sdk/client-s3@3.600.0";
 
+function fetchWithTimeout(url: string, options: RequestInit, timeoutMs: number) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(timeout));
+}
+
 function getCorsHeaders(req: Request) {
   const allowedOrigins = [
     "https://grouaistream-com.lovable.app",
@@ -112,28 +118,40 @@ async function generateAICover(title: string, artist: string, genre: string | nu
   const genreStyle = genre ? ` The music style is ${genre}.` : "";
   const prompt = `Create a breathtaking, photographic-quality album cover art for a song called "${title}" by "${artist}".${genreStyle} The image must look like a professional photograph or cinematic movie still — NOT cartoon, NOT illustration, NOT abstract art. Think: Hasselblad camera quality, dramatic natural or studio lighting, rich vivid colors, shallow depth of field with beautiful bokeh. The scene should emotionally represent the mood and theme of the song title. Ultra-realistic, high-resolution, award-winning photography style. No text, no letters, no words, no logos on the image. On a clean background.`;
 
-  try {
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-3-pro-image-preview",
-        messages: [{ role: "user", content: prompt }],
-        modalities: ["image", "text"],
-      }),
-    });
+  const attempts = [
+    { model: "google/gemini-3.1-flash-image-preview", timeoutMs: 90000 },
+    { model: "google/gemini-2.5-flash-image", timeoutMs: 45000 },
+  ];
 
-    if (!response.ok) return null;
+  for (const attempt of attempts) {
+    try {
+      const response = await fetchWithTimeout("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: attempt.model,
+          messages: [{ role: "user", content: prompt }],
+          modalities: ["image", "text"],
+        }),
+      }, attempt.timeoutMs);
 
-    const data = await response.json();
-    return data.choices?.[0]?.message?.images?.[0]?.image_url?.url || null;
-  } catch (e) {
-    console.error("AI cover generation error:", e);
-    return null;
+      if (!response.ok) {
+        console.error("AI cover generation failed:", attempt.model, response.status, await response.text());
+        continue;
+      }
+
+      const data = await response.json();
+      const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+      if (imageUrl) return imageUrl;
+    } catch (e) {
+      console.error("AI cover generation error:", attempt.model, e);
+    }
   }
+
+  return null;
 }
 
 serve(async (req) => {
@@ -159,8 +177,9 @@ serve(async (req) => {
       global: { headers: { Authorization: authHeader } },
     });
 
-    const { data: userData, error: userError } = await supabaseAuth.auth.getUser();
-    if (userError || !userData?.user) {
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: claimsError } = await supabaseAuth.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims?.sub) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
