@@ -402,47 +402,50 @@ const Upload = () => {
       if (trackInsertErr) throw trackInsertErr;
 
       setInsertedTrackId(insertedTrack?.id || null);
+
+      // Auto-generate cover in BACKGROUND — does not block user, survives page navigation
       if (!coverUrl && insertedTrack?.id) {
         const trimmedDesc = (description || "").trim();
-        const autoCoverPromise = supabase.functions.invoke("ai-cover-generate", {
-          body: {
-            title,
-            style: genre,
-            description: trimmedDesc || undefined,
-            mode: trimmedDesc ? "custom" : "auto",
-          },
-        });
+        const trackId = insertedTrack.id;
 
-        try {
-          const result = await Promise.race([
-            autoCoverPromise,
-            new Promise<never>((_, reject) =>
-              window.setTimeout(() => reject(new Error("Cover generation timeout")), COVER_GENERATION_TIMEOUT_MS)
-            ),
-          ]);
+        // Fire-and-forget: ai-cover-generate (premium prompt) → DB update
+        // Fallback: ai-cover (iTunes/MusicBrainz/Deezer + AI) handled server-side
+        (async () => {
+          try {
+            const { data: coverData, error: coverError } = await supabase.functions.invoke("ai-cover-generate", {
+              body: {
+                title,
+                style: genre,
+                description: trimmedDesc || undefined,
+                mode: trimmedDesc ? "custom" : "auto",
+              },
+            });
 
-          const { data: coverData, error: coverError } = result as Awaited<typeof autoCoverPromise>;
-          if (coverError) throw coverError;
-
-          if (coverData?.cover_url) {
-            await supabase
-              .from("tracks")
-              .update({ cover_url: coverData.cover_url })
-              .eq("id", insertedTrack.id);
-
-            setCoverUrl(coverData.cover_url);
-            window.dispatchEvent(new Event("track-list-changed"));
-            toast.success("🎨 Okładka została wygenerowana automatycznie");
+            if (!coverError && coverData?.cover_url) {
+              await supabase
+                .from("tracks")
+                .update({ cover_url: coverData.cover_url })
+                .eq("id", trackId);
+              window.dispatchEvent(new Event("track-list-changed"));
+              toast.success("🎨 Okładka została wygenerowana automatycznie");
+              return;
+            }
+            throw coverError || new Error("No cover_url in response");
+          } catch (primaryErr) {
+            console.warn("Primary cover generation failed, trying ai-cover fallback:", primaryErr);
+            try {
+              const { error: fallbackErr } = await supabase.functions.invoke("ai-cover", {
+                body: { trackId },
+              });
+              if (fallbackErr) throw fallbackErr;
+              window.dispatchEvent(new Event("track-list-changed"));
+            } catch (fallbackErr) {
+              console.error("Fallback ai-cover also failed:", fallbackErr);
+            }
           }
-        } catch (coverErr) {
-          console.error("Auto cover generation error:", coverErr);
+        })();
 
-          supabase.functions.invoke("ai-cover", {
-            body: { trackId: insertedTrack.id },
-          }).catch((fallbackErr) => {
-            console.error("Fallback auto cover error:", fallbackErr);
-          });
-        }
+        toast.info("🎨 Okładka generuje się w tle — pojawi się za chwilę");
       }
 
       // Emit brain event
