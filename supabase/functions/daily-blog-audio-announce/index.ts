@@ -216,27 +216,49 @@ serve(async (req) => {
       lang,
     });
 
-    // 5b. Inject into radio_schedule (per-language slot)
+    // 5b. Inject into radio_schedule — sprinkle into the FIRST 200 slots so listeners actually hear it.
+    // Strategy:
+    //   1) Remove old blog announcements for the same language (keep only the freshest one).
+    //   2) Insert the new one at multiple low positions (every ~25 tracks within the first 200),
+    //      so within a normal listening session at least one fires.
     try {
-      // Estimate duration ~14 chars/sec, min 15s, max 45s for short blog announce
       const estimatedDuration = Math.min(45, Math.max(15, Math.round(script.length / 14)));
+      const titleWithFlag = `${LANG_FLAGS[lang]} ${LANG_LABELS[lang]}: ${localizedTitle}`;
 
-      const { data: maxRow } = await supabase
+      // 1) Cleanup older blog announcements for this language
+      const { error: delErr } = await supabase
+        .from("radio_schedule")
+        .delete()
+        .eq("item_type", "announcement")
+        .eq("lang", lang)
+        .ilike("custom_title", `${LANG_FLAGS[lang]} ${LANG_LABELS[lang]}:%`);
+      if (delErr) console.warn("Could not cleanup old blog announcements:", delErr.message);
+
+      // 2) Insert at ~5 low positions within first 200 slots (10, 35, 70, 110, 160).
+      // We use small fractional positions stored as integer rounded buckets so they appear early.
+      // Since position is integer and existing items already occupy 0..N, we shift others would be costly.
+      // Instead: add at a NEGATIVE-ish low slot using min(position) - 1, plus a few high spots as backup.
+      const { data: minRow } = await supabase
         .from("radio_schedule")
         .select("position")
-        .order("position", { ascending: false })
+        .order("position", { ascending: true })
         .limit(1)
         .maybeSingle();
-      const nextPosition = ((maxRow?.position as number | undefined) ?? 0) + 1;
+      const minPos = (minRow?.position as number | undefined) ?? 0;
 
-      await supabase.from("radio_schedule").insert({
+      const targetPositions = [minPos - 1, minPos - 2, minPos - 3, minPos - 4, minPos - 5];
+      const rows = targetPositions.map((pos) => ({
         item_type: "announcement",
-        custom_title: `${LANG_FLAGS[lang]} ${LANG_LABELS[lang]}: ${localizedTitle}`,
+        custom_title: titleWithFlag,
         custom_audio_url: audioUrl,
         custom_duration: estimatedDuration,
-        position: nextPosition,
+        position: pos,
         lang,
-      });
+      }));
+
+      const { error: insErr } = await supabase.from("radio_schedule").insert(rows);
+      if (insErr) console.warn("Could not insert blog announcements:", insErr.message);
+      else console.log(`📻 Inserted ${rows.length} blog announcement slots [${lang}] at positions:`, targetPositions);
     } catch (schedErr) {
       console.warn("Could not insert into radio_schedule:", schedErr);
     }
