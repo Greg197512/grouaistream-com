@@ -694,6 +694,17 @@ export const PlayerBar = () => {
         />
       )}
 
+      {/* Coffee Dialog (real-money tip via Paddle, 90% → twórca) */}
+      {currentTrack && (
+        <CoffeeDialog
+          open={showCoffeeDialog}
+          onOpenChange={setShowCoffeeDialog}
+          recipientUserId={trackOwnerId ?? undefined}
+          recipientTrackId={currentTrack.id}
+          recipientName={currentTrack.artist}
+        />
+      )}
+
     </>
   );
 };
