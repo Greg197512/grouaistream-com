@@ -270,13 +270,30 @@ const Orders = () => {
                               {s.status === "completed" ? "Opłacone" : s.status}
                             </div>
                           </div>
-                          {s.invoice_url && (
-                            <Button asChild size="sm" variant="outline" className="gap-1.5">
-                              <a href={s.invoice_url} target="_blank" rel="noopener noreferrer">
-                                <ExternalLink className="h-3.5 w-3.5" />
-                                Faktura PDF
-                              </a>
-                            </Button>
+                          {s.status === "completed" && (
+                            <div className="flex flex-wrap gap-2 justify-end">
+                              <Button
+                                size="sm"
+                                onClick={() => downloadInvoice(s.paddle_transaction_id)}
+                                disabled={downloadingId === s.paddle_transaction_id}
+                                className="gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90"
+                              >
+                                {downloadingId === s.paddle_transaction_id ? (
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                ) : (
+                                  <Download className="h-3.5 w-3.5" />
+                                )}
+                                Pobierz fakturę PDF
+                              </Button>
+                              {s.invoice_url && (
+                                <Button asChild size="sm" variant="outline" className="gap-1.5">
+                                  <a href={s.invoice_url} target="_blank" rel="noopener noreferrer">
+                                    <ExternalLink className="h-3.5 w-3.5" />
+                                    Otwórz online
+                                  </a>
+                                </Button>
+                              )}
+                            </div>
                           )}
                         </div>
                       </div>
