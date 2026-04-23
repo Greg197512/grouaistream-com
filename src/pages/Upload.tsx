@@ -17,6 +17,8 @@ import { uploadToR2 } from "@/lib/r2Upload";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { CoverDesigner } from "@/components/cover/CoverDesigner";
 
+const COVER_GENERATION_TIMEOUT_MS = 120000;
+
 const genres = [
   "Pop", "Rock", "Electronic", "EDM", "House", "Trance", "Hip-Hop", "R&B",
   "Jazz", "Disco", "Punk", "Metal", "Ambient", "Lo-fi", "Indie", "Trap",
@@ -398,9 +400,44 @@ const Upload = () => {
 
       setInsertedTrackId(insertedTrack?.id || null);
       if (!coverUrl && insertedTrack?.id) {
-        supabase.functions.invoke("ai-cover", {
-          body: { trackId: insertedTrack.id },
-        }).catch(() => {/* silent */});
+        const autoCoverPromise = supabase.functions.invoke("ai-cover-generate", {
+          body: {
+            title,
+            style: genre,
+            mode: "auto",
+          },
+        });
+
+        try {
+          const result = await Promise.race([
+            autoCoverPromise,
+            new Promise<never>((_, reject) =>
+              window.setTimeout(() => reject(new Error("Cover generation timeout")), COVER_GENERATION_TIMEOUT_MS)
+            ),
+          ]);
+
+          const { data: coverData, error: coverError } = result as Awaited<typeof autoCoverPromise>;
+          if (coverError) throw coverError;
+
+          if (coverData?.cover_url) {
+            await supabase
+              .from("tracks")
+              .update({ cover_url: coverData.cover_url })
+              .eq("id", insertedTrack.id);
+
+            setCoverUrl(coverData.cover_url);
+            window.dispatchEvent(new Event("track-list-changed"));
+            toast.success("🎨 Okładka została wygenerowana automatycznie");
+          }
+        } catch (coverErr) {
+          console.error("Auto cover generation error:", coverErr);
+
+          supabase.functions.invoke("ai-cover", {
+            body: { trackId: insertedTrack.id },
+          }).catch((fallbackErr) => {
+            console.error("Fallback auto cover error:", fallbackErr);
+          });
+        }
       }
 
       // Emit brain event
