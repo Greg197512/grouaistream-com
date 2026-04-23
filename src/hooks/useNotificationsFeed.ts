@@ -121,6 +121,32 @@ export const useNotificationsFeed = () => {
       });
     });
 
+    // 3b. Płatności: nieudane / anulowane subskrypcje
+    const { data: payEvents } = await supabase
+      .from("payment_events")
+      .select("id, event_type, plan, period_end, created_at")
+      .eq("user_id", user.id)
+      .gte("created_at", sinceISO)
+      .order("created_at", { ascending: false })
+      .limit(10);
+
+    (payEvents || []).forEach((p: any) => {
+      const isFail = p.event_type === "payment_failed";
+      const planLabel = p.plan ? `GrouAI ${p.plan}` : "subskrypcja";
+      all.push({
+        id: `pay-${p.id}`,
+        ts: p.created_at,
+        icon: "alert",
+        title: isFail ? `Płatność nieudana ⚠️` : `Subskrypcja anulowana ✓`,
+        body: isFail
+          ? `Nie udało się obciążyć karty za ${planLabel}. Zaktualizuj metodę płatności.`
+          : p.period_end
+            ? `${planLabel} — dostęp do ${new Date(p.period_end).toLocaleDateString("pl-PL")}`
+            : `${planLabel} — anulowano`,
+        href: "/orders",
+      });
+    });
+
     // 4. Nowe posty na blogu
     const { data: posts } = await supabase
       .from("seo_blog_posts")
