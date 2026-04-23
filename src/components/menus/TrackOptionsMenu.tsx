@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { useFloatingHearts, FloatingHeartsOverlay } from "@/components/effects/FloatingHearts";
 import { RatingLikeModal } from "@/components/modals/RatingLikeModal";
 import { usePlayer } from "@/contexts/PlayerContext";
+import { CoffeeDialog } from "@/components/payments/CoffeeDialog";
 import { 
   MoreHorizontal, 
   Heart, 
@@ -15,7 +16,8 @@ import {
   Twitter,
   MessageCircle,
   Trash2,
-  Scissors
+  Scissors,
+  Coffee
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -69,6 +71,23 @@ const TrackOptionsMenuComponent = (
   const [likeCount, setLikeCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [showCoffeeDialog, setShowCoffeeDialog] = useState(false);
+  const [trackOwnerId, setTrackOwnerId] = useState<string | null>(null);
+
+  // Fetch właściciela utworu — żeby wiedzieć czy pokazać "Postaw kawę twórcy"
+  // (ukrywamy dla własnych utworów; nie ma sensu fundować kawy samemu sobie)
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("tracks")
+        .select("user_id")
+        .eq("id", trackId)
+        .maybeSingle();
+      if (!cancelled) setTrackOwnerId(data?.user_id ?? null);
+    })();
+    return () => { cancelled = true; };
+  }, [trackId]);
 
   useEffect(() => {
     const fetchLikeData = async () => {
@@ -351,6 +370,21 @@ const TrackOptionsMenuComponent = (
             Cut (to paste elsewhere)
           </DropdownMenuItem>
 
+          {/* Postaw kawę twórcy (real money via Paddle, 90% → twórca) */}
+          {trackOwnerId && trackOwnerId !== user?.id && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => setShowCoffeeDialog(true)}
+                className="cursor-pointer text-amber-400 focus:text-amber-300 focus:bg-amber-500/10"
+              >
+                <Coffee className="mr-2 h-4 w-4" />
+                <span className="flex-1">Postaw kawę twórcy ☕</span>
+                <span className="text-[10px] text-muted-foreground">1€ / 3€ / 5€</span>
+              </DropdownMenuItem>
+            </>
+          )}
+
           <DropdownMenuSeparator />
 
           {/* Share submenu */}
@@ -435,6 +469,15 @@ const TrackOptionsMenuComponent = (
           )}
         </DropdownMenuContent>
       </DropdownMenu>
+
+      {/* Coffee Dialog (real-money tip via Paddle, 90% → twórca utworu) */}
+      <CoffeeDialog
+        open={showCoffeeDialog}
+        onOpenChange={setShowCoffeeDialog}
+        recipientUserId={trackOwnerId ?? undefined}
+        recipientTrackId={trackId}
+        recipientName={trackArtist}
+      />
     </div>
   );
 };

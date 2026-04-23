@@ -21,7 +21,8 @@ import {
   ScanFace,
   Smile,
   Camera,
-  DollarSign
+  DollarSign,
+  Coffee
 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
@@ -39,6 +40,7 @@ import { HQCover } from "@/components/ui/HQCover";
 import { TrackBadges } from "@/components/ui/TrackBadges";
 import { TipModal } from "@/components/modals/TipModal";
 import { RatingLikeModal } from "@/components/modals/RatingLikeModal";
+import { CoffeeDialog } from "@/components/payments/CoffeeDialog";
 
 // Video visibility state - shared via window for simplicity
 declare global {
@@ -89,6 +91,8 @@ export const PlayerBar = () => {
   const [showFullscreen, setShowFullscreen] = useState(false);
   const [showMoodDetector, setShowMoodDetector] = useState(false);
   const [showTipModal, setShowTipModal] = useState(false);
+  const [showCoffeeDialog, setShowCoffeeDialog] = useState(false);
+  const [trackOwnerId, setTrackOwnerId] = useState<string | null>(null);
   const [showRatingModal, setShowRatingModal] = useState(false);
 
   // Check if current track is liked
@@ -121,6 +125,24 @@ export const PlayerBar = () => {
     window.addEventListener("track-like-changed", handler);
     return () => window.removeEventListener("track-like-changed", handler);
   }, [user, currentTrack]);
+
+  // Fetch owner of the current track (potrzebne do "Postaw kawę twórcy")
+  useEffect(() => {
+    if (!currentTrack) {
+      setTrackOwnerId(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("tracks")
+        .select("user_id")
+        .eq("id", currentTrack.id)
+        .maybeSingle();
+      if (!cancelled) setTrackOwnerId(data?.user_id ?? null);
+    })();
+    return () => { cancelled = true; };
+  }, [currentTrack]);
 
   // Handle seeking for YouTube
   useEffect(() => {
@@ -367,16 +389,29 @@ export const PlayerBar = () => {
             )} />
           </button>
 
-          {/* Tip button */}
+          {/* Tip button (portfel wewnętrzny) */}
           {currentTrack && (
             <motion.button
               whileHover={{ scale: 1.2 }}
               whileTap={{ scale: 0.9 }}
               onClick={() => setShowTipModal(true)}
               className="flex-shrink-0 p-1 text-pink-400/60 hover:text-pink-400 transition-colors"
-              title="Wesprzyj artystę"
+              title="Wyślij tip z portfela (1–10 €)"
             >
               <DollarSign className="h-3.5 w-3.5" />
+            </motion.button>
+          )}
+
+          {/* Coffee button (real money via Paddle, 90% trafia do twórcy) */}
+          {currentTrack && trackOwnerId && trackOwnerId !== user?.id && (
+            <motion.button
+              whileHover={{ scale: 1.2, rotate: -8 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={() => setShowCoffeeDialog(true)}
+              className="flex-shrink-0 p-1 text-amber-400/70 hover:text-amber-300 transition-colors"
+              title="Postaw kawę twórcy ☕ (1€ / 3€ / 5€ — 90% trafia do artysty)"
+            >
+              <Coffee className="h-3.5 w-3.5" />
             </motion.button>
           )}
 
@@ -656,6 +691,17 @@ export const PlayerBar = () => {
             setIsLiked(true);
             window.dispatchEvent(new CustomEvent("track-like-changed", { detail: { trackId: currentTrack.id, liked: true } }));
           }}
+        />
+      )}
+
+      {/* Coffee Dialog (real-money tip via Paddle, 90% → twórca) */}
+      {currentTrack && (
+        <CoffeeDialog
+          open={showCoffeeDialog}
+          onOpenChange={setShowCoffeeDialog}
+          recipientUserId={trackOwnerId ?? undefined}
+          recipientTrackId={currentTrack.id}
+          recipientName={currentTrack.artist}
         />
       )}
 
