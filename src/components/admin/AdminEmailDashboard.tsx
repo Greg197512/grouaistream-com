@@ -385,6 +385,7 @@ export function AdminEmailDashboard({ stats, genreStats }: AdminEmailDashboardPr
                 <Select value={language} onValueChange={(v: LangOpt) => setLanguage(v)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="auto">🌍 Auto (po e-mailu odbiorcy)</SelectItem>
                     <SelectItem value="pl">🇵🇱 Polski</SelectItem>
                     <SelectItem value="en">🇬🇧 English</SelectItem>
                     <SelectItem value="nl">🇳🇱 Nederlands</SelectItem>
