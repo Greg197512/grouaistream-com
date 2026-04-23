@@ -61,9 +61,9 @@ export function AdminEmailDashboard({ stats, genreStats }: AdminEmailDashboardPr
   const [timeRange, setTimeRange] = useState<"24h" | "7d" | "30d">("7d");
 
   type EmailTypeOpt = "invitation" | "challenge" | "newsletter" | "weekly_digest" | "easter" | "feature_announcement" | "tip_of_the_week" | "blog_post" | "milestone" | "comeback" | "thank_you" | "ai_studio_promo" | "live_radio_promo" | "party_mode_promo" | "custom";
-  type LangOpt = "pl" | "en" | "nl" | "uk";
+  type LangOpt = "auto" | "pl" | "en" | "nl" | "uk";
   const [emailType, setEmailType] = useState<EmailTypeOpt>("invitation");
-  const [language, setLanguage] = useState<LangOpt>("pl");
+  const [language, setLanguage] = useState<LangOpt>("auto");
   const [customSubject, setCustomSubject] = useState("");
   const [recipientName, setRecipientName] = useState("");
   const [recipientEmail, setRecipientEmail] = useState("");
@@ -385,6 +385,7 @@ export function AdminEmailDashboard({ stats, genreStats }: AdminEmailDashboardPr
                 <Select value={language} onValueChange={(v: LangOpt) => setLanguage(v)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="auto">🌍 Auto (po e-mailu odbiorcy)</SelectItem>
                     <SelectItem value="pl">🇵🇱 Polski</SelectItem>
                     <SelectItem value="en">🇬🇧 English</SelectItem>
                     <SelectItem value="nl">🇳🇱 Nederlands</SelectItem>
