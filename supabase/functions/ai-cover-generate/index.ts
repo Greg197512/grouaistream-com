@@ -54,10 +54,11 @@ Visually interpret the title with bold cinematic storytelling, elite art directi
 }
 
 async function generateImageBase64(prompt: string, apiKey: string): Promise<string | null> {
-  // Flash Image 3.1 = pro-level quality + szybko (mieści się w 150s edge limit)
+  // Kolejność: szybki model (2.5-flash-image, ~30-45s) → fallback flash 3.1-preview (do 90s)
+  // Większość uploadów dostanie okładkę w pierwszej próbie, mieści się w 150s edge limit.
   const attempts = [
-    { model: "google/gemini-3.1-flash-image-preview", timeoutMs: 90000 },
-    { model: "google/gemini-2.5-flash-image", timeoutMs: 45000 },
+    { model: "google/gemini-2.5-flash-image", timeoutMs: 60000 },
+    { model: "google/gemini-3.1-flash-image-preview", timeoutMs: 70000 },
   ];
 
   for (const attempt of attempts) {
