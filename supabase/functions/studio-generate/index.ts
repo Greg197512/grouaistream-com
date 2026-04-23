@@ -206,7 +206,7 @@ serve(async (req) => {
       await supabase.rpc("emit_agent_event", {
         _event_type: triggerResult.error ? "generation.failed" : "generation.finished",
         _source: "studio-generate",
-        _actor_user_id: user_id ?? null,
+        _actor_user_id: userId ?? null,
         _target_type: "studio_generation",
         _target_id: gen.id,
         _payload: {
