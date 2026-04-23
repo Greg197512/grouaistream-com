@@ -6,6 +6,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { semanticEmbed } from "../_shared/semanticEmbed.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -14,9 +15,7 @@ const corsHeaders = {
 };
 
 const LOVABLE_AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
-const LOVABLE_EMBED_URL = "https://ai.gateway.lovable.dev/v1/embeddings";
 const BRAIN_MODEL = "google/gemini-2.5-pro";
-const EMBED_MODEL = "google/text-embedding-004"; // 768 dims
 
 const MAX_EVENTS_PER_TICK = 50;
 const MEMORY_RECALL_COUNT = 8;
@@ -41,27 +40,10 @@ interface BrainOutput {
   skip_reason?: string;
 }
 
-async function embed(text: string, apiKey: string): Promise<number[] | null> {
-  try {
-    const res = await fetch(LOVABLE_EMBED_URL, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ model: EMBED_MODEL, input: text.slice(0, 8000) }),
-    });
-    if (!res.ok) {
-      console.warn("[brain] embed failed:", res.status, await res.text());
-      return null;
-    }
-    const json = await res.json();
-    return json.data?.[0]?.embedding ?? null;
-  } catch (e) {
-    console.warn("[brain] embed error:", e);
-    return null;
-  }
-}
+// Use semantic fingerprint (LLM concepts → deterministic 768-dim vector)
+// instead of the deprecated text-embedding-004.
+const embed = (text: string, apiKey: string) => semanticEmbed(text, apiKey);
+
 
 function buildEventDigest(events: Array<Record<string, unknown>>): string {
   const lines = events.slice(0, 50).map((e: any) => {
