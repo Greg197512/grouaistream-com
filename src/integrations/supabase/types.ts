@@ -3542,6 +3542,7 @@ export type Database = {
         Returns: boolean
       }
       increment_blog_view: { Args: { _post_id: string }; Returns: undefined }
+      is_verified_creator: { Args: { _user_id: string }; Returns: boolean }
       log_seo_activity: {
         Args: {
           _action_type: string

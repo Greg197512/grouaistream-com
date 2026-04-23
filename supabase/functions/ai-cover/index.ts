@@ -162,35 +162,42 @@ serve(async (req) => {
   }
 
   try {
-    // --- Authentication check ---
-    const authHeader = req.headers.get("authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    const body = await req.json();
+    const { trackId, allow_ai_fallback, source: callSource } = body;
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-    const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsError } = await supabaseAuth.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims?.sub) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+    // --- Authentication: trigger calls use anon key + source flag, user calls validate JWT ---
+    const isTriggerCall = callSource === "auto_trigger";
+
+    if (!isTriggerCall) {
+      const authHeader = req.headers.get("authorization");
+      if (!authHeader?.startsWith("Bearer ")) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+        global: { headers: { Authorization: authHeader } },
       });
+      const token = authHeader.replace("Bearer ", "");
+      const { data: claimsData, error: claimsError } = await supabaseAuth.auth.getClaims(token);
+      if (claimsError || !claimsData?.claims?.sub) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
     // --- End authentication ---
 
-    const { trackId } = await req.json();
-    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
     if (!trackId) throw new Error("trackId is required");
+
+    // For user calls, AI is allowed by default; for trigger calls, only if flag is true
+    const aiAllowed = isTriggerCall ? !!allow_ai_fallback : true;
 
     const supabase = createClient(supabaseUrl, SUPABASE_SERVICE_ROLE_KEY);
 
@@ -217,7 +224,7 @@ serve(async (req) => {
     let coverUrl = await findOriginalCover(track.title, track.artist);
     let source = "original";
 
-    if (!coverUrl) {
+    if (!coverUrl && aiAllowed) {
       const aiBase64 = await generateAICover(track.title, track.artist, track.genre);
       
       if (aiBase64) {
@@ -236,11 +243,11 @@ serve(async (req) => {
       }
     }
 
+    // Gradient placeholder fallback (free users, or AI failed)
     if (!coverUrl) {
-      return new Response(
-        JSON.stringify({ success: false, error: "No cover found and AI generation failed" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      const seed = encodeURIComponent(`${track.artist}-${track.title}-${track.id}`);
+      coverUrl = `https://picsum.photos/seed/${seed}/600/600`;
+      source = "placeholder";
     }
 
     const { error: updateErr } = await supabase
