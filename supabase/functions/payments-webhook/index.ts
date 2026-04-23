@@ -125,15 +125,101 @@ async function handleSubscriptionPastDue(data: any, env: PaddleEnv) {
 }
 
 async function handleSubscriptionCanceled(data: any, env: PaddleEnv) {
+  const { id, customData, items, currentBillingPeriod, scheduledChange } = data;
+
   await supabase.from('subscriptions')
-    .update({ status: 'canceled', updated_at: new Date().toISOString() })
-    .eq('paddle_subscription_id', data.id)
+    .update({
+      status: 'canceled',
+      cancel_at_period_end: scheduledChange?.action === 'cancel',
+      current_period_end: currentBillingPeriod?.endsAt,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('paddle_subscription_id', id)
     .eq('environment', env);
+
+  const userId = customData?.userId;
+  if (!userId) return;
+
+  const priceExt = items?.[0]?.price?.importMeta?.externalId || '';
+  const planName = priceExt.includes('ultimate') ? 'Ultimate' : 'Pro';
+  const periodEnd = currentBillingPeriod?.endsAt || null;
+
+  // In-app event
+  await supabase.from('payment_events').upsert({
+    user_id: userId,
+    event_type: 'subscription_canceled',
+    paddle_subscription_id: id,
+    plan: planName,
+    period_end: periodEnd,
+    environment: env,
+  }, { onConflict: 'event_type,paddle_subscription_id,environment' }).then(({ error }) => {
+    if (error) console.error('[payments-webhook] payment_events upsert (canceled) err:', error);
+  });
+
+  // Email
+  const { data: u } = await supabase.auth.admin.getUserById(userId);
+  const email = u?.user?.email;
+  const displayName = u?.user?.user_metadata?.display_name || email?.split('@')[0] || 'tam';
+  if (email) {
+    await supabase.functions.invoke('send-transactional-email', {
+      body: {
+        templateName: 'subscription-canceled',
+        recipientEmail: email,
+        idempotencyKey: `sub-canceled-${id}`,
+        templateData: { displayName, periodEnd, isReminder: false },
+      },
+    }).catch((e) => console.error('[payments-webhook] sub-canceled email err:', e));
+  }
 }
 
 async function handleTransactionPaymentFailed(data: any, env: PaddleEnv) {
-  // Subscription past_due event handles the user notification — this is just a log
-  console.log('[payments-webhook] transaction.payment_failed:', data.id);
+  const { id, customData, items, subscriptionId, payments } = data;
+  const userId = customData?.userId;
+  console.log('[payments-webhook] transaction.payment_failed:', id);
+  if (!userId) return;
+
+  const item = items?.[0];
+  const priceExt = item?.price?.importMeta?.externalId || '';
+  const planName = priceExt.includes('ultimate')
+    ? 'Ultimate'
+    : priceExt.includes('pro')
+      ? 'Pro'
+      : (priceExt.startsWith('grouai_coffee') ? 'Coffee' : '—');
+
+  const totalCents = Number(item?.price?.unitPrice?.amount ?? 0);
+  const amount = totalCents / 100;
+  const currency = (item?.price?.unitPrice?.currencyCode || 'USD').toLowerCase();
+  const reason = payments?.[0]?.errorCode || payments?.[0]?.status || null;
+
+  // In-app event
+  await supabase.from('payment_events').upsert({
+    user_id: userId,
+    event_type: 'payment_failed',
+    paddle_transaction_id: id,
+    paddle_subscription_id: subscriptionId || null,
+    plan: planName,
+    amount,
+    currency,
+    reason,
+    environment: env,
+  }, { onConflict: 'event_type,paddle_transaction_id,environment' }).then(({ error }) => {
+    if (error) console.error('[payments-webhook] payment_events upsert (failed) err:', error);
+  });
+
+  // Email
+  const { data: u } = await supabase.auth.admin.getUserById(userId);
+  const email = u?.user?.email;
+  const displayName = u?.user?.user_metadata?.display_name || email?.split('@')[0] || 'tam';
+  if (email) {
+    await supabase.functions.invoke('send-transactional-email', {
+      body: {
+        templateName: 'payment-failed',
+        recipientEmail: email,
+        idempotencyKey: `payment-failed-txn-${id}`,
+        templateData: { displayName, planName },
+      },
+    }).catch((e) => console.error('[payments-webhook] payment-failed email err:', e));
+  }
 }
 
 async function handleTransactionCompleted(data: any, env: PaddleEnv) {
