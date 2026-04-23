@@ -60,7 +60,11 @@ export function AdminEmailDashboard({ stats, genreStats }: AdminEmailDashboardPr
   const [loadingLogs, setLoadingLogs] = useState(true);
   const [timeRange, setTimeRange] = useState<"24h" | "7d" | "30d">("7d");
 
-  const [emailType, setEmailType] = useState<"invitation" | "challenge" | "newsletter" | "weekly_digest" | "easter">("invitation");
+  type EmailTypeOpt = "invitation" | "challenge" | "newsletter" | "weekly_digest" | "easter" | "feature_announcement" | "tip_of_the_week" | "blog_post" | "milestone" | "comeback" | "thank_you" | "ai_studio_promo" | "live_radio_promo" | "party_mode_promo" | "custom";
+  type LangOpt = "pl" | "en" | "nl" | "uk";
+  const [emailType, setEmailType] = useState<EmailTypeOpt>("invitation");
+  const [language, setLanguage] = useState<LangOpt>("pl");
+  const [customSubject, setCustomSubject] = useState("");
   const [recipientName, setRecipientName] = useState("");
   const [recipientEmail, setRecipientEmail] = useState("");
   const [customMessage, setCustomMessage] = useState("");
@@ -108,6 +112,8 @@ export function AdminEmailDashboard({ stats, genreStats }: AdminEmailDashboardPr
       const { data, error } = await supabase.functions.invoke("mass-email-dispatch", {
         body: {
           emailType,
+          language,
+          customSubject: customSubject || undefined,
           customMessage: customMessage || undefined,
           audience,
           mode: dispatchMode,
