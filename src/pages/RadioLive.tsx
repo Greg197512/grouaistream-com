@@ -249,7 +249,12 @@ const RadioLive = () => {
 
   const getItemArtist = (item: ScheduleTrack) => {
     if (item.item_type === "track" || !item.item_type) return item.track?.artist || "";
-    const labels: Record<string, string> = { jingle: "🎵 Jingiel", ad: "📢 Reklama", talk: "🎙️ Rozmowa" };
+    const labels: Record<string, string> = {
+      jingle: "🎵 Jingiel",
+      ad: "📢 Reklama",
+      talk: "🎙️ Rozmowa",
+      announcement: "📰 Zapowiedź GrouAI",
+    };
     return labels[item.item_type] || item.item_type;
   };
 
