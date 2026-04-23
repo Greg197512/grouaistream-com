@@ -60,7 +60,11 @@ export function AdminEmailDashboard({ stats, genreStats }: AdminEmailDashboardPr
   const [loadingLogs, setLoadingLogs] = useState(true);
   const [timeRange, setTimeRange] = useState<"24h" | "7d" | "30d">("7d");
 
-  const [emailType, setEmailType] = useState<"invitation" | "challenge" | "newsletter" | "weekly_digest" | "easter">("invitation");
+  type EmailTypeOpt = "invitation" | "challenge" | "newsletter" | "weekly_digest" | "easter" | "feature_announcement" | "tip_of_the_week" | "blog_post" | "milestone" | "comeback" | "thank_you" | "ai_studio_promo" | "live_radio_promo" | "party_mode_promo" | "custom";
+  type LangOpt = "pl" | "en" | "nl" | "uk";
+  const [emailType, setEmailType] = useState<EmailTypeOpt>("invitation");
+  const [language, setLanguage] = useState<LangOpt>("pl");
+  const [customSubject, setCustomSubject] = useState("");
   const [recipientName, setRecipientName] = useState("");
   const [recipientEmail, setRecipientEmail] = useState("");
   const [customMessage, setCustomMessage] = useState("");
@@ -108,6 +112,8 @@ export function AdminEmailDashboard({ stats, genreStats }: AdminEmailDashboardPr
       const { data, error } = await supabase.functions.invoke("mass-email-dispatch", {
         body: {
           emailType,
+          language,
+          customSubject: customSubject || undefined,
           customMessage: customMessage || undefined,
           audience,
           mode: dispatchMode,
@@ -349,28 +355,47 @@ export function AdminEmailDashboard({ stats, genreStats }: AdminEmailDashboardPr
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label>Typ e-maila</Label>
-              <Select value={emailType} onValueChange={(v: typeof emailType) => setEmailType(v)}>
+              <Select value={emailType} onValueChange={(v: EmailTypeOpt) => setEmailType(v)}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="invitation">
-                    <div className="flex items-center gap-2"><UserPlus className="h-4 w-4" />Zaproszenie</div>
-                  </SelectItem>
-                  <SelectItem value="challenge">
-                    <div className="flex items-center gap-2"><Trophy className="h-4 w-4" />Wyzwanie muzyczne</div>
-                  </SelectItem>
-                  <SelectItem value="newsletter">
-                    <div className="flex items-center gap-2"><Newspaper className="h-4 w-4" />Newsletter</div>
-                  </SelectItem>
-                  <SelectItem value="weekly_digest">
-                    <div className="flex items-center gap-2"><Mail className="h-4 w-4" />Podsumowanie tygodnia</div>
-                  </SelectItem>
-                  <SelectItem value="easter">
-                    <div className="flex items-center gap-2"><Gift className="h-4 w-4" />Życzenia wielkanocne</div>
-                  </SelectItem>
+                  <SelectItem value="invitation"><div className="flex items-center gap-2"><UserPlus className="h-4 w-4" />Zaproszenie</div></SelectItem>
+                  <SelectItem value="challenge"><div className="flex items-center gap-2"><Trophy className="h-4 w-4" />Wyzwanie muzyczne</div></SelectItem>
+                  <SelectItem value="newsletter"><div className="flex items-center gap-2"><Newspaper className="h-4 w-4" />Newsletter</div></SelectItem>
+                  <SelectItem value="weekly_digest"><div className="flex items-center gap-2"><Mail className="h-4 w-4" />Podsumowanie tygodnia</div></SelectItem>
+                  <SelectItem value="feature_announcement"><div className="flex items-center gap-2"><Sparkles className="h-4 w-4" />Nowa funkcja</div></SelectItem>
+                  <SelectItem value="tip_of_the_week"><div className="flex items-center gap-2"><Zap className="h-4 w-4" />Trik tygodnia</div></SelectItem>
+                  <SelectItem value="blog_post"><div className="flex items-center gap-2"><Newspaper className="h-4 w-4" />Wpis blogowy</div></SelectItem>
+                  <SelectItem value="milestone"><div className="flex items-center gap-2"><Trophy className="h-4 w-4" />Kamień milowy</div></SelectItem>
+                  <SelectItem value="comeback"><div className="flex items-center gap-2"><Bell className="h-4 w-4" />Tęsknimy (comeback)</div></SelectItem>
+                  <SelectItem value="thank_you"><div className="flex items-center gap-2"><Gift className="h-4 w-4" />Podziękowanie</div></SelectItem>
+                  <SelectItem value="ai_studio_promo"><div className="flex items-center gap-2"><Sparkles className="h-4 w-4" />Promo AI Studio</div></SelectItem>
+                  <SelectItem value="live_radio_promo"><div className="flex items-center gap-2"><Bell className="h-4 w-4" />Promo Live Radio</div></SelectItem>
+                  <SelectItem value="party_mode_promo"><div className="flex items-center gap-2"><Trophy className="h-4 w-4" />Promo Party Mode</div></SelectItem>
+                  <SelectItem value="easter"><div className="flex items-center gap-2"><Gift className="h-4 w-4" />Życzenia świąteczne</div></SelectItem>
+                  <SelectItem value="custom"><div className="flex items-center gap-2"><Mail className="h-4 w-4" />Własna wiadomość</div></SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Język AI</Label>
+                <Select value={language} onValueChange={(v: LangOpt) => setLanguage(v)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pl">🇵🇱 Polski</SelectItem>
+                    <SelectItem value="en">🇬🇧 English</SelectItem>
+                    <SelectItem value="nl">🇳🇱 Nederlands</SelectItem>
+                    <SelectItem value="uk">🇺🇦 Українська</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Własny temat (opcj.)</Label>
+                <Input placeholder="AI poprawi jeśli trzeba" value={customSubject} onChange={(e) => setCustomSubject(e.target.value)} />
+              </div>
             </div>
 
             <div className="space-y-2">
