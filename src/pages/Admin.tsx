@@ -1177,7 +1177,8 @@ export default function Admin() {
               </TabsContent>
 
               {/* Storage Tab */}
-              <TabsContent value="storage">
+              <TabsContent value="storage" className="space-y-4">
+                <CoverFillPanel />
                 <StorageStats />
               </TabsContent>
 
