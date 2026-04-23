@@ -53,6 +53,7 @@ import {
 import { Track, usePlayer } from "@/contexts/PlayerContext";
 import { RadioStationManager } from "@/components/admin/RadioStationManager";
 import { StorageStats } from "@/components/admin/StorageStats";
+import { CoverFillPanel } from "@/components/admin/CoverFillPanel";
 import { AdminEmailDashboard } from "@/components/admin/AdminEmailDashboard";
 import { AIModeratorRankings } from "@/components/admin/AIModeratorRankings";
 import { TopEarners } from "@/components/admin/TopEarners";
@@ -1177,7 +1178,8 @@ export default function Admin() {
               </TabsContent>
 
               {/* Storage Tab */}
-              <TabsContent value="storage">
+              <TabsContent value="storage" className="space-y-4">
+                <CoverFillPanel />
                 <StorageStats />
               </TabsContent>
 
