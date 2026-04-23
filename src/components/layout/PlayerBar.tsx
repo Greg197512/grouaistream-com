@@ -389,16 +389,29 @@ export const PlayerBar = () => {
             )} />
           </button>
 
-          {/* Tip button */}
+          {/* Tip button (portfel wewnętrzny) */}
           {currentTrack && (
             <motion.button
               whileHover={{ scale: 1.2 }}
               whileTap={{ scale: 0.9 }}
               onClick={() => setShowTipModal(true)}
               className="flex-shrink-0 p-1 text-pink-400/60 hover:text-pink-400 transition-colors"
-              title="Wesprzyj artystę"
+              title="Wyślij tip z portfela (1–10 €)"
             >
               <DollarSign className="h-3.5 w-3.5" />
+            </motion.button>
+          )}
+
+          {/* Coffee button (real money via Paddle, 90% trafia do twórcy) */}
+          {currentTrack && trackOwnerId && trackOwnerId !== user?.id && (
+            <motion.button
+              whileHover={{ scale: 1.2, rotate: -8 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={() => setShowCoffeeDialog(true)}
+              className="flex-shrink-0 p-1 text-amber-400/70 hover:text-amber-300 transition-colors"
+              title="Postaw kawę twórcy ☕ (1€ / 3€ / 5€ — 90% trafia do artysty)"
+            >
+              <Coffee className="h-3.5 w-3.5" />
             </motion.button>
           )}
 
