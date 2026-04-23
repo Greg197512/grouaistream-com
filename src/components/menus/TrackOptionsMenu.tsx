@@ -71,6 +71,23 @@ const TrackOptionsMenuComponent = (
   const [likeCount, setLikeCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [showCoffeeDialog, setShowCoffeeDialog] = useState(false);
+  const [trackOwnerId, setTrackOwnerId] = useState<string | null>(null);
+
+  // Fetch właściciela utworu — żeby wiedzieć czy pokazać "Postaw kawę twórcy"
+  // (ukrywamy dla własnych utworów; nie ma sensu fundować kawy samemu sobie)
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("tracks")
+        .select("user_id")
+        .eq("id", trackId)
+        .maybeSingle();
+      if (!cancelled) setTrackOwnerId(data?.user_id ?? null);
+    })();
+    return () => { cancelled = true; };
+  }, [trackId]);
 
   useEffect(() => {
     const fetchLikeData = async () => {
