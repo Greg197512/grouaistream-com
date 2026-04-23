@@ -91,10 +91,13 @@ export function SubscriptionManager() {
 
   if (!isPro) {
     return (
-      <div className="rounded-xl border border-border bg-secondary/30 p-4">
+      <div className="rounded-xl border border-border bg-secondary/30 p-4 space-y-3">
         <p className="text-sm text-muted-foreground">
           Korzystasz z planu <strong className="text-foreground">Free</strong>. Wybierz Pro lub Ultimate, aby odblokować pełnię GrouAI Stream.
         </p>
+        <Button asChild variant="outline" size="sm" className="gap-2">
+          <Link to="/orders"><Receipt className="h-4 w-4" />Historia zamówień</Link>
+        </Button>
       </div>
     );
   }
