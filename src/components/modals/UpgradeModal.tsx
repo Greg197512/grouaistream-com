@@ -290,7 +290,6 @@ export const UpgradeModal = ({ open, onOpenChange }: UpgradeModalProps) => {
             </motion.div>
 
             <p className="text-center text-[10px] sm:text-xs text-muted-foreground mt-2 sm:mt-3">
-              {env === "sandbox" ? "🧪 Tryb testowy — użyj karty 4242 4242 4242 4242. " : ""}
               {t("upgrade.footer")}
             </p>
           </div>
