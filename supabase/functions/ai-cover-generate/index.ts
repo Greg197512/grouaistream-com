@@ -33,24 +33,14 @@ GENRE-SPECIFIC DIRECTION — RAP / HIP-HOP TOP-TIER ALBUM COVER:
 Iconic premium rap artwork energy, luxury noir, neon amber reflections, wet asphalt, powerful central figure, dramatic low-angle composition, editorial fashion styling, cinematic haze, expensive atmosphere.
 Shot like a global album campaign on Hasselblad or ARRI, 50mm or 85mm lens, high dynamic range, ultra-premium color grading, deep blacks, hot amber highlights.`;
 
-  const premiumRules = `
-ABSOLUTE PHOTOGRAPHIC QUALITY RULES:
-- Hyper-realistic PHOTOGRAPH, shot on Hasselblad H6D-100c or Phase One IQ4, 80mm prime lens, f/1.8, ISO 100.
-- 8K resolution, RAW photo, ultra-sharp focus, micro-detail in skin / texture / fabric / surface.
-- Cinematic lighting: dramatic chiaroscuro, golden-hour or neon rim light, volumetric haze, lens flare subtle.
-- Professional color grading: deep true blacks, rich saturation, filmic contrast, Kodak Portra / Fuji 400H look.
-- NO text, NO letters, NO logos, NO watermark, NO typography, NO captions, NO numbers anywhere in the image.
-- NOT cartoon, NOT illustration, NOT 3D render, NOT CGI, NOT anime — must look like a real photograph taken by a top-tier commercial photographer.
-- Square 1:1 composition, full bleed, magazine-cover quality, world-class commercial album artwork.`;
+  const premiumRules = ` Hyper-realistic photo, cinematic lighting, deep blacks, neon amber highlights, 1:1 square, no text, no logos, magazine-quality album cover.`;
 
   if (mode === "custom" && description?.trim()) {
-    return `Create an extraordinary, highest-tier premium album cover. User direction: "${description.trim()}".${isRap ? rapRecipe : ""}
-The image must feel unforgettable, emotionally intense, luxurious, and instantly clickable on a music platform.${premiumRules}`;
+    return `Premium album cover. ${description.trim()}.${isRap ? " Luxury noir rap aesthetic, neon amber, wet asphalt." : ""}${premiumRules}`;
   }
 
-  const styleHint = style ? ` Music style: ${style}.` : "";
-  return `Create an extraordinary, highest-tier premium album cover for the song "${title || "Untitled"}".${styleHint}${isRap ? rapRecipe : ""}
-Visually interpret the title with bold cinematic storytelling, elite art direction, premium lighting, and magnetic composition.${premiumRules}`;
+  const styleHint = style ? ` Style: ${style}.` : "";
+  return `Premium album cover for "${title || "Untitled"}".${styleHint}${isRap ? " Luxury noir rap aesthetic, neon amber, wet asphalt." : ""}${premiumRules}`;
 }
 
 async function generateImageBase64(prompt: string, apiKey: string): Promise<string | null> {
