@@ -292,3 +292,94 @@ async function getProductExternalId(paddleProductId: string, env: PaddleEnv): Pr
     return null;
   }
 }
+
+/**
+ * Subscription transaction (Pro/Ultimate billing event).
+ * Records to paddle_transactions, fetches invoice URL, sends receipt email.
+ */
+async function handleSubscriptionTransaction(data: any, env: PaddleEnv) {
+  const { id, customerId, items, customData, details, subscriptionId, billedAt } = data;
+  const item = items?.[0];
+  if (!item) return;
+
+  const userId = customData?.userId;
+  const priceExternal = item.price?.importMeta?.externalId || item.price?.id || '';
+  const productExternal = item.price?.productId
+    ? (await getProductExternalId(item.price.productId, env)) || item.price.productId
+    : 'unknown';
+
+  const planName =
+    productExternal === 'grouai_ultimate' ? 'Ultimate' :
+    productExternal === 'grouai_pro' ? 'Pro' :
+    productExternal;
+
+  const cycle = item.price?.billingCycle?.interval as string | undefined;
+  const cycleLabel = cycle === 'year' ? 'rocznie' : cycle === 'month' ? 'miesięcznie' : undefined;
+
+  const totalCents = Number(details?.totals?.grandTotal ?? item.price?.unitPrice?.amount ?? 0);
+  const currency = (details?.totals?.currencyCode || item.price?.unitPrice?.currencyCode || 'usd').toUpperCase();
+  const amount = totalCents / 100;
+
+  // Best-effort: fetch invoice PDF URL from Paddle
+  let invoiceUrl: string | null = null;
+  try {
+    const { gatewayFetch } = await import('../_shared/paddle.ts');
+    const invRes = await gatewayFetch(env, `/transactions/${id}/invoice`);
+    if (invRes.ok) {
+      const invJson = await invRes.json();
+      invoiceUrl = invJson?.data?.url ?? null;
+    }
+  } catch (e) {
+    console.warn('[payments-webhook] invoice fetch failed:', String(e));
+  }
+
+  const { error: insertErr } = await supabase.from('paddle_transactions').upsert({
+    user_id: userId || null,
+    paddle_transaction_id: id,
+    paddle_subscription_id: subscriptionId || null,
+    paddle_customer_id: customerId || null,
+    product_id: productExternal,
+    price_id: priceExternal,
+    plan: planName,
+    amount,
+    currency: currency.toLowerCase(),
+    status: 'completed',
+    billed_at: billedAt || new Date().toISOString(),
+    invoice_url: invoiceUrl,
+    environment: env,
+  }, { onConflict: 'paddle_transaction_id,environment' });
+
+  if (insertErr) console.error('[payments-webhook] paddle_transactions upsert failed:', insertErr);
+
+  let nextBilledAt: string | null = null;
+  if (subscriptionId) {
+    const { data: sub } = await supabase
+      .from('subscriptions')
+      .select('current_period_end')
+      .eq('paddle_subscription_id', subscriptionId)
+      .maybeSingle();
+    nextBilledAt = sub?.current_period_end ?? null;
+  }
+
+  if (userId) {
+    const { data: u } = await supabase.auth.admin.getUserById(userId);
+    const email = u?.user?.email;
+    const displayName = u?.user?.user_metadata?.display_name || email?.split('@')[0] || 'tam';
+    if (email) {
+      await supabase.functions.invoke('send-transactional-email', {
+        body: {
+          templateName: 'subscription-receipt',
+          recipientEmail: email,
+          idempotencyKey: `sub-receipt-${id}`,
+          templateData: {
+            displayName, planName, cycleLabel, amount, currency,
+            billedAt: billedAt || new Date().toISOString(),
+            transactionId: id, invoiceUrl, nextBilledAt,
+          },
+        },
+      }).catch((e) => console.error('[payments-webhook] receipt email error:', e));
+    }
+  }
+
+  console.log('[payments-webhook] subscription txn recorded:', id, planName, amount, currency);
+}
