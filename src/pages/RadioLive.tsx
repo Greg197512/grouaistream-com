@@ -382,6 +382,18 @@ const RadioLive = () => {
     setCurrentIndex(0);
   }, [config, schedule]);
 
+  // Helper: find next announcement index after current position
+  const findNextAnnouncementIndex = useCallback((fromIndex: number): number | null => {
+    for (let i = fromIndex + 1; i < schedule.length; i++) {
+      if (schedule[i]?.item_type === "announcement") return i;
+    }
+    // wrap-around
+    for (let i = 0; i <= fromIndex && i < schedule.length; i++) {
+      if (schedule[i]?.item_type === "announcement") return i;
+    }
+    return null;
+  }, [schedule]);
+
   const startPlayback = useCallback(
     (index: number, offset = 0) => {
       const item = schedule[index];
@@ -389,6 +401,20 @@ const RadioLive = () => {
       const token = ++playbackTokenRef.current;
       const audioUrl = getItemAudioUrl(item);
       stopCurrentAudio();
+
+      // 🎙️ Force-jump to nearest announcement after 3:20 (only for tracks, not announcements)
+      const isAnnouncementItem = item.item_type === "announcement";
+      if (!isAnnouncementItem) {
+        window.setTimeout(() => {
+          if (playbackTokenRef.current !== token) return;
+          const annIndex = findNextAnnouncementIndex(index);
+          if (annIndex === null) return;
+          console.log("[RadioLive] ⏰ 3:20 reached — jumping to announcement at index", annIndex);
+          setCurrentIndex(annIndex);
+          startPlayback(annIndex);
+        }, 200_000); // 3 min 20 sec
+      }
+
       if (!audioUrl) {
         setIsPlaying(true);
         setProgress(Math.min(100, (offset / getItemDuration(item)) * 100));
@@ -437,7 +463,7 @@ const RadioLive = () => {
       });
       audio.load();
     },
-    [schedule, volume, muted, stopCurrentAudio]
+    [schedule, volume, muted, stopCurrentAudio, findNextAnnouncementIndex]
   );
 
   useEffect(() => {
