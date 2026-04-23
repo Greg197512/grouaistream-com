@@ -4,7 +4,6 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-import { semanticEmbed } from "../_shared/semanticEmbed.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -12,8 +11,44 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const BATCH_SIZE = 25;
-const CONCURRENCY = 5;
+const VECTOR_DIM = 768;
+
+// Fast deterministic hash-only embedding (no LLM) for backfilling old memories.
+// FNV-1a → multi-hash bucket projection → L2-normalized 768-dim vector.
+function fnv1a(str: string): number {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = (h + ((h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24))) >>> 0;
+  }
+  return h >>> 0;
+}
+
+function hashEmbed(text: string): number[] {
+  const tokens = text
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .split(/\s+/)
+    .filter((t) => t.length > 2 && t.length < 30)
+    .slice(0, 64);
+  const v = new Array<number>(VECTOR_DIM).fill(0);
+  const seeds = ["c1", "c2", "c3"];
+  tokens.forEach((tok, i) => {
+    const w = Math.max(0.4, 1.0 - i * 0.01);
+    for (const seed of seeds) {
+      const h = fnv1a(`${seed}::${tok}`);
+      const idx = h % VECTOR_DIM;
+      const sign = (fnv1a(`${seed}::sign::${tok}`) & 1) === 0 ? 1 : -1;
+      v[idx] += sign * w;
+    }
+  });
+  let norm = 0;
+  for (let i = 0; i < VECTOR_DIM; i++) norm += v[i] * v[i];
+  norm = Math.sqrt(norm) || 1;
+  for (let i = 0; i < VECTOR_DIM; i++) v[i] /= norm;
+  return v;
+}
+
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
