@@ -21,7 +21,8 @@ import {
   ScanFace,
   Smile,
   Camera,
-  DollarSign
+  DollarSign,
+  Coffee
 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
@@ -39,6 +40,7 @@ import { HQCover } from "@/components/ui/HQCover";
 import { TrackBadges } from "@/components/ui/TrackBadges";
 import { TipModal } from "@/components/modals/TipModal";
 import { RatingLikeModal } from "@/components/modals/RatingLikeModal";
+import { CoffeeDialog } from "@/components/payments/CoffeeDialog";
 
 // Video visibility state - shared via window for simplicity
 declare global {
@@ -89,6 +91,8 @@ export const PlayerBar = () => {
   const [showFullscreen, setShowFullscreen] = useState(false);
   const [showMoodDetector, setShowMoodDetector] = useState(false);
   const [showTipModal, setShowTipModal] = useState(false);
+  const [showCoffeeDialog, setShowCoffeeDialog] = useState(false);
+  const [trackOwnerId, setTrackOwnerId] = useState<string | null>(null);
   const [showRatingModal, setShowRatingModal] = useState(false);
 
   // Check if current track is liked
