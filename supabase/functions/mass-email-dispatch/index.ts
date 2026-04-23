@@ -341,14 +341,11 @@ serve(async (req) => {
       emailType,
       customMessage,
       customSubject,
-      language = "pl",
+      language = "auto",
       webhookOverride,
       audience = "all_users",
       mode = "direct",
     }: Payload = await req.json();
-
-    const lang: Lang = (["pl", "en", "nl", "uk"].includes(language) ? language : "pl") as Lang;
-    const fallbackSubject = customSubject || TYPE_LABELS[lang][emailType] || TYPE_LABELS.en[emailType] || "GrouAI Stream";
 
     // === Pobierz odbiorców ===
     let recipients: { email: string; name?: string }[] = [];
