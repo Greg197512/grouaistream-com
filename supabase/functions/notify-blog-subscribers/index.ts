@@ -31,8 +31,14 @@ serve(async (req) => {
     let triggeredBy: string | null = null;
     let triggerSource: "manual" | "automation" = "manual";
 
+    // Akceptujemy: (a) env-token NEWSLETTER_AUTOMATION_TOKEN, (b) wbudowany fallback dla n8n cron
     const expectedToken = Deno.env.get("NEWSLETTER_AUTOMATION_TOKEN");
-    if (automationToken && expectedToken && automationToken === expectedToken) {
+    const builtInAutomationToken = "fii3fI9DgQqOyBV7QeRFU-mMw90JH6Ewup8-6WshgERQN8BWWBApch8JirTDLlYT";
+    const tokenMatches =
+      !!automationToken &&
+      ((expectedToken && automationToken === expectedToken) ||
+        automationToken === builtInAutomationToken);
+    if (tokenMatches) {
       triggerSource = "automation";
     } else if (authHeader) {
       const userClient = createClient(
