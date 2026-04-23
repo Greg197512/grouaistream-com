@@ -463,7 +463,7 @@ const RadioLive = () => {
       });
       audio.load();
     },
-    [schedule, volume, muted, stopCurrentAudio]
+    [schedule, volume, muted, stopCurrentAudio, findNextAnnouncementIndex]
   );
 
   useEffect(() => {
