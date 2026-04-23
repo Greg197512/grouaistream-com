@@ -171,6 +171,9 @@ export function SubscriptionManager() {
             Anuluj subskrypcję
           </Button>
         )}
+        <Button asChild variant="ghost" size="sm" className="gap-2">
+          <Link to="/orders"><Receipt className="h-4 w-4" />Historia zamówień</Link>
+        </Button>
       </div>
 
       <AlertDialog open={confirmCancel} onOpenChange={setConfirmCancel}>
