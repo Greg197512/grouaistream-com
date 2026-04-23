@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { useFloatingHearts, FloatingHeartsOverlay } from "@/components/effects/FloatingHearts";
 import { RatingLikeModal } from "@/components/modals/RatingLikeModal";
 import { usePlayer } from "@/contexts/PlayerContext";
+import { CoffeeDialog } from "@/components/payments/CoffeeDialog";
 import { 
   MoreHorizontal, 
   Heart, 
@@ -15,7 +16,8 @@ import {
   Twitter,
   MessageCircle,
   Trash2,
-  Scissors
+  Scissors,
+  Coffee
 } from "lucide-react";
 import {
   DropdownMenu,
