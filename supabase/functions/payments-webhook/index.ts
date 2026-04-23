@@ -137,13 +137,19 @@ async function handleTransactionPaymentFailed(data: any, env: PaddleEnv) {
 }
 
 async function handleTransactionCompleted(data: any, env: PaddleEnv) {
-  if (data.subscriptionId) return;
-
-  const { id, customerId, items, customData, details } = data;
+  const { id, customerId, items, customData, details, subscriptionId, billedAt, invoice, invoiceId } = data;
   const item = items?.[0];
   if (!item) return;
 
   const priceExternal = item.price?.importMeta?.externalId || item.price?.id;
+
+  // ---- Path A: Subscription transaction (Pro/Ultimate) → record + receipt email
+  if (subscriptionId) {
+    await handleSubscriptionTransaction(data, env);
+    return;
+  }
+
+  // ---- Path B: Coffee tip (one-time) — existing flow
   if (!priceExternal?.startsWith('grouai_coffee')) return;
 
   const userId = customData?.userId || null;
