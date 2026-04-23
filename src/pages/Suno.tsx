@@ -19,6 +19,7 @@ import { GenerationHistory } from "@/components/studio/GenerationHistory";
 import { LyricsDisplay, generateLyrics, parseLyricsFromText } from "@/components/studio/LyricsDisplay";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { SunoGeneratePanel } from "@/components/studio/SunoGeneratePanel";
+import { MusicPromptBox } from "@/components/studio/MusicPromptBox";
 import { VoiceRecorder } from "@/components/studio/VoiceRecorder";
 import { VoiceLibrary } from "@/components/studio/VoiceLibrary";
 import { StudioGrokDock } from "@/components/studio/StudioGrokDock";
@@ -642,6 +643,29 @@ const Suno = () => {
               Napędzany przez <span className="text-[#FF9500] font-semibold">ElevenLabs Music v1</span> — studyjna jakość, śpiewane wokale
             </span>
           </div>
+
+          {/* === NATURAL LANGUAGE PROMPT BOX (PL/EN/NL/UK) === */}
+          <MusicPromptBox
+            onTrackReady={(data) => {
+              if (data.audioUrl) {
+                setResult({
+                  audioUrl: data.audioUrl,
+                  title: data.plan?.lyrics_theme?.substring(0, 60) || `${data.plan?.genre || "AI"} ${data.plan?.mood || ""}`.trim(),
+                  genre: data.plan?.genre || "AI",
+                  generationId: data.generationId,
+                  durationSeconds: data.plan?.duration_seconds || 30,
+                  lyrics: [],
+                });
+                toast.success(`🎵 ${data.engine.toUpperCase()} — utwór gotowy!`);
+              } else if (data.processing) {
+                toast.info(
+                  data.engine === "suno"
+                    ? "🎤 Suno komponuje pełny utwór z wokalem (~30-60s)…"
+                    : "🎶 ElevenLabs przygotowuje wokal premium…",
+                );
+              }
+            }}
+          />
 
           {/* Tabs */}
           <div className="flex gap-2 p-1 rounded-xl bg-[#1a1a2e]/80 border border-[#FF6B00]/10">
