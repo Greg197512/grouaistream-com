@@ -365,34 +365,65 @@ serve(async (req) => {
     const suppressedSet = new Set((suppressed || []).map((s: any) => s.email.toLowerCase()));
     recipients = recipients.filter((r) => !suppressedSet.has(r.email.toLowerCase()));
 
-    // === Generuj copy + hero raz ===
+    // === Przypisz język do każdego odbiorcy ===
+    const autoMode = (language as LangSetting) === "auto";
+    const requestedLang: Lang = (["pl", "en", "nl", "uk"].includes(language as string) ? (language as Lang) : "pl");
+    const recipientsWithLang = recipients.map((r) => ({
+      ...r,
+      lang: autoMode ? detectLanguageFromEmail(r.email, r.name) : requestedLang,
+    }));
+
+    // === Generuj copy per język (tylko te, które są potrzebne) ===
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    let sharedCopy: any = null;
+    const usedLangs = Array.from(new Set(recipientsWithLang.map((r) => r.lang))) as Lang[];
+    const copyByLang: Record<string, any> = {};
     let heroUrl: string | null = null;
 
     if (LOVABLE_API_KEY) {
+      // Hero image — jedna grafika dla całej kampanii (oszczędność)
       try {
-        sharedCopy = await generateEmailCopy(emailType, customMessage, customSubject, lang, LOVABLE_API_KEY);
-      } catch (e) {
-        console.error("AI copy failed, using fallback:", e);
-      }
-      try {
-        heroUrl = await generateHeroImage(emailType, LOVABLE_API_KEY, sharedCopy?.headline);
+        heroUrl = await generateHeroImage(emailType, LOVABLE_API_KEY, customSubject || customMessage);
       } catch (e) {
         console.error("Image gen failed:", e);
       }
-    }
-    if (!sharedCopy) {
-      sharedCopy = {
-        subject: fallbackSubject,
-        headline: fallbackSubject,
-        body: customMessage || "GrouAI Stream",
-        cta: "Open GrouAI Stream",
-        ctaUrl: "https://grouaistream.com",
-      };
+
+      // Copy w każdym potrzebnym języku
+      for (const l of usedLangs) {
+        try {
+          copyByLang[l] = await generateEmailCopy(emailType, customMessage, customSubject, l, LOVABLE_API_KEY);
+        } catch (e) {
+          console.error(`AI copy failed for ${l}, fallback used:`, e);
+        }
+      }
     }
 
-    const fullHtml = buildHtml(sharedCopy, heroUrl, lang);
+    // Fallback dla brakujących języków
+    for (const l of usedLangs) {
+      if (!copyByLang[l]) {
+        const fb = customSubject || TYPE_LABELS[l][emailType] || TYPE_LABELS.en[emailType] || "GrouAI Stream";
+        copyByLang[l] = {
+          subject: fb,
+          headline: fb,
+          body: customMessage || "GrouAI Stream",
+          cta: "Open GrouAI Stream",
+          ctaUrl: "https://grouaistream.com",
+        };
+      }
+    }
+
+    // Pre-render HTML per język
+    const htmlByLang: Record<string, string> = {};
+    for (const l of usedLangs) {
+      htmlByLang[l] = buildHtml(copyByLang[l], heroUrl, l);
+    }
+
+    // Statystyki języków (do raportu)
+    const langStats: Record<string, number> = {};
+    for (const r of recipientsWithLang) langStats[r.lang] = (langStats[r.lang] || 0) + 1;
+
+    // Reprezentatywne copy do odpowiedzi (preferuj PL, potem EN)
+    const primaryLang: Lang = (usedLangs.includes("pl") ? "pl" : usedLangs[0] || "en") as Lang;
+    const sharedCopy = copyByLang[primaryLang];
 
     // === DIRECT mode ===
     if (mode === "direct") {
@@ -400,19 +431,22 @@ serve(async (req) => {
       let queued = 0;
       let errors = 0;
 
-      for (const r of recipients) {
+      for (const r of recipientsWithLang) {
         try {
+          const lang = r.lang;
+          const copy = copyByLang[lang];
+          const fullHtml = htmlByLang[lang];
           const idempotencyKey = `mass-${emailType}-${lang}-${stamp}-${r.email}`;
           const templateData: any = {
-            title: sharedCopy.subject || fallbackSubject,
-            message: sharedCopy.body,
+            title: copy.subject || TYPE_LABELS[lang][emailType] || "GrouAI Stream",
+            message: copy.body,
             recipientName: r.name,
             emailType: TYPE_LABELS[lang][emailType] || emailType,
             heroImageUrl: heroUrl,
             language: lang,
-            cta: sharedCopy.cta,
-            ctaUrl: sharedCopy.ctaUrl,
-            headline: sharedCopy.headline,
+            cta: copy.cta,
+            ctaUrl: copy.ctaUrl,
+            headline: copy.headline,
             fullHtml,
           };
 
@@ -444,15 +478,21 @@ serve(async (req) => {
       return new Response(JSON.stringify({
         success: true,
         mode: "direct",
-        language: lang,
-        recipientCount: recipients.length,
+        language: autoMode ? "auto" : requestedLang,
+        languageBreakdown: langStats,
+        recipientCount: recipientsWithLang.length,
         queued,
         errors,
         templateName: TEMPLATE_NAME,
-        subject: sharedCopy?.subject || fallbackSubject,
+        subject: sharedCopy?.subject,
         heroImageUrl: heroUrl,
       }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
+
+    // Pozostały kod (n8n) używa pierwszego języka jako reprezentatywnego
+    const lang: Lang = primaryLang;
+    const fullHtml = htmlByLang[lang];
+    const fallbackSubject = sharedCopy.subject;
 
     // === N8N mode ===
     let webhookUrl = webhookOverride;
