@@ -1293,6 +1293,42 @@ export type Database = {
           },
         ]
       }
+      monthly_cost_reports: {
+        Row: {
+          amount_eur: number
+          category: string
+          created_at: string
+          id: string
+          notes: string | null
+          report_month: string
+          service_name: string
+          updated_at: string
+          usage_metric: Json
+        }
+        Insert: {
+          amount_eur?: number
+          category: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          report_month: string
+          service_name: string
+          updated_at?: string
+          usage_metric?: Json
+        }
+        Update: {
+          amount_eur?: number
+          category?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          report_month?: string
+          service_name?: string
+          updated_at?: string
+          usage_metric?: Json
+        }
+        Relationships: []
+      }
       mood_analysis_bonuses: {
         Row: {
           amount: number
@@ -3509,6 +3545,7 @@ export type Database = {
       }
       get_all_users_bonus_progress: { Args: never; Returns: Json }
       get_all_users_for_admin: { Args: never; Returns: Json }
+      get_cost_report_summary: { Args: { _months?: number }; Returns: Json }
       get_my_likes_stats: { Args: never; Returns: Json }
       get_pending_payouts: { Args: never; Returns: Json }
       get_random_tippable_track: {
@@ -3629,6 +3666,7 @@ export type Database = {
           subscription_status: string
         }[]
       }
+      trigger_cost_report: { Args: { _month?: string }; Returns: Json }
       verify_unlock_code: { Args: { candidate: string }; Returns: boolean }
     }
     Enums: {
