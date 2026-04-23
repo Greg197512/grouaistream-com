@@ -160,7 +160,7 @@ export const BreakEvenPanel = () => {
                     Nowi subskrybenci Pro
                   </div>
                   <div className="text-2xl font-bold text-primary">
-                    {status.pro_subs_to_break_even} × 4,99€
+                    {status.pro_subs_to_break_even} × 9,99€
                   </div>
                 </div>
                 <div className="bg-amber-500/10 rounded p-3">
@@ -168,7 +168,7 @@ export const BreakEvenPanel = () => {
                     LUB Ultimate
                   </div>
                   <div className="text-2xl font-bold text-amber-300">
-                    {status.ultimate_subs_to_break_even} × 9,99€
+                    {status.ultimate_subs_to_break_even} × 19,99€
                   </div>
                 </div>
               </div>

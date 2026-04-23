@@ -49,7 +49,7 @@ Deno.serve(async (req) => {
     const daysInMonth = new Date(now.getUTCFullYear(), now.getUTCMonth() + 1, 0).getUTCDate();
     const dayOfMonth = now.getUTCDate();
     const prorate = dayOfMonth / daysInMonth;
-    const subRevenue = (activePro * 4.99 + activeUlt * 9.99) * prorate;
+    const subRevenue = (activePro * 9.99 + activeUlt * 19.99) * prorate;
 
     const { data: tips } = await supabase
       .from("tip_transactions")
