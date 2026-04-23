@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Mail, Sparkles, Check } from "lucide-react";
 import { toast } from "sonner";
+import { notifyN8nNewSubscriber } from "@/lib/newsletterNotify";
 
 interface NewsletterCaptureProps {
   variant?: "inline" | "card";
@@ -32,6 +33,9 @@ export function NewsletterCapture({ variant = "card", source = "blog_inline" }: 
       setLoading(false);
       return;
     }
+
+    // Best-effort: powiadom n8n o nowym subskrybencie (welcome flow)
+    notifyN8nNewSubscriber(trimmed, source);
 
     setDone(true);
     setLoading(false);
