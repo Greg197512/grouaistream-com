@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 export type FeedItem = {
   id: string;
   ts: string; // ISO timestamp
-  icon: "heart" | "coin" | "trophy" | "comment" | "blog" | "challenge" | "stream" | "tip";
+  icon: "heart" | "coin" | "trophy" | "comment" | "blog" | "challenge" | "stream" | "tip" | "alert";
   title: string;
   body?: string;
   href?: string;
