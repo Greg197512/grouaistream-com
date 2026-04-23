@@ -292,6 +292,20 @@ export const UpgradeModal = ({ open, onOpenChange }: UpgradeModalProps) => {
             <p className="text-center text-[10px] sm:text-xs text-muted-foreground mt-2 sm:mt-3">
               {t("upgrade.footer")}
             </p>
+
+            <div className="mt-3 flex items-center justify-center gap-1.5 text-[10px] sm:text-[11px] text-muted-foreground/80">
+              <Lock className="h-3 w-3" />
+              <span>Bezpieczne płatności obsługiwane przez</span>
+              <a
+                href="https://www.paddle.com/legal/checkout-buyer-terms"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-semibold text-foreground/80 hover:text-primary underline-offset-2 hover:underline"
+              >
+                Paddle
+              </a>
+              <span>· VAT, faktury i zwroty wliczone</span>
+            </div>
           </div>
         </div>
       </DialogContent>

@@ -134,6 +134,72 @@ const Legal = () => {
                   . Szczegółowe warunki płatności reguluje regulamin kupującego Paddle.
                 </p>
               </Section>
+
+              {/* AI Acceptable Use — required by Paddle for generative-AI products */}
+              <Section title="AI Acceptable Use / Dozwolone użycie AI">
+                <div className="p-4 rounded-lg bg-primary/5 border border-primary/20 mb-3">
+                  <p className="font-semibold text-primary text-sm">
+                    GrouAI Stream uses generative AI (Suno, ElevenLabs, Gemini) to create music, voices, and lyrics.
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    GrouAI Stream wykorzystuje generatywną AI do tworzenia muzyki, głosów i tekstów. Korzystając z funkcji AI akceptujesz poniższe zasady.
+                  </p>
+                </div>
+
+                <p><strong>Prohibited Uses / Zabronione użycie:</strong></p>
+                <p className="pl-4">
+                  • <strong>No deepfakes / Brak deepfake'ów</strong> — you may NOT use AI voice cloning, face swap, or generative tools to impersonate real persons (celebrities, politicians, private individuals) without their explicit written consent.
+                  Nie wolno używać klonowania głosu ani generatywnej AI do podszywania się pod realne osoby bez ich pisemnej zgody.
+                </p>
+                <p className="pl-4">
+                  • <strong>No hate speech, harassment, or discrimination</strong> — content promoting violence, hatred, or discrimination based on race, religion, gender, sexual orientation, disability, or nationality is strictly forbidden.
+                  Treści promujące przemoc, nienawiść lub dyskryminację są surowo zabronione.
+                </p>
+                <p className="pl-4">
+                  • <strong>No illegal content</strong> — CSAM, terrorism propaganda, illegal drug promotion, instructions for weapons, malware, or any content violating applicable laws.
+                  Treści nielegalne (CSAM, terroryzm, narkotyki, broń, malware) są zabronione.
+                </p>
+                <p className="pl-4">
+                  • <strong>No copyright infringement</strong> — do not generate AI covers, mashups, or lyrics that reproduce copyrighted works (specific artists, songs, or recognizable melodies) without proper licensing.
+                  Nie wolno generować utworów naruszających prawa autorskie istniejących artystów lub piosenek bez licencji.
+                </p>
+                <p className="pl-4">
+                  • <strong>No spam, fraud, or manipulation</strong> — fake streams, artificial play counts, fake reviews, phishing, or scam content.
+                  Spam, fałszywe odtworzenia, fake reviews, phishing i scam są zabronione.
+                </p>
+                <p className="pl-4">
+                  • <strong>No NSFW / explicit sexual content</strong> involving identifiable real persons or minors.
+                  Treści NSFW z udziałem realnych osób lub nieletnich są zabronione.
+                </p>
+
+                <p className="mt-3"><strong>User Responsibility / Odpowiedzialność użytkownika:</strong></p>
+                <p>
+                  You are solely responsible for the prompts you submit, the AI-generated outputs you publish or share, and ensuring you have the necessary rights to all input content (uploaded audio, lyrics, vocals, images).
+                  Ponosisz wyłączną odpowiedzialność za prompty, generowane treści oraz za posiadanie praw do materiałów wejściowych (audio, teksty, głos, grafiki).
+                </p>
+                <p>
+                  AI outputs may be inaccurate, biased, or unsuitable for professional use. GrouAI Stream provides AI features "as is" without warranty of fitness for any particular purpose.
+                  Wyniki AI mogą być niedokładne lub nieadekwatne — nie udzielamy gwarancji ich przydatności do konkretnego celu.
+                </p>
+
+                <p className="mt-3"><strong>Moderation & Enforcement / Moderacja i egzekwowanie:</strong></p>
+                <p>
+                  We reserve the right to: (a) refuse, filter, or remove AI prompts and outputs, (b) suspend or terminate accounts violating these rules, (c) cooperate with law enforcement on illegal content, (d) report serious violations (CSAM, terrorism) to relevant authorities, (e) implement automatic content filters that may block specific keywords or styles.
+                  Zastrzegamy prawo do filtrowania promptów, blokowania kont łamiących zasady, współpracy z organami ścigania oraz automatycznej moderacji treści.
+                </p>
+                <p>
+                  Repeat infringement of intellectual property rights will result in permanent account termination per our DMCA / copyright policy.
+                  Powtarzające się naruszenia praw autorskich skutkują trwałym usunięciem konta.
+                </p>
+
+                <p className="mt-3"><strong>Reporting Violations / Zgłaszanie naruszeń:</strong></p>
+                <p>
+                  Report abuse, deepfakes, copyright violations, or harmful content to{" "}
+                  <a href="mailto:abuse@grouaistream.com" className="text-primary underline">abuse@grouaistream.com</a>.
+                  We respond to verified reports within 48 hours.
+                  Zgłoszenia nadużyć rozpatrujemy w ciągu 48 godzin.
+                </p>
+              </Section>
             </div>
           </TabsContent>
 
