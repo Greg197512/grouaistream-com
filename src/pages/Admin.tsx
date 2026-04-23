@@ -69,6 +69,8 @@ import { TikTokStoriesPanel } from "@/components/admin/TikTokStoriesPanel";
 import { TikTokReelsStudio } from "@/components/admin/TikTokReelsStudio";
 import { AIBuilderProgress } from "@/components/admin/AIBuilderProgress";
 import { CostReportsPanel } from "@/components/admin/CostReportsPanel";
+import { BreakEvenPanel } from "@/components/admin/BreakEvenPanel";
+import { CostAlertBanner } from "@/components/admin/CostAlertBanner";
 
 interface UserStats {
   totalUsers: number;
@@ -646,9 +648,16 @@ export default function Admin() {
               </motion.div>
             </div>
 
+            {/* Cost alerts banner */}
+            <CostAlertBanner />
+
             {/* Tabs */}
-            <Tabs defaultValue="bonuses" className="space-y-4">
+            <Tabs defaultValue="break-even" className="space-y-4">
               <TabsList className="flex-wrap h-auto">
+                <TabsTrigger value="break-even" className="gap-2">
+                  <TrendingUp className="h-4 w-4" />
+                  Break-even 💰
+                </TabsTrigger>
                 <TabsTrigger value="bonuses" className="gap-2">
                   <DollarSign className="h-4 w-4" />
                   Bonusy & Wypłaty
@@ -734,6 +743,11 @@ export default function Admin() {
 
               <TabsContent value="ai-builder">
                 <AIBuilderProgress />
+              </TabsContent>
+
+              {/* Break-even Tab */}
+              <TabsContent value="break-even">
+                <BreakEvenPanel />
               </TabsContent>
 
               {/* Bonuses & Payouts Tab */}

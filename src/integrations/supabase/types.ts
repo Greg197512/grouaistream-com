@@ -798,6 +798,42 @@ export type Database = {
         }
         Relationships: []
       }
+      cost_alerts: {
+        Row: {
+          cost_amount: number
+          dismissed_at: string | null
+          dismissed_by: string | null
+          id: string
+          level: string
+          message: string
+          ratio_pct: number
+          revenue_amount: number
+          triggered_at: string
+        }
+        Insert: {
+          cost_amount?: number
+          dismissed_at?: string | null
+          dismissed_by?: string | null
+          id?: string
+          level: string
+          message: string
+          ratio_pct?: number
+          revenue_amount?: number
+          triggered_at?: string
+        }
+        Update: {
+          cost_amount?: number
+          dismissed_at?: string | null
+          dismissed_by?: string | null
+          id?: string
+          level?: string
+          message?: string
+          ratio_pct?: number
+          revenue_amount?: number
+          triggered_at?: string
+        }
+        Relationships: []
+      }
       creator_earnings: {
         Row: {
           amount: number
@@ -3508,6 +3544,7 @@ export type Database = {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
       }
+      dismiss_cost_alert: { Args: { _id: string }; Returns: Json }
       emit_agent_event: {
         Args: {
           _actor_user_id?: string
@@ -3533,6 +3570,26 @@ export type Database = {
         }[]
       }
       expire_unpaid_ad_campaigns: { Args: never; Returns: number }
+      get_active_cost_alerts: {
+        Args: never
+        Returns: {
+          cost_amount: number
+          dismissed_at: string | null
+          dismissed_by: string | null
+          id: string
+          level: string
+          message: string
+          ratio_pct: number
+          revenue_amount: number
+          triggered_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "cost_alerts"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       get_active_weekend_challenge: { Args: never; Returns: Json }
       get_admin_cost_overview: { Args: never; Returns: Json }
       get_admin_financial_overview: { Args: never; Returns: Json }
@@ -3545,6 +3602,7 @@ export type Database = {
       }
       get_all_users_bonus_progress: { Args: never; Returns: Json }
       get_all_users_for_admin: { Args: never; Returns: Json }
+      get_break_even_status: { Args: never; Returns: Json }
       get_cost_report_summary: { Args: { _months?: number }; Returns: Json }
       get_my_likes_stats: { Args: never; Returns: Json }
       get_pending_payouts: { Args: never; Returns: Json }
@@ -3555,6 +3613,7 @@ export type Database = {
           track_id: string
         }[]
       }
+      get_revenue_mtd: { Args: never; Returns: Json }
       get_seo_dashboard_stats: { Args: never; Returns: Json }
       get_similar_tracks_by_embedding: {
         Args: { _limit?: number; _query_embedding: string }
