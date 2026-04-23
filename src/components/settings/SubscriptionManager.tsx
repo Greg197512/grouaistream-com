@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Crown, ExternalLink, Loader2, X, AlertTriangle, Calendar } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Crown, ExternalLink, Loader2, X, AlertTriangle, Calendar, Receipt } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
