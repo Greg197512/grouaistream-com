@@ -469,6 +469,15 @@ const TrackOptionsMenuComponent = (
           )}
         </DropdownMenuContent>
       </DropdownMenu>
+
+      {/* Coffee Dialog (real-money tip via Paddle, 90% → twórca utworu) */}
+      <CoffeeDialog
+        open={showCoffeeDialog}
+        onOpenChange={setShowCoffeeDialog}
+        recipientUserId={trackOwnerId ?? undefined}
+        recipientTrackId={trackId}
+        recipientName={trackArtist}
+      />
     </div>
   );
 };
