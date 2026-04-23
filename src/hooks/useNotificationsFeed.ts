@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 export type FeedItem = {
   id: string;
   ts: string; // ISO timestamp
-  icon: "heart" | "coin" | "trophy" | "comment" | "blog" | "challenge" | "stream" | "tip";
+  icon: "heart" | "coin" | "trophy" | "comment" | "blog" | "challenge" | "stream" | "tip" | "alert";
   title: string;
   body?: string;
   href?: string;
@@ -118,6 +118,32 @@ export const useNotificationsFeed = () => {
         title: `Milestone +${fmtMoney(Number(m.amount))} 🏆`,
         body: `Osiągnięcie: ${m.bonus_type.replace(/_/g, " ")}`,
         href: "/creator-earnings",
+      });
+    });
+
+    // 3b. Płatności: nieudane / anulowane subskrypcje
+    const { data: payEvents } = await supabase
+      .from("payment_events")
+      .select("id, event_type, plan, period_end, created_at")
+      .eq("user_id", user.id)
+      .gte("created_at", sinceISO)
+      .order("created_at", { ascending: false })
+      .limit(10);
+
+    (payEvents || []).forEach((p: any) => {
+      const isFail = p.event_type === "payment_failed";
+      const planLabel = p.plan ? `GrouAI ${p.plan}` : "subskrypcja";
+      all.push({
+        id: `pay-${p.id}`,
+        ts: p.created_at,
+        icon: "alert",
+        title: isFail ? `Płatność nieudana ⚠️` : `Subskrypcja anulowana ✓`,
+        body: isFail
+          ? `Nie udało się obciążyć karty za ${planLabel}. Zaktualizuj metodę płatności.`
+          : p.period_end
+            ? `${planLabel} — dostęp do ${new Date(p.period_end).toLocaleDateString("pl-PL")}`
+            : `${planLabel} — anulowano`,
+        href: "/orders",
       });
     });
 

@@ -1642,6 +1642,51 @@ export type Database = {
         }
         Relationships: []
       }
+      payment_events: {
+        Row: {
+          amount: number | null
+          created_at: string
+          currency: string | null
+          environment: string
+          event_type: string
+          id: string
+          paddle_subscription_id: string | null
+          paddle_transaction_id: string | null
+          period_end: string | null
+          plan: string | null
+          reason: string | null
+          user_id: string | null
+        }
+        Insert: {
+          amount?: number | null
+          created_at?: string
+          currency?: string | null
+          environment?: string
+          event_type: string
+          id?: string
+          paddle_subscription_id?: string | null
+          paddle_transaction_id?: string | null
+          period_end?: string | null
+          plan?: string | null
+          reason?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          amount?: number | null
+          created_at?: string
+          currency?: string | null
+          environment?: string
+          event_type?: string
+          id?: string
+          paddle_subscription_id?: string | null
+          paddle_transaction_id?: string | null
+          period_end?: string | null
+          plan?: string | null
+          reason?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       payout_details: {
         Row: {
           acknowledged: boolean

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Receipt, ExternalLink, Crown, Coffee, Loader2, Calendar, ArrowLeft, Copy, Check } from "lucide-react";
+import { Receipt, ExternalLink, Crown, Coffee, Loader2, Calendar, ArrowLeft, Copy, Check, Download } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -61,6 +61,7 @@ const Orders = () => {
   const [tips, setTips] = useState<CoffeeTxn[]>([]);
   const [loading, setLoading] = useState(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (authLoading) return;
@@ -107,6 +108,57 @@ const Orders = () => {
       toast.success("Skopiowano ID");
     } catch {
       toast.error("Nie udało się skopiować");
+    }
+  };
+
+  const downloadInvoice = async (transactionId: string) => {
+    setDownloadingId(transactionId);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) throw new Error("Brak sesji");
+
+      const url = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.functions.supabase.co/download-paddle-invoice`;
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        },
+        body: JSON.stringify({ transactionId, environment: env }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || `HTTP ${res.status}`);
+      }
+
+      const ct = res.headers.get("content-type") || "";
+      if (ct.includes("application/pdf")) {
+        const blob = await res.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = blobUrl;
+        a.download = `faktura-${transactionId}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(blobUrl);
+        toast.success("Pobrano fakturę PDF");
+      } else {
+        const json = await res.json();
+        if (json.url) {
+          window.open(json.url, "_blank", "noopener,noreferrer");
+        } else {
+          throw new Error("Brak pliku PDF");
+        }
+      }
+    } catch (e: any) {
+      console.error("download invoice error", e);
+      toast.error(`Nie udało się pobrać faktury: ${e.message || e}`);
+    } finally {
+      setDownloadingId(null);
     }
   };
 
@@ -218,13 +270,30 @@ const Orders = () => {
                               {s.status === "completed" ? "Opłacone" : s.status}
                             </div>
                           </div>
-                          {s.invoice_url && (
-                            <Button asChild size="sm" variant="outline" className="gap-1.5">
-                              <a href={s.invoice_url} target="_blank" rel="noopener noreferrer">
-                                <ExternalLink className="h-3.5 w-3.5" />
-                                Faktura PDF
-                              </a>
-                            </Button>
+                          {s.status === "completed" && (
+                            <div className="flex flex-wrap gap-2 justify-end">
+                              <Button
+                                size="sm"
+                                onClick={() => downloadInvoice(s.paddle_transaction_id)}
+                                disabled={downloadingId === s.paddle_transaction_id}
+                                className="gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90"
+                              >
+                                {downloadingId === s.paddle_transaction_id ? (
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                ) : (
+                                  <Download className="h-3.5 w-3.5" />
+                                )}
+                                Pobierz fakturę PDF
+                              </Button>
+                              {s.invoice_url && (
+                                <Button asChild size="sm" variant="outline" className="gap-1.5">
+                                  <a href={s.invoice_url} target="_blank" rel="noopener noreferrer">
+                                    <ExternalLink className="h-3.5 w-3.5" />
+                                    Otwórz online
+                                  </a>
+                                </Button>
+                              )}
+                            </div>
                           )}
                         </div>
                       </div>

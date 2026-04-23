@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { 
   ChevronLeft, ChevronRight, Search, Bell, User, Crown, LogOut,
   Settings, Sparkles, UserCircle, Heart, Library, Power, Globe, Music,
-  Coins, Trophy, MessageCircle, FileText, Flame, Radio, Gift
+  Coins, Trophy, MessageCircle, FileText, Flame, Radio, Gift, AlertCircle
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,7 @@ const ICONS: Record<FeedItem["icon"], React.ComponentType<{ className?: string }
   challenge: Flame,
   stream: Radio,
   tip: Gift,
+  alert: AlertCircle,
 };
 
 export const TopBar = () => {
