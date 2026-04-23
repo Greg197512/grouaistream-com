@@ -370,6 +370,21 @@ const TrackOptionsMenuComponent = (
             Cut (to paste elsewhere)
           </DropdownMenuItem>
 
+          {/* Postaw kawę twórcy (real money via Paddle, 90% → twórca) */}
+          {trackOwnerId && trackOwnerId !== user?.id && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => setShowCoffeeDialog(true)}
+                className="cursor-pointer text-amber-400 focus:text-amber-300 focus:bg-amber-500/10"
+              >
+                <Coffee className="mr-2 h-4 w-4" />
+                <span className="flex-1">Postaw kawę twórcy ☕</span>
+                <span className="text-[10px] text-muted-foreground">1€ / 3€ / 5€</span>
+              </DropdownMenuItem>
+            </>
+          )}
+
           <DropdownMenuSeparator />
 
           {/* Share submenu */}
