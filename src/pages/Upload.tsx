@@ -195,7 +195,10 @@ const Upload = () => {
   const [sunoResolving, setSunoResolving] = useState(false);
   const [sunoResolved, setSunoResolved] = useState<{ audioUrl: string; imageUrl: string; duration: number } | null>(null);
 
-  const displayName = user?.user_metadata?.display_name || user?.email?.split("@")[0] || "Artist";
+  const profileDisplayName = user?.user_metadata?.display_name || user?.email?.split("@")[0] || "Artist";
+  const [useProfileName, setUseProfileName] = useState(true);
+  const [customArtist, setCustomArtist] = useState("");
+  const displayName = useProfileName ? profileDisplayName : (customArtist.trim() || profileDisplayName);
   const isSunoTrack = sunoLink.trim().length > 0;
 
   const handleSunoLinkChange = async (value: string) => {
@@ -787,13 +790,39 @@ const Upload = () => {
               />
             </div>
 
-            {/* Artist info (read-only from profile) */}
+            {/* Artist info — z profilu lub własna nazwa */}
             <div className="space-y-2">
               <Label>{t("upload.artistLabel")}</Label>
-              <div className="flex items-center gap-2 px-3 py-2 bg-card/60 border border-muted rounded-md text-sm">
-                <span className="font-medium">{displayName}</span>
-                <span className="text-muted-foreground text-xs">({t("upload.fromProfile")})</span>
+              <div className="flex items-center gap-2 mb-2">
+                <Checkbox
+                  id="use-profile-name"
+                  checked={useProfileName}
+                  onCheckedChange={(checked) => setUseProfileName(checked === true)}
+                />
+                <label htmlFor="use-profile-name" className="text-xs text-muted-foreground cursor-pointer select-none">
+                  Użyj nazwy z profilu ({profileDisplayName})
+                </label>
               </div>
+              {useProfileName ? (
+                <div className="flex items-center gap-2 px-3 py-2 bg-card/60 border border-muted rounded-md text-sm">
+                  <span className="font-medium">{profileDisplayName}</span>
+                  <span className="text-muted-foreground text-xs">({t("upload.fromProfile")})</span>
+                </div>
+              ) : (
+                <Input
+                  type="text"
+                  placeholder="Wpisz nazwę artysty / pseudonim sceniczny"
+                  value={customArtist}
+                  onChange={(e) => setCustomArtist(e.target.value.slice(0, 80))}
+                  maxLength={80}
+                  className="bg-card/60 border-muted"
+                />
+              )}
+              {!useProfileName && customArtist.trim() && (
+                <p className="text-[11px] text-muted-foreground">
+                  Utwór zostanie opublikowany jako: <span className="text-primary font-semibold">{customArtist.trim()}</span>
+                </p>
+              )}
             </div>
 
             {/* Monetization opt-in */}
