@@ -195,7 +195,10 @@ const Upload = () => {
   const [sunoResolving, setSunoResolving] = useState(false);
   const [sunoResolved, setSunoResolved] = useState<{ audioUrl: string; imageUrl: string; duration: number } | null>(null);
 
-  const displayName = user?.user_metadata?.display_name || user?.email?.split("@")[0] || "Artist";
+  const profileDisplayName = user?.user_metadata?.display_name || user?.email?.split("@")[0] || "Artist";
+  const [useProfileName, setUseProfileName] = useState(true);
+  const [customArtist, setCustomArtist] = useState("");
+  const displayName = useProfileName ? profileDisplayName : (customArtist.trim() || profileDisplayName);
   const isSunoTrack = sunoLink.trim().length > 0;
 
   const handleSunoLinkChange = async (value: string) => {
