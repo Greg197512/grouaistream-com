@@ -126,6 +126,24 @@ export const PlayerBar = () => {
     return () => window.removeEventListener("track-like-changed", handler);
   }, [user, currentTrack]);
 
+  // Fetch owner of the current track (potrzebne do "Postaw kawę twórcy")
+  useEffect(() => {
+    if (!currentTrack) {
+      setTrackOwnerId(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("tracks")
+        .select("user_id")
+        .eq("id", currentTrack.id)
+        .maybeSingle();
+      if (!cancelled) setTrackOwnerId(data?.user_id ?? null);
+    })();
+    return () => { cancelled = true; };
+  }, [currentTrack]);
+
   // Handle seeking for YouTube
   useEffect(() => {
     if (seekPosition !== null && youtubePlayerRef.current && isVideoMode) {
