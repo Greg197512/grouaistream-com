@@ -170,7 +170,7 @@ serve(async (req) => {
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
     // --- Authentication: trigger calls use anon key + source flag, user calls validate JWT ---
-    const isTriggerCall = source === "auto_trigger";
+    const isTriggerCall = callSource === "auto_trigger";
 
     if (!isTriggerCall) {
       const authHeader = req.headers.get("authorization");
@@ -224,7 +224,7 @@ serve(async (req) => {
     let coverUrl = await findOriginalCover(track.title, track.artist);
     let source = "original";
 
-    if (!coverUrl) {
+    if (!coverUrl && aiAllowed) {
       const aiBase64 = await generateAICover(track.title, track.artist, track.genre);
       
       if (aiBase64) {
@@ -243,11 +243,11 @@ serve(async (req) => {
       }
     }
 
+    // Gradient placeholder fallback (free users, or AI failed)
     if (!coverUrl) {
-      return new Response(
-        JSON.stringify({ success: false, error: "No cover found and AI generation failed" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      const seed = encodeURIComponent(`${track.artist}-${track.title}-${track.id}`);
+      coverUrl = `https://picsum.photos/seed/${seed}/600/600`;
+      source = "placeholder";
     }
 
     const { error: updateErr } = await supabase
