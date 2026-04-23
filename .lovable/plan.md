@@ -1,166 +1,114 @@
 
 
-# 💰 Auto-raportowanie kosztów + nowa mapa finansowa
+# 🚀 Pełne uruchomienie systemu finansowego — "wszystko ma żyć"
 
-## Co dostajesz
+## Co robię w tym kroku
 
-1. **Czytelna mapa myśli** — pokolorowana, pogrupowana w 5 obszarów, łatwa do skanowania wzrokiem
-2. **Automatyczny system kosztów** — każdego 1. dnia miesiąca system sam zapisuje do bazy:
-   - **Koszty stałe** (Lovable, n8n, ElevenLabs, Suno) z tabeli `operational_costs`
-   - **Koszty zmienne** wyliczone z realnego użycia: R2 storage, ElevenLabs znaki, Suno generacje, AI Gateway, Paddle prowizje
-3. **Panel admina "Cost Reports"** — historia miesięcy, breakdown każdej kategorii, trend wzrostu
+Domykam pętlę z poprzedniego planu tak, żeby system kosztów + przychodów działał **w pełni autonomicznie 24/7** — bez Twojej ingerencji. Dokładam też brakujące elementy, których jeszcze nie ma:
 
----
-
-## CZĘŚĆ 1: Nowa mapa myśli (czytelniejsza)
-
-Zamiast jednego gęstego mindmapa zrobię **3 osobne diagramy** w jednym pliku:
-- 🔴 **Strona kosztów** (co Cię zjada)
-- 🟢 **Strona przychodów** (skąd ma wpływać)
-- 🎯 **Plan działania** (co robić w jakiej kolejności — flowchart)
-
-Każdy diagram pokolorowany, pogrupowany, z liczbami EUR, max 4 poziomy zagnieżdżenia.
+1. **Panel Break-even na żywo** — admin widzi dziś / w tym miesiącu ile brakuje do zera
+2. **Auto-aktywacja cron jobs** — pewność, że raport faktycznie odpala się codziennie
+3. **Powiadomienia progowe** — gdy koszty przekroczą 80% / 100% / 150% przychodu
+4. **Eksport CSV** kosztów do księgowości
+5. **Widget przychodów** połączony z kosztami → realny **margin %** dziennie
 
 ---
 
-## CZĘŚĆ 2: Automatyczne raportowanie kosztów
+## 1. Panel Break-even (`BreakEvenPanel.tsx`)
 
-### Nowa tabela `monthly_cost_reports`
+Nowa zakładka w `/admin` → **"Break-even"** pokazuje:
+
+- 💸 **Koszty miesiąca dziś (live)** — np. `181 €`
+- 💰 **Przychody miesiąca dziś** — suma z `subscriptions` (Pro 4,99 / Ultimate 9,99) + `tip_transactions` (10% platform fee) + paid boosts
+- 🎯 **Break-even gap** — różnica `koszty − przychody`. Czerwone gdy ujemne, zielone gdy dodatnie.
+- 📊 **Pasek postępu** "Ile dni do końca miesiąca / ile musisz zarobić dziennie"
+- 👥 **Ile subskrypcji brakuje** do break-even (gap ÷ 4,99 € = liczba Pro lub gap ÷ 9,99 € = liczba Ultimate)
+- 📈 **Wykres dzienny** — koszty vs. przychody narastająco od 1. dnia miesiąca
 
 ```text
-┌─────────────────────────────────────────────────┐
-│  monthly_cost_reports                           │
-├─────────────────────────────────────────────────┤
-│  id              uuid                           │
-│  report_month    date     (np. 2026-04-01)     │
-│  category        text     (fixed/variable)      │
-│  service_name    text     (Lovable, R2, Suno…) │
-│  amount_eur      numeric  (wyliczona kwota)    │
-│  usage_metric    jsonb    ({"gb": 12, "calls"…})│
-│  notes           text                           │
-│  created_at      timestamptz                    │
-└─────────────────────────────────────────────────┘
+┌─────────────────────────────────────────┐
+│  KOSZT DZIŚ:    181,42 €                │
+│  PRZYCHÓD DZIŚ:  47,80 €                │
+│  ─────────────────────                  │
+│  GAP:           -133,62 € 🔴            │
+│                                         │
+│  Brakuje: 27 × Pro (4,99€)              │
+│  lub:     14 × Ultimate (9,99€)         │
+│                                         │
+│  [████░░░░░░] 35% miesiąca              │
+└─────────────────────────────────────────┘
 ```
 
-RLS: tylko admin czyta i zapisuje. Trigger pilnuje unikalności `(report_month, service_name)`.
+## 2. RPC `get_break_even_status()`
 
-### Edge function `monthly-cost-report` (cron 1. dnia miesiąca o 03:00 UTC)
+Nowa funkcja DB (security definer, admin only):
+- Sumuje `monthly_cost_reports` dla bieżącego miesiąca (live preview)
+- Sumuje przychody MTD: aktywne subskrypcje × stawka prorata + tip platform fees
+- Zwraca JSON z gap, dni_do_końca_miesiąca, wymagana_dzienna_średnia_przychodu
 
-Logika:
+## 3. Cron jobs — gwarancja działania
 
+Dorzucam dwa joby przez `supabase_insert` (NIE migrację, bo zawierają anon key):
+
+- `monthly-cost-report-daily` — codziennie o 02:00 UTC (preview live)
+- `monthly-cost-report-finalize` — 1. dnia miesiąca o 03:00 UTC (zamknięcie poprzedniego miesiąca)
+- `break-even-alert` — codziennie o 09:00 UTC (sprawdza progi i loguje alert do tabeli)
+
+## 4. Powiadomienia progowe (`cost_alerts` table)
+
+Nowa tabela:
 ```text
-1. KOSZTY STAŁE (z operational_costs)
-   ├── Lovable.dev      50 €
-   ├── n8n              30 €
-   ├── ElevenLabs       25 €
-   └── Suno API         20 €
-   → zapis 4 wierszy z category='fixed'
-
-2. KOSZTY ZMIENNE (wyliczone z bazy za poprzedni miesiąc)
-   ├── R2 Storage      = (suma audio_file_size_mb tracks) / 1024 × 0,015 €/GB
-   ├── R2 Egress       = (stream_events count × średni rozmiar) × 0,01 €/GB
-   ├── ElevenLabs TTS  = (znaki w tts_logs) × 0,18 €/1k znaków
-   ├── Suno generacje  = (tracks z audio_url ILIKE '%suno%' za miesiąc) × 0,05 €
-   ├── AI Gateway      = (ai_gateway_calls count × średnia cena tokenów)
-   ├── Paddle prowizje = (sum paddle_transactions) × 0,05 + 0,50 × count
-   └── Cover AI        = (count auto-generated covers) × 0,04 €
-   → zapis ~7 wierszy z category='variable'
-
-3. AGREGACJA ŁĄCZNA
-   ├── total_fixed     = sum(fixed)
-   ├── total_variable  = sum(variable)
-   └── total_eur       = sum wszystkich
-   → zapis 1 wiersz z category='summary'
-
-4. PORÓWNANIE Z POPRZEDNIM MIESIĄCEM
-   → wyliczenie delta % i zapis do brain_memory jako "raport miesięczny"
+cost_alerts(id, level, message, gap_amount, triggered_at, dismissed_at)
 ```
+- Próg **80%** kosztów wzgl. przychodu → żółty banner w `/admin`
+- Próg **100%** → czerwony banner "TRACISZ PIENIĄDZE"
+- Próg **150%** → krytyczny + sugestie cięć (wyłącz n8n, downgrade ElevenLabs)
 
-### Cron schedule
+Banner pojawia się **na górze panelu admin** dopóki nie klikniesz "Rozumiem".
 
-W `pg_cron` (już jest enabled):
-- **Codzienna mini-aktualizacja**: o 02:00 UTC liczy bieżący miesiąc na bazie dotychczasowego użycia (live preview)
-- **Miesięczny finalny raport**: 1. dnia miesiąca o 03:00 UTC zamyka poprzedni miesiąc
+## 5. Eksport CSV
+
+Przycisk **"Eksportuj CSV"** w `CostReportsPanel` → generuje plik z kolumnami:
+`miesiąc, kategoria, serwis, kwota_eur, jednostki, opis` — gotowe do księgowości / VAT-7.
+
+## 6. Aktualizacja `CostReportsPanel.tsx`
+
+- Dorzucam zakładkę "Margin" → wykres przychód − koszty miesięcznie (12 mc)
+- Pokazuję **Margin %** = `(przychód − koszt) / przychód × 100`
+- Wskaźnik "Runway" = `aktualne saldo banku ÷ średni miesięczny burn` (pole do ręcznego wpisania salda)
 
 ---
 
-## CZĘŚĆ 3: Panel "Cost Reports" w adminie
-
-Nowa zakładka w `/admin` → **💸 Koszty**:
-
-```text
-┌──────────────────────────────────────────────────┐
-│  Bieżący miesiąc (live)        Kwiecień 2026     │
-│  ─────────────────────────────────────────────   │
-│  Stałe:        125,00 €    [Lovable, n8n, ...]  │
-│  Zmienne:       42,30 €    [R2, AI, Paddle]     │
-│  RAZEM:        167,30 €  ⬆ +12% wzgl. marca     │
-│                                                  │
-│  [Wygeneruj teraz]  [Eksport CSV]               │
-└──────────────────────────────────────────────────┘
-
-┌──────────────────────────────────────────────────┐
-│  Historia 6 miesięcy (wykres słupkowy)          │
-│  ███▌  Mar  148 €                                │
-│  ████  Kwi  167 €  ←                             │
-│  ...                                             │
-└──────────────────────────────────────────────────┘
-
-┌──────────────────────────────────────────────────┐
-│  Breakdown bieżącego miesiąca (tabela)          │
-│  Lovable.dev      50,00 €  fixed                │
-│  ElevenLabs       25,00 €  fixed                │
-│  R2 Storage       18,40 €  variable  12 GB      │
-│  Suno generacje    8,50 €  variable  170 utw.   │
-│  ...                                             │
-└──────────────────────────────────────────────────┘
-
-┌──────────────────────────────────────────────────┐
-│  💡 Sugestie oszczędności (z AI)                │
-│  • R2 wzrosło o 35% — rozważ kompresję mp3      │
-│  • ElevenLabs nieużywane — downgrade do Starter │
-└──────────────────────────────────────────────────┘
-```
-
----
-
-## Pliki do stworzenia/edycji
+## Pliki do utworzenia / edycji
 
 **Nowe:**
-- `supabase/migrations/<nowy>.sql` — tabela `monthly_cost_reports`, RLS, trigger unikalności, RPC `get_cost_report_summary`
-- `supabase/functions/monthly-cost-report/index.ts` — edge function liczący koszty
-- `src/components/admin/CostReportsPanel.tsx` — panel admina z wykresem i breakdown
+- `supabase/functions/break-even-alert/index.ts` — sprawdza progi, loguje do `cost_alerts`
+- `src/components/admin/BreakEvenPanel.tsx` — główny widok live
+- `src/components/admin/CostAlertBanner.tsx` — banner ostrzegawczy na górze /admin
+- `supabase/migrations/<ts>_break_even_system.sql`:
+  - tabela `cost_alerts` (RLS: admin only)
+  - RPC `get_break_even_status()` (security definer)
+  - RPC `get_revenue_mtd()` (sumuje subskrypcje + tipy w bieżącym miesiącu)
+  - RPC `dismiss_cost_alert(_id uuid)`
 
-**Edycje:**
-- `src/pages/Admin.tsx` — dodanie zakładki "💸 Koszty"
-- Cron przez `pg_cron` + `pg_net` — zapis przez insert tool (nie migracja, bo zawiera klucz)
+**Edytowane:**
+- `src/pages/Admin.tsx` — nowa zakładka "Break-even" + montaż `CostAlertBanner` na górze
+- `src/components/admin/CostReportsPanel.tsx` — przycisk "Eksportuj CSV" + zakładka "Margin"
 
-**Nowy artefakt mapy:**
-- `/mnt/documents/GrouAI_Mapa_Finansowa_v2.mmd` — czytelna, pokolorowana, 3 sekcje
-
----
-
-## Założenia liczbowe (do weryfikacji w realnym czasie)
-
-| Pozycja zmienna | Stawka | Skąd liczba |
-|---|---|---|
-| R2 Storage | 0,015 €/GB/mc | Cloudflare R2 cennik |
-| R2 Egress | 0 €/GB | R2 ma free egress |
-| ElevenLabs | 0,18 €/1k znaków | Creator plan |
-| Suno API | 0,05 €/generacja | Suno API |
-| Lovable AI Gateway | wg Settings → Cloud & AI | live z Twojego konta |
-| Paddle | 5% + 0,50 €/tx | Paddle standard |
-| Cover AI (Gemini) | 0,04 €/obraz | Gemini Flash Image |
-
-Stawki będą trzymane jako **stałe w funkcji** — łatwo zmienić w jednym miejscu jak Cloudflare/Suno zmieni cennik.
+**SQL przez supabase_insert (nie migracja — zawiera klucze):**
+- 3 cron joby (daily report, monthly finalize, break-even alert)
 
 ---
 
-## Co zyskujesz
+## Wartość dla Ciebie
 
-1. **Codziennie wiesz na żywo**, ile Cię realnie kosztuje miesiąc — nie zgadywanie
-2. **Historia 12 miesięcy** w wykresie — widzisz trend wzrostu
-3. **Sugestie oszczędności** generowane automatycznie (np. "R2 wzrosło o 35% — sprawdź czy nie masz duplikatów")
-4. **Eksport CSV** do księgowości
-5. **Powiązanie z przychodami** — w panelu finansowym zobaczysz **margin %** (przychód − koszty)
+Po tym kroku:
+
+1. **Otwierasz `/admin` i od razu widzisz**, czy dziś tracisz czy zarabiasz
+2. **System sam Cię ostrzega**, gdy zaczynasz tracić — nie musisz pamiętać sprawdzać
+3. **Wiesz dokładnie**, ile osób dziś musi kupić Pro/Ultimate, żeby wyjść na zero
+4. **Eksportujesz CSV do księgowej** jednym kliknięciem
+5. **Cron działa autonomicznie** — nawet gdy śpisz, raport się aktualizuje
+
+Po wdrożeniu **system finansowy żyje sam** — Twoja rola to tylko reagowanie na alerty.
 
