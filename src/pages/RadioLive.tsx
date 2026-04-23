@@ -143,7 +143,7 @@ const RadioLive = () => {
           .from("radio_schedule")
           .select("position, item_type, custom_title, custom_duration, custom_audio_url, lang, track:tracks(id, title, artist, duration, audio_url, cover_url)")
           .order("position", { ascending: true })
-          .limit(200);
+          .limit(1000);
         if (cancelled) return;
         if (scheduleRes.data) setRawSchedule(scheduleRes.data as any);
       } catch (err) {
