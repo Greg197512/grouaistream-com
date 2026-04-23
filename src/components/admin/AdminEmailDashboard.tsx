@@ -397,7 +397,6 @@ export function AdminEmailDashboard({ stats, genreStats }: AdminEmailDashboardPr
                 <Input placeholder="AI poprawi jeśli trzeba" value={customSubject} onChange={(e) => setCustomSubject(e.target.value)} />
               </div>
             </div>
-            </div>
 
             <div className="space-y-2">
               <Label>E-mail odbiorcy</Label>
