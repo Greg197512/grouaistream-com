@@ -1,67 +1,69 @@
 
 
-# ✅ Status Go-Live: WSZYSTKO GOTOWE
+# ☕ "Włącz krany" — kawa w PlayerBar + tip-jar na każdym utworze
 
-Sprawdziłem status weryfikacji w Paddle i mam dla Ciebie dobre wieści.
+## Co dziś jest, a czego brakuje
 
-## Co jest już ukończone
+| Element | Stan |
+|---|---|
+| `BuyCoffeeButton` (Paddle, real money, 1€/3€/5€, z `recipientUserId` + `recipientTrackId`) | ✅ istnieje, ale **nigdzie nie używany przy utworach** |
+| `TipModal` w PlayerBar (portfel wewnętrzny, doładowywany przez admina) | ✅ działa, **zostaje bez zmian** |
+| Real-money kawa dla aktualnie granego utworu | ❌ brak |
+| Real-money kawa z poziomu listy utworów (Liked, Recently Played, Queue, wyniki wyszukiwania) | ❌ brak |
+| Sprawdzenie, że Paddle webhook poprawnie zapisuje `recipientTrackId`/`recipientUserId` i nabija `creator_earnings` typu `tip` | ❓ do weryfikacji |
 
-| Krok | Status |
-|------|--------|
-| **Readiness check** (Privacy, Terms, Refund, Pricing, Site content) | ✅ Pass |
-| **Publish project** | ✅ Completed |
-| **Verification** (Twoje dane firmowe) | ✅ Completed |
-| **Automated review** (Paddle zatwierdził konto) | ✅ Completed |
+## Co dokładnie zrobię
 
-**Wniosek systemu**: *"All steps completed — live checkout should be ready."*
+### 1. Kawa w PlayerBar (obok obecnego serduszka tipa)
+W `src/components/layout/PlayerBar.tsx` obok przycisku `DollarSign` (TipModal z portfela) dodam **drugi mikro-przycisk z ikoną `Coffee`** — odpalający `BuyCoffeeButton` z parametrami aktualnego utworu:
 
-To znaczy, że **realny live checkout działa** — możesz przyjmować prawdziwe pieniądze z kart Visa/Mastercard/PayPal na grouaistream.com **już teraz**.
+```
+recipientUserId  = currentTrack.uploaded_by  (lub creator_id)
+recipientTrackId = currentTrack.id
+recipientName    = currentTrack.artist
+```
 
----
+Wizualnie: bursztynowy mikro-IconButton (`text-amber-400/70`), tooltip „Postaw kawę twórcy ☕ (1€ / 3€ / 5€)". Otwiera istniejący Dialog z 3 opcjami → Paddle Checkout → po sukcesie toast „☕ wysłano kawę dla {artist}".
 
-## Jedyne ostrzeżenie (niekrytyczne)
+**Różnica vs istniejący 💲 tip:**
+- 💲 = portfel wewnętrzny (saldo, bez wypłaty) — istniejące
+- ☕ = realne € z karty przez Paddle, 90% trafia do twórcy do wypłaty — **nowe**
 
-- **`acceptable_use`** = warning (nie błąd)
+### 2. „Tip-jar na każdym utworze" — przez TrackOptionsMenu
+W `src/components/menus/TrackOptionsMenu.tsx` (używany w TrackRow, RecentlyPlayed, Queue, Liked, Search wyniki — czyli **wszędzie gdzie jest utwór**) dodam nowy item w dropdownie:
 
-To zwykle dotyczy zapisu w Terms o **zabronionych zastosowaniach AI** — Paddle wymaga, żeby produkty generatywne (a Twój Suno/ElevenLabs/Gemini się kwalifikuje) miały jasno wymienione:
-- zakaz deepfake'ów, mowy nienawiści, treści nielegalnych
-- odpowiedzialność użytkownika za prompty i generowane treści
-- prawo do moderacji i blokowania kont
+```
+☕  Postaw kawę twórcy   →  otwiera BuyCoffeeButton dialog
+```
 
-Konto **działa mimo warningu**, ale warto to dopisać dla bezpieczeństwa prawnego.
+Item pojawia się tylko gdy utwór ma `uploaded_by/creator_id` ≠ aktualny user (nie można fundować kawy samemu sobie — taką regułę webhook i tak musi mieć, ale ukrywam item żeby nie kusić).
 
----
+Aby uniknąć duplikacji, wyrenderuję `BuyCoffeeButton` **bez własnego buttona** — wyciągnę z niego logikę dialogu do małego sub-komponentu `CoffeeDialog` (otwierany kontrolowanym `open`/`onOpenChange`), a w obu miejscach (PlayerBar item, TrackOptionsMenu item) podpinam tylko trigger.
 
-## Co proponuję zrobić w tej iteracji
+### 3. Weryfikacja flow Paddle → DB → twórca
+- Sprawdzę edge function `payments-webhook` że dla `transaction.completed` z `priceId IN (grouai_coffee_*)`:
+  - zapisuje wpis do `one_time_purchases` (już jest)
+  - **nabija `creator_earnings`** typu `tip` z `amount = 0.9 * price` na `recipientUserId` z `customData`
+  - emituje `agent_event` typu `tip.received` (pojawi się w dzwoneczku notyfikacji — `useNotificationsFeed` już to obsługuje)
+- Jeśli czegoś brakuje — dopiszę do webhook. Jeśli już jest — tylko potwierdzę.
 
-### 1. Dopiąć `acceptable_use` w Terms & Conditions
-Dodam sekcję **"Acceptable Use of AI Features"** do strony Terms — wymienię zakazane zastosowania (deepfake, hate, spam, copyright violation), odpowiedzialność użytkownika za prompty, oraz prawo GrouAI do moderacji i blokowania.
+### 4. Drobny FX po sukcesie
+Po powrocie z Paddle z `?coffee=success` w URL — istniejący już handler pokaże toast. Dorzucę tylko **floating coffee emoji** (analogiczny do `FloatingHearts`) wokół coveru utworu, jeśli utwór wciąż gra — żeby było widać efekt „strumienia kawy".
 
-### 2. Włączyć realny tracking przychodów MTD
-Skoro live działa, RPC `get_revenue_mtd()` może już zaciągać prawdziwe transakcje z webhook'a Paddle. Sprawdzę czy webhook poprawnie zapisuje subskrypcje z `environment='live'` (zamiast `'sandbox'`) i pokażę Ci pierwsze realne € w panelu Break-even gdy tylko ktoś kupi.
+## Co użytkownik dostaje
 
-### 3. Pokazać użytkownikom, że płatności są LIVE
-Aktualnie masz `PaymentTestModeBanner` widoczny tylko w preview. Na produkcji (grouaistream.com) banner sam zniknie — ale dorobię delikatny **trust badge** "🔒 Bezpieczne płatności obsługiwane przez Paddle" pod każdym CTA Pro/Ultimate, żeby zwiększyć konwersję.
+1. **W PlayerBar** dwa mikro-przyciski przy każdym graniu: 💲 (tip z portfela) + ☕ (real-money kawa)
+2. **W KAŻDEJ liście utworów** (Liked, Recently Played, Search, Queue, Albumy) — w trzykropku „⋯" nowa opcja **„Postaw kawę twórcy"**
+3. **Twórca dostaje 90%** każdej kawy do wypłaty (creator_earnings type=`tip`) i widzi powiadomienie w dzwoneczku
+4. **Ty (admin)** zobaczysz nowe wpływy w panelu Break-even MTD od pierwszej kawy
 
-### 4. Test pierwszej realnej transakcji
-Po wdrożeniu możesz sam kupić Pro/Ultimate prawdziwą kartą (potem zwrot przez Paddle 1 klik) — żeby zobaczyć cały lifecycle: webhook → DB → unlock funkcji → wpis w Break-even MTD.
+## Szczegóły techniczne (dla mnie do wykonania)
 
----
-
-## Co zyskujesz po tym kroku
-
-1. **Zero blockerów prawnych** — Paddle nie cofnie zatwierdzenia
-2. **Pierwszy realny przychód** widoczny w panelu Break-even
-3. **Trust badge** zwiększający konwersję subskrypcji
-4. **Pewność**, że cały flow (checkout → webhook → unlock → metryki) działa end-to-end
-
----
-
-## Szczegóły techniczne
-
-- **Edycja**: `src/pages/Terms.tsx` (lub równoważna) — dodanie sekcji AI Acceptable Use
-- **Edycja**: `src/components/PricingCard.tsx` (lub gdzie są CTA) — dodanie trust badge
-- **Weryfikacja**: query do `subscriptions` aby sprawdzić, że `environment='live'` jest poprawnie zapisywane przez webhook
-- **Bez nowych migracji** — schema już to obsługuje (`environment` column istnieje)
-- **Bez nowych edge functions** — `payments-webhook` już deklaruje obsługę obu envów
+- **Plik nowy**: `src/components/payments/CoffeeDialog.tsx` — rozbity dialog z `BuyCoffeeButton` (kontrolowany open/close)
+- **Refaktor**: `BuyCoffeeButton.tsx` → używa `CoffeeDialog` (zachowany API)
+- **Edycja**: `src/components/layout/PlayerBar.tsx` — drugi przycisk + state `showCoffeeDialog`
+- **Edycja**: `src/components/menus/TrackOptionsMenu.tsx` — DropdownMenuItem „☕ Postaw kawę twórcy" + state `showCoffeeDialog`, props rozszerzone o `trackOwnerId?: string`
+- **Edycja consumerów TrackOptionsMenu** (TrackRow, RecentlyPlayed, QueueSidebar, FullscreenPlayer) — przekazanie `trackOwnerId` z danych utworu (kolumna `uploaded_by` w `catalog`)
+- **Weryfikacja edge function**: `supabase/functions/payments-webhook/index.ts` — branch dla coffee priceId → insert `creator_earnings` + emit `agent_event`
+- **Brak nowych migracji** — `creator_earnings` i `one_time_purchases` już istnieją
 
