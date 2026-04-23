@@ -24,15 +24,45 @@ type EmailType =
   | "custom";
 
 type Lang = "pl" | "en" | "nl" | "uk";
+type LangSetting = Lang | "auto";
 
 interface Payload {
   emailType: EmailType;
   customMessage?: string;
   customSubject?: string;
-  language?: Lang;
+  language?: LangSetting;
   webhookOverride?: string;
   audience?: "all_users" | "blog_subscribers";
   mode?: "n8n" | "direct";
+}
+
+// === Auto-detekcja języka po e-mailu ===
+// Kolejność: TLD domeny -> słowa-klucze w domenie -> fallback EN
+function detectLanguageFromEmail(email: string, displayName?: string): Lang {
+  const lower = (email || "").toLowerCase().trim();
+  const domain = lower.split("@")[1] || "";
+  const tld = domain.split(".").pop() || "";
+
+  // Polskie domeny i providerzy
+  if (tld === "pl" || /\b(wp|onet|interia|o2|gazeta|poczta)\b/.test(domain)) return "pl";
+
+  // Holenderskie / belgijskie (NL)
+  if (tld === "nl" || tld === "be" || /\b(kpn|ziggo|telfort|xs4all|home|hetnet|planet|chello)\b/.test(domain)) return "nl";
+
+  // Ukraińskie
+  if (tld === "ua" || /\b(ukr|meta|i\.ua)\b/.test(domain)) return "uk";
+
+  // Anglojęzyczne TLD
+  if (["com", "co", "uk", "us", "ie", "ca", "au", "nz", "io", "net", "org", "edu", "gov"].includes(tld)) {
+    // Spróbuj zgadnąć po nazwie wyświetlanej (czasem zawiera polskie znaki)
+    const name = (displayName || "").toLowerCase();
+    if (/[ąćęłńóśźż]/.test(name)) return "pl";
+    if (/[іїєґ]/.test(name)) return "uk";
+    return "en";
+  }
+
+  // Inne europejskie / nieznane → EN (uniwersalne)
+  return "en";
 }
 
 // === I18n: tytuły zapasowe i nazwy etykiet ===
