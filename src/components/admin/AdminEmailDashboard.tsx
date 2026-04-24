@@ -42,6 +42,7 @@ interface GeneratedEmail {
   subject: string;
   body: string;
   preview: string;
+  heroImageUrl?: string | null;
   type: string;
   generatedAt: string;
 }
