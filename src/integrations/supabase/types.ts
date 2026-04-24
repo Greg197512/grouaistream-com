@@ -646,6 +646,198 @@ export type Database = {
         }
         Relationships: []
       }
+      aurora_conversations: {
+        Row: {
+          channel: string
+          channel_thread_id: string | null
+          client_id: string | null
+          created_at: string
+          id: string
+          intent: string | null
+          last_message_at: string
+          metadata: Json
+          status: string
+          summary: string | null
+          unread_count: number
+          updated_at: string
+        }
+        Insert: {
+          channel?: string
+          channel_thread_id?: string | null
+          client_id?: string | null
+          created_at?: string
+          id?: string
+          intent?: string | null
+          last_message_at?: string
+          metadata?: Json
+          status?: string
+          summary?: string | null
+          unread_count?: number
+          updated_at?: string
+        }
+        Update: {
+          channel?: string
+          channel_thread_id?: string | null
+          client_id?: string | null
+          created_at?: string
+          id?: string
+          intent?: string | null
+          last_message_at?: string
+          metadata?: Json
+          status?: string
+          summary?: string | null
+          unread_count?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aurora_conversations_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "aurora_crm_clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      aurora_crm_clients: {
+        Row: {
+          company: string | null
+          created_at: string
+          email: string | null
+          external_ids: Json
+          first_contact_at: string
+          full_name: string | null
+          id: string
+          last_contact_at: string | null
+          ltv_score: number
+          notes: string | null
+          phone: string | null
+          preferred_language: string | null
+          tags: string[]
+          total_orders: number
+          total_revenue_eur: number
+          updated_at: string
+        }
+        Insert: {
+          company?: string | null
+          created_at?: string
+          email?: string | null
+          external_ids?: Json
+          first_contact_at?: string
+          full_name?: string | null
+          id?: string
+          last_contact_at?: string | null
+          ltv_score?: number
+          notes?: string | null
+          phone?: string | null
+          preferred_language?: string | null
+          tags?: string[]
+          total_orders?: number
+          total_revenue_eur?: number
+          updated_at?: string
+        }
+        Update: {
+          company?: string | null
+          created_at?: string
+          email?: string | null
+          external_ids?: Json
+          first_contact_at?: string
+          full_name?: string | null
+          id?: string
+          last_contact_at?: string | null
+          ltv_score?: number
+          notes?: string | null
+          phone?: string | null
+          preferred_language?: string | null
+          tags?: string[]
+          total_orders?: number
+          total_revenue_eur?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      aurora_intake_drafts: {
+        Row: {
+          ai_proposal: Json | null
+          approved_at: string | null
+          approved_by: string | null
+          brief: string | null
+          budget_eur: number | null
+          client_id: string | null
+          confidence: number | null
+          conversation_id: string | null
+          created_at: string
+          deadline: string | null
+          id: string
+          payload: Json
+          rejection_reason: string | null
+          resulting_order_id: string | null
+          service_type: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          ai_proposal?: Json | null
+          approved_at?: string | null
+          approved_by?: string | null
+          brief?: string | null
+          budget_eur?: number | null
+          client_id?: string | null
+          confidence?: number | null
+          conversation_id?: string | null
+          created_at?: string
+          deadline?: string | null
+          id?: string
+          payload?: Json
+          rejection_reason?: string | null
+          resulting_order_id?: string | null
+          service_type?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          ai_proposal?: Json | null
+          approved_at?: string | null
+          approved_by?: string | null
+          brief?: string | null
+          budget_eur?: number | null
+          client_id?: string | null
+          confidence?: number | null
+          conversation_id?: string | null
+          created_at?: string
+          deadline?: string | null
+          id?: string
+          payload?: Json
+          rejection_reason?: string | null
+          resulting_order_id?: string | null
+          service_type?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aurora_intake_drafts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "aurora_crm_clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "aurora_intake_drafts_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "aurora_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "aurora_intake_drafts_resulting_order_id_fkey"
+            columns: ["resulting_order_id"]
+            isOneToOne: false
+            referencedRelation: "aurora_business_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       aurora_landing_pages: {
         Row: {
           conversions_count: number | null
@@ -770,6 +962,44 @@ export type Database = {
             columns: ["landing_page_id"]
             isOneToOne: false
             referencedRelation: "aurora_landing_pages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      aurora_messages: {
+        Row: {
+          content: string
+          conversation_id: string
+          created_at: string
+          id: string
+          metadata: Json
+          role: string
+          tool_call: Json | null
+        }
+        Insert: {
+          content: string
+          conversation_id: string
+          created_at?: string
+          id?: string
+          metadata?: Json
+          role: string
+          tool_call?: Json | null
+        }
+        Update: {
+          content?: string
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          metadata?: Json
+          role?: string
+          tool_call?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aurora_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "aurora_conversations"
             referencedColumns: ["id"]
           },
         ]
@@ -5262,6 +5492,10 @@ export type Database = {
         Args: { _amount: number; _user_id: string }
         Returns: Json
       }
+      aurora_approve_intake_draft: {
+        Args: { _draft_id: string }
+        Returns: string
+      }
       aurora_n8n_run_finalize: {
         Args: {
           _error?: string
@@ -5270,6 +5504,10 @@ export type Database = {
           _status: string
         }
         Returns: Json
+      }
+      aurora_reject_intake_draft: {
+        Args: { _draft_id: string; _reason: string }
+        Returns: undefined
       }
       aurora_storage_fulfill_from_paddle: {
         Args: {
