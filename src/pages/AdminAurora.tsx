@@ -264,12 +264,13 @@ export default function AdminAurora() {
           <div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 animate-spin" /></div>
         ) : (
           <Tabs defaultValue="ranking">
-            <TabsList className="grid grid-cols-6 w-full max-w-4xl">
+            <TabsList className="grid grid-cols-7 w-full max-w-5xl">
               <TabsTrigger value="ranking">Nisze</TabsTrigger>
               <TabsTrigger value="orders">Zlecenia <Badge className="ml-2" variant="secondary">{orders.filter(o => o.status !== "completed").length}</Badge></TabsTrigger>
               <TabsTrigger value="n8n">n8n <Badge className="ml-2" variant="secondary">{workflows.length}</Badge></TabsTrigger>
               <TabsTrigger value="runs">Runs <Badge className="ml-2" variant="secondary">{runs.filter(r => r.status === "running").length}</Badge></TabsTrigger>
               <TabsTrigger value="r2"><Cloud className="w-3 h-3 mr-1" />R2</TabsTrigger>
+              <TabsTrigger value="storage"><HardDrive className="w-3 h-3 mr-1" />Storage Desk</TabsTrigger>
               <TabsTrigger value="archived">Archiwum</TabsTrigger>
             </TabsList>
 
