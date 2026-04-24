@@ -60,6 +60,23 @@ Deno.serve(async (req) => {
           }).eq("id", run.order_id);
         }
       }
+
+      // Jeśli to był run pracownika z workforce — zamknij job (zwolni worka, zliczy success/fail)
+      const { data: wfJob } = await supabase
+        .from("aurora_workforce_jobs")
+        .select("id")
+        .eq("run_id", run_id)
+        .maybeSingle();
+      if (wfJob?.id) {
+        await supabase.rpc("aurora_workforce_complete_job", {
+          _job_id: wfJob.id,
+          _success: status === "success",
+          _result: output ?? {},
+          _error: error ?? null,
+          _run_id: run_id,
+        });
+      }
+
       return new Response(JSON.stringify({ ok: true, finalize: data }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });

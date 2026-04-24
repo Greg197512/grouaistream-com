@@ -11,11 +11,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, Rocket, Target, Trash2, RefreshCw, Briefcase, Workflow, PlayCircle, Plus, ExternalLink, ArrowLeft, Cloud, Download, HardDrive } from "lucide-react";
+import { Loader2, Rocket, Target, Trash2, RefreshCw, Briefcase, Workflow, PlayCircle, Plus, ExternalLink, ArrowLeft, Cloud, Download, HardDrive, Users } from "lucide-react";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { pl } from "date-fns/locale";
 import { AuroraStorageDesk } from "@/components/admin/AuroraStorageDesk";
+import { AuroraWorkforceDesk } from "@/components/admin/AuroraWorkforceDesk";
 
 
 interface Niche {
@@ -265,13 +266,14 @@ export default function AdminAurora() {
           <div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 animate-spin" /></div>
         ) : (
           <Tabs defaultValue="ranking">
-            <TabsList className="grid grid-cols-7 w-full max-w-5xl">
+            <TabsList className="grid grid-cols-8 w-full max-w-6xl">
               <TabsTrigger value="ranking">Nisze</TabsTrigger>
               <TabsTrigger value="orders">Zlecenia <Badge className="ml-2" variant="secondary">{orders.filter(o => o.status !== "completed").length}</Badge></TabsTrigger>
               <TabsTrigger value="n8n">n8n <Badge className="ml-2" variant="secondary">{workflows.length}</Badge></TabsTrigger>
               <TabsTrigger value="runs">Runs <Badge className="ml-2" variant="secondary">{runs.filter(r => r.status === "running").length}</Badge></TabsTrigger>
+              <TabsTrigger value="workforce"><Users className="w-3 h-3 mr-1" />Workforce</TabsTrigger>
               <TabsTrigger value="r2"><Cloud className="w-3 h-3 mr-1" />R2</TabsTrigger>
-              <TabsTrigger value="storage"><HardDrive className="w-3 h-3 mr-1" />Storage Desk</TabsTrigger>
+              <TabsTrigger value="storage"><HardDrive className="w-3 h-3 mr-1" />Storage</TabsTrigger>
               <TabsTrigger value="archived">Archiwum</TabsTrigger>
             </TabsList>
 
@@ -631,6 +633,11 @@ export default function AdminAurora() {
                   <p className="text-xs text-muted-foreground mt-2">{`{ file_name, content_base64|content_text, content_type?, category?, niche_id?, order_id?, run_id?, visibility?, storage_subscription_id? }`}</p>
                 </CardContent>
               </Card>
+            </TabsContent>
+
+            {/* WORKFORCE */}
+            <TabsContent value="workforce" className="mt-4">
+              <AuroraWorkforceDesk />
             </TabsContent>
 
             {/* STORAGE DESK */}
