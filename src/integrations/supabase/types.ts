@@ -475,6 +475,72 @@ export type Database = {
         }
         Relationships: []
       }
+      aurora_compliance_log: {
+        Row: {
+          action_type: string
+          created_at: string
+          decision: string
+          failed_checks: Json | null
+          id: string
+          notes: string | null
+          quality_score: number | null
+          reference_id: string | null
+          reference_table: string | null
+        }
+        Insert: {
+          action_type: string
+          created_at?: string
+          decision: string
+          failed_checks?: Json | null
+          id?: string
+          notes?: string | null
+          quality_score?: number | null
+          reference_id?: string | null
+          reference_table?: string | null
+        }
+        Update: {
+          action_type?: string
+          created_at?: string
+          decision?: string
+          failed_checks?: Json | null
+          id?: string
+          notes?: string | null
+          quality_score?: number | null
+          reference_id?: string | null
+          reference_table?: string | null
+        }
+        Relationships: []
+      }
+      aurora_compliance_rules: {
+        Row: {
+          action_type: string
+          auto_approve: boolean
+          banned_terms: string[]
+          checklist: Json
+          id: string
+          min_quality_score: number
+          updated_at: string
+        }
+        Insert: {
+          action_type: string
+          auto_approve?: boolean
+          banned_terms?: string[]
+          checklist?: Json
+          id?: string
+          min_quality_score?: number
+          updated_at?: string
+        }
+        Update: {
+          action_type?: string
+          auto_approve?: boolean
+          banned_terms?: string[]
+          checklist?: Json
+          id?: string
+          min_quality_score?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       aurora_landing_pages: {
         Row: {
           conversions_count: number | null
@@ -484,8 +550,11 @@ export type Database = {
           hero_headline: string | null
           hero_subheadline: string | null
           id: string
+          last_refreshed_at: string | null
           meta_description: string | null
           niche: string
+          refresh_count: number | null
+          refresh_interval_days: number | null
           sections: Json
           slug: string
           sponsor_active: boolean | null
@@ -505,8 +574,11 @@ export type Database = {
           hero_headline?: string | null
           hero_subheadline?: string | null
           id?: string
+          last_refreshed_at?: string | null
           meta_description?: string | null
           niche: string
+          refresh_count?: number | null
+          refresh_interval_days?: number | null
           sections?: Json
           slug: string
           sponsor_active?: boolean | null
@@ -526,8 +598,11 @@ export type Database = {
           hero_headline?: string | null
           hero_subheadline?: string | null
           id?: string
+          last_refreshed_at?: string | null
           meta_description?: string | null
           niche?: string
+          refresh_count?: number | null
+          refresh_interval_days?: number | null
           sections?: Json
           slug?: string
           sponsor_active?: boolean | null
@@ -541,12 +616,138 @@ export type Database = {
         }
         Relationships: []
       }
+      aurora_landing_variants: {
+        Row: {
+          clicks: number
+          conversions: number
+          created_at: string
+          cta_text: string
+          hero_headline: string
+          hero_subheadline: string | null
+          id: string
+          is_winner: boolean
+          landing_page_id: string
+          variant_label: string
+          views: number
+          weight: number
+        }
+        Insert: {
+          clicks?: number
+          conversions?: number
+          created_at?: string
+          cta_text?: string
+          hero_headline: string
+          hero_subheadline?: string | null
+          id?: string
+          is_winner?: boolean
+          landing_page_id: string
+          variant_label: string
+          views?: number
+          weight?: number
+        }
+        Update: {
+          clicks?: number
+          conversions?: number
+          created_at?: string
+          cta_text?: string
+          hero_headline?: string
+          hero_subheadline?: string | null
+          id?: string
+          is_winner?: boolean
+          landing_page_id?: string
+          variant_label?: string
+          views?: number
+          weight?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aurora_landing_variants_landing_page_id_fkey"
+            columns: ["landing_page_id"]
+            isOneToOne: false
+            referencedRelation: "aurora_landing_pages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      aurora_metric_events: {
+        Row: {
+          amount_eur: number | null
+          country: string | null
+          created_at: string
+          event_type: string
+          id: string
+          landing_page_id: string | null
+          niche_id: string | null
+          referrer: string | null
+          session_id: string | null
+          user_agent_hash: string | null
+          variant_id: string | null
+        }
+        Insert: {
+          amount_eur?: number | null
+          country?: string | null
+          created_at?: string
+          event_type: string
+          id?: string
+          landing_page_id?: string | null
+          niche_id?: string | null
+          referrer?: string | null
+          session_id?: string | null
+          user_agent_hash?: string | null
+          variant_id?: string | null
+        }
+        Update: {
+          amount_eur?: number | null
+          country?: string | null
+          created_at?: string
+          event_type?: string
+          id?: string
+          landing_page_id?: string | null
+          niche_id?: string | null
+          referrer?: string | null
+          session_id?: string | null
+          user_agent_hash?: string | null
+          variant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aurora_metric_events_landing_page_id_fkey"
+            columns: ["landing_page_id"]
+            isOneToOne: false
+            referencedRelation: "aurora_landing_pages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "aurora_metric_events_niche_id_fkey"
+            columns: ["niche_id"]
+            isOneToOne: false
+            referencedRelation: "aurora_niche_performance"
+            referencedColumns: ["niche_id"]
+          },
+          {
+            foreignKeyName: "aurora_metric_events_niche_id_fkey"
+            columns: ["niche_id"]
+            isOneToOne: false
+            referencedRelation: "aurora_niches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "aurora_metric_events_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "aurora_landing_variants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       aurora_niches: {
         Row: {
+          affiliate_potential: number | null
           category: string
           competition_level: string | null
           confidence_score: number | null
           content_pillars: Json | null
+          cpc_estimate_eur: number | null
           description: string | null
           discovered_at: string
           domain_suggestions: Json | null
@@ -554,6 +755,7 @@ export type Database = {
           estimated_monthly_revenue_eur: number | null
           first_actions: Json | null
           id: string
+          keyword_volume_monthly: number | null
           launched_at: string | null
           launched_url: string | null
           legal_risk: string | null
@@ -561,18 +763,22 @@ export type Database = {
           monetization_methods: Json | null
           niche_name: string
           notes: string | null
+          opportunity_score: number | null
           reviewed_at: string | null
           reviewer_user_id: string | null
           search_volume_estimate: number | null
+          seo_difficulty: number | null
           source_urls: Json | null
           status: string
           target_audience: string | null
         }
         Insert: {
+          affiliate_potential?: number | null
           category: string
           competition_level?: string | null
           confidence_score?: number | null
           content_pillars?: Json | null
+          cpc_estimate_eur?: number | null
           description?: string | null
           discovered_at?: string
           domain_suggestions?: Json | null
@@ -580,6 +786,7 @@ export type Database = {
           estimated_monthly_revenue_eur?: number | null
           first_actions?: Json | null
           id?: string
+          keyword_volume_monthly?: number | null
           launched_at?: string | null
           launched_url?: string | null
           legal_risk?: string | null
@@ -587,18 +794,22 @@ export type Database = {
           monetization_methods?: Json | null
           niche_name: string
           notes?: string | null
+          opportunity_score?: number | null
           reviewed_at?: string | null
           reviewer_user_id?: string | null
           search_volume_estimate?: number | null
+          seo_difficulty?: number | null
           source_urls?: Json | null
           status?: string
           target_audience?: string | null
         }
         Update: {
+          affiliate_potential?: number | null
           category?: string
           competition_level?: string | null
           confidence_score?: number | null
           content_pillars?: Json | null
+          cpc_estimate_eur?: number | null
           description?: string | null
           discovered_at?: string
           domain_suggestions?: Json | null
@@ -606,6 +817,7 @@ export type Database = {
           estimated_monthly_revenue_eur?: number | null
           first_actions?: Json | null
           id?: string
+          keyword_volume_monthly?: number | null
           launched_at?: string | null
           launched_url?: string | null
           legal_risk?: string | null
@@ -613,9 +825,11 @@ export type Database = {
           monetization_methods?: Json | null
           niche_name?: string
           notes?: string | null
+          opportunity_score?: number | null
           reviewed_at?: string | null
           reviewer_user_id?: string | null
           search_volume_estimate?: number | null
+          seo_difficulty?: number | null
           source_urls?: Json | null
           status?: string
           target_audience?: string | null
@@ -2470,6 +2684,9 @@ export type Database = {
           generated_by_ai: boolean
           id: string
           is_published: boolean
+          last_refreshed_at: string | null
+          refresh_count: number | null
+          refresh_interval_days: number | null
           slug: string
           tags: string[] | null
           title: string
@@ -2496,6 +2713,9 @@ export type Database = {
           generated_by_ai?: boolean
           id?: string
           is_published?: boolean
+          last_refreshed_at?: string | null
+          refresh_count?: number | null
+          refresh_interval_days?: number | null
           slug: string
           tags?: string[] | null
           title: string
@@ -2522,6 +2742,9 @@ export type Database = {
           generated_by_ai?: boolean
           id?: string
           is_published?: boolean
+          last_refreshed_at?: string | null
+          refresh_count?: number | null
+          refresh_interval_days?: number | null
           slug?: string
           tags?: string[] | null
           title?: string
@@ -3973,6 +4196,24 @@ export type Database = {
       }
     }
     Views: {
+      aurora_niche_performance: {
+        Row: {
+          age_days: number | null
+          category: string | null
+          clicks_7d: number | null
+          cost_eur_7d: number | null
+          ctr_7d: number | null
+          leads_7d: number | null
+          niche_id: string | null
+          niche_name: string | null
+          opportunity_score: number | null
+          revenue_7d: number | null
+          roi_7d: number | null
+          status: string | null
+          views_7d: number | null
+        }
+        Relationships: []
+      }
       public_profiles: {
         Row: {
           avatar_url: string | null
