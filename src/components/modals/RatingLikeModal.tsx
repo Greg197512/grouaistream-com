@@ -35,8 +35,8 @@ export const RatingLikeModal = ({
       toast.error("Wybierz ocenę 1-5 gwiazdek");
       return;
     }
-    if (listenedSeconds < 30) {
-      toast.error(`Posłuchaj minimum 30 sekund (masz ${Math.floor(listenedSeconds)}s) ⏱`);
+    if (listenedSeconds < 45) {
+      toast.error(`Posłuchaj minimum 45 sekund (masz ${Math.floor(listenedSeconds)}s) ⏱`);
       return;
     }
     setSubmitting(true);
@@ -54,7 +54,7 @@ export const RatingLikeModal = ({
           track_not_found: "Utwór nie istnieje",
           invalid_stars: "Nieprawidłowa liczba gwiazdek",
           unauthorized: "Musisz być zalogowany",
-          listen_too_short: `Posłuchaj minimum 30 sekund, aby polubić ⏱`,
+          listen_too_short: `Posłuchaj minimum 45 sekund, aby polubić ⏱`,
         };
         toast.error(errMap[res?.error || ""] || res?.error || "Nie udało się zapisać oceny");
         return;
@@ -77,7 +77,7 @@ export const RatingLikeModal = ({
   };
 
   const labels = ["", "Słabe", "Średnie", "Dobre", "Świetne", "Genialne"];
-  const tooShort = listenedSeconds < 30;
+  const tooShort = listenedSeconds < 45;
 
   return (
     <Dialog open={isOpen} onOpenChange={(o) => !o && handleClose()}>
@@ -129,7 +129,7 @@ export const RatingLikeModal = ({
 
           <div className="mt-4 text-center text-xs">
             <span className={cn("font-mono", tooShort ? "text-destructive" : "text-primary")}>
-              ⏱ Odsłuchano: {Math.floor(listenedSeconds)}s / 30s {tooShort && "— wymagane minimum 30s aby polubić"}
+              ⏱ Odsłuchano: {Math.floor(listenedSeconds)}s / 45s {tooShort && "— wymagane minimum 45s aby polubić"}
             </span>
           </div>
           {!tooShort && (
@@ -148,7 +148,7 @@ export const RatingLikeModal = ({
             disabled={stars < 1 || submitting || tooShort}
             className="bg-primary hover:bg-primary/80"
           >
-            {submitting ? "Zapisuję..." : tooShort ? `Posłuchaj jeszcze ${30 - Math.floor(listenedSeconds)}s` : `Polub z ${stars || "?"}★`}
+            {submitting ? "Zapisuję..." : tooShort ? `Posłuchaj jeszcze ${45 - Math.floor(listenedSeconds)}s` : `Polub z ${stars || "?"}★`}
           </Button>
         </div>
       </DialogContent>
