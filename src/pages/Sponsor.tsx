@@ -51,7 +51,7 @@ const PACKAGES = [
 ];
 
 export default function SponsorPage() {
-  const { openCheckout, loading } = usePaddleCheckout();
+  const [loading, setLoading] = useState(false);
   const { user } = useAuth();
 
   useEffect(() => {
@@ -60,14 +60,21 @@ export default function SponsorPage() {
     if (m) m.setAttribute("content", "Promuj swoją markę w ekosystemie GrouAI Stream przez sponsoring blogowy, niszowych landingów lub akcję partnerską z Aurorą.");
   }, []);
 
-  const buy = (priceId: string) => {
-    openCheckout({
-      priceId,
-      quantity: 1,
-      customerEmail: user?.email,
-      customData: { userId: user?.id || "guest", source: "sponsor_page" },
-      successUrl: `${window.location.origin}/sponsor?success=1`,
-    });
+  const buy = async (priceId: string) => {
+    setLoading(true);
+    try {
+      await openPaddleCheckout({
+        priceId,
+        quantity: 1,
+        customerEmail: user?.email,
+        customData: { userId: user?.id || "guest", source: "sponsor_page" },
+        successUrl: `${window.location.origin}/sponsor?success=1`,
+      });
+    } catch (e: any) {
+      toast.error(e?.message || "Nie udało się otworzyć checkoutu");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

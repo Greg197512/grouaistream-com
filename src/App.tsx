@@ -49,6 +49,7 @@ import BlogPost from "./pages/BlogPost";
 import AdSubmission from "./pages/AdSubmission";
 import Orders from "./pages/Orders";
 import NicheLandingPage from "./pages/NicheLandingPage";
+import Sponsor from "./pages/Sponsor";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -125,6 +126,7 @@ const AppShell = () => {
           <Route path="/reklama/:token" element={<AdSubmission />} />
           <Route path="/orders" element={<Orders />} />
           <Route path="/n/:slug" element={<NicheLandingPage />} />
+          <Route path="/sponsor" element={<Sponsor />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
