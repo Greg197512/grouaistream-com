@@ -28,9 +28,14 @@ interface ClientUsage {
   estimated_cost_eur: number;
   projected_usage_gb: number;
   r2_real_cost_eur: number;
+  r2_egress_cost_eur: number;
+  r2_total_cost_eur: number;
   plan_margin_eur: number;
   current_period_end: string | null;
   paddle_subscription_id: string | null;
+  egress_billing_enabled: boolean;
+  egress_used_gb: number;
+  effective_egress_cost_per_gb_eur: number;
   suggested_upgrade: {
     plan_code: string;
     plan_name: string;
