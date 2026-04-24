@@ -201,6 +201,43 @@ export const AuroraPanel = () => {
     }
   };
 
+  const triggerNicheScanner = async () => {
+    setScanningNiches(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("aurora-niche-scanner", { body: {} });
+      if (error) throw error;
+      toast.success(`🎯 Aurora znalazła ${data?.count || 0} nisz poza muzyką`);
+      await loadAll();
+    } catch (e: any) {
+      toast.error(`Skaner nisz: ${e.message || "błąd"}`);
+    } finally {
+      setScanningNiches(false);
+    }
+  };
+
+  const launchNiche = async (id: string) => {
+    setLaunchingNicheId(id);
+    try {
+      const { data, error } = await supabase.functions.invoke("aurora-launch-niche", { body: { niche_id: id } });
+      if (error) throw error;
+      toast.success(`🚀 Nisza uruchomiona: ${data?.url || "ok"}`);
+      await loadAll();
+    } catch (e: any) {
+      toast.error(`Start nisz nieudany: ${e.message || "błąd"}`);
+    } finally {
+      setLaunchingNicheId(null);
+    }
+  };
+
+  const rejectNiche = async (id: string) => {
+    const { error } = await supabase
+      .from("aurora_niches" as any)
+      .update({ status: "rejected", reviewed_at: new Date().toISOString() })
+      .eq("id", id);
+    if (error) toast.error(error.message);
+    else { toast.success("Nisza odrzucona"); loadAll(); }
+  };
+
   const approveAction = async (id: string) => {
     setApprovingId(id);
     try {
