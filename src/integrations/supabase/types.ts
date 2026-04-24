@@ -1634,6 +1634,199 @@ export type Database = {
           },
         ]
       }
+      aurora_worker_ranks: {
+        Row: {
+          can_delegate: boolean
+          code: string
+          color_hex: string | null
+          created_at: string
+          description: string | null
+          id: string
+          level: number
+          max_concurrent_jobs: number
+          name: string
+        }
+        Insert: {
+          can_delegate?: boolean
+          code: string
+          color_hex?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          level?: number
+          max_concurrent_jobs?: number
+          name: string
+        }
+        Update: {
+          can_delegate?: boolean
+          code?: string
+          color_hex?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          level?: number
+          max_concurrent_jobs?: number
+          name?: string
+        }
+        Relationships: []
+      }
+      aurora_workers: {
+        Row: {
+          created_at: string
+          current_jobs: number
+          display_name: string
+          domain: string
+          id: string
+          is_busy: boolean
+          last_assigned_at: string | null
+          notes: string | null
+          rank_id: string | null
+          scopes: string[]
+          status: string
+          total_completed: number
+          total_failed: number
+          updated_at: string
+          workflow_db_id: string | null
+          workflow_id: string
+        }
+        Insert: {
+          created_at?: string
+          current_jobs?: number
+          display_name: string
+          domain: string
+          id?: string
+          is_busy?: boolean
+          last_assigned_at?: string | null
+          notes?: string | null
+          rank_id?: string | null
+          scopes?: string[]
+          status?: string
+          total_completed?: number
+          total_failed?: number
+          updated_at?: string
+          workflow_db_id?: string | null
+          workflow_id: string
+        }
+        Update: {
+          created_at?: string
+          current_jobs?: number
+          display_name?: string
+          domain?: string
+          id?: string
+          is_busy?: boolean
+          last_assigned_at?: string | null
+          notes?: string | null
+          rank_id?: string | null
+          scopes?: string[]
+          status?: string
+          total_completed?: number
+          total_failed?: number
+          updated_at?: string
+          workflow_db_id?: string | null
+          workflow_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aurora_workers_rank_id_fkey"
+            columns: ["rank_id"]
+            isOneToOne: false
+            referencedRelation: "aurora_worker_ranks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "aurora_workers_workflow_db_id_fkey"
+            columns: ["workflow_db_id"]
+            isOneToOne: false
+            referencedRelation: "aurora_n8n_workflows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      aurora_workforce_jobs: {
+        Row: {
+          attempts: number
+          created_at: string
+          domain: string
+          error_message: string | null
+          finished_at: string | null
+          id: string
+          lock_expires_at: string | null
+          locked_at: string | null
+          locked_by: string | null
+          max_attempts: number
+          payload: Json
+          priority: number
+          requested_by: string | null
+          result: Json | null
+          run_id: string | null
+          scope: string
+          started_at: string | null
+          status: string
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          domain: string
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string
+          lock_expires_at?: string | null
+          locked_at?: string | null
+          locked_by?: string | null
+          max_attempts?: number
+          payload?: Json
+          priority?: number
+          requested_by?: string | null
+          result?: Json | null
+          run_id?: string | null
+          scope: string
+          started_at?: string | null
+          status?: string
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          domain?: string
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string
+          lock_expires_at?: string | null
+          locked_at?: string | null
+          locked_by?: string | null
+          max_attempts?: number
+          payload?: Json
+          priority?: number
+          requested_by?: string | null
+          result?: Json | null
+          run_id?: string | null
+          scope?: string
+          started_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aurora_workforce_jobs_locked_by_fkey"
+            columns: ["locked_by"]
+            isOneToOne: false
+            referencedRelation: "aurora_workers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "aurora_workforce_jobs_locked_by_fkey"
+            columns: ["locked_by"]
+            isOneToOne: false
+            referencedRelation: "aurora_workforce_overview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "aurora_workforce_jobs_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "aurora_n8n_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       blog_affiliate_links: {
         Row: {
           brand: string
@@ -4976,6 +5169,27 @@ export type Database = {
         }
         Relationships: []
       }
+      aurora_workforce_overview: {
+        Row: {
+          active_jobs: number | null
+          color_hex: string | null
+          current_jobs: number | null
+          display_name: string | null
+          domain: string | null
+          id: string | null
+          is_busy: boolean | null
+          max_concurrent_jobs: number | null
+          rank_code: string | null
+          rank_level: number | null
+          rank_name: string | null
+          scopes: string[] | null
+          status: string | null
+          total_completed: number | null
+          total_failed: number | null
+          workflow_id: string | null
+        }
+        Relationships: []
+      }
       public_profiles: {
         Row: {
           avatar_url: string | null
@@ -5065,6 +5279,29 @@ export type Database = {
           _price_external_id: string
           _status: string
           _user_id: string
+        }
+        Returns: string
+      }
+      aurora_workforce_claim_job: {
+        Args: { _lock_seconds?: number }
+        Returns: Json
+      }
+      aurora_workforce_complete_job: {
+        Args: {
+          _error?: string
+          _job_id: string
+          _result?: Json
+          _run_id?: string
+          _success: boolean
+        }
+        Returns: Json
+      }
+      aurora_workforce_enqueue: {
+        Args: {
+          _max_attempts?: number
+          _payload?: Json
+          _priority?: number
+          _scope: string
         }
         Returns: string
       }
