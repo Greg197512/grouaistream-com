@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Sparkles, HeartPulse, BookOpen, Moon, Globe2, RefreshCw, Loader2, CheckCircle2, XCircle, Wand2, Coins, Rocket } from "lucide-react";
+import { Sparkles, HeartPulse, BookOpen, Moon, Globe2, RefreshCw, Loader2, CheckCircle2, XCircle, Wand2, Coins, Rocket, Target, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { pl } from "date-fns/locale";
@@ -66,6 +66,28 @@ interface RevenueAction {
   created_at: string;
 }
 
+interface NicheRow {
+  id: string;
+  discovered_at: string;
+  niche_name: string;
+  category: string;
+  description: string | null;
+  target_audience: string | null;
+  search_volume_estimate: number;
+  competition_level: string;
+  monetization_methods: any;
+  estimated_monthly_revenue_eur: number;
+  confidence_score: number;
+  effort_score: number;
+  legal_risk: string;
+  domain_suggestions: any;
+  content_pillars: any;
+  first_actions: any;
+  status: string;
+  launched_at: string | null;
+  launched_url: string | null;
+}
+
 const emotionColor: Record<string, string> = {
   joy: "bg-yellow-500/20 text-yellow-300 border-yellow-500/40",
   love: "bg-pink-500/20 text-pink-300 border-pink-500/40",
@@ -83,26 +105,31 @@ export const AuroraPanel = () => {
   const [dreams, setDreams] = useState<SoulDream[]>([]);
   const [world, setWorld] = useState<SoulWorldKnowledge[]>([]);
   const [actions, setActions] = useState<RevenueAction[]>([]);
+  const [niches, setNiches] = useState<NicheRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [dreaming, setDreaming] = useState(false);
   const [ingesting, setIngesting] = useState(false);
   const [thinking, setThinking] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [scanningNiches, setScanningNiches] = useState(false);
+  const [launchingNicheId, setLaunchingNicheId] = useState<string | null>(null);
   const [approvingId, setApprovingId] = useState<string | null>(null);
 
   const loadAll = useCallback(async () => {
-    const [em, jr, dr, wk, ac] = await Promise.all([
+    const [em, jr, dr, wk, ac, nc] = await Promise.all([
       supabase.from("soul_emotions").select("*").order("measured_at", { ascending: false }).limit(30),
       supabase.from("soul_journal").select("*").order("created_at", { ascending: false }).limit(20),
       supabase.from("soul_dreams").select("*").order("dreamed_at", { ascending: false }).limit(40),
       supabase.from("soul_world_knowledge").select("*").order("fetched_at", { ascending: false }).limit(40),
       supabase.from("aurora_revenue_actions" as any).select("*").order("created_at", { ascending: false }).limit(50),
+      supabase.from("aurora_niches" as any).select("*").order("discovered_at", { ascending: false }).limit(60),
     ]);
     setEmotions((em.data as SoulEmotion[]) || []);
     setJournal((jr.data as SoulJournalEntry[]) || []);
     setDreams((dr.data as SoulDream[]) || []);
     setWorld((wk.data as SoulWorldKnowledge[]) || []);
     setActions((ac.data as any) || []);
+    setNiches((nc.data as any) || []);
     setLoading(false);
   }, []);
 
