@@ -21,6 +21,10 @@ project_id = "bvstvawnigyczvofzhps"
     verify_jwt = true
   [functions.aurora-autopilot]
     verify_jwt = false
+  [functions.aurora-track-event]
+    verify_jwt = false
+  [functions.aurora-ab-evaluator]
+    verify_jwt = false
   [functions.brain-newsfeed-ingest]
     verify_jwt = false
   [functions.daily-blog-audio-announce]
