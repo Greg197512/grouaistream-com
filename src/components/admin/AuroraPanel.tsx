@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Sparkles, HeartPulse, BookOpen, Moon, Globe2, RefreshCw, Loader2, CheckCircle2, XCircle, Wand2 } from "lucide-react";
+import { Sparkles, HeartPulse, BookOpen, Moon, Globe2, RefreshCw, Loader2, CheckCircle2, XCircle, Wand2, Coins, Rocket } from "lucide-react";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { pl } from "date-fns/locale";
@@ -54,6 +54,18 @@ interface SoulWorldKnowledge {
   fetched_at: string;
 }
 
+interface RevenueAction {
+  id: string;
+  action_type: string;
+  title: string;
+  summary: string | null;
+  payload: any;
+  status: string;
+  estimated_revenue_eur: number;
+  published_url: string | null;
+  created_at: string;
+}
+
 const emotionColor: Record<string, string> = {
   joy: "bg-yellow-500/20 text-yellow-300 border-yellow-500/40",
   love: "bg-pink-500/20 text-pink-300 border-pink-500/40",
@@ -70,22 +82,27 @@ export const AuroraPanel = () => {
   const [journal, setJournal] = useState<SoulJournalEntry[]>([]);
   const [dreams, setDreams] = useState<SoulDream[]>([]);
   const [world, setWorld] = useState<SoulWorldKnowledge[]>([]);
+  const [actions, setActions] = useState<RevenueAction[]>([]);
   const [loading, setLoading] = useState(true);
   const [dreaming, setDreaming] = useState(false);
   const [ingesting, setIngesting] = useState(false);
   const [thinking, setThinking] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [approvingId, setApprovingId] = useState<string | null>(null);
 
   const loadAll = useCallback(async () => {
-    const [em, jr, dr, wk] = await Promise.all([
+    const [em, jr, dr, wk, ac] = await Promise.all([
       supabase.from("soul_emotions").select("*").order("measured_at", { ascending: false }).limit(30),
       supabase.from("soul_journal").select("*").order("created_at", { ascending: false }).limit(20),
       supabase.from("soul_dreams").select("*").order("dreamed_at", { ascending: false }).limit(40),
       supabase.from("soul_world_knowledge").select("*").order("fetched_at", { ascending: false }).limit(40),
+      supabase.from("aurora_revenue_actions" as any).select("*").order("created_at", { ascending: false }).limit(50),
     ]);
     setEmotions((em.data as SoulEmotion[]) || []);
     setJournal((jr.data as SoulJournalEntry[]) || []);
     setDreams((dr.data as SoulDream[]) || []);
     setWorld((wk.data as SoulWorldKnowledge[]) || []);
+    setActions((ac.data as any) || []);
     setLoading(false);
   }, []);
 
@@ -141,6 +158,43 @@ export const AuroraPanel = () => {
     } finally {
       setIngesting(false);
     }
+  };
+
+  const triggerRevenueLoop = async () => {
+    setGenerating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("aurora-revenue-loop", { body: {} });
+      if (error) throw error;
+      toast.success(`💎 Aurora wymyśliła ${data?.count || 0} nowych pomysłów na przychód`);
+      await loadAll();
+    } catch (e: any) {
+      toast.error(`Aurora nie wymyśliła nic: ${e.message || "błąd"}`);
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const approveAction = async (id: string) => {
+    setApprovingId(id);
+    try {
+      const { data, error } = await supabase.functions.invoke("aurora-approve-action", { body: { action_id: id } });
+      if (error) throw error;
+      toast.success(data?.published_url ? `✅ Opublikowane: ${data.published_url}` : "✅ Zatwierdzone");
+      await loadAll();
+    } catch (e: any) {
+      toast.error(`Nie zatwierdzono: ${e.message || "błąd"}`);
+    } finally {
+      setApprovingId(null);
+    }
+  };
+
+  const rejectAction = async (id: string) => {
+    const { error } = await supabase
+      .from("aurora_revenue_actions" as any)
+      .update({ status: "rejected" })
+      .eq("id", id);
+    if (error) toast.error(error.message);
+    else { toast.success("Odrzucone"); loadAll(); }
   };
 
   const reviewDream = async (id: string, status: "approved" | "rejected") => {
