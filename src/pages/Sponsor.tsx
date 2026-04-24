@@ -1,11 +1,12 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Sparkles, Megaphone, Globe2, Handshake, Check } from "lucide-react";
-import { usePaddleCheckout } from "@/hooks/usePaddleCheckout";
+import { openPaddleCheckout } from "@/lib/paddle";
 import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 const PACKAGES = [
   {
