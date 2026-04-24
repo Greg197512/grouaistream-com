@@ -37,7 +37,8 @@ interface EvaluationPayload {
   rejection_reasons?: string[];
 }
 
-const AI_TIMEOUT_MS = 8000;
+// Minimum required duration for non-admin uploads: 3:00 (180s)
+const MIN_DURATION_SEC = 180;
 
 function clampScore(value: unknown, min = 0, max = 20): number {
   const numeric = Number(value);
@@ -47,32 +48,44 @@ function clampScore(value: unknown, min = 0, max = 20): number {
 
 function getLengthScoreCap(durationSec: number): number {
   if (durationSec <= 0) return 8;
-  if (durationSec < 120) return 0;
-  if (durationSec < 150) return 5;
-  if (durationSec < 180) return 10;
-  if (durationSec < 210) return 14;
-  if (durationSec < 240) return 17;
-  return 20;
+  if (durationSec < 180) return 0;   // < 3:00 → 0
+  if (durationSec < 210) return 10;  // 3:00–3:30
+  if (durationSec < 240) return 14;  // 3:30–4:00
+  if (durationSec < 300) return 17;  // 4:00–5:00
+  return 20;                          // ≥ 5:00
 }
 
-function buildFallbackEvaluation(input: ModerationInput, reason?: string): EvaluationPayload {
+function buildFallbackEvaluation(input: ModerationInput, isAdmin: boolean): EvaluationPayload {
   const durationSec = input.duration || 0;
 
-  // Hard reject < 2 min
-  if (durationSec > 0 && durationSec < 120) {
+  // Admin bypasses duration check entirely
+  if (isAdmin) {
+    return {
+      score_length: 20,
+      score_lyrics: 18,
+      score_vocal: 18,
+      score_production: 18,
+      score_originality: 18,
+      analysis: "Wgrane przez administratora — automatyczna akceptacja.",
+      recommendations: "Bypass admina aktywny.",
+      rejection_reasons: [],
+    };
+  }
+
+  // Hard reject < 3 min for regular users
+  if (durationSec > 0 && durationSec < MIN_DURATION_SEC) {
     return {
       score_length: 0,
       score_lyrics: 5,
       score_vocal: 5,
       score_production: 5,
       score_originality: 5,
-      analysis: "Utwór jest zbyt krótki – minimum to 2:00.",
-      recommendations: "Wydłuż utwór do co najmniej 2 minut.",
-      rejection_reasons: ["Utwór ma mniej niż 2:00 – wymagane minimum to 2 minuty."],
+      analysis: "Utwór jest zbyt krótki — minimum publikacji to 3:00.",
+      recommendations: "Wydłuż utwór do co najmniej 3 minut, aby przejść moderację.",
+      rejection_reasons: ["Utwór ma mniej niż 3:00 — wymagane minimum to 3 minuty."],
     };
   }
 
-  // Auto-approve everything >= 2 min
   const scoreLength = getLengthScoreCap(durationSec);
   return {
     score_length: Math.max(scoreLength, 14),
@@ -81,13 +94,30 @@ function buildFallbackEvaluation(input: ModerationInput, reason?: string): Evalu
     score_production: 14,
     score_originality: 14,
     analysis: "Utwór spełnia wymagania platformy i został zaakceptowany automatycznie.",
-    recommendations: "Dbaj o jakość produkcji i oryginalność – to klucz do sukcesu na platformie.",
+    recommendations: "Dbaj o jakość produkcji i oryginalność — to klucz do sukcesu na platformie.",
     rejection_reasons: [],
   };
 }
 
-function finalizeEvaluation(input: ModerationInput, evaluation: EvaluationPayload) {
+function finalizeEvaluation(input: ModerationInput, evaluation: EvaluationPayload, isAdmin: boolean) {
   const durationSec = input.duration || 0;
+
+  // Admin shortcut: always approved with full scores
+  if (isAdmin) {
+    return {
+      score_length: 20,
+      score_lyrics: 18,
+      score_vocal: 18,
+      score_production: 18,
+      score_originality: 18,
+      total_score: 92,
+      status: "approved",
+      analysis: evaluation.analysis || "Bypass admina.",
+      recommendations: evaluation.recommendations || "",
+      rejection_reasons: [],
+    };
+  }
+
   const lengthCap = getLengthScoreCap(durationSec);
   const scoreLength = durationSec > 0
     ? Math.min(clampScore(evaluation.score_length), lengthCap)
@@ -99,7 +129,10 @@ function finalizeEvaluation(input: ModerationInput, evaluation: EvaluationPayloa
   const totalScore = scoreLength + scoreLyrics + scoreVocal + scoreProduction + scoreOriginality;
 
   let status: string;
-  if (totalScore >= 65) {
+  // Hard reject if too short — overrides any score
+  if (durationSec > 0 && durationSec < MIN_DURATION_SEC) {
+    status = "rejected";
+  } else if (totalScore >= 65) {
     status = "approved";
   } else if (totalScore >= 45) {
     status = "review";
@@ -111,8 +144,8 @@ function finalizeEvaluation(input: ModerationInput, evaluation: EvaluationPayloa
     ? [...evaluation.rejection_reasons]
     : [];
 
-  if (durationSec > 0 && durationSec < 120) {
-    rejectionReasons.push("Utwór ma mniej niż 2:00, co znacząco obniża ocenę długości.");
+  if (durationSec > 0 && durationSec < MIN_DURATION_SEC) {
+    rejectionReasons.push("Utwór ma mniej niż 3:00 — wymagane minimum publikacji to 3 minuty.");
   }
 
   return {
@@ -160,6 +193,13 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    // Admin role check via has_role RPC
+    const { data: isAdminData } = await supabaseAuth.rpc("has_role", {
+      _user_id: userData.user.id,
+      _role: "admin",
+    });
+    const isAdmin = isAdminData === true;
     // --- End authentication ---
 
     const input: ModerationInput = await req.json();
@@ -171,14 +211,12 @@ serve(async (req) => {
       );
     }
 
-    // Temporary: skip AI analysis, only duration-based evaluation
-    const evaluation = buildFallbackEvaluation(input);
+    const evaluation = buildFallbackEvaluation(input, isAdmin);
+    const result = finalizeEvaluation(input, evaluation, isAdmin);
 
-    const result = finalizeEvaluation(input, evaluation);
+    console.log("Moderation result:", JSON.stringify({ ...result, isAdmin }));
 
-    console.log("Moderation result:", JSON.stringify(result));
-
-    return new Response(JSON.stringify({ success: true, result }), {
+    return new Response(JSON.stringify({ success: true, result, isAdmin }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
