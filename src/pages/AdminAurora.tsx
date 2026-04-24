@@ -33,6 +33,21 @@ interface Workflow {
   webhook_url: string | null; enabled: boolean; auto_assign: boolean;
   total_runs: number; total_success: number; total_failed: number;
 }
+interface Run {
+  id: string; workflow_id: string; status: string; trigger_source: string;
+  started_at: string; finished_at: string | null; duration_ms: number | null;
+  error_message: string | null; niche_id: string | null; order_id: string | null;
+  output_payload: any;
+}
+interface RunStep {
+  id: string; run_id: string; step_index: number; node_name: string;
+  status: string; message: string | null; data: any; created_at: string;
+}
+interface NicheSummary {
+  niche_id: string; niche_name: string; runs_30d: number; success_30d: number;
+  failed_30d: number; avg_duration_ms: number | null; last_run_at: string | null;
+  seo_pages_generated: number; backlinks_created: number; leads_captured: number;
+}
 
 const SERVICE_TYPES = [
   { value: "seo_audit", label: "Audyt SEO" },
