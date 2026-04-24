@@ -18,8 +18,29 @@ const Auth = () => {
   const [displayName, setDisplayName] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const navigate = useNavigate();
   const { signIn, signUp } = useAuth();
+
+  const handleGoogleSignIn = async () => {
+    setGoogleLoading(true);
+    try {
+      const result = await lovable.auth.signInWithOAuth("google", {
+        redirect_uri: window.location.origin,
+      });
+      if (result.error) {
+        toast.error(result.error.message || "Nie udało się zalogować przez Google");
+        setGoogleLoading(false);
+        return;
+      }
+      if (result.redirected) return;
+      toast.success("Zalogowano przez Google");
+      navigate("/");
+    } catch (e: any) {
+      toast.error(e?.message || "Błąd logowania Google");
+      setGoogleLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
