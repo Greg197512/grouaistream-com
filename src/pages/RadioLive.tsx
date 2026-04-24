@@ -106,10 +106,34 @@ const RadioLive = () => {
 
   // Filter announcements by selected language. Tracks (lang === null) are always kept.
   // Announcement items with `lang` set are kept ONLY when matching the user's UI language.
-  const schedule = useMemo(() => rawSchedule.filter((item) => {
-    if (item.item_type === "announcement" && item.lang && item.lang !== language) return false;
-    return true;
-  }), [rawSchedule, language]);
+  const schedule = useMemo(() => {
+    const filtered = rawSchedule.filter((item) => {
+      if (item.item_type === "announcement" && item.lang && item.lang !== language) return false;
+      return true;
+    });
+
+    const recentTrackIds: string[] = [];
+    const recentArtists: string[] = [];
+
+    return filtered.filter((item) => {
+      if (item.item_type === "announcement") return true;
+
+      const trackId = item.track?.id;
+      const artist = item.track?.artist?.trim().toLowerCase();
+
+      if (!trackId) return true;
+      if (recentTrackIds.includes(trackId)) return false;
+      if (artist && recentArtists.includes(artist)) return false;
+
+      recentTrackIds.push(trackId);
+      if (artist) recentArtists.push(artist);
+
+      if (recentTrackIds.length > 28) recentTrackIds.shift();
+      if (recentArtists.length > 10) recentArtists.shift();
+
+      return true;
+    });
+  }, [rawSchedule, language]);
 
   // Auth
   useEffect(() => {
@@ -402,19 +426,6 @@ const RadioLive = () => {
       const token = ++playbackTokenRef.current;
       const audioUrl = getItemAudioUrl(item);
       stopCurrentAudio();
-
-      // 🎙️ Force-jump to nearest announcement after 3:20 (only for tracks, not announcements)
-      const isAnnouncementItem = item.item_type === "announcement";
-      if (!isAnnouncementItem) {
-        window.setTimeout(() => {
-          if (playbackTokenRef.current !== token) return;
-          const annIndex = findNextAnnouncementIndex(index);
-          if (annIndex === null) return;
-          console.log("[RadioLive] ⏰ 3:20 reached — jumping to announcement at index", annIndex);
-          setCurrentIndex(annIndex);
-          startPlayback(annIndex);
-        }, 200_000); // 3 min 20 sec
-      }
 
       if (!audioUrl) {
         setIsPlaying(true);
