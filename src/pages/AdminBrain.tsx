@@ -31,7 +31,16 @@ const AdminBrain = () => {
 
   return (
     <MainLayout>
-      <div className="container mx-auto p-4 md:p-6">
+      <div className="container mx-auto p-4 md:p-6 space-y-4">
+        <div className="flex items-center justify-between p-3 rounded-lg border border-primary/30 bg-primary/5">
+          <div>
+            <div className="font-semibold">Aurora Business Desk</div>
+            <div className="text-xs text-muted-foreground">Pełny pulpit autonomicznego biznesu — nisze, zlecenia, n8n</div>
+          </div>
+          <button onClick={() => navigate("/admin/aurora")} className="px-4 py-2 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:opacity-90">
+            Otwórz pulpit →
+          </button>
+        </div>
         <BrainPanel />
       </div>
     </MainLayout>
