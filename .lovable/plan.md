@@ -1,69 +1,63 @@
 
 
-# ☕ "Włącz krany" — kawa w PlayerBar + tip-jar na każdym utworze
+# 🟡 Postaw paywall — twardy FeatureGate na Studio / AI DJ / Mood
 
-## Co dziś jest, a czego brakuje
+## Stan dziś (prawda z kodu)
 
-| Element | Stan |
-|---|---|
-| `BuyCoffeeButton` (Paddle, real money, 1€/3€/5€, z `recipientUserId` + `recipientTrackId`) | ✅ istnieje, ale **nigdzie nie używany przy utworach** |
-| `TipModal` w PlayerBar (portfel wewnętrzny, doładowywany przez admina) | ✅ działa, **zostaje bez zmian** |
-| Real-money kawa dla aktualnie granego utworu | ❌ brak |
-| Real-money kawa z poziomu listy utworów (Liked, Recently Played, Queue, wyniki wyszukiwania) | ❌ brak |
-| Sprawdzenie, że Paddle webhook poprawnie zapisuje `recipientTrackId`/`recipientUserId` i nabija `creator_earnings` typu `tip` | ❓ do weryfikacji |
+| Feature | Plan w kontrakcie | Co dziś faktycznie blokuje |
+|---|---|---|
+| **GrouAI Studio** (`/suno`) | Ultimate | Gate `if (user && !isUltimate)` — **niezalogowany** widzi cały panel, free user widzi gate, ale po kliknięciu „Generuj" jest tylko soft-paywall przez `freeUsed` count |
+| **AI DJ Section** (Index, „live-radio"/„ai-dj") | Pro (`canUseAIDJ`) | `<FeatureGate requiredPlan="pro">` — ✅ działa, ale **„QR Parkiet" + PartyActivationModal renderowane POZA bramką** (komentarz w kodzie: „always interactive") |
+| **Mood detector** w PlayerBar (kamera, „Rozpoznawanie nastroju") | Pro (`canUseMoodDetection`) | ❌ **Zero gate** — każdy klika `setShowMoodDetector(true)`, otwiera się pełny `QuickMoodDetector` |
+| **RadioMoodDetector** na `/radio-live` | Pro (`canUseMoodDetection`) | ❌ **Zero gate** |
+| **AI Psychologist** (`/mood-history`) | Ultimate | ✅ `<FeatureGate requiredPlan="ultimate" mode="hide">` |
+| **MoodDetector wewnątrz AIDJSection** | Pro | ✅ pokryty przez nadrzędny FeatureGate |
 
-## Co dokładnie zrobię
+## Co zrobię
 
-### 1. Kawa w PlayerBar (obok obecnego serduszka tipa)
-W `src/components/layout/PlayerBar.tsx` obok przycisku `DollarSign` (TipModal z portfela) dodam **drugi mikro-przycisk z ikoną `Coffee`** — odpalający `BuyCoffeeButton` z parametrami aktualnego utworu:
+### 1. Studio (`/suno`) — twardy Ultimate gate dla wszystkich
+- Zmienię warunek z `if (user && !isUltimate)` na `if (!isUltimate)` — niezalogowany dostaje **ten sam ekran upgrade** (z CTA „Zaloguj się i odblokuj Ultimate" jeśli `!user`, inaczej istniejące CTA `showUpgradeFor("GrouAI Studio")`)
+- Usunę resztkowy soft-paywall `freeUsed/showPaywall` — staje się martwym kodem skoro free nie może już wejść do panelu (zostawiam tylko jeśli jest też używany dla soft-trial — sprawdzę i usunę nieużywane stany)
+- **Efekt**: `/suno` to pełny Ultimate-only screen, zero ścieżki przez backend dla free
 
-```
-recipientUserId  = currentTrack.uploaded_by  (lub creator_id)
-recipientTrackId = currentTrack.id
-recipientName    = currentTrack.artist
-```
+### 2. PlayerBar mood button → Pro paywall
+- Owinę `<motion.button onClick={setShowMoodDetector(true)}>` w wrapper sprawdzający `canUseMoodDetection`:
+  - jeśli **Pro** → otwiera `QuickMoodDetector` jak teraz
+  - jeśli **Free** → zamiast otwierać kamerę, wywołuje `showUpgradeFor("Rozpoznawanie nastroju")` → pojawia się `UpgradeModal` (już zhakowany w `TopBar`/innych miejscach)
+- Dodatkowo nakładam mały kłódka-overlay na ikonę dla free userów (ikonka `Lock` w prawym dolnym rogu mikro-przycisku) — wizualny sygnał Pro
+- `<QuickMoodDetector isOpen={...}>` zostaje, ale `isOpen` może stać się `true` tylko przy `canUseMoodDetection`
 
-Wizualnie: bursztynowy mikro-IconButton (`text-amber-400/70`), tooltip „Postaw kawę twórcy ☕ (1€ / 3€ / 5€)". Otwiera istniejący Dialog z 3 opcjami → Paddle Checkout → po sukcesie toast „☕ wysłano kawę dla {artist}".
+### 3. RadioMoodDetector na `/radio-live` → Pro paywall
+- W `src/pages/RadioLive.tsx` owinę `<RadioMoodDetector />` w `<FeatureGate requiredPlan="pro" featureName="Radio Mood Detection" mode="overlay">`
+- Free user widzi blur + lockscreen z CTA „Upgrade do Pro"
 
-**Różnica vs istniejący 💲 tip:**
-- 💲 = portfel wewnętrzny (saldo, bez wypłaty) — istniejące
-- ☕ = realne € z karty przez Paddle, 90% trafia do twórcy do wypłaty — **nowe**
+### 4. AI DJ Section — uszczelnienie wycieku „QR Parkiet"
+- Obecny komentarz: *„QR Parkiet button OUTSIDE FeatureGate so it's always clickable"* — to **wyciek**: free user może odpalić sesję imprezową
+- Przenoszę przycisk **QR Parkiet + `PartyActivationModal` + `DJSessionQR`** **DO ŚRODKA** `<FeatureGate requiredPlan="pro">`
+- Albo (bezpieczniej) zostawiam przycisk poza, ale jego `onClick` zmieniam na `canUseAIDJ ? setShowActivationModal(true) : showUpgradeFor("AI DJ Party")`
+- **Wybieram opcję B** (przycisk widoczny dla free, ale klik = upgrade modal — lepsza konwersja, ten sam efekt blokady)
 
-### 2. „Tip-jar na każdym utworze" — przez TrackOptionsMenu
-W `src/components/menus/TrackOptionsMenu.tsx` (używany w TrackRow, RecentlyPlayed, Queue, Liked, Search wyniki — czyli **wszędzie gdzie jest utwór**) dodam nowy item w dropdownie:
+### 5. Spójność: wykorzystanie istniejącego `showUpgradeFor` + `UpgradeModal`
+- Wszędzie gdzie blokuję klik (PlayerBar mood, AI DJ Party button), używam `useSubscription().showUpgradeFor(featureName)` — **ALE** sprawdzę czy `upgradePromptFeature` ma globalny listener który otwiera `UpgradeModal`
+- Jeśli nie ma globalnego listenera (a w `TopBar` widzę lokalny `showUpgrade` state), dodam go w `MainLayout` jako **jedno globalne miejsce**: gdy `upgradePromptFeature !== null` → render `<UpgradeModal open={true} onOpenChange={() => dismissUpgradePrompt()} />`. Dzięki temu każdy `showUpgradeFor` z dowolnego miejsca otwiera modal.
 
-```
-☕  Postaw kawę twórcy   →  otwiera BuyCoffeeButton dialog
-```
+## Wynik dla użytkownika
 
-Item pojawia się tylko gdy utwór ma `uploaded_by/creator_id` ≠ aktualny user (nie można fundować kawy samemu sobie — taką regułę webhook i tak musi mieć, ale ukrywam item żeby nie kusić).
+| Akcja free usera | Dziś | Po zmianach |
+|---|---|---|
+| Wejście na `/suno` | Widzi panel generowania (bug) | Pełny gate Ultimate z CTA |
+| Klik 😊 mood w PlayerBar | Otwiera kamerę | Otwiera `UpgradeModal` (Pro) |
+| Klik „Wykryj nastrój" w AI DJ | Pokryty | Pokryty (bez zmian) |
+| Wejście na `/radio-live` → mood | Otwiera kamerę | Blur + „Upgrade do Pro" |
+| Klik „QR Parkiet" | Otwiera modal sesji | Otwiera `UpgradeModal` |
+| Wejście na `/mood-history` raport | Pokryty | Pokryty (bez zmian) |
 
-Aby uniknąć duplikacji, wyrenderuję `BuyCoffeeButton` **bez własnego buttona** — wyciągnę z niego logikę dialogu do małego sub-komponentu `CoffeeDialog` (otwierany kontrolowanym `open`/`onOpenChange`), a w obu miejscach (PlayerBar item, TrackOptionsMenu item) podpinam tylko trigger.
+## Szczegóły techniczne
 
-### 3. Weryfikacja flow Paddle → DB → twórca
-- Sprawdzę edge function `payments-webhook` że dla `transaction.completed` z `priceId IN (grouai_coffee_*)`:
-  - zapisuje wpis do `one_time_purchases` (już jest)
-  - **nabija `creator_earnings`** typu `tip` z `amount = 0.9 * price` na `recipientUserId` z `customData`
-  - emituje `agent_event` typu `tip.received` (pojawi się w dzwoneczku notyfikacji — `useNotificationsFeed` już to obsługuje)
-- Jeśli czegoś brakuje — dopiszę do webhook. Jeśli już jest — tylko potwierdzę.
-
-### 4. Drobny FX po sukcesie
-Po powrocie z Paddle z `?coffee=success` w URL — istniejący już handler pokaże toast. Dorzucę tylko **floating coffee emoji** (analogiczny do `FloatingHearts`) wokół coveru utworu, jeśli utwór wciąż gra — żeby było widać efekt „strumienia kawy".
-
-## Co użytkownik dostaje
-
-1. **W PlayerBar** dwa mikro-przyciski przy każdym graniu: 💲 (tip z portfela) + ☕ (real-money kawa)
-2. **W KAŻDEJ liście utworów** (Liked, Recently Played, Search, Queue, Albumy) — w trzykropku „⋯" nowa opcja **„Postaw kawę twórcy"**
-3. **Twórca dostaje 90%** każdej kawy do wypłaty (creator_earnings type=`tip`) i widzi powiadomienie w dzwoneczku
-4. **Ty (admin)** zobaczysz nowe wpływy w panelu Break-even MTD od pierwszej kawy
-
-## Szczegóły techniczne (dla mnie do wykonania)
-
-- **Plik nowy**: `src/components/payments/CoffeeDialog.tsx` — rozbity dialog z `BuyCoffeeButton` (kontrolowany open/close)
-- **Refaktor**: `BuyCoffeeButton.tsx` → używa `CoffeeDialog` (zachowany API)
-- **Edycja**: `src/components/layout/PlayerBar.tsx` — drugi przycisk + state `showCoffeeDialog`
-- **Edycja**: `src/components/menus/TrackOptionsMenu.tsx` — DropdownMenuItem „☕ Postaw kawę twórcy" + state `showCoffeeDialog`, props rozszerzone o `trackOwnerId?: string`
-- **Edycja consumerów TrackOptionsMenu** (TrackRow, RecentlyPlayed, QueueSidebar, FullscreenPlayer) — przekazanie `trackOwnerId` z danych utworu (kolumna `uploaded_by` w `catalog`)
-- **Weryfikacja edge function**: `supabase/functions/payments-webhook/index.ts` — branch dla coffee priceId → insert `creator_earnings` + emit `agent_event`
-- **Brak nowych migracji** — `creator_earnings` i `one_time_purchases` już istnieją
+- **Edycja**: `src/pages/Suno.tsx` — warunek gate, usunięcie martwych stanów `freeUsed`/`showPaywall` (jeśli nie używane gdzie indziej)
+- **Edycja**: `src/components/layout/PlayerBar.tsx` — wrap mood button, dodanie kłódki, integracja `useSubscription`
+- **Edycja**: `src/pages/RadioLive.tsx` — owinięcie `<RadioMoodDetector />` w `<FeatureGate>`
+- **Edycja**: `src/components/sections/AIDJSection.tsx` — gate na klik „QR Parkiet" (opcja B — soft block przez upgrade modal)
+- **Edycja**: `src/components/layout/MainLayout.tsx` — globalny listener `upgradePromptFeature` → renderuje `<UpgradeModal>` (jedno miejsce dla całej apki)
+- **Bez nowych migracji, bez nowych edge functions, bez nowych komponentów** — używam istniejących `FeatureGate`, `UpgradeModal`, `useSubscription`
 
