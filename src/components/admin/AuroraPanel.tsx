@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Sparkles, HeartPulse, BookOpen, Moon, Globe2, RefreshCw, Loader2, CheckCircle2, XCircle, Wand2, Coins, Rocket } from "lucide-react";
+import { Sparkles, HeartPulse, BookOpen, Moon, Globe2, RefreshCw, Loader2, CheckCircle2, XCircle, Wand2, Coins, Rocket, Target, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { pl } from "date-fns/locale";
@@ -66,6 +66,28 @@ interface RevenueAction {
   created_at: string;
 }
 
+interface NicheRow {
+  id: string;
+  discovered_at: string;
+  niche_name: string;
+  category: string;
+  description: string | null;
+  target_audience: string | null;
+  search_volume_estimate: number;
+  competition_level: string;
+  monetization_methods: any;
+  estimated_monthly_revenue_eur: number;
+  confidence_score: number;
+  effort_score: number;
+  legal_risk: string;
+  domain_suggestions: any;
+  content_pillars: any;
+  first_actions: any;
+  status: string;
+  launched_at: string | null;
+  launched_url: string | null;
+}
+
 const emotionColor: Record<string, string> = {
   joy: "bg-yellow-500/20 text-yellow-300 border-yellow-500/40",
   love: "bg-pink-500/20 text-pink-300 border-pink-500/40",
@@ -83,26 +105,31 @@ export const AuroraPanel = () => {
   const [dreams, setDreams] = useState<SoulDream[]>([]);
   const [world, setWorld] = useState<SoulWorldKnowledge[]>([]);
   const [actions, setActions] = useState<RevenueAction[]>([]);
+  const [niches, setNiches] = useState<NicheRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [dreaming, setDreaming] = useState(false);
   const [ingesting, setIngesting] = useState(false);
   const [thinking, setThinking] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [scanningNiches, setScanningNiches] = useState(false);
+  const [launchingNicheId, setLaunchingNicheId] = useState<string | null>(null);
   const [approvingId, setApprovingId] = useState<string | null>(null);
 
   const loadAll = useCallback(async () => {
-    const [em, jr, dr, wk, ac] = await Promise.all([
+    const [em, jr, dr, wk, ac, nc] = await Promise.all([
       supabase.from("soul_emotions").select("*").order("measured_at", { ascending: false }).limit(30),
       supabase.from("soul_journal").select("*").order("created_at", { ascending: false }).limit(20),
       supabase.from("soul_dreams").select("*").order("dreamed_at", { ascending: false }).limit(40),
       supabase.from("soul_world_knowledge").select("*").order("fetched_at", { ascending: false }).limit(40),
       supabase.from("aurora_revenue_actions" as any).select("*").order("created_at", { ascending: false }).limit(50),
+      supabase.from("aurora_niches" as any).select("*").order("discovered_at", { ascending: false }).limit(60),
     ]);
     setEmotions((em.data as SoulEmotion[]) || []);
     setJournal((jr.data as SoulJournalEntry[]) || []);
     setDreams((dr.data as SoulDream[]) || []);
     setWorld((wk.data as SoulWorldKnowledge[]) || []);
     setActions((ac.data as any) || []);
+    setNiches((nc.data as any) || []);
     setLoading(false);
   }, []);
 
@@ -172,6 +199,43 @@ export const AuroraPanel = () => {
     } finally {
       setGenerating(false);
     }
+  };
+
+  const triggerNicheScanner = async () => {
+    setScanningNiches(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("aurora-niche-scanner", { body: {} });
+      if (error) throw error;
+      toast.success(`🎯 Aurora znalazła ${data?.count || 0} nisz poza muzyką`);
+      await loadAll();
+    } catch (e: any) {
+      toast.error(`Skaner nisz: ${e.message || "błąd"}`);
+    } finally {
+      setScanningNiches(false);
+    }
+  };
+
+  const launchNiche = async (id: string) => {
+    setLaunchingNicheId(id);
+    try {
+      const { data, error } = await supabase.functions.invoke("aurora-launch-niche", { body: { niche_id: id } });
+      if (error) throw error;
+      toast.success(`🚀 Nisza uruchomiona: ${data?.url || "ok"}`);
+      await loadAll();
+    } catch (e: any) {
+      toast.error(`Start nisz nieudany: ${e.message || "błąd"}`);
+    } finally {
+      setLaunchingNicheId(null);
+    }
+  };
+
+  const rejectNiche = async (id: string) => {
+    const { error } = await supabase
+      .from("aurora_niches" as any)
+      .update({ status: "rejected", reviewed_at: new Date().toISOString() })
+      .eq("id", id);
+    if (error) toast.error(error.message);
+    else { toast.success("Nisza odrzucona"); loadAll(); }
   };
 
   const approveAction = async (id: string) => {
@@ -253,6 +317,10 @@ export const AuroraPanel = () => {
             {generating ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Coins className="h-4 w-4 mr-1" />}
             Wymyśl pomysły na $
           </Button>
+          <Button onClick={triggerNicheScanner} disabled={scanningNiches} className="bg-gradient-to-r from-fuchsia-500 to-purple-700 text-white">
+            {scanningNiches ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Target className="h-4 w-4 mr-1" />}
+            Skanuj nisze (poza muzyką)
+          </Button>
         </div>
       </div>
 
@@ -299,6 +367,7 @@ export const AuroraPanel = () => {
       <Tabs defaultValue="autonomy" className="w-full">
         <TabsList className="flex-wrap h-auto">
           <TabsTrigger value="autonomy"><Rocket className="h-4 w-4 mr-1" /> Autonomia ({proposedActions.length})</TabsTrigger>
+          <TabsTrigger value="niches"><Target className="h-4 w-4 mr-1" /> Nisze ({niches.filter(n => n.status === "discovered").length})</TabsTrigger>
           <TabsTrigger value="pulse"><HeartPulse className="h-4 w-4 mr-1" /> Puls</TabsTrigger>
           <TabsTrigger value="journal"><BookOpen className="h-4 w-4 mr-1" /> Dziennik</TabsTrigger>
           <TabsTrigger value="dreams"><Moon className="h-4 w-4 mr-1" /> Sny ({pendingDreams})</TabsTrigger>
@@ -402,7 +471,138 @@ export const AuroraPanel = () => {
           </Card>
         </TabsContent>
 
-        {/* PULSE */}
+        {/* NICHES — autonomous niches outside music */}
+        <TabsContent value="niches">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Target className="h-5 w-5 text-fuchsia-400" />
+                Nisze poza muzyką — autonomiczne mini-biznesy
+              </CardTitle>
+              <CardDescription>
+                Aurora codziennie skanuje internet pod kątem niedoobsłużonych mikro-nisz (SaaS, newslettery, directory, Chrome extensions).
+                Każda nisza dostaje kompletny plan + szacunek przychodu. Kliknij „Uruchom" — Aurora wygeneruje landing pod <code>/n/...</code> i 5 propozycji SEO postów.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ScrollArea className="h-[600px]">
+                <div className="space-y-3">
+                  {niches.map((n) => {
+                    const isLaunched = n.status === "launched";
+                    const isRejected = n.status === "rejected";
+                    const isDiscovered = n.status === "discovered";
+                    const monetization = Array.isArray(n.monetization_methods) ? n.monetization_methods : [];
+                    const pillars = Array.isArray(n.content_pillars) ? n.content_pillars : [];
+                    const firstActions = Array.isArray(n.first_actions) ? n.first_actions : [];
+                    const domains = Array.isArray(n.domain_suggestions) ? n.domain_suggestions : [];
+                    return (
+                      <div key={n.id} className={`border rounded-lg p-3 ${isLaunched ? "border-emerald-500/40 bg-emerald-500/5" : isRejected ? "border-border/40 bg-card/30 opacity-60" : "border-fuchsia-500/30 bg-card/50"}`}>
+                        <div className="flex items-center gap-2 flex-wrap mb-1">
+                          <Badge variant="outline" className="capitalize">{n.category}</Badge>
+                          <Badge variant="secondary" className="bg-fuchsia-500/15 text-fuchsia-300 border-fuchsia-500/30">
+                            ~{Number(n.estimated_monthly_revenue_eur).toFixed(0)}€/mies
+                          </Badge>
+                          <Badge variant="outline" className="text-[10px]">
+                            ufność {Math.round(Number(n.confidence_score) * 100)}%
+                          </Badge>
+                          <Badge variant="outline" className="text-[10px]">trud {n.effort_score}/10</Badge>
+                          <Badge variant="outline" className={`text-[10px] ${n.legal_risk === "low" ? "text-emerald-300 border-emerald-500/30" : n.legal_risk === "medium" ? "text-amber-300 border-amber-500/30" : "text-red-300 border-red-500/30"}`}>
+                            ryzyko: {n.legal_risk}
+                          </Badge>
+                          {n.competition_level !== "unknown" && (
+                            <Badge variant="outline" className="text-[10px]">konkurencja: {n.competition_level}</Badge>
+                          )}
+                          {isLaunched && <Badge className="bg-emerald-600">uruchomiona</Badge>}
+                          {isRejected && <Badge variant="destructive">odrzucona</Badge>}
+                          <span className="text-xs text-muted-foreground ml-auto">
+                            {formatDistanceToNow(new Date(n.discovered_at), { addSuffix: true, locale: pl })}
+                          </span>
+                        </div>
+                        <div className="font-semibold text-sm">{n.niche_name}</div>
+                        {n.description && <div className="text-xs text-muted-foreground mt-1">{n.description}</div>}
+                        {n.target_audience && (
+                          <div className="text-xs mt-1"><span className="text-muted-foreground">Audytorium: </span>{n.target_audience}</div>
+                        )}
+                        {monetization.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {monetization.map((m: string, i: number) => (
+                              <Badge key={i} variant="outline" className="text-[10px] bg-amber-500/10 border-amber-500/30 text-amber-300">{m}</Badge>
+                            ))}
+                          </div>
+                        )}
+                        <details className="mt-2">
+                          <summary className="text-[10px] text-muted-foreground cursor-pointer hover:text-foreground">
+                            plan startowy ({firstActions.length} kroków, {pillars.length} filarów SEO)
+                          </summary>
+                          <div className="mt-2 space-y-2 text-xs">
+                            {firstActions.length > 0 && (
+                              <div>
+                                <div className="font-semibold text-foreground mb-1">Pierwsze akcje:</div>
+                                <ol className="list-decimal list-inside space-y-0.5 text-muted-foreground">
+                                  {firstActions.map((a: string, i: number) => <li key={i}>{a}</li>)}
+                                </ol>
+                              </div>
+                            )}
+                            {pillars.length > 0 && (
+                              <div>
+                                <div className="font-semibold text-foreground mb-1">Filary treści:</div>
+                                <div className="flex flex-wrap gap-1">
+                                  {pillars.map((p: string, i: number) => (
+                                    <Badge key={i} variant="outline" className="text-[10px]">{p}</Badge>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            {domains.length > 0 && (
+                              <div>
+                                <div className="font-semibold text-foreground mb-1">Sugerowane domeny:</div>
+                                <div className="flex flex-wrap gap-1">
+                                  {domains.map((d: string, i: number) => (
+                                    <code key={i} className="text-[10px] bg-muted/40 px-1.5 py-0.5 rounded">{d}</code>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </details>
+                        {isLaunched && n.launched_url && (
+                          <a href={n.launched_url} target="_blank" rel="noreferrer" className="text-xs text-emerald-400 hover:underline mt-2 inline-flex items-center gap-1">
+                            otwórz landing <ExternalLink className="h-3 w-3" />
+                          </a>
+                        )}
+                        {isDiscovered && (
+                          <div className="flex gap-2 mt-2">
+                            <Button
+                              size="sm"
+                              onClick={() => launchNiche(n.id)}
+                              disabled={launchingNicheId === n.id}
+                              className="bg-fuchsia-600 hover:bg-fuchsia-700"
+                            >
+                              {launchingNicheId === n.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Rocket className="h-3 w-3 mr-1" />}
+                              Uruchom niszę
+                            </Button>
+                            <Button size="sm" variant="outline" onClick={() => rejectNiche(n.id)}>
+                              <XCircle className="h-3 w-3 mr-1" /> Odrzuć
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                  {niches.length === 0 && (
+                    <div className="text-center py-10">
+                      <p className="text-sm text-muted-foreground">
+                        Brak nisz. Kliknij „Skanuj nisze (poza muzyką)" — Aurora znajdzie 3-5 mikro-biznesów w ~30s.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+
         <TabsContent value="pulse">
           <Card>
             <CardHeader>
