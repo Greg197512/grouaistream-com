@@ -15,7 +15,7 @@ import { Loader2, Rocket, Target, Trash2, RefreshCw, Briefcase, Workflow, PlayCi
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { pl } from "date-fns/locale";
-import { Helmet } from "react-helmet-async";
+import { useEffect as useDocEffect } from "react";
 
 interface Niche {
   id: string; niche_name: string; status: string; opportunity_score: number | null;
