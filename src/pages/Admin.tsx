@@ -563,6 +563,40 @@ export default function Admin() {
           </div>
         </motion.div>
 
+        {/* Aurora Quick Access */}
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="grid gap-3 md:grid-cols-2"
+        >
+          <button
+            onClick={() => navigate("/admin/aurora")}
+            className="group text-left rounded-xl border border-primary/40 bg-gradient-to-br from-primary/15 via-primary/5 to-transparent p-4 hover:border-primary/70 hover:from-primary/25 transition-all"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-xs uppercase tracking-wider text-primary/80 font-semibold mb-1">Aurora Business Desk</div>
+                <div className="text-lg font-bold">Pulpit autonomicznego biznesu →</div>
+                <div className="text-xs text-muted-foreground mt-1">Nisze · Zlecenia · Asystent · Workforce · n8n · R2</div>
+              </div>
+              <Activity className="h-8 w-8 text-primary group-hover:scale-110 transition-transform" />
+            </div>
+          </button>
+          <button
+            onClick={() => navigate("/admin/brain")}
+            className="group text-left rounded-xl border border-accent/40 bg-gradient-to-br from-accent/15 via-accent/5 to-transparent p-4 hover:border-accent/70 hover:from-accent/25 transition-all"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-xs uppercase tracking-wider text-accent/80 font-semibold mb-1">Mózg GrouAI</div>
+                <div className="text-lg font-bold">Brain Panel →</div>
+                <div className="text-xs text-muted-foreground mt-1">Decyzje AI, pamięć, telemetria</div>
+              </div>
+              <Shield className="h-8 w-8 text-accent group-hover:scale-110 transition-transform" />
+            </div>
+          </button>
+        </motion.div>
+
         {/* Stats Grid */}
         {loadingData ? (
           <div className="flex justify-center py-8">
