@@ -245,9 +245,13 @@ export const AuroraPanel = () => {
             {dreaming ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Moon className="h-4 w-4 mr-1" />}
             Niech śni
           </Button>
-          <Button onClick={triggerSoul} disabled={thinking}>
+          <Button variant="outline" size="sm" onClick={triggerSoul} disabled={thinking}>
             {thinking ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Wand2 className="h-4 w-4 mr-1" />}
-            Każ Aurorze poczuć
+            Każ poczuć
+          </Button>
+          <Button onClick={triggerRevenueLoop} disabled={generating} className="bg-gradient-to-r from-amber-500 to-orange-600 text-white">
+            {generating ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Coins className="h-4 w-4 mr-1" />}
+            Wymyśl pomysły na $
           </Button>
         </div>
       </div>
