@@ -275,6 +275,7 @@ export const AuroraPanel = () => {
     }
   };
 
+  const approveAction = async (id: string) => {
     setApprovingId(id);
     try {
       const { data, error } = await supabase.functions.invoke("aurora-approve-action", { body: { action_id: id } });
