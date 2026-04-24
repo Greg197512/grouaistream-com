@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 /**
- * Counts a stream after 30+ seconds of continuous playback.
+ * Counts a stream after 45+ seconds of continuous playback.
  * Calls the record_stream DB function which handles deduplication,
  * stream counting, and earnings generation.
  */
@@ -33,8 +33,8 @@ export function useStreamCounter(
     intervalRef.current = setInterval(() => {
       elapsedRef.current += 1;
 
-      // After 30 seconds, record the stream (only for logged-in users)
-      if (elapsedRef.current >= 30 && countedRef.current !== trackId && userId) {
+      // After 45 seconds, record the stream (only for logged-in users)
+      if (elapsedRef.current >= 45 && countedRef.current !== trackId && userId) {
         countedRef.current = trackId;
         supabase.rpc("record_stream", {
           _track_id: trackId,

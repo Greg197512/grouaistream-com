@@ -106,8 +106,12 @@ export function useAudioAnalyser(audioElement: HTMLAudioElement | null, isPlayin
       const ctx = ctxRef.current;
 
       const analyser = ctx.createAnalyser();
-      analyser.fftSize = 256;
-      analyser.smoothingTimeConstant = 0.75;
+      // Higher resolution for honest, lively spectrum
+      analyser.fftSize = 1024;
+      // Lower smoothing = more reactive bars (was 0.75)
+      analyser.smoothingTimeConstant = 0.55;
+      analyser.minDecibels = -85;
+      analyser.maxDecibels = -10;
       analyserRef.current = analyser;
 
       const source = ctx.createMediaElementSource(audioElement);
@@ -150,9 +154,11 @@ export function useAudioAnalyser(audioElement: HTMLAudioElement | null, isPlayin
       if (useReal && analyser && dataArray) {
         analyser.getByteFrequencyData(dataArray);
 
-        const bassEnd = Math.floor(bufferLength * 0.15);
-        const midEnd = Math.floor(bufferLength * 0.5);
-        
+        // Honest bass/mid/treble bands by perceptual frequency split
+        // sub/bass: 0-250Hz, mid: 250Hz-4kHz, treble: 4kHz-20kHz (assuming 48kHz sr)
+        const bassEnd = Math.max(2, Math.floor(bufferLength * 0.06));
+        const midEnd = Math.max(bassEnd + 2, Math.floor(bufferLength * 0.42));
+
         let bassSum = 0, midSum = 0, trebleSum = 0;
         for (let i = 0; i < bufferLength; i++) {
           const v = dataArray[i];
@@ -164,19 +170,41 @@ export function useAudioAnalyser(audioElement: HTMLAudioElement | null, isPlayin
         const bass = bassSum / (bassEnd * 255);
         const mid = midSum / ((midEnd - bassEnd) * 255);
         const treble = trebleSum / ((bufferLength - midEnd) * 255);
-        const overall = bass * 0.5 + mid * 0.35 + treble * 0.15;
+        const overall = bass * 0.45 + mid * 0.4 + treble * 0.15;
 
-        const barsPerBin = bufferLength / barCount;
+        // Logarithmic bin distribution — honest representation of human hearing.
+        // Each bar covers a band in log-frequency space (like a true equalizer).
+        const minBin = 1;
+        const maxBin = bufferLength;
+        const logMin = Math.log(minBin);
+        const logMax = Math.log(maxBin);
         const frequencies: number[] = [];
         for (let b = 0; b < barCount; b++) {
-          const start = Math.floor(b * barsPerBin);
-          const end = Math.floor((b + 1) * barsPerBin);
+          const lo = Math.floor(Math.exp(logMin + (logMax - logMin) * (b / barCount)));
+          const hi = Math.max(lo + 1, Math.floor(Math.exp(logMin + (logMax - logMin) * ((b + 1) / barCount))));
+          let peak = 0;
           let sum = 0;
-          for (let j = start; j < end; j++) sum += dataArray[j];
-          frequencies.push(sum / ((end - start) * 255));
+          const span = Math.min(hi, bufferLength) - lo;
+          for (let j = lo; j < Math.min(hi, bufferLength); j++) {
+            const v = dataArray[j];
+            if (v > peak) peak = v;
+            sum += v;
+          }
+          // Blend peak (lively) with average (stable) — gamma curve for visible dynamics
+          const avg = sum / Math.max(1, span);
+          const blended = (peak * 0.65 + avg * 0.35) / 255;
+          frequencies.push(Math.pow(blended, 0.7));
         }
 
-        setLevels({ bass, mid, treble, overall, frequencies, rawBass: bassSum / bassEnd, isReal: true });
+        setLevels({
+          bass: Math.min(1, bass * 1.15),
+          mid: Math.min(1, mid * 1.1),
+          treble: Math.min(1, treble * 1.2),
+          overall: Math.min(1, overall),
+          frequencies,
+          rawBass: bassSum / Math.max(1, bassEnd),
+          isReal: true,
+        });
       } else {
         // Simulated fallback
         setLevels(generateSimulatedLevels(Date.now(), barCount));
