@@ -1,5 +1,5 @@
-// Aurora Launch Niche — converts an approved niche into a live landing page
-// + creates SEO content pillars as revenue actions for further publishing.
+// Aurora Launch Niche — converts a discovered niche into a live landing page
+// at /n/<slug> and seeds 5 SEO post proposals tied to it.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
@@ -25,20 +25,32 @@ const LAUNCH_TOOL = {
   type: "function",
   function: {
     name: "launch_niche",
-    description: "Generate the full launch package for a niche.",
+    description: "Generate a full launch package for a niche.",
     parameters: {
       type: "object",
       properties: {
+        title: { type: "string", description: "Page title (60 chars max, includes keyword)" },
+        meta_description: { type: "string", description: "Under 160 chars" },
         hero_headline: { type: "string" },
         hero_subheadline: { type: "string" },
-        meta_title: { type: "string" },
-        meta_description: { type: "string" },
-        primary_cta: { type: "string" },
-        body_markdown: { type: "string", description: "Full landing body in markdown, 600-900 words, SEO-optimized" },
+        cta_text: { type: "string" },
+        sections: {
+          type: "array",
+          description: "4-6 content sections for the landing page",
+          items: {
+            type: "object",
+            properties: {
+              heading: { type: "string" },
+              body: { type: "string", description: "100-200 words per section" },
+            },
+            required: ["heading", "body"],
+            additionalProperties: false,
+          },
+        },
         affiliate_keywords: { type: "array", items: { type: "string" } },
-        seo_post_titles: { type: "array", items: { type: "string" }, description: "5 SEO blog post titles for content cluster" },
+        seo_post_titles: { type: "array", items: { type: "string" }, description: "5 SEO blog post titles" },
       },
-      required: ["hero_headline", "hero_subheadline", "meta_title", "meta_description", "primary_cta", "body_markdown", "seo_post_titles"],
+      required: ["title", "meta_description", "hero_headline", "hero_subheadline", "cta_text", "sections", "seo_post_titles"],
       additionalProperties: false,
     },
   },
@@ -66,7 +78,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Generate launch package via AI
     const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -78,11 +89,11 @@ Deno.serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: "You are Aurora — premium copywriter & SEO strategist. Output must be conversion-grade, original, and emotionally resonant.",
+            content: "You are Aurora — premium copywriter & SEO strategist. Output: conversion-grade, original, emotionally resonant. Match niche language (English unless niche is local-language).",
           },
           {
             role: "user",
-            content: `Launch this niche:
+            content: `Launch this niche as a live landing page:
 NAME: ${niche.niche_name}
 CATEGORY: ${niche.category}
 AUDIENCE: ${niche.target_audience || "n/a"}
@@ -90,7 +101,7 @@ DESCRIPTION: ${niche.description}
 MONETIZATION: ${(niche.monetization_methods || []).join(", ")}
 PILLARS: ${(niche.content_pillars || []).join(", ")}
 
-Generate the full landing page package + 5 SEO blog titles. Tone: confident, useful, no fluff.`,
+Produce: SEO title, meta description, hero, 4-6 deep content sections, CTA, and 5 SEO blog post titles for the content cluster.`,
           },
         ],
         tools: [LAUNCH_TOOL],
@@ -114,31 +125,30 @@ Generate the full landing page package + 5 SEO blog titles. Tone: confident, use
     const slug = slugify(niche.niche_name);
     const launchUrl = `/n/${slug}`;
 
-    // Insert into aurora_landing_pages (existing table from prior migration)
+    // Upsert into aurora_landing_pages with the schema we have
     const { error: lpErr } = await supabase
       .from("aurora_landing_pages")
       .upsert(
         {
           slug,
           niche: niche.niche_name,
+          title: pkg.title,
+          meta_description: pkg.meta_description,
           hero_headline: pkg.hero_headline,
           hero_subheadline: pkg.hero_subheadline,
-          meta_title: pkg.meta_title,
-          meta_description: pkg.meta_description,
-          primary_cta: pkg.primary_cta,
-          body_markdown: pkg.body_markdown,
+          sections: pkg.sections || [],
+          cta_text: pkg.cta_text || "Dowiedz się więcej",
+          cta_url: "/",
           status: "live",
-          published_at: new Date().toISOString(),
         },
         { onConflict: "slug" }
       );
 
     if (lpErr) {
       console.error("landing page upsert error", lpErr);
-      // Continue anyway — niche is still marked launched
     }
 
-    // Create 5 SEO post proposals tied to this niche
+    // Seed 5 SEO post proposals tied to this niche
     const seoActions = (pkg.seo_post_titles || []).slice(0, 5).map((title: string) => ({
       action_type: "seo_post",
       title: `[${niche.niche_name}] ${title}`,
@@ -157,7 +167,6 @@ Generate the full landing page package + 5 SEO blog titles. Tone: confident, use
       await supabase.from("aurora_revenue_actions").insert(seoActions);
     }
 
-    // Mark niche as launched
     await supabase
       .from("aurora_niches")
       .update({
