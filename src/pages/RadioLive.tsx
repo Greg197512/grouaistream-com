@@ -99,6 +99,7 @@ const RadioLive = () => {
   const [sendingMessage, setSendingMessage] = useState(false);
   const [showEmojis, setShowEmojis] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [micBoothOpen, setMicBoothOpen] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const playbackTokenRef = useRef(0);
   const fallbackTimerRef = useRef<number | null>(null);
