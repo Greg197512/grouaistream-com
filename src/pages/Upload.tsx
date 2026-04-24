@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -33,30 +34,35 @@ const AUDIO_TYPES = [
 const MIN_DURATION_SEC = 10;
 const DURATION_FALLBACK_SEC = 180;
 const MODERATION_TIMEOUT_MS = 30000;
-const MODERATION_MIN_APPROVED_SEC = 120;
+// Minimum duration required for non-admin uploads to pass moderation: 3:00
+const MODERATION_MIN_APPROVED_SEC = 180;
 
-function buildLocalModerationFallback(durationSec?: number | null) {
+function buildLocalModerationFallback(durationSec?: number | null, isAdmin = false) {
   const duration = Math.round(durationSec || DURATION_FALLBACK_SEC);
-  const isTooShort = duration > 0 && duration < MODERATION_MIN_APPROVED_SEC;
+  const isTooShort = !isAdmin && duration > 0 && duration < MODERATION_MIN_APPROVED_SEC;
 
   return {
     success: true,
     result: {
-      score_length: isTooShort ? 0 : 14,
-      score_lyrics: isTooShort ? 5 : 14,
-      score_vocal: isTooShort ? 5 : 14,
-      score_production: isTooShort ? 5 : 14,
-      score_originality: isTooShort ? 5 : 14,
-      total_score: isTooShort ? 20 : 70,
+      score_length: isTooShort ? 0 : (isAdmin ? 20 : 14),
+      score_lyrics: isTooShort ? 5 : (isAdmin ? 18 : 14),
+      score_vocal: isTooShort ? 5 : (isAdmin ? 18 : 14),
+      score_production: isTooShort ? 5 : (isAdmin ? 18 : 14),
+      score_originality: isTooShort ? 5 : (isAdmin ? 18 : 14),
+      total_score: isTooShort ? 20 : (isAdmin ? 92 : 70),
       status: isTooShort ? "rejected" : "approved",
       analysis: isTooShort
-        ? "Utwór jest zbyt krótki – minimum do publikacji to 2:00."
-        : "Utwór spełnia aktualne wymagania długości i został zaakceptowany lokalnie.",
+        ? "Utwór jest zbyt krótki – minimum do publikacji to 3:00."
+        : isAdmin
+          ? "Wgrane przez administratora — automatyczna akceptacja (bypass długości)."
+          : "Utwór spełnia aktualne wymagania długości i został zaakceptowany lokalnie.",
       recommendations: isTooShort
-        ? "Wydłuż utwór do co najmniej 2 minut."
-        : "Możesz opublikować utwór — mobilny fallback zakończył weryfikację długości poprawnie.",
+        ? "Wydłuż utwór do co najmniej 3 minut."
+        : isAdmin
+          ? "Bypass admina aktywny."
+          : "Możesz opublikować utwór — mobilny fallback zakończył weryfikację długości poprawnie.",
       rejection_reasons: isTooShort
-        ? ["Utwór ma mniej niż 2:00 – wymagane minimum to 2 minuty."]
+        ? ["Utwór ma mniej niż 3:00 – wymagane minimum to 3 minuty."]
         : [],
     },
   };
@@ -175,6 +181,7 @@ async function getUploadedAudioDuration(audioUrl: string): Promise<number | null
 const Upload = () => {
   const { t } = useLanguage();
   const { user } = useAuth();
+  const { isAdmin } = useAdminAuth();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [sunoLink, setSunoLink] = useState("");
@@ -370,7 +377,7 @@ const Upload = () => {
 
       if (moderationError) {
         console.warn("Moderation fallback used:", moderationError);
-        moderationData = buildLocalModerationFallback(resolvedDuration || DURATION_FALLBACK_SEC);
+        moderationData = buildLocalModerationFallback(resolvedDuration || DURATION_FALLBACK_SEC, isAdmin);
         // Cichy fallback — utwór i tak przechodzi, nie straszymy usera
       }
 
