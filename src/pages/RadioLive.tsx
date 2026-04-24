@@ -919,6 +919,17 @@ const RadioLive = () => {
                   className="flex-1"
                 />
               </div>
+
+              {/* Admin: Live Mic Booth */}
+              {isAdmin && (
+                <Button
+                  onClick={() => setMicBoothOpen(true)}
+                  className="w-full gap-2 h-11 bg-gradient-to-r from-primary to-red-500 text-primary-foreground font-bold shadow-[0_0_20px_hsl(var(--primary)/0.4)] hover:opacity-90"
+                >
+                  <Radio className="h-4 w-4" />
+                  🎙️ Wejdź na antenę (Live Mic)
+                </Button>
+              )}
               {/* Manual play button when autoplay blocked */}
               {autoplayBlocked && (
                 <motion.div
