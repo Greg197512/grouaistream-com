@@ -886,4 +886,3 @@ export const AuroraPanel = () => {
 };
 
 export default AuroraPanel;
-export { AuroraPanel };
