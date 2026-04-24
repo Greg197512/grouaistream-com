@@ -98,6 +98,45 @@ export const BlogDistributionPanel = () => {
     }
   };
 
+  const postUrl = (slug: string) =>
+    `${window.location.origin}/blog/${slug}`;
+
+  const shareOnX = async (post: Post, hookText: string | null) => {
+    const url = postUrl(post.slug);
+    const text = (hookText || post.title).slice(0, 240);
+    // Skopiuj tekst do schowka żeby user mógł doedytować w razie czego
+    try { await navigator.clipboard.writeText(`${text}\n\n${url}`); } catch {}
+    const intent = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
+    window.open(intent, "_blank", "noopener,noreferrer,width=600,height=600");
+    toast.success("Tekst skopiowany — okno X otwarte");
+  };
+
+  const shareOnFacebook = async (post: Post) => {
+    const url = postUrl(post.slug);
+    const quote = post.description || post.title;
+    try { await navigator.clipboard.writeText(`${post.title}\n\n${quote}\n\n${url}`); } catch {}
+    const sharer = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}&quote=${encodeURIComponent(quote)}`;
+    window.open(sharer, "_blank", "noopener,noreferrer,width=600,height=600");
+    toast.success("Tekst skopiowany — okno Facebook otwarte");
+  };
+
+  const openTikTokStudio = async (post: Post) => {
+    const caption = `${post.title}\n\n${post.description}\n\n#fyp #musicapp #aimusic #grouaistream`;
+    try { await navigator.clipboard.writeText(caption); } catch {}
+    toast.success("Caption skopiowany!", {
+      description: "Otwieram TikTok Reels Studio — wklej caption tam, gdzie chcesz",
+    });
+    // Scroll do TikTok Studio (jest na tej samej stronie Admin /tiktok tab)
+    const studioEl = document.querySelector('[data-section="tiktok-reels-studio"]');
+    if (studioEl) {
+      studioEl.scrollIntoView({ behavior: "smooth", block: "start" });
+    } else {
+      // Fallback: przełącz na zakładkę tiktok
+      window.dispatchEvent(new CustomEvent("admin:switch-tab", { detail: "tiktok" }));
+    }
+  };
+
+
   const sendNewsletter = async (post: Post) => {
     if (!confirm(`Wysłać newsletter "${post.title}" do wszystkich subskrybentów?`)) return;
     setSending(post.id);
