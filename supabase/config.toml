@@ -1,43 +1,33 @@
 project_id = "bvstvawnigyczvofzhps"
 
-[functions.r2-upload-proxy]
-verify_jwt = false
-
-[functions.ai-cover-generate]
-verify_jwt = false
-
-[functions.r2-signed-url]
-verify_jwt = false
-
-[functions.tiktok-story-generate]
-verify_jwt = false
-
-[functions.tiktok-reel-generate]
-verify_jwt = false
-
-[functions.ad-lead-lookup]
-verify_jwt = false
-
-[functions.ad-campaign-submit]
-verify_jwt = false
-
-[functions.n8n-music-ingest]
-verify_jwt = false
-
-[functions.grouai-brain]
-verify_jwt = false
-
-[functions.brain-newsfeed-ingest]
-verify_jwt = false
-
-[functions.a-r-scout]
-verify_jwt = false
-
-[functions.health-monitor]
-verify_jwt = false
-
-[functions.revenue-optimizer]
-verify_jwt = false
-
-[functions.daily-blog-audio-announce]
-verify_jwt = false
+[functions]
+  [functions.a-r-scout]
+    verify_jwt = false
+  [functions.ad-campaign-submit]
+    verify_jwt = false
+  [functions.ad-lead-lookup]
+    verify_jwt = false
+  [functions.ai-cover-generate]
+    verify_jwt = false
+  [functions.auth-email-hook]
+    verify_jwt = false
+  [functions.brain-newsfeed-ingest]
+    verify_jwt = false
+  [functions.daily-blog-audio-announce]
+    verify_jwt = false
+  [functions.grouai-brain]
+    verify_jwt = false
+  [functions.health-monitor]
+    verify_jwt = false
+  [functions.n8n-music-ingest]
+    verify_jwt = false
+  [functions.r2-signed-url]
+    verify_jwt = false
+  [functions.r2-upload-proxy]
+    verify_jwt = false
+  [functions.revenue-optimizer]
+    verify_jwt = false
+  [functions.tiktok-reel-generate]
+    verify_jwt = false
+  [functions.tiktok-story-generate]
+    verify_jwt = false
