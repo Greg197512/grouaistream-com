@@ -1,49 +1,53 @@
 
 
-# 📧 Naprawa „Dodatkowy kontekst" w generatorze maili (admin)
+# 🛠 Fix „Wyślij do wszystkich" — masowa wysyłka mailowa
 
-## Co jest zepsute (prawda z kodu)
+## Co jest zepsute (twardo z kodu i logów)
 
-1. **`supabase/functions/generate-email/index.ts`** — funkcja AI która generuje maila do testu pojedynczego odbiorcy:
-   - Typ `EmailRequest.type` akceptuje TYLKO 5 wartości: `invitation | challenge | newsletter | weekly_digest | easter`.
-   - **10 nowszych typów** widocznych w dropdownie admina (`feature_announcement`, `tip_of_the_week`, `blog_post`, `milestone`, `comeback`, `thank_you`, `ai_studio_promo`, `live_radio_promo`, `party_mode_promo`, `custom`) **nie mają żadnego case'a** w `switch (type)` → `userPrompt` zostaje pustym stringiem `""` → AI dostaje tylko system prompt bez żadnego kontekstu → ignoruje `customMessage`.
-   - Dla 5 obsługiwanych typów `customMessage` jest doklejany, ale opisany niespójnie (raz „Kontekst", raz „Temat challenge", raz „Główny temat", raz „Dodatkowy kontekst"). System prompt narzuca sztywną strukturę i limit 120 słów → AI często topi krótki dopisek admina.
+Logi edge function pokazują dokładnie:
+```
+mass-email-dispatch error: TypeError: (data || []).filter is not a function
+at index.ts:332:33
+```
 
-2. **`AdminEmailDashboard.tsx` → `sendEmail()`**: bierze `generatedEmail.body.replace(/<[^>]*>/g, "")` i wsadza w pole `message` szablonu `admin-notification`. Czyli jeśli AI zignoruje kontekst → kontekst NIE pojawi się w mailu. Nie ma żadnego fallbacku.
+Powód:
+- `mass-email-dispatch` woła RPC `get_all_users_for_admin()` przez klienta **service-role** (`supaAdmin`).
+- W tej funkcji w bazie pierwsza linia to `IF NOT public.has_role(auth.uid(), 'admin') THEN RETURN json_build_object('error', 'unauthorized')`.
+- Klient service-role nie ma JWT użytkownika → `auth.uid()` = `NULL` → `has_role(NULL, 'admin')` = `false` → RPC zwraca **obiekt** `{"error":"unauthorized"}`, a nie tablicę.
+- Kod robi `(data || []).filter(...)` → crash → 500 → toast „Błąd masowej wysyłki" w UI.
 
-## Co naprawiam
+Bonus bug: nawet gdyby autoryzacja przeszła, dla zera użytkowników `json_agg(...)` zwraca `NULL`, co też wywaliłoby `.filter`.
 
-### A. `supabase/functions/generate-email/index.ts` (główny fix)
+Admin został już zweryfikowany wcześniej w funkcji (linie 320–325) przez `has_role` z prawdziwym `user.id`, więc nie trzeba drugi raz sprawdzać uprawnień przez RPC.
 
-1. **Rozszerzam typ `EmailRequest.type`** o wszystkie 15 wariantów z dropdownu admina (`feature_announcement`, `tip_of_the_week`, `blog_post`, `milestone`, `comeback`, `thank_you`, `ai_studio_promo`, `live_radio_promo`, `party_mode_promo`, `custom` + 5 istniejących).
-2. **Dodaję `case` dla każdego brakującego typu** z konkretnym promptem dopasowanym do funkcji platformy (AI Studio, Live Radio, Party Mode, Mood detection itd.).
-3. **Ujednolicam użycie `customMessage`** — w KAŻDYM case'ie dodaję na początku promptu twardą instrukcję:
-   ```
-   ⚠️ KRYTYCZNE: Admin podał następujący kontekst, który MUSI pojawić się w treści maila (sparafrazowany lub dosłownie, ale jasno widoczny dla odbiorcy):
-   "${customMessage}"
-   ```
-   gdy `customMessage` jest podany. Bez tego AI zignoruje krótki tekst.
-4. **Case `custom`** (typ „Własna wiadomość") = AI ma użyć `customMessage` jako głównej treści maila, a nie własnej kreacji.
-5. **Walidacja**: jeśli typ jest nieznany → fallback do `custom` zamiast pustego promptu.
+## Plan naprawy (1 plik)
 
-### B. `AdminEmailDashboard.tsx` (bezpiecznik po stronie wysyłki)
+**Plik:** `supabase/functions/mass-email-dispatch/index.ts`
 
-W `sendEmail()` dodaję fallback: jeśli `customMessage` jest podany i NIE występuje w `generatedEmail.body` (case-insensitive, pierwsze 30 znaków) → doklejam go do `message` jako sekcję „Kontekst od redakcji:". Gwarantuje, że kontekst zawsze trafi do maila, nawet jeśli AI go zgubi.
+W bloku `else` (audience = `all_users`, ~linia 343–346) **zamiast** wołania zepsutego RPC:
 
-### C. Drobny UX
+1. **Pobierz userów bezpośrednio przez Supabase Admin API** — `supaAdmin.auth.admin.listUsers({ page, perPage: 1000 })` z paginacją w pętli aż do wyczerpania.
+2. Zbierz `id` i `email` ze wszystkich stron, odfiltruj wpisy bez `email`.
+3. **Pobierz `display_name` z `profiles`** jednym zapytaniem `in('user_id', ids)` i zmapuj na recipientów.
+4. Zwróć `recipients = [{ email, name }]` — dokładnie taki kształt, jakiego oczekuje reszta funkcji.
 
-W labelu pola w UI: `Dodatkowy kontekst (opcjonalne)` → `Dodatkowy kontekst (zostanie wpleciony w treść maila)` + krótki helper text.
+Dodatkowe zabezpieczenia:
+- `Array.isArray(data) ? data : []` jako twardy guard (gdyby kiedyś coś znów zwróciło nie-tablicę, nie wywali całego flow).
+- Krótki log: ilu odbiorców wyciągnięto + ilu po filtrze suppressed (ułatwi przyszły debug).
+- Jeśli odbiorców jest 0 → zwróć od razu `200 { success: true, recipientCount: 0, queued: 0 }` z toast info zamiast iść w generowanie obrazka i copy AI (oszczędność kredytów).
 
-## Co NIE jest zmieniane
+Po edycie funkcja edge automatycznie się zredeployuje.
 
-- `mass-email-dispatch/index.ts` — tam `customMessage` już działa poprawnie (linia 252: `Admin context to weave in: ${customMessage}`).
-- Szablon `admin-notification.tsx` — działa OK, `message` renderuje się akapitami.
-- Brak nowych migracji, brak nowych edge functions, brak nowych tabel.
+## Czego NIE ruszamy
 
-## Pliki do edycji
+- `get_all_users_for_admin()` zostaje — używają go inne miejsca w panelu admina, gdzie jest wołany przez **klienta z JWT admina** (czyli działa poprawnie). Naprawiamy tylko jedno wywołanie z złego kontekstu.
+- Nie trzeba żadnej migracji DB.
+- Nie trzeba zmian w UI (`AdminEmailDashboard.tsx`) — bug jest 100% po stronie edge function.
+- Tryb `n8n` i pojedynczy „test e-mail" nie były dotknięte tym bugiem — działały, dotykamy tylko ścieżki direct/all_users.
 
-- `supabase/functions/generate-email/index.ts` (główny fix — rozszerzenie typów + twarda instrukcja kontekstu)
-- `src/components/admin/AdminEmailDashboard.tsx` (bezpiecznik w `sendEmail` + label)
+## Efekt po wdrożeniu
 
-Po wdrożeniu funkcja edge zostanie automatycznie zredeployowana.
+- Klik **„Wyślij do wszystkich (bezpośrednio)"** → pobranie wszystkich emaili → odfiltrowanie suppressed → wygenerowanie hero grafiki + copy AI per język → zakolejkowanie maila do każdego odbiorcy przez `send-transactional-email`.
+- Toast pokaże `🚀 N odbiorców (zakolejkowano: N, błędy: 0)`.
+- W tabeli „Logi e-maili" pojawią się wpisy `pending` → `sent` w czasie rzeczywistym (live subscription już działa).
 
