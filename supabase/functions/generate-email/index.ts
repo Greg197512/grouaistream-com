@@ -5,8 +5,14 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+type EmailType =
+  | "invitation" | "challenge" | "newsletter" | "weekly_digest" | "easter"
+  | "feature_announcement" | "tip_of_the_week" | "blog_post" | "milestone"
+  | "comeback" | "thank_you" | "ai_studio_promo" | "live_radio_promo"
+  | "party_mode_promo" | "custom";
+
 interface EmailRequest {
-  type: "invitation" | "challenge" | "newsletter" | "weekly_digest" | "easter";
+  type: EmailType;
   recipientName?: string;
   customMessage?: string;
   stats?: {
@@ -42,7 +48,7 @@ ZASADY PISANIA:
 2. Używaj max 3 emoji, tylko jako subtelne akcenty (🎵 🎧 ✨), nigdy w nadmiarze
 3. Struktura: chwytliwy nagłówek → treść wartościowa → jasne CTA
 4. Unikaj pustych frazesów i korporacyjnego żargonu
-5. Max 120 słów treści — każde zdanie musi nieść wartość
+5. Max 140 słów treści — każde zdanie musi nieść wartość
 6. Wplataj unikalne cechy platformy (AI mood, generowanie muzyki, sesje DJ)
 7. Generuj piękny, dobrze sformatowany HTML z:
    - Nagłówkami w kolorze #e8450a (pomarańczowy GrouAI)
@@ -52,37 +58,86 @@ ZASADY PISANIA:
    - Responsywnym layoutem (max-width 580px, padding 20-30px)
 8. HTML body musi mieć białe tło (#ffffff), akcenty w kolorach marki`;
 
+    // Twarda instrukcja dla AI: kontekst od admina MA SIĘ POJAWIĆ w mailu
+    const contextDirective = customMessage && customMessage.trim()
+      ? `\n\n⚠️ KRYTYCZNE — KONTEKST OD ADMINA (MUSI być widoczny w treści maila, sparafrazowany lub dosłownie, ale jasno przekazany odbiorcy):\n"""\n${customMessage.trim()}\n"""\nTen kontekst jest najważniejszą informacją w mailu — całe pozostałe pisanie ma być wokół niego. Nie ignoruj go, nie zastępuj własną kreacją.\n`
+      : "";
+
     let userPrompt = "";
     switch (type) {
       case "invitation":
         userPrompt = `Wygeneruj e-mail zapraszający ${recipientName ? `użytkownika ${recipientName} ` : ""}do GrouAI Stream.
 Podkreśl 3 unikalne funkcje: (1) AI rozpoznaje nastrój przez kamerę i dobiera muzykę, (2) generowanie własnych utworów w 15 gatunkach, (3) radio na żywo z czatem i głosowaniem.
-Zakończ mocnym CTA zachęcającym do dołączenia.
-${customMessage ? `Kontekst: ${customMessage}` : ""}`;
+Zakończ mocnym CTA zachęcającym do dołączenia.${contextDirective}`;
         break;
       case "challenge":
         userPrompt = `Wygeneruj e-mail z ekskluzywnym muzycznym wyzwaniem tygodniowym dla ${recipientName ? `${recipientName}` : "użytkownika"}.
 Wymyśl kreatywne, angażujące wyzwanie powiązane z funkcjami AI (np. „Pozwól AI odczytać 5 Twoich nastrojów", „Stwórz utwór AI w gatunku, którego nigdy nie słuchałeś").
-Dodaj motywujący opis dlaczego warto i co użytkownik zyska.
-${customMessage ? `Temat challenge: ${customMessage}` : ""}`;
+Dodaj motywujący opis dlaczego warto i co użytkownik zyska.${contextDirective}`;
         break;
       case "newsletter":
         userPrompt = `Wygeneruj elegancki newsletter o nowościach w GrouAI Stream.
 Struktura: (1) główna nowość/highlight, (2) ciekawostka o AI w muzyce, (3) krótka statystyka platformy.
-${stats ? `Statystyki do wykorzystania: ${stats.totalTracks} utworów, ${stats.totalUsers} użytkowników, popularne gatunki: ${stats.topGenres.join(", ")}` : ""}
-${customMessage ? `Główny temat: ${customMessage}` : ""}`;
+${stats ? `Statystyki do wykorzystania: ${stats.totalTracks} utworów, ${stats.totalUsers} użytkowników, popularne gatunki: ${stats.topGenres.join(", ")}` : ""}${contextDirective}`;
         break;
       case "weekly_digest":
         userPrompt = `Wygeneruj spersonalizowane cotygodniowe podsumowanie dla ${recipientName ? `${recipientName}` : "użytkownika"}.
 Struktura: (1) podziękowanie za bycie częścią społeczności, (2) odkrywcza rekomendacja — zaproponuj eksplorację nowego gatunku lub funkcji (np. sesje DJ, generowanie muzyki, mood detection), (3) inspirująca myśl o muzyce na nowy tydzień.
-${stats ? `Dane platformy: ${stats.totalTracks} utworów dostępnych w ${stats.topGenres.length} gatunkach` : ""}`;
+${stats ? `Dane platformy: ${stats.totalTracks} utworów dostępnych w ${stats.topGenres.length} gatunkach` : ""}${contextDirective}`;
         break;
       case "easter":
         userPrompt = `Wygeneruj piękny, ciepły e-mail z życzeniami wielkanocnymi od zespołu GrouAI Stream dla ${recipientName ? `${recipientName}` : "użytkownika"}.
 Struktura: (1) serdeczne życzenia świąteczne — nawiąż do muzyki, harmonii i wspólnego słuchania jako metafory świąt, (2) krótkie podziękowanie za bycie częścią społeczności GrouAI Stream, (3) życzenie spokoju, radości i pięknych dźwięków na Wielkanoc.
 Ton: ciepły, poetycki, premium — jak kartka od bliskiego przyjaciela, nie od korporacji. Użyj subtelnych motywów wielkanocnych (wiosna, odrodzenie, światło, nadzieja) wplecionych w kontekst muzyczny.
-Dodaj emoji wielkanocne jako delikatne akcenty (🐣 🌷 ✨), max 3.
-${customMessage ? `Dodatkowy kontekst: ${customMessage}` : ""}`;
+Dodaj emoji wielkanocne jako delikatne akcenty (🐣 🌷 ✨), max 3.${contextDirective}`;
+        break;
+      case "feature_announcement":
+        userPrompt = `Wygeneruj e-mail ogłaszający nową funkcję w GrouAI Stream${recipientName ? ` dla ${recipientName}` : ""}.
+Struktura: (1) intrygujący nagłówek o nowości, (2) co to robi i dlaczego zmienia sposób słuchania, (3) jak tego użyć w 1 zdaniu, (4) CTA „Wypróbuj teraz".${contextDirective}`;
+        break;
+      case "tip_of_the_week":
+        userPrompt = `Wygeneruj e-mail „Trik tygodnia" dla ${recipientName ? recipientName : "użytkownika"} GrouAI Stream.
+Struktura: (1) jeden konkretny, mało znany trik (np. „komenda głosowa do szybkiego mashupu", „ukryty skrót w AI Studio"), (2) krok po kroku jak go użyć (3-4 punkty), (3) co dzięki temu zyska.${contextDirective}`;
+        break;
+      case "blog_post":
+        userPrompt = `Wygeneruj e-mail anonsujący nowy wpis blogowy GrouAI Stream${recipientName ? ` dla ${recipientName}` : ""}.
+Struktura: (1) chwytliwy tytuł nawiązujący do tematu wpisu, (2) 2-3 zdania o czym jest i co czytelnik wyniesie, (3) CTA „Czytaj na blogu".${contextDirective}`;
+        break;
+      case "milestone":
+        userPrompt = `Wygeneruj e-mail świętujący kamień milowy ${recipientName ? `użytkownika ${recipientName}` : "użytkownika"} w GrouAI Stream.
+Struktura: (1) gratulacje za osiągnięcie, (2) co to mówi o jego stylu / pasji do muzyki, (3) co go czeka dalej (kolejny goal, nowa funkcja, nagroda).${contextDirective}`;
+        break;
+      case "comeback":
+        userPrompt = `Wygeneruj ciepły e-mail „tęsknimy" do ${recipientName ? recipientName : "użytkownika"}, który dawno nie był w GrouAI Stream.
+Ton: nigdy nachalny, nigdy „kup", zawsze emocjonalny. Struktura: (1) „muzyka czeka na Ciebie" — krótka poetycka myśl, (2) co nowego pojawiło się od jego ostatniej wizyty (1-2 rzeczy), (3) delikatne CTA „Wróć i posłuchaj".${contextDirective}`;
+        break;
+      case "thank_you":
+        userPrompt = `Wygeneruj e-mail z podziękowaniem dla ${recipientName ? recipientName : "użytkownika"} GrouAI Stream.
+Struktura: (1) szczere, osobiste podziękowanie (nie korpo!), (2) za co konkretnie dziękujemy, (3) co to znaczy dla zespołu i społeczności.${contextDirective}`;
+        break;
+      case "ai_studio_promo":
+        userPrompt = `Wygeneruj e-mail promujący GrouAI Studio (generowanie muzyki AI) dla ${recipientName ? recipientName : "użytkownika"}.
+Struktura: (1) „stwórz utwór, którego nikt nigdy nie napisał" — emocjonalny hook, (2) jak to działa w 3 krokach (prompt → gatunek → utwór), (3) CTA „Otwórz AI Studio".${contextDirective}`;
+        break;
+      case "live_radio_promo":
+        userPrompt = `Wygeneruj e-mail promujący Live Radio GrouAI Stream dla ${recipientName ? recipientName : "użytkownika"}.
+Struktura: (1) „tysiące serc słyszą to samo w tej samej chwili" — emocjonalny hook o wspólnym słuchaniu, (2) co dzieje się na żywo (czat, lajki, głosowanie), (3) CTA „Wejdź na Live".${contextDirective}`;
+        break;
+      case "party_mode_promo":
+        userPrompt = `Wygeneruj e-mail promujący Party Mode / Sesje DJ z QR dla ${recipientName ? recipientName : "użytkownika"}.
+Struktura: (1) „Twoja impreza, Twoje DJ" — co to daje, (2) jak to działa (QR dla gości, głosowanie, kamera tłumu, detekcja emocji), (3) CTA „Uruchom sesję DJ".${contextDirective}`;
+        break;
+      case "custom":
+      default:
+        // Tryb „własna wiadomość": kontekst od admina JEST treścią maila.
+        userPrompt = customMessage && customMessage.trim()
+          ? `Wygeneruj piękny, premium e-mail GrouAI Stream${recipientName ? ` skierowany do ${recipientName}` : ""} oparty W CAŁOŚCI na poniższej wiadomości od redakcji. Zachowaj jej sens i ton, dodaj jedynie spójną oprawę graficzną (HTML), chwytliwy nagłówek wynikający z treści i jasne CTA „Otwórz GrouAI Stream" prowadzące na https://grouaistream.com.
+
+WIADOMOŚĆ OD REDAKCJI (to jest TREŚĆ maila — nie zastępuj jej własną kreacją):
+"""
+${customMessage.trim()}
+"""`
+          : `Wygeneruj krótki, ciepły e-mail powitalny od GrouAI Stream${recipientName ? ` dla ${recipientName}` : ""} z zaproszeniem do odkrycia platformy.`;
         break;
     }
 
