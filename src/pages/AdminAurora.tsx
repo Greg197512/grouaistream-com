@@ -94,6 +94,13 @@ export default function AdminAurora() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
 
+  // R2 Storage
+  const [storagePlans, setStoragePlans] = useState<StoragePlan[]>([]);
+  const [storageSubs, setStorageSubs] = useState<StorageSub[]>([]);
+  const [storageFiles, setStorageFiles] = useState<StorageFile[]>([]);
+  const [storageOverview, setStorageOverview] = useState<StorageOverview | null>(null);
+  const [newSub, setNewSub] = useState({ plan_code: "r2_starter_10gb", client_email: "", client_company: "" });
+
   // New order form
   const [newOrder, setNewOrder] = useState({ service_type: "seo_content", brief: "", client_email: "", client_company: "", budget_eur: 0 });
   // New workflow form
@@ -110,18 +117,26 @@ export default function AdminAurora() {
   }, [user]);
 
   const loadAll = useCallback(async () => {
-    const [n, o, w, r, ns] = await Promise.all([
+    const [n, o, w, r, ns, sp, ss, sf, sov] = await Promise.all([
       supabase.from("aurora_niches" as any).select("id,niche_name,status,opportunity_score,search_volume_estimate,competition_level,estimated_monthly_revenue_eur,launched_url,launched_at").order("opportunity_score", { ascending: false }).limit(100),
       supabase.from("aurora_business_orders" as any).select("*").order("created_at", { ascending: false }).limit(100),
       supabase.from("aurora_n8n_workflows" as any).select("*").order("created_at", { ascending: false }),
       supabase.from("aurora_n8n_runs" as any).select("*").order("started_at", { ascending: false }).limit(60),
       supabase.from("aurora_niche_n8n_summary" as any).select("*").order("runs_30d", { ascending: false }).limit(50),
+      supabase.from("aurora_storage_plans" as any).select("*").order("sort_order", { ascending: true }),
+      supabase.from("aurora_storage_subscriptions" as any).select("*").order("created_at", { ascending: false }),
+      supabase.from("aurora_storage_files" as any).select("*").order("created_at", { ascending: false }).limit(100),
+      supabase.from("aurora_storage_overview" as any).select("*").maybeSingle(),
     ]);
     setNiches((n.data as any) || []);
     setOrders((o.data as any) || []);
     setWorkflows((w.data as any) || []);
     setRuns((r.data as any) || []);
     setNicheSummary((ns.data as any) || []);
+    setStoragePlans((sp.data as any) || []);
+    setStorageSubs((ss.data as any) || []);
+    setStorageFiles((sf.data as any) || []);
+    setStorageOverview((sov.data as any) || null);
     setLoading(false);
   }, []);
 
