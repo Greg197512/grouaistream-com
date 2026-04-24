@@ -59,6 +59,18 @@ const SERVICE_TYPES = [
   { value: "other", label: "Inne" },
 ];
 
+interface StoragePlan { id: string; code: string; name: string; storage_gb: number; bandwidth_gb_month: number; price_eur: number; features: string[]; active: boolean; sort_order: number; }
+interface StorageSub { id: string; plan_code: string; client_email: string | null; client_company: string | null; status: string; storage_used_bytes: number; current_period_end: string | null; }
+interface StorageFile { id: string; r2_key: string; public_url: string | null; file_name: string; content_type: string | null; size_bytes: number; visibility: string; category: string; niche_id: string | null; order_id: string | null; created_at: string; }
+interface StorageOverview { total_files: number; total_bytes: number; active_subscriptions: number; mrr_eur: number; }
+
+const formatBytes = (b: number): string => {
+  if (!b) return "0 B";
+  const k = 1024, sizes = ["B", "KB", "MB", "GB", "TB"];
+  const i = Math.floor(Math.log(b) / Math.log(k));
+  return `${(b / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`;
+};
+
 const statusColor = (s: string) => {
   if (s === "completed") return "bg-emerald-500/20 text-emerald-300 border-emerald-500/40";
   if (s === "in_progress") return "bg-blue-500/20 text-blue-300 border-blue-500/40";
