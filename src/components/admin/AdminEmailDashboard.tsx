@@ -423,8 +423,16 @@ export function AdminEmailDashboard({ stats, genreStats }: AdminEmailDashboardPr
             </div>
 
             <div className="space-y-2">
-              <Label>Dodatkowy kontekst (opcjonalne)</Label>
-              <Textarea placeholder="np. Promuj nowy gatunek K-pop..." value={customMessage} onChange={(e) => setCustomMessage(e.target.value)} rows={3} />
+              <Label>Dodatkowy kontekst (zostanie wpleciony w treść maila)</Label>
+              <Textarea
+                placeholder="np. Promuj nowy gatunek K-pop, nową funkcję AI Studio 2.0, wpis blogowy o Mood Detection..."
+                value={customMessage}
+                onChange={(e) => setCustomMessage(e.target.value)}
+                rows={3}
+              />
+              <p className="text-xs text-muted-foreground">
+                AI dostanie ten tekst jako twardy kontekst. Jeśli go zignoruje, dopiszemy go automatycznie na końcu maila.
+              </p>
             </div>
 
             <div className="flex gap-2">
