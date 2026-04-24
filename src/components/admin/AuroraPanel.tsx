@@ -471,7 +471,138 @@ export const AuroraPanel = () => {
           </Card>
         </TabsContent>
 
-        {/* PULSE */}
+        {/* NICHES — autonomous niches outside music */}
+        <TabsContent value="niches">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Target className="h-5 w-5 text-fuchsia-400" />
+                Nisze poza muzyką — autonomiczne mini-biznesy
+              </CardTitle>
+              <CardDescription>
+                Aurora codziennie skanuje internet pod kątem niedoobsłużonych mikro-nisz (SaaS, newslettery, directory, Chrome extensions).
+                Każda nisza dostaje kompletny plan + szacunek przychodu. Kliknij „Uruchom" — Aurora wygeneruje landing pod <code>/n/...</code> i 5 propozycji SEO postów.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ScrollArea className="h-[600px]">
+                <div className="space-y-3">
+                  {niches.map((n) => {
+                    const isLaunched = n.status === "launched";
+                    const isRejected = n.status === "rejected";
+                    const isDiscovered = n.status === "discovered";
+                    const monetization = Array.isArray(n.monetization_methods) ? n.monetization_methods : [];
+                    const pillars = Array.isArray(n.content_pillars) ? n.content_pillars : [];
+                    const firstActions = Array.isArray(n.first_actions) ? n.first_actions : [];
+                    const domains = Array.isArray(n.domain_suggestions) ? n.domain_suggestions : [];
+                    return (
+                      <div key={n.id} className={`border rounded-lg p-3 ${isLaunched ? "border-emerald-500/40 bg-emerald-500/5" : isRejected ? "border-border/40 bg-card/30 opacity-60" : "border-fuchsia-500/30 bg-card/50"}`}>
+                        <div className="flex items-center gap-2 flex-wrap mb-1">
+                          <Badge variant="outline" className="capitalize">{n.category}</Badge>
+                          <Badge variant="secondary" className="bg-fuchsia-500/15 text-fuchsia-300 border-fuchsia-500/30">
+                            ~{Number(n.estimated_monthly_revenue_eur).toFixed(0)}€/mies
+                          </Badge>
+                          <Badge variant="outline" className="text-[10px]">
+                            ufność {Math.round(Number(n.confidence_score) * 100)}%
+                          </Badge>
+                          <Badge variant="outline" className="text-[10px]">trud {n.effort_score}/10</Badge>
+                          <Badge variant="outline" className={`text-[10px] ${n.legal_risk === "low" ? "text-emerald-300 border-emerald-500/30" : n.legal_risk === "medium" ? "text-amber-300 border-amber-500/30" : "text-red-300 border-red-500/30"}`}>
+                            ryzyko: {n.legal_risk}
+                          </Badge>
+                          {n.competition_level !== "unknown" && (
+                            <Badge variant="outline" className="text-[10px]">konkurencja: {n.competition_level}</Badge>
+                          )}
+                          {isLaunched && <Badge className="bg-emerald-600">uruchomiona</Badge>}
+                          {isRejected && <Badge variant="destructive">odrzucona</Badge>}
+                          <span className="text-xs text-muted-foreground ml-auto">
+                            {formatDistanceToNow(new Date(n.discovered_at), { addSuffix: true, locale: pl })}
+                          </span>
+                        </div>
+                        <div className="font-semibold text-sm">{n.niche_name}</div>
+                        {n.description && <div className="text-xs text-muted-foreground mt-1">{n.description}</div>}
+                        {n.target_audience && (
+                          <div className="text-xs mt-1"><span className="text-muted-foreground">Audytorium: </span>{n.target_audience}</div>
+                        )}
+                        {monetization.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {monetization.map((m: string, i: number) => (
+                              <Badge key={i} variant="outline" className="text-[10px] bg-amber-500/10 border-amber-500/30 text-amber-300">{m}</Badge>
+                            ))}
+                          </div>
+                        )}
+                        <details className="mt-2">
+                          <summary className="text-[10px] text-muted-foreground cursor-pointer hover:text-foreground">
+                            plan startowy ({firstActions.length} kroków, {pillars.length} filarów SEO)
+                          </summary>
+                          <div className="mt-2 space-y-2 text-xs">
+                            {firstActions.length > 0 && (
+                              <div>
+                                <div className="font-semibold text-foreground mb-1">Pierwsze akcje:</div>
+                                <ol className="list-decimal list-inside space-y-0.5 text-muted-foreground">
+                                  {firstActions.map((a: string, i: number) => <li key={i}>{a}</li>)}
+                                </ol>
+                              </div>
+                            )}
+                            {pillars.length > 0 && (
+                              <div>
+                                <div className="font-semibold text-foreground mb-1">Filary treści:</div>
+                                <div className="flex flex-wrap gap-1">
+                                  {pillars.map((p: string, i: number) => (
+                                    <Badge key={i} variant="outline" className="text-[10px]">{p}</Badge>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            {domains.length > 0 && (
+                              <div>
+                                <div className="font-semibold text-foreground mb-1">Sugerowane domeny:</div>
+                                <div className="flex flex-wrap gap-1">
+                                  {domains.map((d: string, i: number) => (
+                                    <code key={i} className="text-[10px] bg-muted/40 px-1.5 py-0.5 rounded">{d}</code>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </details>
+                        {isLaunched && n.launched_url && (
+                          <a href={n.launched_url} target="_blank" rel="noreferrer" className="text-xs text-emerald-400 hover:underline mt-2 inline-flex items-center gap-1">
+                            otwórz landing <ExternalLink className="h-3 w-3" />
+                          </a>
+                        )}
+                        {isDiscovered && (
+                          <div className="flex gap-2 mt-2">
+                            <Button
+                              size="sm"
+                              onClick={() => launchNiche(n.id)}
+                              disabled={launchingNicheId === n.id}
+                              className="bg-fuchsia-600 hover:bg-fuchsia-700"
+                            >
+                              {launchingNicheId === n.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Rocket className="h-3 w-3 mr-1" />}
+                              Uruchom niszę
+                            </Button>
+                            <Button size="sm" variant="outline" onClick={() => rejectNiche(n.id)}>
+                              <XCircle className="h-3 w-3 mr-1" /> Odrzuć
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                  {niches.length === 0 && (
+                    <div className="text-center py-10">
+                      <p className="text-sm text-muted-foreground">
+                        Brak nisz. Kliknij „Skanuj nisze (poza muzyką)" — Aurora znajdzie 3-5 mikro-biznesów w ~30s.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+
         <TabsContent value="pulse">
           <Card>
             <CardHeader>
