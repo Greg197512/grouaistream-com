@@ -3605,6 +3605,16 @@ export type Database = {
       get_break_even_status: { Args: never; Returns: Json }
       get_cost_report_summary: { Args: { _months?: number }; Returns: Json }
       get_my_likes_stats: { Args: never; Returns: Json }
+      get_my_profile: {
+        Args: never
+        Returns: {
+          avatar_url: string
+          display_name: string
+          first_login_completed: boolean
+          role: string
+          subscription_status: string
+        }[]
+      }
       get_pending_payouts: { Args: never; Returns: Json }
       get_random_tippable_track: {
         Args: never

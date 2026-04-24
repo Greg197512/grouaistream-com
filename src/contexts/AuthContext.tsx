@@ -51,11 +51,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
 
     try {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("display_name, role, subscription_status, first_login_completed")
-        .eq("user_id", userId)
-        .maybeSingle();
+      const { data, error } = await supabase.rpc("get_my_profile");
 
       if (error) {
         console.error("Error fetching profile:", error);
@@ -63,11 +59,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
 
+      const row = Array.isArray(data) ? data[0] : data;
+
       const nextProfile: UserProfile = {
-        displayName: data?.display_name ?? null,
-        role: (data?.role as ProfileRole | null) ?? "free",
-        subscriptionStatus: data?.subscription_status ?? "free",
-        firstLoginCompleted: Boolean(data?.first_login_completed),
+        displayName: row?.display_name ?? null,
+        role: (row?.role as ProfileRole | null) ?? "free",
+        subscriptionStatus: row?.subscription_status ?? "free",
+        firstLoginCompleted: Boolean(row?.first_login_completed),
       };
 
       console.log("[Auth] active profile role:", {
@@ -105,13 +103,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (event === "SIGNED_IN") {
           setTimeout(async () => {
             try {
-              const { data: profileData } = await supabase
-                .from("profiles")
-                .select("first_login_completed")
-                .eq("user_id", session.user.id)
-                .maybeSingle();
+              const { data: profileData } = await supabase.rpc("get_my_profile");
+              const row = Array.isArray(profileData) ? profileData[0] : profileData;
 
-              if (profileData && !profileData.first_login_completed) {
+              if (row && !row.first_login_completed) {
                 setIsFirstLogin(true);
                 await supabase
                   .from("profiles")
