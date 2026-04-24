@@ -1,63 +1,49 @@
 
 
-# 🟡 Postaw paywall — twardy FeatureGate na Studio / AI DJ / Mood
+# 📧 Naprawa „Dodatkowy kontekst" w generatorze maili (admin)
 
-## Stan dziś (prawda z kodu)
+## Co jest zepsute (prawda z kodu)
 
-| Feature | Plan w kontrakcie | Co dziś faktycznie blokuje |
-|---|---|---|
-| **GrouAI Studio** (`/suno`) | Ultimate | Gate `if (user && !isUltimate)` — **niezalogowany** widzi cały panel, free user widzi gate, ale po kliknięciu „Generuj" jest tylko soft-paywall przez `freeUsed` count |
-| **AI DJ Section** (Index, „live-radio"/„ai-dj") | Pro (`canUseAIDJ`) | `<FeatureGate requiredPlan="pro">` — ✅ działa, ale **„QR Parkiet" + PartyActivationModal renderowane POZA bramką** (komentarz w kodzie: „always interactive") |
-| **Mood detector** w PlayerBar (kamera, „Rozpoznawanie nastroju") | Pro (`canUseMoodDetection`) | ❌ **Zero gate** — każdy klika `setShowMoodDetector(true)`, otwiera się pełny `QuickMoodDetector` |
-| **RadioMoodDetector** na `/radio-live` | Pro (`canUseMoodDetection`) | ❌ **Zero gate** |
-| **AI Psychologist** (`/mood-history`) | Ultimate | ✅ `<FeatureGate requiredPlan="ultimate" mode="hide">` |
-| **MoodDetector wewnątrz AIDJSection** | Pro | ✅ pokryty przez nadrzędny FeatureGate |
+1. **`supabase/functions/generate-email/index.ts`** — funkcja AI która generuje maila do testu pojedynczego odbiorcy:
+   - Typ `EmailRequest.type` akceptuje TYLKO 5 wartości: `invitation | challenge | newsletter | weekly_digest | easter`.
+   - **10 nowszych typów** widocznych w dropdownie admina (`feature_announcement`, `tip_of_the_week`, `blog_post`, `milestone`, `comeback`, `thank_you`, `ai_studio_promo`, `live_radio_promo`, `party_mode_promo`, `custom`) **nie mają żadnego case'a** w `switch (type)` → `userPrompt` zostaje pustym stringiem `""` → AI dostaje tylko system prompt bez żadnego kontekstu → ignoruje `customMessage`.
+   - Dla 5 obsługiwanych typów `customMessage` jest doklejany, ale opisany niespójnie (raz „Kontekst", raz „Temat challenge", raz „Główny temat", raz „Dodatkowy kontekst"). System prompt narzuca sztywną strukturę i limit 120 słów → AI często topi krótki dopisek admina.
 
-## Co zrobię
+2. **`AdminEmailDashboard.tsx` → `sendEmail()`**: bierze `generatedEmail.body.replace(/<[^>]*>/g, "")` i wsadza w pole `message` szablonu `admin-notification`. Czyli jeśli AI zignoruje kontekst → kontekst NIE pojawi się w mailu. Nie ma żadnego fallbacku.
 
-### 1. Studio (`/suno`) — twardy Ultimate gate dla wszystkich
-- Zmienię warunek z `if (user && !isUltimate)` na `if (!isUltimate)` — niezalogowany dostaje **ten sam ekran upgrade** (z CTA „Zaloguj się i odblokuj Ultimate" jeśli `!user`, inaczej istniejące CTA `showUpgradeFor("GrouAI Studio")`)
-- Usunę resztkowy soft-paywall `freeUsed/showPaywall` — staje się martwym kodem skoro free nie może już wejść do panelu (zostawiam tylko jeśli jest też używany dla soft-trial — sprawdzę i usunę nieużywane stany)
-- **Efekt**: `/suno` to pełny Ultimate-only screen, zero ścieżki przez backend dla free
+## Co naprawiam
 
-### 2. PlayerBar mood button → Pro paywall
-- Owinę `<motion.button onClick={setShowMoodDetector(true)}>` w wrapper sprawdzający `canUseMoodDetection`:
-  - jeśli **Pro** → otwiera `QuickMoodDetector` jak teraz
-  - jeśli **Free** → zamiast otwierać kamerę, wywołuje `showUpgradeFor("Rozpoznawanie nastroju")` → pojawia się `UpgradeModal` (już zhakowany w `TopBar`/innych miejscach)
-- Dodatkowo nakładam mały kłódka-overlay na ikonę dla free userów (ikonka `Lock` w prawym dolnym rogu mikro-przycisku) — wizualny sygnał Pro
-- `<QuickMoodDetector isOpen={...}>` zostaje, ale `isOpen` może stać się `true` tylko przy `canUseMoodDetection`
+### A. `supabase/functions/generate-email/index.ts` (główny fix)
 
-### 3. RadioMoodDetector na `/radio-live` → Pro paywall
-- W `src/pages/RadioLive.tsx` owinę `<RadioMoodDetector />` w `<FeatureGate requiredPlan="pro" featureName="Radio Mood Detection" mode="overlay">`
-- Free user widzi blur + lockscreen z CTA „Upgrade do Pro"
+1. **Rozszerzam typ `EmailRequest.type`** o wszystkie 15 wariantów z dropdownu admina (`feature_announcement`, `tip_of_the_week`, `blog_post`, `milestone`, `comeback`, `thank_you`, `ai_studio_promo`, `live_radio_promo`, `party_mode_promo`, `custom` + 5 istniejących).
+2. **Dodaję `case` dla każdego brakującego typu** z konkretnym promptem dopasowanym do funkcji platformy (AI Studio, Live Radio, Party Mode, Mood detection itd.).
+3. **Ujednolicam użycie `customMessage`** — w KAŻDYM case'ie dodaję na początku promptu twardą instrukcję:
+   ```
+   ⚠️ KRYTYCZNE: Admin podał następujący kontekst, który MUSI pojawić się w treści maila (sparafrazowany lub dosłownie, ale jasno widoczny dla odbiorcy):
+   "${customMessage}"
+   ```
+   gdy `customMessage` jest podany. Bez tego AI zignoruje krótki tekst.
+4. **Case `custom`** (typ „Własna wiadomość") = AI ma użyć `customMessage` jako głównej treści maila, a nie własnej kreacji.
+5. **Walidacja**: jeśli typ jest nieznany → fallback do `custom` zamiast pustego promptu.
 
-### 4. AI DJ Section — uszczelnienie wycieku „QR Parkiet"
-- Obecny komentarz: *„QR Parkiet button OUTSIDE FeatureGate so it's always clickable"* — to **wyciek**: free user może odpalić sesję imprezową
-- Przenoszę przycisk **QR Parkiet + `PartyActivationModal` + `DJSessionQR`** **DO ŚRODKA** `<FeatureGate requiredPlan="pro">`
-- Albo (bezpieczniej) zostawiam przycisk poza, ale jego `onClick` zmieniam na `canUseAIDJ ? setShowActivationModal(true) : showUpgradeFor("AI DJ Party")`
-- **Wybieram opcję B** (przycisk widoczny dla free, ale klik = upgrade modal — lepsza konwersja, ten sam efekt blokady)
+### B. `AdminEmailDashboard.tsx` (bezpiecznik po stronie wysyłki)
 
-### 5. Spójność: wykorzystanie istniejącego `showUpgradeFor` + `UpgradeModal`
-- Wszędzie gdzie blokuję klik (PlayerBar mood, AI DJ Party button), używam `useSubscription().showUpgradeFor(featureName)` — **ALE** sprawdzę czy `upgradePromptFeature` ma globalny listener który otwiera `UpgradeModal`
-- Jeśli nie ma globalnego listenera (a w `TopBar` widzę lokalny `showUpgrade` state), dodam go w `MainLayout` jako **jedno globalne miejsce**: gdy `upgradePromptFeature !== null` → render `<UpgradeModal open={true} onOpenChange={() => dismissUpgradePrompt()} />`. Dzięki temu każdy `showUpgradeFor` z dowolnego miejsca otwiera modal.
+W `sendEmail()` dodaję fallback: jeśli `customMessage` jest podany i NIE występuje w `generatedEmail.body` (case-insensitive, pierwsze 30 znaków) → doklejam go do `message` jako sekcję „Kontekst od redakcji:". Gwarantuje, że kontekst zawsze trafi do maila, nawet jeśli AI go zgubi.
 
-## Wynik dla użytkownika
+### C. Drobny UX
 
-| Akcja free usera | Dziś | Po zmianach |
-|---|---|---|
-| Wejście na `/suno` | Widzi panel generowania (bug) | Pełny gate Ultimate z CTA |
-| Klik 😊 mood w PlayerBar | Otwiera kamerę | Otwiera `UpgradeModal` (Pro) |
-| Klik „Wykryj nastrój" w AI DJ | Pokryty | Pokryty (bez zmian) |
-| Wejście na `/radio-live` → mood | Otwiera kamerę | Blur + „Upgrade do Pro" |
-| Klik „QR Parkiet" | Otwiera modal sesji | Otwiera `UpgradeModal` |
-| Wejście na `/mood-history` raport | Pokryty | Pokryty (bez zmian) |
+W labelu pola w UI: `Dodatkowy kontekst (opcjonalne)` → `Dodatkowy kontekst (zostanie wpleciony w treść maila)` + krótki helper text.
 
-## Szczegóły techniczne
+## Co NIE jest zmieniane
 
-- **Edycja**: `src/pages/Suno.tsx` — warunek gate, usunięcie martwych stanów `freeUsed`/`showPaywall` (jeśli nie używane gdzie indziej)
-- **Edycja**: `src/components/layout/PlayerBar.tsx` — wrap mood button, dodanie kłódki, integracja `useSubscription`
-- **Edycja**: `src/pages/RadioLive.tsx` — owinięcie `<RadioMoodDetector />` w `<FeatureGate>`
-- **Edycja**: `src/components/sections/AIDJSection.tsx` — gate na klik „QR Parkiet" (opcja B — soft block przez upgrade modal)
-- **Edycja**: `src/components/layout/MainLayout.tsx` — globalny listener `upgradePromptFeature` → renderuje `<UpgradeModal>` (jedno miejsce dla całej apki)
-- **Bez nowych migracji, bez nowych edge functions, bez nowych komponentów** — używam istniejących `FeatureGate`, `UpgradeModal`, `useSubscription`
+- `mass-email-dispatch/index.ts` — tam `customMessage` już działa poprawnie (linia 252: `Admin context to weave in: ${customMessage}`).
+- Szablon `admin-notification.tsx` — działa OK, `message` renderuje się akapitami.
+- Brak nowych migracji, brak nowych edge functions, brak nowych tabel.
+
+## Pliki do edycji
+
+- `supabase/functions/generate-email/index.ts` (główny fix — rozszerzenie typów + twarda instrukcja kontekstu)
+- `src/components/admin/AdminEmailDashboard.tsx` (bezpiecznik w `sendEmail` + label)
+
+Po wdrożeniu funkcja edge zostanie automatycznie zredeployowana.
 
