@@ -269,6 +269,7 @@ export function AdminEmailDashboard({ stats, genreStats }: AdminEmailDashboardPr
             title: generatedEmail.subject,
             message: messagePlain,
             recipientName: recipientName || undefined,
+            heroImageUrl: generatedEmail.heroImageUrl || undefined,
             emailType: emailType === "invitation" ? "Zaproszenie" : emailType === "challenge" ? "Wyzwanie" : emailType === "newsletter" ? "Newsletter" : emailType === "easter" ? "Życzenia wielkanocne" : "Podsumowanie",
           },
         },
