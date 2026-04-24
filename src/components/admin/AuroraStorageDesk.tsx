@@ -237,12 +237,13 @@ export function AuroraStorageDesk() {
       {/* === CLIENTS === */}
       <TabsContent value="clients" className="space-y-4">
         {summary && (
-          <div className="grid md:grid-cols-5 gap-3">
+          <div className="grid md:grid-cols-6 gap-3">
             <Card><CardContent className="pt-6"><div className="text-2xl font-bold">{summary.total_clients}</div><div className="text-xs text-muted-foreground">klientów</div></CardContent></Card>
-            <Card><CardContent className="pt-6"><div className="text-2xl font-bold">{summary.total_used_gb} GB</div><div className="text-xs text-muted-foreground">zużycie razem</div></CardContent></Card>
+            <Card><CardContent className="pt-6"><div className="text-2xl font-bold">{summary.total_used_gb} GB</div><div className="text-xs text-muted-foreground">storage razem</div></CardContent></Card>
+            <Card><CardContent className="pt-6"><div className="text-2xl font-bold">{summary.total_egress_gb} GB</div><div className="text-xs text-muted-foreground">egress / mc</div></CardContent></Card>
             <Card><CardContent className="pt-6"><div className="text-2xl font-bold text-green-500">€{summary.total_revenue_eur}</div><div className="text-xs text-muted-foreground">przychód MRR</div></CardContent></Card>
-            <Card><CardContent className="pt-6"><div className="text-2xl font-bold text-orange-500">€{summary.total_r2_cost_eur}</div><div className="text-xs text-muted-foreground">koszt R2</div></CardContent></Card>
-            <Card><CardContent className="pt-6"><div className="text-2xl font-bold text-emerald-500">€{summary.total_margin_eur}</div><div className="text-xs text-muted-foreground">marża miesięczna</div></CardContent></Card>
+            <Card><CardContent className="pt-6"><div className="text-2xl font-bold text-orange-500">€{(Number(summary.total_r2_cost_eur) + Number(summary.total_egress_cost_eur || 0)).toFixed(2)}</div><div className="text-xs text-muted-foreground">koszt R2 + egress</div></CardContent></Card>
+            <Card><CardContent className="pt-6"><div className="text-2xl font-bold text-emerald-500">€{summary.total_margin_eur}</div><div className="text-xs text-muted-foreground">marża netto</div></CardContent></Card>
           </div>
         )}
 
