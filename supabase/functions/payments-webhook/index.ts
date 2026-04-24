@@ -86,6 +86,29 @@ async function handleSubscription(data: any, env: PaddleEnv) {
   }, { onConflict: 'user_id,environment' });
 
   console.log('[payments-webhook] subscription synced:', userId, productId, status);
+
+  // Aurora R2 storage fulfillment — auto-grant storage plan if priceId matches
+  if (typeof priceId === 'string' && priceId.startsWith('aurora_storage_')) {
+    try {
+      const { data: u } = await supabase.auth.admin.getUserById(userId);
+      const email = u?.user?.email || customData?.email || null;
+      const { data: subId, error: fulfillErr } = await supabase.rpc('aurora_storage_fulfill_from_paddle', {
+        _user_id: userId,
+        _email: email,
+        _price_external_id: priceId,
+        _paddle_subscription_id: id,
+        _current_period_end: currentBillingPeriod?.endsAt || null,
+        _status: status,
+      });
+      if (fulfillErr) {
+        console.error('[payments-webhook] aurora storage fulfill error:', fulfillErr);
+      } else {
+        console.log('[payments-webhook] aurora storage subscription:', subId);
+      }
+    } catch (e) {
+      console.error('[payments-webhook] aurora storage fulfill exception:', e);
+    }
+  }
 }
 
 /**
