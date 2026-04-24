@@ -317,6 +317,10 @@ export const AuroraPanel = () => {
             {generating ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Coins className="h-4 w-4 mr-1" />}
             Wymyśl pomysły na $
           </Button>
+          <Button onClick={triggerNicheScanner} disabled={scanningNiches} className="bg-gradient-to-r from-fuchsia-500 to-purple-700 text-white">
+            {scanningNiches ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Target className="h-4 w-4 mr-1" />}
+            Skanuj nisze (poza muzyką)
+          </Button>
         </div>
       </div>
 
