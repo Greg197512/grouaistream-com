@@ -377,7 +377,7 @@ const Upload = () => {
 
       if (moderationError) {
         console.warn("Moderation fallback used:", moderationError);
-        moderationData = buildLocalModerationFallback(resolvedDuration || DURATION_FALLBACK_SEC);
+        moderationData = buildLocalModerationFallback(resolvedDuration || DURATION_FALLBACK_SEC, isAdmin);
         // Cichy fallback — utwór i tak przechodzi, nie straszymy usera
       }
 
