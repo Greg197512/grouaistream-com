@@ -475,6 +475,84 @@ export type Database = {
         }
         Relationships: []
       }
+      aurora_business_orders: {
+        Row: {
+          ai_plan: Json | null
+          assigned_to: string | null
+          brief: string
+          budget_eur: number | null
+          client_company: string | null
+          client_email: string | null
+          client_name: string | null
+          completed_at: string | null
+          created_at: string
+          deadline: string | null
+          id: string
+          n8n_execution_id: string | null
+          n8n_workflow_id: string | null
+          notes: string | null
+          payload: Json | null
+          priority: number
+          result: Json | null
+          result_url: string | null
+          service_type: string
+          source: string
+          started_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          ai_plan?: Json | null
+          assigned_to?: string | null
+          brief: string
+          budget_eur?: number | null
+          client_company?: string | null
+          client_email?: string | null
+          client_name?: string | null
+          completed_at?: string | null
+          created_at?: string
+          deadline?: string | null
+          id?: string
+          n8n_execution_id?: string | null
+          n8n_workflow_id?: string | null
+          notes?: string | null
+          payload?: Json | null
+          priority?: number
+          result?: Json | null
+          result_url?: string | null
+          service_type: string
+          source?: string
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          ai_plan?: Json | null
+          assigned_to?: string | null
+          brief?: string
+          budget_eur?: number | null
+          client_company?: string | null
+          client_email?: string | null
+          client_name?: string | null
+          completed_at?: string | null
+          created_at?: string
+          deadline?: string | null
+          id?: string
+          n8n_execution_id?: string | null
+          n8n_workflow_id?: string | null
+          notes?: string | null
+          payload?: Json | null
+          priority?: number
+          result?: Json | null
+          result_url?: string | null
+          service_type?: string
+          source?: string
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       aurora_compliance_log: {
         Row: {
           action_type: string
@@ -538,6 +616,33 @@ export type Database = {
           id?: string
           min_quality_score?: number
           updated_at?: string
+        }
+        Relationships: []
+      }
+      aurora_content_refresh_log: {
+        Row: {
+          changes: Json | null
+          id: string
+          niche_id: string | null
+          refreshed_at: string
+          target_id: string
+          target_type: string
+        }
+        Insert: {
+          changes?: Json | null
+          id?: string
+          niche_id?: string | null
+          refreshed_at?: string
+          target_id: string
+          target_type: string
+        }
+        Update: {
+          changes?: Json | null
+          id?: string
+          niche_id?: string | null
+          refreshed_at?: string
+          target_id?: string
+          target_type?: string
         }
         Relationships: []
       }
@@ -740,6 +845,102 @@ export type Database = {
           },
         ]
       }
+      aurora_n8n_workflows: {
+        Row: {
+          auto_assign: boolean
+          created_at: string
+          description: string | null
+          enabled: boolean
+          id: string
+          last_execution_at: string | null
+          last_status: string | null
+          name: string
+          service_type: string | null
+          total_failed: number
+          total_runs: number
+          total_success: number
+          updated_at: string
+          webhook_url: string | null
+          workflow_id: string
+        }
+        Insert: {
+          auto_assign?: boolean
+          created_at?: string
+          description?: string | null
+          enabled?: boolean
+          id?: string
+          last_execution_at?: string | null
+          last_status?: string | null
+          name: string
+          service_type?: string | null
+          total_failed?: number
+          total_runs?: number
+          total_success?: number
+          updated_at?: string
+          webhook_url?: string | null
+          workflow_id: string
+        }
+        Update: {
+          auto_assign?: boolean
+          created_at?: string
+          description?: string | null
+          enabled?: boolean
+          id?: string
+          last_execution_at?: string | null
+          last_status?: string | null
+          name?: string
+          service_type?: string | null
+          total_failed?: number
+          total_runs?: number
+          total_success?: number
+          updated_at?: string
+          webhook_url?: string | null
+          workflow_id?: string
+        }
+        Relationships: []
+      }
+      aurora_niche_prune_log: {
+        Row: {
+          action: string
+          created_at: string
+          id: string
+          metrics: Json
+          niche_id: string | null
+          reason: string
+        }
+        Insert: {
+          action?: string
+          created_at?: string
+          id?: string
+          metrics?: Json
+          niche_id?: string | null
+          reason: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          id?: string
+          metrics?: Json
+          niche_id?: string | null
+          reason?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aurora_niche_prune_log_niche_id_fkey"
+            columns: ["niche_id"]
+            isOneToOne: false
+            referencedRelation: "aurora_niche_performance"
+            referencedColumns: ["niche_id"]
+          },
+          {
+            foreignKeyName: "aurora_niche_prune_log_niche_id_fkey"
+            columns: ["niche_id"]
+            isOneToOne: false
+            referencedRelation: "aurora_niches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       aurora_niches: {
         Row: {
           affiliate_potential: number | null
@@ -835,6 +1036,41 @@ export type Database = {
           target_audience?: string | null
         }
         Relationships: []
+      }
+      aurora_order_events: {
+        Row: {
+          created_at: string
+          data: Json | null
+          event_type: string
+          id: string
+          message: string | null
+          order_id: string
+        }
+        Insert: {
+          created_at?: string
+          data?: Json | null
+          event_type: string
+          id?: string
+          message?: string | null
+          order_id: string
+        }
+        Update: {
+          created_at?: string
+          data?: Json | null
+          event_type?: string
+          id?: string
+          message?: string | null
+          order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aurora_order_events_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "aurora_business_orders"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       aurora_partnerships: {
         Row: {
