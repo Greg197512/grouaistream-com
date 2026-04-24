@@ -194,6 +194,34 @@ export function AuroraStorageDesk() {
     }
   };
 
+  const toggleEgressBilling = async (subId: string, enabled: boolean) => {
+    try {
+      const { error } = await supabase
+        .from("aurora_storage_subscriptions")
+        .update({ egress_billing_enabled: enabled })
+        .eq("id", subId);
+      if (error) throw error;
+      toast.success(`Egress billing ${enabled ? "włączony" : "wyłączony"}`);
+      refresh();
+    } catch (e: any) {
+      toast.error("Błąd: " + e.message);
+    }
+  };
+
+  const updateEgressOverride = async (subId: string, value: number | null) => {
+    try {
+      const { error } = await supabase
+        .from("aurora_storage_subscriptions")
+        .update({ egress_cost_per_gb_eur_override: value })
+        .eq("id", subId);
+      if (error) throw error;
+      toast.success("Stawka egress zaktualizowana");
+      refresh();
+    } catch (e: any) {
+      toast.error("Błąd: " + e.message);
+    }
+  };
+
   if (loading) {
     return <div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 animate-spin" /></div>;
   }
