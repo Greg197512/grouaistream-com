@@ -440,7 +440,7 @@ export function AdminEmailDashboard({ stats, genreStats }: AdminEmailDashboardPr
             <div className="flex gap-2">
               <Button className="flex-1 gap-2" onClick={generateEmail} disabled={generatingEmail}>
                 {generatingEmail ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                {generatingEmail ? "Generuję..." : "Generuj AI"}
+                {generatingEmail ? "Generuję tekst + grafikę..." : "Generuj AI (tekst + grafika)"}
               </Button>
               <Button variant="default" className="flex-1 gap-2" onClick={sendEmail} disabled={sendingEmail || !generatedEmail || !recipientEmail.trim()}>
                 {sendingEmail ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
