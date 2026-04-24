@@ -217,6 +217,9 @@ export const AuroraPanel = () => {
 
   const lastEmotion = emotions[0];
   const pendingDreams = dreams.filter((d) => d.status === "pending" || d.status === "new").length;
+  const proposedActions = actions.filter((a) => a.status === "proposed");
+  const publishedActions = actions.filter((a) => a.status === "published");
+  const proposedRevenue = proposedActions.reduce((s, a) => s + Number(a.estimated_revenue_eur || 0), 0);
 
   return (
     <div className="space-y-6">
