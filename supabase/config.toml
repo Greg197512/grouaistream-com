@@ -11,6 +11,10 @@ project_id = "bvstvawnigyczvofzhps"
     verify_jwt = false
   [functions.auth-email-hook]
     verify_jwt = false
+  [functions.aurora-revenue-loop]
+    verify_jwt = false
+  [functions.aurora-approve-action]
+    verify_jwt = true
   [functions.brain-newsfeed-ingest]
     verify_jwt = false
   [functions.daily-blog-audio-announce]

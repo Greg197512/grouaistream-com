@@ -124,6 +124,7 @@ const AppShell = () => {
           <Route path="/blog/:slug" element={<BlogPost />} />
           <Route path="/reklama/:token" element={<AdSubmission />} />
           <Route path="/orders" element={<Orders />} />
+          <Route path="/n/:slug" element={<NicheLandingPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
