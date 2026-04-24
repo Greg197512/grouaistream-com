@@ -332,6 +332,12 @@ export default function AdminAurora() {
                     {`https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/aurora-business-intake`}
                   </code>
                   <p className="text-xs text-muted-foreground mt-2">Body JSON: {`{ service_type, brief, client_email?, client_company?, budget_eur?, payload?, n8n_workflow_id? }`}</p>
+
+                  <p className="text-sm text-muted-foreground mt-4 mb-2">Callback dla n8n (raportowanie kroków/błędów do Aurory):</p>
+                  <code className="block text-xs p-2 bg-background border border-border rounded break-all">
+                    {`https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/aurora-n8n-callback`}
+                  </code>
+                  <p className="text-xs text-muted-foreground mt-2">{`POST { run_id, type: "step"|"finish"|"log", node_name?, status?, message?, output? }`}</p>
                 </CardContent>
               </Card>
 
