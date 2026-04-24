@@ -1044,6 +1044,16 @@ const RadioLive = () => {
           </div>
         </motion.div>
       )}
+
+      {/* Admin Live Mic Booth */}
+      {isAdmin && (
+        <LiveMicBooth
+          open={micBoothOpen}
+          onClose={() => setMicBoothOpen(false)}
+          radioAudio={audioRef.current}
+          baseVolume={muted ? 0 : volume}
+        />
+      )}
     </div>
   );
 };
