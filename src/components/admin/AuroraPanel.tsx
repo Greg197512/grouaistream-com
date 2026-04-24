@@ -243,7 +243,38 @@ export const AuroraPanel = () => {
     else { toast.success("Nisza odrzucona"); loadAll(); }
   };
 
-  const approveAction = async (id: string) => {
+  const triggerAutopilot = async () => {
+    setAutopilotRunning(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("aurora-autopilot", { body: { trigger: "manual" } });
+      if (error) throw error;
+      toast.success(`🤖 Autopilot zakończył cykl. Sprawdź podsumowanie.`);
+      console.log("autopilot summary", data);
+      await loadAll();
+    } catch (e: any) {
+      toast.error(`Autopilot: ${e.message || "błąd"}`);
+    } finally {
+      setAutopilotRunning(false);
+    }
+  };
+
+  const updateAutopilot = async (patch: Record<string, any>) => {
+    setSavingAutopilot(true);
+    const optimistic = { ...autopilot, ...patch };
+    setAutopilot(optimistic);
+    const { error } = await supabase
+      .from("aurora_autopilot_settings" as any)
+      .update({ ...patch, updated_at: new Date().toISOString() })
+      .eq("id", 1);
+    setSavingAutopilot(false);
+    if (error) {
+      toast.error(error.message);
+      loadAll();
+    } else {
+      toast.success("Zapisane");
+    }
+  };
+
     setApprovingId(id);
     try {
       const { data, error } = await supabase.functions.invoke("aurora-approve-action", { body: { action_id: id } });
