@@ -2973,6 +2973,7 @@ export type Database = {
           impressions_used: number
           is_active: boolean
           package_type: string
+          paddle_transaction_id: string | null
           track_id: string
           user_id: string
         }
@@ -2985,6 +2986,7 @@ export type Database = {
           impressions_used?: number
           is_active?: boolean
           package_type?: string
+          paddle_transaction_id?: string | null
           track_id: string
           user_id: string
         }
@@ -2997,6 +2999,7 @@ export type Database = {
           impressions_used?: number
           is_active?: boolean
           package_type?: string
+          paddle_transaction_id?: string | null
           track_id?: string
           user_id?: string
         }
@@ -3487,6 +3490,16 @@ export type Database = {
     }
     Functions: {
       acknowledge_payout: { Args: { _detail_id: string }; Returns: Json }
+      activate_boost_paid: {
+        Args: {
+          _amount?: number
+          _package?: string
+          _paddle_transaction_id?: string
+          _track_id: string
+          _user_id: string
+        }
+        Returns: Json
+      }
       ad_outreach_daily_count: { Args: never; Returns: number }
       add_to_song_catalog: {
         Args: {

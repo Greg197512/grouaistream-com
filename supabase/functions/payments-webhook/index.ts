@@ -235,7 +235,62 @@ async function handleTransactionCompleted(data: any, env: PaddleEnv) {
     return;
   }
 
-  // ---- Path B: Coffee tip (one-time) — existing flow
+  // ---- Path B: Track Boost (one-time, paid via Paddle) ----
+  if (priceExternal?.startsWith('grouai_boost')) {
+    const userId = customData?.userId || null;
+    const boostTrackId = customData?.boostTrackId || null;
+    const boostPackage = customData?.boostPackage || 'basic';
+    const totalCents = Number(details?.totals?.grandTotal || item.price?.unitPrice?.amount || 0);
+    const amount = totalCents / 100;
+
+    if (!userId || !boostTrackId) {
+      console.error('[payments-webhook] boost: missing userId/boostTrackId in customData', customData);
+      return;
+    }
+
+    // Idempotent activation (track_boosts.paddle_transaction_id is UNIQUE)
+    const { data: actResult, error: actErr } = await supabase.rpc('activate_boost_paid', {
+      _user_id: userId,
+      _track_id: boostTrackId,
+      _package: boostPackage,
+      _amount: amount,
+      _paddle_transaction_id: id,
+    });
+
+    if (actErr) {
+      console.error('[payments-webhook] boost activation error:', actErr);
+      return;
+    }
+
+    // Record in one_time_purchases for accounting parity with coffee
+    await supabase.from('one_time_purchases').insert({
+      user_id: userId,
+      paddle_transaction_id: id,
+      paddle_customer_id: customerId,
+      product_id: 'grouai_boost',
+      price_id: priceExternal,
+      amount,
+      currency: (item.price?.unitPrice?.currencyCode || 'eur').toLowerCase(),
+      recipient_user_id: userId,
+      recipient_track_id: boostTrackId,
+      environment: env,
+    });
+
+    // Emit agent event for analytics / brain
+    await supabase.from('agent_events').insert({
+      event_type: 'boost.purchased',
+      source: 'payments-webhook',
+      actor_user_id: userId,
+      target_type: 'track',
+      target_id: boostTrackId,
+      payload: { package: boostPackage, amount, currency: 'eur', paddle_transaction_id: id, env },
+    }).then(() => {}, (e) => console.error('[payments-webhook] agent_event err:', e));
+
+    console.log('[payments-webhook] boost activated:', userId, boostTrackId, amount, '→', actResult);
+    return;
+  }
+
+  // ---- Path C: Coffee tip (one-time) — existing flow
   if (!priceExternal?.startsWith('grouai_coffee')) return;
 
   const userId = customData?.userId || null;
