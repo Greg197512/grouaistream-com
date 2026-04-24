@@ -313,15 +313,6 @@ export function AuroraStorageDesk() {
                     />
                   </div>
                 </div>
-                <Progress value={Math.min(c.usage_percent, 100)} className={c.usage_percent > 90 ? "[&>div]:bg-red-500" : c.usage_percent > 75 ? "[&>div]:bg-orange-500" : ""} />
-                {c.usage_percent > 90 && (
-                  <div className="flex items-center gap-2 text-xs text-red-500">
-                    <AlertTriangle className="w-3 h-3" /> Przekroczono 90% — uploads wkrótce zablokowane
-                  </div>
-                )}
-                {c.suggested_upgrade && (
-                  <p className="text-xs text-muted-foreground italic">💡 {c.suggested_upgrade.reason}</p>
-                )}
               </CardContent>
             </Card>
           ))}
