@@ -496,6 +496,87 @@ export type Database = {
         }
         Relationships: []
       }
+      aurora_niches: {
+        Row: {
+          category: string
+          competition_level: string | null
+          confidence_score: number | null
+          content_pillars: Json | null
+          description: string | null
+          discovered_at: string
+          domain_suggestions: Json | null
+          effort_score: number | null
+          estimated_monthly_revenue_eur: number | null
+          first_actions: Json | null
+          id: string
+          launched_at: string | null
+          launched_url: string | null
+          legal_risk: string | null
+          market_signals: Json | null
+          monetization_methods: Json | null
+          niche_name: string
+          notes: string | null
+          reviewed_at: string | null
+          reviewer_user_id: string | null
+          search_volume_estimate: number | null
+          source_urls: Json | null
+          status: string
+          target_audience: string | null
+        }
+        Insert: {
+          category: string
+          competition_level?: string | null
+          confidence_score?: number | null
+          content_pillars?: Json | null
+          description?: string | null
+          discovered_at?: string
+          domain_suggestions?: Json | null
+          effort_score?: number | null
+          estimated_monthly_revenue_eur?: number | null
+          first_actions?: Json | null
+          id?: string
+          launched_at?: string | null
+          launched_url?: string | null
+          legal_risk?: string | null
+          market_signals?: Json | null
+          monetization_methods?: Json | null
+          niche_name: string
+          notes?: string | null
+          reviewed_at?: string | null
+          reviewer_user_id?: string | null
+          search_volume_estimate?: number | null
+          source_urls?: Json | null
+          status?: string
+          target_audience?: string | null
+        }
+        Update: {
+          category?: string
+          competition_level?: string | null
+          confidence_score?: number | null
+          content_pillars?: Json | null
+          description?: string | null
+          discovered_at?: string
+          domain_suggestions?: Json | null
+          effort_score?: number | null
+          estimated_monthly_revenue_eur?: number | null
+          first_actions?: Json | null
+          id?: string
+          launched_at?: string | null
+          launched_url?: string | null
+          legal_risk?: string | null
+          market_signals?: Json | null
+          monetization_methods?: Json | null
+          niche_name?: string
+          notes?: string | null
+          reviewed_at?: string | null
+          reviewer_user_id?: string | null
+          search_volume_estimate?: number | null
+          source_urls?: Json | null
+          status?: string
+          target_audience?: string | null
+        }
+        Relationships: []
+      }
       aurora_partnerships: {
         Row: {
           approved_by: string | null
