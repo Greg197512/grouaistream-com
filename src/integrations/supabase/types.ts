@@ -1262,6 +1262,54 @@ export type Database = {
         }
         Relationships: []
       }
+      aurora_r2_settings: {
+        Row: {
+          allow_public_assets: boolean
+          bucket_name: string
+          cost_per_gb_egress_eur: number
+          cost_per_gb_eur: number
+          created_at: string
+          default_signed_ttl_days: number
+          hard_block_on_quota: boolean
+          id: string
+          margin_percent: number
+          notes: string | null
+          public_base_url: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          allow_public_assets?: boolean
+          bucket_name?: string
+          cost_per_gb_egress_eur?: number
+          cost_per_gb_eur?: number
+          created_at?: string
+          default_signed_ttl_days?: number
+          hard_block_on_quota?: boolean
+          id?: string
+          margin_percent?: number
+          notes?: string | null
+          public_base_url?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          allow_public_assets?: boolean
+          bucket_name?: string
+          cost_per_gb_egress_eur?: number
+          cost_per_gb_eur?: number
+          created_at?: string
+          default_signed_ttl_days?: number
+          hard_block_on_quota?: boolean
+          id?: string
+          margin_percent?: number
+          notes?: string | null
+          public_base_url?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       aurora_revenue_actions: {
         Row: {
           action_type: string
@@ -1402,8 +1450,77 @@ export type Database = {
             foreignKeyName: "aurora_storage_files_storage_subscription_id_fkey"
             columns: ["storage_subscription_id"]
             isOneToOne: false
+            referencedRelation: "aurora_storage_client_usage"
+            referencedColumns: ["subscription_id"]
+          },
+          {
+            foreignKeyName: "aurora_storage_files_storage_subscription_id_fkey"
+            columns: ["storage_subscription_id"]
+            isOneToOne: false
             referencedRelation: "aurora_storage_subscriptions"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      aurora_storage_offers: {
+        Row: {
+          checkout_url: string | null
+          client_company: string | null
+          client_email: string
+          created_at: string
+          current_usage_gb: number
+          expires_at: string | null
+          id: string
+          margin_eur: number
+          metadata: Json
+          monthly_price_eur: number
+          projected_usage_gb: number
+          rationale: string | null
+          recommended_plan_code: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          checkout_url?: string | null
+          client_company?: string | null
+          client_email: string
+          created_at?: string
+          current_usage_gb?: number
+          expires_at?: string | null
+          id?: string
+          margin_eur?: number
+          metadata?: Json
+          monthly_price_eur?: number
+          projected_usage_gb?: number
+          rationale?: string | null
+          recommended_plan_code?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          checkout_url?: string | null
+          client_company?: string | null
+          client_email?: string
+          created_at?: string
+          current_usage_gb?: number
+          expires_at?: string | null
+          id?: string
+          margin_eur?: number
+          metadata?: Json
+          monthly_price_eur?: number
+          projected_usage_gb?: number
+          rationale?: string | null
+          recommended_plan_code?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aurora_storage_offers_recommended_plan_code_fkey"
+            columns: ["recommended_plan_code"]
+            isOneToOne: false
+            referencedRelation: "aurora_storage_plans"
+            referencedColumns: ["code"]
           },
         ]
       }
@@ -4812,6 +4929,34 @@ export type Database = {
         }
         Relationships: []
       }
+      aurora_storage_client_usage: {
+        Row: {
+          client_company: string | null
+          client_email: string | null
+          client_user_id: string | null
+          current_period_end: string | null
+          estimated_cost_eur: number | null
+          paddle_subscription_id: string | null
+          plan_code: string | null
+          plan_name: string | null
+          plan_price_eur: number | null
+          plan_storage_gb: number | null
+          status: string | null
+          storage_used_bytes: number | null
+          storage_used_gb: number | null
+          subscription_id: string | null
+          usage_percent: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aurora_storage_subscriptions_plan_code_fkey"
+            columns: ["plan_code"]
+            isOneToOne: false
+            referencedRelation: "aurora_storage_plans"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
       aurora_storage_overview: {
         Row: {
           active_subscriptions: number | null
@@ -4901,6 +5046,17 @@ export type Database = {
           _status: string
         }
         Returns: Json
+      }
+      aurora_storage_fulfill_from_paddle: {
+        Args: {
+          _current_period_end: string
+          _email: string
+          _paddle_subscription_id: string
+          _price_external_id: string
+          _status: string
+          _user_id: string
+        }
+        Returns: string
       }
       claim_likes_milestone_bonus: { Args: never; Returns: Json }
       claim_mood_analysis_bonus: { Args: never; Returns: Json }

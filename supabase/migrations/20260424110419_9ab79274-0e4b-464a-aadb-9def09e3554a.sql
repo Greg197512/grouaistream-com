@@ -1,0 +1,1 @@
+ALTER VIEW public.aurora_storage_client_usage SET (security_invoker = true);
