@@ -264,9 +264,12 @@ export function AuroraStorageDesk() {
                       {c.client_company && <Badge variant="outline">{c.client_company}</Badge>}
                       <Badge>{c.plan_name}</Badge>
                       <Badge variant={c.status === "active" ? "default" : "secondary"}>{c.status}</Badge>
+                      {c.egress_billing_enabled && <Badge className="bg-blue-500/20 text-blue-500 hover:bg-blue-500/30">egress on</Badge>}
                     </div>
                     <div className="text-xs text-muted-foreground mt-1">
-                      {c.storage_used_gb} / {c.plan_storage_gb} GB · koszt R2: €{c.r2_real_cost_eur} · marża: <span className={c.plan_margin_eur > 0 ? "text-green-500" : "text-red-500"}>€{c.plan_margin_eur}</span>
+                      {c.storage_used_gb} / {c.plan_storage_gb} GB · storage €{c.r2_real_cost_eur}
+                      {c.egress_billing_enabled && <> · egress {c.egress_used_gb}GB → €{c.r2_egress_cost_eur}</>}
+                      {" · "}marża: <span className={c.plan_margin_eur > 0 ? "text-green-500" : "text-red-500"}>€{c.plan_margin_eur}</span>
                     </div>
                   </div>
                   {c.suggested_upgrade && (
@@ -275,6 +278,40 @@ export function AuroraStorageDesk() {
                       Oferta {c.suggested_upgrade.plan_name}
                     </Button>
                   )}
+                </div>
+                <Progress value={Math.min(c.usage_percent, 100)} className={c.usage_percent > 90 ? "[&>div]:bg-red-500" : c.usage_percent > 75 ? "[&>div]:bg-orange-500" : ""} />
+                {c.usage_percent > 90 && (
+                  <div className="flex items-center gap-2 text-xs text-red-500">
+                    <AlertTriangle className="w-3 h-3" /> Przekroczono 90% — uploads wkrótce zablokowane
+                  </div>
+                )}
+                {c.suggested_upgrade && (
+                  <p className="text-xs text-muted-foreground italic">💡 {c.suggested_upgrade.reason}</p>
+                )}
+
+                {/* Egress per-client controls */}
+                <div className="border-t pt-3 mt-2 flex items-center gap-3 flex-wrap">
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      checked={c.egress_billing_enabled}
+                      onCheckedChange={v => toggleEgressBilling(c.subscription_id, v)}
+                    />
+                    <span className="text-xs">Naliczaj egress</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Label className="text-xs whitespace-nowrap">Stawka €/GB:</Label>
+                    <Input
+                      type="number"
+                      step="0.0001"
+                      className="h-7 w-24 text-xs"
+                      defaultValue={c.effective_egress_cost_per_gb_eur}
+                      onBlur={e => {
+                        const v = e.target.value === "" ? null : Number(e.target.value);
+                        if (v !== c.effective_egress_cost_per_gb_eur) updateEgressOverride(c.subscription_id, v);
+                      }}
+                      disabled={!c.egress_billing_enabled}
+                    />
+                  </div>
                 </div>
                 <Progress value={Math.min(c.usage_percent, 100)} className={c.usage_percent > 90 ? "[&>div]:bg-red-500" : c.usage_percent > 75 ? "[&>div]:bg-orange-500" : ""} />
                 {c.usage_percent > 90 && (
