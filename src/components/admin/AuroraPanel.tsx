@@ -508,7 +508,75 @@ export const AuroraPanel = () => {
         </TabsContent>
 
         {/* NICHES — autonomous niches outside music */}
-        <TabsContent value="niches">
+        <TabsContent value="niches" className="space-y-4">
+          {/* AUTOPILOT */}
+          {autopilot && (
+            <Card className="border-fuchsia-500/40 bg-gradient-to-br from-fuchsia-500/5 to-purple-700/5">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  🤖 Autopilot Aurory
+                  <Badge variant={autopilot.enabled ? "default" : "outline"} className={autopilot.enabled ? "bg-emerald-600" : ""}>
+                    {autopilot.enabled ? "WŁĄCZONY" : "wyłączony"}
+                  </Badge>
+                </CardTitle>
+                <CardDescription>
+                  Co 6h Aurora sama: skanuje nisze → uruchamia te z ufnością ≥{Math.round((autopilot.min_confidence || 0) * 100)}% i przychodem ≥{autopilot.min_revenue_eur}€ → automatycznie publikuje SEO posty na blogu.
+                  {autopilot.last_run_at && (
+                    <span className="block mt-1 text-xs">Ostatni cykl: {formatDistanceToNow(new Date(autopilot.last_run_at), { addSuffix: true, locale: pl })}</span>
+                  )}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs mb-3">
+                  <label className="flex flex-col gap-1">
+                    <span className="text-muted-foreground">Nisz/dzień</span>
+                    <input type="number" min={0} max={10} value={autopilot.max_niches_per_day}
+                      onChange={(e) => updateAutopilot({ max_niches_per_day: parseInt(e.target.value || "0") })}
+                      className="bg-background border border-border rounded px-2 py-1" disabled={savingAutopilot} />
+                  </label>
+                  <label className="flex flex-col gap-1">
+                    <span className="text-muted-foreground">Min. ufność (0-1)</span>
+                    <input type="number" step="0.05" min={0} max={1} value={autopilot.min_confidence}
+                      onChange={(e) => updateAutopilot({ min_confidence: parseFloat(e.target.value || "0") })}
+                      className="bg-background border border-border rounded px-2 py-1" disabled={savingAutopilot} />
+                  </label>
+                  <label className="flex flex-col gap-1">
+                    <span className="text-muted-foreground">Min. przychód €/mies</span>
+                    <input type="number" min={0} value={autopilot.min_revenue_eur}
+                      onChange={(e) => updateAutopilot({ min_revenue_eur: parseFloat(e.target.value || "0") })}
+                      className="bg-background border border-border rounded px-2 py-1" disabled={savingAutopilot} />
+                  </label>
+                  <label className="flex flex-col gap-1">
+                    <span className="text-muted-foreground">SEO postów/dzień</span>
+                    <input type="number" min={0} max={20} value={autopilot.max_seo_posts_per_day}
+                      onChange={(e) => updateAutopilot({ max_seo_posts_per_day: parseInt(e.target.value || "0") })}
+                      className="bg-background border border-border rounded px-2 py-1" disabled={savingAutopilot} />
+                  </label>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button size="sm" onClick={() => updateAutopilot({ enabled: !autopilot.enabled })} variant={autopilot.enabled ? "outline" : "default"}>
+                    {autopilot.enabled ? "Wyłącz autopilota" : "Włącz autopilota"}
+                  </Button>
+                  <Button size="sm" onClick={() => updateAutopilot({ auto_publish_seo_posts: !autopilot.auto_publish_seo_posts })} variant="outline">
+                    Auto-publikacja SEO: {autopilot.auto_publish_seo_posts ? "TAK" : "NIE"}
+                  </Button>
+                  <Button size="sm" onClick={triggerAutopilot} disabled={autopilotRunning} className="bg-gradient-to-r from-fuchsia-500 to-purple-700 text-white ml-auto">
+                    {autopilotRunning ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Rocket className="h-3 w-3 mr-1" />}
+                    Uruchom cykl teraz
+                  </Button>
+                </div>
+                {autopilot.last_run_summary && Object.keys(autopilot.last_run_summary).length > 0 && (
+                  <details className="mt-3">
+                    <summary className="text-[10px] text-muted-foreground cursor-pointer">podgląd ostatniego cyklu</summary>
+                    <pre className="mt-1 text-[10px] text-muted-foreground overflow-x-auto bg-muted/30 p-2 rounded max-h-48">
+                      {JSON.stringify(autopilot.last_run_summary, null, 2)}
+                    </pre>
+                  </details>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
