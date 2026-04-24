@@ -188,12 +188,13 @@ export const BlogDistributionPanel = () => {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Sparkles className="h-5 w-5 text-primary" />
-          Dystrybucja blogu — hooki AI + newsletter
+          Dystrybucja blogu — wszędzie 1 klikiem
         </CardTitle>
         <p className="text-xs text-muted-foreground mt-1">
-          Gotowe teasery do skopiowania na X, Telegram + 1-klik wysyłka emaili do wszystkich
-          potwierdzonych użytkowników (z opcją wypisania).
+          Newsletter (auto, do wszystkich) ・ X / Facebook (1 klik = okno publikacji z gotowym tekstem) ・
+          TikTok (caption do schowka + przejście do Reels Studio).
         </p>
+
       </CardHeader>
       <CardContent>
         <ScrollArea className="h-[520px]">
