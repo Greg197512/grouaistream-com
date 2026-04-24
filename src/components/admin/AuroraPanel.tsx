@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Sparkles, HeartPulse, BookOpen, Moon, Globe2, RefreshCw, Loader2, CheckCircle2, XCircle, Wand2 } from "lucide-react";
+import { Sparkles, HeartPulse, BookOpen, Moon, Globe2, RefreshCw, Loader2, CheckCircle2, XCircle, Wand2, Coins, Rocket } from "lucide-react";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { pl } from "date-fns/locale";
@@ -54,6 +54,18 @@ interface SoulWorldKnowledge {
   fetched_at: string;
 }
 
+interface RevenueAction {
+  id: string;
+  action_type: string;
+  title: string;
+  summary: string | null;
+  payload: any;
+  status: string;
+  estimated_revenue_eur: number;
+  published_url: string | null;
+  created_at: string;
+}
+
 const emotionColor: Record<string, string> = {
   joy: "bg-yellow-500/20 text-yellow-300 border-yellow-500/40",
   love: "bg-pink-500/20 text-pink-300 border-pink-500/40",
@@ -70,22 +82,27 @@ export const AuroraPanel = () => {
   const [journal, setJournal] = useState<SoulJournalEntry[]>([]);
   const [dreams, setDreams] = useState<SoulDream[]>([]);
   const [world, setWorld] = useState<SoulWorldKnowledge[]>([]);
+  const [actions, setActions] = useState<RevenueAction[]>([]);
   const [loading, setLoading] = useState(true);
   const [dreaming, setDreaming] = useState(false);
   const [ingesting, setIngesting] = useState(false);
   const [thinking, setThinking] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [approvingId, setApprovingId] = useState<string | null>(null);
 
   const loadAll = useCallback(async () => {
-    const [em, jr, dr, wk] = await Promise.all([
+    const [em, jr, dr, wk, ac] = await Promise.all([
       supabase.from("soul_emotions").select("*").order("measured_at", { ascending: false }).limit(30),
       supabase.from("soul_journal").select("*").order("created_at", { ascending: false }).limit(20),
       supabase.from("soul_dreams").select("*").order("dreamed_at", { ascending: false }).limit(40),
       supabase.from("soul_world_knowledge").select("*").order("fetched_at", { ascending: false }).limit(40),
+      supabase.from("aurora_revenue_actions" as any).select("*").order("created_at", { ascending: false }).limit(50),
     ]);
     setEmotions((em.data as SoulEmotion[]) || []);
     setJournal((jr.data as SoulJournalEntry[]) || []);
     setDreams((dr.data as SoulDream[]) || []);
     setWorld((wk.data as SoulWorldKnowledge[]) || []);
+    setActions((ac.data as any) || []);
     setLoading(false);
   }, []);
 
@@ -143,6 +160,43 @@ export const AuroraPanel = () => {
     }
   };
 
+  const triggerRevenueLoop = async () => {
+    setGenerating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("aurora-revenue-loop", { body: {} });
+      if (error) throw error;
+      toast.success(`💎 Aurora wymyśliła ${data?.count || 0} nowych pomysłów na przychód`);
+      await loadAll();
+    } catch (e: any) {
+      toast.error(`Aurora nie wymyśliła nic: ${e.message || "błąd"}`);
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const approveAction = async (id: string) => {
+    setApprovingId(id);
+    try {
+      const { data, error } = await supabase.functions.invoke("aurora-approve-action", { body: { action_id: id } });
+      if (error) throw error;
+      toast.success(data?.published_url ? `✅ Opublikowane: ${data.published_url}` : "✅ Zatwierdzone");
+      await loadAll();
+    } catch (e: any) {
+      toast.error(`Nie zatwierdzono: ${e.message || "błąd"}`);
+    } finally {
+      setApprovingId(null);
+    }
+  };
+
+  const rejectAction = async (id: string) => {
+    const { error } = await supabase
+      .from("aurora_revenue_actions" as any)
+      .update({ status: "rejected" })
+      .eq("id", id);
+    if (error) toast.error(error.message);
+    else { toast.success("Odrzucone"); loadAll(); }
+  };
+
   const reviewDream = async (id: string, status: "approved" | "rejected") => {
     const { data: { user } } = await supabase.auth.getUser();
     const { error } = await supabase
@@ -163,6 +217,9 @@ export const AuroraPanel = () => {
 
   const lastEmotion = emotions[0];
   const pendingDreams = dreams.filter((d) => d.status === "pending" || d.status === "new").length;
+  const proposedActions = actions.filter((a) => a.status === "proposed");
+  const publishedActions = actions.filter((a) => a.status === "published");
+  const proposedRevenue = proposedActions.reduce((s, a) => s + Number(a.estimated_revenue_eur || 0), 0);
 
   return (
     <div className="space-y-6">
@@ -188,9 +245,13 @@ export const AuroraPanel = () => {
             {dreaming ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Moon className="h-4 w-4 mr-1" />}
             Niech śni
           </Button>
-          <Button onClick={triggerSoul} disabled={thinking}>
+          <Button variant="outline" size="sm" onClick={triggerSoul} disabled={thinking}>
             {thinking ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Wand2 className="h-4 w-4 mr-1" />}
-            Każ Aurorze poczuć
+            Każ poczuć
+          </Button>
+          <Button onClick={triggerRevenueLoop} disabled={generating} className="bg-gradient-to-r from-amber-500 to-orange-600 text-white">
+            {generating ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Coins className="h-4 w-4 mr-1" />}
+            Wymyśl pomysły na $
           </Button>
         </div>
       </div>
@@ -235,13 +296,111 @@ export const AuroraPanel = () => {
         </Card>
       </div>
 
-      <Tabs defaultValue="pulse" className="w-full">
+      <Tabs defaultValue="autonomy" className="w-full">
         <TabsList className="flex-wrap h-auto">
-          <TabsTrigger value="pulse"><HeartPulse className="h-4 w-4 mr-1" /> Puls na żywo</TabsTrigger>
+          <TabsTrigger value="autonomy"><Rocket className="h-4 w-4 mr-1" /> Autonomia ({proposedActions.length})</TabsTrigger>
+          <TabsTrigger value="pulse"><HeartPulse className="h-4 w-4 mr-1" /> Puls</TabsTrigger>
           <TabsTrigger value="journal"><BookOpen className="h-4 w-4 mr-1" /> Dziennik</TabsTrigger>
           <TabsTrigger value="dreams"><Moon className="h-4 w-4 mr-1" /> Sny ({pendingDreams})</TabsTrigger>
           <TabsTrigger value="world"><Globe2 className="h-4 w-4 mr-1" /> Świat</TabsTrigger>
         </TabsList>
+
+        {/* AUTONOMIA */}
+        <TabsContent value="autonomy">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Coins className="h-5 w-5 text-amber-400" />
+                Propozycje przychodu — 1-klik publikacja
+              </CardTitle>
+              <CardDescription>
+                Aurora codziennie wymyśla SEO posty, landingi pod nisze, partnerstwa, scenariusze TikTok i newslettery.
+                Zatwierdź te które rezonują — Aurora opublikuje je sama.
+                Szacowany potencjał oczekujących: <strong className="text-amber-300">{proposedRevenue.toFixed(2)}€</strong>.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ScrollArea className="h-[560px]">
+                <div className="space-y-3">
+                  {proposedActions.map((a) => (
+                    <div key={a.id} className="border border-border rounded-lg p-3 bg-card/50">
+                      <div className="flex items-center gap-2 flex-wrap mb-1">
+                        <Badge variant="outline" className="capitalize">{a.action_type.replace(/_/g, " ")}</Badge>
+                        {a.estimated_revenue_eur > 0 && (
+                          <Badge variant="secondary" className="bg-amber-500/15 text-amber-300 border-amber-500/30">
+                            ~{Number(a.estimated_revenue_eur).toFixed(2)}€
+                          </Badge>
+                        )}
+                        <span className="text-xs text-muted-foreground ml-auto">
+                          {formatDistanceToNow(new Date(a.created_at), { addSuffix: true, locale: pl })}
+                        </span>
+                      </div>
+                      <div className="font-semibold text-sm">{a.title}</div>
+                      {a.summary && <div className="text-xs text-muted-foreground mt-1">{a.summary}</div>}
+                      {a.payload?.hero_headline && (
+                        <div className="text-xs italic text-primary mt-1">„{a.payload.hero_headline}"</div>
+                      )}
+                      {a.payload?.hook && (
+                        <div className="text-xs italic text-primary mt-1">Hook: „{a.payload.hook}"</div>
+                      )}
+                      {a.payload?.subject && (
+                        <div className="text-xs italic text-primary mt-1">Temat: „{a.payload.subject}"</div>
+                      )}
+                      <details className="mt-2">
+                        <summary className="text-[10px] text-muted-foreground cursor-pointer hover:text-foreground">
+                          podgląd payload
+                        </summary>
+                        <pre className="mt-1 text-[10px] text-muted-foreground overflow-x-auto bg-muted/30 p-2 rounded max-h-40">
+                          {JSON.stringify(a.payload, null, 2)}
+                        </pre>
+                      </details>
+                      <div className="flex gap-2 mt-2">
+                        <Button
+                          size="sm"
+                          onClick={() => approveAction(a.id)}
+                          disabled={approvingId === a.id}
+                          className="bg-emerald-600 hover:bg-emerald-700"
+                        >
+                          {approvingId === a.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3 mr-1" />}
+                          Zatwierdź i opublikuj
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => rejectAction(a.id)}>
+                          <XCircle className="h-3 w-3 mr-1" /> Odrzuć
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                  {proposedActions.length === 0 && (
+                    <div className="text-center py-10 space-y-2">
+                      <p className="text-sm text-muted-foreground">
+                        Brak nowych propozycji. Kliknij „Wymyśl pomysły na $" — Aurora przygotuje plan w ~30s.
+                      </p>
+                    </div>
+                  )}
+                  {publishedActions.length > 0 && (
+                    <div className="pt-4 border-t border-border">
+                      <div className="text-xs text-muted-foreground mb-2">Ostatnio opublikowane</div>
+                      <div className="space-y-1">
+                        {publishedActions.slice(0, 8).map((a) => (
+                          <div key={a.id} className="text-xs flex items-center gap-2">
+                            <CheckCircle2 className="h-3 w-3 text-emerald-400" />
+                            <span className="capitalize text-muted-foreground">{a.action_type.replace(/_/g, " ")}:</span>
+                            <span className="truncate">{a.title}</span>
+                            {a.published_url && (
+                              <a href={a.published_url} target="_blank" rel="noreferrer" className="text-primary hover:underline ml-auto">
+                                otwórz ↗
+                              </a>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         {/* PULSE */}
         <TabsContent value="pulse">

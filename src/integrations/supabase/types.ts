@@ -430,6 +430,165 @@ export type Database = {
           },
         ]
       }
+      aurora_landing_pages: {
+        Row: {
+          conversions_count: number | null
+          created_at: string
+          cta_text: string | null
+          cta_url: string | null
+          hero_headline: string | null
+          hero_subheadline: string | null
+          id: string
+          meta_description: string | null
+          niche: string
+          sections: Json
+          slug: string
+          sponsor_active: boolean | null
+          sponsor_name: string | null
+          sponsor_until: string | null
+          sponsor_url: string | null
+          status: string
+          title: string
+          updated_at: string
+          views_count: number | null
+        }
+        Insert: {
+          conversions_count?: number | null
+          created_at?: string
+          cta_text?: string | null
+          cta_url?: string | null
+          hero_headline?: string | null
+          hero_subheadline?: string | null
+          id?: string
+          meta_description?: string | null
+          niche: string
+          sections?: Json
+          slug: string
+          sponsor_active?: boolean | null
+          sponsor_name?: string | null
+          sponsor_until?: string | null
+          sponsor_url?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+          views_count?: number | null
+        }
+        Update: {
+          conversions_count?: number | null
+          created_at?: string
+          cta_text?: string | null
+          cta_url?: string | null
+          hero_headline?: string | null
+          hero_subheadline?: string | null
+          id?: string
+          meta_description?: string | null
+          niche?: string
+          sections?: Json
+          slug?: string
+          sponsor_active?: boolean | null
+          sponsor_name?: string | null
+          sponsor_until?: string | null
+          sponsor_url?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+          views_count?: number | null
+        }
+        Relationships: []
+      }
+      aurora_partnerships: {
+        Row: {
+          approved_by: string | null
+          contact_email: string | null
+          contact_url: string | null
+          created_at: string
+          estimated_value_eur: number | null
+          id: string
+          partner_name: string
+          partner_type: string | null
+          pitch_body: string | null
+          pitch_subject: string | null
+          sent_at: string | null
+          status: string
+        }
+        Insert: {
+          approved_by?: string | null
+          contact_email?: string | null
+          contact_url?: string | null
+          created_at?: string
+          estimated_value_eur?: number | null
+          id?: string
+          partner_name: string
+          partner_type?: string | null
+          pitch_body?: string | null
+          pitch_subject?: string | null
+          sent_at?: string | null
+          status?: string
+        }
+        Update: {
+          approved_by?: string | null
+          contact_email?: string | null
+          contact_url?: string | null
+          created_at?: string
+          estimated_value_eur?: number | null
+          id?: string
+          partner_name?: string
+          partner_type?: string | null
+          pitch_body?: string | null
+          pitch_subject?: string | null
+          sent_at?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
+      aurora_revenue_actions: {
+        Row: {
+          action_type: string
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          estimated_revenue_eur: number | null
+          id: string
+          payload: Json
+          published_at: string | null
+          published_url: string | null
+          status: string
+          summary: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          action_type: string
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          estimated_revenue_eur?: number | null
+          id?: string
+          payload?: Json
+          published_at?: string | null
+          published_url?: string | null
+          status?: string
+          summary?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          action_type?: string
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          estimated_revenue_eur?: number | null
+          id?: string
+          payload?: Json
+          published_at?: string | null
+          published_url?: string | null
+          status?: string
+          summary?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       blog_affiliate_links: {
         Row: {
           brand: string
