@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, Rocket, Target, Trash2, RefreshCw, Briefcase, Workflow, PlayCircle, Plus, ExternalLink, ArrowLeft } from "lucide-react";
+import { Loader2, Rocket, Target, Trash2, RefreshCw, Briefcase, Workflow, PlayCircle, Plus, ExternalLink, ArrowLeft, Cloud, Download, HardDrive } from "lucide-react";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { pl } from "date-fns/locale";
@@ -59,6 +59,18 @@ const SERVICE_TYPES = [
   { value: "other", label: "Inne" },
 ];
 
+interface StoragePlan { id: string; code: string; name: string; storage_gb: number; bandwidth_gb_month: number; price_eur: number; features: string[]; active: boolean; sort_order: number; }
+interface StorageSub { id: string; plan_code: string; client_email: string | null; client_company: string | null; status: string; storage_used_bytes: number; current_period_end: string | null; }
+interface StorageFile { id: string; r2_key: string; public_url: string | null; file_name: string; content_type: string | null; size_bytes: number; visibility: string; category: string; niche_id: string | null; order_id: string | null; created_at: string; }
+interface StorageOverview { total_files: number; total_bytes: number; active_subscriptions: number; mrr_eur: number; }
+
+const formatBytes = (b: number): string => {
+  if (!b) return "0 B";
+  const k = 1024, sizes = ["B", "KB", "MB", "GB", "TB"];
+  const i = Math.floor(Math.log(b) / Math.log(k));
+  return `${(b / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`;
+};
+
 const statusColor = (s: string) => {
   if (s === "completed") return "bg-emerald-500/20 text-emerald-300 border-emerald-500/40";
   if (s === "in_progress") return "bg-blue-500/20 text-blue-300 border-blue-500/40";
@@ -82,6 +94,13 @@ export default function AdminAurora() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
 
+  // R2 Storage
+  const [storagePlans, setStoragePlans] = useState<StoragePlan[]>([]);
+  const [storageSubs, setStorageSubs] = useState<StorageSub[]>([]);
+  const [storageFiles, setStorageFiles] = useState<StorageFile[]>([]);
+  const [storageOverview, setStorageOverview] = useState<StorageOverview | null>(null);
+  const [newSub, setNewSub] = useState({ plan_code: "r2_starter_10gb", client_email: "", client_company: "" });
+
   // New order form
   const [newOrder, setNewOrder] = useState({ service_type: "seo_content", brief: "", client_email: "", client_company: "", budget_eur: 0 });
   // New workflow form
@@ -98,18 +117,26 @@ export default function AdminAurora() {
   }, [user]);
 
   const loadAll = useCallback(async () => {
-    const [n, o, w, r, ns] = await Promise.all([
+    const [n, o, w, r, ns, sp, ss, sf, sov] = await Promise.all([
       supabase.from("aurora_niches" as any).select("id,niche_name,status,opportunity_score,search_volume_estimate,competition_level,estimated_monthly_revenue_eur,launched_url,launched_at").order("opportunity_score", { ascending: false }).limit(100),
       supabase.from("aurora_business_orders" as any).select("*").order("created_at", { ascending: false }).limit(100),
       supabase.from("aurora_n8n_workflows" as any).select("*").order("created_at", { ascending: false }),
       supabase.from("aurora_n8n_runs" as any).select("*").order("started_at", { ascending: false }).limit(60),
       supabase.from("aurora_niche_n8n_summary" as any).select("*").order("runs_30d", { ascending: false }).limit(50),
+      supabase.from("aurora_storage_plans" as any).select("*").order("sort_order", { ascending: true }),
+      supabase.from("aurora_storage_subscriptions" as any).select("*").order("created_at", { ascending: false }),
+      supabase.from("aurora_storage_files" as any).select("*").order("created_at", { ascending: false }).limit(100),
+      supabase.from("aurora_storage_overview" as any).select("*").maybeSingle(),
     ]);
     setNiches((n.data as any) || []);
     setOrders((o.data as any) || []);
     setWorkflows((w.data as any) || []);
     setRuns((r.data as any) || []);
     setNicheSummary((ns.data as any) || []);
+    setStoragePlans((sp.data as any) || []);
+    setStorageSubs((ss.data as any) || []);
+    setStorageFiles((sf.data as any) || []);
+    setStorageOverview((sov.data as any) || null);
     setLoading(false);
   }, []);
 
@@ -175,6 +202,30 @@ export default function AdminAurora() {
     await loadAll();
   };
 
+  const addStorageSub = async () => {
+    if (!newSub.client_email || !newSub.plan_code) return toast.error("Email i pakiet wymagane");
+    const { error } = await supabase.from("aurora_storage_subscriptions" as any).insert(newSub);
+    if (error) return toast.error(error.message);
+    toast.success("Klient otrzymał pakiet R2");
+    setNewSub({ plan_code: "r2_starter_10gb", client_email: "", client_company: "" });
+    await loadAll();
+  };
+
+  const togglePlan = async (id: string, active: boolean) => {
+    await supabase.from("aurora_storage_plans" as any).update({ active }).eq("id", id);
+    await loadAll();
+  };
+
+  const downloadFile = async (fileId: string) => {
+    setBusy(`dl-${fileId}`);
+    try {
+      const { data, error } = await supabase.functions.invoke("aurora-r2-signed-download", { body: { file_id: fileId } });
+      if (error) throw error;
+      if (data?.url) window.open(data.url, "_blank");
+    } catch (e: any) { toast.error(e.message); }
+    finally { setBusy(null); }
+  };
+
   const launched = niches.filter(n => n.status === "launched");
   const archived = niches.filter(n => n.status === "archived");
   const ranked = niches.filter(n => n.status === "discovered" || n.status === "approved");
@@ -213,11 +264,12 @@ export default function AdminAurora() {
           <div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 animate-spin" /></div>
         ) : (
           <Tabs defaultValue="ranking">
-            <TabsList className="grid grid-cols-5 w-full max-w-3xl">
-              <TabsTrigger value="ranking">Ranking nisz</TabsTrigger>
+            <TabsList className="grid grid-cols-6 w-full max-w-4xl">
+              <TabsTrigger value="ranking">Nisze</TabsTrigger>
               <TabsTrigger value="orders">Zlecenia <Badge className="ml-2" variant="secondary">{orders.filter(o => o.status !== "completed").length}</Badge></TabsTrigger>
               <TabsTrigger value="n8n">n8n <Badge className="ml-2" variant="secondary">{workflows.length}</Badge></TabsTrigger>
               <TabsTrigger value="runs">Runs <Badge className="ml-2" variant="secondary">{runs.filter(r => r.status === "running").length}</Badge></TabsTrigger>
+              <TabsTrigger value="r2"><Cloud className="w-3 h-3 mr-1" />R2</TabsTrigger>
               <TabsTrigger value="archived">Archiwum</TabsTrigger>
             </TabsList>
 
@@ -467,6 +519,114 @@ export default function AdminAurora() {
                       {runs.length === 0 && <p className="text-center text-muted-foreground py-10 text-sm">Brak runów. Aurora pokaże je gdy wywoła workflowy n8n.</p>}
                     </div>
                   </ScrollArea>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* R2 STORAGE — pakiety, klienci, pliki, MRR */}
+            <TabsContent value="r2" className="mt-4 space-y-4">
+              <div className="grid md:grid-cols-4 gap-3">
+                <Card><CardContent className="pt-6"><div className="text-2xl font-bold">{storageOverview?.total_files || 0}</div><div className="text-xs text-muted-foreground">plików w R2</div></CardContent></Card>
+                <Card><CardContent className="pt-6"><div className="text-2xl font-bold">{formatBytes(storageOverview?.total_bytes || 0)}</div><div className="text-xs text-muted-foreground">zajęte miejsce</div></CardContent></Card>
+                <Card><CardContent className="pt-6"><div className="text-2xl font-bold">{storageOverview?.active_subscriptions || 0}</div><div className="text-xs text-muted-foreground">aktywni klienci</div></CardContent></Card>
+                <Card><CardContent className="pt-6"><div className="text-2xl font-bold text-emerald-400">€{Number(storageOverview?.mrr_eur || 0).toFixed(2)}</div><div className="text-xs text-muted-foreground">MRR R2</div></CardContent></Card>
+              </div>
+
+              <Card>
+                <CardHeader><CardTitle className="flex items-center gap-2"><HardDrive className="w-4 h-4" /> Pakiety pojemności</CardTitle><CardDescription>Aurora oferuje je klientom jako add-on do zleceń SEO/landingów</CardDescription></CardHeader>
+                <CardContent className="grid md:grid-cols-3 gap-3">
+                  {storagePlans.map(p => (
+                    <Card key={p.id} className={p.active ? "border-primary/40" : "opacity-50"}>
+                      <CardContent className="pt-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <strong>{p.name}</strong>
+                          <Switch checked={p.active} onCheckedChange={v => togglePlan(p.id, v)} />
+                        </div>
+                        <div className="text-2xl font-bold">€{Number(p.price_eur).toFixed(2)}<span className="text-xs text-muted-foreground">/mies</span></div>
+                        <div className="text-xs text-muted-foreground mt-1">{p.storage_gb} GB · {p.bandwidth_gb_month} GB transferu</div>
+                        <ul className="text-xs mt-2 space-y-0.5">
+                          {(p.features || []).map((f, i) => <li key={i}>✓ {f}</li>)}
+                        </ul>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader><CardTitle>Przyznaj pakiet klientowi</CardTitle></CardHeader>
+                <CardContent className="grid md:grid-cols-4 gap-3">
+                  <div>
+                    <Label>Pakiet</Label>
+                    <select className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm" value={newSub.plan_code} onChange={e => setNewSub({ ...newSub, plan_code: e.target.value })}>
+                      {storagePlans.filter(p => p.active).map(p => <option key={p.code} value={p.code}>{p.name} · €{p.price_eur}</option>)}
+                    </select>
+                  </div>
+                  <div><Label>Email klienta</Label><Input value={newSub.client_email} onChange={e => setNewSub({ ...newSub, client_email: e.target.value })} /></div>
+                  <div><Label>Firma</Label><Input value={newSub.client_company} onChange={e => setNewSub({ ...newSub, client_company: e.target.value })} /></div>
+                  <div className="flex items-end"><Button onClick={addStorageSub}><Plus className="w-4 h-4 mr-2" /> Aktywuj</Button></div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader><CardTitle>Klienci R2</CardTitle></CardHeader>
+                <CardContent>
+                  <ScrollArea className="h-[200px]">
+                    <div className="space-y-2">
+                      {storageSubs.map(s => {
+                        const plan = storagePlans.find(p => p.code === s.plan_code);
+                        const limit = (plan?.storage_gb || 0) * 1024 * 1024 * 1024;
+                        const pct = limit > 0 ? (s.storage_used_bytes / limit * 100) : 0;
+                        return (
+                          <div key={s.id} className="flex items-center justify-between gap-3 p-2 rounded border border-border/40">
+                            <div className="flex-1 min-w-0">
+                              <div className="font-medium text-sm">{s.client_email} {s.client_company && <span className="text-xs text-muted-foreground">· {s.client_company}</span>}</div>
+                              <div className="text-xs text-muted-foreground">{plan?.name || s.plan_code} · {formatBytes(s.storage_used_bytes)} / {plan?.storage_gb} GB ({pct.toFixed(1)}%)</div>
+                              <div className="h-1 bg-muted rounded mt-1 overflow-hidden"><div className={`h-full ${pct > 90 ? "bg-red-500" : pct > 70 ? "bg-orange-400" : "bg-emerald-500"}`} style={{ width: `${Math.min(100, pct)}%` }} /></div>
+                            </div>
+                            <Badge variant={s.status === "active" ? "default" : "outline"}>{s.status}</Badge>
+                          </div>
+                        );
+                      })}
+                      {storageSubs.length === 0 && <p className="text-center text-muted-foreground py-6 text-sm">Brak klientów R2.</p>}
+                    </div>
+                  </ScrollArea>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader><CardTitle>Pliki Aurory w R2 (100 ostatnich)</CardTitle><CardDescription>Deliverables, assety nisz, backupy</CardDescription></CardHeader>
+                <CardContent>
+                  <ScrollArea className="h-[360px]">
+                    <div className="space-y-1">
+                      {storageFiles.map(f => (
+                        <div key={f.id} className="flex items-center justify-between gap-3 p-2 rounded border border-border/40 text-sm">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <Badge variant="outline" className="text-xs">{f.category}</Badge>
+                              <span className="truncate font-mono text-xs">{f.file_name}</span>
+                              {f.visibility === "public_cdn" && <Badge variant="secondary" className="text-xs">CDN</Badge>}
+                            </div>
+                            <div className="text-xs text-muted-foreground">{formatBytes(f.size_bytes)} · {f.content_type} · {formatDistanceToNow(new Date(f.created_at), { locale: pl, addSuffix: true })}</div>
+                          </div>
+                          <Button size="sm" variant="ghost" onClick={() => downloadFile(f.id)} disabled={busy === `dl-${f.id}`}>
+                            {busy === `dl-${f.id}` ? <Loader2 className="w-3 h-3 animate-spin" /> : <Download className="w-3 h-3" />}
+                          </Button>
+                        </div>
+                      ))}
+                      {storageFiles.length === 0 && <p className="text-center text-muted-foreground py-10 text-sm">Brak plików. Aurora doda je przy realizacji zleceń.</p>}
+                    </div>
+                  </ScrollArea>
+                </CardContent>
+              </Card>
+
+              <Card className="border-primary/30 bg-primary/5">
+                <CardHeader><CardTitle className="text-sm">Endpoint dla Aurory / n8n (upload do R2)</CardTitle></CardHeader>
+                <CardContent>
+                  <code className="block text-xs p-2 bg-background border border-border rounded break-all">
+                    {`POST https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/aurora-r2-deliverable-upload`}
+                  </code>
+                  <p className="text-xs text-muted-foreground mt-2">{`{ file_name, content_base64|content_text, content_type?, category?, niche_id?, order_id?, run_id?, visibility?, storage_subscription_id? }`}</p>
                 </CardContent>
               </Card>
             </TabsContent>

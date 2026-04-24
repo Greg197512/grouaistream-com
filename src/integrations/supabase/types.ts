@@ -1310,6 +1310,207 @@ export type Database = {
         }
         Relationships: []
       }
+      aurora_storage_files: {
+        Row: {
+          category: string
+          content_type: string | null
+          created_at: string
+          expires_at: string | null
+          file_name: string
+          id: string
+          niche_id: string | null
+          order_id: string | null
+          public_url: string | null
+          r2_key: string
+          run_id: string | null
+          size_bytes: number
+          storage_subscription_id: string | null
+          uploaded_by: string | null
+          visibility: string
+        }
+        Insert: {
+          category?: string
+          content_type?: string | null
+          created_at?: string
+          expires_at?: string | null
+          file_name: string
+          id?: string
+          niche_id?: string | null
+          order_id?: string | null
+          public_url?: string | null
+          r2_key: string
+          run_id?: string | null
+          size_bytes?: number
+          storage_subscription_id?: string | null
+          uploaded_by?: string | null
+          visibility?: string
+        }
+        Update: {
+          category?: string
+          content_type?: string | null
+          created_at?: string
+          expires_at?: string | null
+          file_name?: string
+          id?: string
+          niche_id?: string | null
+          order_id?: string | null
+          public_url?: string | null
+          r2_key?: string
+          run_id?: string | null
+          size_bytes?: number
+          storage_subscription_id?: string | null
+          uploaded_by?: string | null
+          visibility?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aurora_storage_files_niche_id_fkey"
+            columns: ["niche_id"]
+            isOneToOne: false
+            referencedRelation: "aurora_niche_n8n_summary"
+            referencedColumns: ["niche_id"]
+          },
+          {
+            foreignKeyName: "aurora_storage_files_niche_id_fkey"
+            columns: ["niche_id"]
+            isOneToOne: false
+            referencedRelation: "aurora_niche_performance"
+            referencedColumns: ["niche_id"]
+          },
+          {
+            foreignKeyName: "aurora_storage_files_niche_id_fkey"
+            columns: ["niche_id"]
+            isOneToOne: false
+            referencedRelation: "aurora_niches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "aurora_storage_files_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "aurora_business_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "aurora_storage_files_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "aurora_n8n_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "aurora_storage_files_storage_subscription_id_fkey"
+            columns: ["storage_subscription_id"]
+            isOneToOne: false
+            referencedRelation: "aurora_storage_subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      aurora_storage_plans: {
+        Row: {
+          active: boolean
+          bandwidth_gb_month: number
+          code: string
+          created_at: string
+          features: Json
+          id: string
+          name: string
+          paddle_price_id: string | null
+          price_eur: number
+          sort_order: number
+          storage_gb: number
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          bandwidth_gb_month?: number
+          code: string
+          created_at?: string
+          features?: Json
+          id?: string
+          name: string
+          paddle_price_id?: string | null
+          price_eur: number
+          sort_order?: number
+          storage_gb: number
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          bandwidth_gb_month?: number
+          code?: string
+          created_at?: string
+          features?: Json
+          id?: string
+          name?: string
+          paddle_price_id?: string | null
+          price_eur?: number
+          sort_order?: number
+          storage_gb?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      aurora_storage_subscriptions: {
+        Row: {
+          bandwidth_used_bytes_month: number
+          client_company: string | null
+          client_email: string | null
+          client_user_id: string | null
+          created_at: string
+          current_period_end: string | null
+          id: string
+          metadata: Json
+          paddle_subscription_id: string | null
+          plan_code: string
+          started_at: string
+          status: string
+          storage_used_bytes: number
+          updated_at: string
+        }
+        Insert: {
+          bandwidth_used_bytes_month?: number
+          client_company?: string | null
+          client_email?: string | null
+          client_user_id?: string | null
+          created_at?: string
+          current_period_end?: string | null
+          id?: string
+          metadata?: Json
+          paddle_subscription_id?: string | null
+          plan_code: string
+          started_at?: string
+          status?: string
+          storage_used_bytes?: number
+          updated_at?: string
+        }
+        Update: {
+          bandwidth_used_bytes_month?: number
+          client_company?: string | null
+          client_email?: string | null
+          client_user_id?: string | null
+          created_at?: string
+          current_period_end?: string | null
+          id?: string
+          metadata?: Json
+          paddle_subscription_id?: string | null
+          plan_code?: string
+          started_at?: string
+          status?: string
+          storage_used_bytes?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aurora_storage_subscriptions_plan_code_fkey"
+            columns: ["plan_code"]
+            isOneToOne: false
+            referencedRelation: "aurora_storage_plans"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
       blog_affiliate_links: {
         Row: {
           brand: string
@@ -4608,6 +4809,15 @@ export type Database = {
           roi_7d: number | null
           status: string | null
           views_7d: number | null
+        }
+        Relationships: []
+      }
+      aurora_storage_overview: {
+        Row: {
+          active_subscriptions: number | null
+          mrr_eur: number | null
+          total_bytes: number | null
+          total_files: number | null
         }
         Relationships: []
       }
