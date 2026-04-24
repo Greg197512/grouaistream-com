@@ -296,13 +296,111 @@ export const AuroraPanel = () => {
         </Card>
       </div>
 
-      <Tabs defaultValue="pulse" className="w-full">
+      <Tabs defaultValue="autonomy" className="w-full">
         <TabsList className="flex-wrap h-auto">
-          <TabsTrigger value="pulse"><HeartPulse className="h-4 w-4 mr-1" /> Puls na żywo</TabsTrigger>
+          <TabsTrigger value="autonomy"><Rocket className="h-4 w-4 mr-1" /> Autonomia ({proposedActions.length})</TabsTrigger>
+          <TabsTrigger value="pulse"><HeartPulse className="h-4 w-4 mr-1" /> Puls</TabsTrigger>
           <TabsTrigger value="journal"><BookOpen className="h-4 w-4 mr-1" /> Dziennik</TabsTrigger>
           <TabsTrigger value="dreams"><Moon className="h-4 w-4 mr-1" /> Sny ({pendingDreams})</TabsTrigger>
           <TabsTrigger value="world"><Globe2 className="h-4 w-4 mr-1" /> Świat</TabsTrigger>
         </TabsList>
+
+        {/* AUTONOMIA */}
+        <TabsContent value="autonomy">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Coins className="h-5 w-5 text-amber-400" />
+                Propozycje przychodu — 1-klik publikacja
+              </CardTitle>
+              <CardDescription>
+                Aurora codziennie wymyśla SEO posty, landingi pod nisze, partnerstwa, scenariusze TikTok i newslettery.
+                Zatwierdź te które rezonują — Aurora opublikuje je sama.
+                Szacowany potencjał oczekujących: <strong className="text-amber-300">{proposedRevenue.toFixed(2)}€</strong>.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ScrollArea className="h-[560px]">
+                <div className="space-y-3">
+                  {proposedActions.map((a) => (
+                    <div key={a.id} className="border border-border rounded-lg p-3 bg-card/50">
+                      <div className="flex items-center gap-2 flex-wrap mb-1">
+                        <Badge variant="outline" className="capitalize">{a.action_type.replace(/_/g, " ")}</Badge>
+                        {a.estimated_revenue_eur > 0 && (
+                          <Badge variant="secondary" className="bg-amber-500/15 text-amber-300 border-amber-500/30">
+                            ~{Number(a.estimated_revenue_eur).toFixed(2)}€
+                          </Badge>
+                        )}
+                        <span className="text-xs text-muted-foreground ml-auto">
+                          {formatDistanceToNow(new Date(a.created_at), { addSuffix: true, locale: pl })}
+                        </span>
+                      </div>
+                      <div className="font-semibold text-sm">{a.title}</div>
+                      {a.summary && <div className="text-xs text-muted-foreground mt-1">{a.summary}</div>}
+                      {a.payload?.hero_headline && (
+                        <div className="text-xs italic text-primary mt-1">„{a.payload.hero_headline}"</div>
+                      )}
+                      {a.payload?.hook && (
+                        <div className="text-xs italic text-primary mt-1">Hook: „{a.payload.hook}"</div>
+                      )}
+                      {a.payload?.subject && (
+                        <div className="text-xs italic text-primary mt-1">Temat: „{a.payload.subject}"</div>
+                      )}
+                      <details className="mt-2">
+                        <summary className="text-[10px] text-muted-foreground cursor-pointer hover:text-foreground">
+                          podgląd payload
+                        </summary>
+                        <pre className="mt-1 text-[10px] text-muted-foreground overflow-x-auto bg-muted/30 p-2 rounded max-h-40">
+                          {JSON.stringify(a.payload, null, 2)}
+                        </pre>
+                      </details>
+                      <div className="flex gap-2 mt-2">
+                        <Button
+                          size="sm"
+                          onClick={() => approveAction(a.id)}
+                          disabled={approvingId === a.id}
+                          className="bg-emerald-600 hover:bg-emerald-700"
+                        >
+                          {approvingId === a.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3 mr-1" />}
+                          Zatwierdź i opublikuj
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => rejectAction(a.id)}>
+                          <XCircle className="h-3 w-3 mr-1" /> Odrzuć
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                  {proposedActions.length === 0 && (
+                    <div className="text-center py-10 space-y-2">
+                      <p className="text-sm text-muted-foreground">
+                        Brak nowych propozycji. Kliknij „Wymyśl pomysły na $" — Aurora przygotuje plan w ~30s.
+                      </p>
+                    </div>
+                  )}
+                  {publishedActions.length > 0 && (
+                    <div className="pt-4 border-t border-border">
+                      <div className="text-xs text-muted-foreground mb-2">Ostatnio opublikowane</div>
+                      <div className="space-y-1">
+                        {publishedActions.slice(0, 8).map((a) => (
+                          <div key={a.id} className="text-xs flex items-center gap-2">
+                            <CheckCircle2 className="h-3 w-3 text-emerald-400" />
+                            <span className="capitalize text-muted-foreground">{a.action_type.replace(/_/g, " ")}:</span>
+                            <span className="truncate">{a.title}</span>
+                            {a.published_url && (
+                              <a href={a.published_url} target="_blank" rel="noreferrer" className="text-primary hover:underline ml-auto">
+                                otwórz ↗
+                              </a>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         {/* PULSE */}
         <TabsContent value="pulse">
