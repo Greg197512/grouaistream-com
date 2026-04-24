@@ -1,60 +1,74 @@
 /// <reference types="npm:@types/react@18.3.1" />
 
 import * as React from 'npm:react@18.3.1'
-
 import {
   Body,
   Container,
   Head,
   Heading,
+  Hr,
   Html,
+  Img,
   Preview,
+  Section,
   Text,
 } from 'npm:@react-email/components@0.0.22'
+import {
+  LOGO_URL,
+  main,
+  container,
+  headerSection,
+  logo,
+  wordmark,
+  card,
+  h1,
+  text,
+  codeBox,
+  divider,
+  footer,
+  footerBrand,
+} from './_brand.ts'
 
 interface ReauthenticationEmailProps {
   token: string
+  siteName?: string
 }
 
-export const ReauthenticationEmail = ({ token }: ReauthenticationEmailProps) => (
-  <Html lang="en" dir="ltr">
+export const ReauthenticationEmail = ({
+  token,
+  siteName = 'GrouAI Stream',
+}: ReauthenticationEmailProps) => (
+  <Html lang="pl" dir="ltr">
     <Head />
-    <Preview>Your verification code</Preview>
+    <Preview>Twój kod weryfikacyjny: {token}</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Heading style={h1}>Confirm reauthentication</Heading>
-        <Text style={text}>Use the code below to confirm your identity:</Text>
-        <Text style={codeStyle}>{token}</Text>
-        <Text style={footer}>
-          This code will expire shortly. If you didn't request this, you can
-          safely ignore this email.
-        </Text>
+        <Section style={headerSection}>
+          <Img src={LOGO_URL} alt={siteName} style={logo} />
+          <Text style={wordmark}>GrouAI Stream</Text>
+        </Section>
+
+        <Section style={card}>
+          <Heading style={h1}>Twój kod weryfikacyjny 🔑</Heading>
+          <Text style={text}>
+            Użyj poniższego kodu, aby potwierdzić swoją tożsamość. Kod wygasa
+            za chwilę.
+          </Text>
+
+          <Text style={codeBox}>{token}</Text>
+
+          <Hr style={divider} />
+
+          <Text style={footer}>
+            Nie prosiłeś o ten kod? Możesz spokojnie zignorować tę wiadomość —
+            ale jeśli powtarza się to często, zmień hasło dla pewności.
+          </Text>
+        </Section>
+
+        <Text style={footerBrand}>{siteName} · Bezpieczeństwo przede wszystkim</Text>
       </Container>
     </Body>
   </Html>
 )
 
 export default ReauthenticationEmail
-
-const main = { backgroundColor: '#ffffff', fontFamily: 'Arial, sans-serif' }
-const container = { padding: '20px 25px' }
-const h1 = {
-  fontSize: '22px',
-  fontWeight: 'bold' as const,
-  color: '#000000',
-  margin: '0 0 20px',
-}
-const text = {
-  fontSize: '14px',
-  color: '#55575d',
-  lineHeight: '1.5',
-  margin: '0 0 25px',
-}
-const codeStyle = {
-  fontFamily: 'Courier, monospace',
-  fontSize: '22px',
-  fontWeight: 'bold' as const,
-  color: '#000000',
-  margin: '0 0 30px',
-}
-const footer = { fontSize: '12px', color: '#999999', margin: '30px 0 0' }
