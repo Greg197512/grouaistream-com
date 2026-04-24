@@ -103,13 +103,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (event === "SIGNED_IN") {
           setTimeout(async () => {
             try {
-              const { data: profileData } = await supabase
-                .from("profiles")
-                .select("first_login_completed")
-                .eq("user_id", session.user.id)
-                .maybeSingle();
+              const { data: profileData } = await supabase.rpc("get_my_profile");
+              const row = Array.isArray(profileData) ? profileData[0] : profileData;
 
-              if (profileData && !profileData.first_login_completed) {
+              if (row && !row.first_login_completed) {
                 setIsFirstLogin(true);
                 await supabase
                   .from("profiles")
