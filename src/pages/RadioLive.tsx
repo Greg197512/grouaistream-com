@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Radio, Wifi, Music, Volume2, VolumeX, ArrowLeft, Heart, Sparkles, MessageCircle, Send, X, Trash2, Smile, Play } from "lucide-react";
 import { RadioMoodDetector } from "@/components/radio/RadioMoodDetector";
 import { VerifiedStreamsCard } from "@/components/radio/VerifiedStreamsCard";
+import { LiveMicBooth } from "@/components/radio/LiveMicBooth";
 import { FeatureGate } from "@/components/ui/FeatureGate";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
@@ -98,6 +99,7 @@ const RadioLive = () => {
   const [sendingMessage, setSendingMessage] = useState(false);
   const [showEmojis, setShowEmojis] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [micBoothOpen, setMicBoothOpen] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const playbackTokenRef = useRef(0);
   const fallbackTimerRef = useRef<number | null>(null);
@@ -917,6 +919,17 @@ const RadioLive = () => {
                   className="flex-1"
                 />
               </div>
+
+              {/* Admin: Live Mic Booth */}
+              {isAdmin && (
+                <Button
+                  onClick={() => setMicBoothOpen(true)}
+                  className="w-full gap-2 h-11 bg-gradient-to-r from-primary to-red-500 text-primary-foreground font-bold shadow-[0_0_20px_hsl(var(--primary)/0.4)] hover:opacity-90"
+                >
+                  <Radio className="h-4 w-4" />
+                  🎙️ Wejdź na antenę (Live Mic)
+                </Button>
+              )}
               {/* Manual play button when autoplay blocked */}
               {autoplayBlocked && (
                 <motion.div
@@ -1030,6 +1043,16 @@ const RadioLive = () => {
             </div>
           </div>
         </motion.div>
+      )}
+
+      {/* Admin Live Mic Booth */}
+      {isAdmin && (
+        <LiveMicBooth
+          open={micBoothOpen}
+          onClose={() => setMicBoothOpen(false)}
+          radioAudio={audioRef.current}
+          baseVolume={muted ? 0 : volume}
+        />
       )}
     </div>
   );
