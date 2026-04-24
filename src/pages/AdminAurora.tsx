@@ -15,7 +15,7 @@ import { Loader2, Rocket, Target, Trash2, RefreshCw, Briefcase, Workflow, PlayCi
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { pl } from "date-fns/locale";
-import { useEffect as useDocEffect } from "react";
+
 
 interface Niche {
   id: string; niche_name: string; status: string; opportunity_score: number | null;
@@ -67,6 +67,8 @@ export default function AdminAurora() {
   const [newOrder, setNewOrder] = useState({ service_type: "seo_content", brief: "", client_email: "", client_company: "", budget_eur: 0 });
   // New workflow form
   const [newWf, setNewWf] = useState({ workflow_id: "", name: "", service_type: "seo_content", webhook_url: "", auto_assign: true });
+
+  useEffect(() => { document.title = "Aurora Business Desk — Pulpit autonomicznego biznesu"; }, []);
 
   useEffect(() => {
     (async () => {
