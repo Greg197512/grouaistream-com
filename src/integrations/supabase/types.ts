@@ -1577,6 +1577,8 @@ export type Database = {
           client_user_id: string | null
           created_at: string
           current_period_end: string | null
+          egress_billing_enabled: boolean
+          egress_cost_per_gb_eur_override: number | null
           id: string
           metadata: Json
           paddle_subscription_id: string | null
@@ -1593,6 +1595,8 @@ export type Database = {
           client_user_id?: string | null
           created_at?: string
           current_period_end?: string | null
+          egress_billing_enabled?: boolean
+          egress_cost_per_gb_eur_override?: number | null
           id?: string
           metadata?: Json
           paddle_subscription_id?: string | null
@@ -1609,6 +1613,8 @@ export type Database = {
           client_user_id?: string | null
           created_at?: string
           current_period_end?: string | null
+          egress_billing_enabled?: boolean
+          egress_cost_per_gb_eur_override?: number | null
           id?: string
           metadata?: Json
           paddle_subscription_id?: string | null
@@ -4935,6 +4941,10 @@ export type Database = {
           client_email: string | null
           client_user_id: string | null
           current_period_end: string | null
+          effective_egress_cost_per_gb_eur: number | null
+          egress_billing_enabled: boolean | null
+          egress_cost_eur: number | null
+          egress_used_gb: number | null
           estimated_cost_eur: number | null
           paddle_subscription_id: string | null
           plan_code: string | null
