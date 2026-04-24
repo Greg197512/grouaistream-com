@@ -3,7 +3,6 @@ import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Loader2, Sparkles } from "lucide-react";
-import { Helmet } from "react-helmet-async";
 
 interface LandingPage {
   slug: string;
@@ -35,13 +34,17 @@ export default function NicheLandingPage() {
         .eq("status", "live")
         .maybeSingle();
       setPage(data as any);
-      // bump views (best-effort)
-      if (data) {
-        await supabase.rpc("increment" as any, { table_name: "aurora_landing_pages", row_id: (data as any).id, column_name: "views_count" }).catch(() => {});
-      }
       setLoading(false);
     })();
   }, [slug]);
+
+  useEffect(() => {
+    if (page) {
+      document.title = page.title;
+      const metaDesc = document.querySelector('meta[name="description"]');
+      if (metaDesc && page.meta_description) metaDesc.setAttribute("content", page.meta_description);
+    }
+  }, [page]);
 
   if (loading) {
     return (
@@ -63,14 +66,6 @@ export default function NicheLandingPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <Helmet>
-        <title>{page.title}</title>
-        {page.meta_description && <meta name="description" content={page.meta_description} />}
-        <link rel="canonical" href={`https://grouaistream.com/n/${page.slug}`} />
-        <meta property="og:title" content={page.title} />
-        {page.meta_description && <meta property="og:description" content={page.meta_description} />}
-      </Helmet>
-
       {/* Hero */}
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-background to-background" />

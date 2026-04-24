@@ -48,6 +48,7 @@ import BlogIndex from "./pages/BlogIndex";
 import BlogPost from "./pages/BlogPost";
 import AdSubmission from "./pages/AdSubmission";
 import Orders from "./pages/Orders";
+import NicheLandingPage from "./pages/NicheLandingPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
