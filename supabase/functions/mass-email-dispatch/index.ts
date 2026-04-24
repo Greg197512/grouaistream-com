@@ -341,13 +341,56 @@ serve(async (req) => {
         .select("email").eq("confirmed", true).is("unsubscribed_at", null);
       recipients = (data || []).map((r) => ({ email: r.email }));
     } else {
-      const { data } = await supaAdmin.rpc("get_all_users_for_admin");
-      recipients = (data || []).filter((u: any) => u.email).map((u: any) => ({ email: u.email, name: u.display_name }));
+      // Pobierz wszystkich userów przez Admin API (paginacja po 1000)
+      const collected: { id: string; email: string }[] = [];
+      let page = 1;
+      const perPage = 1000;
+      while (true) {
+        const { data: pageData, error: listErr } = await supaAdmin.auth.admin.listUsers({ page, perPage });
+        if (listErr) {
+          console.error("listUsers error:", listErr);
+          break;
+        }
+        const users = pageData?.users || [];
+        for (const u of users) {
+          if (u.email) collected.push({ id: u.id, email: u.email });
+        }
+        if (users.length < perPage) break;
+        page++;
+        if (page > 50) break; // safety: max 50k userów
+      }
+
+      // Dociągnij display_name z profiles jednym zapytaniem
+      const ids = collected.map((u) => u.id);
+      const nameById = new Map<string, string>();
+      if (ids.length > 0) {
+        const { data: profiles } = await supaAdmin.from("profiles").select("user_id, display_name").in("user_id", ids);
+        for (const p of (Array.isArray(profiles) ? profiles : [])) {
+          if (p?.user_id && p?.display_name) nameById.set(p.user_id as string, p.display_name as string);
+        }
+      }
+
+      recipients = collected.map((u) => ({ email: u.email, name: nameById.get(u.id) }));
+      console.log(`mass-email-dispatch: pobrano ${recipients.length} użytkowników`);
     }
 
     const { data: suppressed } = await supaAdmin.from("suppressed_emails").select("email");
-    const suppressedSet = new Set((suppressed || []).map((s: any) => s.email.toLowerCase()));
+    const suppressedSet = new Set((Array.isArray(suppressed) ? suppressed : []).map((s: any) => s.email.toLowerCase()));
+    const beforeSuppression = recipients.length;
     recipients = recipients.filter((r) => !suppressedSet.has(r.email.toLowerCase()));
+    console.log(`mass-email-dispatch: po filtrze suppressed: ${recipients.length} (odfiltrowano ${beforeSuppression - recipients.length})`);
+
+    // Zero odbiorców → krótka odpowiedź, nie palimy kredytów AI
+    if (recipients.length === 0) {
+      return new Response(JSON.stringify({
+        success: true,
+        mode,
+        recipientCount: 0,
+        queued: 0,
+        errors: 0,
+        message: "Brak odbiorców do wysyłki",
+      }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
 
     // === Przypisz język do każdego odbiorcy ===
     const autoMode = (language as LangSetting) === "auto";
