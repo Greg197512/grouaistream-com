@@ -124,7 +124,7 @@ export const BlogDistributionPanel = () => {
     const caption = `${post.title}\n\n${post.description}\n\n#fyp #musicapp #aimusic #grouaistream`;
     try { await navigator.clipboard.writeText(caption); } catch {}
     toast.success("📋 Caption skopiowany!", {
-      description: "Otwórz zakładkę „Rolki TikTok 🎬" u góry — wygeneruj rolkę, wklej caption gdy będzie gotowa do uploadu.",
+      description: 'Otwórz zakładkę „Rolki TikTok 🎬" u góry — wygeneruj rolkę, wklej caption gdy będzie gotowa do uploadu.',
       duration: 8000,
     });
     // Próba znalezienia tabu TikTok i kliknięcia w niego
