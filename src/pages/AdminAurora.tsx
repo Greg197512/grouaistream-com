@@ -150,10 +150,6 @@ export default function AdminAurora() {
 
   return (
     <div className="dark min-h-screen bg-background text-foreground">
-      <Helmet>
-        <title>Aurora Business Desk — Pulpit autonomicznego biznesu</title>
-        <meta name="description" content="Aurora Business Desk: ranking nisz, autonomiczne wykonywanie zleceń SEO i automatyzacji n8n." />
-      </Helmet>
 
       <div className="border-b border-border/60 bg-card/40 backdrop-blur sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
