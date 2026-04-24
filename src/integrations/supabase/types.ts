@@ -2403,6 +2403,225 @@ export type Database = {
         }
         Relationships: []
       }
+      soul_dreams: {
+        Row: {
+          created_at: string
+          dream_text: string
+          dreamed_at: string
+          hypothesis: string | null
+          id: string
+          metadata: Json | null
+          proposed_action: Json | null
+          reviewed_at: string | null
+          reviewer_user_id: string | null
+          status: string
+          target_id: string | null
+          target_type: string | null
+        }
+        Insert: {
+          created_at?: string
+          dream_text: string
+          dreamed_at?: string
+          hypothesis?: string | null
+          id?: string
+          metadata?: Json | null
+          proposed_action?: Json | null
+          reviewed_at?: string | null
+          reviewer_user_id?: string | null
+          status?: string
+          target_id?: string | null
+          target_type?: string | null
+        }
+        Update: {
+          created_at?: string
+          dream_text?: string
+          dreamed_at?: string
+          hypothesis?: string | null
+          id?: string
+          metadata?: Json | null
+          proposed_action?: Json | null
+          reviewed_at?: string | null
+          reviewer_user_id?: string | null
+          status?: string
+          target_id?: string | null
+          target_type?: string | null
+        }
+        Relationships: []
+      }
+      soul_emotions: {
+        Row: {
+          context: Json | null
+          created_at: string
+          dominant_emotion: string
+          emotions: Json
+          energy: number | null
+          id: string
+          measured_at: string
+          narrative: string | null
+          tension: number | null
+          valence: number | null
+        }
+        Insert: {
+          context?: Json | null
+          created_at?: string
+          dominant_emotion: string
+          emotions?: Json
+          energy?: number | null
+          id?: string
+          measured_at?: string
+          narrative?: string | null
+          tension?: number | null
+          valence?: number | null
+        }
+        Update: {
+          context?: Json | null
+          created_at?: string
+          dominant_emotion?: string
+          emotions?: Json
+          energy?: number | null
+          id?: string
+          measured_at?: string
+          narrative?: string | null
+          tension?: number | null
+          valence?: number | null
+        }
+        Relationships: []
+      }
+      soul_journal: {
+        Row: {
+          audio_url: string | null
+          content: string
+          created_at: string
+          entry_date: string
+          entry_type: string
+          id: string
+          metadata: Json | null
+          mood: string | null
+        }
+        Insert: {
+          audio_url?: string | null
+          content: string
+          created_at?: string
+          entry_date?: string
+          entry_type?: string
+          id?: string
+          metadata?: Json | null
+          mood?: string | null
+        }
+        Update: {
+          audio_url?: string | null
+          content?: string
+          created_at?: string
+          entry_date?: string
+          entry_type?: string
+          id?: string
+          metadata?: Json | null
+          mood?: string | null
+        }
+        Relationships: []
+      }
+      soul_world_knowledge: {
+        Row: {
+          content: string | null
+          created_at: string
+          embedding: string | null
+          expires_at: string | null
+          fetched_at: string
+          id: string
+          importance: number | null
+          language: string | null
+          metadata: Json | null
+          sentiment: number | null
+          source: string
+          source_type: string
+          source_url: string | null
+          summary: string | null
+          title: string
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string
+          embedding?: string | null
+          expires_at?: string | null
+          fetched_at?: string
+          id?: string
+          importance?: number | null
+          language?: string | null
+          metadata?: Json | null
+          sentiment?: number | null
+          source: string
+          source_type: string
+          source_url?: string | null
+          summary?: string | null
+          title: string
+        }
+        Update: {
+          content?: string | null
+          created_at?: string
+          embedding?: string | null
+          expires_at?: string | null
+          fetched_at?: string
+          id?: string
+          importance?: number | null
+          language?: string | null
+          metadata?: Json | null
+          sentiment?: number | null
+          source?: string
+          source_type?: string
+          source_url?: string | null
+          summary?: string | null
+          title?: string
+        }
+        Relationships: []
+      }
+      soul_world_sources: {
+        Row: {
+          config: Json | null
+          created_at: string
+          enabled: boolean
+          fetch_interval_minutes: number | null
+          id: string
+          items_ingested_total: number | null
+          last_error: string | null
+          last_fetched_at: string | null
+          last_status: string | null
+          name: string
+          source_type: string
+          updated_at: string
+          url_template: string
+        }
+        Insert: {
+          config?: Json | null
+          created_at?: string
+          enabled?: boolean
+          fetch_interval_minutes?: number | null
+          id?: string
+          items_ingested_total?: number | null
+          last_error?: string | null
+          last_fetched_at?: string | null
+          last_status?: string | null
+          name: string
+          source_type: string
+          updated_at?: string
+          url_template: string
+        }
+        Update: {
+          config?: Json | null
+          created_at?: string
+          enabled?: boolean
+          fetch_interval_minutes?: number | null
+          id?: string
+          items_ingested_total?: number | null
+          last_error?: string | null
+          last_fetched_at?: string | null
+          last_status?: string | null
+          name?: string
+          source_type?: string
+          updated_at?: string
+          url_template?: string
+        }
+        Relationships: []
+      }
       stream_events: {
         Row: {
           counted: boolean
@@ -3615,6 +3834,7 @@ export type Database = {
       }
       get_all_users_bonus_progress: { Args: never; Returns: Json }
       get_all_users_for_admin: { Args: never; Returns: Json }
+      get_aurora_pulse: { Args: never; Returns: Json }
       get_break_even_status: { Args: never; Returns: Json }
       get_cost_report_summary: { Args: { _months?: number }; Returns: Json }
       get_my_likes_stats: { Args: never; Returns: Json }
