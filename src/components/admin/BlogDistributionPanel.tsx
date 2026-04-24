@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, Copy, Check, Mail, Twitter, Loader2, Sparkles, ExternalLink } from "lucide-react";
+import { Send, Copy, Check, Mail, Twitter, Loader2, Sparkles, ExternalLink, Facebook, Video, Share2 } from "lucide-react";
 import { toast } from "sonner";
 
 interface Post {
@@ -98,6 +98,47 @@ export const BlogDistributionPanel = () => {
     }
   };
 
+  const postUrl = (slug: string) =>
+    `${window.location.origin}/blog/${slug}`;
+
+  const shareOnX = async (post: Post, hookText: string | null) => {
+    const url = postUrl(post.slug);
+    const text = (hookText || post.title).slice(0, 240);
+    // Skopiuj tekst do schowka żeby user mógł doedytować w razie czego
+    try { await navigator.clipboard.writeText(`${text}\n\n${url}`); } catch {}
+    const intent = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
+    window.open(intent, "_blank", "noopener,noreferrer,width=600,height=600");
+    toast.success("Tekst skopiowany — okno X otwarte");
+  };
+
+  const shareOnFacebook = async (post: Post) => {
+    const url = postUrl(post.slug);
+    const quote = post.description || post.title;
+    try { await navigator.clipboard.writeText(`${post.title}\n\n${quote}\n\n${url}`); } catch {}
+    const sharer = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}&quote=${encodeURIComponent(quote)}`;
+    window.open(sharer, "_blank", "noopener,noreferrer,width=600,height=600");
+    toast.success("Tekst skopiowany — okno Facebook otwarte");
+  };
+
+  const openTikTokStudio = async (post: Post) => {
+    const caption = `${post.title}\n\n${post.description}\n\n#fyp #musicapp #aimusic #grouaistream`;
+    try { await navigator.clipboard.writeText(caption); } catch {}
+    toast.success("📋 Caption skopiowany!", {
+      description: 'Otwórz zakładkę „Rolki TikTok 🎬" u góry — wygeneruj rolkę, wklej caption gdy będzie gotowa do uploadu.',
+      duration: 8000,
+    });
+    // Próba znalezienia tabu TikTok i kliknięcia w niego
+    const tiktokTab = document.querySelector('[role="tab"][value="tiktok"]') as HTMLElement | null;
+    if (tiktokTab) {
+      tiktokTab.click();
+      setTimeout(() => {
+        document.querySelector('[data-section="tiktok-reels-studio"]')?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 200);
+    }
+  };
+
+
+
   const sendNewsletter = async (post: Post) => {
     if (!confirm(`Wysłać newsletter "${post.title}" do wszystkich subskrybentów?`)) return;
     setSending(post.id);
@@ -149,12 +190,13 @@ export const BlogDistributionPanel = () => {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Sparkles className="h-5 w-5 text-primary" />
-          Dystrybucja blogu — hooki AI + newsletter
+          Dystrybucja blogu — wszędzie 1 klikiem
         </CardTitle>
         <p className="text-xs text-muted-foreground mt-1">
-          Gotowe teasery do skopiowania na X, Telegram + 1-klik wysyłka emaili do wszystkich
-          potwierdzonych użytkowników (z opcją wypisania).
+          Newsletter (auto, do wszystkich) ・ X / Facebook (1 klik = okno publikacji z gotowym tekstem) ・
+          TikTok (caption do schowka + przejście do Reels Studio).
         </p>
+
       </CardHeader>
       <CardContent>
         <ScrollArea className="h-[520px]">
@@ -224,14 +266,14 @@ export const BlogDistributionPanel = () => {
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2 mt-3">
+                      <div className="flex items-center gap-2 mt-3 flex-wrap">
                         <Button
                           size="sm"
                           variant="outline"
                           className="h-7 text-xs"
                           onClick={() => setExpanded(isExpanded ? null : post.id)}
                         >
-                          {isExpanded ? "Ukryj hooki" : "Pokaż hooki"}
+                          {isExpanded ? "Ukryj" : "Pokaż teasery"}
                         </Button>
                         <Button
                           size="sm"
@@ -244,9 +286,54 @@ export const BlogDistributionPanel = () => {
                           ) : (
                             <Send className="h-3 w-3" />
                           )}
-                          Wyślij newsletter
+                          Newsletter
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-xs gap-1 hover:bg-[#1DA1F2]/10 hover:text-[#1DA1F2] hover:border-[#1DA1F2]/40"
+                          onClick={() => shareOnX(post, hook?.x_hook ?? null)}
+                          title="Skopiuj teaser i otwórz X"
+                        >
+                          <Twitter className="h-3 w-3" />
+                          X
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-xs gap-1 hover:bg-[#1877F2]/10 hover:text-[#1877F2] hover:border-[#1877F2]/40"
+                          onClick={() => shareOnFacebook(post)}
+                          title="Skopiuj opis i otwórz Facebook"
+                        >
+                          <Facebook className="h-3 w-3" />
+                          Facebook
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-xs gap-1 hover:bg-pink-500/10 hover:text-pink-500 hover:border-pink-500/40"
+                          onClick={() => openTikTokStudio(post)}
+                          title="Skopiuj caption i przejdź do TikTok Reels Studio"
+                        >
+                          <Video className="h-3 w-3" />
+                          TikTok
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 text-xs gap-1 ml-auto"
+                          onClick={async () => {
+                            const url = postUrl(post.slug);
+                            const all = `📝 ${post.title}\n\n${hook?.x_hook || post.description}\n\n🔗 ${url}\n\n#grouaistream #aimusic #fyp`;
+                            try { await navigator.clipboard.writeText(all); toast.success("Wszystko skopiowane!"); } catch { toast.error("Błąd"); }
+                          }}
+                          title="Skopiuj cały pakiet (tytuł + teaser + link + hashtagi)"
+                        >
+                          <Share2 className="h-3 w-3" />
+                          Kopiuj wszystko
                         </Button>
                       </div>
+
                     </div>
                   </div>
 
