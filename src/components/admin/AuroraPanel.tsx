@@ -114,15 +114,19 @@ export const AuroraPanel = () => {
   const [scanningNiches, setScanningNiches] = useState(false);
   const [launchingNicheId, setLaunchingNicheId] = useState<string | null>(null);
   const [approvingId, setApprovingId] = useState<string | null>(null);
+  const [autopilot, setAutopilot] = useState<any>(null);
+  const [autopilotRunning, setAutopilotRunning] = useState(false);
+  const [savingAutopilot, setSavingAutopilot] = useState(false);
 
   const loadAll = useCallback(async () => {
-    const [em, jr, dr, wk, ac, nc] = await Promise.all([
+    const [em, jr, dr, wk, ac, nc, ap] = await Promise.all([
       supabase.from("soul_emotions").select("*").order("measured_at", { ascending: false }).limit(30),
       supabase.from("soul_journal").select("*").order("created_at", { ascending: false }).limit(20),
       supabase.from("soul_dreams").select("*").order("dreamed_at", { ascending: false }).limit(40),
       supabase.from("soul_world_knowledge").select("*").order("fetched_at", { ascending: false }).limit(40),
       supabase.from("aurora_revenue_actions" as any).select("*").order("created_at", { ascending: false }).limit(50),
       supabase.from("aurora_niches" as any).select("*").order("discovered_at", { ascending: false }).limit(60),
+      supabase.from("aurora_autopilot_settings" as any).select("*").eq("id", 1).maybeSingle(),
     ]);
     setEmotions((em.data as SoulEmotion[]) || []);
     setJournal((jr.data as SoulJournalEntry[]) || []);
@@ -130,6 +134,7 @@ export const AuroraPanel = () => {
     setWorld((wk.data as SoulWorldKnowledge[]) || []);
     setActions((ac.data as any) || []);
     setNiches((nc.data as any) || []);
+    setAutopilot((ap.data as any) || null);
     setLoading(false);
   }, []);
 
