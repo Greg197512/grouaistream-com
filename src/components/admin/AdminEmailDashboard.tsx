@@ -246,6 +246,19 @@ export function AdminEmailDashboard({ stats, genreStats }: AdminEmailDashboardPr
     setSendingEmail(true);
     try {
       const id = crypto.randomUUID();
+      // Treść maila w plain-text (z HTML AI)
+      let messagePlain = generatedEmail.body.replace(/<[^>]*>/g, "").replace(/\n{3,}/g, "\n\n").trim();
+
+      // BEZPIECZNIK: jeśli admin podał kontekst, a AI go zignorował → doklej go ręcznie do treści
+      const ctx = customMessage.trim();
+      if (ctx) {
+        const ctxStart = ctx.slice(0, Math.min(30, ctx.length)).toLowerCase();
+        const bodyLower = messagePlain.toLowerCase();
+        if (!bodyLower.includes(ctxStart)) {
+          messagePlain = `${messagePlain}\n\n— Od redakcji GrouAI —\n${ctx}`;
+        }
+      }
+
       const { data, error } = await supabase.functions.invoke("send-transactional-email", {
         body: {
           templateName: "admin-notification",
@@ -253,7 +266,7 @@ export function AdminEmailDashboard({ stats, genreStats }: AdminEmailDashboardPr
           idempotencyKey: `admin-email-${id}`,
           templateData: {
             title: generatedEmail.subject,
-            message: generatedEmail.body.replace(/<[^>]*>/g, ""),
+            message: messagePlain,
             recipientName: recipientName || undefined,
             emailType: emailType === "invitation" ? "Zaproszenie" : emailType === "challenge" ? "Wyzwanie" : emailType === "newsletter" ? "Newsletter" : emailType === "easter" ? "Życzenia wielkanocne" : "Podsumowanie",
           },
