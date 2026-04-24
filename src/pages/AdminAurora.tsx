@@ -75,6 +75,10 @@ export default function AdminAurora() {
   const [niches, setNiches] = useState<Niche[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
+  const [runs, setRuns] = useState<Run[]>([]);
+  const [nicheSummary, setNicheSummary] = useState<NicheSummary[]>([]);
+  const [expandedRun, setExpandedRun] = useState<string | null>(null);
+  const [runSteps, setRunSteps] = useState<Record<string, RunStep[]>>({});
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
 
@@ -94,16 +98,27 @@ export default function AdminAurora() {
   }, [user]);
 
   const loadAll = useCallback(async () => {
-    const [n, o, w] = await Promise.all([
+    const [n, o, w, r, ns] = await Promise.all([
       supabase.from("aurora_niches" as any).select("id,niche_name,status,opportunity_score,search_volume_estimate,competition_level,estimated_monthly_revenue_eur,launched_url,launched_at").order("opportunity_score", { ascending: false }).limit(100),
       supabase.from("aurora_business_orders" as any).select("*").order("created_at", { ascending: false }).limit(100),
       supabase.from("aurora_n8n_workflows" as any).select("*").order("created_at", { ascending: false }),
+      supabase.from("aurora_n8n_runs" as any).select("*").order("started_at", { ascending: false }).limit(60),
+      supabase.from("aurora_niche_n8n_summary" as any).select("*").order("runs_30d", { ascending: false }).limit(50),
     ]);
     setNiches((n.data as any) || []);
     setOrders((o.data as any) || []);
     setWorkflows((w.data as any) || []);
+    setRuns((r.data as any) || []);
+    setNicheSummary((ns.data as any) || []);
     setLoading(false);
   }, []);
+
+  const loadRunSteps = async (runId: string) => {
+    if (runSteps[runId]) { setExpandedRun(expandedRun === runId ? null : runId); return; }
+    const { data } = await supabase.from("aurora_n8n_run_steps" as any).select("*").eq("run_id", runId).order("step_index", { ascending: true });
+    setRunSteps(prev => ({ ...prev, [runId]: (data as any) || [] }));
+    setExpandedRun(runId);
+  };
 
   useEffect(() => {
     if (isAdmin) {
@@ -111,6 +126,7 @@ export default function AdminAurora() {
       const ch = supabase.channel("aurora-desk")
         .on("postgres_changes", { event: "*", schema: "public", table: "aurora_business_orders" }, () => loadAll())
         .on("postgres_changes", { event: "*", schema: "public", table: "aurora_niches" }, () => loadAll())
+        .on("postgres_changes", { event: "*", schema: "public", table: "aurora_n8n_runs" }, () => loadAll())
         .subscribe();
       return () => { supabase.removeChannel(ch); };
     }
