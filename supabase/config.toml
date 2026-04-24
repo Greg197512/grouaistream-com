@@ -17,6 +17,14 @@ project_id = "bvstvawnigyczvofzhps"
     verify_jwt = false
   [functions.grouai-brain]
     verify_jwt = false
+  [functions.groua-soul]
+    verify_jwt = false
+  [functions.soul-world-ingest]
+    verify_jwt = false
+  [functions.soul-dream]
+    verify_jwt = false
+  [functions.soul-export]
+    verify_jwt = true
   [functions.health-monitor]
     verify_jwt = false
   [functions.n8n-music-ingest]
