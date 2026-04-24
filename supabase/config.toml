@@ -45,6 +45,8 @@ project_id = "bvstvawnigyczvofzhps"
     verify_jwt = true
   [functions.aurora-storage-offer-create]
     verify_jwt = true
+  [functions.aurora-workforce-dispatch]
+    verify_jwt = true
   [functions.brain-newsfeed-ingest]
     verify_jwt = false
   [functions.daily-blog-audio-announce]
