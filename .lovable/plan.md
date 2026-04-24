@@ -1,53 +1,71 @@
 
 
-# 🛠 Fix „Wyślij do wszystkich" — masowa wysyłka mailowa
+# Dystrybucja blogu — wersja "zero kombinowania"
 
-## Co jest zepsute (twardo z kodu i logów)
+Skoro Telegram bot wymagałby zakładania konta @BotFather + podawania tokena, **wywalamy go** z Fazy 1. Zostawiamy tylko to, co działa **natychmiast, bez żadnej konfiguracji, bez API keys, bez approvali**.
 
-Logi edge function pokazują dokładnie:
-```
-mass-email-dispatch error: TypeError: (data || []).filter is not a function
-at index.ts:332:33
-```
+## Co dostaniesz (1 klik = gotowe do wklejenia)
 
-Powód:
-- `mass-email-dispatch` woła RPC `get_all_users_for_admin()` przez klienta **service-role** (`supaAdmin`).
-- W tej funkcji w bazie pierwsza linia to `IF NOT public.has_role(auth.uid(), 'admin') THEN RETURN json_build_object('error', 'unauthorized')`.
-- Klient service-role nie ma JWT użytkownika → `auth.uid()` = `NULL` → `has_role(NULL, 'admin')` = `false` → RPC zwraca **obiekt** `{"error":"unauthorized"}`, a nie tablicę.
-- Kod robi `(data || []).filter(...)` → crash → 500 → toast „Błąd masowej wysyłki" w UI.
+W panelu admina, przy każdym poście blogowym, pojawi się sekcja **„Dystrybucja"** z 4 przyciskami:
 
-Bonus bug: nawet gdyby autoryzacja przeszła, dla zera użytkowników `json_agg(...)` zwraca `NULL`, co też wywaliłoby `.filter`.
+| Platforma | Co robi przycisk | Co musisz zrobić |
+|---|---|---|
+| **X / Twitter** | Kopiuje teaser + otwiera `twitter.com/intent/tweet` z wklejonym tekstem i linkiem | Klik „Tweetnij" |
+| **Facebook** | Kopiuje teaser + otwiera `facebook.com/sharer` z linkiem | Klik „Opublikuj" |
+| **TikTok (rolka)** | Generuje MP4 (9:16, 30s, hook AI + okładka + audio) w istniejącym TikTok Reels Studio i pobiera plik | Wrzucasz MP4 w aplikacji TikTok (drag & drop) |
+| **Newsletter** | Wysyła post jako mail do wszystkich subskrybentów przez `mass-email-dispatch` (już naprawione) | Klik „Wyślij" |
 
-Admin został już zweryfikowany wcześniej w funkcji (linie 320–325) przez `has_role` z prawdziwym `user.id`, więc nie trzeba drugi raz sprawdzać uprawnień przez RPC.
+Plus **„Skopiuj wszystko"** — jeden buffer z gotowymi teaserami pod każdą platformę osobno (X 280 zn., FB długi, TikTok caption + hashtagi).
 
-## Plan naprawy (1 plik)
+## Co generuje AI (Lovable AI Gateway, `google/gemini-2.5-flash`)
 
-**Plik:** `supabase/functions/mass-email-dispatch/index.ts`
+Dla każdego posta blogowego, jednym callem, w 4 wariantach:
+- **Hook X** — max 270 zn., 1 emoji, 2 hashtagi, link
+- **Post FB** — 3 akapity, CTA „czytaj więcej", link
+- **TikTok caption** — hook w 1. linijce + 5 hashtagów (#fyp #musicapp #aimusic #grouaistream + tematyczny)
+- **Newsletter subject + preview** — pod istniejący szablon React Email
 
-W bloku `else` (audience = `all_users`, ~linia 343–346) **zamiast** wołania zepsutego RPC:
+Wynik cache'owany w nowej kolumnie `blog_posts.distribution_payload` (jsonb), żeby nie regenerować przy każdym otwarciu.
 
-1. **Pobierz userów bezpośrednio przez Supabase Admin API** — `supaAdmin.auth.admin.listUsers({ page, perPage: 1000 })` z paginacją w pętli aż do wyczerpania.
-2. Zbierz `id` i `email` ze wszystkich stron, odfiltruj wpisy bez `email`.
-3. **Pobierz `display_name` z `profiles`** jednym zapytaniem `in('user_id', ids)` i zmapuj na recipientów.
-4. Zwróć `recipients = [{ email, name }]` — dokładnie taki kształt, jakiego oczekuje reszta funkcji.
+## Co budujemy
 
-Dodatkowe zabezpieczenia:
-- `Array.isArray(data) ? data : []` jako twardy guard (gdyby kiedyś coś znów zwróciło nie-tablicę, nie wywali całego flow).
-- Krótki log: ilu odbiorców wyciągnięto + ilu po filtrze suppressed (ułatwi przyszły debug).
-- Jeśli odbiorców jest 0 → zwróć od razu `200 { success: true, recipientCount: 0, queued: 0 }` z toast info zamiast iść w generowanie obrazka i copy AI (oszczędność kredytów).
+### 1. Edge function `generate-blog-distribution`
+- Input: `post_id`
+- Czyta tytuł + treść posta
+- Woła Lovable AI → zwraca JSON `{ x, facebook, tiktok, newsletter }`
+- Zapisuje do `blog_posts.distribution_payload`
+- Zwraca payload do frontu
 
-Po edycie funkcja edge automatycznie się zredeployuje.
+### 2. Migracja DB
+- `ALTER TABLE blog_posts ADD COLUMN distribution_payload jsonb`
 
-## Czego NIE ruszamy
+### 3. Komponent `<BlogDistributionPanel postId={...} />`
+Renderowany w `AdminBlogEditor` (lub gdziekolwiek edytujesz post). Cztery karty:
+- **X** → `Copy` + `Open intent URL`
+- **Facebook** → `Copy` + `Open sharer URL`
+- **TikTok** → `Generate MP4` (woła istniejące `tiktok-reels-render` z auto-promptem z teasera) + `Download`
+- **Newsletter** → `Send to all subscribers` (woła naprawione `mass-email-dispatch` z trybem `direct/all_users`, treść z `newsletter` payloadu)
 
-- `get_all_users_for_admin()` zostaje — używają go inne miejsca w panelu admina, gdzie jest wołany przez **klienta z JWT admina** (czyli działa poprawnie). Naprawiamy tylko jedno wywołanie z złego kontekstu.
-- Nie trzeba żadnej migracji DB.
-- Nie trzeba zmian w UI (`AdminEmailDashboard.tsx`) — bug jest 100% po stronie edge function.
-- Tryb `n8n` i pojedynczy „test e-mail" nie były dotknięte tym bugiem — działały, dotykamy tylko ścieżki direct/all_users.
+Każda karta ma podgląd tekstu (edytowalny textarea — możesz poprawić przed wysłaniem) i licznik znaków dla X.
 
-## Efekt po wdrożeniu
+### 4. Integracja z istniejącym TikTok Reels Studio
+- Przycisk „Generate MP4" przekazuje do studia: `{ caption, hook, coverImage: post.cover_url, durationSec: 30 }`
+- Studio renderuje jak teraz, zwraca URL do MP4, panel pokazuje przycisk „Pobierz"
 
-- Klik **„Wyślij do wszystkich (bezpośrednio)"** → pobranie wszystkich emaili → odfiltrowanie suppressed → wygenerowanie hero grafiki + copy AI per język → zakolejkowanie maila do każdego odbiorcy przez `send-transactional-email`.
-- Toast pokaże `🚀 N odbiorców (zakolejkowano: N, błędy: 0)`.
-- W tabeli „Logi e-maili" pojawią się wpisy `pending` → `sent` w czasie rzeczywistym (live subscription już działa).
+## Czego NIE robimy (świadomie)
+
+- ❌ Telegram (wymaga bota)
+- ❌ Auto-post na X (wymaga $100/mies API)
+- ❌ Auto-post na FB (wymaga Meta App review)
+- ❌ Auto-upload na TikTok (wymaga 2-8 tyg approval Content Posting API)
+- ❌ Żadnych nowych connectorów, żadnych nowych secretów
+
+## Efekt
+
+Otwierasz post → klikasz **„Wygeneruj dystrybucję"** (10s czeka na AI) → masz 4 gotowe karty.
+- **Newsletter**: 1 klik, leci do wszystkich (działa od razu).
+- **TikTok**: 1 klik = MP4 do pobrania, wrzucasz w aplikacji telefonu.
+- **X / FB**: 1 klik = otwarte okno publikacji z wklejonym tekstem, klikasz „Tweet" / „Post".
+
+Cały flow: **~30 sekund** od „chcę rozpropagować post" do „leci na 4 kanały".
 
