@@ -507,6 +507,12 @@ export const PlayerBar = () => {
                     <Camera className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-white" />
                   </motion.div>
                 </motion.div>
+                {/* Pro lock indicator for free users */}
+                {!canUseMoodDetection && (
+                  <div className="absolute -bottom-0.5 -right-0.5 z-20 flex h-3 w-3 items-center justify-center rounded-full bg-amber-500 border border-background">
+                    <Lock className="h-2 w-2 text-background" strokeWidth={3} />
+                  </div>
+                )}
               </motion.button>
             </motion.div>
 

@@ -12,6 +12,8 @@ import { usePlayer } from "@/contexts/PlayerContext";
 import { DragDropProvider } from "@/contexts/DragDropContext";
 import { FloatingPlaylistDropZones } from "@/components/dnd/FloatingPlaylistDropZones";
 import { AuroraBackground } from "@/components/effects/AuroraBackground";
+import { UpgradeModal } from "@/components/modals/UpgradeModal";
+import { useSubscription } from "@/contexts/SubscriptionContext";
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -22,6 +24,7 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
   const [showVideo, setShowVideo] = useState(false);
   const isMobile = useIsMobile();
   const { isVideoMode, currentTrack } = usePlayer();
+  const { upgradePromptFeature, dismissUpgradePrompt } = useSubscription();
 
   // Auto-show video player when a video track starts playing
   useEffect(() => {
@@ -76,7 +79,12 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
         {/* AI Assistant Chat + Infinity Widget */}
         <AIAssistant />
         <InfinityAssistantWidget />
-        
+
+        {/* Global UpgradeModal — opened by showUpgradeFor() from anywhere in the app */}
+        <UpgradeModal
+          open={upgradePromptFeature !== null}
+          onOpenChange={(open) => { if (!open) dismissUpgradePrompt(); }}
+        />
       </div>
     </DragDropProvider>
   );
