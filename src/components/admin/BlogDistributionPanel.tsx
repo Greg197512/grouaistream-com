@@ -263,14 +263,14 @@ export const BlogDistributionPanel = () => {
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2 mt-3">
+                      <div className="flex items-center gap-2 mt-3 flex-wrap">
                         <Button
                           size="sm"
                           variant="outline"
                           className="h-7 text-xs"
                           onClick={() => setExpanded(isExpanded ? null : post.id)}
                         >
-                          {isExpanded ? "Ukryj hooki" : "Pokaż hooki"}
+                          {isExpanded ? "Ukryj" : "Pokaż teasery"}
                         </Button>
                         <Button
                           size="sm"
@@ -283,9 +283,54 @@ export const BlogDistributionPanel = () => {
                           ) : (
                             <Send className="h-3 w-3" />
                           )}
-                          Wyślij newsletter
+                          Newsletter
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-xs gap-1 hover:bg-[#1DA1F2]/10 hover:text-[#1DA1F2] hover:border-[#1DA1F2]/40"
+                          onClick={() => shareOnX(post, hook?.x_hook ?? null)}
+                          title="Skopiuj teaser i otwórz X"
+                        >
+                          <Twitter className="h-3 w-3" />
+                          X
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-xs gap-1 hover:bg-[#1877F2]/10 hover:text-[#1877F2] hover:border-[#1877F2]/40"
+                          onClick={() => shareOnFacebook(post)}
+                          title="Skopiuj opis i otwórz Facebook"
+                        >
+                          <Facebook className="h-3 w-3" />
+                          Facebook
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-xs gap-1 hover:bg-pink-500/10 hover:text-pink-500 hover:border-pink-500/40"
+                          onClick={() => openTikTokStudio(post)}
+                          title="Skopiuj caption i przejdź do TikTok Reels Studio"
+                        >
+                          <Video className="h-3 w-3" />
+                          TikTok
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 text-xs gap-1 ml-auto"
+                          onClick={async () => {
+                            const url = postUrl(post.slug);
+                            const all = `📝 ${post.title}\n\n${hook?.x_hook || post.description}\n\n🔗 ${url}\n\n#grouaistream #aimusic #fyp`;
+                            try { await navigator.clipboard.writeText(all); toast.success("Wszystko skopiowane!"); } catch { toast.error("Błąd"); }
+                          }}
+                          title="Skopiuj cały pakiet (tytuł + teaser + link + hashtagi)"
+                        >
+                          <Share2 className="h-3 w-3" />
+                          Kopiuj wszystko
                         </Button>
                       </div>
+
                     </div>
                   </div>
 
