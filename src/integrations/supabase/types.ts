@@ -430,6 +430,51 @@ export type Database = {
           },
         ]
       }
+      aurora_autopilot_settings: {
+        Row: {
+          auto_publish_seo_posts: boolean
+          enabled: boolean
+          id: number
+          last_run_at: string | null
+          last_run_summary: Json | null
+          max_effort_score: number
+          max_legal_risk: string
+          max_niches_per_day: number
+          max_seo_posts_per_day: number
+          min_confidence: number
+          min_revenue_eur: number
+          updated_at: string
+        }
+        Insert: {
+          auto_publish_seo_posts?: boolean
+          enabled?: boolean
+          id?: number
+          last_run_at?: string | null
+          last_run_summary?: Json | null
+          max_effort_score?: number
+          max_legal_risk?: string
+          max_niches_per_day?: number
+          max_seo_posts_per_day?: number
+          min_confidence?: number
+          min_revenue_eur?: number
+          updated_at?: string
+        }
+        Update: {
+          auto_publish_seo_posts?: boolean
+          enabled?: boolean
+          id?: number
+          last_run_at?: string | null
+          last_run_summary?: Json | null
+          max_effort_score?: number
+          max_legal_risk?: string
+          max_niches_per_day?: number
+          max_seo_posts_per_day?: number
+          min_confidence?: number
+          min_revenue_eur?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       aurora_landing_pages: {
         Row: {
           conversions_count: number | null
