@@ -28,9 +28,14 @@ interface ClientUsage {
   estimated_cost_eur: number;
   projected_usage_gb: number;
   r2_real_cost_eur: number;
+  r2_egress_cost_eur: number;
+  r2_total_cost_eur: number;
   plan_margin_eur: number;
   current_period_end: string | null;
   paddle_subscription_id: string | null;
+  egress_billing_enabled: boolean;
+  egress_used_gb: number;
+  effective_egress_cost_per_gb_eur: number;
   suggested_upgrade: {
     plan_code: string;
     plan_name: string;
@@ -189,6 +194,34 @@ export function AuroraStorageDesk() {
     }
   };
 
+  const toggleEgressBilling = async (subId: string, enabled: boolean) => {
+    try {
+      const { error } = await supabase
+        .from("aurora_storage_subscriptions")
+        .update({ egress_billing_enabled: enabled })
+        .eq("id", subId);
+      if (error) throw error;
+      toast.success(`Egress billing ${enabled ? "włączony" : "wyłączony"}`);
+      refresh();
+    } catch (e: any) {
+      toast.error("Błąd: " + e.message);
+    }
+  };
+
+  const updateEgressOverride = async (subId: string, value: number | null) => {
+    try {
+      const { error } = await supabase
+        .from("aurora_storage_subscriptions")
+        .update({ egress_cost_per_gb_eur_override: value })
+        .eq("id", subId);
+      if (error) throw error;
+      toast.success("Stawka egress zaktualizowana");
+      refresh();
+    } catch (e: any) {
+      toast.error("Błąd: " + e.message);
+    }
+  };
+
   if (loading) {
     return <div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 animate-spin" /></div>;
   }
@@ -204,12 +237,13 @@ export function AuroraStorageDesk() {
       {/* === CLIENTS === */}
       <TabsContent value="clients" className="space-y-4">
         {summary && (
-          <div className="grid md:grid-cols-5 gap-3">
+          <div className="grid md:grid-cols-6 gap-3">
             <Card><CardContent className="pt-6"><div className="text-2xl font-bold">{summary.total_clients}</div><div className="text-xs text-muted-foreground">klientów</div></CardContent></Card>
-            <Card><CardContent className="pt-6"><div className="text-2xl font-bold">{summary.total_used_gb} GB</div><div className="text-xs text-muted-foreground">zużycie razem</div></CardContent></Card>
+            <Card><CardContent className="pt-6"><div className="text-2xl font-bold">{summary.total_used_gb} GB</div><div className="text-xs text-muted-foreground">storage razem</div></CardContent></Card>
+            <Card><CardContent className="pt-6"><div className="text-2xl font-bold">{summary.total_egress_gb} GB</div><div className="text-xs text-muted-foreground">egress / mc</div></CardContent></Card>
             <Card><CardContent className="pt-6"><div className="text-2xl font-bold text-green-500">€{summary.total_revenue_eur}</div><div className="text-xs text-muted-foreground">przychód MRR</div></CardContent></Card>
-            <Card><CardContent className="pt-6"><div className="text-2xl font-bold text-orange-500">€{summary.total_r2_cost_eur}</div><div className="text-xs text-muted-foreground">koszt R2</div></CardContent></Card>
-            <Card><CardContent className="pt-6"><div className="text-2xl font-bold text-emerald-500">€{summary.total_margin_eur}</div><div className="text-xs text-muted-foreground">marża miesięczna</div></CardContent></Card>
+            <Card><CardContent className="pt-6"><div className="text-2xl font-bold text-orange-500">€{(Number(summary.total_r2_cost_eur) + Number(summary.total_egress_cost_eur || 0)).toFixed(2)}</div><div className="text-xs text-muted-foreground">koszt R2 + egress</div></CardContent></Card>
+            <Card><CardContent className="pt-6"><div className="text-2xl font-bold text-emerald-500">€{summary.total_margin_eur}</div><div className="text-xs text-muted-foreground">marża netto</div></CardContent></Card>
           </div>
         )}
 
@@ -230,9 +264,12 @@ export function AuroraStorageDesk() {
                       {c.client_company && <Badge variant="outline">{c.client_company}</Badge>}
                       <Badge>{c.plan_name}</Badge>
                       <Badge variant={c.status === "active" ? "default" : "secondary"}>{c.status}</Badge>
+                      {c.egress_billing_enabled && <Badge className="bg-blue-500/20 text-blue-500 hover:bg-blue-500/30">egress on</Badge>}
                     </div>
                     <div className="text-xs text-muted-foreground mt-1">
-                      {c.storage_used_gb} / {c.plan_storage_gb} GB · koszt R2: €{c.r2_real_cost_eur} · marża: <span className={c.plan_margin_eur > 0 ? "text-green-500" : "text-red-500"}>€{c.plan_margin_eur}</span>
+                      {c.storage_used_gb} / {c.plan_storage_gb} GB · storage €{c.r2_real_cost_eur}
+                      {c.egress_billing_enabled && <> · egress {c.egress_used_gb}GB → €{c.r2_egress_cost_eur}</>}
+                      {" · "}marża: <span className={c.plan_margin_eur > 0 ? "text-green-500" : "text-red-500"}>€{c.plan_margin_eur}</span>
                     </div>
                   </div>
                   {c.suggested_upgrade && (
@@ -251,6 +288,31 @@ export function AuroraStorageDesk() {
                 {c.suggested_upgrade && (
                   <p className="text-xs text-muted-foreground italic">💡 {c.suggested_upgrade.reason}</p>
                 )}
+
+                {/* Egress per-client controls */}
+                <div className="border-t pt-3 mt-2 flex items-center gap-3 flex-wrap">
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      checked={c.egress_billing_enabled}
+                      onCheckedChange={v => toggleEgressBilling(c.subscription_id, v)}
+                    />
+                    <span className="text-xs">Naliczaj egress</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Label className="text-xs whitespace-nowrap">Stawka €/GB:</Label>
+                    <Input
+                      type="number"
+                      step="0.0001"
+                      className="h-7 w-24 text-xs"
+                      defaultValue={c.effective_egress_cost_per_gb_eur}
+                      onBlur={e => {
+                        const v = e.target.value === "" ? null : Number(e.target.value);
+                        if (v !== c.effective_egress_cost_per_gb_eur) updateEgressOverride(c.subscription_id, v);
+                      }}
+                      disabled={!c.egress_billing_enabled}
+                    />
+                  </div>
+                </div>
               </CardContent>
             </Card>
           ))}

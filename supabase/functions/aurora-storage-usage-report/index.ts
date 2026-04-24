@@ -78,9 +78,11 @@ Deno.serve(async (req) => {
     const enriched = (usage || []).map((u: any) => {
       const usedGb = Number(u.storage_used_gb || 0);
       const projectedGb = Math.ceil(usedGb * 1.3); // 30% growth headroom
-      const r2Cost = usedGb * costPerGb;
+      const r2StorageCost = usedGb * costPerGb;
+      const egressCost = Number(u.egress_cost_eur || 0);
+      const r2TotalCost = r2StorageCost + egressCost;
       const planRevenue = Number(u.plan_price_eur || 0);
-      const realMargin = planRevenue - r2Cost;
+      const realMargin = planRevenue - r2TotalCost;
       const usagePct = Number(u.usage_percent || 0);
 
       // Suggest upsell if usage > 75%
@@ -102,7 +104,9 @@ Deno.serve(async (req) => {
       return {
         ...u,
         projected_usage_gb: projectedGb,
-        r2_real_cost_eur: Number(r2Cost.toFixed(4)),
+        r2_real_cost_eur: Number(r2StorageCost.toFixed(4)),
+        r2_egress_cost_eur: Number(egressCost.toFixed(4)),
+        r2_total_cost_eur: Number(r2TotalCost.toFixed(4)),
         plan_margin_eur: Number(realMargin.toFixed(2)),
         suggested_upgrade: suggested,
       };
@@ -111,8 +115,10 @@ Deno.serve(async (req) => {
     const summary = {
       total_clients: enriched.length,
       total_used_gb: Number(enriched.reduce((s, u) => s + Number(u.storage_used_gb || 0), 0).toFixed(3)),
+      total_egress_gb: Number(enriched.reduce((s, u) => s + Number(u.egress_used_gb || 0), 0).toFixed(3)),
       total_revenue_eur: Number(enriched.reduce((s, u) => s + Number(u.plan_price_eur || 0), 0).toFixed(2)),
       total_r2_cost_eur: Number(enriched.reduce((s, u) => s + Number(u.r2_real_cost_eur || 0), 0).toFixed(2)),
+      total_egress_cost_eur: Number(enriched.reduce((s, u) => s + Number(u.r2_egress_cost_eur || 0), 0).toFixed(2)),
       total_margin_eur: Number(enriched.reduce((s, u) => s + Number(u.plan_margin_eur || 0), 0).toFixed(2)),
       upsell_candidates: enriched.filter((u) => u.suggested_upgrade).length,
       avg_margin_percent: margin * 100,
