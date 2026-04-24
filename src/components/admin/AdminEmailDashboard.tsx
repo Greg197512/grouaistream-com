@@ -464,6 +464,19 @@ export function AdminEmailDashboard({ stats, genreStats }: AdminEmailDashboardPr
                   <div className="text-sm text-muted-foreground mb-1">Temat:</div>
                   <div className="font-semibold">{generatedEmail.subject}</div>
                 </div>
+                {generatedEmail.heroImageUrl && (
+                  <div className="rounded-lg overflow-hidden border border-primary/30 shadow-lg shadow-primary/10">
+                    <img
+                      src={generatedEmail.heroImageUrl}
+                      alt="Hero AI"
+                      className="w-full block"
+                    />
+                    <div className="px-3 py-2 bg-background/80 backdrop-blur text-xs text-muted-foreground flex items-center gap-1.5">
+                      <Sparkles className="h-3 w-3 text-primary" />
+                      Grafika hero wygenerowana przez AI dla tego maila
+                    </div>
+                  </div>
+                )}
                 <div className="p-4 rounded-lg bg-background border max-h-[300px] overflow-y-auto">
                   <div className="text-sm text-muted-foreground mb-2">Treść:</div>
                   <div className="prose prose-sm dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: generatedEmail.body }} />
