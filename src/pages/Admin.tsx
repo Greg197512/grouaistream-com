@@ -23,7 +23,8 @@ import {
   Lock,
   Plus,
   ToggleLeft,
-  ToggleRight
+  ToggleRight,
+  Sparkles
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -567,7 +568,7 @@ export default function Admin() {
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="grid gap-3 md:grid-cols-2"
+          className="grid gap-3 md:grid-cols-3"
         >
           <button
             onClick={() => navigate("/admin/aurora")}
@@ -593,6 +594,20 @@ export default function Admin() {
                 <div className="text-xs text-muted-foreground mt-1">Decyzje AI, pamięć, telemetria</div>
               </div>
               <Shield className="h-8 w-8 text-accent group-hover:scale-110 transition-transform" />
+            </div>
+          </button>
+          <button
+            onClick={() => navigate("/business")}
+            className="group relative text-left rounded-xl border border-cyan-400/50 bg-gradient-to-br from-cyan-500/20 via-blue-500/10 to-transparent p-4 hover:border-cyan-300 hover:shadow-[0_0_30px_hsl(210_100%_50%/0.4)] transition-all overflow-hidden"
+          >
+            <span className="absolute inset-0 bg-gradient-to-r from-transparent via-cyan-300/15 to-transparent animate-[shimmer_3s_ease-in-out_infinite]" />
+            <div className="flex items-center justify-between relative z-10">
+              <div>
+                <div className="text-xs uppercase tracking-wider text-cyan-300 font-semibold mb-1">Strona B2B (publiczna)</div>
+                <div className="text-lg font-bold bg-gradient-to-r from-cyan-200 to-blue-300 bg-clip-text text-transparent">grouaistream.com/business →</div>
+                <div className="text-xs text-muted-foreground mt-1">Hub usług + chat z Aurorą · klienci → Asystent Desk</div>
+              </div>
+              <Sparkles className="h-8 w-8 text-cyan-300 group-hover:scale-110 transition-transform animate-pulse" />
             </div>
           </button>
         </motion.div>

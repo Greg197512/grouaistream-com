@@ -180,6 +180,11 @@
     50% { transform: scaleY(0.5); }
   }
 
+  @keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
+
   .backdrop-blur-groove {
     backdrop-filter: blur(20px) saturate(180%);
   }
