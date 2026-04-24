@@ -15,11 +15,61 @@ interface EmailRequest {
   type: EmailType;
   recipientName?: string;
   customMessage?: string;
+  generateImage?: boolean; // domyślnie true
   stats?: {
     totalTracks: number;
     totalUsers: number;
     topGenres: string[];
   };
+}
+
+// === Premium hero image — ten sam wzorzec co w mass-email-dispatch ===
+function buildImagePrompt(emailType: EmailType, copyHeadline?: string): string {
+  const baseStyle = "ultra-cinematic editorial style, deep black background with soft aurora borealis, vibrant orange neon (#e8450a) and warm amber (#f59e0b) accents, glowing bass particles, premium music platform aesthetic, dramatic light rays, depth of field, 16:9, no text, no logos, no watermarks";
+  const themes: Record<EmailType, string> = {
+    invitation: "elegant glowing music portal opening into a dark velvet space with floating sound waves",
+    challenge: "iconic glowing trophy on a dark stage surrounded by orange spotlights and bass particles",
+    newsletter: "dark editorial magazine cover, glowing headphones suspended in aurora light",
+    weekly_digest: "cozy dark studio at night, vinyl records glowing under warm amber lamp, week timeline",
+    easter: "elegant decorated easter eggs with neon orange music notes on luxurious black silk",
+    feature_announcement: "futuristic neon music interface floating in dark space, glowing buttons revealing new feature",
+    tip_of_the_week: "close-up of glowing lightbulb made of music notes, dark moody background",
+    blog_post: "elegant open book transforming into musical waves, dark editorial style",
+    milestone: "fireworks of orange neon light over dark city skyline, celebratory cinematic mood",
+    comeback: "lonely glowing microphone in dim spotlight, warm nostalgic atmosphere",
+    thank_you: "warm orange heart made of glowing sound waves on deep black background",
+    ai_studio_promo: "futuristic AI music workstation with floating waveforms and neon controls",
+    live_radio_promo: "glowing on-air sign in dark radio studio, vintage microphone with neon halo",
+    party_mode_promo: "crowded silhouettes dancing under orange laser lights, energetic club atmosphere",
+    custom: "abstract orange aurora flowing through dark cosmic space with bass particles",
+  };
+  const theme = themes[emailType] || themes.custom;
+  const headlineHint = copyHeadline ? ` Inspired by: "${copyHeadline}".` : "";
+  return `${theme}.${headlineHint} ${baseStyle}`;
+}
+
+async function generateHeroImage(emailType: EmailType, apiKey: string, copyHeadline?: string): Promise<string | null> {
+  try {
+    const prompt = buildImagePrompt(emailType, copyHeadline);
+    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "google/gemini-3.1-flash-image-preview",
+        messages: [{ role: "user", content: prompt }],
+        modalities: ["image", "text"],
+      }),
+    });
+    if (!res.ok) {
+      console.error("Image gen failed:", res.status, await res.text());
+      return null;
+    }
+    const data = await res.json();
+    return data?.choices?.[0]?.message?.images?.[0]?.image_url?.url || null;
+  } catch (e) {
+    console.error("Image gen exception:", e);
+    return null;
+  }
 }
 
 serve(async (req) => {
@@ -33,7 +83,7 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    const { type, recipientName, customMessage, stats }: EmailRequest = await req.json();
+    const { type, recipientName, customMessage, generateImage = true, stats }: EmailRequest = await req.json();
 
     const systemPrompt = `Jesteś ekspertem od komunikacji marki GrouAI Stream — premium platformy muzycznej z AI.
 
@@ -58,7 +108,6 @@ ZASADY PISANIA:
    - Responsywnym layoutem (max-width 580px, padding 20-30px)
 8. HTML body musi mieć białe tło (#ffffff), akcenty w kolorach marki`;
 
-    // Twarda instrukcja dla AI: kontekst od admina MA SIĘ POJAWIĆ w mailu
     const contextDirective = customMessage && customMessage.trim()
       ? `\n\n⚠️ KRYTYCZNE — KONTEKST OD ADMINA (MUSI być widoczny w treści maila, sparafrazowany lub dosłownie, ale jasno przekazany odbiorcy):\n"""\n${customMessage.trim()}\n"""\nTen kontekst jest najważniejszą informacją w mailu — całe pozostałe pisanie ma być wokół niego. Nie ignoruj go, nie zastępuj własną kreacją.\n`
       : "";
@@ -129,7 +178,6 @@ Struktura: (1) „Twoja impreza, Twoje DJ" — co to daje, (2) jak to działa (Q
         break;
       case "custom":
       default:
-        // Tryb „własna wiadomość": kontekst od admina JEST treścią maila.
         userPrompt = customMessage && customMessage.trim()
           ? `Wygeneruj piękny, premium e-mail GrouAI Stream${recipientName ? ` skierowany do ${recipientName}` : ""} oparty W CAŁOŚCI na poniższej wiadomości od redakcji. Zachowaj jej sens i ton, dodaj jedynie spójną oprawę graficzną (HTML), chwytliwy nagłówek wynikający z treści i jasne CTA „Otwórz GrouAI Stream" prowadzące na https://grouaistream.com.
 
@@ -141,7 +189,8 @@ ${customMessage.trim()}
         break;
     }
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    // === Równolegle: tekst maila + hero image ===
+    const textPromise = fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${LOVABLE_API_KEY}`,
@@ -176,6 +225,12 @@ ${customMessage.trim()}
       }),
     });
 
+    const imagePromise: Promise<string | null> = generateImage
+      ? generateHeroImage(type, LOVABLE_API_KEY, customMessage || undefined)
+      : Promise.resolve(null);
+
+    const [response, heroImageUrl] = await Promise.all([textPromise, imagePromise]);
+
     if (!response.ok) {
       if (response.status === 429) {
         return new Response(JSON.stringify({ error: "Zbyt wiele zapytań. Spróbuj ponownie za chwilę." }), {
@@ -209,6 +264,7 @@ ${customMessage.trim()}
         subject: emailContent.subject,
         body: emailContent.body,
         preview: emailContent.preview,
+        heroImageUrl, // może być null jeśli generacja padła — szablon ma fallback
         type,
         generatedAt: new Date().toISOString()
       }

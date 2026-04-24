@@ -42,6 +42,7 @@ interface GeneratedEmail {
   subject: string;
   body: string;
   preview: string;
+  heroImageUrl?: string | null;
   type: string;
   generatedAt: string;
 }
@@ -268,6 +269,7 @@ export function AdminEmailDashboard({ stats, genreStats }: AdminEmailDashboardPr
             title: generatedEmail.subject,
             message: messagePlain,
             recipientName: recipientName || undefined,
+            heroImageUrl: generatedEmail.heroImageUrl || undefined,
             emailType: emailType === "invitation" ? "Zaproszenie" : emailType === "challenge" ? "Wyzwanie" : emailType === "newsletter" ? "Newsletter" : emailType === "easter" ? "Życzenia wielkanocne" : "Podsumowanie",
           },
         },
@@ -438,7 +440,7 @@ export function AdminEmailDashboard({ stats, genreStats }: AdminEmailDashboardPr
             <div className="flex gap-2">
               <Button className="flex-1 gap-2" onClick={generateEmail} disabled={generatingEmail}>
                 {generatingEmail ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                {generatingEmail ? "Generuję..." : "Generuj AI"}
+                {generatingEmail ? "Generuję tekst + grafikę..." : "Generuj AI (tekst + grafika)"}
               </Button>
               <Button variant="default" className="flex-1 gap-2" onClick={sendEmail} disabled={sendingEmail || !generatedEmail || !recipientEmail.trim()}>
                 {sendingEmail ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
@@ -462,6 +464,19 @@ export function AdminEmailDashboard({ stats, genreStats }: AdminEmailDashboardPr
                   <div className="text-sm text-muted-foreground mb-1">Temat:</div>
                   <div className="font-semibold">{generatedEmail.subject}</div>
                 </div>
+                {generatedEmail.heroImageUrl && (
+                  <div className="rounded-lg overflow-hidden border border-primary/30 shadow-lg shadow-primary/10">
+                    <img
+                      src={generatedEmail.heroImageUrl}
+                      alt="Hero AI"
+                      className="w-full block"
+                    />
+                    <div className="px-3 py-2 bg-background/80 backdrop-blur text-xs text-muted-foreground flex items-center gap-1.5">
+                      <Sparkles className="h-3 w-3 text-primary" />
+                      Grafika hero wygenerowana przez AI dla tego maila
+                    </div>
+                  </div>
+                )}
                 <div className="p-4 rounded-lg bg-background border max-h-[300px] overflow-y-auto">
                   <div className="text-sm text-muted-foreground mb-2">Treść:</div>
                   <div className="prose prose-sm dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: generatedEmail.body }} />
