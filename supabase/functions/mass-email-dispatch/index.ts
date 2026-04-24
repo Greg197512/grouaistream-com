@@ -280,40 +280,27 @@ function buildHtml(copy: any, heroUrl: string | null, language: Lang): string {
     nl: "GrouAI Stream — muziek die naar jou luistert",
     uk: "GrouAI Stream — музика, що слухає тебе",
   };
-  return `<!DOCTYPE html><html lang="${language}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<style>
-body{margin:0;padding:0;background:#0a0a0a;font-family:'Inter',Arial,sans-serif;color:#1a1a1a;}
-.outer{padding:24px 12px;background:linear-gradient(180deg,#0a0a0a 0%,#1a1208 100%);}
-.wrap{max-width:600px;margin:0 auto;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 24px 60px rgba(232,69,10,0.15);}
-.hero-frame{position:relative;background:#0a0a0a;}
-.hero-overlay{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,0) 60%,rgba(0,0,0,0.55) 100%);}
-.brand-strip{padding:16px 32px;background:#0a0a0a;color:#fff;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:18px;letter-spacing:0.4px;}
-.brand-strip span{color:#e8450a;}
-.headline{font-family:'Space Grotesk','Playfair Display',Georgia,serif;font-size:32px;line-height:1.15;color:#0a0a0a;font-weight:700;margin:0 0 18px;letter-spacing:-0.4px;}
-.body{font-size:16px;line-height:1.75;color:#2d2d2d;margin:0 0 28px;}
-.body p{margin:0 0 16px;}
-.cta{display:inline-block;background:linear-gradient(135deg,#e8450a,#f59e0b);color:#ffffff !important;text-decoration:none;padding:16px 36px;border-radius:999px;font-weight:600;font-size:15px;letter-spacing:0.4px;box-shadow:0 8px 24px rgba(232,69,10,0.35);}
-.divider{height:1px;background:linear-gradient(90deg,transparent,rgba(232,69,10,0.4),transparent);margin:32px 0 0;}
-.footer{padding:24px 32px;background:#0a0a0a;color:#888;font-size:12px;text-align:center;line-height:1.6;}
-.footer a{color:#e8450a;text-decoration:none;font-weight:500;}
-.footer .tag{display:inline-block;margin-top:6px;padding:4px 10px;border:1px solid rgba(232,69,10,0.3);border-radius:999px;color:#e8450a;font-size:10px;letter-spacing:1px;text-transform:uppercase;}
-</style></head>
-<body>
-<div class="outer">
-<div class="wrap">
-<div class="brand-strip">Grou<span>AI</span> Stream</div>
-<div class="hero-frame">${hero}<div class="hero-overlay"></div></div>
-<div style="padding:40px 32px 32px;">
-<h1 class="headline">${copy.headline || copy.subject || ""}</h1>
-<div class="body">${(copy.body || "").split("\n").filter((p: string) => p.trim()).map((p: string) => `<p>${p}</p>`).join("")}</div>
-<a href="${copy.ctaUrl || "https://grouaistream.com"}" class="cta">${copy.cta || "GrouAI Stream"}</a>
-<div class="divider"></div>
+  const bodyParas = (copy.body || "")
+    .split("\n")
+    .filter((p: string) => p.trim())
+    .map((p: string) => `<p style="margin:0 0 16px 0;font-size:16px;line-height:1.75;color:#2d2d2d;font-family:'Inter',Arial,sans-serif;">${p}</p>`)
+    .join("");
+  return `<!DOCTYPE html><html lang="${language}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#0a0a0a;font-family:'Inter',Arial,sans-serif;color:#1a1a1a;">
+<div style="padding:24px 12px;background:#0a0a0a;">
+<div style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 24px 60px rgba(232,69,10,0.15);">
+<div style="padding:16px 32px;background:#0a0a0a;color:#ffffff;font-family:'Space Grotesk',Arial,sans-serif;font-weight:700;font-size:18px;letter-spacing:0.4px;">Grou<span style="color:#e8450a;">AI</span> Stream</div>
+<div style="background:#0a0a0a;">${hero}</div>
+<div style="padding:40px 32px 32px;background:#ffffff;">
+<h1 style="font-family:'Space Grotesk',Georgia,serif;font-size:32px;line-height:1.15;color:#0a0a0a;font-weight:700;margin:0 0 18px 0;letter-spacing:-0.4px;">${copy.headline || copy.subject || ""}</h1>
+<div style="margin:0 0 28px 0;color:#2d2d2d;">${bodyParas}</div>
+<a href="${copy.ctaUrl || "https://grouaistream.com"}" style="display:inline-block;background:#e8450a;color:#ffffff;text-decoration:none;padding:16px 36px;border-radius:999px;font-weight:600;font-size:15px;letter-spacing:0.4px;font-family:'Inter',Arial,sans-serif;">${copy.cta || "GrouAI Stream"}</a>
+<div style="height:1px;background:#f1d4c4;margin:32px 0 0 0;"></div>
 </div>
-<div class="footer">
+<div style="padding:24px 32px;background:#0a0a0a;color:#888888;font-size:12px;text-align:center;line-height:1.6;font-family:'Inter',Arial,sans-serif;">
 ${footerText[language]}<br/>
-<a href="https://grouaistream.com">grouaistream.com</a><br/>
-<span class="tag">AI · LIVE · STUDIO</span>
+<a href="https://grouaistream.com" style="color:#e8450a;text-decoration:none;font-weight:500;">grouaistream.com</a><br/>
+<span style="display:inline-block;margin-top:6px;padding:4px 10px;border:1px solid rgba(232,69,10,0.3);border-radius:999px;color:#e8450a;font-size:10px;letter-spacing:1px;text-transform:uppercase;">AI · LIVE · STUDIO</span>
 </div>
 </div></div></body></html>`;
 }
