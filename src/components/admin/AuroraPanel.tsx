@@ -367,6 +367,7 @@ export const AuroraPanel = () => {
       <Tabs defaultValue="autonomy" className="w-full">
         <TabsList className="flex-wrap h-auto">
           <TabsTrigger value="autonomy"><Rocket className="h-4 w-4 mr-1" /> Autonomia ({proposedActions.length})</TabsTrigger>
+          <TabsTrigger value="niches"><Target className="h-4 w-4 mr-1" /> Nisze ({niches.filter(n => n.status === "discovered").length})</TabsTrigger>
           <TabsTrigger value="pulse"><HeartPulse className="h-4 w-4 mr-1" /> Puls</TabsTrigger>
           <TabsTrigger value="journal"><BookOpen className="h-4 w-4 mr-1" /> Dziennik</TabsTrigger>
           <TabsTrigger value="dreams"><Moon className="h-4 w-4 mr-1" /> Sny ({pendingDreams})</TabsTrigger>
