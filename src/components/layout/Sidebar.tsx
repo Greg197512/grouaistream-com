@@ -112,6 +112,32 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
 
         <div className="my-4 h-px bg-border" />
 
+        {/* Business B2B — animated blue glow */}
+        <button
+          onClick={() => handleNavClick("/business")}
+          className={cn(
+            "group relative flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition-all overflow-hidden",
+            "bg-gradient-to-r from-cyan-500/20 via-blue-500/15 to-transparent",
+            "border border-cyan-400/30 hover:border-cyan-300/70",
+            "shadow-[0_0_15px_hsl(210_100%_50%/0.15)] hover:shadow-[0_0_25px_hsl(210_100%_50%/0.4)]",
+            activeItem === "/business" && "border-cyan-300 shadow-[0_0_25px_hsl(210_100%_50%/0.45)]",
+            collapsed && "justify-center px-2"
+          )}
+        >
+          <span className="absolute inset-0 -z-0 opacity-0 group-hover:opacity-100 transition-opacity bg-gradient-to-r from-cyan-400/0 via-cyan-300/20 to-blue-500/0 animate-[shimmer_2s_ease-in-out_infinite]" />
+          <span className="material-icons-outlined text-xl text-cyan-300 relative z-10 animate-pulse">business_center</span>
+          {!collapsed && (
+            <>
+              <span className="flex-1 text-left truncate relative z-10 bg-gradient-to-r from-cyan-200 to-blue-300 bg-clip-text text-transparent">
+                Business · B2B
+              </span>
+              <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-cyan-400 text-background relative z-10">NEW</span>
+            </>
+          )}
+        </button>
+
+        <div className="my-3 h-px bg-border" />
+
         <div className="space-y-1">
           {playlistItems.map((item) => (
             <NavItem key={item.href} icon={item.icon} label={t(item.labelKey)} active={activeItem === item.href} collapsed={collapsed} onClick={() => handleNavClick(item.href)} badge={item.badge} />
