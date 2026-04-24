@@ -33,6 +33,21 @@ interface Workflow {
   webhook_url: string | null; enabled: boolean; auto_assign: boolean;
   total_runs: number; total_success: number; total_failed: number;
 }
+interface Run {
+  id: string; workflow_id: string; status: string; trigger_source: string;
+  started_at: string; finished_at: string | null; duration_ms: number | null;
+  error_message: string | null; niche_id: string | null; order_id: string | null;
+  output_payload: any;
+}
+interface RunStep {
+  id: string; run_id: string; step_index: number; node_name: string;
+  status: string; message: string | null; data: any; created_at: string;
+}
+interface NicheSummary {
+  niche_id: string; niche_name: string; runs_30d: number; success_30d: number;
+  failed_30d: number; avg_duration_ms: number | null; last_run_at: string | null;
+  seo_pages_generated: number; backlinks_created: number; leads_captured: number;
+}
 
 const SERVICE_TYPES = [
   { value: "seo_audit", label: "Audyt SEO" },
@@ -60,6 +75,10 @@ export default function AdminAurora() {
   const [niches, setNiches] = useState<Niche[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
+  const [runs, setRuns] = useState<Run[]>([]);
+  const [nicheSummary, setNicheSummary] = useState<NicheSummary[]>([]);
+  const [expandedRun, setExpandedRun] = useState<string | null>(null);
+  const [runSteps, setRunSteps] = useState<Record<string, RunStep[]>>({});
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
 
@@ -79,16 +98,27 @@ export default function AdminAurora() {
   }, [user]);
 
   const loadAll = useCallback(async () => {
-    const [n, o, w] = await Promise.all([
+    const [n, o, w, r, ns] = await Promise.all([
       supabase.from("aurora_niches" as any).select("id,niche_name,status,opportunity_score,search_volume_estimate,competition_level,estimated_monthly_revenue_eur,launched_url,launched_at").order("opportunity_score", { ascending: false }).limit(100),
       supabase.from("aurora_business_orders" as any).select("*").order("created_at", { ascending: false }).limit(100),
       supabase.from("aurora_n8n_workflows" as any).select("*").order("created_at", { ascending: false }),
+      supabase.from("aurora_n8n_runs" as any).select("*").order("started_at", { ascending: false }).limit(60),
+      supabase.from("aurora_niche_n8n_summary" as any).select("*").order("runs_30d", { ascending: false }).limit(50),
     ]);
     setNiches((n.data as any) || []);
     setOrders((o.data as any) || []);
     setWorkflows((w.data as any) || []);
+    setRuns((r.data as any) || []);
+    setNicheSummary((ns.data as any) || []);
     setLoading(false);
   }, []);
+
+  const loadRunSteps = async (runId: string) => {
+    if (runSteps[runId]) { setExpandedRun(expandedRun === runId ? null : runId); return; }
+    const { data } = await supabase.from("aurora_n8n_run_steps" as any).select("*").eq("run_id", runId).order("step_index", { ascending: true });
+    setRunSteps(prev => ({ ...prev, [runId]: (data as any) || [] }));
+    setExpandedRun(runId);
+  };
 
   useEffect(() => {
     if (isAdmin) {
@@ -96,6 +126,7 @@ export default function AdminAurora() {
       const ch = supabase.channel("aurora-desk")
         .on("postgres_changes", { event: "*", schema: "public", table: "aurora_business_orders" }, () => loadAll())
         .on("postgres_changes", { event: "*", schema: "public", table: "aurora_niches" }, () => loadAll())
+        .on("postgres_changes", { event: "*", schema: "public", table: "aurora_n8n_runs" }, () => loadAll())
         .subscribe();
       return () => { supabase.removeChannel(ch); };
     }
@@ -182,10 +213,11 @@ export default function AdminAurora() {
           <div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 animate-spin" /></div>
         ) : (
           <Tabs defaultValue="ranking">
-            <TabsList className="grid grid-cols-4 w-full max-w-2xl">
+            <TabsList className="grid grid-cols-5 w-full max-w-3xl">
               <TabsTrigger value="ranking">Ranking nisz</TabsTrigger>
               <TabsTrigger value="orders">Zlecenia <Badge className="ml-2" variant="secondary">{orders.filter(o => o.status !== "completed").length}</Badge></TabsTrigger>
               <TabsTrigger value="n8n">n8n <Badge className="ml-2" variant="secondary">{workflows.length}</Badge></TabsTrigger>
+              <TabsTrigger value="runs">Runs <Badge className="ml-2" variant="secondary">{runs.filter(r => r.status === "running").length}</Badge></TabsTrigger>
               <TabsTrigger value="archived">Archiwum</TabsTrigger>
             </TabsList>
 
@@ -300,6 +332,12 @@ export default function AdminAurora() {
                     {`https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/aurora-business-intake`}
                   </code>
                   <p className="text-xs text-muted-foreground mt-2">Body JSON: {`{ service_type, brief, client_email?, client_company?, budget_eur?, payload?, n8n_workflow_id? }`}</p>
+
+                  <p className="text-sm text-muted-foreground mt-4 mb-2">Callback dla n8n (raportowanie kroków/błędów do Aurory):</p>
+                  <code className="block text-xs p-2 bg-background border border-border rounded break-all">
+                    {`https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/aurora-n8n-callback`}
+                  </code>
+                  <p className="text-xs text-muted-foreground mt-2">{`POST { run_id, type: "step"|"finish"|"log", node_name?, status?, message?, output? }`}</p>
                 </CardContent>
               </Card>
 
@@ -338,6 +376,99 @@ export default function AdminAurora() {
                 ))}
                 {workflows.length === 0 && <p className="text-center text-muted-foreground py-6 text-sm">Brak workflowów n8n. Podłącz pierwszy powyżej.</p>}
               </div>
+            </TabsContent>
+
+            {/* N8N RUNS — aktywne workflowy, logi kroków, błędy + podsumowanie SEO per nisza */}
+            <TabsContent value="runs" className="mt-4 space-y-4">
+              <div className="grid md:grid-cols-4 gap-3">
+                <Card><CardContent className="pt-6"><div className="text-2xl font-bold">{runs.filter(r => r.status === "running").length}</div><div className="text-xs text-muted-foreground">aktywne runy</div></CardContent></Card>
+                <Card><CardContent className="pt-6"><div className="text-2xl font-bold text-emerald-400">{runs.filter(r => r.status === "success").length}</div><div className="text-xs text-muted-foreground">udane (60 ost.)</div></CardContent></Card>
+                <Card><CardContent className="pt-6"><div className="text-2xl font-bold text-red-400">{runs.filter(r => r.status === "failed").length}</div><div className="text-xs text-muted-foreground">błędy</div></CardContent></Card>
+                <Card><CardContent className="pt-6"><div className="text-2xl font-bold">{nicheSummary.reduce((s, n) => s + (n.seo_pages_generated || 0), 0)}</div><div className="text-xs text-muted-foreground">str. SEO wygenerowane (30d)</div></CardContent></Card>
+              </div>
+
+              <Card>
+                <CardHeader><CardTitle>Podsumowanie efektów per nisza (30 dni)</CardTitle><CardDescription>SEO pages, backlinki, leady — auto-agregowane z runów n8n</CardDescription></CardHeader>
+                <CardContent>
+                  <ScrollArea className="h-[260px]">
+                    <div className="space-y-2">
+                      {nicheSummary.map(s => (
+                        <div key={s.niche_id} className="flex items-center justify-between gap-3 p-2 rounded border border-border/40">
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium truncate">{s.niche_name}</div>
+                            <div className="text-xs text-muted-foreground flex flex-wrap gap-3">
+                              <span>📄 SEO: <strong className="text-foreground">{s.seo_pages_generated}</strong></span>
+                              <span>🔗 backlinks: {s.backlinks_created}</span>
+                              <span>📥 leady: {s.leads_captured}</span>
+                              <span>⏱ avg: {s.avg_duration_ms ? `${Math.round(s.avg_duration_ms / 1000)}s` : "—"}</span>
+                            </div>
+                          </div>
+                          <div className="flex flex-col items-end shrink-0 text-xs">
+                            <Badge variant="outline">{s.runs_30d} runs</Badge>
+                            <span className="text-emerald-400 mt-1">✓ {s.success_30d}</span>
+                            {s.failed_30d > 0 && <span className="text-red-400">✗ {s.failed_30d}</span>}
+                          </div>
+                        </div>
+                      ))}
+                      {nicheSummary.length === 0 && <p className="text-center text-muted-foreground py-6 text-sm">Brak runów per nisza. Aurora doda je gdy uruchomi workflowy.</p>}
+                    </div>
+                  </ScrollArea>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader><CardTitle>Ostatnie runy n8n</CardTitle><CardDescription>Kliknij run, by zobaczyć kroki i błędy</CardDescription></CardHeader>
+                <CardContent>
+                  <ScrollArea className="h-[480px]">
+                    <div className="space-y-2">
+                      {runs.map(r => {
+                        const wf = workflows.find(w => w.workflow_id === r.workflow_id);
+                        const steps = runSteps[r.id] || [];
+                        const isOpen = expandedRun === r.id;
+                        return (
+                          <Card key={r.id} className={r.status === "failed" ? "border-red-500/40" : ""}>
+                            <CardContent className="pt-4">
+                              <div className="flex items-center justify-between gap-3 cursor-pointer" onClick={() => loadRunSteps(r.id)}>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <Badge className={statusColor(r.status)}>{r.status}</Badge>
+                                    <span className="font-semibold text-sm">{wf?.name || r.workflow_id}</span>
+                                    <Badge variant="outline" className="text-xs">{r.trigger_source}</Badge>
+                                    <span className="text-xs text-muted-foreground">{formatDistanceToNow(new Date(r.started_at), { locale: pl, addSuffix: true })}</span>
+                                    {r.duration_ms != null && <span className="text-xs text-muted-foreground">· {Math.round(r.duration_ms / 1000)}s</span>}
+                                  </div>
+                                  {r.error_message && <div className="text-xs text-red-400 mt-1 line-clamp-2">⚠ {r.error_message}</div>}
+                                </div>
+                                <Button size="sm" variant="ghost">{isOpen ? "−" : "+"}</Button>
+                              </div>
+                              {isOpen && (
+                                <div className="mt-3 pl-3 border-l border-border/40 space-y-1">
+                                  {steps.length === 0 && <div className="text-xs text-muted-foreground">Brak kroków raportowanych przez n8n.</div>}
+                                  {steps.map(s => (
+                                    <div key={s.id} className="text-xs flex items-start gap-2">
+                                      <Badge variant="outline" className={`shrink-0 ${s.status === "failed" ? "text-red-400 border-red-500/40" : s.status === "success" ? "text-emerald-400 border-emerald-500/40" : ""}`}>
+                                        #{s.step_index} {s.node_name}
+                                      </Badge>
+                                      <span className="text-muted-foreground">{s.message}</span>
+                                    </div>
+                                  ))}
+                                  {r.output_payload && Object.keys(r.output_payload).length > 0 && (
+                                    <details className="mt-2">
+                                      <summary className="text-xs cursor-pointer text-primary">output payload</summary>
+                                      <pre className="text-xs mt-1 p-2 bg-muted rounded overflow-auto max-h-48">{JSON.stringify(r.output_payload, null, 2)}</pre>
+                                    </details>
+                                  )}
+                                </div>
+                              )}
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
+                      {runs.length === 0 && <p className="text-center text-muted-foreground py-10 text-sm">Brak runów. Aurora pokaże je gdy wywoła workflowy n8n.</p>}
+                    </div>
+                  </ScrollArea>
+                </CardContent>
+              </Card>
             </TabsContent>
 
             {/* ARCHIWUM */}
