@@ -826,6 +826,13 @@ export type Database = {
             foreignKeyName: "aurora_metric_events_niche_id_fkey"
             columns: ["niche_id"]
             isOneToOne: false
+            referencedRelation: "aurora_niche_n8n_summary"
+            referencedColumns: ["niche_id"]
+          },
+          {
+            foreignKeyName: "aurora_metric_events_niche_id_fkey"
+            columns: ["niche_id"]
+            isOneToOne: false
             referencedRelation: "aurora_niche_performance"
             referencedColumns: ["niche_id"]
           },
@@ -841,6 +848,137 @@ export type Database = {
             columns: ["variant_id"]
             isOneToOne: false
             referencedRelation: "aurora_landing_variants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      aurora_n8n_run_steps: {
+        Row: {
+          created_at: string
+          data: Json | null
+          duration_ms: number | null
+          id: string
+          message: string | null
+          node_name: string
+          run_id: string
+          status: string
+          step_index: number
+        }
+        Insert: {
+          created_at?: string
+          data?: Json | null
+          duration_ms?: number | null
+          id?: string
+          message?: string | null
+          node_name: string
+          run_id: string
+          status?: string
+          step_index?: number
+        }
+        Update: {
+          created_at?: string
+          data?: Json | null
+          duration_ms?: number | null
+          id?: string
+          message?: string | null
+          node_name?: string
+          run_id?: string
+          status?: string
+          step_index?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aurora_n8n_run_steps_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "aurora_n8n_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      aurora_n8n_runs: {
+        Row: {
+          duration_ms: number | null
+          error_message: string | null
+          execution_id: string | null
+          finished_at: string | null
+          id: string
+          input_payload: Json | null
+          niche_id: string | null
+          order_id: string | null
+          output_payload: Json | null
+          started_at: string
+          status: string
+          trigger_source: string
+          workflow_db_id: string | null
+          workflow_id: string
+        }
+        Insert: {
+          duration_ms?: number | null
+          error_message?: string | null
+          execution_id?: string | null
+          finished_at?: string | null
+          id?: string
+          input_payload?: Json | null
+          niche_id?: string | null
+          order_id?: string | null
+          output_payload?: Json | null
+          started_at?: string
+          status?: string
+          trigger_source?: string
+          workflow_db_id?: string | null
+          workflow_id: string
+        }
+        Update: {
+          duration_ms?: number | null
+          error_message?: string | null
+          execution_id?: string | null
+          finished_at?: string | null
+          id?: string
+          input_payload?: Json | null
+          niche_id?: string | null
+          order_id?: string | null
+          output_payload?: Json | null
+          started_at?: string
+          status?: string
+          trigger_source?: string
+          workflow_db_id?: string | null
+          workflow_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aurora_n8n_runs_niche_id_fkey"
+            columns: ["niche_id"]
+            isOneToOne: false
+            referencedRelation: "aurora_niche_n8n_summary"
+            referencedColumns: ["niche_id"]
+          },
+          {
+            foreignKeyName: "aurora_n8n_runs_niche_id_fkey"
+            columns: ["niche_id"]
+            isOneToOne: false
+            referencedRelation: "aurora_niche_performance"
+            referencedColumns: ["niche_id"]
+          },
+          {
+            foreignKeyName: "aurora_n8n_runs_niche_id_fkey"
+            columns: ["niche_id"]
+            isOneToOne: false
+            referencedRelation: "aurora_niches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "aurora_n8n_runs_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "aurora_business_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "aurora_n8n_runs_workflow_db_id_fkey"
+            columns: ["workflow_db_id"]
+            isOneToOne: false
+            referencedRelation: "aurora_n8n_workflows"
             referencedColumns: ["id"]
           },
         ]
@@ -925,6 +1063,13 @@ export type Database = {
           reason?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "aurora_niche_prune_log_niche_id_fkey"
+            columns: ["niche_id"]
+            isOneToOne: false
+            referencedRelation: "aurora_niche_n8n_summary"
+            referencedColumns: ["niche_id"]
+          },
           {
             foreignKeyName: "aurora_niche_prune_log_niche_id_fkey"
             columns: ["niche_id"]
@@ -4432,6 +4577,22 @@ export type Database = {
       }
     }
     Views: {
+      aurora_niche_n8n_summary: {
+        Row: {
+          avg_duration_ms: number | null
+          backlinks_created: number | null
+          failed_30d: number | null
+          last_run_at: string | null
+          leads_captured: number | null
+          niche_id: string | null
+          niche_name: string | null
+          niche_status: string | null
+          runs_30d: number | null
+          seo_pages_generated: number | null
+          success_30d: number | null
+        }
+        Relationships: []
+      }
       aurora_niche_performance: {
         Row: {
           age_days: number | null
@@ -4520,6 +4681,15 @@ export type Database = {
       }
       admin_topup_tip_credits: {
         Args: { _amount: number; _user_id: string }
+        Returns: Json
+      }
+      aurora_n8n_run_finalize: {
+        Args: {
+          _error?: string
+          _output?: Json
+          _run_id: string
+          _status: string
+        }
         Returns: Json
       }
       claim_likes_milestone_bonus: { Args: never; Returns: Json }
