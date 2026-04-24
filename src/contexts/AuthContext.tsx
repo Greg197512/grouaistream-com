@@ -114,6 +114,35 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                   .eq("user_id", session.user.id);
                 await fetchProfile(session.user.id);
                 console.log("First login completed - mood history reset");
+
+                // Fire welcome webhook for first-time logins that bypassed signUp()
+                // (Google OAuth, Apple, magic link, etc.) so the new email shows up
+                // in the system and n8n welcome flow — same as email/password signup.
+                const provider =
+                  (session.user.app_metadata as any)?.provider ?? "email";
+                if (provider !== "email" && session.user.email) {
+                  const N8N_WELCOME_WEBHOOK =
+                    "https://gregorypeek.app.n8n.cloud/webhook/grouai-signup";
+                  const displayName =
+                    (session.user.user_metadata as any)?.display_name ||
+                    (session.user.user_metadata as any)?.full_name ||
+                    (session.user.user_metadata as any)?.name ||
+                    session.user.email.split("@")[0];
+                  fetch(N8N_WELCOME_WEBHOOK, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      email: session.user.email,
+                      displayName,
+                      provider,
+                      source: "oauth_first_login",
+                    }),
+                    keepalive: true,
+                  }).catch((err) => {
+                    console.warn("[Auth] OAuth welcome webhook failed:", err);
+                  });
+                  console.log(`[Auth] OAuth first login (${provider}) — welcome webhook sent`);
+                }
               }
             } catch (err) {
               console.error("Error checking first login:", err);
