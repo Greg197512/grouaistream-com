@@ -123,18 +123,20 @@ export const BlogDistributionPanel = () => {
   const openTikTokStudio = async (post: Post) => {
     const caption = `${post.title}\n\n${post.description}\n\n#fyp #musicapp #aimusic #grouaistream`;
     try { await navigator.clipboard.writeText(caption); } catch {}
-    toast.success("Caption skopiowany!", {
-      description: "Otwieram TikTok Reels Studio — wklej caption tam, gdzie chcesz",
+    toast.success("📋 Caption skopiowany!", {
+      description: "Otwórz zakładkę „Rolki TikTok 🎬" u góry — wygeneruj rolkę, wklej caption gdy będzie gotowa do uploadu.",
+      duration: 8000,
     });
-    // Scroll do TikTok Studio (jest na tej samej stronie Admin /tiktok tab)
-    const studioEl = document.querySelector('[data-section="tiktok-reels-studio"]');
-    if (studioEl) {
-      studioEl.scrollIntoView({ behavior: "smooth", block: "start" });
-    } else {
-      // Fallback: przełącz na zakładkę tiktok
-      window.dispatchEvent(new CustomEvent("admin:switch-tab", { detail: "tiktok" }));
+    // Próba znalezienia tabu TikTok i kliknięcia w niego
+    const tiktokTab = document.querySelector('[role="tab"][value="tiktok"]') as HTMLElement | null;
+    if (tiktokTab) {
+      tiktokTab.click();
+      setTimeout(() => {
+        document.querySelector('[data-section="tiktok-reels-studio"]')?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 200);
     }
   };
+
 
 
   const sendNewsletter = async (post: Post) => {
