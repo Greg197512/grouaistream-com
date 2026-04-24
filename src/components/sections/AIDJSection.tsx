@@ -11,6 +11,8 @@ import { usePlayer } from "@/contexts/PlayerContext";
 import { useDJMode } from "@/hooks/useDJMode";
 import { FeatureGate } from "@/components/ui/FeatureGate";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useSubscription } from "@/contexts/SubscriptionContext";
+import { Lock } from "lucide-react";
 
 interface MoodState {
   mood: string;
@@ -93,10 +95,21 @@ export const AIDJSection = () => {
   };
 
   const { t } = useLanguage();
+  const { canUseAIDJ, showUpgradeFor } = useSubscription();
+
+  const handleQRClick = () => {
+    if (!canUseAIDJ) {
+      showUpgradeFor("AI DJ Party");
+      return;
+    }
+    setShowActivationModal(true);
+    if (showCrowdCamera) setShowCrowdCamera(false);
+    if (showMoodDetector) setShowMoodDetector(false);
+  };
 
   return (
     <>
-      {/* Party modals rendered OUTSIDE FeatureGate so they're always interactive */}
+      {/* Party modals — only Pro users can reach them via handleQRClick */}
       <PartyActivationModal
         open={showActivationModal}
         onClose={() => setShowActivationModal(false)}
@@ -108,14 +121,14 @@ export const AIDJSection = () => {
         )}
       </AnimatePresence>
 
-      {/* QR Parkiet button OUTSIDE FeatureGate so it's always clickable */}
+      {/* QR Parkiet button — visible for all, but Pro-gated on click */}
       <div className="px-6 pt-6 flex justify-end">
         <Button
-          onClick={() => { setShowActivationModal(true); if (showCrowdCamera) setShowCrowdCamera(false); if (showMoodDetector) setShowMoodDetector(false); }}
+          onClick={handleQRClick}
           variant="outline"
           className="gap-2 rounded-full border-primary/30 hover:bg-primary/10"
         >
-          <QrCode className="h-4 w-4" />
+          {canUseAIDJ ? <QrCode className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
           QR Parkiet
         </Button>
       </div>

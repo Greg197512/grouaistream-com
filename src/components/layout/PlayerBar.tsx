@@ -41,6 +41,8 @@ import { TrackBadges } from "@/components/ui/TrackBadges";
 import { TipModal } from "@/components/modals/TipModal";
 import { RatingLikeModal } from "@/components/modals/RatingLikeModal";
 import { CoffeeDialog } from "@/components/payments/CoffeeDialog";
+import { useSubscription } from "@/contexts/SubscriptionContext";
+import { Lock } from "lucide-react";
 
 // Video visibility state - shared via window for simplicity
 declare global {
@@ -51,6 +53,7 @@ declare global {
 
 export const PlayerBar = () => {
   const { user } = useAuth();
+  const { canUseMoodDetection, showUpgradeFor } = useSubscription();
   const {
     currentTrack,
     isPlaying,
@@ -468,9 +471,15 @@ export const PlayerBar = () => {
               <motion.button
                 whileHover={{ scale: 1.2 }}
                 whileTap={{ scale: 0.9 }}
-                onClick={() => setShowMoodDetector(true)}
+                onClick={() => {
+                  if (!canUseMoodDetection) {
+                    showUpgradeFor("Rozpoznawanie nastroju");
+                    return;
+                  }
+                  setShowMoodDetector(true);
+                }}
                 className="relative z-10 flex items-center justify-center h-7 w-7 sm:h-8 sm:w-8 rounded-full bg-gradient-to-br from-primary to-accent border border-white/30 shadow-[0_0_10px_rgba(var(--primary),0.5)]"
-                title="Rozpoznawanie nastroju (Kamera)"
+                title={canUseMoodDetection ? "Rozpoznawanie nastroju (Kamera)" : "Rozpoznawanie nastroju — Pro"}
               >
                 {/* Face icon → Camera icon alternating */}
                 <motion.div
@@ -498,6 +507,12 @@ export const PlayerBar = () => {
                     <Camera className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-white" />
                   </motion.div>
                 </motion.div>
+                {/* Pro lock indicator for free users */}
+                {!canUseMoodDetection && (
+                  <div className="absolute -bottom-0.5 -right-0.5 z-20 flex h-3 w-3 items-center justify-center rounded-full bg-amber-500 border border-background">
+                    <Lock className="h-2 w-2 text-background" strokeWidth={3} />
+                  </div>
+                )}
               </motion.button>
             </motion.div>
 
