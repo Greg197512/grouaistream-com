@@ -202,6 +202,30 @@ export default function AdminAurora() {
     await loadAll();
   };
 
+  const addStorageSub = async () => {
+    if (!newSub.client_email || !newSub.plan_code) return toast.error("Email i pakiet wymagane");
+    const { error } = await supabase.from("aurora_storage_subscriptions" as any).insert(newSub);
+    if (error) return toast.error(error.message);
+    toast.success("Klient otrzymał pakiet R2");
+    setNewSub({ plan_code: "r2_starter_10gb", client_email: "", client_company: "" });
+    await loadAll();
+  };
+
+  const togglePlan = async (id: string, active: boolean) => {
+    await supabase.from("aurora_storage_plans" as any).update({ active }).eq("id", id);
+    await loadAll();
+  };
+
+  const downloadFile = async (fileId: string) => {
+    setBusy(`dl-${fileId}`);
+    try {
+      const { data, error } = await supabase.functions.invoke("aurora-r2-signed-download", { body: { file_id: fileId } });
+      if (error) throw error;
+      if (data?.url) window.open(data.url, "_blank");
+    } catch (e: any) { toast.error(e.message); }
+    finally { setBusy(null); }
+  };
+
   const launched = niches.filter(n => n.status === "launched");
   const archived = niches.filter(n => n.status === "archived");
   const ranked = niches.filter(n => n.status === "discovered" || n.status === "approved");
