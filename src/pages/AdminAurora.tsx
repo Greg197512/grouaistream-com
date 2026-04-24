@@ -637,6 +637,11 @@ export default function AdminAurora() {
               </Card>
             </TabsContent>
 
+            {/* ASYSTENT */}
+            <TabsContent value="assistant" className="mt-4">
+              <AuroraAssistantDesk />
+            </TabsContent>
+
             {/* WORKFORCE */}
             <TabsContent value="workforce" className="mt-4">
               <AuroraWorkforceDesk />
