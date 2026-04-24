@@ -523,6 +523,114 @@ export default function AdminAurora() {
               </Card>
             </TabsContent>
 
+            {/* R2 STORAGE — pakiety, klienci, pliki, MRR */}
+            <TabsContent value="r2" className="mt-4 space-y-4">
+              <div className="grid md:grid-cols-4 gap-3">
+                <Card><CardContent className="pt-6"><div className="text-2xl font-bold">{storageOverview?.total_files || 0}</div><div className="text-xs text-muted-foreground">plików w R2</div></CardContent></Card>
+                <Card><CardContent className="pt-6"><div className="text-2xl font-bold">{formatBytes(storageOverview?.total_bytes || 0)}</div><div className="text-xs text-muted-foreground">zajęte miejsce</div></CardContent></Card>
+                <Card><CardContent className="pt-6"><div className="text-2xl font-bold">{storageOverview?.active_subscriptions || 0}</div><div className="text-xs text-muted-foreground">aktywni klienci</div></CardContent></Card>
+                <Card><CardContent className="pt-6"><div className="text-2xl font-bold text-emerald-400">€{Number(storageOverview?.mrr_eur || 0).toFixed(2)}</div><div className="text-xs text-muted-foreground">MRR R2</div></CardContent></Card>
+              </div>
+
+              <Card>
+                <CardHeader><CardTitle className="flex items-center gap-2"><HardDrive className="w-4 h-4" /> Pakiety pojemności</CardTitle><CardDescription>Aurora oferuje je klientom jako add-on do zleceń SEO/landingów</CardDescription></CardHeader>
+                <CardContent className="grid md:grid-cols-3 gap-3">
+                  {storagePlans.map(p => (
+                    <Card key={p.id} className={p.active ? "border-primary/40" : "opacity-50"}>
+                      <CardContent className="pt-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <strong>{p.name}</strong>
+                          <Switch checked={p.active} onCheckedChange={v => togglePlan(p.id, v)} />
+                        </div>
+                        <div className="text-2xl font-bold">€{Number(p.price_eur).toFixed(2)}<span className="text-xs text-muted-foreground">/mies</span></div>
+                        <div className="text-xs text-muted-foreground mt-1">{p.storage_gb} GB · {p.bandwidth_gb_month} GB transferu</div>
+                        <ul className="text-xs mt-2 space-y-0.5">
+                          {(p.features || []).map((f, i) => <li key={i}>✓ {f}</li>)}
+                        </ul>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader><CardTitle>Przyznaj pakiet klientowi</CardTitle></CardHeader>
+                <CardContent className="grid md:grid-cols-4 gap-3">
+                  <div>
+                    <Label>Pakiet</Label>
+                    <select className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm" value={newSub.plan_code} onChange={e => setNewSub({ ...newSub, plan_code: e.target.value })}>
+                      {storagePlans.filter(p => p.active).map(p => <option key={p.code} value={p.code}>{p.name} · €{p.price_eur}</option>)}
+                    </select>
+                  </div>
+                  <div><Label>Email klienta</Label><Input value={newSub.client_email} onChange={e => setNewSub({ ...newSub, client_email: e.target.value })} /></div>
+                  <div><Label>Firma</Label><Input value={newSub.client_company} onChange={e => setNewSub({ ...newSub, client_company: e.target.value })} /></div>
+                  <div className="flex items-end"><Button onClick={addStorageSub}><Plus className="w-4 h-4 mr-2" /> Aktywuj</Button></div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader><CardTitle>Klienci R2</CardTitle></CardHeader>
+                <CardContent>
+                  <ScrollArea className="h-[200px]">
+                    <div className="space-y-2">
+                      {storageSubs.map(s => {
+                        const plan = storagePlans.find(p => p.code === s.plan_code);
+                        const limit = (plan?.storage_gb || 0) * 1024 * 1024 * 1024;
+                        const pct = limit > 0 ? (s.storage_used_bytes / limit * 100) : 0;
+                        return (
+                          <div key={s.id} className="flex items-center justify-between gap-3 p-2 rounded border border-border/40">
+                            <div className="flex-1 min-w-0">
+                              <div className="font-medium text-sm">{s.client_email} {s.client_company && <span className="text-xs text-muted-foreground">· {s.client_company}</span>}</div>
+                              <div className="text-xs text-muted-foreground">{plan?.name || s.plan_code} · {formatBytes(s.storage_used_bytes)} / {plan?.storage_gb} GB ({pct.toFixed(1)}%)</div>
+                              <div className="h-1 bg-muted rounded mt-1 overflow-hidden"><div className={`h-full ${pct > 90 ? "bg-red-500" : pct > 70 ? "bg-orange-400" : "bg-emerald-500"}`} style={{ width: `${Math.min(100, pct)}%` }} /></div>
+                            </div>
+                            <Badge variant={s.status === "active" ? "default" : "outline"}>{s.status}</Badge>
+                          </div>
+                        );
+                      })}
+                      {storageSubs.length === 0 && <p className="text-center text-muted-foreground py-6 text-sm">Brak klientów R2.</p>}
+                    </div>
+                  </ScrollArea>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader><CardTitle>Pliki Aurory w R2 (100 ostatnich)</CardTitle><CardDescription>Deliverables, assety nisz, backupy</CardDescription></CardHeader>
+                <CardContent>
+                  <ScrollArea className="h-[360px]">
+                    <div className="space-y-1">
+                      {storageFiles.map(f => (
+                        <div key={f.id} className="flex items-center justify-between gap-3 p-2 rounded border border-border/40 text-sm">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <Badge variant="outline" className="text-xs">{f.category}</Badge>
+                              <span className="truncate font-mono text-xs">{f.file_name}</span>
+                              {f.visibility === "public_cdn" && <Badge variant="secondary" className="text-xs">CDN</Badge>}
+                            </div>
+                            <div className="text-xs text-muted-foreground">{formatBytes(f.size_bytes)} · {f.content_type} · {formatDistanceToNow(new Date(f.created_at), { locale: pl, addSuffix: true })}</div>
+                          </div>
+                          <Button size="sm" variant="ghost" onClick={() => downloadFile(f.id)} disabled={busy === `dl-${f.id}`}>
+                            {busy === `dl-${f.id}` ? <Loader2 className="w-3 h-3 animate-spin" /> : <Download className="w-3 h-3" />}
+                          </Button>
+                        </div>
+                      ))}
+                      {storageFiles.length === 0 && <p className="text-center text-muted-foreground py-10 text-sm">Brak plików. Aurora doda je przy realizacji zleceń.</p>}
+                    </div>
+                  </ScrollArea>
+                </CardContent>
+              </Card>
+
+              <Card className="border-primary/30 bg-primary/5">
+                <CardHeader><CardTitle className="text-sm">Endpoint dla Aurory / n8n (upload do R2)</CardTitle></CardHeader>
+                <CardContent>
+                  <code className="block text-xs p-2 bg-background border border-border rounded break-all">
+                    {`POST https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/aurora-r2-deliverable-upload`}
+                  </code>
+                  <p className="text-xs text-muted-foreground mt-2">{`{ file_name, content_base64|content_text, content_type?, category?, niche_id?, order_id?, run_id?, visibility?, storage_subscription_id? }`}</p>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
             {/* ARCHIWUM */}
             <TabsContent value="archived" className="mt-4">
               <ScrollArea className="h-[600px]">
