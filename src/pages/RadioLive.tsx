@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Radio, Wifi, Music, Volume2, VolumeX, ArrowLeft, Heart, Sparkles, MessageCircle, Send, X, Trash2, Smile, Play } from "lucide-react";
 import { RadioMoodDetector } from "@/components/radio/RadioMoodDetector";
 import { VerifiedStreamsCard } from "@/components/radio/VerifiedStreamsCard";
+import { LiveMicBooth } from "@/components/radio/LiveMicBooth";
 import { FeatureGate } from "@/components/ui/FeatureGate";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
