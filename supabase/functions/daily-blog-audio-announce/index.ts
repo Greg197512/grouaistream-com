@@ -234,10 +234,8 @@ serve(async (req) => {
         .ilike("custom_title", `${LANG_FLAGS[lang]} ${LANG_LABELS[lang]}:%`);
       if (delErr) console.warn("Could not cleanup old blog announcements:", delErr.message);
 
-      // 2) Insert at ~5 low positions within first 200 slots (10, 35, 70, 110, 160).
-      // We use small fractional positions stored as integer rounded buckets so they appear early.
-      // Since position is integer and existing items already occupy 0..N, we shift others would be costly.
-      // Instead: add at a NEGATIVE-ish low slot using min(position) - 1, plus a few high spots as backup.
+      // 2) Insert ONLY ONE slot per language - announcement plays once, then rotates by hour.
+      //    PL → NL → EN → UA cycle handled by cron schedule (different hours per language).
       const { data: minRow } = await supabase
         .from("radio_schedule")
         .select("position")
@@ -246,19 +244,16 @@ serve(async (req) => {
         .maybeSingle();
       const minPos = (minRow?.position as number | undefined) ?? 0;
 
-      const targetPositions = [minPos - 1, minPos - 2, minPos - 3, minPos - 4, minPos - 5];
-      const rows = targetPositions.map((pos) => ({
+      const { error: insErr } = await supabase.from("radio_schedule").insert({
         item_type: "announcement",
         custom_title: titleWithFlag,
         custom_audio_url: audioUrl,
         custom_duration: estimatedDuration,
-        position: pos,
+        position: minPos - 1,
         lang,
-      }));
-
-      const { error: insErr } = await supabase.from("radio_schedule").insert(rows);
-      if (insErr) console.warn("Could not insert blog announcements:", insErr.message);
-      else console.log(`📻 Inserted ${rows.length} blog announcement slots [${lang}] at positions:`, targetPositions);
+      });
+      if (insErr) console.warn("Could not insert blog announcement:", insErr.message);
+      else console.log(`📻 Inserted 1 blog announcement [${lang}] at position ${minPos - 1}`);
     } catch (schedErr) {
       console.warn("Could not insert into radio_schedule:", schedErr);
     }
