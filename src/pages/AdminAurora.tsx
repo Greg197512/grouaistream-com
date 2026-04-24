@@ -15,6 +15,7 @@ import { Loader2, Rocket, Target, Trash2, RefreshCw, Briefcase, Workflow, PlayCi
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { pl } from "date-fns/locale";
+import { AuroraStorageDesk } from "@/components/admin/AuroraStorageDesk";
 
 
 interface Niche {
@@ -630,6 +631,11 @@ export default function AdminAurora() {
                   <p className="text-xs text-muted-foreground mt-2">{`{ file_name, content_base64|content_text, content_type?, category?, niche_id?, order_id?, run_id?, visibility?, storage_subscription_id? }`}</p>
                 </CardContent>
               </Card>
+            </TabsContent>
+
+            {/* STORAGE DESK */}
+            <TabsContent value="storage" className="mt-4">
+              <AuroraStorageDesk />
             </TabsContent>
 
             {/* ARCHIWUM */}
