@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import {
   Sparkles, Send, Bot, User, Loader2, ArrowRight, Check,
   Search, FileText, Layout, Share2, Workflow, Target,
-  Music, Radio, HardDrive, Megaphone, Mail, MessageSquare,
+  Music, Radio, HardDrive, Megaphone, Mail, MessageSquare, Mic, MicOff, Volume2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { speak, stopSpeaking } from "@/utils/tts";
 
 type ChatMessage = { role: "user" | "assistant"; content: string; ts: number };
 
