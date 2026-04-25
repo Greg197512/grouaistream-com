@@ -52,6 +52,7 @@ import Orders from "./pages/Orders";
 import NicheLandingPage from "./pages/NicheLandingPage";
 import Sponsor from "./pages/Sponsor";
 import Business from "./pages/Business";
+import ClientDashboard from "./pages/ClientDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -132,6 +133,8 @@ const AppShell = () => {
           <Route path="/sponsor" element={<Sponsor />} />
           <Route path="/business" element={<Business />} />
           <Route path="/dla-firm" element={<Business />} />
+          <Route path="/client-dashboard" element={<ClientDashboard />} />
+          <Route path="/client-dashboard/:orderId" element={<ClientDashboard />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
