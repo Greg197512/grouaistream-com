@@ -493,10 +493,33 @@ Deno.serve(async (req) => {
 
     // 6) Process tool calls
     const toolResults: any[] = [];
+    let orderConfirmation: string | null = null;
+
     for (const tc of toolCalls) {
       const name = tc.function?.name;
       let args: any = {};
       try { args = JSON.parse(tc.function?.arguments ?? "{}"); } catch {}
+
+      if (name === "place_order") {
+        try {
+          if (!args.client_email || !args.brief || !args.service_type) {
+            toolResults.push({ tool: name, ok: false, error: "missing required fields (client_email, brief, service_type)" });
+          } else if (String(args.brief).trim().length < 30) {
+            toolResults.push({ tool: name, ok: false, error: "brief too short (need ≥30 chars)" });
+          } else {
+            const result = await placeOrderAndDispatch(supabase, args, conversation, client);
+            if (result.client_id && !client) {
+              const { data: c } = await supabase.from("aurora_crm_clients").select("*").eq("id", result.client_id).maybeSingle();
+              client = c;
+            }
+            toolResults.push({ tool: name, ok: true, ...result });
+            orderConfirmation = `✅ **Zlecenie #${result.short_id}** zarejestrowane!\n\nPrzekazuję je teraz do **${result.worker}** ${result.dispatched ? "— właśnie odebrał zadanie" : result.has_workflow ? "— pracownik dostanie webhook za moment" : "— trafia do kolejki ludzkiego operatora (workflow w przygotowaniu)"}.\n\nOdezwiemy się na **${args.client_email}** w ciągu **${result.sla_hours}h**. Jeśli coś jest pilniejsze — daj znać, podbiję priorytet.`;
+          }
+        } catch (e) {
+          console.error("place_order failed:", e);
+          toolResults.push({ tool: name, ok: false, error: String(e) });
+        }
+      }
 
       if (name === "save_intake_draft") {
         // Find existing draft for this conv (collecting/ready_for_approval) or create
@@ -552,8 +575,11 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 7) Save assistant message
-    const finalText = assistantText || (toolResults.length ? "✅ Zapisuję Twoje zapytanie, nasz zespół wkrótce wróci do Ciebie z potwierdzeniem." : "…");
+    // 7) Save assistant message — order confirmation appended if not already in model output
+    const baseText = assistantText || (toolResults.length ? "✅ Zapisuję Twoje zapytanie, nasz zespół wkrótce wróci do Ciebie z potwierdzeniem." : "…");
+    const finalText = orderConfirmation && !baseText.includes("Zlecenie #")
+      ? (baseText && baseText.length > 10 ? `${baseText}\n\n${orderConfirmation}` : orderConfirmation)
+      : baseText;
     await supabase.from("aurora_messages").insert({
       conversation_id: conversation.id,
       role: "assistant",
