@@ -79,6 +79,21 @@ serve(async (req) => {
     const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
     const triggeredBy = req.headers.get("x-trigger") || "cron";
 
+    // Kill switch: skip if blog announcements are disabled in radio_config
+    try {
+      const { data: cfg } = await supabase
+        .from("radio_config")
+        .select("blog_announcements_enabled")
+        .limit(1)
+        .single();
+      if (cfg && cfg.blog_announcements_enabled === false) {
+        return new Response(
+          JSON.stringify({ skipped: true, reason: "blog_announcements_disabled" }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    } catch (_) { /* ignore - default to enabled if check fails */ }
+
     // Resolve language
     const url = new URL(req.url);
     let lang: Lang = parseLang(url.searchParams.get("lang"));
