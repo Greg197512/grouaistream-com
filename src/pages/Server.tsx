@@ -197,6 +197,7 @@ const Server = () => {
   };
 
   const addFilesToQueue = (files: FileList | File[], relativePaths?: string[]) => {
+    if (!requireProForUpload()) return;
     const newItems: QueuedFile[] = [];
     const arr = Array.from(files);
     for (let i = 0; i < arr.length; i++) {
