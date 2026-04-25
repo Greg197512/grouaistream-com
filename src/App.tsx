@@ -52,6 +52,7 @@ import Orders from "./pages/Orders";
 import NicheLandingPage from "./pages/NicheLandingPage";
 import Sponsor from "./pages/Sponsor";
 import Business from "./pages/Business";
+import ClientDashboard from "./pages/ClientDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
