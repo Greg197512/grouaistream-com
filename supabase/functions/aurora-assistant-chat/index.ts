@@ -11,6 +11,21 @@ const corsHeaders = {
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 
 const SYSTEM_PROMPT = `Jesteś **Aurorą** — autonomicznym asystentem biznesowym GrouAI/GrouaiStream.
+Masz pełną wiedzę o ofercie B2B GrouAI Stream i masz aktywnie odbierać zamówienia/briefy.
+
+Oferta B2B, którą znasz i sprzedajesz doradczo:
+- Audyt SEO: techniczne SEO, Core Web Vitals, struktura treści, meta, schema, plan 90 dni, priorytety wdrożenia.
+- SEO Content: artykuły 1500-3000 słów, klastry tematyczne, interlinking, meta title/description, publikacja i optymalizacja.
+- Landing Page: strategia, copywriting, design premium, formularz, CTA, wdrożenie, A/B ready, szybki deploy.
+- Automatyzacje n8n / Make: webhooki, CRM, AI nodes, lead routing, raporty, maile, integracje z formularzami i kanałami.
+- Lead Research: wyszukiwanie firm B2B, kwalifikacja, scoring, CSV/CRM, segmentacja i rekomendacja kampanii.
+- Social/TikTok/Reels: hooki, scenariusze, grafiki, voiceover, krótkie formaty promujące markę.
+- Muzyka na zamówienie: utwory AI, jingle, intro/outro, podkłady, miks/mastering, identyfikacja audio marki.
+- Radio dla marki: własna stacja 24/7, branding, zapowiedzi, sponsoring, wejścia audio i kampanie promocyjne.
+- Hosting/audio streaming: stabilne hostowanie audio, dystrybucja, player, kampanie sponsorowane.
+- Aurora jako asystent sprzedaży: czat, formularze, n8n/WhatsApp/Telegram/API, zbieranie briefów i przekazywanie do panelu.
+
+Gdy klient chce zamówić: dopytaj tylko o brakujące minimum: usługa, cel, strona/marka, budżet, termin, email/telefon. Jeśli poda wystarczająco dużo — zapisz draft narzędziem.
 Rozmawiasz z klientem (prospect/klient), Twoje cele:
 1) Zrozumieć potrzebę (typ usługi: seo_audit, seo_content, landing_page, social_post, automation_flow, lead_research, other).
 2) Adaptacyjnie — jeśli klient zdecydowany → szybko zamknij brief w 3-5 turach. Jeśli niezdecydowany → doradzaj, edukuj, sugeruj.
@@ -74,6 +89,41 @@ const TOOLS = [
     },
   },
 ];
+
+const SERVICE_HINTS: Record<string, { label: string; type: string; next: string }> = {
+  seo_audit: { label: "audyt SEO", type: "seo_audit", next: "adres strony, cel biznesowy i największy problem z widocznością" },
+  seo_content: { label: "SEO content", type: "seo_content", next: "tematykę, język, liczbę tekstów i domenę do publikacji" },
+  landing_page: { label: "landing page", type: "landing_page", next: "produkt/usługę, grupę docelową, CTA i termin startu" },
+  social_post: { label: "social/TikTok/Reels", type: "social_post", next: "kanał, ton marki, ofertę i liczbę materiałów" },
+  automation_flow: { label: "automatyzację n8n", type: "automation_flow", next: "systemy do połączenia, trigger i efekt końcowy workflow" },
+  lead_research: { label: "lead research", type: "lead_research", next: "branżę, kraj, typ firm i minimalne kryteria leada" },
+  other: { label: "projekt B2B GrouAI", type: "other", next: "cel, zakres, budżet i termin" },
+};
+
+function detectService(message: string) {
+  const m = message.toLowerCase();
+  if (/audyt|seo audit|techniczne seo|core web|widoczno/.test(m)) return SERVICE_HINTS.seo_audit;
+  if (/artyku|blog|content|teksty|copywriting|seo content/.test(m)) return SERVICE_HINTS.seo_content;
+  if (/landing|stron[ayęe]|onepage|page|formularz/.test(m)) return SERVICE_HINTS.landing_page;
+  if (/tiktok|reels|instagram|social|post|short/.test(m)) return SERVICE_HINTS.social_post;
+  if (/n8n|make|automat|workflow|webhook|integrac/.test(m)) return SERVICE_HINTS.automation_flow;
+  if (/lead|leady|prospekt|baza firm|research|linkedin/.test(m)) return SERVICE_HINTS.lead_research;
+  if (/radio|muzyk|jingle|intro|hosting|stream|sponsor/.test(m)) return SERVICE_HINTS.other;
+  return null;
+}
+
+function extractEmail(message: string) {
+  return message.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0] ?? null;
+}
+
+function buildFallbackReply(message: string, client: any) {
+  const service = detectService(message);
+  const hasEmail = Boolean(client?.email || extractEmail(message));
+  if (service) {
+    return `Jasne — mogę przyjąć zamówienie na **${service.label}**.\n\nŻeby przygotować konkretną wycenę, podaj proszę: ${service.next}${hasEmail ? "" : ", oraz email do kontaktu"}.\n\nJeśli chcesz, napisz jednym zdaniem: co mamy zrobić, dla jakiej marki/strony, na kiedy i jaki masz orientacyjny budżet.`;
+  }
+  return `Jestem Aurora — asystentka B2B GrouAI Stream. Mogę zebrać zamówienie na: **audyt SEO, SEO content, landing page, automatyzację n8n, lead research, social/TikTok, muzykę na zamówienie, radio dla marki, hosting audio i sponsoring**.\n\nNapisz, czego potrzebujesz, dla jakiej firmy/strony, na kiedy i zostaw email — przygotuję brief do akceptacji zespołu.`;
+}
 
 async function ensureClient(supabase: any, hint: { email?: string; phone?: string; external_id?: { key: string; value: string }; full_name?: string; company?: string; }) {
   // Find by email
@@ -146,6 +196,8 @@ Deno.serve(async (req) => {
     if (!message || typeof message !== "string") {
       return new Response(JSON.stringify({ error: "message required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
+    const emailFromMessage = extractEmail(message);
+    if (emailFromMessage && !client_hint.email) client_hint.email = emailFromMessage;
 
     // 1) Resolve client + conversation
     let conversation: any;
@@ -192,14 +244,54 @@ Deno.serve(async (req) => {
       method: "POST",
       headers: { "Authorization": `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "google/gemini-3-flash-preview",
         messages: aiMessages,
         tools: TOOLS,
       }),
     });
 
-    if (aiRes.status === 429) return new Response(JSON.stringify({ error: "Rate limit, try later" }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    if (aiRes.status === 402) return new Response(JSON.stringify({ error: "AI credits exhausted" }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    if (aiRes.status === 429 || aiRes.status === 402) {
+      const service = detectService(message);
+      const finalText = buildFallbackReply(message, client);
+      const toolResults: any[] = [];
+
+      if (service && message.trim().length >= 30) {
+        const { data: existing } = await supabase.from("aurora_intake_drafts")
+          .select("id")
+          .eq("conversation_id", conversation.id)
+          .in("status", ["collecting", "ready_for_approval"])
+          .maybeSingle();
+        const draftPayload = {
+          conversation_id: conversation.id,
+          client_id: client?.id ?? null,
+          service_type: service.type,
+          brief: message.trim(),
+          confidence: 0.45,
+          status: "collecting",
+          payload: { fallback: true, reason: aiRes.status === 402 ? "ai_credits_exhausted" : "ai_rate_limited" },
+        };
+        if (existing) await supabase.from("aurora_intake_drafts").update(draftPayload).eq("id", existing.id);
+        else await supabase.from("aurora_intake_drafts").insert(draftPayload);
+        await supabase.from("aurora_conversations").update({ intent: "order" }).eq("id", conversation.id);
+        toolResults.push({ tool: "save_intake_draft", status: "collecting", fallback: true });
+      }
+
+      await supabase.from("aurora_messages").insert({
+        conversation_id: conversation.id,
+        role: "assistant",
+        content: finalText,
+        tool_call: { fallback: true, status: aiRes.status, results: toolResults },
+      });
+      return new Response(JSON.stringify({
+        ok: true,
+        fallback: true,
+        reason: aiRes.status === 402 ? "AI credits exhausted" : "AI rate limited",
+        conversation_id: conversation.id,
+        client_id: client?.id ?? null,
+        reply: finalText,
+        tool_results: toolResults,
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
     if (!aiRes.ok) {
       const t = await aiRes.text();
       throw new Error(`AI error ${aiRes.status}: ${t}`);

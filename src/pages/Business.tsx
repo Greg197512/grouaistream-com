@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import {
   Sparkles, Send, Bot, User, Loader2, ArrowRight, Check,
   Search, FileText, Layout, Share2, Workflow, Target,
-  Music, Radio, HardDrive, Megaphone, Mail, MessageSquare,
+  Music, Radio, HardDrive, Megaphone, Mail, MessageSquare, Mic, MicOff, Volume2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { speak, stopSpeaking } from "@/utils/tts";
 
 type ChatMessage = { role: "user" | "assistant"; content: string; ts: number };
 
@@ -84,7 +85,10 @@ export default function BusinessPage() {
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [email, setEmail] = useState(user?.email ?? "");
   const [draftSaved, setDraftSaved] = useState(false);
+  const [voiceEnabled, setVoiceEnabled] = useState(false);
+  const [listening, setListening] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const recognitionRef = useRef<any>(null);
 
   useEffect(() => {
     document.title = "Usługi B2B Aurora — SEO, automatyzacja, muzyka, hosting | GrouAI Stream";
@@ -129,7 +133,9 @@ export default function BusinessPage() {
         toast.success("✨ Twój brief został zapisany u Aurory");
       }
 
-      setMessages((m) => [...m, { role: "assistant", content: data.reply || "…", ts: Date.now() }]);
+      const reply = data.reply || "…";
+      setMessages((m) => [...m, { role: "assistant", content: reply, ts: Date.now() }]);
+      if (voiceEnabled) void speak(reply.replace(/[*_`#]/g, ""), { lang: "pl-PL", mode: "assistant" });
     } catch (e: any) {
       toast.error(e?.message || "Błąd komunikacji z Aurorą");
       setMessages((m) => [
@@ -143,6 +149,41 @@ export default function BusinessPage() {
 
   const quickStart = (key: string, name: string) => {
     send(`Cześć Aurora, jestem zainteresowany usługą: **${name}**. Opowiedz mi szczegóły i zapytaj o moje potrzeby.`);
+  };
+
+  const startVoiceInput = () => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      toast.error("Ta przeglądarka nie obsługuje rozpoznawania mowy. Użyj Chrome albo Edge.");
+      return;
+    }
+    if (recognitionRef.current) {
+      try { recognitionRef.current.stop(); } catch {}
+      recognitionRef.current = null;
+    }
+    const recognition = new SpeechRecognition();
+    recognition.lang = "pl-PL";
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.onstart = () => setListening(true);
+    recognition.onend = () => setListening(false);
+    recognition.onerror = () => {
+      setListening(false);
+      toast.error("Nie mogę odczytać mikrofonu. Sprawdź zgodę w przeglądarce.");
+    };
+    recognition.onresult = (event: any) => {
+      const transcript = event.results?.[0]?.[0]?.transcript?.trim();
+      if (transcript) void send(transcript);
+    };
+    recognitionRef.current = recognition;
+    recognition.start();
+  };
+
+  const toggleVoice = () => {
+    const next = !voiceEnabled;
+    setVoiceEnabled(next);
+    if (!next) stopSpeaking();
+    else toast.success("Rozmowa głosowa Aurory włączona");
   };
 
   return (
@@ -372,10 +413,29 @@ export default function BusinessPage() {
             }}
             className="border-t border-border/60 p-3 flex gap-2 bg-background/40"
           >
+            <Button
+              type="button"
+              variant={voiceEnabled ? "default" : "outline"}
+              onClick={toggleVoice}
+              className={cn("shrink-0", voiceEnabled && "bg-cyan-600 hover:bg-cyan-500 text-white")}
+              title={voiceEnabled ? "Wyłącz odpowiedzi głosowe Aurory" : "Włącz odpowiedzi głosowe Aurory"}
+            >
+              {voiceEnabled ? <Volume2 className="h-4 w-4" /> : <MicOff className="h-4 w-4" />}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={startVoiceInput}
+              disabled={loading || listening}
+              className={cn("shrink-0 border-cyan-400/30", listening && "bg-cyan-400/10 text-cyan-300")}
+              title="Mów do Aurory"
+            >
+              {listening ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mic className="h-4 w-4" />}
+            </Button>
             <Input
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Napisz do Aurory…"
+              placeholder={listening ? "Słucham…" : "Napisz albo powiedz Aurorze, czego potrzebujesz…"}
               disabled={loading}
               className="flex-1 bg-background/80"
             />
