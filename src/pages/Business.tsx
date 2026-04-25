@@ -15,6 +15,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { speak, stopSpeaking } from "@/utils/tts";
+import businessHeroBg from "@/assets/business-hero-bg.jpg";
 
 type ChatMessage = { role: "user" | "assistant"; content: string; ts: number };
 
@@ -192,14 +193,32 @@ export default function BusinessPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground relative overflow-hidden">
-      {/* Animated gradient background — cyan/blue */}
+      {/* Cinematic hero background image */}
       <div className="absolute inset-0 -z-10">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,hsl(210_100%_50%/0.18),transparent_60%)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,hsl(190_100%_45%/0.15),transparent_55%)]" />
+        <img
+          src={businessHeroBg}
+          alt=""
+          aria-hidden="true"
+          width={1920}
+          height={1080}
+          className="absolute inset-0 w-full h-[900px] object-cover opacity-40"
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-background/40 via-background/85 to-background" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,hsl(190_100%_50%/0.15),transparent_60%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,hsl(210_100%_45%/0.12),transparent_55%)]" />
         <motion.div
-          className="absolute -top-40 left-1/2 -translate-x-1/2 h-[600px] w-[900px] rounded-full bg-[hsl(210_100%_50%/0.08)] blur-3xl"
-          animate={{ scale: [1, 1.15, 1], opacity: [0.5, 0.8, 0.5] }}
+          className="absolute top-20 left-1/2 -translate-x-1/2 h-[500px] w-[900px] rounded-full bg-[hsl(190_100%_50%/0.08)] blur-3xl"
+          animate={{ scale: [1, 1.15, 1], opacity: [0.4, 0.7, 0.4] }}
           transition={{ duration: 8, repeat: Infinity }}
+        />
+        {/* subtle grid */}
+        <div
+          className="absolute inset-0 opacity-[0.04]"
+          style={{
+            backgroundImage:
+              "linear-gradient(hsl(190 100% 50% / 0.4) 1px, transparent 1px), linear-gradient(90deg, hsl(190 100% 50% / 0.4) 1px, transparent 1px)",
+            backgroundSize: "48px 48px",
+          }}
         />
       </div>
 
@@ -259,7 +278,7 @@ export default function BusinessPage() {
           <h2 className="text-3xl md:text-4xl font-bold mb-3">Usługi, które robi Aurora</h2>
           <p className="text-muted-foreground">Wybierz, kliknij — Aurora od razu zacznie z Tobą rozmawiać.</p>
         </div>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {SERVICES.map((s, i) => {
             const Icon = s.icon;
             return (
@@ -269,33 +288,42 @@ export default function BusinessPage() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.05 }}
+                whileHover={{ y: -6 }}
+                className="group relative"
               >
-                <Card className="group h-full border-border bg-card/50 backdrop-blur hover:border-cyan-400/50 hover:shadow-[0_0_30px_hsl(210_100%_50%/0.15)] transition-all">
-                  <CardContent className="p-6 flex flex-col h-full">
+                {/* Animated gradient border */}
+                <div className="absolute -inset-[1px] rounded-2xl bg-gradient-to-br from-cyan-400/40 via-blue-500/20 to-purple-500/30 opacity-60 group-hover:opacity-100 transition-opacity blur-[2px] group-hover:blur-[4px]" />
+                <Card className="relative h-full rounded-2xl border-0 bg-gradient-to-br from-card/95 via-card/85 to-card/70 backdrop-blur-xl shadow-[0_10px_40px_-10px_hsl(210_100%_30%/0.4),0_0_0_1px_hsl(190_100%_50%/0.15)] group-hover:shadow-[0_20px_60px_-10px_hsl(190_100%_50%/0.45),0_0_0_1px_hsl(190_100%_50%/0.4)] transition-all duration-500 overflow-hidden">
+                  {/* Inner glow accent */}
+                  <div className="absolute top-0 right-0 h-32 w-32 bg-cyan-400/10 blur-3xl rounded-full" />
+                  <div className="absolute bottom-0 left-0 h-24 w-24 bg-blue-500/10 blur-3xl rounded-full" />
+                  <CardContent className="relative p-6 flex flex-col h-full">
                     <div className="flex items-start justify-between mb-4">
-                      <div className="h-11 w-11 rounded-lg bg-gradient-to-br from-cyan-500/20 to-blue-600/20 border border-cyan-400/30 flex items-center justify-center">
-                        <Icon className="h-5 w-5 text-cyan-300" />
+                      <div className="relative">
+                        <div className="absolute inset-0 bg-cyan-400/40 blur-xl rounded-xl" />
+                        <div className="relative h-12 w-12 rounded-xl bg-gradient-to-br from-cyan-500/30 to-blue-600/30 border border-cyan-400/50 flex items-center justify-center shadow-[inset_0_1px_0_hsl(190_100%_70%/0.3)]">
+                          <Icon className="h-5 w-5 text-cyan-200 drop-shadow-[0_0_8px_hsl(190_100%_50%/0.8)]" />
+                        </div>
                       </div>
-                      <Badge variant="secondary" className="bg-cyan-400/10 text-cyan-300 border-cyan-400/30">
+                      <Badge variant="secondary" className="bg-gradient-to-r from-cyan-400/20 to-blue-500/20 text-cyan-200 border border-cyan-400/40 shadow-[0_0_15px_hsl(190_100%_50%/0.3)]">
                         {s.price}
                       </Badge>
                     </div>
-                    <h3 className="text-lg font-semibold mb-2">{s.name}</h3>
+                    <h3 className="text-lg font-semibold mb-2 bg-gradient-to-r from-foreground to-cyan-100 bg-clip-text text-transparent">{s.name}</h3>
                     <p className="text-sm text-muted-foreground mb-4">{s.desc}</p>
                     <ul className="space-y-1.5 text-xs text-muted-foreground mb-5 flex-1">
                       {s.bullets.map((b, j) => (
                         <li key={j} className="flex gap-2">
-                          <Check className="h-3.5 w-3.5 text-cyan-400 flex-shrink-0 mt-0.5" />
+                          <Check className="h-3.5 w-3.5 text-cyan-400 flex-shrink-0 mt-0.5 drop-shadow-[0_0_4px_hsl(190_100%_50%/0.8)]" />
                           <span>{b}</span>
                         </li>
                       ))}
                     </ul>
                     <Button
                       onClick={() => quickStart(s.key, s.name)}
-                      variant="outline"
-                      className="w-full border-cyan-400/30 hover:bg-cyan-400/10 hover:border-cyan-400 group-hover:border-cyan-400"
+                      className="w-full bg-gradient-to-r from-cyan-500/90 to-blue-600/90 hover:from-cyan-400 hover:to-blue-500 text-white border-0 shadow-[0_4px_20px_-4px_hsl(190_100%_50%/0.5)] hover:shadow-[0_8px_30px_-4px_hsl(190_100%_50%/0.7)] transition-all"
                     >
-                      Zacznij rozmowę <ArrowRight className="h-3.5 w-3.5 ml-1" />
+                      Zacznij rozmowę <ArrowRight className="h-3.5 w-3.5 ml-1 group-hover:translate-x-1 transition-transform" />
                     </Button>
                   </CardContent>
                 </Card>
@@ -307,32 +335,46 @@ export default function BusinessPage() {
 
       {/* STREAM-NATIVE OFFER */}
       <section className="relative max-w-6xl mx-auto px-4 py-12">
-        <div className="rounded-3xl border border-border bg-gradient-to-br from-card/80 via-card/40 to-transparent backdrop-blur p-8 md:p-12">
-          <div className="text-center mb-8">
-            <Badge className="mb-3 bg-blue-500/15 text-blue-300 border-blue-400/30">Tylko u nas</Badge>
-            <h2 className="text-2xl md:text-3xl font-bold mb-2">Dla klientów ze świata muzyki</h2>
-            <p className="text-muted-foreground text-sm">GrouAI Stream daje to, czego nie ma żadna agencja SEO.</p>
-          </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {STREAM_OFFER.map((o, i) => {
-              const Icon = o.icon;
-              return (
-                <div key={i} className="flex gap-3 items-start p-4 rounded-xl bg-background/40 border border-border/50">
-                  <Icon className="h-5 w-5 text-cyan-300 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <div className="font-semibold text-sm">{o.label}</div>
-                    <div className="text-xs text-muted-foreground">{o.desc}</div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+        <div className="relative group">
+          <div className="absolute -inset-[1px] rounded-3xl bg-gradient-to-br from-cyan-400/30 via-blue-500/20 to-purple-500/30 opacity-70 blur-[3px]" />
+          <div className="relative rounded-3xl border border-cyan-400/20 bg-gradient-to-br from-card/95 via-card/70 to-background/60 backdrop-blur-xl p-8 md:p-12 shadow-[0_20px_70px_-20px_hsl(210_100%_30%/0.5),inset_0_1px_0_hsl(190_100%_70%/0.1)] overflow-hidden">
+            <div className="absolute top-0 right-0 h-64 w-64 bg-cyan-400/10 blur-3xl rounded-full -translate-y-20 translate-x-20" />
+            <div className="absolute bottom-0 left-0 h-64 w-64 bg-blue-500/10 blur-3xl rounded-full translate-y-20 -translate-x-20" />
+            <div className="relative text-center mb-8">
+              <Badge className="mb-3 bg-blue-500/15 text-blue-300 border-blue-400/40 shadow-[0_0_20px_hsl(210_100%_50%/0.3)]">Tylko u nas</Badge>
+              <h2 className="text-2xl md:text-3xl font-bold mb-2 bg-gradient-to-r from-foreground via-cyan-100 to-blue-200 bg-clip-text text-transparent">Dla klientów ze świata muzyki</h2>
+              <p className="text-muted-foreground text-sm">GrouAI Stream daje to, czego nie ma żadna agencja SEO.</p>
+            </div>
+            <div className="relative grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {STREAM_OFFER.map((o, i) => {
+                const Icon = o.icon;
+                return (
+                  <motion.div
+                    key={i}
+                    whileHover={{ y: -4, scale: 1.02 }}
+                    className="group/card flex gap-3 items-start p-4 rounded-xl bg-gradient-to-br from-background/80 to-background/40 border border-cyan-400/15 hover:border-cyan-400/50 backdrop-blur shadow-[0_4px_20px_-8px_hsl(210_100%_30%/0.4)] hover:shadow-[0_8px_30px_-8px_hsl(190_100%_50%/0.5)] transition-all"
+                  >
+                    <div className="relative flex-shrink-0">
+                      <div className="absolute inset-0 bg-cyan-400/30 blur-md rounded-lg" />
+                      <div className="relative h-9 w-9 rounded-lg bg-gradient-to-br from-cyan-500/20 to-blue-600/20 border border-cyan-400/40 flex items-center justify-center">
+                        <Icon className="h-4 w-4 text-cyan-200 drop-shadow-[0_0_6px_hsl(190_100%_50%/0.8)]" />
+                      </div>
+                    </div>
+                    <div>
+                      <div className="font-semibold text-sm">{o.label}</div>
+                      <div className="text-xs text-muted-foreground">{o.desc}</div>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
           <div className="text-center mt-8">
             <Link to="/sponsor">
               <Button variant="ghost" className="text-cyan-300 hover:text-cyan-200 hover:bg-cyan-400/10">
                 Zobacz pakiety sponsorskie <ArrowRight className="h-4 w-4 ml-1" />
               </Button>
             </Link>
+          </div>
           </div>
         </div>
       </section>
