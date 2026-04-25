@@ -129,7 +129,19 @@ const GENRE_COLORS: Record<string, string> = {
 
 const Server = () => {
   const { user } = useAuth();
+  const { isPro } = useSubscription();
+  const navigate = useNavigate();
   const { playTrack, currentTrack, isPlaying, togglePlay, playPlaylist } = usePlayer();
+  
+  const requireProForUpload = useCallback(() => {
+    if (isPro) return true;
+    toast.error("Upload utworów wymaga planu PRO", {
+      description: "Przekierowuję do cennika...",
+      duration: 3500,
+    });
+    setTimeout(() => navigate("/pricing"), 600);
+    return false;
+  }, [isPro, navigate]);
   
   const [tracks, setTracks] = useState<Track[]>([]);
   const [loading, setLoading] = useState(true);
