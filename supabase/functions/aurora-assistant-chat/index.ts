@@ -19,7 +19,7 @@ const BRIEF_FIELDS: { key: string; label: string; description: string; required:
   { key: "client_company", label: "Nazwa firmy", description: "Marka / firma, dla której robimy projekt", required: false },
   { key: "website_url", label: "Adres strony", description: "URL Twojej strony / projektu (jeśli dotyczy: SEO, landing, content)", required: false },
   { key: "budget_eur", label: "Budżet (€)", description: "Orientacyjny budżet — pomaga dobrać zakres", required: false },
-  { key: "deadline", label: "Termin (deadline)", description: "Do kiedy potrzebujesz efektu (data lub np. „za 2 tygodnie")", required: false },
+  { key: "deadline", label: "Termin (deadline)", description: "Do kiedy potrzebujesz efektu (data lub np. za 2 tygodnie)", required: false },
   { key: "extra_notes", label: "Dodatkowe wymagania", description: "Specyficzne wymagania, branża, grupa docelowa, ton, język", required: false },
 ];
 
