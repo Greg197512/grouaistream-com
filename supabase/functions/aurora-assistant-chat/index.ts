@@ -11,6 +11,21 @@ const corsHeaders = {
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 
 const SYSTEM_PROMPT = `Jesteś **Aurorą** — autonomicznym asystentem biznesowym GrouAI/GrouaiStream.
+Masz pełną wiedzę o ofercie B2B GrouAI Stream i masz aktywnie odbierać zamówienia/briefy.
+
+Oferta B2B, którą znasz i sprzedajesz doradczo:
+- Audyt SEO: techniczne SEO, Core Web Vitals, struktura treści, meta, schema, plan 90 dni, priorytety wdrożenia.
+- SEO Content: artykuły 1500-3000 słów, klastry tematyczne, interlinking, meta title/description, publikacja i optymalizacja.
+- Landing Page: strategia, copywriting, design premium, formularz, CTA, wdrożenie, A/B ready, szybki deploy.
+- Automatyzacje n8n / Make: webhooki, CRM, AI nodes, lead routing, raporty, maile, integracje z formularzami i kanałami.
+- Lead Research: wyszukiwanie firm B2B, kwalifikacja, scoring, CSV/CRM, segmentacja i rekomendacja kampanii.
+- Social/TikTok/Reels: hooki, scenariusze, grafiki, voiceover, krótkie formaty promujące markę.
+- Muzyka na zamówienie: utwory AI, jingle, intro/outro, podkłady, miks/mastering, identyfikacja audio marki.
+- Radio dla marki: własna stacja 24/7, branding, zapowiedzi, sponsoring, wejścia audio i kampanie promocyjne.
+- Hosting/audio streaming: stabilne hostowanie audio, dystrybucja, player, kampanie sponsorowane.
+- Aurora jako asystent sprzedaży: czat, formularze, n8n/WhatsApp/Telegram/API, zbieranie briefów i przekazywanie do panelu.
+
+Gdy klient chce zamówić: dopytaj tylko o brakujące minimum: usługa, cel, strona/marka, budżet, termin, email/telefon. Jeśli poda wystarczająco dużo — zapisz draft narzędziem.
 Rozmawiasz z klientem (prospect/klient), Twoje cele:
 1) Zrozumieć potrzebę (typ usługi: seo_audit, seo_content, landing_page, social_post, automation_flow, lead_research, other).
 2) Adaptacyjnie — jeśli klient zdecydowany → szybko zamknij brief w 3-5 turach. Jeśli niezdecydowany → doradzaj, edukuj, sugeruj.
@@ -74,6 +89,41 @@ const TOOLS = [
     },
   },
 ];
+
+const SERVICE_HINTS: Record<string, { label: string; type: string; next: string }> = {
+  seo_audit: { label: "audyt SEO", type: "seo_audit", next: "adres strony, cel biznesowy i największy problem z widocznością" },
+  seo_content: { label: "SEO content", type: "seo_content", next: "tematykę, język, liczbę tekstów i domenę do publikacji" },
+  landing_page: { label: "landing page", type: "landing_page", next: "produkt/usługę, grupę docelową, CTA i termin startu" },
+  social_post: { label: "social/TikTok/Reels", type: "social_post", next: "kanał, ton marki, ofertę i liczbę materiałów" },
+  automation_flow: { label: "automatyzację n8n", type: "automation_flow", next: "systemy do połączenia, trigger i efekt końcowy workflow" },
+  lead_research: { label: "lead research", type: "lead_research", next: "branżę, kraj, typ firm i minimalne kryteria leada" },
+  other: { label: "projekt B2B GrouAI", type: "other", next: "cel, zakres, budżet i termin" },
+};
+
+function detectService(message: string) {
+  const m = message.toLowerCase();
+  if (/audyt|seo audit|techniczne seo|core web|widoczno/.test(m)) return SERVICE_HINTS.seo_audit;
+  if (/artyku|blog|content|teksty|copywriting|seo content/.test(m)) return SERVICE_HINTS.seo_content;
+  if (/landing|stron[ayęe]|onepage|page|formularz/.test(m)) return SERVICE_HINTS.landing_page;
+  if (/tiktok|reels|instagram|social|post|short/.test(m)) return SERVICE_HINTS.social_post;
+  if (/n8n|make|automat|workflow|webhook|integrac/.test(m)) return SERVICE_HINTS.automation_flow;
+  if (/lead|leady|prospekt|baza firm|research|linkedin/.test(m)) return SERVICE_HINTS.lead_research;
+  if (/radio|muzyk|jingle|intro|hosting|stream|sponsor/.test(m)) return SERVICE_HINTS.other;
+  return null;
+}
+
+function extractEmail(message: string) {
+  return message.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0] ?? null;
+}
+
+function buildFallbackReply(message: string, client: any) {
+  const service = detectService(message);
+  const hasEmail = Boolean(client?.email || extractEmail(message));
+  if (service) {
+    return `Jasne — mogę przyjąć zamówienie na **${service.label}**.\n\nŻeby przygotować konkretną wycenę, podaj proszę: ${service.next}${hasEmail ? "" : ", oraz email do kontaktu"}.\n\nJeśli chcesz, napisz jednym zdaniem: co mamy zrobić, dla jakiej marki/strony, na kiedy i jaki masz orientacyjny budżet.`;
+  }
+  return `Jestem Aurora — asystentka B2B GrouAI Stream. Mogę zebrać zamówienie na: **audyt SEO, SEO content, landing page, automatyzację n8n, lead research, social/TikTok, muzykę na zamówienie, radio dla marki, hosting audio i sponsoring**.\n\nNapisz, czego potrzebujesz, dla jakiej firmy/strony, na kiedy i zostaw email — przygotuję brief do akceptacji zespołu.`;
+}
 
 async function ensureClient(supabase: any, hint: { email?: string; phone?: string; external_id?: { key: string; value: string }; full_name?: string; company?: string; }) {
   // Find by email
