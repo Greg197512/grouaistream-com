@@ -130,6 +130,7 @@ export default function BusinessPage() {
       if (!data?.ok) throw new Error(data?.error || "Aurora nie odpowiada");
 
       if (data.conversation_id && !conversationId) setConversationId(data.conversation_id);
+      if (data.brief_state) setBriefState(data.brief_state as BriefState);
 
       const orderHit = (data.tool_results || []).find((t: any) => t.tool === "place_order" && t.ok);
       const draftHit = (data.tool_results || []).some((t: any) => t.tool === "save_intake_draft");
