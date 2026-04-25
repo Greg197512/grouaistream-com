@@ -58,7 +58,7 @@ export const LiveMicBooth = ({ open, onClose, radioAudio, baseVolume }: LiveMicB
   const [micGain, setMicGain] = useState(100);
   const [pitch, setPitch] = useState(0); // -12..+12 (EQ tilt)
   const [echo, setEcho] = useState(false);
-  const [monitor, setMonitor] = useState(false); // odsłuch w słuchawkach
+  const [monitor, setMonitor] = useState(true); // odsłuch w słuchawkach / lokalny miks antenowy
   const [level, setLevel] = useState(0);
   const [peak, setPeak] = useState(0);
   const [jingleUrl, setJingleUrl] = useState<string | null>(null);
@@ -191,39 +191,34 @@ export const LiveMicBooth = ({ open, onClose, radioAudio, baseVolume }: LiveMicB
   // Tworzymy AudioContext też w gesture (resume po await jest OK).
   const initMicChain = useCallback(async (): Promise<boolean> => {
     try {
-      // 1) Sprawdź zgodę
-      if (navigator.permissions) {
-        try {
-          const status = await navigator.permissions.query({ name: "microphone" as PermissionName });
-          if (status.state === "denied") {
-            setErrorMsg("Mikrofon jest zablokowany w ustawieniach przeglądarki. Odblokuj i odśwież stronę.");
-            toast.error("Mikrofon zablokowany", { description: "Odblokuj go w ustawieniach przeglądarki." });
-            return false;
-          }
-        } catch { /* nie wszystkie przeglądarki wspierają */ }
+      if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
+        setErrorMsg("Ta przeglądarka nie udostępnia mikrofonu. Otwórz stronę przez HTTPS i użyj Chrome, Edge albo Safari.");
+        return false;
       }
 
-      // 2) Mic stream
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: false,
-          channelCount: 1,
-        },
-        video: false,
-      });
-      streamRef.current = stream;
-
-      // 3) AudioContext
+      // 1) AudioContext + getUserMedia muszą wystartować natychmiast po kliknięciu.
       const Ctx = (window.AudioContext || (window as any).webkitAudioContext) as typeof AudioContext;
       const ctx = new Ctx({ latencyHint: "interactive" });
       audioCtxRef.current = ctx;
+      const streamPromise = navigator.mediaDevices.getUserMedia({
+        audio: buildMicConstraints(selectedDeviceId),
+        video: false,
+      });
+
       if (ctx.state === "suspended") {
         try { await ctx.resume(); } catch (e) { console.warn("[LiveMicBooth] resume failed", e); }
       }
 
-      // 4) Łańcuch przetwarzania
+      // 2) Mic stream — wybrany mikrofon lub domyślny systemowy
+      const stream = await streamPromise;
+      streamRef.current = stream;
+      await refreshMicDevices();
+      const track = stream.getAudioTracks()[0];
+      const settings = track?.getSettings?.();
+      const picked = micDevices.find((device) => device.deviceId === settings?.deviceId);
+      setActiveMicLabel(track?.label || picked?.label || "Aktywny mikrofon");
+
+      // 3) Łańcuch przetwarzania
       const source = ctx.createMediaStreamSource(stream);
 
       // High-pass 80Hz — wycina rumble/wiatr
@@ -295,7 +290,7 @@ export const LiveMicBooth = ({ open, onClose, radioAudio, baseVolume }: LiveMicB
       masterRef.current = master;
       analyserRef.current = analyser;
 
-      console.log("[LiveMicBooth] ✅ chain ready, ctx:", ctx.state, "tracks:", stream.getAudioTracks().length);
+      console.log("[LiveMicBooth] ✅ chain ready, ctx:", ctx.state, "mic:", track?.label || settings?.deviceId, "tracks:", stream.getAudioTracks().length);
 
       // VU meter (RMS + peak hold)
       const data = new Uint8Array(analyser.fftSize);
@@ -331,13 +326,13 @@ export const LiveMicBooth = ({ open, onClose, radioAudio, baseVolume }: LiveMicB
       if (err?.name === "NotAllowedError") msg = "Brak zgody na mikrofon. Pozwól w przeglądarce.";
       else if (err?.name === "NotFoundError") msg = "Nie znaleziono mikrofonu w systemie.";
       else if (err?.name === "NotReadableError") msg = "Mikrofon jest używany przez inną aplikację.";
-      else if (err?.name === "OverconstrainedError") msg = "Mikrofon nie spełnia wymagań (constraints).";
+      else if (err?.name === "OverconstrainedError") msg = "Wybrany mikrofon nie jest dostępny. Wybierz inny mikrofon albo ustaw domyślny w systemie.";
       setErrorMsg(msg);
       toast.error("Mikrofon", { description: msg });
       cleanupAudio();
       return false;
     }
-  }, [micGain, pitch, echo, monitor, cleanupAudio]);
+  }, [micGain, pitch, echo, monitor, selectedDeviceId, micDevices, refreshMicDevices, cleanupAudio]);
 
   const startCountdown = useCallback(async () => {
     setErrorMsg(null);
