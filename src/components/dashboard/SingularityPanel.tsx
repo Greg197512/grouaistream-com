@@ -18,6 +18,8 @@ export function SingularityPanel() {
   const [knowledge, setKnowledge] = useState<Knowledge[]>([]);
   const [dialogues, setDialogues] = useState<Dialogue[]>([]);
   const [topic, setTopic] = useState("");
+  const [autoScope, setAutoScope] = useState("");
+  const [autoCount, setAutoCount] = useState(5);
   const [busy, setBusy] = useState<string | null>(null);
 
   const load = async () => {
