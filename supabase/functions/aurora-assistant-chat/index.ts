@@ -160,6 +160,43 @@ const TOOLS = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "report_missing_fields",
+      description: "Po KAŻDEJ wiadomości klienta zaktualizuj checklist briefu — które pola masz, które brakują, jakie pytanie zadasz dalej. Frontend wyświetli to klientowi jako tabelkę.",
+      parameters: {
+        type: "object",
+        properties: {
+          collected: {
+            type: "object",
+            description: "Pola, które już znasz z rozmowy. Klucze: service_type, brief, client_email, client_name, client_company, website_url, budget_eur, deadline, extra_notes.",
+            properties: {
+              service_type: { type: "string" },
+              brief: { type: "string" },
+              client_email: { type: "string" },
+              client_name: { type: "string" },
+              client_company: { type: "string" },
+              website_url: { type: "string" },
+              budget_eur: { type: "number" },
+              deadline: { type: "string" },
+              extra_notes: { type: "string" },
+            },
+          },
+          missing: {
+            type: "array",
+            description: "Lista kluczy pól, których jeszcze brakuje (z BRIEF_FIELDS).",
+            items: { type: "string" },
+          },
+          next_question: {
+            type: "string",
+            description: "Konkretne pytanie, które właśnie zadajesz klientowi (1 zdanie).",
+          },
+        },
+        required: ["collected", "missing"],
+      },
+    },
+  },
 ];
 
 // === Pracownicy n8n (imiona dla personalizacji odpowiedzi) ===
