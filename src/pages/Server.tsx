@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { 
   HardDrive, Upload, Music, FileAudio, FileVideo, Play, Pause, Search, 
   Loader2, CheckCircle, AlertCircle, X, Film, Download, Trash2, 
-  FolderOpen, Sparkles, Library, ImageIcon, RefreshCw
+  FolderOpen, Sparkles, Library, ImageIcon, RefreshCw, Lock
 } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
