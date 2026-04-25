@@ -5,7 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Brain, Globe, MessageSquareMore, Loader2, Sparkles, TrendingUp, Database } from "lucide-react";
+import { Brain, Globe, MessageSquareMore, Loader2, Sparkles, TrendingUp, Database, Zap } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 
 interface IQMetric { id: string; iq_score: number; facts_known: number; dialogues_completed: number; avg_quality: number; recorded_at: string; }
