@@ -127,8 +127,12 @@ export default function BusinessPage() {
 
       if (data.conversation_id && !conversationId) setConversationId(data.conversation_id);
 
+      const orderHit = (data.tool_results || []).find((t: any) => t.tool === "place_order" && t.ok);
       const draftHit = (data.tool_results || []).some((t: any) => t.tool === "save_intake_draft");
-      if (draftHit && !draftSaved) {
+      if (orderHit) {
+        setDraftSaved(true);
+        toast.success(`🚀 Zlecenie #${orderHit.short_id} przekazane do ${orderHit.worker}`, { duration: 6000 });
+      } else if (draftHit && !draftSaved) {
         setDraftSaved(true);
         toast.success("✨ Twój brief został zapisany u Aurory");
       }
