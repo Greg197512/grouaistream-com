@@ -196,6 +196,8 @@ Deno.serve(async (req) => {
     if (!message || typeof message !== "string") {
       return new Response(JSON.stringify({ error: "message required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
+    const emailFromMessage = extractEmail(message);
+    if (emailFromMessage && !client_hint.email) client_hint.email = emailFromMessage;
 
     // 1) Resolve client + conversation
     let conversation: any;
@@ -242,14 +244,54 @@ Deno.serve(async (req) => {
       method: "POST",
       headers: { "Authorization": `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "google/gemini-3-flash-preview",
         messages: aiMessages,
         tools: TOOLS,
       }),
     });
 
-    if (aiRes.status === 429) return new Response(JSON.stringify({ error: "Rate limit, try later" }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    if (aiRes.status === 402) return new Response(JSON.stringify({ error: "AI credits exhausted" }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    if (aiRes.status === 429 || aiRes.status === 402) {
+      const service = detectService(message);
+      const finalText = buildFallbackReply(message, client);
+      const toolResults: any[] = [];
+
+      if (service && message.trim().length >= 30) {
+        const { data: existing } = await supabase.from("aurora_intake_drafts")
+          .select("id")
+          .eq("conversation_id", conversation.id)
+          .in("status", ["collecting", "ready_for_approval"])
+          .maybeSingle();
+        const draftPayload = {
+          conversation_id: conversation.id,
+          client_id: client?.id ?? null,
+          service_type: service.type,
+          brief: message.trim(),
+          confidence: 0.45,
+          status: "collecting",
+          payload: { fallback: true, reason: aiRes.status === 402 ? "ai_credits_exhausted" : "ai_rate_limited" },
+        };
+        if (existing) await supabase.from("aurora_intake_drafts").update(draftPayload).eq("id", existing.id);
+        else await supabase.from("aurora_intake_drafts").insert(draftPayload);
+        await supabase.from("aurora_conversations").update({ intent: "order" }).eq("id", conversation.id);
+        toolResults.push({ tool: "save_intake_draft", status: "collecting", fallback: true });
+      }
+
+      await supabase.from("aurora_messages").insert({
+        conversation_id: conversation.id,
+        role: "assistant",
+        content: finalText,
+        tool_call: { fallback: true, status: aiRes.status, results: toolResults },
+      });
+      return new Response(JSON.stringify({
+        ok: true,
+        fallback: true,
+        reason: aiRes.status === 402 ? "AI credits exhausted" : "AI rate limited",
+        conversation_id: conversation.id,
+        client_id: client?.id ?? null,
+        reply: finalText,
+        tool_results: toolResults,
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
     if (!aiRes.ok) {
       const t = await aiRes.text();
       throw new Error(`AI error ${aiRes.status}: ${t}`);
