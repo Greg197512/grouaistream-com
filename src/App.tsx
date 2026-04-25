@@ -133,6 +133,8 @@ const AppShell = () => {
           <Route path="/sponsor" element={<Sponsor />} />
           <Route path="/business" element={<Business />} />
           <Route path="/dla-firm" element={<Business />} />
+          <Route path="/client-dashboard" element={<ClientDashboard />} />
+          <Route path="/client-dashboard/:orderId" element={<ClientDashboard />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
