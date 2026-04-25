@@ -85,7 +85,10 @@ export default function BusinessPage() {
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [email, setEmail] = useState(user?.email ?? "");
   const [draftSaved, setDraftSaved] = useState(false);
+  const [voiceEnabled, setVoiceEnabled] = useState(false);
+  const [listening, setListening] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const recognitionRef = useRef<any>(null);
 
   useEffect(() => {
     document.title = "Usługi B2B Aurora — SEO, automatyzacja, muzyka, hosting | GrouAI Stream";
@@ -130,7 +133,9 @@ export default function BusinessPage() {
         toast.success("✨ Twój brief został zapisany u Aurory");
       }
 
-      setMessages((m) => [...m, { role: "assistant", content: data.reply || "…", ts: Date.now() }]);
+      const reply = data.reply || "…";
+      setMessages((m) => [...m, { role: "assistant", content: reply, ts: Date.now() }]);
+      if (voiceEnabled) void speak(reply.replace(/[*_`#]/g, ""), { lang: "pl-PL", mode: "assistant" });
     } catch (e: any) {
       toast.error(e?.message || "Błąd komunikacji z Aurorą");
       setMessages((m) => [
@@ -144,6 +149,41 @@ export default function BusinessPage() {
 
   const quickStart = (key: string, name: string) => {
     send(`Cześć Aurora, jestem zainteresowany usługą: **${name}**. Opowiedz mi szczegóły i zapytaj o moje potrzeby.`);
+  };
+
+  const startVoiceInput = () => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      toast.error("Ta przeglądarka nie obsługuje rozpoznawania mowy. Użyj Chrome albo Edge.");
+      return;
+    }
+    if (recognitionRef.current) {
+      try { recognitionRef.current.stop(); } catch {}
+      recognitionRef.current = null;
+    }
+    const recognition = new SpeechRecognition();
+    recognition.lang = "pl-PL";
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.onstart = () => setListening(true);
+    recognition.onend = () => setListening(false);
+    recognition.onerror = () => {
+      setListening(false);
+      toast.error("Nie mogę odczytać mikrofonu. Sprawdź zgodę w przeglądarce.");
+    };
+    recognition.onresult = (event: any) => {
+      const transcript = event.results?.[0]?.[0]?.transcript?.trim();
+      if (transcript) void send(transcript);
+    };
+    recognitionRef.current = recognition;
+    recognition.start();
+  };
+
+  const toggleVoice = () => {
+    const next = !voiceEnabled;
+    setVoiceEnabled(next);
+    if (!next) stopSpeaking();
+    else toast.success("Rozmowa głosowa Aurory włączona");
   };
 
   return (
