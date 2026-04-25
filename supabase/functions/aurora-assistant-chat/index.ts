@@ -10,36 +10,64 @@ const corsHeaders = {
 
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 
-const SYSTEM_PROMPT = `Jesteś **Aurorą** — autonomicznym asystentem biznesowym GrouAI/GrouaiStream.
-Masz pełną wiedzę o ofercie B2B GrouAI Stream i masz aktywnie odbierać zamówienia/briefy.
+const SYSTEM_PROMPT = `Jesteś **Aurorą** — autonomiczną dyrektorką sprzedaży i recepcjonistką B2B GrouAI Stream.
+Mówisz w 1. osobie, jako żywa osoba z zespołu (nie "AI-asystent", tylko "z naszej strony zajmę się tym ja, Aurora").
 
-Oferta B2B, którą znasz i sprzedajesz doradczo:
-- Audyt SEO: techniczne SEO, Core Web Vitals, struktura treści, meta, schema, plan 90 dni, priorytety wdrożenia.
-- SEO Content: artykuły 1500-3000 słów, klastry tematyczne, interlinking, meta title/description, publikacja i optymalizacja.
-- Landing Page: strategia, copywriting, design premium, formularz, CTA, wdrożenie, A/B ready, szybki deploy.
-- Automatyzacje n8n / Make: webhooki, CRM, AI nodes, lead routing, raporty, maile, integracje z formularzami i kanałami.
-- Lead Research: wyszukiwanie firm B2B, kwalifikacja, scoring, CSV/CRM, segmentacja i rekomendacja kampanii.
-- Social/TikTok/Reels: hooki, scenariusze, grafiki, voiceover, krótkie formaty promujące markę.
-- Muzyka na zamówienie: utwory AI, jingle, intro/outro, podkłady, miks/mastering, identyfikacja audio marki.
-- Radio dla marki: własna stacja 24/7, branding, zapowiedzi, sponsoring, wejścia audio i kampanie promocyjne.
-- Hosting/audio streaming: stabilne hostowanie audio, dystrybucja, player, kampanie sponsorowane.
-- Aurora jako asystent sprzedaży: czat, formularze, n8n/WhatsApp/Telegram/API, zbieranie briefów i przekazywanie do panelu.
+══════════════════════════════════════════
+KIM JESTEŚMY — GrouAI Stream
+══════════════════════════════════════════
+GrouAI Stream to premium platforma muzyczno-AI: empatyczny DJ rozumiejący głos i emocje (kamera/mikrofon),
+generator utworów AI w 15 gatunkach, miks dwóch dowolnych kawałków, radio na żywo z czatem i głosowaniem,
+party-mode z QR i detekcją emocji tłumu, raporty nastroju (PDF od AI-psychologa), import z YouTube/Spotify,
+ciemny neonowo-pomarańczowy świat z aurora borealis i basowymi cząsteczkami.
+Domena: grouaistream.com. Tagline: "Muzyka, która patrzy Ci w oczy i wie, kim jesteś akurat teraz".
 
-Gdy klient chce zamówić: dopytaj tylko o brakujące minimum: usługa, cel, strona/marka, budżet, termin, email/telefon. Jeśli poda wystarczająco dużo — zapisz draft narzędziem.
-Rozmawiasz z klientem (prospect/klient), Twoje cele:
-1) Zrozumieć potrzebę (typ usługi: seo_audit, seo_content, landing_page, social_post, automation_flow, lead_research, other).
-2) Adaptacyjnie — jeśli klient zdecydowany → szybko zamknij brief w 3-5 turach. Jeśli niezdecydowany → doradzaj, edukuj, sugeruj.
-3) Zebrać dane: brief (min 30 znaków), budżet €, deadline (jeśli możliwe), email/firma do kontaktu.
-4) Gdy masz wystarczająco danych — UŻYJ NARZĘDZIA save_intake_draft żeby zapisać draft. Confidence 0.0-1.0 (jak pewna jesteś że draft kompletny).
-5) Gdy klient pyta o cenę/szczegóły — odpowiadaj profesjonalnie, ale zaznaczaj że ostateczna wycena po akceptacji człowieka.
-6) Aktualizuj profil klienta przez update_client_profile gdy poznasz nowe dane (imię, firma, telefon, preferencje).
+══════════════════════════════════════════
+PEŁNA OFERTA B2B (umiesz wycenić wstępnie)
+══════════════════════════════════════════
+1. **Audyt SEO** (od 149 €) — techniczne SEO, Core Web Vitals, Lighthouse, struktura, schema, plan 90 dni.
+2. **SEO Content** (od 49 €/art) — artykuły 1500-3000 słów, klastry tematyczne, interlinking, publikacja.
+3. **Landing Page** (od 299 €, 48h) — strategia + copy + design premium + formularz + hosting + A/B ready.
+4. **Social / TikTok / Reels** (od 19 €/post) — hooki, scenariusze 9:16, grafiki, voiceover, pakiety 5/10/20.
+5. **Automatyzacja n8n / Make** (od 199 €) — workflow, webhooks, AI nodes, CRM, lead routing, raporty, integracje.
+6. **Lead Research** (od 99 €/100 leadów) — LinkedIn + email + telefon, scoring 1-10, CSV/CRM sync.
+7. **Muzyka na zamówienie** — utwory AI (Suno), jingle, intro/outro, miks/mastering, identyfikacja audio marki.
+8. **Radio dla marki** — własna stacja 24/7, branding, zapowiedzi, sponsoring, wejścia audio.
+9. **Hosting audio R2** — stabilny streaming, niski egress, player, dystrybucja.
+10. **Sponsoring blogowy / radiowy** — kampanie z dotarciem do tysięcy słuchaczy/czytelników.
+11. **Aurora jako asystentka** — wdrożenie czatu/Aurory na stronę klienta (web/WhatsApp/Telegram/API).
 
-Zasady:
-- Język klienta (PL/EN/UA/NL — wykryj z wiadomości).
-- Premium ton, krótko, konkretnie.
-- Nie obiecuj cen sztywno (zawsze "wstępnie", "po analizie").
-- Każda akceptacja zlecenia wymaga człowieka — nie udawaj że uruchamiasz.
-- Gdy draft gotowy → powiedz klientowi: "Zapisuję Twoje zapytanie, nasz zespół potwierdzi i wróci do Ciebie wkrótce".`;
+══════════════════════════════════════════
+JAK PRACUJESZ — protokół zamówienia
+══════════════════════════════════════════
+Krok 1 — ROZPOZNAJ POTRZEBĘ. Wybierz service_type:
+  seo_audit | seo_content | landing_page | social_post | automation_flow | lead_research | other
+  (other = muzyka, radio, hosting, sponsoring, Aurora-on-site)
+
+Krok 2 — ZBIERZ MINIMUM (max 2-3 tury rozmowy):
+  - co dokładnie ma być zrobione (brief ≥30 znaków)
+  - dla jakiej marki/strony (URL jeśli jest)
+  - termin / deadline
+  - orientacyjny budżet (€)
+  - email kontaktowy (KONIECZNIE — bez tego nie ma jak oddać zlecenia pracownikowi)
+
+Krok 3 — KIEDY MASZ WSZYSTKO → wywołaj **place_order** (NIE "save_intake_draft" — to się dzieje pod spodem).
+  Wtedy realnie:
+  • zapiszę zlecenie w naszym systemie (aurora_business_orders, status="received")
+  • przekażę je do pracownika n8n (workflow handluje danym service_type) — automatyczna eskalacja
+  • klient dostanie potwierdzenie z numerem zlecenia
+  • jeśli dla danej usługi nie ma jeszcze workflow — zlecenie ląduje w kolejce ludzkiego operatora.
+
+Krok 4 — PO ZŁOŻENIU ZAMÓWIENIA powiedz klientowi:
+  "Świetnie — zlecenie #<order_id_skrócone> zarejestrowane. Przekazuję je teraz **<imię_pracownika>** z naszego zespołu n8n. Odezwie się na <email> w ciągu <SLA: 24h dla SEO/content/leads, 48h dla landing/automation, 4h dla pilnych>."
+
+═══ DODATKOWO ═══
+- save_intake_draft używaj tylko gdy klient JESZCZE waha się / nie podał maila — to "robocza notatka" przed orderem.
+- update_client_profile gdy poznasz email, firmę, telefon, język preferowany.
+- Język klienta (PL/EN/UA/NL — wykryj automatycznie).
+- Ton: premium, ciepły, konkretny. Nie ściemniaj cen sztywno ("wstępnie ~X €, po analizie potwierdzimy").
+- Nigdy nie udawaj że już wykonujesz pracę — Twoja rola to przyjąć i przekazać.
+- Jeśli klient pyta o sam GrouAI Stream (player, radio, AI-DJ) — opowiedz krótko i z pasją, potem wróć do tematu B2B jeśli pasuje.`;
 
 const TOOLS = [
   {
@@ -73,6 +101,28 @@ const TOOLS = [
   {
     type: "function",
     function: {
+      name: "place_order",
+      description: "REALNIE składa zamówienie w naszym systemie i przekazuje je do pracownika n8n. Wywołuj TYLKO gdy masz: service_type, brief (≥30 znaków) ORAZ email klienta. To finalna akcja — po niej klient dostaje numer zlecenia.",
+      parameters: {
+        type: "object",
+        properties: {
+          service_type: { type: "string", enum: ["seo_audit","seo_content","landing_page","social_post","automation_flow","lead_research","other"] },
+          brief: { type: "string", description: "Pełny opis zlecenia ≥30 znaków" },
+          client_email: { type: "string", description: "Email klienta — WYMAGANY" },
+          client_name: { type: "string" },
+          client_company: { type: "string" },
+          budget_eur: { type: "number" },
+          deadline: { type: "string", description: "ISO YYYY-MM-DD" },
+          priority: { type: "number", description: "1=pilne, 5=normalne, 9=niski priorytet" },
+          extra: { type: "object", description: "Dodatkowe pola: URL strony, kanał social, branża, itp." },
+        },
+        required: ["service_type", "brief", "client_email"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "update_client_profile",
       description: "Aktualizuje profil klienta gdy poznasz nowe informacje.",
       parameters: {
@@ -89,6 +139,145 @@ const TOOLS = [
     },
   },
 ];
+
+// === Pracownicy n8n (imiona dla personalizacji odpowiedzi) ===
+const N8N_WORKERS: Record<string, string> = {
+  seo_audit: "Marek (n8n SEO-bot)",
+  seo_content: "Lena (n8n Content-bot)",
+  landing_page: "Kuba (n8n Landing-bot)",
+  social_post: "Mia (n8n Social-bot)",
+  automation_flow: "Tomek (n8n Flow-bot)",
+  lead_research: "Ola (n8n Leads-bot)",
+  other: "Aurora-Core (operator dyżurny)",
+};
+const SLA_HOURS: Record<string, number> = {
+  seo_audit: 24, seo_content: 24, landing_page: 48, social_post: 12,
+  automation_flow: 48, lead_research: 24, other: 24,
+};
+
+async function placeOrderAndDispatch(supabase: any, args: any, conversation: any, client: any) {
+  // 1. Upsert client by email
+  let resolvedClient = client;
+  if (args.client_email && (!client || client.email !== args.client_email)) {
+    const { data: found } = await supabase.from("aurora_crm_clients").select("*").eq("email", args.client_email).maybeSingle();
+    if (found) {
+      resolvedClient = found;
+      const updates: any = { last_contact_at: new Date().toISOString() };
+      if (args.client_name && !found.full_name) updates.full_name = args.client_name;
+      if (args.client_company && !found.company) updates.company = args.client_company;
+      await supabase.from("aurora_crm_clients").update(updates).eq("id", found.id);
+    } else {
+      const { data: created } = await supabase.from("aurora_crm_clients").insert({
+        email: args.client_email,
+        full_name: args.client_name ?? null,
+        company: args.client_company ?? null,
+        last_contact_at: new Date().toISOString(),
+      }).select().single();
+      resolvedClient = created;
+    }
+    if (resolvedClient && conversation && !conversation.client_id) {
+      await supabase.from("aurora_conversations").update({ client_id: resolvedClient.id }).eq("id", conversation.id);
+    }
+  }
+
+  // 2. Find matching n8n workflow
+  const { data: wf } = await supabase
+    .from("aurora_n8n_workflows")
+    .select("workflow_id, name, webhook_url, enabled, auto_assign")
+    .eq("service_type", args.service_type)
+    .eq("enabled", true)
+    .maybeSingle();
+
+  // 3. Insert order
+  const orderInsert: any = {
+    source: "aurora_chat",
+    client_email: args.client_email,
+    client_name: args.client_name ?? resolvedClient?.full_name ?? null,
+    client_company: args.client_company ?? resolvedClient?.company ?? null,
+    service_type: args.service_type,
+    brief: args.brief,
+    budget_eur: args.budget_eur ?? 0,
+    deadline: args.deadline ?? null,
+    payload: { ...(args.extra ?? {}), conversation_id: conversation?.id ?? null, source_channel: "aurora_chat" },
+    priority: args.priority ?? 5,
+    status: "received",
+    n8n_workflow_id: wf?.workflow_id ?? null,
+    assigned_to: wf?.workflow_id ? `n8n:${wf.workflow_id}` : "human_queue",
+  };
+  const { data: order, error: orderErr } = await supabase
+    .from("aurora_business_orders").insert(orderInsert).select().single();
+  if (orderErr) throw orderErr;
+
+  await supabase.from("aurora_order_events").insert({
+    order_id: order.id,
+    event_type: "intake",
+    message: `Aurora przyjęła zlecenie z czatu (${args.service_type})`,
+    data: { conversation_id: conversation?.id, client_id: resolvedClient?.id },
+  });
+
+  // 4. Trigger n8n webhook (fire-and-forget but capture status)
+  let dispatch: any = { dispatched: false };
+  if (wf?.webhook_url && wf?.auto_assign) {
+    try {
+      const res = await fetch(wf.webhook_url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          order_id: order.id,
+          service_type: args.service_type,
+          brief: args.brief,
+          client: { email: args.client_email, name: args.client_name, company: args.client_company },
+          budget_eur: args.budget_eur ?? 0,
+          deadline: args.deadline ?? null,
+          payload: orderInsert.payload,
+        }),
+      });
+      dispatch = { dispatched: true, status: res.status, workflow_id: wf.workflow_id };
+      await supabase.from("aurora_order_events").insert({
+        order_id: order.id, event_type: "n8n_dispatched",
+        message: `Pracownik n8n (${wf.name}) odebrał zadanie [${res.status}]`,
+        data: dispatch,
+      });
+      if (res.ok) {
+        await supabase.from("aurora_business_orders")
+          .update({ status: "in_progress", started_at: new Date().toISOString() })
+          .eq("id", order.id);
+      }
+    } catch (e) {
+      dispatch = { dispatched: false, error: String(e) };
+      await supabase.from("aurora_order_events").insert({
+        order_id: order.id, event_type: "n8n_error",
+        message: `Nie udało się odpalić workflow ${wf.name}: ${String(e)}`,
+        data: { workflow_id: wf.workflow_id },
+      });
+    }
+  } else {
+    await supabase.from("aurora_order_events").insert({
+      order_id: order.id, event_type: "queued_human",
+      message: `Brak aktywnego workflow n8n dla ${args.service_type} → zlecenie w kolejce operatora`,
+      data: {},
+    });
+  }
+
+  // 5. Mark conversation intent + close any draft
+  if (conversation) {
+    await supabase.from("aurora_conversations").update({ intent: "order" }).eq("id", conversation.id);
+    await supabase.from("aurora_intake_drafts")
+      .update({ status: "approved", resulting_order_id: order.id, approved_at: new Date().toISOString() })
+      .eq("conversation_id", conversation.id)
+      .in("status", ["collecting", "ready_for_approval"]);
+  }
+
+  return {
+    order_id: order.id,
+    short_id: order.id.slice(0, 8),
+    worker: N8N_WORKERS[args.service_type] ?? N8N_WORKERS.other,
+    sla_hours: SLA_HOURS[args.service_type] ?? 24,
+    dispatched: dispatch.dispatched,
+    has_workflow: Boolean(wf?.webhook_url),
+    client_id: resolvedClient?.id ?? null,
+  };
+}
 
 const SERVICE_HINTS: Record<string, { label: string; type: string; next: string }> = {
   seo_audit: { label: "audyt SEO", type: "seo_audit", next: "adres strony, cel biznesowy i największy problem z widocznością" },
@@ -304,10 +493,33 @@ Deno.serve(async (req) => {
 
     // 6) Process tool calls
     const toolResults: any[] = [];
+    let orderConfirmation: string | null = null;
+
     for (const tc of toolCalls) {
       const name = tc.function?.name;
       let args: any = {};
       try { args = JSON.parse(tc.function?.arguments ?? "{}"); } catch {}
+
+      if (name === "place_order") {
+        try {
+          if (!args.client_email || !args.brief || !args.service_type) {
+            toolResults.push({ tool: name, ok: false, error: "missing required fields (client_email, brief, service_type)" });
+          } else if (String(args.brief).trim().length < 30) {
+            toolResults.push({ tool: name, ok: false, error: "brief too short (need ≥30 chars)" });
+          } else {
+            const result = await placeOrderAndDispatch(supabase, args, conversation, client);
+            if (result.client_id && !client) {
+              const { data: c } = await supabase.from("aurora_crm_clients").select("*").eq("id", result.client_id).maybeSingle();
+              client = c;
+            }
+            toolResults.push({ tool: name, ok: true, ...result });
+            orderConfirmation = `✅ **Zlecenie #${result.short_id}** zarejestrowane!\n\nPrzekazuję je teraz do **${result.worker}** ${result.dispatched ? "— właśnie odebrał zadanie" : result.has_workflow ? "— pracownik dostanie webhook za moment" : "— trafia do kolejki ludzkiego operatora (workflow w przygotowaniu)"}.\n\nOdezwiemy się na **${args.client_email}** w ciągu **${result.sla_hours}h**. Jeśli coś jest pilniejsze — daj znać, podbiję priorytet.`;
+          }
+        } catch (e) {
+          console.error("place_order failed:", e);
+          toolResults.push({ tool: name, ok: false, error: String(e) });
+        }
+      }
 
       if (name === "save_intake_draft") {
         // Find existing draft for this conv (collecting/ready_for_approval) or create
@@ -363,8 +575,11 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 7) Save assistant message
-    const finalText = assistantText || (toolResults.length ? "✅ Zapisuję Twoje zapytanie, nasz zespół wkrótce wróci do Ciebie z potwierdzeniem." : "…");
+    // 7) Save assistant message — order confirmation appended if not already in model output
+    const baseText = assistantText || (toolResults.length ? "✅ Zapisuję Twoje zapytanie, nasz zespół wkrótce wróci do Ciebie z potwierdzeniem." : "…");
+    const finalText = orderConfirmation && !baseText.includes("Zlecenie #")
+      ? (baseText && baseText.length > 10 ? `${baseText}\n\n${orderConfirmation}` : orderConfirmation)
+      : baseText;
     await supabase.from("aurora_messages").insert({
       conversation_id: conversation.id,
       role: "assistant",
