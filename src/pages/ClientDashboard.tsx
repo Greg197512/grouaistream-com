@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Map, MessageCircle, FileText, Calendar as CalIcon, NotebookPen, Calculator, Building2, Sparkles, ArrowRight, Brain } from "lucide-react";
+import { Loader2, Map, MessageCircle, FileText, Calendar as CalIcon, NotebookPen, Calculator, Building2, Sparkles, ArrowRight } from "lucide-react";
 import { OrderWorkflowMap } from "@/components/dashboard/OrderWorkflowMap";
 import { AuroraNegotiatorPanel } from "@/components/dashboard/AuroraNegotiatorPanel";
 import { InvoicesPanel } from "@/components/dashboard/InvoicesPanel";
@@ -16,7 +16,6 @@ import { CalendarPanel } from "@/components/dashboard/CalendarPanel";
 import { NotesPanel } from "@/components/dashboard/NotesPanel";
 import { CalculatorPanel } from "@/components/dashboard/CalculatorPanel";
 import { PartnerCRMPanel } from "@/components/dashboard/PartnerCRMPanel";
-import { SingularityPanel } from "@/components/dashboard/SingularityPanel";
 import auroraAvatar from "@/assets/aurora-avatar.jpg";
 import { toast } from "sonner";
 
@@ -154,10 +153,9 @@ const ClientDashboard = () => {
 
         {/* Tabs */}
         <Tabs value={tab} onValueChange={setTab} className="space-y-4">
-          <TabsList className="grid grid-cols-4 md:grid-cols-8 w-full h-auto">
+          <TabsList className="grid grid-cols-4 md:grid-cols-7 w-full h-auto">
             <TabsTrigger value="workflow" className="gap-1 text-xs"><Map className="w-3 h-3" />Mapa</TabsTrigger>
             <TabsTrigger value="aurora" className="gap-1 text-xs"><MessageCircle className="w-3 h-3" />Aurora</TabsTrigger>
-            <TabsTrigger value="singularity" className="gap-1 text-xs"><Brain className="w-3 h-3" />Osobliwość</TabsTrigger>
             <TabsTrigger value="invoices" className="gap-1 text-xs"><FileText className="w-3 h-3" />Faktury</TabsTrigger>
             <TabsTrigger value="calendar" className="gap-1 text-xs"><CalIcon className="w-3 h-3" />Kalendarz</TabsTrigger>
             <TabsTrigger value="notes" className="gap-1 text-xs"><NotebookPen className="w-3 h-3" />Notatki</TabsTrigger>
@@ -177,7 +175,6 @@ const ClientDashboard = () => {
           <TabsContent value="aurora">
             {activeOrder && <AuroraNegotiatorPanel orderId={activeOrder.id} />}
           </TabsContent>
-          <TabsContent value="singularity"><SingularityPanel /></TabsContent>
           <TabsContent value="invoices">
             {activeOrder && <InvoicesPanel orderId={activeOrder.id} />}
           </TabsContent>

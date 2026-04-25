@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Brain, Activity, Lightbulb, Cpu, RefreshCw, Loader2, CheckCircle2, XCircle, Zap, HeartPulse, AlertTriangle, Sparkles } from "lucide-react";
+import { Brain, Activity, Lightbulb, Cpu, RefreshCw, Loader2, CheckCircle2, XCircle, Zap, HeartPulse, AlertTriangle, Sparkles, Infinity as InfinityIcon } from "lucide-react";
 import { AuroraPanel } from "./AuroraPanel";
+import { SingularityPanel } from "@/components/dashboard/SingularityPanel";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { pl } from "date-fns/locale";
@@ -210,6 +211,7 @@ export const BrainPanel = () => {
           <TabsTrigger value="agents"><Cpu className="h-4 w-4 mr-1" /> Agenci</TabsTrigger>
           <TabsTrigger value="health"><HeartPulse className="h-4 w-4 mr-1" /> Zdrowie</TabsTrigger>
           <TabsTrigger value="aurora"><Sparkles className="h-4 w-4 mr-1" /> Aurora</TabsTrigger>
+          <TabsTrigger value="singularity"><InfinityIcon className="h-4 w-4 mr-1" /> Osobliwość</TabsTrigger>
         </TabsList>
 
         <TabsContent value="events">
@@ -367,6 +369,9 @@ export const BrainPanel = () => {
         </TabsContent>
         <TabsContent value="aurora">
           <AuroraPanel />
+        </TabsContent>
+        <TabsContent value="singularity">
+          <SingularityPanel />
         </TabsContent>
       </Tabs>
     </div>
