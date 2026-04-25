@@ -430,6 +430,45 @@ export type Database = {
           },
         ]
       }
+      aurora_ai_dialogues: {
+        Row: {
+          aurora_messages: Json | null
+          conclusion: string | null
+          created_at: string | null
+          id: string
+          iq_gain: number | null
+          partner_messages: Json | null
+          partner_model: string
+          r2_key: string | null
+          status: string | null
+          topic: string
+        }
+        Insert: {
+          aurora_messages?: Json | null
+          conclusion?: string | null
+          created_at?: string | null
+          id?: string
+          iq_gain?: number | null
+          partner_messages?: Json | null
+          partner_model: string
+          r2_key?: string | null
+          status?: string | null
+          topic: string
+        }
+        Update: {
+          aurora_messages?: Json | null
+          conclusion?: string | null
+          created_at?: string | null
+          id?: string
+          iq_gain?: number | null
+          partner_messages?: Json | null
+          partner_model?: string
+          r2_key?: string | null
+          status?: string | null
+          topic?: string
+        }
+        Relationships: []
+      }
       aurora_autopilot_settings: {
         Row: {
           auto_publish_seo_posts: boolean
@@ -1131,6 +1170,90 @@ export type Database = {
           },
         ]
       }
+      aurora_iq_metrics: {
+        Row: {
+          avg_quality: number | null
+          dialogues_completed: number | null
+          facts_known: number | null
+          failed_decisions: number | null
+          id: string
+          iq_score: number
+          notes: string | null
+          recorded_at: string | null
+          successful_decisions: number | null
+        }
+        Insert: {
+          avg_quality?: number | null
+          dialogues_completed?: number | null
+          facts_known?: number | null
+          failed_decisions?: number | null
+          id?: string
+          iq_score?: number
+          notes?: string | null
+          recorded_at?: string | null
+          successful_decisions?: number | null
+        }
+        Update: {
+          avg_quality?: number | null
+          dialogues_completed?: number | null
+          facts_known?: number | null
+          failed_decisions?: number | null
+          id?: string
+          iq_score?: number
+          notes?: string | null
+          recorded_at?: string | null
+          successful_decisions?: number | null
+        }
+        Relationships: []
+      }
+      aurora_knowledge_base: {
+        Row: {
+          category: string | null
+          content: string
+          created_at: string | null
+          id: string
+          iq_value: number | null
+          metadata: Json | null
+          quality_score: number | null
+          r2_key: string | null
+          source_type: string | null
+          source_url: string | null
+          summary: string | null
+          title: string | null
+          topic: string
+        }
+        Insert: {
+          category?: string | null
+          content: string
+          created_at?: string | null
+          id?: string
+          iq_value?: number | null
+          metadata?: Json | null
+          quality_score?: number | null
+          r2_key?: string | null
+          source_type?: string | null
+          source_url?: string | null
+          summary?: string | null
+          title?: string | null
+          topic: string
+        }
+        Update: {
+          category?: string | null
+          content?: string
+          created_at?: string | null
+          id?: string
+          iq_value?: number | null
+          metadata?: Json | null
+          quality_score?: number | null
+          r2_key?: string | null
+          source_type?: string | null
+          source_url?: string | null
+          summary?: string | null
+          title?: string | null
+          topic?: string
+        }
+        Relationships: []
+      }
       aurora_landing_pages: {
         Row: {
           conversions_count: number | null
@@ -1258,6 +1381,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      aurora_learning_jobs: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          error: string | null
+          goal: string | null
+          id: string
+          priority: number | null
+          r2_key: string | null
+          result_summary: string | null
+          status: string | null
+          topic: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          error?: string | null
+          goal?: string | null
+          id?: string
+          priority?: number | null
+          r2_key?: string | null
+          result_summary?: string | null
+          status?: string | null
+          topic: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          error?: string | null
+          goal?: string | null
+          id?: string
+          priority?: number | null
+          r2_key?: string | null
+          result_summary?: string | null
+          status?: string | null
+          topic?: string
+        }
+        Relationships: []
       }
       aurora_messages: {
         Row: {

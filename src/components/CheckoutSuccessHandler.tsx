@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 
@@ -21,9 +21,15 @@ export function CheckoutSuccessHandler() {
     handled.current = true;
 
     if (checkout === "success") {
-      toast.success("Płatność przyjęta! ⚡ Twoje uprawnienia odświeżą się za chwilę.", {
-        duration: 6000,
+      toast.success("Płatność przyjęta! ⚡ Otwieram Twój dashboard...", {
+        duration: 8000,
+        action: {
+          label: "Otwórz dashboard",
+          onClick: () => { window.location.href = "/client-dashboard"; },
+        },
       });
+      // Auto-redirect to dashboard after 2.5s
+      window.setTimeout(() => { window.location.href = "/client-dashboard"; }, 2500);
       // Webhook lands within a few seconds — give it time, then refresh
       const timers = [1500, 4000, 8000].map((ms) =>
         window.setTimeout(() => { void refreshSubscription(); }, ms)
