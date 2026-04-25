@@ -375,6 +375,7 @@ export default function BusinessPage() {
               </Button>
             </Link>
           </div>
+          </div>
         </div>
       </section>
 
