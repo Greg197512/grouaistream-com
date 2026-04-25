@@ -13,6 +13,7 @@ import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface LiveMicBoothProps {
   open: boolean;
@@ -21,6 +22,8 @@ interface LiveMicBoothProps {
   radioAudio: HTMLAudioElement | null;
   /** Original radio volume (0..100) so we can restore it */
   baseVolume: number;
+  /** Prevents the admin tab from receiving its own Cloud broadcast */
+  sourceId: string;
 }
 
 type Phase = "idle" | "preparing" | "countdown" | "live" | "stopped";
@@ -35,6 +38,24 @@ const buildMicConstraints = (deviceId: string): MediaTrackConstraints => ({
   channelCount: { ideal: 1 },
   sampleRate: { ideal: 48000 },
 });
+
+const arrayBufferToBase64 = (buffer: ArrayBuffer): string => {
+  const bytes = new Uint8Array(buffer);
+  const chunkSize = 0x8000;
+  let binary = "";
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+  }
+  return btoa(binary);
+};
+
+const pickBroadcastMimeType = () => {
+  if (typeof MediaRecorder === "undefined") return "";
+  if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) return "audio/webm;codecs=opus";
+  if (MediaRecorder.isTypeSupported("audio/webm")) return "audio/webm";
+  if (MediaRecorder.isTypeSupported("audio/mp4")) return "audio/mp4";
+  return "";
+};
 
 /**
  * LiveMicBooth — Profesjonalny pulpit live komentarza radiowego.
@@ -51,7 +72,7 @@ const buildMicConstraints = (deviceId: string): MediaTrackConstraints => ({
  * powoduje echo + sprzężenie (mic łapie z głośnika z opóźnieniem). Gdy admin
  * chce odsłuch — używa słuchawek i włącza monitor ręcznie.
  */
-export const LiveMicBooth = ({ open, onClose, radioAudio, baseVolume }: LiveMicBoothProps) => {
+export const LiveMicBooth = ({ open, onClose, radioAudio, baseVolume, sourceId }: LiveMicBoothProps) => {
   const [phase, setPhase] = useState<Phase>("idle");
   const [countdown, setCountdown] = useState(COUNTDOWN_SECONDS);
   const [musicDuck, setMusicDuck] = useState(20); // % oryginału w live
@@ -68,6 +89,7 @@ export const LiveMicBooth = ({ open, onClose, radioAudio, baseVolume }: LiveMicB
   const [micDevices, setMicDevices] = useState<MediaDeviceInfo[]>([]);
   const [selectedDeviceId, setSelectedDeviceId] = useState("default");
   const [activeMicLabel, setActiveMicLabel] = useState<string | null>(null);
+  const [broadcastConnected, setBroadcastConnected] = useState(false);
 
   const streamRef = useRef<MediaStream | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
