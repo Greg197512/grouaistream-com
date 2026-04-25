@@ -65,6 +65,27 @@ export function SingularityPanel() {
     load();
   };
 
+  const triggerAuto = async () => {
+    if (!autoScope.trim()) return toast.error("Opisz zakres, w którym Aurora ma się uczyć");
+    setBusy("auto");
+    const { data, error } = await supabase.functions.invoke("aurora-auto-learn", {
+      body: { scope: autoScope, count: autoCount, run_now: true },
+    });
+    setBusy(null);
+    if (error || !(data as any)?.ok) {
+      return toast.error("Tryb Automat nie wystartował", {
+        description: (data as any)?.error ?? error?.message,
+      });
+    }
+    toast.success(`Aurora uczy się automatycznie: ${(data as any).queued} podtematów w tle`, {
+      description: ((data as any).topics ?? []).slice(0, 3).join(" • "),
+    });
+    setAutoScope("");
+    // odśwież po chwili — joby kończą się stopniowo
+    setTimeout(load, 4000);
+    setTimeout(load, 15000);
+  };
+
   return (
     <div className="space-y-4">
       {/* IQ Hero */}
