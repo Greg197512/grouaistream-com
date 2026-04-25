@@ -5,7 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Brain, Globe, MessageSquareMore, Loader2, Sparkles, TrendingUp, Database } from "lucide-react";
+import { Brain, Globe, MessageSquareMore, Loader2, Sparkles, TrendingUp, Database, Zap } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 
 interface IQMetric { id: string; iq_score: number; facts_known: number; dialogues_completed: number; avg_quality: number; recorded_at: string; }
@@ -17,6 +18,8 @@ export function SingularityPanel() {
   const [knowledge, setKnowledge] = useState<Knowledge[]>([]);
   const [dialogues, setDialogues] = useState<Dialogue[]>([]);
   const [topic, setTopic] = useState("");
+  const [autoScope, setAutoScope] = useState("");
+  const [autoCount, setAutoCount] = useState(5);
   const [busy, setBusy] = useState<string | null>(null);
 
   const load = async () => {
@@ -60,6 +63,27 @@ export function SingularityPanel() {
     setBusy(null);
     toast.success(`IQ Aurory: ${(data as any)?.iq_score}`);
     load();
+  };
+
+  const triggerAuto = async () => {
+    if (!autoScope.trim()) return toast.error("Opisz zakres, w którym Aurora ma się uczyć");
+    setBusy("auto");
+    const { data, error } = await supabase.functions.invoke("aurora-auto-learn", {
+      body: { scope: autoScope, count: autoCount, run_now: true },
+    });
+    setBusy(null);
+    if (error || !(data as any)?.ok) {
+      return toast.error("Tryb Automat nie wystartował", {
+        description: (data as any)?.error ?? error?.message,
+      });
+    }
+    toast.success(`Aurora uczy się automatycznie: ${(data as any).queued} podtematów w tle`, {
+      description: ((data as any).topics ?? []).slice(0, 3).join(" • "),
+    });
+    setAutoScope("");
+    // odśwież po chwili — joby kończą się stopniowo
+    setTimeout(load, 4000);
+    setTimeout(load, 15000);
   };
 
   return (
@@ -117,7 +141,43 @@ export function SingularityPanel() {
         </CardContent>
       </Card>
 
-      {/* Knowledge Base */}
+      {/* Auto-Learn (Tryb Automat) */}
+      <Card className="border-orange-500/20 bg-gradient-to-br from-background to-orange-950/10">
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Zap className="w-4 h-4 text-orange-400" /> Tryb Automat
+          </CardTitle>
+          <CardDescription className="text-xs">
+            Opisz zakres tematyczny — Aurora sama wygeneruje listę podtematów i przeszuka je po kolei. Wszystko w tle, bez Twojego nadzoru.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <Textarea
+            value={autoScope}
+            onChange={(e) => setAutoScope(e.target.value)}
+            placeholder='np. "marketing muzyczny niezależnych artystów na TikTok 2026 — algorytm, trendy, viralowe formaty, monetyzacja, błędy początkujących"'
+            rows={3}
+            className="resize-none"
+          />
+          <div className="flex gap-2 items-center flex-wrap">
+            <label className="text-xs text-muted-foreground flex items-center gap-1">
+              Liczba podtematów:
+              <Input
+                type="number"
+                min={1}
+                max={20}
+                value={autoCount}
+                onChange={(e) => setAutoCount(Math.max(1, Math.min(20, Number(e.target.value) || 5)))}
+                className="w-16 h-8"
+              />
+            </label>
+            <Button onClick={triggerAuto} disabled={!!busy} className="gap-1 ml-auto bg-orange-500 hover:bg-orange-600">
+              {busy === "auto" ? <Loader2 className="w-3 h-3 animate-spin" /> : <Zap className="w-3 h-3" />}
+              Uruchom Automat
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
       <Card>
         <CardHeader><CardTitle className="text-base flex items-center gap-2"><Database className="w-4 h-4" /> Baza wiedzy ({knowledge.length})</CardTitle></CardHeader>
         <CardContent className="space-y-2 max-h-[400px] overflow-y-auto">
