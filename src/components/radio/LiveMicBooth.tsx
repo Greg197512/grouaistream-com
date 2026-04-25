@@ -105,8 +105,11 @@ export const LiveMicBooth = ({ open, onClose, radioAudio, baseVolume, sourceId }
   const analyserRef = useRef<AnalyserNode | null>(null);
   const broadcastDestinationRef = useRef<MediaStreamAudioDestinationNode | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const broadcastChunksRef = useRef<Blob[]>([]);
+  const broadcastSegmentTimerRef = useRef<number | null>(null);
   const broadcastChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const broadcastReadyRef = useRef(false);
+  const broadcastActiveRef = useRef(false);
   const rafRef = useRef<number | null>(null);
   const countdownRef = useRef<number | null>(null);
   const jingleAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -128,10 +131,13 @@ export const LiveMicBooth = ({ open, onClose, radioAudio, baseVolume, sourceId }
   const cleanupAudio = useCallback(() => {
     if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
     if (countdownRef.current) { clearInterval(countdownRef.current); countdownRef.current = null; }
+    if (broadcastSegmentTimerRef.current) { clearTimeout(broadcastSegmentTimerRef.current); broadcastSegmentTimerRef.current = null; }
+    broadcastActiveRef.current = false;
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
       try { mediaRecorderRef.current.stop(); } catch {}
     }
     mediaRecorderRef.current = null;
+    broadcastChunksRef.current = [];
     if (broadcastChannelRef.current) {
       supabase.removeChannel(broadcastChannelRef.current);
       broadcastChannelRef.current = null;
