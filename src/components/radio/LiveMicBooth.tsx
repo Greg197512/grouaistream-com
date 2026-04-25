@@ -13,6 +13,7 @@ import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface LiveMicBoothProps {
   open: boolean;
@@ -21,11 +22,40 @@ interface LiveMicBoothProps {
   radioAudio: HTMLAudioElement | null;
   /** Original radio volume (0..100) so we can restore it */
   baseVolume: number;
+  /** Prevents the admin tab from receiving its own Cloud broadcast */
+  sourceId: string;
 }
 
 type Phase = "idle" | "preparing" | "countdown" | "live" | "stopped";
 
 const COUNTDOWN_SECONDS = 6;
+
+const buildMicConstraints = (deviceId: string): MediaTrackConstraints => ({
+  ...(deviceId && deviceId !== "default" ? { deviceId: { exact: deviceId } } : {}),
+  echoCancellation: { ideal: true },
+  noiseSuppression: { ideal: true },
+  autoGainControl: { ideal: true },
+  channelCount: { ideal: 1 },
+  sampleRate: { ideal: 48000 },
+});
+
+const arrayBufferToBase64 = (buffer: ArrayBuffer): string => {
+  const bytes = new Uint8Array(buffer);
+  const chunkSize = 0x8000;
+  let binary = "";
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+  }
+  return btoa(binary);
+};
+
+const pickBroadcastMimeType = () => {
+  if (typeof MediaRecorder === "undefined") return "";
+  if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) return "audio/webm;codecs=opus";
+  if (MediaRecorder.isTypeSupported("audio/webm")) return "audio/webm";
+  if (MediaRecorder.isTypeSupported("audio/mp4")) return "audio/mp4";
+  return "";
+};
 
 /**
  * LiveMicBooth — Profesjonalny pulpit live komentarza radiowego.
@@ -42,20 +72,24 @@ const COUNTDOWN_SECONDS = 6;
  * powoduje echo + sprzężenie (mic łapie z głośnika z opóźnieniem). Gdy admin
  * chce odsłuch — używa słuchawek i włącza monitor ręcznie.
  */
-export const LiveMicBooth = ({ open, onClose, radioAudio, baseVolume }: LiveMicBoothProps) => {
+export const LiveMicBooth = ({ open, onClose, radioAudio, baseVolume, sourceId }: LiveMicBoothProps) => {
   const [phase, setPhase] = useState<Phase>("idle");
   const [countdown, setCountdown] = useState(COUNTDOWN_SECONDS);
   const [musicDuck, setMusicDuck] = useState(20); // % oryginału w live
   const [micGain, setMicGain] = useState(100);
   const [pitch, setPitch] = useState(0); // -12..+12 (EQ tilt)
   const [echo, setEcho] = useState(false);
-  const [monitor, setMonitor] = useState(false); // odsłuch w słuchawkach
+  const [monitor, setMonitor] = useState(true); // odsłuch w słuchawkach / lokalny miks antenowy
   const [level, setLevel] = useState(0);
   const [peak, setPeak] = useState(0);
   const [jingleUrl, setJingleUrl] = useState<string | null>(null);
   const [jingleName, setJingleName] = useState<string | null>(null);
   const [playJingleFirst, setPlayJingleFirst] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [micDevices, setMicDevices] = useState<MediaDeviceInfo[]>([]);
+  const [selectedDeviceId, setSelectedDeviceId] = useState("default");
+  const [activeMicLabel, setActiveMicLabel] = useState<string | null>(null);
+  const [broadcastConnected, setBroadcastConnected] = useState(false);
 
   const streamRef = useRef<MediaStream | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
@@ -69,6 +103,13 @@ export const LiveMicBooth = ({ open, onClose, radioAudio, baseVolume }: LiveMicB
   const monitorGainRef = useRef<GainNode | null>(null); // brama monitor on/off
   const masterRef = useRef<GainNode | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
+  const broadcastDestinationRef = useRef<MediaStreamAudioDestinationNode | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const broadcastChunksRef = useRef<Blob[]>([]);
+  const broadcastSegmentTimerRef = useRef<number | null>(null);
+  const broadcastChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const broadcastReadyRef = useRef(false);
+  const broadcastActiveRef = useRef(false);
   const rafRef = useRef<number | null>(null);
   const countdownRef = useRef<number | null>(null);
   const jingleAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -76,10 +117,33 @@ export const LiveMicBooth = ({ open, onClose, radioAudio, baseVolume }: LiveMicB
   const peakHoldRef = useRef<number>(0);
   const peakHoldTimeRef = useRef<number>(0);
 
+  const refreshMicDevices = useCallback(async () => {
+    if (!navigator.mediaDevices?.enumerateDevices) return;
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      setMicDevices(devices.filter((device) => device.kind === "audioinput"));
+    } catch (err) {
+      console.warn("[LiveMicBooth] enumerateDevices failed", err);
+    }
+  }, []);
+
   // ============= cleanup =============
   const cleanupAudio = useCallback(() => {
     if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
     if (countdownRef.current) { clearInterval(countdownRef.current); countdownRef.current = null; }
+    if (broadcastSegmentTimerRef.current) { clearTimeout(broadcastSegmentTimerRef.current); broadcastSegmentTimerRef.current = null; }
+    broadcastActiveRef.current = false;
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      try { mediaRecorderRef.current.stop(); } catch {}
+    }
+    mediaRecorderRef.current = null;
+    broadcastChunksRef.current = [];
+    if (broadcastChannelRef.current) {
+      supabase.removeChannel(broadcastChannelRef.current);
+      broadcastChannelRef.current = null;
+    }
+    broadcastReadyRef.current = false;
+    setBroadcastConnected(false);
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(t => { try { t.stop(); } catch {} });
       streamRef.current = null;
@@ -98,6 +162,7 @@ export const LiveMicBooth = ({ open, onClose, radioAudio, baseVolume }: LiveMicB
     monitorGainRef.current = null;
     masterRef.current = null;
     analyserRef.current = null;
+    broadcastDestinationRef.current = null;
     if (jingleAudioRef.current) {
       try { jingleAudioRef.current.pause(); } catch {}
       jingleAudioRef.current = null;
@@ -116,8 +181,10 @@ export const LiveMicBooth = ({ open, onClose, radioAudio, baseVolume }: LiveMicB
       setPhase("idle");
       setCountdown(COUNTDOWN_SECONDS);
       setErrorMsg(null);
+      setActiveMicLabel(null);
       setLevel(0);
       setPeak(0);
+      refreshMicDevices();
     } else {
       cleanupAudio();
       restoreRadio();
@@ -128,6 +195,19 @@ export const LiveMicBooth = ({ open, onClose, radioAudio, baseVolume }: LiveMicB
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+
+  useEffect(() => {
+    if (!open || !navigator.mediaDevices?.addEventListener) return;
+    navigator.mediaDevices.addEventListener("devicechange", refreshMicDevices);
+    return () => navigator.mediaDevices.removeEventListener("devicechange", refreshMicDevices);
+  }, [open, refreshMicDevices]);
+
+  useEffect(() => {
+    if (selectedDeviceId === "default") return;
+    if (micDevices.length && !micDevices.some((device) => device.deviceId === selectedDeviceId)) {
+      setSelectedDeviceId("default");
+    }
+  }, [micDevices, selectedDeviceId]);
 
   // Ducking gdy live
   useEffect(() => {
@@ -161,39 +241,34 @@ export const LiveMicBooth = ({ open, onClose, radioAudio, baseVolume }: LiveMicB
   // Tworzymy AudioContext też w gesture (resume po await jest OK).
   const initMicChain = useCallback(async (): Promise<boolean> => {
     try {
-      // 1) Sprawdź zgodę
-      if (navigator.permissions) {
-        try {
-          const status = await navigator.permissions.query({ name: "microphone" as PermissionName });
-          if (status.state === "denied") {
-            setErrorMsg("Mikrofon jest zablokowany w ustawieniach przeglądarki. Odblokuj i odśwież stronę.");
-            toast.error("Mikrofon zablokowany", { description: "Odblokuj go w ustawieniach przeglądarki." });
-            return false;
-          }
-        } catch { /* nie wszystkie przeglądarki wspierają */ }
+      if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
+        setErrorMsg("Ta przeglądarka nie udostępnia mikrofonu. Otwórz stronę przez HTTPS i użyj Chrome, Edge albo Safari.");
+        return false;
       }
 
-      // 2) Mic stream
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: false,
-          channelCount: 1,
-        },
-        video: false,
-      });
-      streamRef.current = stream;
-
-      // 3) AudioContext
+      // 1) AudioContext + getUserMedia muszą wystartować natychmiast po kliknięciu.
       const Ctx = (window.AudioContext || (window as any).webkitAudioContext) as typeof AudioContext;
       const ctx = new Ctx({ latencyHint: "interactive" });
       audioCtxRef.current = ctx;
+      const streamPromise = navigator.mediaDevices.getUserMedia({
+        audio: buildMicConstraints(selectedDeviceId),
+        video: false,
+      });
+
       if (ctx.state === "suspended") {
         try { await ctx.resume(); } catch (e) { console.warn("[LiveMicBooth] resume failed", e); }
       }
 
-      // 4) Łańcuch przetwarzania
+      // 2) Mic stream — wybrany mikrofon lub domyślny systemowy
+      const stream = await streamPromise;
+      streamRef.current = stream;
+      await refreshMicDevices();
+      const track = stream.getAudioTracks()[0];
+      const settings = track?.getSettings?.();
+      const picked = micDevices.find((device) => device.deviceId === settings?.deviceId);
+      setActiveMicLabel(track?.label || picked?.label || "Aktywny mikrofon");
+
+      // 3) Łańcuch przetwarzania
       const source = ctx.createMediaStreamSource(stream);
 
       // High-pass 80Hz — wycina rumble/wiatr
@@ -231,6 +306,9 @@ export const LiveMicBooth = ({ open, onClose, radioAudio, baseVolume }: LiveMicB
       analyser.fftSize = 1024;
       analyser.smoothingTimeConstant = 0.6;
 
+      // Wyjście "antenowe" do Lovable Cloud — niezależne od lokalnego odsłuchu.
+      const broadcastDestination = ctx.createMediaStreamDestination();
+
       // Brama monitora (domyślnie 0 = brak odsłuchu — eliminuje sprzężenie)
       const monitorGain = ctx.createGain();
       monitorGain.gain.value = monitor ? 1 : 0;
@@ -246,10 +324,12 @@ export const LiveMicBooth = ({ open, onClose, radioAudio, baseVolume }: LiveMicB
       gain.connect(eq);
       eq.connect(analyser);            // TAP — analyser nie idzie dalej
       eq.connect(monitorGain);         // sygnał suchy do monitora
+      eq.connect(broadcastDestination); // sygnał suchy do słuchaczy radia
       eq.connect(delay);               // sygnał do delay
       delay.connect(feedback);
       feedback.connect(delay);
       delay.connect(monitorGain);      // mokry sygnał też przez monitor gate
+      delay.connect(broadcastDestination);
 
       monitorGain.connect(master);
       master.connect(ctx.destination);
@@ -264,8 +344,9 @@ export const LiveMicBooth = ({ open, onClose, radioAudio, baseVolume }: LiveMicB
       monitorGainRef.current = monitorGain;
       masterRef.current = master;
       analyserRef.current = analyser;
+      broadcastDestinationRef.current = broadcastDestination;
 
-      console.log("[LiveMicBooth] ✅ chain ready, ctx:", ctx.state, "tracks:", stream.getAudioTracks().length);
+      console.log("[LiveMicBooth] ✅ chain ready, ctx:", ctx.state, "mic:", track?.label || settings?.deviceId, "tracks:", stream.getAudioTracks().length);
 
       // VU meter (RMS + peak hold)
       const data = new Uint8Array(analyser.fftSize);
@@ -301,13 +382,85 @@ export const LiveMicBooth = ({ open, onClose, radioAudio, baseVolume }: LiveMicB
       if (err?.name === "NotAllowedError") msg = "Brak zgody na mikrofon. Pozwól w przeglądarce.";
       else if (err?.name === "NotFoundError") msg = "Nie znaleziono mikrofonu w systemie.";
       else if (err?.name === "NotReadableError") msg = "Mikrofon jest używany przez inną aplikację.";
-      else if (err?.name === "OverconstrainedError") msg = "Mikrofon nie spełnia wymagań (constraints).";
+      else if (err?.name === "OverconstrainedError") msg = "Wybrany mikrofon nie jest dostępny. Wybierz inny mikrofon albo ustaw domyślny w systemie.";
       setErrorMsg(msg);
       toast.error("Mikrofon", { description: msg });
       cleanupAudio();
       return false;
     }
-  }, [micGain, pitch, echo, monitor, cleanupAudio]);
+  }, [micGain, pitch, echo, monitor, selectedDeviceId, micDevices, refreshMicDevices, cleanupAudio]);
+
+  const startCloudBroadcast = useCallback(() => {
+    const destination = broadcastDestinationRef.current;
+    if (!destination || !destination.stream.getAudioTracks().length || typeof MediaRecorder === "undefined") {
+      setErrorMsg("Mikrofon działa lokalnie, ale ta przeglądarka nie potrafi wysłać głosu na radio.");
+      return false;
+    }
+
+    const mimeType = pickBroadcastMimeType();
+    if (!mimeType) {
+      setErrorMsg("Brak obsługi nagrywania audio w tej przeglądarce. Użyj Chrome albo Edge.");
+      return false;
+    }
+
+    const channel = supabase.channel("radio-live-voice", { config: { broadcast: { self: false } } });
+    broadcastChannelRef.current = channel;
+
+    const startSegment = () => {
+      if (!broadcastActiveRef.current) return;
+      const recorder = new MediaRecorder(destination.stream, { mimeType, audioBitsPerSecond: 96_000 });
+      mediaRecorderRef.current = recorder;
+      broadcastChunksRef.current = [];
+
+      recorder.ondataavailable = (event) => {
+        if (event.data.size) broadcastChunksRef.current.push(event.data);
+      };
+
+      recorder.onstop = async () => {
+        const chunks = broadcastChunksRef.current;
+        broadcastChunksRef.current = [];
+        if (chunks.length && broadcastReadyRef.current) {
+          try {
+            const blob = new Blob(chunks, { type: mimeType });
+            const audioBase64 = arrayBufferToBase64(await blob.arrayBuffer());
+            await channel.send({
+              type: "broadcast",
+              event: "chunk",
+              payload: { sourceId, mimeType, audioBase64, sentAt: Date.now() },
+            });
+          } catch (err) {
+            console.warn("[LiveMicBooth] broadcast chunk failed", err);
+          }
+        }
+        if (broadcastActiveRef.current) startSegment();
+      };
+
+      recorder.onerror = () => {
+        setBroadcastConnected(false);
+        setErrorMsg("Połączenie głosu live z radiem zostało przerwane. Zatrzymaj i wejdź na antenę ponownie.");
+      };
+
+      recorder.start();
+      broadcastSegmentTimerRef.current = window.setTimeout(() => {
+        if (recorder.state !== "inactive") recorder.stop();
+      }, 900);
+    };
+
+    channel.subscribe((status) => {
+      if (status !== "SUBSCRIBED") return;
+      broadcastReadyRef.current = true;
+      broadcastActiveRef.current = true;
+      setBroadcastConnected(true);
+      channel.send({
+        type: "broadcast",
+        event: "start",
+        payload: { sourceId, mimeType, sentAt: Date.now() },
+      });
+      startSegment();
+    });
+
+    return true;
+  }, [sourceId]);
 
   const startCountdown = useCallback(async () => {
     setErrorMsg(null);
@@ -348,13 +501,14 @@ export const LiveMicBooth = ({ open, onClose, radioAudio, baseVolume }: LiveMicB
         if (prev <= 1) {
           if (countdownRef.current) { clearInterval(countdownRef.current); countdownRef.current = null; }
           setPhase("live");
+          startCloudBroadcast();
           toast.success("🎙️ JESTEŚ NA ANTENIE", { duration: 2500 });
           return 0;
         }
         return prev - 1;
       });
     }, 1000);
-  }, [initMicChain, playJingleFirst, jingleUrl, radioAudio]);
+  }, [initMicChain, playJingleFirst, jingleUrl, radioAudio, startCloudBroadcast]);
 
   const stopLive = () => {
     cleanupAudio();
@@ -444,6 +598,36 @@ export const LiveMicBooth = ({ open, onClose, radioAudio, baseVolume }: LiveMicB
             </div>
           )}
 
+          <div className="space-y-2 p-3 rounded-lg border border-border/30 bg-card/40">
+            <div className="flex items-center justify-between gap-3">
+              <Label className="text-xs flex items-center gap-2">
+                <Mic className="h-3.5 w-3.5 text-primary" />
+                Mikrofon wejściowy
+              </Label>
+              {activeMicLabel && (
+                <Badge className="bg-primary/15 text-primary border-primary/30 max-w-[180px] truncate">
+                  {activeMicLabel}
+                </Badge>
+              )}
+            </div>
+            <select
+              value={selectedDeviceId}
+              onChange={(event) => setSelectedDeviceId(event.target.value)}
+              disabled={isBusy}
+              className="w-full h-9 rounded-md border border-border/50 bg-background px-3 text-xs text-foreground outline-none focus:border-primary disabled:opacity-60"
+            >
+              <option value="default">Domyślny mikrofon systemowy</option>
+              {micDevices.map((device, index) => (
+                <option key={device.deviceId || index} value={device.deviceId}>
+                  {device.label || `Mikrofon ${index + 1}`}
+                </option>
+              ))}
+            </select>
+            <p className="text-[10px] text-muted-foreground">
+              Jeśli masz słuchawki z mikrofonem, wybierz je tutaj przed wejściem na antenę.
+            </p>
+          </div>
+
           {/* ON-AIR badge */}
           {phase === "live" && (
             <motion.div
@@ -459,7 +643,9 @@ export const LiveMicBooth = ({ open, onClose, radioAudio, baseVolume }: LiveMicB
               <span className="text-white font-black text-lg uppercase tracking-widest">
                 ON AIR
               </span>
-              <Badge className="bg-white/20 text-white border-white/30">LIVE</Badge>
+              <Badge className="bg-white/20 text-white border-white/30">
+                {broadcastConnected ? "LIVE CLOUD" : "ŁĄCZĘ"}
+              </Badge>
             </motion.div>
           )}
 
