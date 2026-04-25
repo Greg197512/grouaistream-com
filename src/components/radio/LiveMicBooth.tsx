@@ -103,6 +103,10 @@ export const LiveMicBooth = ({ open, onClose, radioAudio, baseVolume, sourceId }
   const monitorGainRef = useRef<GainNode | null>(null); // brama monitor on/off
   const masterRef = useRef<GainNode | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
+  const broadcastDestinationRef = useRef<MediaStreamAudioDestinationNode | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const broadcastChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const broadcastReadyRef = useRef(false);
   const rafRef = useRef<number | null>(null);
   const countdownRef = useRef<number | null>(null);
   const jingleAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -124,6 +128,16 @@ export const LiveMicBooth = ({ open, onClose, radioAudio, baseVolume, sourceId }
   const cleanupAudio = useCallback(() => {
     if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
     if (countdownRef.current) { clearInterval(countdownRef.current); countdownRef.current = null; }
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      try { mediaRecorderRef.current.stop(); } catch {}
+    }
+    mediaRecorderRef.current = null;
+    if (broadcastChannelRef.current) {
+      supabase.removeChannel(broadcastChannelRef.current);
+      broadcastChannelRef.current = null;
+    }
+    broadcastReadyRef.current = false;
+    setBroadcastConnected(false);
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(t => { try { t.stop(); } catch {} });
       streamRef.current = null;
@@ -142,6 +156,7 @@ export const LiveMicBooth = ({ open, onClose, radioAudio, baseVolume, sourceId }
     monitorGainRef.current = null;
     masterRef.current = null;
     analyserRef.current = null;
+    broadcastDestinationRef.current = null;
     if (jingleAudioRef.current) {
       try { jingleAudioRef.current.pause(); } catch {}
       jingleAudioRef.current = null;
@@ -285,6 +300,9 @@ export const LiveMicBooth = ({ open, onClose, radioAudio, baseVolume, sourceId }
       analyser.fftSize = 1024;
       analyser.smoothingTimeConstant = 0.6;
 
+      // Wyjście "antenowe" do Lovable Cloud — niezależne od lokalnego odsłuchu.
+      const broadcastDestination = ctx.createMediaStreamDestination();
+
       // Brama monitora (domyślnie 0 = brak odsłuchu — eliminuje sprzężenie)
       const monitorGain = ctx.createGain();
       monitorGain.gain.value = monitor ? 1 : 0;
@@ -300,10 +318,12 @@ export const LiveMicBooth = ({ open, onClose, radioAudio, baseVolume, sourceId }
       gain.connect(eq);
       eq.connect(analyser);            // TAP — analyser nie idzie dalej
       eq.connect(monitorGain);         // sygnał suchy do monitora
+      eq.connect(broadcastDestination); // sygnał suchy do słuchaczy radia
       eq.connect(delay);               // sygnał do delay
       delay.connect(feedback);
       feedback.connect(delay);
       delay.connect(monitorGain);      // mokry sygnał też przez monitor gate
+      delay.connect(broadcastDestination);
 
       monitorGain.connect(master);
       master.connect(ctx.destination);
@@ -318,6 +338,7 @@ export const LiveMicBooth = ({ open, onClose, radioAudio, baseVolume, sourceId }
       monitorGainRef.current = monitorGain;
       masterRef.current = master;
       analyserRef.current = analyser;
+      broadcastDestinationRef.current = broadcastDestination;
 
       console.log("[LiveMicBooth] ✅ chain ready, ctx:", ctx.state, "mic:", track?.label || settings?.deviceId, "tracks:", stream.getAudioTracks().length);
 
