@@ -480,10 +480,43 @@ Deno.serve(async (req) => {
       .order("created_at", { ascending: true })
       .limit(30);
 
+    // 3b) Load existing draft for this conversation (so Aurora remembers what she already collected)
+    const { data: currentDraft } = await supabase.from("aurora_intake_drafts")
+      .select("service_type, brief, budget_eur, deadline, payload")
+      .eq("conversation_id", conversation.id)
+      .in("status", ["collecting", "ready_for_approval"])
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    // Build "collected so far" snapshot from client + draft
+    const draftPayload = (currentDraft?.payload ?? {}) as Record<string, any>;
+    const collectedSoFar: Record<string, any> = {
+      service_type: currentDraft?.service_type ?? null,
+      brief: currentDraft?.brief ?? null,
+      client_email: client?.email ?? null,
+      client_name: client?.full_name ?? null,
+      client_company: client?.company ?? null,
+      website_url: draftPayload.website_url ?? null,
+      budget_eur: currentDraft?.budget_eur ?? null,
+      deadline: currentDraft?.deadline ?? null,
+      extra_notes: draftPayload.extra_notes ?? null,
+    };
+    const missingSoFar = BRIEF_FIELDS
+      .filter((f) => !collectedSoFar[f.key])
+      .map((f) => f.key);
+
+    const briefStateBlock = `
+[STAN BRIEFU — czytaj zanim zapytasz o cokolwiek!]
+Już zebrane:
+${Object.entries(collectedSoFar).filter(([, v]) => v).map(([k, v]) => `  • ${k}: ${typeof v === "string" ? v.slice(0, 200) : v}`).join("\n") || "  (brak — to nowa rozmowa)"}
+Jeszcze brakuje (KOLEJNOŚĆ priorytetu): ${missingSoFar.join(", ") || "NIC — możesz wywołać place_order"}
+[/STAN BRIEFU]`;
+
     // 4) Build messages for AI
     const clientCtx = client ? `\n[Profil klienta: ${client.full_name ?? "?"} | ${client.company ?? "?"} | ${client.email ?? "?"} | zlecenia: ${client.total_orders}]` : "\n[Nowy klient — zbierz dane kontaktowe.]";
     const aiMessages: any[] = [
-      { role: "system", content: SYSTEM_PROMPT + clientCtx },
+      { role: "system", content: SYSTEM_PROMPT + clientCtx + briefStateBlock },
       ...(history ?? []).map((h: any) => ({ role: h.role, content: h.content })),
     ];
 
