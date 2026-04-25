@@ -225,6 +225,7 @@ const Server = () => {
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setDragActive(false);
+    if (!requireProForUpload()) return;
     const items = e.dataTransfer.items;
     if (items) {
       const files: File[] = [];
