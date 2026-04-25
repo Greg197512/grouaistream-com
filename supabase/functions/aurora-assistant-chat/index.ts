@@ -665,6 +665,66 @@ Jeszcze brakuje (KOLEJNOŚĆ priorytetu): ${missingSoFar.join(", ") || "NIC — 
         }
         toolResults.push({ tool: name, ok: true });
       }
+
+      if (name === "report_missing_fields") {
+        const collected = (args.collected ?? {}) as Record<string, any>;
+        // Merge with what we already had — collected fields are additive
+        const merged: Record<string, any> = { ...collectedSoFar };
+        for (const [k, v] of Object.entries(collected)) {
+          if (v !== null && v !== undefined && v !== "") merged[k] = v;
+        }
+        const stillMissing = BRIEF_FIELDS.filter((f) => !merged[f.key]).map((f) => f.key);
+
+        // Persist into intake draft so next turn remembers it
+        const inferredService = merged.service_type ?? currentDraft?.service_type ?? null;
+        const inferredBrief = merged.brief ?? currentDraft?.brief ?? message.slice(0, 500);
+        if (inferredService && inferredBrief) {
+          const newPayload = {
+            ...(currentDraft?.payload ?? {}),
+            website_url: merged.website_url ?? draftPayload.website_url ?? null,
+            extra_notes: merged.extra_notes ?? draftPayload.extra_notes ?? null,
+            missing_fields: stillMissing,
+            next_question: args.next_question ?? null,
+          };
+          if (currentDraft) {
+            await supabase.from("aurora_intake_drafts").update({
+              service_type: inferredService,
+              brief: inferredBrief,
+              budget_eur: merged.budget_eur ?? currentDraft.budget_eur ?? null,
+              deadline: merged.deadline ?? currentDraft.deadline ?? null,
+              payload: newPayload,
+            }).eq("conversation_id", conversation.id).in("status", ["collecting", "ready_for_approval"]);
+          } else {
+            await supabase.from("aurora_intake_drafts").insert({
+              conversation_id: conversation.id,
+              client_id: client?.id ?? null,
+              service_type: inferredService,
+              brief: inferredBrief,
+              budget_eur: merged.budget_eur ?? null,
+              deadline: merged.deadline ?? null,
+              payload: newPayload,
+              status: "collecting",
+              confidence: Math.max(0.1, 1 - stillMissing.length / BRIEF_FIELDS.length),
+            });
+          }
+          // Also update client profile if we learned something
+          if ((merged.client_email || merged.client_name || merged.client_company) && client) {
+            const updates: any = { last_contact_at: new Date().toISOString() };
+            if (merged.client_email && !client.email) updates.email = merged.client_email;
+            if (merged.client_name && !client.full_name) updates.full_name = merged.client_name;
+            if (merged.client_company && !client.company) updates.company = merged.client_company;
+            if (Object.keys(updates).length > 1) await supabase.from("aurora_crm_clients").update(updates).eq("id", client.id);
+          }
+        }
+
+        toolResults.push({
+          tool: name,
+          ok: true,
+          collected: merged,
+          missing: stillMissing,
+          next_question: args.next_question ?? null,
+        });
+      }
     }
 
     // 7) Save assistant message — order confirmation appended if not already in model output
@@ -679,12 +739,31 @@ Jeszcze brakuje (KOLEJNOŚĆ priorytetu): ${missingSoFar.join(", ") || "NIC — 
       tool_call: toolCalls.length ? { calls: toolCalls, results: toolResults } : null,
     });
 
+    // Build missing-fields table for frontend (always, based on latest snapshot)
+    const reportHit = toolResults.find((t: any) => t.tool === "report_missing_fields");
+    const finalCollected = reportHit?.collected ?? collectedSoFar;
+    const finalMissingKeys: string[] = reportHit?.missing ?? missingSoFar;
+    const missingFieldsTable = BRIEF_FIELDS.map((f) => ({
+      key: f.key,
+      label: f.label,
+      description: f.description,
+      required: f.required,
+      value: finalCollected[f.key] ?? null,
+      status: finalCollected[f.key] ? "collected" : (f.required ? "missing_required" : "missing_optional"),
+    }));
+
     return new Response(JSON.stringify({
       ok: true,
       conversation_id: conversation.id,
       client_id: client?.id ?? null,
       reply: finalText,
       tool_results: toolResults,
+      brief_state: {
+        collected: finalCollected,
+        missing: finalMissingKeys,
+        table: missingFieldsTable,
+        next_question: reportHit?.next_question ?? null,
+      },
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
   } catch (e) {
