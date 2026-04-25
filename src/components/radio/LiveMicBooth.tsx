@@ -159,6 +159,13 @@ export const LiveMicBooth = ({ open, onClose, radioAudio, baseVolume }: LiveMicB
     return () => navigator.mediaDevices.removeEventListener("devicechange", refreshMicDevices);
   }, [open, refreshMicDevices]);
 
+  useEffect(() => {
+    if (selectedDeviceId === "default") return;
+    if (micDevices.length && !micDevices.some((device) => device.deviceId === selectedDeviceId)) {
+      setSelectedDeviceId("default");
+    }
+  }, [micDevices, selectedDeviceId]);
+
   // Ducking gdy live
   useEffect(() => {
     if (!radioAudio) return;
@@ -468,6 +475,36 @@ export const LiveMicBooth = ({ open, onClose, radioAudio, baseVolume }: LiveMicB
               ⚠️ {errorMsg}
             </div>
           )}
+
+          <div className="space-y-2 p-3 rounded-lg border border-border/30 bg-card/40">
+            <div className="flex items-center justify-between gap-3">
+              <Label className="text-xs flex items-center gap-2">
+                <Mic className="h-3.5 w-3.5 text-primary" />
+                Mikrofon wejściowy
+              </Label>
+              {activeMicLabel && (
+                <Badge className="bg-primary/15 text-primary border-primary/30 max-w-[180px] truncate">
+                  {activeMicLabel}
+                </Badge>
+              )}
+            </div>
+            <select
+              value={selectedDeviceId}
+              onChange={(event) => setSelectedDeviceId(event.target.value)}
+              disabled={isBusy}
+              className="w-full h-9 rounded-md border border-border/50 bg-background px-3 text-xs text-foreground outline-none focus:border-primary disabled:opacity-60"
+            >
+              <option value="default">Domyślny mikrofon systemowy</option>
+              {micDevices.map((device, index) => (
+                <option key={device.deviceId || index} value={device.deviceId}>
+                  {device.label || `Mikrofon ${index + 1}`}
+                </option>
+              ))}
+            </select>
+            <p className="text-[10px] text-muted-foreground">
+              Jeśli masz słuchawki z mikrofonem, wybierz je tutaj przed wejściem na antenę.
+            </p>
+          </div>
 
           {/* ON-AIR badge */}
           {phase === "live" && (
