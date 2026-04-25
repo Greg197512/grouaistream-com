@@ -3638,6 +3638,7 @@ export type Database = {
       }
       radio_config: {
         Row: {
+          blog_announcements_enabled: boolean
           end_time: string | null
           id: string
           is_active: boolean
@@ -3648,6 +3649,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          blog_announcements_enabled?: boolean
           end_time?: string | null
           id?: string
           is_active?: boolean
@@ -3658,6 +3660,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          blog_announcements_enabled?: boolean
           end_time?: string | null
           id?: string
           is_active?: boolean
