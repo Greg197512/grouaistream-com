@@ -107,27 +107,27 @@ export const AdOutreachEmail = ({ company_name, cta_url }: Props) => {
 }
 
 const body = { backgroundColor: '#ffffff', color: '#1a1a1f', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', margin: 0, padding: '24px 0' }
-const container = { maxWidth: '620px', margin: '0 auto', padding: '0', backgroundColor: '#0f0f17', borderRadius: '24px', overflow: 'hidden' as const }
+const container = { maxWidth: '620px', margin: '0 auto', padding: '0', backgroundColor: '#ffffff', borderRadius: '24px', overflow: 'hidden' as const, border: '1px solid #ececec', boxShadow: '0 8px 32px rgba(0,0,0,0.08)' }
 const heroSection = { padding: 0, margin: 0, lineHeight: 0 }
 const heroImage = { width: '100%', height: 'auto', display: 'block', margin: 0 }
-const contentSection = { padding: '32px 32px 24px' }
-const greetingText = { fontSize: '17px', fontWeight: 600, color: '#ffffff', margin: '0 0 20px' }
-const paragraph = { fontSize: '15px', lineHeight: '1.7', color: '#cfcfdc', margin: '0 0 16px' }
-const smallParagraph = { fontSize: '13px', lineHeight: '1.6', color: '#9999ad', margin: '8px 0 10px' }
+const contentSection = { padding: '32px 32px 24px', backgroundColor: '#ffffff' }
+const greetingText = { fontSize: '17px', fontWeight: 600, color: '#0a0a0a', margin: '0 0 20px' }
+const paragraph = { fontSize: '15px', lineHeight: '1.7', color: '#2d2d2d', margin: '0 0 16px' }
+const smallParagraph = { fontSize: '13px', lineHeight: '1.6', color: '#6b7280', margin: '8px 0 10px' }
 const accent = { color: '#ff6b1a' }
-const divider = { borderColor: '#2a2a3a', margin: '28px 0' }
-const offerTitle = { fontSize: '22px', fontWeight: 700, color: '#ffffff', margin: '0 0 16px' }
-const priceBox = { background: 'linear-gradient(135deg, rgba(255,107,26,0.12) 0%, rgba(255,180,0,0.12) 100%)', border: '1px solid rgba(255,107,26,0.4)', borderRadius: '16px', padding: '24px', textAlign: 'center' as const, margin: '24px 0' }
+const divider = { borderColor: '#ececec', margin: '28px 0' }
+const offerTitle = { fontSize: '22px', fontWeight: 700, color: '#0a0a0a', margin: '0 0 16px' }
+const priceBox = { background: 'linear-gradient(135deg, rgba(255,107,26,0.08) 0%, rgba(255,180,0,0.06) 100%)', border: '1px solid rgba(255,107,26,0.3)', borderRadius: '16px', padding: '24px', textAlign: 'center' as const, margin: '24px 0' }
 const priceLabel = { fontSize: '11px', color: '#ff6b1a', textTransform: 'uppercase' as const, letterSpacing: '2px', fontWeight: 700, margin: '0 0 8px' }
-const priceValue = { fontSize: '36px', fontWeight: 800, color: '#ffffff', margin: '0 0 4px' }
-const priceNote = { fontSize: '12px', color: '#9999ad', margin: 0 }
+const priceValue = { fontSize: '36px', fontWeight: 800, color: '#0a0a0a', margin: '0 0 4px' }
+const priceNote = { fontSize: '12px', color: '#6b7280', margin: 0 }
 const ctaWrapper = { textAlign: 'center' as const, margin: '28px 0 16px' }
 const ctaButton = { background: '#ff6b1a', color: '#ffffff', padding: '16px 36px', borderRadius: '12px', fontSize: '16px', fontWeight: 700, textDecoration: 'none', display: 'inline-block', boxShadow: '0 8px 24px rgba(255,107,26,0.35)' }
-const fallbackLink = { color: '#ff8a3d', textDecoration: 'underline', fontSize: '13px', wordBreak: 'break-all' as const }
-const signature = { fontSize: '14px', lineHeight: '1.6', color: '#cfcfdc', margin: '24px 0 0' }
-const signatureSub = { fontSize: '12px', color: '#9999ad', fontStyle: 'italic' as const }
-const footer = { padding: '24px 32px 32px', textAlign: 'center' as const, borderTop: '1px solid #2a2a3a' }
-const footerText = { fontSize: '13px', color: '#9999ad', margin: 0, lineHeight: '1.6' }
+const fallbackLink = { color: '#ff6b1a', textDecoration: 'underline', fontSize: '13px', wordBreak: 'break-all' as const }
+const signature = { fontSize: '14px', lineHeight: '1.6', color: '#2d2d2d', margin: '24px 0 0' }
+const signatureSub = { fontSize: '12px', color: '#6b7280', fontStyle: 'italic' as const }
+const footer = { padding: '24px 32px 32px', textAlign: 'center' as const, borderTop: '1px solid #ececec', backgroundColor: '#fafafa' }
+const footerText = { fontSize: '13px', color: '#6b7280', margin: 0, lineHeight: '1.6' }
 const footerLink = { color: '#ff6b1a', textDecoration: 'none' }
 
 export const template: TemplateEntry = {
