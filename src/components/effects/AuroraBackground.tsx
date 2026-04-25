@@ -2,7 +2,9 @@ import { motion } from "framer-motion";
 
 export const AuroraBackground = () => {
   return (
-    <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+    <div className="fixed inset-0 pointer-events-none z-[1] overflow-hidden">
+      {/* Solid base so we always see something even before children mount */}
+      <div className="absolute inset-0 bg-background" />
       {/* Deep base gradient */}
       <div className="absolute inset-0 bg-gradient-to-br from-background via-background to-background" />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,hsl(var(--primary)/0.15),transparent_60%)]" />
