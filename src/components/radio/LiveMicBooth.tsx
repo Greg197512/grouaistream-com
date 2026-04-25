@@ -129,20 +129,30 @@ export const LiveMicBooth = ({ open, onClose, radioAudio, baseVolume }: LiveMicB
       filterRef.current.gain.value = Math.abs(pitch) * 1.2; // up to ~14dB
       filterRef.current.type = pitch >= 0 ? "highshelf" : "lowshelf";
     }
-    if (feedbackRef.current) feedbackRef.current.gain.value = echo ? 0.35 : 0;
+    if (feedbackRef.current) feedbackRef.current.gain.value = echo ? 0.25 : 0;
     if (delayRef.current) delayRef.current.delayTime.value = echo ? 0.25 : 0;
   }, [micGain, pitch, echo]);
 
   // ============= start live =============
   const initMicChain = async (): Promise<boolean> => {
     try {
+      // Request mic FIRST inside user gesture (before any await chains)
       const stream = await navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: false },
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: false,
+        },
       });
       streamRef.current = stream;
 
-      const ctx = new AudioContext();
+      // Create context AFTER mic granted, then resume (Chrome/Safari often start "suspended")
+      const Ctx = (window.AudioContext || (window as any).webkitAudioContext) as typeof AudioContext;
+      const ctx = new Ctx();
       audioCtxRef.current = ctx;
+      if (ctx.state === "suspended") {
+        try { await ctx.resume(); } catch (e) { console.warn("[LiveMicBooth] resume failed", e); }
+      }
 
       const source = ctx.createMediaStreamSource(stream);
       const gain = ctx.createGain();
@@ -156,21 +166,31 @@ export const LiveMicBooth = ({ open, onClose, radioAudio, baseVolume }: LiveMicB
       const delay = ctx.createDelay(1.0);
       delay.delayTime.value = echo ? 0.25 : 0;
       const feedback = ctx.createGain();
-      feedback.gain.value = echo ? 0.35 : 0;
+      // Lower feedback to prevent runaway howl
+      feedback.gain.value = echo ? 0.25 : 0;
 
       const analyser = ctx.createAnalyser();
       analyser.fftSize = 512;
 
-      // Routing: source → gain → filter → analyser → destination
-      //                                   ↘ delay → feedback ↺ delay → destination
+      // Master output bus → destination (single connection point, no double-routing)
+      const master = ctx.createGain();
+      master.gain.value = 1.0;
+
+      // Routing:
+      //  source → gain → filter → analyser (tap, no output)
+      //                  filter → master → destination
+      //                  filter → delay ⇄ feedback → master
       source.connect(gain);
       gain.connect(filter);
-      filter.connect(analyser);
-      analyser.connect(ctx.destination);
+      filter.connect(analyser);          // analyser is a TAP only (do not connect to destination)
+      filter.connect(master);
       filter.connect(delay);
       delay.connect(feedback);
       feedback.connect(delay);
-      delay.connect(ctx.destination);
+      delay.connect(master);
+      master.connect(ctx.destination);
+
+      console.log("[LiveMicBooth] mic chain ready, ctx state:", ctx.state);
 
       sourceRef.current = source;
       gainRef.current = gain;
