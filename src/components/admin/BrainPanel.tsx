@@ -211,6 +211,7 @@ export const BrainPanel = () => {
           <TabsTrigger value="agents"><Cpu className="h-4 w-4 mr-1" /> Agenci</TabsTrigger>
           <TabsTrigger value="health"><HeartPulse className="h-4 w-4 mr-1" /> Zdrowie</TabsTrigger>
           <TabsTrigger value="aurora"><Sparkles className="h-4 w-4 mr-1" /> Aurora</TabsTrigger>
+          <TabsTrigger value="singularity"><InfinityIcon className="h-4 w-4 mr-1" /> Osobliwość</TabsTrigger>
         </TabsList>
 
         <TabsContent value="events">
