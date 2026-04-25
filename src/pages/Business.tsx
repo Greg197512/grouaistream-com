@@ -88,6 +88,7 @@ export default function BusinessPage() {
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [email, setEmail] = useState(user?.email ?? "");
   const [draftSaved, setDraftSaved] = useState(false);
+  const [briefState, setBriefState] = useState<BriefState | null>(null);
   const [voiceEnabled, setVoiceEnabled] = useState(false);
   const [listening, setListening] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
