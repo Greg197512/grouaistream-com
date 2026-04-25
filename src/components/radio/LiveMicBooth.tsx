@@ -618,7 +618,9 @@ export const LiveMicBooth = ({ open, onClose, radioAudio, baseVolume, sourceId }
               <span className="text-white font-black text-lg uppercase tracking-widest">
                 ON AIR
               </span>
-              <Badge className="bg-white/20 text-white border-white/30">LIVE</Badge>
+              <Badge className="bg-white/20 text-white border-white/30">
+                {broadcastConnected ? "LIVE CLOUD" : "ŁĄCZĘ"}
+              </Badge>
             </motion.div>
           )}
 
