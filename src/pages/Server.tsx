@@ -755,7 +755,11 @@ const Server = () => {
                 {/* AI info */}
                 <div className="flex items-center gap-2 p-3 rounded-lg bg-accent/10 text-sm">
                   <Sparkles className="h-4 w-4 text-accent flex-shrink-0" />
-                  <span>AI automatycznie skategoryzuje utwory (gatunek, nastrój) i wygeneruje okładki po uploadzie</span>
+                  <span>
+                    {isPro
+                      ? "AI automatycznie skategoryzuje utwory (gatunek, nastrój) i wygeneruje okładki po uploadzie"
+                      : "✨ Auto-kategoryzacja AI i generowanie okładek — dostępne w planie PRO"}
+                  </span>
                 </div>
 
                 {/* Queue list */}
