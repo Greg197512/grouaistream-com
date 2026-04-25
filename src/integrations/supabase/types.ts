@@ -481,6 +481,7 @@ export type Database = {
           assigned_to: string | null
           brief: string
           budget_eur: number | null
+          checkout_url: string | null
           client_company: string | null
           client_email: string | null
           client_name: string | null
@@ -491,7 +492,12 @@ export type Database = {
           n8n_execution_id: string | null
           n8n_workflow_id: string | null
           notes: string | null
+          paddle_price_id: string | null
+          paddle_transaction_id: string | null
+          paid_at: string | null
           payload: Json | null
+          payment_status: string
+          price_eur: number | null
           priority: number
           result: Json | null
           result_url: string | null
@@ -500,12 +506,14 @@ export type Database = {
           started_at: string | null
           status: string
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           ai_plan?: Json | null
           assigned_to?: string | null
           brief: string
           budget_eur?: number | null
+          checkout_url?: string | null
           client_company?: string | null
           client_email?: string | null
           client_name?: string | null
@@ -516,7 +524,12 @@ export type Database = {
           n8n_execution_id?: string | null
           n8n_workflow_id?: string | null
           notes?: string | null
+          paddle_price_id?: string | null
+          paddle_transaction_id?: string | null
+          paid_at?: string | null
           payload?: Json | null
+          payment_status?: string
+          price_eur?: number | null
           priority?: number
           result?: Json | null
           result_url?: string | null
@@ -525,12 +538,14 @@ export type Database = {
           started_at?: string | null
           status?: string
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           ai_plan?: Json | null
           assigned_to?: string | null
           brief?: string
           budget_eur?: number | null
+          checkout_url?: string | null
           client_company?: string | null
           client_email?: string | null
           client_name?: string | null
@@ -541,7 +556,12 @@ export type Database = {
           n8n_execution_id?: string | null
           n8n_workflow_id?: string | null
           notes?: string | null
+          paddle_price_id?: string | null
+          paddle_transaction_id?: string | null
+          paid_at?: string | null
           payload?: Json | null
+          payment_status?: string
+          price_eur?: number | null
           priority?: number
           result?: Json | null
           result_url?: string | null
@@ -550,6 +570,7 @@ export type Database = {
           started_at?: string | null
           status?: string
           updated_at?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -1078,6 +1099,59 @@ export type Database = {
             columns: ["variant_id"]
             isOneToOne: false
             referencedRelation: "aurora_landing_variants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      aurora_n8n_architect_log: {
+        Row: {
+          ai_model: string | null
+          ai_response: Json | null
+          created_at: string
+          duration_ms: number | null
+          error: string | null
+          generated_workflow: Json | null
+          id: string
+          n8n_response: Json | null
+          prompt: string
+          request_id: string | null
+          service_type: string
+          status: string
+        }
+        Insert: {
+          ai_model?: string | null
+          ai_response?: Json | null
+          created_at?: string
+          duration_ms?: number | null
+          error?: string | null
+          generated_workflow?: Json | null
+          id?: string
+          n8n_response?: Json | null
+          prompt: string
+          request_id?: string | null
+          service_type: string
+          status?: string
+        }
+        Update: {
+          ai_model?: string | null
+          ai_response?: Json | null
+          created_at?: string
+          duration_ms?: number | null
+          error?: string | null
+          generated_workflow?: Json | null
+          id?: string
+          n8n_response?: Json | null
+          prompt?: string
+          request_id?: string | null
+          service_type?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aurora_n8n_architect_log_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "aurora_workforce_requests"
             referencedColumns: ["id"]
           },
         ]
@@ -2053,6 +2127,66 @@ export type Database = {
             columns: ["run_id"]
             isOneToOne: false
             referencedRelation: "aurora_n8n_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      aurora_workforce_requests: {
+        Row: {
+          architect_log_id: string | null
+          brief: string | null
+          built_workflow_db_id: string | null
+          built_workflow_id: string | null
+          created_at: string
+          error: string | null
+          id: string
+          order_id: string | null
+          required_capability: string
+          service_type: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          architect_log_id?: string | null
+          brief?: string | null
+          built_workflow_db_id?: string | null
+          built_workflow_id?: string | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          order_id?: string | null
+          required_capability: string
+          service_type: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          architect_log_id?: string | null
+          brief?: string | null
+          built_workflow_db_id?: string | null
+          built_workflow_id?: string | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          order_id?: string | null
+          required_capability?: string
+          service_type?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aurora_workforce_requests_built_workflow_db_id_fkey"
+            columns: ["built_workflow_db_id"]
+            isOneToOne: false
+            referencedRelation: "aurora_n8n_workflows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "aurora_workforce_requests_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "aurora_business_orders"
             referencedColumns: ["id"]
           },
         ]
