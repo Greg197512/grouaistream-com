@@ -188,11 +188,11 @@ const coverWrap = { padding: 0, position: 'relative' as const, lineHeight: 0 }
 const coverImg = { width: '100%', height: 'auto', display: 'block' as const, objectFit: 'cover' as const, maxHeight: '320px' }
 const coverOverlay = {
   position: 'absolute' as const,
-  bottom: 0, left: 0, right: 0, height: '60px',
-  background: 'linear-gradient(to bottom, transparent, #0a0a0a)',
+  bottom: 0, left: 0, right: 0, height: '40px',
+  background: 'linear-gradient(to bottom, transparent, #ffffff)',
 }
 const coverFallback = {
-  background: 'linear-gradient(135deg, #1a1a1a 0%, #2a1410 100%)',
+  background: 'linear-gradient(135deg, #fef3ec 0%, #fde6d3 100%)',
   padding: '48px 24px',
   textAlign: 'center' as const,
 }
