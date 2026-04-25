@@ -1,6 +1,14 @@
 import { motion } from "framer-motion";
+import { useAI } from "@/contexts/AIContext";
+import auroraWomanFace from "@/assets/aurora-woman-face.jpg";
 
 export const AuroraBackground = () => {
+  const { isProcessing } = useAI();
+
+  // Im bardziej AI "myśli", tym mocniej twarz się ujawnia
+  const faceOpacity = isProcessing ? 0.45 : 0.12;
+  const faceBlur = isProcessing ? 0 : 8;
+
   return (
     <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
       {/* Solid base */}
@@ -10,7 +18,37 @@ export const AuroraBackground = () => {
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,hsl(210_90%_55%/0.06),transparent_55%)]" />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,hsl(220_85%_60%/0.05),transparent_55%)]" />
 
-      {/* Aurora blobs — blue, very transparent */}
+      {/* Aurora WOMAN FACE — ujawnia się gdy AI myśli */}
+      <motion.div
+        animate={{
+          opacity: [faceOpacity * 0.85, faceOpacity, faceOpacity * 0.85],
+          scale: [1, 1.03, 1],
+        }}
+        transition={{
+          opacity: { duration: 4, repeat: Infinity, ease: "easeInOut" },
+          scale: { duration: 8, repeat: Infinity, ease: "easeInOut" },
+        }}
+        style={{
+          filter: `blur(${faceBlur}px)`,
+          transition: "filter 1.2s ease-out",
+        }}
+        className="absolute inset-0 flex items-center justify-center"
+      >
+        <img
+          src={auroraWomanFace}
+          alt=""
+          aria-hidden="true"
+          className="w-full h-full object-cover mix-blend-screen"
+          style={{
+            maskImage:
+              "radial-gradient(ellipse 60% 70% at center, black 30%, transparent 80%)",
+            WebkitMaskImage:
+              "radial-gradient(ellipse 60% 70% at center, black 30%, transparent 80%)",
+          }}
+        />
+      </motion.div>
+
+      {/* Aurora blobs — niebieskie, transparentne */}
       <motion.div
         animate={{
           x: [0, 120, -40, 0],
@@ -44,7 +82,7 @@ export const AuroraBackground = () => {
         style={{ background: "hsl(220 90% 60% / 0.28)" }}
       />
 
-      {/* Aurora ribbons — gentle blue waves */}
+      {/* Aurora ribbons — niebieskie wstęgi */}
       <motion.div
         animate={{
           x: ["-20%", "10%", "-20%"],
