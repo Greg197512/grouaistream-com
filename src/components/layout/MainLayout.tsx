@@ -46,7 +46,7 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
         <AuroraBackground />
         
         {/* Main Content Area */}
-        <div className="flex flex-1 overflow-hidden">
+        <div className="flex flex-1 overflow-hidden relative z-10">
           {/* Sidebar - hidden on mobile */}
           {!isMobile && (
             <Sidebar 
