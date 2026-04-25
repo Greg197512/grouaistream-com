@@ -59,6 +59,13 @@ interface RadioMessage {
 
 const EMOJI_LIST = ["❤️", "🔥", "🎵", "🎶", "👏", "🙌", "💃", "🕺", "🎧", "🎤", "✨", "💫", "🌟", "😍", "🥰", "😎", "🤩", "🎉", "🎊", "👍", "💯", "🫶", "🎸", "🎹"];
 
+const base64ToBlobUrl = (audioBase64: string, mimeType: string) => {
+  const binary = atob(audioBase64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return URL.createObjectURL(new Blob([bytes], { type: mimeType }));
+};
+
 const HEART_COLORS = [
   "hsl(var(--primary))",
   "hsl(var(--destructive))",
@@ -101,6 +108,11 @@ const RadioLive = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [micBoothOpen, setMicBoothOpen] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const radioClientIdRef = useRef(crypto.randomUUID());
+  const liveVoiceQueueRef = useRef<string[]>([]);
+  const liveVoicePlayingRef = useRef(false);
+  const liveVoiceAudioRef = useRef<HTMLAudioElement | null>(null);
+  const liveVoiceTimeoutRef = useRef<number | null>(null);
   const playbackTokenRef = useRef(0);
   const fallbackTimerRef = useRef<number | null>(null);
   const heartIdRef = useRef(0);
@@ -487,6 +499,62 @@ const RadioLive = () => {
   useEffect(() => {
     pausePlayback();
   }, [pausePlayback]);
+
+  const playNextLiveVoiceChunk = useCallback(() => {
+    const nextUrl = liveVoiceQueueRef.current.shift();
+    if (!nextUrl) {
+      liveVoicePlayingRef.current = false;
+      liveVoiceAudioRef.current = null;
+      return;
+    }
+
+    liveVoicePlayingRef.current = true;
+    const voiceAudio = new Audio(nextUrl);
+    voiceAudio.volume = 1;
+    liveVoiceAudioRef.current = voiceAudio;
+
+    const cleanup = () => {
+      URL.revokeObjectURL(nextUrl);
+      if (liveVoiceAudioRef.current === voiceAudio) liveVoiceAudioRef.current = null;
+      playNextLiveVoiceChunk();
+    };
+
+    voiceAudio.addEventListener("ended", cleanup, { once: true });
+    voiceAudio.addEventListener("error", cleanup, { once: true });
+    voiceAudio.play().catch((err) => {
+      console.warn("[RadioLive] live voice playback blocked", err);
+      cleanup();
+    });
+  }, []);
+
+  useEffect(() => {
+    const channel = supabase
+      .channel("radio-live-voice", { config: { broadcast: { self: false } } })
+      .on("broadcast", { event: "chunk" }, ({ payload }) => {
+        if (!payload?.audioBase64 || payload.sourceId === radioClientIdRef.current) return;
+        try {
+          const url = base64ToBlobUrl(payload.audioBase64, payload.mimeType || "audio/webm");
+          liveVoiceQueueRef.current.push(url);
+          if (audioRef.current) audioRef.current.volume = Math.min(audioRef.current.volume, 0.18);
+          if (liveVoiceTimeoutRef.current) window.clearTimeout(liveVoiceTimeoutRef.current);
+          liveVoiceTimeoutRef.current = window.setTimeout(() => {
+            if (audioRef.current) audioRef.current.volume = muted ? 0 : volume / 100;
+          }, 1600);
+          if (!liveVoicePlayingRef.current) playNextLiveVoiceChunk();
+        } catch (err) {
+          console.warn("[RadioLive] live voice chunk failed", err);
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+      if (liveVoiceTimeoutRef.current) window.clearTimeout(liveVoiceTimeoutRef.current);
+      liveVoiceQueueRef.current.forEach((url) => URL.revokeObjectURL(url));
+      liveVoiceQueueRef.current = [];
+      liveVoiceAudioRef.current?.pause();
+    };
+  }, [muted, volume, playNextLiveVoiceChunk]);
 
   // 🕐 Scheduled announcements & music stories per language
   // Blog audio: 08:00/14:00 PL · 08:15/14:15 EN · 08:30/14:30 NL · 08:45/14:45 UA
@@ -1052,6 +1120,7 @@ const RadioLive = () => {
           onClose={() => setMicBoothOpen(false)}
           radioAudio={audioRef.current}
           baseVolume={muted ? 0 : volume}
+          sourceId={radioClientIdRef.current}
         />
       )}
     </div>
