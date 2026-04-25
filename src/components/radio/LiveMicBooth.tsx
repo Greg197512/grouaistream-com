@@ -406,38 +406,57 @@ export const LiveMicBooth = ({ open, onClose, radioAudio, baseVolume, sourceId }
     const channel = supabase.channel("radio-live-voice", { config: { broadcast: { self: false } } });
     broadcastChannelRef.current = channel;
 
-    const recorder = new MediaRecorder(destination.stream, { mimeType, audioBitsPerSecond: 96_000 });
-    mediaRecorderRef.current = recorder;
+    const startSegment = () => {
+      if (!broadcastActiveRef.current) return;
+      const recorder = new MediaRecorder(destination.stream, { mimeType, audioBitsPerSecond: 96_000 });
+      mediaRecorderRef.current = recorder;
+      broadcastChunksRef.current = [];
 
-    recorder.ondataavailable = async (event) => {
-      if (!event.data.size || !broadcastReadyRef.current) return;
-      try {
-        const audioBase64 = arrayBufferToBase64(await event.data.arrayBuffer());
-        await channel.send({
-          type: "broadcast",
-          event: "chunk",
-          payload: { sourceId, mimeType, audioBase64, sentAt: Date.now() },
-        });
-      } catch (err) {
-        console.warn("[LiveMicBooth] broadcast chunk failed", err);
-      }
-    };
+      recorder.ondataavailable = (event) => {
+        if (event.data.size) broadcastChunksRef.current.push(event.data);
+      };
 
-    recorder.onerror = () => {
-      setBroadcastConnected(false);
-      setErrorMsg("Połączenie głosu live z radiem zostało przerwane. Zatrzymaj i wejdź na antenę ponownie.");
+      recorder.onstop = async () => {
+        const chunks = broadcastChunksRef.current;
+        broadcastChunksRef.current = [];
+        if (chunks.length && broadcastReadyRef.current) {
+          try {
+            const blob = new Blob(chunks, { type: mimeType });
+            const audioBase64 = arrayBufferToBase64(await blob.arrayBuffer());
+            await channel.send({
+              type: "broadcast",
+              event: "chunk",
+              payload: { sourceId, mimeType, audioBase64, sentAt: Date.now() },
+            });
+          } catch (err) {
+            console.warn("[LiveMicBooth] broadcast chunk failed", err);
+          }
+        }
+        if (broadcastActiveRef.current) startSegment();
+      };
+
+      recorder.onerror = () => {
+        setBroadcastConnected(false);
+        setErrorMsg("Połączenie głosu live z radiem zostało przerwane. Zatrzymaj i wejdź na antenę ponownie.");
+      };
+
+      recorder.start();
+      broadcastSegmentTimerRef.current = window.setTimeout(() => {
+        if (recorder.state !== "inactive") recorder.stop();
+      }, 900);
     };
 
     channel.subscribe((status) => {
       if (status !== "SUBSCRIBED") return;
       broadcastReadyRef.current = true;
+      broadcastActiveRef.current = true;
       setBroadcastConnected(true);
       channel.send({
         type: "broadcast",
         event: "start",
         payload: { sourceId, mimeType, sentAt: Date.now() },
       });
-      recorder.start(750);
+      startSegment();
     });
 
     return true;
