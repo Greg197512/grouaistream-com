@@ -680,9 +680,16 @@ const Server = () => {
                       <Upload className="h-12 w-12 text-muted-foreground" />
                     </motion.div>
                     <div>
-                      <p className="font-medium">Przeciągnij pliki lub foldery tutaj</p>
+                      <p className="font-medium flex items-center justify-center gap-2">
+                        {!isPro && <Lock className="h-4 w-4 text-primary" />}
+                        {isPro
+                          ? "Przeciągnij pliki lub foldery tutaj"
+                          : "Upload utworów wymaga planu PRO"}
+                      </p>
                       <p className="text-sm text-muted-foreground mt-1">
-                        MP3, WAV, MP4, WebM — max 500MB • Dodaj okładkę 🖼️ do każdego utworu w kolejce
+                        {isPro
+                          ? "MP3, WAV, MP4, WebM — max 500MB • Dodaj okładkę 🖼️ do każdego utworu w kolejce"
+                          : "Wykup PRO, aby wrzucać pliki i całe katalogi z auto-kategoryzacją AI"}
                       </p>
                     </div>
                     <div className="flex flex-col items-center gap-2 mt-2">
@@ -713,15 +720,33 @@ const Server = () => {
                           }}
                           className="hidden"
                         />
-                        <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }} className="gap-1">
-                          <Music className="h-4 w-4" /> Wybierz pliki
-                        </Button>
-                        <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); folderInputRef.current?.click(); }} className="gap-1">
-                          <FolderOpen className="h-4 w-4" /> + Dodaj katalog
-                        </Button>
+                        {isPro ? (
+                          <>
+                            <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }} className="gap-1">
+                              <Music className="h-4 w-4" /> Wybierz pliki
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); folderInputRef.current?.click(); }} className="gap-1">
+                              <FolderOpen className="h-4 w-4" /> + Dodaj katalog
+                            </Button>
+                          </>
+                        ) : (
+                          <>
+                            <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); requireProForUpload(); }} className="gap-1 opacity-60">
+                              <Lock className="h-4 w-4" /> Wybierz pliki
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); requireProForUpload(); }} className="gap-1 opacity-60">
+                              <Lock className="h-4 w-4" /> + Dodaj katalog
+                            </Button>
+                            <Button size="sm" onClick={(e) => { e.stopPropagation(); navigate("/pricing"); }} className="gap-1">
+                              <Sparkles className="h-4 w-4" /> Wykup PRO
+                            </Button>
+                          </>
+                        )}
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        Klikaj „+ Dodaj katalog" wielokrotnie — pliki z każdego katalogu trafią do kolejki
+                        {isPro
+                          ? "Klikaj „+ Dodaj katalog" wielokrotnie — pliki z każdego katalogu trafią do kolejki"
+                          : "Po wykupieniu PRO możesz wrzucać pojedyncze pliki i całe katalogi"}
                       </p>
                     </div>
                   </div>
