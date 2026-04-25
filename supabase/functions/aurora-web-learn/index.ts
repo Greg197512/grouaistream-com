@@ -18,9 +18,25 @@ async function firecrawlSearch(query: string) {
     headers: { Authorization: `Bearer ${FIRECRAWL_KEY}`, "Content-Type": "application/json" },
     body: JSON.stringify({ query, limit: 4, scrapeOptions: { formats: ["markdown"] } }),
   });
-  if (!r.ok) throw new Error(`firecrawl ${r.status}`);
+  if (!r.ok) {
+    const txt = await r.text().catch(() => "");
+    throw new Error(`firecrawl ${r.status}: ${txt.slice(0, 200)}`);
+  }
   const j = await r.json();
-  return j.data ?? j.web?.results ?? [];
+  // Firecrawl v2 may return: { data: { web: [...] } } or { data: [...] } or { web: { results: [...] } }
+  const candidates = [
+    j?.data?.web,
+    j?.data?.results,
+    j?.data,
+    j?.web?.results,
+    j?.web,
+    j?.results,
+  ];
+  for (const c of candidates) {
+    if (Array.isArray(c)) return c;
+  }
+  console.warn("[firecrawl] unexpected shape:", JSON.stringify(j).slice(0, 500));
+  return [];
 }
 
 async function summarize(topic: string, raw: string) {
