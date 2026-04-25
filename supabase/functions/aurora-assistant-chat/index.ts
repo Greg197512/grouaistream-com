@@ -101,6 +101,28 @@ const TOOLS = [
   {
     type: "function",
     function: {
+      name: "place_order",
+      description: "REALNIE składa zamówienie w naszym systemie i przekazuje je do pracownika n8n. Wywołuj TYLKO gdy masz: service_type, brief (≥30 znaków) ORAZ email klienta. To finalna akcja — po niej klient dostaje numer zlecenia.",
+      parameters: {
+        type: "object",
+        properties: {
+          service_type: { type: "string", enum: ["seo_audit","seo_content","landing_page","social_post","automation_flow","lead_research","other"] },
+          brief: { type: "string", description: "Pełny opis zlecenia ≥30 znaków" },
+          client_email: { type: "string", description: "Email klienta — WYMAGANY" },
+          client_name: { type: "string" },
+          client_company: { type: "string" },
+          budget_eur: { type: "number" },
+          deadline: { type: "string", description: "ISO YYYY-MM-DD" },
+          priority: { type: "number", description: "1=pilne, 5=normalne, 9=niski priorytet" },
+          extra: { type: "object", description: "Dodatkowe pola: URL strony, kanał social, branża, itp." },
+        },
+        required: ["service_type", "brief", "client_email"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "update_client_profile",
       description: "Aktualizuje profil klienta gdy poznasz nowe informacje.",
       parameters: {
@@ -117,6 +139,145 @@ const TOOLS = [
     },
   },
 ];
+
+// === Pracownicy n8n (imiona dla personalizacji odpowiedzi) ===
+const N8N_WORKERS: Record<string, string> = {
+  seo_audit: "Marek (n8n SEO-bot)",
+  seo_content: "Lena (n8n Content-bot)",
+  landing_page: "Kuba (n8n Landing-bot)",
+  social_post: "Mia (n8n Social-bot)",
+  automation_flow: "Tomek (n8n Flow-bot)",
+  lead_research: "Ola (n8n Leads-bot)",
+  other: "Aurora-Core (operator dyżurny)",
+};
+const SLA_HOURS: Record<string, number> = {
+  seo_audit: 24, seo_content: 24, landing_page: 48, social_post: 12,
+  automation_flow: 48, lead_research: 24, other: 24,
+};
+
+async function placeOrderAndDispatch(supabase: any, args: any, conversation: any, client: any) {
+  // 1. Upsert client by email
+  let resolvedClient = client;
+  if (args.client_email && (!client || client.email !== args.client_email)) {
+    const { data: found } = await supabase.from("aurora_crm_clients").select("*").eq("email", args.client_email).maybeSingle();
+    if (found) {
+      resolvedClient = found;
+      const updates: any = { last_contact_at: new Date().toISOString() };
+      if (args.client_name && !found.full_name) updates.full_name = args.client_name;
+      if (args.client_company && !found.company) updates.company = args.client_company;
+      await supabase.from("aurora_crm_clients").update(updates).eq("id", found.id);
+    } else {
+      const { data: created } = await supabase.from("aurora_crm_clients").insert({
+        email: args.client_email,
+        full_name: args.client_name ?? null,
+        company: args.client_company ?? null,
+        last_contact_at: new Date().toISOString(),
+      }).select().single();
+      resolvedClient = created;
+    }
+    if (resolvedClient && conversation && !conversation.client_id) {
+      await supabase.from("aurora_conversations").update({ client_id: resolvedClient.id }).eq("id", conversation.id);
+    }
+  }
+
+  // 2. Find matching n8n workflow
+  const { data: wf } = await supabase
+    .from("aurora_n8n_workflows")
+    .select("workflow_id, name, webhook_url, enabled, auto_assign")
+    .eq("service_type", args.service_type)
+    .eq("enabled", true)
+    .maybeSingle();
+
+  // 3. Insert order
+  const orderInsert: any = {
+    source: "aurora_chat",
+    client_email: args.client_email,
+    client_name: args.client_name ?? resolvedClient?.full_name ?? null,
+    client_company: args.client_company ?? resolvedClient?.company ?? null,
+    service_type: args.service_type,
+    brief: args.brief,
+    budget_eur: args.budget_eur ?? 0,
+    deadline: args.deadline ?? null,
+    payload: { ...(args.extra ?? {}), conversation_id: conversation?.id ?? null, source_channel: "aurora_chat" },
+    priority: args.priority ?? 5,
+    status: "received",
+    n8n_workflow_id: wf?.workflow_id ?? null,
+    assigned_to: wf?.workflow_id ? `n8n:${wf.workflow_id}` : "human_queue",
+  };
+  const { data: order, error: orderErr } = await supabase
+    .from("aurora_business_orders").insert(orderInsert).select().single();
+  if (orderErr) throw orderErr;
+
+  await supabase.from("aurora_order_events").insert({
+    order_id: order.id,
+    event_type: "intake",
+    message: `Aurora przyjęła zlecenie z czatu (${args.service_type})`,
+    data: { conversation_id: conversation?.id, client_id: resolvedClient?.id },
+  });
+
+  // 4. Trigger n8n webhook (fire-and-forget but capture status)
+  let dispatch: any = { dispatched: false };
+  if (wf?.webhook_url && wf?.auto_assign) {
+    try {
+      const res = await fetch(wf.webhook_url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          order_id: order.id,
+          service_type: args.service_type,
+          brief: args.brief,
+          client: { email: args.client_email, name: args.client_name, company: args.client_company },
+          budget_eur: args.budget_eur ?? 0,
+          deadline: args.deadline ?? null,
+          payload: orderInsert.payload,
+        }),
+      });
+      dispatch = { dispatched: true, status: res.status, workflow_id: wf.workflow_id };
+      await supabase.from("aurora_order_events").insert({
+        order_id: order.id, event_type: "n8n_dispatched",
+        message: `Pracownik n8n (${wf.name}) odebrał zadanie [${res.status}]`,
+        data: dispatch,
+      });
+      if (res.ok) {
+        await supabase.from("aurora_business_orders")
+          .update({ status: "in_progress", started_at: new Date().toISOString() })
+          .eq("id", order.id);
+      }
+    } catch (e) {
+      dispatch = { dispatched: false, error: String(e) };
+      await supabase.from("aurora_order_events").insert({
+        order_id: order.id, event_type: "n8n_error",
+        message: `Nie udało się odpalić workflow ${wf.name}: ${String(e)}`,
+        data: { workflow_id: wf.workflow_id },
+      });
+    }
+  } else {
+    await supabase.from("aurora_order_events").insert({
+      order_id: order.id, event_type: "queued_human",
+      message: `Brak aktywnego workflow n8n dla ${args.service_type} → zlecenie w kolejce operatora`,
+      data: {},
+    });
+  }
+
+  // 5. Mark conversation intent + close any draft
+  if (conversation) {
+    await supabase.from("aurora_conversations").update({ intent: "order" }).eq("id", conversation.id);
+    await supabase.from("aurora_intake_drafts")
+      .update({ status: "approved", resulting_order_id: order.id, approved_at: new Date().toISOString() })
+      .eq("conversation_id", conversation.id)
+      .in("status", ["collecting", "ready_for_approval"]);
+  }
+
+  return {
+    order_id: order.id,
+    short_id: order.id.slice(0, 8),
+    worker: N8N_WORKERS[args.service_type] ?? N8N_WORKERS.other,
+    sla_hours: SLA_HOURS[args.service_type] ?? 24,
+    dispatched: dispatch.dispatched,
+    has_workflow: Boolean(wf?.webhook_url),
+    client_id: resolvedClient?.id ?? null,
+  };
+}
 
 const SERVICE_HINTS: Record<string, { label: string; type: string; next: string }> = {
   seo_audit: { label: "audyt SEO", type: "seo_audit", next: "adres strony, cel biznesowy i największy problem z widocznością" },
