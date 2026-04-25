@@ -129,7 +129,7 @@ export const LiveMicBooth = ({ open, onClose, radioAudio, baseVolume }: LiveMicB
       filterRef.current.gain.value = Math.abs(pitch) * 1.2; // up to ~14dB
       filterRef.current.type = pitch >= 0 ? "highshelf" : "lowshelf";
     }
-    if (feedbackRef.current) feedbackRef.current.gain.value = echo ? 0.35 : 0;
+    if (feedbackRef.current) feedbackRef.current.gain.value = echo ? 0.25 : 0;
     if (delayRef.current) delayRef.current.delayTime.value = echo ? 0.25 : 0;
   }, [micGain, pitch, echo]);
 
