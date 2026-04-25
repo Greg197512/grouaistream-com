@@ -141,7 +141,43 @@ export function SingularityPanel() {
         </CardContent>
       </Card>
 
-      {/* Knowledge Base */}
+      {/* Auto-Learn (Tryb Automat) */}
+      <Card className="border-orange-500/20 bg-gradient-to-br from-background to-orange-950/10">
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Zap className="w-4 h-4 text-orange-400" /> Tryb Automat
+          </CardTitle>
+          <CardDescription className="text-xs">
+            Opisz zakres tematyczny — Aurora sama wygeneruje listę podtematów i przeszuka je po kolei. Wszystko w tle, bez Twojego nadzoru.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <Textarea
+            value={autoScope}
+            onChange={(e) => setAutoScope(e.target.value)}
+            placeholder='np. "marketing muzyczny niezależnych artystów na TikTok 2026 — algorytm, trendy, viralowe formaty, monetyzacja, błędy początkujących"'
+            rows={3}
+            className="resize-none"
+          />
+          <div className="flex gap-2 items-center flex-wrap">
+            <label className="text-xs text-muted-foreground flex items-center gap-1">
+              Liczba podtematów:
+              <Input
+                type="number"
+                min={1}
+                max={20}
+                value={autoCount}
+                onChange={(e) => setAutoCount(Math.max(1, Math.min(20, Number(e.target.value) || 5)))}
+                className="w-16 h-8"
+              />
+            </label>
+            <Button onClick={triggerAuto} disabled={!!busy} className="gap-1 ml-auto bg-orange-500 hover:bg-orange-600">
+              {busy === "auto" ? <Loader2 className="w-3 h-3 animate-spin" /> : <Zap className="w-3 h-3" />}
+              Uruchom Automat
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
       <Card>
         <CardHeader><CardTitle className="text-base flex items-center gap-2"><Database className="w-4 h-4" /> Baza wiedzy ({knowledge.length})</CardTitle></CardHeader>
         <CardContent className="space-y-2 max-h-[400px] overflow-y-auto">
