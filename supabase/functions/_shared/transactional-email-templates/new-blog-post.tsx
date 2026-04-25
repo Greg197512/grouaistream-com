@@ -156,10 +156,11 @@ const main = {
 const outerWrap = {
   maxWidth: '600px',
   margin: '0 auto',
-  backgroundColor: '#0a0a0a',
+  backgroundColor: '#ffffff',
   borderRadius: '20px',
   overflow: 'hidden' as const,
-  boxShadow: '0 20px 60px rgba(232,69,10,0.25), 0 4px 20px rgba(0,0,0,0.3)',
+  boxShadow: '0 20px 60px rgba(232,69,10,0.18), 0 4px 20px rgba(0,0,0,0.08)',
+  border: '1px solid #ececec',
 }
 const headerGradient = {
   background: 'linear-gradient(135deg, #e8450a 0%, #f59e0b 50%, #e8450a 100%)',
@@ -187,22 +188,22 @@ const coverWrap = { padding: 0, position: 'relative' as const, lineHeight: 0 }
 const coverImg = { width: '100%', height: 'auto', display: 'block' as const, objectFit: 'cover' as const, maxHeight: '320px' }
 const coverOverlay = {
   position: 'absolute' as const,
-  bottom: 0, left: 0, right: 0, height: '60px',
-  background: 'linear-gradient(to bottom, transparent, #0a0a0a)',
+  bottom: 0, left: 0, right: 0, height: '40px',
+  background: 'linear-gradient(to bottom, transparent, #ffffff)',
 }
 const coverFallback = {
-  background: 'linear-gradient(135deg, #1a1a1a 0%, #2a1410 100%)',
+  background: 'linear-gradient(135deg, #fef3ec 0%, #fde6d3 100%)',
   padding: '48px 24px',
   textAlign: 'center' as const,
 }
 const coverFallbackEmoji = { fontSize: '56px', margin: '0', lineHeight: '1' }
-const contentSection = { padding: '32px 32px 28px', backgroundColor: '#0a0a0a' }
+const contentSection = { padding: '32px 32px 28px', backgroundColor: '#ffffff' }
 const badge = {
   display: 'inline-block' as const,
   fontSize: '11px',
   fontWeight: '700' as const,
   color: '#e8450a',
-  backgroundColor: 'rgba(232,69,10,0.15)',
+  backgroundColor: '#fef3ec',
   padding: '6px 16px',
   borderRadius: '999px',
   textTransform: 'uppercase' as const,
@@ -213,14 +214,14 @@ const badge = {
 const h1 = {
   fontSize: '28px',
   fontWeight: '800' as const,
-  color: '#fafafa',
+  color: '#0a0a0a',
   margin: '0 0 18px',
   lineHeight: '1.25',
   letterSpacing: '-0.5px',
 }
-const greeting = { fontSize: '15px', color: '#a1a1aa', margin: '0 0 22px', fontWeight: '500' as const }
+const greeting = { fontSize: '15px', color: '#3f3f46', margin: '0 0 22px', fontWeight: '500' as const }
 const hookBox = {
-  background: 'linear-gradient(135deg, rgba(232,69,10,0.12), rgba(245,158,11,0.06))',
+  background: 'linear-gradient(135deg, rgba(232,69,10,0.08), rgba(245,158,11,0.04))',
   borderRadius: '14px',
   padding: '22px 24px 20px',
   borderLeft: '4px solid #e8450a',
@@ -237,13 +238,13 @@ const hookQuote = {
 }
 const hookText = {
   fontSize: '17px',
-  color: '#fafafa',
+  color: '#1a1a1a',
   lineHeight: '1.6',
   margin: '8px 0 0',
   fontStyle: 'italic' as const,
   fontWeight: '500' as const,
 }
-const text = { fontSize: '15px', color: '#d4d4d8', lineHeight: '1.75', margin: '0 0 32px' }
+const text = { fontSize: '15px', color: '#2d2d2d', lineHeight: '1.75', margin: '0 0 32px' }
 const ctaSection = { textAlign: 'center' as const, margin: '0 0 24px' }
 const ctaButton = {
   background: 'linear-gradient(135deg, #e8450a 0%, #f59e0b 100%)',
