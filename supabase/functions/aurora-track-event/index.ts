@@ -27,7 +27,7 @@ Deno.serve(async (req) => {
     // Optimistic counter on variant
     if (body.variant_id && (event_type === "view" || event_type === "click" || event_type === "lead")) {
       const col = event_type === "view" ? "views" : event_type === "click" ? "clicks" : "conversions";
-      await supabase.rpc("execute_increment_variant", { _variant: body.variant_id, _col: col }).catch(() => {});
+      try { await supabase.rpc("execute_increment_variant", { _variant: body.variant_id, _col: col }); } catch { /* ignore */ }
       // fallback: direct update
       const { data: v } = await supabase
         .from("aurora_landing_variants")

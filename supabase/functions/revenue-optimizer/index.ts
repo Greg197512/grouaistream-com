@@ -158,7 +158,6 @@ Deno.serve(async (req) => {
         event_type: 'agent.recommendation',
         payload: {
           type: 'promote_track',
-          track_id: t.track_id,
           reason: `Trending: ${t.multiplier}× baseline (${t.streams_24h} streams w 24h)`,
           ...t,
         },

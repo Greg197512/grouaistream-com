@@ -53,7 +53,7 @@ interface PlatformTaste {
   totalStreams7d: number;
 }
 
-async function computePlatformTaste(supabase: ReturnType<typeof createClient>): Promise<PlatformTaste> {
+async function computePlatformTaste(supabase: any): Promise<PlatformTaste> {
   // top gatunki z ostatnich 7 dni słuchania
   const sevenDaysAgo = new Date(Date.now() - 7 * 86400_000).toISOString();
 
@@ -244,7 +244,7 @@ async function scanForCandidates(taste: PlatformTaste): Promise<Candidate[]> {
 }
 
 async function filterAlreadyKnown(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   candidates: Candidate[],
 ): Promise<Candidate[]> {
   if (candidates.length === 0) return [];
