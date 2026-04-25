@@ -156,10 +156,11 @@ const main = {
 const outerWrap = {
   maxWidth: '600px',
   margin: '0 auto',
-  backgroundColor: '#0a0a0a',
+  backgroundColor: '#ffffff',
   borderRadius: '20px',
   overflow: 'hidden' as const,
-  boxShadow: '0 20px 60px rgba(232,69,10,0.25), 0 4px 20px rgba(0,0,0,0.3)',
+  boxShadow: '0 20px 60px rgba(232,69,10,0.18), 0 4px 20px rgba(0,0,0,0.08)',
+  border: '1px solid #ececec',
 }
 const headerGradient = {
   background: 'linear-gradient(135deg, #e8450a 0%, #f59e0b 50%, #e8450a 100%)',
