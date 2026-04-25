@@ -162,19 +162,21 @@ const body = {
 const container = {
   maxWidth: '620px',
   margin: '0 auto',
-  backgroundColor: '#0f0f17',
+  backgroundColor: '#ffffff',
   borderRadius: '24px',
   overflow: 'hidden' as const,
+  border: '1px solid #ececec',
+  boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
 }
 
 const heroSection = {
   padding: '32px 32px 12px',
-  background: 'linear-gradient(180deg, #181824 0%, #0f0f17 100%)',
+  background: 'linear-gradient(180deg, #0a0a0a 0%, #181824 100%)',
 }
 
 const eyebrow = {
   margin: '0 0 10px',
-  color: '#ff6b1a',
+  color: '#ff8a3d',
   fontSize: '12px',
   fontWeight: 700,
   letterSpacing: '1.4px',
@@ -197,8 +199,8 @@ const lead = {
 }
 
 const priceCard = {
-  margin: '0 32px',
-  background: 'linear-gradient(135deg, rgba(255,107,26,0.18) 0%, rgba(255,180,0,0.14) 100%)',
+  margin: '20px 32px',
+  background: 'linear-gradient(135deg, rgba(255,107,26,0.10) 0%, rgba(255,180,0,0.08) 100%)',
   border: '1px solid rgba(255,107,26,0.38)',
   borderRadius: '18px',
   padding: '24px',
@@ -207,7 +209,7 @@ const priceCard = {
 
 const priceLabel = {
   margin: '0 0 6px',
-  color: '#ffb45c',
+  color: '#ff6b1a',
   fontSize: '11px',
   fontWeight: 700,
   letterSpacing: '1.6px',
@@ -216,7 +218,7 @@ const priceLabel = {
 
 const priceValue = {
   margin: '0 0 6px',
-  color: '#ffffff',
+  color: '#0a0a0a',
   fontSize: '40px',
   lineHeight: '1',
   fontWeight: 800,
@@ -224,34 +226,35 @@ const priceValue = {
 
 const priceNote = {
   margin: 0,
-  color: '#cfcfdc',
+  color: '#3f3f46',
   fontSize: '13px',
   lineHeight: '1.6',
 }
 
 const contentSection = {
   padding: '28px 32px 36px',
+  backgroundColor: '#ffffff',
 }
 
 const sectionTitle = {
   margin: '0 0 14px',
-  color: '#ffffff',
+  color: '#0a0a0a',
   fontSize: '21px',
   lineHeight: '1.3',
   fontWeight: 700,
 }
 
 const detailBox = {
-  backgroundColor: '#171722',
-  border: '1px solid #26263a',
+  backgroundColor: '#fafafa',
+  border: '1px solid #ececec',
   borderRadius: '14px',
   padding: '14px 16px',
   margin: '0 0 12px',
 }
 
 const detailBoxLarge = {
-  backgroundColor: '#171722',
-  border: '1px solid #26263a',
+  backgroundColor: '#fafafa',
+  border: '1px solid #ececec',
   borderRadius: '14px',
   padding: '16px',
   margin: '0 0 12px',
@@ -259,7 +262,7 @@ const detailBoxLarge = {
 
 const detailLabel = {
   margin: '0 0 6px',
-  color: '#9f9fb3',
+  color: '#71717a',
   fontSize: '11px',
   fontWeight: 700,
   letterSpacing: '1.2px',
@@ -268,7 +271,7 @@ const detailLabel = {
 
 const detailValue = {
   margin: 0,
-  color: '#ffffff',
+  color: '#0a0a0a',
   fontSize: '15px',
   lineHeight: '1.6',
   fontWeight: 600,
@@ -276,13 +279,13 @@ const detailValue = {
 
 const detailText = {
   margin: 0,
-  color: '#d7d7e2',
+  color: '#2d2d2d',
   fontSize: '14px',
   lineHeight: '1.8',
 }
 
 const linkValue = {
-  color: '#ff8a3d',
+  color: '#ff6b1a',
   fontSize: '14px',
   lineHeight: '1.7',
   textDecoration: 'underline',
@@ -298,17 +301,17 @@ const image = {
   height: 'auto',
   display: 'block',
   borderRadius: '16px',
-  border: '1px solid #26263a',
+  border: '1px solid #ececec',
 }
 
 const divider = {
-  borderColor: '#2a2a3a',
+  borderColor: '#ececec',
   margin: '24px 0',
 }
 
 const paragraph = {
   margin: '0 0 16px',
-  color: '#cfcfdc',
+  color: '#3f3f46',
   fontSize: '14px',
   lineHeight: '1.7',
 }
@@ -320,7 +323,7 @@ const ctaSection = {
 
 const ctaButton = {
   background: 'linear-gradient(135deg, #ff6b1a, #ffb400)',
-  color: '#0f0f17',
+  color: '#ffffff',
   padding: '15px 28px',
   borderRadius: '12px',
   fontSize: '15px',
@@ -330,7 +333,7 @@ const ctaButton = {
 }
 
 const fallbackLink = {
-  color: '#ff8a3d',
+  color: '#ff6b1a',
   fontSize: '13px',
   lineHeight: '1.7',
   textDecoration: 'underline',
