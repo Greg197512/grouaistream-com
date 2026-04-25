@@ -3,15 +3,17 @@ import { motion, AnimatePresence } from "framer-motion";
 import { 
   HardDrive, Upload, Music, FileAudio, FileVideo, Play, Pause, Search, 
   Loader2, CheckCircle, AlertCircle, X, Film, Download, Trash2, 
-  FolderOpen, Sparkles, Library, ImageIcon, RefreshCw
+  FolderOpen, Sparkles, Library, ImageIcon, RefreshCw, Lock
 } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSubscription } from "@/contexts/SubscriptionContext";
 import { usePlayer, Track } from "@/contexts/PlayerContext";
 
 import { toast } from "sonner";
@@ -127,7 +129,19 @@ const GENRE_COLORS: Record<string, string> = {
 
 const Server = () => {
   const { user } = useAuth();
+  const { isPro } = useSubscription();
+  const navigate = useNavigate();
   const { playTrack, currentTrack, isPlaying, togglePlay, playPlaylist } = usePlayer();
+  
+  const requireProForUpload = useCallback(() => {
+    if (isPro) return true;
+    toast.error("Upload utworów wymaga planu PRO", {
+      description: "Przekierowuję do cennika...",
+      duration: 3500,
+    });
+    setTimeout(() => navigate("/pricing"), 600);
+    return false;
+  }, [isPro, navigate]);
   
   const [tracks, setTracks] = useState<Track[]>([]);
   const [loading, setLoading] = useState(true);
@@ -183,6 +197,7 @@ const Server = () => {
   };
 
   const addFilesToQueue = (files: FileList | File[], relativePaths?: string[]) => {
+    if (!requireProForUpload()) return;
     const newItems: QueuedFile[] = [];
     const arr = Array.from(files);
     for (let i = 0; i < arr.length; i++) {
@@ -210,6 +225,7 @@ const Server = () => {
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setDragActive(false);
+    if (!requireProForUpload()) return;
     const items = e.dataTransfer.items;
     if (items) {
       const files: File[] = [];
@@ -664,9 +680,16 @@ const Server = () => {
                       <Upload className="h-12 w-12 text-muted-foreground" />
                     </motion.div>
                     <div>
-                      <p className="font-medium">Przeciągnij pliki lub foldery tutaj</p>
+                      <p className="font-medium flex items-center justify-center gap-2">
+                        {!isPro && <Lock className="h-4 w-4 text-primary" />}
+                        {isPro
+                          ? "Przeciągnij pliki lub foldery tutaj"
+                          : "Upload utworów wymaga planu PRO"}
+                      </p>
                       <p className="text-sm text-muted-foreground mt-1">
-                        MP3, WAV, MP4, WebM — max 500MB • Dodaj okładkę 🖼️ do każdego utworu w kolejce
+                        {isPro
+                          ? "MP3, WAV, MP4, WebM — max 500MB • Dodaj okładkę 🖼️ do każdego utworu w kolejce"
+                          : "Wykup PRO, aby wrzucać pliki i całe katalogi z auto-kategoryzacją AI"}
                       </p>
                     </div>
                     <div className="flex flex-col items-center gap-2 mt-2">
@@ -697,15 +720,33 @@ const Server = () => {
                           }}
                           className="hidden"
                         />
-                        <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }} className="gap-1">
-                          <Music className="h-4 w-4" /> Wybierz pliki
-                        </Button>
-                        <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); folderInputRef.current?.click(); }} className="gap-1">
-                          <FolderOpen className="h-4 w-4" /> + Dodaj katalog
-                        </Button>
+                        {isPro ? (
+                          <>
+                            <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }} className="gap-1">
+                              <Music className="h-4 w-4" /> Wybierz pliki
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); folderInputRef.current?.click(); }} className="gap-1">
+                              <FolderOpen className="h-4 w-4" /> + Dodaj katalog
+                            </Button>
+                          </>
+                        ) : (
+                          <>
+                            <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); requireProForUpload(); }} className="gap-1 opacity-60">
+                              <Lock className="h-4 w-4" /> Wybierz pliki
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); requireProForUpload(); }} className="gap-1 opacity-60">
+                              <Lock className="h-4 w-4" /> + Dodaj katalog
+                            </Button>
+                            <Button size="sm" onClick={(e) => { e.stopPropagation(); navigate("/pricing"); }} className="gap-1">
+                              <Sparkles className="h-4 w-4" /> Wykup PRO
+                            </Button>
+                          </>
+                        )}
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        Klikaj „+ Dodaj katalog" wielokrotnie — pliki z każdego katalogu trafią do kolejki
+                        {isPro
+                          ? 'Klikaj „+ Dodaj katalog" wielokrotnie — pliki z każdego katalogu trafią do kolejki'
+                          : "Po wykupieniu PRO możesz wrzucać pojedyncze pliki i całe katalogi"}
                       </p>
                     </div>
                   </div>
@@ -714,7 +755,11 @@ const Server = () => {
                 {/* AI info */}
                 <div className="flex items-center gap-2 p-3 rounded-lg bg-accent/10 text-sm">
                   <Sparkles className="h-4 w-4 text-accent flex-shrink-0" />
-                  <span>AI automatycznie skategoryzuje utwory (gatunek, nastrój) i wygeneruje okładki po uploadzie</span>
+                  <span>
+                    {isPro
+                      ? "AI automatycznie skategoryzuje utwory (gatunek, nastrój) i wygeneruje okładki po uploadzie"
+                      : "✨ Auto-kategoryzacja AI i generowanie okładek — dostępne w planie PRO"}
+                  </span>
                 </div>
 
                 {/* Queue list */}
