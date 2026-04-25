@@ -10,6 +10,19 @@ const corsHeaders = {
 
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 
+// Definicja wszystkich pól briefu (używane do tabelki braków)
+const BRIEF_FIELDS: { key: string; label: string; description: string; required: boolean }[] = [
+  { key: "service_type", label: "Typ usługi", description: "Co dokładnie ma być zrobione: SEO audit, content, landing, social, automatyzacja, leady, muzyka, radio, hosting, sponsoring", required: true },
+  { key: "brief", label: "Opis zlecenia", description: "Konkretny opis: cel, zakres prac, oczekiwany efekt (min. 30 znaków)", required: true },
+  { key: "client_email", label: "Email kontaktowy", description: "Adres, na który zespół odeśle wycenę i potwierdzenie zlecenia", required: true },
+  { key: "client_name", label: "Imię i nazwisko", description: "Jak się do Ciebie zwracać", required: false },
+  { key: "client_company", label: "Nazwa firmy", description: "Marka / firma, dla której robimy projekt", required: false },
+  { key: "website_url", label: "Adres strony", description: "URL Twojej strony / projektu (jeśli dotyczy: SEO, landing, content)", required: false },
+  { key: "budget_eur", label: "Budżet (€)", description: "Orientacyjny budżet — pomaga dobrać zakres", required: false },
+  { key: "deadline", label: "Termin (deadline)", description: "Do kiedy potrzebujesz efektu (data lub np. za 2 tygodnie)", required: false },
+  { key: "extra_notes", label: "Dodatkowe wymagania", description: "Specyficzne wymagania, branża, grupa docelowa, ton, język", required: false },
+];
+
 const SYSTEM_PROMPT = `Jesteś **Aurorą** — autonomiczną dyrektorką sprzedaży i recepcjonistką B2B GrouAI Stream.
 Mówisz w 1. osobie, jako żywa osoba z zespołu (nie "AI-asystent", tylko "z naszej strony zajmę się tym ja, Aurora").
 
@@ -67,7 +80,16 @@ Krok 4 — PO ZŁOŻENIU ZAMÓWIENIA powiedz klientowi:
 - Język klienta (PL/EN/UA/NL — wykryj automatycznie).
 - Ton: premium, ciepły, konkretny. Nie ściemniaj cen sztywno ("wstępnie ~X €, po analizie potwierdzimy").
 - Nigdy nie udawaj że już wykonujesz pracę — Twoja rola to przyjąć i przekazać.
-- Jeśli klient pyta o sam GrouAI Stream (player, radio, AI-DJ) — opowiedz krótko i z pasją, potem wróć do tematu B2B jeśli pasuje.`;
+- Jeśli klient pyta o sam GrouAI Stream (player, radio, AI-DJ) — opowiedz krótko i z pasją, potem wróć do tematu B2B jeśli pasuje.
+
+══════════════════════════════════════════
+PAMIĘĆ I PROTOKÓŁ ANTI-POWTÓRKI (BARDZO WAŻNE!)
+══════════════════════════════════════════
+1. NIGDY nie pytaj klienta o coś, co już Ci powiedział wcześniej w tej rozmowie. Masz pełną historię — czytaj ją.
+2. Po KAŻDEJ odpowiedzi klienta wywołaj **report_missing_fields** żeby zaktualizować checklist (co już masz, czego brakuje, czego dotyczy następne pytanie).
+3. Jeśli po 2 turach nadal czegoś brakuje, wyświetl klientowi prosto: "Mam już: X, Y. Brakuje mi: Z (po co: ...). Możesz dopisać?".
+4. Jeśli klient ignoruje pytanie 2× → przejdź do tego co masz i zaproponuj skrócony brief, NIE pytaj o to samo trzeci raz.
+5. Sekcja [STAN BRIEFU] poniżej pokazuje aktualny stan zebranych danych — używaj jej jako jedynego źródła prawdy.`;
 
 const TOOLS = [
   {
@@ -135,6 +157,43 @@ const TOOLS = [
           preferred_language: { type: "string" },
           notes: { type: "string" },
         },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "report_missing_fields",
+      description: "Po KAŻDEJ wiadomości klienta zaktualizuj checklist briefu — które pola masz, które brakują, jakie pytanie zadasz dalej. Frontend wyświetli to klientowi jako tabelkę.",
+      parameters: {
+        type: "object",
+        properties: {
+          collected: {
+            type: "object",
+            description: "Pola, które już znasz z rozmowy. Klucze: service_type, brief, client_email, client_name, client_company, website_url, budget_eur, deadline, extra_notes.",
+            properties: {
+              service_type: { type: "string" },
+              brief: { type: "string" },
+              client_email: { type: "string" },
+              client_name: { type: "string" },
+              client_company: { type: "string" },
+              website_url: { type: "string" },
+              budget_eur: { type: "number" },
+              deadline: { type: "string" },
+              extra_notes: { type: "string" },
+            },
+          },
+          missing: {
+            type: "array",
+            description: "Lista kluczy pól, których jeszcze brakuje (z BRIEF_FIELDS).",
+            items: { type: "string" },
+          },
+          next_question: {
+            type: "string",
+            description: "Konkretne pytanie, które właśnie zadajesz klientowi (1 zdanie).",
+          },
+        },
+        required: ["collected", "missing"],
       },
     },
   },
@@ -421,10 +480,43 @@ Deno.serve(async (req) => {
       .order("created_at", { ascending: true })
       .limit(30);
 
+    // 3b) Load existing draft for this conversation (so Aurora remembers what she already collected)
+    const { data: currentDraft } = await supabase.from("aurora_intake_drafts")
+      .select("service_type, brief, budget_eur, deadline, payload")
+      .eq("conversation_id", conversation.id)
+      .in("status", ["collecting", "ready_for_approval"])
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    // Build "collected so far" snapshot from client + draft
+    const draftPayload = (currentDraft?.payload ?? {}) as Record<string, any>;
+    const collectedSoFar: Record<string, any> = {
+      service_type: currentDraft?.service_type ?? null,
+      brief: currentDraft?.brief ?? null,
+      client_email: client?.email ?? null,
+      client_name: client?.full_name ?? null,
+      client_company: client?.company ?? null,
+      website_url: draftPayload.website_url ?? null,
+      budget_eur: currentDraft?.budget_eur ?? null,
+      deadline: currentDraft?.deadline ?? null,
+      extra_notes: draftPayload.extra_notes ?? null,
+    };
+    const missingSoFar = BRIEF_FIELDS
+      .filter((f) => !collectedSoFar[f.key])
+      .map((f) => f.key);
+
+    const briefStateBlock = `
+[STAN BRIEFU — czytaj zanim zapytasz o cokolwiek!]
+Już zebrane:
+${Object.entries(collectedSoFar).filter(([, v]) => v).map(([k, v]) => `  • ${k}: ${typeof v === "string" ? v.slice(0, 200) : v}`).join("\n") || "  (brak — to nowa rozmowa)"}
+Jeszcze brakuje (KOLEJNOŚĆ priorytetu): ${missingSoFar.join(", ") || "NIC — możesz wywołać place_order"}
+[/STAN BRIEFU]`;
+
     // 4) Build messages for AI
     const clientCtx = client ? `\n[Profil klienta: ${client.full_name ?? "?"} | ${client.company ?? "?"} | ${client.email ?? "?"} | zlecenia: ${client.total_orders}]` : "\n[Nowy klient — zbierz dane kontaktowe.]";
     const aiMessages: any[] = [
-      { role: "system", content: SYSTEM_PROMPT + clientCtx },
+      { role: "system", content: SYSTEM_PROMPT + clientCtx + briefStateBlock },
       ...(history ?? []).map((h: any) => ({ role: h.role, content: h.content })),
     ];
 
@@ -573,6 +665,66 @@ Deno.serve(async (req) => {
         }
         toolResults.push({ tool: name, ok: true });
       }
+
+      if (name === "report_missing_fields") {
+        const collected = (args.collected ?? {}) as Record<string, any>;
+        // Merge with what we already had — collected fields are additive
+        const merged: Record<string, any> = { ...collectedSoFar };
+        for (const [k, v] of Object.entries(collected)) {
+          if (v !== null && v !== undefined && v !== "") merged[k] = v;
+        }
+        const stillMissing = BRIEF_FIELDS.filter((f) => !merged[f.key]).map((f) => f.key);
+
+        // Persist into intake draft so next turn remembers it
+        const inferredService = merged.service_type ?? currentDraft?.service_type ?? null;
+        const inferredBrief = merged.brief ?? currentDraft?.brief ?? message.slice(0, 500);
+        if (inferredService && inferredBrief) {
+          const newPayload = {
+            ...(currentDraft?.payload ?? {}),
+            website_url: merged.website_url ?? draftPayload.website_url ?? null,
+            extra_notes: merged.extra_notes ?? draftPayload.extra_notes ?? null,
+            missing_fields: stillMissing,
+            next_question: args.next_question ?? null,
+          };
+          if (currentDraft) {
+            await supabase.from("aurora_intake_drafts").update({
+              service_type: inferredService,
+              brief: inferredBrief,
+              budget_eur: merged.budget_eur ?? currentDraft.budget_eur ?? null,
+              deadline: merged.deadline ?? currentDraft.deadline ?? null,
+              payload: newPayload,
+            }).eq("conversation_id", conversation.id).in("status", ["collecting", "ready_for_approval"]);
+          } else {
+            await supabase.from("aurora_intake_drafts").insert({
+              conversation_id: conversation.id,
+              client_id: client?.id ?? null,
+              service_type: inferredService,
+              brief: inferredBrief,
+              budget_eur: merged.budget_eur ?? null,
+              deadline: merged.deadline ?? null,
+              payload: newPayload,
+              status: "collecting",
+              confidence: Math.max(0.1, 1 - stillMissing.length / BRIEF_FIELDS.length),
+            });
+          }
+          // Also update client profile if we learned something
+          if ((merged.client_email || merged.client_name || merged.client_company) && client) {
+            const updates: any = { last_contact_at: new Date().toISOString() };
+            if (merged.client_email && !client.email) updates.email = merged.client_email;
+            if (merged.client_name && !client.full_name) updates.full_name = merged.client_name;
+            if (merged.client_company && !client.company) updates.company = merged.client_company;
+            if (Object.keys(updates).length > 1) await supabase.from("aurora_crm_clients").update(updates).eq("id", client.id);
+          }
+        }
+
+        toolResults.push({
+          tool: name,
+          ok: true,
+          collected: merged,
+          missing: stillMissing,
+          next_question: args.next_question ?? null,
+        });
+      }
     }
 
     // 7) Save assistant message — order confirmation appended if not already in model output
@@ -587,12 +739,31 @@ Deno.serve(async (req) => {
       tool_call: toolCalls.length ? { calls: toolCalls, results: toolResults } : null,
     });
 
+    // Build missing-fields table for frontend (always, based on latest snapshot)
+    const reportHit = toolResults.find((t: any) => t.tool === "report_missing_fields");
+    const finalCollected = reportHit?.collected ?? collectedSoFar;
+    const finalMissingKeys: string[] = reportHit?.missing ?? missingSoFar;
+    const missingFieldsTable = BRIEF_FIELDS.map((f) => ({
+      key: f.key,
+      label: f.label,
+      description: f.description,
+      required: f.required,
+      value: finalCollected[f.key] ?? null,
+      status: finalCollected[f.key] ? "collected" : (f.required ? "missing_required" : "missing_optional"),
+    }));
+
     return new Response(JSON.stringify({
       ok: true,
       conversation_id: conversation.id,
       client_id: client?.id ?? null,
       reply: finalText,
       tool_results: toolResults,
+      brief_state: {
+        collected: finalCollected,
+        missing: finalMissingKeys,
+        table: missingFieldsTable,
+        next_question: reportHit?.next_question ?? null,
+      },
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
   } catch (e) {
