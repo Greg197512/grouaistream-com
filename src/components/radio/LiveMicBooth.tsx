@@ -384,6 +384,59 @@ export const LiveMicBooth = ({ open, onClose, radioAudio, baseVolume, sourceId }
     }
   }, [micGain, pitch, echo, monitor, selectedDeviceId, micDevices, refreshMicDevices, cleanupAudio]);
 
+  const startCloudBroadcast = useCallback(() => {
+    const destination = broadcastDestinationRef.current;
+    if (!destination || !destination.stream.getAudioTracks().length || typeof MediaRecorder === "undefined") {
+      setErrorMsg("Mikrofon działa lokalnie, ale ta przeglądarka nie potrafi wysłać głosu na radio.");
+      return false;
+    }
+
+    const mimeType = pickBroadcastMimeType();
+    if (!mimeType) {
+      setErrorMsg("Brak obsługi nagrywania audio w tej przeglądarce. Użyj Chrome albo Edge.");
+      return false;
+    }
+
+    const channel = supabase.channel("radio-live-voice", { config: { broadcast: { self: false } } });
+    broadcastChannelRef.current = channel;
+
+    const recorder = new MediaRecorder(destination.stream, { mimeType, audioBitsPerSecond: 96_000 });
+    mediaRecorderRef.current = recorder;
+
+    recorder.ondataavailable = async (event) => {
+      if (!event.data.size || !broadcastReadyRef.current) return;
+      try {
+        const audioBase64 = arrayBufferToBase64(await event.data.arrayBuffer());
+        await channel.send({
+          type: "broadcast",
+          event: "chunk",
+          payload: { sourceId, mimeType, audioBase64, sentAt: Date.now() },
+        });
+      } catch (err) {
+        console.warn("[LiveMicBooth] broadcast chunk failed", err);
+      }
+    };
+
+    recorder.onerror = () => {
+      setBroadcastConnected(false);
+      setErrorMsg("Połączenie głosu live z radiem zostało przerwane. Zatrzymaj i wejdź na antenę ponownie.");
+    };
+
+    channel.subscribe((status) => {
+      if (status !== "SUBSCRIBED") return;
+      broadcastReadyRef.current = true;
+      setBroadcastConnected(true);
+      channel.send({
+        type: "broadcast",
+        event: "start",
+        payload: { sourceId, mimeType, sentAt: Date.now() },
+      });
+      recorder.start(750);
+    });
+
+    return true;
+  }, [sourceId]);
+
   const startCountdown = useCallback(async () => {
     setErrorMsg(null);
     setPhase("preparing");
@@ -423,13 +476,14 @@ export const LiveMicBooth = ({ open, onClose, radioAudio, baseVolume, sourceId }
         if (prev <= 1) {
           if (countdownRef.current) { clearInterval(countdownRef.current); countdownRef.current = null; }
           setPhase("live");
+          startCloudBroadcast();
           toast.success("🎙️ JESTEŚ NA ANTENIE", { duration: 2500 });
           return 0;
         }
         return prev - 1;
       });
     }, 1000);
-  }, [initMicChain, playJingleFirst, jingleUrl, radioAudio]);
+  }, [initMicChain, playJingleFirst, jingleUrl, radioAudio, startCloudBroadcast]);
 
   const stopLive = () => {
     cleanupAudio();
