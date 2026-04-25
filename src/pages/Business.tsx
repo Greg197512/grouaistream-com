@@ -499,6 +499,66 @@ export default function BusinessPage() {
           </form>
         </Card>
 
+        {/* Brief checklist — co Aurora już wie, czego jej brakuje */}
+        {briefState && briefState.table && briefState.table.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-6"
+          >
+            <Card className="border-cyan-400/30 bg-card/70 backdrop-blur shadow-[0_0_40px_hsl(210_100%_50%/0.08)]">
+              <div className="p-4 border-b border-border/60 flex items-center gap-2">
+                <FileText className="h-4 w-4 text-cyan-300" />
+                <h3 className="font-semibold text-sm">Co Aurora już wie · czego jeszcze potrzebuje</h3>
+                <Badge variant="secondary" className="ml-auto bg-cyan-400/15 text-cyan-200 border border-cyan-400/30 text-xs">
+                  {briefState.table.filter((f) => f.status === "collected").length}/{briefState.table.length}
+                </Badge>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-background/40 text-xs text-muted-foreground">
+                    <tr>
+                      <th className="text-left px-3 py-2 font-medium">Pole</th>
+                      <th className="text-left px-3 py-2 font-medium">Opis</th>
+                      <th className="text-left px-3 py-2 font-medium">Wartość / status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {briefState.table.map((f) => (
+                      <tr key={f.key} className="border-t border-border/40">
+                        <td className="px-3 py-2 align-top">
+                          <div className="font-medium text-foreground flex items-center gap-1.5">
+                            {f.label}
+                            {f.required && <span className="text-rose-400 text-[10px]">*</span>}
+                          </div>
+                        </td>
+                        <td className="px-3 py-2 align-top text-xs text-muted-foreground">{f.description}</td>
+                        <td className="px-3 py-2 align-top text-xs">
+                          {f.status === "collected" ? (
+                            <span className="inline-flex items-center gap-1 text-emerald-300">
+                              <Check className="h-3 w-3" />
+                              <span className="truncate max-w-[200px] inline-block">{String(f.value)}</span>
+                            </span>
+                          ) : f.status === "missing_required" ? (
+                            <span className="text-rose-300">⚠ brakuje (wymagane)</span>
+                          ) : (
+                            <span className="text-muted-foreground/70">— opcjonalne</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {briefState.next_question && (
+                <div className="p-3 border-t border-border/60 bg-background/40 text-xs text-cyan-200">
+                  <span className="font-medium">Aurora pyta dalej:</span> {briefState.next_question}
+                </div>
+              )}
+            </Card>
+          </motion.div>
+        )}
+
         <p className="text-center text-xs text-muted-foreground mt-4">
           Każde zapytanie trafia do panelu admina i jest akceptowane przez człowieka przed startem prac.
         </p>
