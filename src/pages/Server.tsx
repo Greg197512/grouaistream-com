@@ -745,7 +745,7 @@ const Server = () => {
                       </div>
                       <p className="text-xs text-muted-foreground">
                         {isPro
-                          ? "Klikaj „+ Dodaj katalog" wielokrotnie — pliki z każdego katalogu trafią do kolejki"
+                          ? 'Klikaj „+ Dodaj katalog" wielokrotnie — pliki z każdego katalogu trafią do kolejki'
                           : "Po wykupieniu PRO możesz wrzucać pojedyncze pliki i całe katalogi"}
                       </p>
                     </div>
