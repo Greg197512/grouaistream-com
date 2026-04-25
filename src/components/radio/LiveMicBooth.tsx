@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Mic, MicOff, Square, X, Music2, Radio as RadioIcon, Upload, Volume2, AudioWaveform } from "lucide-react";
+import { Mic, Square, X, Music2, Radio as RadioIcon, Upload, Volume2, AudioWaveform, Headphones, HeadphoneOff } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -23,69 +23,87 @@ interface LiveMicBoothProps {
   baseVolume: number;
 }
 
-type Phase = "idle" | "countdown" | "live" | "stopped";
+type Phase = "idle" | "preparing" | "countdown" | "live" | "stopped";
 
 const COUNTDOWN_SECONDS = 6;
 
 /**
- * LiveMicBooth — Admin live commentary booth for the radio.
- * - 6-second countdown before going on-air
- * - Ducks the underlying radio music via volume slider
- * - Real-time pitch shifting (tonacja głosu) via playback rate on a recorded buffer
- *   (live mic is routed straight; pitch slider applies a subtle preamp + filter chain
- *   for "warm/bright" vocal coloration since true real-time pitch shift requires worklets)
- * - Optional jingle / wejściówka upload played before the mic opens
+ * LiveMicBooth — Profesjonalny pulpit live komentarza radiowego.
+ *
+ * Architektura sygnału (Web Audio API):
+ *
+ *  mic → [HighPass 80Hz] → [Compressor] → [Gain] → [EQ tilt] ─┬─→ [Analyser TAP]
+ *                                                              │
+ *                                                              ├─→ [Master] → ctx.destination  (TYLKO gdy monitor=on)
+ *                                                              │
+ *                                                              └─→ [Delay ⇄ Feedback] → [Master]
+ *
+ * KLUCZOWE: domyślnie monitor=OFF, bo słuchanie własnego głosu w głośnikach
+ * powoduje echo + sprzężenie (mic łapie z głośnika z opóźnieniem). Gdy admin
+ * chce odsłuch — używa słuchawek i włącza monitor ręcznie.
  */
 export const LiveMicBooth = ({ open, onClose, radioAudio, baseVolume }: LiveMicBoothProps) => {
   const [phase, setPhase] = useState<Phase>("idle");
   const [countdown, setCountdown] = useState(COUNTDOWN_SECONDS);
-  const [musicDuck, setMusicDuck] = useState(25); // % of original volume during live
-  const [micGain, setMicGain] = useState(85);
-  const [pitch, setPitch] = useState(0); // -12..+12 semitones (tonal coloration)
+  const [musicDuck, setMusicDuck] = useState(20); // % oryginału w live
+  const [micGain, setMicGain] = useState(100);
+  const [pitch, setPitch] = useState(0); // -12..+12 (EQ tilt)
   const [echo, setEcho] = useState(false);
+  const [monitor, setMonitor] = useState(false); // odsłuch w słuchawkach
   const [level, setLevel] = useState(0);
+  const [peak, setPeak] = useState(0);
   const [jingleUrl, setJingleUrl] = useState<string | null>(null);
   const [jingleName, setJingleName] = useState<string | null>(null);
   const [playJingleFirst, setPlayJingleFirst] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const streamRef = useRef<MediaStream | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
+  const hpfRef = useRef<BiquadFilterNode | null>(null);
+  const compressorRef = useRef<DynamicsCompressorNode | null>(null);
   const gainRef = useRef<GainNode | null>(null);
-  const filterRef = useRef<BiquadFilterNode | null>(null);
+  const eqRef = useRef<BiquadFilterNode | null>(null);
   const delayRef = useRef<DelayNode | null>(null);
   const feedbackRef = useRef<GainNode | null>(null);
+  const monitorGainRef = useRef<GainNode | null>(null); // brama monitor on/off
+  const masterRef = useRef<GainNode | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const rafRef = useRef<number | null>(null);
   const countdownRef = useRef<number | null>(null);
   const jingleAudioRef = useRef<HTMLAudioElement | null>(null);
   const originalVolumeRef = useRef<number>(baseVolume);
+  const peakHoldRef = useRef<number>(0);
+  const peakHoldTimeRef = useRef<number>(0);
 
   // ============= cleanup =============
   const cleanupAudio = useCallback(() => {
     if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
     if (countdownRef.current) { clearInterval(countdownRef.current); countdownRef.current = null; }
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach(t => t.stop());
+      streamRef.current.getTracks().forEach(t => { try { t.stop(); } catch {} });
       streamRef.current = null;
     }
     if (audioCtxRef.current) {
-      audioCtxRef.current.close().catch(() => {});
+      try { audioCtxRef.current.close(); } catch {}
       audioCtxRef.current = null;
     }
     sourceRef.current = null;
+    hpfRef.current = null;
+    compressorRef.current = null;
     gainRef.current = null;
-    filterRef.current = null;
+    eqRef.current = null;
     delayRef.current = null;
     feedbackRef.current = null;
+    monitorGainRef.current = null;
+    masterRef.current = null;
     analyserRef.current = null;
     if (jingleAudioRef.current) {
-      jingleAudioRef.current.pause();
+      try { jingleAudioRef.current.pause(); } catch {}
       jingleAudioRef.current = null;
     }
   }, []);
 
-  // Restore radio volume on close/cleanup
   const restoreRadio = useCallback(() => {
     if (radioAudio) {
       radioAudio.volume = Math.max(0, Math.min(1, originalVolumeRef.current / 100));
@@ -97,6 +115,9 @@ export const LiveMicBooth = ({ open, onClose, radioAudio, baseVolume }: LiveMicB
       originalVolumeRef.current = baseVolume;
       setPhase("idle");
       setCountdown(COUNTDOWN_SECONDS);
+      setErrorMsg(null);
+      setLevel(0);
+      setPeak(0);
     } else {
       cleanupAudio();
       restoreRadio();
@@ -108,7 +129,7 @@ export const LiveMicBooth = ({ open, onClose, radioAudio, baseVolume }: LiveMicB
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  // Apply ducking when phase = live
+  // Ducking gdy live
   useEffect(() => {
     if (!radioAudio) return;
     if (phase === "live") {
@@ -119,129 +140,207 @@ export const LiveMicBooth = ({ open, onClose, radioAudio, baseVolume }: LiveMicB
     }
   }, [phase, musicDuck, radioAudio, restoreRadio]);
 
-  // Apply mic gain & pitch (tonacja) live
+  // Live efekty
   useEffect(() => {
-    if (gainRef.current) gainRef.current.gain.value = micGain / 100;
-    if (filterRef.current) {
-      // Map pitch (-12..+12) to a brightness/warmth tilt EQ instead of true repitch
-      // Negative = warmer (low-shelf boost), positive = brighter (high-shelf boost)
-      filterRef.current.frequency.value = pitch >= 0 ? 4000 : 250;
-      filterRef.current.gain.value = Math.abs(pitch) * 1.2; // up to ~14dB
-      filterRef.current.type = pitch >= 0 ? "highshelf" : "lowshelf";
+    const ctx = audioCtxRef.current;
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    if (gainRef.current) gainRef.current.gain.setTargetAtTime(micGain / 100, now, 0.02);
+    if (eqRef.current) {
+      eqRef.current.frequency.value = pitch >= 0 ? 4000 : 250;
+      eqRef.current.gain.value = Math.abs(pitch) * 1.2;
+      eqRef.current.type = pitch >= 0 ? "highshelf" : "lowshelf";
     }
-    if (feedbackRef.current) feedbackRef.current.gain.value = echo ? 0.25 : 0;
-    if (delayRef.current) delayRef.current.delayTime.value = echo ? 0.25 : 0;
-  }, [micGain, pitch, echo]);
+    if (feedbackRef.current) feedbackRef.current.gain.setTargetAtTime(echo ? 0.22 : 0, now, 0.05);
+    if (delayRef.current) delayRef.current.delayTime.setTargetAtTime(echo ? 0.22 : 0, now, 0.05);
+    if (monitorGainRef.current) monitorGainRef.current.gain.setTargetAtTime(monitor ? 1 : 0, now, 0.02);
+  }, [micGain, pitch, echo, monitor]);
 
-  // ============= start live =============
-  const initMicChain = async (): Promise<boolean> => {
+  // ============= start mikrofonu =============
+  // KLUCZOWE: getUserMedia musi być wywołane SYNCHRONICZNIE w handlerze user-gesture.
+  // Tworzymy AudioContext też w gesture (resume po await jest OK).
+  const initMicChain = useCallback(async (): Promise<boolean> => {
     try {
-      // Request mic FIRST inside user gesture (before any await chains)
+      // 1) Sprawdź zgodę
+      if (navigator.permissions) {
+        try {
+          const status = await navigator.permissions.query({ name: "microphone" as PermissionName });
+          if (status.state === "denied") {
+            setErrorMsg("Mikrofon jest zablokowany w ustawieniach przeglądarki. Odblokuj i odśwież stronę.");
+            toast.error("Mikrofon zablokowany", { description: "Odblokuj go w ustawieniach przeglądarki." });
+            return false;
+          }
+        } catch { /* nie wszystkie przeglądarki wspierają */ }
+      }
+
+      // 2) Mic stream
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
           autoGainControl: false,
+          channelCount: 1,
         },
+        video: false,
       });
       streamRef.current = stream;
 
-      // Create context AFTER mic granted, then resume (Chrome/Safari often start "suspended")
+      // 3) AudioContext
       const Ctx = (window.AudioContext || (window as any).webkitAudioContext) as typeof AudioContext;
-      const ctx = new Ctx();
+      const ctx = new Ctx({ latencyHint: "interactive" });
       audioCtxRef.current = ctx;
       if (ctx.state === "suspended") {
         try { await ctx.resume(); } catch (e) { console.warn("[LiveMicBooth] resume failed", e); }
       }
 
+      // 4) Łańcuch przetwarzania
       const source = ctx.createMediaStreamSource(stream);
+
+      // High-pass 80Hz — wycina rumble/wiatr
+      const hpf = ctx.createBiquadFilter();
+      hpf.type = "highpass";
+      hpf.frequency.value = 80;
+      hpf.Q.value = 0.7;
+
+      // Kompresor — wyrównanie dynamiki głosu
+      const compressor = ctx.createDynamicsCompressor();
+      compressor.threshold.value = -22;
+      compressor.knee.value = 30;
+      compressor.ratio.value = 4;
+      compressor.attack.value = 0.005;
+      compressor.release.value = 0.15;
+
+      // Gain użytkownika
       const gain = ctx.createGain();
       gain.gain.value = micGain / 100;
 
-      const filter = ctx.createBiquadFilter();
-      filter.type = pitch >= 0 ? "highshelf" : "lowshelf";
-      filter.frequency.value = pitch >= 0 ? 4000 : 250;
-      filter.gain.value = Math.abs(pitch) * 1.2;
+      // EQ tilt
+      const eq = ctx.createBiquadFilter();
+      eq.type = pitch >= 0 ? "highshelf" : "lowshelf";
+      eq.frequency.value = pitch >= 0 ? 4000 : 250;
+      eq.gain.value = Math.abs(pitch) * 1.2;
 
+      // Echo (delay + feedback)
       const delay = ctx.createDelay(1.0);
-      delay.delayTime.value = echo ? 0.25 : 0;
+      delay.delayTime.value = echo ? 0.22 : 0;
       const feedback = ctx.createGain();
-      // Lower feedback to prevent runaway howl
-      feedback.gain.value = echo ? 0.25 : 0;
+      feedback.gain.value = echo ? 0.22 : 0;
 
+      // Analyser TAP
       const analyser = ctx.createAnalyser();
-      analyser.fftSize = 512;
+      analyser.fftSize = 1024;
+      analyser.smoothingTimeConstant = 0.6;
 
-      // Master output bus → destination (single connection point, no double-routing)
+      // Brama monitora (domyślnie 0 = brak odsłuchu — eliminuje sprzężenie)
+      const monitorGain = ctx.createGain();
+      monitorGain.gain.value = monitor ? 1 : 0;
+
+      // Master → destination
       const master = ctx.createGain();
       master.gain.value = 1.0;
 
-      // Routing:
-      //  source → gain → filter → analyser (tap, no output)
-      //                  filter → master → destination
-      //                  filter → delay ⇄ feedback → master
-      source.connect(gain);
-      gain.connect(filter);
-      filter.connect(analyser);          // analyser is a TAP only (do not connect to destination)
-      filter.connect(master);
-      filter.connect(delay);
+      // Routing
+      source.connect(hpf);
+      hpf.connect(compressor);
+      compressor.connect(gain);
+      gain.connect(eq);
+      eq.connect(analyser);            // TAP — analyser nie idzie dalej
+      eq.connect(monitorGain);         // sygnał suchy do monitora
+      eq.connect(delay);               // sygnał do delay
       delay.connect(feedback);
       feedback.connect(delay);
-      delay.connect(master);
+      delay.connect(monitorGain);      // mokry sygnał też przez monitor gate
+
+      monitorGain.connect(master);
       master.connect(ctx.destination);
 
-      console.log("[LiveMicBooth] mic chain ready, ctx state:", ctx.state);
-
       sourceRef.current = source;
+      hpfRef.current = hpf;
+      compressorRef.current = compressor;
       gainRef.current = gain;
-      filterRef.current = filter;
+      eqRef.current = eq;
       delayRef.current = delay;
       feedbackRef.current = feedback;
+      monitorGainRef.current = monitorGain;
+      masterRef.current = master;
       analyserRef.current = analyser;
 
-      // VU meter
-      const data = new Uint8Array(analyser.frequencyBinCount);
+      console.log("[LiveMicBooth] ✅ chain ready, ctx:", ctx.state, "tracks:", stream.getAudioTracks().length);
+
+      // VU meter (RMS + peak hold)
+      const data = new Uint8Array(analyser.fftSize);
       const tick = () => {
         if (!analyserRef.current) return;
-        analyserRef.current.getByteFrequencyData(data);
-        const avg = data.reduce((a, b) => a + b, 0) / data.length;
-        setLevel(Math.min(100, (avg / 128) * 100));
+        analyserRef.current.getByteTimeDomainData(data);
+        let sum = 0;
+        let max = 0;
+        for (let i = 0; i < data.length; i++) {
+          const v = (data[i] - 128) / 128;
+          sum += v * v;
+          const av = Math.abs(v);
+          if (av > max) max = av;
+        }
+        const rms = Math.sqrt(sum / data.length);
+        const lvl = Math.min(100, rms * 180);
+        setLevel(lvl);
+
+        const peakNow = Math.min(100, max * 110);
+        const t = performance.now();
+        if (peakNow > peakHoldRef.current || t - peakHoldTimeRef.current > 700) {
+          peakHoldRef.current = peakNow;
+          peakHoldTimeRef.current = t;
+          setPeak(peakNow);
+        }
         rafRef.current = requestAnimationFrame(tick);
       };
       tick();
       return true;
-    } catch (err) {
-      console.error("[LiveMicBooth] mic error", err);
-      toast.error("Brak dostępu do mikrofonu", {
-        description: "Pozwól przeglądarce na dostęp do mikrofonu.",
-      });
+    } catch (err: any) {
+      console.error("[LiveMicBooth] ❌ mic error", err);
+      let msg = "Nieznany błąd mikrofonu.";
+      if (err?.name === "NotAllowedError") msg = "Brak zgody na mikrofon. Pozwól w przeglądarce.";
+      else if (err?.name === "NotFoundError") msg = "Nie znaleziono mikrofonu w systemie.";
+      else if (err?.name === "NotReadableError") msg = "Mikrofon jest używany przez inną aplikację.";
+      else if (err?.name === "OverconstrainedError") msg = "Mikrofon nie spełnia wymagań (constraints).";
+      setErrorMsg(msg);
+      toast.error("Mikrofon", { description: msg });
+      cleanupAudio();
       return false;
     }
-  };
+  }, [micGain, pitch, echo, monitor, cleanupAudio]);
 
-  const startCountdown = async () => {
-    // Optional jingle first
+  const startCountdown = useCallback(async () => {
+    setErrorMsg(null);
+    setPhase("preparing");
+
+    // KROK 1 — mikrofon najpierw (synchroniczne wywołanie w gesture-chain)
+    const ok = await initMicChain();
+    if (!ok) {
+      setPhase("idle");
+      return;
+    }
+
+    // KROK 2 — opcjonalna wejściówka (PO uzyskaniu mikrofonu, żeby nie tracić gestu)
     if (playJingleFirst && jingleUrl) {
       const audio = new Audio(jingleUrl);
       audio.volume = 0.9;
       jingleAudioRef.current = audio;
-      // Duck radio while jingle plays
       if (radioAudio) radioAudio.volume = (originalVolumeRef.current * 0.15) / 100;
       try {
         await audio.play();
         await new Promise<void>((resolve) => {
           audio.onended = () => resolve();
           audio.onerror = () => resolve();
+          // safety timeout 30s
+          setTimeout(() => resolve(), 30_000);
         });
-      } catch {
-        // ignore
+      } catch (e) {
+        console.warn("[LiveMicBooth] jingle play failed", e);
       }
       jingleAudioRef.current = null;
     }
 
-    const ok = await initMicChain();
-    if (!ok) return;
-
+    // KROK 3 — odliczanie
     setPhase("countdown");
     setCountdown(COUNTDOWN_SECONDS);
     countdownRef.current = window.setInterval(() => {
@@ -249,19 +348,20 @@ export const LiveMicBooth = ({ open, onClose, radioAudio, baseVolume }: LiveMicB
         if (prev <= 1) {
           if (countdownRef.current) { clearInterval(countdownRef.current); countdownRef.current = null; }
           setPhase("live");
-          toast.success("🎙️ Jesteś NA ANTENIE", { duration: 2500 });
+          toast.success("🎙️ JESTEŚ NA ANTENIE", { duration: 2500 });
           return 0;
         }
         return prev - 1;
       });
     }, 1000);
-  };
+  }, [initMicChain, playJingleFirst, jingleUrl, radioAudio]);
 
   const stopLive = () => {
     cleanupAudio();
     restoreRadio();
     setPhase("stopped");
     setLevel(0);
+    setPeak(0);
     toast("📻 Mikrofon wyłączony — wracamy do muzyki", { duration: 2000 });
   };
 
@@ -294,16 +394,18 @@ export const LiveMicBooth = ({ open, onClose, radioAudio, baseVolume }: LiveMicB
     setPlayJingleFirst(false);
   };
 
+  const isBusy = phase === "preparing" || phase === "countdown" || phase === "live";
+
   return (
     <Dialog open={open} onOpenChange={(v) => !v && handleClose()}>
-      <DialogContent className="max-w-md bg-gradient-to-br from-[#0F0F1A] via-[#1a1a2e] to-[#0F0F1A] border border-primary/40 text-foreground">
+      <DialogContent className="max-w-md bg-gradient-to-br from-[#0F0F1A] via-[#1a1a2e] to-[#0F0F1A] border border-primary/40 text-foreground max-h-[92vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <RadioIcon className="h-5 w-5 text-primary" />
             Studio Live — Komentarz na antenie
           </DialogTitle>
           <DialogDescription className="text-muted-foreground">
-            Wejdź na antenę z głosem na żywo. Po starcie liczymy 6 sekund, a muzyka zostanie ściszona automatycznie.
+            Wejdź na antenę z głosem na żywo. Po starcie liczymy 6 sekund i muzyka zostanie ściszona automatycznie.
           </DialogDescription>
         </DialogHeader>
 
@@ -336,6 +438,12 @@ export const LiveMicBooth = ({ open, onClose, radioAudio, baseVolume }: LiveMicB
         </AnimatePresence>
 
         <div className="space-y-4 py-2">
+          {errorMsg && (
+            <div className="p-3 rounded-lg border border-red-500/40 bg-red-950/40 text-red-200 text-xs">
+              ⚠️ {errorMsg}
+            </div>
+          )}
+
           {/* ON-AIR badge */}
           {phase === "live" && (
             <motion.div
@@ -355,30 +463,42 @@ export const LiveMicBooth = ({ open, onClose, radioAudio, baseVolume }: LiveMicB
             </motion.div>
           )}
 
-          {/* Mic level */}
-          {(phase === "live" || phase === "countdown") && (
+          {/* VU meter */}
+          {isBusy && (
             <div className="space-y-1">
               <div className="flex items-center justify-between text-xs text-muted-foreground">
                 <span className="flex items-center gap-1"><AudioWaveform className="h-3 w-3" /> Poziom mikrofonu</span>
-                <span className="font-mono">{Math.round(level)}%</span>
+                <span className="font-mono">{Math.round(level)}% · peak {Math.round(peak)}%</span>
               </div>
-              <div className="h-3 rounded-full bg-black/60 overflow-hidden border border-primary/20">
+              <div className="relative h-4 rounded-full bg-black/60 overflow-hidden border border-primary/20">
                 <motion.div
                   className="h-full"
                   style={{
                     background: level > 80
                       ? "linear-gradient(90deg, #22c55e, #facc15, #ef4444)"
-                      : "linear-gradient(90deg, #22c55e, #84cc16)",
+                      : level > 55
+                        ? "linear-gradient(90deg, #22c55e, #84cc16, #facc15)"
+                        : "linear-gradient(90deg, #22c55e, #65a30d)",
                     width: `${level}%`,
                   }}
                   animate={{ width: `${level}%` }}
                   transition={{ duration: 0.05 }}
                 />
+                {/* peak marker */}
+                <div
+                  className="absolute top-0 bottom-0 w-0.5 bg-white shadow-[0_0_6px_white]"
+                  style={{ left: `${peak}%` }}
+                />
               </div>
+              {phase === "live" && level < 2 && (
+                <p className="text-[10px] text-amber-300">
+                  ⚠️ Brak sygnału z mikrofonu — mów głośniej lub sprawdź urządzenie wejściowe.
+                </p>
+              )}
             </div>
           )}
 
-          {/* Music ducking slider */}
+          {/* Music ducking */}
           <div className="space-y-2 p-3 rounded-lg border border-border/30 bg-card/40">
             <div className="flex items-center justify-between">
               <Label className="text-xs flex items-center gap-2">
@@ -387,13 +507,7 @@ export const LiveMicBooth = ({ open, onClose, radioAudio, baseVolume }: LiveMicB
               </Label>
               <span className="text-xs font-mono text-primary">{musicDuck}%</span>
             </div>
-            <Slider
-              value={[musicDuck]}
-              min={0}
-              max={100}
-              step={5}
-              onValueChange={([v]) => setMusicDuck(v)}
-            />
+            <Slider value={[musicDuck]} min={0} max={100} step={5} onValueChange={([v]) => setMusicDuck(v)} />
             <p className="text-[10px] text-muted-foreground">
               0% = całkowite wyciszenie · 100% = bez ściszenia
             </p>
@@ -408,47 +522,42 @@ export const LiveMicBooth = ({ open, onClose, radioAudio, baseVolume }: LiveMicB
               </Label>
               <span className="text-xs font-mono text-primary">{micGain}%</span>
             </div>
-            <Slider
-              value={[micGain]}
-              min={0}
-              max={150}
-              step={5}
-              onValueChange={([v]) => setMicGain(v)}
-            />
+            <Slider value={[micGain]} min={0} max={200} step={5} onValueChange={([v]) => setMicGain(v)} />
           </div>
 
-          {/* Pitch / tonacja */}
+          {/* Tonacja */}
           <div className="space-y-2 p-3 rounded-lg border border-border/30 bg-card/40">
             <div className="flex items-center justify-between">
               <Label className="text-xs">🎚️ Tonacja głosu (warm ↔ bright)</Label>
-              <span className="text-xs font-mono text-primary">
-                {pitch > 0 ? `+${pitch}` : pitch}
-              </span>
+              <span className="text-xs font-mono text-primary">{pitch > 0 ? `+${pitch}` : pitch}</span>
             </div>
-            <Slider
-              value={[pitch]}
-              min={-12}
-              max={12}
-              step={1}
-              onValueChange={([v]) => setPitch(v)}
-            />
-            <p className="text-[10px] text-muted-foreground">
-              Minus = cieplejszy, niższy charakter · Plus = jaśniejszy, ostrzejszy
-            </p>
+            <Slider value={[pitch]} min={-12} max={12} step={1} onValueChange={([v]) => setPitch(v)} />
+            <p className="text-[10px] text-muted-foreground">Minus = cieplej · Plus = jaśniej</p>
           </div>
 
-          {/* Echo toggle */}
-          <div className="flex items-center justify-between p-3 rounded-lg border border-border/30 bg-card/40">
-            <Label className="text-xs">🌊 Echo studyjne</Label>
-            <Button
-              size="sm"
-              variant={echo ? "default" : "outline"}
-              onClick={() => setEcho(!echo)}
-              className="h-7 text-xs"
-            >
-              {echo ? "Włączone" : "Wyłączone"}
-            </Button>
+          {/* Echo + Monitor */}
+          <div className="grid grid-cols-2 gap-2">
+            <div className="flex items-center justify-between p-3 rounded-lg border border-border/30 bg-card/40">
+              <Label className="text-xs">🌊 Echo</Label>
+              <Button size="sm" variant={echo ? "default" : "outline"} onClick={() => setEcho(!echo)} className="h-7 text-xs">
+                {echo ? "ON" : "OFF"}
+              </Button>
+            </div>
+            <div className="flex items-center justify-between p-3 rounded-lg border border-border/30 bg-card/40">
+              <Label className="text-xs flex items-center gap-1">
+                {monitor ? <Headphones className="h-3.5 w-3.5" /> : <HeadphoneOff className="h-3.5 w-3.5" />}
+                Odsłuch
+              </Label>
+              <Button size="sm" variant={monitor ? "default" : "outline"} onClick={() => setMonitor(!monitor)} className="h-7 text-xs">
+                {monitor ? "ON" : "OFF"}
+              </Button>
+            </div>
           </div>
+          {monitor && (
+            <p className="text-[10px] text-amber-300 -mt-2">
+              ⚠️ Włącz odsłuch tylko ze słuchawkami — bez nich powstanie sprzężenie!
+            </p>
+          )}
 
           {/* Wejściówka */}
           <div className="space-y-2 p-3 rounded-lg border border-border/30 bg-card/40">
@@ -458,12 +567,7 @@ export const LiveMicBooth = ({ open, onClose, radioAudio, baseVolume }: LiveMicB
                 Wejściówka (jingle)
               </Label>
               {jingleUrl && (
-                <button
-                  onClick={clearJingle}
-                  className="text-xs text-red-400 hover:text-red-300"
-                >
-                  Usuń
-                </button>
+                <button onClick={clearJingle} className="text-xs text-red-400 hover:text-red-300">Usuń</button>
               )}
             </div>
             {jingleUrl ? (
@@ -484,17 +588,12 @@ export const LiveMicBooth = ({ open, onClose, radioAudio, baseVolume }: LiveMicB
               <label className="flex items-center justify-center gap-2 p-3 rounded-md border-2 border-dashed border-border/50 cursor-pointer hover:border-primary/50 transition-colors">
                 <Upload className="h-4 w-4 text-muted-foreground" />
                 <span className="text-xs text-muted-foreground">Wgraj plik audio (mp3/wav)</span>
-                <input
-                  type="file"
-                  accept="audio/*"
-                  onChange={handleJingleUpload}
-                  className="hidden"
-                />
+                <input type="file" accept="audio/*" onChange={handleJingleUpload} className="hidden" />
               </label>
             )}
           </div>
 
-          {/* Action buttons */}
+          {/* Akcje */}
           <div className="flex gap-2 pt-2">
             {phase === "idle" || phase === "stopped" ? (
               <Button
@@ -514,15 +613,11 @@ export const LiveMicBooth = ({ open, onClose, radioAudio, baseVolume }: LiveMicB
               </Button>
             ) : (
               <Button disabled className="flex-1 h-12 gap-2">
-                Odliczam...
+                {phase === "preparing" ? "Inicjalizuję mikrofon..." : "Odliczam..."}
               </Button>
             )}
 
-            <Button
-              variant="outline"
-              onClick={handleClose}
-              className="h-12 gap-2"
-            >
+            <Button variant="outline" onClick={handleClose} className="h-12 gap-2">
               <X className="h-4 w-4" />
             </Button>
           </div>
