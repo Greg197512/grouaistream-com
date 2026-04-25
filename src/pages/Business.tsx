@@ -413,10 +413,29 @@ export default function BusinessPage() {
             }}
             className="border-t border-border/60 p-3 flex gap-2 bg-background/40"
           >
+            <Button
+              type="button"
+              variant={voiceEnabled ? "default" : "outline"}
+              onClick={toggleVoice}
+              className={cn("shrink-0", voiceEnabled && "bg-cyan-600 hover:bg-cyan-500 text-white")}
+              title={voiceEnabled ? "Wyłącz odpowiedzi głosowe Aurory" : "Włącz odpowiedzi głosowe Aurory"}
+            >
+              {voiceEnabled ? <Volume2 className="h-4 w-4" /> : <MicOff className="h-4 w-4" />}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={startVoiceInput}
+              disabled={loading || listening}
+              className={cn("shrink-0 border-cyan-400/30", listening && "bg-cyan-400/10 text-cyan-300")}
+              title="Mów do Aurory"
+            >
+              {listening ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mic className="h-4 w-4" />}
+            </Button>
             <Input
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Napisz do Aurory…"
+              placeholder={listening ? "Słucham…" : "Napisz albo powiedz Aurorze, czego potrzebujesz…"}
               disabled={loading}
               className="flex-1 bg-background/80"
             />
