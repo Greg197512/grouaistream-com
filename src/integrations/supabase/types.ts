@@ -499,6 +499,7 @@ export type Database = {
           payment_status: string
           price_eur: number | null
           priority: number
+          progress_pct: number
           result: Json | null
           result_url: string | null
           service_type: string
@@ -507,6 +508,7 @@ export type Database = {
           status: string
           updated_at: string
           user_id: string | null
+          workflow_map: Json | null
         }
         Insert: {
           ai_plan?: Json | null
@@ -531,6 +533,7 @@ export type Database = {
           payment_status?: string
           price_eur?: number | null
           priority?: number
+          progress_pct?: number
           result?: Json | null
           result_url?: string | null
           service_type: string
@@ -539,6 +542,7 @@ export type Database = {
           status?: string
           updated_at?: string
           user_id?: string | null
+          workflow_map?: Json | null
         }
         Update: {
           ai_plan?: Json | null
@@ -563,6 +567,7 @@ export type Database = {
           payment_status?: string
           price_eur?: number | null
           priority?: number
+          progress_pct?: number
           result?: Json | null
           result_url?: string | null
           service_type?: string
@@ -571,8 +576,180 @@ export type Database = {
           status?: string
           updated_at?: string
           user_id?: string | null
+          workflow_map?: Json | null
         }
         Relationships: []
+      }
+      aurora_calendar_events: {
+        Row: {
+          all_day: boolean
+          color: string | null
+          created_at: string
+          description: string | null
+          ends_at: string | null
+          event_type: string
+          id: string
+          order_id: string | null
+          remind_before_minutes: number | null
+          reminded_at: string | null
+          starts_at: string
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          all_day?: boolean
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          ends_at?: string | null
+          event_type?: string
+          id?: string
+          order_id?: string | null
+          remind_before_minutes?: number | null
+          reminded_at?: string | null
+          starts_at: string
+          status?: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          all_day?: boolean
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          ends_at?: string | null
+          event_type?: string
+          id?: string
+          order_id?: string | null
+          remind_before_minutes?: number | null
+          reminded_at?: string | null
+          starts_at?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aurora_calendar_events_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "aurora_business_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      aurora_change_requests: {
+        Row: {
+          applied_at: string | null
+          aurora_analysis: Json | null
+          aurora_proposal: string | null
+          client_message: string
+          client_response: string | null
+          created_at: string
+          id: string
+          order_id: string
+          proposal_cons: string[] | null
+          proposal_eta_minutes: number | null
+          proposal_extra_cost_eur: number | null
+          proposal_pros: string[] | null
+          status: string
+          updated_at: string
+          user_id: string
+          web_research: Json | null
+        }
+        Insert: {
+          applied_at?: string | null
+          aurora_analysis?: Json | null
+          aurora_proposal?: string | null
+          client_message: string
+          client_response?: string | null
+          created_at?: string
+          id?: string
+          order_id: string
+          proposal_cons?: string[] | null
+          proposal_eta_minutes?: number | null
+          proposal_extra_cost_eur?: number | null
+          proposal_pros?: string[] | null
+          status?: string
+          updated_at?: string
+          user_id: string
+          web_research?: Json | null
+        }
+        Update: {
+          applied_at?: string | null
+          aurora_analysis?: Json | null
+          aurora_proposal?: string | null
+          client_message?: string
+          client_response?: string | null
+          created_at?: string
+          id?: string
+          order_id?: string
+          proposal_cons?: string[] | null
+          proposal_eta_minutes?: number | null
+          proposal_extra_cost_eur?: number | null
+          proposal_pros?: string[] | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+          web_research?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aurora_change_requests_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "aurora_business_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      aurora_client_notes: {
+        Row: {
+          content_md: string
+          created_at: string
+          id: string
+          order_id: string | null
+          pinned: boolean
+          tags: string[] | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content_md?: string
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          pinned?: boolean
+          tags?: string[] | null
+          title?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content_md?: string
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          pinned?: boolean
+          tags?: string[] | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aurora_client_notes_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "aurora_business_orders"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       aurora_compliance_log: {
         Row: {
@@ -853,6 +1030,101 @@ export type Database = {
           {
             foreignKeyName: "aurora_intake_drafts_resulting_order_id_fkey"
             columns: ["resulting_order_id"]
+            isOneToOne: false
+            referencedRelation: "aurora_business_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      aurora_invoices: {
+        Row: {
+          buyer_address: string | null
+          buyer_company: string | null
+          buyer_email: string | null
+          buyer_name: string
+          buyer_tax_id: string | null
+          created_at: string
+          currency: string
+          due_at: string | null
+          id: string
+          invoice_number: string
+          invoice_type: string
+          issued_at: string | null
+          items: Json
+          order_id: string | null
+          paid_at: string | null
+          pdf_url: string | null
+          seller_address: string | null
+          seller_name: string
+          seller_tax_id: string | null
+          status: string
+          subtotal_eur: number
+          total_eur: number
+          updated_at: string
+          user_id: string
+          vat_amount_eur: number
+          vat_rate: number
+        }
+        Insert: {
+          buyer_address?: string | null
+          buyer_company?: string | null
+          buyer_email?: string | null
+          buyer_name: string
+          buyer_tax_id?: string | null
+          created_at?: string
+          currency?: string
+          due_at?: string | null
+          id?: string
+          invoice_number: string
+          invoice_type?: string
+          issued_at?: string | null
+          items?: Json
+          order_id?: string | null
+          paid_at?: string | null
+          pdf_url?: string | null
+          seller_address?: string | null
+          seller_name?: string
+          seller_tax_id?: string | null
+          status?: string
+          subtotal_eur?: number
+          total_eur?: number
+          updated_at?: string
+          user_id: string
+          vat_amount_eur?: number
+          vat_rate?: number
+        }
+        Update: {
+          buyer_address?: string | null
+          buyer_company?: string | null
+          buyer_email?: string | null
+          buyer_name?: string
+          buyer_tax_id?: string | null
+          created_at?: string
+          currency?: string
+          due_at?: string | null
+          id?: string
+          invoice_number?: string
+          invoice_type?: string
+          issued_at?: string | null
+          items?: Json
+          order_id?: string | null
+          paid_at?: string | null
+          pdf_url?: string | null
+          seller_address?: string | null
+          seller_name?: string
+          seller_tax_id?: string | null
+          status?: string
+          subtotal_eur?: number
+          total_eur?: number
+          updated_at?: string
+          user_id?: string
+          vat_amount_eur?: number
+          vat_rate?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aurora_invoices_order_id_fkey"
+            columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "aurora_business_orders"
             referencedColumns: ["id"]
@@ -1520,6 +1792,163 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      aurora_order_plan_steps: {
+        Row: {
+          assigned_worker_id: string | null
+          completed_at: string | null
+          created_at: string
+          depends_on: string[] | null
+          description: string | null
+          error_message: string | null
+          eta_minutes: number | null
+          id: string
+          order_id: string
+          progress_pct: number
+          result: Json | null
+          scope: string | null
+          started_at: string | null
+          status: string
+          step_index: number
+          title: string
+          updated_at: string
+          workflow_id: string | null
+        }
+        Insert: {
+          assigned_worker_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          depends_on?: string[] | null
+          description?: string | null
+          error_message?: string | null
+          eta_minutes?: number | null
+          id?: string
+          order_id: string
+          progress_pct?: number
+          result?: Json | null
+          scope?: string | null
+          started_at?: string | null
+          status?: string
+          step_index: number
+          title: string
+          updated_at?: string
+          workflow_id?: string | null
+        }
+        Update: {
+          assigned_worker_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          depends_on?: string[] | null
+          description?: string | null
+          error_message?: string | null
+          eta_minutes?: number | null
+          id?: string
+          order_id?: string
+          progress_pct?: number
+          result?: Json | null
+          scope?: string | null
+          started_at?: string | null
+          status?: string
+          step_index?: number
+          title?: string
+          updated_at?: string
+          workflow_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aurora_order_plan_steps_assigned_worker_id_fkey"
+            columns: ["assigned_worker_id"]
+            isOneToOne: false
+            referencedRelation: "aurora_workers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "aurora_order_plan_steps_assigned_worker_id_fkey"
+            columns: ["assigned_worker_id"]
+            isOneToOne: false
+            referencedRelation: "aurora_workforce_overview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "aurora_order_plan_steps_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "aurora_business_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      aurora_partner_companies: {
+        Row: {
+          address: string | null
+          city: string | null
+          company_name: string
+          contacts: Json | null
+          country: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          industry: string | null
+          last_contact_at: string | null
+          legal_name: string | null
+          notes: string | null
+          partnership_status: string
+          partnership_value_eur: number | null
+          primary_email: string | null
+          primary_phone: string | null
+          registry_number: string | null
+          tags: string[] | null
+          tax_id: string | null
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          company_name: string
+          contacts?: Json | null
+          country?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          industry?: string | null
+          last_contact_at?: string | null
+          legal_name?: string | null
+          notes?: string | null
+          partnership_status?: string
+          partnership_value_eur?: number | null
+          primary_email?: string | null
+          primary_phone?: string | null
+          registry_number?: string | null
+          tags?: string[] | null
+          tax_id?: string | null
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          company_name?: string
+          contacts?: Json | null
+          country?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          industry?: string | null
+          last_contact_at?: string | null
+          legal_name?: string | null
+          notes?: string | null
+          partnership_status?: string
+          partnership_value_eur?: number | null
+          primary_email?: string | null
+          primary_phone?: string | null
+          registry_number?: string | null
+          tags?: string[] | null
+          tax_id?: string | null
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: []
       }
       aurora_partnerships: {
         Row: {
