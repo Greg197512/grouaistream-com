@@ -335,26 +335,39 @@ export default function BusinessPage() {
 
       {/* STREAM-NATIVE OFFER */}
       <section className="relative max-w-6xl mx-auto px-4 py-12">
-        <div className="rounded-3xl border border-border bg-gradient-to-br from-card/80 via-card/40 to-transparent backdrop-blur p-8 md:p-12">
-          <div className="text-center mb-8">
-            <Badge className="mb-3 bg-blue-500/15 text-blue-300 border-blue-400/30">Tylko u nas</Badge>
-            <h2 className="text-2xl md:text-3xl font-bold mb-2">Dla klientów ze świata muzyki</h2>
-            <p className="text-muted-foreground text-sm">GrouAI Stream daje to, czego nie ma żadna agencja SEO.</p>
-          </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {STREAM_OFFER.map((o, i) => {
-              const Icon = o.icon;
-              return (
-                <div key={i} className="flex gap-3 items-start p-4 rounded-xl bg-background/40 border border-border/50">
-                  <Icon className="h-5 w-5 text-cyan-300 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <div className="font-semibold text-sm">{o.label}</div>
-                    <div className="text-xs text-muted-foreground">{o.desc}</div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+        <div className="relative group">
+          <div className="absolute -inset-[1px] rounded-3xl bg-gradient-to-br from-cyan-400/30 via-blue-500/20 to-purple-500/30 opacity-70 blur-[3px]" />
+          <div className="relative rounded-3xl border border-cyan-400/20 bg-gradient-to-br from-card/95 via-card/70 to-background/60 backdrop-blur-xl p-8 md:p-12 shadow-[0_20px_70px_-20px_hsl(210_100%_30%/0.5),inset_0_1px_0_hsl(190_100%_70%/0.1)] overflow-hidden">
+            <div className="absolute top-0 right-0 h-64 w-64 bg-cyan-400/10 blur-3xl rounded-full -translate-y-20 translate-x-20" />
+            <div className="absolute bottom-0 left-0 h-64 w-64 bg-blue-500/10 blur-3xl rounded-full translate-y-20 -translate-x-20" />
+            <div className="relative text-center mb-8">
+              <Badge className="mb-3 bg-blue-500/15 text-blue-300 border-blue-400/40 shadow-[0_0_20px_hsl(210_100%_50%/0.3)]">Tylko u nas</Badge>
+              <h2 className="text-2xl md:text-3xl font-bold mb-2 bg-gradient-to-r from-foreground via-cyan-100 to-blue-200 bg-clip-text text-transparent">Dla klientów ze świata muzyki</h2>
+              <p className="text-muted-foreground text-sm">GrouAI Stream daje to, czego nie ma żadna agencja SEO.</p>
+            </div>
+            <div className="relative grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {STREAM_OFFER.map((o, i) => {
+                const Icon = o.icon;
+                return (
+                  <motion.div
+                    key={i}
+                    whileHover={{ y: -4, scale: 1.02 }}
+                    className="group/card flex gap-3 items-start p-4 rounded-xl bg-gradient-to-br from-background/80 to-background/40 border border-cyan-400/15 hover:border-cyan-400/50 backdrop-blur shadow-[0_4px_20px_-8px_hsl(210_100%_30%/0.4)] hover:shadow-[0_8px_30px_-8px_hsl(190_100%_50%/0.5)] transition-all"
+                  >
+                    <div className="relative flex-shrink-0">
+                      <div className="absolute inset-0 bg-cyan-400/30 blur-md rounded-lg" />
+                      <div className="relative h-9 w-9 rounded-lg bg-gradient-to-br from-cyan-500/20 to-blue-600/20 border border-cyan-400/40 flex items-center justify-center">
+                        <Icon className="h-4 w-4 text-cyan-200 drop-shadow-[0_0_6px_hsl(190_100%_50%/0.8)]" />
+                      </div>
+                    </div>
+                    <div>
+                      <div className="font-semibold text-sm">{o.label}</div>
+                      <div className="text-xs text-muted-foreground">{o.desc}</div>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
           <div className="text-center mt-8">
             <Link to="/sponsor">
               <Button variant="ghost" className="text-cyan-300 hover:text-cyan-200 hover:bg-cyan-400/10">
