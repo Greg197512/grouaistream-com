@@ -370,6 +370,9 @@ export const BrainPanel = () => {
         <TabsContent value="aurora">
           <AuroraPanel />
         </TabsContent>
+        <TabsContent value="singularity">
+          <SingularityPanel />
+        </TabsContent>
       </Tabs>
     </div>
   );
