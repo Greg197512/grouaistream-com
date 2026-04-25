@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { speak, stopSpeaking } from "@/utils/tts";
 import businessHeroBg from "@/assets/business-hero-bg.jpg";
+import { AuroraBackground } from "@/components/effects/AuroraBackground";
 
 type ChatMessage = { role: "user" | "assistant"; content: string; ts: number };
 type BriefField = { key: string; label: string; description: string; required: boolean; value: any; status: "collected" | "missing_required" | "missing_optional" };
@@ -197,6 +198,8 @@ export default function BusinessPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground relative overflow-hidden">
+      {/* Animated Aurora background (global look) */}
+      <AuroraBackground />
       {/* Cinematic hero background image */}
       <div className="absolute inset-0 -z-10">
         <img
