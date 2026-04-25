@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Map, MessageCircle, FileText, Calendar as CalIcon, NotebookPen, Calculator, Building2, Sparkles, ArrowRight, Brain } from "lucide-react";
+import { Loader2, Map, MessageCircle, FileText, Calendar as CalIcon, NotebookPen, Calculator, Building2, Sparkles, ArrowRight } from "lucide-react";
 import { OrderWorkflowMap } from "@/components/dashboard/OrderWorkflowMap";
 import { AuroraNegotiatorPanel } from "@/components/dashboard/AuroraNegotiatorPanel";
 import { InvoicesPanel } from "@/components/dashboard/InvoicesPanel";
@@ -16,7 +16,6 @@ import { CalendarPanel } from "@/components/dashboard/CalendarPanel";
 import { NotesPanel } from "@/components/dashboard/NotesPanel";
 import { CalculatorPanel } from "@/components/dashboard/CalculatorPanel";
 import { PartnerCRMPanel } from "@/components/dashboard/PartnerCRMPanel";
-import { SingularityPanel } from "@/components/dashboard/SingularityPanel";
 import auroraAvatar from "@/assets/aurora-avatar.jpg";
 import { toast } from "sonner";
 
