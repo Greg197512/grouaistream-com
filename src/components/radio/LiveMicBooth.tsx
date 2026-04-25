@@ -27,6 +27,15 @@ type Phase = "idle" | "preparing" | "countdown" | "live" | "stopped";
 
 const COUNTDOWN_SECONDS = 6;
 
+const buildMicConstraints = (deviceId: string): MediaTrackConstraints => ({
+  ...(deviceId && deviceId !== "default" ? { deviceId: { exact: deviceId } } : {}),
+  echoCancellation: { ideal: true },
+  noiseSuppression: { ideal: true },
+  autoGainControl: { ideal: true },
+  channelCount: { ideal: 1 },
+  sampleRate: { ideal: 48000 },
+});
+
 /**
  * LiveMicBooth — Profesjonalny pulpit live komentarza radiowego.
  *
@@ -56,6 +65,9 @@ export const LiveMicBooth = ({ open, onClose, radioAudio, baseVolume }: LiveMicB
   const [jingleName, setJingleName] = useState<string | null>(null);
   const [playJingleFirst, setPlayJingleFirst] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [micDevices, setMicDevices] = useState<MediaDeviceInfo[]>([]);
+  const [selectedDeviceId, setSelectedDeviceId] = useState("default");
+  const [activeMicLabel, setActiveMicLabel] = useState<string | null>(null);
 
   const streamRef = useRef<MediaStream | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
@@ -75,6 +87,16 @@ export const LiveMicBooth = ({ open, onClose, radioAudio, baseVolume }: LiveMicB
   const originalVolumeRef = useRef<number>(baseVolume);
   const peakHoldRef = useRef<number>(0);
   const peakHoldTimeRef = useRef<number>(0);
+
+  const refreshMicDevices = useCallback(async () => {
+    if (!navigator.mediaDevices?.enumerateDevices) return;
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      setMicDevices(devices.filter((device) => device.kind === "audioinput"));
+    } catch (err) {
+      console.warn("[LiveMicBooth] enumerateDevices failed", err);
+    }
+  }, []);
 
   // ============= cleanup =============
   const cleanupAudio = useCallback(() => {
@@ -116,8 +138,10 @@ export const LiveMicBooth = ({ open, onClose, radioAudio, baseVolume }: LiveMicB
       setPhase("idle");
       setCountdown(COUNTDOWN_SECONDS);
       setErrorMsg(null);
+      setActiveMicLabel(null);
       setLevel(0);
       setPeak(0);
+      refreshMicDevices();
     } else {
       cleanupAudio();
       restoreRadio();
@@ -128,6 +152,12 @@ export const LiveMicBooth = ({ open, onClose, radioAudio, baseVolume }: LiveMicB
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+
+  useEffect(() => {
+    if (!open || !navigator.mediaDevices?.addEventListener) return;
+    navigator.mediaDevices.addEventListener("devicechange", refreshMicDevices);
+    return () => navigator.mediaDevices.removeEventListener("devicechange", refreshMicDevices);
+  }, [open, refreshMicDevices]);
 
   // Ducking gdy live
   useEffect(() => {
