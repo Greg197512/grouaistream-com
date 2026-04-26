@@ -15,7 +15,7 @@ const corsHeaders = {
 };
 
 const LOVABLE_AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
-const BRAIN_MODEL = "google/gemini-2.5-pro";
+const BRAIN_MODEL = "openai/gpt-5.2";
 
 const MAX_EVENTS_PER_TICK = 50;
 const MEMORY_RECALL_COUNT = 8;
@@ -195,6 +195,7 @@ Zdecyduj co zapamiętać i jakich agentów wezwać. Odpowiedz CZYSTYM JSON.`;
           { role: "user", content: userPrompt },
         ],
         response_format: { type: "json_object" },
+        reasoning: { effort: "high" },
       }),
     });
 
