@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { TrackMixer } from "./TrackMixer";
 import { VoiceRecorder } from "./VoiceRecorder";
 import { uploadToR2 } from "@/lib/r2Upload";
+import grokAvatar from "@/assets/grok-avatar.jpg";
 
 type AIEngine = "our_ai" | "suno" | "elevenlabs";
 
@@ -292,9 +293,17 @@ export const StudioGrokDock = () => {
           >
             <div className="flex items-center justify-between border-b border-border/50 bg-gradient-to-r from-primary/15 via-purple-500/10 to-transparent px-3 py-1.5 select-none">
               <div className="flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-primary" />
-                <span className="text-xs font-semibold tracking-tight">GrouAI Studio</span>
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                <div className="relative">
+                  <img
+                    src={grokAvatar}
+                    alt="GrAIstudio AI assistant avatar"
+                    width={28}
+                    height={28}
+                    className="h-7 w-7 rounded-full object-cover ring-2 ring-primary/60 shadow-[0_0_15px_hsl(var(--primary)/0.6)]"
+                  />
+                  <span className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full bg-emerald-400 ring-2 ring-background animate-pulse" />
+                </div>
+                <span className="text-xs font-semibold tracking-tight bg-gradient-to-r from-primary to-purple-400 bg-clip-text text-transparent">GrAIstudio</span>
               </div>
 
               {/* Engine segmented control + close */}
