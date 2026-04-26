@@ -136,31 +136,53 @@ export default function BlogIndex() {
           </div>
         </header>
 
-        {/* SEARCH + CATEGORIES */}
-        <div className="mb-8 space-y-4">
-          <div className="relative max-w-xl mx-auto">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Szukaj artykułów…"
-              className="pl-10 bg-card/40 border-border focus-visible:border-primary/50 focus-visible:ring-primary/20"
-            />
-          </div>
-          <div className="flex flex-wrap gap-2 justify-center">
-            {CATEGORIES.map((c) => (
-              <button
-                key={c.id}
-                onClick={() => setActiveCat(c.id)}
-                className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all border ${
-                  activeCat === c.id
-                    ? "bg-primary text-primary-foreground border-primary shadow-[0_0_20px_hsl(var(--primary)/0.4)]"
-                    : "bg-card/30 text-muted-foreground border-border hover:border-primary/40 hover:text-foreground"
-                }`}
-              >
-                {catLabel(c.id, language)}
-              </button>
-            ))}
+        {/* SEARCH */}
+        <div className="mb-5 relative max-w-xl mx-auto">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Szukaj artykułów…"
+            className="pl-10 bg-card/40 border-border focus-visible:border-primary/50 focus-visible:ring-primary/20"
+          />
+        </div>
+
+        {/* TABS — sticky technical category navigation */}
+        <div className="sticky top-2 z-20 mb-8 -mx-2 px-2">
+          <div className="overflow-x-auto rounded-2xl border border-border/60 bg-background/85 backdrop-blur-xl shadow-[0_4px_30px_hsl(var(--primary)/0.08)]">
+            <div className="flex items-stretch gap-1 p-1.5 min-w-max">
+              {CATEGORIES.map((c) => {
+                const count = c.id === "all"
+                  ? posts.length
+                  : posts.filter((p) => p.category === c.id).length;
+                const active = activeCat === c.id;
+                return (
+                  <button
+                    key={c.id}
+                    onClick={() => setActiveCat(c.id)}
+                    disabled={count === 0 && c.id !== "all"}
+                    className={`group flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all border ${
+                      active
+                        ? "bg-gradient-to-r from-primary to-accent text-primary-foreground border-primary shadow-[0_0_20px_hsl(var(--primary)/0.4)]"
+                        : count === 0
+                        ? "bg-transparent text-muted-foreground/40 border-transparent cursor-not-allowed"
+                        : "bg-card/40 text-muted-foreground border-border/40 hover:border-primary/40 hover:text-foreground hover:bg-card/70"
+                    }`}
+                  >
+                    <span>{catLabel(c.id, language)}</span>
+                    <span
+                      className={`inline-flex items-center justify-center min-w-[22px] h-5 px-1.5 rounded-full text-[10px] font-bold tabular-nums ${
+                        active
+                          ? "bg-primary-foreground/20 text-primary-foreground"
+                          : "bg-muted/60 text-muted-foreground group-hover:bg-primary/20 group-hover:text-primary"
+                      }`}
+                    >
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
 
