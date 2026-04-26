@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Map, MessageCircle, FileText, Calendar as CalIcon, NotebookPen, Calculator, Building2, Sparkles, ArrowRight } from "lucide-react";
+import { Loader2, Map, MessageCircle, FileText, Calendar as CalIcon, NotebookPen, Calculator, Building2, Sparkles, ArrowRight, FileEdit, Sheet, BarChart3, GitBranch } from "lucide-react";
 import { OrderWorkflowMap } from "@/components/dashboard/OrderWorkflowMap";
 import { AuroraNegotiatorPanel } from "@/components/dashboard/AuroraNegotiatorPanel";
 import { InvoicesPanel } from "@/components/dashboard/InvoicesPanel";
@@ -16,6 +16,10 @@ import { CalendarPanel } from "@/components/dashboard/CalendarPanel";
 import { NotesPanel } from "@/components/dashboard/NotesPanel";
 import { CalculatorPanel } from "@/components/dashboard/CalculatorPanel";
 import { PartnerCRMPanel } from "@/components/dashboard/PartnerCRMPanel";
+import { WordPadPanel } from "@/components/dashboard/WordPadPanel";
+import { ExcelLitePanel } from "@/components/dashboard/ExcelLitePanel";
+import { BotsLiveCharts } from "@/components/dashboard/BotsLiveCharts";
+import { WorkflowTreePanel } from "@/components/dashboard/WorkflowTreePanel";
 import auroraAvatar from "@/assets/aurora-avatar.jpg";
 import { toast } from "sonner";
 
@@ -153,12 +157,16 @@ const ClientDashboard = () => {
 
         {/* Tabs */}
         <Tabs value={tab} onValueChange={setTab} className="space-y-4">
-          <TabsList className="grid grid-cols-4 md:grid-cols-7 w-full h-auto">
+          <TabsList className="flex flex-wrap w-full h-auto gap-1 justify-start">
             <TabsTrigger value="workflow" className="gap-1 text-xs"><Map className="w-3 h-3" />Mapa</TabsTrigger>
+            <TabsTrigger value="tree" className="gap-1 text-xs"><GitBranch className="w-3 h-3" />Drzewo</TabsTrigger>
+            <TabsTrigger value="charts" className="gap-1 text-xs"><BarChart3 className="w-3 h-3" />Wykresy botów</TabsTrigger>
             <TabsTrigger value="aurora" className="gap-1 text-xs"><MessageCircle className="w-3 h-3" />Aurora</TabsTrigger>
             <TabsTrigger value="invoices" className="gap-1 text-xs"><FileText className="w-3 h-3" />Faktury</TabsTrigger>
             <TabsTrigger value="calendar" className="gap-1 text-xs"><CalIcon className="w-3 h-3" />Kalendarz</TabsTrigger>
             <TabsTrigger value="notes" className="gap-1 text-xs"><NotebookPen className="w-3 h-3" />Notatki</TabsTrigger>
+            <TabsTrigger value="wordpad" className="gap-1 text-xs"><FileEdit className="w-3 h-3" />WordPad</TabsTrigger>
+            <TabsTrigger value="excel" className="gap-1 text-xs"><Sheet className="w-3 h-3" />Excel-lite</TabsTrigger>
             <TabsTrigger value="calc" className="gap-1 text-xs"><Calculator className="w-3 h-3" />Kalkulator</TabsTrigger>
             <TabsTrigger value="crm" className="gap-1 text-xs"><Building2 className="w-3 h-3" />CRM</TabsTrigger>
           </TabsList>
@@ -172,6 +180,12 @@ const ClientDashboard = () => {
               />
             )}
           </TabsContent>
+          <TabsContent value="tree">
+            {activeOrder && <WorkflowTreePanel orderId={activeOrder.id} />}
+          </TabsContent>
+          <TabsContent value="charts">
+            {activeOrder && <BotsLiveCharts orderId={activeOrder.id} />}
+          </TabsContent>
           <TabsContent value="aurora">
             {activeOrder && <AuroraNegotiatorPanel orderId={activeOrder.id} />}
           </TabsContent>
@@ -180,6 +194,8 @@ const ClientDashboard = () => {
           </TabsContent>
           <TabsContent value="calendar"><CalendarPanel orderId={activeOrderId} /></TabsContent>
           <TabsContent value="notes"><NotesPanel orderId={activeOrderId} /></TabsContent>
+          <TabsContent value="wordpad"><WordPadPanel /></TabsContent>
+          <TabsContent value="excel"><ExcelLitePanel /></TabsContent>
           <TabsContent value="calc"><CalculatorPanel /></TabsContent>
           <TabsContent value="crm"><PartnerCRMPanel /></TabsContent>
         </Tabs>
