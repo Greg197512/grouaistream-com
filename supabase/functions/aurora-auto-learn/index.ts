@@ -16,9 +16,10 @@ async function generateSubtopics(scope: string, count: number): Promise<string[]
     method: "POST",
     headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: "google/gemini-3-flash-preview",
+      model: "openai/gpt-5.2",
+      reasoning: { effort: "low" },
       messages: [
-        { role: "system", content: "Jesteś planistą nauki Aurory. Z opisanego zakresu wygeneruj listę konkretnych, wyszukiwalnych w internecie podtematów po polsku. Każdy podtemat = jedno hasło do wyszukania, max 8 słów." },
+        { role: "system", content: "Jesteś planistą nauki Aurory. Z opisanego zakresu wygeneruj listę konkretnych, wyszukiwalnych w internecie podtematów po polsku. Każdy podtemat = jedno hasło do wyszukania, max 8 słów. Myśl strategicznie — pokrywaj różne kąty (techniczny, biznesowy, kulturowy, kontrowersyjny)." },
         { role: "user", content: `Zakres nauki: ${scope}\n\nWygeneruj dokładnie ${count} różnorodnych podtematów pokrywających ten zakres.` },
       ],
       tools: [{

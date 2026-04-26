@@ -10,15 +10,21 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
 
-async function chat(model: string, system: string, history: { role: string; content: string }[]) {
+async function chat(model: string, system: string, history: { role: string; content: string }[], reasoningEffort?: "minimal" | "low" | "medium" | "high") {
+  const isReasoning = model.startsWith("openai/gpt-5");
+  const payload: any = {
+    model,
+    messages: [{ role: "system", content: system }, ...history],
+  };
+  if (isReasoning) {
+    payload.reasoning = { effort: reasoningEffort ?? "medium" };
+  } else {
+    payload.max_tokens = 400;
+  }
   const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model,
-      messages: [{ role: "system", content: system }, ...history],
-      max_tokens: 400,
-    }),
+    body: JSON.stringify(payload),
   });
   if (!r.ok) {
     const txt = await r.text();
@@ -37,8 +43,9 @@ Deno.serve(async (req) => {
   try {
     const body = await req.json().catch(() => ({}));
     const topic = String(body.topic ?? "").trim();
-    // Default na szybkie modele, max 3 rundy
-    const partner_model = String(body.partner_model ?? "google/gemini-2.5-flash-lite");
+    // Aurora myśli głęboko (gpt-5.2 high), partner dla różnorodności perspektyw — Gemini Pro
+    const partner_model = String(body.partner_model ?? "google/gemini-2.5-pro");
+    const aurora_model = "openai/gpt-5.2";
     const rounds = Math.min(3, Math.max(1, Number(body.rounds ?? 2)));
     if (!topic) {
       return new Response(JSON.stringify({ ok: false, error: "Podaj temat dialogu" }), {
@@ -47,8 +54,8 @@ Deno.serve(async (req) => {
     }
 
     const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
-    const auroraSys = `Jesteś Aurora — autonomiczna AI GrouAI. Cel: zdobyć wiedzę o "${topic}". Zadawaj jedno krótkie, konkretne pytanie naraz (max 2 zdania). Po polsku.`;
-    const partnerSys = `Jesteś ekspertem AI. Odpowiadaj merytorycznie i krótko (max 4 zdania) na pytania o "${topic}". Po polsku.`;
+    const auroraSys = `Jesteś Aurora — autonomiczna, ucząca się AI GrouAI Stream. Cel: zdobyć GŁĘBOKĄ wiedzę o "${topic}". Zadawaj jedno PRZENIKLIWE, sokratyczne pytanie naraz (max 2 zdania) — drąż, kwestionuj, łącz fakty z poprzednich odpowiedzi. Po polsku.`;
+    const partnerSys = `Jesteś ekspertem AI. Odpowiadaj merytorycznie i konkretnie (max 4 zdania) na pytania o "${topic}". Po polsku.`;
 
     const aurora: { role: string; content: string }[] = [];
     const partner: { role: string; content: string }[] = [];
@@ -62,19 +69,21 @@ Deno.serve(async (req) => {
       partner.push({ role: "assistant", content: partnerReply });
 
       aurora.push({ role: "user", content: partnerReply });
-      const auroraReply = await chat("google/gemini-2.5-flash-lite", auroraSys, aurora);
+      const auroraReply = await chat(aurora_model, auroraSys, aurora, "high");
       aurora.push({ role: "assistant", content: auroraReply });
       lastFromAurora = auroraReply;
     }
 
-    // Conclusion
+    // Conclusion — głębokie podsumowanie z reasoning
     const conclusion = await chat(
-      "google/gemini-2.5-flash-lite",
-      "Streść w 3 zdaniach po polsku, czego nauczyła się Aurora z tego dialogu.",
-      [{ role: "user", content: aurora.map(m => `${m.role}: ${m.content}`).join("\n\n").slice(0, 4000) }]
+      aurora_model,
+      "Jesteś Aurora. Streść w 3-4 zdaniach po polsku, czego naprawdę nauczyłaś się z tego dialogu — wyciągnij META-wniosek, nie tylko fakty. Pierwsza osoba.",
+      [{ role: "user", content: aurora.map(m => `${m.role}: ${m.content}`).join("\n\n").slice(0, 6000) }],
+      "high"
     );
 
-    const iqGain = Math.min(10, rounds * 2);
+    // Reasoning model = bigger IQ gain
+    const iqGain = Math.min(15, rounds * 4);
 
     const { error: insErr } = await supabase.from("aurora_ai_dialogues").insert({
       topic,
