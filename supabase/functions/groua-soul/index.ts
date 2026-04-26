@@ -13,7 +13,7 @@ const corsHeaders = {
 };
 
 const LOVABLE_AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
-const SOUL_MODEL = "google/gemini-2.5-pro";
+const SOUL_MODEL = "openai/gpt-5.2";
 
 interface SoulOutput {
   pulse: {
@@ -166,7 +166,7 @@ Zwróć JSON.`;
           { role: "user", content: userPrompt },
         ],
         response_format: { type: "json_object" },
-        reasoning: { effort: "medium" },
+        reasoning: { effort: "high" },
       }),
     });
 
