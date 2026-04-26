@@ -276,6 +276,15 @@ export default function BusinessPage() {
           >
             Zobacz usługi <ArrowRight className="h-4 w-4" />
           </Button>
+          <Button
+            asChild
+            size="lg"
+            className="rounded-full bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-white shadow-[0_0_30px_hsl(160_80%_45%/0.5)] gap-2"
+          >
+            <Link to="/client-dashboard">
+              <Layout className="h-4 w-4" /> Dashboard Zleceniodawcy 🎯
+            </Link>
+          </Button>
         </motion.div>
       </section>
 
