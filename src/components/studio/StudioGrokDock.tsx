@@ -19,12 +19,11 @@ import { VoiceRecorder } from "./VoiceRecorder";
 import { uploadToR2 } from "@/lib/r2Upload";
 import grokAvatar from "@/assets/grok-avatar.jpg";
 
-type AIEngine = "our_ai" | "suno" | "elevenlabs";
+type AIEngine = "our_ai" | "musicgen";
 
-const ENGINES: { id: AIEngine; label: string; backend: "auto" | "suno" | "elevenlabs" }[] = [
+const ENGINES: { id: AIEngine; label: string; backend: "auto" | "musicgen" }[] = [
   { id: "our_ai", label: "Nasz AI", backend: "auto" },
-  { id: "suno", label: "Suno", backend: "suno" },
-  { id: "elevenlabs", label: "ElevenLabs", backend: "elevenlabs" },
+  { id: "musicgen", label: "MusicGen", backend: "musicgen" },
 ];
 type Msg = { role: "user" | "assistant"; content: string; meta?: any };
 
@@ -364,7 +363,7 @@ export const StudioGrokDock = () => {
                   {streaming && (
                     <div className="flex items-center gap-1.5 px-1 text-[10px] text-muted-foreground">
                       <Loader2 className="h-3 w-3 animate-spin" />
-                      <span>{engine === "our_ai" ? "Nasz AI" : "ElevenLabs"} myśli…</span>
+                      <span>{engine === "our_ai" ? "Nasz AI" : "MusicGen"} myśli…</span>
                     </div>
                   )}
                 </div>
