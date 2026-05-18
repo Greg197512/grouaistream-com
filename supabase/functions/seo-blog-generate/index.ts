@@ -114,6 +114,29 @@ function injectAffiliateLinks(content: string, links: Array<{ display_text: stri
   return result;
 }
 
+// Curated Unsplash photos per category — free to use (unsplash.com/license)
+const UNSPLASH_COVERS: Record<string, string[]> = {
+  ai_news:      ["1677442135703-1787eea5ce01","1620712943543-bcc4688e7485","1555255707-c07966088b7b","1518770660439-4636190af475"],
+  tech_news:    ["1518770660439-4636190af475","1461749280684-dccba630e2f6","1451187580459-43490279c0fa","1555255707-c07966088b7b"],
+  trends:       ["1470225620780-dba8ba36b745","1493225457124-a3eb161ffa5f","1514320291840-2e0a9bf2a9ae","1505740420928-5e560c06d30e"],
+  feature:      ["1598488035139-bdbb2231ce04","1516450360452-9312f5e86fc7","1511671782779-c97d3d27a1d4","1485579149621-3123dd979885"],
+  monetization: ["1553729459-efe14ef6055d","1454165804606-c3d57bc86b40","1507003211169-0a1dd7228f2d","1611532736597-de2d4265fba3"],
+  tutorial:     ["1598488035139-bdbb2231ce04","1505740420928-5e560c06d30e","1461749280684-dccba630e2f6","1516450360452-9312f5e86fc7"],
+  psychology:   ["1504892564858-48800e5aeb17","1451187580459-43490279c0fa","1485579149621-3123dd979885","1511671782779-c97d3d27a1d4"],
+  industry:     ["1493225457124-a3eb161ffa5f","1526478806334-5fd488fcaabc","1459749411175-04bf5292ceea","1514320291840-2e0a9bf2a9ae"],
+  tools:        ["1598488035139-bdbb2231ce04","1516450360452-9312f5e86fc7","1505740420928-5e560c06d30e","1518770660439-4636190af475"],
+  lifestyle:    ["1511671782779-c97d3d27a1d4","1485579149621-3123dd979885","1459749411175-04bf5292ceea","1470225620780-dba8ba36b745"],
+  marketing:    ["1611532736597-de2d4265fba3","1507003211169-0a1dd7228f2d","1454165804606-c3d57bc86b40","1553729459-efe14ef6055d"],
+  future:       ["1451187580459-43490279c0fa","1677442135703-1787eea5ce01","1518770660439-4636190af475","1555255707-c07966088b7b"],
+};
+
+function getCuratedCover(category: string, slug: string): string {
+  const pool = UNSPLASH_COVERS[category] ?? UNSPLASH_COVERS["trends"];
+  const code = slug ? (slug.charCodeAt(slug.length - 1) + (slug.charCodeAt(slug.length - 2) || 0)) : 0;
+  const id = pool[code % pool.length];
+  return `https://images.unsplash.com/photo-${id}?w=1200&q=85&fit=crop&crop=center`;
+}
+
 async function generateCoverImage(LOVABLE_API_KEY: string, title: string, category: string): Promise<string | null> {
   const isNews = category === "ai_news" || category === "tech_news";
   const sceneHint = isNews
@@ -126,13 +149,13 @@ STYLE: Shot on Hasselblad H6D-100c, 50mm prime lens, f/1.4 aperture, dramatic ci
 MOOD: Premium, intelligent, futuristic, emotionally captivating — like a National Geographic meets Wired magazine cover.
 ABSOLUTE RULES: NO text, NO letters, NO logos, NO watermarks, NO typography. Pure photorealistic image only.`;
 
-  const attempts = [
-    "google/gemini-3-pro-image-preview",
-    "google/gemini-3.1-flash-image-preview",
-    "google/gemini-2.5-flash-image",
+  const models = [
+    "google/gemini-2.0-flash-exp",
+    "google/gemini-2.0-pro-exp",
+    "google/gemini-2.5-flash-preview-04-17",
   ];
 
-  for (const model of attempts) {
+  for (const model of models) {
     try {
       const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
@@ -143,16 +166,11 @@ ABSOLUTE RULES: NO text, NO letters, NO logos, NO watermarks, NO typography. Pur
           modalities: ["image", "text"],
         }),
       });
-      if (!res.ok) {
-        console.error(`Cover gen ${model} failed`, res.status);
-        continue;
-      }
+      if (!res.ok) { console.error(`Cover gen ${model} failed`, res.status); continue; }
       const data = await res.json();
-      const dataUrl = data?.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-      if (dataUrl) {
-        console.log(`Cover generated with ${model}`);
-        return dataUrl;
-      }
+      const dataUrl = data?.choices?.[0]?.message?.images?.[0]?.image_url?.url
+        || data?.choices?.[0]?.message?.content?.find?.((c: any) => c.type === "image_url")?.image_url?.url;
+      if (dataUrl) { console.log(`Cover generated with ${model}`); return dataUrl; }
     } catch (e) {
       console.error(`Cover gen ${model} exception`, e);
     }
@@ -340,11 +358,16 @@ serve(async (req) => {
 
     const enrichedContent = injectAffiliateLinks(parsed.content, affiliates || []);
 
-    // Generate cover image (best effort, non-fatal)
+    // Generate cover image — try AI first, fall back to curated Unsplash photo
     let coverUrl: string | null = null;
     const dataUrl = await generateCoverImage(LOVABLE_API_KEY, parsed.title, pick.category);
     if (dataUrl) {
       coverUrl = await uploadCoverToStorage(supabaseAdmin, dataUrl, slug);
+    }
+    // Guaranteed fallback: every post gets a professional cover photo
+    if (!coverUrl) {
+      coverUrl = getCuratedCover(pick.category, slug);
+      console.log("[cover] Using curated Unsplash fallback:", coverUrl);
     }
 
     const { data: inserted, error: insErr } = await supabaseAdmin

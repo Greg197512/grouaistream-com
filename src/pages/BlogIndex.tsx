@@ -2,13 +2,13 @@ import { useEffect, useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { MainLayout } from "@/components/layout/MainLayout";
-import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
-import { Search, Sparkles, TrendingUp, Eye } from "lucide-react";
+import { Search, Sparkles, TrendingUp, Eye, Clock, ArrowRight } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { BLOG_CATEGORIES as CATEGORIES, getCategoryLabel as catLabel } from "@/lib/blogCategories";
+import { getCoverUrl } from "@/lib/blogCovers";
 
 interface BlogPost {
   id: string;
@@ -34,26 +34,18 @@ const localizedField = (post: BlogPost, field: "title" | "description", lang: st
   return v || post[field];
 };
 
+const readMins = (desc: string) => Math.max(1, Math.round(desc.split(/\s+/).length / 4));
+
 const setMeta = (name: string, content: string, attr: "name" | "property" = "name") => {
   let el = document.querySelector(`meta[${attr}="${name}"]`) as HTMLMetaElement | null;
-  if (!el) {
-    el = document.createElement("meta");
-    el.setAttribute(attr, name);
-    document.head.appendChild(el);
-  }
+  if (!el) { el = document.createElement("meta"); el.setAttribute(attr, name); document.head.appendChild(el); }
   el.content = content;
 };
-
 const setCanonical = (href: string) => {
   let el = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
-  if (!el) {
-    el = document.createElement("link");
-    el.rel = "canonical";
-    document.head.appendChild(el);
-  }
+  if (!el) { el = document.createElement("link"); el.rel = "canonical"; document.head.appendChild(el); }
   el.href = href;
 };
-
 
 export default function BlogIndex() {
   const { language } = useLanguage();
@@ -104,57 +96,62 @@ export default function BlogIndex() {
       if (!q) return true;
       const title = localizedField(p, "title", language).toLowerCase();
       const desc = localizedField(p, "description", language).toLowerCase();
-      return (
-        title.includes(q) ||
-        desc.includes(q) ||
-        (p.tags || []).some((tag) => tag.toLowerCase().includes(q))
-      );
+      return title.includes(q) || desc.includes(q) || (p.tags || []).some((tag) => tag.toLowerCase().includes(q));
     });
   }, [posts, search, activeCat, language]);
 
   const featured = filtered[0];
-  const rest = filtered.slice(1);
+  const secondary = filtered.slice(1, 3);
+  const rest = filtered.slice(3);
 
   return (
     <MainLayout>
-      <section className="px-4 sm:px-6 py-8 max-w-6xl mx-auto">
+      <section className="px-4 sm:px-6 py-8 max-w-7xl mx-auto">
+
         {/* HERO */}
-        <header className="relative mb-12 text-center overflow-hidden rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/10 via-background to-accent/10 px-6 py-14 sm:py-20">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,hsl(var(--primary)/0.25),transparent_60%),radial-gradient(circle_at_70%_80%,hsl(var(--accent)/0.2),transparent_55%)] pointer-events-none" />
+        <header className="relative mb-12 text-center overflow-hidden rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/10 via-background to-accent/10 px-6 py-16 sm:py-24">
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_30%_20%,hsl(var(--primary)/0.3),transparent_55%),radial-gradient(ellipse_at_75%_80%,hsl(var(--accent)/0.25),transparent_50%)] pointer-events-none" />
           <div className="relative">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/15 border border-primary/30 text-[11px] uppercase tracking-[0.2em] text-primary font-bold mb-5">
-              <Sparkles className="w-3 h-3" /> Codziennie nowe artykuły AI
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/15 border border-primary/30 text-[11px] uppercase tracking-[0.2em] text-primary font-bold mb-6">
+              <Sparkles className="w-3 h-3" />
+              {language === "en" ? "New articles daily" : language === "nl" ? "Dagelijks nieuwe artikelen" : language === "ua" ? "Нові статті щодня" : "Codziennie nowe artykuły AI"}
             </div>
-            <h1 className="text-4xl sm:text-6xl font-black text-foreground mb-4 tracking-tight">
-              Blog <span className="bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">GrouAI</span> Stream
+            <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black text-foreground mb-4 tracking-tight">
+              Blog{" "}
+              <span className="bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">
+                GrouAI
+              </span>{" "}
+              Stream
             </h1>
-            <p className="text-base sm:text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-              AI, muzyka, mood detection i monetyzacja dla niezależnych twórców.
-              <br className="hidden sm:block" />
-              Pisane sercem — czasem trochę algorytmem.
+            <p className="text-base sm:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+              {language === "en"
+                ? "AI, music, mood detection and monetization for independent creators."
+                : language === "nl"
+                ? "AI, muziek, mood detection en monetisatie voor onafhankelijke creators."
+                : language === "ua"
+                ? "AI, музика, визначення настрою та монетизація для незалежних творців."
+                : "AI, muzyka, mood detection i monetyzacja dla niezależnych twórców."}
             </p>
           </div>
         </header>
 
         {/* SEARCH */}
-        <div className="mb-5 relative max-w-xl mx-auto">
+        <div className="mb-6 relative max-w-xl mx-auto">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Szukaj artykułów…"
-            className="pl-10 bg-card/40 border-border focus-visible:border-primary/50 focus-visible:ring-primary/20"
+            placeholder={language === "en" ? "Search articles…" : language === "nl" ? "Artikelen zoeken…" : language === "ua" ? "Пошук статей…" : "Szukaj artykułów…"}
+            className="pl-10 bg-card/40 border-border/60 focus-visible:border-primary/50 focus-visible:ring-primary/20 h-11"
           />
         </div>
 
-        {/* TABS — sticky technical category navigation */}
-        <div className="sticky top-2 z-20 mb-8 -mx-2 px-2">
-          <div className="overflow-x-auto rounded-2xl border border-border/60 bg-background/85 backdrop-blur-xl shadow-[0_4px_30px_hsl(var(--primary)/0.08)]">
+        {/* CATEGORY TABS */}
+        <div className="sticky top-2 z-20 mb-10 -mx-2 px-2">
+          <div className="overflow-x-auto rounded-2xl border border-border/50 bg-background/90 backdrop-blur-xl shadow-lg">
             <div className="flex items-stretch gap-1 p-1.5 min-w-max">
               {CATEGORIES.map((c) => {
-                const count = c.id === "all"
-                  ? posts.length
-                  : posts.filter((p) => p.category === c.id).length;
+                const count = c.id === "all" ? posts.length : posts.filter((p) => p.category === c.id).length;
                 const active = activeCat === c.id;
                 return (
                   <button
@@ -165,18 +162,14 @@ export default function BlogIndex() {
                       active
                         ? "bg-gradient-to-r from-primary to-accent text-primary-foreground border-primary shadow-[0_0_20px_hsl(var(--primary)/0.4)]"
                         : count === 0
-                        ? "bg-transparent text-muted-foreground/40 border-transparent cursor-not-allowed"
+                        ? "bg-transparent text-muted-foreground/30 border-transparent cursor-not-allowed"
                         : "bg-card/40 text-muted-foreground border-border/40 hover:border-primary/40 hover:text-foreground hover:bg-card/70"
                     }`}
                   >
                     <span>{catLabel(c.id, language)}</span>
-                    <span
-                      className={`inline-flex items-center justify-center min-w-[22px] h-5 px-1.5 rounded-full text-[10px] font-bold tabular-nums ${
-                        active
-                          ? "bg-primary-foreground/20 text-primary-foreground"
-                          : "bg-muted/60 text-muted-foreground group-hover:bg-primary/20 group-hover:text-primary"
-                      }`}
-                    >
+                    <span className={`inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-[10px] font-bold tabular-nums ${
+                      active ? "bg-primary-foreground/20 text-primary-foreground" : "bg-muted/60 text-muted-foreground group-hover:bg-primary/20 group-hover:text-primary"
+                    }`}>
                       {count}
                     </span>
                   </button>
@@ -188,95 +181,155 @@ export default function BlogIndex() {
 
         {/* CONTENT */}
         {loading ? (
-          <div className="grid gap-5 md:grid-cols-2">
-            {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-64 rounded-2xl" />)}
+          <div className="space-y-6">
+            <Skeleton className="h-80 rounded-3xl" />
+            <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+              {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-72 rounded-2xl" />)}
+            </div>
           </div>
         ) : filtered.length === 0 ? (
-          <p className="text-center text-muted-foreground py-16">
-            {search
-              ? language === "en" ? `No results for "${search}"` :
-                language === "nl" ? `Geen resultaten voor "${search}"` :
-                language === "ua" ? `Немає результатів для "${search}"` :
-                `Brak wyników dla „${search}"`
-              : language === "en" ? "First post coming soon." :
-                language === "nl" ? "Eerste post komt binnenkort." :
-                language === "ua" ? "Перший пост скоро з'явиться." :
-                "Pierwszy post pojawi się wkrótce."}
-          </p>
+          <div className="text-center py-24">
+            <p className="text-muted-foreground text-lg">
+              {search
+                ? `${language === "en" ? "No results for" : "Brak wyników dla"} „${search}"`
+                : language === "en" ? "First article coming soon." : "Pierwszy artykuł pojawi się wkrótce."}
+            </p>
+          </div>
         ) : (
           <>
-            {/* FEATURED */}
+            {/* FEATURED — hero card with full-bleed image */}
             {featured && (
               <Link to={`/blog/${featured.slug}`} className="group block mb-8">
-                <Card className="overflow-hidden bg-card/40 border-border hover:border-primary/60 transition-all hover:shadow-[0_0_50px_hsl(var(--primary)/0.25)]">
-                  <div className="grid md:grid-cols-2 gap-0">
-                    <div className="aspect-[16/10] md:aspect-auto overflow-hidden bg-muted">
-                      {featured.cover_url ? (
-                        <img src={featured.cover_url} alt={localizedField(featured, "title", language)} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
-                      ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-primary/30 to-accent/20 flex items-center justify-center">
-                          <Sparkles className="w-16 h-16 text-primary/40" />
-                        </div>
-                      )}
+                <article className="relative overflow-hidden rounded-3xl border border-border/50 bg-card hover:border-primary/50 transition-all duration-500 hover:shadow-[0_0_80px_hsl(var(--primary)/0.2)]">
+                  <div className="aspect-[21/9] sm:aspect-[3/1] overflow-hidden">
+                    <img
+                      src={getCoverUrl(featured.cover_url, featured.category, featured.slug)}
+                      alt={localizedField(featured, "title", language)}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                      loading="eager"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
+                  </div>
+                  <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-10">
+                    <div className="flex items-center gap-2 mb-3 flex-wrap">
+                      <Badge className="bg-primary text-primary-foreground border-0 text-[10px] uppercase tracking-wider font-bold">
+                        <TrendingUp className="w-3 h-3 mr-1" />
+                        {language === "en" ? "Latest" : language === "nl" ? "Nieuwste" : language === "ua" ? "Найновіше" : "Najnowszy"}
+                      </Badge>
+                      <Badge variant="secondary" className="text-[10px] bg-background/60 backdrop-blur border-border/40">
+                        {catLabel(featured.category, language)}
+                      </Badge>
                     </div>
-                    <div className="p-6 sm:p-8 flex flex-col justify-center">
-                      <div className="flex items-center gap-2 mb-3">
-                        <Badge className="bg-primary/20 text-primary border-primary/30 text-[10px] uppercase tracking-wider">
-                          <TrendingUp className="w-3 h-3 mr-1" /> {language === "en" ? "Latest" : language === "nl" ? "Nieuwste" : language === "ua" ? "Найновіше" : "Najnowszy"}
-                        </Badge>
-                        <Badge variant="secondary" className="text-[10px]">{catLabel(featured.category, language)}</Badge>
-                      </div>
-                      <h2 className="text-2xl sm:text-3xl font-black text-foreground mb-3 leading-tight group-hover:text-primary transition-colors">
-                        {localizedField(featured, "title", language)}
-                      </h2>
-                      <p className="text-sm text-muted-foreground line-clamp-3 mb-4">{localizedField(featured, "description", language)}</p>
-                      <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                        <span>{new Date(featured.created_at).toLocaleDateString(language === "ua" ? "uk-UA" : language === "nl" ? "nl-NL" : language === "en" ? "en-US" : "pl-PL", { day: "numeric", month: "long", year: "numeric" })}</span>
-                        <span className="flex items-center gap-1"><Eye className="w-3 h-3" /> {featured.view_count}</span>
-                      </div>
+                    <h2 className="text-2xl sm:text-4xl lg:text-5xl font-black text-white mb-3 leading-[1.1] group-hover:text-primary transition-colors max-w-3xl drop-shadow-lg">
+                      {localizedField(featured, "title", language)}
+                    </h2>
+                    <p className="text-sm sm:text-base text-white/70 line-clamp-2 mb-4 max-w-2xl drop-shadow">
+                      {localizedField(featured, "description", language)}
+                    </p>
+                    <div className="flex items-center gap-4 text-xs text-white/60">
+                      <span>
+                        {new Date(featured.created_at).toLocaleDateString(
+                          language === "ua" ? "uk-UA" : language === "nl" ? "nl-NL" : language === "en" ? "en-US" : "pl-PL",
+                          { day: "numeric", month: "long", year: "numeric" }
+                        )}
+                      </span>
+                      <span className="flex items-center gap-1"><Eye className="w-3 h-3" /> {featured.view_count}</span>
+                      <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {readMins(localizedField(featured, "description", language))} min</span>
+                      <span className="hidden sm:flex items-center gap-1 text-primary font-semibold">
+                        {language === "en" ? "Read article" : "Czytaj artykuł"} <ArrowRight className="w-3 h-3" />
+                      </span>
                     </div>
                   </div>
-                </Card>
+                </article>
               </Link>
             )}
 
-            {/* GRID */}
-            <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-              {rest.map((p) => (
-                <Link key={p.id} to={`/blog/${p.slug}`} className="group">
-                  <Card className="h-full overflow-hidden bg-card/40 border-border hover:border-primary/50 transition-all hover:shadow-[0_0_30px_hsl(var(--primary)/0.2)]">
-                    <div className="aspect-[16/9] overflow-hidden bg-muted">
-                      {p.cover_url ? (
-                        <img src={p.cover_url} alt={localizedField(p, "title", language)} loading="lazy" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                      ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-primary/20 to-accent/15 flex items-center justify-center">
-                          <Sparkles className="w-10 h-10 text-primary/40" />
-                        </div>
-                      )}
-                    </div>
-                    <div className="p-4">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Badge variant="secondary" className="text-[10px]">{catLabel(p.category, language)}</Badge>
-                        <span className="text-[10px] text-muted-foreground">
-                          {new Date(p.created_at).toLocaleDateString(language === "ua" ? "uk-UA" : language === "nl" ? "nl-NL" : language === "en" ? "en-US" : "pl-PL", { day: "numeric", month: "short" })}
-                        </span>
+            {/* SECONDARY ROW — 2 large cards */}
+            {secondary.length > 0 && (
+              <div className="grid gap-5 md:grid-cols-2 mb-8">
+                {secondary.map((p) => (
+                  <Link key={p.id} to={`/blog/${p.slug}`} className="group">
+                    <article className="relative overflow-hidden rounded-2xl border border-border/50 bg-card hover:border-primary/50 transition-all duration-500 hover:shadow-[0_0_50px_hsl(var(--primary)/0.2)] h-full">
+                      <div className="aspect-[16/9] overflow-hidden">
+                        <img
+                          src={getCoverUrl(p.cover_url, p.category, p.slug)}
+                          alt={localizedField(p, "title", language)}
+                          loading="lazy"
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
                       </div>
-                      <h3 className="font-bold text-foreground group-hover:text-primary transition-colors leading-snug line-clamp-2 mb-2">
-                        {localizedField(p, "title", language)}
-                      </h3>
-                      <p className="text-xs text-muted-foreground line-clamp-2">{localizedField(p, "description", language)}</p>
-                      {p.tags && p.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-3">
-                          {p.tags.slice(0, 3).map((t) => (
-                            <span key={t} className="text-[9px] px-1.5 py-0.5 rounded-full bg-muted/60 text-muted-foreground">#{t}</span>
-                          ))}
+                      <div className="absolute bottom-0 left-0 right-0 p-5">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Badge variant="secondary" className="text-[10px] bg-background/60 backdrop-blur border-border/40">
+                            {catLabel(p.category, language)}
+                          </Badge>
+                          <span className="text-[10px] text-white/50">
+                            {new Date(p.created_at).toLocaleDateString(language === "en" ? "en-US" : "pl-PL", { day: "numeric", month: "short" })}
+                          </span>
                         </div>
-                      )}
-                    </div>
-                  </Card>
-                </Link>
-              ))}
-            </div>
+                        <h3 className="font-bold text-white text-lg leading-snug line-clamp-2 group-hover:text-primary transition-colors drop-shadow">
+                          {localizedField(p, "title", language)}
+                        </h3>
+                      </div>
+                    </article>
+                  </Link>
+                ))}
+              </div>
+            )}
+
+            {/* GRID — smaller cards */}
+            {rest.length > 0 && (
+              <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+                {rest.map((p) => {
+                  const coverSrc = getCoverUrl(p.cover_url, p.category, p.slug);
+                  return (
+                    <Link key={p.id} to={`/blog/${p.slug}`} className="group">
+                      <article className="h-full overflow-hidden rounded-2xl border border-border/50 bg-card hover:border-primary/40 transition-all duration-300 hover:shadow-[0_4px_40px_hsl(var(--primary)/0.18)] flex flex-col">
+                        <div className="aspect-[16/9] overflow-hidden relative flex-shrink-0">
+                          <img
+                            src={coverSrc}
+                            alt={localizedField(p, "title", language)}
+                            loading="lazy"
+                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-card/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </div>
+                        <div className="p-4 flex flex-col flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Badge variant="secondary" className="text-[9px] px-2 py-0.5">{catLabel(p.category, language)}</Badge>
+                            <span className="text-[10px] text-muted-foreground ml-auto flex items-center gap-1">
+                              <Eye className="w-3 h-3" /> {p.view_count}
+                            </span>
+                          </div>
+                          <h3 className="font-bold text-foreground group-hover:text-primary transition-colors leading-snug line-clamp-2 mb-2 text-sm sm:text-base">
+                            {localizedField(p, "title", language)}
+                          </h3>
+                          <p className="text-xs text-muted-foreground line-clamp-2 flex-1">
+                            {localizedField(p, "description", language)}
+                          </p>
+                          <div className="flex items-center justify-between mt-3 pt-3 border-t border-border/40">
+                            <span className="text-[10px] text-muted-foreground">
+                              {new Date(p.created_at).toLocaleDateString(
+                                language === "ua" ? "uk-UA" : language === "nl" ? "nl-NL" : language === "en" ? "en-US" : "pl-PL",
+                                { day: "numeric", month: "short" }
+                              )}
+                            </span>
+                            {p.tags && p.tags.length > 0 && (
+                              <div className="flex gap-1">
+                                {p.tags.slice(0, 2).map((t) => (
+                                  <span key={t} className="text-[9px] px-1.5 py-0.5 rounded-full bg-muted/50 text-muted-foreground">#{t}</span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </article>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
           </>
         )}
       </section>
