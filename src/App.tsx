@@ -33,6 +33,7 @@ import MoodHistory from "./pages/MoodHistory";
 import Admin from "./pages/Admin";
 import AdminBrain from "./pages/AdminBrain";
 import AdminAurora from "./pages/AdminAurora";
+import AdminSEO from "./pages/AdminSEO";
 import Movies from "./pages/Movies";
 import Server from "./pages/Server";
 import Legal from "./pages/Legal";
@@ -115,6 +116,7 @@ const AppShell = () => {
           <Route path="/admin" element={<Admin />} />
           <Route path="/admin/brain" element={<AdminBrain />} />
           <Route path="/admin/aurora" element={<AdminAurora />} />
+          <Route path="/admin/seo" element={<AdminSEO />} />
           <Route path="/legal" element={<Legal />} />
           <Route path="/party/:code" element={<PartyPulpit />} />
           <Route path="/suno" element={<Suno />} />
