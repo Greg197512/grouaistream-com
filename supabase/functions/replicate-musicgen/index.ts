@@ -1,5 +1,6 @@
-// Replicate MusicGen-Large — tani default engine (~$0.002 za 30s)
-// 90% taniej niż ElevenLabs/Suno. Generuje instrumental w wysokiej jakości.
+// Replicate MusicGen-Stereo — tani default engine (~$0.002 za 30s)
+// Używa Meta MusicGen-Large Stereo v1.0 — najlepsza jakość instrumentalna na Replicate.
+// ElevenLabs NIE generuje muzyki — służy wyłącznie do głosów (studio-voice-apply).
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
@@ -8,7 +9,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// MusicGen-Large stereo (Meta) — najlepsza jakość/cena na Replicate
+// Meta MusicGen-Large Stereo — najlepszy model instrumentalny na Replicate
+// stereo-large daje znacznie lepszą separację przestrzenną niż mono
 const MUSICGEN_VERSION = "671ac645ce5e552cc63a54a2bbff63fcf798043055f2a04b1d735e6ee09b7bd6";
 
 serve(async (req) => {

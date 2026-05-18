@@ -266,14 +266,7 @@ const Suno = () => {
   const [vocalStyle, setVocalStyle] = useState<string>("singing");
   const [intensity, setIntensity] = useState<string>("balanced");
   const [showAdvanced, setShowAdvanced] = useState(false);
-  // ElevenLabs engine toggle — default ON. When OFF → uses n8n router (multi-engine).
-  const [useElevenLabs, setUseElevenLabs] = useState<boolean>(() => {
-    const stored = typeof window !== "undefined" ? localStorage.getItem("studio-use-elevenlabs") : null;
-    return stored === null ? true : stored === "true";
-  });
-  useEffect(() => {
-    if (typeof window !== "undefined") localStorage.setItem("studio-use-elevenlabs", String(useElevenLabs));
-  }, [useElevenLabs]);
+  const [applyingVoice, setApplyingVoice] = useState(false);
   const [result, setResult] = useState<{
     audioUrl: string;
     title: string;
@@ -322,21 +315,11 @@ const Suno = () => {
   }, [result?.audioUrl]);
 
   const generate = async () => {
-    // === GATE 1: must be logged in to generate (so we can track usage) ===
-    if (!user) {
-      toast.error(t("studio.toast.loginRequired"));
-      return;
-    }
-
-    // === GATE 2: free users get only 1 generation, then paywall ===
-    if (!isPro && freeUsed >= FREE_GENERATION_LIMIT) {
-      setShowPaywall(true);
-      return;
-    }
+    if (!user) { toast.error(t("studio.toast.loginRequired")); return; }
+    if (!isPro && freeUsed >= FREE_GENERATION_LIMIT) { setShowPaywall(true); return; }
 
     setGenerating(true);
     setResult(null);
-    setGenStatus(t("studio.status.generating"));
 
     try {
       const genreBlend = genre2 ? `${genre} mixed with ${genre2} (${blendRatio}% / ${100 - blendRatio}%)` : genre;
@@ -345,159 +328,66 @@ const Suno = () => {
       const intensityDesc = INTENSITIES.find(i => i.id === intensity)?.desc || "";
       const vocalDesc = !instrumental ? VOCAL_STYLES.find(v => v.id === vocalStyle)?.desc || "" : "";
       const musicPrompt = `${genreBlend} ${title ? `"${title}"` : ""} track, ${moodDesc}, ${tempoDesc}, ${intensityDesc}${vocalDesc ? `, with ${vocalDesc}` : ""}, professional studio quality`.trim().replace(/\s+,/g, ",");
+      const trackTitle = title || `${genre} Track`;
 
-      const body: any = {
-        prompt: musicPrompt,
-        duration,
-        vocals: !instrumental && customLyrics.trim().length > 0,
-        vocalText: !instrumental ? customLyrics.trim() : null,
-        // Use cloned user voice if available, otherwise auto-pick by genre
-        vocalVoiceId: clonedVoiceId || getVoiceForGenre(genre),
-      };
+      if (instrumental) {
+        // MusicGen — szybki, tani, świetna jakość instrumentalna
+        setGenStatus("MusicGen komponuje instrumental… (~30s)");
+        const { data, error } = await supabase.functions.invoke("replicate-musicgen", {
+          body: { prompt: musicPrompt, duration },
+        });
+        if (error || !data?.audio_url) {
+          const msg = data?.message || error?.message || "MusicGen error";
+          if (data?.error === "quota_exceeded") {
+            toast.error(t("studio.toast.noCredits"), { description: msg, duration: 8000 });
+            return;
+          }
+          throw new Error(msg);
+        }
+        setResult({
+          audioUrl: data.audio_url,
+          title: trackTitle,
+          genre,
+          durationSeconds: duration,
+          lyrics: [],
+        });
+        setGenStatus(t("studio.status.done"));
+        toast.success(`🎹 "${trackTitle}" — instrumental gotowy!`);
 
-      setGenStatus(t("studio.status.instruments"));
-
-      // === ROUTING: ElevenLabs (toggle ON) vs n8n Multi-Engine Router (toggle OFF) ===
-      const endpoint = useElevenLabs
-        ? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-music`
-        : `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/studio-router`;
-
-      const routerBody = useElevenLabs ? body : {
-        prompt: musicPrompt,
-        title: title || `${genre} Track`,
-        duration,
-        instrumental,
-        hasVocals: !instrumental && customLyrics.trim().length > 0,
-        quality: "premium",
-        lyrics: !instrumental ? customLyrics.trim() : undefined,
-      };
-
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-        },
-        body: JSON.stringify(routerBody),
-      });
-
-      if (!response.ok) {
-        const errData = await response.json().catch(() => ({ error: "Unknown error" }));
-
-        if (response.status === 402 || errData.error === "quota_exceeded") {
-          toast.error(t("studio.toast.noCredits"), {
-            description: errData.message || t("studio.toast.noCreditsDesc"),
-            duration: 8000,
-          });
-          setGenStatus("");
-          setGenerating(false);
+      } else {
+        // Suno — pełna piosenka z wokalem AI (async, 30-90s)
+        setGenStatus("Suno komponuje pełny utwór z wokalem… (~60s)");
+        const lyricsSection = customLyrics.trim() ? `\n\n[Lyrics]\n${customLyrics.trim()}` : "";
+        const { data, error } = await supabase.functions.invoke("studio-generate", {
+          body: {
+            prompt: musicPrompt + lyricsSection,
+            engine: "suno",
+            duration_seconds: duration,
+            instrumental: false,
+          },
+        });
+        if (error) throw new Error(error.message || "Suno error");
+        if (data?.error === "quota_exceeded") {
+          toast.error(t("studio.toast.noCredits"), { description: data.message, duration: 8000 });
           return;
         }
-
-        throw new Error(errData.error || `HTTP ${response.status}`);
-      }
-
-      const data = await response.json();
-
-      // === n8n router branch — returns { engine, audio_url, status, task_id } ===
-      if (!useElevenLabs) {
-        if (data.audio_url) {
-          // Synchronous engine (MusicGen) returned ready URL
+        if (data?.audio_url) {
           setResult({
             audioUrl: data.audio_url,
-            title: title || `${genre} Track`,
+            title: trackTitle,
             genre,
             durationSeconds: duration,
-            lyrics: customLyrics.trim()
-              ? parseLyricsFromText(customLyrics, duration)
-              : generateLyrics(genre, title || `${genre} Track`, duration, instrumental),
+            lyrics: customLyrics.trim() ? parseLyricsFromText(customLyrics, duration) : generateLyrics(genre, trackTitle, duration, false),
           });
           setGenStatus(t("studio.status.done"));
-          toast.success(`🎶 Wygenerowane przez ${data.engine || "n8n router"}`);
-          if (!isPro) setFreeUsed(p => p + 1);
-          return;
-        }
-        if (data.task_id || data.status === "processing") {
-          toast.success(`⏳ Router uruchomił ${data.engine || "silnik"} — utwór będzie gotowy za chwilę. Zobaczysz go w "Historia".`);
+          toast.success(`🎤 "${trackTitle}" — gotowy!`);
+        } else {
+          toast.info("🎤 Suno komponuje utwór — pojawi się w Historii za ~60s");
           setGenStatus("");
-          if (!isPro) setFreeUsed(p => p + 1);
-          return;
         }
-        throw new Error(data.error || "Router n8n nie zwrócił audio");
       }
 
-      // === ElevenLabs branch (default) — base64 music + vocals ===
-      if (!data.success || !data.music) {
-        throw new Error("Brak danych audio z ElevenLabs");
-      }
-
-      setGenStatus(data.vocals ? t("studio.status.mixing") : t("studio.status.finalizing"));
-
-      // Mix music + vocals in browser → returns blob URL of WAV
-      const audioBlobUrl = await mixAudioTracks(data.music, data.vocals);
-
-      const trackTitle = title || `${genre} Track`;
-      const lyrics = customLyrics.trim()
-        ? parseLyricsFromText(customLyrics, duration)
-        : generateLyrics(genre, trackTitle, duration, instrumental);
-
-      // === Upload mixed WAV to R2 so it works across devices + persists ===
-      setGenStatus(t("studio.status.uploading"));
-      let publicAudioUrl = audioBlobUrl; // fallback: keep blob if upload fails
-      try {
-        const wavResp = await fetch(audioBlobUrl);
-        const wavBlob = await wavResp.blob();
-        const safeTitle = trackTitle.replace(/[^a-zA-Z0-9]/g, "_").substring(0, 40);
-        const wavFile = new File([wavBlob], `${safeTitle}_${Date.now()}.wav`, { type: "audio/wav" });
-        const uploadRes = await uploadToR2({ file: wavFile, folder: `studio/${user.id}` });
-        publicAudioUrl = uploadRes.publicUrl;
-        console.log("[Studio] Uploaded to R2:", publicAudioUrl);
-      } catch (uploadErr: any) {
-        console.warn("[Studio] R2 upload failed, using local blob:", uploadErr);
-        toast.warning(t("studio.toast.localOnly"), {
-          description: t("studio.toast.localOnlyDesc"),
-        });
-      }
-
-      setResult({
-        audioUrl: publicAudioUrl,
-        title: trackTitle,
-        genre,
-        durationSeconds: duration,
-        lyrics,
-      });
-
-      setGenStatus(t("studio.status.done"));
-      toast.success(`🎶 "${trackTitle}" — gotowy!`);
-
-      // Save to generations + auto-add to user's tracks library
-      const { data: genRow } = await supabase.from("generations").insert({
-        user_id: user.id,
-        title: trackTitle,
-        genre,
-        prompt: customLyrics || `ElevenLabs: ${musicPrompt}`,
-        instrumental,
-        status: "completed",
-        audio_url: publicAudioUrl,
-      }).select().single();
-
-      // Auto-save to tracks (user's personal studio catalog)
-      if (publicAudioUrl.startsWith("http")) {
-        await supabase.from("tracks").insert({
-          user_id: user.id,
-          title: trackTitle,
-          artist: "GrouAI Studio",
-          album: "AI Generated",
-          duration,
-          audio_url: publicAudioUrl,
-          genre,
-          mood,
-        });
-      }
-
-      // Increment free counter
-      if (!isPro) setFreeUsed(prev => prev + 1);
+      if (!isPro) setFreeUsed(p => p + 1);
     } catch (err: any) {
       console.error("[GrouAI Studio] Generate error:", err);
       toast.error(t("studio.toast.genError") + ": " + (err.message || ""));
@@ -505,6 +395,53 @@ const Suno = () => {
       setErrorModal(err.message);
     } finally {
       setGenerating(false);
+    }
+  };
+
+  const applyElevenLabsVoice = async () => {
+    if (!result || !customLyrics.trim()) {
+      toast.error("Wpisz tekst piosenki żeby dodać wokal ElevenLabs");
+      return;
+    }
+    setApplyingVoice(true);
+    setGenStatus("ElevenLabs generuje wokal…");
+    try {
+      const { data, error } = await supabase.functions.invoke("studio-voice-apply", {
+        body: {
+          lyrics: customLyrics,
+          genre,
+          vocalStyle,
+          language: "pl",
+          voiceId: clonedVoiceId || undefined,
+        },
+      });
+      if (error || !data?.vocals) throw new Error(error?.message || "Voice apply error");
+
+      setGenStatus("Miksuję wokal z instrumentalnym…");
+
+      // Fetch instrumental, convert to base64 for browser-side mixing
+      const resp = await fetch(result.audioUrl);
+      const buf = await resp.arrayBuffer();
+      const uint8 = new Uint8Array(buf);
+      let binary = "";
+      for (let i = 0; i < uint8.length; i += 8192) {
+        binary += String.fromCharCode(...uint8.slice(i, i + 8192));
+      }
+      const musicBase64 = btoa(binary);
+
+      const mixedUrl = await mixAudioTracks(musicBase64, data.vocals);
+      setResult(prev => prev ? {
+        ...prev,
+        audioUrl: mixedUrl,
+        lyrics: parseLyricsFromText(customLyrics, prev.durationSeconds),
+      } : prev);
+      setGenStatus(t("studio.status.done"));
+      toast.success("🎤 Wokal ElevenLabs dodany i zmiksowany!");
+    } catch (err: any) {
+      toast.error("Błąd dodawania wokalu: " + err.message);
+      setGenStatus("");
+    } finally {
+      setApplyingVoice(false);
     }
   };
 
@@ -598,7 +535,7 @@ const Suno = () => {
               </Button>
             </div>
             <p className="text-[11px] text-foreground/40 pt-2">
-              Ultimate = pełny dostęp do AI Studio (Suno + ElevenLabs + Replicate), AI Psychologist, lossless audio 48kHz/24-bit i wszystkie bonusy creatorów.
+              Ultimate = pełny dostęp do AI Studio (Suno v4 + MusicGen + ElevenLabs Voice), AI Psychologist, lossless audio 48kHz/24-bit i wszystkie bonusy creatorów.
             </p>
           </motion.div>
         </div>
@@ -640,7 +577,9 @@ const Suno = () => {
           <div className="flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-gradient-to-r from-[#FF6B00]/10 to-[#9333EA]/10 border border-[#FF6B00]/20">
             <Sparkles className="h-3.5 w-3.5 text-[#FF9500]" />
             <span className="text-xs text-gray-300">
-              Napędzany przez <span className="text-[#FF9500] font-semibold">ElevenLabs Music v1</span> — studyjna jakość, śpiewane wokale
+              <span className="text-[#FF9500] font-semibold">Suno v4</span> — pełne piosenki z wokalem &nbsp;·&nbsp;
+              <span className="text-[#9333EA] font-semibold">MusicGen</span> — instrumentalne &nbsp;·&nbsp;
+              <span className="text-gray-400 font-semibold">ElevenLabs</span> — głos
             </span>
           </div>
 
@@ -1042,43 +981,35 @@ const Suno = () => {
             )}
           </AnimatePresence>
 
-          {/* Engine Info + ElevenLabs Toggle */}
-          <div className="p-4 rounded-xl border border-[#9333EA]/30 bg-[#1a1a2e]/60 space-y-3">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3 min-w-0">
-                <Zap className="h-5 w-5 text-[#9333EA] shrink-0" />
-                <div className="min-w-0">
-                  <Label className="text-sm text-gray-200">
-                    {useElevenLabs ? "ElevenLabs HQ Engine" : "GrouAI Multi-Engine Router"}
-                  </Label>
-                  <p className="text-xs text-gray-500 truncate">
-                    {useElevenLabs
-                      ? "Studyjna jakość ElevenLabs Music v1 + śpiewany wokal"
-                      : "Auto-routing: Suno · ElevenLabs · MusicGen (przez n8n)"}
-                  </p>
-                </div>
+          {/* Engine Info */}
+          <div className="p-4 rounded-xl border border-[#9333EA]/30 bg-[#1a1a2e]/60 space-y-2">
+            <div className="flex items-center gap-3">
+              <Zap className="h-5 w-5 text-[#9333EA] shrink-0" />
+              <div>
+                <Label className="text-sm text-gray-200">
+                  {instrumental ? "MusicGen Stereo — instrumental" : "Suno v4 — pełna piosenka z wokalem AI"}
+                </Label>
+                <p className="text-xs text-gray-500">
+                  {instrumental
+                    ? "Meta MusicGen-Large Stereo · szybki, tani (~$0.002/30s) · idealny do beatów i tła"
+                    : "Suno v4 · wokal AI wbudowany w utwór · ~30-90s generowania"}
+                </p>
               </div>
-              <Switch
-                checked={useElevenLabs}
-                onCheckedChange={setUseElevenLabs}
-                className="data-[state=checked]:bg-[#FF6B00]"
-              />
             </div>
             <div className="flex gap-2 flex-wrap">
-              <Badge className="text-xs bg-[#9333EA] text-white border-transparent">
-                <Music className="h-3 w-3 mr-1" /> Instrumenty AI
+              <Badge className="text-xs border-transparent text-white" style={{ background: "linear-gradient(135deg,#9333EA,#6366f1)" }}>
+                <Music className="h-3 w-3 mr-1" /> {instrumental ? "MusicGen" : "Suno v4"}
               </Badge>
               {!instrumental && (
                 <Badge className="text-xs bg-[#FF6B00] text-white border-transparent">
                   <Mic className="h-3 w-3 mr-1" /> Wokal AI
                 </Badge>
               )}
-              <Badge
-                className="text-xs border-transparent text-white"
-                style={{ background: useElevenLabs ? "linear-gradient(135deg,#FF6B00,#FF9500)" : "linear-gradient(135deg,#9333EA,#FF6B00)" }}
-              >
-                {useElevenLabs ? "🎤 ElevenLabs" : "🤖 n8n Router"}
-              </Badge>
+              {instrumental && (
+                <Badge className="text-xs bg-[#1a1a2e] border border-[#9333EA]/30 text-gray-400">
+                  <Mic className="h-3 w-3 mr-1" /> + ElevenLabs głos (po generacji)
+                </Badge>
+              )}
             </div>
           </div>
 
@@ -1191,6 +1122,31 @@ const Suno = () => {
                   <WaveformPlayer audioUrl={result.audioUrl} title={result.title} genre={result.genre} onSaveToLibrary={saveToLibrary} />
                 </motion.div>
 
+                {/* Voice Studio — apply ElevenLabs TTS vocals to instrumental */}
+                {instrumental && (
+                  <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="relative z-10 p-4 rounded-xl border border-[#9333EA]/30 bg-[#0d0d1f]/60 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Mic className="h-4 w-4 text-[#9333EA]" />
+                      <span className="text-sm font-medium text-gray-200">Voice Studio — dodaj wokal ElevenLabs</span>
+                    </div>
+                    {customLyrics.trim() ? (
+                      <Button
+                        onClick={applyElevenLabsVoice}
+                        disabled={applyingVoice}
+                        className="w-full text-white font-semibold gap-2"
+                        style={{ background: "linear-gradient(135deg, #9333EA, #FF6B00)", opacity: applyingVoice ? 0.7 : 1 }}
+                      >
+                        <Mic className="h-4 w-4" />
+                        {applyingVoice ? "Generuję i miksuję wokal…" : "Zaśpiewaj wpisany tekst (ElevenLabs)"}
+                      </Button>
+                    ) : (
+                      <p className="text-xs text-gray-500">
+                        Wpisz tekst piosenki w polu "Lyrics" powyżej, aby dodać śpiewany wokal do tego instrumentalu.
+                      </p>
+                    )}
+                  </motion.div>
+                )}
+
                 {result.lyrics.length > 0 && (
                   <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }} className="relative z-10">
                     <LyricsDisplay lyrics={result.lyrics} currentTime={playbackTime} isPlaying={isPlaying} totalDuration={result.durationSeconds} />
@@ -1214,7 +1170,7 @@ const Suno = () => {
             <DialogTitle className="text-[#FF9500]">Błąd generowania</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-gray-300">{errorModal}</p>
-          <p className="text-xs text-gray-500">Sprawdź czy ElevenLabs API jest dostępne i spróbuj ponownie</p>
+          <p className="text-xs text-gray-500">Sprawdź połączenie i spróbuj ponownie. Jeśli problem się powtarza — zmień prompt.</p>
           <Button
             onClick={() => { setErrorModal(null); generate(); }}
             className="w-full text-white"
