@@ -32,6 +32,7 @@ type TranslationKeys = {
   "nav.moodDetection": string;
   "nav.moodHistory": string;
   "nav.realtimeAdaptation": string;
+  "nav.binaural": string;
   "nav.adminPanel": string;
   "nav.settings": string;
   "nav.legalDocs": string;
@@ -937,6 +938,7 @@ const pl: TranslationKeys = {
   "nav.moodDetection": "Detekcja Nastroju",
   "nav.moodHistory": "Historia Nastrojów",
   "nav.realtimeAdaptation": "Adaptacja w czasie rzeczywistym",
+  "nav.binaural": "Binaural Beats",
   "nav.adminPanel": "Panel Admina",
   "nav.settings": "Ustawienia",
   "nav.legalDocs": "Dokumenty prawne",
@@ -1806,6 +1808,7 @@ const en: TranslationKeys = {
   "nav.moodDetection": "Mood Detection",
   "nav.moodHistory": "Mood History",
   "nav.realtimeAdaptation": "Real-time Adaptation",
+  "nav.binaural": "Binaural Beats",
   "nav.adminPanel": "Admin Panel",
   "nav.settings": "Settings",
   "nav.legalDocs": "Legal Documents",
@@ -2675,6 +2678,7 @@ const nl: TranslationKeys = {
   "nav.moodDetection": "Stemming Detectie",
   "nav.moodHistory": "Stemmingsgeschiedenis",
   "nav.realtimeAdaptation": "Realtime Aanpassing",
+  "nav.binaural": "Binaural Beats",
   "nav.adminPanel": "Beheerders Paneel",
   "nav.settings": "Instellingen",
   "nav.legalDocs": "Juridische Documenten",
@@ -3544,6 +3548,7 @@ const ua: TranslationKeys = {
   "nav.moodDetection": "Визначення Настрою",
   "nav.moodHistory": "Історія Настрою",
   "nav.realtimeAdaptation": "Адаптація в реальному часі",
+  "nav.binaural": "Бінауральні Біти",
   "nav.adminPanel": "Панель Адміна",
   "nav.settings": "Налаштування",
   "nav.legalDocs": "Юридичні Документи",

@@ -337,9 +337,10 @@ const Movies = () => {
               </div>
 
               {/* Player */}
-              <div className="aspect-video w-full">
+              <div className="aspect-video w-full bg-black">
                 <iframe
-                  src={`https://www.youtube.com/embed/${getVideoId(selectedMovie.video_url!)}?autoplay=1&rel=0`}
+                  key={selectedMovie.id}
+                  src={`https://www.youtube.com/embed/${getVideoId(selectedMovie.video_url!)}?autoplay=1&rel=0&modestbranding=1`}
                   className="w-full h-full"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                   allowFullScreen
