@@ -1,6 +1,6 @@
 // GrouAI Studio — Prompt Engine v2
-// Naturalny język (PL/EN/NL/UK) → structured plan → Suno (pełne piosenki) lub MusicGen (instrumental)
-// ElevenLabs służy WYŁĄCZNIE do głosów — NIGDY do generowania muzyki.
+// Naturalny język (PL/EN/NL/UK) → structured plan → MusicGen (muzyka) + ElevenLabs (głos opcjonalnie)
+// ElevenLabs służy WYŁĄCZNIE do głosów — NIGDY do generowania muzyki. Suno nie ma API.
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
@@ -11,7 +11,7 @@ const corsHeaders = {
 };
 
 type Lang = "pl" | "en" | "nl" | "uk";
-type Engine = "suno" | "musicgen";
+type Engine = "musicgen";
 
 interface PromptPlan {
   language: Lang;
@@ -34,14 +34,13 @@ interface PromptPlan {
   human_summary: string;
 }
 
-// Lepszy system prompt — zoptymalizowany pod Suno v4 style tags
+// System prompt — MusicGen dla muzyki, ElevenLabs opcjonalnie dla głosu
 const SYSTEM_PROMPT = `You are GrouAI Studio's music intelligence engine. The user describes music they want in NATURAL LANGUAGE (Polish, English, Dutch, or Ukrainian).
 
-IMPORTANT ARCHITECTURE: There are only 2 music engines:
-- "suno" → for songs WITH vocals/lyrics, full productions, complete tracks (any length)
-- "musicgen" → for INSTRUMENTAL music, beats, backgrounds, ambient, fast generation
+IMPORTANT ARCHITECTURE: There is 1 music engine:
+- "musicgen" → for ALL music: instrumentals, beats, backgrounds, ambient, and tracks that will later receive vocals
 
-ElevenLabs is VOICE-ONLY and is NOT an engine option here.
+ElevenLabs is VOICE-ONLY (applied separately after music generation). Suno has no public API.
 
 DETECT LANGUAGE automatically (pl / en / nl / uk).
 
@@ -61,16 +60,15 @@ EXTRACT all fields:
 - intensity: minimal/balanced/rich/epic
 - instruments: specific instruments mentioned ["electric guitar", "piano", "808 bass", "violin", etc.]
 
-SUNO STYLE TAGS — generate 4-8 comma-separated style descriptors optimized for Suno v4:
+MUSICGEN STYLE TAGS — generate 4-8 comma-separated style descriptors optimized for MusicGen:
 These must be SPECIFIC and EVOCATIVE. Examples:
 - Bad: "pop music with singing"
-- Good: "dreamy indie pop, ethereal female vocals, jangly guitars, lush reverb, 2010s indie vibes, nostalgic, bittersweet"
+- Good: "dreamy indie pop, jangly guitars, lush reverb, 2010s indie vibes, nostalgic, bittersweet, 85 BPM"
 - Bad: "electronic music"
 - Good: "dark techno, aggressive kick, acidic 303 bassline, industrial atmosphere, Berlin underground, minimal and hypnotic"
 
 ENGINE DECISION:
-- "suno" → has_vocals=true (user wants a song with words/singing)
-- "musicgen" → instrumental=true OR user wants background/beat/ambient/fast/cheap generation
+- "musicgen" → always (it's the only available music engine)
 
 human_summary: ONE enthusiastic sentence in user's DETECTED language confirming what you understood.
 Polish: "Tworzę dla Ciebie..."
@@ -99,7 +97,7 @@ const PLAN_SCHEMA = {
     intensity: { type: "string", enum: ["minimal", "balanced", "rich", "epic"] },
     instruments: { type: "array", items: { type: "string" } },
     suno_style_tags: { type: "array", items: { type: "string" } },
-    engine_recommendation: { type: "string", enum: ["suno", "musicgen"] },
+    engine_recommendation: { type: "string", enum: ["musicgen"] },
     human_summary: { type: "string" },
   },
   required: ["language", "genre", "mood", "bpm", "duration_seconds", "instrumental", "has_vocals", "engine_recommendation", "human_summary"],
@@ -282,13 +280,10 @@ serve(async (req) => {
     plan.duration_seconds = Math.max(8, Math.min(300, plan.duration_seconds || 30));
     plan.has_vocals = !plan.instrumental;
 
-    // Engine: suno for songs, musicgen for instrumentals. ElevenLabs NEVER for music.
-    let engine: Engine = forceEngine || plan.engine_recommendation || (plan.has_vocals ? "suno" : "musicgen");
-    if (plan.instrumental) engine = "musicgen";
+    // MusicGen to jedyny silnik muzyczny. Suno nie ma publicznego API.
+    const engine: Engine = "musicgen";
 
-    const enginePrompt = engine === "suno"
-      ? buildSunoPrompt(plan)
-      : buildMusicGenPrompt(plan);
+    const enginePrompt = buildMusicGenPrompt(plan);
 
     console.log("[prompt-engine v2] engine:", engine, "prompt:", enginePrompt.substring(0, 100));
 
@@ -344,29 +339,6 @@ serve(async (req) => {
           result.audio_url = r.data?.audio_url;
           result.completed = !!r.data?.audio_url;
           result.cost_estimate_usd = r.data?.cost_estimate_usd;
-        }
-      } else if (engine === "suno") {
-        const r = await supabase.functions.invoke("suno-generate", {
-          body: {
-            prompt: plan.lyrics_theme || enginePrompt,
-            style: enginePrompt, // full style descriptor for Suno
-            title: plan.lyrics_theme?.substring(0, 60) || `${plan.genre} — ${plan.mood}`,
-            instrumental: plan.instrumental,
-            duration: plan.duration_seconds,
-          },
-        });
-        if (r.error) {
-          result.error = "suno_failed";
-          result.error_message = r.error.message;
-        } else {
-          const taskId = r.data?.data?.taskId || r.data?.taskId;
-          result.task_id = taskId;
-          result.processing = true;
-          if (taskId) {
-            await supabase.from("studio_generations")
-              .update({ platform_track_id: taskId, status: "processing" })
-              .eq("id", gen.id);
-          }
         }
       }
     } catch (e) {

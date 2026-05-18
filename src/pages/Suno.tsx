@@ -243,7 +243,7 @@ const Suno = () => {
   const { user } = useAuth();
   const { isPro, isUltimate, showUpgradeFor } = useSubscription();
   const { t } = useLanguage();
-  const [activeTab, setActiveTab] = useState<"generate" | "mix" | "suno">("generate");
+  const [activeTab, setActiveTab] = useState<"generate" | "mix">("generate");
   const [genre, setGenre] = useState("Pop");
   const [genre2, setGenre2] = useState<string | null>(null);
   const [blendRatio, setBlendRatio] = useState(50);
@@ -330,62 +330,66 @@ const Suno = () => {
       const musicPrompt = `${genreBlend} ${title ? `"${title}"` : ""} track, ${moodDesc}, ${tempoDesc}, ${intensityDesc}${vocalDesc ? `, with ${vocalDesc}` : ""}, professional studio quality`.trim().replace(/\s+,/g, ",");
       const trackTitle = title || `${genre} Track`;
 
-      if (instrumental) {
-        // MusicGen — szybki, tani, świetna jakość instrumentalna
-        setGenStatus("MusicGen komponuje instrumental… (~30s)");
-        const { data, error } = await supabase.functions.invoke("replicate-musicgen", {
-          body: { prompt: musicPrompt, duration },
-        });
-        if (error || !data?.audio_url) {
-          const msg = data?.message || error?.message || "MusicGen error";
-          if (data?.error === "quota_exceeded") {
-            toast.error(t("studio.toast.noCredits"), { description: msg, duration: 8000 });
-            return;
-          }
-          throw new Error(msg);
-        }
-        setResult({
-          audioUrl: data.audio_url,
-          title: trackTitle,
-          genre,
-          durationSeconds: duration,
-          lyrics: [],
-        });
-        setGenStatus(t("studio.status.done"));
-        toast.success(`🎹 "${trackTitle}" — instrumental gotowy!`);
-
-      } else {
-        // Suno — pełna piosenka z wokalem AI (async, 30-90s)
-        setGenStatus("Suno komponuje pełny utwór z wokalem… (~60s)");
-        const lyricsSection = customLyrics.trim() ? `\n\n[Lyrics]\n${customLyrics.trim()}` : "";
-        const { data, error } = await supabase.functions.invoke("studio-generate", {
-          body: {
-            prompt: musicPrompt + lyricsSection,
-            engine: "suno",
-            duration_seconds: duration,
-            instrumental: false,
-          },
-        });
-        if (error) throw new Error(error.message || "Suno error");
-        if (data?.error === "quota_exceeded") {
-          toast.error(t("studio.toast.noCredits"), { description: data.message, duration: 8000 });
+      // === STEP 1: MusicGen generuje ścieżkę muzyczną (zawsze) ===
+      setGenStatus("MusicGen komponuje muzykę… (~30s)");
+      const { data: mgData, error: mgError } = await supabase.functions.invoke("replicate-musicgen", {
+        body: { prompt: musicPrompt, duration },
+      });
+      if (mgError || !mgData?.audio_url) {
+        const msg = mgData?.message || mgError?.message || "MusicGen error";
+        if (mgData?.error === "quota_exceeded") {
+          toast.error(t("studio.toast.noCredits"), { description: msg, duration: 8000 });
           return;
         }
-        if (data?.audio_url) {
-          setResult({
-            audioUrl: data.audio_url,
-            title: trackTitle,
+        throw new Error(msg);
+      }
+
+      let finalAudioUrl = mgData.audio_url;
+      const hasLyrics = !instrumental && customLyrics.trim().length > 0;
+
+      // === STEP 2: ElevenLabs dodaje wokal (jeśli nie instrumental i są słowa) ===
+      if (hasLyrics) {
+        setGenStatus("ElevenLabs generuje wokal…");
+        const { data: voiceData, error: voiceError } = await supabase.functions.invoke("studio-voice-apply", {
+          body: {
+            lyrics: customLyrics.trim(),
             genre,
-            durationSeconds: duration,
-            lyrics: customLyrics.trim() ? parseLyricsFromText(customLyrics, duration) : generateLyrics(genre, trackTitle, duration, false),
-          });
-          setGenStatus(t("studio.status.done"));
-          toast.success(`🎤 "${trackTitle}" — gotowy!`);
+            vocalStyle,
+            language: "pl",
+            voiceId: clonedVoiceId || undefined,
+          },
+        });
+
+        if (voiceError || !voiceData?.vocals) {
+          toast.warning("Wokal niedostępny — zapisuję sam instrumental");
         } else {
-          toast.info("🎤 Suno komponuje utwór — pojawi się w Historii za ~60s");
-          setGenStatus("");
+          // === STEP 3: Miksuj muzykę + wokal w przeglądarce ===
+          setGenStatus("Miksuję muzykę z wokalem…");
+          const resp = await fetch(mgData.audio_url);
+          const buf = await resp.arrayBuffer();
+          const uint8 = new Uint8Array(buf);
+          let binary = "";
+          for (let i = 0; i < uint8.length; i += 8192) {
+            binary += String.fromCharCode(...uint8.slice(i, i + 8192));
+          }
+          finalAudioUrl = await mixAudioTracks(btoa(binary), voiceData.vocals);
         }
       }
+
+      setResult({
+        audioUrl: finalAudioUrl,
+        title: trackTitle,
+        genre,
+        durationSeconds: duration,
+        lyrics: hasLyrics
+          ? parseLyricsFromText(customLyrics, duration)
+          : generateLyrics(genre, trackTitle, duration, instrumental),
+      });
+      setGenStatus(t("studio.status.done"));
+      toast.success(hasLyrics
+        ? `🎤 "${trackTitle}" — muzyka + wokal gotowe!`
+        : `🎹 "${trackTitle}" — instrumental gotowy!`
+      );
 
       if (!isPro) setFreeUsed(p => p + 1);
     } catch (err: any) {
@@ -493,7 +497,7 @@ const Suno = () => {
             <div className="space-y-2 text-left bg-background/30 rounded-xl p-4 border border-primary/20">
               <p className="text-[10px] font-bold uppercase tracking-wider text-primary/80">{t("studio.gate.poweredBy")}:</p>
               <div className="grid grid-cols-2 gap-2 text-xs text-foreground/80">
-                <div className="flex items-center gap-2"><Sparkles className="h-3.5 w-3.5 text-primary" /> <span><b>Suno v4</b> — {t("studio.gate.engineMusic")}</span></div>
+                <div className="flex items-center gap-2"><Sparkles className="h-3.5 w-3.5 text-primary" /> <span><b>MusicGen Stereo</b> — {t("studio.gate.engineMusic")}</span></div>
                 <div className="flex items-center gap-2"><Mic className="h-3.5 w-3.5 text-primary" /> <span><b>ElevenLabs</b> — {t("studio.gate.engineVocal")}</span></div>
                 <div className="flex items-center gap-2"><Wand2 className="h-3.5 w-3.5 text-primary" /> <span><b>Replicate</b> — {t("studio.gate.engineMaster")}</span></div>
                 <div className="flex items-center gap-2"><Type className="h-3.5 w-3.5 text-primary" /> <span><b>Gemini 2.5</b> — {t("studio.gate.engineLyrics")}</span></div>
@@ -535,7 +539,7 @@ const Suno = () => {
               </Button>
             </div>
             <p className="text-[11px] text-foreground/40 pt-2">
-              Ultimate = pełny dostęp do AI Studio (Suno v4 + MusicGen + ElevenLabs Voice), AI Psychologist, lossless audio 48kHz/24-bit i wszystkie bonusy creatorów.
+              Ultimate = pełny dostęp do AI Studio (MusicGen Stereo + ElevenLabs Voice), AI Psychologist, lossless audio 48kHz/24-bit i wszystkie bonusy creatorów.
             </p>
           </motion.div>
         </div>
@@ -577,9 +581,9 @@ const Suno = () => {
           <div className="flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-gradient-to-r from-[#FF6B00]/10 to-[#9333EA]/10 border border-[#FF6B00]/20">
             <Sparkles className="h-3.5 w-3.5 text-[#FF9500]" />
             <span className="text-xs text-gray-300">
-              <span className="text-[#FF9500] font-semibold">Suno v4</span> — pełne piosenki z wokalem &nbsp;·&nbsp;
-              <span className="text-[#9333EA] font-semibold">MusicGen</span> — instrumentalne &nbsp;·&nbsp;
-              <span className="text-gray-400 font-semibold">ElevenLabs</span> — głos
+              <span className="text-[#9333EA] font-semibold">MusicGen Stereo</span> — muzyka &nbsp;·&nbsp;
+              <span className="text-[#FF9500] font-semibold">ElevenLabs</span> — wokal &nbsp;·&nbsp;
+              <span className="text-gray-400">miksowanie w przeglądarce</span>
             </span>
           </div>
 
@@ -597,11 +601,7 @@ const Suno = () => {
                 });
                 toast.success(`🎵 ${data.engine.toUpperCase()} — utwór gotowy!`);
               } else if (data.processing) {
-                toast.info(
-                  data.engine === "suno"
-                    ? "🎤 Suno komponuje pełny utwór z wokalem (~30-60s)…"
-                    : "🎶 ElevenLabs przygotowuje wokal premium…",
-                );
+                toast.info("🎶 MusicGen przetwarza — utwór pojawi się za chwilę w Historii…");
               }
             }}
           />
@@ -987,27 +987,29 @@ const Suno = () => {
               <Zap className="h-5 w-5 text-[#9333EA] shrink-0" />
               <div>
                 <Label className="text-sm text-gray-200">
-                  {instrumental ? "MusicGen Stereo — instrumental" : "Suno v4 — pełna piosenka z wokalem AI"}
+                  {!instrumental && customLyrics.trim()
+                    ? "MusicGen + ElevenLabs — muzyka ze śpiewanym wokalem"
+                    : "MusicGen Stereo — high-quality instrumental"}
                 </Label>
                 <p className="text-xs text-gray-500">
-                  {instrumental
-                    ? "Meta MusicGen-Large Stereo · szybki, tani (~$0.002/30s) · idealny do beatów i tła"
-                    : "Suno v4 · wokal AI wbudowany w utwór · ~30-90s generowania"}
+                  {!instrumental && customLyrics.trim()
+                    ? "Muzyka: Meta MusicGen-Large Stereo · Wokal: ElevenLabs TTS · Miksowanie: przeglądarka"
+                    : "Meta MusicGen-Large Stereo · ~30s · tani (~$0.002/30s) · stereo"}
                 </p>
               </div>
             </div>
             <div className="flex gap-2 flex-wrap">
               <Badge className="text-xs border-transparent text-white" style={{ background: "linear-gradient(135deg,#9333EA,#6366f1)" }}>
-                <Music className="h-3 w-3 mr-1" /> {instrumental ? "MusicGen" : "Suno v4"}
+                <Music className="h-3 w-3 mr-1" /> MusicGen
               </Badge>
-              {!instrumental && (
+              {!instrumental && customLyrics.trim() && (
                 <Badge className="text-xs bg-[#FF6B00] text-white border-transparent">
-                  <Mic className="h-3 w-3 mr-1" /> Wokal AI
+                  <Mic className="h-3 w-3 mr-1" /> + ElevenLabs Wokal
                 </Badge>
               )}
-              {instrumental && (
-                <Badge className="text-xs bg-[#1a1a2e] border border-[#9333EA]/30 text-gray-400">
-                  <Mic className="h-3 w-3 mr-1" /> + ElevenLabs głos (po generacji)
+              {!instrumental && !customLyrics.trim() && (
+                <Badge className="text-xs bg-[#1a1a2e] border border-[#FF6B00]/30 text-gray-400">
+                  <Type className="h-3 w-3 mr-1" /> Wpisz tekst → doda wokal
                 </Badge>
               )}
             </div>

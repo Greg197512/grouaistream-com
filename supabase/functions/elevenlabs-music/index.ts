@@ -140,7 +140,7 @@ serve(async (req) => {
     return new Response(JSON.stringify({
       error: "unknown_mode",
       available_modes: ["generate_voice", "singing", "list_voices"],
-      note: "ElevenLabs is now voice-only. Use suno-generate or replicate-musicgen for music generation.",
+      note: "ElevenLabs is voice-only. Use replicate-musicgen for music generation.",
     }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
   } catch (error) {
