@@ -9,13 +9,14 @@ import { WelcomeConfetti } from "@/components/effects/WelcomeConfetti";
 import { PlayerProvider } from "@/contexts/PlayerContext";
 import { AIProvider } from "@/contexts/AIContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
-
 import { SubscriptionProvider } from "@/contexts/SubscriptionContext";
 import { AutoVoiceListener } from "@/components/player/AutoVoiceListener";
 import { PWAInstallPrompt } from "@/components/pwa/PWAInstallPrompt";
 import { TipWelcomeModal } from "@/components/modals/TipWelcomeModal";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
 import { CheckoutSuccessHandler } from "@/components/CheckoutSuccessHandler";
+
+// Existing pages
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Search from "./pages/Search";
@@ -55,13 +56,22 @@ import Business from "./pages/Business";
 import ClientDashboard from "./pages/ClientDashboard";
 import NotFound from "./pages/NotFound";
 
+// Empire platform pages
+import EmpireDashboard from "./pages/empire/EmpireDashboard";
+import AgentBuilder from "./pages/empire/AgentBuilder";
+import KnowledgeGarden from "./pages/empire/KnowledgeGarden";
+import AgentMarketplace from "./pages/empire/AgentMarketplace";
+import EmpireAnalytics from "./pages/empire/EmpireAnalytics";
+import EmpireCommunity from "./pages/empire/EmpireCommunity";
+import EmpireProjects from "./pages/empire/EmpireProjects";
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 5 * 60 * 1000,    // 5 min — avoid refetching too often
-      gcTime: 10 * 60 * 1000,      // 10 min — garbage-collect old cache entries
-      retry: 1,                     // only 1 retry to avoid memory pressure
-      refetchOnWindowFocus: false,  // don't refetch on tab switch
+      staleTime: 5 * 60 * 1000,
+      gcTime: 10 * 60 * 1000,
+      retry: 1,
+      refetchOnWindowFocus: false,
     },
   },
 });
@@ -92,6 +102,7 @@ const AppShell = () => {
         <CheckoutSuccessHandler />
         <AutoVoiceListener />
         <Routes>
+          {/* Existing routes */}
           <Route path="/" element={<Index />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/search" element={<Search />} />
@@ -135,6 +146,16 @@ const AppShell = () => {
           <Route path="/dla-firm" element={<Business />} />
           <Route path="/client-dashboard" element={<ClientDashboard />} />
           <Route path="/client-dashboard/:orderId" element={<ClientDashboard />} />
+
+          {/* Empire platform routes */}
+          <Route path="/empire" element={<EmpireDashboard />} />
+          <Route path="/empire/projects" element={<EmpireProjects />} />
+          <Route path="/empire/agents" element={<AgentBuilder />} />
+          <Route path="/empire/knowledge" element={<KnowledgeGarden />} />
+          <Route path="/empire/marketplace" element={<AgentMarketplace />} />
+          <Route path="/empire/analytics" element={<EmpireAnalytics />} />
+          <Route path="/empire/community" element={<EmpireCommunity />} />
+
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
@@ -146,21 +167,21 @@ const App = () => (
   <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
       <LanguageProvider>
-      <AuthProvider>
-        <SubscriptionProvider>
-        <PlayerProvider>
-          <AIProvider>
-            <TooltipProvider>
-              <div className="dark">
-                <Toaster />
-                <Sonner />
-                <AppShell />
-              </div>
-            </TooltipProvider>
-          </AIProvider>
-        </PlayerProvider>
-        </SubscriptionProvider>
-      </AuthProvider>
+        <AuthProvider>
+          <SubscriptionProvider>
+            <PlayerProvider>
+              <AIProvider>
+                <TooltipProvider>
+                  <div className="dark">
+                    <Toaster />
+                    <Sonner />
+                    <AppShell />
+                  </div>
+                </TooltipProvider>
+              </AIProvider>
+            </PlayerProvider>
+          </SubscriptionProvider>
+        </AuthProvider>
       </LanguageProvider>
     </QueryClientProvider>
   </ErrorBoundary>
