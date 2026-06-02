@@ -41,6 +41,7 @@ import { TrackBadges } from "@/components/ui/TrackBadges";
 import { TipModal } from "@/components/modals/TipModal";
 import { RatingLikeModal } from "@/components/modals/RatingLikeModal";
 import { CoffeeDialog } from "@/components/payments/CoffeeDialog";
+import { ShareTrackModal } from "@/components/modals/ShareTrackModal";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { Lock } from "lucide-react";
 
@@ -97,6 +98,7 @@ export const PlayerBar = () => {
   const [showCoffeeDialog, setShowCoffeeDialog] = useState(false);
   const [trackOwnerId, setTrackOwnerId] = useState<string | null>(null);
   const [showRatingModal, setShowRatingModal] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
 
   // Check if current track is liked
   useEffect(() => {
@@ -211,24 +213,9 @@ export const PlayerBar = () => {
     }
   };
 
-  const handleShare = async () => {
+  const handleShare = () => {
     if (!currentTrack) return;
-    
-    const text = `🎵 Listening to "${currentTrack.title}" by ${currentTrack.artist} on GrouAI Stream!`;
-    const url = currentTrack.video_url || window.location.origin;
-    
-    try {
-      if (navigator.share) {
-        await navigator.share({ title: currentTrack.title, text, url });
-      } else {
-        window.open(
-          `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`,
-          "_blank"
-        );
-      }
-    } catch (error) {
-      // User cancelled or error
-    }
+    setShowShareModal(true);
   };
 
   const formatTime = (seconds: number) => {
@@ -719,6 +706,13 @@ export const PlayerBar = () => {
           recipientName={currentTrack.artist}
         />
       )}
+
+      {/* Share Track Modal */}
+      <ShareTrackModal
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        track={currentTrack}
+      />
 
     </>
   );
