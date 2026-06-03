@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -70,6 +70,12 @@ export const RadioTimeline = ({ schedule, onMove, onRemove, onReorder, currentSc
   const [cutItemId, setCutItemId] = useState<string | null>(null);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const rowRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  useEffect(() => {
+    if (!currentScheduleId) return;
+    rowRefs.current[currentScheduleId]?.scrollIntoView({ block: "center", behavior: "smooth" });
+  }, [currentScheduleId]);
 
   const formatDuration = (sec: number) => {
     const m = Math.floor(sec / 60);
@@ -200,6 +206,7 @@ export const RadioTimeline = ({ schedule, onMove, onRemove, onReorder, currentSc
               return (
                 <div
                   key={item.id}
+                  ref={(node) => { rowRefs.current[item.id] = node; }}
                   draggable
                   onDragStart={() => handleDragStart(item.index)}
                   onDragOver={(e) => handleDragOver(e, item.index)}
@@ -216,7 +223,7 @@ export const RadioTimeline = ({ schedule, onMove, onRemove, onReorder, currentSc
                     <span className="text-xs text-gray-600">{item.index + 1}</span>
                   </span>
 
-                  <span className={`text-xs font-mono ${isCurrent ? "text-black font-bold" : "text-gray-700"}`}>{formatTime24h(item.startTime)}</span>
+                  <span className={`text-xs font-mono rounded px-1 py-0.5 ${isCurrent ? "bg-black text-orange-300 font-black shadow-sm" : "text-gray-700"}`}>{formatTime24h(item.startTime)}</span>
 
                   <span className={`text-xs font-mono ${isCurrent ? "text-black" : "text-gray-600"}`}>{formatDuration(getItemDuration(item))}</span>
 
