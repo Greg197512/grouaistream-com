@@ -178,9 +178,9 @@ export const RadioTimeline = ({ schedule, onMove, onRemove, onReorder, currentSc
       </div>
 
       {/* Timeline Table */}
-      <ScrollArea className="h-[500px] rounded-lg border border-border/50">
+      <ScrollArea className="h-[500px] rounded-lg border border-border bg-white text-black">
         <div className="min-w-full">
-          <div className="sticky top-0 z-10 grid grid-cols-[32px_70px_55px_24px_1fr_130px_40px] gap-1 bg-muted/80 backdrop-blur px-2 py-2 text-xs font-medium text-muted-foreground border-b border-border/50">
+          <div className="sticky top-0 z-10 grid grid-cols-[32px_70px_55px_24px_1fr_130px_40px] gap-1 bg-gray-100 px-2 py-2 text-xs font-semibold text-black border-b border-gray-300">
             <span>#</span>
             <span>Start</span>
             <span>Czas</span>
@@ -190,11 +190,12 @@ export const RadioTimeline = ({ schedule, onMove, onRemove, onReorder, currentSc
             <span></span>
           </div>
 
-          <div className="divide-y divide-border/20">
+          <div className="divide-y divide-gray-200">
             {timelineData.map((item) => {
               const itemType = item.item_type || "track";
               const cfg = TYPE_CONFIG[itemType] || TYPE_CONFIG.track;
               const Icon = cfg.icon;
+              const isCurrent = currentScheduleId === item.id;
 
               return (
                 <div
@@ -204,40 +205,40 @@ export const RadioTimeline = ({ schedule, onMove, onRemove, onReorder, currentSc
                   onDragOver={(e) => handleDragOver(e, item.index)}
                   onDrop={() => handleDrop(item.index)}
                   onDragEnd={handleDragEnd}
-                  className={`grid grid-cols-[32px_70px_55px_24px_1fr_130px_40px] gap-1 items-center px-2 py-1.5 text-sm transition-all cursor-grab active:cursor-grabbing group
-                    ${currentScheduleId === item.id ? "bg-orange-500/15 ring-1 ring-inset ring-orange-500/60" : cutItemId === item.id ? "opacity-40 bg-destructive/10" : `hover:bg-muted/30 ${cfg.bgColor}`}
-                    ${dragOverIndex === item.index ? "bg-primary/10 border-l-2 border-primary" : ""}
+                  className={`grid grid-cols-[32px_70px_55px_24px_1fr_130px_40px] gap-1 items-center px-2 py-1.5 text-sm transition-all cursor-grab active:cursor-grabbing group text-black
+                    ${isCurrent ? "bg-orange-400 !text-black ring-2 ring-inset ring-orange-600 shadow-[0_0_20px_rgba(249,115,22,0.6)] relative z-[1]" : cutItemId === item.id ? "opacity-40 bg-red-100" : "hover:bg-gray-100"}
+                    ${dragOverIndex === item.index ? "bg-orange-100 border-l-2 border-orange-500" : ""}
                     ${dragIndex === item.index ? "opacity-50" : ""}
                   `}
                 >
                   <span className="flex items-center gap-0.5">
-                    <GripVertical className="h-3 w-3 text-muted-foreground/30 opacity-0 group-hover:opacity-100 transition-opacity" />
-                    <span className="text-xs text-muted-foreground">{item.index + 1}</span>
+                    <GripVertical className="h-3 w-3 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <span className="text-xs text-gray-600">{item.index + 1}</span>
                   </span>
 
-                  <span className="text-xs font-mono text-primary/80">{formatTime24h(item.startTime)}</span>
+                  <span className={`text-xs font-mono ${isCurrent ? "text-black font-bold" : "text-gray-700"}`}>{formatTime24h(item.startTime)}</span>
 
-                  <span className="text-xs font-mono text-muted-foreground">{formatDuration(getItemDuration(item))}</span>
+                  <span className={`text-xs font-mono ${isCurrent ? "text-black" : "text-gray-600"}`}>{formatDuration(getItemDuration(item))}</span>
 
-                  <Icon className={`h-3.5 w-3.5 ${cfg.color} shrink-0`} />
+                  <Icon className={`h-3.5 w-3.5 shrink-0 ${isCurrent ? "text-black" : cfg.color}`} />
 
-                  <p className="text-sm font-medium truncate flex items-center gap-1.5">
+                  <p className={`text-sm truncate flex items-center gap-1.5 ${isCurrent ? "font-bold text-black" : "font-medium text-black"}`}>
                     {item.lang && item.item_type === "announcement" && (
                       <span className="mr-1">{LANG_FLAGS[item.lang] || "🌐"}</span>
                     )}
                     {getItemTitle(item)}
-                    {currentScheduleId === item.id && (
-                      <span className="shrink-0 text-[9px] font-bold px-1 py-0.5 rounded bg-orange-500 text-white animate-pulse">
+                    {isCurrent && (
+                      <span className="shrink-0 text-[9px] font-bold px-1 py-0.5 rounded bg-black text-orange-300 animate-pulse">
                         ON AIR
                       </span>
                     )}
                   </p>
 
-                  <p className="text-xs text-muted-foreground truncate">{getItemSubtitle(item)}</p>
+                  <p className={`text-xs truncate ${isCurrent ? "text-black" : "text-gray-600"}`}>{getItemSubtitle(item)}</p>
 
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button size="icon" variant="ghost" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button size="icon" variant="ghost" className={`h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity ${isCurrent ? "text-black hover:bg-orange-300" : "text-black hover:bg-gray-200"}`}>
                         <MoreVertical className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
@@ -272,6 +273,7 @@ export const RadioTimeline = ({ schedule, onMove, onRemove, onReorder, currentSc
           </div>
         </div>
       </ScrollArea>
+
 
       {/* 24h Progress Bar */}
       <div className="space-y-1">
