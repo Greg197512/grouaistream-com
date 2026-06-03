@@ -517,7 +517,9 @@ export type Database = {
       aurora_business_orders: {
         Row: {
           ai_plan: Json | null
+          assigned_skill_id: string | null
           assigned_to: string | null
+          autonomous_decisions: Json
           brief: string
           budget_eur: number | null
           checkout_url: string | null
@@ -527,11 +529,13 @@ export type Database = {
           completed_at: string | null
           created_at: string
           deadline: string | null
+          delivered_at: string | null
           id: string
           n8n_execution_id: string | null
           n8n_workflow_id: string | null
           notes: string | null
           paddle_price_id: string | null
+          paddle_subscription_id: string | null
           paddle_transaction_id: string | null
           paid_at: string | null
           payload: Json | null
@@ -551,7 +555,9 @@ export type Database = {
         }
         Insert: {
           ai_plan?: Json | null
+          assigned_skill_id?: string | null
           assigned_to?: string | null
+          autonomous_decisions?: Json
           brief: string
           budget_eur?: number | null
           checkout_url?: string | null
@@ -561,11 +567,13 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           deadline?: string | null
+          delivered_at?: string | null
           id?: string
           n8n_execution_id?: string | null
           n8n_workflow_id?: string | null
           notes?: string | null
           paddle_price_id?: string | null
+          paddle_subscription_id?: string | null
           paddle_transaction_id?: string | null
           paid_at?: string | null
           payload?: Json | null
@@ -585,7 +593,9 @@ export type Database = {
         }
         Update: {
           ai_plan?: Json | null
+          assigned_skill_id?: string | null
           assigned_to?: string | null
+          autonomous_decisions?: Json
           brief?: string
           budget_eur?: number | null
           checkout_url?: string | null
@@ -595,11 +605,13 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           deadline?: string | null
+          delivered_at?: string | null
           id?: string
           n8n_execution_id?: string | null
           n8n_workflow_id?: string | null
           notes?: string | null
           paddle_price_id?: string | null
+          paddle_subscription_id?: string | null
           paddle_transaction_id?: string | null
           paid_at?: string | null
           payload?: Json | null
@@ -617,7 +629,15 @@ export type Database = {
           user_id?: string | null
           workflow_map?: Json | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "aurora_business_orders_assigned_skill_id_fkey"
+            columns: ["assigned_skill_id"]
+            isOneToOne: false
+            referencedRelation: "aurora_skill_registry"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       aurora_calendar_events: {
         Row: {
@@ -990,6 +1010,99 @@ export type Database = {
           total_orders?: number
           total_revenue_eur?: number
           updated_at?: string
+        }
+        Relationships: []
+      }
+      aurora_desktop_emotions: {
+        Row: {
+          context: string | null
+          created_at: string
+          device_id: string
+          emotion_type: string
+          id: string
+          intensity: number
+          recorded_at: string
+        }
+        Insert: {
+          context?: string | null
+          created_at?: string
+          device_id: string
+          emotion_type: string
+          id?: string
+          intensity?: number
+          recorded_at?: string
+        }
+        Update: {
+          context?: string | null
+          created_at?: string
+          device_id?: string
+          emotion_type?: string
+          id?: string
+          intensity?: number
+          recorded_at?: string
+        }
+        Relationships: []
+      }
+      aurora_desktop_sync: {
+        Row: {
+          client_version: string | null
+          conversations_count: number | null
+          created_at: string
+          device_id: string
+          emotions_count: number | null
+          id: string
+          payload: Json | null
+        }
+        Insert: {
+          client_version?: string | null
+          conversations_count?: number | null
+          created_at?: string
+          device_id: string
+          emotions_count?: number | null
+          id?: string
+          payload?: Json | null
+        }
+        Update: {
+          client_version?: string | null
+          conversations_count?: number | null
+          created_at?: string
+          device_id?: string
+          emotions_count?: number | null
+          id?: string
+          payload?: Json | null
+        }
+        Relationships: []
+      }
+      aurora_email_digest_log: {
+        Row: {
+          digest_date: string
+          errors_count: number
+          id: string
+          new_skills_count: number
+          orders_count: number
+          payload: Json | null
+          recipient: string
+          sent_at: string
+        }
+        Insert: {
+          digest_date: string
+          errors_count?: number
+          id?: string
+          new_skills_count?: number
+          orders_count?: number
+          payload?: Json | null
+          recipient?: string
+          sent_at?: string
+        }
+        Update: {
+          digest_date?: string
+          errors_count?: number
+          id?: string
+          new_skills_count?: number
+          orders_count?: number
+          payload?: Json | null
+          recipient?: string
+          sent_at?: string
         }
         Relationships: []
       }
@@ -2253,6 +2366,120 @@ export type Database = {
         }
         Relationships: []
       }
+      aurora_skill_build_queue: {
+        Row: {
+          attempts: number
+          built_skill_id: string | null
+          completed_at: string | null
+          context: Json | null
+          created_at: string
+          error_message: string | null
+          id: string
+          related_order_id: string | null
+          requested_category: string
+          requested_skill_name: string
+          status: string
+          task_description: string
+        }
+        Insert: {
+          attempts?: number
+          built_skill_id?: string | null
+          completed_at?: string | null
+          context?: Json | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          related_order_id?: string | null
+          requested_category: string
+          requested_skill_name: string
+          status?: string
+          task_description: string
+        }
+        Update: {
+          attempts?: number
+          built_skill_id?: string | null
+          completed_at?: string | null
+          context?: Json | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          related_order_id?: string | null
+          requested_category?: string
+          requested_skill_name?: string
+          status?: string
+          task_description?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aurora_skill_build_queue_built_skill_id_fkey"
+            columns: ["built_skill_id"]
+            isOneToOne: false
+            referencedRelation: "aurora_skill_registry"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "aurora_skill_build_queue_related_order_id_fkey"
+            columns: ["related_order_id"]
+            isOneToOne: false
+            referencedRelation: "aurora_business_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      aurora_skill_registry: {
+        Row: {
+          category: string
+          created_at: string
+          created_by: string
+          description: string | null
+          error_count: number
+          id: string
+          input_schema: Json | null
+          last_used_at: string | null
+          metadata: Json | null
+          n8n_workflow_id: string | null
+          output_schema: Json | null
+          skill_name: string
+          status: string
+          success_count: number
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          error_count?: number
+          id?: string
+          input_schema?: Json | null
+          last_used_at?: string | null
+          metadata?: Json | null
+          n8n_workflow_id?: string | null
+          output_schema?: Json | null
+          skill_name: string
+          status?: string
+          success_count?: number
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          error_count?: number
+          id?: string
+          input_schema?: Json | null
+          last_used_at?: string | null
+          metadata?: Json | null
+          n8n_workflow_id?: string | null
+          output_schema?: Json | null
+          skill_name?: string
+          status?: string
+          success_count?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       aurora_storage_files: {
         Row: {
           category: string
@@ -3150,6 +3377,110 @@ export type Database = {
         }
         Relationships: []
       }
+      compose_feedback: {
+        Row: {
+          created_at: string
+          event: string
+          generation_id: string
+          id: string
+          position_ms: number | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          event: string
+          generation_id: string
+          id?: string
+          position_ms?: number | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          event?: string
+          generation_id?: string
+          id?: string
+          position_ms?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compose_feedback_generation_id_fkey"
+            columns: ["generation_id"]
+            isOneToOne: false
+            referencedRelation: "compose_generations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      compose_generations: {
+        Row: {
+          audio_url: string | null
+          bpm: number | null
+          created_at: string
+          duration_sec: number | null
+          genre: string | null
+          id: string
+          lyrics: string | null
+          mood: string | null
+          params: Json | null
+          prompt: string
+          seed: number | null
+          user_id: string
+        }
+        Insert: {
+          audio_url?: string | null
+          bpm?: number | null
+          created_at?: string
+          duration_sec?: number | null
+          genre?: string | null
+          id?: string
+          lyrics?: string | null
+          mood?: string | null
+          params?: Json | null
+          prompt: string
+          seed?: number | null
+          user_id: string
+        }
+        Update: {
+          audio_url?: string | null
+          bpm?: number | null
+          created_at?: string
+          duration_sec?: number | null
+          genre?: string | null
+          id?: string
+          lyrics?: string | null
+          mood?: string | null
+          params?: Json | null
+          prompt?: string
+          seed?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      compose_taste_profile: {
+        Row: {
+          bpm_avg: number | null
+          genre_weights: Json
+          mood_weights: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          bpm_avg?: number | null
+          genre_weights?: Json
+          mood_weights?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          bpm_avg?: number | null
+          genre_weights?: Json
+          mood_weights?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       cost_alerts: {
         Row: {
           cost_amount: number
@@ -3585,6 +3916,170 @@ export type Database = {
             columns: ["track_id"]
             isOneToOne: false
             referencedRelation: "tracks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      marketing_campaigns: {
+        Row: {
+          campaign_type: string
+          created_at: string
+          created_by: string | null
+          id: string
+          metadata: Json | null
+          name: string
+          platforms: string[]
+          schedule: Json | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          campaign_type?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          metadata?: Json | null
+          name: string
+          platforms?: string[]
+          schedule?: Json | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          campaign_type?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          metadata?: Json | null
+          name?: string
+          platforms?: string[]
+          schedule?: Json | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      marketing_logs: {
+        Row: {
+          action: string
+          api_payload: Json | null
+          campaign_id: string | null
+          created_at: string
+          id: string
+          media_urls: string[] | null
+          next_action: string | null
+          post_id: string | null
+          published_urls: string[] | null
+          response: Json | null
+        }
+        Insert: {
+          action: string
+          api_payload?: Json | null
+          campaign_id?: string | null
+          created_at?: string
+          id?: string
+          media_urls?: string[] | null
+          next_action?: string | null
+          post_id?: string | null
+          published_urls?: string[] | null
+          response?: Json | null
+        }
+        Update: {
+          action?: string
+          api_payload?: Json | null
+          campaign_id?: string | null
+          created_at?: string
+          id?: string
+          media_urls?: string[] | null
+          next_action?: string | null
+          post_id?: string | null
+          published_urls?: string[] | null
+          response?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketing_logs_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "marketing_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketing_logs_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "marketing_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      marketing_posts: {
+        Row: {
+          ab_variant: string | null
+          affiliate_links: Json | null
+          campaign_id: string | null
+          captions: Json | null
+          content_text: string | null
+          created_at: string
+          engagement_metrics: Json | null
+          id: string
+          image_url: string | null
+          music_url: string | null
+          platforms: string[]
+          published_at: string | null
+          published_urls: Json | null
+          scheduled_at: string | null
+          status: string
+          thumbnails: string[] | null
+          titles: string[] | null
+          video_url: string | null
+        }
+        Insert: {
+          ab_variant?: string | null
+          affiliate_links?: Json | null
+          campaign_id?: string | null
+          captions?: Json | null
+          content_text?: string | null
+          created_at?: string
+          engagement_metrics?: Json | null
+          id?: string
+          image_url?: string | null
+          music_url?: string | null
+          platforms?: string[]
+          published_at?: string | null
+          published_urls?: Json | null
+          scheduled_at?: string | null
+          status?: string
+          thumbnails?: string[] | null
+          titles?: string[] | null
+          video_url?: string | null
+        }
+        Update: {
+          ab_variant?: string | null
+          affiliate_links?: Json | null
+          campaign_id?: string | null
+          captions?: Json | null
+          content_text?: string | null
+          created_at?: string
+          engagement_metrics?: Json | null
+          id?: string
+          image_url?: string | null
+          music_url?: string | null
+          platforms?: string[]
+          published_at?: string | null
+          published_urls?: Json | null
+          scheduled_at?: string | null
+          status?: string
+          thumbnails?: string[] | null
+          titles?: string[] | null
+          video_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketing_posts_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "marketing_campaigns"
             referencedColumns: ["id"]
           },
         ]
@@ -4269,14 +4764,219 @@ export type Database = {
         }
         Relationships: []
       }
+      podcast_assets: {
+        Row: {
+          audio_url: string
+          created_at: string
+          duration_sec: number | null
+          id: string
+          is_active: boolean
+          kind: string
+          lang: string | null
+          last_used_at: string | null
+          name: string
+          play_count: number
+          script: string | null
+          voice_id: string | null
+        }
+        Insert: {
+          audio_url: string
+          created_at?: string
+          duration_sec?: number | null
+          id?: string
+          is_active?: boolean
+          kind: string
+          lang?: string | null
+          last_used_at?: string | null
+          name: string
+          play_count?: number
+          script?: string | null
+          voice_id?: string | null
+        }
+        Update: {
+          audio_url?: string
+          created_at?: string
+          duration_sec?: number | null
+          id?: string
+          is_active?: boolean
+          kind?: string
+          lang?: string | null
+          last_used_at?: string | null
+          name?: string
+          play_count?: number
+          script?: string | null
+          voice_id?: string | null
+        }
+        Relationships: []
+      }
+      podcast_automator_logs: {
+        Row: {
+          created_at: string
+          episode_id: string | null
+          id: string
+          level: string
+          message: string
+          metadata: Json | null
+          source: string | null
+        }
+        Insert: {
+          created_at?: string
+          episode_id?: string | null
+          id?: string
+          level: string
+          message: string
+          metadata?: Json | null
+          source?: string | null
+        }
+        Update: {
+          created_at?: string
+          episode_id?: string | null
+          id?: string
+          level?: string
+          message?: string
+          metadata?: Json | null
+          source?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "podcast_automator_logs_episode_id_fkey"
+            columns: ["episode_id"]
+            isOneToOne: false
+            referencedRelation: "podcast_episodes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      podcast_automator_settings: {
+        Row: {
+          ad_every_hours: number
+          ad_voice: string
+          auto_approve: boolean
+          enabled: boolean
+          id: number
+          jingle_every_hours: number
+          n8n_webhook_url: string | null
+          notification_email: string | null
+          saturday_slots: string[]
+          updated_at: string
+          voice_en: string
+          voice_pl: string
+        }
+        Insert: {
+          ad_every_hours?: number
+          ad_voice?: string
+          auto_approve?: boolean
+          enabled?: boolean
+          id?: number
+          jingle_every_hours?: number
+          n8n_webhook_url?: string | null
+          notification_email?: string | null
+          saturday_slots?: string[]
+          updated_at?: string
+          voice_en?: string
+          voice_pl?: string
+        }
+        Update: {
+          ad_every_hours?: number
+          ad_voice?: string
+          auto_approve?: boolean
+          enabled?: boolean
+          id?: number
+          jingle_every_hours?: number
+          n8n_webhook_url?: string | null
+          notification_email?: string | null
+          saturday_slots?: string[]
+          updated_at?: string
+          voice_en?: string
+          voice_pl?: string
+        }
+        Relationships: []
+      }
+      podcast_episodes: {
+        Row: {
+          audio_url: string | null
+          created_at: string
+          created_by: string | null
+          duration_sec: number | null
+          error: string | null
+          id: string
+          lang: string
+          manual_text: string | null
+          post_id: string | null
+          published_at: string | null
+          retry_count: number
+          schedule_slot: string | null
+          scheduled_for: string | null
+          script: string | null
+          source: string
+          status: string
+          title: string
+          updated_at: string
+          voice_id: string | null
+        }
+        Insert: {
+          audio_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          duration_sec?: number | null
+          error?: string | null
+          id?: string
+          lang?: string
+          manual_text?: string | null
+          post_id?: string | null
+          published_at?: string | null
+          retry_count?: number
+          schedule_slot?: string | null
+          scheduled_for?: string | null
+          script?: string | null
+          source?: string
+          status?: string
+          title: string
+          updated_at?: string
+          voice_id?: string | null
+        }
+        Update: {
+          audio_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          duration_sec?: number | null
+          error?: string | null
+          id?: string
+          lang?: string
+          manual_text?: string | null
+          post_id?: string | null
+          published_at?: string | null
+          retry_count?: number
+          schedule_slot?: string | null
+          scheduled_for?: string | null
+          script?: string | null
+          source?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          voice_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "podcast_episodes_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "seo_blog_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
+          banned_at: string | null
+          banned_reason: string | null
           blog_newsletter_opt_out: boolean
           created_at: string
           display_name: string | null
           first_login_completed: boolean | null
           id: string
+          is_banned: boolean
           role: string
           subscription_status: string
           updated_at: string
@@ -4284,11 +4984,14 @@ export type Database = {
         }
         Insert: {
           avatar_url?: string | null
+          banned_at?: string | null
+          banned_reason?: string | null
           blog_newsletter_opt_out?: boolean
           created_at?: string
           display_name?: string | null
           first_login_completed?: boolean | null
           id?: string
+          is_banned?: boolean
           role?: string
           subscription_status?: string
           updated_at?: string
@@ -4296,11 +4999,14 @@ export type Database = {
         }
         Update: {
           avatar_url?: string | null
+          banned_at?: string | null
+          banned_reason?: string | null
           blog_newsletter_opt_out?: boolean
           created_at?: string
           display_name?: string | null
           first_login_completed?: boolean | null
           id?: string
+          is_banned?: boolean
           role?: string
           subscription_status?: string
           updated_at?: string
@@ -4361,9 +5067,48 @@ export type Database = {
           },
         ]
       }
+      radio_artist_blocks: {
+        Row: {
+          active: boolean
+          artist: string
+          blocks_per_rebuild: number
+          created_at: string
+          duration_minutes: number
+          id: string
+          notes: string | null
+          spacing: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          artist: string
+          blocks_per_rebuild?: number
+          created_at?: string
+          duration_minutes?: number
+          id?: string
+          notes?: string | null
+          spacing?: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          artist?: string
+          blocks_per_rebuild?: number
+          created_at?: string
+          duration_minutes?: number
+          id?: string
+          notes?: string | null
+          spacing?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       radio_config: {
         Row: {
+          announcements_enabled: boolean | null
           blog_announcements_enabled: boolean
+          cooldown_artist_minutes: number
+          cooldown_track_hours: number
           end_time: string | null
           id: string
           is_active: boolean
@@ -4374,7 +5119,10 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          announcements_enabled?: boolean | null
           blog_announcements_enabled?: boolean
+          cooldown_artist_minutes?: number
+          cooldown_track_hours?: number
           end_time?: string | null
           id?: string
           is_active?: boolean
@@ -4385,7 +5133,10 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          announcements_enabled?: boolean | null
           blog_announcements_enabled?: boolean
+          cooldown_artist_minutes?: number
+          cooldown_track_hours?: number
           end_time?: string | null
           id?: string
           is_active?: boolean
@@ -4393,6 +5144,30 @@ export type Database = {
           start_time?: string | null
           started_at?: string | null
           station_name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      radio_day_profile: {
+        Row: {
+          day_of_week: number
+          genre_tags: string[]
+          label: string
+          loop_fill_enabled: boolean
+          updated_at: string
+        }
+        Insert: {
+          day_of_week: number
+          genre_tags?: string[]
+          label?: string
+          loop_fill_enabled?: boolean
+          updated_at?: string
+        }
+        Update: {
+          day_of_week?: number
+          genre_tags?: string[]
+          label?: string
+          loop_fill_enabled?: boolean
           updated_at?: string
         }
         Relationships: []
@@ -4450,6 +5225,41 @@ export type Database = {
         }
         Relationships: []
       }
+      radio_program_slot: {
+        Row: {
+          created_at: string
+          day_of_week: number
+          hour: number
+          id: string
+          position: number
+          track_id: string
+        }
+        Insert: {
+          created_at?: string
+          day_of_week: number
+          hour: number
+          id?: string
+          position?: number
+          track_id: string
+        }
+        Update: {
+          created_at?: string
+          day_of_week?: number
+          hour?: number
+          id?: string
+          position?: number
+          track_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "radio_program_slot_track_id_fkey"
+            columns: ["track_id"]
+            isOneToOne: false
+            referencedRelation: "tracks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       radio_schedule: {
         Row: {
           added_at: string
@@ -4459,6 +5269,7 @@ export type Database = {
           id: string
           item_type: string
           lang: string | null
+          played_at: string | null
           position: number
           track_id: string | null
         }
@@ -4470,6 +5281,7 @@ export type Database = {
           id?: string
           item_type?: string
           lang?: string | null
+          played_at?: string | null
           position?: number
           track_id?: string | null
         }
@@ -4481,6 +5293,7 @@ export type Database = {
           id?: string
           item_type?: string
           lang?: string | null
+          played_at?: string | null
           position?: number
           track_id?: string | null
         }
@@ -6355,6 +7168,17 @@ export type Database = {
           avatar_url: string
           display_name: string
           first_login_completed: boolean
+          role: string
+          subscription_status: string
+        }[]
+      }
+      get_my_profile_status: {
+        Args: never
+        Returns: {
+          banned_at: string
+          banned_reason: string
+          blog_newsletter_opt_out: boolean
+          is_banned: boolean
           role: string
           subscription_status: string
         }[]
