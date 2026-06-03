@@ -5109,6 +5109,7 @@ export type Database = {
           blog_announcements_enabled: boolean
           cooldown_artist_minutes: number
           cooldown_track_hours: number
+          current_schedule_id: string | null
           end_time: string | null
           id: string
           is_active: boolean
@@ -5123,6 +5124,7 @@ export type Database = {
           blog_announcements_enabled?: boolean
           cooldown_artist_minutes?: number
           cooldown_track_hours?: number
+          current_schedule_id?: string | null
           end_time?: string | null
           id?: string
           is_active?: boolean
@@ -5137,6 +5139,7 @@ export type Database = {
           blog_announcements_enabled?: boolean
           cooldown_artist_minutes?: number
           cooldown_track_hours?: number
+          current_schedule_id?: string | null
           end_time?: string | null
           id?: string
           is_active?: boolean
@@ -5146,7 +5149,15 @@ export type Database = {
           station_name?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "radio_config_current_schedule_id_fkey"
+            columns: ["current_schedule_id"]
+            isOneToOne: false
+            referencedRelation: "radio_schedule"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       radio_day_profile: {
         Row: {
