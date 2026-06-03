@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { usePlayer } from "@/contexts/PlayerContext";
+import { fetchRadioSchedule, resolveCurrentRadioPosition, syncRadioCurrentSchedule } from "@/lib/radioSchedule";
 
 interface RadioConfig {
   is_active: boolean;
@@ -153,13 +154,9 @@ const RadioLive = () => {
         if (cancelled) return;
         if (configRes.data) setConfig(configRes.data as any);
 
-        const scheduleRes = await supabase
-          .from("radio_schedule")
-          .select("id, position, item_type, custom_title, custom_duration, custom_audio_url, lang, track:tracks(id, title, artist, duration, audio_url, cover_url)")
-          .order("position", { ascending: true })
-          .limit(1000);
+        const scheduleRes = await fetchRadioSchedule();
         if (cancelled) return;
-        if (scheduleRes.data) setRawSchedule(scheduleRes.data as any);
+        setRawSchedule(scheduleRes as any);
       } catch (err) {
         console.error("[RadioLive] Fetch error:", err);
       } finally {
@@ -246,15 +243,13 @@ const RadioLive = () => {
     checkLiked();
   }, [userId, currentIndex, schedule]);
 
-  // Sync current playing schedule item so admin panel can highlight exactly what radio plays
+  // Sync current playing schedule item so admin panel can highlight exactly what radio plays.
   useEffect(() => {
     if (!config?.is_active || schedule.length === 0) return;
     const scheduleId = schedule[currentIndex]?.id ?? null;
-    (supabase as any)
-      .rpc("set_radio_current_schedule", { _schedule_id: scheduleId })
-      .then(({ error }) => {
-        if (error) console.warn("[RadioLive] sync current_schedule_id failed:", error.message);
-      });
+    syncRadioCurrentSchedule(scheduleId).then((error) => {
+      if (error) console.warn("[RadioLive] sync current_schedule_id failed:", error.message);
+    });
   }, [currentIndex, schedule, config?.is_active]);
 
   const getItemDuration = (item: ScheduleTrack) => {
@@ -388,23 +383,10 @@ const RadioLive = () => {
 
   useEffect(() => {
     if (!config?.is_active || !config.started_at || schedule.length === 0) return;
-    const startedAt = new Date(config.started_at).getTime();
-    const now = Date.now();
-    let elapsed = (now - startedAt) / 1000;
-    const totalDuration = schedule.reduce((s, t) => s + getItemDuration(t), 0);
-    if (totalDuration <= 0) return;
-    if (config.mode === "24h") elapsed = elapsed % totalDuration;
-    let cumulative = 0;
-    for (let i = 0; i < schedule.length; i++) {
-      const dur = getItemDuration(schedule[i]);
-      if (cumulative + dur > elapsed) {
-        setCurrentIndex(i);
-        startPlayback(i, elapsed - cumulative);
-        return;
-      }
-      cumulative += dur;
-    }
-    setCurrentIndex(0);
+    const current = resolveCurrentRadioPosition(schedule, config);
+    if (!current) return;
+    setCurrentIndex(current.index);
+    startPlayback(current.index, current.offset);
   }, [config, schedule]);
 
   const startPlayback = useCallback(
