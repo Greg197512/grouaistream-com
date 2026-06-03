@@ -48,10 +48,10 @@ const RadioEmbed = () => {
     const fetchData = async () => {
       const [configRes, scheduleRes] = await Promise.all([
         supabase.from("radio_config").select("*").limit(1).single(),
-        fetchRadioSchedule(),
+        fetchRadioSchedule<ScheduleTrack>(),
       ]);
-      if (configRes.data) setConfig(configRes.data as any);
-      setRawSchedule(scheduleRes as any);
+      if (configRes.data) setConfig(configRes.data as RadioConfig);
+      setRawSchedule(scheduleRes);
     };
     fetchData();
   }, []);
