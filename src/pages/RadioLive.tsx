@@ -119,36 +119,10 @@ const RadioLive = () => {
   const heartIdRef = useRef(0);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
-  // Filter announcements by selected language. Tracks (lang === null) are always kept.
-  // Announcement items with `lang` set are kept ONLY when matching the user's UI language.
-  const schedule = useMemo(() => {
-    const filtered = rawSchedule.filter((item) => {
-      if (item.item_type === "announcement" && item.lang && item.lang !== language) return false;
-      return true;
-    });
-
-    const recentTrackIds: string[] = [];
-    const recentArtists: string[] = [];
-
-    return filtered.filter((item) => {
-      if (item.item_type === "announcement") return true;
-
-      const trackId = item.track?.id;
-      const artist = item.track?.artist?.trim().toLowerCase();
-
-      if (!trackId) return true;
-      if (recentTrackIds.includes(trackId)) return false;
-      if (artist && recentArtists.includes(artist)) return false;
-
-      recentTrackIds.push(trackId);
-      if (artist) recentArtists.push(artist);
-
-      if (recentTrackIds.length > 28) recentTrackIds.shift();
-      if (recentArtists.length > 10) recentArtists.shift();
-
-      return true;
-    });
-  }, [rawSchedule, language]);
+  // Radio plays the schedule EXACTLY as configured in the admin panel
+  // (no language filtering, no dedup) so what listeners hear matches
+  // the highlighted row in the admin timeline 1:1.
+  const schedule = useMemo(() => rawSchedule, [rawSchedule]);
 
   // Auth
   useEffect(() => {
