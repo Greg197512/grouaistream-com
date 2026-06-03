@@ -246,14 +246,12 @@ const RadioLive = () => {
     checkLiked();
   }, [userId, currentIndex, schedule]);
 
-  // Sync current playing schedule item to radio_config so admin panel can highlight it
+  // Sync current playing schedule item so admin panel can highlight exactly what radio plays
   useEffect(() => {
-    if (!config?.is_active) return;
+    if (!config?.is_active || schedule.length === 0) return;
     const scheduleId = schedule[currentIndex]?.id ?? null;
-    supabase
-      .from("radio_config")
-      .update({ current_schedule_id: scheduleId } as any)
-      .eq("is_active", true)
+    (supabase as any)
+      .rpc("set_radio_current_schedule", { _schedule_id: scheduleId })
       .then(({ error }) => {
         if (error) console.warn("[RadioLive] sync current_schedule_id failed:", error.message);
       });
