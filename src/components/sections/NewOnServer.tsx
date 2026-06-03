@@ -118,10 +118,12 @@ export const NewOnServer = () => {
   const [hasError, setHasError] = useState(false);
   const [page, setPage] = useState(0);
   const [direction, setDirection] = useState(1); // 1=forward -1=backward
+  const [isPaused, setIsPaused] = useState(false);
   const { playPlaylist, currentTrack, isPlaying } = usePlayer();
   const navigate = useNavigate();
   const mountedRef = useRef(true);
   const timerRef = useRef<number | null>(null);
+  const wheelCooldownRef = useRef(false);
 
   const totalPages = Math.max(1, Math.ceil(tracks.length / CARDS_VISIBLE));
   const currentCards = tracks.slice(page * CARDS_VISIBLE, (page + 1) * CARDS_VISIBLE);
@@ -136,17 +138,32 @@ export const NewOnServer = () => {
     setPage(p => (p + 1) % totalPages);
   }, [totalPages]);
 
-  // auto-advance
+  // auto-advance — zatrzymuje się gdy isPaused
   useEffect(() => {
-    if (tracks.length === 0) return;
+    if (tracks.length === 0 || isPaused) {
+      if (timerRef.current) { window.clearInterval(timerRef.current); timerRef.current = null; }
+      return;
+    }
     timerRef.current = window.setInterval(advance, AUTO_MS);
     return () => { if (timerRef.current) window.clearInterval(timerRef.current); };
-  }, [advance, tracks.length]);
+  }, [advance, tracks.length, isPaused]);
 
   const resetTimer = () => {
     if (timerRef.current) window.clearInterval(timerRef.current);
-    timerRef.current = window.setInterval(advance, AUTO_MS);
+    if (!isPaused) timerRef.current = window.setInterval(advance, AUTO_MS);
   };
+
+  // kółko myszy → przełącza strony
+  const handleWheel = useCallback((e: React.WheelEvent) => {
+    if (wheelCooldownRef.current) return;
+    wheelCooldownRef.current = true;
+    setTimeout(() => { wheelCooldownRef.current = false; }, 600);
+    if (e.deltaX > 30 || e.deltaY > 30) {
+      goTo((page + 1) % totalPages, 1);
+    } else if (e.deltaX < -30 || e.deltaY < -30) {
+      goTo((page - 1 + totalPages) % totalPages, -1);
+    }
+  }, [page, totalPages, goTo]);
 
   const fetchLatest = useCallback(async () => {
     if (!mountedRef.current) return;
@@ -233,6 +250,9 @@ export const NewOnServer = () => {
         <div className="flex items-center gap-3">
           <Flame className="h-5 w-5 text-primary" />
           <h2 className="font-display text-xl font-bold">🔥 Nowe na serwerze</h2>
+          {isPaused && (
+            <span className="text-[10px] text-muted-foreground/60 font-medium">⏸ zatrzymano</span>
+          )}
         </div>
         <div className="flex items-center gap-2">
           {/* Page dots */}
@@ -264,7 +284,13 @@ export const NewOnServer = () => {
       </div>
 
       {/* Cards carousel */}
-      <div className="relative overflow-hidden" style={{ minHeight: 320 }}>
+      <div
+        className="relative overflow-hidden"
+        style={{ minHeight: 320 }}
+        onMouseEnter={() => setIsPaused(true)}
+        onMouseLeave={() => setIsPaused(false)}
+        onWheel={handleWheel}
+      >
         <AnimatePresence mode="popLayout" custom={direction} initial={false}>
           <motion.div
             key={page}
