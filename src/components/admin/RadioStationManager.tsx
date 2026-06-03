@@ -110,16 +110,18 @@ export const RadioStationManager = () => {
     fetchData();
   }, [fetchData]);
 
-  // Realtime: track which schedule item is currently playing
+  // Track current item: compute locally from started_at + durations
+  // (works even when nobody has /radio-live open). DB current_schedule_id used as fallback.
+  const [dbCurrentScheduleId, setDbCurrentScheduleId] = useState<string | null>(null);
+
   useEffect(() => {
-    // Seed from initial fetch
     supabase
       .from("radio_config")
       .select("current_schedule_id")
       .limit(1)
       .single()
       .then(({ data }) => {
-        if (data) setCurrentScheduleId((data as any).current_schedule_id ?? null);
+        if (data) setDbCurrentScheduleId((data as any).current_schedule_id ?? null);
       });
 
     const channel = supabase
@@ -129,13 +131,46 @@ export const RadioStationManager = () => {
         { event: "UPDATE", schema: "public", table: "radio_config" },
         (payload) => {
           const updated = payload.new as any;
-          setCurrentScheduleId(updated.current_schedule_id ?? null);
+          setDbCurrentScheduleId(updated.current_schedule_id ?? null);
+          setConfig((prev) => (prev ? { ...prev, ...updated } : prev));
         }
       )
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
   }, []);
+
+  const getItemDur = (item: ScheduleTrack) => {
+    if ((item.item_type || "track") === "track") return item.track?.duration || 180;
+    return item.custom_duration || 30;
+  };
+
+  useEffect(() => {
+    if (!config?.is_active || !config.started_at || schedule.length === 0) {
+      setCurrentScheduleId(dbCurrentScheduleId);
+      return;
+    }
+    const total = schedule.reduce((s, t) => s + getItemDur(t), 0);
+    if (total <= 0) { setCurrentScheduleId(dbCurrentScheduleId); return; }
+    const startedAt = new Date(config.started_at).getTime();
+
+    const tick = () => {
+      let elapsed = (Date.now() - startedAt) / 1000;
+      if (config.mode === "24h") elapsed = ((elapsed % total) + total) % total;
+      if (elapsed < 0) { setCurrentScheduleId(schedule[0].id); return; }
+      let cum = 0;
+      for (const item of schedule) {
+        const dur = getItemDur(item);
+        if (cum + dur > elapsed) { setCurrentScheduleId(item.id); return; }
+        cum += dur;
+      }
+      setCurrentScheduleId(schedule[schedule.length - 1].id);
+    };
+
+    tick();
+    const id = window.setInterval(tick, 1000);
+    return () => window.clearInterval(id);
+  }, [config?.is_active, config?.started_at, config?.mode, schedule, dbCurrentScheduleId]);
 
   const updateConfig = async (updates: Partial<RadioConfig>) => {
     if (!config) return;
