@@ -6,6 +6,7 @@ import { Track } from "@/contexts/PlayerContext";
 interface AIContextType {
   currentMood: DetectedMood | null;
   isProcessing: boolean;
+  isLLMReady: boolean;
   listeningStats: {
     topGenres: string[];
     topMoods: string[];
@@ -49,6 +50,7 @@ export const useAISafe = () => {
 
 export const AIProvider = ({ children }: { children: ReactNode }) => {
   const [isAIEnabled, setIsAIEnabled] = useState(true);
+  const [isLLMReady, setIsLLMReady] = useState(false);
   
   const {
     currentMood,
@@ -82,6 +84,12 @@ export const AIProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
+  // LLM initialisation — reveal face after engine warms up
+  useEffect(() => {
+    const t = setTimeout(() => setIsLLMReady(true), 2500);
+    return () => clearTimeout(t);
+  }, []);
+
   // Save AI preference
   useEffect(() => {
     localStorage.setItem("ai-enabled", String(isAIEnabled));
@@ -99,6 +107,7 @@ export const AIProvider = ({ children }: { children: ReactNode }) => {
         processVoiceCommand,
         adaptToUserBehavior,
         isAIEnabled,
+        isLLMReady,
         toggleAI,
         preferences,
         isLearning,

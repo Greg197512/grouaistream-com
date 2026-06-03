@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -9,7 +10,7 @@ const INDEXNOW_KEY = "afe06e072b8e4d01a107df5a4b0722ff";
 const HOST = "grouaistream.com";
 const KEY_LOCATION = `https://${HOST}/${INDEXNOW_KEY}.txt`;
 
-const ALL_URLS = [
+const STATIC_URLS = [
   `https://${HOST}/`,
   `https://${HOST}/search`,
   `https://${HOST}/library`,
@@ -20,6 +21,10 @@ const ALL_URLS = [
   `https://${HOST}/movies`,
   `https://${HOST}/earn`,
   `https://${HOST}/server`,
+  `https://${HOST}/blog`,
+  `https://${HOST}/business`,
+  `https://${HOST}/dla-firm`,
+  `https://${HOST}/sponsor`,
   `https://${HOST}/liked`,
   `https://${HOST}/mood-history`,
   `https://${HOST}/my-tracks`,
@@ -37,8 +42,13 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const supabaseAdmin = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+  );
+
   try {
-    let urlsToPing = ALL_URLS;
+    let urlsToPing = [...STATIC_URLS];
 
     // Allow passing specific URLs in body
     if (req.method === "POST") {
@@ -48,9 +58,20 @@ serve(async (req) => {
           urlsToPing = body.urls;
         }
       } catch {
-        // Use default URLs
+        // Use default static + blog URLs
       }
     }
+
+    // Dynamically fetch last 30 published blog posts and add to ping list
+    const { data: blogPosts } = await supabaseAdmin
+      .from("seo_blog_posts")
+      .select("slug")
+      .eq("is_published", true)
+      .order("created_at", { ascending: false })
+      .limit(30);
+
+    const blogUrls = (blogPosts || []).map((p: { slug: string }) => `https://${HOST}/blog/${p.slug}`);
+    urlsToPing = [...new Set([...urlsToPing, ...blogUrls])];
 
     const indexNowPayload = {
       host: HOST,
@@ -86,6 +107,8 @@ serve(async (req) => {
     const result = {
       success: bingStatus === 200 || bingStatus === 202,
       urls_submitted: urlsToPing.length,
+      static_urls: STATIC_URLS.length,
+      blog_urls: blogUrls.length,
       bing: { status: bingStatus, response: bingText },
       yandex: { status: yandexResponse.status },
       naver: { status: naverResponse.status },

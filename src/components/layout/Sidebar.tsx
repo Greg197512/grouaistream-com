@@ -49,6 +49,7 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
     { icon: "face", labelKey: "nav.moodDetection", href: "/" },
     { icon: "history", labelKey: "nav.moodHistory", href: "/mood-history" },
     { icon: "autorenew", labelKey: "nav.realtimeAdaptation", href: "/daily-mix" },
+    { icon: "waves", labelKey: "nav.binaural", href: "/binaural", badge: "NEW" },
     { icon: "admin_panel_settings", labelKey: "nav.adminPanel", href: "/admin", adminOnly: true },
   ];
 

@@ -33,6 +33,7 @@ import MoodHistory from "./pages/MoodHistory";
 import Admin from "./pages/Admin";
 import AdminBrain from "./pages/AdminBrain";
 import AdminAurora from "./pages/AdminAurora";
+import AdminSEO from "./pages/AdminSEO";
 import Movies from "./pages/Movies";
 import Server from "./pages/Server";
 import Legal from "./pages/Legal";
@@ -54,6 +55,7 @@ import Sponsor from "./pages/Sponsor";
 import Business from "./pages/Business";
 import ClientDashboard from "./pages/ClientDashboard";
 import NotFound from "./pages/NotFound";
+import Binaural from "./pages/Binaural";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -76,8 +78,9 @@ const AppShell = () => {
 
   if (loading) {
     return (
-      <div className="dark min-h-screen bg-background text-foreground flex items-center justify-center">
-        <div className="text-sm text-muted-foreground">Przywracanie sesji…</div>
+      <div className="dark min-h-screen bg-background text-foreground flex items-center justify-center gap-3">
+        <div className="w-6 h-6 rounded-full border-2 border-primary/20 border-t-primary animate-spin" />
+        <span className="text-sm text-muted-foreground">Przywracanie sesji…</span>
       </div>
     );
   }
@@ -115,6 +118,7 @@ const AppShell = () => {
           <Route path="/admin" element={<Admin />} />
           <Route path="/admin/brain" element={<AdminBrain />} />
           <Route path="/admin/aurora" element={<AdminAurora />} />
+          <Route path="/admin/seo" element={<AdminSEO />} />
           <Route path="/legal" element={<Legal />} />
           <Route path="/party/:code" element={<PartyPulpit />} />
           <Route path="/suno" element={<Suno />} />
@@ -135,6 +139,7 @@ const AppShell = () => {
           <Route path="/dla-firm" element={<Business />} />
           <Route path="/client-dashboard" element={<ClientDashboard />} />
           <Route path="/client-dashboard/:orderId" element={<ClientDashboard />} />
+          <Route path="/binaural" element={<Binaural />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

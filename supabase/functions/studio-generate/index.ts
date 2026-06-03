@@ -1,5 +1,6 @@
-// HYBRID router AI: bierze fingerprint usera + prompt i wybiera najlepszy model
-// (Suno = pełne utwory z wokalem, ElevenLabs = krótki precyzyjny wokal, MusicGen = instrumental z BPM/key)
+// Studio Generate — bierze fingerprint usera + prompt i wywołuje MusicGen
+// MusicGen (Replicate) = high-quality stereo instrumental
+// ElevenLabs używany WYŁĄCZNIE do głosów/wokalu (studio-voice-apply), nie do muzyki
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
@@ -11,8 +12,8 @@ const corsHeaders = {
 interface GenerateRequest {
   prompt?: string;
   use_fingerprint?: boolean; // "Brzmiej jak moje top 10"
-  engine?: "auto" | "musicgen" | "suno" | "elevenlabs"; // auto = router decyduje
-  quality?: "standard" | "premium"; // standard = MusicGen (tani), premium = Suno/ElevenLabs
+  engine?: "auto" | "musicgen"; // musicgen = jedyny dostępny silnik
+  quality?: "standard" | "premium"; // oba → MusicGen (Suno nie ma API)
   duration_seconds?: number;
   instrumental?: boolean;
 }
@@ -87,14 +88,7 @@ serve(async (req) => {
     const instrumental = body.instrumental ?? true; // MusicGen = instrumental by design
 
     if (engine === "auto") {
-      // PREMIUM → ElevenLabs (krótki wokal) lub Suno (długi pełny)
-      if (quality === "premium") {
-        if (duration <= 30 && !instrumental) engine = "elevenlabs";
-        else engine = "suno";
-      } else {
-        // STANDARD → MusicGen (90% taniej, świetna jakość instrumentalna)
-        engine = "musicgen";
-      }
+      engine = "musicgen"; // jedyny działający silnik muzyczny
     }
 
     // === STEP 3: Stwórz wpis w studio_generations (status: pending)
@@ -144,56 +138,6 @@ serve(async (req) => {
           triggerResult.audio_url = mgResp.data?.audio_url;
           triggerResult.cost_estimate_usd = mgResp.data?.cost_estimate_usd;
           triggerResult.completed = true;
-        }
-      } else if (engine === "elevenlabs") {
-        const elKey = Deno.env.get("ELEVENLABS_API_KEY");
-        if (elKey) {
-          const elResp = await fetch("https://api.elevenlabs.io/v1/music/compositions", {
-            method: "POST",
-            headers: { "xi-api-key": elKey, "Content-Type": "application/json" },
-            body: JSON.stringify({
-              prompt: finalPrompt,
-              music_length_ms: Math.min(duration * 1000, 90000),
-            }),
-          });
-          if (elResp.ok) {
-            const elData = await elResp.json();
-            triggerResult.external_id = elData.composition_id || elData.id;
-            await supabase.from("studio_generations").update({
-              platform_track_id: triggerResult.external_id,
-              status: "processing",
-            }).eq("id", gen.id);
-          } else {
-            const errText = await elResp.text();
-            console.error("[elevenlabs] err:", elResp.status, errText);
-            triggerResult.error = `elevenlabs_${elResp.status}`;
-          }
-        }
-      } else if (engine === "suno") {
-        const sunoKey = Deno.env.get("SUNO_API_KEY");
-        if (sunoKey) {
-          const sunoResp = await fetch("https://api.sunoapi.org/api/v1/generate", {
-            method: "POST",
-            headers: { Authorization: `Bearer ${sunoKey}`, "Content-Type": "application/json" },
-            body: JSON.stringify({
-              prompt: finalPrompt,
-              customMode: false,
-              instrumental,
-              model: "V4",
-            }),
-          });
-          if (sunoResp.ok) {
-            const sunoData = await sunoResp.json();
-            triggerResult.external_id = sunoData.data?.taskId || sunoData.taskId;
-            await supabase.from("studio_generations").update({
-              platform_track_id: triggerResult.external_id,
-              status: "processing",
-            }).eq("id", gen.id);
-          } else {
-            const errText = await sunoResp.text();
-            console.error("[suno] err:", sunoResp.status, errText);
-            triggerResult.error = `suno_${sunoResp.status}`;
-          }
         }
       }
     } catch (e) {

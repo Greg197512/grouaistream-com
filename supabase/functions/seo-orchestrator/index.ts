@@ -8,7 +8,8 @@ const corsHeaders = {
 
 /**
  * Orchestrator — single endpoint for cron + manual triggers.
- * Body: { action: "ping" | "sitemap" | "blog" | "all", triggered_by?: "cron" | "manual" }
+ * Body: { action: "ping" | "sitemap" | "blog" | "bot" | "all", triggered_by?: "cron" | "manual" }
+ * "bot" delegates to seo-bot for full autonomous SEO cycle
  */
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -88,6 +89,17 @@ serve(async (req) => {
       } else {
         results.blog = { skipped: "rate-limited" };
       }
+    }
+
+    // Full autonomous SEO bot cycle
+    if (action === "bot") {
+      const r = await fetch(`${baseUrl}/functions/v1/seo-bot`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ action: "full", triggered_by: triggeredBy }),
+      });
+      const json = await r.json().catch(() => ({}));
+      results.bot = { status: r.status, ...json };
     }
 
     return new Response(JSON.stringify({ success: true, action, triggered_by: triggeredBy, results }), {

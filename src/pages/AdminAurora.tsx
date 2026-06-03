@@ -18,6 +18,7 @@ import { pl } from "date-fns/locale";
 import { AuroraStorageDesk } from "@/components/admin/AuroraStorageDesk";
 import { AuroraWorkforceDesk } from "@/components/admin/AuroraWorkforceDesk";
 import { AuroraAssistantDesk } from "@/components/admin/AuroraAssistantDesk";
+import { useAISafe } from "@/contexts/AIContext";
 
 
 interface Niche {
@@ -86,6 +87,8 @@ const statusColor = (s: string) => {
 export default function AdminAurora() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const ai = useAISafe();
+  const isLLMReady = ai?.isLLMReady ?? false;
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [niches, setNiches] = useState<Niche[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
@@ -245,7 +248,11 @@ export default function AdminAurora() {
               <p className="text-xs text-muted-foreground">Pulpit autonomicznego biznesu — nisze, zlecenia, automatyzacje</p>
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center">
+            <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border transition-all duration-700 ${isLLMReady ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-400" : "bg-muted/40 border-border text-muted-foreground"}`}>
+              <span className={`w-2 h-2 rounded-full ${isLLMReady ? "bg-emerald-400 shadow-[0_0_6px_#4ade80] animate-pulse" : "bg-muted-foreground"}`} />
+              {isLLMReady ? "LLM Ready" : "LLM Init…"}
+            </div>
             <Button size="sm" variant="outline" onClick={() => runFn("scan", "aurora-niche-scanner", {}, "Skan")} disabled={!!busy}>
               {busy === "scan" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Target className="w-4 h-4" />} Skan nisz
             </Button>
@@ -615,8 +622,9 @@ export default function AdminAurora() {
                             </div>
                             <div className="text-xs text-muted-foreground">{formatBytes(f.size_bytes)} · {f.content_type} · {formatDistanceToNow(new Date(f.created_at), { locale: pl, addSuffix: true })}</div>
                           </div>
-                          <Button size="sm" variant="ghost" onClick={() => downloadFile(f.id)} disabled={busy === `dl-${f.id}`}>
+                          <Button size="sm" variant="secondary" onClick={() => downloadFile(f.id)} disabled={busy === `dl-${f.id}`} className="gap-1.5 shrink-0">
                             {busy === `dl-${f.id}` ? <Loader2 className="w-3 h-3 animate-spin" /> : <Download className="w-3 h-3" />}
+                            Pobierz
                           </Button>
                         </div>
                       ))}

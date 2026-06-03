@@ -1,10 +1,17 @@
 User-agent: *
 Allow: /
+Disallow: /admin
+Disallow: /admin/
+Crawl-delay: 1
 
 User-agent: Googlebot
 Allow: /
+Disallow: /admin
+Disallow: /admin/
 
 User-agent: Bingbot
 Allow: /
+Disallow: /admin
+Disallow: /admin/
 
 Sitemap: https://grouaistream.com/sitemap.xml

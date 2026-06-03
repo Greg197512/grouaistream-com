@@ -42,34 +42,27 @@ export const SunoGenerateModal = ({ isOpen, onClose }: SunoGenerateModalProps) =
   const [style, setStyle] = useState("");
   const [instrumental, setInstrumental] = useState(false);
   const [customMode, setCustomMode] = useState(false);
+  const [duration, setDuration] = useState(15);
   const [generating, setGenerating] = useState(false);
   const [polling, setPolling] = useState(false);
   const [songs, setSongs] = useState<GeneratedSong[]>([]);
   const [statusMsg, setStatusMsg] = useState("");
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Cover art state
   const [coverMode, setCoverMode] = useState<CoverMode>("auto");
   const [coverDescription, setCoverDescription] = useState("");
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
 
-  // Cleanup polling on unmount
   useEffect(() => {
-    return () => {
-      if (pollRef.current) clearInterval(pollRef.current);
-    };
+    return () => { if (pollRef.current) clearInterval(pollRef.current); };
   }, []);
 
-  // Handle cover file selection
   const handleCoverFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (!file.type.startsWith("image/")) {
-        toast.error("Wybierz plik graficzny (JPG, PNG, WEBP)");
-        return;
-      }
+      if (!file.type.startsWith("image/")) { toast.error("Wybierz plik graficzny (JPG, PNG, WEBP)"); return; }
       setCoverFile(file);
       setCoverPreview(URL.createObjectURL(file));
     }
@@ -81,142 +74,94 @@ export const SunoGenerateModal = ({ isOpen, onClose }: SunoGenerateModalProps) =
     setCoverPreview(null);
   };
 
-  // Upload custom cover to storage
   const uploadCoverToStorage = async (file: File): Promise<string | null> => {
     try {
       const ext = file.name.split(".").pop() || "jpg";
-      const safeName = `covers/suno-custom-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-      const { error } = await supabase.storage.from("music").upload(safeName, file, {
-        contentType: file.type,
-        upsert: true,
-      });
+      const safeName = `covers/groua-custom-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const { error } = await supabase.storage.from("music").upload(safeName, file, { contentType: file.type, upsert: true });
       if (error) throw error;
       const { data } = supabase.storage.from("music").getPublicUrl(safeName);
       return data.publicUrl;
-    } catch (err) {
-      console.error("Cover upload error:", err);
-      return null;
-    }
+    } catch { return null; }
   };
 
-  // Generate AI cover based on text description
   const generateAICover = async (songTitle: string, songStyle: string): Promise<string | null> => {
     try {
       toast.loading("🎨 Generuję okładkę AI...", { id: "ai-cover" });
-      
       const descriptionPart = coverMode === "custom" && coverDescription.trim()
         ? coverDescription.trim()
         : `profesjonalna, kinowa okładka albumu muzycznego dla utworu "${songTitle}" w stylu ${songStyle || "muzycznym"}`;
-
       const { data, error } = await supabase.functions.invoke("ai-cover-generate", {
-        body: {
-          title: songTitle,
-          style: songStyle,
-          description: descriptionPart,
-          mode: coverMode,
-        }
+        body: { title: songTitle, style: songStyle, description: descriptionPart, mode: coverMode }
       });
-
       if (error) throw error;
-      if (data?.cover_url) {
-        toast.success("🎨 Okładka wygenerowana!", { id: "ai-cover" });
-        return data.cover_url;
-      }
+      if (data?.cover_url) { toast.success("🎨 Okładka wygenerowana!", { id: "ai-cover" }); return data.cover_url; }
       toast.dismiss("ai-cover");
       return null;
-    } catch (err) {
-      console.error("AI cover gen error:", err);
-      toast.error("Błąd generowania okładki", { id: "ai-cover" });
-      return null;
-    }
+    } catch { toast.error("Błąd generowania okładki", { id: "ai-cover" }); return null; }
   };
 
   const generate = async () => {
-    if (!prompt.trim() && !customMode) {
-      toast.error("Wpisz opis utworu");
-      return;
-    }
-
+    if (!prompt.trim() && !customMode) { toast.error("Wpisz opis utworu"); return; }
     setGenerating(true);
     setSongs([]);
-    setStatusMsg("🎵 Generuję muzykę z Suno AI...");
-
+    setStatusMsg("🧠 GrouAI Engine (MusicGen) generuje...");
     try {
-      const body: any = { action: "generate", prompt: prompt.trim(), instrumental };
-      if (customMode) {
-        body.style = style || "Pop";
-        body.title = title || "AI Track";
-      }
-
-      const { data, error } = await supabase.functions.invoke("suno-generate", { body });
+      const { data, error } = await supabase.functions.invoke("groua-music-engine", {
+        body: {
+          action: "generate",
+          prompt: prompt.trim(),
+          duration,
+          instrumental,
+          title: title || undefined,
+        },
+      });
       if (error) throw error;
-
-      console.log("[Suno] Response:", data);
-
-      // Check for API-level errors
-      if (data?.code && data.code !== 200) {
-        throw new Error(data?.msg || "Błąd API Suno");
-      }
-
-      const taskId = data?.data?.taskId || data?.taskId;
-
-      if (taskId) {
-        setStatusMsg("⏳ Utwór jest generowany... czekam na wynik (~30-120s)");
-        setPolling(true);
-        pollForResult(taskId);
-      } else if (data?.data?.songs || data?.data) {
-        handleResult(data.data.songs || data.data);
-      } else {
-        throw new Error(data?.msg || "Nieoczekiwana odpowiedź z Suno API");
-      }
+      if (data?.error) throw new Error(data.error);
+      const predId = data?.id;
+      const genId = data?.generation_id;
+      if (!predId) throw new Error("Brak prediction_id z silnika");
+      setStatusMsg(`⏳ GrouAI Engine pracuje... (~${Math.round(duration * 1.5)}s)`);
+      setPolling(true);
+      pollResult(predId, genId);
     } catch (err: any) {
-      console.error("[Suno] Generate error:", err);
       toast.error("Błąd generowania: " + (err.message || "Nieznany błąd"));
       setStatusMsg("");
-    } finally {
-      setGenerating(false);
-    }
+    } finally { setGenerating(false); }
   };
 
-  const pollForResult = (taskId: string) => {
+  const pollResult = (predictionId: string, generationId?: string) => {
     let attempts = 0;
-    const maxAttempts = 60; // 5 min max
-
     pollRef.current = setInterval(async () => {
       attempts++;
-      if (attempts > maxAttempts) {
+      if (attempts > 60) {
         if (pollRef.current) clearInterval(pollRef.current);
         setPolling(false);
         setStatusMsg("⏰ Generowanie trwa dłużej niż oczekiwano. Spróbuj ponownie.");
         return;
       }
-
       try {
-        const { data, error } = await supabase.functions.invoke("suno-generate", {
-          body: { action: "status", taskId },
+        const { data, error } = await supabase.functions.invoke("groua-music-engine", {
+          body: { action: "status", prediction_id: predictionId, generation_id: generationId },
         });
-
         if (error) throw error;
-
-        const status = data?.data?.status || data?.status;
-        const sunoData = data?.data?.response?.sunoData || data?.data?.songs || [];
-
-        if (status === "SUCCESS" || status === "FIRST_SUCCESS" || status === "TEXT_SUCCESS") {
+        const status = data?.status;
+        if (status === "succeeded") {
           if (pollRef.current) clearInterval(pollRef.current);
           setPolling(false);
-          handleResult(sunoData);
-        } else if (status === "failed" || status === "FAILED" || status === "GENERATE_AUDIO_FAILED" || status === "CREATE_TASK_FAILED") {
+          const url = typeof data.output === "string" ? data.output : data.output?.[0];
+          if (!url) { setStatusMsg("❌ Brak audio z GrouAI Engine"); return; }
+          handleResult([{ id: data.id, title: title || "GrouAI Track", audio_url: url, audioUrl: url, tags: style || "GrouAI", duration }]);
+        } else if (status === "failed" || status === "canceled") {
           if (pollRef.current) clearInterval(pollRef.current);
           setPolling(false);
           setStatusMsg("❌ Generowanie nie powiodło się");
-          toast.error("Suno AI nie mogło wygenerować utworu");
+          toast.error("GrouAI Engine nie mogło wygenerować utworu");
         } else {
-          setStatusMsg(`⏳ Generuję... (${Math.floor(attempts * 5)}s)`);
+          setStatusMsg(`⏳ Generuję... (${attempts * 3}s)`);
         }
-      } catch (err) {
-        console.error("[Suno] Poll error:", err);
-      }
-    }, 5000);
+      } catch {}
+    }, 3000);
   };
 
   const handleResult = (data: any) => {
@@ -226,13 +171,12 @@ export const SunoGenerateModal = ({ isOpen, onClose }: SunoGenerateModalProps) =
       .map((s: any) => ({
         id: s.id || s.songId || crypto.randomUUID(),
         title: s.title || s.name || title || "AI Generated",
-        audioUrl: s.audioUrl || s.audio_url || s.sourceAudioUrl || "",
-        streamUrl: s.streamAudioUrl || s.sourceStreamAudioUrl || s.streamUrl || s.stream_url || "",
-        imageUrl: s.imageUrl || s.image_url || s.sourceImageUrl || "",
+        audioUrl: s.audioUrl || s.audio_url || "",
+        streamUrl: s.streamUrl || s.stream_url || "",
+        imageUrl: s.imageUrl || s.image_url || "",
         duration: s.duration || 0,
         style: s.tags || s.style || style || "",
       }));
-
     setSongs(parsed);
     setStatusMsg(parsed.length > 0 ? `✅ Wygenerowano ${parsed.length} utworów!` : "Brak wyników");
     if (parsed.length > 0) toast.success(`🎶 Wygenerowano ${parsed.length} utworów!`);
@@ -240,57 +184,21 @@ export const SunoGenerateModal = ({ isOpen, onClose }: SunoGenerateModalProps) =
 
   const playSong = (song: GeneratedSong) => {
     const url = song.streamUrl || song.audioUrl;
-    if (!url) {
-      toast.error("Brak linku audio");
-      return;
-    }
-
-    playTrack({
-      id: song.id,
-      title: song.title,
-      artist: "Suno AI",
-      album: "AI Generated",
-      duration: song.duration || 180,
-      audio_url: url,
-      cover_url: song.imageUrl || null,
-      genre: song.style || "AI",
-      mood: null,
-    });
+    if (!url) { toast.error("Brak linku audio"); return; }
+    playTrack({ id: song.id, title: song.title, artist: "GrouAI Engine", album: "AI Generated", duration: song.duration || 180, audio_url: url, cover_url: song.imageUrl || null, genre: song.style || "AI", mood: null });
   };
 
   const saveSongToLibrary = async (song: GeneratedSong) => {
     const url = song.streamUrl || song.audioUrl;
     if (!url) return;
-
     try {
       let finalCoverUrl = song.imageUrl || null;
-
-      // Determine cover based on mode
-      if (coverMode === "upload" && coverFile) {
-        const uploaded = await uploadCoverToStorage(coverFile);
-        if (uploaded) finalCoverUrl = uploaded;
-      } else if (coverMode === "custom" || coverMode === "auto") {
-        // Generate AI cover
-        const aiCover = await generateAICover(song.title, song.style || style || "");
-        if (aiCover) finalCoverUrl = aiCover;
-      }
-
-      const { error } = await supabase.from("tracks").insert({
-        title: song.title,
-        artist: "Suno AI",
-        album: "AI Generated",
-        duration: song.duration || 180,
-        audio_url: url,
-        cover_url: finalCoverUrl,
-        genre: song.style || "AI",
-        mood: "generated",
-      });
-
+      if (coverMode === "upload" && coverFile) { const uploaded = await uploadCoverToStorage(coverFile); if (uploaded) finalCoverUrl = uploaded; }
+      else if (coverMode === "custom" || coverMode === "auto") { const aiCover = await generateAICover(song.title, song.style || style || ""); if (aiCover) finalCoverUrl = aiCover; }
+      const { error } = await supabase.from("tracks").insert({ title: song.title, artist: "GrouAI Engine", album: "AI Generated", duration: song.duration || 180, audio_url: url, cover_url: finalCoverUrl, genre: song.style || "AI", mood: "generated" });
       if (error) throw error;
       toast.success(`"${song.title}" dodano do biblioteki!`);
-    } catch (err: any) {
-      toast.error("Błąd zapisu: " + err.message);
-    }
+    } catch (err: any) { toast.error("Błąd zapisu: " + err.message); }
   };
 
   return (
@@ -299,7 +207,7 @@ export const SunoGenerateModal = ({ isOpen, onClose }: SunoGenerateModalProps) =
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-xl">
             <Wand2 className="h-5 w-5 text-primary" />
-            Suno AI — Generuj muzykę
+            GrouAI Studio — Generuj muzykę
           </DialogTitle>
         </DialogHeader>
 
@@ -312,14 +220,9 @@ export const SunoGenerateModal = ({ isOpen, onClose }: SunoGenerateModalProps) =
 
           {/* Prompt */}
           <div>
-            <Label className="text-sm mb-1 block">
-              {customMode ? "Tekst / Lyrics" : "Opis utworu"}
-            </Label>
+            <Label className="text-sm mb-1 block">{customMode ? "Tekst / Lyrics" : "Opis utworu"}</Label>
             <Textarea
-              placeholder={customMode
-                ? "Wpisz tekst piosenki lub opis..."
-                : "Np. Energiczna piosenka elektroniczna z mocnym bassem i wokalem..."
-              }
+              placeholder={customMode ? "Wpisz tekst piosenki lub opis..." : "Np. Energiczna elektronika z mocnym bassem i syntezatorami..."}
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               rows={3}
@@ -338,19 +241,11 @@ export const SunoGenerateModal = ({ isOpen, onClose }: SunoGenerateModalProps) =
               >
                 <div>
                   <Label className="text-sm mb-1 block">Tytuł</Label>
-                  <Input
-                    placeholder="Nazwa utworu"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                  />
+                  <Input placeholder="Nazwa utworu" value={title} onChange={(e) => setTitle(e.target.value)} />
                 </div>
                 <div>
                   <Label className="text-sm mb-1 block">Styl muzyczny</Label>
-                  <Input
-                    placeholder="Np. Pop, Rock, Electronic..."
-                    value={style}
-                    onChange={(e) => setStyle(e.target.value)}
-                  />
+                  <Input placeholder="Np. Pop, Rock, Electronic..." value={style} onChange={(e) => setStyle(e.target.value)} />
                   <div className="flex flex-wrap gap-1.5 mt-2">
                     {STYLE_PRESETS.map((s) => (
                       <Badge
@@ -368,6 +263,20 @@ export const SunoGenerateModal = ({ isOpen, onClose }: SunoGenerateModalProps) =
             )}
           </AnimatePresence>
 
+          {/* Duration */}
+          <div className="p-3 rounded-lg bg-secondary/30 border border-border space-y-2">
+            <Label className="text-sm">Długość: {duration}s</Label>
+            <input
+              type="range"
+              min={4}
+              max={30}
+              step={1}
+              value={duration}
+              onChange={(e) => setDuration(parseInt(e.target.value))}
+              className="w-full accent-primary"
+            />
+          </div>
+
           {/* Instrumental toggle */}
           <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/30 border border-border">
             <div className="flex items-center gap-2">
@@ -377,90 +286,37 @@ export const SunoGenerateModal = ({ isOpen, onClose }: SunoGenerateModalProps) =
             <Switch checked={instrumental} onCheckedChange={setInstrumental} />
           </div>
 
-          {/* Cover Art Section */}
+          {/* Cover Art */}
           <div className="p-3 rounded-lg bg-secondary/30 border border-border space-y-3">
             <div className="flex items-center gap-2">
               <ImagePlus className="h-4 w-4 text-primary" />
               <Label className="text-sm font-medium">Okładka utworu</Label>
             </div>
-
-            {/* Cover mode selector */}
             <div className="flex gap-1.5">
-              <Badge
-                variant={coverMode === "auto" ? "default" : "outline"}
-                className="cursor-pointer text-xs hover:bg-primary/20 transition-colors"
-                onClick={() => setCoverMode("auto")}
-              >
-                🤖 Auto AI
-              </Badge>
-              <Badge
-                variant={coverMode === "custom" ? "default" : "outline"}
-                className="cursor-pointer text-xs hover:bg-primary/20 transition-colors"
-                onClick={() => setCoverMode("custom")}
-              >
-                <Palette className="h-3 w-3 mr-1" /> Opisz AI
-              </Badge>
-              <Badge
-                variant={coverMode === "upload" ? "default" : "outline"}
-                className="cursor-pointer text-xs hover:bg-primary/20 transition-colors"
-                onClick={() => setCoverMode("upload")}
-              >
-                <Upload className="h-3 w-3 mr-1" /> Własna
-              </Badge>
+              <Badge variant={coverMode === "auto" ? "default" : "outline"} className="cursor-pointer text-xs hover:bg-primary/20 transition-colors" onClick={() => setCoverMode("auto")}>🤖 Auto AI</Badge>
+              <Badge variant={coverMode === "custom" ? "default" : "outline"} className="cursor-pointer text-xs hover:bg-primary/20 transition-colors" onClick={() => setCoverMode("custom")}><Palette className="h-3 w-3 mr-1" /> Opisz AI</Badge>
+              <Badge variant={coverMode === "upload" ? "default" : "outline"} className="cursor-pointer text-xs hover:bg-primary/20 transition-colors" onClick={() => setCoverMode("upload")}><Upload className="h-3 w-3 mr-1" /> Własna</Badge>
             </div>
-
-            {/* Auto mode description */}
-            {coverMode === "auto" && (
-              <p className="text-[11px] text-muted-foreground">
-                AI automatycznie wygeneruje profesjonalną okładkę w jakości fotograficznej, dopasowaną do tytułu i stylu utworu.
-              </p>
-            )}
-
-            {/* Custom AI description */}
+            {coverMode === "auto" && <p className="text-[11px] text-muted-foreground">AI automatycznie wygeneruje profesjonalną okładkę dopasowaną do tytułu i stylu.</p>}
             {coverMode === "custom" && (
               <div>
-                <Textarea
-                  placeholder="Opisz jak ma wyglądać okładka, np: ciemna fotografia neonowego miasta nocą z deszczem, efekt kinowy, bokeh..."
-                  value={coverDescription}
-                  onChange={(e) => setCoverDescription(e.target.value)}
-                  rows={2}
-                  className="resize-none text-sm"
-                />
-                <p className="text-[10px] text-muted-foreground mt-1">
-                  Opisz styl, kolory, scenę — AI wygeneruje okładkę na podstawie Twojego opisu.
-                </p>
+                <Textarea placeholder="Opisz jak ma wyglądać okładka..." value={coverDescription} onChange={(e) => setCoverDescription(e.target.value)} rows={2} className="resize-none text-sm" />
+                <p className="text-[10px] text-muted-foreground mt-1">Opisz styl, kolory, scenę — AI wygeneruje okładkę na podstawie Twojego opisu.</p>
               </div>
             )}
-
-            {/* Upload own cover */}
             {coverMode === "upload" && (
               <div>
-                <input
-                  ref={coverInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleCoverFile}
-                />
+                <input ref={coverInputRef} type="file" accept="image/*" className="hidden" onChange={handleCoverFile} />
                 {coverPreview ? (
                   <div className="relative w-24 h-24 rounded-lg overflow-hidden border border-border">
                     <img src={coverPreview} alt="Cover" className="w-full h-full object-cover" />
-                    <button
-                      onClick={removeCoverFile}
-                      className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/70 flex items-center justify-center"
-                    >
+                    <button onClick={removeCoverFile} className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/70 flex items-center justify-center">
                       <X className="h-3 w-3 text-white" />
                     </button>
                   </div>
                 ) : (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-2"
-                    onClick={() => coverInputRef.current?.click()}
-                  >
-                    <Upload className="h-3.5 w-3.5" />
-                    Wybierz grafikę
+                  <Button variant="outline" size="sm" className="gap-2" onClick={() => coverInputRef.current?.click()}>
+                    <Upload className="h-3.5 w-3.5" /> Wybierz grafikę
                   </Button>
                 )}
               </div>
@@ -468,41 +324,23 @@ export const SunoGenerateModal = ({ isOpen, onClose }: SunoGenerateModalProps) =
           </div>
 
           {/* Generate button */}
-          <Button
-            onClick={generate}
-            disabled={generating || polling}
-            className="w-full groove-gradient-bg text-primary-foreground gap-2 h-11"
-          >
-            {generating || polling ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Sparkles className="h-4 w-4" />
-            )}
+          <Button onClick={generate} disabled={generating || polling} className="w-full groove-gradient-bg text-primary-foreground gap-2 h-11">
+            {generating || polling ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
             {generating ? "Generuję..." : polling ? "Czekam na wynik..." : "Generuj utwór 🎶"}
           </Button>
 
           {/* Status */}
-          {statusMsg && (
-            <p className="text-sm text-center text-muted-foreground">{statusMsg}</p>
-          )}
+          {statusMsg && <p className="text-sm text-center text-muted-foreground">{statusMsg}</p>}
 
           {/* Results */}
           <AnimatePresence>
             {songs.length > 0 && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="space-y-3"
-              >
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
                 <h3 className="font-semibold text-sm flex items-center gap-2">
-                  <Music className="h-4 w-4 text-primary" />
-                  Wygenerowane utwory
+                  <Music className="h-4 w-4 text-primary" /> Wygenerowane utwory
                 </h3>
                 {songs.map((song) => (
-                  <div
-                    key={song.id}
-                    className="flex items-center gap-3 p-3 rounded-xl border border-border bg-card hover:bg-secondary/30 transition-colors"
-                  >
+                  <div key={song.id} className="flex items-center gap-3 p-3 rounded-xl border border-border bg-card hover:bg-secondary/30 transition-colors">
                     {song.imageUrl ? (
                       <img src={song.imageUrl} alt="" className="w-12 h-12 rounded-lg object-cover" />
                     ) : (
@@ -512,17 +350,11 @@ export const SunoGenerateModal = ({ isOpen, onClose }: SunoGenerateModalProps) =
                     )}
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-sm truncate">{song.title}</p>
-                      <p className="text-xs text-muted-foreground">
-                        Suno AI{song.style ? ` • ${song.style}` : ""}
-                      </p>
+                      <p className="text-xs text-muted-foreground">GrouAI Engine{song.style ? ` • ${song.style}` : ""}</p>
                     </div>
                     <div className="flex gap-1.5">
-                      <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => playSong(song)}>
-                        <Play className="h-4 w-4" />
-                      </Button>
-                      <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => saveSongToLibrary(song)}>
-                        <Download className="h-4 w-4" />
-                      </Button>
+                      <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => playSong(song)}><Play className="h-4 w-4" /></Button>
+                      <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => saveSongToLibrary(song)}><Download className="h-4 w-4" /></Button>
                     </div>
                   </div>
                 ))}

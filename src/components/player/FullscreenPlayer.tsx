@@ -1,13 +1,14 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  X, 
-  Play, 
-  Pause, 
-  SkipBack, 
-  SkipForward, 
-  Shuffle, 
-  Repeat, 
-  Volume2, 
+import { useState } from "react";
+import {
+  X,
+  Play,
+  Pause,
+  SkipBack,
+  SkipForward,
+  Shuffle,
+  Repeat,
+  Volume2,
   VolumeX,
   Heart,
   ListMusic,
@@ -17,6 +18,7 @@ import { Slider } from "@/components/ui/slider";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { cn } from "@/lib/utils";
 import { HQCover } from "@/components/ui/HQCover";
+import { ShareTrackModal } from "@/components/modals/ShareTrackModal";
 
 interface FullscreenPlayerProps {
   isOpen: boolean;
@@ -43,6 +45,8 @@ export const FullscreenPlayer = ({ isOpen, onClose }: FullscreenPlayerProps) => 
     currentTime,
     duration,
   } = usePlayer();
+
+  const [showShareModal, setShowShareModal] = useState(false);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -245,7 +249,10 @@ export const FullscreenPlayer = ({ isOpen, onClose }: FullscreenPlayerProps) => 
                 />
               </div>
 
-              <button className="p-2 text-muted-foreground hover:text-foreground transition-colors">
+              <button
+                onClick={() => setShowShareModal(true)}
+                className="p-2 text-muted-foreground hover:text-foreground transition-colors"
+              >
                 <Share2 className="h-6 w-6" />
               </button>
 
@@ -257,5 +264,11 @@ export const FullscreenPlayer = ({ isOpen, onClose }: FullscreenPlayerProps) => 
         </motion.div>
       )}
     </AnimatePresence>
+
+    <ShareTrackModal
+      isOpen={showShareModal}
+      onClose={() => setShowShareModal(false)}
+      track={currentTrack}
+    />
   );
 };

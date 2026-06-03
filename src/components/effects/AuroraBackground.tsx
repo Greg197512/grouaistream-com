@@ -3,11 +3,11 @@ import { useAI } from "@/contexts/AIContext";
 import auroraWomanFace from "@/assets/aurora-woman-face.jpg";
 
 export const AuroraBackground = () => {
-  const { isProcessing } = useAI();
+  const { isProcessing, isLLMReady } = useAI();
 
-  // Im bardziej AI "myśli", tym mocniej twarz się ujawnia
-  const faceOpacity = isProcessing ? 0.45 : 0.12;
-  const faceBlur = isProcessing ? 0 : 8;
+  // Twarz ukryta dopóki LLM nie jest gotowy; po inicjalizacji ujawnia się stopniowo
+  const faceOpacity = !isLLMReady ? 0 : isProcessing ? 0.55 : 0.18;
+  const faceBlur = !isLLMReady ? 20 : isProcessing ? 0 : 6;
 
   return (
     <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
@@ -18,7 +18,7 @@ export const AuroraBackground = () => {
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,hsl(210_90%_55%/0.06),transparent_55%)]" />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,hsl(220_85%_60%/0.05),transparent_55%)]" />
 
-      {/* Aurora WOMAN FACE — ujawnia się gdy AI myśli */}
+      {/* Aurora WOMAN FACE — ujawnia się gdy LLM gotowy */}
       <motion.div
         animate={{
           opacity: [faceOpacity * 0.85, faceOpacity, faceOpacity * 0.85],
@@ -30,7 +30,7 @@ export const AuroraBackground = () => {
         }}
         style={{
           filter: `blur(${faceBlur}px)`,
-          transition: "filter 1.2s ease-out",
+          transition: "opacity 1.8s ease-out, filter 1.8s ease-out",
         }}
         className="absolute inset-0 flex items-center justify-center"
       >

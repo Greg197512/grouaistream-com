@@ -23,6 +23,7 @@ interface RadioConfig {
 }
 
 interface ScheduleTrack {
+  id: string;
   position: number;
   item_type: string;
   custom_title: string | null;
@@ -180,7 +181,7 @@ const RadioLive = () => {
 
         const scheduleRes = await supabase
           .from("radio_schedule")
-          .select("position, item_type, custom_title, custom_duration, custom_audio_url, lang, track:tracks(id, title, artist, duration, audio_url, cover_url)")
+          .select("id, position, item_type, custom_title, custom_duration, custom_audio_url, lang, track:tracks(id, title, artist, duration, audio_url, cover_url)")
           .order("position", { ascending: true })
           .limit(1000);
         if (cancelled) return;
@@ -270,6 +271,19 @@ const RadioLive = () => {
     };
     checkLiked();
   }, [userId, currentIndex, schedule]);
+
+  // Sync current playing schedule item to radio_config so admin panel can highlight it
+  useEffect(() => {
+    if (!config?.is_active) return;
+    const scheduleId = schedule[currentIndex]?.id ?? null;
+    supabase
+      .from("radio_config")
+      .update({ current_schedule_id: scheduleId } as any)
+      .eq("is_active", true)
+      .then(({ error }) => {
+        if (error) console.warn("[RadioLive] sync current_schedule_id failed:", error.message);
+      });
+  }, [currentIndex, schedule, config?.is_active]);
 
   const getItemDuration = (item: ScheduleTrack) => {
     if (item.item_type === "track" || !item.item_type) return item.track?.duration || 180;

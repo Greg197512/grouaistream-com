@@ -7,7 +7,7 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Sparkles, Eye, Clock } from "lucide-react";
+import { ArrowLeft, Sparkles, Eye, BookOpen } from "lucide-react";
 import { ReadingProgress } from "@/components/blog/ReadingProgress";
 import { TableOfContents } from "@/components/blog/TableOfContents";
 import { BlogPostActions } from "@/components/blog/BlogPostActions";
@@ -18,6 +18,7 @@ import { NewsletterCapture } from "@/components/blog/NewsletterCapture";
 import { headingComponents } from "@/lib/markdownHeadingId";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { getCategoryLabel } from "@/lib/blogCategories";
+import { getCoverUrl } from "@/lib/blogCovers";
 
 interface BlogPost {
   id: string;
@@ -210,27 +211,44 @@ export default function BlogPost() {
             <header className="mb-6">
               <div className="flex items-center gap-2 mb-4 flex-wrap">
                 <Badge className="bg-primary/15 text-primary border-primary/30">{getCategoryLabel(post.category, language)}</Badge>
-                <span className="text-xs text-muted-foreground">
-                  {new Date(post.created_at).toLocaleDateString(dateLocale, { day: "numeric", month: "long", year: "numeric" })}
-                </span>
                 <span className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Clock className="w-3 h-3" /> {minutes} min
-                </span>
-                <span className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Eye className="w-3 h-3" /> {post.view_count}
+                  <Eye className="w-3 h-3" /> {post.view_count} {language === "en" ? "views" : "wyświetleń"}
                 </span>
               </div>
               <h1 className="text-3xl sm:text-5xl font-black text-foreground leading-[1.1] tracking-tight mb-4">
                 {displayTitle}
               </h1>
-              <p className="text-base sm:text-lg text-muted-foreground leading-relaxed">{displayDescription}</p>
+              <p className="text-lg sm:text-xl text-muted-foreground leading-relaxed font-light">{displayDescription}</p>
             </header>
 
-            {post.cover_url && (
-              <div className="relative mb-8 rounded-2xl overflow-hidden border border-primary/20 shadow-[0_0_60px_hsl(var(--primary)/0.15)]">
-                <img src={post.cover_url} alt={displayTitle} className="w-full" loading="eager" />
+            {/* Hero image — always shown (real or curated Unsplash fallback) */}
+            <div className="relative mb-8 rounded-2xl overflow-hidden border border-border/40 shadow-[0_8px_60px_hsl(var(--primary)/0.12)]">
+              <div className="aspect-[16/7] overflow-hidden">
+                <img
+                  src={getCoverUrl(post.cover_url, post.category, post.slug)}
+                  alt={displayTitle}
+                  className="w-full h-full object-cover"
+                  loading="eager"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-background/40 via-transparent to-transparent" />
               </div>
-            )}
+            </div>
+
+            {/* Author row */}
+            <div className="flex items-center gap-3 mb-8 pb-6 border-b border-border/40">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center flex-shrink-0">
+                <Sparkles className="w-5 h-5 text-primary-foreground" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-foreground">GrouAI Redakcja</p>
+                <p className="text-xs text-muted-foreground">
+                  {new Date(post.created_at).toLocaleDateString(dateLocale, { day: "numeric", month: "long", year: "numeric" })}
+                  {" · "}
+                  <BookOpen className="w-3 h-3 inline mr-0.5" />
+                  {minutes} min czytania
+                </p>
+              </div>
+            </div>
 
             <div className="mb-8">
               <BlogPostActions postId={post.id} postUrl={url} postTitle={displayTitle} onScrollToComments={scrollToComments} />
