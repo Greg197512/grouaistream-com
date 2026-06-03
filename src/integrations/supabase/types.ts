@@ -7299,6 +7299,10 @@ export type Database = {
         }[]
       }
       send_tip: { Args: { _amount: number; _track_id: string }; Returns: Json }
+      set_radio_current_schedule: {
+        Args: { _schedule_id: string }
+        Returns: undefined
+      }
       submit_payout_request: {
         Args: { _bank_account: string; _city: string; _full_name: string }
         Returns: Json
