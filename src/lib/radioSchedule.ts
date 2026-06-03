@@ -30,9 +30,9 @@ export const getRadioItemDuration = (item: RadioScheduleItem) => {
   return item.custom_duration || 30;
 };
 
-export const fetchRadioSchedule = async () => {
+export const fetchRadioSchedule = async <T = unknown>() => {
   const pageSize = 1000;
-  const all: unknown[] = [];
+  const all: T[] = [];
 
   for (let from = 0; from < 10000; from += pageSize) {
     const { data, error } = await supabase
@@ -42,7 +42,7 @@ export const fetchRadioSchedule = async () => {
       .range(from, from + pageSize - 1);
 
     if (error) throw error;
-    all.push(...(data || []));
+    all.push(...((data || []) as T[]));
     if (!data || data.length < pageSize) break;
   }
 
@@ -87,6 +87,12 @@ export const resolveCurrentRadioScheduleId = <T extends RadioScheduleItem>(
 ) => resolveCurrentRadioPosition(schedule, config, nowMs)?.item.id ?? null;
 
 export const syncRadioCurrentSchedule = async (scheduleId: string | null) => {
-  const { error } = await (supabase as any).rpc("set_radio_current_schedule", { _schedule_id: scheduleId });
+  const rpcClient = supabase as typeof supabase & {
+    rpc(
+      fn: "set_radio_current_schedule",
+      args: { _schedule_id: string | null }
+    ): Promise<{ error: { message: string } | null }>;
+  };
+  const { error } = await rpcClient.rpc("set_radio_current_schedule", { _schedule_id: scheduleId });
   return error;
 };
