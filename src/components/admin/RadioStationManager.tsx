@@ -97,11 +97,11 @@ export const RadioStationManager = () => {
   const fetchData = useCallback(async () => {
     const [configRes, fullSchedule] = await Promise.all([
       supabase.from("radio_config").select("*").limit(1).single(),
-      fetchRadioSchedule(),
+      fetchRadioSchedule<ScheduleTrack>(),
     ]);
 
-    if (configRes.data) setConfig(configRes.data as any);
-    setSchedule(fullSchedule as ScheduleTrack[]);
+    if (configRes.data) setConfig(configRes.data as RadioConfig);
+    setSchedule(fullSchedule);
     setLoading(false);
   }, []);
 
@@ -116,7 +116,7 @@ export const RadioStationManager = () => {
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "radio_config" },
         (payload) => {
-          const updated = payload.new as any;
+          const updated = payload.new as Partial<RadioConfig>;
           setConfig((prev) => (prev ? { ...prev, ...updated } : prev));
         }
       )
