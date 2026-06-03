@@ -271,5 +271,6 @@ export const FullscreenPlayer = ({ isOpen, onClose }: FullscreenPlayerProps) => 
       onClose={() => setShowShareModal(false)}
       track={currentTrack}
     />
+    </>
   );
 };
