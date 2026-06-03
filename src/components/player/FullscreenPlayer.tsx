@@ -57,6 +57,7 @@ export const FullscreenPlayer = ({ isOpen, onClose }: FullscreenPlayerProps) => 
   const displayDuration = duration || currentTrack?.duration || 0;
 
   return (
+    <>
     <AnimatePresence>
       {isOpen && (
         <motion.div
@@ -270,5 +271,6 @@ export const FullscreenPlayer = ({ isOpen, onClose }: FullscreenPlayerProps) => 
       onClose={() => setShowShareModal(false)}
       track={currentTrack}
     />
+    </>
   );
 };
