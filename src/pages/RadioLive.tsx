@@ -152,11 +152,11 @@ const RadioLive = () => {
       try {
         const configRes = await supabase.from("radio_config").select("*").limit(1).single();
         if (cancelled) return;
-        if (configRes.data) setConfig(configRes.data as any);
+        if (configRes.data) setConfig(configRes.data as RadioConfig);
 
-        const scheduleRes = await fetchRadioSchedule();
+        const scheduleRes = await fetchRadioSchedule<ScheduleTrack>();
         if (cancelled) return;
-        setRawSchedule(scheduleRes as any);
+        setRawSchedule(scheduleRes);
       } catch (err) {
         console.error("[RadioLive] Fetch error:", err);
       } finally {
@@ -213,7 +213,7 @@ const RadioLive = () => {
         setMessages((prev) => [...prev.slice(-49), newMsg]);
       })
       .on("postgres_changes", { event: "DELETE", schema: "public", table: "radio_messages" }, (payload) => {
-        const deletedId = (payload.old as any).id;
+        const deletedId = (payload.old as Pick<RadioMessage, "id">).id;
         setMessages((prev) => prev.filter((m) => m.id !== deletedId));
       })
       .subscribe();
@@ -381,14 +381,6 @@ const RadioLive = () => {
     }
   };
 
-  useEffect(() => {
-    if (!config?.is_active || !config.started_at || schedule.length === 0) return;
-    const current = resolveCurrentRadioPosition(schedule, config);
-    if (!current) return;
-    setCurrentIndex(current.index);
-    startPlayback(current.index, current.offset);
-  }, [config, schedule]);
-
   const startPlayback = useCallback(
     (index: number, offset = 0) => {
       const item = schedule[index];
@@ -447,6 +439,14 @@ const RadioLive = () => {
     },
     [schedule, volume, muted, stopCurrentAudio]
   );
+
+  useEffect(() => {
+    if (!config?.is_active || !config.started_at || schedule.length === 0) return;
+    const current = resolveCurrentRadioPosition(schedule, config);
+    if (!current) return;
+    setCurrentIndex(current.index);
+    startPlayback(current.index, current.offset);
+  }, [config, schedule, startPlayback]);
 
   useEffect(() => {
     if (audioRef.current) audioRef.current.volume = muted ? 0 : volume / 100;
