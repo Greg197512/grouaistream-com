@@ -28,6 +28,7 @@ import {
 import { uploadToR2 } from "@/lib/r2Upload";
 import { useAuth } from "@/contexts/AuthContext";
 import { isAllowedMediaFile, MAX_UPLOAD_SIZE_BYTES, MEDIA_FILE_ACCEPT } from "@/lib/mediaFormats";
+import { fetchRadioSchedule, getRadioItemDuration, resolveCurrentRadioScheduleId } from "@/lib/radioSchedule";
 import { RadioTimeline } from "./RadioTimeline";
 import { RadioAnnouncementsLog } from "./RadioAnnouncementsLog";
 import {
@@ -46,6 +47,7 @@ interface RadioConfig {
   end_time: string | null;
   started_at: string | null;
   station_name: string;
+  current_schedule_id?: string | null;
 }
 
 interface ScheduleTrack {
@@ -93,16 +95,13 @@ export const RadioStationManager = () => {
   const radioUrl = `${window.location.origin}/radio-live`;
 
   const fetchData = useCallback(async () => {
-    const [configRes, scheduleRes] = await Promise.all([
+    const [configRes, fullSchedule] = await Promise.all([
       supabase.from("radio_config").select("*").limit(1).single(),
-      supabase
-        .from("radio_schedule")
-        .select("*, track:tracks(*)")
-        .order("position", { ascending: true }),
+      fetchRadioSchedule<ScheduleTrack>(),
     ]);
 
-    if (configRes.data) setConfig(configRes.data as any);
-    if (scheduleRes.data) setSchedule(scheduleRes.data as any);
+    if (configRes.data) setConfig(configRes.data as RadioConfig);
+    setSchedule(fullSchedule);
     setLoading(false);
   }, []);
 
@@ -110,32 +109,31 @@ export const RadioStationManager = () => {
     fetchData();
   }, [fetchData]);
 
-  // Realtime: track which schedule item is currently playing
   useEffect(() => {
-    // Seed from initial fetch
-    supabase
-      .from("radio_config")
-      .select("current_schedule_id")
-      .limit(1)
-      .single()
-      .then(({ data }) => {
-        if (data) setCurrentScheduleId((data as any).current_schedule_id ?? null);
-      });
-
     const channel = supabase
       .channel("admin-radio-config-realtime")
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "radio_config" },
         (payload) => {
-          const updated = payload.new as any;
-          setCurrentScheduleId(updated.current_schedule_id ?? null);
+          const updated = payload.new as Partial<RadioConfig>;
+          setConfig((prev) => (prev ? { ...prev, ...updated } : prev));
         }
       )
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
   }, []);
+
+  useEffect(() => {
+    const tick = () => {
+      setCurrentScheduleId(resolveCurrentRadioScheduleId(schedule, config));
+    };
+
+    tick();
+    const id = window.setInterval(tick, 1000);
+    return () => window.clearInterval(id);
+  }, [config, schedule]);
 
   const updateConfig = async (updates: Partial<RadioConfig>) => {
     if (!config) return;
@@ -357,7 +355,7 @@ export const RadioStationManager = () => {
     return `${m}:${s.toString().padStart(2, "0")}`;
   };
 
-  const totalDuration = schedule.reduce((sum, s) => sum + (s.track?.duration || 0), 0);
+  const totalDuration = schedule.reduce((sum, s) => sum + getRadioItemDuration(s), 0);
 
   const copyLink = () => {
     navigator.clipboard.writeText(radioUrl);
