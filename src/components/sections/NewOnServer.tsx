@@ -18,7 +18,7 @@ const FETCH_TIMEOUT_MS = 25_000;
 const PROFILE_FETCH_TIMEOUT_MS = 8_000;
 const TRACK_SELECT = "id,title,artist,album,duration,cover_url,audio_url,video_url,genre,mood,created_at,user_id";
 const CARDS_VISIBLE = 4;
-const AUTO_MS = 5200;
+const AUTO_MS = 10000;
 
 interface UploaderProfile {
   display_name: string | null;
@@ -314,7 +314,11 @@ export const NewOnServer = () => {
                 >
                   {/* Cover art */}
                   <div className="relative aspect-square overflow-hidden">
+<<<<<<< HEAD
+                    {track.cover_url?.trim() ? (
+=======
                     {track.cover_url ? (
+>>>>>>> origin/main
                       <HQCover
                         src={track.cover_url}
                         alt={track.title}
@@ -364,7 +368,11 @@ export const NewOnServer = () => {
                     </div>
 
                     {/* Genre badge bottom-left */}
+<<<<<<< HEAD
+                    {track.genre && !track.cover_url?.trim() && (
+=======
                     {track.genre && !track.cover_url && (
+>>>>>>> origin/main
                       <div className="absolute bottom-2 left-2">
                         <span
                           className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full uppercase tracking-wider"
@@ -391,7 +399,11 @@ export const NewOnServer = () => {
                         <span className="text-[10px] text-muted-foreground truncate">@{track.uploader.display_name}</span>
                       </div>
                     )}
+<<<<<<< HEAD
+                    {track.genre && track.cover_url?.trim() && (
+=======
                     {track.genre && track.cover_url && (
+>>>>>>> origin/main
                       <span className="inline-block mt-1.5 text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary">
                         {track.genre}
                       </span>
