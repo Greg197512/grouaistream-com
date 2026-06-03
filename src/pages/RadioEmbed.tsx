@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Radio, Volume2, VolumeX, Play, Pause } from "lucide-react";
+import { fetchRadioSchedule, resolveCurrentRadioPosition, syncRadioCurrentSchedule } from "@/lib/radioSchedule";
 
 interface RadioConfig {
   is_active: boolean;
@@ -47,13 +48,10 @@ const RadioEmbed = () => {
     const fetchData = async () => {
       const [configRes, scheduleRes] = await Promise.all([
         supabase.from("radio_config").select("*").limit(1).single(),
-        supabase
-          .from("radio_schedule")
-          .select("id, position, item_type, custom_title, custom_duration, custom_audio_url, lang, track:tracks(id, title, artist, duration, audio_url, cover_url)")
-          .order("position", { ascending: true }),
+        fetchRadioSchedule<ScheduleTrack>(),
       ]);
-      if (configRes.data) setConfig(configRes.data as any);
-      if (scheduleRes.data) setRawSchedule(scheduleRes.data as any);
+      if (configRes.data) setConfig(configRes.data as RadioConfig);
+      setRawSchedule(scheduleRes);
     };
     fetchData();
   }, []);
@@ -87,11 +85,9 @@ const RadioEmbed = () => {
   useEffect(() => {
     if (!config?.is_active || schedule.length === 0) return;
     const scheduleId = schedule[currentIndex]?.id ?? null;
-    (supabase as any)
-      .rpc("set_radio_current_schedule", { _schedule_id: scheduleId })
-      .then(({ error }) => {
-        if (error) console.warn("[RadioEmbed] sync current_schedule_id failed:", error.message);
-      });
+    syncRadioCurrentSchedule(scheduleId).then((error) => {
+      if (error) console.warn("[RadioEmbed] sync current_schedule_id failed:", error.message);
+    });
   }, [currentIndex, schedule, config?.is_active]);
 
   const startPlayback = useCallback(
@@ -146,29 +142,10 @@ const RadioEmbed = () => {
   const syncAndPlay = useCallback(() => {
     if (!config?.is_active || !config.started_at || schedule.length === 0) return;
 
-    const startedAt = new Date(config.started_at).getTime();
-    const now = Date.now();
-    let elapsed = (now - startedAt) / 1000;
-
-    const totalDuration = schedule.reduce((s, t) => s + getItemDuration(t), 0);
-    if (totalDuration <= 0) return;
-
-    if (config.mode === "24h") {
-      elapsed = elapsed % totalDuration;
-    }
-
-    let cumulative = 0;
-    for (let i = 0; i < schedule.length; i++) {
-      const dur = getItemDuration(schedule[i]);
-      if (cumulative + dur > elapsed) {
-        setCurrentIndex(i);
-        startPlayback(i, elapsed - cumulative);
-        return;
-      }
-      cumulative += dur;
-    }
-    setCurrentIndex(0);
-    startPlayback(0);
+    const current = resolveCurrentRadioPosition(schedule, config);
+    if (!current) return;
+    setCurrentIndex(current.index);
+    startPlayback(current.index, current.offset);
   }, [config, schedule, startPlayback]);
 
   const handlePlayPause = () => {

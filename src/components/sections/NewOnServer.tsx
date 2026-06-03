@@ -183,14 +183,14 @@ export const NewOnServer = () => {
         </button>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+      <div className="flex gap-4 overflow-x-auto pb-3 pr-6 groove-scrollbar snap-x snap-mandatory">
         {tracks.map((track, index) => (
           <motion.div
             key={track.id}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.05 }}
-            className="group relative rounded-xl overflow-hidden bg-secondary/50 hover:bg-secondary transition-colors cursor-pointer"
+            className="group relative w-[168px] sm:w-[190px] lg:w-[210px] shrink-0 snap-start rounded-xl overflow-hidden bg-secondary/50 hover:bg-secondary transition-colors cursor-pointer"
             onClick={() => handlePlay(track, index)}
           >
             <div className="relative aspect-square overflow-hidden">

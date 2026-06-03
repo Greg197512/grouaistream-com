@@ -28,6 +28,7 @@ import {
 import { uploadToR2 } from "@/lib/r2Upload";
 import { useAuth } from "@/contexts/AuthContext";
 import { isAllowedMediaFile, MAX_UPLOAD_SIZE_BYTES, MEDIA_FILE_ACCEPT } from "@/lib/mediaFormats";
+import { fetchRadioSchedule, getRadioItemDuration, resolveCurrentRadioScheduleId } from "@/lib/radioSchedule";
 import { RadioTimeline } from "./RadioTimeline";
 import { RadioAnnouncementsLog } from "./RadioAnnouncementsLog";
 import {
@@ -46,6 +47,7 @@ interface RadioConfig {
   end_time: string | null;
   started_at: string | null;
   station_name: string;
+  current_schedule_id?: string | null;
 }
 
 interface ScheduleTrack {
@@ -93,16 +95,13 @@ export const RadioStationManager = () => {
   const radioUrl = `${window.location.origin}/radio-live`;
 
   const fetchData = useCallback(async () => {
-    const [configRes, scheduleRes] = await Promise.all([
+    const [configRes, fullSchedule] = await Promise.all([
       supabase.from("radio_config").select("*").limit(1).single(),
-      supabase
-        .from("radio_schedule")
-        .select("*, track:tracks(*)")
-        .order("position", { ascending: true }),
+      fetchRadioSchedule<ScheduleTrack>(),
     ]);
 
-    if (configRes.data) setConfig(configRes.data as any);
-    if (scheduleRes.data) setSchedule(scheduleRes.data as any);
+    if (configRes.data) setConfig(configRes.data as RadioConfig);
+    setSchedule(fullSchedule);
     setLoading(false);
   }, []);
 
@@ -110,28 +109,14 @@ export const RadioStationManager = () => {
     fetchData();
   }, [fetchData]);
 
-  // Track current item: compute locally from started_at + durations
-  // (works even when nobody has /radio-live open). DB current_schedule_id used as fallback.
-  const [dbCurrentScheduleId, setDbCurrentScheduleId] = useState<string | null>(null);
-
   useEffect(() => {
-    supabase
-      .from("radio_config")
-      .select("current_schedule_id")
-      .limit(1)
-      .single()
-      .then(({ data }) => {
-        if (data) setDbCurrentScheduleId((data as any).current_schedule_id ?? null);
-      });
-
     const channel = supabase
       .channel("admin-radio-config-realtime")
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "radio_config" },
         (payload) => {
-          const updated = payload.new as any;
-          setDbCurrentScheduleId(updated.current_schedule_id ?? null);
+          const updated = payload.new as Partial<RadioConfig>;
           setConfig((prev) => (prev ? { ...prev, ...updated } : prev));
         }
       )
@@ -140,43 +125,15 @@ export const RadioStationManager = () => {
     return () => { supabase.removeChannel(channel); };
   }, []);
 
-  const getItemDur = (item: ScheduleTrack) => {
-    if ((item.item_type || "track") === "track") return item.track?.duration || 180;
-    return item.custom_duration || 30;
-  };
-
   useEffect(() => {
-    // Source of truth: current_schedule_id written by /radio-live (matches what listeners actually hear).
-    if (dbCurrentScheduleId) {
-      setCurrentScheduleId(dbCurrentScheduleId);
-      return;
-    }
-    // Fallback only when nobody is listening: estimate from started_at + cumulative durations.
-    if (!config?.is_active || !config.started_at || schedule.length === 0) {
-      setCurrentScheduleId(null);
-      return;
-    }
-    const total = schedule.reduce((s, t) => s + getItemDur(t), 0);
-    if (total <= 0) { setCurrentScheduleId(null); return; }
-    const startedAt = new Date(config.started_at).getTime();
-
     const tick = () => {
-      let elapsed = (Date.now() - startedAt) / 1000;
-      if (config.mode === "24h") elapsed = ((elapsed % total) + total) % total;
-      if (elapsed < 0) { setCurrentScheduleId(schedule[0].id); return; }
-      let cum = 0;
-      for (const item of schedule) {
-        const dur = getItemDur(item);
-        if (cum + dur > elapsed) { setCurrentScheduleId(item.id); return; }
-        cum += dur;
-      }
-      setCurrentScheduleId(schedule[schedule.length - 1].id);
+      setCurrentScheduleId(resolveCurrentRadioScheduleId(schedule, config));
     };
 
     tick();
     const id = window.setInterval(tick, 1000);
     return () => window.clearInterval(id);
-  }, [config?.is_active, config?.started_at, config?.mode, schedule, dbCurrentScheduleId]);
+  }, [config, schedule]);
 
   const updateConfig = async (updates: Partial<RadioConfig>) => {
     if (!config) return;
@@ -398,7 +355,7 @@ export const RadioStationManager = () => {
     return `${m}:${s.toString().padStart(2, "0")}`;
   };
 
-  const totalDuration = schedule.reduce((sum, s) => sum + (s.track?.duration || 0), 0);
+  const totalDuration = schedule.reduce((sum, s) => sum + getRadioItemDuration(s), 0);
 
   const copyLink = () => {
     navigator.clipboard.writeText(radioUrl);
