@@ -54,6 +54,7 @@ interface Props {
   onMove: (index: number, direction: "up" | "down") => void;
   onRemove: (id: string) => void;
   onReorder: (fromIndex: number, toIndex: number) => void;
+  currentScheduleId?: string | null;
 }
 
 const TYPE_CONFIG: Record<string, { label: string; icon: typeof Music; color: string; bgColor: string }> = {
@@ -64,7 +65,7 @@ const TYPE_CONFIG: Record<string, { label: string; icon: typeof Music; color: st
   announcement: { label: "🎹 Historia muz.", icon: Radio, color: "text-amber-400", bgColor: "bg-amber-500/5" },
 };
 
-export const RadioTimeline = ({ schedule, onMove, onRemove, onReorder }: Props) => {
+export const RadioTimeline = ({ schedule, onMove, onRemove, onReorder, currentScheduleId }: Props) => {
   const [clipboard, setClipboard] = useState<{ item: TrackItem; mode: "cut" | "copy" } | null>(null);
   const [cutItemId, setCutItemId] = useState<string | null>(null);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
@@ -204,7 +205,7 @@ export const RadioTimeline = ({ schedule, onMove, onRemove, onReorder }: Props) 
                   onDrop={() => handleDrop(item.index)}
                   onDragEnd={handleDragEnd}
                   className={`grid grid-cols-[32px_70px_55px_24px_1fr_130px_40px] gap-1 items-center px-2 py-1.5 text-sm transition-all cursor-grab active:cursor-grabbing group
-                    ${cutItemId === item.id ? "opacity-40 bg-destructive/10" : `hover:bg-muted/30 ${cfg.bgColor}`}
+                    ${currentScheduleId === item.id ? "bg-orange-500/15 ring-1 ring-inset ring-orange-500/60" : cutItemId === item.id ? "opacity-40 bg-destructive/10" : `hover:bg-muted/30 ${cfg.bgColor}`}
                     ${dragOverIndex === item.index ? "bg-primary/10 border-l-2 border-primary" : ""}
                     ${dragIndex === item.index ? "opacity-50" : ""}
                   `}
@@ -220,11 +221,16 @@ export const RadioTimeline = ({ schedule, onMove, onRemove, onReorder }: Props) 
 
                   <Icon className={`h-3.5 w-3.5 ${cfg.color} shrink-0`} />
 
-                  <p className="text-sm font-medium truncate">
+                  <p className="text-sm font-medium truncate flex items-center gap-1.5">
                     {item.lang && item.item_type === "announcement" && (
                       <span className="mr-1">{LANG_FLAGS[item.lang] || "🌐"}</span>
                     )}
                     {getItemTitle(item)}
+                    {currentScheduleId === item.id && (
+                      <span className="shrink-0 text-[9px] font-bold px-1 py-0.5 rounded bg-orange-500 text-white animate-pulse">
+                        ON AIR
+                      </span>
+                    )}
                   </p>
 
                   <p className="text-xs text-muted-foreground truncate">{getItemSubtitle(item)}</p>

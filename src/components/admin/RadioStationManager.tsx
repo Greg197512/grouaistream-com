@@ -82,6 +82,7 @@ export const RadioStationManager = () => {
   const [catalogPage, setCatalogPage] = useState(0);
   const CATALOG_PAGE_SIZE = 50;
   const [diskUploading, setDiskUploading] = useState(false);
+  const [currentScheduleId, setCurrentScheduleId] = useState<string | null>(null);
 
   // Custom item form
   const [customTitle, setCustomTitle] = useState("");
@@ -108,6 +109,33 @@ export const RadioStationManager = () => {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // Realtime: track which schedule item is currently playing
+  useEffect(() => {
+    // Seed from initial fetch
+    supabase
+      .from("radio_config")
+      .select("current_schedule_id")
+      .limit(1)
+      .single()
+      .then(({ data }) => {
+        if (data) setCurrentScheduleId((data as any).current_schedule_id ?? null);
+      });
+
+    const channel = supabase
+      .channel("admin-radio-config-realtime")
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "radio_config" },
+        (payload) => {
+          const updated = payload.new as any;
+          setCurrentScheduleId(updated.current_schedule_id ?? null);
+        }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, []);
 
   const updateConfig = async (updates: Partial<RadioConfig>) => {
     if (!config) return;
@@ -649,6 +677,7 @@ export const RadioStationManager = () => {
               onMove={moveTrack}
               onRemove={removeFromSchedule}
               onReorder={reorderTrack}
+              currentScheduleId={currentScheduleId}
             />
           )}
         </CardContent>
