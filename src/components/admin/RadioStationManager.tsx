@@ -146,12 +146,18 @@ export const RadioStationManager = () => {
   };
 
   useEffect(() => {
-    if (!config?.is_active || !config.started_at || schedule.length === 0) {
+    // Source of truth: current_schedule_id written by /radio-live (matches what listeners actually hear).
+    if (dbCurrentScheduleId) {
       setCurrentScheduleId(dbCurrentScheduleId);
       return;
     }
+    // Fallback only when nobody is listening: estimate from started_at + cumulative durations.
+    if (!config?.is_active || !config.started_at || schedule.length === 0) {
+      setCurrentScheduleId(null);
+      return;
+    }
     const total = schedule.reduce((s, t) => s + getItemDur(t), 0);
-    if (total <= 0) { setCurrentScheduleId(dbCurrentScheduleId); return; }
+    if (total <= 0) { setCurrentScheduleId(null); return; }
     const startedAt = new Date(config.started_at).getTime();
 
     const tick = () => {
