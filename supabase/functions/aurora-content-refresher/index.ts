@@ -1,33 +1,27 @@
 // Aurora Content Refresher — odświeża najlepsze landingi i posty
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { callAI } from "../_shared/ai.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-
 async function rewriteWithAI(title: string, body: string): Promise<{ title: string; body: string }> {
-  if (!LOVABLE_API_KEY) return { title, body };
-  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    headers: { "Authorization": `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: "google/gemini-2.5-flash",
-      messages: [
-        { role: "system", content: "Jesteś SEO copywriterem. Odśwież treść — popraw hooki, zaktualizuj CTA, dodaj świeże frazy. Zachowaj długość ±10%. Zwróć JSON {title, body}." },
-        { role: "user", content: `Tytuł: ${title}\n\nTreść:\n${body}` },
-      ],
-      response_format: { type: "json_object" },
-    }),
-  });
-  if (!res.ok) return { title, body };
-  const j = await res.json();
+  const messages = [
+    {
+      role: "system" as const,
+      content: "Jesteś SEO copywriterem. Odśwież treść — popraw hooki, zaktualizuj CTA, dodaj świeże frazy. Zachowaj długość ±10%. Zwróć JSON {title, body}.",
+    },
+    { role: "user" as const, content: `Tytuł: ${title}\n\nTreść:\n${body}` },
+  ];
   try {
-    const parsed = JSON.parse(j.choices?.[0]?.message?.content ?? "{}");
+    const result = await callAI(messages, { model: "grok-3-mini", maxTokens: 2048 });
+    const parsed = JSON.parse(result);
     return { title: parsed.title ?? title, body: parsed.body ?? body };
-  } catch { return { title, body }; }
+  } catch {
+    return { title, body };
+  }
 }
 
 Deno.serve(async (req) => {
