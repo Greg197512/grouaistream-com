@@ -137,7 +137,7 @@ function getCuratedCover(category: string, slug: string): string {
   return `https://images.unsplash.com/photo-${id}?w=1200&q=85&fit=crop&crop=center`;
 }
 
-async function generateCoverImage(LOVABLE_API_KEY: string, title: string, category: string): Promise<string | null> {
+async function generateCoverImage(OPENROUTER_API_KEY: string, title: string, category: string): Promise<string | null> {
   const isNews = category === "ai_news" || category === "tech_news";
   const sceneHint = isNews
     ? "futuristic AI laboratory with glowing neural networks, holographic data streams, server racks with neon orange LEDs, cinematic depth of field"
@@ -150,16 +150,16 @@ MOOD: Premium, intelligent, futuristic, emotionally captivating — like a Natio
 ABSOLUTE RULES: NO text, NO letters, NO logos, NO watermarks, NO typography. Pure photorealistic image only.`;
 
   const models = [
-    "google/gemini-2.0-flash-exp",
-    "google/gemini-2.0-pro-exp",
-    "google/gemini-2.5-flash-preview-04-17",
+    "google/gemma-2-9b-it:free",
+    "google/gemma-2-9b-it:free",
+    "google/gemma-2-9b-it:free",
   ];
 
   for (const model of models) {
     try {
-      const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",
-        headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+        headers: { Authorization: `Bearer ${OPENROUTER_API_KEY}`, "Content-Type": "application/json" },
         body: JSON.stringify({
           model,
           messages: [{ role: "user", content: prompt }],
@@ -239,11 +239,11 @@ serve(async (req) => {
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
   );
-  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY");
   const triggeredBy = req.headers.get("x-trigger") || "cron";
 
   try {
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY missing");
+    if (!OPENROUTER_API_KEY) throw new Error("OPENROUTER_API_KEY missing");
 
     // Pick a topic not used recently
     const { data: recent } = await supabaseAdmin
@@ -269,12 +269,12 @@ serve(async (req) => {
     }
 
     // Use stronger model for news (Gemini Pro), Flash for evergreen topics
-    const model = isNews ? "google/gemini-2.5-pro" : "google/gemini-2.5-flash";
+    const model = isNews ? "google/gemma-2-9b-it:free" : "google/gemma-2-9b-it:free";
 
-    const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const aiRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${OPENROUTER_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
@@ -360,7 +360,7 @@ serve(async (req) => {
 
     // Generate cover image — try AI first, fall back to curated Unsplash photo
     let coverUrl: string | null = null;
-    const dataUrl = await generateCoverImage(LOVABLE_API_KEY, parsed.title, pick.category);
+    const dataUrl = await generateCoverImage(OPENROUTER_API_KEY, parsed.title, pick.category);
     if (dataUrl) {
       coverUrl = await uploadCoverToStorage(supabaseAdmin, dataUrl, slug);
     }
@@ -390,11 +390,11 @@ serve(async (req) => {
 
     // Generate distribution hooks (X / Telegram / Email) — best effort
     try {
-      const hookRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      const hookRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",
-        headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+        headers: { Authorization: `Bearer ${OPENROUTER_API_KEY}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
+          model: "google/gemma-2-9b-it:free",
           messages: [
             {
               role: "system",
