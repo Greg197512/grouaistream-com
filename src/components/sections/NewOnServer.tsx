@@ -340,11 +340,7 @@ export const NewOnServer = () => {
                 >
                   {/* Cover art */}
                   <div className="relative aspect-square overflow-hidden">
-<<<<<<< HEAD
                     {track.cover_url?.trim() ? (
-=======
-                    {track.cover_url ? (
->>>>>>> origin/main
                       <HQCover
                         src={track.cover_url}
                         alt={track.title}
