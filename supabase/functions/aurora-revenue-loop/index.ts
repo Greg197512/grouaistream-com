@@ -17,8 +17,8 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const LOVABLE_AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
-const MODEL = "google/gemini-2.5-flash";
+const LOVABLE_AI_URL = "https://openrouter.ai/api/v1/chat/completions";
+const MODEL = "google/gemma-2-9b-it:free";
 
 const NICHE_IDEAS = [
   { slug: "muzyka-do-medytacji", niche: "Medytacja & Mindfulness" },
@@ -73,7 +73,7 @@ Deno.serve(async (req) => {
 
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
   const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  const LOVABLE_API_KEY = Deno.env.get("OPENROUTER_API_KEY");
 
   if (!LOVABLE_API_KEY) {
     return new Response(JSON.stringify({ error: "LOVABLE_API_KEY missing" }), {
