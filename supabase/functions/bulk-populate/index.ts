@@ -129,7 +129,7 @@ Format: [{"title":"...","artist":"...","album":"...","duration":210,"mood":"..."
 Return ONLY the JSON array, no markdown, no explanation. Make sure every song is REAL and the videoId is CORRECT.
 Include artists from: USA, UK, Poland, Korea, Spain, Brazil, Japan, France, Germany, Sweden, Nigeria, India.`;
 
-          const aiResponse = await fetch('https://ai.lovable.dev/api/generate', {
+          const aiResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
