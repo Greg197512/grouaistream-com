@@ -8,7 +8,7 @@
 //
 // Properties:
 // - similar texts → similar concepts → similar vectors (cosine sim works)
-// - zero new secrets, uses Deno.env.get("GROK_API_KEY") only
+// - zero new secrets, uses Deno.env.get("OPENROUTER_API_KEY") only
 // - cheap: gemini-2.5-flash-lite, ~30 tokens output per call
 // - drop-in replacement for the old embed() helper
 
@@ -110,7 +110,7 @@ export async function semanticEmbed(
 
   // 1) Try LLM-extracted fingerprint
   try {
-    const res = await fetch("https://api.x.ai/v1/chat/completions", {
+    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
