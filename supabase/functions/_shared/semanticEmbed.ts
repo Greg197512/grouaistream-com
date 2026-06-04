@@ -8,12 +8,10 @@
 //
 // Properties:
 // - similar texts → similar concepts → similar vectors (cosine sim works)
-// - zero new secrets, uses LOVABLE_API_KEY only
+// - zero new secrets, uses Deno.env.get("GROK_API_KEY") only
 // - cheap: gemini-2.5-flash-lite, ~30 tokens output per call
 // - drop-in replacement for the old embed() helper
 
-const LOVABLE_AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
-const EXTRACT_MODEL = "google/gemini-2.5-flash-lite";
 const VECTOR_DIM = 768;
 
 interface ConceptFingerprint {
@@ -112,7 +110,7 @@ export async function semanticEmbed(
 
   // 1) Try LLM-extracted fingerprint
   try {
-    const res = await fetch(LOVABLE_AI_URL, {
+    const res = await fetch("https://api.x.ai/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
