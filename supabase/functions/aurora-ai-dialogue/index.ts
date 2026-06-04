@@ -8,10 +8,10 @@ const corsHeaders = {
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
+const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY")!;
 
 async function chat(model: string, system: string, history: { role: string; content: string }[], reasoningEffort?: "minimal" | "low" | "medium" | "high") {
-  const isReasoning = model.startsWith("openai/gpt-5");
+  const isReasoning = model.startsWith("google/gemma-2-9b-it:free");
   const payload: any = {
     model,
     messages: [{ role: "system", content: system }, ...history],
@@ -21,9 +21,9 @@ async function chat(model: string, system: string, history: { role: string; cont
   } else {
     payload.max_tokens = 400;
   }
-  const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+  const r = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
-    headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+    headers: { Authorization: `Bearer ${OPENROUTER_API_KEY}`, "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
   if (!r.ok) {
@@ -44,8 +44,8 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const topic = String(body.topic ?? "").trim();
     // Aurora myśli głęboko (gpt-5.2 high), partner dla różnorodności perspektyw — Gemini Pro
-    const partner_model = String(body.partner_model ?? "google/gemini-2.5-pro");
-    const aurora_model = "openai/gpt-5.2";
+    const partner_model = String(body.partner_model ?? "google/gemma-2-9b-it:free");
+    const aurora_model = "google/gemma-2-9b-it:free";
     const rounds = Math.min(3, Math.max(1, Number(body.rounds ?? 2)));
     if (!topic) {
       return new Response(JSON.stringify({ ok: false, error: "Podaj temat dialogu" }), {
