@@ -46,7 +46,7 @@ serve(async (req) => {
     const userId = userData.user.id;
     // --- End authentication ---
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY");
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
@@ -180,7 +180,7 @@ serve(async (req) => {
     }
 
     let aiProfileSummary = "";
-    if (LOVABLE_API_KEY) {
+    if (OPENROUTER_API_KEY) {
       try {
         const profileContext = `User listening data:
 - Total tracks analyzed: ${history.length}
@@ -193,14 +193,14 @@ serve(async (req) => {
 - Avoided genres: ${avoidGenres.join(", ") || "none"}
 - Liked tracks count: ${likedIds.size}`;
 
-        const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        const aiResp = await fetch("https://openrouter.ai/api/v1/chat/completions", {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${LOVABLE_API_KEY}`,
+            Authorization: `Bearer ${OPENROUTER_API_KEY}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            model: "google/gemini-2.5-flash-lite",
+            model: "google/gemma-2-9b-it:free",
             messages: [
               { role: "system", content: "You are a music psychologist AI. Create a short (3-4 sentences) personality profile of this listener based on their data. Include their musical identity, energy patterns, and what drives their taste. Be insightful and specific." },
               { role: "user", content: profileContext },
