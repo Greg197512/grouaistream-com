@@ -72,7 +72,7 @@ serve(async (req) => {
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const ELEVENLABS_API_KEY = Deno.env.get("ELEVENLABS_API_KEY");
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY");
 
     if (!ELEVENLABS_API_KEY) throw new Error("ELEVENLABS_API_KEY missing");
 
@@ -127,16 +127,16 @@ serve(async (req) => {
 
     // 2. Build short radio announcement script via Lovable AI in target language
     let script = "";
-    if (LOVABLE_API_KEY) {
+    if (OPENROUTER_API_KEY) {
       try {
-        const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        const aiResp = await fetch("https://openrouter.ai/api/v1/chat/completions", {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${LOVABLE_API_KEY}`,
+            Authorization: `Bearer ${OPENROUTER_API_KEY}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            model: "google/gemini-2.5-flash",
+            model: "google/gemma-2-9b-it:free",
             messages: [
               { role: "system", content: SYSTEM_PROMPTS[lang] },
               {
