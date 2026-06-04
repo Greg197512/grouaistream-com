@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { lovable } from "@/integrations/lovable";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 const Auth = () => {
@@ -25,17 +25,17 @@ const Auth = () => {
   const handleGoogleSignIn = async () => {
     setGoogleLoading(true);
     try {
-      const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: window.location.origin,
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: window.location.origin,
+        },
       });
-      if (result.error) {
-        toast.error(result.error.message || "Nie udało się zalogować przez Google");
+      if (error) {
+        toast.error(error.message || "Nie udało się zalogować przez Google");
         setGoogleLoading(false);
-        return;
       }
-      if (result.redirected) return;
-      toast.success("Zalogowano przez Google");
-      navigate("/");
+      // on success Supabase redirects automatically — no return value needed
     } catch (e: any) {
       toast.error(e?.message || "Błąd logowania Google");
       setGoogleLoading(false);
