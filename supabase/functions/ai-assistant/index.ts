@@ -419,14 +419,16 @@ serve(async (req) => {
     if (hasGenerateIntent) {
       // Use AI to parse the complex prompt into generation parameters
       try {
-        const parseResponse = await fetch("https://api.x.ai/v1/chat/completions", {
+        const parseResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
           method: "POST",
           headers: {
             Authorization: `Bearer ${GROK_API_KEY}`,
+          "HTTP-Referer": "https://grouaistream.com",
+          "X-Title": "Groua AI Stream",
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            model: "grok-3-mini",
+            model: "google/gemma-2-9b-it:free",
             messages: [
               { role: "system", content: `You are a music production AI that parses user prompts into generation parameters. Analyze the user's request and extract parameters. Available styles: Pop, Rock, Electronic, Hip-Hop, Jazz, Classical, Lo-fi, Ambient, Metal, R&B, Reggae, Trap, House, Disco, Indie, Country. Available moods: dark, bright, melancholic, euphoric, aggressive, dreamy, romantic, tense. Available energy: low, medium, high, extreme.` },
               { role: "user", content: message },
@@ -1297,7 +1299,7 @@ Znasz DOKŁADNIE każdą funkcję i stronę:
     // ==========================================
     // WEB SEARCH via Grok (xAI) — for factual/general questions
     // ==========================================
-    const GROK_API_KEY = Deno.env.get("GROK_API_KEY");
+    const GROK_API_KEY = Deno.env.get("OPENROUTER_API_KEY")!;
     let webSearchResult = "";
 
     // Detect if user is asking a factual/web question (not music playback commands)
@@ -1314,10 +1316,10 @@ Znasz DOKŁADNIE każdą funkcję i stronę:
     if (isWebQuestion && GROK_API_KEY) {
       try {
         console.log("🔍 Web search triggered for:", message.slice(0, 100));
-        const grokResponse = await fetch("https://api.x.ai/v1/chat/completions", {
+        const grokResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
           method: "POST",
           headers: {
-            "Authorization": `Bearer ${GROK_API_KEY}`,
+            "Authorization": `Bearer ${GROK_API_KEY}`, "HTTP-Referer": "https://grouaistream.com", "X-Title": "Groua AI Stream",
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
@@ -1351,14 +1353,16 @@ Znasz DOKŁADNIE każdą funkcję i stronę:
     const userPrompt = message;
 
     // Stream the response
-    const aiResponse = await fetch("https://api.x.ai/v1/chat/completions", {
+    const aiResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${GROK_API_KEY}`,
+          "HTTP-Referer": "https://grouaistream.com",
+          "X-Title": "Groua AI Stream",
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "grok-3-mini",
+        model: "google/gemma-2-9b-it:free",
         messages: [
           { role: "system", content: systemPrompt + webSearchResult },
           ...history.slice(-12).map((m: any) => ({ role: m.role, content: m.content })),
