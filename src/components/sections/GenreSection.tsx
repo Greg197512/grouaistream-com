@@ -45,6 +45,8 @@ export const GenreSection = ({ genre, title, icon, color, limit = 8 }: GenreSect
           query = query.or("genre.eq.Punk,genre.eq.Pop-Punk,genre.eq.Punk-Rock,genre.ilike.%punk%");
         } else if (genre === "Pop") {
           query = query.or("genre.eq.Pop,genre.ilike.%pop%").not("genre", "ilike", "%punk%").not("genre", "ilike", "%rock%");
+        } else if (genre === "Other") {
+          query = query.or("genre.is.null,genre.eq.Other,genre.ilike.%other%,genre.eq.AI,genre.eq.Lo-fi,genre.eq.Ambient,genre.eq.Classical,genre.eq.Metal,genre.eq.Trap");
         } else {
           query = query.or(`genre.ilike.%${genre}%,genre.eq.${genre}`);
         }

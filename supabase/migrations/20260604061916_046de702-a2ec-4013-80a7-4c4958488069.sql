@@ -1,0 +1,1 @@
+DELETE FROM public.tracks WHERE artist = 'Unknown Artist';
