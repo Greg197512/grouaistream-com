@@ -417,11 +417,7 @@ export const NewOnServer = () => {
                         <span className="text-[10px] text-muted-foreground truncate">@{track.uploader.display_name}</span>
                       </div>
                     )}
-<<<<<<< HEAD
                     {track.genre && track.cover_url?.trim() && (
-=======
-                    {track.genre && track.cover_url && (
->>>>>>> origin/main
                       <span className="inline-block mt-1.5 text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary">
                         {track.genre}
                       </span>
