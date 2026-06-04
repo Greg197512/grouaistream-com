@@ -42,7 +42,14 @@ const Index = () => {
       <Section name="g-rnb"><GenreSection genre="R&B" title={t("section.rnb")} icon="favorite" color="text-accent" limit={8} /></Section>
       <Section name="g-indie"><GenreSection genre="Indie" title="Indie" icon="auto_awesome" color="text-primary" limit={8} /></Section>
       <Section name="g-disco"><GenreSection genre="Disco" title={t("section.disco")} icon="nightlife" color="text-accent" limit={8} /></Section>
-      <Section name="g-jazz"><GenreSection genre="Jazz" title="Jazz" icon="piano" color="text-accent" limit={8} /></Section>
+      <Section name="g-jazz"><GenreSection genre="Jazz" title="🎷 Jazz i Blues" icon="piano" color="text-yellow-400" limit={8} /></Section>
+      <Section name="g-ai"><GenreSection genre="AI" title="🤖 Muzyka AI (Suno)" icon="memory" color="text-fuchsia-400" limit={8} /></Section>
+      <Section name="g-ambient"><GenreSection genre="Ambient" title="🌊 Ambient i Chillout" icon="waves" color="text-cyan-400" limit={8} /></Section>
+      <Section name="g-classical"><GenreSection genre="Classical" title="🎻 Klasyczna i Orkiestra" icon="queue_music" color="text-blue-300" limit={8} /></Section>
+      <Section name="g-soul"><GenreSection genre="Soul" title="✨ Soul i Funk" icon="favorite_border" color="text-orange-400" limit={8} /></Section>
+      <Section name="g-trance"><GenreSection genre="Trance" title={t("section.trance")} icon="waves" color="text-primary" limit={8} /></Section>
+      <Section name="g-punk"><GenreSection genre="Punk" title={t("section.punk")} icon="whatshot" color="text-destructive" limit={8} /></Section>
+      <Section name="g-house"><GenreSection genre="House" title={t("section.house")} icon="music_note" color="text-primary" limit={8} /></Section>
       <Section name="g-other"><GenreSection genre="Other" title="Inne odkrycia" icon="explore" color="text-primary" limit={12} /></Section>
 
       <Section name="live-radio"><LiveRadioCard /></Section>
