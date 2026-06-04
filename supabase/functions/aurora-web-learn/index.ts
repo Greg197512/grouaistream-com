@@ -9,7 +9,7 @@ const corsHeaders = {
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
+const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY")!;
 const FIRECRAWL_KEY = Deno.env.get("FIRECRAWL_API_KEY")!;
 
 async function firecrawlSearch(query: string) {
@@ -40,11 +40,11 @@ async function firecrawlSearch(query: string) {
 }
 
 async function summarize(topic: string, raw: string) {
-  const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+  const r = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
-    headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+    headers: { Authorization: `Bearer ${OPENROUTER_API_KEY}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: "google/gemini-3-flash-preview",
+      model: "google/gemma-2-9b-it:free",
       messages: [
         { role: "system", content: "Jesteś Aurora — autonomiczna AI ucząca się. Streść wiedzę w 5 najważniejszych faktach po polsku, oceń jakość źródła 0-1 i zaproponuj kategorię." },
         { role: "user", content: `Temat: ${topic}\n\nŹródła:\n${raw.slice(0, 12000)}` },
