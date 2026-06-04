@@ -6,6 +6,7 @@ import { usePlayer, Track } from "@/contexts/PlayerContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { Loader2, TrendingUp, Zap } from "lucide-react";
 import { ArtistCard } from "@/components/cards/ArtistCard";
+import { withTimeout } from "@/lib/withTimeout";
 
 interface ArtistData {
   id: string;
@@ -63,10 +64,15 @@ export const TopArtists = () => {
   const fetchTopArtists = async () => {
     setIsLoading(true);
     try {
-      const { data: tracksData } = await supabase
-        .from("tracks")
-        .select("user_id, artist")
-        .not("user_id", "is", null);
+      const { data: tracksData } = await withTimeout(
+        supabase
+          .from("tracks")
+          .select("user_id, artist")
+          .not("user_id", "is", null)
+          .limit(500),
+        15_000,
+        "TopArtists tracks"
+      );
 
       if (!tracksData || tracksData.length === 0) { setArtists([]); return; }
 
@@ -80,10 +86,14 @@ export const TopArtists = () => {
       const userIds = Object.keys(userTrackMap);
       if (userIds.length === 0) { setArtists([]); return; }
 
-      const { data: profiles } = await supabase
-        .from("profiles")
-        .select("user_id, display_name, avatar_url")
-        .in("user_id", userIds);
+      const { data: profiles } = await withTimeout(
+        supabase
+          .from("profiles")
+          .select("user_id, display_name, avatar_url")
+          .in("user_id", userIds),
+        8_000,
+        "TopArtists profiles"
+      );
 
       const profileMap: Record<string, { name: string | null; avatar: string | null }> = {};
       profiles?.forEach(p => { profileMap[p.user_id] = { name: p.display_name, avatar: p.avatar_url }; });
