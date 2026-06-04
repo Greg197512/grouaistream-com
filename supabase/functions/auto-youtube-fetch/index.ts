@@ -239,7 +239,7 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    const OPENROUTER_API_KEY = Deno.env.get('OPENROUTER_API_KEY');
 
     const body = await req.json().catch(() => ({}));
     const requestedGenres = body.genres || Object.keys(VERIFIED_YOUTUBE_TRACKS);
@@ -294,16 +294,16 @@ serve(async (req) => {
     }
 
     // Use AI to suggest more tracks if requested
-    if (body.useAI && LOVABLE_API_KEY) {
+    if (body.useAI && OPENROUTER_API_KEY) {
       try {
-        const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        const aiResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${LOVABLE_API_KEY}`,
+            Authorization: `Bearer ${OPENROUTER_API_KEY}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            model: "google/gemini-3-flash-preview",
+            model: "google/gemma-2-9b-it:free",
             messages: [
               { 
                 role: "system", 
