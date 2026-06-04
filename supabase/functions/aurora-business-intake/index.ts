@@ -6,17 +6,17 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY");
 
 const SERVICE_TYPES = ["seo_audit", "seo_content", "landing_page", "social_post", "automation_flow", "lead_research", "other"];
 
 async function planWithAI(brief: string, serviceType: string) {
-  if (!LOVABLE_API_KEY) return null;
-  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+  if (!OPENROUTER_API_KEY) return null;
+  const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
-    headers: { "Authorization": `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+    headers: { "Authorization": `Bearer ${OPENROUTER_API_KEY}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: "google/gemini-2.5-flash",
+      model: "google/gemma-2-9b-it:free",
       messages: [
         { role: "system", content: "Jesteś Aurorą — autonomicznym wykonawcą zleceń biznesowych (SEO, copy, automatyzacje). Na podstawie briefu zwróć JSON: {steps: [{title, description, tool}], estimated_hours, deliverables: [], next_action}. tool ∈ ['ai-write','seo-research','n8n-flow','manual-review']." },
         { role: "user", content: `Typ usługi: ${serviceType}\n\nBrief klienta:\n${brief}` },
