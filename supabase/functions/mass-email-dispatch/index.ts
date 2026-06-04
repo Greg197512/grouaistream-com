@@ -168,11 +168,11 @@ function buildImagePrompt(emailType: EmailType, copyHeadline?: string): string {
 async function generateHeroImage(emailType: EmailType, apiKey: string, copyHeadline?: string): Promise<string | null> {
   try {
     const prompt = buildImagePrompt(emailType, copyHeadline);
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "google/gemini-3.1-flash-image-preview",
+        model: "google/gemma-2-9b-it:free",
         messages: [{ role: "user", content: prompt }],
         modalities: ["image", "text"],
       }),
@@ -253,11 +253,11 @@ ${customMessage ? `Admin context to weave in: ${customMessage}` : ""}
 
 ${hint}`;
 
-  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+  const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: "google/gemini-2.5-flash",
+      model: "google/gemma-2-9b-it:free",
       messages: [
         { role: "system", content: sys },
         { role: "user", content: userPrompt },
@@ -401,7 +401,7 @@ serve(async (req) => {
     }));
 
     // === Generuj copy per język (tylko te, które są potrzebne) ===
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    const LOVABLE_API_KEY = Deno.env.get("OPENROUTER_API_KEY");
     const usedLangs = Array.from(new Set(recipientsWithLang.map((r) => r.lang))) as Lang[];
     const copyByLang: Record<string, any> = {};
     let heroUrl: string | null = null;
