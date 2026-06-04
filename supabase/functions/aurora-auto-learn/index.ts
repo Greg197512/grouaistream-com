@@ -9,15 +9,14 @@ const corsHeaders = {
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
+const LOVABLE_API_KEY = Deno.env.get("GROK_API_KEY")!;
 
 async function generateSubtopics(scope: string, count: number): Promise<string[]> {
-  const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+  const r = await fetch("https://api.x.ai/v1/chat/completions", {
     method: "POST",
     headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: "openai/gpt-5.2",
-      reasoning: { effort: "low" },
+      model: "grok-3-mini",
       messages: [
         { role: "system", content: "Jesteś planistą nauki Aurory. Z opisanego zakresu wygeneruj listę konkretnych, wyszukiwalnych w internecie podtematów po polsku. Każdy podtemat = jedno hasło do wyszukania, max 8 słów. Myśl strategicznie — pokrywaj różne kąty (techniczny, biznesowy, kulturowy, kontrowersyjny)." },
         { role: "user", content: `Zakres nauki: ${scope}\n\nWygeneruj dokładnie ${count} różnorodnych podtematów pokrywających ten zakres.` },
