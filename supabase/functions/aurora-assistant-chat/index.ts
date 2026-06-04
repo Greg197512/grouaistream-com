@@ -8,7 +8,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY");
 
 // Definicja wszystkich pól briefu (używane do tabelki braków)
 const BRIEF_FIELDS: { key: string; label: string; description: string; required: boolean }[] = [
@@ -430,7 +430,7 @@ Deno.serve(async (req) => {
   );
 
   try {
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    if (!OPENROUTER_API_KEY) throw new Error("OPENROUTER_API_KEY not configured");
 
     const body = await req.json();
     const {
@@ -521,11 +521,11 @@ Jeszcze brakuje (KOLEJNOŚĆ priorytetu): ${missingSoFar.join(", ") || "NIC — 
     ];
 
     // 5) Call Lovable AI Gateway (with tools)
-    const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const aiRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
-      headers: { "Authorization": `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+      headers: { "Authorization": `Bearer ${OPENROUTER_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "openai/gpt-5.2",
+        model: "google/gemma-2-9b-it:free",
         messages: aiMessages,
         tools: TOOLS,
         reasoning: { effort: "medium" },
