@@ -1,6 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
+import { callAI, AIMessage } from "../_shared/ai.ts";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -168,46 +170,10 @@ async function huntArtistContext(FIRECRAWL_API_KEY: string | undefined, artist: 
   }
 }
 
-async function generateCoverImage(LOVABLE_API_KEY: string, artist: string, era: string): Promise<string | null> {
-  const prompt = `Create a HYPERREALISTIC, 4K, photorealistic cinematic editorial portrait inspired by the music pioneer "${artist}" (${era}).
-SCENE: vintage analog studio with classic synthesizers (Moog, ARP, Roland Jupiter, Buchla, Yamaha CS-80), patch cables glowing under warm tungsten light, vintage CRT monitors, reel-to-reel tape machines, neon orange and amber accents reflecting on chrome surfaces, smoke and aurora borealis ambience.
-STYLE: Shot on Hasselblad H6D-100c, 50mm prime lens, f/1.4, dramatic chiaroscuro lighting, deep blacks with neon orange highlights, ultra-sharp focus, premium magazine cover quality, 16:9 aspect ratio, evokes feeling of an iconic Rolling Stone or Wired cover.
-MOOD: Intimate, nostalgic, futuristic-retro, emotionally captivating — a portrait of a sonic visionary at work.
-ABSOLUTE RULES: NO text, NO letters, NO logos, NO watermarks, NO typography, NO real recognizable face. Pure photorealistic atmospheric image only — focus on hands, equipment, atmosphere, and silhouette.`;
-
-  const attempts = [
-    "google/gemini-3-pro-image-preview",
-    "google/gemini-3.1-flash-image-preview",
-    "google/gemini-2.5-flash-image",
-  ];
-
-  for (const model of attempts) {
-    try {
-      const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model,
-          messages: [{ role: "user", content: prompt }],
-          modalities: ["image", "text"],
-        }),
-      });
-      if (!res.ok) {
-        console.error(`Cover ${model} failed`, res.status);
-        continue;
-      }
-      const data = await res.json();
-      const dataUrl = data?.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-      if (dataUrl) {
-        console.log(`Cover via ${model}`);
-        return dataUrl;
-      }
-    } catch (e) {
-      console.error(`Cover ${model} exception`, e);
-    }
-  }
+async function generateCoverImage(..._args: unknown[]): Promise<string | null> {
   return null;
 }
+
 
 async function uploadCoverToStorage(supabase: any, dataUrl: string, slug: string): Promise<string | null> {
   try {
@@ -241,12 +207,10 @@ serve(async (req) => {
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
   );
-  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
   const FIRECRAWL_API_KEY = Deno.env.get("FIRECRAWL_API_KEY");
   const triggeredBy = req.headers.get("x-trigger") || "cron";
 
   try {
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY missing");
 
     // Pick artist not used in last 60 posts of this category
     // (also looks at legacy 'music_stories' category for migration period)
@@ -276,17 +240,8 @@ serve(async (req) => {
       ? `\n\nKONTEKST Z SIECI (parafrazuj, dodaj swój komentarz, NIE kopiuj 1:1):\n${context}`
       : "";
 
-    // Generate article via Gemini Pro
-    const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-pro",
-        response_format: { type: "json_object" },
-        messages: [
+    // Generate article via AI
+    const aiMessages: AIMessage[] = [
           {
             role: "system",
             content:
@@ -296,15 +251,8 @@ serve(async (req) => {
             role: "user",
             content: `Napisz historię muzyczną o: **${pick.name}** (era: ${pick.era}).\nKĄT: ${pick.angle}\n\nZacznij od mocnej sceny (konkretny moment w studiu, na koncercie, w życiu artysty). Pokaż jak technologia (syntezatory, komputery, sequencery, taśmy, samplery) zmieniła ich sposób tworzenia. Wpleć minimum 2 anegdoty, 1 cytat (autentyczny lub plausible), konkretne nazwy sprzętu. Zakończ refleksją co ich historia mówi o muzyce dziś. Naturalnie wpomnij raz GrouAI Stream (https://grouaistream.com) jako miejsce gdzie dziedzictwo elektroniki żyje dalej — bez nachalnej promocji.${contextBlock}`,
           },
-        ],
-      }),
-    });
-
-    if (!aiRes.ok) throw new Error(`AI ${aiRes.status}: ${await aiRes.text()}`);
-
-    const aiData = await aiRes.json();
-    const raw = aiData.choices?.[0]?.message?.content || "";
-    const cleaned = raw.replace(/^```json\s*/i, "").replace(/```\s*$/, "").trim();
+        ];
+    const rawText = await callAI(aiMessages, { model: "grok-3-mini", maxTokens: 8192 });
 
     const sanitizeForJson = (s: string) => s
       .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "")
@@ -359,7 +307,7 @@ serve(async (req) => {
 
     // Generate cover
     let coverUrl: string | null = null;
-    const dataUrl = await generateCoverImage(LOVABLE_API_KEY, pick.name, pick.era);
+    const dataUrl = await generateCoverImage(pick.name, pick.era);
     if (dataUrl) {
       coverUrl = await uploadCoverToStorage(supabaseAdmin, dataUrl, slug);
     }
@@ -384,12 +332,7 @@ serve(async (req) => {
 
     // Distribution hooks (best effort)
     try {
-      const hookRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
-          messages: [
+        const hookMessages: AIMessage[] = [
             {
               role: "system",
               content:
@@ -399,20 +342,13 @@ serve(async (req) => {
               role: "user",
               content: `Artykuł: "${parsed.title}"\nO: ${pick.name}\nLink: https://grouaistream.com/blog/${slug}`,
             },
-          ],
-        }),
-      });
-      if (hookRes.ok) {
-        const hd = await hookRes.json();
-        const hraw = hd.choices?.[0]?.message?.content || "";
-        const hclean = hraw.replace(/^```json\s*/i, "").replace(/```\s*$/, "").trim();
-        let hookData: any;
+          ];
+        let hookData: any = null;
         try {
-          hookData = JSON.parse(hclean);
-        } catch {
-          const m = hclean.match(/\{[\s\S]*\}/);
-          if (m) hookData = JSON.parse(m[0]);
-        }
+          const hText = await callAI(hookMessages, { model: "grok-3-mini", maxTokens: 512 });
+          const hm = hText.match(/\{[\s\S]*\}/);
+          if (hm) hookData = JSON.parse(hm[0]);
+        } catch { /* ignore */ }
         if (hookData) {
           await supabaseAdmin.from("blog_post_hooks").insert({
             post_id: inserted.id,
