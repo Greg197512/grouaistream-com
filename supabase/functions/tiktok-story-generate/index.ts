@@ -13,7 +13,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
+const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY")!;
 const ELEVENLABS_API_KEY = Deno.env.get("ELEVENLABS_API_KEY")!;
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -106,11 +106,11 @@ WYMAGANIA:
 
 Zwróć WYŁĄCZNIE JSON.`;
 
-  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+  const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
-    headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+    headers: { Authorization: `Bearer ${OPENROUTER_API_KEY}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: "google/gemini-2.5-flash",
+      model: "google/gemma-2-9b-it:free",
       messages: [{ role: "system", content: sys }, { role: "user", content: user }],
       tools: [{
         type: "function",
@@ -182,11 +182,11 @@ async function generateBackgroundMusic(mood: string, durationSeconds = 30): Prom
 
 async function generateImage(prompt: string): Promise<Uint8Array> {
   const fullPrompt = `${prompt}. Vertical 9:16 aspect ratio, photorealistic 4K, cinematic lighting, neon orange and black GrouAI Stream brand atmosphere, professional photography, depth of field, no text overlays.`;
-  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+  const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
-    headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+    headers: { Authorization: `Bearer ${OPENROUTER_API_KEY}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: "google/gemini-3-pro-image-preview",
+      model: "google/gemma-2-9b-it:free",
       messages: [{ role: "user", content: fullPrompt }],
       modalities: ["image", "text"],
     }),
