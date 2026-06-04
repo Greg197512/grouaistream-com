@@ -1,159 +1,113 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { callAI } from "../_shared/ai.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const LANGS = [
-  { code: "en", name: "English", instr: "Natural, fluent English. Keep music slang authentic. American English." },
-  { code: "nl", name: "Dutch (Nederlands)", instr: "Natural Dutch as spoken in Netherlands. Keep music terms in English where natural (DJ, beat, drop, vibe)." },
-  { code: "ua", name: "Ukrainian (українська)", instr: "Natural modern Ukrainian. Use Latin for brand names and music tech terms." },
-];
-
-const SYSTEM_BASE = `You translate Polish blog posts for GrouAI Stream — an AI music platform by GrouaRock.
-RULES:
-- PRESERVE markdown exactly (## headings, **bold**, [links](url), > quotes, lists)
-- KEEP these unchanged: GrouAI, GrouAI Stream, GrouaRock, GrouaRadio, Spotify, ElevenLabs, Suno, Udio, TikTok, YouTube
-- KEEP all URLs intact
-- KEEP emotional tone: premium, intimate, slightly poetic
-- DO NOT add commentary, prefaces, or "Translation:" labels
-- Return ONLY raw translated markdown, nothing else`;
-
-async function translateField(
-  apiKey: string,
-  text: string,
-  lang: { code: string; name: string; instr: string },
-  fieldType: "title" | "description" | "content"
-): Promise<string> {
-  const maxLen = fieldType === "title" ? 80 : fieldType === "description" ? 160 : 100000;
-  const constraint = fieldType === "title"
-    ? `Keep under ${maxLen} chars. No quotes around it.`
-    : fieldType === "description"
-    ? `Keep under ${maxLen} chars. Strong hook. No quotes.`
-    : `Full markdown article. Preserve every heading, link, list, bold.`;
-
-  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: "google/gemini-2.5-flash",
-      messages: [
-        { role: "system", content: `${SYSTEM_BASE}\n\nTARGET: ${lang.name}. ${lang.instr}\nFIELD: ${fieldType}. ${constraint}` },
-        { role: "user", content: text },
-      ],
-    }),
-  });
-
-  if (!res.ok) {
-    const errText = await res.text();
-    throw new Error(`AI ${res.status}: ${errText}`);
-  }
-  const data = await res.json();
-  let out = data.choices?.[0]?.message?.content?.trim() || "";
-  // Strip wrapping quotes/markdown fences if AI added them
-  out = out.replace(/^```(?:markdown|md)?\s*/i, "").replace(/```\s*$/, "").trim();
-  if ((out.startsWith('"') && out.endsWith('"')) || (out.startsWith("'") && out.endsWith("'"))) {
-    out = out.slice(1, -1);
-  }
-  return out;
+async function translateField(text: string, targetLang: string): Promise<string> {
+  if (!text || text.trim() === "") return text;
+  const messages = [
+    {
+      role: "system" as const,
+      content: `You are a professional translator. Translate the following text to ${targetLang}. Return only the translated text, no explanations.`,
+    },
+    { role: "user" as const, content: text },
+  ];
+  return await callAI(messages, { model: "grok-3-mini", maxTokens: 4096 });
 }
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
-
-  const supabase = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-  );
-  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
 
   try {
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY missing");
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const body = await req.json().catch(() => ({}));
-    const { post_id, batch, force } = body as { post_id?: string; batch?: boolean; force?: boolean };
+    const { postId, targetLanguages } = await req.json();
 
-    // Fetch posts to translate
-    let postsQuery = supabase.from("seo_blog_posts").select("id, slug, title, description, content, content_en, content_nl, content_ua");
-    if (post_id) {
-      postsQuery = postsQuery.eq("id", post_id);
-    } else if (batch) {
-      // Backfill mode: posts missing any translation
-      postsQuery = postsQuery
-        .eq("is_published", true)
-        .or("content_en.is.null,content_nl.is.null,content_ua.is.null")
-        .limit(5);
-    } else {
-      throw new Error("Provide post_id or batch=true");
+    if (!postId || !targetLanguages || !Array.isArray(targetLanguages)) {
+      return new Response(
+        JSON.stringify({ error: "postId and targetLanguages array are required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
-    const { data: posts, error: fetchErr } = await postsQuery;
-    if (fetchErr) throw fetchErr;
-    if (!posts || posts.length === 0) {
-      return new Response(JSON.stringify({ ok: true, translated: 0, message: "No posts to translate" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    // Fetch the original post
+    const { data: post, error: fetchError } = await supabase
+      .from("blog_posts")
+      .select("*")
+      .eq("id", postId)
+      .single();
+
+    if (fetchError || !post) {
+      return new Response(
+        JSON.stringify({ error: "Post not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
-    const results: Array<{ id: string; status: string; error?: string }> = [];
+    const results = [];
 
-    for (const post of posts) {
+    for (const lang of targetLanguages) {
       try {
-        await supabase.from("seo_blog_posts").update({ translation_status: "translating" }).eq("id", post.id);
+        const translatedTitle = await translateField(post.title, lang);
+        const translatedExcerpt = await translateField(post.excerpt || "", lang);
+        const translatedContent = await translateField(post.content, lang);
+        const translatedMetaTitle = await translateField(post.meta_title || post.title, lang);
+        const translatedMetaDesc = await translateField(post.meta_description || post.excerpt || "", lang);
 
-        const updates: Record<string, string> = {};
-        for (const lang of LANGS) {
-          const contentField = `content_${lang.code}` as keyof typeof post;
-          // Skip if already translated and not forcing
-          if (!force && post[contentField]) {
-            console.log(`Skipping ${lang.code} for ${post.slug} — already translated`);
-            continue;
-          }
+        // Check if translation already exists
+        const { data: existing } = await supabase
+          .from("blog_post_translations")
+          .select("id")
+          .eq("post_id", postId)
+          .eq("language_code", lang)
+          .single();
 
-          console.log(`Translating ${post.slug} → ${lang.code}`);
-          const [tTitle, tDesc, tContent] = await Promise.all([
-            translateField(LOVABLE_API_KEY, post.title, lang, "title"),
-            translateField(LOVABLE_API_KEY, post.description, lang, "description"),
-            translateField(LOVABLE_API_KEY, post.content, lang, "content"),
-          ]);
+        const translationData = {
+          post_id: postId,
+          language_code: lang,
+          title: translatedTitle,
+          excerpt: translatedExcerpt,
+          content: translatedContent,
+          meta_title: translatedMetaTitle,
+          meta_description: translatedMetaDesc,
+          updated_at: new Date().toISOString(),
+        };
 
-          updates[`title_${lang.code}`] = tTitle;
-          updates[`description_${lang.code}`] = tDesc;
-          updates[`content_${lang.code}`] = tContent;
-        }
-
-        if (Object.keys(updates).length > 0) {
-          updates.translations_updated_at = new Date().toISOString();
-          updates.translation_status = "completed";
-          const { error: updErr } = await supabase
-            .from("seo_blog_posts")
-            .update(updates)
-            .eq("id", post.id);
-          if (updErr) throw updErr;
+        if (existing) {
+          await supabase
+            .from("blog_post_translations")
+            .update(translationData)
+            .eq("id", existing.id);
         } else {
-          await supabase.from("seo_blog_posts").update({ translation_status: "completed" }).eq("id", post.id);
+          await supabase
+            .from("blog_post_translations")
+            .insert({ ...translationData, created_at: new Date().toISOString() });
         }
 
-        results.push({ id: post.id, status: "ok" });
-      } catch (e) {
-        const msg = e instanceof Error ? e.message : String(e);
-        console.error(`Translation failed for ${post.id}:`, msg);
-        await supabase.from("seo_blog_posts").update({ translation_status: "failed" }).eq("id", post.id);
-        results.push({ id: post.id, status: "failed", error: msg });
+        results.push({ lang, status: "success" });
+      } catch (err) {
+        console.error(`Error translating to ${lang}:`, err);
+        results.push({ lang, status: "error", error: String(err) });
       }
     }
 
-    return new Response(JSON.stringify({ ok: true, translated: results.length, results }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    console.error("blog-translate error:", msg);
-    return new Response(JSON.stringify({ error: msg }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({ success: true, results }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  } catch (error) {
+    console.error("Unexpected error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
   }
 });
