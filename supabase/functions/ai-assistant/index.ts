@@ -36,8 +36,6 @@ serve(async (req) => {
     // --- End authentication ---
 
     const { message, history, userContext, attachments } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
@@ -421,14 +419,14 @@ serve(async (req) => {
     if (hasGenerateIntent) {
       // Use AI to parse the complex prompt into generation parameters
       try {
-        const parseResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        const parseResponse = await fetch("https://api.x.ai/v1/chat/completions", {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${LOVABLE_API_KEY}`,
+            Authorization: `Bearer ${GROK_API_KEY}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            model: "google/gemini-2.5-flash-lite",
+            model: "grok-3-mini",
             messages: [
               { role: "system", content: `You are a music production AI that parses user prompts into generation parameters. Analyze the user's request and extract parameters. Available styles: Pop, Rock, Electronic, Hip-Hop, Jazz, Classical, Lo-fi, Ambient, Metal, R&B, Reggae, Trap, House, Disco, Indie, Country. Available moods: dark, bright, melancholic, euphoric, aggressive, dreamy, romantic, tense. Available energy: low, medium, high, extreme.` },
               { role: "user", content: message },
@@ -1353,14 +1351,14 @@ Znasz DOKŁADNIE każdą funkcję i stronę:
     const userPrompt = message;
 
     // Stream the response
-    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const aiResponse = await fetch("https://api.x.ai/v1/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${GROK_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "grok-3-mini",
         messages: [
           { role: "system", content: systemPrompt + webSearchResult },
           ...history.slice(-12).map((m: any) => ({ role: m.role, content: m.content })),
