@@ -14,8 +14,8 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const LOVABLE_AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
-const BRAIN_MODEL = "openai/gpt-5.2";
+const LOVABLE_AI_URL = "https://openrouter.ai/api/v1/chat/completions";
+const BRAIN_MODEL = "google/gemma-2-9b-it:free";
 
 const MAX_EVENTS_PER_TICK = 50;
 const MEMORY_RECALL_COUNT = 8;
@@ -116,10 +116,10 @@ serve(async (req) => {
   const startTime = Date.now();
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
   const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY");
 
-  if (!LOVABLE_API_KEY) {
-    return new Response(JSON.stringify({ error: "LOVABLE_API_KEY not configured" }), {
+  if (!OPENROUTER_API_KEY) {
+    return new Response(JSON.stringify({ error: "OPENROUTER_API_KEY not configured" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
@@ -160,7 +160,7 @@ serve(async (req) => {
     const eventDigest = buildEventDigest(events);
 
     // 2) Recall — embedduj digest, znajdź podobne wspomnienia
-    const queryEmbedding = await embed(eventDigest, LOVABLE_API_KEY);
+    const queryEmbedding = await embed(eventDigest, OPENROUTER_API_KEY);
     let memories: any[] = [];
     if (queryEmbedding) {
       const { data: recalled } = await supabase.rpc("search_brain_memory", {
@@ -185,7 +185,7 @@ Zdecyduj co zapamiętać i jakich agentów wezwać. Odpowiedz CZYSTYM JSON.`;
     const aiRes = await fetch(LOVABLE_AI_URL, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${OPENROUTER_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
@@ -227,7 +227,7 @@ Zdecyduj co zapamiętać i jakich agentów wezwać. Odpowiedz CZYSTYM JSON.`;
     // 4) Zapisz wspomnienia
     if (brainOutput.observations && brainOutput.observations.length > 0) {
       for (const obs of brainOutput.observations) {
-        const obsEmbed = await embed(`${obs.title}\n${obs.summary ?? ""}\n${obs.content}`, LOVABLE_API_KEY);
+        const obsEmbed = await embed(`${obs.title}\n${obs.summary ?? ""}\n${obs.content}`, OPENROUTER_API_KEY);
         const expiresAt = obs.expires_in_days
           ? new Date(Date.now() + obs.expires_in_days * 86400_000).toISOString()
           : null;
