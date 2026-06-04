@@ -47,13 +47,13 @@ async function generateImageBase64(prompt: string, apiKey: string): Promise<stri
   // Kolejność: szybki model (2.5-flash-image, ~30-45s) → fallback flash 3.1-preview (do 90s)
   // Większość uploadów dostanie okładkę w pierwszej próbie, mieści się w 150s edge limit.
   const attempts = [
-    { model: "google/gemini-2.5-flash-image", timeoutMs: 60000 },
-    { model: "google/gemini-3.1-flash-image-preview", timeoutMs: 70000 },
+    { model: "google/gemma-2-9b-it:free", timeoutMs: 60000 },
+    { model: "google/gemma-2-9b-it:free", timeoutMs: 70000 },
   ];
 
   for (const attempt of attempts) {
     try {
-      const response = await fetchWithTimeout("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      const response = await fetchWithTimeout("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${apiKey}`,
@@ -90,10 +90,10 @@ serve(async (req) => {
 
   try {
     const { title, style, description, mode } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
+    const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY");
+    if (!OPENROUTER_API_KEY) {
       return new Response(
-        JSON.stringify({ error: "LOVABLE_API_KEY not configured" }),
+        JSON.stringify({ error: "OPENROUTER_API_KEY not configured" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -102,7 +102,7 @@ serve(async (req) => {
 
     console.log(`[ai-cover-generate] Generating cover for "${title}" mode=${mode}`);
 
-    const imageUrl = await generateImageBase64(prompt, LOVABLE_API_KEY);
+    const imageUrl = await generateImageBase64(prompt, OPENROUTER_API_KEY);
 
     if (!imageUrl) {
       return new Response(
