@@ -79,10 +79,10 @@ serve(async (req) => {
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const ELEVENLABS_API_KEY = Deno.env.get("ELEVENLABS_API_KEY");
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY");
 
     if (!ELEVENLABS_API_KEY) throw new Error("ELEVENLABS_API_KEY missing");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY missing");
+    if (!OPENROUTER_API_KEY) throw new Error("OPENROUTER_API_KEY missing");
 
     const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
     const triggeredBy = req.headers.get("x-trigger") || "cron";
@@ -130,14 +130,14 @@ serve(async (req) => {
     const localizedContent = pickLocalizedField(post, "content", lang);
     const cleanContent = stripMarkdown(localizedContent).slice(0, 2500);
 
-    const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const aiResp = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${OPENROUTER_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-pro",
+        model: "google/gemma-2-9b-it:free",
         messages: [
           { role: "system", content: SYSTEM_PROMPTS[lang] },
           { role: "user", content: USER_PROMPTS[lang](localizedTitle, localizedDesc || "", cleanContent) },
