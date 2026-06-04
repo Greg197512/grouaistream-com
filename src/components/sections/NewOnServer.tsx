@@ -390,11 +390,7 @@ export const NewOnServer = () => {
                     </div>
 
                     {/* Genre badge bottom-left */}
-<<<<<<< HEAD
                     {track.genre && !track.cover_url?.trim() && (
-=======
-                    {track.genre && !track.cover_url && (
->>>>>>> origin/main
                       <div className="absolute bottom-2 left-2">
                         <span
                           className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full uppercase tracking-wider"
