@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { callAI } from "../_shared/ai.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -29,89 +30,64 @@ Deno.serve(async (req) => {
     const { data: isAdmin } = await supabase.rpc("has_role", { _user_id: user.id, _role: "admin" });
     if (!isAdmin) return new Response(JSON.stringify({ error: "forbidden" }), { status: 403, headers: corsHeaders });
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
-
     // Ask AI to generate a weekend challenge
-    const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
+    const messages = [
+      {
+        role: "system" as const,
+        content: "Tworzysz weekendowe wyzwanie dla muzycznej platformy GrouAI Stream. Każde wyzwanie musi być inne, motywujące, krótkie. Tytuł max 60 znaków, opis max 200 znaków. Zwróć TYLKO poprawny JSON bez markdown.",
       },
-      body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: [
-          {
-            role: "system",
-            content: "Tworzysz weekendowe wyzwanie dla muzycznej platformy GrouAI Stream. Każde wyzwanie musi być inne, motywujące, krótkie. Tytuł max 60 znaków, opis max 140 znaków. Po polsku.",
-          },
-          {
-            role: "user",
-            content: "Wygeneruj nowe weekendowe wyzwanie. Wybierz typ aktywności, sensowny target i nagrodę 1-5€.",
-          },
-        ],
-        tools: [{
-          type: "function",
-          function: {
-            name: "create_challenge",
-            description: "Tworzy weekendowe wyzwanie",
-            parameters: {
-              type: "object",
-              properties: {
-                title: { type: "string", description: "Krótki, chwytliwy tytuł" },
-                description: { type: "string", description: "Opis wyzwania" },
-                activity_type: {
-                  type: "string",
-                  enum: ["uploads", "ratings", "mood_sessions", "studio_tracks", "listens"],
-                },
-                target_count: { type: "integer", minimum: 1, maximum: 50 },
-                reward_amount: { type: "number", minimum: 1, maximum: 5 },
-              },
-              required: ["title", "description", "activity_type", "target_count", "reward_amount"],
-              additionalProperties: false,
-            },
-          },
-        }],
-        tool_choice: { type: "function", function: { name: "create_challenge" } },
-      }),
-    });
+      {
+        role: "user" as const,
+        content: `Wygeneruj nowe weekendowe wyzwanie. Wybierz typ aktywności, sensowny target i nagrodę 1-5€.
 
-    if (!aiResp.ok) {
-      const errText = await aiResp.text();
-      console.error("AI gateway error:", aiResp.status, errText);
-      if (aiResp.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit" }), { status: 429, headers: corsHeaders });
-      }
-      if (aiResp.status === 402) {
-        return new Response(JSON.stringify({ error: "Brak kredytów Lovable AI" }), { status: 402, headers: corsHeaders });
-      }
-      throw new Error("AI gateway error");
+Zwróć JSON z dokładnie tymi polami:
+{
+  "title": "krótki, chwytliwy tytuł",
+  "description": "opis wyzwania (max 200 znaków)",
+  "activity_type": "uploads" | "ratings" | "mood_sessions" | "studio_tracks" | "listens",
+  "target": liczba (np. 5),
+  "reward": liczba (1-5),
+  "duration_days": liczba (2 lub 3)
+}`,
+      },
+    ];
+
+    const aiText = await callAI(messages, { model: "grok-3-mini", maxTokens: 512 });
+    let challenge: any;
+    try {
+      challenge = JSON.parse(aiText);
+    } catch {
+      const match = aiText.match(/\{[\s\S]*\}/);
+      if (!match) throw new Error("AI returned non-JSON: " + aiText.slice(0, 200));
+      challenge = JSON.parse(match[0]);
     }
 
-    const aiData = await aiResp.json();
-    const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
-    if (!toolCall) throw new Error("No tool call from AI");
+    const now = new Date();
+    const endsAt = new Date(now.getTime() + (challenge.duration_days ?? 2) * 24 * 60 * 60 * 1000);
 
-    const args = JSON.parse(toolCall.function.arguments);
-
-    const { data, error } = await supabase.rpc("admin_create_weekend_challenge", {
-      _title: args.title,
-      _description: args.description,
-      _activity_type: args.activity_type,
-      _target_count: args.target_count,
-      _reward_amount: args.reward_amount,
-      _duration_hours: 72,
-    });
+    const { data, error } = await supabase
+      .from("weekend_challenges")
+      .insert({
+        title: challenge.title,
+        description: challenge.description,
+        activity_type: challenge.activity_type,
+        target: challenge.target,
+        reward_euros: challenge.reward,
+        starts_at: now.toISOString(),
+        ends_at: endsAt.toISOString(),
+        status: "active",
+      })
+      .select()
+      .single();
 
     if (error) throw error;
 
-    return new Response(JSON.stringify({ success: true, challenge: { ...args, id: (data as any)?.id } }), {
+    return new Response(JSON.stringify({ ok: true, challenge: data }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
     console.error("generate-weekend-challenge error:", e);
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown" }), {
+    return new Response(JSON.stringify({ error: String(e) }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
