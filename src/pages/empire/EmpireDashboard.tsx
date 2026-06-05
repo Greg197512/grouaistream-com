@@ -81,9 +81,9 @@ const AGENTS = [
 ];
 
 const ACHIEVEMENTS = [
-  { icon: "<ud83d><udd25>", label: "7-dniowy streak", color: "text-orange-400" },
-  { icon: "<ud83c><udfc6>", label: "Pierwszy 10k view", color: "text-yellow-400" },
-  { icon: "<ud83d><ude80>", label: "5 agentów jednocześnie", color: "text-teal-400" },
+  { icon: "🔥", label: "7-dniowy streak", color: "text-orange-400" },
+  { icon: "🏆", label: "Pierwszy 10k view", color: "text-yellow-400" },
+  { icon: "🚀", label: "5 agentów jednocześnie", color: "text-teal-400" },
 ];
 
 export default function EmpireDashboard() {
@@ -172,7 +172,7 @@ export default function EmpireDashboard() {
             <div className="space-y-2">
               {ACHIEVEMENTS.map((a) => (
                 <div key={a.label} className="flex items-center gap-3 bg-white/3 rounded-xl px-4 py-3">
-                  <span className="text-xl">{a.icon.replace(/<[^>]+>/g, "")}</span>
+                  <span className="text-xl">{a.icon}</span>
                   <span className="text-sm text-white/70">{a.label}</span>
                   <div className="ml-auto">
                     <Zap className={`w-4 h-4 ${a.color}`} />
