@@ -1,5 +1,33 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
-import { WebhookError, verifyWebhookRequest } from 'npm:@lovable.dev/webhooks-js'
+
+class WebhookError extends Error {
+  constructor(public code: string, message: string) { super(message) }
+}
+
+async function verifyWebhookRequest<T>(opts: {
+  req: Request; secret: string; parser: (body: string) => T;
+}): Promise<{ payload: T }> {
+  const signature = opts.req.headers.get('x-webhook-signature') || opts.req.headers.get('x-hub-signature-256') || ''
+  const timestamp = opts.req.headers.get('x-webhook-timestamp') || ''
+  const body = await opts.req.text()
+
+  if (timestamp) {
+    const ts = parseInt(timestamp, 10)
+    if (Math.abs(Date.now() / 1000 - ts) > 300) throw new WebhookError('stale_timestamp', 'Stale timestamp')
+  }
+
+  if (signature) {
+    const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(opts.secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['verify'])
+    const sigBytes = signature.replace(/^sha256=/, '')
+    const expected = Array.from(new Uint8Array(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(timestamp ? `${timestamp}.${body}` : body))))
+      .map(b => b.toString(16).padStart(2, '0')).join('')
+    if (sigBytes !== expected) throw new WebhookError('invalid_signature', 'Invalid signature')
+  }
+
+  let payload: T
+  try { payload = opts.parser(body) } catch { throw new WebhookError('invalid_payload', 'Invalid payload') }
+  return { payload }
+}
 
 // Suppression event payload sent by the Go API when Mailgun reports
 // a bounce, complaint, or unsubscribe.
@@ -36,7 +64,7 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: 'Method not allowed' }, 405)
   }
 
-  const apiKey = Deno.env.get('LOVABLE_API_KEY')
+  const apiKey = Deno.env.get('WEBHOOK_SECRET') || Deno.env.get('RESEND_API_KEY')
   const supabaseUrl = Deno.env.get('SUPABASE_URL')
   const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
 
