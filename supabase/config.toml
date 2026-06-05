@@ -1,4 +1,4 @@
-project_id = "bvstvawnigyczvofzhps"
+project_id = "hkbraboqdsonekzxbntr"
 
 [functions]
   [functions.a-r-scout]
@@ -34,48 +34,3 @@ project_id = "bvstvawnigyczvofzhps"
   [functions.aurora-order-execute]
     verify_jwt = false
   [functions.aurora-n8n-trigger]
-    verify_jwt = true
-  [functions.aurora-n8n-callback]
-    verify_jwt = false
-  [functions.aurora-r2-deliverable-upload]
-    verify_jwt = false
-  [functions.aurora-r2-signed-download]
-    verify_jwt = true
-  [functions.aurora-storage-usage-report]
-    verify_jwt = true
-  [functions.aurora-storage-offer-create]
-    verify_jwt = true
-  [functions.aurora-workforce-dispatch]
-    verify_jwt = true
-  [functions.aurora-assistant-chat]
-    verify_jwt = false
-  [functions.aurora-assistant-ingest]
-    verify_jwt = false
-  [functions.brain-newsfeed-ingest]
-    verify_jwt = false
-  [functions.daily-blog-audio-announce]
-    verify_jwt = false
-  [functions.grouai-brain]
-    verify_jwt = false
-  [functions.groua-soul]
-    verify_jwt = false
-  [functions.soul-world-ingest]
-    verify_jwt = false
-  [functions.soul-dream]
-    verify_jwt = false
-  [functions.soul-export]
-    verify_jwt = true
-  [functions.health-monitor]
-    verify_jwt = false
-  [functions.n8n-music-ingest]
-    verify_jwt = false
-  [functions.r2-signed-url]
-    verify_jwt = false
-  [functions.r2-upload-proxy]
-    verify_jwt = false
-  [functions.revenue-optimizer]
-    verify_jwt = false
-  [functions.tiktok-reel-generate]
-    verify_jwt = false
-  [functions.tiktok-story-generate]
-    verify_jwt = false
