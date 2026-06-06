@@ -428,7 +428,7 @@ serve(async (req) => {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            model: "google/gemma-2-9b-it:free",
+            model: "meta-llama/llama-3.3-70b-instruct:free",
             messages: [
               { role: "system", content: `You are a music production AI that parses user prompts into generation parameters. Analyze the user's request and extract parameters. Available styles: Pop, Rock, Electronic, Hip-Hop, Jazz, Classical, Lo-fi, Ambient, Metal, R&B, Reggae, Trap, House, Disco, Indie, Country. Available moods: dark, bright, melancholic, euphoric, aggressive, dreamy, romantic, tense. Available energy: low, medium, high, extreme.` },
               { role: "user", content: message },
@@ -1352,7 +1352,42 @@ Znasz DOKŁADNIE każdą funkcję i stronę:
 
     const userPrompt = message;
 
-    // Stream the response
+    // Gemini-first: use Gemini if key available, fallback to OpenRouter
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    let aiResponseText = "";
+
+    if (GEMINI_API_KEY) {
+      try {
+        const geminiMessages = [
+          ...history.slice(-12).map((m: any) => ({
+            role: m.role === "assistant" ? "model" : "user",
+            parts: [{ text: m.content }],
+          })),
+          { role: "user", parts: [{ text: userPrompt }] },
+        ];
+        const geminiRes = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: geminiMessages,
+              systemInstruction: { parts: [{ text: systemPrompt + webSearchResult }] },
+              generationConfig: { maxOutputTokens: 4096, temperature: 0.8 },
+            }),
+          }
+        );
+        if (geminiRes.ok) {
+          const gd = await geminiRes.json();
+          aiResponseText = gd.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+        }
+      } catch (e) {
+        console.warn("Gemini failed, falling back to OpenRouter:", e);
+      }
+    }
+
+    if (!aiResponseText) {
+    // Stream the response via OpenRouter
     const aiResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -1362,7 +1397,7 @@ Znasz DOKŁADNIE każdą funkcję i stronę:
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemma-2-9b-it:free",
+        model: "meta-llama/llama-3.3-70b-instruct:free",
         messages: [
           { role: "system", content: systemPrompt + webSearchResult },
           ...history.slice(-12).map((m: any) => ({ role: m.role, content: m.content })),
@@ -1476,6 +1511,27 @@ Znasz DOKŁADNIE każdą funkcję i stronę:
     });
 
     return new Response(body, {
+      headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+    });
+    } // end if (!aiResponseText)
+
+    // Gemini path — emit as SSE
+    const encoder2 = new TextEncoder();
+    const geminiBody = new ReadableStream({
+      start(controller) {
+        if (radioUpdateResult) controller.enqueue(encoder2.encode(`data: ${JSON.stringify({ type: "radio_updated", data: radioUpdateResult })}\n\n`));
+        if (wishResult) controller.enqueue(encoder2.encode(`data: ${JSON.stringify({ type: "radio_wish_sent", data: wishResult })}\n\n`));
+        if (autoPlayTracks.length > 0) controller.enqueue(encoder2.encode(`data: ${JSON.stringify({ type: "auto_play_tracks", data: autoPlayTracks.map((t: any) => ({ id: t.id, title: t.title, artist: t.artist, genre: t.genre })) })}\n\n`));
+        // Emit text as SSE delta chunks (compatible with OpenRouter format)
+        const words = aiResponseText.split(" ");
+        for (const word of words) {
+          controller.enqueue(encoder2.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: word + " " } }] })}\n\n`));
+        }
+        controller.enqueue(encoder2.encode("data: [DONE]\n\n"));
+        controller.close();
+      }
+    });
+    return new Response(geminiBody, {
       headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
     });
 
