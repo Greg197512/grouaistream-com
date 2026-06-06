@@ -1,17 +1,9 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
-function getCorsHeaders(req: Request) {
-  const allowedOrigins = [
-    "https://grouaistream.com",
-    "https://www.grouaistream.com",
-    "https://grouaistream-com.lovable.app",
-    "https://id-preview--462bddcb-d545-4f42-bc51-5f437cb12bbe.lovable.app",
-  ];
-  const origin = req.headers.get("origin") || "";
-  const isCustomDomain = /^https:\/\/([a-z0-9-]+\.)?grouaistream\.com$/i.test(origin);
+function getCorsHeaders(_req: Request) {
   return {
-    "Access-Control-Allow-Origin": allowedOrigins.includes(origin) || isCustomDomain ? origin : allowedOrigins[0],
+    "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
   };
 }
