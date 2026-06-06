@@ -1360,72 +1360,147 @@ Znasz DOKŁADNIE każdą funkcję i stronę:
     let aiResponseText = "";
 
     if (GEMINI_API_KEY) {
-      try {
-        // Gemini requires conversation to start with "user" role — filter assistant-only leading messages
-        const historyForGemini = history.slice(-12).filter((m: any) => m.content?.trim());
-        const geminiMessages = [
-          ...historyForGemini.map((m: any) => ({
-            role: m.role === "assistant" ? "model" : "user",
-            parts: [{ text: m.content || "" }],
-          })),
-          { role: "user", parts: [{ text: userPrompt }] },
-        ];
-        const geminiRes = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              contents: geminiMessages,
-              systemInstruction: { parts: [{ text: systemPrompt + webSearchResult }] },
-              generationConfig: { maxOutputTokens: 4096, temperature: 0.8 },
-            }),
+      // Try multiple Gemini models — different keys support different models
+      const geminiModels = [
+        "gemini-2.0-flash",
+        "gemini-2.0-flash-lite",
+        "gemini-1.5-flash-latest",
+        "gemini-1.5-flash-8b",
+        "gemini-pro",
+      ];
+      let historyForGemini = history.slice(-12).filter((m: any) => m.content?.trim());
+      while (historyForGemini.length > 0 && historyForGemini[0].role === "assistant") {
+        historyForGemini = historyForGemini.slice(1);
+      }
+      const geminiMessages = [
+        ...historyForGemini.map((m: any) => ({
+          role: m.role === "assistant" ? "model" : "user",
+          parts: [{ text: m.content || "" }],
+        })),
+        { role: "user", parts: [{ text: userPrompt }] },
+      ];
+
+      for (const gModel of geminiModels) {
+        if (aiResponseText) break;
+        try {
+          const geminiRes = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/${gModel}:generateContent?key=${GEMINI_API_KEY}`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                contents: geminiMessages,
+                systemInstruction: { parts: [{ text: systemPrompt + webSearchResult }] },
+                generationConfig: { maxOutputTokens: 4096, temperature: 0.8 },
+              }),
+            }
+          );
+          if (geminiRes.ok) {
+            const gd = await geminiRes.json();
+            aiResponseText = gd.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+            if (aiResponseText) {
+              console.log("Gemini model used:", gModel);
+            } else {
+              console.error("Gemini empty response from", gModel, JSON.stringify(gd).substring(0, 200));
+            }
+          } else {
+            const errBody = await geminiRes.text();
+            console.error(`Gemini ${gModel} error:`, geminiRes.status, errBody.substring(0, 150));
           }
-        );
-        if (geminiRes.ok) {
-          const gd = await geminiRes.json();
-          aiResponseText = gd.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+        } catch (e) {
+          console.error(`Gemini ${gModel} exception:`, e);
         }
-      } catch (e) {
-        console.warn("Gemini failed, falling back to OpenRouter:", e);
       }
     }
 
     if (!aiResponseText) {
-    // Stream the response via OpenRouter
-    const aiResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${GROK_API_KEY}`,
-          "HTTP-Referer": "https://grouaistream.com",
-          "X-Title": "Groua AI Stream",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "meta-llama/llama-3.3-70b-instruct:free",
-        messages: [
-          { role: "system", content: systemPrompt + webSearchResult },
-          ...history.slice(-12).map((m: any) => ({ role: m.role, content: m.content })),
-          { role: "user", content: userPrompt }
-        ],
-        stream: true,
-      }),
-    });
+    // Build a shorter system prompt for free models (limited context window)
+    const shortTrackList = playableTracks.slice(0, 80).map((t: any) => `${t.title} — ${t.artist} [${t.genre || '?'}]`).join("\n");
+    const shortSystemPrompt = `Jesteś GrouAI — asystent AI platformy muzycznej GrouAIStream (grouaistream.com). Jesteś pomocny, przyjazny i ekspertem w muzyce.
+Kontakt: grouarock@gmail.com, tel: +48 570 598 552.
+Użytkownik: ${userName || "Gość"}. Odpowiadaj zawsze po polsku (lub w języku pytania).
+Biblioteka muzyczna (${playableTracks.length} szt., fragment):
+${shortTrackList}${playableTracks.length > 80 ? `\n... i ${playableTracks.length - 80} więcej` : ""}
+Ulubione: ${userFavorites.slice(0, 20).map((t: any) => t.title).join(", ") || "brak"}`;
 
-    if (!aiResponse.ok) {
-      const errorText = await aiResponse.text();
-      console.error("AI Gateway error:", aiResponse.status, errorText);
-      if (aiResponse.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit exceeded" }), {
-          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" }
+    // Try multiple OpenRouter models in order until one succeeds
+    const openRouterModels = [
+      "openai/gpt-4o-mini",
+      "anthropic/claude-3-haiku",
+      "mistralai/mistral-small",
+      "meta-llama/llama-3.3-70b-instruct:free",
+      "meta-llama/llama-3.1-8b-instruct:free",
+      "mistralai/mistral-7b-instruct:free",
+      "qwen/qwen-2-7b-instruct:free",
+      "google/gemma-2-9b-it:free",
+    ];
+
+    let aiResponse: Response | null = null;
+    for (const model of openRouterModels) {
+      try {
+        const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${GROK_API_KEY}`,
+            "HTTP-Referer": "https://grouaistream.com",
+            "X-Title": "Groua AI Stream",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model,
+            messages: [
+              { role: "system", content: shortSystemPrompt },
+              ...history.slice(-6).map((m: any) => ({ role: m.role, content: m.content })),
+              { role: "user", content: userPrompt }
+            ],
+            stream: true,
+          }),
         });
+        if (res.ok) {
+          aiResponse = res;
+          console.log("OpenRouter model used:", model);
+          break;
+        }
+        console.warn(`Model ${model} failed with status ${res.status}, trying next...`);
+      } catch (e) {
+        console.warn(`Model ${model} threw error:`, e);
       }
-      if (aiResponse.status === 402) {
-        return new Response(JSON.stringify({ error: "Credits exhausted" }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" }
+    }
+
+    // If all OpenRouter models failed — try Gemini via OpenRouter as last resort
+    if (!aiResponse && GROK_API_KEY) {
+      try {
+        const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${GROK_API_KEY}`,
+            "HTTP-Referer": "https://grouaistream.com",
+            "X-Title": "Groua AI Stream",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "google/gemini-2.0-flash-exp:free",
+            messages: [
+              { role: "system", content: shortSystemPrompt },
+              ...history.slice(-6).map((m: any) => ({ role: m.role, content: m.content })),
+              { role: "user", content: userPrompt }
+            ],
+            stream: true,
+          }),
         });
+        if (res.ok) {
+          aiResponse = res;
+          console.log("Gemini via OpenRouter fallback worked");
+        } else {
+          console.error("Gemini via OpenRouter failed:", res.status, await res.text());
+        }
+      } catch (e) {
+        console.error("Gemini via OpenRouter exception:", e);
       }
-      throw new Error("AI Gateway error: " + aiResponse.status);
+    }
+
+    if (!aiResponse) {
+      aiResponseText = "Hej! Chwilowo mam problemy z połączeniem z serwerami AI. Spróbuj ponownie za chwilę! 🔄";
     }
 
     // Return SSE stream with track data prepended as first events
@@ -1499,17 +1574,26 @@ Znasz DOKŁADNIE każdą funkcję i stronę:
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: "track_link", data: trackLink })}\n\n`));
         }
 
-        const reader = aiResponse.body!.getReader();
-        const decoder = new TextDecoder();
-        try {
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            controller.enqueue(value);
+        if (aiResponse) {
+          const reader = aiResponse.body!.getReader();
+          try {
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              controller.enqueue(value);
+            }
+          } catch (e) {
+            console.error("Stream error:", e);
+          } finally {
+            controller.close();
           }
-        } catch (e) {
-          console.error("Stream error:", e);
-        } finally {
+        } else {
+          // All models failed — stream the fallback text
+          const fallbackWords = aiResponseText.split(" ");
+          for (const word of fallbackWords) {
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: word + " " } }] })}\n\n`));
+          }
+          controller.enqueue(encoder.encode("data: [DONE]\n\n"));
           controller.close();
         }
       }
