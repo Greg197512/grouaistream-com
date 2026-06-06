@@ -1,18 +1,13 @@
-// 🧠 Semantic embedding via Lovable AI + deterministic projection.
+// 🧠 Semantic embedding via Gemini / OpenRouter + deterministic projection.
 //
-// WHY: Lovable AI Gateway no longer supports text-embedding-004.
-// We replace classical embeddings with an LLM-extracted "concept fingerprint"
-// (16 normalized concepts + mood + category), then deterministically project
-// it into a 768-dim vector compatible with the existing pgvector(768) column
-// and search_brain_memory() RPC.
+// LLM extracts a "concept fingerprint" (16 concepts + mood + category),
+// then deterministically projects it into a 768-dim vector compatible with
+// the existing pgvector(768) column and search_brain_memory() RPC.
 //
-// Properties:
-// - similar texts → similar concepts → similar vectors (cosine sim works)
-// - zero new secrets, uses Deno.env.get("OPENROUTER_API_KEY") only
-// - cheap: gemini-2.5-flash-lite, ~30 tokens output per call
-// - drop-in replacement for the old embed() helper
+// Provider priority: Gemini (GEMINI_API_KEY) → OpenRouter (OPENROUTER_API_KEY) → hash-only fallback
 
 const VECTOR_DIM = 768;
+const EXTRACT_MODEL = "google/gemma-2-9b-it:free";
 
 interface ConceptFingerprint {
   concepts: string[]; // up to 16 normalized lowercase concepts/keywords
@@ -100,6 +95,27 @@ function hashOnlyProjection(text: string): number[] {
   return projectFingerprint(fp);
 }
 
+async function semanticEmbedGemini(text: string, geminiKey: string): Promise<number[] | null> {
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text }] }],
+        systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+        generationConfig: { responseMimeType: "application/json", maxOutputTokens: 256, temperature: 0 },
+      }),
+    }
+  );
+  if (!res.ok) throw new Error(`Gemini embed error ${res.status}`);
+  const data = await res.json();
+  const raw = data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+  const parsed: ConceptFingerprint = JSON.parse(raw);
+  if (!Array.isArray(parsed?.concepts) || parsed.concepts.length === 0) throw new Error("bad fingerprint");
+  return projectFingerprint({ concepts: parsed.concepts, mood: parsed.mood || "neutral", category: parsed.category || "general" });
+}
+
 export async function semanticEmbed(
   text: string,
   apiKey: string,
@@ -108,7 +124,15 @@ export async function semanticEmbed(
 
   const trimmed = text.slice(0, 4000);
 
-  // 1) Try LLM-extracted fingerprint
+  // 1) Try Gemini first (faster, no markup)
+  const geminiKey = Deno.env.get("GEMINI_API_KEY");
+  if (geminiKey) {
+    try { return await semanticEmbedGemini(trimmed, geminiKey); } catch (e) {
+      console.warn("[semanticEmbed] Gemini failed, trying OpenRouter:", (e as Error).message);
+    }
+  }
+
+  // 2) Try OpenRouter with tool calling
   try {
     const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",

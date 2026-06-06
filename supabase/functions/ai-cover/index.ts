@@ -8,14 +8,9 @@ function fetchWithTimeout(url: string, options: RequestInit, timeoutMs: number) 
   return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(timeout));
 }
 
-function getCorsHeaders(req: Request) {
-  const allowedOrigins = [
-    "https://grouaistream-com.lovable.app",
-    "https://id-preview--462bddcb-d545-4f42-bc51-5f437cb12bbe.lovable.app",
-  ];
-  const origin = req.headers.get("origin") || "";
+function getCorsHeaders(_req: Request) {
   return {
-    "Access-Control-Allow-Origin": allowedOrigins.includes(origin) ? origin : allowedOrigins[0],
+    "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
   };
 }
