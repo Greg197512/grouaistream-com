@@ -35,7 +35,12 @@ serve(async (req) => {
     }
     // --- End authentication ---
 
-    const { message, history, userContext, attachments } = await req.json();
+    const { message, history: rawHistory, userContext, attachments } = await req.json();
+    const history = Array.isArray(rawHistory) ? rawHistory : [];
+
+    // API keys — declared early to avoid temporal dead zone issues
+    const GROK_API_KEY = Deno.env.get("OPENROUTER_API_KEY")!;
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
 
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
@@ -1299,7 +1304,6 @@ Znasz DOKŁADNIE każdą funkcję i stronę:
     // ==========================================
     // WEB SEARCH via Grok (xAI) — for factual/general questions
     // ==========================================
-    const GROK_API_KEY = Deno.env.get("OPENROUTER_API_KEY")!;
     let webSearchResult = "";
 
     // Detect if user is asking a factual/web question (not music playback commands)
@@ -1323,7 +1327,7 @@ Znasz DOKŁADNIE każdą funkcję i stronę:
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            model: "grok-4-1-fast",
+            model: "x-ai/grok-3-mini",
             messages: [
               {
                 role: "system",
@@ -1353,15 +1357,16 @@ Znasz DOKŁADNIE każdą funkcję i stronę:
     const userPrompt = message;
 
     // Gemini-first: use Gemini if key available, fallback to OpenRouter
-    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
     let aiResponseText = "";
 
     if (GEMINI_API_KEY) {
       try {
+        // Gemini requires conversation to start with "user" role — filter assistant-only leading messages
+        const historyForGemini = history.slice(-12).filter((m: any) => m.content?.trim());
         const geminiMessages = [
-          ...history.slice(-12).map((m: any) => ({
+          ...historyForGemini.map((m: any) => ({
             role: m.role === "assistant" ? "model" : "user",
-            parts: [{ text: m.content }],
+            parts: [{ text: m.content || "" }],
           })),
           { role: "user", parts: [{ text: userPrompt }] },
         ];
