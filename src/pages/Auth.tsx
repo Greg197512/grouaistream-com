@@ -209,7 +209,7 @@ const Auth = () => {
           </div>
 
           <p className="mt-4 text-center text-[10px] text-muted-foreground/60 tracking-wide">
-            by Karon
+            by GrouaRock
           </p>
         </div>
       </motion.div>

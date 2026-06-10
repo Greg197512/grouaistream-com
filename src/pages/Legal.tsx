@@ -228,7 +228,7 @@ const Legal = () => {
                   (card details, billing address, email, IP address, transaction metadata) is
                   collected and processed by <strong>Paddle.com Market Limited</strong> acting as
                   our Merchant of Record and independent data controller for payment, fraud-
-                  prevention, tax-compliance and invoicing purposes. Karon receives only
+                  prevention, tax-compliance and invoicing purposes. GrouaRock receives only
                   limited transaction metadata (transaction ID, amount, plan, customer ID, country)
                   to provision your subscription and credits — we never see or store your full
                   card number.
@@ -238,7 +238,7 @@ const Legal = () => {
                   (numer karty, adres rozliczeniowy, e-mail, adres IP, metadane transakcji) są
                   zbierane i przetwarzane przez <strong>Paddle.com Market Limited</strong>, działającą
                   jako Sprzedawca Rejestrowy i niezależny administrator danych w celach płatności,
-                  zapobiegania oszustwom, rozliczeń podatkowych i fakturowania. Karon otrzymuje
+                  zapobiegania oszustwom, rozliczeń podatkowych i fakturowania. GrouaRock otrzymuje
                   jedynie ograniczone metadane (ID transakcji, kwota, plan, ID klienta, kraj),
                   niezbędne do aktywacji subskrypcji — nigdy nie widzimy ani nie przechowujemy
                   pełnego numeru karty.
@@ -421,7 +421,7 @@ const Legal = () => {
                   For payment questions: <a href="mailto:support@grouaistream.com" className="text-primary underline">support@grouaistream.com</a>
                 </p>
                 <p>
-                  Operator: <strong>Karon</strong> (sole proprietorship, Netherlands)
+                  Operator: <strong>GrouaRock</strong> (sole proprietorship, Poland)
                 </p>
               </Section>
             </div>
