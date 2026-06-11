@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 import { speak, stopSpeaking } from "@/utils/tts";
 import businessHeroBg from "@/assets/business-hero-bg.jpg";
 import { AuroraBackground } from "@/components/effects/AuroraBackground";
+import { ServicesScroller } from "@/components/business/ServicesScroller";
 
 type ChatMessage = { role: "user" | "assistant"; content: string; ts: number };
 type BriefField = { key: string; label: string; description: string; required: boolean; value: any; status: "collected" | "missing_required" | "missing_optional" };
