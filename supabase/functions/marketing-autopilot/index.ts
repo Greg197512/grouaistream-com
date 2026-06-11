@@ -1,9 +1,11 @@
 // Marketing Autopilot — autonomiczna dystrybucja treści promocyjnych.
-// 1) Wybiera świeże treści do promocji (blog / landing pages)
+// 1) Wybiera świeże posty bloga (lub evergreen fallback) jeszcze nie promowane
 // 2) Generuje AI copy dla każdej platformy (X, Facebook, Instagram, TikTok, LinkedIn)
-// 3) Dodaje brief graficzny dla Canva i skrypt audio dla ElevenLabs
-// 4) Wysyła pakiet do n8n (workflow "social-distribution") przez aurora-n8n-trigger
-// 5) Loguje wszystko w marketing_dispatches
+//    + brief Canva + skrypt ElevenLabs — przez Lovable AI Gateway (Gemini)
+// 3) Zapisuje wynik w marketing_posts
+// 4) Wysyła pakiet do n8n (jeden webhook → n8n rozsyła na X/FB/IG/TT/LI)
+//    URL z admin_settings.n8n_webhook_url (fallback: aurora_n8n_workflows."social-distribution")
+// 5) Loguje wszystko w marketing_logs
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
@@ -13,16 +15,19 @@ const corsHeaders = {
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY")!;
+const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
 
 const SITE_URL = "https://grouaistream.com";
-const MODEL = "google/gemma-2-9b-it:free";
+const MODEL = "google/gemini-2.5-flash";
 const MAX_DISPATCHES_PER_RUN = 3;
 
 async function generateSocialPack(title: string, description: string, url: string) {
-  const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
-    headers: { Authorization: `Bearer ${OPENROUTER_API_KEY}`, "Content-Type": "application/json" },
+    headers: {
+      Authorization: `Bearer ${LOVABLE_API_KEY}`,
+      "Content-Type": "application/json",
+    },
     body: JSON.stringify({
       model: MODEL,
       messages: [
@@ -56,6 +61,8 @@ Return JSON with exactly these keys:
   });
   if (!res.ok) {
     const t = await res.text();
+    if (res.status === 429) throw new Error("AI rate limit (429) — try again later");
+    if (res.status === 402) throw new Error("AI credits exhausted (402) — top up Lovable AI credits");
     throw new Error(`AI ${res.status}: ${t.slice(0, 200)}`);
   }
   const json = await res.json();
@@ -69,19 +76,32 @@ Return JSON with exactly these keys:
   }
 }
 
-async function dispatchToN8n(payload: Record<string, unknown>): Promise<{ ok: boolean; detail: string }> {
-  const resp = await fetch(`${SUPABASE_URL}/functions/v1/aurora-n8n-trigger`, {
+async function resolveN8nWebhook(supabase: any): Promise<string | null> {
+  // 1) preferred: aurora_n8n_workflows row for social-distribution
+  const { data: wf } = await supabase
+    .from("aurora_n8n_workflows")
+    .select("webhook_url, enabled")
+    .eq("workflow_id", "social-distribution")
+    .maybeSingle();
+  if (wf?.enabled && wf?.webhook_url) return wf.webhook_url;
+
+  // 2) fallback: global admin_settings.n8n_webhook_url
+  const { data: s } = await supabase
+    .from("admin_settings")
+    .select("n8n_webhook_url")
+    .eq("id", 1)
+    .maybeSingle();
+  return s?.n8n_webhook_url || null;
+}
+
+async function dispatchToN8n(webhookUrl: string, payload: Record<string, unknown>) {
+  const resp = await fetch(webhookUrl, {
     method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${SERVICE_KEY}` },
-    body: JSON.stringify({
-      workflow_id: "social-distribution",
-      trigger_source: "marketing-autopilot",
-      payload,
-    }),
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
   });
-  const data = await resp.json().catch(() => ({}));
-  if (!resp.ok) return { ok: false, detail: data?.error || `status ${resp.status}` };
-  return { ok: true, detail: "dispatched" };
+  const text = await resp.text().catch(() => "");
+  return { ok: resp.ok, status: resp.status, body: text.slice(0, 500) };
 }
 
 Deno.serve(async (req) => {
@@ -91,7 +111,10 @@ Deno.serve(async (req) => {
   const summary: Record<string, unknown> = { started_at: new Date().toISOString() };
 
   try {
-    // 1. Świeże posty bloga z ostatnich 24h, jeszcze nie promowane
+    const webhookUrl = await resolveN8nWebhook(supabase);
+    summary.n8n_webhook_configured = !!webhookUrl;
+
+    // 1. Świeże posty bloga z ostatnich 24h
     const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
     const { data: freshPosts } = await supabase
       .from("seo_blog_posts")
@@ -101,15 +124,20 @@ Deno.serve(async (req) => {
       .order("created_at", { ascending: false })
       .limit(10);
 
-    const { data: alreadyDispatched } = await supabase
-      .from("marketing_dispatches")
-      .select("content_ref")
+    // Już promowane w ciągu ostatnich 7 dni
+    const { data: recentPosts } = await supabase
+      .from("marketing_posts")
+      .select("titles")
       .gte("created_at", new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString());
 
-    const dispatchedRefs = new Set((alreadyDispatched || []).map((d: any) => d.content_ref));
-    let candidates = (freshPosts || []).filter((p: any) => !dispatchedRefs.has(`blog:${p.id}`));
+    const dispatchedTitles = new Set<string>();
+    for (const p of recentPosts || []) {
+      for (const t of p.titles || []) dispatchedTitles.add(t);
+    }
 
-    // 2. Fallback: brak świeżych treści → re-promocja evergreen posta
+    let candidates = (freshPosts || []).filter((p: any) => !dispatchedTitles.has(p.title));
+
+    // 2. Fallback: brak świeżych → evergreen
     if (candidates.length === 0) {
       const { data: evergreen } = await supabase
         .from("seo_blog_posts")
@@ -117,7 +145,9 @@ Deno.serve(async (req) => {
         .eq("is_published", true)
         .order("created_at", { ascending: false })
         .limit(30);
-      candidates = (evergreen || []).filter((p: any) => !dispatchedRefs.has(`blog:${p.id}`)).slice(0, 1);
+      candidates = (evergreen || [])
+        .filter((p: any) => !dispatchedTitles.has(p.title))
+        .slice(0, 1);
     }
 
     candidates = candidates.slice(0, MAX_DISPATCHES_PER_RUN);
@@ -129,40 +159,75 @@ Deno.serve(async (req) => {
       try {
         const pack = await generateSocialPack(post.title, post.description || "", url);
 
+        const platforms = ["x", "facebook", "instagram", "tiktok", "linkedin"];
+        const contentText = [
+          pack.twitter_post,
+          pack.facebook_post,
+          pack.instagram_caption,
+          pack.tiktok_script,
+          pack.linkedin_post,
+        ].filter(Boolean).join("\n\n---\n\n");
+
+        // zapisz w marketing_posts
+        const { data: mp } = await supabase
+          .from("marketing_posts")
+          .insert({
+            content_text: contentText,
+            captions: pack,
+            titles: [post.title],
+            platforms,
+            status: webhookUrl ? "publishing" : "generated",
+          })
+          .select("id")
+          .single();
+
         const dispatchPayload = {
+          marketing_post_id: mp?.id,
           content_type: "blog_post",
           title: post.title,
           url,
           site: SITE_URL,
           social: pack,
+          platforms,
           generated_at: new Date().toISOString(),
         };
 
-        const n8n = await dispatchToN8n(dispatchPayload);
+        let dispatch: { ok: boolean; status: number; body: string } | null = null;
+        if (webhookUrl) {
+          dispatch = await dispatchToN8n(webhookUrl, dispatchPayload);
+        }
 
-        await supabase.from("marketing_dispatches").insert({
-          content_type: "blog_post",
-          content_ref: `blog:${post.id}`,
-          title: post.title,
-          url,
-          social_payload: pack,
-          status: n8n.ok ? "dispatched" : "queued",
-          dispatched_at: n8n.ok ? new Date().toISOString() : null,
-          error: n8n.ok ? null : n8n.detail,
+        await supabase.from("marketing_logs").insert({
+          post_id: mp?.id,
+          action: webhookUrl ? "dispatch_n8n" : "queued_no_webhook",
+          api_payload: dispatchPayload as any,
+          response: dispatch as any,
+          next_action: webhookUrl && !dispatch?.ok ? "retry" : null,
         });
 
-        results.push({ title: post.title, dispatched: n8n.ok, detail: n8n.detail });
+        if (mp?.id) {
+          await supabase
+            .from("marketing_posts")
+            .update({
+              status: webhookUrl && dispatch?.ok ? "published" : (webhookUrl ? "failed" : "generated"),
+              published_at: webhookUrl && dispatch?.ok ? new Date().toISOString() : null,
+            })
+            .eq("id", mp.id);
+        }
+
+        results.push({
+          title: post.title,
+          marketing_post_id: mp?.id,
+          dispatched: !!dispatch?.ok,
+          status: dispatch?.status ?? null,
+        });
       } catch (e) {
         const msg = e instanceof Error ? e.message : "unknown";
-        await supabase.from("marketing_dispatches").insert({
-          content_type: "blog_post",
-          content_ref: `blog:${post.id}`,
-          title: post.title,
-          url,
-          status: "error",
-          error: msg,
+        await supabase.from("marketing_logs").insert({
+          action: "error",
+          response: { title: post.title, error: msg } as any,
         });
-        results.push({ title: post.title, dispatched: false, detail: msg });
+        results.push({ title: post.title, dispatched: false, error: msg });
       }
     }
 
@@ -171,8 +236,7 @@ Deno.serve(async (req) => {
 
     await supabase
       .from("agent_registry")
-      .update({ last_run_at: new Date().toISOString(), last_status: "ok" })
-      .eq("name", "marketing-autopilot");
+      .upsert({ name: "marketing-autopilot", last_run_at: new Date().toISOString(), last_status: "ok" }, { onConflict: "name" });
 
     return new Response(JSON.stringify({ ok: true, summary }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -182,8 +246,7 @@ Deno.serve(async (req) => {
     console.error("marketing-autopilot error", e);
     await supabase
       .from("agent_registry")
-      .update({ last_run_at: new Date().toISOString(), last_status: "error", last_error: msg })
-      .eq("name", "marketing-autopilot");
+      .upsert({ name: "marketing-autopilot", last_run_at: new Date().toISOString(), last_status: "error", last_error: msg }, { onConflict: "name" });
     return new Response(JSON.stringify({ error: msg, summary }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
