@@ -101,6 +101,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         void fetchProfile(session.user.id);
 
         if (event === "SIGNED_IN") {
+          // Program poleceń: jeśli user przyszedł z linku ?ref=KOD,
+          // przypisz kod polecającego (RPC pilnuje: tylko raz, nie self,
+          // tylko świeże konta — patrz migracja referral_program).
+          const pendingRefCode = localStorage.getItem("grouai-ref-code");
+          if (pendingRefCode) {
+            (supabase.rpc as any)("apply_referral_code", { _code: pendingRefCode })
+              .then(({ data, error }: { data: any; error: any }) => {
+                if (!error && data?.ok) {
+                  console.log("[Referral] kod polecający przypisany:", pendingRefCode);
+                }
+                // Niezależnie od wyniku — kod jednorazowy
+                localStorage.removeItem("grouai-ref-code");
+              })
+              .catch(() => localStorage.removeItem("grouai-ref-code"));
+          }
+
           setTimeout(async () => {
             try {
               const { data: profileData } = await supabase.rpc("get_my_profile");

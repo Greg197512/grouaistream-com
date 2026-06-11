@@ -1113,6 +1113,14 @@ Platforma umożliwia twórcom zarabianie na swojej muzyce:
 4. Śledź zarobki na dashboardzie /earnings
 5. Wypłata od 50 PLN na konto bankowe
 
+**🎁 PROGRAM POLECEŃ (polecaj i zarabiaj — nie musisz być twórcą!):**
+- Każdy użytkownik ma swój unikalny link polecający — widać go na /earnings (panel "Program poleceń")
+- Link ma postać: https://www.grouaistream.com/?ref=TWOJKOD
+- Gdy polecona osoba zarejestruje się z Twojego linku i wykupi abonament (Pro lub Ultimate), dostajesz **20% prowizji od KAŻDEJ jej płatności przez 12 miesięcy**
+- Prowizje wpadają do Twoich zarobków i wypłacasz je jak resztę (od 50 PLN)
+- Program jest JEDNOPOZIOMOWY i w pełni legalny: prowizja tylko za własnych poleconych, tylko od realnych płatności — to NIE jest piramida ani MLM
+- Gdy ktoś pyta "jak zarabiać bez wgrywania muzyki", "program poleceń", "afiliacja", "polecanie znajomym" — opisz ten program i skieruj na /earnings
+
 **Ważne informacje prawne:**
 - Utwory z Suno Pro/Premier MOŻNA monetyzować i dystrybuować
 - Platforma NIE jest dystrybutorem do Spotify/Apple Music — do tego służą DistroKid, TuneCore, CD Baby

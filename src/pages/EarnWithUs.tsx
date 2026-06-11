@@ -206,6 +206,43 @@ const EarnWithUs = () => {
           </div>
         </motion.section>
 
+        {/* Program poleceń */}
+        <motion.section
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, amount: 0.2 }}
+          className="space-y-4"
+        >
+          <motion.div
+            variants={fadeUp}
+            custom={0}
+            className="relative overflow-hidden rounded-2xl border border-primary/20 p-8 text-center space-y-4"
+          >
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-emerald-500/10" />
+            <div className="relative space-y-3">
+              <h2 className="text-2xl font-bold">🎁 Polecaj i zarabiaj — bez wgrywania muzyki</h2>
+              <p className="text-muted-foreground max-w-xl mx-auto">
+                Każdy użytkownik ma swój <strong className="text-foreground">link polecający</strong>.
+                Gdy osoba z Twojego linku wykupi abonament Pro lub Ultimate, dostajesz{" "}
+                <strong className="text-foreground">20% prowizji od każdej jej płatności przez 12 miesięcy</strong>.
+                Prowizje wypłacasz razem z resztą zarobków (od 50 PLN).
+              </p>
+              <p className="text-xs text-muted-foreground/70 max-w-lg mx-auto">
+                Program jednopoziomowy — zarabiasz wyłącznie od realnych abonamentów osób,
+                które poleciłeś bezpośrednio. Zero opłat wejściowych, zero piramidy.
+              </p>
+              <Button
+                size="lg"
+                className="gap-2"
+                onClick={() => user ? navigate("/earnings") : navigate("/auth")}
+              >
+                Pokaż mój link polecający
+                <ArrowRight className="h-5 w-5" />
+              </Button>
+            </div>
+          </motion.div>
+        </motion.section>
+
         {/* CTA */}
         <motion.section
           initial="hidden"

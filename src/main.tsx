@@ -41,4 +41,13 @@ if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
   }
 }
 
+// Program poleceń: zapamiętaj kod z linku (?ref=KOD) — zostanie
+// przypisany do konta po rejestracji/pierwszym logowaniu.
+try {
+  const refCode = new URLSearchParams(window.location.search).get("ref");
+  if (refCode && /^[A-Za-z0-9]{4,16}$/.test(refCode)) {
+    localStorage.setItem("grouai-ref-code", refCode.toUpperCase());
+  }
+} catch { /* ignore */ }
+
 createRoot(document.getElementById("root")!).render(<App />);

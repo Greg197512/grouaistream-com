@@ -1,11 +1,19 @@
-import { useState, useEffect, ReactNode } from "react";
+import { useState, useEffect, ReactNode, lazy, Suspense } from "react";
 import { Sidebar } from "./Sidebar";
 import { PlayerBar } from "./PlayerBar";
 import { TopBar } from "./TopBar";
 import { MobileBottomNav } from "./MobileBottomNav";
-import { AIAssistant } from "@/components/assistant/AIAssistant";
-import { InfinityAssistantWidget } from "@/components/assistant/InfinityAssistantWidget";
-import { VideoPlayer } from "@/components/player/VideoPlayer";
+// Lazy: asystent i video player nie blokują pierwszego renderu,
+// a ciągną ciężkie zależności (react-markdown, wavesurfer).
+const AIAssistant = lazy(() =>
+  import("@/components/assistant/AIAssistant").then((m) => ({ default: m.AIAssistant }))
+);
+const InfinityAssistantWidget = lazy(() =>
+  import("@/components/assistant/InfinityAssistantWidget").then((m) => ({ default: m.InfinityAssistantWidget }))
+);
+const VideoPlayer = lazy(() =>
+  import("@/components/player/VideoPlayer").then((m) => ({ default: m.VideoPlayer }))
+);
 import { useIsMobile } from "@/hooks/use-mobile";
 import { usePlayer } from "@/contexts/PlayerContext";
 
@@ -68,7 +76,9 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
         <FloatingPlaylistDropZones />
 
         {/* Floating Video Player */}
-        <VideoPlayer isVisible={showVideo} onClose={() => setShowVideo(false)} />
+        <Suspense fallback={null}>
+          <VideoPlayer isVisible={showVideo} onClose={() => setShowVideo(false)} />
+        </Suspense>
 
         {/* Floating Draggable Player Bar */}
         <PlayerBar />
@@ -77,8 +87,10 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
         {isMobile && <MobileBottomNav />}
 
         {/* AI Assistant Chat + Infinity Widget */}
-        <AIAssistant />
-        <InfinityAssistantWidget />
+        <Suspense fallback={null}>
+          <AIAssistant />
+          <InfinityAssistantWidget />
+        </Suspense>
 
         {/* Global UpgradeModal — opened by showUpgradeFor() from anywhere in the app */}
         <UpgradeModal

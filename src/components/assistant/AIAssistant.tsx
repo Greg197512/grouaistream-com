@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { motion, AnimatePresence, useDragControls } from "framer-motion";
-import { Send, Loader2, ExternalLink, Music, Power, GripHorizontal, Sparkles, Maximize2, Minimize2, Radio, Waves, Copy, Check, Paperclip, Image, X, FileAudio, Film, Trash2 } from "lucide-react";
+import { Send, Loader2, ExternalLink, Music, Power, GripHorizontal, Sparkles, Maximize2, Minimize2, Radio, Waves, Copy, Check, Paperclip, Image, X, FileAudio, Film, Trash2, Mic, Volume2, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -12,6 +12,7 @@ import { useLocation } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import aiAssistantAvatar from "@/assets/ai-assistant-avatar.jpg";
 import { generateMusic, type GeneratedTrack } from "@/utils/musicGenerator";
+import { speak, stopSpeaking, isTTSSpeaking } from "@/utils/tts";
 import { mixAudioFiles, type MixStyle } from "@/utils/audioMixer";
 import { WaveformPlayer } from "@/components/studio/WaveformPlayer";
 import { toast } from "sonner";
@@ -53,6 +54,24 @@ const getTimeOfDay = () => {
   return "evening";
 };
 
+/** Locale kod dla Web Speech API wg języka aplikacji */
+const getSpeechLang = () => {
+  const lang = localStorage.getItem("grooveai-language") || "pl";
+  const map: Record<string, string> = { pl: "pl-PL", en: "en-US", nl: "nl-NL", ua: "uk-UA" };
+  return map[lang] || "pl-PL";
+};
+
+/** Markdown → czysty tekst do odczytania przez TTS */
+const stripMarkdownForSpeech = (md: string) =>
+  md
+    .replace(/```[\s\S]*?```/g, " ")          // bloki kodu
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, " ")    // obrazki
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")  // linki → tekst
+    .replace(/[*_~`#>|-]/g, " ")
+    .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, " ") // emoji
+    .replace(/\s+/g, " ")
+    .trim();
+
 const CopyButton = ({ text, isUser }: { text: string; isUser: boolean }) => {
   const [copied, setCopied] = useState(false);
   const handleCopy = async (e: React.MouseEvent) => {
@@ -91,6 +110,9 @@ export const AIAssistant = () => {
   const [isDragOver, setIsDragOver] = useState(false);
   
   const [listeningStats, setListeningStats] = useState<{ topGenres: string[]; topMoods: string[]; recentTracks: number } | null>(null);
+  const [isMicListening, setIsMicListening] = useState(false);
+  const [voiceReplies, setVoiceReplies] = useState(() => localStorage.getItem("grouai-voice-replies") === "1");
+  const recognitionRef = useRef<any>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { playTrack, playPlaylist, currentTrack } = usePlayer();
@@ -403,9 +425,9 @@ export const AIAssistant = () => {
     return data.publicUrl;
   };
 
-  const handleSend = useCallback(async () => {
-    if ((!input.trim() && attachments.length === 0) || isLoading) return;
-    const userMessage = input.trim();
+  const handleSend = useCallback(async (overrideText?: string) => {
+    const userMessage = (overrideText ?? input).trim();
+    if ((!userMessage && attachments.length === 0) || isLoading) return;
     const currentAttachments = [...attachments];
     setInput("");
     setAttachments([]);
@@ -680,6 +702,12 @@ export const AIAssistant = () => {
         }
       }
 
+      // Głosowa odpowiedź: przeczytaj finalną wiadomość asystenta
+      if (voiceReplies && assistantContent.trim()) {
+        const speech = stripMarkdownForSpeech(assistantContent).slice(0, 800);
+        if (speech) void speak(speech, { lang: getSpeechLang() });
+      }
+
     } catch (error) {
       console.error("AI Assistant error:", error);
       setMessages(prev => [...prev, {
@@ -695,7 +723,52 @@ export const AIAssistant = () => {
       pendingGeneratedTrackRef.current = null;
       setIsLoading(false);
     }
-  }, [input, isLoading, messages, userContext, startDJSession, parseDJCommand, attachments]);
+  }, [input, isLoading, messages, userContext, startDJSession, parseDJCommand, attachments, voiceReplies]);
+
+  /** Mikrofon: rozpoznawanie mowy → automatyczne wysłanie wiadomości */
+  const toggleMic = useCallback(() => {
+    if (isMicListening) {
+      recognitionRef.current?.stop();
+      setIsMicListening(false);
+      return;
+    }
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SR) {
+      toast.error("Twoja przeglądarka nie wspiera rozpoznawania mowy");
+      return;
+    }
+    if (isTTSSpeaking()) stopSpeaking();
+    const rec = new SR();
+    rec.lang = getSpeechLang();
+    rec.continuous = false;
+    rec.interimResults = true;
+    rec.onresult = (event: any) => {
+      let transcript = "";
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        transcript += event.results[i][0].transcript;
+      }
+      setInput(transcript);
+      if (event.results[event.results.length - 1].isFinal && transcript.trim()) {
+        setIsMicListening(false);
+        setInput("");
+        void handleSend(transcript);
+      }
+    };
+    rec.onerror = () => setIsMicListening(false);
+    rec.onend = () => setIsMicListening(false);
+    recognitionRef.current = rec;
+    rec.start();
+    setIsMicListening(true);
+  }, [isMicListening, handleSend]);
+
+  const toggleVoiceReplies = useCallback(() => {
+    setVoiceReplies((prev) => {
+      const next = !prev;
+      localStorage.setItem("grouai-voice-replies", next ? "1" : "0");
+      if (!next) stopSpeaking();
+      return next;
+    });
+  }, []);
 
   const isMobileView = typeof window !== "undefined" && window.innerWidth < 640;
   const chatWidth = isExpanded ? "w-full sm:w-[600px]" : "w-full sm:w-[400px]";
@@ -1073,6 +1146,33 @@ export const AIAssistant = () => {
                   disabled={isLoading}
                 >
                   <Paperclip className="h-4 w-4" />
+                </Button>
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  onClick={toggleMic}
+                  disabled={isLoading}
+                  title={isMicListening ? "Zatrzymaj nasłuchiwanie" : "Mów do asystenta"}
+                  className={`shrink-0 h-9 w-9 rounded-xl transition-colors ${
+                    isMicListening
+                      ? "text-red-400 bg-red-500/15 animate-pulse"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <Mic className="h-4 w-4" />
+                </Button>
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  onClick={toggleVoiceReplies}
+                  title={voiceReplies ? "Wyłącz odpowiedzi głosowe" : "Włącz odpowiedzi głosowe"}
+                  className={`shrink-0 h-9 w-9 rounded-xl transition-colors ${
+                    voiceReplies ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {voiceReplies ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
                 </Button>
                 <Input
                   value={input}

@@ -546,4 +546,52 @@ async function handleSubscriptionTransaction(data: any, env: PaddleEnv) {
   }
 
   console.log('[payments-webhook] subscription txn recorded:', id, planName, amount, currency);
+
+  // ---- Program poleceń: 20% prowizji dla polecającego ----
+  // przez 12 miesięcy od rejestracji poleconego (jednopoziomowy, legalny)
+  if (userId && amount > 0) {
+    try {
+      const { data: prof } = await supabase
+        .from('profiles')
+        .select('referred_by, referred_at, display_name')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      const referredAt = prof?.referred_at ? new Date(prof.referred_at).getTime() : null;
+      const withinWindow = referredAt !== null &&
+        Date.now() - referredAt < 365 * 24 * 60 * 60 * 1000;
+
+      if (prof?.referred_by && withinWindow) {
+        const commission = Math.round(amount * 0.20 * 100) / 100;
+
+        // Idempotencja: UNIQUE(paddle_transaction_id, environment)
+        const { error: commErr } = await supabase.from('referral_commissions').insert({
+          referrer_user_id: prof.referred_by,
+          referred_user_id: userId,
+          paddle_transaction_id: id,
+          environment: env,
+          plan: planName,
+          gross_amount: amount,
+          commission_amount: commission,
+          currency: currency.toLowerCase(),
+        });
+
+        if (!commErr) {
+          // Prowizja wpada do creator_earnings → istniejący system wypłat
+          await supabase.from('creator_earnings').insert({
+            user_id: prof.referred_by,
+            track_id: null,
+            amount: commission,
+            earning_type: 'referral',
+            description: `Prowizja 20% z polecenia (${planName}, ${amount.toFixed(2)} ${currency})`,
+          });
+          console.log('[payments-webhook] referral commission:', commission, currency, '→', prof.referred_by);
+        } else if (!String(commErr.message || '').includes('duplicate')) {
+          console.error('[payments-webhook] referral commission insert err:', commErr);
+        }
+      }
+    } catch (e) {
+      console.error('[payments-webhook] referral processing error:', e);
+    }
+  }
 }

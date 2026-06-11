@@ -26,4 +26,19 @@ export default defineConfig(() => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        // Stabilne chunki vendorów — rzadko się zmieniają, więc po deployu
+        // przeglądarki użytkowników trzymają je w cache i pobierają tylko
+        // mały chunk z kodem aplikacji.
+        manualChunks: {
+          "vendor-react": ["react", "react-dom", "react-router-dom"],
+          "vendor-supabase": ["@supabase/supabase-js"],
+          "vendor-motion": ["framer-motion"],
+          "vendor-charts": ["recharts", "chart.js", "react-chartjs-2"],
+        },
+      },
+    },
+  },
 }));

@@ -16,46 +16,58 @@ import { PWAInstallPrompt } from "@/components/pwa/PWAInstallPrompt";
 import { TipWelcomeModal } from "@/components/modals/TipWelcomeModal";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
 import { CheckoutSuccessHandler } from "@/components/CheckoutSuccessHandler";
+import { lazy, Suspense } from "react";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
-import Search from "./pages/Search";
-import Library from "./pages/Library";
-import LikedSongs from "./pages/LikedSongs";
-import CreatePlaylist from "./pages/CreatePlaylist";
-import Radio from "./pages/Radio";
-import RadioLive from "./pages/RadioLive";
-import RadioEmbed from "./pages/RadioEmbed";
-import ImportYouTube from "./pages/ImportYouTube";
-import Settings from "./pages/Settings";
-import PlaylistManager from "./pages/PlaylistManager";
-import PlaylistDetail from "./pages/PlaylistDetail";
-import MoodHistory from "./pages/MoodHistory";
-import Admin from "./pages/Admin";
-import AdminBrain from "./pages/AdminBrain";
-import AdminAurora from "./pages/AdminAurora";
-import AdminSEO from "./pages/AdminSEO";
-import Movies from "./pages/Movies";
-import Server from "./pages/Server";
-import Legal from "./pages/Legal";
-import PartyPulpit from "./pages/PartyPulpit";
-import Suno from "./pages/Suno";
-import LocalPlayer from "./pages/LocalPlayer";
-import Upload from "./pages/Upload";
-import MyTracks from "./pages/MyTracks";
-import Unsubscribe from "./pages/Unsubscribe";
-import AlbumCreator from "./pages/AlbumCreator";
-import CreatorEarnings from "./pages/CreatorEarnings";
-import EarnWithUs from "./pages/EarnWithUs";
-import BlogIndex from "./pages/BlogIndex";
-import BlogPost from "./pages/BlogPost";
-import AdSubmission from "./pages/AdSubmission";
-import Orders from "./pages/Orders";
-import NicheLandingPage from "./pages/NicheLandingPage";
-import Sponsor from "./pages/Sponsor";
-import Business from "./pages/Business";
-import ClientDashboard from "./pages/ClientDashboard";
 import NotFound from "./pages/NotFound";
-import Binaural from "./pages/Binaural";
+
+// Route-level code-splitting: każda strona ładuje się dopiero przy wejściu,
+// dzięki czemu główny bundle nie zawiera ciężkich bibliotek (face-api,
+// tiptap, xlsx, wavesurfer, jspdf) używanych tylko w panelach.
+const Search = lazy(() => import("./pages/Search"));
+const Library = lazy(() => import("./pages/Library"));
+const LikedSongs = lazy(() => import("./pages/LikedSongs"));
+const CreatePlaylist = lazy(() => import("./pages/CreatePlaylist"));
+const Radio = lazy(() => import("./pages/Radio"));
+const RadioLive = lazy(() => import("./pages/RadioLive"));
+const RadioEmbed = lazy(() => import("./pages/RadioEmbed"));
+const ImportYouTube = lazy(() => import("./pages/ImportYouTube"));
+const Settings = lazy(() => import("./pages/Settings"));
+const PlaylistManager = lazy(() => import("./pages/PlaylistManager"));
+const PlaylistDetail = lazy(() => import("./pages/PlaylistDetail"));
+const MoodHistory = lazy(() => import("./pages/MoodHistory"));
+const Admin = lazy(() => import("./pages/Admin"));
+const AdminBrain = lazy(() => import("./pages/AdminBrain"));
+const AdminAurora = lazy(() => import("./pages/AdminAurora"));
+const AdminSEO = lazy(() => import("./pages/AdminSEO"));
+const Movies = lazy(() => import("./pages/Movies"));
+const Server = lazy(() => import("./pages/Server"));
+const Legal = lazy(() => import("./pages/Legal"));
+const PartyPulpit = lazy(() => import("./pages/PartyPulpit"));
+const Suno = lazy(() => import("./pages/Suno"));
+const LocalPlayer = lazy(() => import("./pages/LocalPlayer"));
+const Upload = lazy(() => import("./pages/Upload"));
+const MyTracks = lazy(() => import("./pages/MyTracks"));
+const Unsubscribe = lazy(() => import("./pages/Unsubscribe"));
+const AlbumCreator = lazy(() => import("./pages/AlbumCreator"));
+const CreatorEarnings = lazy(() => import("./pages/CreatorEarnings"));
+const EarnWithUs = lazy(() => import("./pages/EarnWithUs"));
+const BlogIndex = lazy(() => import("./pages/BlogIndex"));
+const BlogPost = lazy(() => import("./pages/BlogPost"));
+const AdSubmission = lazy(() => import("./pages/AdSubmission"));
+const Orders = lazy(() => import("./pages/Orders"));
+const NicheLandingPage = lazy(() => import("./pages/NicheLandingPage"));
+const Sponsor = lazy(() => import("./pages/Sponsor"));
+const Business = lazy(() => import("./pages/Business"));
+const ClientDashboard = lazy(() => import("./pages/ClientDashboard"));
+const Binaural = lazy(() => import("./pages/Binaural"));
+
+const RouteFallback = () => (
+  <div className="min-h-screen bg-background flex items-center justify-center gap-3">
+    <div className="w-6 h-6 rounded-full border-2 border-primary/20 border-t-primary animate-spin" />
+    <span className="text-sm text-muted-foreground">Ładowanie…</span>
+  </div>
+);
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -94,6 +106,7 @@ const AppShell = () => {
       <BrowserRouter>
         <CheckoutSuccessHandler />
         <AutoVoiceListener />
+        <Suspense fallback={<RouteFallback />}>
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/auth" element={<Auth />} />
@@ -142,6 +155,7 @@ const AppShell = () => {
           <Route path="/binaural" element={<Binaural />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
+        </Suspense>
       </BrowserRouter>
     </>
   );

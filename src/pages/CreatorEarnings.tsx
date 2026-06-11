@@ -21,6 +21,7 @@ import { TrackBadges } from "@/components/ui/TrackBadges";
 import { StreamBreakdown } from "@/components/earnings/StreamBreakdown";
 import { WeekendChallengeCard } from "@/components/earnings/WeekendChallengeCard";
 import { MyLikesCard } from "@/components/earnings/MyLikesCard";
+import { ReferralPanel } from "@/components/earnings/ReferralPanel";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -387,6 +388,9 @@ const CreatorEarnings = () => {
             </div>
           </motion.div>
         ))}
+
+        {/* Program poleceń — 20% prowizji z abonamentów poleconych */}
+        <ReferralPanel />
 
         {/* Wyzwanie weekendowe AI */}
         <WeekendChallengeCard />

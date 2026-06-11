@@ -34,3 +34,18 @@ project_id = "hkbraboqdsonekzxbntr"
   [functions.aurora-order-execute]
     verify_jwt = false
   [functions.aurora-n8n-trigger]
+    verify_jwt = false
+  [functions.marketing-autopilot]
+    verify_jwt = false
+  [functions.revenue-optimizer]
+    verify_jwt = false
+  [functions.seo-orchestrator]
+    verify_jwt = false
+  [functions.health-monitor]
+    verify_jwt = false
+  [functions.aurora-ab-evaluator]
+    verify_jwt = false
+  [functions.aurora-content-refresher]
+    verify_jwt = false
+  [functions.break-even-alert]
+    verify_jwt = false
