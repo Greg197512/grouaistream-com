@@ -80,7 +80,8 @@ Deno.serve(async function (req) {
   const f = (url.searchParams.get("f") || "").toLowerCase();
   try {
     const st = await loadState();
-    const station = (st.config && st.config.station_name) || "GrouAI Stream Radio";
+    // Nazwa publicznego radia (strumień, auta, odtwarzacz). Ustawiona na życzenie.
+    const station = "Groua Radio";
     const playable = st.playable;
     if (!playable.length) return new Response("Radio schedule is empty", { status: 503, headers: Object.assign({}, H, { "Content-Type": "text/plain", "Retry-After": "60" }) });
     const startedAt = (st.config && st.config.started_at) || null;
