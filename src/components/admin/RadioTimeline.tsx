@@ -57,6 +57,7 @@ interface Props {
   onRemove: (id: string) => void;
   onReorder: (fromIndex: number, toIndex: number) => void;
   currentScheduleId?: string | null;
+  onAddAfter?: (index: number, files: FileList) => Promise<void> | void;
 }
 
 const TYPE_CONFIG: Record<string, { label: string; icon: typeof Music; color: string; bgColor: string }> = {
