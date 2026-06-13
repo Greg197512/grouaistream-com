@@ -288,6 +288,81 @@ export const RadioStationManager = () => {
     fetchData();
   };
 
+  // Upload from disk and insert into schedule right after `afterIndex`.
+  const addTrackAfterIndex = async (afterIndex: number, files: FileList) => {
+    if (!user) { toast.error("Zaloguj się jako admin"); return; }
+    const fresh = [...schedule].sort((a, b) => a.position - b.position);
+    const anchor = fresh[afterIndex];
+    if (!anchor) return;
+
+    let inserted = 0;
+    let offset = 1;
+
+    for (const file of Array.from(files)) {
+      if (!isAllowedMediaFile(file, MAX_UPLOAD_SIZE_BYTES)) continue;
+      try {
+        const name = file.name.replace(/\.[^/.]+$/, "");
+        const parts = name.split(" - ");
+        const artist = parts.length >= 2 ? parts[0].trim() : "Unknown Artist";
+        const title = parts.length >= 2 ? parts.slice(1).join(" - ").trim() : name;
+        const duration = await new Promise<number>((resolve) => {
+          const url = URL.createObjectURL(file);
+          const audio = new Audio();
+          const tid = setTimeout(() => { URL.revokeObjectURL(url); resolve(180); }, 3000);
+          audio.preload = "metadata";
+          audio.onloadedmetadata = () => {
+            clearTimeout(tid);
+            const d = Math.round(audio.duration);
+            URL.revokeObjectURL(url);
+            resolve(Number.isFinite(d) && d > 0 ? d : 180);
+          };
+          audio.onerror = () => { clearTimeout(tid); URL.revokeObjectURL(url); resolve(180); };
+          audio.src = url;
+        });
+        toast.info(`Przesyłanie: ${title}...`);
+        const { publicUrl } = await uploadToR2({ file, folder: "tracks" });
+        const displayName = user.user_metadata?.display_name || user.email?.split("@")[0] || "Admin";
+        const { data: trackData, error: insertErr } = await supabase.from("tracks").insert({
+          title,
+          artist: artist !== "Unknown Artist" ? artist : displayName,
+          duration,
+          audio_url: publicUrl,
+          user_id: user.id,
+        }).select("id").single();
+        if (insertErr || !trackData) {
+          toast.error(`Błąd zapisu: ${file.name}`);
+          continue;
+        }
+        // Shift everyone after anchor down by 1, then insert at anchor.position + offset
+        const shiftTargets = fresh.slice(afterIndex + 1);
+        await Promise.all(
+          shiftTargets.map((s) =>
+            supabase.from("radio_schedule").update({ position: s.position + 1 } as any).eq("id", s.id)
+          )
+        );
+        const newPos = anchor.position + offset;
+        const { error: schedErr } = await supabase.from("radio_schedule").insert({
+          track_id: trackData.id,
+          position: newPos,
+          item_type: "track",
+        } as any);
+        if (schedErr) {
+          toast.error("Błąd dodawania do programu: " + schedErr.message);
+          continue;
+        }
+        // Reflect shift in local snapshot so subsequent files chain correctly
+        shiftTargets.forEach((s) => { s.position = s.position + 1; });
+        offset++;
+        inserted++;
+      } catch (err: any) {
+        console.error("Row upload error:", file.name, err);
+        toast.error(`Błąd: ${file.name} — ${err.message || "nieznany"}`);
+      }
+    }
+    if (inserted > 0) toast.success(`✅ Wstawiono ${inserted} utwór(y) po pozycji ${afterIndex + 1}`);
+    fetchData();
+  };
+
   const addCustomItem = async () => {
     if (!customTitle.trim()) {
       toast.error("Podaj nazwę elementu");
