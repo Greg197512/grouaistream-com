@@ -68,12 +68,15 @@ const TYPE_CONFIG: Record<string, { label: string; icon: typeof Music; color: st
   announcement: { label: "🎹 Historia muz.", icon: Radio, color: "text-amber-400", bgColor: "bg-amber-500/5" },
 };
 
-export const RadioTimeline = ({ schedule, onMove, onRemove, onReorder, currentScheduleId }: Props) => {
+export const RadioTimeline = ({ schedule, onMove, onRemove, onReorder, currentScheduleId, onAddAfter }: Props) => {
   const [clipboard, setClipboard] = useState<{ item: TrackItem; mode: "cut" | "copy" } | null>(null);
   const [cutItemId, setCutItemId] = useState<string | null>(null);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [uploadingRowIndex, setUploadingRowIndex] = useState<number | null>(null);
   const rowRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const rowFileInputRef = useRef<HTMLInputElement | null>(null);
+  const pendingInsertIndexRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (!currentScheduleId) return;
