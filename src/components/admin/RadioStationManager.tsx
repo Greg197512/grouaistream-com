@@ -751,6 +751,7 @@ export const RadioStationManager = () => {
               onRemove={removeFromSchedule}
               onReorder={reorderTrack}
               currentScheduleId={currentScheduleId}
+              onAddAfter={addTrackAfterIndex}
             />
           )}
         </CardContent>
