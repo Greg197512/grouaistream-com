@@ -119,11 +119,19 @@ const RadioLive = () => {
   const fallbackTimerRef = useRef<number | null>(null);
   const heartIdRef = useRef(0);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  // Live refs so volume/mute/schedule changes don't restart playback
+  const volumeRef = useRef(volume);
+  const mutedRef = useRef(muted);
+  const scheduleRef = useRef<ScheduleTrack[]>([]);
+  const startedRef = useRef(false);
+  useEffect(() => { volumeRef.current = volume; }, [volume]);
+  useEffect(() => { mutedRef.current = muted; }, [muted]);
 
   // Radio plays the schedule EXACTLY as configured in the admin panel
   // (no language filtering, no dedup) so what listeners hear matches
   // the highlighted row in the admin timeline 1:1.
   const schedule = useMemo(() => rawSchedule, [rawSchedule]);
+  useEffect(() => { scheduleRef.current = schedule; }, [schedule]);
 
   // Auth
   useEffect(() => {
@@ -383,7 +391,8 @@ const RadioLive = () => {
 
   const startPlayback = useCallback(
     (index: number, offset = 0) => {
-      const item = schedule[index];
+      const sched = scheduleRef.current;
+      const item = sched[index];
       if (!item) return;
       const token = ++playbackTokenRef.current;
       const audioUrl = getItemAudioUrl(item);
@@ -395,7 +404,7 @@ const RadioLive = () => {
         const remaining = Math.max(0.25, getItemDuration(item) - offset);
         fallbackTimerRef.current = window.setTimeout(() => {
           if (playbackTokenRef.current !== token) return;
-          const nextIndex = (index + 1) % schedule.length;
+          const nextIndex = (index + 1) % scheduleRef.current.length;
           setCurrentIndex(nextIndex);
           startPlayback(nextIndex);
         }, remaining * 1000);
@@ -405,7 +414,7 @@ const RadioLive = () => {
       audio.crossOrigin = "anonymous";
       audio.preload = "auto";
       audio.preservesPitch = false;
-      audio.volume = muted ? 0 : volume / 100;
+      audio.volume = mutedRef.current ? 0 : volumeRef.current / 100;
       audioRef.current = audio;
       audio.addEventListener("loadedmetadata", () => {
         if (playbackTokenRef.current !== token) return;
@@ -431,22 +440,35 @@ const RadioLive = () => {
       });
       audio.addEventListener("ended", () => {
         if (playbackTokenRef.current !== token) return;
-        const nextIndex = (index + 1) % schedule.length;
+        const nextIndex = (index + 1) % scheduleRef.current.length;
         setCurrentIndex(nextIndex);
         startPlayback(nextIndex);
       });
       audio.load();
     },
-    [schedule, volume, muted, stopCurrentAudio]
+    [stopCurrentAudio]
   );
 
+  // Initial sync — only when station turns on, station restarts, or schedule first loads.
+  // Do NOT re-run on every currentIndex / volume change, otherwise playback restarts (= stutter).
   useEffect(() => {
     if (!config?.is_active || !config.started_at || schedule.length === 0) return;
+    if (startedRef.current) return;
+    startedRef.current = true;
     const current = resolveCurrentRadioPosition(schedule, config);
     if (!current) return;
     setCurrentIndex(current.index);
     startPlayback(current.index, current.offset);
-  }, [config, schedule, startPlayback]);
+  }, [config?.is_active, config?.started_at, schedule.length, startPlayback, config, schedule]);
+
+  // If station is stopped, stop playback and allow restart later.
+  useEffect(() => {
+    if (config && !config.is_active) {
+      startedRef.current = false;
+      stopCurrentAudio();
+      setIsPlaying(false);
+    }
+  }, [config?.is_active, stopCurrentAudio, config]);
 
   useEffect(() => {
     if (audioRef.current) audioRef.current.volume = muted ? 0 : volume / 100;

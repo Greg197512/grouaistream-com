@@ -18,6 +18,8 @@ import {
   Megaphone,
   MessageSquare,
   Radio,
+  Plus,
+  Loader2,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -55,6 +57,7 @@ interface Props {
   onRemove: (id: string) => void;
   onReorder: (fromIndex: number, toIndex: number) => void;
   currentScheduleId?: string | null;
+  onAddAfter?: (index: number, files: FileList) => Promise<void> | void;
 }
 
 const TYPE_CONFIG: Record<string, { label: string; icon: typeof Music; color: string; bgColor: string }> = {
@@ -65,12 +68,15 @@ const TYPE_CONFIG: Record<string, { label: string; icon: typeof Music; color: st
   announcement: { label: "🎹 Historia muz.", icon: Radio, color: "text-amber-400", bgColor: "bg-amber-500/5" },
 };
 
-export const RadioTimeline = ({ schedule, onMove, onRemove, onReorder, currentScheduleId }: Props) => {
+export const RadioTimeline = ({ schedule, onMove, onRemove, onReorder, currentScheduleId, onAddAfter }: Props) => {
   const [clipboard, setClipboard] = useState<{ item: TrackItem; mode: "cut" | "copy" } | null>(null);
   const [cutItemId, setCutItemId] = useState<string | null>(null);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [uploadingRowIndex, setUploadingRowIndex] = useState<number | null>(null);
   const rowRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const rowFileInputRef = useRef<HTMLInputElement | null>(null);
+  const pendingInsertIndexRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (!currentScheduleId) return;
@@ -154,8 +160,35 @@ export const RadioTimeline = ({ schedule, onMove, onRemove, onReorder, currentSc
   };
   const handleDragEnd = () => { setDragIndex(null); setDragOverIndex(null); };
 
+  const handleRowFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    const idx = pendingInsertIndexRef.current;
+    e.target.value = "";
+    if (!files || files.length === 0 || idx === null || !onAddAfter) return;
+    setUploadingRowIndex(idx);
+    try {
+      await onAddAfter(idx, files);
+    } finally {
+      setUploadingRowIndex(null);
+      pendingInsertIndexRef.current = null;
+    }
+  };
+
+  const triggerRowUpload = (index: number) => {
+    pendingInsertIndexRef.current = index;
+    rowFileInputRef.current?.click();
+  };
+
   return (
     <div className="space-y-3">
+      <input
+        ref={rowFileInputRef}
+        type="file"
+        accept="audio/*,video/*"
+        multiple
+        className="hidden"
+        onChange={handleRowFileChange}
+      />
       {/* Header */}
       <div className="flex items-center justify-between px-1 flex-wrap gap-2">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -186,13 +219,14 @@ export const RadioTimeline = ({ schedule, onMove, onRemove, onReorder, currentSc
       {/* Timeline Table */}
       <ScrollArea className="h-[500px] rounded-lg border border-border bg-white text-black">
         <div className="min-w-full">
-          <div className="sticky top-0 z-10 grid grid-cols-[32px_70px_55px_24px_1fr_130px_40px] gap-1 bg-gray-100 px-2 py-2 text-xs font-semibold text-black border-b border-gray-300">
+          <div className="sticky top-0 z-10 grid grid-cols-[32px_70px_55px_24px_1fr_130px_32px_40px] gap-1 bg-gray-100 px-2 py-2 text-xs font-semibold text-black border-b border-gray-300">
             <span>#</span>
             <span>Start</span>
             <span>Czas</span>
             <span></span>
             <span>Nazwa</span>
             <span>Opis</span>
+            <span></span>
             <span></span>
           </div>
 
@@ -212,7 +246,7 @@ export const RadioTimeline = ({ schedule, onMove, onRemove, onReorder, currentSc
                   onDragOver={(e) => handleDragOver(e, item.index)}
                   onDrop={() => handleDrop(item.index)}
                   onDragEnd={handleDragEnd}
-                  className={`grid grid-cols-[32px_70px_55px_24px_1fr_130px_40px] gap-1 items-center px-2 py-1.5 text-sm transition-all cursor-grab active:cursor-grabbing group text-black
+                  className={`grid grid-cols-[32px_70px_55px_24px_1fr_130px_32px_40px] gap-1 items-center px-2 py-1.5 text-sm transition-all cursor-grab active:cursor-grabbing group text-black
                     ${isCurrent ? "bg-orange-400 !text-black ring-2 ring-inset ring-orange-600 shadow-[0_0_20px_rgba(249,115,22,0.6)] relative z-[1]" : cutItemId === item.id ? "opacity-40 bg-red-100" : "hover:bg-gray-100"}
                     ${dragOverIndex === item.index ? "bg-orange-100 border-l-2 border-orange-500" : ""}
                     ${dragIndex === item.index ? "opacity-50" : ""}
@@ -242,6 +276,21 @@ export const RadioTimeline = ({ schedule, onMove, onRemove, onReorder, currentSc
                   </p>
 
                   <p className={`text-xs truncate ${isCurrent ? "text-black" : "text-gray-600"}`}>{getItemSubtitle(item)}</p>
+
+                  {onAddAfter ? (
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      title="Dodaj utwór z dysku po tej pozycji"
+                      disabled={uploadingRowIndex !== null}
+                      onClick={(e) => { e.stopPropagation(); triggerRowUpload(item.index); }}
+                      className={`h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity ${isCurrent ? "text-black hover:bg-orange-300" : "text-emerald-600 hover:bg-emerald-100"}`}
+                    >
+                      {uploadingRowIndex === item.index
+                        ? <Loader2 className="h-4 w-4 animate-spin" />
+                        : <Plus className="h-4 w-4" />}
+                    </Button>
+                  ) : <span />}
 
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
