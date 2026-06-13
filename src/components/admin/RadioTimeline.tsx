@@ -246,7 +246,7 @@ export const RadioTimeline = ({ schedule, onMove, onRemove, onReorder, currentSc
                   onDragOver={(e) => handleDragOver(e, item.index)}
                   onDrop={() => handleDrop(item.index)}
                   onDragEnd={handleDragEnd}
-                  className={`grid grid-cols-[32px_70px_55px_24px_1fr_130px_40px] gap-1 items-center px-2 py-1.5 text-sm transition-all cursor-grab active:cursor-grabbing group text-black
+                  className={`grid grid-cols-[32px_70px_55px_24px_1fr_130px_32px_40px] gap-1 items-center px-2 py-1.5 text-sm transition-all cursor-grab active:cursor-grabbing group text-black
                     ${isCurrent ? "bg-orange-400 !text-black ring-2 ring-inset ring-orange-600 shadow-[0_0_20px_rgba(249,115,22,0.6)] relative z-[1]" : cutItemId === item.id ? "opacity-40 bg-red-100" : "hover:bg-gray-100"}
                     ${dragOverIndex === item.index ? "bg-orange-100 border-l-2 border-orange-500" : ""}
                     ${dragIndex === item.index ? "opacity-50" : ""}
