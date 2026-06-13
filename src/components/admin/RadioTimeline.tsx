@@ -196,9 +196,6 @@ export const RadioTimeline = ({ schedule, onMove, onRemove, onReorder, currentSc
           <span>Łącznie: {formatTime24h(totalDuration)}</span>
           <span className="text-xs">({schedule.length} el.)</span>
         </div>
-          <span>Łącznie: {formatTime24h(totalDuration)}</span>
-          <span className="text-xs">({schedule.length} el.)</span>
-        </div>
         <div className="flex gap-1">
           {["track", "announcement", "jingle", "ad", "talk"].map((type) => {
             const count = schedule.filter((s) => (s.item_type || "track") === type).length;
