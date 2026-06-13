@@ -219,13 +219,14 @@ export const RadioTimeline = ({ schedule, onMove, onRemove, onReorder, currentSc
       {/* Timeline Table */}
       <ScrollArea className="h-[500px] rounded-lg border border-border bg-white text-black">
         <div className="min-w-full">
-          <div className="sticky top-0 z-10 grid grid-cols-[32px_70px_55px_24px_1fr_130px_40px] gap-1 bg-gray-100 px-2 py-2 text-xs font-semibold text-black border-b border-gray-300">
+          <div className="sticky top-0 z-10 grid grid-cols-[32px_70px_55px_24px_1fr_130px_32px_40px] gap-1 bg-gray-100 px-2 py-2 text-xs font-semibold text-black border-b border-gray-300">
             <span>#</span>
             <span>Start</span>
             <span>Czas</span>
             <span></span>
             <span>Nazwa</span>
             <span>Opis</span>
+            <span></span>
             <span></span>
           </div>
 
