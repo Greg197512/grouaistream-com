@@ -6,7 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 
 // Publiczny, ciągły strumień radia (HLS) — działa w Tesli, CarPlay/Android Auto,
 // aplikacjach radiowych i każdej przeglądarce.
-const STREAM_BASE = "https://bvstvawnigyczvofzhps.supabase.co/functions/v1/radio-stream";
+const STREAM_BASE = "https://hkbraboqdsonekzxbntr.supabase.co/functions/v1/radio-stream";
 const HLS_URL = `${STREAM_BASE}?f=m3u8`;
 const PLS_URL = "https://grouaistream.com/radio.pls";
 const LISTEN_URL = "https://grouaistream.com/listen.html";
