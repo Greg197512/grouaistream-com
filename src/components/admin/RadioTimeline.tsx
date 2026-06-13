@@ -277,6 +277,21 @@ export const RadioTimeline = ({ schedule, onMove, onRemove, onReorder, currentSc
 
                   <p className={`text-xs truncate ${isCurrent ? "text-black" : "text-gray-600"}`}>{getItemSubtitle(item)}</p>
 
+                  {onAddAfter ? (
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      title="Dodaj utwór z dysku po tej pozycji"
+                      disabled={uploadingRowIndex !== null}
+                      onClick={(e) => { e.stopPropagation(); triggerRowUpload(item.index); }}
+                      className={`h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity ${isCurrent ? "text-black hover:bg-orange-300" : "text-emerald-600 hover:bg-emerald-100"}`}
+                    >
+                      {uploadingRowIndex === item.index
+                        ? <Loader2 className="h-4 w-4 animate-spin" />
+                        : <Plus className="h-4 w-4" />}
+                    </Button>
+                  ) : <span />}
+
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button size="icon" variant="ghost" className={`h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity ${isCurrent ? "text-black hover:bg-orange-300" : "text-black hover:bg-gray-200"}`}>
