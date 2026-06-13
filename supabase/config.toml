@@ -35,6 +35,8 @@ project_id = "hkbraboqdsonekzxbntr"
     verify_jwt = false
   [functions.aurora-n8n-trigger]
     verify_jwt = false
+  [functions.radio-stream]
+    verify_jwt = false
   [functions.marketing-autopilot]
     verify_jwt = false
   [functions.revenue-optimizer]

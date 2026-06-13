@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Link } from "react-router-dom";
 import { BuyCoffeeButton } from "@/components/payments/BuyCoffeeButton";
+import { ListenEverywhere } from "@/components/radio/ListenEverywhere";
 
 const PLAYER_URL = "https://play.radioking.io/grouarock-radio1";
 
@@ -47,6 +48,9 @@ const Radio = () => {
               label="Postaw nam kawę ☕"
             />
           </div>
+
+          {/* Słuchaj wszędzie — w aucie, na telefonie, w aplikacjach radiowych */}
+          <ListenEverywhere />
 
           {/* Mini coffee CTA */}
           <motion.div

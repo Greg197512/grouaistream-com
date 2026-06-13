@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>GrouAI Stream Radio — Słuchaj na żywo</title>
+<meta name="description" content="GrouAI Stream Radio — słuchaj na żywo wszędzie: w przeglądarce, w aucie (Tesla, CarPlay, Android Auto) i w aplikacjach radiowych." />
+<meta name="theme-color" content="#0b0b14" />
+<link rel="icon" href="/favicon.png" />
+<meta property="og:title" content="GrouAI Stream Radio — na żywo" />
+<meta property="og:description" content="Włącz radio GrouAI Stream gdziekolwiek jesteś." />
+<meta property="og:image" content="/og-image.jpg" />
+<style>
+  :root { --p:#a855f7; --p2:#22d3ee; --bg:#0b0b14; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { margin:0; height:100%; background:var(--bg); color:#fff;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; }
+  body { display:flex; align-items:center; justify-content:center; padding:24px;
+    background:radial-gradient(1200px 600px at 50% -10%, #241a3a 0%, var(--bg) 60%); }
+  .card { width:100%; max-width:520px; text-align:center; }
+  .logo { width:96px;height:96px;border-radius:50%;margin:0 auto 18px;
+    background:linear-gradient(135deg,var(--p),var(--p2));
+    display:flex;align-items:center;justify-content:center;box-shadow:0 0 60px rgba(168,85,247,.5); }
+  .logo svg{width:46px;height:46px;color:#fff}
+  h1 { font-size:26px; margin:0 0 4px; font-weight:800; letter-spacing:-.5px; }
+  .live { display:inline-flex; align-items:center; gap:7px; font-size:12px; font-weight:800;
+    color:#ff5470; text-transform:uppercase; letter-spacing:1.5px; margin-bottom:26px; }
+  .live .dot{width:9px;height:9px;border-radius:50%;background:#ff5470;animation:pulse 1.4s infinite}
+  @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(1.5)}}
+  .cover { width:200px;height:200px;border-radius:20px;margin:0 auto 22px;object-fit:cover;
+    background:#1a1a2e;box-shadow:0 20px 60px rgba(0,0,0,.5);display:block }
+  .np-label{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#9aa;margin-bottom:6px}
+  .title{font-size:20px;font-weight:700;margin:0 0 2px;line-height:1.25}
+  .artist{font-size:15px;color:#b9b9c9;margin:0 0 26px}
+  .play { width:96px;height:96px;border-radius:50%;border:0;cursor:pointer;
+    background:linear-gradient(135deg,var(--p),var(--p2));color:#fff;
+    display:flex;align-items:center;justify-content:center;margin:0 auto;
+    box-shadow:0 12px 40px rgba(168,85,247,.55);transition:transform .15s }
+  .play:active{transform:scale(.94)}
+  .play svg{width:42px;height:42px;margin-left:2px}
+  .hint{margin-top:20px;font-size:13px;color:#8a8a9a;min-height:18px}
+  .next{margin-top:26px;font-size:13px;color:#8a8a9a}
+  .next b{color:#cfcfe0;font-weight:600}
+  .links{margin-top:34px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+  .links a{font-size:12px;color:#b9b9c9;text-decoration:none;border:1px solid #2a2a3e;
+    padding:8px 14px;border-radius:999px}
+  .links a:hover{border-color:var(--p);color:#fff}
+  .spin{animation:sp 1s linear infinite}@keyframes sp{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"/><path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"/><circle cx="12" cy="12" r="2"/><path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"/><path d="M19.1 4.9C23 8.8 23 15.2 19.1 19.1"/></svg>
+  </div>
+  <h1 id="station">GrouAI Stream Radio</h1>
+  <div class="live"><span class="dot"></span> NA ŻYWO</div>
+
+  <img id="cover" class="cover" alt="" src="/og-image.jpg" />
+  <div class="np-label">Teraz gra</div>
+  <div class="title" id="title">GrouAI Stream</div>
+  <div class="artist" id="artist">Włącz, by słuchać</div>
+
+  <button class="play" id="play" aria-label="Odtwórz / Pauza">
+    <svg id="ico" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+  </button>
+  <div class="hint" id="hint">Dotknij, aby włączyć radio</div>
+  <div class="next" id="next"></div>
+
+  <div class="links">
+    <a id="lpls" href="#">Dodaj w aucie (.pls)</a>
+    <a id="lhls" href="#" target="_blank" rel="noopener">Adres strumienia (HLS)</a>
+    <a href="https://grouaistream.com" target="_blank" rel="noopener">grouaistream.com</a>
+  </div>
+</div>
+
+<audio id="audio" preload="none" crossorigin="anonymous"></audio>
+
+<script>
+  var BASE = "https://bvstvawnigyczvofzhps.supabase.co/functions/v1/radio-stream";
+  var HLS_URL = BASE + "?f=m3u8";
+  var audio = document.getElementById("audio");
+  var playBtn = document.getElementById("play");
+  var ico = document.getElementById("ico");
+  var hint = document.getElementById("hint");
+  var hls = null, playing = false;
+  document.getElementById("lpls").href = BASE + "?f=pls";
+  document.getElementById("lhls").href = HLS_URL;
+
+  var PLAY = '<path d="M8 5v14l11-7z"/>';
+  var PAUSE = '<path d="M6 5h4v14H6zM14 5h4v14h-4z"/>';
+  function setIcon(p){ ico.innerHTML = p ? PAUSE : PLAY; }
+
+  function attach(){
+    if (audio.canPlayType("application/vnd.apple.mpegurl")) {
+      // Safari / iOS / Tesla — natywne HLS
+      audio.src = HLS_URL;
+      return Promise.resolve();
+    }
+    // Pozostałe przeglądarki — hls.js
+    return new Promise(function(res){
+      if (window.Hls) return start();
+      var s = document.createElement("script");
+      s.src = "https://cdn.jsdelivr.net/npm/hls.js@1.5.13/dist/hls.min.js";
+      s.onload = start; s.onerror = function(){ audio.src = HLS_URL; res(); };
+      document.head.appendChild(s);
+      function start(){
+        if (window.Hls && window.Hls.isSupported()){
+          hls = new window.Hls({ liveSyncDuration: 6 });
+          hls.loadSource(HLS_URL);
+          hls.attachMedia(audio);
+        } else { audio.src = HLS_URL; }
+        res();
+      }
+    });
+  }
+
+  function play(){
+    hint.textContent = "Łączenie…";
+    attach().then(function(){
+      audio.play().then(function(){
+        playing = true; setIcon(true); hint.textContent = "";
+      }).catch(function(){
+        hint.textContent = "Dotknij ponownie, aby włączyć dźwięk";
+      });
+    });
+  }
+  function pause(){ audio.pause(); playing = false; setIcon(false); hint.textContent = "Wstrzymane"; }
+
+  playBtn.addEventListener("click", function(){ playing ? pause() : play(); });
+  audio.addEventListener("playing", function(){ playing = true; setIcon(true); hint.textContent=""; });
+  audio.addEventListener("pause", function(){ if(playing){ setIcon(false);} });
+
+  // „Co teraz gra" — odpytujemy metadane
+  function refresh(){
+    fetch(BASE + "?f=info", { cache:"no-store" }).then(function(r){ return r.json(); }).then(function(d){
+      if (!d) return;
+      document.getElementById("station").textContent = d.station_name || "GrouAI Stream Radio";
+      if (d.now_playing){
+        document.getElementById("title").textContent = d.now_playing.title || "GrouAI Stream";
+        document.getElementById("artist").textContent = d.now_playing.artist || "";
+        if (d.now_playing.cover_url) document.getElementById("cover").src = d.now_playing.cover_url;
+        if (navigator.mediaSession) {
+          navigator.mediaSession.metadata = new MediaMetadata({
+            title: d.now_playing.title || "GrouAI Stream",
+            artist: d.now_playing.artist || "GrouAI Stream Radio",
+            album: d.station_name || "GrouAI Stream",
+            artwork: d.now_playing.cover_url ? [{ src:d.now_playing.cover_url, sizes:"512x512", type:"image/jpeg" }] : []
+          });
+        }
+      }
+      if (d.up_next) document.getElementById("next").innerHTML = "Za chwilę: <b>" + (d.up_next.title||"") + "</b>";
+    }).catch(function(){});
+  }
+  refresh();
+  setInterval(refresh, 20000);
+</script>
+</body>
+</html>
