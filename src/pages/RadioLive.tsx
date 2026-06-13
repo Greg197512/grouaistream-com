@@ -119,6 +119,14 @@ const RadioLive = () => {
   const fallbackTimerRef = useRef<number | null>(null);
   const heartIdRef = useRef(0);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  // Live refs so volume/mute/schedule changes don't restart playback
+  const volumeRef = useRef(volume);
+  const mutedRef = useRef(muted);
+  const scheduleRef = useRef<ScheduleTrack[]>([]);
+  const startedRef = useRef(false);
+  useEffect(() => { volumeRef.current = volume; }, [volume]);
+  useEffect(() => { mutedRef.current = muted; }, [muted]);
+  useEffect(() => { scheduleRef.current = schedule; }, [schedule]);
 
   // Radio plays the schedule EXACTLY as configured in the admin panel
   // (no language filtering, no dedup) so what listeners hear matches
