@@ -160,12 +160,42 @@ export const RadioTimeline = ({ schedule, onMove, onRemove, onReorder, currentSc
   };
   const handleDragEnd = () => { setDragIndex(null); setDragOverIndex(null); };
 
+  const handleRowFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    const idx = pendingInsertIndexRef.current;
+    e.target.value = "";
+    if (!files || files.length === 0 || idx === null || !onAddAfter) return;
+    setUploadingRowIndex(idx);
+    try {
+      await onAddAfter(idx, files);
+    } finally {
+      setUploadingRowIndex(null);
+      pendingInsertIndexRef.current = null;
+    }
+  };
+
+  const triggerRowUpload = (index: number) => {
+    pendingInsertIndexRef.current = index;
+    rowFileInputRef.current?.click();
+  };
+
   return (
     <div className="space-y-3">
+      <input
+        ref={rowFileInputRef}
+        type="file"
+        accept="audio/*,video/*"
+        multiple
+        className="hidden"
+        onChange={handleRowFileChange}
+      />
       {/* Header */}
       <div className="flex items-center justify-between px-1 flex-wrap gap-2">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Clock className="h-4 w-4" />
+          <span>Łącznie: {formatTime24h(totalDuration)}</span>
+          <span className="text-xs">({schedule.length} el.)</span>
+        </div>
           <span>Łącznie: {formatTime24h(totalDuration)}</span>
           <span className="text-xs">({schedule.length} el.)</span>
         </div>
