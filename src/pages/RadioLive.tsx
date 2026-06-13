@@ -125,8 +125,8 @@ const RadioLive = () => {
   const scheduleRef = useRef<ScheduleTrack[]>([]);
   const startedRef = useRef(false);
   useEffect(() => { volumeRef.current = volume; }, [volume]);
+  useEffect(() => { volumeRef.current = volume; }, [volume]);
   useEffect(() => { mutedRef.current = muted; }, [muted]);
-  useEffect(() => { scheduleRef.current = schedule; }, [schedule]);
 
   // Radio plays the schedule EXACTLY as configured in the admin panel
   // (no language filtering, no dedup) so what listeners hear matches
