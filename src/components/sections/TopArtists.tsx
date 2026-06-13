@@ -61,7 +61,7 @@ export const TopArtists = () => {
     navigate(`/search?q=${encodeURIComponent(artist.name)}`);
   };
 
-  const fetchTopArtists = async () => {
+  const fetchTopArtists = async ({ retryOnEmpty = true }: { retryOnEmpty?: boolean } = {}) => {
     setIsLoading(true);
     try {
       const { data: tracksData } = await withTimeout(
@@ -74,7 +74,13 @@ export const TopArtists = () => {
         "TopArtists tracks"
       );
 
-      if (!tracksData || tracksData.length === 0) { setArtists([]); return; }
+      if (!tracksData || tracksData.length === 0) {
+        // Pusto może oznaczać przejściowy problem (timeout sesji auth / sieć),
+        // a nie faktyczny brak twórców — spróbuj jeszcze raz po chwili.
+        // NIE czyścimy już pokazanych twórców, żeby sekcja nie "znikała".
+        if (retryOnEmpty) setTimeout(() => fetchTopArtists({ retryOnEmpty: false }), 2500);
+        return;
+      }
 
       const userTrackMap: Record<string, { count: number; artistName: string }> = {};
       tracksData.forEach(t => {
@@ -84,7 +90,10 @@ export const TopArtists = () => {
       });
 
       const userIds = Object.keys(userTrackMap);
-      if (userIds.length === 0) { setArtists([]); return; }
+      if (userIds.length === 0) {
+        if (retryOnEmpty) setTimeout(() => fetchTopArtists({ retryOnEmpty: false }), 2500);
+        return;
+      }
 
       const { data: profiles } = await withTimeout(
         supabase
@@ -115,6 +124,8 @@ export const TopArtists = () => {
       setArtists(finalArtists);
     } catch (error) {
       console.error("Error fetching top artists:", error);
+      // Błąd (np. abort/timeout) — ponów raz; nie czyścimy już pokazanych twórców.
+      if (retryOnEmpty) setTimeout(() => fetchTopArtists({ retryOnEmpty: false }), 2500);
     } finally {
       setIsLoading(false);
     }
@@ -124,15 +135,17 @@ export const TopArtists = () => {
     fetchTopArtists();
     const channel = supabase
       .channel("trending-artists-live")
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "tracks" }, () => fetchTopArtists())
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "profiles" }, () => fetchTopArtists())
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "tracks" }, () => fetchTopArtists({ retryOnEmpty: false }))
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "profiles" }, () => fetchTopArtists({ retryOnEmpty: false }))
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [user]);
 
   const maxTracks = artists[0]?.trackCount || 1;
 
-  if (isLoading) return (
+  // Spinner tylko przy pierwszym ładowaniu — gdy twórcy są już pokazani,
+  // odświeżanie w tle ich nie chowa (sekcja nie "miga" i nie znika).
+  if (isLoading && artists.length === 0) return (
     <section className="px-4 sm:px-6 py-8">
       <div className="flex items-center justify-center py-12">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
