@@ -34,6 +34,8 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
   const isMobile = useIsMobile();
   const { isVideoMode, currentTrack } = usePlayer();
   const { upgradePromptFeature, dismissUpgradePrompt } = useSubscription();
+  const location = useLocation();
+  const showFace = location.pathname.startsWith("/admin");
 
   // Auto-show video player when a video track starts playing
   useEffect(() => {
