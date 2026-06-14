@@ -654,7 +654,9 @@ export const RadioStationManager = () => {
                 </Button>
               </div>
 
+              <div className="flex gap-2">
                 <Input
+
                   placeholder="Szukaj utworu lub artysty..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
