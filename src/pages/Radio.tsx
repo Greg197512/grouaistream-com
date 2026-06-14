@@ -6,6 +6,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { Link } from "react-router-dom";
 import { BuyCoffeeButton } from "@/components/payments/BuyCoffeeButton";
 import { ListenEverywhere } from "@/components/radio/ListenEverywhere";
+import { RadioMoodSwitcher } from "@/components/radio/RadioMoodSwitcher";
 
 const PLAYER_URL = "https://play.radioking.io/grouarock-radio1";
 
@@ -48,6 +49,9 @@ const Radio = () => {
               label="Postaw nam kawę ☕"
             />
           </div>
+
+          {/* Inteligentne tryby radia – AI + n8n */}
+          <RadioMoodSwitcher />
 
           {/* Słuchaj wszędzie — w aucie, na telefonie, w aplikacjach radiowych */}
           <ListenEverywhere />
