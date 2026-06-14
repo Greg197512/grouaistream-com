@@ -1,8 +1,10 @@
 name: Deploy to Vercel
 
+# Stronę hostuje Lovable (DNS wskazuje na Lovable, nie Vercel), więc ten deploy
+# jest zbędny i padał przy każdym pushu, zasypując skrzynkę czerwonymi mailami.
+# Wyłączony automat — zostaje tylko ręczne uruchomienie (workflow_dispatch),
+# gdyby kiedyś trzeba było wrócić na Vercel.
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 jobs:
