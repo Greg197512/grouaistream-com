@@ -1,7 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
-import { withTimeout } from "@/lib/withTimeout";
+import { withTimeout, TimeoutError } from "@/lib/withTimeout";
 
-const AUTH_RESTORE_TIMEOUT_MS = 5_000;
+const AUTH_RESTORE_TIMEOUT_MS = 15_000;
 
 export const clearStoredAuthSession = () => {
   if (typeof window === "undefined") return;
@@ -23,6 +23,14 @@ export const restoreSessionSafely = async () => {
 
     return session;
   } catch (error) {
+    // Timeout = wolny net / chwilowy lag. NIE kasujemy sesji — onAuthStateChange
+    // i tak odzyska zapisaną sesję; kasowanie tu wylogowywało ludzi bez powodu.
+    if (error instanceof TimeoutError) {
+      console.warn("[Auth] Session restore timed out — zachowuję sesję do odzyskania:", error);
+      return null;
+    }
+
+    // Realny błąd (np. uszkodzony token) — wtedy czyścimy.
     console.warn("[Auth] Session restore failed, clearing persisted session:", error);
     clearStoredAuthSession();
 
