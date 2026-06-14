@@ -1,27 +1,52 @@
-## Plan: Radio — dodaj świeże utwory + ułatwienie na przyszłość
+# Plan: Auto-promocja na social media przez n8n
 
-**Stan na teraz:** w bazie jest 9 utworów dodanych w ciągu ostatnich 2 dni (z `audio_url` i czasem ≥ 2 min), które jeszcze nie są w `radio_schedule`. Dorzucam je do anteny i dokładam wygodny przycisk, żebyś w przyszłości robił to jednym kliknięciem.
+Backend już działa — funkcja `marketing-autopilot` 2× dziennie (10:00 i 16:00 UTC) generuje pack copy (X, Facebook, Instagram, TikTok, LinkedIn + Canva brief + skrypt audio) z najnowszych postów bloga i wysyła payload na webhook n8n. **Brakuje samego workflow w n8n i wpisania URL webhooka.** To dorobimy.
 
-### 1. Jednorazowe dodanie 9 świeżych utworów (insert do `radio_schedule`)
-- Wyfiltrowanie utworów z ostatnich 2 dni: `audio_url IS NOT NULL`, `duration >= 120`, brak w `radio_schedule`, brak blokady artysty w `radio_artist_blocks`.
-- Wstawienie ich na koniec rozkładu (kolejne `position` po obecnym maxie), `item_type = 'track'`.
-- Sortowanie: najnowsze pierwsze, ale przeplatane wg artysty (żeby ten sam wykonawca nie leciał obok siebie).
+## Co zrobię
 
-### 2. Przycisk "Dodaj nowości z ostatnich N dni" w `RadioStationManager`
-- Nad timeline'em (`src/components/admin/RadioTimeline.tsx` / `RadioStationManager.tsx`) dodaję mały panel: input liczby dni (domyślnie 2) + przycisk **"Dodaj nowe utwory (N dni)"**.
-- Klik → query do `tracks` z filtrem `created_at > now() - N days`, pomija to, co już jest w `radio_schedule`, pomija zablokowanych artystów, wrzuca na koniec rozkładu.
-- Toast: "Dodano X nowych utworów do radia" + odświeżenie listy.
-- Bezpieczniki: minimum 2 min długości, deduplikacja po `track_id`, limit 50 utworów na jeden klik (żeby przez przypadek nie zalać anteny).
+### 1. Workflow n8n „GrouAI — Social Distribution"
+Zbuduję przez MCP (`create_workflow_from_code`) workflow z węzłami:
 
-### 3. Drobne usprawnienie odtwarzania (kontynuacja poprzedniej naprawy)
-- W `RadioLive.tsx` po dodaniu nowych pozycji `schedule` aktualizuje się tylko w ref — odtwarzacz NIE restartuje bieżącego utworu, świeże pojawią się dopiero w następnej rotacji. Już działa — tylko potwierdzam, że nowe wpisy nie urwą tego, co właśnie leci.
+- **Webhook (POST)** — punkt wejścia; payload od `marketing-autopilot` zawiera `social.twitter_post`, `social.facebook_post`, `social.instagram_caption`, `social.tiktok_script`, `social.linkedin_post`, `social.canva_brief`, `title`, `url`, `marketing_post_id`.
+- **Splitter** (Set + If per platforma) — kieruje tekst do właściwego kanału.
+- **X / Twitter** — `Twitter` node, akcja *Create Tweet*, text = `{{$json.social.twitter_post}}`.
+- **Facebook Pages** — `Facebook Graph API` node, *Create Post*, message = `{{$json.social.facebook_post}}`.
+- **Instagram** — `Instagram` node (Graph API), caption = `{{$json.social.instagram_caption}}` + obraz z `canva_brief` lub fallback OG image z URL bloga.
+- **LinkedIn** — `LinkedIn` node, *Create Post*, text = `{{$json.social.linkedin_post}}`.
+- **TikTok** — jako *queued* (TikTok API wymaga video, więc tylko zapis skryptu do Notion/Sheets do manualnej obróbki). Opcjonalnie pominę w v1.
+- **Callback HTTP Request** — POST z powrotem do funkcji `marketing-callback` (zrobię nową, lekką) z wynikami publikacji per platforma, żeby `marketing_logs` / `marketing_posts` znało status.
 
-### Pliki do zmiany
-- `src/components/admin/RadioStationManager.tsx` — funkcja `addRecentTracks(days)` + UI panelu.
-- `src/components/admin/RadioTimeline.tsx` — miejsce na przycisk (lub nowy mały komponent `AddRecentTracksButton`).
-- **Insert danych** (jednorazowo, przez tool insert, bez migracji) — dorzucenie 9 utworów już teraz, żebyś od razu słyszał je na antenie.
+Workflow ustawię jako aktywny i wystawię URL webhooka.
 
-### Czego NIE zmieniam
-- Schematu bazy, RLS, edge functions, brzmienia strumienia HLS, logiki rozkładu 24h.
+### 2. Wpis URL webhooka
+URL z n8n wkleję do `aurora_n8n_workflows` (`workflow_id = 'social-distribution'`, `enabled = true`, `webhook_url = <URL>`) przez `supabase--insert`. `marketing-autopilot` już to czyta (`resolveN8nWebhook`).
 
-Zatwierdź, to wykonuję od razu.
+### 3. Funkcja zwrotna `marketing-callback` (mała, nowa)
+- Edge function, przyjmuje `{ marketing_post_id, platform, status, external_url, error }`.
+- Aktualizuje `marketing_posts.status` i dopisuje wpis do `marketing_logs`.
+- Daje to pętlę sprzężenia zwrotnego, dzięki czemu w panelu admina widać, że post poszedł na X i FB, a IG się wywalił itp.
+
+### 4. Mały panel statusu w adminie (opcjonalnie — powiedz jeśli chcesz)
+Sekcja w `BlogDistributionPanel.tsx` pokazująca ostatnie 20 dispatchów z `marketing_posts` + statusy per platforma z `marketing_logs`. Zero zmian, jeśli wystarczy Ci sam fakt że to chodzi.
+
+## Co musisz zrobić Ty (jednorazowo, w n8n po stworzeniu workflow)
+Workflow zbuduję, ale **konta social muszą być połączone w n8n jako credentials** — n8n nie pozwala ich utworzyć z zewnątrz:
+
+1. **Twitter/X** — OAuth 2.0 (Developer Portal → app → Client ID/Secret).
+2. **Facebook Page + Instagram Business** — Meta Business → Page Access Token (long-lived).
+3. **LinkedIn** — OAuth 2.0 (LinkedIn Developers → app → `w_member_social` scope).
+
+Po stworzeniu credentials w n8n workflow automatycznie ich użyje (po Twojej autoryzacji 1 klik).
+
+## Czego NIE robię
+- Nie ruszam częstotliwości (zostaje 10:00 i 16:00 UTC).
+- Nie zmieniam generatora copy (działa, leci przez Lovable AI Gateway / Gemini).
+- TikTok pomijam — wymaga video upload, zrobimy w osobnej iteracji jak będziesz chciał.
+
+## Techniczne szczegóły
+- Workflow tworzę przez `mcp_n8n_fsTuo` (n8n MCP już podpięte).
+- Nowa funkcja `supabase/functions/marketing-callback/index.ts` + jej deploy.
+- `aurora_n8n_workflows` upsert przez `supabase--insert`.
+- Brak migracji SQL (tabele już są).
+
+Po Twoim „akceptuję" zaczynam. Po zbudowaniu workflow dam Ci URL webhooka i listę kont, które trzeba połączyć w n8n.
