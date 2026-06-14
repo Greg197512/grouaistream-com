@@ -85,6 +85,73 @@ export const RadioStationManager = () => {
   const CATALOG_PAGE_SIZE = 50;
   const [diskUploading, setDiskUploading] = useState(false);
   const [currentScheduleId, setCurrentScheduleId] = useState<string | null>(null);
+  const [recentDays, setRecentDays] = useState(2);
+  const [addingRecent, setAddingRecent] = useState(false);
+
+  const addRecentTracks = async () => {
+    const days = Math.max(1, Math.min(30, Math.floor(recentDays) || 2));
+    setAddingRecent(true);
+    try {
+      const sinceIso = new Date(Date.now() - days * 86400000).toISOString();
+      const { data: candidates, error } = await supabase
+        .from("tracks")
+        .select("id, artist, title, duration, created_at")
+        .not("audio_url", "is", null)
+        .gte("duration", 120)
+        .gte("created_at", sinceIso)
+        .order("created_at", { ascending: false })
+        .limit(200);
+      if (error) throw error;
+
+      const inSchedule = new Set(schedule.map((s) => s.track_id).filter(Boolean) as string[]);
+      const { data: blocks } = await supabase.from("radio_artist_blocks").select("artist");
+      const blocked = new Set((blocks || []).map((b: any) => String(b.artist || "").toLowerCase()));
+
+      const fresh = (candidates || []).filter(
+        (t: any) => !inSchedule.has(t.id) && !blocked.has(String(t.artist || "").toLowerCase()),
+      );
+
+      // Interleave by artist to avoid back-to-back same artist
+      const byArtist = new Map<string, any[]>();
+      for (const t of fresh) {
+        const key = String(t.artist || "").toLowerCase();
+        if (!byArtist.has(key)) byArtist.set(key, []);
+        byArtist.get(key)!.push(t);
+      }
+      const queues = Array.from(byArtist.values());
+      const interleaved: any[] = [];
+      while (queues.some((q) => q.length)) {
+        for (const q of queues) {
+          if (q.length) interleaved.push(q.shift());
+        }
+      }
+      const toAdd = interleaved.slice(0, 50);
+
+      if (toAdd.length === 0) {
+        toast.info("Brak nowych utworów do dodania");
+        return;
+      }
+
+      const { data: maxRow } = await supabase
+        .from("radio_schedule")
+        .select("position")
+        .order("position", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      const startPos = ((maxRow as any)?.position ?? 0) + 1;
+
+      const rows = toAdd.map((t, i) => ({ track_id: t.id, position: startPos + i, item_type: "track" }));
+      const { error: insErr } = await supabase.from("radio_schedule").insert(rows as any);
+      if (insErr) throw insErr;
+
+      toast.success(`Dodano ${toAdd.length} nowych utworów do radia`);
+      await fetchData();
+    } catch (e: any) {
+      toast.error("Błąd: " + (e?.message || "nie udało się dodać"));
+    } finally {
+      setAddingRecent(false);
+    }
+  };
 
   // Custom item form
   const [customTitle, setCustomTitle] = useState("");
