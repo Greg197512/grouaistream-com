@@ -2,11 +2,11 @@ import { motion } from "framer-motion";
 import { useAI } from "@/contexts/AIContext";
 import auroraWomanFace from "@/assets/aurora-woman-face.jpg";
 
-export const AuroraBackground = () => {
+export const AuroraBackground = ({ showFace = false }: { showFace?: boolean }) => {
   const { isProcessing, isLLMReady } = useAI();
 
-  // Twarz ukryta dopóki LLM nie jest gotowy; po inicjalizacji ujawnia się stopniowo
-  const faceOpacity = !isLLMReady ? 0 : isProcessing ? 0.55 : 0.18;
+  // Twarz pokazywana tylko gdy showFace=true (admin, b2b)
+  const faceOpacity = !showFace || !isLLMReady ? 0 : isProcessing ? 0.55 : 0.18;
   const faceBlur = !isLLMReady ? 20 : isProcessing ? 0 : 6;
 
   return (
