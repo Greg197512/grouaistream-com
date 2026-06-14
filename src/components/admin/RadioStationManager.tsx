@@ -632,7 +632,28 @@ export const RadioStationManager = () => {
             </TabsList>
 
             <TabsContent value="tracks" className="space-y-3">
-              <div className="flex gap-2">
+              <div className="flex gap-2 items-center rounded-md border border-orange-500/30 bg-orange-500/5 p-2">
+                <span className="text-xs text-muted-foreground shrink-0">Nowości z ostatnich</span>
+                <Input
+                  type="number"
+                  min={1}
+                  max={30}
+                  value={recentDays}
+                  onChange={(e) => setRecentDays(Number(e.target.value))}
+                  className="w-16 h-8"
+                />
+                <span className="text-xs text-muted-foreground shrink-0">dni</span>
+                <Button
+                  onClick={addRecentTracks}
+                  disabled={addingRecent}
+                  size="sm"
+                  className="gap-1 ml-auto bg-orange-500 hover:bg-orange-600 text-black"
+                >
+                  {addingRecent ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
+                  Dodaj nowe utwory do radia
+                </Button>
+              </div>
+
                 <Input
                   placeholder="Szukaj utworu lub artysty..."
                   value={searchQuery}
