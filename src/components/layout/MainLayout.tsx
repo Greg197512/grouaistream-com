@@ -20,6 +20,7 @@ import { usePlayer } from "@/contexts/PlayerContext";
 import { DragDropProvider } from "@/contexts/DragDropContext";
 import { FloatingPlaylistDropZones } from "@/components/dnd/FloatingPlaylistDropZones";
 import { AuroraBackground } from "@/components/effects/AuroraBackground";
+import { useLocation } from "react-router-dom";
 import { UpgradeModal } from "@/components/modals/UpgradeModal";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 
