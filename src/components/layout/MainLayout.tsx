@@ -20,6 +20,7 @@ import { usePlayer } from "@/contexts/PlayerContext";
 import { DragDropProvider } from "@/contexts/DragDropContext";
 import { FloatingPlaylistDropZones } from "@/components/dnd/FloatingPlaylistDropZones";
 import { AuroraBackground } from "@/components/effects/AuroraBackground";
+import { useLocation } from "react-router-dom";
 import { UpgradeModal } from "@/components/modals/UpgradeModal";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 
@@ -33,6 +34,8 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
   const isMobile = useIsMobile();
   const { isVideoMode, currentTrack } = usePlayer();
   const { upgradePromptFeature, dismissUpgradePrompt } = useSubscription();
+  const location = useLocation();
+  const showFace = location.pathname.startsWith("/admin");
 
   // Auto-show video player when a video track starts playing
   useEffect(() => {
@@ -51,7 +54,7 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
     <DragDropProvider>
       <div className="flex h-screen flex-col overflow-hidden bg-background relative">
         {/* Aurora animated background */}
-        <AuroraBackground />
+        <AuroraBackground showFace={showFace} />
         
         {/* Main Content Area */}
         <div className="flex flex-1 overflow-hidden relative z-10">

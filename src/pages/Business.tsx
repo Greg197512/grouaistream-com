@@ -200,7 +200,7 @@ export default function BusinessPage() {
   return (
     <div className="min-h-screen bg-background text-foreground relative overflow-hidden">
       {/* Animated Aurora background (global look) */}
-      <AuroraBackground />
+      <AuroraBackground showFace />
       {/* Cinematic hero background image */}
       <div className="absolute inset-0 -z-10">
         <img
