@@ -25,17 +25,17 @@ const Auth = () => {
   const handleGoogleSignIn = async () => {
     setGoogleLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: window.location.origin,
-        },
+      const result = await lovable.auth.signInWithOAuth("google", {
+        redirect_uri: window.location.origin,
       });
-      if (error) {
-        toast.error(error.message || "Nie udało się zalogować przez Google");
+      if (result.error) {
+        toast.error(result.error.message || "Nie udało się zalogować przez Google");
         setGoogleLoading(false);
       }
-      // on success Supabase redirects automatically — no return value needed
+      if (result.redirected) {
+        // browser will redirect — no return value needed
+        return;
+      }
     } catch (e: any) {
       toast.error(e?.message || "Błąd logowania Google");
       setGoogleLoading(false);
