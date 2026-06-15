@@ -208,6 +208,7 @@ serve(async (req) => {
     const userPrompt: string = (body.prompt || "").trim();
     const forceEngine: Engine | undefined = body.force_engine;
     const forceLang: Lang | undefined = body.language;
+    const planOnly: boolean = !!body.plan_only; // skip music engine call, just return plan + full_lyrics
 
     if (!userPrompt || userPrompt.length < 3) {
       return new Response(
@@ -327,6 +328,12 @@ serve(async (req) => {
     }
 
     let result: Record<string, unknown> = { generation_id: gen.id, engine, plan };
+
+    if (planOnly) {
+      return new Response(JSON.stringify({ success: true, ...result }), {
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     try {
       if (engine === "musicgen") {
