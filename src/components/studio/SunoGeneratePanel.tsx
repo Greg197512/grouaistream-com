@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Music, Loader2, Play, Download, Wand2, Guitar, ImagePlus, Upload, X, Zap } from "lucide-react";
+import { Sparkles, Music, Loader2, Play, Download, Wand2, Guitar, ImagePlus, Upload, X, Zap, Mic2, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -29,6 +29,8 @@ const STYLE_PRESETS = [
 
 type CoverMode = "auto" | "custom" | "upload";
 
+type Engine = "acestep" | "musicgen";
+
 export const SunoGeneratePanel = () => {
   const { playTrack } = usePlayer();
   const [prompt, setPrompt] = useState("");
@@ -36,13 +38,19 @@ export const SunoGeneratePanel = () => {
   const [style, setStyle] = useState("");
   const [instrumental, setInstrumental] = useState(false);
   const [customMode, setCustomMode] = useState(false);
-  const [duration, setDuration] = useState(15);
+  const [duration, setDuration] = useState(30);
   const [useFingerprint, setUseFingerprint] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [polling, setPolling] = useState(false);
   const [songs, setSongs] = useState<GeneratedSong[]>([]);
   const [statusMsg, setStatusMsg] = useState("");
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // ACE-Step: engine choice + editable lyrics (AI proposes → user fixes → ACE sings)
+  const [engine, setEngine] = useState<Engine>("acestep");
+  const [lyrics, setLyrics] = useState("");
+  const [lyricsLang, setLyricsLang] = useState<"pl" | "en" | "nl" | "uk">("pl");
+  const [writingLyrics, setWritingLyrics] = useState(false);
 
   const [coverMode, setCoverMode] = useState<CoverMode>("auto");
   const [coverDescription, setCoverDescription] = useState("");
@@ -96,76 +104,119 @@ export const SunoGeneratePanel = () => {
     } catch { toast.error("Błąd generowania okładki", { id: "ai-cover" }); return null; }
   };
 
-  const generate = async () => {
-    if (!prompt.trim() && !customMode) { toast.error("Wpisz opis utworu"); return; }
-    setGenerating(true);
-    setSongs([]);
-    setStatusMsg("🧠 GrouAI Engine (MusicGen) generuje...");
+  // === AI pisze pełny tekst (prompt-engine plan_only) ===
+  const writeLyricsWithAI = async () => {
+    if (!prompt.trim()) { toast.error("Najpierw opisz utwór"); return; }
+    setWritingLyrics(true);
     try {
-      const { data, error } = await supabase.functions.invoke("groua-music-engine", {
-        body: {
-          action: "generate",
-          prompt: prompt.trim(),
-          duration,
-          instrumental,
-          use_fingerprint: useFingerprint,
-          title: title || undefined,
-        },
+      const { data, error } = await supabase.functions.invoke("studio-prompt-engine", {
+        body: { prompt: prompt.trim(), plan_only: true, language: lyricsLang },
       });
       if (error) throw error;
+      const plan = (data as any)?.plan;
+      const full = plan?.full_lyrics?.trim();
+      if (!full) { toast.error("AI nie zwróciło tekstu — spróbuj opisać dokładniej"); return; }
+      setLyrics(full);
+      if (plan?.language) setLyricsLang(plan.language);
+      toast.success("✍️ AI napisało tekst — możesz go poprawić przed generowaniem");
+    } catch (err: any) {
+      toast.error("Nie udało się: " + (err.message || "błąd"));
+    } finally { setWritingLyrics(false); }
+  };
+
+  const generate = async () => {
+    if (!prompt.trim() && !customMode) { toast.error("Wpisz opis utworu"); return; }
+
+    const usingAce = engine === "acestep";
+    if (usingAce && !instrumental && !lyrics.trim()) {
+      toast.error('Dodaj tekst lub kliknij "AI napisz tekst"');
+      return;
+    }
+
+    setGenerating(true);
+    setSongs([]);
+    const engineLabel = usingAce ? "ACE-Step (śpiewa)" : "GrouAI Engine (MusicGen)";
+    setStatusMsg(`🧠 ${engineLabel} generuje...`);
+
+    try {
+      const fnName = usingAce ? "acestep-generate" : "groua-music-engine";
+      const reqBody: any = usingAce
+        ? {
+            action: "generate",
+            prompt: prompt.trim() + (style ? `, ${style}` : ""),
+            lyrics: instrumental ? "" : lyrics,
+            vocal_language: lyricsLang,
+            duration,
+            instrumental,
+            title: title || undefined,
+            genre: style || undefined,
+          }
+        : {
+            action: "generate",
+            prompt: prompt.trim(),
+            duration: Math.min(duration, 30),
+            instrumental,
+            use_fingerprint: useFingerprint,
+            title: title || undefined,
+          };
+
+      const { data, error } = await supabase.functions.invoke(fnName, { body: reqBody });
+      if (error) throw error;
       if (data?.error) throw new Error(data.error);
+
       const predId = data?.id;
       const genId = data?.generation_id;
-      if (!predId) throw new Error("Brak prediction_id z silnika");
-      if (data?.fingerprint_applied) {
+      if (!predId) throw new Error("Brak task_id z silnika");
+
+      if (!usingAce && data?.fingerprint_applied) {
         const fp = data.fingerprint_summary;
         setStatusMsg(`🧠 GrouAI Engine + Twój fingerprint (${fp?.genre || "—"}, ${fp?.bpm || "—"} BPM)...`);
       } else {
-        setStatusMsg(`⏳ GrouAI Engine pracuje... (~${Math.round(duration * 1.5)}s)`);
+        setStatusMsg(`⏳ ${engineLabel} pracuje... (~${Math.round(duration * 1.5)}s)`);
       }
       setPolling(true);
-      pollResult(predId, genId);
+      pollResult(predId, genId, fnName);
     } catch (err: any) {
-      toast.error("GrouAI Engine: " + (err.message || "błąd"));
+      toast.error(engineLabel + ": " + (err.message || "błąd"));
       setStatusMsg("");
     } finally { setGenerating(false); }
   };
 
-  const pollResult = (predictionId: string, generationId?: string) => {
+  const pollResult = (predictionId: string, generationId: string | undefined, fnName: string) => {
     let attempts = 0;
     pollRef.current = setInterval(async () => {
       attempts++;
-      if (attempts > 60) {
+      if (attempts > 80) {
         if (pollRef.current) clearInterval(pollRef.current);
         setPolling(false);
-        setStatusMsg("⏰ Timeout GrouAI Engine");
+        setStatusMsg("⏰ Timeout silnika");
         return;
       }
       try {
-        const { data, error } = await supabase.functions.invoke("groua-music-engine", {
-          body: { action: "status", prediction_id: predictionId, generation_id: generationId },
+        const { data, error } = await supabase.functions.invoke(fnName, {
+          body: { action: "status", prediction_id: predictionId, task_id: predictionId, generation_id: generationId },
         });
         if (error) throw error;
         const status = data?.status;
-        if (status === "succeeded") {
+        if (status === "succeeded" || status === "completed" || status === "ready") {
           if (pollRef.current) clearInterval(pollRef.current);
           setPolling(false);
-          const url = typeof data.output === "string" ? data.output : data.output?.[0];
-          if (!url) { setStatusMsg("❌ Brak audio z GrouAI Engine"); return; }
+          const url = data?.audio_url || (typeof data.output === "string" ? data.output : data.output?.[0]);
+          if (!url) { setStatusMsg("❌ Brak audio z silnika"); return; }
           handleResult([{
-            id: data.id,
+            id: data.id || predictionId,
             title: title || "GrouAI Track",
             audio_url: url,
             audioUrl: url,
-            tags: style || "GrouAI",
+            tags: style || (engine === "acestep" ? "ACE-Step" : "GrouAI"),
             duration,
           }]);
         } else if (status === "failed" || status === "canceled") {
           if (pollRef.current) clearInterval(pollRef.current);
           setPolling(false);
-          setStatusMsg("❌ GrouAI Engine: " + (data?.error || "nie powiodło się"));
+          setStatusMsg("❌ Silnik: " + (data?.error || "nie powiodło się"));
         } else {
-          setStatusMsg(`⏳ GrouAI Engine: ${status}... (${attempts * 3}s)`);
+          setStatusMsg(`⏳ ${status || "processing"}... (${attempts * 3}s)`);
         }
       } catch {}
     }, 3000);
@@ -208,26 +259,47 @@ export const SunoGeneratePanel = () => {
 
   return (
     <div className="space-y-5">
-      {/* Engine info + controls */}
-      <div className="p-4 rounded-xl border border-[#9333EA]/30 bg-gradient-to-br from-[#1a1a2e]/80 to-[#0f0f1e]/80 space-y-3">
+      {/* Engine selector */}
+      <div className="p-4 rounded-xl border border-[#FF6B00]/30 bg-gradient-to-br from-[#1a1a2e]/80 to-[#0f0f1e]/80 space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Zap className="h-4 w-4 text-[#9333EA]" />
-            <span className="text-sm font-semibold text-white">GrouAI Engine</span>
-            <Badge className="text-[10px] px-1.5 py-0 bg-purple-500/20 text-purple-400 border-0">MusicGen</Badge>
+            <Zap className="h-4 w-4 text-[#FF9500]" />
+            <span className="text-sm font-semibold text-white">Silnik AI</span>
           </div>
-          <span className="text-[11px] text-gray-400">{duration}s · stereo</span>
+          <span className="text-[11px] text-gray-400">{duration}s</span>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            onClick={() => setEngine("acestep")}
+            className={`p-3 rounded-lg border text-left transition-all ${engine === "acestep" ? "border-[#FF6B00] bg-[#FF6B00]/10" : "border-[#FF6B00]/20 bg-[#1a1a2e]/40 hover:border-[#FF6B00]/50"}`}
+          >
+            <div className="flex items-center gap-1.5">
+              <Mic2 className="h-3.5 w-3.5 text-[#FF9500]" />
+              <span className="text-xs font-semibold text-white">ACE-Step</span>
+            </div>
+            <p className="text-[10px] text-gray-400 mt-1">Śpiewa Twój tekst (PL/EN/NL/UK)</p>
+          </button>
+          <button
+            onClick={() => setEngine("musicgen")}
+            className={`p-3 rounded-lg border text-left transition-all ${engine === "musicgen" ? "border-[#9333EA] bg-[#9333EA]/10" : "border-[#9333EA]/20 bg-[#1a1a2e]/40 hover:border-[#9333EA]/50"}`}
+          >
+            <div className="flex items-center gap-1.5">
+              <Music className="h-3.5 w-3.5 text-[#9333EA]" />
+              <span className="text-xs font-semibold text-white">MusicGen</span>
+            </div>
+            <p className="text-[10px] text-gray-400 mt-1">Instrumental, bez wokalu (fallback)</p>
+          </button>
         </div>
         <div className="space-y-1">
           <Label className="text-xs text-gray-400">Długość: {duration}s</Label>
           <input
             type="range"
-            min={4}
-            max={30}
+            min={engine === "acestep" ? 15 : 4}
+            max={engine === "acestep" ? 180 : 30}
             step={1}
             value={duration}
             onChange={(e) => setDuration(parseInt(e.target.value))}
-            className="w-full accent-[#9333EA]"
+            className="w-full accent-[#FF6B00]"
           />
         </div>
         <div className="flex items-center justify-between p-2.5 rounded-lg bg-[#9333EA]/5 border border-[#9333EA]/20">
@@ -263,6 +335,54 @@ export const SunoGeneratePanel = () => {
           className="bg-[#1a1a2e] border-[#FF6B00]/20 text-white placeholder:text-gray-500 focus:border-[#FF6B00] resize-none"
         />
       </div>
+
+      {/* ACE-Step lyrics editor (only when ACE + has vocals) */}
+      <AnimatePresence>
+        {engine === "acestep" && !instrumental && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="p-4 rounded-xl border border-[#FF6B00]/30 bg-[#1a1a2e]/60 space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-[#FF9500]" />
+                  <Label className="text-sm font-medium text-gray-200">Tekst piosenki (ACE śpiewa to dosłownie)</Label>
+                </div>
+                <div className="flex gap-1">
+                  {(["pl", "en", "nl", "uk"] as const).map((l) => (
+                    <button
+                      key={l}
+                      onClick={() => setLyricsLang(l)}
+                      className={`text-[10px] px-2 py-0.5 rounded ${lyricsLang === l ? "bg-[#FF6B00] text-white" : "bg-[#1a1a2e] text-gray-400 border border-[#FF6B00]/20"}`}
+                    >{l.toUpperCase()}</button>
+                  ))}
+                </div>
+              </div>
+              <Textarea
+                placeholder={"[Verse 1]\nTekst piosenki...\n\n[Chorus]\nRefren..."}
+                value={lyrics}
+                onChange={(e) => setLyrics(e.target.value)}
+                rows={6}
+                className="bg-[#0f0f1e] border-[#FF6B00]/20 text-white placeholder:text-gray-600 focus:border-[#FF6B00] resize-none font-mono text-sm"
+              />
+              <Button
+                onClick={writeLyricsWithAI}
+                disabled={writingLyrics || !prompt.trim()}
+                variant="outline"
+                size="sm"
+                className="w-full gap-2 border-[#FF6B00]/30 text-[#FF9500] hover:bg-[#FF6B00]/10"
+              >
+                {writingLyrics ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wand2 className="h-3.5 w-3.5" />}
+                {writingLyrics ? "AI pisze..." : "✨ AI napisz tekst z mojego opisu"}
+              </Button>
+              <p className="text-[10px] text-gray-500">Tekst możesz dowolnie edytować. Używaj [Verse 1], [Chorus], [Bridge] dla struktury.</p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Custom mode fields */}
       <AnimatePresence>

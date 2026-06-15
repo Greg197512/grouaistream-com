@@ -11,7 +11,7 @@ const corsHeaders = {
 };
 
 type Lang = "pl" | "en" | "nl" | "uk";
-type Engine = "musicgen";
+type Engine = "musicgen" | "acestep";
 
 interface PromptPlan {
   language: Lang;
@@ -26,10 +26,11 @@ interface PromptPlan {
   vocal_gender?: "male" | "female" | "neutral";
   vocal_style?: string;
   lyrics_theme?: string;
+  full_lyrics?: string;             // complete singable lyrics in vocal language (for ACE-Step)
   reference_artists?: string[];
   intensity?: "minimal" | "balanced" | "rich" | "epic";
   instruments?: string[];           // specific instruments mentioned
-  suno_style_tags?: string[];       // Suno-specific style tags
+  suno_style_tags?: string[];       // Suno/ACE-Step style descriptors
   engine_recommendation: Engine;
   human_summary: string;
 }
@@ -56,6 +57,7 @@ EXTRACT all fields:
 - vocal_gender: male/female/neutral (from "kobiecy głos", "male singer", "mannenstem", etc.)
 - vocal_style: singing/rap/whisper/powerful/soft/opera/choir/spoken
 - lyrics_theme: what the song should BE ABOUT (1 concise English sentence, even if user wrote in another language)
+- full_lyrics: IF has_vocals, WRITE THE COMPLETE SONG LYRICS in the user's vocal language (Polish if pl, English if en, Dutch if nl, Ukrainian if uk). Use structure tags [Verse 1], [Chorus], [Verse 2], [Bridge], [Outro]. 8-24 lines, singable, matching mood/theme. If user provided their own lyrics, PRESERVE and only add structure. If instrumental, leave empty.
 - reference_artists: artists mentioned or clearly implied in style
 - intensity: minimal/balanced/rich/epic
 - instruments: specific instruments mentioned ["electric guitar", "piano", "808 bass", "violin", etc.]
@@ -68,7 +70,9 @@ These must be SPECIFIC and EVOCATIVE. Examples:
 - Good: "dark techno, aggressive kick, acidic 303 bassline, industrial atmosphere, Berlin underground, minimal and hypnotic"
 
 ENGINE DECISION:
-- "musicgen" → always (it's the only available music engine)
+- "acestep" → preferred for songs WITH vocals (ACE-Step actually sings the lyrics in PL/EN/NL/UK)
+- "acestep" also fine for instrumentals
+- "musicgen" → only as fallback for pure instrumental when ACE-Step unavailable
 
 human_summary: ONE enthusiastic sentence in user's DETECTED language confirming what you understood.
 Polish: "Tworzę dla Ciebie..."
@@ -93,11 +97,12 @@ const PLAN_SCHEMA = {
     vocal_gender: { type: "string", enum: ["male", "female", "neutral"] },
     vocal_style: { type: "string" },
     lyrics_theme: { type: "string" },
+    full_lyrics: { type: "string" },
     reference_artists: { type: "array", items: { type: "string" } },
     intensity: { type: "string", enum: ["minimal", "balanced", "rich", "epic"] },
     instruments: { type: "array", items: { type: "string" } },
     suno_style_tags: { type: "array", items: { type: "string" } },
-    engine_recommendation: { type: "string", enum: ["musicgen"] },
+    engine_recommendation: { type: "string", enum: ["musicgen", "acestep"] },
     human_summary: { type: "string" },
   },
   required: ["language", "genre", "mood", "bpm", "duration_seconds", "instrumental", "has_vocals", "engine_recommendation", "human_summary"],
@@ -203,6 +208,7 @@ serve(async (req) => {
     const userPrompt: string = (body.prompt || "").trim();
     const forceEngine: Engine | undefined = body.force_engine;
     const forceLang: Lang | undefined = body.language;
+    const planOnly: boolean = !!body.plan_only; // skip music engine call, just return plan + full_lyrics
 
     if (!userPrompt || userPrompt.length < 3) {
       return new Response(
@@ -322,6 +328,12 @@ serve(async (req) => {
     }
 
     let result: Record<string, unknown> = { generation_id: gen.id, engine, plan };
+
+    if (planOnly) {
+      return new Response(JSON.stringify({ success: true, ...result }), {
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     try {
       if (engine === "musicgen") {
