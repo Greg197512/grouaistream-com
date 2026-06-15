@@ -259,26 +259,47 @@ export const SunoGeneratePanel = () => {
 
   return (
     <div className="space-y-5">
-      {/* Engine info + controls */}
-      <div className="p-4 rounded-xl border border-[#9333EA]/30 bg-gradient-to-br from-[#1a1a2e]/80 to-[#0f0f1e]/80 space-y-3">
+      {/* Engine selector */}
+      <div className="p-4 rounded-xl border border-[#FF6B00]/30 bg-gradient-to-br from-[#1a1a2e]/80 to-[#0f0f1e]/80 space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Zap className="h-4 w-4 text-[#9333EA]" />
-            <span className="text-sm font-semibold text-white">GrouAI Engine</span>
-            <Badge className="text-[10px] px-1.5 py-0 bg-purple-500/20 text-purple-400 border-0">MusicGen</Badge>
+            <Zap className="h-4 w-4 text-[#FF9500]" />
+            <span className="text-sm font-semibold text-white">Silnik AI</span>
           </div>
-          <span className="text-[11px] text-gray-400">{duration}s · stereo</span>
+          <span className="text-[11px] text-gray-400">{duration}s</span>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            onClick={() => setEngine("acestep")}
+            className={`p-3 rounded-lg border text-left transition-all ${engine === "acestep" ? "border-[#FF6B00] bg-[#FF6B00]/10" : "border-[#FF6B00]/20 bg-[#1a1a2e]/40 hover:border-[#FF6B00]/50"}`}
+          >
+            <div className="flex items-center gap-1.5">
+              <Mic2 className="h-3.5 w-3.5 text-[#FF9500]" />
+              <span className="text-xs font-semibold text-white">ACE-Step</span>
+            </div>
+            <p className="text-[10px] text-gray-400 mt-1">Śpiewa Twój tekst (PL/EN/NL/UK)</p>
+          </button>
+          <button
+            onClick={() => setEngine("musicgen")}
+            className={`p-3 rounded-lg border text-left transition-all ${engine === "musicgen" ? "border-[#9333EA] bg-[#9333EA]/10" : "border-[#9333EA]/20 bg-[#1a1a2e]/40 hover:border-[#9333EA]/50"}`}
+          >
+            <div className="flex items-center gap-1.5">
+              <Music className="h-3.5 w-3.5 text-[#9333EA]" />
+              <span className="text-xs font-semibold text-white">MusicGen</span>
+            </div>
+            <p className="text-[10px] text-gray-400 mt-1">Instrumental, bez wokalu (fallback)</p>
+          </button>
         </div>
         <div className="space-y-1">
           <Label className="text-xs text-gray-400">Długość: {duration}s</Label>
           <input
             type="range"
-            min={4}
-            max={30}
+            min={engine === "acestep" ? 15 : 4}
+            max={engine === "acestep" ? 180 : 30}
             step={1}
             value={duration}
             onChange={(e) => setDuration(parseInt(e.target.value))}
-            className="w-full accent-[#9333EA]"
+            className="w-full accent-[#FF6B00]"
           />
         </div>
         <div className="flex items-center justify-between p-2.5 rounded-lg bg-[#9333EA]/5 border border-[#9333EA]/20">
