@@ -3818,9 +3818,11 @@ export type Database = {
         Row: {
           audio_url: string | null
           created_at: string
+          engine: string | null
           genre: string
           id: string
           instrumental: boolean
+          lyrics: string | null
           prompt: string
           replicate_id: string | null
           status: string
@@ -3830,9 +3832,11 @@ export type Database = {
         Insert: {
           audio_url?: string | null
           created_at?: string
+          engine?: string | null
           genre?: string
           id?: string
           instrumental?: boolean
+          lyrics?: string | null
           prompt: string
           replicate_id?: string | null
           status?: string
@@ -3842,9 +3846,11 @@ export type Database = {
         Update: {
           audio_url?: string | null
           created_at?: string
+          engine?: string | null
           genre?: string
           id?: string
           instrumental?: boolean
+          lyrics?: string | null
           prompt?: string
           replicate_id?: string | null
           status?: string
