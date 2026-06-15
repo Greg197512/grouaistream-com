@@ -336,6 +336,54 @@ export const SunoGeneratePanel = () => {
         />
       </div>
 
+      {/* ACE-Step lyrics editor (only when ACE + has vocals) */}
+      <AnimatePresence>
+        {engine === "acestep" && !instrumental && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="p-4 rounded-xl border border-[#FF6B00]/30 bg-[#1a1a2e]/60 space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-[#FF9500]" />
+                  <Label className="text-sm font-medium text-gray-200">Tekst piosenki (ACE śpiewa to dosłownie)</Label>
+                </div>
+                <div className="flex gap-1">
+                  {(["pl", "en", "nl", "uk"] as const).map((l) => (
+                    <button
+                      key={l}
+                      onClick={() => setLyricsLang(l)}
+                      className={`text-[10px] px-2 py-0.5 rounded ${lyricsLang === l ? "bg-[#FF6B00] text-white" : "bg-[#1a1a2e] text-gray-400 border border-[#FF6B00]/20"}`}
+                    >{l.toUpperCase()}</button>
+                  ))}
+                </div>
+              </div>
+              <Textarea
+                placeholder={"[Verse 1]\nTekst piosenki...\n\n[Chorus]\nRefren..."}
+                value={lyrics}
+                onChange={(e) => setLyrics(e.target.value)}
+                rows={6}
+                className="bg-[#0f0f1e] border-[#FF6B00]/20 text-white placeholder:text-gray-600 focus:border-[#FF6B00] resize-none font-mono text-sm"
+              />
+              <Button
+                onClick={writeLyricsWithAI}
+                disabled={writingLyrics || !prompt.trim()}
+                variant="outline"
+                size="sm"
+                className="w-full gap-2 border-[#FF6B00]/30 text-[#FF9500] hover:bg-[#FF6B00]/10"
+              >
+                {writingLyrics ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wand2 className="h-3.5 w-3.5" />}
+                {writingLyrics ? "AI pisze..." : "✨ AI napisz tekst z mojego opisu"}
+              </Button>
+              <p className="text-[10px] text-gray-500">Tekst możesz dowolnie edytować. Używaj [Verse 1], [Chorus], [Bridge] dla struktury.</p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Custom mode fields */}
       <AnimatePresence>
         {customMode && (
