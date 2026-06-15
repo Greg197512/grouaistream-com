@@ -1,12 +1,8 @@
-// GrouAI Studio — ACE-Step 1.5 engine.
-// Output contract is 1:1 with groua-music-engine so SunoGeneratePanel can switch
-// engines by changing only the function name + body fields.
+// GrouAI Studio — ACE-Step engine via Replicate.
+// Model: lucataco/ace-step (community port of ACE-Step 1.5 with vocals)
+// Auth: REPLICATE_API_TOKEN
 //
-// ACE-Step API (verified, docs/en/API.md):
-//   POST /release_task  -> { data: { task_id, status } }
-//   POST /query_result  -> { data: [{ task_id, status: 0|1|2, result: "<json string>" }] }
-//   result[0].file = "/v1/audio?path=..." -> absolute URL = ACESTEP_API_URL + file
-// Auth: Authorization: Bearer <ACESTEP_API_KEY>
+// Output contract is 1:1 with groua-music-engine.
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
@@ -18,14 +14,15 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const ACESTEP_API_URL = (Deno.env.get("ACESTEP_API_URL") || "").replace(/\/+$/, "");
-const ACESTEP_API_KEY = Deno.env.get("ACESTEP_API_KEY") || "";
-const ACESTEP_MODEL = Deno.env.get("ACESTEP_MODEL") || "acestep-v15-turbo";
+const REPLICATE_API_TOKEN = Deno.env.get("REPLICATE_API_TOKEN") || "";
+const REPLICATE_BASE = "https://api.replicate.com/v1";
+const ACE_MODEL = Deno.env.get("ACE_REPLICATE_MODEL") || "lucataco/ace-step";
 
-function aceHeaders(): Record<string, string> {
-  const h: Record<string, string> = { "Content-Type": "application/json" };
-  if (ACESTEP_API_KEY) h["Authorization"] = `Bearer ${ACESTEP_API_KEY}`;
-  return h;
+function rHeaders(): Record<string, string> {
+  return {
+    "Content-Type": "application/json",
+    "Authorization": `Bearer ${REPLICATE_API_TOKEN}`,
+  };
 }
 
 function json(body: unknown, status = 200) {
@@ -35,10 +32,28 @@ function json(body: unknown, status = 200) {
   });
 }
 
+function extractAudioUrl(output: unknown): string {
+  if (!output) return "";
+  if (typeof output === "string") return output;
+  if (Array.isArray(output)) {
+    const first = output[0];
+    if (typeof first === "string") return first;
+    if (first && typeof first === "object") {
+      const o = first as Record<string, unknown>;
+      return (o.audio as string) || (o.url as string) || "";
+    }
+  }
+  if (typeof output === "object") {
+    const o = output as Record<string, unknown>;
+    return (o.audio as string) || (o.url as string) || "";
+  }
+  return "";
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
-  if (!ACESTEP_API_URL) return json({ error: "ACESTEP_API_URL not configured" }, 500);
+  if (!REPLICATE_API_TOKEN) return json({ error: "REPLICATE_API_TOKEN not configured" }, 500);
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const supabaseAnon = Deno.env.get("SUPABASE_ANON_KEY")!;
@@ -55,33 +70,23 @@ serve(async (req) => {
   try {
     // ================= STATUS =================
     if (action === "status") {
-      const taskId = body.task_id || body.prediction_id || body.replicate_id;
-      if (!taskId) return json({ error: "task_id required" }, 400);
+      const predId = body.task_id || body.prediction_id || body.replicate_id;
+      if (!predId) return json({ error: "prediction_id required" }, 400);
 
-      const qr = await fetch(`${ACESTEP_API_URL}/query_result`, {
-        method: "POST",
-        headers: aceHeaders(),
-        body: JSON.stringify({ task_id_list: [taskId] }),
-      });
-      const qrData = await qr.json();
-      if (!qr.ok) return json({ error: "ACE-Step query failed", details: qrData }, qr.status);
+      const r = await fetch(`${REPLICATE_BASE}/predictions/${predId}`, { headers: rHeaders() });
+      const data = await r.json();
+      if (!r.ok) return json({ error: "Replicate poll failed", details: data }, r.status);
 
-      const entry = qrData?.data?.[0];
-      const st = entry?.status; // 0=pending, 1=ok, 2=failed
+      const st = data?.status;
 
-      if (st === 1) {
-        let file = "";
-        try {
-          const parsed = typeof entry.result === "string" ? JSON.parse(entry.result) : entry.result;
-          file = parsed?.[0]?.file || "";
-        } catch { /* ignore */ }
+      if (st === "succeeded") {
+        const audioUrl = extractAudioUrl(data.output);
+        if (!audioUrl) return json({ error: "no audio in output", details: data.output }, 502);
 
-        const audioUrl = file.startsWith("http") ? file : `${ACESTEP_API_URL}${file}`;
         const r2Url = await archiveToR2({
           sourceUrl: audioUrl,
           folder: "acestep",
-          id: taskId,
-          fetchHeaders: aceHeaders(),
+          id: predId,
         });
         const finalUrl = r2Url || audioUrl;
 
@@ -93,7 +98,7 @@ serve(async (req) => {
         }
 
         return json({
-          id: taskId,
+          id: predId,
           status: "succeeded",
           output: finalUrl,
           audio_url: finalUrl,
@@ -101,14 +106,14 @@ serve(async (req) => {
         });
       }
 
-      if (st === 2) {
+      if (st === "failed" || st === "canceled") {
         if (body.generation_id) {
           await supa.from("generations").update({ status: "failed" }).eq("id", body.generation_id);
         }
-        return json({ id: taskId, status: "failed" });
+        return json({ id: predId, status: "failed", error: data?.error });
       }
 
-      return json({ id: taskId, status: "processing" });
+      return json({ id: predId, status: "processing" });
     }
 
     // ================= GENERATE =================
@@ -120,39 +125,30 @@ serve(async (req) => {
     if (prompt.length < 3) return json({ error: "prompt too short" }, 400);
 
     const instrumental: boolean = !!body.instrumental;
-    const lyrics: string = instrumental ? "" : (body.lyrics || "").trim();
-    const vocalLang: string = body.vocal_language || body.language || "pl";
-    const duration: number = Math.min(Math.max(body.duration || body.duration_seconds || 30, 10), 240);
+    const lyrics: string = instrumental ? "[instrumental]" : (body.lyrics || "[instrumental]").trim();
+    const duration: number = Math.min(Math.max(body.duration || body.duration_seconds || 60, 10), 240);
     const title: string = body.title || "GrouAI Track";
 
-    const releaseBody: Record<string, unknown> = {
-      prompt,
+    // lucataco/ace-step input schema
+    const input: Record<string, unknown> = {
+      tags: prompt,
       lyrics,
-      vocal_language: vocalLang,
-      audio_duration: duration,
-      audio_format: "mp3",
-      model: ACESTEP_MODEL,
-      thinking: true,
-      use_format: true,
-      use_cot_caption: true,
-      use_cot_language: true,
-      inference_steps: 8,
-      batch_size: 1,
+      duration,
+      scheduler: "euler",
+      guidance_scale: 15,
+      number_of_steps: 60,
     };
-    if (body.bpm) releaseBody.bpm = body.bpm;
-    if (body.key_scale || body.music_key) releaseBody.key_scale = body.key_scale || body.music_key;
-    if (instrumental) releaseBody.task_type = "text2music";
 
-    const rel = await fetch(`${ACESTEP_API_URL}/release_task`, {
+    const rel = await fetch(`${REPLICATE_BASE}/models/${ACE_MODEL}/predictions`, {
       method: "POST",
-      headers: aceHeaders(),
-      body: JSON.stringify(releaseBody),
+      headers: rHeaders(),
+      body: JSON.stringify({ input }),
     });
     const relData = await rel.json();
-    if (!rel.ok) return json({ error: "ACE-Step release failed", details: relData }, rel.status);
+    if (!rel.ok) return json({ error: "Replicate create failed", details: relData }, rel.status);
 
-    const taskId = relData?.data?.task_id;
-    if (!taskId) return json({ error: "No task_id from ACE-Step", details: relData }, 502);
+    const predId = relData?.id;
+    if (!predId) return json({ error: "No prediction id from Replicate", details: relData }, 502);
 
     const { data: gen } = await supa.from("generations").insert({
       user_id: userId,
@@ -162,15 +158,15 @@ serve(async (req) => {
       lyrics: lyrics.slice(0, 4000),
       instrumental,
       status: "pending",
-      replicate_id: taskId,
+      replicate_id: predId,
       engine: "acestep",
     }).select().single();
 
     return json({
-      id: taskId,
+      id: predId,
       generation_id: gen?.id ?? null,
       status: "starting",
-      engine: "acestep-v15",
+      engine: "acestep-replicate",
       duration,
       created_at: new Date().toISOString(),
     });
