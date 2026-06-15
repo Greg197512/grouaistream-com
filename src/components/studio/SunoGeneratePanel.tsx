@@ -129,7 +129,7 @@ export const SunoGeneratePanel = () => {
 
     const usingAce = engine === "acestep";
     if (usingAce && !instrumental && !lyrics.trim()) {
-      toast.error("Dodaj tekst lub kliknij „AI napisz tekst"");
+      toast.error('Dodaj tekst lub kliknij "AI napisz tekst"');
       return;
     }
 
