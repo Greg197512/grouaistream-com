@@ -1373,10 +1373,43 @@ Znasz DOKŁADNIE każdą funkcję i stronę:
 
     const userPrompt = message;
 
-    // Gemini-first: use Gemini if key available, fallback to OpenRouter
+    // Lovable AI first: stream through the Lovable AI gateway
     let aiResponseText = "";
+    let aiResponse: Response | null = null;
 
-    if (GEMINI_API_KEY) {
+    if (LOVABLE_API_KEY) {
+      try {
+        const res = await fetch(LOVABLE_AI_CHAT_URL, {
+          method: "POST",
+          headers: lovableAiHeaders(LOVABLE_API_KEY),
+          body: JSON.stringify({
+            model: LOVABLE_AI_MODEL,
+            messages: [
+              { role: "system", content: systemPrompt + webSearchResult },
+              ...history.slice(-12).map((m: any) => ({ role: m.role, content: m.content || "" })),
+              { role: "user", content: userPrompt },
+            ],
+            max_tokens: 4096,
+            temperature: 0.8,
+            stream: true,
+          }),
+        });
+
+        if (res.ok) {
+          aiResponse = res;
+          console.log("Lovable AI model used:", LOVABLE_AI_MODEL);
+        } else {
+          const errBody = await res.text();
+          console.error("Lovable AI gateway error:", res.status, errBody.substring(0, 500));
+          if (res.status === 402) aiResponseText = "AI jest podłączone przez Lovable, ale skończyły się kredyty. Doładuj kredyty w ustawieniach workspace i spróbuj ponownie.";
+          if (res.status === 429) aiResponseText = "AI jest chwilowo przeciążone limitem zapytań. Spróbuj ponownie za moment.";
+        }
+      } catch (e) {
+        console.error("Lovable AI gateway exception:", e);
+      }
+    }
+
+    if (!aiResponse && !aiResponseText && GEMINI_API_KEY) {
       // Try multiple Gemini models — different keys support different models
       const geminiModels = [
         "gemini-2.0-flash",
