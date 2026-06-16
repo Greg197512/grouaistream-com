@@ -107,20 +107,20 @@ async function findOriginalCover(title: string, artist: string): Promise<string 
 }
 
 async function generateAICover(title: string, artist: string, genre: string | null): Promise<string | null> {
-  const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY");
+  const OPENROUTER_API_KEY = Deno.env.get("LOVABLE_API_KEY") || Deno.env.get("OPENROUTER_API_KEY");
   if (!OPENROUTER_API_KEY) return null;
 
   const genreStyle = genre ? ` The music style is ${genre}.` : "";
   const prompt = `Create a breathtaking, photographic-quality album cover art for a song called "${title}" by "${artist}".${genreStyle} The image must look like a professional photograph or cinematic movie still — NOT cartoon, NOT illustration, NOT abstract art. Think: Hasselblad camera quality, dramatic natural or studio lighting, rich vivid colors, shallow depth of field with beautiful bokeh. The scene should emotionally represent the mood and theme of the song title. Ultra-realistic, high-resolution, award-winning photography style. No text, no letters, no words, no logos on the image. On a clean background.`;
 
   const attempts = [
-    { model: "google/gemma-2-9b-it:free", timeoutMs: 90000 },
-    { model: "google/gemma-2-9b-it:free", timeoutMs: 45000 },
+    { model: "google/gemini-2.5-flash", timeoutMs: 90000 },
+    { model: "google/gemini-2.5-flash", timeoutMs: 45000 },
   ];
 
   for (const attempt of attempts) {
     try {
-      const response = await fetchWithTimeout("https://openrouter.ai/api/v1/chat/completions", {
+      const response = await fetchWithTimeout("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${OPENROUTER_API_KEY}`,

@@ -18,7 +18,7 @@ const corsHeaders = {
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
-const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY") || "";
+const OPENROUTER_API_KEY = Deno.env.get("LOVABLE_API_KEY") || Deno.env.get("OPENROUTER_API_KEY") || "";
 const CRON_SECRET = Deno.env.get("CRON_SECRET") || "";
 
 interface TrackIn {
@@ -63,14 +63,14 @@ Output JSON only:
 [{"id":"...","bpm":120,"energy":0.7,"valence":0.6,"danceability":0.65}]`;
 
   try {
-    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${OPENROUTER_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemma-2-9b-it:free",
+        model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: "You are a music analyst. Output ONLY valid JSON arrays. No prose, no markdown." },
           { role: "user", content: prompt },
