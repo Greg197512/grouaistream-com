@@ -1000,7 +1000,14 @@ serve(async (req) => {
     const topMoods = ctx.topMoods || [];
     const currentPage = ctx.currentPage || "/";
     const userLanguage = ctx.language || "en";
-    const userLanguageName = ctx.languageName || "English";
+    const languageNames: Record<string, string> = {
+      pl: "polski",
+      en: "English",
+      nl: "Nederlands",
+      ua: "українська",
+      uk: "українська",
+    };
+    const userLanguageName = ctx.languageName || languageNames[String(userLanguage).toLowerCase()] || "English";
     // Build radio update info for the AI
     const radioUpdateInfo = radioUpdateResult
       ? `\n\n## 📻 RADIO ZOSTAŁO ZMIENIONE!
