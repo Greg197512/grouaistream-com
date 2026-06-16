@@ -388,7 +388,6 @@ serve(async (req) => {
             email_subject: null,
           });
         }
-      }
     } catch (e) {
       console.error("Hook gen failed", e);
     }
