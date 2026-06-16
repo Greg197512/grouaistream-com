@@ -6,6 +6,15 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const LOVABLE_AI_CHAT_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
+const LOVABLE_AI_MODEL = "google/gemini-3-flash-preview";
+
+const lovableAiHeaders = (apiKey: string) => ({
+  "Lovable-API-Key": apiKey,
+  "X-Lovable-AIG-SDK": "raw-openai-compatible",
+  "Content-Type": "application/json",
+});
+
 serve(async (req) => {
 
   if (req.method === "OPTIONS") {
@@ -38,7 +47,8 @@ serve(async (req) => {
     const { message, history: rawHistory, userContext, attachments } = await req.json();
     const history = Array.isArray(rawHistory) ? rawHistory : [];
 
-    // API keys — declared early to avoid temporal dead zone issues
+    // API keys — Lovable AI is the primary provider for the assistant
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY") || "";
     const GROK_API_KEY = Deno.env.get("GROK_API_KEY") || Deno.env.get("OPENROUTER_API_KEY") || "";
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
 
