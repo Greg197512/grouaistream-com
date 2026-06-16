@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import { Suspense, lazy } from "react";
 import { WelcomeConfetti } from "@/components/effects/WelcomeConfetti";
 import { PlayerProvider } from "@/contexts/PlayerContext";
 import { AIProvider } from "@/contexts/AIContext";
@@ -56,15 +57,15 @@ import Business from "./pages/Business";
 import ClientDashboard from "./pages/ClientDashboard";
 import NotFound from "./pages/NotFound";
 
-// Empire platform pages
-import EmpireDashboard from "./pages/empire/EmpireDashboard";
-import AgentBuilder from "./pages/empire/AgentBuilder";
-import KnowledgeGarden from "./pages/empire/KnowledgeGarden";
-import AgentMarketplace from "./pages/empire/AgentMarketplace";
-import EmpireAnalytics from "./pages/empire/EmpireAnalytics";
-import EmpireCommunity from "./pages/empire/EmpireCommunity";
-import EmpireProjects from "./pages/empire/EmpireProjects";
-import ApifyResearch from "./pages/empire/ApifyResearch";
+// Empire platform pages — lazy-loaded for code splitting
+const EmpireDashboard = lazy(() => import("./pages/empire/EmpireDashboard"));
+const AgentBuilder = lazy(() => import("./pages/empire/AgentBuilder"));
+const KnowledgeGarden = lazy(() => import("./pages/empire/KnowledgeGarden"));
+const AgentMarketplace = lazy(() => import("./pages/empire/AgentMarketplace"));
+const EmpireAnalytics = lazy(() => import("./pages/empire/EmpireAnalytics"));
+const EmpireCommunity = lazy(() => import("./pages/empire/EmpireCommunity"));
+const EmpireProjects = lazy(() => import("./pages/empire/EmpireProjects"));
+const ApifyResearch = lazy(() => import("./pages/empire/ApifyResearch"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -148,15 +149,15 @@ const AppShell = () => {
           <Route path="/client-dashboard" element={<ClientDashboard />} />
           <Route path="/client-dashboard/:orderId" element={<ClientDashboard />} />
 
-          {/* Empire platform routes */}
-          <Route path="/empire" element={<EmpireDashboard />} />
-          <Route path="/empire/projects" element={<EmpireProjects />} />
-          <Route path="/empire/agents" element={<AgentBuilder />} />
-          <Route path="/empire/research" element={<ApifyResearch />} />
-          <Route path="/empire/knowledge" element={<KnowledgeGarden />} />
-          <Route path="/empire/marketplace" element={<AgentMarketplace />} />
-          <Route path="/empire/analytics" element={<EmpireAnalytics />} />
-          <Route path="/empire/community" element={<EmpireCommunity />} />
+          {/* Empire platform routes — lazy loaded */}
+          <Route path="/empire" element={<Suspense fallback={null}><EmpireDashboard /></Suspense>} />
+          <Route path="/empire/projects" element={<Suspense fallback={null}><EmpireProjects /></Suspense>} />
+          <Route path="/empire/agents" element={<Suspense fallback={null}><AgentBuilder /></Suspense>} />
+          <Route path="/empire/research" element={<Suspense fallback={null}><ApifyResearch /></Suspense>} />
+          <Route path="/empire/knowledge" element={<Suspense fallback={null}><KnowledgeGarden /></Suspense>} />
+          <Route path="/empire/marketplace" element={<Suspense fallback={null}><AgentMarketplace /></Suspense>} />
+          <Route path="/empire/analytics" element={<Suspense fallback={null}><EmpireAnalytics /></Suspense>} />
+          <Route path="/empire/community" element={<Suspense fallback={null}><EmpireCommunity /></Suspense>} />
 
           <Route path="*" element={<NotFound />} />
         </Routes>

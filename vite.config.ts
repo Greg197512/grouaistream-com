@@ -28,4 +28,19 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    chunkSizeWarningLimit: 600,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes("@tensorflow") || id.includes("@vladmandic")) return "vendor-tf";
+          if (id.includes("@react-three") || id.includes("three")) return "vendor-three";
+          if (id.includes("wavesurfer")) return "vendor-audio";
+          if (id.includes("recharts") || id.includes("d3-")) return "vendor-charts";
+          if (id.includes("framer-motion")) return "vendor-motion";
+          if (id.includes("node_modules")) return "vendor";
+        },
+      },
+    },
+  },
 }));
