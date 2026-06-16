@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import {
   LayoutDashboard, FolderKanban, Bot, BookOpen,
   ShoppingBag, BarChart3, Users, ChevronLeft,
-  ChevronRight, Crown, Zap, Search,
+  ChevronRight, Crown, Zap, Search, TrendingUp,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -12,6 +12,7 @@ const NAV = [
   { icon: LayoutDashboard, label: "Dashboard",       to: "/empire" },
   { icon: FolderKanban,   label: "Moje Projekty",    to: "/empire/projects" },
   { icon: Bot,            label: "Agent Teams",      to: "/empire/agents" },
+  { icon: TrendingUp,     label: "Research (Apify)", to: "/empire/research" },
   { icon: BookOpen,       label: "Knowledge Garden", to: "/empire/knowledge" },
   { icon: ShoppingBag,    label: "Marketplace",      to: "/empire/marketplace" },
   { icon: BarChart3,      label: "Analytics",        to: "/empire/analytics" },

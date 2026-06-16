@@ -64,6 +64,7 @@ import AgentMarketplace from "./pages/empire/AgentMarketplace";
 import EmpireAnalytics from "./pages/empire/EmpireAnalytics";
 import EmpireCommunity from "./pages/empire/EmpireCommunity";
 import EmpireProjects from "./pages/empire/EmpireProjects";
+import ApifyResearch from "./pages/empire/ApifyResearch";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -151,6 +152,7 @@ const AppShell = () => {
           <Route path="/empire" element={<EmpireDashboard />} />
           <Route path="/empire/projects" element={<EmpireProjects />} />
           <Route path="/empire/agents" element={<AgentBuilder />} />
+          <Route path="/empire/research" element={<ApifyResearch />} />
           <Route path="/empire/knowledge" element={<KnowledgeGarden />} />
           <Route path="/empire/marketplace" element={<AgentMarketplace />} />
           <Route path="/empire/analytics" element={<EmpireAnalytics />} />
