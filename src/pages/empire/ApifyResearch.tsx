@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Search, Globe, Play, Loader2, ExternalLink, Key,
-  TrendingUp, Youtube, Hash, BookOpen, AlertCircle,
-  CheckCircle2, Copy, Download,
+  Search, Globe, Play, Loader2, ExternalLink,
+  TrendingUp, Youtube, Hash, AlertCircle,
+  CheckCircle2, Copy,
 } from "lucide-react";
 import { EmpireLayout } from "@/components/empire/EmpireLayout";
 import { Button } from "@/components/ui/button";
@@ -249,23 +249,11 @@ export default function ApifyResearch() {
   const [query, setQuery] = useState("");
   const [maxItems, setMaxItems] = useState(10);
   const [jobs, setJobs] = useState<ResearchJob[]>([]);
-  const [apiKey, setApiKey] = useState(
-    import.meta.env.VITE_APIFY_TOKEN ?? ""
-  );
-  const [showKeyInput, setShowKeyInput] = useState(!import.meta.env.VITE_APIFY_TOKEN);
 
   const currentMode = MODES.find((m) => m.id === mode)!;
 
   const run = async () => {
     if (!query.trim()) return;
-    if (!apiKey.trim()) {
-      setShowKeyInput(true);
-      return;
-    }
-
-    // Inject token temporarily into env (runtime only)
-    (import.meta.env as Record<string, string>).VITE_APIFY_TOKEN = apiKey;
-
     const job: ResearchJob = {
       id: Date.now().toString(),
       mode,
@@ -275,7 +263,6 @@ export default function ApifyResearch() {
     };
     setJobs((prev) => [job, ...prev]);
     setQuery("");
-
     const start = Date.now();
     try {
       let results: ResultItem[] = [];
@@ -283,7 +270,6 @@ export default function ApifyResearch() {
       else if (mode === "website") results = await scrapeWebsite(query.trim());
       else if (mode === "tiktok") results = await scrapeTikTok(query.trim(), maxItems);
       else if (mode === "youtube") results = await scrapeYouTube(query.trim(), maxItems);
-
       setJobs((prev) =>
         prev.map((j) =>
           j.id === job.id
@@ -294,9 +280,7 @@ export default function ApifyResearch() {
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Nieznany błąd";
       setJobs((prev) =>
-        prev.map((j) =>
-          j.id === job.id ? { ...j, status: "error", error: msg } : j
-        )
+        prev.map((j) => (j.id === job.id ? { ...j, status: "error", error: msg } : j))
       );
     }
   };
@@ -305,69 +289,20 @@ export default function ApifyResearch() {
     <EmpireLayout>
       <div className="max-w-3xl mx-auto px-6 py-8">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <div className="flex items-center gap-3 mb-1">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-500 to-pink-600 flex items-center justify-center">
-                <TrendingUp className="w-4 h-4 text-white" />
-              </div>
-              <h1 className="text-2xl font-bold text-white">Research Agent</h1>
-              <span className="text-xs bg-orange-500/20 text-orange-400 border border-orange-500/30 rounded-full px-2 py-0.5 font-medium">
-                Apify
-              </span>
+        <div className="mb-8">
+          <div className="flex items-center gap-3 mb-1">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-500 to-pink-600 flex items-center justify-center">
+              <TrendingUp className="w-4 h-4 text-white" />
             </div>
-            <p className="text-white/45 text-sm">
-              Automatyczny research z Google, stron WWW, TikToka i YouTube
-            </p>
+            <h1 className="text-2xl font-bold text-white">Research Agent</h1>
+            <span className="text-xs bg-orange-500/20 text-orange-400 border border-orange-500/30 rounded-full px-2 py-0.5 font-medium">
+              Apify
+            </span>
           </div>
-          <button
-            onClick={() => setShowKeyInput(!showKeyInput)}
-            className="flex items-center gap-2 text-xs text-white/40 hover:text-white/70 transition-colors"
-          >
-            <Key className="w-3.5 h-3.5" />
-            API Key
-          </button>
+          <p className="text-white/45 text-sm">
+            Automatyczny research z Google, stron WWW, TikToka i YouTube
+          </p>
         </div>
-
-        {/* API Key input */}
-        <AnimatePresence>
-          {showKeyInput && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              className="mb-6 overflow-hidden"
-            >
-              <div className="bg-yellow-500/8 border border-yellow-500/20 rounded-2xl p-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <Key className="w-4 h-4 text-yellow-400" />
-                  <p className="text-sm font-semibold text-yellow-400">Apify API Token</p>
-                </div>
-                <p className="text-xs text-white/50 mb-3">
-                  Pobierz token z{" "}
-                  <span className="text-teal-400">apify.com → Settings → Integrations</span>.
-                  Docelowo dodaj <code className="bg-white/10 px-1 rounded text-white/70">VITE_APIFY_TOKEN</code> do pliku <code className="bg-white/10 px-1 rounded text-white/70">.env</code>.
-                </p>
-                <div className="flex gap-2">
-                  <input
-                    value={apiKey}
-                    onChange={(e) => setApiKey(e.target.value)}
-                    placeholder="apify_api_xxxxxxxxxxxx"
-                    type="password"
-                    className="flex-1 bg-white/5 border border-white/15 rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-white/25 outline-none focus:border-yellow-500/50 font-mono"
-                  />
-                  <Button
-                    onClick={() => setShowKeyInput(false)}
-                    size="sm"
-                    className="bg-yellow-600 hover:bg-yellow-500 border-0 text-white"
-                  >
-                    Zapisz
-                  </Button>
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
 
         {/* Mode selector */}
         <div className="flex gap-2 mb-5 flex-wrap">
