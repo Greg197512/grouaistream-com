@@ -366,7 +366,7 @@ serve(async (req) => {
             {
               role: "system",
               content:
-                "Jesteś social media copywriterem. Tworzysz hooki promujące historię muzyczną. Zwracasz TYLKO JSON: {\"x_hook\":\"...max 240 znaków, 1-2 emoji ok\",\"telegram_hook\":\"...max 400 znaków, emoji ok\",\"email_hook\":\"...1 zdanie hook, max 120 znaków\",\"email_subject\":\"...max 60 znaków\"}",
+                "Jesteś social media copywriterem. Tworzysz hooki promujące historię muzyczną — TYLKO do social mediów, NIE do maili. Zwracasz TYLKO JSON: {\"x_hook\":\"...max 240 znaków, 1-2 emoji ok\",\"telegram_hook\":\"...max 400 znaków, emoji ok\"}. NIE generuj tematu maila ani żadnych pól email.",
             },
             {
               role: "user",
@@ -384,8 +384,8 @@ serve(async (req) => {
             post_id: inserted.id,
             x_hook: hookData.x_hook?.slice(0, 280) || null,
             telegram_hook: hookData.telegram_hook?.slice(0, 500) || null,
-            email_hook: hookData.email_hook?.slice(0, 160) || null,
-            email_subject: hookData.email_subject?.slice(0, 80) || null,
+            email_hook: null,
+            email_subject: null,
           });
         }
       }
