@@ -1463,7 +1463,7 @@ Znasz DOKŁADNIE każdą funkcję i stronę:
       }
     }
 
-    if (!aiResponseText) {
+    if (!aiResponse && !aiResponseText && GROK_API_KEY) {
     // Build a shorter system prompt for free models (limited context window)
     const shortTrackList = playableTracks.slice(0, 80).map((t: any) => `${t.title} — ${t.artist} [${t.genre || '?'}]`).join("\n");
     const shortSystemPrompt = `Jesteś GrouAI — asystent AI platformy muzycznej GrouAIStream (grouaistream.com). Jesteś pomocny, przyjazny i ekspertem w muzyce.
@@ -1485,7 +1485,6 @@ Ulubione: ${userFavorites.slice(0, 20).map((t: any) => t.title).join(", ") || "b
       "google/gemma-2-9b-it:free",
     ];
 
-    let aiResponse: Response | null = null;
     for (const model of openRouterModels) {
       try {
         const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
