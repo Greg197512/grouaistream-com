@@ -51,3 +51,6 @@ project_id = "hkbraboqdsonekzxbntr"
     verify_jwt = false
   [functions.break-even-alert]
     verify_jwt = false
+  [functions.analyze-track-features]
+    verify_jwt = false
+
