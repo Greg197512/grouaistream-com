@@ -1,5 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { generateText } from "npm:ai";
+import { createOpenAICompatible } from "npm:@ai-sdk/openai-compatible";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -13,6 +15,15 @@ const lovableAiHeaders = (apiKey: string) => ({
   "Lovable-API-Key": apiKey,
   "X-Lovable-AIG-SDK": "raw-openai-compatible",
   "Content-Type": "application/json",
+});
+
+const createLovableGateway = (apiKey: string) => createOpenAICompatible({
+  name: "lovable",
+  baseURL: "https://ai.gateway.lovable.dev/v1",
+  headers: {
+    "Lovable-API-Key": apiKey,
+    "X-Lovable-AIG-SDK": "vercel-ai-sdk",
+  },
 });
 
 serve(async (req) => {
