@@ -97,6 +97,21 @@ serve(async (req) => {
       }
     } catch (_) { /* ignore */ }
 
+    // Daily cap: max 2 blog/story radio announcements per day (combined across all kinds & languages)
+    const startOfDay = new Date();
+    startOfDay.setUTCHours(0, 0, 0, 0);
+    const { count: todayCount } = await supabase
+      .from("radio_announcements")
+      .select("id", { count: "exact", head: true })
+      .in("kind", ["music_story_radio", "blog_daily"])
+      .gte("created_at", startOfDay.toISOString());
+    if ((todayCount ?? 0) >= 2) {
+      return new Response(
+        JSON.stringify({ skipped: true, reason: "daily_cap_reached", count: todayCount, lang }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // 1. Latest published music_stories post not yet announced in this language
     const { data: recentAnnounced } = await supabase
       .from("radio_announcements")
