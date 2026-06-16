@@ -170,8 +170,38 @@ async function huntArtistContext(FIRECRAWL_API_KEY: string | undefined, artist: 
   }
 }
 
-async function generateCoverImage(..._args: unknown[]): Promise<string | null> {
-  return null;
+async function generateCoverImage(artist: string, era: string, angle: string): Promise<string | null> {
+  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  if (!LOVABLE_API_KEY) {
+    console.warn("LOVABLE_API_KEY missing — skipping cover");
+    return null;
+  }
+  const prompt = `Premium editorial blog cover illustration for a music story about ${artist} (${era}). Theme: ${angle}. Style: cinematic, photoreal-meets-painterly, dramatic chiaroscuro lighting, deep blacks with neon amber and orange accents (GrouAI Stream brand). Subject: vintage synthesizers, modular cables, glowing studio gear, era-accurate equipment, atmospheric haze, no text, no logos, no faces of real people, no watermarks. 16:9 widescreen, ultra-detailed, museum-quality composition.`;
+  try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 90000);
+    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-image-preview",
+        messages: [{ role: "user", content: prompt }],
+        modalities: ["image", "text"],
+      }),
+      signal: ctrl.signal,
+    });
+    clearTimeout(timer);
+    if (!res.ok) {
+      console.error("cover gen failed", res.status, (await res.text()).slice(0, 200));
+      return null;
+    }
+    const data = await res.json();
+    const dataUrl: string | undefined = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+    return dataUrl || null;
+  } catch (e) {
+    console.error("cover gen exception", e);
+    return null;
+  }
 }
 
 
