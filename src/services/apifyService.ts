@@ -1,15 +1,69 @@
-import { ApifyClient } from "apify-client";
+const APIFY_BASE = "https://api.apify.com/v2";
 
-export type ApifyActorId =
-  | "apify/google-search-scraper"
-  | "apify/website-content-crawler"
-  | "clockworks/free-tiktok-scraper"
-  | "streamers/youtube-scraper";
+function token(): string {
+  const t = import.meta.env.VITE_APIFY_TOKEN as string | undefined;
+  if (!t) throw new Error("Brak VITE_APIFY_TOKEN — wklej token w panelu Research Agent");
+  return t;
+}
 
-export interface ApifyRunOptions {
-  actorId: ApifyActorId;
-  input: Record<string, unknown>;
-  maxItems?: number;
+async function runActor(
+  actorId: string,
+  input: Record<string, unknown>
+): Promise<string> {
+  const res = await fetch(
+    `${APIFY_BASE}/acts/${encodeURIComponent(actorId)}/runs?token=${token()}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    }
+  );
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error(`Apify Actor error ${res.status}: ${txt.slice(0, 200)}`);
+  }
+  const { data } = await res.json();
+  return data.id as string;
+}
+
+async function waitForRun(runId: string, timeoutMs = 120_000): Promise<string> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const res = await fetch(
+      `${APIFY_BASE}/actor-runs/${runId}?token=${token()}`
+    );
+    const { data } = await res.json();
+    if (data.status === "SUCCEEDED") return data.defaultDatasetId as string;
+    if (data.status === "FAILED" || data.status === "ABORTED")
+      throw new Error(`Run zakończony ze statusem: ${data.status}`);
+    await new Promise((r) => setTimeout(r, 3000));
+  }
+  throw new Error("Timeout — Actor działał zbyt długo (>2 min)");
+}
+
+async function fetchDataset<T>(datasetId: string, limit = 20): Promise<T[]> {
+  const res = await fetch(
+    `${APIFY_BASE}/datasets/${datasetId}/items?token=${token()}&limit=${limit}&clean=true`
+  );
+  if (!res.ok) throw new Error(`Dataset fetch error ${res.status}`);
+  return res.json();
+}
+
+async function runAndFetch<T>(
+  actorId: string,
+  input: Record<string, unknown>,
+  limit = 20
+): Promise<T[]> {
+  const runId = await runActor(actorId, input);
+  const datasetId = await waitForRun(runId);
+  return fetchDataset<T>(datasetId, limit);
+}
+
+export interface GoogleSearchResult {
+  title: string;
+  url: string;
+  description: string;
+  position: number;
 }
 
 export interface ResearchResult {
@@ -18,13 +72,6 @@ export interface ResearchResult {
   text: string;
   source: string;
   scrapedAt: string;
-}
-
-export interface GoogleSearchResult {
-  title: string;
-  url: string;
-  description: string;
-  position: number;
 }
 
 export interface TikTokResult {
@@ -46,52 +93,34 @@ export interface YouTubeResult {
   publishedAt: string;
 }
 
-function getClient(): ApifyClient {
-  const token = import.meta.env.VITE_APIFY_TOKEN;
-  if (!token) throw new Error("Brak VITE_APIFY_TOKEN w zmiennych środowiskowych");
-  return new ApifyClient({ token });
-}
-
 export async function runGoogleSearch(
   query: string,
   maxResults = 10
 ): Promise<GoogleSearchResult[]> {
-  const client = getClient();
-  const run = await client.actor("apify/google-search-scraper").call({
-    queries: query,
-    maxPagesPerQuery: 1,
-    resultsPerPage: maxResults,
-    countryCode: "pl",
-    languageCode: "pl",
-  });
-  const { items } = await client.dataset(run.defaultDatasetId).listItems();
+  type Raw = { organicResults?: GoogleSearchResult[] };
+  const items = await runAndFetch<Raw>(
+    "apify/google-search-scraper",
+    { queries: query, maxPagesPerQuery: 1, resultsPerPage: maxResults, countryCode: "pl", languageCode: "pl" },
+    1
+  );
   const results: GoogleSearchResult[] = [];
-  for (const item of items as Record<string, unknown>[]) {
-    const organicResults = (item.organicResults as Record<string, unknown>[]) ?? [];
-    for (const r of organicResults) {
-      results.push({
-        title: String(r.title ?? ""),
-        url: String(r.url ?? ""),
-        description: String(r.description ?? ""),
-        position: Number(r.position ?? 0),
-      });
-    }
+  for (const item of items) {
+    for (const r of item.organicResults ?? []) results.push(r);
   }
   return results.slice(0, maxResults);
 }
 
 export async function scrapeWebsite(url: string): Promise<ResearchResult[]> {
-  const client = getClient();
-  const run = await client.actor("apify/website-content-crawler").call({
-    startUrls: [{ url }],
-    maxCrawlPages: 3,
-    crawlerType: "cheerio",
-  });
-  const { items } = await client.dataset(run.defaultDatasetId).listItems();
-  return (items as Record<string, unknown>[]).map((item) => ({
-    title: String(item.title ?? "Bez tytułu"),
-    url: String(item.url ?? url),
-    text: String(item.text ?? "").slice(0, 2000),
+  type Raw = { title?: string; url?: string; text?: string };
+  const items = await runAndFetch<Raw>(
+    "apify/website-content-crawler",
+    { startUrls: [{ url }], maxCrawlPages: 3, crawlerType: "cheerio" },
+    3
+  );
+  return items.map((i) => ({
+    title: i.title ?? "Bez tytułu",
+    url: i.url ?? url,
+    text: (i.text ?? "").slice(0, 2000),
     source: "website",
     scrapedAt: new Date().toISOString(),
   }));
@@ -101,39 +130,20 @@ export async function scrapeTikTok(
   hashtag: string,
   maxItems = 10
 ): Promise<TikTokResult[]> {
-  const client = getClient();
-  const run = await client.actor("clockworks/free-tiktok-scraper").call({
-    hashtags: [hashtag],
-    resultsPerPage: maxItems,
-    shouldDownloadVideos: false,
-    shouldDownloadCovers: false,
-  });
-  const { items } = await client.dataset(run.defaultDatasetId).listItems();
-  return (items as TikTokResult[]).slice(0, maxItems);
+  return runAndFetch<TikTokResult>(
+    "clockworks/free-tiktok-scraper",
+    { hashtags: [hashtag], resultsPerPage: maxItems, shouldDownloadVideos: false, shouldDownloadCovers: false },
+    maxItems
+  );
 }
 
 export async function scrapeYouTube(
   query: string,
   maxItems = 10
 ): Promise<YouTubeResult[]> {
-  const client = getClient();
-  const run = await client.actor("streamers/youtube-scraper").call({
-    searchKeywords: query,
-    maxResults: maxItems,
-    type: "video",
-  });
-  const { items } = await client.dataset(run.defaultDatasetId).listItems();
-  return (items as YouTubeResult[]).slice(0, maxItems);
-}
-
-export async function runCustomActor(
-  opts: ApifyRunOptions
-): Promise<Record<string, unknown>[]> {
-  const client = getClient();
-  const run = await client.actor(opts.actorId).call(opts.input);
-  const { items } = await client.dataset(run.defaultDatasetId).listItems();
-  return (items as Record<string, unknown>[]).slice(
-    0,
-    opts.maxItems ?? 20
+  return runAndFetch<YouTubeResult>(
+    "streamers/youtube-scraper",
+    { searchKeywords: query, maxResults: maxItems, type: "video" },
+    maxItems
   );
 }
