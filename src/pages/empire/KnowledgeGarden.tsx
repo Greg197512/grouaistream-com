@@ -1,12 +1,13 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus, Search, FileText, Link2, Image, Tag, Star,
-  Trash2, Sparkles, BookOpen, ArrowUpRight,
+  Trash2, Sparkles, BookOpen, ArrowUpRight, Loader2,
 } from "lucide-react";
 import { EmpireLayout } from "@/components/empire/EmpireLayout";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 
 type NoteType = "note" | "link" | "image" | "insight";
 
@@ -17,8 +18,8 @@ interface Note {
   type: NoteType;
   tags: string[];
   starred: boolean;
-  createdAt: string;
-  aiInsight?: string;
+  created_at: string;
+  ai_insight?: string | null;
 }
 
 const TYPE_CONFIG: Record<NoteType, { icon: React.ReactNode; color: string; label: string }> = {
@@ -28,110 +29,89 @@ const TYPE_CONFIG: Record<NoteType, { icon: React.ReactNode; color: string; labe
   insight: { icon: <Sparkles className="w-3.5 h-3.5" />, color: "text-yellow-400 bg-yellow-400/10", label: "AI Insight" },
 };
 
-const INITIAL_NOTES: Note[] = [
-  {
-    id: "1",
-    title: "Trendy fitness TikTok Q2 2026",
-    content: "Najgorętsze trendy: 60-second morning routines, cold plunge challenges, AI-personalized workouts. Target: 18-34yo women.",
-    type: "note",
-    tags: ["fitness", "tiktok", "trendy"],
-    starred: true,
-    createdAt: "2026-05-20",
-    aiInsight: "Ten temat ma 340% wzrost wyszukiwań w ostatnich 30 dniach.",
-  },
-  {
-    id: "2",
-    title: "Konkurencja - kanał @FitWithAI",
-    content: "500k subskrybentów, codzienne posty, używają Runway do wideo. Słabość: brak personalizacji.",
-    type: "note",
-    tags: ["konkurencja", "research"],
-    starred: false,
-    createdAt: "2026-05-19",
-  },
-  {
-    id: "3",
-    title: "Najlepszy format newslettera AI",
-    content: "Analiza 50 newsletterów: krótkie akapity, bullet points, 1 główna idea na mail, CTA na końcu.",
-    type: "insight",
-    tags: ["newsletter", "format"],
-    starred: true,
-    createdAt: "2026-05-18",
-    aiInsight: "Zastosowanie tych zasad zwiększa open rate o ~23%.",
-  },
-  {
-    id: "4",
-    title: "Inspiracja - @HealthHacker",
-    content: "https://tiktok.com/@healthhacker",
-    type: "link",
-    tags: ["inspiracja", "tiktok"],
-    starred: false,
-    createdAt: "2026-05-17",
-  },
-  {
-    id: "5",
-    title: "Paleta kolorów brandu",
-    content: "Główny: #0d9488 (teal), Akcent: #7c3aed (purple), Tło: #000000",
-    type: "note",
-    tags: ["brand", "design"],
-    starred: false,
-    createdAt: "2026-05-16",
-  },
-  {
-    id: "6",
-    title: "AI identyfikuje powiązania",
-    content: "Twoje notatki o fitnesie + trendy + analiza konkurencji = gotowa strategia contentu na Q3",
-    type: "insight",
-    tags: ["strategia", "ai"],
-    starred: true,
-    createdAt: "2026-05-21",
-    aiInsight: "Wygeneruj automatyczny plan contentu na podstawie tych notatek?",
-  },
-];
-
 export default function KnowledgeGarden() {
-  const [notes, setNotes] = useState<Note[]>(INITIAL_NOTES);
+  const [notes, setNotes] = useState<Note[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [selected, setSelected] = useState<Note | null>(null);
   const [creating, setCreating] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [newContent, setNewContent] = useState("");
+  const [saving, setSaving] = useState(false);
 
-  const allTags = Array.from(new Set(notes.flatMap((n) => n.tags)));
+  useEffect(() => {
+    const load = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setLoading(false); return; }
+
+      const { data } = await supabase
+        .from("empire_knowledge_notes")
+        .select("id, title, content, type, tags, starred, created_at, ai_insight")
+        .eq("user_id", user.id)
+        .order("updated_at", { ascending: false });
+
+      setNotes((data as Note[]) ?? []);
+      setLoading(false);
+    };
+    load();
+  }, []);
+
+  const allTags = Array.from(new Set(notes.flatMap((n) => n.tags ?? [])));
 
   const filtered = notes.filter((n) => {
     const matchSearch =
       !search ||
       n.title.toLowerCase().includes(search.toLowerCase()) ||
-      n.content.toLowerCase().includes(search.toLowerCase());
-    const matchTag = !activeTag || n.tags.includes(activeTag);
+      (n.content ?? "").toLowerCase().includes(search.toLowerCase());
+    const matchTag = !activeTag || (n.tags ?? []).includes(activeTag);
     return matchSearch && matchTag;
   });
 
-  const addNote = () => {
-    if (!newTitle.trim()) return;
-    const note: Note = {
-      id: Date.now().toString(),
-      title: newTitle,
-      content: newContent,
-      type: "note",
-      tags: [],
-      starred: false,
-      createdAt: new Date().toISOString().split("T")[0],
-    };
-    setNotes((prev) => [note, ...prev]);
+  const addNote = async () => {
+    if (!newTitle.trim() || saving) return;
+    setSaving(true);
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setSaving(false); return; }
+
+    const { data, error } = await supabase
+      .from("empire_knowledge_notes")
+      .insert({
+        user_id: user.id,
+        title: newTitle,
+        content: newContent,
+        type: "note",
+        tags: [],
+        starred: false,
+      })
+      .select()
+      .single();
+
+    if (!error && data) {
+      const note = data as Note;
+      setNotes((prev) => [note, ...prev]);
+      setSelected(note);
+    }
     setNewTitle("");
     setNewContent("");
     setCreating(false);
-    setSelected(note);
+    setSaving(false);
   };
 
-  const toggleStar = (id: string) =>
-    setNotes((prev) => prev.map((n) => (n.id === id ? { ...n, starred: !n.starred } : n)));
+  const toggleStar = async (id: string) => {
+    const note = notes.find((n) => n.id === id);
+    if (!note) return;
+    const next = !note.starred;
+    setNotes((prev) => prev.map((n) => (n.id === id ? { ...n, starred: next } : n)));
+    if (selected?.id === id) setSelected((s) => s ? { ...s, starred: next } : s);
+    await supabase.from("empire_knowledge_notes").update({ starred: next }).eq("id", id);
+  };
 
-  const deleteNote = (id: string) => {
+  const deleteNote = async (id: string) => {
     setNotes((prev) => prev.filter((n) => n.id !== id));
     if (selected?.id === id) setSelected(null);
+    await supabase.from("empire_knowledge_notes").delete().eq("id", id);
   };
 
   return (
@@ -208,6 +188,7 @@ export default function KnowledgeGarden() {
                       autoFocus
                       value={newTitle}
                       onChange={(e) => setNewTitle(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && addNote()}
                       placeholder="Tytuł notatki…"
                       className="w-full bg-transparent text-sm font-medium text-white placeholder:text-white/30 outline-none"
                     />
@@ -221,8 +202,10 @@ export default function KnowledgeGarden() {
                     <div className="flex gap-2">
                       <button
                         onClick={addNote}
-                        className="text-xs bg-teal-600 hover:bg-teal-500 text-white rounded-lg px-3 py-1.5 transition-colors"
+                        disabled={saving}
+                        className="text-xs bg-teal-600 hover:bg-teal-500 text-white rounded-lg px-3 py-1.5 transition-colors disabled:opacity-50 flex items-center gap-1.5"
                       >
+                        {saving && <Loader2 className="w-3 h-3 animate-spin" />}
                         Dodaj
                       </button>
                       <button
@@ -236,47 +219,54 @@ export default function KnowledgeGarden() {
                 )}
               </AnimatePresence>
 
-              {filtered.map((note) => {
-                const cfg = TYPE_CONFIG[note.type];
-                return (
-                  <motion.button
-                    key={note.id}
-                    layout
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    onClick={() => setSelected(note)}
-                    className={cn(
-                      "w-full text-left bg-white/5 hover:bg-white/8 border rounded-xl p-3.5 transition-all",
-                      selected?.id === note.id
-                        ? "border-teal-500/40 bg-teal-500/8"
-                        : "border-white/10 hover:border-white/20"
-                    )}
-                  >
-                    <div className="flex items-start justify-between gap-2 mb-2">
-                      <span className={cn("flex items-center gap-1 text-[11px] font-medium rounded-full px-2 py-0.5", cfg.color)}>
-                        {cfg.icon} {cfg.label}
-                      </span>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); toggleStar(note.id); }}
-                        className={cn("flex-shrink-0 transition-colors", note.starred ? "text-yellow-400" : "text-white/20 hover:text-yellow-400")}
-                      >
-                        <Star className="w-3.5 h-3.5" fill={note.starred ? "currentColor" : "none"} />
-                      </button>
-                    </div>
-                    <p className="text-sm font-medium text-white leading-snug mb-1 line-clamp-2">{note.title}</p>
-                    <p className="text-xs text-white/40 line-clamp-2">{note.content}</p>
-                    {note.tags.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-2">
-                        {note.tags.slice(0, 3).map((tag) => (
-                          <span key={tag} className="text-[10px] bg-white/8 text-white/40 rounded px-1.5 py-0.5">{tag}</span>
-                        ))}
+              {loading ? (
+                <div className="flex justify-center py-10">
+                  <Loader2 className="w-6 h-6 text-teal-400 animate-spin" />
+                </div>
+              ) : (
+                filtered.map((note) => {
+                  const type = (note.type in TYPE_CONFIG ? note.type : "note") as NoteType;
+                  const cfg = TYPE_CONFIG[type];
+                  return (
+                    <motion.button
+                      key={note.id}
+                      layout
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      onClick={() => setSelected(note)}
+                      className={cn(
+                        "w-full text-left bg-white/5 hover:bg-white/8 border rounded-xl p-3.5 transition-all",
+                        selected?.id === note.id
+                          ? "border-teal-500/40 bg-teal-500/8"
+                          : "border-white/10 hover:border-white/20"
+                      )}
+                    >
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <span className={cn("flex items-center gap-1 text-[11px] font-medium rounded-full px-2 py-0.5", cfg.color)}>
+                          {cfg.icon} {cfg.label}
+                        </span>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); toggleStar(note.id); }}
+                          className={cn("flex-shrink-0 transition-colors", note.starred ? "text-yellow-400" : "text-white/20 hover:text-yellow-400")}
+                        >
+                          <Star className="w-3.5 h-3.5" fill={note.starred ? "currentColor" : "none"} />
+                        </button>
                       </div>
-                    )}
-                  </motion.button>
-                );
-              })}
+                      <p className="text-sm font-medium text-white leading-snug mb-1 line-clamp-2">{note.title}</p>
+                      <p className="text-xs text-white/40 line-clamp-2">{note.content}</p>
+                      {(note.tags ?? []).length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {note.tags.slice(0, 3).map((tag) => (
+                            <span key={tag} className="text-[10px] bg-white/8 text-white/40 rounded px-1.5 py-0.5">{tag}</span>
+                          ))}
+                        </div>
+                      )}
+                    </motion.button>
+                  );
+                })
+              )}
 
-              {filtered.length === 0 && (
+              {!loading && filtered.length === 0 && (
                 <div className="text-center py-12">
                   <BookOpen className="w-8 h-8 text-white/15 mx-auto mb-3" />
                   <p className="text-white/30 text-sm">Brak notatek</p>
@@ -291,10 +281,16 @@ export default function KnowledgeGarden() {
               <div className="max-w-2xl mx-auto px-8 py-8">
                 <div className="flex items-start justify-between mb-6">
                   <div className="flex items-center gap-2">
-                    <span className={cn("flex items-center gap-1.5 text-xs font-medium rounded-full px-2.5 py-1", TYPE_CONFIG[selected.type].color)}>
-                      {TYPE_CONFIG[selected.type].icon} {TYPE_CONFIG[selected.type].label}
+                    <span className={cn(
+                      "flex items-center gap-1.5 text-xs font-medium rounded-full px-2.5 py-1",
+                      TYPE_CONFIG[(selected.type in TYPE_CONFIG ? selected.type : "note") as NoteType].color
+                    )}>
+                      {TYPE_CONFIG[(selected.type in TYPE_CONFIG ? selected.type : "note") as NoteType].icon}
+                      {TYPE_CONFIG[(selected.type in TYPE_CONFIG ? selected.type : "note") as NoteType].label}
                     </span>
-                    <span className="text-xs text-white/30">{selected.createdAt}</span>
+                    <span className="text-xs text-white/30">
+                      {new Date(selected.created_at).toLocaleDateString("pl-PL")}
+                    </span>
                   </div>
                   <div className="flex items-center gap-2">
                     <button
@@ -315,7 +311,7 @@ export default function KnowledgeGarden() {
                 <h1 className="text-2xl font-bold text-white mb-4">{selected.title}</h1>
                 <p className="text-white/70 leading-relaxed mb-6">{selected.content}</p>
 
-                {selected.tags.length > 0 && (
+                {(selected.tags ?? []).length > 0 && (
                   <div className="flex flex-wrap gap-2 mb-6">
                     {selected.tags.map((tag) => (
                       <span key={tag} className="flex items-center gap-1 text-xs bg-white/8 text-white/50 rounded-full px-3 py-1">
@@ -325,13 +321,13 @@ export default function KnowledgeGarden() {
                   </div>
                 )}
 
-                {selected.aiInsight && (
+                {selected.ai_insight && (
                   <div className="bg-gradient-to-r from-teal-500/10 to-purple-500/10 border border-teal-500/20 rounded-2xl p-4">
                     <div className="flex items-center gap-2 mb-2">
                       <Sparkles className="w-4 h-4 text-teal-400" />
                       <span className="text-sm font-semibold text-teal-400">AI Insight</span>
                     </div>
-                    <p className="text-sm text-white/70">{selected.aiInsight}</p>
+                    <p className="text-sm text-white/70">{selected.ai_insight}</p>
                     <button className="mt-3 flex items-center gap-1.5 text-xs text-teal-400 hover:text-teal-300 transition-colors">
                       Generuj content z tego <ArrowUpRight className="w-3 h-3" />
                     </button>

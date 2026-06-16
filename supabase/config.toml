@@ -3,6 +3,8 @@ project_id = "bvstvawnigyczvofzhps"
 [functions]
   [functions.empire-apify-research]
     verify_jwt = true
+  [functions.empire-aurora-chat]
+    verify_jwt = true
   [functions.a-r-scout]
     verify_jwt = false
   [functions.ad-campaign-submit]

@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { X, Send, Sparkles, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Message {
   id: string;
@@ -15,12 +16,6 @@ const SUGGESTIONS = [
   "Analizuj moje imperium",
 ];
 
-const MOCK_REPLIES = [
-  "Świetny kierunek! Sugeruję uruchomienie Agent Crew: Researcher → Writer → Publisher. Chcesz, żebym skonfigurował przepływ? ✨",
-  "Na podstawie Twoich danych, najlepszy content to seria 'How-to' na TikTok (60s). Twój Researcher agent może zebrać 20 tematów w 5 minut! 🚀",
-  "Twoje imperium rośnie! Aktywne agenty generują dziś ~12 treści. Polecam zwiększyć kredyty o 200 na boost wydajności. 💎",
-];
-
 interface Props {
   onClose: () => void;
 }
@@ -30,13 +25,12 @@ export function MuseChat({ onClose }: Props) {
     {
       id: "init",
       role: "muse",
-      content: "Cześć! Jestem Twoją osobistą Muzą AI. Jak możemy dziś rozwinąć Twoje imperium? 🏰",
+      content: "Cześć! Jestem Aurorą — AI doradcą Twojego imperium. Czym mogę pomóc? ✨",
     },
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
-  const replyIdx = useRef(0);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -44,20 +38,43 @@ export function MuseChat({ onClose }: Props) {
 
   const send = async (text: string) => {
     if (!text.trim() || loading) return;
-    setMessages((m) => [
-      ...m,
-      { id: Date.now().toString(), role: "user", content: text },
-    ]);
+
+    const userMsg: Message = { id: Date.now().toString(), role: "user", content: text };
+    setMessages((m) => [...m, userMsg]);
     setInput("");
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 900 + Math.random() * 600));
-    const reply = MOCK_REPLIES[replyIdx.current % MOCK_REPLIES.length];
-    replyIdx.current += 1;
-    setMessages((m) => [
-      ...m,
-      { id: (Date.now() + 1).toString(), role: "muse", content: reply },
-    ]);
-    setLoading(false);
+
+    try {
+      const history = messages.slice(-8).map((m) => ({
+        role: m.role,
+        content: m.content,
+      }));
+
+      const { data, error } = await supabase.functions.invoke("empire-aurora-chat", {
+        body: { message: text, history },
+      });
+
+      const reply: string =
+        !error && data?.ok && data?.reply
+          ? data.reply
+          : "Przepraszam, mam chwilowy problem z połączeniem. Spróbuj ponownie za chwilę! 🔄";
+
+      setMessages((m) => [
+        ...m,
+        { id: (Date.now() + 1).toString(), role: "muse", content: reply },
+      ]);
+    } catch {
+      setMessages((m) => [
+        ...m,
+        {
+          id: (Date.now() + 1).toString(),
+          role: "muse",
+          content: "Błąd połączenia. Sprawdź internet i spróbuj ponownie! 🔄",
+        },
+      ]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -69,7 +86,7 @@ export function MuseChat({ onClose }: Props) {
             <Sparkles className="w-4 h-4 text-white" />
           </div>
           <div>
-            <p className="text-sm font-semibold text-white">AI Muse</p>
+            <p className="text-sm font-semibold text-white">Aurora AI</p>
             <div className="flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse" />
               <p className="text-[11px] text-teal-400">Online</p>
@@ -147,7 +164,7 @@ export function MuseChat({ onClose }: Props) {
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Zapytaj swoją Muzę…"
+            placeholder="Zapytaj Aurorę…"
             className="flex-1 bg-transparent text-sm text-white/80 placeholder:text-white/30 outline-none"
           />
           <button
