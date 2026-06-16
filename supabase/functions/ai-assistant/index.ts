@@ -433,17 +433,13 @@ serve(async (req) => {
 
     if (hasGenerateIntent) {
       // Use AI to parse the complex prompt into generation parameters
-      try {
-        const parseResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${GROK_API_KEY}`,
-          "HTTP-Referer": "https://grouaistream.com",
-          "X-Title": "Groua AI Stream",
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model: "meta-llama/llama-3.3-70b-instruct:free",
+      if (LOVABLE_API_KEY) {
+        try {
+          const parseResponse = await fetch(LOVABLE_AI_CHAT_URL, {
+            method: "POST",
+            headers: lovableAiHeaders(LOVABLE_API_KEY),
+            body: JSON.stringify({
+              model: LOVABLE_AI_MODEL,
             messages: [
               { role: "system", content: `You are a music production AI that parses user prompts into generation parameters. Analyze the user's request and extract parameters. Available styles: Pop, Rock, Electronic, Hip-Hop, Jazz, Classical, Lo-fi, Ambient, Metal, R&B, Reggae, Trap, House, Disco, Indie, Country. Available moods: dark, bright, melancholic, euphoric, aggressive, dreamy, romantic, tense. Available energy: low, medium, high, extreme.` },
               { role: "user", content: message },
@@ -472,28 +468,31 @@ serve(async (req) => {
             }],
             tool_choice: { type: "function", function: { name: "set_music_params" } },
           }),
-        });
+          });
 
-        if (parseResponse.ok) {
-          const parseData = await parseResponse.json();
-          const toolCall = parseData.choices?.[0]?.message?.tool_calls?.[0];
-          if (toolCall?.function?.arguments) {
-            const params = JSON.parse(toolCall.function.arguments);
-            generateResult = {
-              style: params.style || "Pop",
-              style2: params.style2 || undefined,
-              blendRatio: params.blendRatio || undefined,
-              instrumental: params.instrumental ?? false,
-              title: params.title || undefined,
-              mood: params.mood || undefined,
-              energy: params.energy || undefined,
-              tempoOverride: params.tempoOverride || undefined,
-              prompt: message,
-            };
+          if (parseResponse.ok) {
+            const parseData = await parseResponse.json();
+            const toolCall = parseData.choices?.[0]?.message?.tool_calls?.[0];
+            if (toolCall?.function?.arguments) {
+              const params = JSON.parse(toolCall.function.arguments);
+              generateResult = {
+                style: params.style || "Pop",
+                style2: params.style2 || undefined,
+                blendRatio: params.blendRatio || undefined,
+                instrumental: params.instrumental ?? false,
+                title: params.title || undefined,
+                mood: params.mood || undefined,
+                energy: params.energy || undefined,
+                tempoOverride: params.tempoOverride || undefined,
+                prompt: message,
+              };
+            }
+          } else {
+            console.error("Lovable AI prompt parsing error:", parseResponse.status, await parseResponse.text());
           }
+        } catch (parseErr) {
+          console.error("AI prompt parsing error:", parseErr);
         }
-      } catch (parseErr) {
-        console.error("AI prompt parsing error:", parseErr);
       }
 
       // Fallback: basic keyword detection if AI parsing failed
