@@ -39,7 +39,7 @@ serve(async (req) => {
     const history = Array.isArray(rawHistory) ? rawHistory : [];
 
     // API keys — declared early to avoid temporal dead zone issues
-    const GROK_API_KEY = Deno.env.get("OPENROUTER_API_KEY")!;
+    const GROK_API_KEY = Deno.env.get("GROK_API_KEY") || Deno.env.get("OPENROUTER_API_KEY") || "";
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
 
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
