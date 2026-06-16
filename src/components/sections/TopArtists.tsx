@@ -48,7 +48,9 @@ export const TopArtists = () => {
   const [artists, setArtists] = useState<ArtistData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const sectionRef = useRef<HTMLElement>(null);
-  const isInView = useInView(sectionRef, { once: true, margin: "-80px" });
+  // useInView nie wykrywa przewijania wewnątrz <main> (scroll container),
+  // więc sekcja zostawała na opacity 0 — wymuszamy widoczność od razu.
+  const isInView = true;
 
   const handleArtistClick = async (artist: ArtistData) => {
     const { data } = await supabase
