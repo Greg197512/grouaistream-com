@@ -638,14 +638,6 @@ const Upload = () => {
     <MainLayout>
       <div className="max-w-2xl mx-auto px-6 py-12">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          {/* Promo banner */}
-          <div className="mb-6 p-4 rounded-xl bg-primary/10 border border-primary/20 flex items-center gap-3">
-            <Gift className="h-6 w-6 text-primary shrink-0" />
-            <div>
-              <p className="text-sm font-semibold text-primary">{t("upload.promoTitle")}</p>
-              <p className="text-xs text-muted-foreground">{t("upload.promoDesc")}</p>
-            </div>
-          </div>
 
           <div className="flex items-center gap-3 mb-2">
             <div className="h-12 w-12 rounded-xl bg-green-500/20 border border-green-500/30 flex items-center justify-center">
