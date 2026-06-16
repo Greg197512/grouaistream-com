@@ -337,7 +337,7 @@ serve(async (req) => {
 
     // Generate cover
     let coverUrl: string | null = null;
-    const dataUrl = await generateCoverImage(pick.name, pick.era);
+    const dataUrl = await generateCoverImage(pick.name, pick.era, pick.angle);
     if (dataUrl) {
       coverUrl = await uploadCoverToStorage(supabaseAdmin, dataUrl, slug);
     }
