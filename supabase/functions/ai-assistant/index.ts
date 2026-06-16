@@ -1412,33 +1412,28 @@ Zasady: używaj markdown, nie zmyślaj danych spoza kontekstu, przy pytaniach o 
 
     if (LOVABLE_API_KEY) {
       try {
-        const res = await fetch(LOVABLE_AI_CHAT_URL, {
-          method: "POST",
-          headers: lovableAiHeaders(LOVABLE_API_KEY),
-          body: JSON.stringify({
-            model: LOVABLE_AI_MODEL,
-            messages: [
-              { role: "system", content: lovableSystemPrompt },
-              ...history.slice(-12).map((m: any) => ({ role: m.role, content: m.content || "" })),
-              { role: "user", content: userPrompt },
-            ],
-            max_tokens: 4096,
-            temperature: 0.8,
-            stream: true,
-          }),
+        const gateway = createLovableGateway(LOVABLE_API_KEY);
+        const result = await generateText({
+          model: gateway(LOVABLE_AI_MODEL),
+          system: lovableSystemPrompt,
+          messages: [
+            ...history.slice(-12).map((m: any) => ({ role: m.role, content: m.content || "" })),
+            { role: "user", content: userPrompt },
+          ],
+          maxOutputTokens: 4096,
+          temperature: 0.8,
         });
-
-        if (res.ok) {
-          aiResponse = res;
+        aiResponseText = result.text?.trim() || "";
+        if (aiResponseText) {
           console.log("Lovable AI model used:", LOVABLE_AI_MODEL);
         } else {
-          const errBody = await res.text();
-          console.error("Lovable AI gateway error:", res.status, errBody.substring(0, 500));
-          if (res.status === 402) aiResponseText = "AI jest podłączone przez Lovable, ale skończyły się kredyty. Doładuj kredyty w ustawieniach workspace i spróbuj ponownie.";
-          if (res.status === 429) aiResponseText = "AI jest chwilowo przeciążone limitem zapytań. Spróbuj ponownie za moment.";
+          console.error("Lovable AI gateway returned empty text");
         }
       } catch (e) {
         console.error("Lovable AI gateway exception:", e);
+        const msg = e instanceof Error ? e.message : String(e);
+        if (msg.includes("402")) aiResponseText = "AI jest podłączone przez Lovable, ale skończyły się kredyty. Doładuj kredyty w ustawieniach workspace i spróbuj ponownie.";
+        if (msg.includes("429")) aiResponseText = "AI jest chwilowo przeciążone limitem zapytań. Spróbuj ponownie za moment.";
       }
     }
 
