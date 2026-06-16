@@ -1,10 +1,30 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { generateText } from "npm:ai";
+import { createOpenAICompatible } from "npm:@ai-sdk/openai-compatible";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
+
+const LOVABLE_AI_CHAT_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
+const LOVABLE_AI_MODEL = "google/gemini-3-flash-preview";
+
+const lovableAiHeaders = (apiKey: string) => ({
+  "Lovable-API-Key": apiKey,
+  "X-Lovable-AIG-SDK": "raw-openai-compatible",
+  "Content-Type": "application/json",
+});
+
+const createLovableGateway = (apiKey: string) => createOpenAICompatible({
+  name: "lovable",
+  baseURL: "https://ai.gateway.lovable.dev/v1",
+  headers: {
+    "Lovable-API-Key": apiKey,
+    "X-Lovable-AIG-SDK": "vercel-ai-sdk",
+  },
+});
 
 serve(async (req) => {
 
@@ -38,7 +58,8 @@ serve(async (req) => {
     const { message, history: rawHistory, userContext, attachments } = await req.json();
     const history = Array.isArray(rawHistory) ? rawHistory : [];
 
-    // API keys — declared early to avoid temporal dead zone issues
+    // API keys — Lovable AI is the primary provider for the assistant
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY") || "";
     const GROK_API_KEY = Deno.env.get("GROK_API_KEY") || Deno.env.get("OPENROUTER_API_KEY") || "";
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
 
@@ -423,17 +444,13 @@ serve(async (req) => {
 
     if (hasGenerateIntent) {
       // Use AI to parse the complex prompt into generation parameters
-      try {
-        const parseResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${GROK_API_KEY}`,
-          "HTTP-Referer": "https://grouaistream.com",
-          "X-Title": "Groua AI Stream",
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model: "meta-llama/llama-3.3-70b-instruct:free",
+      if (LOVABLE_API_KEY) {
+        try {
+          const parseResponse = await fetch(LOVABLE_AI_CHAT_URL, {
+            method: "POST",
+            headers: lovableAiHeaders(LOVABLE_API_KEY),
+            body: JSON.stringify({
+              model: LOVABLE_AI_MODEL,
             messages: [
               { role: "system", content: `You are a music production AI that parses user prompts into generation parameters. Analyze the user's request and extract parameters. Available styles: Pop, Rock, Electronic, Hip-Hop, Jazz, Classical, Lo-fi, Ambient, Metal, R&B, Reggae, Trap, House, Disco, Indie, Country. Available moods: dark, bright, melancholic, euphoric, aggressive, dreamy, romantic, tense. Available energy: low, medium, high, extreme.` },
               { role: "user", content: message },
@@ -462,28 +479,31 @@ serve(async (req) => {
             }],
             tool_choice: { type: "function", function: { name: "set_music_params" } },
           }),
-        });
+          });
 
-        if (parseResponse.ok) {
-          const parseData = await parseResponse.json();
-          const toolCall = parseData.choices?.[0]?.message?.tool_calls?.[0];
-          if (toolCall?.function?.arguments) {
-            const params = JSON.parse(toolCall.function.arguments);
-            generateResult = {
-              style: params.style || "Pop",
-              style2: params.style2 || undefined,
-              blendRatio: params.blendRatio || undefined,
-              instrumental: params.instrumental ?? false,
-              title: params.title || undefined,
-              mood: params.mood || undefined,
-              energy: params.energy || undefined,
-              tempoOverride: params.tempoOverride || undefined,
-              prompt: message,
-            };
+          if (parseResponse.ok) {
+            const parseData = await parseResponse.json();
+            const toolCall = parseData.choices?.[0]?.message?.tool_calls?.[0];
+            if (toolCall?.function?.arguments) {
+              const params = JSON.parse(toolCall.function.arguments);
+              generateResult = {
+                style: params.style || "Pop",
+                style2: params.style2 || undefined,
+                blendRatio: params.blendRatio || undefined,
+                instrumental: params.instrumental ?? false,
+                title: params.title || undefined,
+                mood: params.mood || undefined,
+                energy: params.energy || undefined,
+                tempoOverride: params.tempoOverride || undefined,
+                prompt: message,
+              };
+            }
+          } else {
+            console.error("Lovable AI prompt parsing error:", parseResponse.status, await parseResponse.text());
           }
+        } catch (parseErr) {
+          console.error("AI prompt parsing error:", parseErr);
         }
-      } catch (parseErr) {
-        console.error("AI prompt parsing error:", parseErr);
       }
 
       // Fallback: basic keyword detection if AI parsing failed
@@ -980,7 +1000,14 @@ serve(async (req) => {
     const topMoods = ctx.topMoods || [];
     const currentPage = ctx.currentPage || "/";
     const userLanguage = ctx.language || "en";
-    const userLanguageName = ctx.languageName || "English";
+    const languageNames: Record<string, string> = {
+      pl: "polski",
+      en: "English",
+      nl: "Nederlands",
+      ua: "українська",
+      uk: "українська",
+    };
+    const userLanguageName = ctx.languageName || languageNames[String(userLanguage).toLowerCase()] || "English";
     // Build radio update info for the AI
     const radioUpdateInfo = radioUpdateResult
       ? `\n\n## 📻 RADIO ZOSTAŁO ZMIENIONE!
@@ -1364,10 +1391,60 @@ Znasz DOKŁADNIE każdą funkcję i stronę:
 
     const userPrompt = message;
 
-    // Gemini-first: use Gemini if key available, fallback to OpenRouter
+    // Lovable AI first: stream through the Lovable AI gateway
     let aiResponseText = "";
+    let aiResponse: Response | null = null;
+    const lovableTrackList = playableTracks.slice(0, 120).map((t: any) => `${t.title} — ${t.artist} [${t.genre || "?"}]`).join("\n");
+    const lovableSystemPrompt = `Jesteś GrouAI — asystent AI platformy muzycznej GrouAIStream i marki GrouaRock®.
+Odpowiadaj zawsze w języku ${userLanguageName}. Bądź pomocny, konkretny, empatyczny i muzyczny.
+Kontakt: grouarock@gmail.com, tel: +48 570 598 552.
+Użytkownik: ${userName || "Gość"}. Aktualna strona: ${currentPage}. Aktualnie gra: ${currentTrack ? `${currentTrack.title} — ${currentTrack.artist}` : "nic"}.
 
-    if (GEMINI_API_KEY) {
+Najważniejsze funkcje: odtwarzanie i rekomendacje muzyki, radio live, upload, playlisty, AI DJ, detekcja nastroju, import YouTube, generowanie muzyki, miksowanie audio, zarobki twórców.
+
+Biblioteka muzyczna (${playableTracks.length} utworów, fragment):
+${lovableTrackList}${playableTracks.length > 120 ? `\n... i ${playableTracks.length - 120} więcej` : ""}
+
+Ulubione użytkownika: ${userFavorites.slice(0, 30).map((t: any) => t.title).join(", ") || "brak"}
+Ostatnio słuchane: ${userListeningHistory.slice(0, 20).map((t: any) => t.title).join(", ") || "brak"}
+
+Jeśli system wykonał akcję, potwierdź ją jasno:
+${radioUpdateResult ? `Radio zmienione: ${radioUpdateResult.genre}, ${radioUpdateResult.trackCount} utworów.` : ""}
+${wishResult ? `Życzenia radiowe wysłane: ${wishResult.wishText}` : ""}
+${dedicationResult ? `Dedykacja radiowa dodana: ${dedicationResult.trackName} dla ${dedicationResult.recipientName}.` : ""}
+${generateResult ? `Generowanie muzyki uruchomione: ${generateResult.style}${generateResult.style2 ? ` × ${generateResult.style2}` : ""}, mood ${generateResult.mood || "auto"}, energia ${generateResult.energy || "medium"}.` : ""}
+${mixRequest ? `Miksowanie audio uruchomione w stylu ${mixRequest.style}.` : ""}
+
+Zasady: używaj markdown, nie zmyślaj danych spoza kontekstu, przy pytaniach o aplikację prowadź użytkownika do właściwej sekcji.${webSearchResult}`;
+
+    if (LOVABLE_API_KEY) {
+      try {
+        const gateway = createLovableGateway(LOVABLE_API_KEY);
+        const result = await generateText({
+          model: gateway(LOVABLE_AI_MODEL),
+          system: lovableSystemPrompt,
+          messages: [
+            ...history.slice(-12).map((m: any) => ({ role: m.role, content: m.content || "" })),
+            { role: "user", content: userPrompt },
+          ],
+          maxOutputTokens: 4096,
+          temperature: 0.8,
+        });
+        aiResponseText = result.text?.trim() || "";
+        if (aiResponseText) {
+          console.log("Lovable AI model used:", LOVABLE_AI_MODEL);
+        } else {
+          console.error("Lovable AI gateway returned empty text");
+        }
+      } catch (e) {
+        console.error("Lovable AI gateway exception:", e);
+        const msg = e instanceof Error ? e.message : String(e);
+        if (msg.includes("402")) aiResponseText = "AI jest podłączone przez Lovable, ale skończyły się kredyty. Doładuj kredyty w ustawieniach workspace i spróbuj ponownie.";
+        if (msg.includes("429")) aiResponseText = "AI jest chwilowo przeciążone limitem zapytań. Spróbuj ponownie za moment.";
+      }
+    }
+
+    if (!aiResponse && !aiResponseText && GEMINI_API_KEY) {
       // Try multiple Gemini models — different keys support different models
       const geminiModels = [
         "gemini-2.0-flash",
@@ -1421,7 +1498,7 @@ Znasz DOKŁADNIE każdą funkcję i stronę:
       }
     }
 
-    if (!aiResponseText) {
+    if (!aiResponse && !aiResponseText && GROK_API_KEY) {
     // Build a shorter system prompt for free models (limited context window)
     const shortTrackList = playableTracks.slice(0, 80).map((t: any) => `${t.title} — ${t.artist} [${t.genre || '?'}]`).join("\n");
     const shortSystemPrompt = `Jesteś GrouAI — asystent AI platformy muzycznej GrouAIStream (grouaistream.com). Jesteś pomocny, przyjazny i ekspertem w muzyce.
@@ -1443,7 +1520,6 @@ Ulubione: ${userFavorites.slice(0, 20).map((t: any) => t.title).join(", ") || "b
       "google/gemma-2-9b-it:free",
     ];
 
-    let aiResponse: Response | null = null;
     for (const model of openRouterModels) {
       try {
         const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
