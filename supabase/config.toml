@@ -53,4 +53,61 @@ project_id = "hkbraboqdsonekzxbntr"
     verify_jwt = false
   [functions.analyze-track-features]
     verify_jwt = false
-
+  [functions.ai-compose]
+    verify_jwt = false
+  [functions.empire-apify-research]
+    verify_jwt = true
+  [functions.empire-aurora-chat]
+    verify_jwt = true
+  [functions.elevenlabs-music]
+    verify_jwt = false
+  [functions.elevenlabs-voice-clone]
+    verify_jwt = true
+  [functions.studio-router]
+    verify_jwt = false
+  [functions.studio-prompt-engine]
+    verify_jwt = true
+  [functions.suno-generate]
+    verify_jwt = true
+  [functions.groua-music-engine]
+    verify_jwt = false
+  [functions.aurora-n8n-callback]
+    verify_jwt = false
+  [functions.aurora-r2-deliverable-upload]
+    verify_jwt = false
+  [functions.aurora-r2-signed-download]
+    verify_jwt = true
+  [functions.aurora-storage-usage-report]
+    verify_jwt = true
+  [functions.aurora-storage-offer-create]
+    verify_jwt = true
+  [functions.aurora-workforce-dispatch]
+    verify_jwt = true
+  [functions.aurora-assistant-chat]
+    verify_jwt = false
+  [functions.aurora-assistant-ingest]
+    verify_jwt = false
+  [functions.brain-newsfeed-ingest]
+    verify_jwt = false
+  [functions.daily-blog-audio-announce]
+    verify_jwt = false
+  [functions.grouai-brain]
+    verify_jwt = false
+  [functions.groua-soul]
+    verify_jwt = false
+  [functions.soul-world-ingest]
+    verify_jwt = false
+  [functions.soul-dream]
+    verify_jwt = false
+  [functions.soul-export]
+    verify_jwt = true
+  [functions.n8n-music-ingest]
+    verify_jwt = false
+  [functions.r2-signed-url]
+    verify_jwt = false
+  [functions.r2-upload-proxy]
+    verify_jwt = false
+  [functions.tiktok-reel-generate]
+    verify_jwt = false
+  [functions.tiktok-story-generate]
+    verify_jwt = false

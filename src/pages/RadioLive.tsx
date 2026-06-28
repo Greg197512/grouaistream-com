@@ -12,7 +12,6 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { usePlayer } from "@/contexts/PlayerContext";
-import { fetchRadioSchedule, resolveCurrentRadioPosition, syncRadioCurrentSchedule } from "@/lib/radioSchedule";
 
 interface RadioConfig {
   is_active: boolean;
@@ -24,7 +23,6 @@ interface RadioConfig {
 }
 
 interface ScheduleTrack {
-  id: string;
   position: number;
   item_type: string;
   custom_title: string | null;
@@ -86,7 +84,7 @@ const HEART_COLORS = [
 const RadioLive = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { pausePlayback } = usePlayer();
   const [config, setConfig] = useState<RadioConfig | null>(null);
   const [rawSchedule, setRawSchedule] = useState<ScheduleTrack[]>([]);
@@ -119,19 +117,37 @@ const RadioLive = () => {
   const fallbackTimerRef = useRef<number | null>(null);
   const heartIdRef = useRef(0);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
-  // Live refs so volume/mute/schedule changes don't restart playback
-  const volumeRef = useRef(volume);
-  const mutedRef = useRef(muted);
-  const scheduleRef = useRef<ScheduleTrack[]>([]);
-  const startedRef = useRef(false);
-  useEffect(() => { volumeRef.current = volume; }, [volume]);
-  useEffect(() => { mutedRef.current = muted; }, [muted]);
 
-  // Radio plays the schedule EXACTLY as configured in the admin panel
-  // (no language filtering, no dedup) so what listeners hear matches
-  // the highlighted row in the admin timeline 1:1.
-  const schedule = useMemo(() => rawSchedule, [rawSchedule]);
-  useEffect(() => { scheduleRef.current = schedule; }, [schedule]);
+  // Filter announcements by selected language. Tracks (lang === null) are always kept.
+  // Announcement items with `lang` set are kept ONLY when matching the user's UI language.
+  const schedule = useMemo(() => {
+    const filtered = rawSchedule.filter((item) => {
+      if (item.item_type === "announcement" && item.lang && item.lang !== language) return false;
+      return true;
+    });
+
+    const recentTrackIds: string[] = [];
+    const recentArtists: string[] = [];
+
+    return filtered.filter((item) => {
+      if (item.item_type === "announcement") return true;
+
+      const trackId = item.track?.id;
+      const artist = item.track?.artist?.trim().toLowerCase();
+
+      if (!trackId) return true;
+      if (recentTrackIds.includes(trackId)) return false;
+      if (artist && recentArtists.includes(artist)) return false;
+
+      recentTrackIds.push(trackId);
+      if (artist) recentArtists.push(artist);
+
+      if (recentTrackIds.length > 28) recentTrackIds.shift();
+      if (recentArtists.length > 10) recentArtists.shift();
+
+      return true;
+    });
+  }, [rawSchedule, language]);
 
   // Auth
   useEffect(() => {
@@ -160,11 +176,15 @@ const RadioLive = () => {
       try {
         const configRes = await supabase.from("radio_config").select("*").limit(1).single();
         if (cancelled) return;
-        if (configRes.data) setConfig(configRes.data as RadioConfig);
+        if (configRes.data) setConfig(configRes.data as any);
 
-        const scheduleRes = await fetchRadioSchedule<ScheduleTrack>();
+        const scheduleRes = await supabase
+          .from("radio_schedule")
+          .select("position, item_type, custom_title, custom_duration, custom_audio_url, lang, track:tracks(id, title, artist, duration, audio_url, cover_url)")
+          .order("position", { ascending: true })
+          .limit(1000);
         if (cancelled) return;
-        setRawSchedule(scheduleRes);
+        if (scheduleRes.data) setRawSchedule(scheduleRes.data as any);
       } catch (err) {
         console.error("[RadioLive] Fetch error:", err);
       } finally {
@@ -221,7 +241,7 @@ const RadioLive = () => {
         setMessages((prev) => [...prev.slice(-49), newMsg]);
       })
       .on("postgres_changes", { event: "DELETE", schema: "public", table: "radio_messages" }, (payload) => {
-        const deletedId = (payload.old as Pick<RadioMessage, "id">).id;
+        const deletedId = (payload.old as any).id;
         setMessages((prev) => prev.filter((m) => m.id !== deletedId));
       })
       .subscribe();
@@ -250,15 +270,6 @@ const RadioLive = () => {
     };
     checkLiked();
   }, [userId, currentIndex, schedule]);
-
-  // Sync current playing schedule item so admin panel can highlight exactly what radio plays.
-  useEffect(() => {
-    if (!config?.is_active || schedule.length === 0) return;
-    const scheduleId = schedule[currentIndex]?.id ?? null;
-    syncRadioCurrentSchedule(scheduleId).then((error) => {
-      if (error) console.warn("[RadioLive] sync current_schedule_id failed:", error.message);
-    });
-  }, [currentIndex, schedule, config?.is_active]);
 
   const getItemDuration = (item: ScheduleTrack) => {
     if (item.item_type === "track" || !item.item_type) return item.track?.duration || 180;
@@ -389,10 +400,42 @@ const RadioLive = () => {
     }
   };
 
+  useEffect(() => {
+    if (!config?.is_active || !config.started_at || schedule.length === 0) return;
+    const startedAt = new Date(config.started_at).getTime();
+    const now = Date.now();
+    let elapsed = (now - startedAt) / 1000;
+    const totalDuration = schedule.reduce((s, t) => s + getItemDuration(t), 0);
+    if (totalDuration <= 0) return;
+    if (config.mode === "24h") elapsed = elapsed % totalDuration;
+    let cumulative = 0;
+    for (let i = 0; i < schedule.length; i++) {
+      const dur = getItemDuration(schedule[i]);
+      if (cumulative + dur > elapsed) {
+        setCurrentIndex(i);
+        startPlayback(i, elapsed - cumulative);
+        return;
+      }
+      cumulative += dur;
+    }
+    setCurrentIndex(0);
+  }, [config, schedule]);
+
+  // Helper: find next announcement index after current position
+  const findNextAnnouncementIndex = useCallback((fromIndex: number): number | null => {
+    for (let i = fromIndex + 1; i < schedule.length; i++) {
+      if (schedule[i]?.item_type === "announcement") return i;
+    }
+    // wrap-around
+    for (let i = 0; i <= fromIndex && i < schedule.length; i++) {
+      if (schedule[i]?.item_type === "announcement") return i;
+    }
+    return null;
+  }, [schedule]);
+
   const startPlayback = useCallback(
     (index: number, offset = 0) => {
-      const sched = scheduleRef.current;
-      const item = sched[index];
+      const item = schedule[index];
       if (!item) return;
       const token = ++playbackTokenRef.current;
       const audioUrl = getItemAudioUrl(item);
@@ -404,7 +447,7 @@ const RadioLive = () => {
         const remaining = Math.max(0.25, getItemDuration(item) - offset);
         fallbackTimerRef.current = window.setTimeout(() => {
           if (playbackTokenRef.current !== token) return;
-          const nextIndex = (index + 1) % scheduleRef.current.length;
+          const nextIndex = (index + 1) % schedule.length;
           setCurrentIndex(nextIndex);
           startPlayback(nextIndex);
         }, remaining * 1000);
@@ -414,7 +457,7 @@ const RadioLive = () => {
       audio.crossOrigin = "anonymous";
       audio.preload = "auto";
       audio.preservesPitch = false;
-      audio.volume = mutedRef.current ? 0 : volumeRef.current / 100;
+      audio.volume = muted ? 0 : volume / 100;
       audioRef.current = audio;
       audio.addEventListener("loadedmetadata", () => {
         if (playbackTokenRef.current !== token) return;
@@ -440,35 +483,14 @@ const RadioLive = () => {
       });
       audio.addEventListener("ended", () => {
         if (playbackTokenRef.current !== token) return;
-        const nextIndex = (index + 1) % scheduleRef.current.length;
+        const nextIndex = (index + 1) % schedule.length;
         setCurrentIndex(nextIndex);
         startPlayback(nextIndex);
       });
       audio.load();
     },
-    [stopCurrentAudio]
+    [schedule, volume, muted, stopCurrentAudio, findNextAnnouncementIndex]
   );
-
-  // Initial sync — only when station turns on, station restarts, or schedule first loads.
-  // Do NOT re-run on every currentIndex / volume change, otherwise playback restarts (= stutter).
-  useEffect(() => {
-    if (!config?.is_active || !config.started_at || schedule.length === 0) return;
-    if (startedRef.current) return;
-    startedRef.current = true;
-    const current = resolveCurrentRadioPosition(schedule, config);
-    if (!current) return;
-    setCurrentIndex(current.index);
-    startPlayback(current.index, current.offset);
-  }, [config?.is_active, config?.started_at, schedule.length, startPlayback, config, schedule]);
-
-  // If station is stopped, stop playback and allow restart later.
-  useEffect(() => {
-    if (config && !config.is_active) {
-      startedRef.current = false;
-      stopCurrentAudio();
-      setIsPlaying(false);
-    }
-  }, [config?.is_active, stopCurrentAudio, config]);
 
   useEffect(() => {
     if (audioRef.current) audioRef.current.volume = muted ? 0 : volume / 100;
@@ -533,6 +555,83 @@ const RadioLive = () => {
       liveVoiceAudioRef.current?.pause();
     };
   }, [muted, volume, playNextLiveVoiceChunk]);
+
+  // 🕐 Scheduled announcements & music stories per language
+  // Blog audio: 08:00/14:00 PL · 08:15/14:15 EN · 08:30/14:30 NL · 08:45/14:45 UA
+  // Music story: 17:00/23:00 PL · 17:15/23:15 EN · 17:30/23:30 NL · 17:45/23:45 UA
+  const scheduledFiredRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!schedule.length) return;
+
+    const LANG_OFFSET: Record<string, number> = { pl: 0, en: 15, nl: 30, ua: 45 };
+    const offset = LANG_OFFSET[language] ?? 0;
+    // hour:minute pairs in Europe/Warsaw local time
+    const slots = [
+      { h: 8, m: offset, kind: "blog" },
+      { h: 14, m: offset, kind: "blog" },
+      { h: 17, m: offset, kind: "story" },
+      { h: 23, m: offset, kind: "story" },
+    ];
+
+    const fadeAudio = (target: number, duration = 1500): Promise<void> => {
+      return new Promise((resolve) => {
+        const audio = audioRef.current;
+        if (!audio) return resolve();
+        const start = audio.volume;
+        const startTime = performance.now();
+        const step = (now: number) => {
+          const t = Math.min(1, (now - startTime) / duration);
+          if (audioRef.current) audioRef.current.volume = start + (target - start) * t;
+          if (t < 1) requestAnimationFrame(step);
+          else resolve();
+        };
+        requestAnimationFrame(step);
+      });
+    };
+
+    const tick = async () => {
+      const now = new Date();
+      // Convert to Europe/Warsaw via Intl
+      const fmt = new Intl.DateTimeFormat("pl-PL", {
+        timeZone: "Europe/Warsaw",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      }).format(now);
+      const [hStr, mStr] = fmt.split(":");
+      const h = parseInt(hStr, 10);
+      const m = parseInt(mStr, 10);
+      const hit = slots.find((s) => s.h === h && s.m === m);
+      if (!hit) return;
+
+      const dayKey = now.toISOString().slice(0, 10);
+      const fireKey = `${dayKey}-${hit.h}:${hit.m}-${language}`;
+      if (scheduledFiredRef.current.has(fireKey)) return;
+      scheduledFiredRef.current.add(fireKey);
+
+      const annIndex = findNextAnnouncementIndex(currentIndex - 1);
+      if (annIndex === null) {
+        console.warn("[RadioLive] ⏰ scheduled slot but no announcement in queue", hit);
+        return;
+      }
+
+      console.log(`[RadioLive] ⏰ ${hit.kind} slot ${hit.h}:${String(hit.m).padStart(2, "0")} [${language}] → fade out + play announcement`);
+
+      // Fade out current music
+      await fadeAudio(0, 1200);
+      setCurrentIndex(annIndex);
+      startPlayback(annIndex);
+      // Restore volume after a brief delay so the announcement plays at full level
+      setTimeout(() => {
+        if (audioRef.current) audioRef.current.volume = muted ? 0 : volume / 100;
+      }, 1500);
+    };
+
+    // Run immediately, then every 20s (catches the minute window reliably)
+    tick();
+    const id = window.setInterval(tick, 20_000);
+    return () => window.clearInterval(id);
+  }, [schedule, language, currentIndex, findNextAnnouncementIndex, startPlayback, volume, muted]);
 
   useEffect(() => {
     return () => { audioRef.current?.pause(); };
@@ -1006,9 +1105,17 @@ const RadioLive = () => {
               <p className="text-sm font-semibold truncate">{currentTitle}</p>
               <p className="text-xs text-muted-foreground truncate">{currentArtist}</p>
             </div>
-            <div className="text-right shrink-0">
+            <div className="text-right shrink-0 flex flex-col items-end gap-0.5">
               <p className="text-[10px] text-muted-foreground uppercase">Pozycja</p>
               <p className="text-sm font-bold tabular-nums">{currentIndex + 1}/{schedule.length}</p>
+              <a
+                href="https://grouarock.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[9px] text-muted-foreground/40 hover:text-primary/60 transition-colors"
+              >
+                grouarock.com
+              </a>
             </div>
           </div>
         </motion.div>

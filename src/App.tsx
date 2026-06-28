@@ -62,6 +62,16 @@ const Business = lazy(() => import("./pages/Business"));
 const ClientDashboard = lazy(() => import("./pages/ClientDashboard"));
 const Binaural = lazy(() => import("./pages/Binaural"));
 
+// Empire Platform pages
+const EmpireDashboard = lazy(() => import("./pages/empire/EmpireDashboard"));
+const EmpireProjects = lazy(() => import("./pages/empire/EmpireProjects"));
+const KnowledgeGarden = lazy(() => import("./pages/empire/KnowledgeGarden"));
+const EmpireAnalytics = lazy(() => import("./pages/empire/EmpireAnalytics"));
+const AgentBuilder = lazy(() => import("./pages/empire/AgentBuilder"));
+const AgentMarketplace = lazy(() => import("./pages/empire/AgentMarketplace"));
+const EmpireCommunity = lazy(() => import("./pages/empire/EmpireCommunity"));
+const ApifyResearch = lazy(() => import("./pages/empire/ApifyResearch"));
+
 const RouteFallback = () => (
   <div className="min-h-screen bg-background flex items-center justify-center gap-3">
     <div className="w-6 h-6 rounded-full border-2 border-primary/20 border-t-primary animate-spin" />
@@ -153,6 +163,14 @@ const AppShell = () => {
           <Route path="/client-dashboard" element={<ClientDashboard />} />
           <Route path="/client-dashboard/:orderId" element={<ClientDashboard />} />
           <Route path="/binaural" element={<Binaural />} />
+          <Route path="/empire" element={<EmpireDashboard />} />
+          <Route path="/empire/projects" element={<EmpireProjects />} />
+          <Route path="/empire/knowledge" element={<KnowledgeGarden />} />
+          <Route path="/empire/analytics" element={<EmpireAnalytics />} />
+          <Route path="/empire/agent-builder" element={<AgentBuilder />} />
+          <Route path="/empire/marketplace" element={<AgentMarketplace />} />
+          <Route path="/empire/community" element={<EmpireCommunity />} />
+          <Route path="/empire/research" element={<ApifyResearch />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
         </Suspense>
