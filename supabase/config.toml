@@ -23,6 +23,8 @@ project_id = "bvstvawnigyczvofzhps"
     verify_jwt = false
   [functions.ad-lead-lookup]
     verify_jwt = false
+  [functions.ai-compose]
+    verify_jwt = false
   [functions.ai-cover-generate]
     verify_jwt = false
   [functions.auth-email-hook]

@@ -26,6 +26,7 @@ import { StudioGrokDock } from "@/components/studio/StudioGrokDock";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { uploadToR2 } from "@/lib/r2Upload";
+import { renderScore } from "@/lib/musicSynth";
 import { Lock, Crown } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -266,14 +267,16 @@ const Suno = () => {
   const [vocalStyle, setVocalStyle] = useState<string>("singing");
   const [intensity, setIntensity] = useState<string>("balanced");
   const [showAdvanced, setShowAdvanced] = useState(false);
-  // ElevenLabs engine toggle — default ON. When OFF → uses n8n router (multi-engine).
-  const [useElevenLabs, setUseElevenLabs] = useState<boolean>(() => {
-    const stored = typeof window !== "undefined" ? localStorage.getItem("studio-use-elevenlabs") : null;
-    return stored === null ? true : stored === "true";
+  // Engine selector: "grouai" (AI Compose + browser synth), "elevenlabs", "n8n" (multi-engine router)
+  const [engine, setEngine] = useState<"grouai" | "elevenlabs" | "n8n">(() => {
+    const stored = typeof window !== "undefined" ? localStorage.getItem("studio-engine") : null;
+    if (stored === "elevenlabs" || stored === "n8n") return stored;
+    return "grouai";
   });
   useEffect(() => {
-    if (typeof window !== "undefined") localStorage.setItem("studio-use-elevenlabs", String(useElevenLabs));
-  }, [useElevenLabs]);
+    if (typeof window !== "undefined") localStorage.setItem("studio-engine", engine);
+  }, [engine]);
+  const useElevenLabs = engine === "elevenlabs";
   const [result, setResult] = useState<{
     audioUrl: string;
     title: string;
@@ -357,12 +360,77 @@ const Suno = () => {
 
       setGenStatus(t("studio.status.instruments"));
 
-      // === ROUTING: ElevenLabs (toggle ON) vs n8n Multi-Engine Router (toggle OFF) ===
+      // === GROUAI SYNTH ENGINE — AI composes JSON score, browser renders audio ===
+      if (engine === "grouai") {
+        setGenStatus("AI komponuje utwór...");
+        const composeRes = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-compose`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json", apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
+            body: JSON.stringify({
+              prompt: musicPrompt,
+              duration,
+              genre: genreBlend,
+              mood: MOODS.find(m => m.id === mood)?.id || "energetic",
+              tempo: TEMPOS.find(t => t.id === tempo)?.id || "medium",
+              intensity: INTENSITIES.find(i => i.id === intensity)?.id || "balanced",
+            }),
+          },
+        );
+        if (!composeRes.ok) {
+          const errData = await composeRes.json().catch(() => ({ error: "AI compose error" }));
+          throw new Error(errData.error || `AI Compose: HTTP ${composeRes.status}`);
+        }
+        const composeData = await composeRes.json();
+        if (!composeData.ok || !composeData.score) throw new Error("AI nie zwróciło kompozycji");
+
+        setGenStatus("Renderowanie audio w przeglądarce...");
+        const audioBlobUrl = await renderScore(composeData.score);
+
+        const trackTitle = title || `${genre} Track`;
+        const lyrics = customLyrics.trim()
+          ? parseLyricsFromText(customLyrics, duration)
+          : generateLyrics(genre, trackTitle, duration, instrumental);
+
+        setGenStatus(t("studio.status.uploading"));
+        let publicAudioUrl = audioBlobUrl;
+        try {
+          const wavResp = await fetch(audioBlobUrl);
+          const wavBlob = await wavResp.blob();
+          const safeTitle = trackTitle.replace(/[^a-zA-Z0-9]/g, "_").substring(0, 40);
+          const wavFile = new File([wavBlob], `${safeTitle}_${Date.now()}.wav`, { type: "audio/wav" });
+          const uploadRes = await uploadToR2({ file: wavFile, folder: `studio/${user!.id}` });
+          publicAudioUrl = uploadRes.publicUrl;
+        } catch {
+          toast.warning("Upload do chmury nie powiódł się — audio dostępne lokalnie");
+        }
+
+        setResult({ audioUrl: publicAudioUrl, title: trackTitle, genre, durationSeconds: duration, lyrics });
+        setGenStatus(t("studio.status.done"));
+        toast.success(`🎶 "${trackTitle}" — wygenerowany przez GrouAI Synth!`);
+
+        await supabase.from("generations").insert({
+          user_id: user!.id, title: trackTitle, genre,
+          prompt: `GrouAI Synth: ${musicPrompt}`, instrumental,
+          status: "completed", audio_url: publicAudioUrl,
+        });
+        if (publicAudioUrl.startsWith("http")) {
+          await supabase.from("tracks").insert({
+            user_id: user!.id, title: trackTitle, artist: "GrouAI Studio",
+            album: "AI Generated", duration, audio_url: publicAudioUrl, genre, mood,
+          });
+        }
+        if (!isPro) setFreeUsed(prev => prev + 1);
+        return;
+      }
+
+      // === ROUTING: ElevenLabs vs n8n Multi-Engine Router ===
       const endpoint = useElevenLabs
         ? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-music`
         : `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/studio-router`;
 
-      const routerBody = useElevenLabs ? body : {
+      const routerBody = engine === "elevenlabs" ? body : {
         prompt: musicPrompt,
         title: title || `${genre} Track`,
         duration,
@@ -401,7 +469,7 @@ const Suno = () => {
       const data = await response.json();
 
       // === n8n router branch — returns { engine, audio_url, status, task_id } ===
-      if (!useElevenLabs) {
+      if (engine === "n8n") {
         if (data.audio_url) {
           // Synchronous engine (MusicGen) returned ready URL
           setResult({
@@ -640,7 +708,11 @@ const Suno = () => {
           <div className="flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-gradient-to-r from-[#FF6B00]/10 to-[#9333EA]/10 border border-[#FF6B00]/20">
             <Sparkles className="h-3.5 w-3.5 text-[#FF9500]" />
             <span className="text-xs text-gray-300">
-              Napędzany przez <span className="text-[#FF9500] font-semibold">ElevenLabs Music v1</span> — studyjna jakość, śpiewane wokale
+              {engine === "grouai"
+                ? <>Napędzany przez <span className="text-[#FF9500] font-semibold">GrouAI Synth</span> — AI kompozytor + syntezator w przeglądarce</>
+                : engine === "elevenlabs"
+                ? <>Napędzany przez <span className="text-[#FF9500] font-semibold">ElevenLabs Music v1</span> — studyjna jakość, śpiewane wokale</>
+                : <>Napędzany przez <span className="text-[#FF9500] font-semibold">GrouAI Multi-Engine Router</span> — auto-routing przez n8n</>}
             </span>
           </div>
 
@@ -1042,43 +1114,43 @@ const Suno = () => {
             )}
           </AnimatePresence>
 
-          {/* Engine Info + ElevenLabs Toggle */}
+          {/* Engine Selector — 3 engines */}
           <div className="p-4 rounded-xl border border-[#9333EA]/30 bg-[#1a1a2e]/60 space-y-3">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3 min-w-0">
-                <Zap className="h-5 w-5 text-[#9333EA] shrink-0" />
-                <div className="min-w-0">
-                  <Label className="text-sm text-gray-200">
-                    {useElevenLabs ? "ElevenLabs HQ Engine" : "GrouAI Multi-Engine Router"}
-                  </Label>
-                  <p className="text-xs text-gray-500 truncate">
-                    {useElevenLabs
-                      ? "Studyjna jakość ElevenLabs Music v1 + śpiewany wokal"
-                      : "Auto-routing: Suno · ElevenLabs · MusicGen (przez n8n)"}
-                  </p>
-                </div>
-              </div>
-              <Switch
-                checked={useElevenLabs}
-                onCheckedChange={setUseElevenLabs}
-                className="data-[state=checked]:bg-[#FF6B00]"
-              />
+            <div className="flex items-center gap-3 mb-2">
+              <Zap className="h-5 w-5 text-[#9333EA] shrink-0" />
+              <Label className="text-sm text-gray-200">Silnik generowania</Label>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {([
+                { id: "grouai" as const, label: "GrouAI Synth", desc: "AI + syntezator", icon: "🎹" },
+                { id: "elevenlabs" as const, label: "ElevenLabs", desc: "Studio HQ + wokal", icon: "🎤" },
+                { id: "n8n" as const, label: "Multi-Engine", desc: "n8n auto-routing", icon: "🤖" },
+              ]).map((e) => (
+                <button
+                  key={e.id}
+                  onClick={() => setEngine(e.id)}
+                  className={`flex flex-col items-center gap-1 p-3 rounded-xl border transition-all text-center ${
+                    engine === e.id
+                      ? "border-transparent text-white"
+                      : "border-[#9333EA]/20 bg-[#1a1a2e]/60 text-gray-400 hover:border-[#FF6B00]/40"
+                  }`}
+                  style={engine === e.id ? { background: "linear-gradient(135deg, #9333EA, #FF6B00)", boxShadow: "0 0 14px #9333EA50" } : undefined}
+                >
+                  <span className="text-lg">{e.icon}</span>
+                  <span className="text-[11px] font-semibold leading-tight">{e.label}</span>
+                  <span className="text-[9px] opacity-70 leading-tight">{e.desc}</span>
+                </button>
+              ))}
             </div>
             <div className="flex gap-2 flex-wrap">
               <Badge className="text-xs bg-[#9333EA] text-white border-transparent">
                 <Music className="h-3 w-3 mr-1" /> Instrumenty AI
               </Badge>
-              {!instrumental && (
+              {!instrumental && engine === "elevenlabs" && (
                 <Badge className="text-xs bg-[#FF6B00] text-white border-transparent">
                   <Mic className="h-3 w-3 mr-1" /> Wokal AI
                 </Badge>
               )}
-              <Badge
-                className="text-xs border-transparent text-white"
-                style={{ background: useElevenLabs ? "linear-gradient(135deg,#FF6B00,#FF9500)" : "linear-gradient(135deg,#9333EA,#FF6B00)" }}
-              >
-                {useElevenLabs ? "🎤 ElevenLabs" : "🤖 n8n Router"}
-              </Badge>
             </div>
           </div>
 
