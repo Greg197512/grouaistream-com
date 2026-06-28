@@ -59,6 +59,7 @@ const Orders = lazy(() => import("./pages/Orders"));
 const NicheLandingPage = lazy(() => import("./pages/NicheLandingPage"));
 const Sponsor = lazy(() => import("./pages/Sponsor"));
 const Business = lazy(() => import("./pages/Business"));
+const ArtistLanding = lazy(() => import("./pages/ArtistLanding"));
 const ClientDashboard = lazy(() => import("./pages/ClientDashboard"));
 const Binaural = lazy(() => import("./pages/Binaural"));
 
@@ -160,6 +161,8 @@ const AppShell = () => {
           <Route path="/sponsor" element={<Sponsor />} />
           <Route path="/business" element={<Business />} />
           <Route path="/dla-firm" element={<Business />} />
+          <Route path="/artysta" element={<ArtistLanding />} />
+          <Route path="/artist" element={<ArtistLanding />} />
           <Route path="/client-dashboard" element={<ClientDashboard />} />
           <Route path="/client-dashboard/:orderId" element={<ClientDashboard />} />
           <Route path="/binaural" element={<Binaural />} />
