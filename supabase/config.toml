@@ -5,6 +5,18 @@ project_id = "bvstvawnigyczvofzhps"
     verify_jwt = true
   [functions.empire-aurora-chat]
     verify_jwt = true
+  [functions.elevenlabs-music]
+    verify_jwt = false
+  [functions.elevenlabs-voice-clone]
+    verify_jwt = true
+  [functions.studio-router]
+    verify_jwt = false
+  [functions.studio-prompt-engine]
+    verify_jwt = true
+  [functions.suno-generate]
+    verify_jwt = true
+  [functions.groua-music-engine]
+    verify_jwt = false
   [functions.a-r-scout]
     verify_jwt = false
   [functions.ad-campaign-submit]
