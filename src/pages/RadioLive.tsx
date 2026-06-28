@@ -1105,9 +1105,17 @@ const RadioLive = () => {
               <p className="text-sm font-semibold truncate">{currentTitle}</p>
               <p className="text-xs text-muted-foreground truncate">{currentArtist}</p>
             </div>
-            <div className="text-right shrink-0">
+            <div className="text-right shrink-0 flex flex-col items-end gap-0.5">
               <p className="text-[10px] text-muted-foreground uppercase">Pozycja</p>
               <p className="text-sm font-bold tabular-nums">{currentIndex + 1}/{schedule.length}</p>
+              <a
+                href="https://grouarock.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[9px] text-muted-foreground/40 hover:text-primary/60 transition-colors"
+              >
+                grouarock.com
+              </a>
             </div>
           </div>
         </motion.div>

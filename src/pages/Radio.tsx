@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Radio as RadioIcon, Wifi, ExternalLink } from "lucide-react";
+import { Radio as RadioIcon, Wifi, ExternalLink, Guitar } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -39,6 +39,15 @@ const Radio = () => {
             <Button onClick={() => window.open(PLAYER_URL, "_blank")} variant="ghost" size="sm" className="gap-2 text-xs text-muted-foreground hover:text-foreground">
               <ExternalLink className="h-3 w-3" />
               {t("radio.openFullPlayer")}
+            </Button>
+            <Button
+              onClick={() => window.open("https://grouarock.com", "_blank")}
+              variant="ghost"
+              size="sm"
+              className="gap-2 text-xs text-muted-foreground hover:text-foreground"
+            >
+              <Guitar className="h-3 w-3" />
+              GrouaRock
             </Button>
             <BuyCoffeeButton
               variant="outline"
