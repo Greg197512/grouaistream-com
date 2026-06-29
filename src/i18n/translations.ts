@@ -40,6 +40,7 @@ type TranslationKeys = {
    "nav.myTracks": string;
    "nav.earnings": string;
    "nav.earnWithUs": string;
+   "nav.artistLanding": string;
 
   // TopBar
   "topbar.searchPlaceholder": string;
@@ -946,6 +947,7 @@ const pl: TranslationKeys = {
   "nav.myTracks": "Moje Utwory",
   "nav.earnings": "Moje Zarobki",
   "nav.earnWithUs": "Zarabiaj z nami",
+  "nav.artistLanding": "Dla artystów",
 
   "topbar.searchPlaceholder": "Czego chcesz posłuchać?",
   "topbar.signIn": "Zaloguj się",
@@ -1816,6 +1818,7 @@ const en: TranslationKeys = {
   "nav.myTracks": "My Tracks",
   "nav.earnings": "My Earnings",
   "nav.earnWithUs": "Earn With Us",
+  "nav.artistLanding": "For Artists",
 
   "topbar.searchPlaceholder": "What do you want to listen to?",
   "topbar.signIn": "Sign In",
@@ -2686,6 +2689,7 @@ const nl: TranslationKeys = {
   "nav.myTracks": "Mijn Nummers",
   "nav.earnings": "Mijn Inkomsten",
   "nav.earnWithUs": "Verdien met ons",
+  "nav.artistLanding": "Voor artiesten",
 
   "topbar.searchPlaceholder": "Waar wil je naar luisteren?",
   "topbar.signIn": "Inloggen",
@@ -3556,6 +3560,7 @@ const ua: TranslationKeys = {
   "nav.myTracks": "Мої Треки",
   "nav.earnings": "Мої Заробітки",
   "nav.earnWithUs": "Заробляй з нами",
+  "nav.artistLanding": "Для артистів",
 
   "topbar.searchPlaceholder": "Що хочеш послухати?",
   "topbar.signIn": "Увійти",

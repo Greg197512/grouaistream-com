@@ -42,6 +42,7 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
     { icon: "queue_music", labelKey: "nav.myTracks", href: "/my-tracks" },
     { icon: "account_balance_wallet", labelKey: "nav.earnings", href: "/earnings", badge: "💰" },
     { icon: "monetization_on", labelKey: "nav.earnWithUs", href: "/earn", badge: "🤑" },
+    { icon: "mic", labelKey: "nav.artistLanding", href: "/artysta", badge: "🎤" },
   ];
 
   const aiFeatures = [
