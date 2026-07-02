@@ -48,18 +48,18 @@ export default function EmpireDashboard() {
       if (!user) { setLoading(false); return; }
 
       const [kpiRes, projRes, agentRes] = await Promise.all([
-        supabase
+        (supabase as any)
           .from("empire_kpi_snapshots")
           .select("content_generated, estimated_views, estimated_revenue_usd, active_agents")
           .eq("user_id", user.id)
           .order("snapshot_date", { ascending: false })
           .limit(1)
           .maybeSingle(),
-        supabase
+        (supabase as any)
           .from("empire_projects")
           .select("id", { count: "exact", head: true })
           .eq("user_id", user.id),
-        supabase
+        (supabase as any)
           .from("empire_agent_teams")
           .select("name, status, run_count")
           .eq("user_id", user.id)

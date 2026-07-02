@@ -45,7 +45,7 @@ export default function KnowledgeGarden() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { setLoading(false); return; }
 
-      const { data } = await supabase
+      const { data } = await (supabase as any)
         .from("empire_knowledge_notes")
         .select("id, title, content, type, tags, starred, created_at, ai_insight")
         .eq("user_id", user.id)
@@ -75,7 +75,7 @@ export default function KnowledgeGarden() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setSaving(false); return; }
 
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from("empire_knowledge_notes")
       .insert({
         user_id: user.id,
