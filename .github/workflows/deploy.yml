@@ -1,27 +1,55 @@
-name: Deploy to Vercel
+name: Deploy to Vercel (backup host)
 
-# Stronę hostuje Lovable (DNS wskazuje na Lovable, nie Vercel), więc ten deploy
-# jest zbędny i padał przy każdym pushu, zasypując skrzynkę czerwonymi mailami.
-# Wyłączony automat — zostaje tylko ręczne uruchomienie (workflow_dispatch),
-# gdyby kiedyś trzeba było wrócić na Vercel.
+# Cel: mieć zawsze świeżą, gotową do przełączenia kopię strony na Vercelu,
+# tak żeby w każdej chwili można było odpiąć się od Lovable — wystarczy
+# przekierować DNS grouaistream.com na Vercela.
+#
+# Dopóki DNS wskazuje na Lovable, Vercel po prostu buduje kopię pod swoim
+# adresem *.vercel.app i nie koliduje z produkcją.
+#
+# Deploy jest pomijany bezpiecznie, jeśli brakuje sekretów Vercela — nie
+# zasypuje skrzynki czerwonymi mailami przy każdym pushu.
+
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
+
+concurrency:
+  group: vercel-deploy-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
+      - name: Check Vercel secrets
+        id: check
+        run: |
+          if [ -n "${{ secrets.VERCEL_TOKEN }}" ] && \
+             [ -n "${{ secrets.VERCEL_ORG_ID }}" ] && \
+             [ -n "${{ secrets.VERCEL_PROJECT_ID }}" ]; then
+            echo "ready=true" >> $GITHUB_OUTPUT
+          else
+            echo "ready=false" >> $GITHUB_OUTPUT
+            echo "::notice::Sekrety Vercela nieustawione — pomijam deploy. Dodaj VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID w GitHub → Settings → Secrets."
+          fi
+
       - uses: actions/checkout@v4
+        if: steps.check.outputs.ready == 'true'
 
       - uses: actions/setup-node@v4
+        if: steps.check.outputs.ready == 'true'
         with:
           node-version: 20
           cache: npm
 
       - name: Install dependencies
+        if: steps.check.outputs.ready == 'true'
         run: npm ci
 
       - name: Deploy to Vercel
+        if: steps.check.outputs.ready == 'true'
         uses: amondnet/vercel-action@v25
         with:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
