@@ -105,13 +105,13 @@ export default function KnowledgeGarden() {
     const next = !note.starred;
     setNotes((prev) => prev.map((n) => (n.id === id ? { ...n, starred: next } : n)));
     if (selected?.id === id) setSelected((s) => s ? { ...s, starred: next } : s);
-    await supabase.from("empire_knowledge_notes").update({ starred: next }).eq("id", id);
+    await (supabase as any).from("empire_knowledge_notes").update({ starred: next }).eq("id", id);
   };
 
   const deleteNote = async (id: string) => {
     setNotes((prev) => prev.filter((n) => n.id !== id));
     if (selected?.id === id) setSelected(null);
-    await supabase.from("empire_knowledge_notes").delete().eq("id", id);
+    await (supabase as any).from("empire_knowledge_notes").delete().eq("id", id);
   };
 
   return (
