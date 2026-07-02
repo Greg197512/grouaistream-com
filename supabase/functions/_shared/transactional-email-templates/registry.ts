@@ -32,4 +32,5 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   'coffee-tip-received': coffeeTipReceived,
   'payment-failed': paymentFailed,
   'subscription-receipt': subscriptionReceipt,
+  'founding-member-invite': foundingMemberInvite,
 }
