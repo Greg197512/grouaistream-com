@@ -52,7 +52,7 @@ export default function EmpireProjects() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { setLoading(false); return; }
 
-      const { data } = await supabase
+      const { data } = await (supabase as any)
         .from("empire_projects")
         .select("id, name, description, agent_count, content_count, status, updated_at")
         .eq("user_id", user.id)
@@ -67,7 +67,7 @@ export default function EmpireProjects() {
   const toggleStatus = async (id: string, current: string) => {
     const next = current === "active" ? "paused" : "active";
     setToggling(id);
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from("empire_projects")
       .update({ status: next, updated_at: new Date().toISOString() })
       .eq("id", id);
