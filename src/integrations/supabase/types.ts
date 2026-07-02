@@ -7118,6 +7118,7 @@ export type Database = {
         Returns: boolean
       }
       dismiss_cost_alert: { Args: { _id: string }; Returns: Json }
+      email_queue_dispatch: { Args: never; Returns: undefined }
       emit_agent_event: {
         Args: {
           _actor_user_id?: string
