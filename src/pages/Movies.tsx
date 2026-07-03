@@ -83,10 +83,11 @@ const Movies = () => {
     const client = supabase as any;
     const { data } = await client
       .from("tracks")
-      .select("id, title, artist, video_url, cover_url, genre, audio_url")
-      .ilike("audio_url", "%suno%")
+      .select("id, title, artist, video_url, cover_url, genre")
+      .not("user_id", "is", null)
+      .order("video_url", { ascending: false, nullsFirst: false })
       .order("created_at", { ascending: false })
-      .limit(120);
+      .limit(200);
     setTracks((data as TrackClip[]) || []);
     setLoading(false);
   }, []);
