@@ -80,13 +80,13 @@ const Movies = () => {
   const loadTracks = useCallback(async () => {
     setLoading(true);
     // Prioritize tracks that already have a music video, then the rest so users can trigger search
-    const { data } = await supabase
+    const { data } = await (supabase
       .from("tracks")
       .select("id, title, artist, video_url, cover_url, genre")
       .eq("is_public", true)
       .order("video_url", { ascending: false, nullsFirst: false })
       .order("created_at", { ascending: false })
-      .limit(120);
+      .limit(120) as any);
     setTracks((data as TrackClip[]) || []);
     setLoading(false);
   }, []);
