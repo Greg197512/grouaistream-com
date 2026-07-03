@@ -66,16 +66,19 @@ export const LiveOnlineBadge = () => {
     };
   }, [user?.id]);
 
+  const total = realCount + boost;
+  const formatted = total.toLocaleString("pl-PL");
+
   return (
     <div
-      title={`${count} ${count === 1 ? "osoba" : "osób"} online teraz`}
+      title={`${formatted} osób online teraz`}
       className="flex h-9 items-center gap-1.5 rounded-full bg-secondary/80 border border-border px-3 text-sm font-medium"
     >
       <span className="relative flex h-2 w-2">
         <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
         <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
       </span>
-      <span className="tabular-nums text-emerald-300">{count}</span>
+      <span className="tabular-nums text-emerald-300">{formatted}</span>
       <span className="hidden sm:inline text-muted-foreground text-xs">online</span>
     </div>
   );
