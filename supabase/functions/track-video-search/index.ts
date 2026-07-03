@@ -98,9 +98,7 @@ serve(async (req) => {
     }
 
     // batch mode — fill first N tracks that have no video_url
-    const batchSize = Math.min(Number(body.batchSize) || 15, 30);
-    const sunoOnly = body.sunoOnly !== false; // default true
-    let q = supabase
+    const sunoOnly = body.sunoOnly === true; // default false — search all our tracks
       .from("tracks")
       .select("id, title, artist")
       .is("video_url", null);
