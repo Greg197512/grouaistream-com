@@ -77,6 +77,67 @@ const Movies = () => {
     setLoading(false);
   }, [activeTab]);
 
+  const loadTracks = useCallback(async () => {
+    setLoading(true);
+    // Prioritize tracks that already have a music video, then the rest so users can trigger search
+    const { data } = await supabase
+      .from("tracks")
+      .select("id, title, artist, video_url, cover_url, genre")
+      .eq("is_public", true)
+      .order("video_url", { ascending: false, nullsFirst: false })
+      .order("created_at", { ascending: false })
+      .limit(120);
+    setTracks((data as TrackClip[]) || []);
+    setLoading(false);
+  }, []);
+
+  const playClip = useCallback(async (clip: TrackClip) => {
+    if (clip.video_url) {
+      setSelectedClip(clip);
+      return;
+    }
+    setSearching(clip.id);
+    try {
+      const { data, error } = await supabase.functions.invoke("track-video-search", {
+        body: { mode: "single", trackId: clip.id, title: clip.title, artist: clip.artist },
+      });
+      if (error || !data?.success) {
+        toast.error(`Nie znaleziono teledysku dla "${clip.title}"`);
+        return;
+      }
+      const updated = { ...clip, video_url: data.videoUrl, cover_url: data.coverUrl };
+      setTracks((prev) => prev.map((c) => (c.id === clip.id ? updated : c)));
+      setSelectedClip(updated);
+      toast.success(`Znaleziono: ${data.youtubeTitle}`);
+    } catch {
+      toast.error("Błąd wyszukiwania teledysku");
+    } finally {
+      setSearching(null);
+    }
+  }, []);
+
+  const runClipBatch = useCallback(async () => {
+    if (clipBatch) return;
+    setClipBatch(true);
+    let total = 0;
+    try {
+      for (let i = 0; i < 3; i++) {
+        const { data, error } = await supabase.functions.invoke("track-video-search", {
+          body: { mode: "batch", batchSize: 15 },
+        });
+        if (error) break;
+        total += data?.updated || 0;
+        if (!data?.updated) break;
+        toast.info(`Batch ${i + 1}: +${data.updated} teledysków`);
+        await new Promise((r) => setTimeout(r, 800));
+      }
+      toast.success(`Dodano ${total} teledysków 🎬`);
+      loadTracks();
+    } finally {
+      setClipBatch(false);
+    }
+  }, [clipBatch, loadTracks]);
+
   const searchAndPlay = useCallback(async (movie: Movie) => {
     // If already has video_url, play directly
     if (movie.video_url) {
