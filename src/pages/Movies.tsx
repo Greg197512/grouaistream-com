@@ -84,8 +84,7 @@ const Movies = () => {
     const { data } = await client
       .from("tracks")
       .select("id, title, artist, video_url, cover_url, genre")
-      .eq("is_public", true)
-      .order("video_url", { ascending: false, nullsFirst: false })
+      .not("video_url", "is", null)
       .order("created_at", { ascending: false })
       .limit(120);
     setTracks((data as TrackClip[]) || []);
