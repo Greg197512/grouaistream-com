@@ -45,17 +45,24 @@ async function searchYouTube(query: string): Promise<{ videoId: string; title: s
 }
 
 function buildQuery(title: string, artist?: string | null) {
-  // Bias to AI-generated / official music videos
+  // Bias to AI-generated music videos (Suno / AI visualizer style)
   const parts = [artist, title].filter(Boolean).join(" ");
-  return `${parts} official music video`;
+  return `${parts} AI music video suno visualizer`;
 }
 
 async function findForTrack(track: { id: string; title: string; artist?: string | null }) {
-  const q = buildQuery(track.title, track.artist);
-  let res = await searchYouTube(q);
-  if (!res) res = await searchYouTube(`${track.artist ?? ""} ${track.title} music video`.trim());
-  if (!res) res = await searchYouTube(`${track.title} AI music video`);
-  return res;
+  const base = [track.artist, track.title].filter(Boolean).join(" ");
+  const queries = [
+    `${base} AI music video suno visualizer`,
+    `${base} AI generated music video`,
+    `${base} AI visualizer 4k`,
+    `${base} music video`,
+  ];
+  for (const q of queries) {
+    const res = await searchYouTube(q);
+    if (res) return res;
+  }
+  return null;
 }
 
 serve(async (req) => {
