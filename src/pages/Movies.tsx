@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Film, Loader2, Database, Flag, Globe, Play, X, Search, RefreshCw } from "lucide-react";
+import { Film, Loader2, Database, Flag, Globe, Play, X, Search, RefreshCw, Music, Sparkles } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -27,11 +27,21 @@ interface Movie {
   country: string | null;
 }
 
+interface TrackClip {
+  id: string;
+  title: string;
+  artist: string;
+  video_url: string | null;
+  cover_url: string | null;
+  genre: string | null;
+}
+
 const Movies = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { t } = useLanguage();
   const [movies, setMovies] = useState<Movie[]>([]);
+  const [tracks, setTracks] = useState<TrackClip[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("all");
   const [populating, setPopulating] = useState(false);
@@ -39,8 +49,10 @@ const Movies = () => {
   const [populateMsg, setPopulateMsg] = useState("");
   const [totalCount, setTotalCount] = useState(0);
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
+  const [selectedClip, setSelectedClip] = useState<TrackClip | null>(null);
   const [searching, setSearching] = useState<string | null>(null);
   const [batchSearching, setBatchSearching] = useState(false);
+  const [clipBatch, setClipBatch] = useState(false);
 
   const loadMovies = useCallback(async () => {
     setLoading(true);
@@ -64,6 +76,68 @@ const Movies = () => {
 
     setLoading(false);
   }, [activeTab]);
+
+  const loadTracks = useCallback(async () => {
+    setLoading(true);
+    // Prioritize tracks that already have a music video, then the rest so users can trigger search
+    const client = supabase as any;
+    const { data } = await client
+      .from("tracks")
+      .select("id, title, artist, video_url, cover_url, genre")
+      .eq("is_public", true)
+      .order("video_url", { ascending: false, nullsFirst: false })
+      .order("created_at", { ascending: false })
+      .limit(120);
+    setTracks((data as TrackClip[]) || []);
+    setLoading(false);
+  }, []);
+
+  const playClip = useCallback(async (clip: TrackClip) => {
+    if (clip.video_url) {
+      setSelectedClip(clip);
+      return;
+    }
+    setSearching(clip.id);
+    try {
+      const { data, error } = await supabase.functions.invoke("track-video-search", {
+        body: { mode: "single", trackId: clip.id, title: clip.title, artist: clip.artist },
+      });
+      if (error || !data?.success) {
+        toast.error(`Nie znaleziono teledysku dla "${clip.title}"`);
+        return;
+      }
+      const updated = { ...clip, video_url: data.videoUrl, cover_url: data.coverUrl };
+      setTracks((prev) => prev.map((c) => (c.id === clip.id ? updated : c)));
+      setSelectedClip(updated);
+      toast.success(`Znaleziono: ${data.youtubeTitle}`);
+    } catch {
+      toast.error("Błąd wyszukiwania teledysku");
+    } finally {
+      setSearching(null);
+    }
+  }, []);
+
+  const runClipBatch = useCallback(async () => {
+    if (clipBatch) return;
+    setClipBatch(true);
+    let total = 0;
+    try {
+      for (let i = 0; i < 3; i++) {
+        const { data, error } = await supabase.functions.invoke("track-video-search", {
+          body: { mode: "batch", batchSize: 15 },
+        });
+        if (error) break;
+        total += data?.updated || 0;
+        if (!data?.updated) break;
+        toast.info(`Batch ${i + 1}: +${data.updated} teledysków`);
+        await new Promise((r) => setTimeout(r, 800));
+      }
+      toast.success(`Dodano ${total} teledysków 🎬`);
+      loadTracks();
+    } finally {
+      setClipBatch(false);
+    }
+  }, [clipBatch, loadTracks]);
 
   const searchAndPlay = useCallback(async (movie: Movie) => {
     // If already has video_url, play directly
@@ -168,8 +242,9 @@ const Movies = () => {
 
   useEffect(() => {
     if (!user) { navigate("/auth"); return; }
-    loadMovies();
-  }, [user, navigate, loadMovies]);
+    if (activeTab === "clips") loadTracks();
+    else loadMovies();
+  }, [user, navigate, loadMovies, loadTracks, activeTab]);
 
   if (loading) {
     return (
@@ -194,24 +269,38 @@ const Movies = () => {
             </div>
           </div>
           <div className="flex gap-2 flex-wrap">
-            <Button
-              onClick={runBatchSearch}
-              variant="outline"
-              className="gap-2"
-              disabled={batchSearching}
-            >
-              {batchSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-              {batchSearching ? t("movies.searching") : t("movies.searchYoutube")}
-            </Button>
-            <Button
-              onClick={runBulkPopulate}
-              variant="outline"
-              className="gap-2"
-              disabled={populating}
-            >
-              {populating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Database className="h-4 w-4" />}
-              {populating ? t("movies.populating") : t("movies.populate20k")}
-            </Button>
+            {activeTab === "clips" ? (
+              <Button
+                onClick={runClipBatch}
+                variant="outline"
+                className="gap-2"
+                disabled={clipBatch}
+              >
+                {clipBatch ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                {clipBatch ? "Szukam teledysków…" : "Znajdź teledyski AI"}
+              </Button>
+            ) : (
+              <>
+                <Button
+                  onClick={runBatchSearch}
+                  variant="outline"
+                  className="gap-2"
+                  disabled={batchSearching}
+                >
+                  {batchSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                  {batchSearching ? t("movies.searching") : t("movies.searchYoutube")}
+                </Button>
+                <Button
+                  onClick={runBulkPopulate}
+                  variant="outline"
+                  className="gap-2"
+                  disabled={populating}
+                >
+                  {populating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Database className="h-4 w-4" />}
+                  {populating ? t("movies.populating") : t("movies.populate20k")}
+                </Button>
+              </>
+            )}
           </div>
         </div>
 
@@ -238,11 +327,63 @@ const Movies = () => {
             <TabsTrigger value="foreign" className="gap-2">
               <Globe className="h-4 w-4" /> {t("movies.foreign")}
             </TabsTrigger>
+            <TabsTrigger value="clips" className="gap-2">
+              <Music className="h-4 w-4" /> Teledyski AI
+            </TabsTrigger>
           </TabsList>
         </Tabs>
 
-        {/* Movie Grid */}
-        {movies.length > 0 ? (
+        {/* Music Clips Grid */}
+        {activeTab === "clips" ? (
+          tracks.length > 0 ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+              {tracks.map((clip) => (
+                <motion.div
+                  key={clip.id}
+                  whileHover={{ scale: 1.03, y: -4 }}
+                  onClick={() => playClip(clip)}
+                  className="group rounded-xl overflow-hidden border border-border bg-card hover:border-primary/50 transition-colors cursor-pointer relative"
+                >
+                  <div className="aspect-video bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center relative overflow-hidden">
+                    {clip.cover_url ? (
+                      <img src={clip.cover_url} alt={clip.title} className="w-full h-full object-cover" />
+                    ) : (
+                      <Music className="h-10 w-10 text-muted-foreground/40" />
+                    )}
+                    <div className="absolute inset-0 bg-background/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      {searching === clip.id ? (
+                        <Loader2 className="h-10 w-10 text-primary animate-spin" />
+                      ) : (
+                        <Play className="h-10 w-10 text-primary fill-primary" />
+                      )}
+                    </div>
+                    {clip.video_url ? (
+                      <span className="absolute bottom-2 right-2 bg-accent text-accent-foreground text-[10px] font-bold px-2 py-0.5 rounded">▶ YT</span>
+                    ) : (
+                      <span className="absolute bottom-2 right-2 bg-primary/80 text-primary-foreground text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1">
+                        <Sparkles className="h-3 w-3" /> AI
+                      </span>
+                    )}
+                  </div>
+                  <div className="p-3">
+                    <h3 className="font-semibold text-sm truncate">{clip.title}</h3>
+                    <p className="text-xs text-muted-foreground truncate">{clip.artist}</p>
+                    {clip.genre && (
+                      <span className="text-[10px] bg-secondary text-secondary-foreground px-1.5 py-0.5 rounded mt-1 inline-block">
+                        {clip.genre}
+                      </span>
+                    )}
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12 text-muted-foreground">
+              <Music className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>Brak utworów. Wgraj coś, żeby zobaczyć teledyski AI.</p>
+            </div>
+          )
+        ) : movies.length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
             {movies.map((movie) => (
               <motion.div
@@ -354,6 +495,51 @@ const Movies = () => {
                   <p className="text-sm text-muted-foreground">{selectedMovie.description}</p>
                 </div>
               )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Music Video Modal */}
+      <AnimatePresence>
+        {selectedClip && selectedClip.video_url && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-background/90 flex items-center justify-center p-4"
+            onClick={() => setSelectedClip(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="w-full max-w-5xl bg-card rounded-2xl overflow-hidden border border-border shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between p-4 border-b border-border">
+                <div>
+                  <h2 className="font-display text-xl font-bold flex items-center gap-2">
+                    <Music className="h-5 w-5 text-primary" /> {selectedClip.title}
+                  </h2>
+                  <p className="text-sm text-muted-foreground">
+                    {selectedClip.artist}{selectedClip.genre ? ` • ${selectedClip.genre}` : ""}
+                  </p>
+                </div>
+                <Button variant="ghost" size="icon" onClick={() => setSelectedClip(null)}>
+                  <X className="h-5 w-5" />
+                </Button>
+              </div>
+              <div className="aspect-video w-full bg-black">
+                <iframe
+                  key={selectedClip.id}
+                  src={`https://www.youtube.com/embed/${getVideoId(selectedClip.video_url!)}?autoplay=1&rel=0&modestbranding=1`}
+                  className="w-full h-full"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                  title={selectedClip.title}
+                />
+              </div>
             </motion.div>
           </motion.div>
         )}

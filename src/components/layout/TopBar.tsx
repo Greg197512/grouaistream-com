@@ -20,7 +20,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { UpgradeModal } from "@/components/modals/UpgradeModal";
 import { Language } from "@/i18n/translations";
 import { useNotificationsFeed, FeedItem } from "@/hooks/useNotificationsFeed";
-import { LiveOnlineBadge } from "@/components/layout/LiveOnlineBadge";
 
 const ICONS: Record<FeedItem["icon"], React.ComponentType<{ className?: string }>> = {
   heart: Heart,
@@ -123,9 +122,6 @@ export const TopBar = () => {
             {t("topbar.signIn")}
           </Button>
         )}
-
-        {/* Live online counter */}
-        <LiveOnlineBadge />
 
         {/* Language Switcher */}
         <DropdownMenu>
