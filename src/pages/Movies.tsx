@@ -27,11 +27,21 @@ interface Movie {
   country: string | null;
 }
 
+interface TrackClip {
+  id: string;
+  title: string;
+  artist: string;
+  video_url: string | null;
+  cover_url: string | null;
+  genre: string | null;
+}
+
 const Movies = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { t } = useLanguage();
   const [movies, setMovies] = useState<Movie[]>([]);
+  const [tracks, setTracks] = useState<TrackClip[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("all");
   const [populating, setPopulating] = useState(false);
@@ -39,8 +49,10 @@ const Movies = () => {
   const [populateMsg, setPopulateMsg] = useState("");
   const [totalCount, setTotalCount] = useState(0);
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
+  const [selectedClip, setSelectedClip] = useState<TrackClip | null>(null);
   const [searching, setSearching] = useState<string | null>(null);
   const [batchSearching, setBatchSearching] = useState(false);
+  const [clipBatch, setClipBatch] = useState(false);
 
   const loadMovies = useCallback(async () => {
     setLoading(true);
