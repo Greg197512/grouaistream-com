@@ -44,19 +44,16 @@ async function searchYouTube(query: string): Promise<{ videoId: string; title: s
   }
 }
 
-function buildQuery(title: string, artist?: string | null) {
-  // Bias to AI-generated music videos (Suno / AI visualizer style)
-  const parts = [artist, title].filter(Boolean).join(" ");
-  return `${parts} AI music video suno visualizer`;
-}
-
 async function findForTrack(track: { id: string; title: string; artist?: string | null }) {
-  const base = [track.artist, track.title].filter(Boolean).join(" ");
+  const artist = (track.artist || "").trim();
+  const title = (track.title || "").trim();
+  const base = [artist, title].filter(Boolean).join(" - ");
   const queries = [
-    `${base} AI music video suno visualizer`,
-    `${base} AI generated music video`,
-    `${base} AI visualizer 4k`,
-    `${base} music video`,
+    `${base} official`,
+    `${artist} ${title}`,
+    `${artist} ${title} teledysk`,
+    `${artist} ${title} music video`,
+    `${title} ${artist}`,
   ];
   for (const q of queries) {
     const res = await searchYouTube(q);
