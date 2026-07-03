@@ -102,10 +102,13 @@ serve(async (req) => {
 
     // batch mode — fill first N tracks that have no video_url
     const batchSize = Math.min(Number(body.batchSize) || 15, 30);
-    const { data: tracks } = await supabase
+    const sunoOnly = body.sunoOnly !== false; // default true
+    let q = supabase
       .from("tracks")
       .select("id, title, artist")
-      .is("video_url", null)
+      .is("video_url", null);
+    if (sunoOnly) q = q.ilike("audio_url", "%suno%");
+    const { data: tracks } = await q
       .order("created_at", { ascending: false })
       .limit(batchSize);
 
