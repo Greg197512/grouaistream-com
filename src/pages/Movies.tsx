@@ -499,6 +499,51 @@ const Movies = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Music Video Modal */}
+      <AnimatePresence>
+        {selectedClip && selectedClip.video_url && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-background/90 flex items-center justify-center p-4"
+            onClick={() => setSelectedClip(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="w-full max-w-5xl bg-card rounded-2xl overflow-hidden border border-border shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between p-4 border-b border-border">
+                <div>
+                  <h2 className="font-display text-xl font-bold flex items-center gap-2">
+                    <Music className="h-5 w-5 text-primary" /> {selectedClip.title}
+                  </h2>
+                  <p className="text-sm text-muted-foreground">
+                    {selectedClip.artist}{selectedClip.genre ? ` • ${selectedClip.genre}` : ""}
+                  </p>
+                </div>
+                <Button variant="ghost" size="icon" onClick={() => setSelectedClip(null)}>
+                  <X className="h-5 w-5" />
+                </Button>
+              </div>
+              <div className="aspect-video w-full bg-black">
+                <iframe
+                  key={selectedClip.id}
+                  src={`https://www.youtube.com/embed/${getVideoId(selectedClip.video_url!)}?autoplay=1&rel=0&modestbranding=1`}
+                  className="w-full h-full"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                  title={selectedClip.title}
+                />
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </MainLayout>
   );
 };
