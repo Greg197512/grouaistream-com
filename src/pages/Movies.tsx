@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Film, Loader2, Database, Flag, Globe, Play, X, Search, RefreshCw } from "lucide-react";
+import { Film, Loader2, Database, Flag, Globe, Play, X, Search, RefreshCw, Music, Sparkles } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
