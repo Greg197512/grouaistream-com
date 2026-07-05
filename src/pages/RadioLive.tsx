@@ -10,6 +10,7 @@ import { FeatureGate } from "@/components/ui/FeatureGate";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { usePlayer } from "@/contexts/PlayerContext";
 
 interface RadioConfig {
@@ -845,7 +846,7 @@ const RadioLive = () => {
 
               {/* Progress */}
               <div className="h-1 w-full rounded-full bg-muted overflow-hidden">
-                <motion.div className={`h-full ${isAnnouncement ? "bg-primary" : "groove-gradient-bg"}`} style={{ width: `${progress}%` }} />
+                <motion.div className="h-full groove-gradient-bg" style={{ width: `${progress}%` }} />
               </div>
 
               {/* Volume */}
