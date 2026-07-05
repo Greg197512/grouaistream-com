@@ -2,7 +2,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { uploadToR2 } from "@/lib/r2Upload";
 import {
   MoreVertical,
   Scissors,
@@ -20,6 +23,8 @@ import {
   Radio,
   Plus,
   Loader2,
+  Search,
+  ImagePlus,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -58,6 +63,7 @@ interface Props {
   onReorder: (fromIndex: number, toIndex: number) => void;
   currentScheduleId?: string | null;
   onAddAfter?: (index: number, files: FileList) => Promise<void> | void;
+  onCoverUpdated?: () => void;
 }
 
 const TYPE_CONFIG: Record<string, { label: string; icon: typeof Music; color: string; bgColor: string }> = {
@@ -68,15 +74,56 @@ const TYPE_CONFIG: Record<string, { label: string; icon: typeof Music; color: st
   announcement: { label: "🎹 Historia muz.", icon: Radio, color: "text-amber-400", bgColor: "bg-amber-500/5" },
 };
 
-export const RadioTimeline = ({ schedule, onMove, onRemove, onReorder, currentScheduleId, onAddAfter }: Props) => {
+export const RadioTimeline = ({ schedule, onMove, onRemove, onReorder, currentScheduleId, onAddAfter, onCoverUpdated }: Props) => {
   const [clipboard, setClipboard] = useState<{ item: TrackItem; mode: "cut" | "copy" } | null>(null);
   const [cutItemId, setCutItemId] = useState<string | null>(null);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [uploadingRowIndex, setUploadingRowIndex] = useState<number | null>(null);
+  const [filter, setFilter] = useState("");
+  const [coverUploadingTrackId, setCoverUploadingTrackId] = useState<string | null>(null);
   const rowRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const rowFileInputRef = useRef<HTMLInputElement | null>(null);
   const pendingInsertIndexRef = useRef<number | null>(null);
+  const coverFileInputRef = useRef<HTMLInputElement | null>(null);
+  const pendingCoverTrackIdRef = useRef<string | null>(null);
+
+  // ── Okładka utworu: klik na miniaturę → wgraj grafikę → tracks.cover_url ──
+  const triggerCoverUpload = (trackId: string) => {
+    pendingCoverTrackIdRef.current = trackId;
+    coverFileInputRef.current?.click();
+  };
+
+  const handleCoverFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    const trackId = pendingCoverTrackIdRef.current;
+    e.target.value = "";
+    pendingCoverTrackIdRef.current = null;
+    if (!file || !trackId) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("To nie jest plik graficzny (użyj JPG/PNG/WebP)");
+      return;
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      toast.error("Grafika za duża (max 8 MB)");
+      return;
+    }
+    setCoverUploadingTrackId(trackId);
+    try {
+      const { publicUrl } = await uploadToR2({ file, folder: "covers" });
+      const { error } = await supabase
+        .from("tracks")
+        .update({ cover_url: publicUrl } as any)
+        .eq("id", trackId);
+      if (error) throw error;
+      toast.success("🖼️ Okładka ustawiona!");
+      onCoverUpdated?.();
+    } catch (err: any) {
+      toast.error("Błąd okładki: " + (err?.message || "nieznany"));
+    } finally {
+      setCoverUploadingTrackId(null);
+    }
+  };
 
   useEffect(() => {
     if (!currentScheduleId) return;
@@ -120,6 +167,18 @@ export const RadioTimeline = ({ schedule, onMove, onRemove, onReorder, currentSc
       return { ...item, startTime, endTime: cumulative, index };
     });
   }, [schedule]);
+
+  // Filtr: szybkie wyszukiwanie w programie (tytuł / artysta / typ)
+  const visibleData = useMemo(() => {
+    const q = filter.trim().toLowerCase();
+    if (!q) return timelineData;
+    return timelineData.filter((item) => {
+      const title = (item.item_type === "track" ? item.track?.title : item.custom_title) || "";
+      const artist = item.track?.artist || "";
+      const type = TYPE_CONFIG[item.item_type]?.label || item.item_type;
+      return `${title} ${artist} ${type}`.toLowerCase().includes(q);
+    });
+  }, [timelineData, filter]);
 
   const totalDuration = schedule.reduce((sum, s) => sum + getItemDuration(s), 0);
 
@@ -189,12 +248,36 @@ export const RadioTimeline = ({ schedule, onMove, onRemove, onReorder, currentSc
         className="hidden"
         onChange={handleRowFileChange}
       />
+      <input
+        ref={coverFileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleCoverFileChange}
+      />
       {/* Header */}
       <div className="flex items-center justify-between px-1 flex-wrap gap-2">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Clock className="h-4 w-4" />
           <span>Łącznie: {formatTime24h(totalDuration)}</span>
           <span className="text-xs">({schedule.length} el.)</span>
+        </div>
+        <div className="relative flex-1 min-w-[180px] max-w-[300px]">
+          <Search className="h-3.5 w-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Filtruj program..."
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            className="pl-8 h-8 text-xs"
+          />
+          {filter && (
+            <button
+              onClick={() => setFilter("")}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground text-xs"
+            >
+              ✕
+            </button>
+          )}
         </div>
         <div className="flex gap-1">
           {["track", "announcement", "jingle", "ad", "talk"].map((type) => {
@@ -219,11 +302,11 @@ export const RadioTimeline = ({ schedule, onMove, onRemove, onReorder, currentSc
       {/* Timeline Table */}
       <ScrollArea className="h-[500px] rounded-lg border border-border bg-white text-black">
         <div className="min-w-full">
-          <div className="sticky top-0 z-10 grid grid-cols-[32px_70px_55px_24px_1fr_130px_32px_40px] gap-1 bg-gray-100 px-2 py-2 text-xs font-semibold text-black border-b border-gray-300">
+          <div className="sticky top-0 z-10 grid grid-cols-[32px_70px_55px_40px_1fr_130px_32px_40px] gap-1 bg-gray-100 px-2 py-2 text-xs font-semibold text-black border-b border-gray-300">
             <span>#</span>
             <span>Start</span>
             <span>Czas</span>
-            <span></span>
+            <span title="Okładka — kliknij, by wgrać grafikę">🖼️</span>
             <span>Nazwa</span>
             <span>Opis</span>
             <span></span>
@@ -231,7 +314,7 @@ export const RadioTimeline = ({ schedule, onMove, onRemove, onReorder, currentSc
           </div>
 
           <div className="divide-y divide-gray-200">
-            {timelineData.map((item) => {
+            {visibleData.map((item) => {
               const itemType = item.item_type || "track";
               const cfg = TYPE_CONFIG[itemType] || TYPE_CONFIG.track;
               const Icon = cfg.icon;
@@ -246,7 +329,7 @@ export const RadioTimeline = ({ schedule, onMove, onRemove, onReorder, currentSc
                   onDragOver={(e) => handleDragOver(e, item.index)}
                   onDrop={() => handleDrop(item.index)}
                   onDragEnd={handleDragEnd}
-                  className={`grid grid-cols-[32px_70px_55px_24px_1fr_130px_32px_40px] gap-1 items-center px-2 py-1.5 text-sm transition-all cursor-grab active:cursor-grabbing group text-black
+                  className={`grid grid-cols-[32px_70px_55px_40px_1fr_130px_32px_40px] gap-1 items-center px-2 py-1.5 text-sm transition-all cursor-grab active:cursor-grabbing group text-black
                     ${isCurrent ? "bg-orange-400 !text-black ring-2 ring-inset ring-orange-600 shadow-[0_0_20px_rgba(249,115,22,0.6)] relative z-[1]" : cutItemId === item.id ? "opacity-40 bg-red-100" : "hover:bg-gray-100"}
                     ${dragOverIndex === item.index ? "bg-orange-100 border-l-2 border-orange-500" : ""}
                     ${dragIndex === item.index ? "opacity-50" : ""}
@@ -261,7 +344,29 @@ export const RadioTimeline = ({ schedule, onMove, onRemove, onReorder, currentSc
 
                   <span className={`text-xs font-mono ${isCurrent ? "text-black" : "text-gray-600"}`}>{formatDuration(getItemDuration(item))}</span>
 
-                  <Icon className={`h-3.5 w-3.5 shrink-0 ${isCurrent ? "text-black" : cfg.color}`} />
+                  {itemType === "track" && item.track ? (
+                    <button
+                      type="button"
+                      title={item.track.cover_url ? "Kliknij, by zmienić okładkę" : "Kliknij, by wgrać okładkę"}
+                      onClick={(e) => { e.stopPropagation(); triggerCoverUpload(item.track!.id); }}
+                      disabled={coverUploadingTrackId !== null}
+                      className="relative h-8 w-8 shrink-0 rounded overflow-hidden border border-gray-300 bg-gray-50 hover:ring-2 hover:ring-orange-400 transition-all"
+                    >
+                      {coverUploadingTrackId === item.track.id ? (
+                        <span className="flex h-full w-full items-center justify-center">
+                          <Loader2 className="h-4 w-4 animate-spin text-orange-500" />
+                        </span>
+                      ) : item.track.cover_url ? (
+                        <img src={item.track.cover_url} alt="" className="h-full w-full object-cover" loading="lazy" />
+                      ) : (
+                        <span className="flex h-full w-full items-center justify-center">
+                          <ImagePlus className="h-4 w-4 text-gray-400" />
+                        </span>
+                      )}
+                    </button>
+                  ) : (
+                    <Icon className={`h-3.5 w-3.5 shrink-0 justify-self-center ${isCurrent ? "text-black" : cfg.color}`} />
+                  )}
 
                   <p className={`text-sm truncate flex items-center gap-1.5 ${isCurrent ? "font-bold text-black" : "font-medium text-black"}`}>
                     {item.lang && item.item_type === "announcement" && (
@@ -326,6 +431,11 @@ export const RadioTimeline = ({ schedule, onMove, onRemove, onReorder, currentSc
                 </div>
               );
             })}
+            {visibleData.length === 0 && filter && (
+              <p className="text-sm text-gray-500 text-center py-8">
+                Brak wyników dla „{filter}"
+              </p>
+            )}
           </div>
         </div>
       </ScrollArea>

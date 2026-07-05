@@ -87,6 +87,16 @@ export const RadioStationManager = () => {
   const [currentScheduleId, setCurrentScheduleId] = useState<string | null>(null);
   const [recentDays, setRecentDays] = useState(2);
   const [addingRecent, setAddingRecent] = useState(false);
+  const [stationNameDraft, setStationNameDraft] = useState<string | null>(null);
+
+  const commitStationName = async () => {
+    if (stationNameDraft === null || !config) return;
+    const trimmed = stationNameDraft.trim();
+    setStationNameDraft(null);
+    if (!trimmed || trimmed === config.station_name) return;
+    await updateConfig({ station_name: trimmed });
+    toast.success(`Nazwa stacji: „${trimmed}"`);
+  };
 
   const addRecentTracks = async () => {
     const days = Math.max(1, Math.min(30, Math.floor(recentDays) || 2));
@@ -322,11 +332,11 @@ export const RadioStationManager = () => {
   };
 
   const addTrackToScheduleFirst = async (track: any) => {
-    // Shift all existing items down by 1
-    const updates = schedule.map((s) =>
-      supabase.from("radio_schedule").update({ position: s.position + 1 } as any).eq("id", s.id)
-    );
-    await Promise.all(updates);
+    // Przesuń wszystkie w dół o 1 — jedno hurtowe zapytanie
+    if (schedule.length > 0) {
+      const rows = schedule.map((s) => ({ id: s.id, position: s.position + 1 }));
+      await supabase.from("radio_schedule").upsert(rows as any, { onConflict: "id" });
+    }
     const { error } = await supabase.from("radio_schedule").insert({
       track_id: track.id,
       position: 0,
@@ -400,13 +410,14 @@ export const RadioStationManager = () => {
           toast.error(`Błąd zapisu: ${file.name}`);
           continue;
         }
-        // Shift everyone after anchor down by 1, then insert at anchor.position + offset
+        // Przesuń wszystko za kotwicą o 1 w dół — jedno hurtowe zapytanie
         const shiftTargets = fresh.slice(afterIndex + 1);
-        await Promise.all(
-          shiftTargets.map((s) =>
-            supabase.from("radio_schedule").update({ position: s.position + 1 } as any).eq("id", s.id)
-          )
-        );
+        if (shiftTargets.length > 0) {
+          await supabase.from("radio_schedule").upsert(
+            shiftTargets.map((s) => ({ id: s.id, position: s.position + 1 })) as any,
+            { onConflict: "id" }
+          );
+        }
         const newPos = anchor.position + offset;
         const { error: schedErr } = await supabase.from("radio_schedule").insert({
           track_id: trackData.id,
@@ -483,11 +494,17 @@ export const RadioStationManager = () => {
     const [moved] = newSchedule.splice(fromIndex, 1);
     newSchedule.splice(toIndex, 0, moved);
 
-    // Update all positions
-    const updates = newSchedule.map((item, i) =>
-      supabase.from("radio_schedule").update({ position: i } as any).eq("id", item.id)
-    );
-    await Promise.all(updates);
+    // Jedno hurtowe zapytanie zamiast setek pojedynczych — natychmiastowa reakcja
+    const rows = newSchedule
+      .map((item, i) => ({ id: item.id, position: i }))
+      .filter((r, i) => newSchedule[i].position !== r.position);
+    if (rows.length > 0) {
+      const { error } = await supabase.from("radio_schedule").upsert(rows as any, { onConflict: "id" });
+      if (error) {
+        toast.error("Błąd zmiany kolejności: " + error.message);
+        return;
+      }
+    }
     fetchData();
   };
 
@@ -560,9 +577,15 @@ export const RadioStationManager = () => {
             <div>
               <Label>Nazwa stacji</Label>
               <Input
-                value={config?.station_name || ""}
-                onChange={(e) => updateConfig({ station_name: e.target.value })}
+                value={stationNameDraft ?? config?.station_name ?? ""}
+                onChange={(e) => setStationNameDraft(e.target.value)}
+                onBlur={commitStationName}
+                onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+                placeholder="np. Groua Radio"
               />
+              {stationNameDraft !== null && stationNameDraft.trim() !== config?.station_name && (
+                <p className="text-[11px] text-orange-400 mt-1">Naciśnij Enter lub kliknij obok, by zapisać</p>
+              )}
             </div>
             <div>
               <Label>Tryb</Label>
@@ -842,6 +865,7 @@ export const RadioStationManager = () => {
               onReorder={reorderTrack}
               currentScheduleId={currentScheduleId}
               onAddAfter={addTrackAfterIndex}
+              onCoverUpdated={fetchData}
             />
           )}
         </CardContent>
