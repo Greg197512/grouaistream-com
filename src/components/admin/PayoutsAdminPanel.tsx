@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, Copy, AlertTriangle, Wallet, CreditCard, ShieldAlert } from "lucide-react";
+import { Loader2, Copy, AlertTriangle, Wallet, CreditCard, ShieldAlert, Check } from "lucide-react";
 import { toast } from "sonner";
 
 type PaymentRow = {
@@ -53,6 +53,7 @@ export default function PayoutsAdminPanel() {
   const [payments, setPayments] = useState<PaymentRow[]>([]);
   const [payouts, setPayouts] = useState<PayoutRow[]>([]);
   const [fraud, setFraud] = useState<FraudRow[]>([]);
+  const [markingPaid, setMarkingPaid] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -73,6 +74,26 @@ export default function PayoutsAdminPanel() {
 
   const totalDue = payouts.reduce((s, r) => s + Number(r.balance || 0), 0);
   const readyToPay = payouts.filter((p) => p.bank_account);
+
+  const markPaid = async (r: PayoutRow) => {
+    const amount = Number(r.balance);
+    if (!confirm(`Oznaczyć jako wypłacone ${amount.toFixed(2)} € dla ${r.display_name || r.user_id.slice(0, 8)}?\n\nLicznik u twórcy zostanie wyzerowany.`)) return;
+    setMarkingPaid(r.user_id);
+    const { error } = await supabase.from("payout_requests").insert({
+      user_id: r.user_id,
+      amount,
+      status: "completed",
+      processed_at: new Date().toISOString(),
+    });
+    setMarkingPaid(null);
+    if (error) {
+      toast.error("Błąd: " + error.message);
+      return;
+    }
+    toast.success(`Wypłacono ${amount.toFixed(2)} € — licznik wyzerowany`);
+    load();
+  };
+
 
   return (
     <div className="space-y-4">
@@ -139,6 +160,7 @@ export default function PayoutsAdminPanel() {
                       <th className="text-right p-3">Saldo</th>
                       <th className="text-left p-3">Dane do przelewu</th>
                       <th className="text-left p-3">Ostatnia prośba</th>
+                      <th className="text-right p-3">Akcja</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -180,11 +202,26 @@ export default function PayoutsAdminPanel() {
                             "—"
                           )}
                         </td>
+                        <td className="p-3 text-right">
+                          <Button
+                            size="sm"
+                            disabled={!r.bank_account || markingPaid === r.user_id}
+                            onClick={() => markPaid(r)}
+                            className="bg-emerald-500 hover:bg-emerald-600 text-white gap-1"
+                          >
+                            {markingPaid === r.user_id ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <Check className="h-3 w-3" />
+                            )}
+                            Wypłacone
+                          </Button>
+                        </td>
                       </tr>
                     ))}
                     {!payouts.length && (
                       <tr>
-                        <td colSpan={6} className="p-8 text-center text-muted-foreground">
+                        <td colSpan={7} className="p-8 text-center text-muted-foreground">
                           🎉 Nikt nie czeka na wypłatę
                         </td>
                       </tr>
@@ -195,6 +232,7 @@ export default function PayoutsAdminPanel() {
             </CardContent>
           </Card>
         </TabsContent>
+
 
         {/* PAYMENTS */}
         <TabsContent value="payments">
