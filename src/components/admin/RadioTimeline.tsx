@@ -259,7 +259,10 @@ export const RadioTimeline = ({ schedule, onMove, onRemove, onReorder, currentSc
       <div className="flex items-center justify-between px-1 flex-wrap gap-2">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Clock className="h-4 w-4" />
-          <span>Łącznie: {formatTime24h(totalDuration)}</span>
+          <span>
+            Łącznie: {totalDuration >= 86400 ? `${Math.floor(totalDuration / 86400)}d ` : ""}
+            {formatTime24h(totalDuration)}
+          </span>
           <span className="text-xs">({schedule.length} el.)</span>
         </div>
         <div className="relative flex-1 min-w-[180px] max-w-[300px]">
