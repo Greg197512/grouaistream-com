@@ -418,3 +418,46 @@
   border-width: 2px;
   animation: radio-neon-pulse 6.5s ease-in-out infinite;
 }
+
+/* ===== Radio now-playing image — orbitujący neonowy pierścień ===== */
+@keyframes radio-neon-spin {
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to   { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+.radio-neon-orbit {
+  position: relative;
+  border-radius: 1rem;
+  overflow: hidden;
+  z-index: 0;
+}
+
+.radio-neon-orbit::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 200%;
+  height: 200%;
+  transform: translate(-50%, -50%);
+  background: conic-gradient(
+    from 0deg,
+    transparent 0% 65%,
+    rgba(255, 138, 0, 0.95) 75%,
+    rgba(255, 179, 71, 1) 85%,
+    rgba(255, 138, 0, 0.95) 95%,
+    transparent 100%
+  );
+  animation: radio-neon-spin 5s linear infinite;
+  filter: blur(1px);
+  z-index: 0;
+}
+
+.radio-neon-orbit-inner {
+  position: relative;
+  z-index: 1;
+  margin: 2px;
+  background: black;
+  border-radius: calc(1rem - 2px);
+  overflow: hidden;
+}
