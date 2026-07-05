@@ -62,6 +62,7 @@ const CreatorEarnings = () => {
   const [loading, setLoading] = useState(true);
   const [boostTrack, setBoostTrack] = useState<{ id: string; title: string } | null>(null);
   const [payouts, setPayouts] = useState<PayoutRequest[]>([]);
+  const [hasBankAccount, setHasBankAccount] = useState<boolean | null>(null);
   const [requestingPayout, setRequestingPayout] = useState(false);
   const [payoutModalOpen, setPayoutModalOpen] = useState(false);
   const [uploadCount, setUploadCount] = useState(0);
