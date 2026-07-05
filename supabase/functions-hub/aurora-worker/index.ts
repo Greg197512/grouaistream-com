@@ -46,34 +46,52 @@ const SERVICE_PROMPTS: Record<string, string> = {
 async function generateDeliverable(cfg: Record<string, string>, serviceType: string, brief: string, extra: unknown) {
   const key = cfg["openrouter_api_key"];
   if (!key) throw new Error("hub_ai_key_missing");
-  const model = cfg["openrouter_model"] || "google/gemini-2.5-flash";
-  const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${key}`,
-      "Content-Type": "application/json",
-      "HTTP-Referer": "https://grouaistream.com",
-      "X-Title": "GrouAI Hub Worker",
-    },
-    body: JSON.stringify({
-      model,
-      messages: [
-        { role: "system", content: SERVICE_PROMPTS[serviceType] ?? SERVICE_PROMPTS.other },
-        {
-          role: "user",
-          content: `BRIEF KLIENTA:\n${brief}\n\nDODATKOWY KONTEKST (JSON):\n${JSON.stringify(extra ?? {}).slice(0, 3000)}`,
+  // Łańcuch modeli: pierwszy działający wygrywa (odporność na limity darmowych modeli)
+  const models = (cfg["openrouter_models"] || cfg["openrouter_model"] || "google/gemini-2.5-flash")
+    .split(",").map((m) => m.trim()).filter(Boolean);
+  let lastErr = "";
+  for (const model of models) {
+    try {
+      const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${key}`,
+          "Content-Type": "application/json",
+          "HTTP-Referer": "https://grouaistream.com",
+          "X-Title": "GrouAI Hub Worker",
         },
-      ],
-    }),
-  });
-  if (!res.ok) {
-    const t = await res.text().catch(() => "");
-    throw new Error(`openrouter_${res.status}: ${t.slice(0, 200)}`);
+        body: JSON.stringify({
+          model,
+          messages: [
+            { role: "system", content: SERVICE_PROMPTS[serviceType] ?? SERVICE_PROMPTS.other },
+            {
+              role: "user",
+              content: `BRIEF KLIENTA:\n${brief}\n\nDODATKOWY KONTEKST (JSON):\n${JSON.stringify(extra ?? {}).slice(0, 3000)}`,
+            },
+          ],
+        }),
+      });
+      if (!res.ok) {
+        const t = await res.text().catch(() => "");
+        lastErr = `openrouter_${res.status} [${model}]: ${t.slice(0, 150)}`;
+        continue;
+      }
+      const out = await res.json();
+      if (out.error) {
+        lastErr = `openrouter [${model}]: ${JSON.stringify(out.error).slice(0, 150)}`;
+        continue;
+      }
+      const content: string = out.choices?.[0]?.message?.content ?? "";
+      if (!content.trim()) {
+        lastErr = `openrouter_empty_response [${model}]`;
+        continue;
+      }
+      return { content, model, usage: out.usage ?? null };
+    } catch (e) {
+      lastErr = `openrouter_fetch [${model}]: ${String(e).slice(0, 120)}`;
+    }
   }
-  const out = await res.json();
-  const content: string = out.choices?.[0]?.message?.content ?? "";
-  if (!content.trim()) throw new Error("openrouter_empty_response");
-  return { content, model, usage: out.usage ?? null };
+  throw new Error(lastErr || "openrouter_all_models_failed");
 }
 
 async function postCallback(url: string, body: Record<string, unknown>) {

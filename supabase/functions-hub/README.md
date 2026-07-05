@@ -11,7 +11,7 @@ Adres bazowy: `https://bmwtydwpevzhbdplilbr.supabase.co/functions/v1`
 
 | Funkcja | Co robi | Zastępuje w n8n |
 |---|---|---|
-| `aurora-worker` | Wykonuje zlecenia Aurory (audyt SEO, teksty, landing, social, automatyzacje, lead research) przez OpenRouter i raportuje wynik do `aurora-n8n-callback` na LIVE. Kopia wyniku w `hub_deliverables`. | wszyscy „pracownicy" (Marek, Lena, Kuba, Mia, Tomek, Ola) |
+| `aurora-worker` | Wykonuje zlecenia Aurory (audyt SEO, teksty, landing, social, automatyzacje, lead research) przez OpenRouter (łańcuch modeli z fallbackiem) i raportuje wynik do `aurora-n8n-callback` na LIVE. Kopia wyniku w `hub_deliverables`. Przetestowany E2E 2026-07-05. | wszyscy „pracownicy" (Marek, Lena, Kuba, Mia, Tomek, Ola) |
 | `social-distribution` | Odbiera pakiet z `marketing-autopilot`, publikuje na Telegram/Discord (gdy skonfigurowane w `hub_config`), raportuje do `marketing-callback`. Bez kanałów: kolejkuje w `hub_social_queue` i zwraca 503. | workflow social-distribution |
 | `newsfeed-fetcher` | Co 2h pobiera RSS (MBW, Pitchfork, TechCrunch AI, HN), deduplikuje, zapisuje w `hub_news_items`; gdy ustawiony `bvstv_ingest_token` — pcha do Mózgu (`brain-newsfeed-ingest`). | cron RSS → Mózg |
 | `radio-autopilot` | Co 30 min sprawdza strumień Groua Radio (info + m3u8), loguje do `hub_radio_log`, alarmuje na Telegram przy awarii. | stróż radia (zaległy deploy na hkbra) |
@@ -31,8 +31,9 @@ Adres bazowy: `https://bmwtydwpevzhbdplilbr.supabase.co/functions/v1`
 | klucz | znaczenie |
 |---|---|
 | `hub_token` | token autoryzujący wywołania funkcji (`?t=...`) — USTAWIONY |
-| `openrouter_api_key` | klucz OpenRouter — **PUSTY, do uzupełnienia** (bez niego aurora-worker zwraca 503) |
-| `openrouter_model` | domyślnie `google/gemini-2.5-flash` |
+| `openrouter_api_key` | klucz OpenRouter — **USTAWIONY 2026-07-05** (klucz „grouai-hub" z konta Grega) |
+| `openrouter_models` | łańcuch modeli z fallbackiem; przy 0 kredytów działa na modelach `:free` (Nemotron 550B → gpt-oss-120b → Llama 3.3 70B → Hermes 405B); po doładowaniu kredytów warto dopisać na początek płatny model |
+| `openrouter_model` | pojedynczy model zapasowy (legacy) |
 | `bvstv_url` | URL projektu LIVE |
 | `bvstv_ingest_token` | token z panelu admina (AI Builder / n8n boty) do pchania newsów do Mózgu — pusty |
 | `telegram_bot_token` + `telegram_chat_id` | kanał publikacji social + alarmy radia — puste |
