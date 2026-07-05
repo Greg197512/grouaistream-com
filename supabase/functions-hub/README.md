@@ -15,7 +15,11 @@ Adres bazowy: `https://bmwtydwpevzhbdplilbr.supabase.co/functions/v1`
 | `social-distribution` | Odbiera pakiet z `marketing-autopilot`, publikuje na Telegram/Discord (gdy skonfigurowane w `hub_config`), raportuje do `marketing-callback`. Bez kanałów: kolejkuje w `hub_social_queue` i zwraca 503. | workflow social-distribution |
 | `newsfeed-fetcher` | Co 2h pobiera RSS (MBW, Pitchfork, TechCrunch AI, HN), deduplikuje, zapisuje w `hub_news_items`; gdy ustawiony `bvstv_ingest_token` — pcha do Mózgu (`brain-newsfeed-ingest`). | cron RSS → Mózg |
 | `radio-autopilot` | Co 30 min sprawdza strumień Groua Radio (info + m3u8), loguje do `hub_radio_log`, alarmuje na Telegram przy awarii. | stróż radia (zaległy deploy na hkbra) |
+| `capture-lead` | Publiczny formularz lead-gen (Google Ads). RODO: zapis TYLKO za zgodą; łapie gclid+utm; mail powitalny przez grouarock.com; B2B odpala Aurorę. Zapis do `hub_leads`. | — (nowy, lead-gen) |
+| `hub-leads` | Podgląd leadów + eksport CSV / Customer Match (auth `?t=hub_token`). | — |
 | `hub-status` | Publiczny JSON ze zdrowiem huba (bez sekretów). | — |
+
+**Landingi Google Ads** (statyczne, `public/lp/`): `firma.html` (B2B), `artysta.html`, `sluchaj.html` + wspólne `lead.js`/`lead.css`. Serwowane przez Vercel. Pełny plan kampanii: `GOOGLE_ADS_PLAN.md`.
 
 ## Harmonogram (pg_cron na hubie)
 
