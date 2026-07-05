@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, Copy, AlertTriangle, Wallet, CreditCard, ShieldAlert } from "lucide-react";
+import { Loader2, Copy, AlertTriangle, Wallet, CreditCard, ShieldAlert, Check } from "lucide-react";
 import { toast } from "sonner";
 
 type PaymentRow = {
