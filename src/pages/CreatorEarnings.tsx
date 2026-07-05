@@ -675,13 +675,39 @@ const CreatorEarnings = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            {(() => {
+              const totalCredited = totalEarnings + bonusPayoutFallback;
+              const reserved = payouts.filter(p => p.status !== "rejected").reduce((s, p) => s + Number(p.amount), 0);
+              const available = Math.max(0, totalCredited - reserved);
+              const showBankCta = hasBankAccount === false && available >= 15;
+              return showBankCta ? (
+                <div className="rounded-xl border border-amber-500/40 bg-gradient-to-br from-amber-500/15 to-orange-500/10 p-4 flex items-start gap-3">
+                  <Wallet className="h-5 w-5 text-amber-400 shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-amber-200">
+                      Masz {available.toFixed(2)} € do wypłaty 🎉
+                    </p>
+                    <p className="text-xs text-amber-100/80 mt-0.5">
+                      Dodaj swój numer konta, żebyśmy mogli przelać Ci pieniądze.
+                    </p>
+                  </div>
+                  <Button
+                    size="sm"
+                    onClick={() => setPayoutModalOpen(true)}
+                    className="bg-amber-500 hover:bg-amber-600 text-black font-semibold"
+                  >
+                    Dodaj konto
+                  </Button>
+                </div>
+              ) : null;
+            })()}
+
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">{t("earnings.availableForPayout")}</p>
                 <p className="text-xl font-bold text-primary">
                   {(() => {
-                    // Combined balance = tracks earnings + standalone bonuses (in case user has no own tracks)
-                     const totalCredited = totalEarnings + bonusPayoutFallback;
+                    const totalCredited = totalEarnings + bonusPayoutFallback;
                     const reserved = payouts.filter(p => p.status !== "rejected").reduce((s, p) => s + Number(p.amount), 0);
                     return Math.max(0, totalCredited - reserved).toFixed(2);
                   })()} €
@@ -702,6 +728,7 @@ const CreatorEarnings = () => {
                 {t("earnings.requestPayout")}
               </Button>
             </div>
+
 
             {payouts.length > 0 && (
               <div className="space-y-2 pt-2">
