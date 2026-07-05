@@ -385,3 +385,36 @@
     100% { transform: translate(var(--drift, 0px), -100%) scale(0.3); opacity: 0; }
   }
 }
+
+/* Radio now-playing frame — occasional orange neon border pulse */
+@keyframes radio-neon-pulse {
+  0%, 82%, 100% {
+    border-color: hsl(var(--border) / 0.5);
+    box-shadow: 0 0 0 0 rgba(255, 138, 0, 0);
+  }
+  87% {
+    border-color: #ff8a00;
+    box-shadow:
+      0 0 14px 2px rgba(255, 138, 0, 0.55),
+      0 0 32px 6px rgba(255, 90, 0, 0.35),
+      inset 0 0 18px rgba(255, 138, 0, 0.25);
+  }
+  92% {
+    border-color: #ffb347;
+    box-shadow:
+      0 0 22px 4px rgba(255, 138, 0, 0.75),
+      0 0 48px 10px rgba(255, 90, 0, 0.45),
+      inset 0 0 26px rgba(255, 138, 0, 0.35);
+  }
+  97% {
+    border-color: #ff8a00;
+    box-shadow:
+      0 0 14px 2px rgba(255, 138, 0, 0.4),
+      0 0 24px 4px rgba(255, 90, 0, 0.2),
+      inset 0 0 14px rgba(255, 138, 0, 0.15);
+  }
+}
+.radio-neon-pulse {
+  border-width: 2px;
+  animation: radio-neon-pulse 6.5s ease-in-out infinite;
+}
