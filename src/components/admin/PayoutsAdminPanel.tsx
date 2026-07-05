@@ -75,6 +75,26 @@ export default function PayoutsAdminPanel() {
   const totalDue = payouts.reduce((s, r) => s + Number(r.balance || 0), 0);
   const readyToPay = payouts.filter((p) => p.bank_account);
 
+  const markPaid = async (r: PayoutRow) => {
+    const amount = Number(r.balance);
+    if (!confirm(`Oznaczyć jako wypłacone ${amount.toFixed(2)} € dla ${r.display_name || r.user_id.slice(0, 8)}?\n\nLicznik u twórcy zostanie wyzerowany.`)) return;
+    setMarkingPaid(r.user_id);
+    const { error } = await supabase.from("payout_requests").insert({
+      user_id: r.user_id,
+      amount,
+      status: "completed",
+      processed_at: new Date().toISOString(),
+    });
+    setMarkingPaid(null);
+    if (error) {
+      toast.error("Błąd: " + error.message);
+      return;
+    }
+    toast.success(`Wypłacono ${amount.toFixed(2)} € — licznik wyzerowany`);
+    load();
+  };
+
+
   return (
     <div className="space-y-4">
       <div className="grid gap-4 md:grid-cols-3">
