@@ -41,8 +41,10 @@ const RadioEmbed = () => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const silentTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Embed uses the same raw schedule as admin and /radio-live, no filtering or reordering.
-  const schedule = useMemo(() => rawSchedule, [rawSchedule]);
+  const schedule = useMemo(
+    () => rawSchedule.filter((item) => (item.item_type === "track" || !item.item_type) && !!item.track?.audio_url),
+    [rawSchedule]
+  );
 
   useEffect(() => {
     const fetchData = async () => {
