@@ -53,6 +53,7 @@ export default function PayoutsAdminPanel() {
   const [payments, setPayments] = useState<PaymentRow[]>([]);
   const [payouts, setPayouts] = useState<PayoutRow[]>([]);
   const [fraud, setFraud] = useState<FraudRow[]>([]);
+  const [markingPaid, setMarkingPaid] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
