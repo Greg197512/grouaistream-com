@@ -139,6 +139,7 @@ export default function PayoutsAdminPanel() {
                       <th className="text-right p-3">Saldo</th>
                       <th className="text-left p-3">Dane do przelewu</th>
                       <th className="text-left p-3">Ostatnia prośba</th>
+                      <th className="text-right p-3">Akcja</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -180,11 +181,26 @@ export default function PayoutsAdminPanel() {
                             "—"
                           )}
                         </td>
+                        <td className="p-3 text-right">
+                          <Button
+                            size="sm"
+                            disabled={!r.bank_account || markingPaid === r.user_id}
+                            onClick={() => markPaid(r)}
+                            className="bg-emerald-500 hover:bg-emerald-600 text-white gap-1"
+                          >
+                            {markingPaid === r.user_id ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <Check className="h-3 w-3" />
+                            )}
+                            Wypłacone
+                          </Button>
+                        </td>
                       </tr>
                     ))}
                     {!payouts.length && (
                       <tr>
-                        <td colSpan={6} className="p-8 text-center text-muted-foreground">
+                        <td colSpan={7} className="p-8 text-center text-muted-foreground">
                           🎉 Nikt nie czeka na wypłatę
                         </td>
                       </tr>
@@ -195,6 +211,7 @@ export default function PayoutsAdminPanel() {
             </CardContent>
           </Card>
         </TabsContent>
+
 
         {/* PAYMENTS */}
         <TabsContent value="payments">
