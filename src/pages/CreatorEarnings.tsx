@@ -160,6 +160,15 @@ const CreatorEarnings = () => {
       setPayouts(payoutData as PayoutRequest[]);
     }
 
+    // Bank account on file?
+    const { data: bankData } = await supabase
+      .from("payout_details")
+      .select("id")
+      .eq("user_id", user.id)
+      .limit(1);
+    setHasBankAccount(!!bankData && bankData.length > 0);
+
+
     // Milestone bonus progress
     const { count: trackCount } = await supabase
       .from("tracks")
