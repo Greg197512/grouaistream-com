@@ -813,10 +813,14 @@ const RadioLive = () => {
 
         {/* Now Playing */}
         {currentItem && (
-          <div className="rounded-2xl overflow-hidden border bg-card transition-all border-border/50 radio-neon-pulse">
+          <div className="rounded-2xl overflow-hidden border bg-card transition-all border-border/50">
             <div className="h-1 w-full groove-gradient-bg" />
             {currentCover ? (
-              <img src={currentCover} alt={currentTitle} className="w-full aspect-square object-contain bg-black" />
+              <div className="radio-neon-orbit">
+                <div className="radio-neon-orbit-inner">
+                  <img src={currentCover} alt={currentTitle} className="w-full aspect-square object-contain bg-black" />
+                </div>
+              </div>
             ) : null}
             <div className="p-4 space-y-3">
               <div className="flex items-start justify-between gap-2">
