@@ -61,6 +61,7 @@ import { TopEarners } from "@/components/admin/TopEarners";
 import { Radio as RadioIcon, HardDrive, Award, DollarSign, Megaphone } from "lucide-react";
 import { MarqueeManager } from "@/components/admin/MarqueeManager";
 import { BonusMonitor } from "@/components/admin/BonusMonitor";
+import PayoutsAdminPanel from "@/components/admin/PayoutsAdminPanel";
 import { FinancialOverview } from "@/components/admin/FinancialOverview";
 import { TipsOverview } from "@/components/admin/TipsOverview";
 import { OperationalCosts } from "@/components/admin/OperationalCosts";
