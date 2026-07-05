@@ -803,6 +803,11 @@ export default function Admin() {
                 <BreakEvenPanel />
               </TabsContent>
 
+              {/* Payouts Admin & Fraud */}
+              <TabsContent value="payouts-admin">
+                <PayoutsAdminPanel />
+              </TabsContent>
+
               {/* Bonuses & Payouts Tab */}
               <TabsContent value="bonuses">
                 <BonusMonitor />
