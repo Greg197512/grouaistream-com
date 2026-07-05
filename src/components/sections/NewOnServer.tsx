@@ -370,15 +370,14 @@ export const NewOnServer = () => {
                       )}
                     </div>
 
-                    {/* NEW badge */}
-                    <div className="absolute top-2 left-2">
+                    {/* NEW badge — small blinking blue */}
+                    <div className="absolute top-2 left-2 pointer-events-none">
                       <motion.span
-                        initial={{ scale: 0.8, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        transition={{ delay: i * 0.09 + 0.2 }}
-                        className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary text-primary-foreground uppercase tracking-wider"
+                        animate={{ opacity: [1, 0.35, 1] }}
+                        transition={{ duration: 1.1, repeat: Infinity, ease: "easeInOut" }}
+                        className="font-display text-[9px] font-extrabold italic tracking-[0.2em] px-1.5 py-[2px] rounded-[3px] bg-[#00A3FF] text-white shadow-[0_0_8px_#00A3FF,0_0_14px_rgba(0,163,255,0.6)]"
                       >
-                        New
+                        NEW
                       </motion.span>
                     </div>
 
