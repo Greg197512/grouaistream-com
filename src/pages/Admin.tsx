@@ -61,6 +61,7 @@ import { TopEarners } from "@/components/admin/TopEarners";
 import { Radio as RadioIcon, HardDrive, Award, DollarSign, Megaphone } from "lucide-react";
 import { MarqueeManager } from "@/components/admin/MarqueeManager";
 import { BonusMonitor } from "@/components/admin/BonusMonitor";
+import PayoutsAdminPanel from "@/components/admin/PayoutsAdminPanel";
 import { FinancialOverview } from "@/components/admin/FinancialOverview";
 import { TipsOverview } from "@/components/admin/TipsOverview";
 import { OperationalCosts } from "@/components/admin/OperationalCosts";
@@ -707,6 +708,10 @@ export default function Admin() {
                   <TrendingUp className="h-4 w-4" />
                   Break-even 💰
                 </TabsTrigger>
+                <TabsTrigger value="payouts-admin" className="gap-2">
+                  <DollarSign className="h-4 w-4" />
+                  Wypłaty & Fraud 💸
+                </TabsTrigger>
                 <TabsTrigger value="bonuses" className="gap-2">
                   <DollarSign className="h-4 w-4" />
                   Bonusy & Wypłaty
@@ -797,6 +802,11 @@ export default function Admin() {
               {/* Break-even Tab */}
               <TabsContent value="break-even">
                 <BreakEvenPanel />
+              </TabsContent>
+
+              {/* Payouts Admin & Fraud */}
+              <TabsContent value="payouts-admin">
+                <PayoutsAdminPanel />
               </TabsContent>
 
               {/* Bonuses & Payouts Tab */}

@@ -7042,6 +7042,48 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_ip_fraud: {
+        Args: { _min_accounts?: number }
+        Returns: {
+          account_count: number
+          display_names: string[]
+          earnings_total: number
+          emails: string[]
+          ip_address: string
+          last_seen: string
+          user_ids: string[]
+        }[]
+      }
+      admin_payments_feed: {
+        Args: { _limit?: number }
+        Returns: {
+          amount: number
+          created_at: string
+          currency: string
+          kind: string
+          payer_id: string
+          payer_name: string
+          product: string
+          recipient_id: string
+          recipient_name: string
+          ref_id: string
+        }[]
+      }
+      admin_payouts_due: {
+        Args: { _min_amount?: number }
+        Returns: {
+          balance: number
+          bank_account: string
+          city: string
+          display_name: string
+          full_name: string
+          last_request_at: string
+          last_request_status: string
+          total_earned: number
+          total_paid: number
+          user_id: string
+        }[]
+      }
       admin_remove_ad_campaign: {
         Args: { _campaign_id: string }
         Returns: Json
