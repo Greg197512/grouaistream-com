@@ -707,6 +707,10 @@ export default function Admin() {
                   <TrendingUp className="h-4 w-4" />
                   Break-even 💰
                 </TabsTrigger>
+                <TabsTrigger value="payouts-admin" className="gap-2">
+                  <DollarSign className="h-4 w-4" />
+                  Wypłaty & Fraud 💸
+                </TabsTrigger>
                 <TabsTrigger value="bonuses" className="gap-2">
                   <DollarSign className="h-4 w-4" />
                   Bonusy & Wypłaty
