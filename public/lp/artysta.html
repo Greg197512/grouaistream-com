@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zarabiaj na uczciwym streamingu — wgraj muzykę do GrouAI Stream</title>
+<meta name="description" content="Streaming bez botów i fałszywych odsłuchań. Realne wypłaty za prawdziwych fanów, radio 24/7 w autach i Teslach. Dołącz jako artysta.">
+<meta name="robots" content="noindex">
+<link rel="icon" href="/favicon.png">
+<link rel="stylesheet" href="/lp/lead.css">
+</head>
+<body>
+<div class="wrap">
+  <div class="brand"><span class="dot"></span> GrouAI Stream <b>· dla artystów</b></div>
+  <div class="hero">
+    <div>
+      <span class="badge">Zero botów · realne wypłaty</span>
+      <h1>Zarabiaj na <span class="g">uczciwym streamingu</span> swojej muzyki</h1>
+      <p class="sub">Koniec z farmami botów, które zjadają budżety i psują statystyki. U nas każde odsłuchanie jest weryfikowane, a Ty dostajesz wypłatę za każdego prawdziwego fana.</p>
+      <ul class="benefits">
+        <li><span class="ic">✔</span> <b>Weryfikowane odsłuchania</b> — płacimy tylko za realnych słuchaczy</li>
+        <li><span class="ic">✔</span> <b>Radio Groua 24/7</b> — Twoja muzyka gra w autach i Teslach</li>
+        <li><span class="ic">✔</span> <b>Wypłaty od 50 zł</b> — przejrzyste zasady, bez ukrytych opłat</li>
+        <li><span class="ic">✔</span> <b>Promocja przez AI</b> — sami tworzymy posty i teledyski dla Twoich utworów</li>
+      </ul>
+      <div class="trust">
+        <span>🎵 15 gatunków</span>
+        <span>🔒 Twoje dane bezpieczne</span>
+        <span>🇵🇱 Po polsku</span>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Dołącz jako artysta</h2>
+      <p class="small">Zostaw kontakt — wyślemy link do rejestracji i wgrania pierwszego utworu.</p>
+      <form id="lead-form" autocomplete="on">
+        <input class="hp" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
+        <label for="name">Pseudonim artystyczny</label>
+        <input id="name" name="name" type="text" placeholder="np. NOCTRA">
+        <label for="email">E-mail *</label>
+        <input id="email" name="email" type="email" required placeholder="ty@email.com">
+        <div class="consent">
+          <input id="consent" name="consent" type="checkbox">
+          <label for="consent" style="margin:0">Zgadzam się na kontakt od GrouAI Stream w sprawie dołączenia i promocji mojej muzyki. Zgodę mogę wycofać w każdej chwili. <a href="https://grouaistream.com/legal" target="_blank">Polityka prywatności</a>.</label>
+        </div>
+        <button type="submit">Chcę zarabiać na muzyce →</button>
+        <div id="lead-msg"></div>
+      </form>
+      <div id="lead-thankyou">
+        <div class="big">🎵</div>
+        <h2>Witaj w rodzinie!</h2>
+        <p>Sprawdź skrzynkę — wysłaliśmy link do rejestracji i wgrania pierwszego utworu.</p>
+        <p><a href="https://grouaistream.com/upload">Wgraj muzykę teraz →</a></p>
+      </div>
+    </div>
+  </div>
+  <footer>© GrouAI Stream · <a href="https://grouaistream.com">grouaistream.com</a></footer>
+</div>
+<script src="/lp/lead.js"></script>
+<script>initLeadForm("artist");</script>
+</body>
+</html>

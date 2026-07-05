@@ -1,0 +1,55 @@
+/* GrouAI Stream — landing page lead-gen (wspólne style) */
+:root{
+  --bg:#0a0a0f; --card:#14141c; --line:#26262f;
+  --accent:#ff6b1a; --accent2:#ff9f45; --cyan:#22d3ee;
+  --text:#f5f5f7; --muted:#a1a1aa; --ok:#7CFF9B; --err:#ff8a8a;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  line-height:1.55;-webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:960px;margin:0 auto;padding:28px 20px 60px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:18px;margin-bottom:36px}
+.brand .dot{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:inline-block}
+.brand b{background:linear-gradient(90deg,var(--accent),var(--accent2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero{display:grid;grid-template-columns:1.1fr .9fr;gap:40px;align-items:start}
+@media(max-width:760px){.hero{grid-template-columns:1fr;gap:28px}.wrap{padding-top:20px}}
+h1{font-size:clamp(30px,5vw,50px);line-height:1.05;margin:0 0 16px;font-weight:900;letter-spacing:-.02em}
+h1 .g{background:linear-gradient(90deg,var(--accent),var(--accent2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{font-size:18px;color:var(--muted);margin:0 0 22px}
+.benefits{list-style:none;padding:0;margin:0 0 8px;display:grid;gap:12px}
+.benefits li{display:flex;gap:11px;align-items:flex-start;font-size:15.5px}
+.benefits .ic{color:var(--accent2);flex:0 0 auto;margin-top:1px}
+.badge{display:inline-block;font-size:12px;color:var(--accent2);border:1px solid var(--line);border-radius:999px;padding:5px 12px;margin-bottom:18px;background:rgba(255,107,26,.06)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:26px}
+.card h2{margin:0 0 4px;font-size:22px}
+.card p.small{color:var(--muted);font-size:13.5px;margin:0 0 18px}
+label{display:block;font-size:13px;color:var(--muted);margin:14px 0 6px}
+input,textarea{
+  width:100%;background:#0f0f16;border:1px solid var(--line);border-radius:11px;
+  color:var(--text);padding:12px 13px;font-size:15px;font-family:inherit;
+}
+input:focus,textarea:focus{outline:none;border-color:var(--accent)}
+textarea{resize:vertical;min-height:72px}
+.hp{position:absolute;left:-9999px;width:1px;height:1px;opacity:0}
+.consent{display:flex;gap:10px;align-items:flex-start;margin:16px 0 6px;font-size:12.5px;color:var(--muted)}
+.consent input{width:18px;height:18px;flex:0 0 auto;margin-top:1px;accent-color:var(--accent)}
+.consent a{color:var(--accent2)}
+button[type=submit]{
+  width:100%;margin-top:16px;padding:14px;border:0;border-radius:12px;cursor:pointer;
+  font-size:16px;font-weight:800;color:#111;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+}
+button[type=submit]:disabled{opacity:.6;cursor:default}
+#lead-msg{min-height:18px;font-size:13px;margin-top:10px;text-align:center}
+#lead-thankyou{display:none;text-align:center;padding:14px 0}
+#lead-thankyou .big{font-size:44px;margin-bottom:6px}
+#lead-thankyou h2{margin:0 0 8px}
+#lead-thankyou a{color:var(--accent2)}
+.trust{margin-top:26px;color:var(--muted);font-size:12.5px;display:flex;gap:16px;flex-wrap:wrap}
+.trust span{display:flex;gap:6px;align-items:center}
+footer{margin-top:48px;color:#5a5a66;font-size:12px;text-align:center}
+footer a{color:#7a7a86}
