@@ -11,7 +11,7 @@ export interface RadioScheduleItem {
   position: number;
   item_type: string | null;
   custom_duration: number | null;
-  track?: { duration: number | null } | null;
+  track?: { duration: number | null; audio_url?: string | null } | null;
 }
 
 export interface CurrentRadioPosition<T extends RadioScheduleItem> {
@@ -30,6 +30,9 @@ export const getRadioItemDuration = (item: RadioScheduleItem) => {
   return item.custom_duration || 30;
 };
 
+export const isRadioMusicItem = (item: RadioScheduleItem) =>
+  (item.item_type || "track") === "track" && !!item.track?.audio_url;
+
 export const fetchRadioSchedule = async <T = unknown>() => {
   const pageSize = 1000;
   const all: T[] = [];
@@ -38,11 +41,12 @@ export const fetchRadioSchedule = async <T = unknown>() => {
     const { data, error } = await supabase
       .from("radio_schedule")
       .select(RADIO_SCHEDULE_SELECT)
+      .eq("item_type", "track")
       .order("position", { ascending: true })
       .range(from, from + pageSize - 1);
 
     if (error) throw error;
-    all.push(...((data || []) as T[]));
+    all.push(...((data || []).filter((item) => isRadioMusicItem(item as RadioScheduleItem)) as T[]));
     if (!data || data.length < pageSize) break;
   }
 

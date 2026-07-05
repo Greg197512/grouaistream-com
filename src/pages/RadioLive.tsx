@@ -84,7 +84,7 @@ const HEART_COLORS = [
 const RadioLive = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { t, language } = useLanguage();
+  const { t } = useLanguage();
   const { pausePlayback } = usePlayer();
   const [config, setConfig] = useState<RadioConfig | null>(null);
   const [rawSchedule, setRawSchedule] = useState<ScheduleTrack[]>([]);
@@ -118,20 +118,14 @@ const RadioLive = () => {
   const heartIdRef = useRef(0);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
-  // Filter announcements by selected language. Tracks (lang === null) are always kept.
-  // Announcement items with `lang` set are kept ONLY when matching the user's UI language.
+  // Radio is music-only: no announcements, voices, jingles, ads, or talk slots.
   const schedule = useMemo(() => {
-    const filtered = rawSchedule.filter((item) => {
-      if (item.item_type === "announcement" && item.lang && item.lang !== language) return false;
-      return true;
-    });
+    const filtered = rawSchedule.filter((item) => (item.item_type === "track" || !item.item_type) && !!item.track?.audio_url);
 
     const recentTrackIds: string[] = [];
     const recentArtists: string[] = [];
 
     return filtered.filter((item) => {
-      if (item.item_type === "announcement") return true;
-
       const trackId = item.track?.id;
       const artist = item.track?.artist?.trim().toLowerCase();
 
@@ -147,7 +141,7 @@ const RadioLive = () => {
 
       return true;
     });
-  }, [rawSchedule, language]);
+  }, [rawSchedule]);
 
   // Auth
   useEffect(() => {
@@ -181,8 +175,9 @@ const RadioLive = () => {
         const scheduleRes = await supabase
           .from("radio_schedule")
           .select("position, item_type, custom_title, custom_duration, custom_audio_url, lang, track:tracks(id, title, artist, duration, audio_url, cover_url)")
+          .eq("item_type", "track")
           .order("position", { ascending: true })
-          .limit(1000);
+          .limit(2000);
         if (cancelled) return;
         if (scheduleRes.data) setRawSchedule(scheduleRes.data as any);
       } catch (err) {
@@ -421,18 +416,6 @@ const RadioLive = () => {
     setCurrentIndex(0);
   }, [config, schedule]);
 
-  // Helper: find next announcement index after current position
-  const findNextAnnouncementIndex = useCallback((fromIndex: number): number | null => {
-    for (let i = fromIndex + 1; i < schedule.length; i++) {
-      if (schedule[i]?.item_type === "announcement") return i;
-    }
-    // wrap-around
-    for (let i = 0; i <= fromIndex && i < schedule.length; i++) {
-      if (schedule[i]?.item_type === "announcement") return i;
-    }
-    return null;
-  }, [schedule]);
-
   const startPlayback = useCallback(
     (index: number, offset = 0) => {
       const item = schedule[index];
@@ -489,7 +472,7 @@ const RadioLive = () => {
       });
       audio.load();
     },
-    [schedule, volume, muted, stopCurrentAudio, findNextAnnouncementIndex]
+    [schedule, volume, muted, stopCurrentAudio]
   );
 
   useEffect(() => {
@@ -556,83 +539,6 @@ const RadioLive = () => {
     };
   }, [muted, volume, playNextLiveVoiceChunk]);
 
-  // 🕐 Scheduled announcements & music stories per language
-  // Blog audio: 08:00/14:00 PL · 08:15/14:15 EN · 08:30/14:30 NL · 08:45/14:45 UA
-  // Music story: 17:00/23:00 PL · 17:15/23:15 EN · 17:30/23:30 NL · 17:45/23:45 UA
-  const scheduledFiredRef = useRef<Set<string>>(new Set());
-  useEffect(() => {
-    if (!schedule.length) return;
-
-    const LANG_OFFSET: Record<string, number> = { pl: 0, en: 15, nl: 30, ua: 45 };
-    const offset = LANG_OFFSET[language] ?? 0;
-    // hour:minute pairs in Europe/Warsaw local time
-    const slots = [
-      { h: 8, m: offset, kind: "blog" },
-      { h: 14, m: offset, kind: "blog" },
-      { h: 17, m: offset, kind: "story" },
-      { h: 23, m: offset, kind: "story" },
-    ];
-
-    const fadeAudio = (target: number, duration = 1500): Promise<void> => {
-      return new Promise((resolve) => {
-        const audio = audioRef.current;
-        if (!audio) return resolve();
-        const start = audio.volume;
-        const startTime = performance.now();
-        const step = (now: number) => {
-          const t = Math.min(1, (now - startTime) / duration);
-          if (audioRef.current) audioRef.current.volume = start + (target - start) * t;
-          if (t < 1) requestAnimationFrame(step);
-          else resolve();
-        };
-        requestAnimationFrame(step);
-      });
-    };
-
-    const tick = async () => {
-      const now = new Date();
-      // Convert to Europe/Warsaw via Intl
-      const fmt = new Intl.DateTimeFormat("pl-PL", {
-        timeZone: "Europe/Warsaw",
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: false,
-      }).format(now);
-      const [hStr, mStr] = fmt.split(":");
-      const h = parseInt(hStr, 10);
-      const m = parseInt(mStr, 10);
-      const hit = slots.find((s) => s.h === h && s.m === m);
-      if (!hit) return;
-
-      const dayKey = now.toISOString().slice(0, 10);
-      const fireKey = `${dayKey}-${hit.h}:${hit.m}-${language}`;
-      if (scheduledFiredRef.current.has(fireKey)) return;
-      scheduledFiredRef.current.add(fireKey);
-
-      const annIndex = findNextAnnouncementIndex(currentIndex - 1);
-      if (annIndex === null) {
-        console.warn("[RadioLive] ⏰ scheduled slot but no announcement in queue", hit);
-        return;
-      }
-
-      console.log(`[RadioLive] ⏰ ${hit.kind} slot ${hit.h}:${String(hit.m).padStart(2, "0")} [${language}] → fade out + play announcement`);
-
-      // Fade out current music
-      await fadeAudio(0, 1200);
-      setCurrentIndex(annIndex);
-      startPlayback(annIndex);
-      // Restore volume after a brief delay so the announcement plays at full level
-      setTimeout(() => {
-        if (audioRef.current) audioRef.current.volume = muted ? 0 : volume / 100;
-      }, 1500);
-    };
-
-    // Run immediately, then every 20s (catches the minute window reliably)
-    tick();
-    const id = window.setInterval(tick, 20_000);
-    return () => window.clearInterval(id);
-  }, [schedule, language, currentIndex, findNextAnnouncementIndex, startPlayback, volume, muted]);
-
   useEffect(() => {
     return () => { audioRef.current?.pause(); };
   }, []);
@@ -643,10 +549,6 @@ const RadioLive = () => {
   const currentCover = currentItem?.track?.cover_url || null;
   const isOffAir = !config?.is_active || schedule.length === 0;
   const isTrack = currentItem?.item_type === "track" || !currentItem?.item_type;
-  const isAnnouncement = currentItem?.item_type === "announcement";
-  const announcementLang = currentItem?.lang || null;
-  const LANG_FLAG: Record<string, string> = { pl: "🇵🇱", en: "🇬🇧", nl: "🇳🇱", ua: "🇺🇦" };
-  const LANG_LABEL: Record<string, string> = { pl: "Polski", en: "English", nl: "Nederlands", ua: "Українська" };
 
   const isInSchedule = () => {
     if (!config || config.mode !== "scheduled" || !config.start_time || !config.end_time) return true;
@@ -911,43 +813,16 @@ const RadioLive = () => {
 
         {/* Now Playing */}
         {currentItem && (
-          <div className={`rounded-2xl overflow-hidden border bg-card transition-all ${isAnnouncement ? "border-primary/60 shadow-[0_0_30px_hsl(var(--primary)/0.4)]" : "border-border/50"}`}>
+          <div className="rounded-2xl overflow-hidden border bg-card transition-all border-border/50">
             <div className="h-1 w-full groove-gradient-bg" />
-            {isAnnouncement ? (
-              <div className="relative w-full h-48 groove-gradient-bg flex flex-col items-center justify-center overflow-hidden">
-                <motion.div
-                  animate={{ scale: [1, 1.15, 1], opacity: [0.7, 1, 0.7] }}
-                  transition={{ duration: 1.6, repeat: Infinity }}
-                  className="absolute inset-0 flex items-center justify-center"
-                >
-                  <Radio className="h-24 w-24 text-primary-foreground/30" />
-                </motion.div>
-                {/* Animated EQ bars */}
-                <div className="absolute bottom-4 left-0 right-0 flex items-end justify-center gap-1.5 h-10">
-                  {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
-                    <motion.div
-                      key={i}
-                      className="w-1.5 bg-primary-foreground rounded-full"
-                      animate={{ height: ["20%", "100%", "30%", "80%", "20%"] }}
-                      transition={{ duration: 0.8 + i * 0.1, repeat: Infinity, delay: i * 0.05 }}
-                    />
-                  ))}
-                </div>
-                <div className="relative z-10 text-center px-4">
-                  <p className="text-xs font-bold uppercase tracking-widest text-primary-foreground/80 mb-1">
-                    🎙️ Audycja na żywo {announcementLang && `· ${LANG_FLAG[announcementLang] || ""} ${LANG_LABEL[announcementLang] || announcementLang.toUpperCase()}`}
-                  </p>
-                  <p className="text-sm font-semibold text-primary-foreground/90">George · GrouAI Stream</p>
-                </div>
-              </div>
-            ) : currentCover ? (
+            {currentCover ? (
               <img src={currentCover} alt={currentTitle} className="w-full h-48 object-cover" />
             ) : null}
             <div className="p-4 space-y-3">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
                   <p className="text-xs text-muted-foreground uppercase tracking-wider">
-                    {isAnnouncement ? "🎙️ Teraz w eterze (audycja)" : t("radio.nowPlaying")}
+                    {t("radio.nowPlaying")}
                   </p>
                   <h2 className="font-bold text-lg truncate">{currentTitle}</h2>
                   <p className="text-sm text-muted-foreground truncate">{currentArtist}</p>
@@ -971,7 +846,7 @@ const RadioLive = () => {
 
               {/* Progress */}
               <div className="h-1 w-full rounded-full bg-muted overflow-hidden">
-                <motion.div className={`h-full ${isAnnouncement ? "bg-primary" : "groove-gradient-bg"}`} style={{ width: `${progress}%` }} />
+                <motion.div className="h-full groove-gradient-bg" style={{ width: `${progress}%` }} />
               </div>
 
               {/* Volume */}
@@ -1035,21 +910,14 @@ const RadioLive = () => {
                 .concat(schedule.slice(0, Math.max(0, 3 - (schedule.length - currentIndex - 1))))
                 .slice(0, 3)
                 .map((item, i) => {
-                  const itemIsAnnouncement = item.item_type === "announcement";
                   return (
                     <div
                       key={(item.track?.id || item.custom_title || "") + "-" + i}
-                      className={`flex items-center gap-3 rounded-lg px-3 py-2 border ${itemIsAnnouncement ? "bg-primary/10 border-primary/30" : "bg-card/50 border-border/30"}`}
+                      className="flex items-center gap-3 rounded-lg px-3 py-2 border bg-card/50 border-border/30"
                     >
-                      {itemIsAnnouncement ? (
-                        <Radio className="h-3 w-3 text-primary shrink-0" />
-                      ) : (
-                        <Music className="h-3 w-3 text-muted-foreground shrink-0" />
-                      )}
+                      <Music className="h-3 w-3 text-muted-foreground shrink-0" />
                       <div className="min-w-0 flex-1">
-                        <p className={`text-sm truncate ${itemIsAnnouncement ? "font-semibold text-primary" : ""}`}>
-                          {itemIsAnnouncement && "🎙️ "}{getItemTitle(item)}
-                        </p>
+                        <p className="text-sm truncate">{getItemTitle(item)}</p>
                         <p className="text-xs text-muted-foreground truncate">{getItemArtist(item)}</p>
                       </div>
                     </div>
@@ -1076,31 +944,17 @@ const RadioLive = () => {
           initial={{ y: 100, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           className={`fixed bottom-0 left-0 right-0 z-[55] backdrop-blur-xl border-t px-4 py-2.5 ${
-            isAnnouncement
-              ? "bg-primary/20 border-primary/50 shadow-[0_-4px_20px_hsl(var(--primary)/0.3)]"
-              : "bg-card/90 border-border/40"
+            "bg-card/90 border-border/40"
           }`}
           style={messages.length > 0 ? { bottom: "52px" } : undefined}
         >
           <div className="max-w-3xl mx-auto flex items-center gap-3">
-            {isAnnouncement ? (
-              <motion.div
-                animate={{ scale: [1, 1.2, 1] }}
-                transition={{ duration: 1.2, repeat: Infinity }}
-                className="h-8 w-8 rounded-full bg-primary flex items-center justify-center shrink-0"
-              >
-                <Radio className="h-4 w-4 text-primary-foreground" />
-              </motion.div>
-            ) : (
-              <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center shrink-0">
-                <Music className="h-4 w-4 text-muted-foreground" />
-              </div>
-            )}
+            <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center shrink-0">
+              <Music className="h-4 w-4 text-muted-foreground" />
+            </div>
             <div className="min-w-0 flex-1">
-              <p className={`text-[10px] uppercase tracking-wider font-bold ${isAnnouncement ? "text-primary" : "text-muted-foreground"}`}>
-                {isAnnouncement
-                  ? `🎙️ AUDYCJA NA ŻYWO ${announcementLang ? `· ${LANG_FLAG[announcementLang] || ""} ${LANG_LABEL[announcementLang] || announcementLang.toUpperCase()}` : ""}`
-                  : "🎵 W ROZKŁADZIE DNIA · UTWÓR"}
+              <p className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">
+                🎵 W ROZKŁADZIE DNIA · UTWÓR
               </p>
               <p className="text-sm font-semibold truncate">{currentTitle}</p>
               <p className="text-xs text-muted-foreground truncate">{currentArtist}</p>

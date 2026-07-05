@@ -42,10 +42,10 @@ interface Item {
 }
 
 const isTrack = (i: Item) => (i.item_type || "track") === "track";
-const dur = (i: Item) => (isTrack(i) ? i.track?.duration || 180 : i.custom_duration || 30);
-const audioUrl = (i: Item) => (isTrack(i) ? i.track?.audio_url || null : i.custom_audio_url || null);
-const title = (i: Item) => (isTrack(i) ? i.track?.title || "GrouAI Stream" : i.custom_title || i.item_type || "GrouAI Stream");
-const artist = (i: Item) => (isTrack(i) ? i.track?.artist || "GrouAI Stream" : "GrouAI Stream");
+const dur = (i: Item) => i.track?.duration || 180;
+const audioUrl = (i: Item) => i.track?.audio_url || null;
+const title = (i: Item) => i.track?.title || "GrouAI Stream";
+const artist = (i: Item) => i.track?.artist || "GrouAI Stream";
 
 async function loadState() {
   const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
@@ -65,6 +65,7 @@ async function loadState() {
       .select(
         "id, item_type, custom_title, custom_duration, custom_audio_url, track:tracks(title, artist, duration, audio_url, cover_url)",
       )
+      .eq("item_type", "track")
       .order("position", { ascending: true })
       .range(from, from + pageSize - 1);
     if (error) break;
@@ -72,8 +73,8 @@ async function loadState() {
     if (!data || data.length < pageSize) break;
   }
 
-  // Do strumienia bierzemy tylko pozycje z faktycznym plikiem audio.
-  const playable = all.filter((i) => !!audioUrl(i));
+  // Radio ma grać wyłącznie muzykę: bez reklam, głosów, jingli i audycji.
+  const playable = all.filter((i) => isTrack(i) && !!audioUrl(i));
   return { config, playable };
 }
 

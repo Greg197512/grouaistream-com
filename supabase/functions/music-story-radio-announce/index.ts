@@ -242,30 +242,6 @@ serve(async (req) => {
       lang,
     });
 
-    // 5b. Inject into radio_schedule for live radio playback (per-language slot)
-    try {
-      const estimatedDuration = Math.min(120, Math.max(45, Math.round(script.length / 14)));
-
-      const { data: maxRow } = await supabase
-        .from("radio_schedule")
-        .select("position")
-        .order("position", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      const nextPosition = ((maxRow?.position as number | undefined) ?? 0) + 1;
-
-      await supabase.from("radio_schedule").insert({
-        item_type: "announcement",
-        custom_title: `${LANG_FLAGS[lang]} ${LANG_LABELS[lang]}: ${localizedTitle}`,
-        custom_audio_url: audioUrl,
-        custom_duration: estimatedDuration,
-        position: nextPosition,
-        lang,
-      });
-    } catch (schedErr) {
-      console.warn("Could not insert into radio_schedule:", schedErr);
-    }
-
     // 6. Emit agent event
     await supabase.from("agent_events").insert({
       source: "music-story-radio-announce",
