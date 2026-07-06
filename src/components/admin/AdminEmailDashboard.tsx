@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeHubAI } from "@/lib/hubAI";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -218,22 +219,41 @@ export function AdminEmailDashboard({ stats, genreStats }: AdminEmailDashboardPr
     setGeneratingEmail(true);
     try {
       const topGenres = genreStats.slice(0, 5).map(g => g.genre);
-      const { data, error } = await supabase.functions.invoke("generate-email", {
-        body: {
-          type: emailType,
-          recipientName: recipientName || undefined,
-          customMessage: customMessage || undefined,
-          stats: { totalTracks: stats?.totalTracks || 0, totalUsers: stats?.totalUsers || 0, topGenres },
-        },
-      });
+      const typeDesc: Record<string, string> = {
+        invitation: "zaproszenie do dołączenia do platformy",
+        challenge: "e-mail z wyzwaniem muzycznym dla użytkowników",
+        newsletter: "newsletter z nowościami platformy",
+        easter: "życzenia świąteczne",
+        summary: "podsumowanie aktywności platformy",
+      };
+      // Generowanie przez GrouAI Hub (darmowe modele) — zamiast martwej funkcji na Lovable
+      const { data, error } = await invokeHubAI({
+        message: `Napisz ${typeDesc[emailType] || "e-mail marketingowy"} od GrouAI Stream.
+${recipientName ? `Odbiorca: ${recipientName}.` : ""}
+${customMessage ? `KONTEKST OD ADMINA (musi znaleźć się w treści): ${customMessage}` : ""}
+Statystyki platformy: ${stats?.totalTracks || 0} utworów, ${stats?.totalUsers || 0} użytkowników, popularne gatunki: ${topGenres.join(", ") || "różne"}.
+Zwróć WYŁĄCZNIE czysty JSON (bez markdown, bez komentarzy) w formacie:
+{"subject":"temat maila (max 70 znaków)","body":"treść maila w prostym HTML (akapity <p>, pogrubienia <b>, bez <html>/<head>)"}`,
+        history: [],
+      }, 90000);
       if (error) throw error;
-      if (data?.email) {
-        setGeneratedEmail(data.email);
-        toast.success("E-mail wygenerowany przez AI!");
-      }
+      const raw = (data?.response || "").replace(/```json|```/g, "").trim();
+      const jsonMatch = raw.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error("AI nie zwróciło poprawnego formatu");
+      const parsed = JSON.parse(jsonMatch[0]);
+      if (!parsed.subject || !parsed.body) throw new Error("Brak tematu lub treści");
+      setGeneratedEmail({
+        subject: String(parsed.subject),
+        body: String(parsed.body),
+        preview: String(parsed.body).replace(/<[^>]*>/g, "").slice(0, 140),
+        heroImageUrl: null,
+        type: emailType,
+        generatedAt: new Date().toISOString(),
+      });
+      toast.success("E-mail wygenerowany przez AI!");
     } catch (error) {
       console.error("Error generating email:", error);
-      toast.error("Błąd generowania e-maila");
+      toast.error("Błąd generowania e-maila — spróbuj ponownie");
     } finally {
       setGeneratingEmail(false);
     }
