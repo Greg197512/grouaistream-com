@@ -15,6 +15,7 @@ import { CCMixterSection } from "@/components/sections/CCMixterSection";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { searchCCMixter, CCMixterTrack } from "@/services/ccMixterService";
 import { cn } from "@/lib/utils";
+import { invokeHubAI } from "@/lib/hubAI";
 
 const formatDuration = (seconds: number): string => {
   const mins = Math.floor(seconds / 60);
@@ -186,11 +187,9 @@ const Search = () => {
     const toastId = toast.loading(`🔍 Szukam "${query}" na YouTube...`);
 
     try {
-      const { data: aiData, error: aiError } = await supabase.functions.invoke("ai-assistant", {
-        body: {
-          message: `Znajdź na YouTube dokładny videoId (11 znaków) dla: "${query}". Odpowiedz TYLKO samym videoId, nic więcej.`,
-          history: []
-        }
+      const { data: aiData, error: aiError } = await invokeHubAI({
+        message: `Znajdź na YouTube dokładny videoId (11 znaków) dla: "${query}". Odpowiedz TYLKO samym videoId, nic więcej.`,
+        history: []
       });
 
       if (aiError) throw aiError;

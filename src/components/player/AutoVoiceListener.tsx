@@ -9,6 +9,7 @@ import { useAssistantConfig } from "@/hooks/useAssistantConfig";
 import { AssistantNamingModal } from "@/components/modals/AssistantNamingModal";
 import { speak, isTTSSpeaking } from "@/utils/tts";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeHubAI } from "@/lib/hubAI";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useClapControl } from "@/hooks/useClapControl";
@@ -442,11 +443,9 @@ export const AutoVoiceListener = () => {
       } else {
         toast.loading(`🌐 Szukam w sieci: "${query}"...`, { id: "voice-search" });
         try {
-          const { data: aiData, error: aiError } = await supabase.functions.invoke("ai-assistant", {
-            body: { 
-              message: `Znajdź YouTube video ID (11 znaków) dla utworu: "${query}". Odpowiedz TYLKO w formacie: VIDEOID:xxxxxxxxxxx albo NOTFOUND jeśli nie znasz.`,
-              history: [] 
-            }
+          const { data: aiData, error: aiError } = await invokeHubAI({
+            message: `Znajdź YouTube video ID (11 znaków) dla utworu: "${query}". Odpowiedz TYLKO w formacie: VIDEOID:xxxxxxxxxxx albo NOTFOUND jeśli nie znasz.`,
+            history: []
           });
           
           if (!aiError && aiData?.response) {
@@ -877,12 +876,10 @@ export const AutoVoiceListener = () => {
     if (wantsMove) {
       toast.loading(`📁 Zarządzam playlistą...`, { id: "voice-cmd" });
       try {
-        const { data: aiData } = await supabase.functions.invoke("ai-assistant", {
-          body: { 
-            message: command, 
-            history: [],
-            userContext: { userId: user?.id, userName: user?.email?.split("@")[0] || "Użytkownik" }
-          }
+        const { data: aiData } = await invokeHubAI({
+          message: command,
+          history: [],
+          userContext: { userId: user?.id, userName: user?.email?.split("@")[0] || "Użytkownik" }
         });
         if (aiData?.response) {
           toast.success(`📁 ${aiData.response.slice(0, 100)}`, { id: "voice-cmd", duration: 5000 });
@@ -914,9 +911,7 @@ export const AutoVoiceListener = () => {
       toast.loading(`🧠 Myślę...`, { id: "voice-cmd" });
       try {
         const lang = getAppLanguage();
-        const { data: voiceData, error: voiceError } = await supabase.functions.invoke("ai-voice-answer", {
-          body: { question: command, language: lang }
-        });
+        const { data: voiceData, error: voiceError } = await invokeHubAI({ question: command, language: lang });
         if (!voiceError && voiceData?.answer) {
           toast.success(`🌐 ${voiceData.answer.slice(0, 120)}`, { id: "voice-cmd", duration: 8000 });
           await safeSpeakAndResume(voiceData.answer);
@@ -1053,10 +1048,8 @@ export const AutoVoiceListener = () => {
 
       // Universal voice answer — calls Grok for ANY question (weather, facts, general knowledge, etc.)
       const lang = getAppLanguage();
-      const { data: voiceData, error: voiceError } = await supabase.functions.invoke("ai-voice-answer", {
-        body: { question: command, language: lang }
-      });
-      
+      const { data: voiceData, error: voiceError } = await invokeHubAI({ question: command, language: lang });
+
       if (!voiceError && voiceData?.answer) {
         const answer = voiceData.answer;
         toast.success(`🌐 ${answer.slice(0, 120)}...`, { id: "voice-cmd", duration: 8000 });
