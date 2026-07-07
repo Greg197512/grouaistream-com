@@ -51,6 +51,8 @@ const PlaylistDetail = () => {
   const [loading, setLoading] = useState(true);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [trackToRemove, setTrackToRemove] = useState<Track | null>(null);
+  const [showUploadModal, setShowUploadModal] = useState(false);
+
 
   useEffect(() => {
     if (id) loadPlaylist();
