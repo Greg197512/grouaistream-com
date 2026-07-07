@@ -18,7 +18,10 @@ interface FileUploadModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: () => void;
+  /** Jeśli podane — wgrane utwory zostaną automatycznie dodane do tej playlisty */
+  playlistId?: string;
 }
+
 
 interface UploadItem {
   file: File;
