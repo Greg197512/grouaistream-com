@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
-import { Play, ArrowLeft, Music, GripVertical, Trash2, MoreHorizontal, Loader2 } from "lucide-react";
+import { Play, ArrowLeft, Music, GripVertical, Trash2, MoreHorizontal, Loader2, Upload as UploadIcon } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { 
@@ -16,7 +16,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { usePlayer, Track } from "@/contexts/PlayerContext";
 
 import { TrackOptionsMenu } from "@/components/menus/TrackOptionsMenu";
+import { FileUploadModal } from "@/components/modals/FileUploadModal";
 import { toast } from "sonner";
+
 import {
   AlertDialog,
   AlertDialogAction,
