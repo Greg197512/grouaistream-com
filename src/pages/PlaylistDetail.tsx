@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
-import { Play, ArrowLeft, Music, GripVertical, Trash2, MoreHorizontal, Loader2 } from "lucide-react";
+import { Play, ArrowLeft, Music, GripVertical, Trash2, MoreHorizontal, Loader2, Upload as UploadIcon } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { 
@@ -16,7 +16,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { usePlayer, Track } from "@/contexts/PlayerContext";
 
 import { TrackOptionsMenu } from "@/components/menus/TrackOptionsMenu";
+import { FileUploadModal } from "@/components/modals/FileUploadModal";
 import { toast } from "sonner";
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -49,6 +51,8 @@ const PlaylistDetail = () => {
   const [loading, setLoading] = useState(true);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [trackToRemove, setTrackToRemove] = useState<Track | null>(null);
+  const [showUploadModal, setShowUploadModal] = useState(false);
+
 
   useEffect(() => {
     if (id) loadPlaylist();
@@ -232,28 +236,39 @@ const PlaylistDetail = () => {
                 <Play className="h-4 w-4 fill-current" />
                 Play All
               </Button>
-              
+
               {isOwner && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="icon">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    <DropdownMenuItem 
-                      onClick={() => setDeleteDialogOpen(true)}
-                      className="text-destructive cursor-pointer"
-                    >
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Delete Playlist
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <>
+                  <Button
+                    onClick={() => setShowUploadModal(true)}
+                    variant="outline"
+                    className="gap-2"
+                  >
+                    <UploadIcon className="h-4 w-4" />
+                    Dodaj utwory
+                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="icon">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                      <DropdownMenuItem 
+                        onClick={() => setDeleteDialogOpen(true)}
+                        className="text-destructive cursor-pointer"
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete Playlist
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </>
               )}
             </div>
           </div>
         </div>
+
 
         {/* Track List */}
         {tracks.length > 0 ? (
@@ -411,7 +426,16 @@ const PlaylistDetail = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Upload tracks directly into this playlist */}
+      <FileUploadModal
+        isOpen={showUploadModal}
+        onClose={() => setShowUploadModal(false)}
+        onSuccess={loadPlaylist}
+        playlistId={id}
+      />
     </MainLayout>
+
   );
 };
 
