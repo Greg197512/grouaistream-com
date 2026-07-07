@@ -426,7 +426,16 @@ const PlaylistDetail = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Upload tracks directly into this playlist */}
+      <FileUploadModal
+        isOpen={showUploadModal}
+        onClose={() => setShowUploadModal(false)}
+        onSuccess={loadPlaylist}
+        playlistId={id}
+      />
     </MainLayout>
+
   );
 };
 
