@@ -68,7 +68,7 @@ function getAudioDuration(file: File): Promise<number> {
   });
 }
 
-export const FileUploadModal = ({ isOpen, onClose, onSuccess }: FileUploadModalProps) => {
+export const FileUploadModal = ({ isOpen, onClose, onSuccess, playlistId }: FileUploadModalProps) => {
   const { user } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
@@ -95,7 +95,7 @@ export const FileUploadModal = ({ isOpen, onClose, onSuccess }: FileUploadModalP
         },
       });
 
-      await supabase.from("tracks").insert({
+      const { data: inserted, error: insertErr } = await supabase.from("tracks").insert({
         title,
         artist: artist !== "Unknown Artist" ? artist : displayName,
         duration,
@@ -105,7 +105,22 @@ export const FileUploadModal = ({ isOpen, onClose, onSuccess }: FileUploadModalP
         genre: null,
         mood: null,
         user_id: user.id,
-      });
+      }).select("id").single();
+
+      if (insertErr) throw insertErr;
+
+      // Dodaj do playlisty jeżeli podano playlistId
+      if (playlistId && inserted?.id) {
+        const { count } = await supabase
+          .from("playlist_tracks")
+          .select("*", { count: "exact", head: true })
+          .eq("playlist_id", playlistId);
+        await supabase.from("playlist_tracks").insert({
+          playlist_id: playlistId,
+          track_id: inserted.id,
+          position: count ?? 0,
+        });
+      }
 
       setItems(prev => prev.map((it, idx) => idx === index ? { ...it, status: "done", percent: 100 } : it));
       return true;
@@ -115,7 +130,8 @@ export const FileUploadModal = ({ isOpen, onClose, onSuccess }: FileUploadModalP
         ? { ...it, status: "error", error: err.message || "Błąd" } : it));
       return false;
     }
-  }, [user]);
+  }, [user, playlistId]);
+
 
   const startUpload = useCallback(async (files: File[]) => {
     if (!user) {
