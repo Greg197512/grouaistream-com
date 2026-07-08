@@ -73,6 +73,9 @@ const TrackOptionsMenuComponent = (
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [showCoffeeDialog, setShowCoffeeDialog] = useState(false);
   const [trackOwnerId, setTrackOwnerId] = useState<string | null>(null);
+  const [myPlaylists, setMyPlaylists] = useState<{ id: string; title: string }[]>([]);
+  const [playlistsLoaded, setPlaylistsLoaded] = useState(false);
+  const [addingTo, setAddingTo] = useState<string | null>(null);
 
   // Fetch właściciela utworu — żeby wiedzieć czy pokazać "Postaw kawę twórcy"
   // (ukrywamy dla własnych utworów; nie ma sensu fundować kawy samemu sobie)
@@ -244,6 +247,89 @@ const TrackOptionsMenuComponent = (
     }
   };
 
+  // Pobierz playlisty użytkownika (leniwie — dopiero gdy otwiera menu playlist).
+  const loadMyPlaylists = async () => {
+    if (playlistsLoaded || !user) return;
+    const { data } = await supabase
+      .from("playlists")
+      .select("id, title")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
+    setMyPlaylists(data ?? []);
+    setPlaylistsLoaded(true);
+  };
+
+  const handleAddToPlaylist = async (targetPlaylistId: string, targetTitle: string) => {
+    if (!user) {
+      toast.error("Zaloguj się, aby dodać do playlisty");
+      return;
+    }
+    setAddingTo(targetPlaylistId);
+    try {
+      // Nie dubluj — sprawdź czy utwór już jest w tej playliście.
+      const { data: existing } = await supabase
+        .from("playlist_tracks")
+        .select("id")
+        .eq("playlist_id", targetPlaylistId)
+        .eq("track_id", trackId)
+        .maybeSingle();
+      if (existing) {
+        toast.info(`Ten utwór już jest w „${targetTitle}"`);
+        return;
+      }
+      // Dołóż na koniec (kolejna pozycja).
+      const { data: last } = await supabase
+        .from("playlist_tracks")
+        .select("position")
+        .eq("playlist_id", targetPlaylistId)
+        .order("position", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      const nextPos = (last?.position ?? -1) + 1;
+      const { error } = await supabase
+        .from("playlist_tracks")
+        .insert({ playlist_id: targetPlaylistId, track_id: trackId, position: nextPos });
+      if (error) throw error;
+      toast.success(`Dodano „${trackTitle}" do „${targetTitle}" 🎶`);
+      window.dispatchEvent(new CustomEvent("track-list-changed"));
+    } catch (e) {
+      console.error("Add to playlist failed:", e);
+      toast.error("Nie udało się dodać do playlisty");
+    } finally {
+      setAddingTo(null);
+    }
+  };
+
+  const handleCreatePlaylistAndAdd = async () => {
+    if (!user) {
+      toast.error("Zaloguj się, aby utworzyć playlistę");
+      return;
+    }
+    const name = window.prompt("Nazwa nowej playlisty:", trackTitle);
+    if (!name || !name.trim()) return;
+    setAddingTo("__new__");
+    try {
+      const { data: created, error: createErr } = await supabase
+        .from("playlists")
+        .insert({ title: name.trim(), user_id: user.id })
+        .select("id, title")
+        .single();
+      if (createErr || !created) throw createErr;
+      const { error: addErr } = await supabase
+        .from("playlist_tracks")
+        .insert({ playlist_id: created.id, track_id: trackId, position: 0 });
+      if (addErr) throw addErr;
+      setMyPlaylists((prev) => [{ id: created.id, title: created.title }, ...prev]);
+      toast.success(`Utworzono „${created.title}" i dodano utwór 🎶`);
+      window.dispatchEvent(new CustomEvent("track-list-changed"));
+    } catch (e) {
+      console.error("Create playlist failed:", e);
+      toast.error("Nie udało się utworzyć playlisty");
+    } finally {
+      setAddingTo(null);
+    }
+  };
+
   const handleCutTrack = async () => {
     // Store track data in clipboard for cut/paste functionality
     const trackData = JSON.stringify({ trackId, trackTitle, trackArtist, playlistId });
@@ -358,11 +444,43 @@ const TrackOptionsMenuComponent = (
             )}
           </DropdownMenuItem>
 
-          {/* Add to playlist */}
-          <DropdownMenuItem className="cursor-pointer">
-            <ListPlus className="mr-2 h-4 w-4" />
-            Add to Playlist
-          </DropdownMenuItem>
+          {/* Add to playlist — submenu z playlistami użytkownika */}
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger onPointerEnter={loadMyPlaylists} onClick={loadMyPlaylists}>
+              <ListPlus className="mr-2 h-4 w-4" />
+              Dodaj do playlisty
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent className="max-h-72 overflow-y-auto w-56">
+              <DropdownMenuItem
+                onClick={handleCreatePlaylistAndAdd}
+                disabled={addingTo === "__new__"}
+                className="cursor-pointer text-primary focus:text-primary"
+              >
+                <ListPlus className="mr-2 h-4 w-4" />
+                + Nowa playlista
+              </DropdownMenuItem>
+              {myPlaylists.length > 0 && <DropdownMenuSeparator />}
+              {!user ? (
+                <div className="px-2 py-2 text-xs text-muted-foreground">Zaloguj się, aby dodawać</div>
+              ) : !playlistsLoaded ? (
+                <div className="px-2 py-2 text-xs text-muted-foreground">Ładowanie…</div>
+              ) : myPlaylists.length === 0 ? (
+                <div className="px-2 py-2 text-xs text-muted-foreground">Brak playlist — utwórz nową powyżej</div>
+              ) : (
+                myPlaylists.map((pl) => (
+                  <DropdownMenuItem
+                    key={pl.id}
+                    onClick={() => handleAddToPlaylist(pl.id, pl.title)}
+                    disabled={addingTo === pl.id}
+                    className="cursor-pointer"
+                  >
+                    <ListPlus className="mr-2 h-4 w-4 opacity-60" />
+                    <span className="truncate">{pl.title}</span>
+                  </DropdownMenuItem>
+                ))
+              )}
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
 
           {/* Cut/Copy for moving */}
           <DropdownMenuItem onClick={handleCutTrack} className="cursor-pointer">

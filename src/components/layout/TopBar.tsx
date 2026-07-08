@@ -13,6 +13,7 @@ import {
   DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSubscription } from "@/contexts/SubscriptionContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -20,6 +21,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { UpgradeModal } from "@/components/modals/UpgradeModal";
 import { Language } from "@/i18n/translations";
 import { useNotificationsFeed, FeedItem } from "@/hooks/useNotificationsFeed";
+import { cn } from "@/lib/utils";
 
 const ICONS: Record<FeedItem["icon"], React.ComponentType<{ className?: string }>> = {
   heart: Heart,
@@ -39,9 +41,17 @@ export const TopBar = () => {
   const { items, unreadCount, markAllSeen, since } = useNotificationsFeed();
   
   const { user, signOut, loading } = useAuth();
+  const { plan, isPro, isUltimate } = useSubscription();
   const { language, setLanguage, t, languageNames, languageFlags } = useLanguage();
-  
+
   const navigate = useNavigate();
+
+  // Odznaka planu przy profilu — pokazywana gdy użytkownik ma płatny plan.
+  const planBadge = isUltimate
+    ? { label: "VIP", full: "Ultimate", ring: "ring-2 ring-amber-400", pill: "bg-gradient-to-r from-amber-400 to-yellow-500 text-black" }
+    : isPro
+      ? { label: "PRO", full: "Pro", ring: "ring-2 ring-primary", pill: "groove-gradient-bg text-primary-foreground" }
+      : null;
 
   const handleSignOut = async () => {
     try {
@@ -225,15 +235,27 @@ export const TopBar = () => {
             <button className="relative flex h-10 w-10 items-center justify-center rounded-full overflow-visible groove-gradient-bg hover:opacity-90 transition-opacity">
               {user ? (
                 <>
-                  <Avatar className="h-10 w-10">
+                  <Avatar className={cn("h-10 w-10", planBadge?.ring)}>
                     <AvatarImage src={user.user_metadata?.avatar_url} />
                     <AvatarFallback className="groove-gradient-bg text-primary-foreground font-semibold">
                       {getUserInitials()}
                     </AvatarFallback>
                   </Avatar>
-                  <span className="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500 border-2 border-background">
-                    <Power className="h-2.5 w-2.5 text-white" />
-                  </span>
+                  {/* Odznaka planu (PRO / VIP) wkomponowana w profil */}
+                  {planBadge ? (
+                    <span
+                      className={cn(
+                        "absolute -bottom-1.5 left-1/2 -translate-x-1/2 px-1.5 h-4 rounded-full text-[9px] font-extrabold leading-none flex items-center justify-center border border-background shadow-sm tracking-wide",
+                        planBadge.pill
+                      )}
+                    >
+                      {planBadge.label}
+                    </span>
+                  ) : (
+                    <span className="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500 border-2 border-background">
+                      <Power className="h-2.5 w-2.5 text-white" />
+                    </span>
+                  )}
                 </>
               ) : (
                 <User className="h-5 w-5 text-primary-foreground" />
@@ -245,11 +267,18 @@ export const TopBar = () => {
               <>
                 <DropdownMenuLabel className="font-normal">
                   <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">{getUserDisplayName()}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium leading-none">{getUserDisplayName()}</p>
+                      {planBadge && (
+                        <span className={cn("px-1.5 py-0.5 rounded-full text-[9px] font-extrabold leading-none tracking-wide", planBadge.pill)}>
+                          {planBadge.full.toUpperCase()}
+                        </span>
+                      )}
+                    </div>
                     <p className="text-xs text-muted-foreground">{user.email}</p>
                     <p className="text-xs flex items-center gap-1 mt-1 text-emerald-600 dark:text-emerald-500">
                       <span className="h-1.5 w-1.5 rounded-full bg-emerald-600 dark:bg-emerald-500" />
-                      {t("topbar.loggedIn")}
+                      {planBadge ? `Plan ${planBadge.full}` : t("topbar.loggedIn")}
                     </p>
                   </div>
                 </DropdownMenuLabel>
