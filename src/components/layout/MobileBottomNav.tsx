@@ -16,7 +16,7 @@ const navItems = [
   { icon: "folder_open", labelKey: "nav.localPlayer", href: "/local-player" },
   { icon: "movie", labelKey: "nav.movies", href: "/movies" },
   { icon: "dns", labelKey: "nav.mediaServer", href: "/server" },
-  { icon: "playlist_play", labelKey: "nav.managePlaylists", href: "/playlists" },
+  { icon: "playlist_play", labelKey: "nav.managePlaylists", href: "/playlist-manager" },
   { icon: "favorite", labelKey: "nav.likedSongs", href: "/liked" },
   { icon: "psychology", labelKey: "nav.moodHistory", href: "/mood-history" },
   { icon: "payments", labelKey: "nav.earnings", href: "/earnings", neon: true },

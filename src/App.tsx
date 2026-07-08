@@ -131,6 +131,8 @@ const AppShell = () => {
           <Route path="/import-youtube" element={<ImportYouTube />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/playlist-manager" element={<PlaylistManager />} />
+          {/* Alias: stare linki /playlists (m.in. z menu mobilnego) też trafiają do menedżera */}
+          <Route path="/playlists" element={<PlaylistManager />} />
           <Route path="/playlist/:id" element={<PlaylistDetail />} />
           <Route path="/mood-history" element={<MoodHistory />} />
           <Route path="/ai-dj" element={<Index />} />

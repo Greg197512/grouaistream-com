@@ -27,6 +27,7 @@ import { useSubscription } from "@/contexts/SubscriptionContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { uploadToR2 } from "@/lib/r2Upload";
 import { renderScore } from "@/lib/musicSynth";
+import { generateMusic } from "@/utils/musicGenerator";
 import { Lock, Crown } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -363,30 +364,63 @@ const Suno = () => {
       // === GROUAI SYNTH ENGINE — AI composes JSON score, browser renders audio ===
       if (engine === "grouai") {
         setGenStatus("AI komponuje utwór...");
-        const composeRes = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-compose`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json", apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
-            body: JSON.stringify({
-              prompt: musicPrompt,
-              duration,
-              genre: genreBlend,
-              mood: MOODS.find(m => m.id === mood)?.id || "energetic",
-              tempo: TEMPOS.find(t => t.id === tempo)?.id || "medium",
-              intensity: INTENSITIES.find(i => i.id === intensity)?.id || "balanced",
-            }),
-          },
-        );
-        if (!composeRes.ok) {
-          const errData = await composeRes.json().catch(() => ({ error: "AI compose error" }));
-          throw new Error(errData.error || `AI Compose: HTTP ${composeRes.status}`);
-        }
-        const composeData = await composeRes.json();
-        if (!composeData.ok || !composeData.score) throw new Error("AI nie zwróciło kompozycji");
+        let audioBlobUrl: string | null = null;
 
-        setGenStatus("Renderowanie audio w przeglądarce...");
-        const audioBlobUrl = await renderScore(composeData.score);
+        // Próba 1: kompozycja przez AI (edge function). Gdy serwer/AI padnie —
+        // NIE przerywamy: przechodzimy na lokalny syntezator GrouAI (działa zawsze).
+        try {
+          const composeRes = await fetch(
+            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-compose`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json", apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
+              body: JSON.stringify({
+                prompt: musicPrompt,
+                duration,
+                genre: genreBlend,
+                mood: MOODS.find(m => m.id === mood)?.id || "energetic",
+                tempo: TEMPOS.find(t => t.id === tempo)?.id || "medium",
+                intensity: INTENSITIES.find(i => i.id === intensity)?.id || "balanced",
+              }),
+            },
+          );
+          if (composeRes.ok) {
+            const composeData = await composeRes.json();
+            if (composeData.ok && composeData.score) {
+              setGenStatus("Renderowanie audio w przeglądarce...");
+              audioBlobUrl = await renderScore(composeData.score);
+            }
+          }
+        } catch { /* przechodzimy na lokalny generator */ }
+
+        // Próba 2 (fallback): lokalny generator GrouAI — pełna kompozycja w przeglądarce.
+        if (!audioBlobUrl) {
+          setGenStatus("GrouAI Synth komponuje lokalnie...");
+          const moodMap: Record<string, "bright" | "melancholic" | "euphoric" | "dreamy" | "romantic" | "dark"> = {
+            happy: "bright", sad: "melancholic", energetic: "euphoric",
+            chill: "dreamy", romantic: "romantic", dark: "dark",
+          };
+          const tempoMap: Record<string, number> = { slow: 72, medium: 100, fast: 128, "very-fast": 152 };
+          const energyMap: Record<string, "low" | "medium" | "high" | "extreme"> = {
+            minimal: "low", balanced: "medium", rich: "high", epic: "extreme",
+          };
+          const localTrack = await generateMusic({
+            style: genre,
+            style2: genre2 || undefined,
+            blendRatio: genre2 ? blendRatio / 100 : undefined,
+            durationSeconds: duration,
+            instrumental,
+            title: title || undefined,
+            prompt: musicPrompt,
+            mood: moodMap[mood],
+            energy: energyMap[intensity] || "medium",
+            tempoOverride: tempoMap[tempo],
+            textContent: customLyrics.trim() || undefined,
+          });
+          audioBlobUrl = localTrack.audioUrl;
+        }
+
+        if (!audioBlobUrl) throw new Error("Nie udało się wygenerować audio");
 
         const trackTitle = title || `${genre} Track`;
         const lyrics = customLyrics.trim()
