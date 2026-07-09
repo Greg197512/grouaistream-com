@@ -148,6 +148,7 @@ const AppShell = () => {
           <Route path="/legal" element={<Legal />} />
           <Route path="/party/:code" element={<PartyPulpit />} />
           <Route path="/suno" element={<Suno />} />
+          <Route path="/studio" element={<Suno />} />
           <Route path="/local-player" element={<LocalPlayer />} />
           <Route path="/upload" element={<Upload />} />
           <Route path="/my-tracks" element={<MyTracks />} />
