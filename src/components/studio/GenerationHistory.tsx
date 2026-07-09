@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePlayer } from "@/contexts/PlayerContext";
-import { Music, Heart, Download, Play, Loader2, RefreshCw, Library } from "lucide-react";
+import { Music, Heart, Download, Play, Loader2, RefreshCw, Library, Trash2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { downloadAudio } from "@/lib/hubStudio";
 import { toast } from "sonner";
@@ -109,6 +109,38 @@ export const GenerationHistory = () => {
     }
   };
 
+  // „Dodaj do Nowości” — publikacja utworu w bibliotece strony (sekcja Nowe na serwerze)
+  const addToNew = async (gen: Generation) => {
+    if (!gen.audio_url) return;
+    try {
+      const { error } = await supabase.from("tracks").insert({
+        title: gen.title,
+        artist: "GrouAI Studio",
+        album: "AI Generated",
+        duration: 180,
+        audio_url: gen.audio_url,
+        cover_url: gen.replicate_id ? `${HUB_STORAGE}/${gen.replicate_id}-cover.jpg` : null,
+        genre: gen.genre || "AI",
+        mood: "generated",
+      });
+      if (error) throw error;
+      toast.success(`„${gen.title}” opublikowano w Nowościach! 🚀`);
+    } catch (e: any) {
+      toast.error("Nie udało się opublikować: " + (e?.message || "błąd"));
+    }
+  };
+
+  const removeGeneration = async (gen: Generation) => {
+    if (!window.confirm(`Usunąć „${gen.title}” z Twoich utworów? Tego nie można cofnąć.`)) return;
+    const { error } = await supabase.from("generations").delete().eq("id", gen.id);
+    if (error) {
+      toast.error("Nie udało się usunąć: " + error.message);
+    } else {
+      setGenerations((prev) => prev.filter((g) => g.id !== gen.id));
+      toast.success("Utwór usunięty 🗑️");
+    }
+  };
+
   const saveToFavorites = async (genId: string) => {
     if (!user) return;
     const { error } = await supabase.from("favorites").insert({
@@ -210,6 +242,24 @@ export const GenerationHistory = () => {
                       title="Do ulubionych"
                     >
                       <Heart className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8 text-emerald-400 hover:text-emerald-300"
+                      onClick={() => void addToNew(gen)}
+                      title="Dodaj do Nowości (publikuj na stronie)"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8 text-gray-500 hover:text-red-400"
+                      onClick={() => void removeGeneration(gen)}
+                      title="Usuń"
+                    >
+                      <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                 )}

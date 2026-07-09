@@ -152,31 +152,53 @@ Deno.serve(async (req) => {
     const title = String(plan.title || "GrouAI Track").slice(0, 120);
     const tags = String(plan.tags);
 
-    // ===== 2. Start generacji ACE-Step (Replicate, model społeczności ⇒ version) =====
+    // ===== 2. Start generacji (routing silników) =====
+    // wokal → MiniMax music-1.5 (jakość/tempo klasy Suno); instrumental → ACE-Step
     const rHeaders = { "Content-Type": "application/json", "Authorization": `Bearer ${repToken}` };
-    const modelName = cfg["ace_model"] || "lucataco/ace-step";
-    const mr = await fetch(`${REPLICATE_BASE}/models/${modelName}`, { headers: rHeaders });
-    const mData = await mr.json();
-    const version = mData?.latest_version?.id;
-    if (!mr.ok || !version) return json({ success: false, error: "model_version_failed" }, 502);
+    let rel: Response;
+    let engineName: string;
+    if (!instrumental) {
+      engineName = "minimax";
+      const vocalModel = cfg["vocal_model"] || "minimax/music-1.5";
+      const mmPrompt = (tags + ", high quality, studio recording").slice(0, 300);
+      rel = await fetch(`${REPLICATE_BASE}/models/${vocalModel}/predictions`, {
+        method: "POST",
+        headers: rHeaders,
+        body: JSON.stringify({
+          input: {
+            prompt: mmPrompt.length >= 10 ? mmPrompt : mmPrompt + ", modern pop",
+            lyrics: lyrics.slice(0, 3000),
+            audio_format: "mp3",
+            bitrate: 256000,
+            sample_rate: 44100,
+          },
+        }),
+      });
+    } else {
+      engineName = "acestep";
+      const modelName = cfg["ace_model"] || "lucataco/ace-step";
+      const mr = await fetch(`${REPLICATE_BASE}/models/${modelName}`, { headers: rHeaders });
+      const mData = await mr.json();
+      const version = mData?.latest_version?.id;
+      if (!mr.ok || !version) return json({ success: false, error: "model_version_failed" }, 502);
 
-    // Jakość: więcej kroków = czystszy dźwięk; strojenie przez hub_config.ace_steps.
-    const steps = Math.min(Math.max(parseInt(cfg["ace_steps"] || "120", 10) || 120, 10), 200);
-    const rel = await fetch(`${REPLICATE_BASE}/predictions`, {
-      method: "POST",
-      headers: rHeaders,
-      body: JSON.stringify({
-        version,
-        input: {
-          tags: tags + ", high quality, studio recording, professional mixing, crisp clear audio",
-          lyrics,
-          duration,
-          scheduler: cfg["ace_scheduler"] || "euler",
-          guidance_scale: 15,
-          number_of_steps: steps,
-        },
-      }),
-    });
+      const steps = Math.min(Math.max(parseInt(cfg["ace_steps"] || "120", 10) || 120, 10), 200);
+      rel = await fetch(`${REPLICATE_BASE}/predictions`, {
+        method: "POST",
+        headers: rHeaders,
+        body: JSON.stringify({
+          version,
+          input: {
+            tags: tags + ", high quality, studio recording, professional mixing, crisp clear audio",
+            lyrics,
+            duration,
+            scheduler: cfg["ace_scheduler"] || "euler",
+            guidance_scale: 15,
+            number_of_steps: steps,
+          },
+        }),
+      });
+    }
     const relData = await rel.json();
     if (!rel.ok) {
       if (rel.status === 402) {
@@ -197,12 +219,12 @@ Deno.serve(async (req) => {
       instrumental,
       status: "pending",
       replicate_id: predId,
-      engine: "acestep",
+      engine: engineName,
     }).select().single();
 
     return json({
       success: true,
-      engine: "acestep",
+      engine: engineName,
       task_id: predId,
       generation_id: gen?.id ?? null,
       plan: {

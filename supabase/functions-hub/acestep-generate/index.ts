@@ -184,32 +184,57 @@ Deno.serve(async (req) => {
     const duration: number = Math.min(Math.max(body.duration || body.duration_seconds || 60, 10), 240);
     const title: string = body.title || "GrouAI Track";
 
-    // Model społecznościowy ⇒ wymagany version id (endpoint /predictions).
-    const modelName = cfg["ace_model"] || "lucataco/ace-step";
-    const mr = await fetch(`${REPLICATE_BASE}/models/${modelName}`, { headers: rHeaders });
-    const mData = await mr.json();
-    const version = mData?.latest_version?.id;
-    if (!mr.ok || !version) {
-      return json({ error: "Cannot resolve model version", details: mData }, 502);
+    // ROUTING SILNIKÓW:
+    // - wokal → MiniMax music-1.5 (oficjalny model Replicate: jakość i tempo
+    //   klasy Suno, ~49 s na piosenkę, groszowe koszty)
+    // - instrumental → ACE-Step (MiniMax wymaga tekstu)
+    let rel: Response;
+    let engineName: string;
+    if (!instrumental) {
+      engineName = "minimax";
+      const vocalModel = cfg["vocal_model"] || "minimax/music-1.5";
+      const mmPrompt = (prompt + ", high quality, studio recording").slice(0, 300);
+      rel = await fetch(`${REPLICATE_BASE}/models/${vocalModel}/predictions`, {
+        method: "POST",
+        headers: rHeaders,
+        body: JSON.stringify({
+          input: {
+            prompt: mmPrompt.length >= 10 ? mmPrompt : mmPrompt + ", modern pop",
+            lyrics: lyrics.slice(0, 3000),
+            audio_format: "mp3",
+            bitrate: 256000,
+            sample_rate: 44100,
+          },
+        }),
+      });
+    } else {
+      engineName = "acestep";
+      // Model społecznościowy ⇒ wymagany version id (endpoint /predictions).
+      const modelName = cfg["ace_model"] || "lucataco/ace-step";
+      const mr = await fetch(`${REPLICATE_BASE}/models/${modelName}`, { headers: rHeaders });
+      const mData = await mr.json();
+      const version = mData?.latest_version?.id;
+      if (!mr.ok || !version) {
+        return json({ error: "Cannot resolve model version", details: mData }, 502);
+      }
+      // Jakość: więcej kroków = czystszy dźwięk; strojenie: hub_config.ace_steps.
+      const steps = Math.min(Math.max(parseInt(cfg["ace_steps"] || "120", 10) || 120, 10), 200);
+      rel = await fetch(`${REPLICATE_BASE}/predictions`, {
+        method: "POST",
+        headers: rHeaders,
+        body: JSON.stringify({
+          version,
+          input: {
+            tags: prompt + ", high quality, studio recording, professional mixing, crisp clear audio",
+            lyrics,
+            duration,
+            scheduler: cfg["ace_scheduler"] || "euler",
+            guidance_scale: 15,
+            number_of_steps: steps,
+          },
+        }),
+      });
     }
-
-    // Jakość: więcej kroków = czystszy dźwięk (koszt GPU rośnie proporcjonalnie).
-    // Strojenie bez redeployu: hub_config.ace_steps / ace_scheduler.
-    const steps = Math.min(Math.max(parseInt(cfg["ace_steps"] || "120", 10) || 120, 10), 200);
-    const input: Record<string, unknown> = {
-      tags: prompt + ", high quality, studio recording, professional mixing, crisp clear audio",
-      lyrics,
-      duration,
-      scheduler: cfg["ace_scheduler"] || "euler",
-      guidance_scale: 15,
-      number_of_steps: steps,
-    };
-
-    const rel = await fetch(`${REPLICATE_BASE}/predictions`, {
-      method: "POST",
-      headers: rHeaders,
-      body: JSON.stringify({ version, input }),
-    });
     const relData = await rel.json();
     if (!rel.ok) {
       // Czytelny komunikat, gdy brak środków na koncie Replicate
@@ -234,14 +259,14 @@ Deno.serve(async (req) => {
       instrumental,
       status: "pending",
       replicate_id: predId,
-      engine: "acestep",
+      engine: engineName,
     }).select().single();
 
     return json({
       id: predId,
       generation_id: gen?.id ?? null,
       status: "starting",
-      engine: "acestep-hub",
+      engine: engineName,
       duration,
       created_at: new Date().toISOString(),
     });
