@@ -42,10 +42,11 @@ Deno.serve(async (req) => {
   const id: string = String(body.id ?? body.prediction_id ?? crypto.randomUUID())
     .replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 64) || crypto.randomUUID();
 
-  // Prompt graficzny — angielski działa najlepiej; bez tekstu na obrazie
+  // Prompt graficzny — angielski działa najlepiej. UWAGA: nie podajemy tytułu,
+  // bo model próbuje go "napisać" na obrazie i wychodzi bełkot.
   const prompt = description.trim()
-    ? `professional album cover art, ${description}, high quality, no text, no letters`
-    : `professional album cover art for a song titled "${title}", music style: ${style || "modern"}, evocative atmosphere matching the mood, cinematic lighting, high quality, no text, no letters, no words`;
+    ? `professional album cover art, ${description}, high quality, plain artwork with absolutely no text, no letters, no typography`
+    : `professional album cover art, abstract or photographic scene evoking the mood of: ${style || "modern music"}, cinematic lighting, rich colors, high quality, plain artwork with absolutely no text, no letters, no words, no typography`;
 
   try {
     const imgUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1024&height=1024&nologo=true&seed=${Math.floor(Math.random() * 1e9)}`;
