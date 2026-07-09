@@ -193,13 +193,16 @@ Deno.serve(async (req) => {
       return json({ error: "Cannot resolve model version", details: mData }, 502);
     }
 
+    // Jakość: więcej kroków = czystszy dźwięk (koszt GPU rośnie proporcjonalnie).
+    // Strojenie bez redeployu: hub_config.ace_steps / ace_scheduler.
+    const steps = Math.min(Math.max(parseInt(cfg["ace_steps"] || "120", 10) || 120, 10), 200);
     const input: Record<string, unknown> = {
-      tags: prompt,
+      tags: prompt + ", high quality, studio recording, professional mixing, crisp clear audio",
       lyrics,
       duration,
-      scheduler: "euler",
+      scheduler: cfg["ace_scheduler"] || "euler",
       guidance_scale: 15,
-      number_of_steps: 60,
+      number_of_steps: steps,
     };
 
     const rel = await fetch(`${REPLICATE_BASE}/predictions`, {

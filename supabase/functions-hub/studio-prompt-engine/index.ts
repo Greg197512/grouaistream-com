@@ -160,12 +160,21 @@ Deno.serve(async (req) => {
     const version = mData?.latest_version?.id;
     if (!mr.ok || !version) return json({ success: false, error: "model_version_failed" }, 502);
 
+    // Jakość: więcej kroków = czystszy dźwięk; strojenie przez hub_config.ace_steps.
+    const steps = Math.min(Math.max(parseInt(cfg["ace_steps"] || "120", 10) || 120, 10), 200);
     const rel = await fetch(`${REPLICATE_BASE}/predictions`, {
       method: "POST",
       headers: rHeaders,
       body: JSON.stringify({
         version,
-        input: { tags, lyrics, duration, scheduler: "euler", guidance_scale: 15, number_of_steps: 60 },
+        input: {
+          tags: tags + ", high quality, studio recording, professional mixing, crisp clear audio",
+          lyrics,
+          duration,
+          scheduler: cfg["ace_scheduler"] || "euler",
+          guidance_scale: 15,
+          number_of_steps: steps,
+        },
       }),
     });
     const relData = await rel.json();
