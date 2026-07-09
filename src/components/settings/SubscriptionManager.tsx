@@ -31,6 +31,7 @@ export function SubscriptionManager() {
   const [loadingCancel, setLoadingCancel] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [sub, setSub] = useState<PaddleSubRow | null>(null);
+  const [subLoaded, setSubLoaded] = useState(false);
 
   const env = getPaddleEnvironment();
 
@@ -48,7 +49,10 @@ export function SubscriptionManager() {
         .eq("user_id", user.id)
         .eq("environment", env)
         .maybeSingle();
-      if (!cancelled) setSub(data ?? null);
+      if (!cancelled) {
+        setSub(data ?? null);
+        setSubLoaded(true);
+      }
     })();
     return () => { cancelled = true; };
   }, [user, isPro, env, plan]);
@@ -147,34 +151,52 @@ export function SubscriptionManager() {
         </div>
       )}
 
-      <p className="text-xs text-muted-foreground">
-        Zarządzaj metodą płatności, fakturami lub anuluj subskrypcję. Płatności obsługuje Paddle (Merchant of Record).
-      </p>
+      {subLoaded && !sub ? (
+        <>
+          {/* Plan aktywny, ale bez subskrypcji Paddle (np. przyznany ręcznie / trial) */}
+          <p className="text-xs text-muted-foreground">
+            Twój plan jest <strong className="text-foreground">aktywny</strong>. Nie jest powiązany
+            z płatnością cykliczną Paddle, więc nie ma tu nic do anulowania — plan nie odnawia się
+            automatycznie i nie pobierze żadnej płatności.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Button asChild variant="ghost" size="sm" className="gap-2">
+              <Link to="/orders"><Receipt className="h-4 w-4" />Historia zamówień</Link>
+            </Button>
+          </div>
+        </>
+      ) : (
+        <>
+          <p className="text-xs text-muted-foreground">
+            Zarządzaj metodą płatności, fakturami lub anuluj subskrypcję. Płatności obsługuje Paddle (Merchant of Record).
+          </p>
 
-      <div className="flex flex-col sm:flex-row gap-2">
-        <Button
-          onClick={handleOpenPortal}
-          disabled={loadingPortal}
-          variant="outline"
-          className="gap-2"
-        >
-          {loadingPortal ? <Loader2 className="h-4 w-4 animate-spin" /> : <ExternalLink className="h-4 w-4" />}
-          {isPastDue ? "Zaktualizuj płatność" : "Zarządzaj subskrypcją"}
-        </Button>
-        {!isCanceling && (
-          <Button
-            onClick={() => setConfirmCancel(true)}
-            variant="ghost"
-            className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
-          >
-            <X className="h-4 w-4" />
-            Anuluj subskrypcję
-          </Button>
-        )}
-        <Button asChild variant="ghost" size="sm" className="gap-2">
-          <Link to="/orders"><Receipt className="h-4 w-4" />Historia zamówień</Link>
-        </Button>
-      </div>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Button
+              onClick={handleOpenPortal}
+              disabled={loadingPortal}
+              variant="outline"
+              className="gap-2"
+            >
+              {loadingPortal ? <Loader2 className="h-4 w-4 animate-spin" /> : <ExternalLink className="h-4 w-4" />}
+              {isPastDue ? "Zaktualizuj płatność" : "Zarządzaj subskrypcją"}
+            </Button>
+            {!isCanceling && (
+              <Button
+                onClick={() => setConfirmCancel(true)}
+                variant="ghost"
+                className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+              >
+                <X className="h-4 w-4" />
+                Anuluj subskrypcję
+              </Button>
+            )}
+            <Button asChild variant="ghost" size="sm" className="gap-2">
+              <Link to="/orders"><Receipt className="h-4 w-4" />Historia zamówień</Link>
+            </Button>
+          </div>
+        </>
+      )}
 
       <AlertDialog open={confirmCancel} onOpenChange={setConfirmCancel}>
         <AlertDialogContent>

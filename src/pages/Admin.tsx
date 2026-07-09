@@ -64,6 +64,7 @@ import { BonusMonitor } from "@/components/admin/BonusMonitor";
 import PayoutsAdminPanel from "@/components/admin/PayoutsAdminPanel";
 import { FinancialOverview } from "@/components/admin/FinancialOverview";
 import { TipsOverview } from "@/components/admin/TipsOverview";
+import { SubscriptionsAdminPanel } from "@/components/admin/SubscriptionsAdminPanel";
 import { OperationalCosts } from "@/components/admin/OperationalCosts";
 import { LikesOverview } from "@/components/admin/LikesOverview";
 import { SEODashboard } from "@/components/admin/SEODashboard";
@@ -724,6 +725,10 @@ export default function Admin() {
                   <DollarSign className="h-4 w-4" />
                   Tipy & Portfele
                 </TabsTrigger>
+                <TabsTrigger value="subscriptions" className="gap-2">
+                  <DollarSign className="h-4 w-4" />
+                  Subskrypcje 👑
+                </TabsTrigger>
                 <TabsTrigger value="costs" className="gap-2">
                   <AlertTriangle className="h-4 w-4" />
                   Koszty & Pomysły
@@ -822,6 +827,11 @@ export default function Admin() {
               {/* Tips & Wallets Tab */}
               <TabsContent value="tips">
                 <TipsOverview />
+              </TabsContent>
+
+              {/* Subscriptions Tab */}
+              <TabsContent value="subscriptions">
+                <SubscriptionsAdminPanel />
               </TabsContent>
 
               {/* Operational Costs Tab */}

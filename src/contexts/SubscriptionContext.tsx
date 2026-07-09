@@ -164,6 +164,38 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
     return () => subscription.unsubscribe();
   }, [fetchSubscription]);
 
+  // Natychmiastowa aktualizacja planu: zmiany w bazie (zakup / anulowanie / zmiana
+  // przez admina) trafiają do klienta bez przeładowania strony.
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel(`sub-updates-${user.id}`)
+      .on("postgres_changes", {
+        event: "*", schema: "public", table: "user_subscriptions", filter: `user_id=eq.${user.id}`,
+      }, () => void fetchSubscription())
+      .on("postgres_changes", {
+        event: "*", schema: "public", table: "subscriptions", filter: `user_id=eq.${user.id}`,
+      }, () => void fetchSubscription())
+      .subscribe();
+
+    // Fallback gdy realtime nie obejmuje tych tabel: odśwież po powrocie do karty
+    // (np. po zamknięciu okna płatności Paddle) i co minutę w tle.
+    const onFocus = () => void fetchSubscription();
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
+    const interval = window.setInterval(() => {
+      if (document.visibilityState === "visible") void fetchSubscription();
+    }, 60_000);
+
+    return () => {
+      supabase.removeChannel(channel);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onFocus);
+      window.clearInterval(interval);
+    };
+  }, [user, fetchSubscription]);
+
   useEffect(() => {
     const stored = localStorage.getItem("grooveai-ai-playlists-date");
     const today = new Date().toDateString();
