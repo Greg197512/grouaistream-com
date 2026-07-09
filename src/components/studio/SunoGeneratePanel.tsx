@@ -8,6 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeStudioEngine } from "@/lib/hubStudio";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { toast } from "sonner";
 
@@ -160,7 +161,7 @@ export const SunoGeneratePanel = () => {
             title: title || undefined,
           };
 
-      const { data, error } = await supabase.functions.invoke(fnName, { body: reqBody });
+      const { data, error } = await invokeStudioEngine(fnName, reqBody);
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
@@ -193,8 +194,8 @@ export const SunoGeneratePanel = () => {
         return;
       }
       try {
-        const { data, error } = await supabase.functions.invoke(fnName, {
-          body: { action: "status", prediction_id: predictionId, task_id: predictionId, generation_id: generationId },
+        const { data, error } = await invokeStudioEngine(fnName, {
+          action: "status", prediction_id: predictionId, task_id: predictionId, generation_id: generationId,
         });
         if (error) throw error;
         const status = data?.status;
