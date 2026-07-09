@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { supabase } from "@/integrations/supabase/client";
+import { lovable } from "@/integrations/lovable/index";
 import { toast } from "sonner";
 
 const Auth = () => {
@@ -25,19 +25,21 @@ const Auth = () => {
   const handleGoogleSignIn = async () => {
     setGoogleLoading(true);
     try {
-      // Bezpośredni OAuth Supabase — ścieżka /~oauth/initiate działała tylko na
-      // hostingu Lovable, po przejściu na Vercel zwraca 404.
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: { redirectTo: window.location.origin },
+      // Flow Lovable (popup /~oauth/initiate). Na Vercelu ta ścieżka wymaga
+      // przekierowania na oauth.lovable.app — patrz redirects w vercel.json.
+      const result = await lovable.auth.signInWithOAuth("google", {
+        redirect_uri: window.location.origin,
       });
-      if (error) {
-        toast.error(error.message || "Nie udało się zalogować przez Google");
+      if (result.error) {
+        toast.error(result.error.message || "Nie udało się zalogować przez Google");
         setGoogleLoading(false);
         return;
       }
-      // przeglądarka przekierowuje do Google — nic więcej nie robimy
-      return;
+      if (result.redirected) {
+        return;
+      }
+      // popup zamknięty, sesja ustawiona — wróć na stronę główną
+      navigate("/");
     } catch (e: any) {
       toast.error(e?.message || "Błąd logowania Google");
       setGoogleLoading(false);
