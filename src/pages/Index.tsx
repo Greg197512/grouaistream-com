@@ -13,6 +13,7 @@ import { SupportSection } from "@/components/sections/SupportSection";
 import { FairnessCounter } from "@/components/sections/FairnessCounter";
 import { PromotedTracksSection } from "@/components/sections/PromotedTracks";
 import { SEOContentSection } from "@/components/sections/SEOContentSection";
+import { JoinCommunity } from "@/components/sections/JoinCommunity";
 
 import SectionErrorBoundary from "@/components/SectionErrorBoundary";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -51,6 +52,7 @@ const Index = () => {
       <Section name="top-artists"><TopArtists /></Section>
       <Section name="trending"><PlaylistGrid title={t("section.trendingNow")} subtitle={t("section.trendingNowDesc")} /></Section>
       <Section name="seo"><SEOContentSection /></Section>
+      <Section name="community"><JoinCommunity /></Section>
       <Section name="support"><SupportSection /></Section>
     </MainLayout>
   );
