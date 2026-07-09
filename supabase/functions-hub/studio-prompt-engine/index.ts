@@ -114,6 +114,20 @@ Deno.serve(async (req) => {
   const userId = userData?.user?.id;
   if (!userId) return json({ success: false, error: "unauthorized" }, 401);
 
+  // Generowanie tylko dla planów płatnych (Pro/Ultimate) lub admina.
+  const [{ data: isAdmin }, { data: subRow }] = await Promise.all([
+    live.rpc("has_role", { _user_id: userId, _role: "admin" }),
+    live.from("user_subscriptions").select("plan, status").eq("user_id", userId).eq("status", "active").maybeSingle(),
+  ]);
+  const paidPlan = subRow && (subRow.plan === "pro" || subRow.plan === "ultimate");
+  if (!isAdmin && !paidPlan) {
+    return json({
+      success: false,
+      error: "subscription_required",
+      message: "Generowanie muzyki wymaga planu Pro lub Ultimate.",
+    }, 403);
+  }
+
   let body: Record<string, any>;
   try { body = await req.json(); } catch { return json({ success: false, error: "invalid_json" }, 400); }
 

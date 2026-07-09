@@ -8,7 +8,8 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
-import { invokeStudioEngine } from "@/lib/hubStudio";
+import { invokeStudioEngine, fireCoverGeneration, isSubscriptionError } from "@/lib/hubStudio";
+import { UpgradeModal } from "@/components/modals/UpgradeModal";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { toast } from "sonner";
 
@@ -54,6 +55,7 @@ export const SunoGeneratePanel = () => {
   const [writingLyrics, setWritingLyrics] = useState(false);
 
   const [coverMode, setCoverMode] = useState<CoverMode>("auto");
+  const [showUpgrade, setShowUpgrade] = useState(false);
   const [coverDescription, setCoverDescription] = useState("");
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
@@ -95,8 +97,8 @@ export const SunoGeneratePanel = () => {
       const desc = coverMode === "custom" && coverDescription.trim()
         ? coverDescription.trim()
         : `profesjonalna okładka albumu dla "${songTitle}" w stylu ${songStyle || "muzycznym"}`;
-      const { data, error } = await supabase.functions.invoke("ai-cover-generate", {
-        body: { title: songTitle, style: songStyle, description: desc, mode: coverMode }
+      const { data, error } = await invokeStudioEngine("ai-cover-generate", {
+        title: songTitle, style: songStyle, description: desc, mode: coverMode,
       });
       if (error) throw error;
       if (data?.cover_url) { toast.success("🎨 Okładka wygenerowana!", { id: "ai-cover" }); return data.cover_url; }
@@ -169,6 +171,17 @@ export const SunoGeneratePanel = () => {
       const genId = data?.generation_id;
       if (!predId) throw new Error("Brak task_id z silnika");
 
+      // Okładka AI (darmowa) w tle — gotowa zanim skończy się muzyka.
+      // Przy trybie "upload" użytkownik doda własną grafikę przy zapisie.
+      if (usingAce && coverMode !== "upload") {
+        fireCoverGeneration(
+          predId,
+          title || prompt.trim().slice(0, 80),
+          style || prompt.trim().slice(0, 120),
+          coverMode === "custom" && coverDescription.trim() ? coverDescription.trim() : undefined
+        );
+      }
+
       if (!usingAce && data?.fingerprint_applied) {
         const fp = data.fingerprint_summary;
         setStatusMsg(`🧠 GrouAI Engine + Twój fingerprint (${fp?.genre || "—"}, ${fp?.bpm || "—"} BPM)...`);
@@ -178,8 +191,13 @@ export const SunoGeneratePanel = () => {
       setPolling(true);
       pollResult(predId, genId, fnName);
     } catch (err: any) {
-      toast.error(engineLabel + ": " + (err.message || "błąd"));
-      setStatusMsg("");
+      if (isSubscriptionError(err)) {
+        setShowUpgrade(true);
+        setStatusMsg("");
+      } else {
+        toast.error(engineLabel + ": " + (err.message || "błąd"));
+        setStatusMsg("");
+      }
     } finally { setGenerating(false); }
   };
 
@@ -209,6 +227,7 @@ export const SunoGeneratePanel = () => {
             title: title || "GrouAI Track",
             audio_url: url,
             audioUrl: url,
+            image_url: coverPreview || data.cover_url || "",
             tags: style || (engine === "acestep" ? "ACE-Step" : "GrouAI"),
             duration,
           }]);
@@ -518,6 +537,9 @@ export const SunoGeneratePanel = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Generowanie wymaga planu Pro/Ultimate */}
+      <UpgradeModal open={showUpgrade} onOpenChange={setShowUpgrade} />
     </div>
   );
 };

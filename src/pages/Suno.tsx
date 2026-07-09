@@ -619,6 +619,7 @@ const Suno = () => {
         album: "AI Generated",
         duration: result.durationSeconds,
         audio_url: result.audioUrl,
+        cover_url: result.imageUrl || null,
         genre: result.genre,
         mood: "generated",
       });
@@ -756,13 +757,14 @@ const Suno = () => {
               if (data.audioUrl) {
                 setResult({
                   audioUrl: data.audioUrl,
-                  title: data.plan?.lyrics_theme?.substring(0, 60) || `${data.plan?.genre || "AI"} ${data.plan?.mood || ""}`.trim(),
+                  imageUrl: data.coverUrl,
+                  title: data.plan?.title || data.plan?.lyrics_theme?.substring(0, 60) || `${data.plan?.genre || "AI"} ${data.plan?.mood || ""}`.trim(),
                   genre: data.plan?.genre || "AI",
                   generationId: data.generationId,
                   durationSeconds: data.plan?.duration_seconds || 30,
                   lyrics: [],
                 });
-                toast.success(`🎵 ${data.engine.toUpperCase()} — utwór gotowy!`);
+                toast.success(`🎵 Twój utwór jest gotowy!`);
               } else if (data.processing) {
                 toast.info(
                   data.engine === "suno"
@@ -1277,14 +1279,26 @@ const Suno = () => {
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.15 }}
                 >
-                  <motion.div
-                    className="w-14 h-14 rounded-xl flex items-center justify-center"
-                    style={{ background: "linear-gradient(135deg, #FF6B00, #FF9500)" }}
-                    animate={{ rotate: [0, 5, -5, 0] }}
-                    transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
-                  >
-                    <Music className="h-7 w-7 text-white" />
-                  </motion.div>
+                  {result.imageUrl ? (
+                    <motion.img
+                      src={result.imageUrl}
+                      alt={result.title}
+                      className="w-24 h-24 rounded-xl object-cover border border-[#FF6B00]/40 shadow-lg"
+                      style={{ boxShadow: "0 0 25px #FF6B0030" }}
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                    />
+                  ) : (
+                    <motion.div
+                      className="w-14 h-14 rounded-xl flex items-center justify-center"
+                      style={{ background: "linear-gradient(135deg, #FF6B00, #FF9500)" }}
+                      animate={{ rotate: [0, 5, -5, 0] }}
+                      transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
+                    >
+                      <Music className="h-7 w-7 text-white" />
+                    </motion.div>
+                  )}
                   <div className="flex-1">
                     <motion.p className="font-bold text-white text-lg" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.25 }}>
                       {result.title}

@@ -4,9 +4,10 @@ import { Sparkles, Loader2, Send, Globe, Zap, Music2, AlertCircle } from "lucide
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { invokeStudioEngine, waitForAceStep } from "@/lib/hubStudio";
+import { invokeStudioEngine, waitForAceStep, fireCoverGeneration, isSubscriptionError } from "@/lib/hubStudio";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
+import { UpgradeModal } from "@/components/modals/UpgradeModal";
 
 type Lang = "auto" | "pl" | "en" | "nl" | "uk";
 
@@ -47,6 +48,7 @@ const STAGE_LABELS: Record<Exclude<Lang, "auto">, { parsing: string; composing: 
 interface Props {
   onTrackReady?: (data: {
     audioUrl?: string;
+    coverUrl?: string;
     generationId: string;
     plan: any;
     engine: string;
@@ -63,6 +65,7 @@ export function MusicPromptBox({ onTrackReady }: Props) {
   const [planSummary, setPlanSummary] = useState<string>("");
   const [error, setError] = useState<string>("");
   const [placeholderIdx, setPlaceholderIdx] = useState(0);
+  const [showUpgrade, setShowUpgrade] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Rotate placeholders for inspiration
@@ -108,8 +111,11 @@ export function MusicPromptBox({ onTrackReady }: Props) {
       setPlanSummary(summary);
       setStage("composing");
 
+      // Okładka AI (darmowa) generuje się w tle, dopasowana do tytułu i stylu
+      fireCoverGeneration(data.task_id, data.plan?.title || "", data.plan?.tags || "");
+
       // ACE-Step pracuje asynchronicznie — czekamy na gotowy utwór
-      const audioUrl = await waitForAceStep(data.task_id, data.generation_id, (sec) => {
+      const { audioUrl, coverUrl } = await waitForAceStep(data.task_id, data.generation_id, (sec) => {
         setPlanSummary(`${summary} · ${labels.composing} ${sec}s`);
       });
 
@@ -117,12 +123,18 @@ export function MusicPromptBox({ onTrackReady }: Props) {
       toast.success(labels.done);
       onTrackReady?.({
         audioUrl,
+        coverUrl: coverUrl || undefined,
         generationId: data.generation_id,
         plan: data.plan,
         engine: data.engine,
       });
       setTimeout(() => setStage("idle"), 2500);
     } catch (e: any) {
+      if (isSubscriptionError(e)) {
+        setStage("idle");
+        setShowUpgrade(true);
+        return;
+      }
       console.error("[MusicPromptBox]", e);
       setStage("error");
       setError(e.message || "Coś poszło nie tak");
@@ -272,6 +284,9 @@ export function MusicPromptBox({ onTrackReady }: Props) {
           )}
         </AnimatePresence>
       </div>
+
+      {/* Generowanie wymaga planu Pro/Ultimate */}
+      <UpgradeModal open={showUpgrade} onOpenChange={setShowUpgrade} />
     </motion.div>
   );
 }

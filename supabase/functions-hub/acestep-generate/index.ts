@@ -140,6 +140,9 @@ Deno.serve(async (req) => {
           status: "succeeded",
           output: finalUrl,
           audio_url: finalUrl,
+          // Okładka generowana równolegle przez studio-cover pod deterministycznym
+          // adresem — frontend robi fallback, jeśli plik (jeszcze) nie istnieje.
+          cover_url: `${Deno.env.get("SUPABASE_URL")}/storage/v1/object/public/acestep/${predId}-cover.jpg`,
           r2_archived: !!archived,
         });
       }
@@ -158,6 +161,20 @@ Deno.serve(async (req) => {
     const { data: userData } = await live.auth.getUser();
     const userId = userData?.user?.id;
     if (!userId) return json({ error: "unauthorized" }, 401);
+
+    // Generowanie tylko dla planów płatnych (Pro/Ultimate) lub admina —
+    // każda generacja kosztuje realne pieniądze na Replicate.
+    const [{ data: isAdmin }, { data: subRow }] = await Promise.all([
+      live.rpc("has_role", { _user_id: userId, _role: "admin" }),
+      live.from("user_subscriptions").select("plan, status").eq("user_id", userId).eq("status", "active").maybeSingle(),
+    ]);
+    const paidPlan = subRow && (subRow.plan === "pro" || subRow.plan === "ultimate");
+    if (!isAdmin && !paidPlan) {
+      return json({
+        error: "subscription_required",
+        message: "Generowanie muzyki wymaga planu Pro lub Ultimate.",
+      }, 403);
+    }
 
     const prompt: string = (body.prompt || body.caption || "").trim();
     if (prompt.length < 3) return json({ error: "prompt too short" }, 400);
