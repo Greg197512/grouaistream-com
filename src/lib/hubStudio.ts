@@ -50,6 +50,21 @@ export async function invokeStudioEngine(
   return supabase.functions.invoke(fnName, { body });
 }
 
+/** Pobierz plik audio na dysk użytkownika (jak przycisk Download w Suno) */
+export async function downloadAudio(url: string, filename: string): Promise<void> {
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  const blob = await r.blob();
+  const objectUrl = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = objectUrl;
+  a.download = filename.replace(/[\\/:*?"<>|]/g, "_");
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(objectUrl), 10_000);
+}
+
 /** Czy błąd silnika oznacza brak planu płatnego */
 export function isSubscriptionError(err: unknown): boolean {
   const msg = err instanceof Error ? err.message : String(err ?? "");

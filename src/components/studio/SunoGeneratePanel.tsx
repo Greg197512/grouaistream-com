@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Music, Loader2, Play, Download, Wand2, Guitar, ImagePlus, Upload, X, Zap, Mic2, FileText } from "lucide-react";
+import { Sparkles, Music, Loader2, Play, Download, Wand2, Guitar, ImagePlus, Upload, X, Zap, Mic2, FileText, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -8,7 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
-import { invokeStudioEngine, fireCoverGeneration, isSubscriptionError } from "@/lib/hubStudio";
+import { invokeStudioEngine, fireCoverGeneration, isSubscriptionError, downloadAudio } from "@/lib/hubStudio";
 import { UpgradeModal } from "@/components/modals/UpgradeModal";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { toast } from "sonner";
@@ -525,11 +525,25 @@ export const SunoGeneratePanel = () => {
                   <p className="text-xs text-gray-400">GrouAI Engine{song.style ? ` • ${song.style}` : ""}</p>
                 </div>
                 <div className="flex gap-2">
-                  <Button size="icon" variant="ghost" className="h-10 w-10 text-[#9333EA] hover:bg-[#9333EA]/20" onClick={() => playSong(song)}>
+                  <Button size="icon" variant="ghost" className="h-10 w-10 text-[#9333EA] hover:bg-[#9333EA]/20" onClick={() => playSong(song)} title="Odtwórz">
                     <Play className="h-5 w-5" />
                   </Button>
-                  <Button size="icon" variant="ghost" className="h-10 w-10 text-[#FF9500] hover:bg-[#FF6B00]/20" onClick={() => saveSongToLibrary(song)}>
+                  <Button
+                    size="icon" variant="ghost"
+                    className="h-10 w-10 text-gray-300 hover:bg-white/10"
+                    title="Pobierz MP3"
+                    onClick={() => {
+                      const url = song.streamUrl || song.audioUrl;
+                      if (!url) { toast.error("Brak pliku audio"); return; }
+                      downloadAudio(url, `${song.title || "grouai-track"}.mp3`)
+                        .then(() => toast.success("Pobieranie rozpoczęte 🎵"))
+                        .catch(() => window.open(url, "_blank"));
+                    }}
+                  >
                     <Download className="h-5 w-5" />
+                  </Button>
+                  <Button size="icon" variant="ghost" className="h-10 w-10 text-[#FF9500] hover:bg-[#FF6B00]/20" onClick={() => saveSongToLibrary(song)} title="Zapisz w bibliotece GrouAI">
+                    <Save className="h-5 w-5" />
                   </Button>
                 </div>
               </motion.div>

@@ -28,7 +28,8 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { uploadToR2 } from "@/lib/r2Upload";
 import { renderScore } from "@/lib/musicSynth";
 import { generateMusic } from "@/utils/musicGenerator";
-import { Lock, Crown } from "lucide-react";
+import { Lock, Crown, Download } from "lucide-react";
+import { downloadAudio } from "@/lib/hubStudio";
 import { Link } from "react-router-dom";
 
 const FREE_GENERATION_LIMIT = 1;
@@ -712,7 +713,8 @@ const Suno = () => {
   return (
     <MainLayout>
       <div className="min-h-screen" style={{ background: "#0F0F1A" }}>
-        <div className="max-w-2xl mx-auto px-4 py-8 space-y-8">
+        <div className="max-w-6xl mx-auto px-4 py-8 xl:grid xl:grid-cols-[minmax(0,1fr)_400px] xl:gap-8 xl:items-start">
+          <div className="space-y-8 w-full max-w-2xl mx-auto xl:mx-0 min-w-0">
           {/* Header */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -1311,6 +1313,22 @@ const Suno = () => {
                   <WaveformPlayer audioUrl={result.audioUrl} title={result.title} genre={result.genre} onSaveToLibrary={saveToLibrary} />
                 </motion.div>
 
+                {/* Pobieranie — jak w Suno */}
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }} className="relative z-10 flex justify-end">
+                  <button
+                    onClick={() => {
+                      downloadAudio(result.audioUrl, `${result.title || "grouai-track"}.mp3`)
+                        .then(() => toast.success("Pobieranie rozpoczęte 🎵"))
+                        .catch(() => window.open(result.audioUrl, "_blank"));
+                    }}
+                    className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium text-white transition-transform hover:scale-105"
+                    style={{ background: "linear-gradient(135deg, #FF6B00, #FF9500)", boxShadow: "0 0 15px #FF6B0040" }}
+                  >
+                    <Download className="h-4 w-4" />
+                    Pobierz MP3
+                  </button>
+                </motion.div>
+
                 {result.lyrics.length > 0 && (
                   <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }} className="relative z-10">
                     <LyricsDisplay lyrics={result.lyrics} currentTime={playbackTime} isPlaying={isPlaying} totalDuration={result.durationSeconds} />
@@ -1320,10 +1338,14 @@ const Suno = () => {
             )}
           </AnimatePresence>
 
-          {/* Generation History */}
-          <GenerationHistory />
           </>
           )}
+          </div>
+
+          {/* Twoje utwory — biblioteka jak w Suno (zawsze widoczna, te same funkcje dla wszystkich) */}
+          <aside className="mt-10 xl:mt-0 xl:sticky xl:top-24 w-full max-w-2xl mx-auto xl:mx-0 min-w-0">
+            <GenerationHistory />
+          </aside>
         </div>
       </div>
 
