@@ -4,7 +4,7 @@ import { Sparkles, Loader2, Send, Globe, Zap, Music2, AlertCircle } from "lucide
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { supabase } from "@/integrations/supabase/client";
+import { invokeStudioEngine, waitForAceStep } from "@/lib/hubStudio";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -91,11 +91,9 @@ export function MusicPromptBox({ onTrackReady }: Props) {
     setPlanSummary("");
 
     try {
-      const { data, error: fnError } = await supabase.functions.invoke("studio-prompt-engine", {
-        body: {
-          prompt: prompt.trim(),
-          ...(language !== "auto" ? { language } : {}),
-        },
+      const { data, error: fnError } = await invokeStudioEngine("studio-prompt-engine", {
+        prompt: prompt.trim(),
+        ...(language !== "auto" ? { language } : {}),
       });
 
       if (fnError) {
@@ -105,35 +103,25 @@ export function MusicPromptBox({ onTrackReady }: Props) {
         throw new Error(data?.message || data?.error || "Engine error");
       }
 
-      // Show plan summary
+      // Show plan summary (AI ułożyło tytuł, styl i tekst)
       const summary: string = data.plan?.human_summary || "";
       setPlanSummary(summary);
       setStage("composing");
 
-      // If MusicGen returned audio synchronously
-      if (data.audio_url) {
-        setStage("done");
-        toast.success(labels.done);
-        onTrackReady?.({
-          audioUrl: data.audio_url,
-          generationId: data.generation_id,
-          plan: data.plan,
-          engine: data.engine,
-        });
-        setTimeout(() => setStage("idle"), 2500);
-        return;
-      }
+      // ACE-Step pracuje asynchronicznie — czekamy na gotowy utwór
+      const audioUrl = await waitForAceStep(data.task_id, data.generation_id, (sec) => {
+        setPlanSummary(`${summary} · ${labels.composing} ${sec}s`);
+      });
 
-      // Suno / ElevenLabs — async, just notify parent
+      setStage("done");
+      toast.success(labels.done);
       onTrackReady?.({
+        audioUrl,
         generationId: data.generation_id,
         plan: data.plan,
         engine: data.engine,
-        taskId: data.task_id,
-        processing: true,
       });
-      toast.success(`${labels.composing} (${data.engine})`);
-      setTimeout(() => setStage("idle"), 4000);
+      setTimeout(() => setStage("idle"), 2500);
     } catch (e: any) {
       console.error("[MusicPromptBox]", e);
       setStage("error");
