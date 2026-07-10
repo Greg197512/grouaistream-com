@@ -1,9 +1,11 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Loader2, Send, Globe, Zap, Music2, AlertCircle } from "lucide-react";
+import {
+  Sparkles, Loader2, Send, Globe, Music2, AlertCircle,
+  Flame, Wand2, Mic2, Guitar, CheckCircle2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import { invokeStudioEngine, waitForAceStep, fireCoverGeneration, isSubscriptionError } from "@/lib/hubStudio";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
@@ -16,25 +18,25 @@ const PLACEHOLDERS: Record<Exclude<Lang, "auto">, string[]> = {
     "Smutny lo-fi z deszczem, 80 BPM, 2 minuty, instrumentalny…",
     "Energetyczny synthwave w stylu The Midnight, męski wokal, 3 minuty…",
     "Mroczny trap na nocną jazdę, 140 BPM, kobiecy szept…",
-    "Spokojny ambient do medytacji, 70 BPM, 4 minuty…",
+    "Radosny pop o lecie, chwytliwy refren, kobiecy wokal…",
   ],
   en: [
     "Sad lo-fi with rain, 80 BPM, 2 minutes, instrumental…",
     "Energetic synthwave like The Midnight, male vocals, 3 minutes…",
     "Dark trap for a night drive, 140 BPM, female whisper…",
-    "Calm ambient for meditation, 70 BPM, 4 minutes…",
+    "Joyful summer pop, catchy chorus, female vocals…",
   ],
   nl: [
     "Verdrietige lo-fi met regen, 80 BPM, 2 minuten, instrumentaal…",
-    "Energieke synthwave zoals The Midnight, mannelijke zang, 3 minuten…",
+    "Energieke synthwave zoals The Midnight, mannelijke zang…",
     "Donkere trap voor een nachtrit, 140 BPM, vrouwelijk gefluister…",
-    "Rustige ambient voor meditatie, 70 BPM, 4 minuten…",
+    "Vrolijke zomerpop, pakkend refrein, vrouwelijke zang…",
   ],
   uk: [
     "Сумний lo-fi з дощем, 80 BPM, 2 хвилини, інструментальний…",
-    "Енергійний synthwave у стилі The Midnight, чоловічий вокал, 3 хвилини…",
+    "Енергійний synthwave у стилі The Midnight, чоловічий вокал…",
     "Темний trap для нічної їзди, 140 BPM, жіночий шепіт…",
-    "Спокійний ambient для медитації, 70 BPM, 4 хвилини…",
+    "Радісний літній поп, чіпкий приспів, жіночий вокал…",
   ],
 };
 
@@ -44,6 +46,18 @@ const STAGE_LABELS: Record<Exclude<Lang, "auto">, { parsing: string; composing: 
   nl: { parsing: "Ik begrijp wat U wilt…", composing: "Ik componeer Uw nummer…", done: "Klaar!" },
   uk: { parsing: "Розумію вашу ідею…", composing: "Створюю трек…", done: "Готово!" },
 };
+
+// Szybkie style — jedno kliknięcie dopisuje do opisu (jak tagi w Suno)
+const VIBES: { label: string; emoji: string; add: string }[] = [
+  { label: "Pop", emoji: "✨", add: "chwytliwy pop, radiowy" },
+  { label: "Rock", emoji: "🎸", add: "energiczny rock, mocne gitary" },
+  { label: "Disco", emoji: "🪩", add: "taneczne disco, lata 80" },
+  { label: "Hip-Hop", emoji: "🎤", add: "hip-hop, mocny bit, flow" },
+  { label: "Lo-fi", emoji: "🌧️", add: "spokojny lo-fi, chillout" },
+  { label: "Elektronika", emoji: "⚡", add: "electronic, syntezatory, energetyczny" },
+  { label: "Ballada", emoji: "💜", add: "emocjonalna ballada, pianino" },
+  { label: "Epicki", emoji: "🔥", add: "epicki, filmowy, orkiestrowy" },
+];
 
 interface Props {
   onTrackReady?: (data: {
@@ -57,18 +71,59 @@ interface Props {
   }) => void;
 }
 
+// Losowe iskry/płomienie zapalające się i gasnące — niepowtarzalny efekt
+function EmberField({ active }: { active: boolean }) {
+  const embers = useMemo(
+    () =>
+      Array.from({ length: 14 }).map((_, i) => ({
+        id: i,
+        left: `${8 + Math.random() * 84}%`,
+        bottom: `${Math.random() * 40}%`,
+        delay: Math.random() * 4,
+        dur: 2.5 + Math.random() * 3,
+        size: 8 + Math.random() * 12,
+      })),
+    []
+  );
+  return (
+    <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-3xl">
+      {embers.map((e) => (
+        <motion.div
+          key={e.id}
+          className="absolute"
+          style={{ left: e.left, bottom: e.bottom }}
+          initial={{ opacity: 0, y: 0, scale: 0.6 }}
+          animate={{
+            opacity: active ? [0, 0.9, 0] : [0, 0.35, 0],
+            y: active ? [-4, -60] : [-2, -24],
+            scale: [0.6, 1, 0.5],
+          }}
+          transition={{ duration: e.dur, repeat: Infinity, delay: e.delay, ease: "easeOut" }}
+        >
+          <Flame
+            style={{ width: e.size, height: e.size }}
+            className={active ? "text-orange-400" : "text-primary/50"}
+          />
+        </motion.div>
+      ))}
+    </div>
+  );
+}
+
 export function MusicPromptBox({ onTrackReady }: Props) {
   const { user } = useAuth();
   const [prompt, setPrompt] = useState("");
   const [language, setLanguage] = useState<Lang>("auto");
+  const [instrumental, setInstrumental] = useState(false);
   const [stage, setStage] = useState<"idle" | "parsing" | "composing" | "done" | "error">("idle");
   const [planSummary, setPlanSummary] = useState<string>("");
+  const [elapsed, setElapsed] = useState(0);
   const [error, setError] = useState<string>("");
   const [placeholderIdx, setPlaceholderIdx] = useState(0);
   const [showUpgrade, setShowUpgrade] = useState(false);
+  const [activeVibes, setActiveVibes] = useState<string[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Rotate placeholders for inspiration
   useEffect(() => {
     if (prompt) return;
     const id = setInterval(() => setPlaceholderIdx((i) => (i + 1) % 4), 3500);
@@ -78,6 +133,18 @@ export function MusicPromptBox({ onTrackReady }: Props) {
   const placeholderLang = language === "auto" ? "pl" : language;
   const placeholder = PLACEHOLDERS[placeholderLang][placeholderIdx];
   const labels = STAGE_LABELS[placeholderLang];
+  const isBusy = stage === "parsing" || stage === "composing";
+
+  const toggleVibe = (v: (typeof VIBES)[number]) => {
+    if (isBusy) return;
+    if (activeVibes.includes(v.label)) {
+      setActiveVibes((s) => s.filter((x) => x !== v.label));
+    } else {
+      setActiveVibes((s) => [...s, v.label]);
+      setPrompt((p) => (p.trim() ? `${p.trim()}, ${v.add}` : v.add));
+    }
+    textareaRef.current?.focus();
+  };
 
   const handleGenerate = async () => {
     if (!user) {
@@ -86,38 +153,35 @@ export function MusicPromptBox({ onTrackReady }: Props) {
     }
     if (prompt.trim().length < 3) {
       toast.error("Powiedz coś więcej o utworze");
+      textareaRef.current?.focus();
       return;
     }
 
     setStage("parsing");
     setError("");
     setPlanSummary("");
+    setElapsed(0);
 
     try {
+      const finalPrompt = instrumental ? `${prompt.trim()} (instrumentalny, bez wokalu)` : prompt.trim();
       const { data, error: fnError } = await invokeStudioEngine("studio-prompt-engine", {
-        prompt: prompt.trim(),
+        prompt: finalPrompt,
         ...(language !== "auto" ? { language } : {}),
       });
 
-      if (fnError) {
-        throw new Error(fnError.message || "Generation failed");
-      }
-      if (!data?.success) {
-        throw new Error(data?.message || data?.error || "Engine error");
-      }
+      if (fnError) throw new Error(fnError.message || "Generation failed");
+      if (!data?.success) throw new Error(data?.message || data?.error || "Engine error");
 
-      // Show plan summary (AI ułożyło tytuł, styl i tekst)
       const summary: string = data.plan?.human_summary || "";
       setPlanSummary(summary);
       setStage("composing");
 
-      // Okładka AI (darmowa) generuje się w tle, dopasowana do tytułu i stylu
+      // Okładka AI (darmowa) startuje w tle, dopasowana do tytułu i stylu
       fireCoverGeneration(data.task_id, data.plan?.title || "", data.plan?.tags || "");
 
-      // ACE-Step pracuje asynchronicznie — czekamy na gotowy utwór
-      const { audioUrl, coverUrl } = await waitForAceStep(data.task_id, data.generation_id, (sec) => {
-        setPlanSummary(`${summary} · ${labels.composing} ${sec}s`);
-      });
+      const { audioUrl, coverUrl } = await waitForAceStep(data.task_id, data.generation_id, (sec) =>
+        setElapsed(sec)
+      );
 
       setStage("done");
       toast.success(labels.done);
@@ -128,6 +192,7 @@ export function MusicPromptBox({ onTrackReady }: Props) {
         plan: data.plan,
         engine: data.engine,
       });
+      setActiveVibes([]);
       setTimeout(() => setStage("idle"), 2500);
     } catch (e: any) {
       if (isSubscriptionError(e)) {
@@ -137,52 +202,56 @@ export function MusicPromptBox({ onTrackReady }: Props) {
       }
       console.error("[MusicPromptBox]", e);
       setStage("error");
-      setError(e.message || "Coś poszło nie tak");
+      setError(e.message || "Coś poszło nie tak — spróbuj ponownie");
       toast.error(e.message || "Błąd generowania");
-      setTimeout(() => setStage("idle"), 5000);
+      setTimeout(() => setStage("idle"), 6000);
     }
   };
 
-  const isBusy = stage === "parsing" || stage === "composing";
-
   return (
-    <motion.div
-      initial={{ opacity: 0, y: -10 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="relative w-full"
-    >
-      {/* Glow background */}
-      <div className="absolute inset-0 -z-10 bg-gradient-to-br from-primary/20 via-purple-500/10 to-orange-500/20 blur-3xl opacity-60" />
+    <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="relative w-full">
+      {/* Obracająca się poświata za kartą */}
+      <motion.div
+        aria-hidden
+        className="absolute -inset-[2px] -z-10 rounded-[26px] opacity-70 blur-md"
+        style={{
+          background:
+            "conic-gradient(from 0deg, #FF6B00, #9333EA, #FF9500, #FF6B00)",
+        }}
+        animate={{ rotate: isBusy ? 360 : [0, 360] }}
+        transition={{ duration: isBusy ? 4 : 18, repeat: Infinity, ease: "linear" }}
+      />
 
-      <div className="relative rounded-3xl border-2 border-primary/40 bg-card/60 backdrop-blur-xl p-6 shadow-2xl shadow-primary/20">
+      <div className="relative overflow-hidden rounded-[24px] border border-white/10 bg-[#12101c]/90 backdrop-blur-2xl p-6 shadow-2xl">
+        <EmberField active={isBusy} />
+
         {/* Header */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
+        <div className="relative z-10 flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2.5">
             <motion.div
-              animate={{ rotate: isBusy ? 360 : 0 }}
-              transition={{ duration: 2, repeat: isBusy ? Infinity : 0, ease: "linear" }}
+              className="grid place-items-center h-9 w-9 rounded-xl bg-gradient-to-br from-[#FF6B00] to-[#9333EA] shadow-lg"
+              animate={isBusy ? { scale: [1, 1.12, 1] } : { scale: 1 }}
+              transition={{ duration: 1, repeat: isBusy ? Infinity : 0 }}
             >
-              <Sparkles className="w-5 h-5 text-primary" />
+              {isBusy ? <Flame className="h-5 w-5 text-white" /> : <Wand2 className="h-5 w-5 text-white" />}
             </motion.div>
-            <h2 className="text-lg font-bold tracking-tight">
-              Powiedz mi co zagrać
-            </h2>
-            <Badge variant="outline" className="text-xs border-primary/40 text-primary">
-              AI · PL/EN/NL/UK
-            </Badge>
+            <div>
+              <h2 className="text-lg font-extrabold tracking-tight text-white leading-none">
+                Stwórz utwór
+              </h2>
+              <p className="text-[11px] text-white/50 mt-0.5">Opisz jednym zdaniem — AI zrobi resztę</p>
+            </div>
           </div>
 
-          {/* Language switcher */}
-          <div className="flex items-center gap-1 bg-muted/40 rounded-full p-1">
+          {/* Język */}
+          <div className="flex items-center gap-0.5 bg-white/5 rounded-full p-1 border border-white/10">
             {(["auto", "pl", "en", "nl", "uk"] as Lang[]).map((l) => (
               <button
                 key={l}
                 onClick={() => setLanguage(l)}
                 disabled={isBusy}
-                className={`px-2.5 py-1 rounded-full text-xs font-medium transition-all ${
-                  language === l
-                    ? "bg-primary text-primary-foreground shadow"
-                    : "text-muted-foreground hover:text-foreground"
+                className={`px-2 py-1 rounded-full text-[11px] font-semibold transition-all ${
+                  language === l ? "bg-white text-black shadow" : "text-white/50 hover:text-white"
                 }`}
               >
                 {l === "auto" ? <Globe className="w-3 h-3 inline" /> : l.toUpperCase()}
@@ -191,93 +260,150 @@ export function MusicPromptBox({ onTrackReady }: Props) {
           </div>
         </div>
 
-        {/* Textarea */}
-        <Textarea
-          ref={textareaRef}
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-              e.preventDefault();
-              handleGenerate();
-            }
-          }}
-          placeholder={placeholder}
-          disabled={isBusy}
-          className="min-h-[100px] text-base resize-none bg-background/50 border-primary/20 focus-visible:ring-primary placeholder:text-muted-foreground/60"
-        />
-
-        {/* Action row */}
-        <div className="flex items-center justify-between mt-4 gap-3">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Zap className="w-3.5 h-3.5" />
-            <span>Cmd/Ctrl + Enter</span>
-          </div>
-
-          <Button
-            onClick={handleGenerate}
-            disabled={isBusy || prompt.trim().length < 3}
-            size="lg"
-            className="bg-gradient-to-r from-primary via-purple-500 to-orange-500 hover:opacity-90 text-white font-bold px-8 shadow-lg shadow-primary/30"
-          >
-            {isBusy ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                {stage === "parsing" ? labels.parsing : labels.composing}
-              </>
-            ) : (
-              <>
-                <Send className="w-4 h-4 mr-2" />
-                Generuj
-              </>
-            )}
-          </Button>
+        {/* Chipy stylu */}
+        <div className="relative z-10 flex flex-wrap gap-1.5 mb-3">
+          {VIBES.map((v) => {
+            const on = activeVibes.includes(v.label);
+            return (
+              <button
+                key={v.label}
+                onClick={() => toggleVibe(v)}
+                disabled={isBusy}
+                className={`group relative inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium transition-all ${
+                  on
+                    ? "border-[#FF6B00] bg-[#FF6B00]/15 text-orange-300"
+                    : "border-white/10 bg-white/5 text-white/60 hover:border-white/25 hover:text-white"
+                }`}
+              >
+                <span>{v.emoji}</span>
+                {v.label}
+                {on && (
+                  <motion.span
+                    initial={{ scale: 0, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    className="ml-0.5"
+                  >
+                    <Flame className="h-3 w-3 text-orange-400" />
+                  </motion.span>
+                )}
+              </button>
+            );
+          })}
         </div>
 
-        {/* Plan summary / progress */}
+        {/* Pole opisu */}
+        <div className="relative z-10">
+          <Textarea
+            ref={textareaRef}
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                e.preventDefault();
+                handleGenerate();
+              }
+            }}
+            placeholder={placeholder}
+            disabled={isBusy}
+            className="min-h-[96px] text-base resize-none bg-black/30 border-white/10 text-white focus-visible:ring-[#FF6B00] placeholder:text-white/35 rounded-2xl"
+          />
+        </div>
+
+        {/* Pasek akcji */}
+        <div className="relative z-10 flex items-center justify-between mt-3 gap-3">
+          <button
+            onClick={() => !isBusy && setInstrumental((v) => !v)}
+            disabled={isBusy}
+            className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-all ${
+              instrumental
+                ? "border-purple-400/50 bg-purple-500/15 text-purple-200"
+                : "border-white/10 bg-white/5 text-white/60 hover:text-white"
+            }`}
+            title="Utwór bez wokalu"
+          >
+            {instrumental ? <Guitar className="h-3.5 w-3.5" /> : <Mic2 className="h-3.5 w-3.5" />}
+            {instrumental ? "Instrumental" : "Z wokalem"}
+          </button>
+
+          <motion.div whileHover={!isBusy ? { scale: 1.03 } : {}} whileTap={!isBusy ? { scale: 0.97 } : {}}>
+            <Button
+              onClick={handleGenerate}
+              disabled={isBusy || prompt.trim().length < 3}
+              size="lg"
+              className="relative overflow-hidden font-bold px-8 text-white border-0 shadow-lg shadow-[#FF6B00]/30 disabled:opacity-50"
+              style={{ background: "linear-gradient(135deg, #FF6B00, #FF9500, #9333EA)" }}
+            >
+              {/* płomienny połysk lecący przez przycisk */}
+              {!isBusy && (
+                <motion.span
+                  aria-hidden
+                  className="absolute inset-0"
+                  style={{ background: "linear-gradient(100deg, transparent, rgba(255,255,255,0.35), transparent)" }}
+                  animate={{ x: ["-120%", "120%"] }}
+                  transition={{ duration: 2.2, repeat: Infinity, repeatDelay: 1.5 }}
+                />
+              )}
+              <span className="relative flex items-center">
+                {isBusy ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    {stage === "parsing" ? labels.parsing : `${labels.composing} ${elapsed}s`}
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4 mr-2" />
+                    Generuj
+                  </>
+                )}
+              </span>
+            </Button>
+          </motion.div>
+        </div>
+
+        {/* Status / postęp / błąd */}
         <AnimatePresence>
           {(planSummary || error || stage === "done") && (
             <motion.div
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: "auto" }}
               exit={{ opacity: 0, height: 0 }}
-              className="mt-4 overflow-hidden"
+              className="relative z-10 mt-4 overflow-hidden"
             >
               {error ? (
-                <div className="flex items-start gap-2 rounded-xl bg-destructive/10 border border-destructive/30 p-3 text-sm text-destructive">
+                <div className="flex items-start gap-2 rounded-xl bg-red-500/10 border border-red-500/30 p-3 text-sm text-red-300">
                   <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
                   <span>{error}</span>
                 </div>
+              ) : stage === "done" ? (
+                <div className="flex items-start gap-2 rounded-xl bg-emerald-500/10 border border-emerald-500/30 p-3 text-sm text-emerald-300">
+                  <CheckCircle2 className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                  <span>{labels.done} Utwór gotowy — pojawił się w „Twoich utworach”.</span>
+                </div>
               ) : (
-                <div className="flex items-start gap-2 rounded-xl bg-primary/10 border border-primary/30 p-3 text-sm">
-                  <Music2 className="w-4 h-4 mt-0.5 flex-shrink-0 text-primary" />
-                  <span className="text-foreground/90">{planSummary || labels.done}</span>
+                <div className="flex items-start gap-2 rounded-xl bg-[#FF6B00]/10 border border-[#FF6B00]/30 p-3 text-sm">
+                  <Music2 className="w-4 h-4 mt-0.5 flex-shrink-0 text-[#FF9500]" />
+                  <span className="text-white/85">{planSummary}</span>
                 </div>
               )}
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Animated bars while composing */}
+        {/* Equalizer podczas komponowania */}
         <AnimatePresence>
           {stage === "composing" && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="flex items-center justify-center gap-1 mt-4 h-8"
+              className="relative z-10 flex items-end justify-center gap-1 mt-4 h-10"
             >
-              {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
+              {Array.from({ length: 16 }).map((_, i) => (
                 <motion.div
                   key={i}
-                  className="w-1 bg-gradient-to-t from-primary to-orange-500 rounded-full"
-                  animate={{ height: ["20%", "100%", "20%"] }}
-                  transition={{
-                    duration: 0.8,
-                    repeat: Infinity,
-                    delay: i * 0.1,
-                    ease: "easeInOut",
-                  }}
+                  className="w-1.5 rounded-full bg-gradient-to-t from-[#9333EA] via-[#FF6B00] to-[#FF9500]"
+                  animate={{ height: ["15%", "100%", "30%", "80%", "15%"] }}
+                  transition={{ duration: 1, repeat: Infinity, delay: i * 0.06, ease: "easeInOut" }}
                 />
               ))}
             </motion.div>
@@ -285,7 +411,6 @@ export function MusicPromptBox({ onTrackReady }: Props) {
         </AnimatePresence>
       </div>
 
-      {/* Generowanie wymaga planu Pro/Ultimate */}
       <UpgradeModal open={showUpgrade} onOpenChange={setShowUpgrade} />
     </motion.div>
   );
