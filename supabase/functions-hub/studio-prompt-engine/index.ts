@@ -105,27 +105,29 @@ async function planWithModels(
   return null;
 }
 
-const PLANNER_PROMPT = `Jesteś kompozytorem i tekściarzem GrouAI Studio. Użytkownik opisze utwór jednym lub kilkoma zdaniami (po polsku, angielsku, niderlandzku lub ukraińsku). Twoim zadaniem jest ułożyć KOMPLETNY plan piosenki.
+const PLANNER_PROMPT = `Jesteś nagradzanym producentem muzycznym i tekściarzem GrouAI Studio (poziom studia klasy premium). Użytkownik opisze utwór jednym lub kilkoma zdaniami. Twoim zadaniem jest ułożyć KOMPLETNY, PROFESJONALNY plan piosenki brzmiącej jak nagranie ze studia.
 
 Odpowiedz WYŁĄCZNIE poprawnym JSON (bez komentarzy) o polach:
 {
-  "title": "chwytliwy tytuł utworu",
-  "tags": "angielskie tagi stylu oddzielone przecinkami: gatunek, nastrój, tempo/BPM, instrumenty, typ wokalu (np. 'melodic pop, upbeat, 120 bpm, female vocals, synth, radio friendly')",
+  "title": "chwytliwy, oryginalny tytuł",
+  "tags": "BOGATE angielskie tagi produkcyjne oddzielone przecinkami — MUSZĄ zawierać: (1) gatunek + podgatunek, (2) nastrój, (3) dokładne tempo BPM, (4) konkretne instrumenty, (5) typ i barwę wokalu (np. 'warm female vocals, emotive'), (6) tagi produkcji/jakości: 'studio quality, professional mix, mastered, wide stereo, punchy drums, clear vocals, radio-ready, hi-fi'. Przykład: 'melodic dance pop, uplifting, 122 bpm, layered synths, punchy kick, warm female vocals, catchy hook, studio quality, professional mix, mastered, radio-ready, hi-fi'",
   "instrumental": false,
-  "lyrics": "PEŁNY tekst piosenki ze strukturą [verse]/[chorus]/[bridge] w języku użytkownika; jeśli instrumental=true wpisz '[instrumental]'",
-  "duration_seconds": 120,
+  "lyrics": "PEŁNY, DOPRACOWANY tekst z rymami i chwytliwym refrenem, PEŁNA struktura ze znacznikami [intro][verse][chorus][verse][chorus][bridge][chorus][outro] w języku użytkownika; jeśli instrumental=true wpisz '[instrumental]'",
+  "duration_seconds": 150,
   "language": "pl|en|nl|uk",
   "human_summary": "jedno zdanie po polsku co tworzysz"
 }
 
-Zasady:
-- Jeśli użytkownik prosi o utwór instrumentalny lub nie wspomina o wokalu/słowach w kontekście muzyki tła — ustaw instrumental=true.
-- Jeśli użytkownik podał własny tekst — użyj go w całości (możesz dodać znaczniki struktury).
-- duration_seconds: 60-180 (domyślnie 120; krótsze jeśli prosi o "krótki"/"intro"/"jingiel").
-- Tekst piosenki w języku, w którym pisze użytkownik (chyba że prosi o inny).
-- tags ZAWSZE po angielsku (tego wymaga silnik muzyczny).
+Zasady jakości (jak Suno):
+- tags MUSZĄ być bogate i konkretne — im więcej dobrych deskryptorów produkcji, tym lepszy dźwięk. ZAWSZE dodaj tagi jakości ('studio quality, professional mix, mastered, hi-fi').
+- Refren chwytliwy i powtarzalny (hook). Zwrotki z sensownym rymem.
+- PEŁNA struktura utworu z [intro] i [outro] — nie tylko verse/chorus.
+- duration_seconds: 120-180 (domyślnie 150 dla pełnego utworu; krótsze tylko gdy user prosi "krótki"/"intro").
+- Jeśli user podał własny tekst — użyj go, dodaj tylko znaczniki struktury.
+- Jeśli user prosi instrumental lub muzykę tła bez wokalu — instrumental=true.
+- Tekst w języku użytkownika; tags ZAWSZE po angielsku (wymóg silnika).
 
-BARDZO WAŻNE: Odpowiedz WYŁĄCZNIE surowym obiektem JSON. Zacznij odpowiedź od znaku { i zakończ na }. NIE dodawaj żadnego tekstu przed ani po, żadnych wyjaśnień, żadnego rozumowania, żadnych znaczników markdown ani <think>.`;
+BARDZO WAŻNE: Odpowiedz WYŁĄCZNIE surowym obiektem JSON. Zacznij od { i zakończ na }. Bez wyjaśnień, rozumowania, markdown ani <think>.`;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -196,16 +198,17 @@ Deno.serve(async (req) => {
     if (!instrumental) {
       engineName = "minimax";
       const vocalModel = cfg["vocal_model"] || "minimax/music-1.5";
-      const mmPrompt = (tags + ", high quality, studio recording").slice(0, 300);
+      // Bogaty opis + tagi jakości studyjnej dają dźwięk najbliższy Suno.
+      const mmPrompt = (tags + ", studio quality, professional mix, mastered, clear vocals, hi-fi").slice(0, 300);
       rel = await fetch(`${REPLICATE_BASE}/models/${vocalModel}/predictions`, {
         method: "POST",
         headers: rHeaders,
         body: JSON.stringify({
           input: {
-            prompt: mmPrompt.length >= 10 ? mmPrompt : mmPrompt + ", modern pop",
+            prompt: mmPrompt.length >= 10 ? mmPrompt : mmPrompt + ", modern pop, studio quality",
             lyrics: lyrics.slice(0, 3000),
             audio_format: "mp3",
-            bitrate: 256000,
+            bitrate: parseInt(cfg["minimax_bitrate"] || "256000", 10) || 256000,
             sample_rate: 44100,
           },
         }),
