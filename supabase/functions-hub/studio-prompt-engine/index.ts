@@ -200,13 +200,20 @@ Deno.serve(async (req) => {
       const vocalModel = cfg["vocal_model"] || "minimax/music-1.5";
       // Bogaty opis + tagi jakości studyjnej dają dźwięk najbliższy Suno.
       const mmPrompt = (tags + ", studio quality, professional mix, mastered, clear vocals, hi-fi").slice(0, 300);
+      // MiniMax przyjmuje tekst 10-600 znaków i sam rozwija go w pełny utwór.
+      // Bierzemy zwrotkę+refren; usuwamy [intro]/[outro], przycinamy do 600.
+      let mmLyrics = lyrics
+        .replace(/\[(intro|outro)\][^\[]*/gi, "")
+        .trim();
+      if (mmLyrics.length > 600) mmLyrics = mmLyrics.slice(0, 600).replace(/\s+\S*$/, "");
+      if (mmLyrics.length < 10) mmLyrics = lyrics.slice(0, 600);
       rel = await fetch(`${REPLICATE_BASE}/models/${vocalModel}/predictions`, {
         method: "POST",
         headers: rHeaders,
         body: JSON.stringify({
           input: {
             prompt: mmPrompt.length >= 10 ? mmPrompt : mmPrompt + ", modern pop, studio quality",
-            lyrics: lyrics.slice(0, 3000),
+            lyrics: mmLyrics,
             audio_format: "mp3",
             bitrate: parseInt(cfg["minimax_bitrate"] || "256000", 10) || 256000,
             sample_rate: 44100,
