@@ -613,10 +613,13 @@ const Suno = () => {
 
   const saveToLibrary = async () => {
     if (!result) return;
+    if (!user) { toast.error("Zaloguj się, aby zapisać"); return; }
     try {
+      const artistName = user.user_metadata?.display_name || user.email?.split("@")[0] || "GrouAI Studio";
       const { error } = await supabase.from("tracks").insert({
+        user_id: user.id,
         title: result.title,
-        artist: "GrouAI Studio",
+        artist: artistName,
         album: "AI Generated",
         duration: result.durationSeconds,
         audio_url: result.audioUrl,

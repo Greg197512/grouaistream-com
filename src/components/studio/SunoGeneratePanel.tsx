@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { invokeStudioEngine, fireCoverGeneration, isSubscriptionError, downloadAudio } from "@/lib/hubStudio";
 import { UpgradeModal } from "@/components/modals/UpgradeModal";
 import { usePlayer } from "@/contexts/PlayerContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
 interface GeneratedSong {
@@ -35,6 +36,7 @@ type Engine = "acestep" | "musicgen";
 
 export const SunoGeneratePanel = () => {
   const { playTrack } = usePlayer();
+  const { user } = useAuth();
   const [prompt, setPrompt] = useState("");
   const [title, setTitle] = useState("");
   const [style, setStyle] = useState("");
@@ -271,7 +273,8 @@ export const SunoGeneratePanel = () => {
       let finalCoverUrl = song.imageUrl || null;
       if (coverMode === "upload" && coverFile) { const uploaded = await uploadCoverToStorage(coverFile); if (uploaded) finalCoverUrl = uploaded; }
       else if (coverMode === "custom" || coverMode === "auto") { const aiCover = await generateAICover(song.title, song.style || style || ""); if (aiCover) finalCoverUrl = aiCover; }
-      const { error } = await supabase.from("tracks").insert({ title: song.title, artist: "GrouAI Engine", album: "AI Generated", duration: song.duration || 180, audio_url: url, cover_url: finalCoverUrl, genre: song.style || "AI", mood: "generated" });
+      if (!user) { toast.error("Zaloguj się, aby zapisać"); return; }
+      const { error } = await supabase.from("tracks").insert({ user_id: user.id, title: song.title, artist: user.user_metadata?.display_name || user.email?.split("@")[0] || "GrouAI Engine", album: "AI Generated", duration: song.duration || 180, audio_url: url, cover_url: finalCoverUrl, genre: song.style || "AI", mood: "generated" });
       if (error) throw error;
       toast.success(`"${song.title}" dodano do biblioteki!`);
     } catch (err: any) { toast.error("Błąd zapisu: " + err.message); }

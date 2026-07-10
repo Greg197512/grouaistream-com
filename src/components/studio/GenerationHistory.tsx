@@ -183,13 +183,17 @@ export const GenerationHistory = () => {
     }
   };
 
-  // „Dodaj do Nowości” — publikacja utworu w bibliotece strony (sekcja Nowe na serwerze)
+  // „Dodaj do Nowości” — publikacja utworu na stronie głównej (sekcja „Nowe na serwerze”).
+  // RLS na LIVE wymaga user_id = zalogowany użytkownik.
   const addToNew = async (gen: Generation) => {
     if (!gen.audio_url) return;
+    if (!user) { toast.error("Zaloguj się, aby publikować"); return; }
     try {
+      const artistName = user.user_metadata?.display_name || user.email?.split("@")[0] || "GrouAI Studio";
       const { error } = await supabase.from("tracks").insert({
+        user_id: user.id,
         title: gen.title,
-        artist: "GrouAI Studio",
+        artist: artistName,
         album: "AI Generated",
         duration: 180,
         audio_url: gen.audio_url,
@@ -198,7 +202,7 @@ export const GenerationHistory = () => {
         mood: "generated",
       });
       if (error) throw error;
-      toast.success(`„${gen.title}” opublikowano w Nowościach! 🚀`);
+      toast.success(`„${gen.title}” jest już na stronie głównej w „Nowe na serwerze”! 🚀`);
     } catch (e: any) {
       toast.error("Nie udało się opublikować: " + (e?.message || "błąd"));
     }
