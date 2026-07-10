@@ -250,6 +250,16 @@ Deno.serve(async (req) => {
     const predId = relData?.id;
     if (!predId) return json({ error: "No prediction id from Replicate", details: relData }, 502);
 
+    // Okładka AI startuje automatycznie po stronie serwera — każdy utwór ją
+    // dostaje, niezależnie od tego, skąd przyszło zlecenie (UI, API, testy).
+    const coverReq = fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/studio-cover`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: authHeader },
+      body: JSON.stringify({ id: predId, title, style: body.genre || prompt.slice(0, 150) }),
+    }).catch(() => null);
+    // @ts-ignore — EdgeRuntime.waitUntil jest dostępne w Supabase Edge Runtime
+    if (typeof EdgeRuntime !== "undefined" && EdgeRuntime.waitUntil) EdgeRuntime.waitUntil(coverReq);
+
     const { data: gen } = await live.from("generations").insert({
       user_id: userId,
       title,

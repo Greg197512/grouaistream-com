@@ -209,6 +209,15 @@ Deno.serve(async (req) => {
     const predId = relData?.id;
     if (!predId) return json({ success: false, error: "no_prediction_id" }, 200);
 
+    // Okładka AI startuje automatycznie po stronie serwera — każdy utwór ją dostaje.
+    const coverReq = fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/studio-cover`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: authHeader },
+      body: JSON.stringify({ id: predId, title, style: tags }),
+    }).catch(() => null);
+    // @ts-ignore — EdgeRuntime.waitUntil jest dostępne w Supabase Edge Runtime
+    if (typeof EdgeRuntime !== "undefined" && EdgeRuntime.waitUntil) EdgeRuntime.waitUntil(coverReq);
+
     // ===== 3. Rekord w Studio (LIVE) =====
     const { data: gen } = await live.from("generations").insert({
       user_id: userId,
