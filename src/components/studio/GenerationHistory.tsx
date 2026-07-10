@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePlayer } from "@/contexts/PlayerContext";
 import {
   Music, Heart, Download, Play, Loader2, RefreshCw, Library, Trash2, Plus,
-  MoreHorizontal, AudioLines, ImagePlus, Crown, FileAudio,
+  MoreHorizontal, AudioLines, ImagePlus, Crown, FileAudio, Link2, Share2, ExternalLink,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -34,7 +35,6 @@ interface Generation {
 
 function CoverThumb({ gen, version }: { gen: Generation; version: number }) {
   const [failed, setFailed] = useState(false);
-  const [hovered, setHovered] = useState(false);
   const coverUrl = gen.replicate_id
     ? `${HUB_STORAGE}/${gen.replicate_id}-cover.jpg${version ? `?v=${version}` : ""}`
     : null;
@@ -46,31 +46,25 @@ function CoverThumb({ gen, version }: { gen: Generation; version: number }) {
       </div>
     );
   }
+  // Najazd = podskok z obrotem i powiększeniem; zejście = sprężysty powrót.
   return (
-    <div
-      className="relative shrink-0"
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-    >
-      <img
-        src={coverUrl}
-        alt=""
-        loading="lazy"
-        onError={() => setFailed(true)}
-        className="w-14 h-14 rounded-lg object-cover border border-[#FF6B00]/20 transition-transform duration-200 hover:scale-105 cursor-zoom-in"
-      />
-      {/* Powiększony podgląd okładki po najechaniu — jak w Suno */}
-      {hovered && (
-        <div className="absolute left-16 top-1/2 -translate-y-1/2 z-50 pointer-events-none">
-          <img
-            src={coverUrl}
-            alt=""
-            className="w-56 h-56 rounded-2xl object-cover border-2 border-[#FF6B00]/50 shadow-2xl"
-            style={{ boxShadow: "0 0 50px #FF6B0050, 0 20px 60px rgba(0,0,0,0.7)" }}
-          />
-        </div>
-      )}
-    </div>
+    <motion.img
+      src={coverUrl}
+      alt=""
+      loading="lazy"
+      onError={() => setFailed(true)}
+      className="w-14 h-14 shrink-0 rounded-lg object-cover border border-[#FF6B00]/20 cursor-zoom-in origin-center"
+      whileHover={{
+        scale: 1.9,
+        rotate: [0, -12, 8, 0],
+        y: -10,
+        zIndex: 40,
+        boxShadow: "0 0 40px rgba(255,107,0,0.45), 0 18px 50px rgba(0,0,0,0.7)",
+        borderRadius: 16,
+      }}
+      transition={{ type: "spring", stiffness: 320, damping: 15 }}
+      style={{ position: "relative", zIndex: 1 }}
+    />
   );
 }
 
@@ -210,6 +204,35 @@ export const GenerationHistory = () => {
     }
   };
 
+  // Kopiuj link do pobrania
+  const copyLink = async (gen: Generation) => {
+    if (!gen.audio_url) return;
+    try {
+      await navigator.clipboard.writeText(gen.audio_url);
+      toast.success("Link do utworu skopiowany 🔗");
+    } catch {
+      window.prompt("Skopiuj link do utworu:", gen.audio_url);
+    }
+  };
+
+  // Wyślij / Udostępnij — natywne „wyślij do" (WhatsApp, Messenger, mail…)
+  const shareTrack = async (gen: Generation) => {
+    if (!gen.audio_url) return;
+    const shareData = {
+      title: gen.title,
+      text: `Posłuchaj „${gen.title}” — stworzone w GrouAI Studio 🎧`,
+      url: gen.audio_url,
+    };
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(gen.audio_url);
+        toast.success("Link skopiowany — wklej go, gdzie chcesz wysłać 🔗");
+      }
+    } catch { /* użytkownik anulował */ }
+  };
+
   const removeGeneration = async (gen: Generation) => {
     if (!window.confirm(`Usunąć „${gen.title}” z Twoich utworów? Tego nie można cofnąć.`)) return;
     const { error } = await supabase.from("generations").delete().eq("id", gen.id);
@@ -325,7 +348,8 @@ export const GenerationHistory = () => {
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-56 bg-[#1a1a2e] border-[#FF6B00]/30 text-white">
+                      <DropdownMenuContent align="end" className="w-60 bg-[#1a1a2e] border-[#FF6B00]/30 text-white">
+                        {/* Pobieranie */}
                         <DropdownMenuItem className="cursor-pointer gap-2" onClick={() => void downloadWav(gen)}>
                           <FileAudio className="h-4 w-4 text-[#FF9500]" /> Pobierz WAV (HQ)
                         </DropdownMenuItem>
@@ -333,6 +357,18 @@ export const GenerationHistory = () => {
                           <Download className="h-4 w-4 text-gray-300" /> Pobierz MP3
                         </DropdownMenuItem>
                         <DropdownMenuSeparator className="bg-[#FF6B00]/20" />
+                        {/* Udostępnianie */}
+                        <DropdownMenuItem className="cursor-pointer gap-2" onClick={() => void shareTrack(gen)}>
+                          <Share2 className="h-4 w-4 text-sky-400" /> Wyślij / Udostępnij
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className="cursor-pointer gap-2" onClick={() => void copyLink(gen)}>
+                          <Link2 className="h-4 w-4 text-gray-300" /> Kopiuj link
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className="cursor-pointer gap-2" onClick={() => gen.audio_url && window.open(gen.audio_url, "_blank")}>
+                          <ExternalLink className="h-4 w-4 text-gray-300" /> Otwórz w nowej karcie
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator className="bg-[#FF6B00]/20" />
+                        {/* Obróbka AI */}
                         <DropdownMenuItem className="cursor-pointer gap-2" onClick={() => void splitStems(gen)}>
                           <AudioLines className="h-4 w-4 text-purple-400" /> Rozdziel na ścieżki (AI)
                         </DropdownMenuItem>
@@ -340,6 +376,7 @@ export const GenerationHistory = () => {
                           <ImagePlus className="h-4 w-4 text-pink-400" /> Nowa okładka (AI)
                         </DropdownMenuItem>
                         <DropdownMenuSeparator className="bg-[#FF6B00]/20" />
+                        {/* Biblioteka */}
                         <DropdownMenuItem className="cursor-pointer gap-2" onClick={() => void addToNew(gen)}>
                           <Plus className="h-4 w-4 text-emerald-400" /> Dodaj do Nowości
                         </DropdownMenuItem>

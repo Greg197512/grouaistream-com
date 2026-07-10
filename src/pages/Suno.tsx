@@ -28,7 +28,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { uploadToR2 } from "@/lib/r2Upload";
 import { renderScore } from "@/lib/musicSynth";
 import { generateMusic } from "@/utils/musicGenerator";
-import { Lock, Crown, Download } from "lucide-react";
+import { Lock, Crown, Download, Share2 } from "lucide-react";
 import { downloadAudio } from "@/lib/hubStudio";
 import { Link } from "react-router-dom";
 
@@ -1313,8 +1313,19 @@ const Suno = () => {
                   <WaveformPlayer audioUrl={result.audioUrl} title={result.title} genre={result.genre} onSaveToLibrary={saveToLibrary} />
                 </motion.div>
 
-                {/* Pobieranie — jak w Suno */}
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }} className="relative z-10 flex justify-end">
+                {/* Pobieranie + Wyślij — jak w Suno */}
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }} className="relative z-10 flex justify-end gap-2">
+                  <button
+                    onClick={() => {
+                      const data = { title: result.title, text: `Posłuchaj „${result.title}” — stworzone w GrouAI Studio 🎧`, url: result.audioUrl };
+                      if (navigator.share) navigator.share(data).catch(() => {});
+                      else navigator.clipboard.writeText(result.audioUrl).then(() => toast.success("Link skopiowany 🔗"));
+                    }}
+                    className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium text-white border border-white/15 bg-white/5 transition-transform hover:scale-105 hover:bg-white/10"
+                  >
+                    <Share2 className="h-4 w-4" />
+                    Wyślij
+                  </button>
                   <button
                     onClick={() => {
                       downloadAudio(result.audioUrl, `${result.title || "grouai-track"}.mp3`)
