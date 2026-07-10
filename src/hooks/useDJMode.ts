@@ -123,9 +123,10 @@ export const useDJMode = () => {
     try {
       toast.loading("🎧 DJ GrouAI — Rotterdam Peak-Time...", { id: "dj-mode" });
 
-      // Fetch tracks matching genres
-      let allTracks: any[] = [];
-      
+      // DJ ma dostęp do CAŁEJ biblioteki (limit 1000 pokrywa cały katalog).
+      // 1) Najpierw utwory z wybranego gatunku (jeśli podano).
+      // 2) Potem dobiera resztę z całej biblioteki, żeby set nigdy się nie urwał.
+      let genreTracks: any[] = [];
       if (genres.length > 0) {
         const genreFilters = genres.map(g => `genre.ilike.%${g}%`).join(",");
         const { data } = await supabase
@@ -133,32 +134,36 @@ export const useDJMode = () => {
           .select("*")
           .not("audio_url", "is", null)
           .or(genreFilters)
-          .limit(200);
-        allTracks = data || [];
+          .limit(1000);
+        genreTracks = data || [];
       }
 
-      // Fill with more tracks if needed
-      if (allTracks.length < trackCount) {
-        const existingIds = allTracks.map(t => t.id);
-        const { data: moreTracks } = await supabase
-          .from("tracks")
-          .select("*")
-          .not("audio_url", "is", null)
-          .limit(200);
-        const additional = (moreTracks || []).filter(t => !existingIds.includes(t.id));
-        allTracks = [...allTracks, ...additional];
-      }
+      // Cała biblioteka (do mieszania i dobierania)
+      const { data: libraryData } = await supabase
+        .from("tracks")
+        .select("*")
+        .not("audio_url", "is", null)
+        .limit(1000);
+      const library = libraryData || [];
 
-      if (allTracks.length === 0) {
-        toast.error("No tracks available!", { id: "dj-mode" });
+      if (library.length === 0) {
+        toast.error("Brak utworów w bibliotece!", { id: "dj-mode" });
         setIsLoading(false);
         return;
       }
 
-      // Shuffle and pick tracks
-      const curatedTracks: Track[] = [...allTracks]
-        .sort(() => Math.random() - 0.5)
-        .slice(0, trackCount);
+      const shuffle = <T,>(arr: T[]): T[] => [...arr].sort(() => Math.random() - 0.5);
+
+      // Set: najpierw shuffle utworów z gatunku, potem shuffle reszty biblioteki.
+      // Gdy "mieszana" (brak gatunku) — cała biblioteka losowo.
+      const genreIds = new Set(genreTracks.map(t => t.id));
+      const restOfLibrary = library.filter(t => !genreIds.has(t.id));
+      const ordered = genres.length > 0
+        ? [...shuffle(genreTracks), ...shuffle(restOfLibrary)]
+        : shuffle(library);
+
+      // Pełny set (min. trackCount, ale zostaw zapas do ciągłego grania)
+      const curatedTracks: Track[] = ordered.slice(0, Math.max(trackCount, 40)) as Track[];
 
       const session: DJSession = {
         tracks: curatedTracks,
