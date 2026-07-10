@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeHubAI } from "@/lib/hubAI";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { useDJMode } from "@/hooks/useDJMode";
 import { useAuth } from "@/contexts/AuthContext";
@@ -472,6 +473,31 @@ export const AIAssistant = () => {
     let assistantContent = "";
     let currentTrackLink: Message["trackLink"] = undefined;
 
+    // === KOMENDA DJ — obsługa LOKALNA (natychmiast, bez serwera AI) ===
+    // "puść disco", "zagraj rock", "muzyka mieszana" itd. → startDJSession
+    // od razu pobiera utwory z bazy, miksuje i zapowiada — jak żywy DJ.
+    try {
+      const djCmd = parseDJCommand(userMessage);
+      if (djCmd.isDJCommand) {
+        const genreLabel = djCmd.genres.length ? djCmd.genres.join(", ") : "impreza";
+        setMessages(prev => [...prev, {
+          role: "assistant",
+          content: `🎧 Lecę z setem: **${genreLabel}**! Miksuję na żywo, zapowiadam kawałki — trzymaj się! 🔥`,
+          isDJMode: true,
+        }]);
+        void startDJSession({
+          genres: djCmd.genres,
+          partyType: djCmd.partyType || "party",
+          trackCount: djCmd.trackCount || 15,
+          customPrompt: userMessage,
+        });
+        setIsLoading(false);
+        return;
+      }
+    } catch (e) {
+      console.warn("[AIAssistant] DJ parse error:", e);
+    }
+
     try {
       const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-assistant`;
       
@@ -702,6 +728,21 @@ export const AIAssistant = () => {
         }
       }
 
+      // Fallback rozmowy: jeśli główny endpoint nic nie zwrócił (np. brak
+      // klucza AI po stronie Lovable), dopytaj działający hub GrouAI.
+      if (!assistantContent.trim()) {
+        const { data: hub } = await invokeHubAI({
+          message: userMessage + saveInfoForAI,
+          history: messages.slice(-10).map(m => ({ role: m.role, content: m.content })),
+          userContext,
+        });
+        const reply = hub?.response || hub?.answer;
+        if (reply) {
+          assistantContent = reply;
+          setMessages(prev => [...prev, { role: "assistant", content: reply }]);
+        }
+      }
+
       // Głosowa odpowiedź: przeczytaj finalną wiadomość asystenta
       if (voiceReplies && assistantContent.trim()) {
         const speech = stripMarkdownForSpeech(assistantContent).slice(0, 800);
@@ -710,10 +751,28 @@ export const AIAssistant = () => {
 
     } catch (error) {
       console.error("AI Assistant error:", error);
-      setMessages(prev => [...prev, {
-        role: "assistant",
-        content: "Przepraszam, wystąpił błąd. Spróbuj ponownie za chwilę. 😔"
-      }]);
+      // Ostatnia deska ratunku — hub GrouAI
+      try {
+        const { data: hub } = await invokeHubAI({
+          message: userMessage,
+          history: messages.slice(-10).map(m => ({ role: m.role, content: m.content })),
+          userContext,
+        });
+        const reply = hub?.response || hub?.answer;
+        setMessages(prev => [...prev, {
+          role: "assistant",
+          content: reply || "Przepraszam, wystąpił błąd. Spróbuj ponownie za chwilę. 😔",
+        }]);
+        if (reply && voiceReplies) {
+          const speech = stripMarkdownForSpeech(reply).slice(0, 800);
+          if (speech) void speak(speech, { lang: getSpeechLang() });
+        }
+      } catch {
+        setMessages(prev => [...prev, {
+          role: "assistant",
+          content: "Przepraszam, wystąpił błąd. Spróbuj ponownie za chwilę. 😔",
+        }]);
+      }
     } finally {
       pendingPlaylistRef.current = null;
       pendingRadioUpdateRef.current = null;

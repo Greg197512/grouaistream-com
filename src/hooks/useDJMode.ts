@@ -248,9 +248,6 @@ export const useDJMode = () => {
       /high\s*energy\s*domówka/i, /jazda/i, /dawaj\s*set/i,
     ];
     
-    const isDJCommand = djPatterns.some(p => p.test(lower));
-    if (!isDJCommand) return { isDJCommand: false, genres: [], partyType: "", trackCount: 0, customPrompt: "" };
-
     const genreMap: Record<string, string> = {
       "techno": "Electronic", "hard techno": "Electronic", "house": "House", "haus": "House",
       "hip-hop": "Hip-Hop", "hip hop": "Hip-Hop", "hiphop": "Hip-Hop",
@@ -260,7 +257,8 @@ export const useDJMode = () => {
       "reggae": "Reggae", "r&b": "R&B", "rnb": "R&B", "funk": "Funk",
       "electronic": "Electronic", "indie": "Indie", "classical": "Classical",
       "ambient": "Ambient", "dens": "Dance", "electro": "Electronic",
-      "rotterdam": "Electronic", "driving house": "House",
+      "rotterdam": "Electronic", "driving house": "House", "elektronika": "Electronic",
+      "klasyczn": "Classical", "klasyka": "Classical", "country": "Country",
     };
 
     const genres: string[] = [];
@@ -274,6 +272,30 @@ export const useDJMode = () => {
     if (genres.length === 0 && (lower.includes("peak") || lower.includes("rotterdam") || lower.includes("hard"))) {
       genres.push("Electronic");
     }
+
+    // "mieszana / miks / wszystko / losowo" → DJ gra ze wszystkich gatunków
+    const mixedWords = ["mieszan", "miks", "mixed", "wszystk", "losow", "random", "różn", "rozn", "alles", "різне", "все"];
+    const wantsMixed = mixedWords.some(w => lower.includes(w));
+
+    // Słowa-akcje: pozwalają uruchomić DJ-a samym gatunkiem, bez słowa "dj/set".
+    // "puść disco", "zagraj rock", "graj pop", "muzyka jazz", "włącz mieszaną"…
+    const actionWords = [
+      "puść", "pusc", "zagraj", "graj", "leć", "lec", "dawaj", "włącz", "wlacz",
+      "nastaw", "ustaw", "chcę", "chce", "poproszę", "poprosze", "muzyk", "muzyka",
+      "play", "put on", "gimme", "give me", "music",
+      "speel", "zet op", "muziek",
+      "включи", "постав", "музик", "давай",
+    ];
+    const hasAction = actionWords.some(w => lower.includes(w));
+
+    // Komenda DJ, jeśli: klasyczny wzorzec DJ, LUB (akcja + gatunek),
+    // LUB (akcja + "mieszana"), LUB samo wskazanie gatunku muzycznego.
+    const isDJCommand =
+      djPatterns.some(p => p.test(lower)) ||
+      (hasAction && (genres.length > 0 || wantsMixed)) ||
+      genres.length > 0;
+
+    if (!isDJCommand) return { isDJCommand: false, genres: [], partyType: "", trackCount: 0, customPrompt: "" };
 
     let trackCount = 15;
     const countMatch = lower.match(/(\d+)\s*(?:utw|kawałk|piosen|track|song|utwor|nummer|трек|пісн)/i);
