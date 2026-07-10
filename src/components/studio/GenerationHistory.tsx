@@ -2,9 +2,16 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePlayer } from "@/contexts/PlayerContext";
-import { Music, Heart, Download, Play, Loader2, RefreshCw, Library, Trash2, Plus } from "lucide-react";
+import {
+  Music, Heart, Download, Play, Loader2, RefreshCw, Library, Trash2, Plus,
+  MoreHorizontal, AudioLines, ImagePlus, Crown, FileAudio,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { downloadAudio } from "@/lib/hubStudio";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { downloadAudio, downloadAudioAsWav, startStems, waitForStems, invokeStudioEngine, isSubscriptionError } from "@/lib/hubStudio";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -25,9 +32,12 @@ interface Generation {
   replicate_id?: string | null;
 }
 
-function CoverThumb({ gen }: { gen: Generation }) {
+function CoverThumb({ gen, version }: { gen: Generation; version: number }) {
   const [failed, setFailed] = useState(false);
-  const coverUrl = gen.replicate_id ? `${HUB_STORAGE}/${gen.replicate_id}-cover.jpg` : null;
+  const [hovered, setHovered] = useState(false);
+  const coverUrl = gen.replicate_id
+    ? `${HUB_STORAGE}/${gen.replicate_id}-cover.jpg${version ? `?v=${version}` : ""}`
+    : null;
 
   if (!coverUrl || failed) {
     return (
@@ -37,13 +47,30 @@ function CoverThumb({ gen }: { gen: Generation }) {
     );
   }
   return (
-    <img
-      src={coverUrl}
-      alt=""
-      loading="lazy"
-      onError={() => setFailed(true)}
-      className="w-14 h-14 shrink-0 rounded-lg object-cover border border-[#FF6B00]/20"
-    />
+    <div
+      className="relative shrink-0"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      <img
+        src={coverUrl}
+        alt=""
+        loading="lazy"
+        onError={() => setFailed(true)}
+        className="w-14 h-14 rounded-lg object-cover border border-[#FF6B00]/20 transition-transform duration-200 hover:scale-105 cursor-zoom-in"
+      />
+      {/* Powiększony podgląd okładki po najechaniu — jak w Suno */}
+      {hovered && (
+        <div className="absolute left-16 top-1/2 -translate-y-1/2 z-50 pointer-events-none">
+          <img
+            src={coverUrl}
+            alt=""
+            className="w-56 h-56 rounded-2xl object-cover border-2 border-[#FF6B00]/50 shadow-2xl"
+            style={{ boxShadow: "0 0 50px #FF6B0050, 0 20px 60px rgba(0,0,0,0.7)" }}
+          />
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -53,6 +80,11 @@ export const GenerationHistory = () => {
   const [generations, setGenerations] = useState<Generation[]>([]);
   const [loading, setLoading] = useState(true);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [coverVersion, setCoverVersion] = useState(0);
+  const [stemsDialog, setStemsDialog] = useState<{
+    open: boolean; title: string; loading: boolean; elapsed: number;
+    stems: Record<string, string> | null;
+  }>({ open: false, title: "", loading: false, elapsed: 0, stems: null });
   const timerRef = useRef<number | null>(null);
 
   const loadGenerations = useCallback(async () => {
@@ -106,6 +138,54 @@ export const GenerationHistory = () => {
       window.open(gen.audio_url, "_blank");
     } finally {
       setDownloadingId(null);
+    }
+  };
+
+  // Pobierz WAV wysokiej jakości (konwersja w przeglądarce)
+  const downloadWav = async (gen: Generation) => {
+    if (!gen.audio_url) return;
+    setDownloadingId(gen.id);
+    toast.loading("Przygotowuję WAV HQ…", { id: "wav" });
+    try {
+      await downloadAudioAsWav(gen.audio_url, `${gen.title || "grouai-track"}.wav`);
+      toast.success("WAV pobrany 🎧", { id: "wav" });
+    } catch (e: any) {
+      toast.error("Błąd WAV: " + (e?.message || "spróbuj MP3"), { id: "wav" });
+    } finally {
+      setDownloadingId(null);
+    }
+  };
+
+  // Rozdziel na ścieżki (wokal/perkusja/bas/reszta) — Demucs, jak w Suno
+  const splitStems = async (gen: Generation) => {
+    if (!gen.audio_url) return;
+    setStemsDialog({ open: true, title: gen.title, loading: true, elapsed: 0, stems: null });
+    try {
+      const taskId = await startStems(gen.audio_url);
+      const stems = await waitForStems(taskId, gen.replicate_id || gen.id, (sec) =>
+        setStemsDialog((s) => ({ ...s, elapsed: sec }))
+      );
+      setStemsDialog((s) => ({ ...s, loading: false, stems }));
+      toast.success("Ścieżki gotowe! 🎚️");
+    } catch (e: any) {
+      setStemsDialog((s) => ({ ...s, open: false, loading: false }));
+      if (isSubscriptionError(e)) toast.error("Rozdzielanie na ścieżki wymaga planu Pro lub Ultimate");
+      else toast.error("Nie udało się rozdzielić: " + (e?.message || "błąd"));
+    }
+  };
+
+  // Nowa okładka AI (darmowa) — nadpisuje obecną
+  const regenerateCover = async (gen: Generation) => {
+    if (!gen.replicate_id) { toast.error("Ten utwór nie obsługuje okładek AI"); return; }
+    toast.loading("🎨 Generuję nową okładkę…", { id: "recover" });
+    const { data, error } = await invokeStudioEngine("studio-cover", {
+      id: gen.replicate_id, title: gen.title, style: gen.genre,
+    });
+    if (error || !data?.cover_url) {
+      toast.error("Nie udało się wygenerować okładki", { id: "recover" });
+    } else {
+      setCoverVersion(Date.now());
+      toast.success("Nowa okładka gotowa! 🎨", { id: "recover" });
     }
   };
 
@@ -166,6 +246,9 @@ export const GenerationHistory = () => {
           {generations.length > 0 && (
             <span className="text-xs font-normal text-gray-400">({generations.length})</span>
           )}
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-extrabold tracking-wider text-black bg-gradient-to-r from-amber-300 to-yellow-500 shadow-[0_0_12px_#f59e0b60]">
+            <Crown className="h-2.5 w-2.5" /> PREMIUM
+          </span>
         </h2>
         <Button
           size="icon"
@@ -194,7 +277,7 @@ export const GenerationHistory = () => {
                   isPending && "opacity-80"
                 )}
               >
-                <CoverThumb gen={gen} />
+                <CoverThumb gen={gen} version={coverVersion} />
 
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-sm text-white truncate">{gen.title}</p>
@@ -234,33 +317,44 @@ export const GenerationHistory = () => {
                         ? <Loader2 className="h-4 w-4 animate-spin" />
                         : <Download className="h-4 w-4" />}
                     </Button>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-8 w-8 text-[#FF6B00] hover:text-[#FF9500]"
-                      onClick={() => void saveToFavorites(gen.id)}
-                      title="Do ulubionych"
-                    >
-                      <Heart className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-8 w-8 text-emerald-400 hover:text-emerald-300"
-                      onClick={() => void addToNew(gen)}
-                      title="Dodaj do Nowości (publikuj na stronie)"
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-8 w-8 text-gray-500 hover:text-red-400"
-                      onClick={() => void removeGeneration(gen)}
-                      title="Usuń"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+
+                    {/* Menu opcji — jak w Suno */}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button size="icon" variant="ghost" className="h-8 w-8 text-gray-400 hover:text-white" title="Więcej opcji">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-56 bg-[#1a1a2e] border-[#FF6B00]/30 text-white">
+                        <DropdownMenuItem className="cursor-pointer gap-2" onClick={() => void downloadWav(gen)}>
+                          <FileAudio className="h-4 w-4 text-[#FF9500]" /> Pobierz WAV (HQ)
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className="cursor-pointer gap-2" onClick={() => void download(gen)}>
+                          <Download className="h-4 w-4 text-gray-300" /> Pobierz MP3
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator className="bg-[#FF6B00]/20" />
+                        <DropdownMenuItem className="cursor-pointer gap-2" onClick={() => void splitStems(gen)}>
+                          <AudioLines className="h-4 w-4 text-purple-400" /> Rozdziel na ścieżki (AI)
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className="cursor-pointer gap-2" onClick={() => void regenerateCover(gen)}>
+                          <ImagePlus className="h-4 w-4 text-pink-400" /> Nowa okładka (AI)
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator className="bg-[#FF6B00]/20" />
+                        <DropdownMenuItem className="cursor-pointer gap-2" onClick={() => void addToNew(gen)}>
+                          <Plus className="h-4 w-4 text-emerald-400" /> Dodaj do Nowości
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className="cursor-pointer gap-2" onClick={() => void saveToFavorites(gen.id)}>
+                          <Heart className="h-4 w-4 text-[#FF6B00]" /> Do ulubionych
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator className="bg-[#FF6B00]/20" />
+                        <DropdownMenuItem
+                          className="cursor-pointer gap-2 text-red-400 focus:text-red-300"
+                          onClick={() => void removeGeneration(gen)}
+                        >
+                          <Trash2 className="h-4 w-4" /> Usuń
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 )}
               </div>
@@ -268,6 +362,47 @@ export const GenerationHistory = () => {
           })}
         </div>
       )}
+
+      {/* Okno ścieżek (stems) — wokal / perkusja / bas / reszta */}
+      <Dialog open={stemsDialog.open} onOpenChange={(o) => !stemsDialog.loading && setStemsDialog((s) => ({ ...s, open: o }))}>
+        <DialogContent className="bg-[#1a1a2e] border-[#FF6B00]/30 text-white max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-[#FF9500]">
+              <AudioLines className="h-5 w-5" />
+              Ścieżki: {stemsDialog.title}
+            </DialogTitle>
+          </DialogHeader>
+          {stemsDialog.loading ? (
+            <div className="py-8 text-center space-y-3">
+              <Loader2 className="h-8 w-8 animate-spin mx-auto text-[#FF9500]" />
+              <p className="text-sm text-gray-300">AI rozdziela utwór na ścieżki… {stemsDialog.elapsed}s</p>
+              <p className="text-xs text-gray-500">wokal · perkusja · bas · reszta (~1–2 min)</p>
+            </div>
+          ) : stemsDialog.stems ? (
+            <div className="space-y-2">
+              {Object.entries(stemsDialog.stems).map(([name, url]) => {
+                const label = ({ vocals: "🎤 Wokal", drums: "🥁 Perkusja", bass: "🎸 Bas", other: "🎹 Reszta (instrumenty)", guitar: "🎸 Gitara", piano: "🎹 Pianino" } as Record<string, string>)[name] || name;
+                return (
+                  <div key={name} className="flex items-center justify-between gap-2 p-2.5 rounded-lg border border-[#FF6B00]/20 bg-[#0f0f1e]/60">
+                    <span className="text-sm font-medium">{label}</span>
+                    <div className="flex gap-1">
+                      <Button size="sm" variant="ghost" className="h-8 gap-1.5 text-gray-200"
+                        onClick={() => { const a = new Audio(url); void a.play(); }}>
+                        <Play className="h-3.5 w-3.5" /> Odsłuchaj
+                      </Button>
+                      <Button size="sm" className="h-8 gap-1.5 text-white" style={{ background: "linear-gradient(135deg, #FF6B00, #FF9500)" }}
+                        onClick={() => void downloadAudio(url, `${stemsDialog.title}-${name}.mp3`).catch(() => window.open(url, "_blank"))}>
+                        <Download className="h-3.5 w-3.5" /> Pobierz
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+              <p className="text-[11px] text-gray-500 pt-1">Ścieżki zapisane na stałe — możesz do nich wrócić w każdej chwili.</p>
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

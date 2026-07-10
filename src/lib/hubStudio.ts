@@ -9,6 +9,8 @@ const HUB_PROMPT_ENGINE_URL =
   "https://bmwtydwpevzhbdplilbr.supabase.co/functions/v1/studio-prompt-engine";
 const HUB_COVER_URL =
   "https://bmwtydwpevzhbdplilbr.supabase.co/functions/v1/studio-cover";
+const HUB_STEMS_URL =
+  "https://bmwtydwpevzhbdplilbr.supabase.co/functions/v1/studio-stems";
 
 type InvokeResult = { data: any; error: Error | null };
 
@@ -48,6 +50,75 @@ export async function invokeStudioEngine(
   if (fnName === "studio-prompt-engine") return hubFetch(HUB_PROMPT_ENGINE_URL, body);
   if (fnName === "ai-cover-generate" || fnName === "studio-cover") return hubFetch(HUB_COVER_URL, body);
   return supabase.functions.invoke(fnName, { body });
+}
+
+/**
+ * Pobierz audio jako WAV wysokiej jakości (16-bit PCM 44.1 kHz) —
+ * dekodowanie w przeglądarce, bez dodatkowych kosztów serwera.
+ */
+export async function downloadAudioAsWav(url: string, filename: string): Promise<void> {
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  const arrayBuffer = await r.arrayBuffer();
+  const ctx = new AudioContext();
+  const audio = await ctx.decodeAudioData(arrayBuffer);
+  void ctx.close();
+
+  // Enkoder WAV (PCM 16-bit, interleaved)
+  const numCh = audio.numberOfChannels;
+  const len = audio.length * numCh * 2;
+  const buffer = new ArrayBuffer(44 + len);
+  const view = new DataView(buffer);
+  const writeStr = (off: number, s: string) => { for (let i = 0; i < s.length; i++) view.setUint8(off + i, s.charCodeAt(i)); };
+  writeStr(0, "RIFF"); view.setUint32(4, 36 + len, true); writeStr(8, "WAVE");
+  writeStr(12, "fmt "); view.setUint32(16, 16, true); view.setUint16(20, 1, true);
+  view.setUint16(22, numCh, true); view.setUint32(24, audio.sampleRate, true);
+  view.setUint32(28, audio.sampleRate * numCh * 2, true); view.setUint16(32, numCh * 2, true);
+  view.setUint16(34, 16, true); writeStr(36, "data"); view.setUint32(40, len, true);
+  let off = 44;
+  const chans: Float32Array[] = [];
+  for (let c = 0; c < numCh; c++) chans.push(audio.getChannelData(c));
+  for (let i = 0; i < audio.length; i++) {
+    for (let c = 0; c < numCh; c++) {
+      const s = Math.max(-1, Math.min(1, chans[c][i]));
+      view.setInt16(off, s < 0 ? s * 0x8000 : s * 0x7fff, true);
+      off += 2;
+    }
+  }
+  const blob = new Blob([buffer], { type: "audio/wav" });
+  const objectUrl = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = objectUrl;
+  a.download = filename.replace(/[\\/:*?"<>|]/g, "_");
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(objectUrl), 10_000);
+}
+
+/** Start rozdzielania utworu na ścieżki (Demucs na hubie). Zwraca task_id. */
+export async function startStems(audioUrl: string): Promise<string> {
+  const { data, error } = await hubFetch(HUB_STEMS_URL, { audio_url: audioUrl });
+  if (error) throw error;
+  if (!data?.task_id) throw new Error(data?.error || "Nie udało się wystartować");
+  return data.task_id as string;
+}
+
+/** Czekaj na ścieżki (poll co 5 s, max ~5 min). Zwraca mapę nazwa→url. */
+export async function waitForStems(
+  taskId: string,
+  trackId: string,
+  onTick?: (sec: number) => void
+): Promise<Record<string, string>> {
+  for (let i = 1; i <= 60; i++) {
+    await new Promise((res) => setTimeout(res, 5000));
+    onTick?.(i * 5);
+    const { data, error } = await hubFetch(HUB_STEMS_URL, { action: "status", task_id: taskId, id: trackId });
+    if (error) continue;
+    if (data?.status === "succeeded" && data?.stems) return data.stems as Record<string, string>;
+    if (data?.status === "failed") throw new Error(data?.error || "Rozdzielanie nie powiodło się");
+  }
+  throw new Error("Przekroczono czas oczekiwania");
 }
 
 /** Pobierz plik audio na dysk użytkownika (jak przycisk Download w Suno) */
