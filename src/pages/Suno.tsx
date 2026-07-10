@@ -724,13 +724,42 @@ const Suno = () => {
             animate={{ opacity: 1, y: 0 }}
             className="text-center space-y-4"
           >
-            <div className="mx-auto w-24 h-24 rounded-2xl flex items-center justify-center relative"
+            <div className="mx-auto w-24 h-24 rounded-2xl flex items-center justify-center relative overflow-hidden"
               style={{
                 background: "linear-gradient(135deg, #FF6B00, #FF9500, #9333EA)",
                 boxShadow: "0 0 40px #FF6B0060, 0 0 80px #9333EA30",
               }}
             >
-              <Waves className="h-12 w-12 text-white" />
+              {/* Obracająca się poświata w tle */}
+              <motion.div
+                aria-hidden
+                className="absolute -inset-6 opacity-40"
+                style={{ background: "conic-gradient(from 0deg, transparent, #ffffff88, transparent 40%)" }}
+                animate={{ rotate: 360 }}
+                transition={{ duration: 6, repeat: Infinity, ease: "linear" }}
+              />
+              {/* Autorski equalizer — fala dźwiękowa */}
+              <div className="relative z-10 flex items-end gap-[3px] h-12">
+                {[0.55, 0.85, 0.35, 1, 0.5, 0.75, 0.4].map((base, i) => (
+                  <motion.span
+                    key={i}
+                    className="w-[4px] rounded-full bg-white"
+                    style={{ boxShadow: "0 0 6px rgba(255,255,255,0.7)" }}
+                    animate={{ scaleY: [base, 1, base * 0.5, 0.9, base] }}
+                    transition={{ duration: 1.1, repeat: Infinity, delay: i * 0.09, ease: "easeInOut" }}
+                    initial={{ height: "100%", transformOrigin: "bottom" }}
+                  />
+                ))}
+              </div>
+              {/* Iskra AI w rogu */}
+              <motion.div
+                className="absolute top-2 right-2 z-10"
+                animate={{ scale: [1, 1.4, 1], opacity: [0.7, 1, 0.7], rotate: [0, 90, 0] }}
+                transition={{ duration: 2.2, repeat: Infinity }}
+              >
+                <Sparkles className="h-4 w-4 text-white" />
+              </motion.div>
+              {/* Pulsująca ramka */}
               <motion.div
                 className="absolute inset-0 rounded-2xl"
                 style={{ border: "2px solid #FF6B0080" }}
