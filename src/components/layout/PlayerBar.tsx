@@ -30,12 +30,16 @@ import { usePlayer } from "@/contexts/PlayerContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { YouTubePlayer, YouTubePlayerRef } from "@/components/player/YouTubePlayer";
 import { TrackOptionsMenu } from "@/components/menus/TrackOptionsMenu";
 import { QueueSidebar } from "@/components/player/QueueSidebar";
 import { FullscreenPlayer } from "@/components/player/FullscreenPlayer";
-import { QuickMoodDetector } from "@/components/mood/QuickMoodDetector";
+// Lazy — face-api (~1 MB) ładuje się dopiero po otwarciu detektora nastroju,
+// nie przy każdym wejściu na stronę.
+const QuickMoodDetector = lazy(() =>
+  import("@/components/mood/QuickMoodDetector").then((m) => ({ default: m.QuickMoodDetector }))
+);
 import { HQCover } from "@/components/ui/HQCover";
 import { TrackBadges } from "@/components/ui/TrackBadges";
 import { TipModal } from "@/components/modals/TipModal";
@@ -667,7 +671,11 @@ export const PlayerBar = () => {
       <FullscreenPlayer isOpen={showFullscreen} onClose={() => setShowFullscreen(false)} />
 
       {/* Mood Detector Modal */}
-      <QuickMoodDetector isOpen={showMoodDetector} onClose={() => setShowMoodDetector(false)} />
+      {showMoodDetector && (
+        <Suspense fallback={null}>
+          <QuickMoodDetector isOpen={showMoodDetector} onClose={() => setShowMoodDetector(false)} />
+        </Suspense>
+      )}
 
       {/* Tip Modal */}
       {currentTrack && (

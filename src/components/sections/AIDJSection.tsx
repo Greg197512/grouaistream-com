@@ -1,9 +1,16 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, Brain, Headphones, TrendingUp, Play, Pause, Camera, Zap, Eye, QrCode } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { Button } from "@/components/ui/button";
-import { MoodDetector } from "@/components/mood/MoodDetector";
-import { DJCrowdCamera, CrowdEnergy } from "@/components/dj/DJCrowdCamera";
+// Lazy — MoodDetector i DJCrowdCamera ciągną face-api (~1 MB). Ładują się
+// dopiero po włączeniu kamery/detekcji, nie przy wejściu na stronę główną.
+const MoodDetector = lazy(() =>
+  import("@/components/mood/MoodDetector").then((m) => ({ default: m.MoodDetector }))
+);
+const DJCrowdCamera = lazy(() =>
+  import("@/components/dj/DJCrowdCamera").then((m) => ({ default: m.DJCrowdCamera }))
+);
+import type { CrowdEnergy } from "@/components/dj/DJCrowdCamera";
 import { PartyActivationModal } from "@/components/dj/PartyActivationModal";
 import { PartyControlPanel } from "@/components/dj/PartyControlPanel";
 import { useAI } from "@/contexts/AIContext";
@@ -178,7 +185,9 @@ export const AIDJSection = () => {
         <AnimatePresence>
           {showMoodDetector && (
             <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="mb-6 overflow-hidden">
-              <MoodDetector onMoodDetected={handleMoodDetectorResult} onClose={() => setShowMoodDetector(false)} />
+              <Suspense fallback={<div className="p-6 text-center text-sm text-muted-foreground">Ładowanie detektora…</div>}>
+                <MoodDetector onMoodDetected={handleMoodDetectorResult} onClose={() => setShowMoodDetector(false)} />
+              </Suspense>
             </motion.div>
           )}
         </AnimatePresence>
@@ -187,11 +196,13 @@ export const AIDJSection = () => {
         <AnimatePresence>
           {showCrowdCamera && (
             <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="mb-6 overflow-hidden">
-              <DJCrowdCamera
-                isActive={showCrowdCamera && djActive}
-                onCrowdUpdate={(energy) => { setCrowdEnergy(energy); handleCrowdEnergy(energy); }}
-                onClose={() => setShowCrowdCamera(false)}
-              />
+              <Suspense fallback={<div className="p-6 text-center text-sm text-muted-foreground">Ładowanie kamery…</div>}>
+                <DJCrowdCamera
+                  isActive={showCrowdCamera && djActive}
+                  onCrowdUpdate={(energy) => { setCrowdEnergy(energy); handleCrowdEnergy(energy); }}
+                  onClose={() => setShowCrowdCamera(false)}
+                />
+              </Suspense>
             </motion.div>
           )}
         </AnimatePresence>
