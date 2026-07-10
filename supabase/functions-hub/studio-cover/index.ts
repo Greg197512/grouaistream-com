@@ -36,38 +36,89 @@ Deno.serve(async (req) => {
   let body: Record<string, any>;
   try { body = await req.json(); } catch { return json({ error: "invalid_json" }, 400); }
 
+  // Konfiguracja huba (klucz Replicate, wybór modelu okładek)
+  const hubAdmin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+  const { data: cfgRows } = await hubAdmin.from("hub_config").select("key, value");
+  const cfg: Record<string, string> = {};
+  for (const row of cfgRows || []) cfg[row.key] = row.value ?? "";
+  const cfgGet = (k: string) => cfg[k] || "";
+
   const title: string = String(body.title ?? "").slice(0, 150);
   const style: string = String(body.style ?? body.tags ?? "").slice(0, 200);
   const description: string = String(body.description ?? "").slice(0, 400);
   const id: string = String(body.id ?? body.prediction_id ?? crypto.randomUUID())
     .replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 64) || crypto.randomUUID();
 
-  // Prompt graficzny — angielski działa najlepiej. UWAGA: nie podajemy tytułu,
-  // bo model próbuje go "napisać" na obrazie i wychodzi bełkot.
-  const prompt = description.trim()
-    ? `professional album cover art, ${description}, high quality, plain artwork with absolutely no text, no letters, no typography`
-    : `professional album cover art, abstract or photographic scene evoking the mood of: ${style || "modern music"}, cinematic lighting, rich colors, high quality, plain artwork with absolutely no text, no letters, no words, no typography`;
+  // Bogaty prompt okładki (bez tytułu — model próbowałby go „napisać").
+  const scene = description.trim() || `evoking the mood of: ${style || "modern music"}`;
+  const prompt =
+    `professional album cover art, ${scene}, striking composition, cinematic dramatic lighting, ` +
+    `rich vivid colors, ultra detailed, high contrast, depth, 4k, trending on artstation, ` +
+    `masterpiece, no text, no letters, no words, no typography, no watermark`;
 
+  const path = `${id}-cover.jpg`;
+
+  // Zapisz bajty obrazu do bucketu i zwróć publiczny URL.
+  async function store(bytes: Uint8Array, contentType: string) {
+    const { error } = await hubAdmin.storage.from("acestep").upload(path, bytes, {
+      contentType,
+      upsert: true,
+    });
+    if (error) throw new Error("storage_failed: " + error.message);
+    return `${Deno.env.get("SUPABASE_URL")}/storage/v1/object/public/acestep/${path}`;
+  }
+
+  // ===== 1) FLUX na Replicate (najwyższa jakość) =====
+  const repToken = cfgGet("replicate_api_token");
+  const coverModel = cfgGet("cover_model") || "black-forest-labs/flux-1.1-pro";
+  if (repToken) {
+    try {
+      const rel = await fetch(`https://api.replicate.com/v1/models/${coverModel}/predictions`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${repToken}`,
+          "Prefer": "wait=55",
+        },
+        body: JSON.stringify({
+          input: {
+            prompt,
+            aspect_ratio: "1:1",
+            output_format: "jpg",
+            output_quality: 95,
+            safety_tolerance: 5,
+            prompt_upsampling: true,
+          },
+        }),
+      });
+      const data = await rel.json();
+      const out = data?.output;
+      const imgUrl = Array.isArray(out) ? out[0] : (typeof out === "string" ? out : null);
+      if (rel.ok && imgUrl) {
+        const ir = await fetch(imgUrl);
+        if (ir.ok) {
+          const bytes = new Uint8Array(await ir.arrayBuffer());
+          if (bytes.length > 5000) {
+            const url = await store(bytes, ir.headers.get("Content-Type") || "image/jpeg");
+            return json({ cover_url: url, id, source: "flux" });
+          }
+        }
+      }
+      console.warn("[studio-cover] FLUX failed, fallback to Pollinations:", data?.error || rel.status);
+    } catch (e) {
+      console.warn("[studio-cover] FLUX error, fallback:", String(e).slice(0, 120));
+    }
+  }
+
+  // ===== 2) Awaryjnie: Pollinations (darmowe, bez klucza) =====
   try {
     const imgUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1024&height=1024&nologo=true&seed=${Math.floor(Math.random() * 1e9)}`;
     const r = await fetch(imgUrl, { signal: AbortSignal.timeout(60000) });
     if (!r.ok) return json({ error: `cover_source_failed HTTP ${r.status}` }, 502);
     const bytes = new Uint8Array(await r.arrayBuffer());
     if (bytes.length < 5000) return json({ error: "cover_too_small" }, 502);
-
-    const admin = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-    );
-    const path = `${id}-cover.jpg`;
-    const { error } = await admin.storage.from("acestep").upload(path, bytes, {
-      contentType: r.headers.get("Content-Type") || "image/jpeg",
-      upsert: true,
-    });
-    if (error) return json({ error: "storage_failed: " + error.message }, 500);
-
-    const cover_url = `${Deno.env.get("SUPABASE_URL")}/storage/v1/object/public/acestep/${path}`;
-    return json({ cover_url, id });
+    const url = await store(bytes, r.headers.get("Content-Type") || "image/jpeg");
+    return json({ cover_url: url, id, source: "pollinations" });
   } catch (e) {
     return json({ error: e instanceof Error ? e.message : String(e) }, 500);
   }

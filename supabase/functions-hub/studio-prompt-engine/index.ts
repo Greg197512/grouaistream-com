@@ -112,8 +112,8 @@ Odpowiedz WYŁĄCZNIE poprawnym JSON (bez komentarzy) o polach:
   "title": "chwytliwy, oryginalny tytuł",
   "tags": "BOGATE angielskie tagi produkcyjne oddzielone przecinkami — MUSZĄ zawierać: (1) gatunek + podgatunek, (2) nastrój, (3) dokładne tempo BPM, (4) konkretne instrumenty, (5) typ i barwę wokalu (np. 'warm female vocals, emotive'), (6) tagi produkcji/jakości: 'studio quality, professional mix, mastered, wide stereo, punchy drums, clear vocals, radio-ready, hi-fi'. Przykład: 'melodic dance pop, uplifting, 122 bpm, layered synths, punchy kick, warm female vocals, catchy hook, studio quality, professional mix, mastered, radio-ready, hi-fi'",
   "instrumental": false,
-  "lyrics": "PEŁNY, DOPRACOWANY tekst z rymami i chwytliwym refrenem, PEŁNA struktura ze znacznikami [intro][verse][chorus][verse][chorus][bridge][chorus][outro] w języku użytkownika; jeśli instrumental=true wpisz '[instrumental]'",
-  "duration_seconds": 150,
+  "lyrics": "PEŁNY tekst — WYKORZYSTAJ prawie cały limit 560-590 znaków (dłuższy tekst = dłuższy utwór!): [verse] (4 linie) + [chorus] (4 linie) + [verse 2] (4 linie) + [chorus] (powtórz refren) w języku użytkownika. Zapełnij budżet znaków — nie zostawiaj krótkiego tekstu. MAX 590 znaków; jeśli instrumental=true wpisz '[instrumental]'",
+  "duration_seconds": 210,
   "language": "pl|en|nl|uk",
   "human_summary": "jedno zdanie po polsku co tworzysz"
 }
@@ -122,7 +122,8 @@ Zasady jakości (jak Suno):
 - tags MUSZĄ być bogate i konkretne — im więcej dobrych deskryptorów produkcji, tym lepszy dźwięk. ZAWSZE dodaj tagi jakości ('studio quality, professional mix, mastered, hi-fi').
 - Refren chwytliwy i powtarzalny (hook). Zwrotki z sensownym rymem.
 - PEŁNA struktura utworu z [intro] i [outro] — nie tylko verse/chorus.
-- duration_seconds: 120-180 (domyślnie 150 dla pełnego utworu; krótsze tylko gdy user prosi "krótki"/"intro").
+- lyrics DŁUGIE (dłuższy utwór!): zwrotka + refren + druga zwrotka + powtórzony refren, wykorzystaj 560-590 znaków. NIGDY nie zostawiaj krótkiego tekstu — im pełniejszy tekst (blisko 590 znaków), tym dłuższy utwór wyprodukuje silnik. Twardy limit: 590 znaków (dłużej = ODRZUCONE).
+- duration_seconds: 180-240 (domyślnie 210 = 3.5 min pełny utwór; krótsze tylko gdy user prosi "krótki"/"intro").
 - Jeśli user podał własny tekst — użyj go, dodaj tylko znaczniki struktury.
 - Jeśli user prosi instrumental lub muzykę tła bez wokalu — instrumental=true.
 - Tekst w języku użytkownika; tags ZAWSZE po angielsku (wymóg silnika).
@@ -186,7 +187,7 @@ Deno.serve(async (req) => {
 
     const instrumental = !!plan.instrumental;
     const lyrics = instrumental ? "[instrumental]" : String(plan.lyrics || "[instrumental]");
-    const duration = Math.min(Math.max(Number(plan.duration_seconds) || 120, 30), 180);
+    const duration = Math.min(Math.max(Number(plan.duration_seconds) || 210, 30), 240);
     const title = String(plan.title || "GrouAI Track").slice(0, 120);
     const tags = String(plan.tags);
 
@@ -205,8 +206,8 @@ Deno.serve(async (req) => {
       let mmLyrics = lyrics
         .replace(/\[(intro|outro)\][^\[]*/gi, "")
         .trim();
-      if (mmLyrics.length > 600) mmLyrics = mmLyrics.slice(0, 600).replace(/\s+\S*$/, "");
-      if (mmLyrics.length < 10) mmLyrics = lyrics.slice(0, 600);
+      if (mmLyrics.length > 595) mmLyrics = mmLyrics.slice(0, 595).replace(/\s+\S*$/, "");
+      if (mmLyrics.length < 10) mmLyrics = lyrics.slice(0, 595);
       rel = await fetch(`${REPLICATE_BASE}/models/${vocalModel}/predictions`, {
         method: "POST",
         headers: rHeaders,
