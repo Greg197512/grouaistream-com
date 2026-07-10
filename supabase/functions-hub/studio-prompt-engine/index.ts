@@ -34,42 +34,75 @@ async function loadConfig(): Promise<Record<string, string>> {
   return cfg;
 }
 
-async function chat(models: string[], apiKey: string, messages: Array<{ role: string; content: string }>) {
-  let lastErr = "";
-  for (const model of models) {
-    try {
-      const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-          "HTTP-Referer": "https://grouaistream.com",
-          "X-Title": "GrouAI Studio",
-        },
-        body: JSON.stringify({ model, messages, max_tokens: 1600 }),
-        signal: AbortSignal.timeout(45000),
-      });
-      if (!res.ok) { lastErr = `HTTP ${res.status} [${model}]`; continue; }
-      const out = await res.json();
-      if (out.error) { lastErr = `[${model}] ${JSON.stringify(out.error).slice(0, 120)}`; continue; }
-      const content: string = out.choices?.[0]?.message?.content ?? "";
-      if (content.trim()) return { content: content.trim(), model };
-      lastErr = `empty [${model}]`;
-    } catch (e) {
-      lastErr = `fetch [${model}]: ${String(e).slice(0, 100)}`;
-    }
-  }
-  throw new Error(lastErr || "all_models_failed");
+async function callModel(model: string, apiKey: string, messages: Array<{ role: string; content: string }>): Promise<string> {
+  const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+      "HTTP-Referer": "https://grouaistream.com",
+      "X-Title": "GrouAI Studio",
+    },
+    body: JSON.stringify({
+      model,
+      messages,
+      max_tokens: 3000,
+      temperature: 0.7,
+      // Preferuj czysty JSON tam gdzie provider wspiera
+      response_format: { type: "json_object" },
+    }),
+    signal: AbortSignal.timeout(45000),
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const out = await res.json();
+  if (out.error) throw new Error(JSON.stringify(out.error).slice(0, 120));
+  return (out.choices?.[0]?.message?.content ?? "").trim();
 }
 
 function extractJson(text: string): Record<string, unknown> | null {
-  // Model może owinąć JSON w ```json ... ``` albo dopisać komentarz.
-  const fence = text.match(/```(?:json)?\s*([\s\S]*?)```/);
-  const raw = fence ? fence[1] : text;
-  const start = raw.indexOf("{");
-  const end = raw.lastIndexOf("}");
-  if (start === -1 || end === -1 || end <= start) return null;
-  try { return JSON.parse(raw.slice(start, end + 1)); } catch { return null; }
+  if (!text) return null;
+  // Usuń bloki rozumowania <think>…</think> (modele „myślące")
+  let t = text.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
+  // Zdejmij ogrodzenie ```json … ```
+  const fence = t.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (fence) t = fence[1];
+  const start = t.indexOf("{");
+  if (start === -1) return null;
+  // Spróbuj od pierwszego { do ostatniego }, potem skracaj od końca
+  // (ratuje ucięte odpowiedzi, gdzie ostatni } jest niżej).
+  for (let end = t.lastIndexOf("}"); end > start; end = t.lastIndexOf("}", end - 1)) {
+    try {
+      const obj = JSON.parse(t.slice(start, end + 1));
+      if (obj && typeof obj === "object") return obj as Record<string, unknown>;
+    } catch { /* próbuj krótszy fragment */ }
+  }
+  return null;
+}
+
+/**
+ * Przechodzi przez modele aż któryś zwróci POPRAWNY plan JSON (z polem tags).
+ * Modele „myślące" (chain-of-thought) są pomijane, gdy nie dają się sparsować.
+ */
+async function planWithModels(
+  models: string[],
+  apiKey: string,
+  messages: Array<{ role: string; content: string }>,
+): Promise<{ plan: Record<string, unknown>; model: string } | null> {
+  let lastErr = "";
+  for (const model of models) {
+    try {
+      const content = await callModel(model, apiKey, messages);
+      const plan = extractJson(content);
+      if (plan && typeof plan.tags === "string" && (plan.tags as string).trim()) {
+        return { plan, model };
+      }
+      lastErr = `[${model}] no valid JSON`;
+    } catch (e) {
+      lastErr = `[${model}] ${String(e).slice(0, 80)}`;
+    }
+  }
+  console.error("[studio-prompt-engine] planning failed:", lastErr);
+  return null;
 }
 
 const PLANNER_PROMPT = `Jesteś kompozytorem i tekściarzem GrouAI Studio. Użytkownik opisze utwór jednym lub kilkoma zdaniami (po polsku, angielsku, niderlandzku lub ukraińsku). Twoim zadaniem jest ułożyć KOMPLETNY plan piosenki.
@@ -90,7 +123,9 @@ Zasady:
 - Jeśli użytkownik podał własny tekst — użyj go w całości (możesz dodać znaczniki struktury).
 - duration_seconds: 60-180 (domyślnie 120; krótsze jeśli prosi o "krótki"/"intro"/"jingiel").
 - Tekst piosenki w języku, w którym pisze użytkownik (chyba że prosi o inny).
-- tags ZAWSZE po angielsku (tego wymaga silnik muzyczny).`;
+- tags ZAWSZE po angielsku (tego wymaga silnik muzyczny).
+
+BARDZO WAŻNE: Odpowiedz WYŁĄCZNIE surowym obiektem JSON. Zacznij odpowiedź od znaku { i zakończ na }. NIE dodawaj żadnego tekstu przed ani po, żadnych wyjaśnień, żadnego rozumowania, żadnych znaczników markdown ani <think>.`;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -136,15 +171,16 @@ Deno.serve(async (req) => {
   const langHint = body.language ? `\n(Użytkownik wybrał język: ${body.language})` : "";
 
   try {
-    // ===== 1. AI układa plan piosenki =====
-    const result = await chat(models, orKey, [
+    // ===== 1. AI układa plan piosenki (próbuje modeli aż JSON się sparsuje) =====
+    const planned = await planWithModels(models, orKey, [
       { role: "system", content: PLANNER_PROMPT },
       { role: "user", content: prompt + langHint },
     ]);
-    const plan = extractJson(result.content);
-    if (!plan || typeof plan.tags !== "string") {
-      return json({ success: false, error: "plan_parse_failed", raw: result.content.slice(0, 300) }, 200);
+    if (!planned) {
+      return json({ success: false, error: "Nie udało się ułożyć planu utworu — spróbuj ponownie za chwilę." }, 200);
     }
+    const plan = planned.plan;
+    const result = { model: planned.model };
 
     const instrumental = !!plan.instrumental;
     const lyrics = instrumental ? "[instrumental]" : String(plan.lyrics || "[instrumental]");
