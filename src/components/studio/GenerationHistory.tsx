@@ -98,6 +98,13 @@ export const GenerationHistory = () => {
     void loadGenerations();
   }, [user, loadGenerations]);
 
+  // Nowy utwór z kompozytora → natychmiast odśwież „Twoje utwory”
+  useEffect(() => {
+    const onChanged = () => void loadGenerations();
+    window.addEventListener("grouai:generations-changed", onChanged);
+    return () => window.removeEventListener("grouai:generations-changed", onChanged);
+  }, [loadGenerations]);
+
   // Auto-odświeżanie, dopóki coś się generuje
   useEffect(() => {
     const hasPending = generations.some((g) => g.status === "pending" || g.status === "processing");

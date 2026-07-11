@@ -176,6 +176,9 @@ export function MusicPromptBox({ onTrackReady }: Props) {
       setPlanSummary(summary);
       setStage("composing");
 
+      // Utwór jest już w „Twoje utwory” (rekord generations) — odśwież listę od razu
+      window.dispatchEvent(new CustomEvent("grouai:generations-changed"));
+
       // Okładka AI (darmowa) startuje w tle, dopasowana do tytułu i stylu
       fireCoverGeneration(data.task_id, data.plan?.title || "", data.plan?.tags || "");
 
@@ -185,6 +188,8 @@ export function MusicPromptBox({ onTrackReady }: Props) {
 
       setStage("done");
       toast.success(labels.done);
+      // Gotowy utwór — odśwież „Twoje utwory”, by pokazał się z audio i okładką
+      window.dispatchEvent(new CustomEvent("grouai:generations-changed"));
       onTrackReady?.({
         audioUrl,
         coverUrl: coverUrl || undefined,
