@@ -61,6 +61,16 @@ const VIBES: { label: string; emoji: string; add: string }[] = [
   { label: "Epicki", emoji: "🔥", add: "epicki, filmowy, orkiestrowy" },
 ];
 
+// AI wykrywa docelowy format z tego, co napisze user (bez przełącznika):
+// „tiktok / reels / shorts / pionowo / insta / story" → 9:16, „youtube / poziomo" → 16:9.
+function detectAspect(text: string): "9:16" | "16:9" {
+  const t = (text || "").toLowerCase();
+  if (/(tik[\s-]?tok|reels?|shorts?|pionow|9:16|9x16|vertical|stor(y|ies)|instagram|insta\b|na telefon)/.test(t)) return "9:16";
+  if (/(you[\s-]?tube|yt\b|poziom|16:9|16x9|horizontal|szerok|kino)/.test(t)) return "16:9";
+  return "16:9";
+}
+const aspectLabel = (a: string) => (a === "9:16" ? "pionowo 9:16 (TikTok/Reels)" : "poziomo 16:9 (YouTube)");
+
 interface Props {
   onTrackReady?: (data: {
     audioUrl?: string;
@@ -121,7 +131,7 @@ export function MusicPromptBox({ onTrackReady }: Props) {
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [videoQuality, setVideoQuality] = useState<"good" | "vip">("good");
   const [videoPrompt, setVideoPrompt] = useState("");
-  const [clip, setClip] = useState<{ audioUrl: string; videoUrls: string[] } | null>(null);
+  const [clip, setClip] = useState<{ audioUrl: string; videoUrls: string[]; aspect: "9:16" | "16:9" } | null>(null);
   const [clipIdx, setClipIdx] = useState(0);
   const [exporting, setExporting] = useState(false);
   const [exportPct, setExportPct] = useState(0);
@@ -237,7 +247,9 @@ export function MusicPromptBox({ onTrackReady }: Props) {
     setVideoUrl(null);
 
     try {
-      const { data, error: fnError } = await submitStudioVideo(prompt.trim(), { quality: videoQuality, aspect: "16:9" });
+      const vAspect = detectAspect(prompt);
+      toast.info(`🎬 Format: ${aspectLabel(vAspect)}`, { duration: 2500 });
+      const { data, error: fnError } = await submitStudioVideo(prompt.trim(), { quality: videoQuality, aspect: vAspect });
       if (fnError) throw new Error(fnError.message || "Nie udało się zlecić wideo");
 
       if (data?.pending) {
@@ -298,8 +310,11 @@ export function MusicPromptBox({ onTrackReady }: Props) {
       window.dispatchEvent(new CustomEvent("grouai:generations-changed"));
       fireCoverGeneration(mData.task_id, plan?.title || "", plan?.tags || "");
 
+      // AI wykrywa format z tego, co napisał user (utwór + ew. wskazówka stylu).
+      const aspect = detectAspect(`${prompt} ${videoPrompt}`);
+
       setStage("composing");
-      setPlanSummary("AI układa sceny teledysku z tekstu utworu i kręci ujęcia…");
+      setPlanSummary(`AI reżyseruje teledysk z tekstu utworu · ${aspectLabel(aspect)}…`);
 
       const audioJob = waitForAceStep(mData.task_id, mData.generation_id).then((r) => r.audioUrl);
 
@@ -320,7 +335,7 @@ export function MusicPromptBox({ onTrackReady }: Props) {
         }
         const jobIds = await Promise.all(
           scenes.map(async (scene) => {
-            const { data, error: e } = await submitStudioVideo(scene, { quality: videoQuality, aspect: "16:9" });
+            const { data, error: e } = await submitStudioVideo(scene, { quality: videoQuality, aspect });
             if (e) throw new Error(e.message || "Błąd wideo");
             if (!data?.job_id) throw new Error(data?.message || "Błąd zlecenia wideo");
             return data.job_id as string;
@@ -334,7 +349,7 @@ export function MusicPromptBox({ onTrackReady }: Props) {
       setClipIdx(0);
       clipBlobRef.current = null;
       setExportPct(0);
-      setClip({ audioUrl, videoUrls: clipUrls });
+      setClip({ audioUrl, videoUrls: clipUrls, aspect });
       setStage("done");
       toast.success("Teledysk gotowy! 🎥");
       window.dispatchEvent(new CustomEvent("grouai:generations-changed"));
@@ -361,7 +376,7 @@ export function MusicPromptBox({ onTrackReady }: Props) {
       setExporting(true);
       setExportPct(1);
       try {
-        blob = await exportTeledysk(clip.videoUrls, clip.audioUrl, (p) => setExportPct(p));
+        blob = await exportTeledysk(clip.videoUrls, clip.audioUrl, (p) => setExportPct(p), clip.aspect);
         clipBlobRef.current = blob;
       } finally {
         setExporting(false);
@@ -751,7 +766,7 @@ export function MusicPromptBox({ onTrackReady }: Props) {
                 autoPlay
                 playsInline
                 onEnded={() => setClipIdx((i) => (i + 1) % clip.videoUrls.length)}
-                className="w-full aspect-video object-cover"
+                className={clip.aspect === "9:16" ? "mx-auto h-[420px] aspect-[9/16] object-cover" : "w-full aspect-video object-cover"}
               />
               <span className="absolute top-2 right-2 text-[10px] px-1.5 py-0.5 rounded bg-black/60 text-white/80">
                 ujęcie {clipIdx + 1}/{clip.videoUrls.length}

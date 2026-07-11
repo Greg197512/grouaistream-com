@@ -39,7 +39,9 @@ export async function exportTeledysk(
   videoUrls: string[],
   audioUrl: string,
   onProgress?: (pct: number) => void,
+  aspect: "9:16" | "16:9" = "16:9",
 ): Promise<Blob> {
+  const [W, H] = aspect === "9:16" ? [720, 1280] : [1280, 720];
   if (!videoUrls.length) throw new Error("brak ujęć");
   const ff = await getFfmpeg();
 
@@ -84,7 +86,7 @@ export async function exportTeledysk(
     inputs.push("-i", "song.mp3");
     const n = names.length;
     const filter =
-      names.map((_, i) => `[${i}:v]scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=24[v${i}]`).join(";") +
+      names.map((_, i) => `[${i}:v]scale=${W}:${H}:force_original_aspect_ratio=decrease,pad=${W}:${H}:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=24[v${i}]`).join(";") +
       ";" + names.map((_, i) => `[v${i}]`).join("") + `concat=n=${n}:v=1:a=0[vout]`;
     await ff.exec([
       ...inputs,
