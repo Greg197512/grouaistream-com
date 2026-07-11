@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -18,6 +17,7 @@ import { speak, stopSpeaking } from "@/utils/tts";
 import businessHeroBg from "@/assets/business-hero-bg.jpg";
 import { AuroraBackground } from "@/components/effects/AuroraBackground";
 import { ServicesScroller } from "@/components/business/ServicesScroller";
+import { askAuroraB2B } from "@/lib/hubAurora";
 
 type ChatMessage = { role: "user" | "assistant"; content: string; ts: number };
 type BriefField = { key: string; label: string; description: string; required: boolean; value: any; status: "collected" | "missing_required" | "missing_optional" };
@@ -90,6 +90,7 @@ export default function BusinessPage() {
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [email, setEmail] = useState(user?.email ?? "");
   const [draftSaved, setDraftSaved] = useState(false);
+  const [orderPlaced, setOrderPlaced] = useState(false);
   const [briefState, setBriefState] = useState<BriefState | null>(null);
   const [voiceEnabled, setVoiceEnabled] = useState(false);
   const [listening, setListening] = useState(false);
@@ -115,20 +116,17 @@ export default function BusinessPage() {
     setLoading(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke("aurora-assistant-chat", {
-        body: {
-          message: msg,
-          channel: "web",
-          channel_thread_id: null,
-          conversation_id: conversationId,
-          client_hint: {
-            email: email || user?.email || undefined,
-            full_name: user?.user_metadata?.display_name || undefined,
-          },
+      const data = await askAuroraB2B({
+        message: msg,
+        conversation_id: conversationId,
+        history: messages.map((m) => ({ role: m.role, content: m.content })),
+        client_hint: {
+          email: email || user?.email || undefined,
+          full_name: user?.user_metadata?.display_name || undefined,
         },
+        order_placed: orderPlaced,
       });
 
-      if (error) throw error;
       if (!data?.ok) throw new Error(data?.error || "Aurora nie odpowiada");
 
       if (data.conversation_id && !conversationId) setConversationId(data.conversation_id);
@@ -137,6 +135,7 @@ export default function BusinessPage() {
       const orderHit = (data.tool_results || []).find((t: any) => t.tool === "place_order" && t.ok);
       const draftHit = (data.tool_results || []).some((t: any) => t.tool === "save_intake_draft");
       if (orderHit) {
+        setOrderPlaced(true);
         setDraftSaved(true);
         toast.success(`🚀 Zlecenie #${orderHit.short_id} przekazane do ${orderHit.worker}`, { duration: 6000 });
       } else if (draftHit && !draftSaved) {

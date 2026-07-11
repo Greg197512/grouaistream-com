@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Play, Flame, Loader2, RefreshCw, ChevronLeft, ChevronRight,
-  Music2, Waves, Zap, Disc3, Guitar, Radio, Mic2, Drum
+  Music2, Waves, Zap, Disc3, Guitar, Radio, Mic2, Drum, Sparkles
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePlayer, Track } from "@/contexts/PlayerContext";
@@ -370,8 +370,8 @@ export const NewOnServer = () => {
                       )}
                     </div>
 
-                    {/* NEW badge — small blinking blue */}
-                    <div className="absolute top-2 left-2 pointer-events-none">
+                    {/* NEW badge + oznaczenie GrouAI Studio (dla utworów z generatora) */}
+                    <div className="absolute top-2 left-2 pointer-events-none flex flex-col items-start gap-1">
                       <motion.span
                         animate={{ opacity: [1, 0.35, 1] }}
                         transition={{ duration: 1.1, repeat: Infinity, ease: "easeInOut" }}
@@ -379,6 +379,23 @@ export const NewOnServer = () => {
                       >
                         NEW
                       </motion.span>
+                      {(track.mood === "generated" || track.album === "AI Generated") && (
+                        <motion.span
+                          animate={{
+                            opacity: [0.4, 1, 0.4],
+                            boxShadow: [
+                              "0 0 4px rgba(255,107,0,0.3)",
+                              "0 0 14px rgba(255,107,0,0.9), 0 0 22px rgba(147,51,234,0.6)",
+                              "0 0 4px rgba(255,107,0,0.3)",
+                            ],
+                          }}
+                          transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
+                          className="inline-flex items-center gap-1 text-[8px] font-bold tracking-wide px-1.5 py-[2px] rounded-full text-white"
+                          style={{ background: "linear-gradient(135deg, #FF6B00, #9333EA)" }}
+                        >
+                          <Sparkles className="h-2 w-2" /> GrouAI Studio
+                        </motion.span>
+                      )}
                     </div>
 
                     {/* Time badge */}

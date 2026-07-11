@@ -9,6 +9,7 @@ import { Search, Sparkles, TrendingUp, Eye, Clock, ArrowRight } from "lucide-rea
 import { useLanguage } from "@/contexts/LanguageContext";
 import { BLOG_CATEGORIES as CATEGORIES, getCategoryLabel as catLabel } from "@/lib/blogCategories";
 import { getCoverUrl } from "@/lib/blogCovers";
+import { fetchHubBlogList } from "@/lib/hubBlog";
 
 interface BlogPost {
   id: string;
@@ -78,13 +79,21 @@ export default function BlogIndex() {
 
   useEffect(() => {
     (async () => {
-      const { data } = await supabase
-        .from("seo_blog_posts")
-        .select("id, slug, title, description, category, tags, cover_url, created_at, view_count, title_en, title_nl, title_ua, description_en, description_nl, description_ua")
-        .eq("is_published", true)
-        .order("created_at", { ascending: false })
-        .limit(60);
-      setPosts((data as BlogPost[]) || []);
+      const [{ data }, hub] = await Promise.all([
+        supabase
+          .from("seo_blog_posts")
+          .select("id, slug, title, description, category, tags, cover_url, created_at, view_count, title_en, title_nl, title_ua, description_en, description_nl, description_ua")
+          .eq("is_published", true)
+          .order("created_at", { ascending: false })
+          .limit(60),
+        fetchHubBlogList(30),
+      ]);
+      // Świeże wpisy huba dokładamy do listy z bvstv i sortujemy po dacie (najnowsze u góry).
+      const bvstv = (data as BlogPost[]) || [];
+      const seen = new Set(bvstv.map((p) => p.slug));
+      const merged = [...bvstv, ...hub.filter((h) => !seen.has(h.slug)) as unknown as BlogPost[]]
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      setPosts(merged);
       setLoading(false);
     })();
   }, []);

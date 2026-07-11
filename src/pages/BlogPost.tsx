@@ -19,6 +19,7 @@ import { headingComponents } from "@/lib/markdownHeadingId";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { getCategoryLabel } from "@/lib/blogCategories";
 import { getCoverUrl } from "@/lib/blogCovers";
+import { fetchHubBlogPost } from "@/lib/hubBlog";
 
 interface BlogPost {
   id: string;
@@ -109,6 +110,13 @@ export default function BlogPost() {
         .maybeSingle();
 
       if (error || !data) {
+        // Fallback: świeże wpisy generowane na hubie (bvstv nie ma już generatora).
+        const hubPost = await fetchHubBlogPost(slug);
+        if (hubPost) {
+          setPost(hubPost as unknown as BlogPost);
+          setLoading(false);
+          return;
+        }
         setNotFound(true);
         setLoading(false);
         return;
