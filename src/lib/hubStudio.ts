@@ -216,6 +216,32 @@ export async function waitForStudioVideo(
   throw new Error("Przekroczono czas oczekiwania na wideo");
 }
 
+// ─── Lip-sync: usta wokalisty zsynchronizowane ze słowami (LatentSync, VIP) ─────
+const HUB_LIPSYNC_URL =
+  "https://bmwtydwpevzhbdplilbr.supabase.co/functions/v1/studio-lipsync";
+
+/** Zleca lip-sync całego wideo do utworu. Zwraca { data, error }. */
+export async function submitStudioLipsync(videoUrl: string, audioUrl: string): Promise<InvokeResult> {
+  return hubFetch(HUB_LIPSYNC_URL, { video_url: videoUrl, audio_url: audioUrl });
+}
+
+/** Odpytuje aż lip-sync będzie gotowy. Zwraca URL wideo (z wgranym audio). */
+export async function waitForStudioLipsync(
+  jobId: string,
+  onTick?: (elapsedSeconds: number) => void
+): Promise<string> {
+  const maxAttempts = 180; // ~15 minut — lip-sync jest wolniejszy
+  for (let i = 1; i <= maxAttempts; i++) {
+    await new Promise((res) => setTimeout(res, 5000));
+    onTick?.(i * 5);
+    const { data, error } = await hubFetch(HUB_LIPSYNC_URL, { action: "status", job_id: jobId });
+    if (error) continue;
+    if (data?.status === "completed" && data?.video_url) return data.video_url as string;
+    if (data?.status === "failed") throw new Error("Synchronizacja ust nie powiodła się");
+  }
+  throw new Error("Przekroczono czas oczekiwania na lip-sync");
+}
+
 // ─── Storyboard: AI układa sceny teledysku z tekstu/klimatu utworu ─────────────
 const HUB_STORYBOARD_URL =
   "https://bmwtydwpevzhbdplilbr.supabase.co/functions/v1/studio-storyboard";
@@ -228,6 +254,7 @@ export async function fetchStoryboard(body: {
   lyrics?: string;
   style?: string;
   count?: number;
+  singing?: boolean;
 }): Promise<string[]> {
   try {
     const { data, error } = await hubFetch(HUB_STORYBOARD_URL, body);

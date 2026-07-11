@@ -32,6 +32,57 @@ async function getFfmpeg(): Promise<FFmpeg> {
 }
 
 /**
+ * Skleja SAME sceny (bez audio) w jeden MP4 — wejście dla lip-synca (LatentSync
+ * dostaje całe wideo + utwór i synchronizuje usta na całej długości).
+ */
+export async function exportScenesOnly(
+  videoUrls: string[],
+  onProgress?: (pct: number) => void,
+  aspect: "9:16" | "16:9" = "16:9",
+): Promise<Blob> {
+  if (!videoUrls.length) throw new Error("brak ujęć");
+  const [W, H] = aspect === "9:16" ? [720, 1280] : [1280, 720];
+  const ff = await getFfmpeg();
+  if (onProgress) {
+    ff.on("progress", ({ progress }: { progress: number }) => {
+      onProgress(Math.max(0, Math.min(99, Math.round((progress || 0) * 100))));
+    });
+  }
+  const names: string[] = [];
+  for (let i = 0; i < videoUrls.length; i++) {
+    const name = `s${i}.mp4`;
+    await ff.writeFile(name, await fetchFile(prox(videoUrls[i])));
+    names.push(name);
+  }
+  const list = names.map((n) => `file '${n}'`).join("\n");
+  await ff.writeFile("slist.txt", new TextEncoder().encode(list));
+  const readOut = async () => {
+    const data = (await ff.readFile("scenes.mp4")) as Uint8Array;
+    return new Blob([data], { type: "video/mp4" });
+  };
+  try {
+    await ff.exec([
+      "-f", "concat", "-safe", "0", "-i", "slist.txt",
+      "-map", "0:v:0", "-c:v", "copy", "-an", "-movflags", "+faststart", "scenes.mp4",
+    ]);
+    return await readOut();
+  } catch {
+    const inputs: string[] = [];
+    names.forEach((n) => { inputs.push("-i", n); });
+    const n = names.length;
+    const filter =
+      names.map((_, i) => `[${i}:v]scale=${W}:${H}:force_original_aspect_ratio=decrease,pad=${W}:${H}:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=24[v${i}]`).join(";") +
+      ";" + names.map((_, i) => `[v${i}]`).join("") + `concat=n=${n}:v=1:a=0[vout]`;
+    await ff.exec([
+      ...inputs, "-filter_complex", filter, "-map", "[vout]",
+      "-c:v", "libx264", "-preset", "ultrafast", "-pix_fmt", "yuv420p",
+      "-an", "-movflags", "+faststart", "scenes.mp4",
+    ]);
+    return await readOut();
+  }
+}
+
+/**
  * Skleja klipy + utwór w jeden MP4 (Blob). onProgress: 0-100.
  * Najpierw szybki concat (kopiowanie strumienia); przy niezgodności — re-enkod.
  */

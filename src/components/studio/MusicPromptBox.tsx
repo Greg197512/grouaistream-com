@@ -6,12 +6,12 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { invokeStudioEngine, waitForAceStep, fireCoverGeneration, isSubscriptionError, submitStudioVideo, waitForStudioVideo, fetchStoryboard } from "@/lib/hubStudio";
+import { invokeStudioEngine, waitForAceStep, fireCoverGeneration, isSubscriptionError, submitStudioVideo, waitForStudioVideo, fetchStoryboard, submitStudioLipsync, waitForStudioLipsync } from "@/lib/hubStudio";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { UpgradeModal } from "@/components/modals/UpgradeModal";
-import { exportTeledysk } from "@/lib/teledyskExport";
+import { exportTeledysk, exportScenesOnly } from "@/lib/teledyskExport";
 
 type Lang = "auto" | "pl" | "en" | "nl" | "uk";
 
@@ -131,7 +131,8 @@ export function MusicPromptBox({ onTrackReady }: Props) {
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [videoQuality, setVideoQuality] = useState<"good" | "vip">("good");
   const [videoPrompt, setVideoPrompt] = useState("");
-  const [clip, setClip] = useState<{ audioUrl: string; videoUrls: string[]; aspect: "9:16" | "16:9" } | null>(null);
+  const [singing, setSinging] = useState(true);
+  const [clip, setClip] = useState<{ audioUrl: string; videoUrls: string[]; aspect: "9:16" | "16:9"; finalUrl?: string } | null>(null);
   const [clipIdx, setClipIdx] = useState(0);
   const [exporting, setExporting] = useState(false);
   const [exportPct, setExportPct] = useState(0);
@@ -327,6 +328,7 @@ export function MusicPromptBox({ onTrackReady }: Props) {
           lyrics: plan?.lyrics || "",
           style: videoPrompt.trim() || undefined, // opcjonalna wskazówka stylu
           count: CLIP_COUNT,
+          singing, // tryb śpiewany: każda scena z twarzą tego samego wokalisty
         });
         if (!scenes.length) {
           // Awaryjnie: użyj wskazówki lub opisu utworu jako wspólnej sceny.
@@ -346,12 +348,36 @@ export function MusicPromptBox({ onTrackReady }: Props) {
 
       const [audioUrl, clipUrls] = await Promise.all([audioJob, clipsJob]);
 
+      // 4) Tryb śpiewany: sklej sceny → wgraj → LatentSync synchronizuje usta
+      // z wokalem na CAŁYM wideo (działa w każdym języku, bo idzie po dźwięku).
+      let finalUrl: string | undefined;
+      if (singing) {
+        try {
+          setPlanSummary("Synchronizuję usta wokalisty ze słowami piosenki…");
+          const scenesBlob = await exportScenesOnly(clipUrls, undefined, aspect);
+          const scenesPath = `lipsync-in-${Date.now()}-${Math.random().toString(36).slice(2, 7)}.mp4`;
+          const up = await supabase.storage.from("music").upload(scenesPath, scenesBlob, { contentType: "video/mp4", upsert: true });
+          if (up.error) throw up.error;
+          const { data: pub } = supabase.storage.from("music").getPublicUrl(scenesPath);
+          const { data: ls, error: lsErr } = await submitStudioLipsync(pub.publicUrl, audioUrl);
+          if (lsErr || !ls?.job_id) throw new Error(ls?.message || lsErr?.message || "lipsync_submit_failed");
+          finalUrl = await waitForStudioLipsync(ls.job_id, (sec) => setElapsed(sec));
+        } catch (lsE: any) {
+          if (isSubscriptionError(lsE)) {
+            toast.info("🎤 Pełny lip-sync wymaga planu Pro/Ultimate — pokazuję zwykły teledysk.");
+          } else {
+            console.error("[teledysk lipsync]", lsE);
+            toast.info("Nie udało się zsynchronizować ust — pokazuję zwykły teledysk.");
+          }
+        }
+      }
+
       setClipIdx(0);
       clipBlobRef.current = null;
       setExportPct(0);
-      setClip({ audioUrl, videoUrls: clipUrls, aspect });
+      setClip({ audioUrl, videoUrls: clipUrls, aspect, finalUrl });
       setStage("done");
-      toast.success("Teledysk gotowy! 🎥");
+      toast.success(finalUrl ? "Śpiewający teledysk gotowy! 🎤🎥" : "Teledysk gotowy! 🎥");
       window.dispatchEvent(new CustomEvent("grouai:generations-changed"));
       setTimeout(() => setStage("idle"), 2500);
     } catch (e: any) {
@@ -376,7 +402,14 @@ export function MusicPromptBox({ onTrackReady }: Props) {
       setExporting(true);
       setExportPct(1);
       try {
-        blob = await exportTeledysk(clip.videoUrls, clip.audioUrl, (p) => setExportPct(p), clip.aspect);
+        if (clip.finalUrl) {
+          // Śpiewający teledysk: LatentSync zwraca gotowy plik z audio — tylko pobieramy (przez proxy CORS).
+          const r = await fetch(`https://bmwtydwpevzhbdplilbr.supabase.co/functions/v1/media-proxy?u=${encodeURIComponent(clip.finalUrl)}`);
+          if (!r.ok) throw new Error("download_failed");
+          blob = await r.blob();
+        } else {
+          blob = await exportTeledysk(clip.videoUrls, clip.audioUrl, (p) => setExportPct(p), clip.aspect);
+        }
         clipBlobRef.current = blob;
       } finally {
         setExporting(false);
@@ -562,6 +595,20 @@ export function MusicPromptBox({ onTrackReady }: Props) {
                 ⭐ VIP · MiniMax
               </button>
             </div>
+            {mode === "teledysk" && (
+              <button
+                onClick={() => !isBusy && setSinging((v) => !v)}
+                disabled={isBusy}
+                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-bold transition-all ${
+                  singing
+                    ? "border-[#FF6B00]/60 bg-gradient-to-r from-[#FF6B00]/20 to-[#9333EA]/20 text-orange-200"
+                    : "border-white/10 bg-white/5 text-white/50 hover:text-white"
+                }`}
+                title="Usta wokalisty idą dokładnie ze słowami (każdy język: PL/UA/NL/EN). Plan Pro/Ultimate."
+              >
+                🎤 {singing ? "Śpiewający: usta w synchro ze słowami" : "Śpiewający: wyłączony"}
+              </button>
+            )}
           </div>
         )}
 
@@ -759,20 +806,31 @@ export function MusicPromptBox({ onTrackReady }: Props) {
             className="relative z-10 mt-4"
           >
             <div className="relative rounded-xl overflow-hidden border border-white/10 bg-black">
-              <video
-                key={clipIdx}
-                src={clip.videoUrls[clipIdx]}
-                muted
-                autoPlay
-                playsInline
-                onEnded={() => setClipIdx((i) => (i + 1) % clip.videoUrls.length)}
-                className={clip.aspect === "9:16" ? "mx-auto h-[420px] aspect-[9/16] object-cover" : "w-full aspect-video object-cover"}
-              />
+              {clip.finalUrl ? (
+                // Śpiewający teledysk — jeden film, usta zsynchronizowane, dźwięk w pliku.
+                <video
+                  src={clip.finalUrl}
+                  controls
+                  autoPlay
+                  playsInline
+                  className={clip.aspect === "9:16" ? "mx-auto h-[420px] aspect-[9/16] object-cover" : "w-full aspect-video object-cover"}
+                />
+              ) : (
+                <video
+                  key={clipIdx}
+                  src={clip.videoUrls[clipIdx]}
+                  muted
+                  autoPlay
+                  playsInline
+                  onEnded={() => setClipIdx((i) => (i + 1) % clip.videoUrls.length)}
+                  className={clip.aspect === "9:16" ? "mx-auto h-[420px] aspect-[9/16] object-cover" : "w-full aspect-video object-cover"}
+                />
+              )}
               <span className="absolute top-2 right-2 text-[10px] px-1.5 py-0.5 rounded bg-black/60 text-white/80">
-                ujęcie {clipIdx + 1}/{clip.videoUrls.length}
+                {clip.finalUrl ? "🎤 usta w synchro" : `ujęcie ${clipIdx + 1}/${clip.videoUrls.length}`}
               </span>
             </div>
-            <audio src={clip.audioUrl} controls autoPlay className="w-full mt-2" />
+            {!clip.finalUrl && <audio src={clip.audioUrl} controls autoPlay className="w-full mt-2" />}
 
             {/* Jeden plik MP4 na YouTube / TikTok */}
             <div className="mt-3 flex flex-wrap items-center gap-2">
