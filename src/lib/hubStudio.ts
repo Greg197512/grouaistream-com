@@ -182,20 +182,21 @@ export async function waitForAceStep(
   throw new Error("Przekroczono czas oczekiwania na utwór");
 }
 
-// ─── Wideo (teledysk / film z tekstu) — Higgsfield przez hub ───────────────────
+// ─── Wideo (teledysk / film z tekstu) — Replicate przez hub ────────────────────
+// good → LTX-Video (szybki, tani), vip → MiniMax video-01 (jakość, plan Pro/Ultimate).
 const HUB_VIDEO_URL =
-  "https://bmwtydwpevzhbdplilbr.supabase.co/functions/v1/higgsfield-video";
+  "https://bmwtydwpevzhbdplilbr.supabase.co/functions/v1/studio-video";
 
 /**
  * Zleca wygenerowanie wideo z tekstu. Zwraca { data, error }.
- * data.pending === true → silnik gotowy, ale czeka na klucz Higgsfield.
  * data.job_id → zlecono; odpytuj waitForStudioVideo.
+ * error „subscription_required" → jakość VIP wymaga planu.
  */
 export async function submitStudioVideo(
   prompt: string,
-  opts?: { duration?: number; aspect?: string }
+  opts?: { quality?: "good" | "vip"; aspect?: string }
 ): Promise<InvokeResult> {
-  return hubFetch(HUB_VIDEO_URL, { prompt, ...(opts || {}) });
+  return hubFetch(HUB_VIDEO_URL, { prompt, quality: opts?.quality ?? "good", aspect: opts?.aspect ?? "16:9" });
 }
 
 /** Odpytuje hub aż wideo będzie gotowe. Zwraca URL albo rzuca błąd. */

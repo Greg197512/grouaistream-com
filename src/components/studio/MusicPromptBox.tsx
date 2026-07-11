@@ -117,6 +117,7 @@ export function MusicPromptBox({ onTrackReady }: Props) {
   const [instrumental, setInstrumental] = useState(false);
   const [mode, setMode] = useState<"music" | "video">("music");
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [videoQuality, setVideoQuality] = useState<"good" | "vip">("good");
   const [stage, setStage] = useState<"idle" | "parsing" | "composing" | "done" | "error">("idle");
   const [planSummary, setPlanSummary] = useState<string>("");
   const [elapsed, setElapsed] = useState(0);
@@ -226,7 +227,7 @@ export function MusicPromptBox({ onTrackReady }: Props) {
     setVideoUrl(null);
 
     try {
-      const { data, error: fnError } = await submitStudioVideo(prompt.trim(), { aspect: "9:16", duration: 5 });
+      const { data, error: fnError } = await submitStudioVideo(prompt.trim(), { quality: videoQuality, aspect: "16:9" });
       if (fnError) throw new Error(fnError.message || "Nie udało się zlecić wideo");
 
       if (data?.pending) {
@@ -331,6 +332,31 @@ export function MusicPromptBox({ onTrackReady }: Props) {
           </button>
         </div>
 
+        {/* Jakość wideo: Good (tani/szybki) vs VIP (najlepszy model) */}
+        {mode === "video" && (
+          <div className="relative z-10 -mt-1 mb-3 flex flex-wrap items-center gap-2">
+            <span className="text-[11px] text-white/50">Jakość:</span>
+            <div className="flex items-center gap-1 bg-white/5 rounded-full p-1 border border-white/10">
+              <button
+                onClick={() => !isBusy && setVideoQuality("good")}
+                disabled={isBusy}
+                className={`px-3 py-1 rounded-full text-[11px] font-bold transition-all ${videoQuality === "good" ? "bg-white text-black shadow" : "text-white/60 hover:text-white"}`}
+                title="LTX-Video — szybko i tanio"
+              >
+                Good · LTX-Video
+              </button>
+              <button
+                onClick={() => !isBusy && setVideoQuality("vip")}
+                disabled={isBusy}
+                className={`px-3 py-1 rounded-full text-[11px] font-bold transition-all ${videoQuality === "vip" ? "bg-gradient-to-r from-[#FF6B00] to-[#9333EA] text-white shadow" : "text-white/60 hover:text-white"}`}
+                title="MiniMax — najwyższa jakość (plan Pro/Ultimate)"
+              >
+                ⭐ VIP · MiniMax
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Chipy stylu (styl muzyczny — pomaga też opisać klimat wideo) */}
         <div className="relative z-10 flex flex-wrap gap-1.5 mb-3">
           {VIBES.map((v) => {
@@ -362,8 +388,18 @@ export function MusicPromptBox({ onTrackReady }: Props) {
           })}
         </div>
 
-        {/* Pole opisu */}
-        <div className="relative z-10">
+        {/* Pole opisu — z delikatnie pulsującą, świecącą ramką */}
+        <motion.div
+          className="relative z-10 rounded-2xl"
+          animate={{
+            boxShadow: [
+              "0 0 4px rgba(255,107,0,0.15), 0 0 8px rgba(147,51,234,0.10)",
+              "0 0 16px rgba(255,107,0,0.55), 0 0 30px rgba(147,51,234,0.35)",
+              "0 0 4px rgba(255,107,0,0.15), 0 0 8px rgba(147,51,234,0.10)",
+            ],
+          }}
+          transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut" }}
+        >
           <Textarea
             ref={textareaRef}
             value={prompt}
@@ -374,11 +410,11 @@ export function MusicPromptBox({ onTrackReady }: Props) {
                 handleGenerate();
               }
             }}
-            placeholder={placeholder}
+            placeholder={mode === "video" ? "Opisz scenę do wideo: np. neonowe miasto nocą, jazda dronem, deszcz…" : placeholder}
             disabled={isBusy}
             className="min-h-[96px] text-base resize-none bg-black/30 border-white/10 text-white focus-visible:ring-[#FF6B00] placeholder:text-white/35 rounded-2xl"
           />
-        </div>
+        </motion.div>
 
         {/* Pasek akcji */}
         <div className="relative z-10 flex items-center justify-between mt-3 gap-3">
