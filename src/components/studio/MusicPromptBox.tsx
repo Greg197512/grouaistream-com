@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Sparkles, Loader2, Send, Globe, Music2, AlertCircle,
-  Flame, Wand2, Mic2, Guitar, CheckCircle2,
+  Flame, Wand2, Mic2, Guitar, CheckCircle2, Download, Share2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -10,6 +10,7 @@ import { invokeStudioEngine, waitForAceStep, fireCoverGeneration, isSubscription
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { UpgradeModal } from "@/components/modals/UpgradeModal";
+import { exportTeledysk } from "@/lib/teledyskExport";
 
 type Lang = "auto" | "pl" | "en" | "nl" | "uk";
 
@@ -121,6 +122,9 @@ export function MusicPromptBox({ onTrackReady }: Props) {
   const [videoPrompt, setVideoPrompt] = useState("");
   const [clip, setClip] = useState<{ audioUrl: string; videoUrls: string[] } | null>(null);
   const [clipIdx, setClipIdx] = useState(0);
+  const [exporting, setExporting] = useState(false);
+  const [exportPct, setExportPct] = useState(0);
+  const clipBlobRef = useRef<Blob | null>(null);
   const [stage, setStage] = useState<"idle" | "parsing" | "composing" | "done" | "error">("idle");
   const [planSummary, setPlanSummary] = useState<string>("");
   const [elapsed, setElapsed] = useState(0);
@@ -326,6 +330,8 @@ export function MusicPromptBox({ onTrackReady }: Props) {
       const [audioUrl, clipUrls] = await Promise.all([audioJob, clipsJob]);
 
       setClipIdx(0);
+      clipBlobRef.current = null;
+      setExportPct(0);
       setClip({ audioUrl, videoUrls: clipUrls });
       setStage("done");
       toast.success("Teledysk gotowy! 🎥");
@@ -342,6 +348,62 @@ export function MusicPromptBox({ onTrackReady }: Props) {
       setError(e.message || "Coś poszło nie tak przy tworzeniu teledysku");
       toast.error(e.message || "Błąd teledysku");
       setTimeout(() => setStage("idle"), 6000);
+    }
+  };
+
+  // Sklej klipy + utwór w jeden plik MP4 (ffmpeg.wasm). Zwraca File; cache w ref.
+  const buildTeledyskFile = async (): Promise<File> => {
+    if (!clip) throw new Error("brak teledysku");
+    let blob = clipBlobRef.current;
+    if (!blob) {
+      setExporting(true);
+      setExportPct(1);
+      try {
+        blob = await exportTeledysk(clip.videoUrls, clip.audioUrl, (p) => setExportPct(p));
+        clipBlobRef.current = blob;
+      } finally {
+        setExporting(false);
+      }
+    }
+    return new File([blob], "grouai-teledysk.mp4", { type: "video/mp4" });
+  };
+
+  const handleDownloadTeledysk = async () => {
+    try {
+      const file = await buildTeledyskFile();
+      const url = URL.createObjectURL(file);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = file.name;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success("Teledysk pobrany 🎥");
+    } catch (e: any) {
+      toast.error("Nie udało się skleić teledysku — pobierz muzykę i ujęcia osobno");
+    }
+  };
+
+  const handleShareTeledysk = async () => {
+    try {
+      const file = await buildTeledyskFile();
+      const nav = navigator as any;
+      if (nav.canShare && nav.canShare({ files: [file] })) {
+        await nav.share({ files: [file], title: "Mój teledysk — GrouAI Stream", text: "Teledysk stworzony w GrouAI Studio 🎥 grouaistream.com" });
+      } else {
+        const url = URL.createObjectURL(file);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = file.name;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        toast.info("To urządzenie nie wspiera bezpośredniego wysyłania — teledysk pobrany, wrzuć go na YouTube/TikTok.");
+      }
+    } catch {
+      toast.error("Nie udało się przygotować teledysku do wysłania");
     }
   };
 
@@ -655,14 +717,39 @@ export function MusicPromptBox({ onTrackReady }: Props) {
               </span>
             </div>
             <audio src={clip.audioUrl} controls autoPlay className="w-full mt-2" />
-            <div className="mt-2 flex flex-wrap gap-3 text-xs">
-              <a href={clip.audioUrl} download className="text-[#FF9500] hover:underline">Pobierz muzykę</a>
+
+            {/* Jeden plik MP4 na YouTube / TikTok */}
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <Button
+                onClick={handleShareTeledysk}
+                disabled={exporting}
+                size="sm"
+                className="font-bold text-white border-0"
+                style={{ background: "linear-gradient(135deg, #FF6B00, #9333EA)" }}
+              >
+                {exporting ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Share2 className="w-4 h-4 mr-1.5" />}
+                {exporting ? `Składam… ${exportPct}%` : "Wyślij do… (YT/TikTok)"}
+              </Button>
+              <Button
+                onClick={handleDownloadTeledysk}
+                disabled={exporting}
+                size="sm"
+                variant="secondary"
+                className="font-semibold"
+              >
+                <Download className="w-4 h-4 mr-1.5" />
+                Pobierz teledysk MP4
+              </Button>
+            </div>
+
+            <div className="mt-2 flex flex-wrap gap-3 text-[11px] text-white/50">
+              <a href={clip.audioUrl} download className="hover:text-[#FF9500] hover:underline">Sama muzyka</a>
               {clip.videoUrls.map((u, i) => (
-                <a key={i} href={u} download className="text-[#FF9500] hover:underline">Ujęcie {i + 1}</a>
+                <a key={i} href={u} download className="hover:text-[#FF9500] hover:underline">Ujęcie {i + 1}</a>
               ))}
             </div>
             <p className="mt-1 text-[10px] text-white/40">
-              Ujęcia lecą płynnie jedno po drugim pod utworem (start zsynchronizowany). Sklejenie w jeden plik MP4 do pobrania — dołożę jako kolejny krok.
+              „Wyślij do…" składa ujęcia + muzykę w jeden plik MP4 (w Twojej przeglądarce) i otwiera menu udostępniania — wybierasz YouTube / TikTok / itp. Krótki format = idealny na Shorts/Reels.
             </p>
           </motion.div>
         )}
