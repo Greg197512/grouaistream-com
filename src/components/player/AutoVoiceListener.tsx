@@ -168,7 +168,7 @@ export const AutoVoiceListener = () => {
   const processVoiceCommand = aiContext?.processVoiceCommand;
   const isAIEnabled = aiContext?.isAIEnabled ?? false;
   const isProcessing = aiContext?.isProcessing ?? false;
-  const { playPlaylist, nextTrack, prevTrack, setVolume, pausePlayback, resumePlayback, restartCurrentTrack } = usePlayer();
+  const { playPlaylist, nextTrack, prevTrack, setVolume, pausePlayback, resumePlayback, restartCurrentTrack, seek, audioElement, toggleRepeat, toggleShuffle, currentTrack, addToQueue } = usePlayer();
   const navigate = useNavigate();
   const { assistantName, needsNaming, saveAssistantName } = useAssistantConfig();
   const { startDJSession, parseDJCommand, isDJActive, stopDJSession } = useDJMode();
@@ -649,6 +649,84 @@ export const AutoVoiceListener = () => {
       return;
     }
 
+    // Przewijanie o czas: „przewiń do przodu o 1 minutę", „cofnij 30 sekund", „skip forward 2 min"
+    const wantsSeek =
+      /(przewin|przewiń|cofnij|do przodu|do tyłu|do tylu|naprzód|naprzod|wstecz|fast ?forward|forward|rewind|skip ?(forward|back)|vooruit|terug|spoel|перемот|вперед|назад)/.test(normalized) &&
+      /(sekund|sekunt|second|minut|minute|\bmin\b|\bsec\b|хвил|секун)/.test(normalized);
+    const liveDur = audioElement?.duration || 0;
+    const liveCur = audioElement?.currentTime || 0;
+    if (wantsSeek && liveDur > 0) {
+      const back = /(cofnij|do tyłu|do tylu|wstecz|rewind|\bback\b|terug|назад)/.test(normalized);
+      const isMinutes = /(minut|minute|\bmin\b|хвил)/.test(normalized);
+      const amount = parseNumber(normalized) ?? (isMinutes ? 1 : 30);
+      const deltaSec = amount * (isMinutes ? 60 : 1) * (back ? -1 : 1);
+      const target = Math.max(0, Math.min(liveDur, liveCur + deltaSec));
+      seek((target / liveDur) * 100);
+      const dirTxt: Record<Language, string> = back
+        ? { pl: "Cofam", en: "Rewinding", nl: "Terugspoelen", ua: "Назад" }
+        : { pl: "Przewijam do przodu", en: "Fast forwarding", nl: "Vooruitspoelen", ua: "Вперед" };
+      const unit = isMinutes ? "min" : "s";
+      await safeSpeakAndResume(`${dirTxt[lang]} o ${amount} ${unit}`);
+      toast.info(`⏩ ${dirTxt[lang]} ${amount}${unit}`);
+      return;
+    }
+
+    // Przewiń na początek / koniec utworu
+    if (includesAny(normalized, ["na poczatek", "poczatek utworu", "to the start", "to the beginning", "naar het begin", "на початок"])) {
+      restartCurrentTrack();
+      await safeSpeakAndResume({ pl: "Od początku", en: "From the start", nl: "Vanaf begin", ua: "Спочатку" }[lang]);
+      return;
+    }
+    if (includesAny(normalized, ["na koniec", "koniec utworu", "to the end", "naar het einde", "в кінець"]) && liveDur > 0) {
+      seek(98);
+      await safeSpeakAndResume({ pl: "Na koniec", en: "To the end", nl: "Naar einde", ua: "У кінець" }[lang]);
+      return;
+    }
+
+    // Powtarzanie / zapętlenie
+    if (includesAny(normalized, ["powtarzaj", "zapetl", "zapętl", "w kolko", "w koło", "repeat", "loop", "herhaal", "повтор", "зациклюй"])) {
+      toggleRepeat();
+      await safeSpeakAndResume({ pl: "Zmieniam powtarzanie", en: "Toggling repeat", nl: "Herhalen aangepast", ua: "Повтор змінено" }[lang]);
+      toast.info("🔁 Powtarzanie");
+      return;
+    }
+
+    // Losowo / tasowanie
+    if (includesAny(normalized, ["losowo", "tasuj", "wymieszaj", "przetasuj", "shuffle", "random", "husselen", "willekeurig", "перемішай", "випадков"])) {
+      toggleShuffle();
+      await safeSpeakAndResume({ pl: "Przełączam losowe odtwarzanie", en: "Toggling shuffle", nl: "Shuffle aangepast", ua: "Перемішування змінено" }[lang]);
+      toast.info("🔀 Losowo");
+      return;
+    }
+
+    // Ustaw dokładną głośność: „głośność na 50", „ustaw głośność 30 procent"
+    if (/(g[łl]o[śs]no|volume|geluid|гучніст|громкост)/.test(normalized) && parseNumber(normalized) !== undefined) {
+      const vol = Math.max(0, Math.min(100, parseNumber(normalized)!));
+      setVolume(vol);
+      await safeSpeakAndResume({ pl: `Głośność ${vol} procent`, en: `Volume ${vol} percent`, nl: `Volume ${vol} procent`, ua: `Гучність ${vol} відсотків` }[lang]);
+      toast.info(`🔊 ${vol}%`);
+      return;
+    }
+
+    // Polub / dodaj do ulubionych AKTUALNY utwór
+    if (includesAny(normalized, ["polub", "dodaj do ulubionych", "do ulubionych ten", "like this", "add to favorites", "add to liked", "vind ik leuk", "voeg toe aan favorieten", "подобається", "додай до улюблених"])) {
+      if (!currentTrack) { await safeSpeakAndResume("Nie ma teraz nic odtwarzanego"); return; }
+      if (!user) { await safeSpeakAndResume("Zaloguj się, aby polubić"); return; }
+      try {
+        await supabase.from("liked_songs").upsert({ user_id: user.id, track_id: currentTrack.id }, { onConflict: "user_id,track_id" });
+        window.dispatchEvent(new CustomEvent("track-like-changed", { detail: { trackId: currentTrack.id, liked: true } }));
+        await safeSpeakAndResume({ pl: `Polubiono ${currentTrack.title}`, en: `Liked ${currentTrack.title}`, nl: "Geliked", ua: "Додано" }[lang]);
+        toast.success(`❤️ ${currentTrack.title}`);
+      } catch { await safeSpeakAndResume("Nie udało się polubić"); }
+      return;
+    }
+
+    // Dodaj aktualny utwór do kolejki
+    if (includesAny(normalized, ["do kolejki", "dodaj do kolejki", "add to queue", "in de wachtrij", "до черги"])) {
+      if (currentTrack) { addToQueue(currentTrack); await safeSpeakAndResume({ pl: "Dodano do kolejki", en: "Added to queue", nl: "Toegevoegd aan wachtrij", ua: "Додано до черги" }[lang]); }
+      return;
+    }
+
     // Next track
     if (includesAny(lower, ["następn", "dalej", "skip", "next", "volgende", "overslaan", "наступн", "далі"])) {
       nextTrack();
@@ -1079,7 +1157,7 @@ export const AutoVoiceListener = () => {
     } finally {
       isProcessingCommandRef.current = false;
     }
-  }, [isAIEnabled, processVoiceCommand, playPlaylist, nextTrack, prevTrack, setVolume, tryNavigate, searchAndPlay, resetSilenceTimer, assistantName, fetchAISuggestions, shutdownMic, showSuggestions, aiSuggestions, pausePlayback, resumePlayback, restartCurrentTrack, parseNumber, handlePlayFromAI, safeSpeakAndResume]);
+  }, [isAIEnabled, processVoiceCommand, playPlaylist, nextTrack, prevTrack, setVolume, tryNavigate, searchAndPlay, resetSilenceTimer, assistantName, fetchAISuggestions, shutdownMic, showSuggestions, aiSuggestions, pausePlayback, resumePlayback, restartCurrentTrack, parseNumber, handlePlayFromAI, safeSpeakAndResume, seek, audioElement, toggleRepeat, toggleShuffle, currentTrack, addToQueue, user]);
 
   const startListening = useCallback(() => {
     if (!user) return;
