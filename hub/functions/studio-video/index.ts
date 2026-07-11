@@ -98,9 +98,18 @@ Deno.serve(async (req) => {
       }
     }
 
-    const prompt: string = String(body.prompt || "").trim();
+    let prompt: string = String(body.prompt || "").trim();
     if (prompt.length < 3) return json({ ok: false, error: "prompt_too_short" }, 400);
     const aspect: string = body.aspect || "16:9";
+
+    // Tryb śpiewany (lip-sync): twarz MUSI być wykrywalna w każdej klatce,
+    // inaczej LatentSync rzuca "Face not detected". Wymuszamy kadr i zakazujemy odwrotów.
+    const singing = body.singing === true;
+    if (singing) {
+      prompt += ", face perfectly centered and fully visible at all times, front-facing the camera, bright soft light on the face, lips clearly visible, steady camera";
+    }
+    const negBase = "low quality, worst quality, blurry, distorted, deformed, watermark, text";
+    const negSinging = negBase + ", face turned away, back of head, side profile, occluded face, blurry face, cutaway, wide shot, multiple people";
 
     // Wejście zależne od modelu (Replicate waliduje schema — wysyłamy tylko poprawne pola).
     let model: string;
@@ -112,7 +121,7 @@ Deno.serve(async (req) => {
       model = cfg["video_model_good"] || "lightricks/ltx-video";
       input = {
         prompt,
-        negative_prompt: "low quality, worst quality, blurry, distorted, deformed, watermark, text",
+        negative_prompt: singing ? negSinging : negBase,
         aspect_ratio: aspect,
       };
     }

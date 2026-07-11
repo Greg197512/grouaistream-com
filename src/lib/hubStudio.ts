@@ -194,9 +194,14 @@ const HUB_VIDEO_URL =
  */
 export async function submitStudioVideo(
   prompt: string,
-  opts?: { quality?: "good" | "vip"; aspect?: string }
+  opts?: { quality?: "good" | "vip"; aspect?: string; singing?: boolean }
 ): Promise<InvokeResult> {
-  return hubFetch(HUB_VIDEO_URL, { prompt, quality: opts?.quality ?? "good", aspect: opts?.aspect ?? "16:9" });
+  return hubFetch(HUB_VIDEO_URL, {
+    prompt,
+    quality: opts?.quality ?? "good",
+    aspect: opts?.aspect ?? "16:9",
+    ...(opts?.singing ? { singing: true } : {}),
+  });
 }
 
 /** Odpytuje hub aż wideo będzie gotowe. Zwraca URL albo rzuca błąd. */

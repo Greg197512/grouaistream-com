@@ -337,7 +337,7 @@ export function MusicPromptBox({ onTrackReady }: Props) {
         }
         const jobIds = await Promise.all(
           scenes.map(async (scene) => {
-            const { data, error: e } = await submitStudioVideo(scene, { quality: videoQuality, aspect });
+            const { data, error: e } = await submitStudioVideo(scene, { quality: videoQuality, aspect, singing });
             if (e) throw new Error(e.message || "Błąd wideo");
             if (!data?.job_id) throw new Error(data?.message || "Błąd zlecenia wideo");
             return data.job_id as string;
