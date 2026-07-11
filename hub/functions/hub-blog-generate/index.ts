@@ -126,11 +126,24 @@ Deno.serve(async (req) => {
 
     await db.from("hub_log").insert({ source: "hub-blog-generate", level: "info", message: `Nowy post: "${art.title}" [${art.model}]`, data: { slug, category: pick.category } });
 
+    // Jeden elegancki wpis dziennie na Discord (rich embed — nie zaśmiecamy serwera).
     const hook = cfg["discord_webhook_url"];
     if (hook) {
       try {
         await fetch(hook, { method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ content: `📝 **Nowy artykuł na blogu**\n**${art.title}**\nhttps://grouaistream.com/blog/${slug}` }) });
+          body: JSON.stringify({
+            username: "GrouAI Stream",
+            embeds: [{
+              author: { name: "✦ Nowy artykuł na blogu" },
+              title: art.title,
+              url: `https://grouaistream.com/blog/${slug}`,
+              description: (art.description || "").slice(0, 300),
+              color: 0xFF6B00,
+              image: { url: cover },
+              footer: { text: "GrouAI Stream · grouaistream.com" },
+              timestamp: new Date().toISOString(),
+            }],
+          }) });
       } catch { /* */ }
     }
 

@@ -247,21 +247,11 @@ Deno.serve(async (req) => {
       }
     };
 
-    // Powiadomienie na Discord.
-    const notify = async () => {
-      const hook = cfg["discord_webhook_url"];
-      if (!hook) return;
-      try {
-        await fetch(hook, {
-          method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ content: `🌌 **Nowe zlecenie B2B** \`${orderId}\`\n**Usługa:** ${SERVICE_LABELS[serviceType] || serviceType}\n**Klient:** ${fields.full_name || "—"} · ${fields.email}\n**Brief:** ${brief.slice(0, 300)}` }),
-        });
-      } catch { /* ignore */ }
-    };
-
+    // Uwaga: NIE wysyłamy zlecenia na publiczny Discord (zawiera e-mail klienta = prywatność,
+    // a Greg prosił, by nie zaśmiecać serwera). Lead jest w hub_leads dla admina.
     try { // @ts-ignore
-      EdgeRuntime.waitUntil(Promise.all([fireWorker(), notify()]));
-    } catch { await fireWorker(); await notify(); }
+      EdgeRuntime.waitUntil(fireWorker());
+    } catch { await fireWorker(); }
 
     tool_results.push({ tool: "place_order", ok: true, short_id: orderId, worker: "Aurora (GrouAI Hub)" });
   } else if (hasRequired || brief.length >= 30) {
