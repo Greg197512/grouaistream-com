@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { invokeStudioEngine, waitForAceStep, fireCoverGeneration, isSubscriptionError } from "@/lib/hubStudio";
+import { invokeStudioEngine, waitForAceStep, fireCoverGeneration, isSubscriptionError, submitStudioVideo, waitForStudioVideo } from "@/lib/hubStudio";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { UpgradeModal } from "@/components/modals/UpgradeModal";
@@ -115,6 +115,8 @@ export function MusicPromptBox({ onTrackReady }: Props) {
   const [prompt, setPrompt] = useState("");
   const [language, setLanguage] = useState<Lang>("auto");
   const [instrumental, setInstrumental] = useState(false);
+  const [mode, setMode] = useState<"music" | "video">("music");
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [stage, setStage] = useState<"idle" | "parsing" | "composing" | "done" | "error">("idle");
   const [planSummary, setPlanSummary] = useState<string>("");
   const [elapsed, setElapsed] = useState(0);
@@ -152,10 +154,12 @@ export function MusicPromptBox({ onTrackReady }: Props) {
       return;
     }
     if (prompt.trim().length < 3) {
-      toast.error("Powiedz coś więcej o utworze");
+      toast.error(mode === "video" ? "Opisz krótko scenę do wideo" : "Powiedz coś więcej o utworze");
       textareaRef.current?.focus();
       return;
     }
+
+    if (mode === "video") return handleGenerateVideo();
 
     setStage("parsing");
     setError("");
@@ -213,6 +217,50 @@ export function MusicPromptBox({ onTrackReady }: Props) {
     }
   };
 
+  // Tryb wideo: teledysk/film z tekstu (Higgsfield przez hub). Gdy brak klucza → komunikat.
+  const handleGenerateVideo = async () => {
+    setStage("parsing");
+    setError("");
+    setPlanSummary("");
+    setElapsed(0);
+    setVideoUrl(null);
+
+    try {
+      const { data, error: fnError } = await submitStudioVideo(prompt.trim(), { aspect: "9:16", duration: 5 });
+      if (fnError) throw new Error(fnError.message || "Nie udało się zlecić wideo");
+
+      if (data?.pending) {
+        setStage("idle");
+        const msg = data.message || "🎬 Tryb wideo czeka na klucz Higgsfield — dodaj klucz, aby generować.";
+        setError(msg);
+        toast.info(msg, { duration: 6000 });
+        setTimeout(() => setError(""), 9000);
+        return;
+      }
+      if (!data?.job_id) throw new Error(data?.message || "Silnik wideo nie zwrócił zadania");
+
+      setPlanSummary("Tworzę wideo z Twojego opisu…");
+      setStage("composing");
+      const url = await waitForStudioVideo(data.job_id, (sec) => setElapsed(sec));
+
+      setVideoUrl(url);
+      setStage("done");
+      toast.success("Wideo gotowe! 🎬");
+      setTimeout(() => setStage("idle"), 2500);
+    } catch (e: any) {
+      if (isSubscriptionError(e)) {
+        setStage("idle");
+        setShowUpgrade(true);
+        return;
+      }
+      console.error("[MusicPromptBox video]", e);
+      setStage("error");
+      setError(e.message || "Coś poszło nie tak przy generowaniu wideo");
+      toast.error(e.message || "Błąd generowania wideo");
+      setTimeout(() => setStage("idle"), 6000);
+    }
+  };
+
   return (
     <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="relative w-full">
       {/* Obracająca się poświata za kartą */}
@@ -265,7 +313,25 @@ export function MusicPromptBox({ onTrackReady }: Props) {
           </div>
         </div>
 
-        {/* Chipy stylu */}
+        {/* Przełącznik Muzyka / Video */}
+        <div className="relative z-10 mb-3 flex items-center gap-1 bg-white/5 rounded-full p-1 border border-white/10 w-fit">
+          <button
+            onClick={() => !isBusy && setMode("music")}
+            disabled={isBusy}
+            className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all ${mode === "music" ? "bg-white text-black shadow" : "text-white/60 hover:text-white"}`}
+          >
+            🎵 Muzyka
+          </button>
+          <button
+            onClick={() => !isBusy && setMode("video")}
+            disabled={isBusy}
+            className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all ${mode === "video" ? "bg-white text-black shadow" : "text-white/60 hover:text-white"}`}
+          >
+            🎬 Video
+          </button>
+        </div>
+
+        {/* Chipy stylu (styl muzyczny — pomaga też opisać klimat wideo) */}
         <div className="relative z-10 flex flex-wrap gap-1.5 mb-3">
           {VIBES.map((v) => {
             const on = activeVibes.includes(v.label);
@@ -352,12 +418,14 @@ export function MusicPromptBox({ onTrackReady }: Props) {
                 {isBusy ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    {stage === "parsing" ? labels.parsing : `${labels.composing} ${elapsed}s`}
+                    {mode === "video"
+                      ? (stage === "parsing" ? "Przygotowuję wideo…" : `Tworzę wideo… ${elapsed}s`)
+                      : (stage === "parsing" ? labels.parsing : `${labels.composing} ${elapsed}s`)}
                   </>
                 ) : (
                   <>
                     <Send className="w-4 h-4 mr-2" />
-                    Generuj
+                    {mode === "video" ? "Generuj wideo" : "Generuj"}
                   </>
                 )}
               </span>
@@ -393,6 +461,29 @@ export function MusicPromptBox({ onTrackReady }: Props) {
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* Gotowe wideo */}
+        {videoUrl && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="relative z-10 mt-4"
+          >
+            <video
+              src={videoUrl}
+              controls
+              playsInline
+              className="w-full rounded-xl border border-white/10 bg-black shadow-lg"
+            />
+            <a
+              href={videoUrl}
+              download
+              className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-[#FF9500] hover:underline"
+            >
+              <Send className="h-3.5 w-3.5 rotate-90" /> Pobierz wideo
+            </a>
+          </motion.div>
+        )}
 
         {/* Equalizer podczas komponowania */}
         <AnimatePresence>

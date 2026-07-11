@@ -181,3 +181,36 @@ export async function waitForAceStep(
   }
   throw new Error("Przekroczono czas oczekiwania na utwór");
 }
+
+// ─── Wideo (teledysk / film z tekstu) — Higgsfield przez hub ───────────────────
+const HUB_VIDEO_URL =
+  "https://bmwtydwpevzhbdplilbr.supabase.co/functions/v1/higgsfield-video";
+
+/**
+ * Zleca wygenerowanie wideo z tekstu. Zwraca { data, error }.
+ * data.pending === true → silnik gotowy, ale czeka na klucz Higgsfield.
+ * data.job_id → zlecono; odpytuj waitForStudioVideo.
+ */
+export async function submitStudioVideo(
+  prompt: string,
+  opts?: { duration?: number; aspect?: string }
+): Promise<InvokeResult> {
+  return hubFetch(HUB_VIDEO_URL, { prompt, ...(opts || {}) });
+}
+
+/** Odpytuje hub aż wideo będzie gotowe. Zwraca URL albo rzuca błąd. */
+export async function waitForStudioVideo(
+  jobId: string,
+  onTick?: (elapsedSeconds: number) => void
+): Promise<string> {
+  const maxAttempts = 120; // ~10 minut
+  for (let i = 1; i <= maxAttempts; i++) {
+    await new Promise((res) => setTimeout(res, 5000));
+    onTick?.(i * 5);
+    const { data, error } = await hubFetch(HUB_VIDEO_URL, { action: "status", job_id: jobId });
+    if (error) continue; // chwilowy błąd sieci — próbujemy dalej
+    if (data?.status === "completed" && data?.video_url) return data.video_url as string;
+    if (data?.status === "failed") throw new Error("Generowanie wideo nie powiodło się");
+  }
+  throw new Error("Przekroczono czas oczekiwania na wideo");
+}
