@@ -5,6 +5,7 @@ import { extractYouTubeId } from "@/components/player/YouTubePlayer";
 import { useSkipAdaptation } from "@/hooks/useSkipAdaptation";
 import { useStreamCounter } from "@/hooks/useStreamCounter";
 import { isLikelyAudioUrl, isNativeVideoUrl } from "@/lib/mediaPlayback";
+import { getOfflineObjectUrl } from "@/lib/offlineLibrary";
 
 export interface Track {
   id: string;
@@ -69,6 +70,8 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   const isVideoModeRef = useRef(false);
   const nextTrackRef = useRef<(isUserSkip?: boolean) => void>(() => {});
   const userIdRef = useRef<string | null>(null);
+  // Token unieważniający zaległe (asynchroniczne) starty audio przy szybkiej zmianie utworu.
+  const playRequestRef = useRef(0);
   
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -261,6 +264,9 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (!currentTrack) return;
 
+    // Każde uruchomienie efektu unieważnia zaległe async-starty audio (offline lookup).
+    const playToken = ++playRequestRef.current;
+
     const videoId = getPlayableYouTubeId(currentTrack);
     const nativeVideoUrl = getNativeVideoUrl(currentTrack);
 
@@ -305,40 +311,52 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
 
       if (audioRef.current) {
         const audioElement = audioRef.current;
-        const isLocalSource = isLocalBrowserUrl(audioUrl);
 
-        audioElement.pause();
-        audioElement.removeAttribute("src");
-        audioElement.load();
-        audioElement.crossOrigin = isLocalSource ? null : "anonymous";
-        console.log("[Player] Setting audio src:", audioUrl);
-        audioElement.src = audioUrl;
-        audioElement.load();
+        const startAudio = (srcUrl: string, isLocalSource: boolean) => {
+          audioElement.pause();
+          audioElement.removeAttribute("src");
+          audioElement.load();
+          audioElement.crossOrigin = isLocalSource ? null : "anonymous";
+          console.log("[Player] Setting audio src:", srcUrl.startsWith("blob:") ? "blob (offline)" : srcUrl);
+          audioElement.src = srcUrl;
+          audioElement.load();
 
-        const playPromise = audioElement.play();
-        console.log("[Player] play() called, promise:", !!playPromise);
-        if (playPromise) {
-          playPromise.then(() => {
-            console.log("[Player] play() success");
-            setIsPlaying(true);
-          }).catch((error) => {
-            console.error("[Player] play() error:", error.name, error.message);
-            if (isAutoplayBlockedError(error)) {
-              setIsPlaying(false);
-              toast.info("Na telefonie naciśnij Play, aby rozpocząć odtwarzanie");
-              return;
-            }
+          const playPromise = audioElement.play();
+          if (playPromise) {
+            playPromise.then(() => {
+              console.log("[Player] play() success");
+              setIsPlaying(true);
+            }).catch((error) => {
+              console.error("[Player] play() error:", error.name, error.message);
+              if (isAutoplayBlockedError(error)) {
+                setIsPlaying(false);
+                toast.info("Na telefonie naciśnij Play, aby rozpocząć odtwarzanie");
+                return;
+              }
 
-            if (isLocalSource) {
-              setIsPlaying(false);
-              toast.error("Telefon zablokował ten plik lokalny. Spróbuj ponownie nacisnąć Play lub wybierz inny format MP3/M4A.");
-              return;
-            }
+              if (isLocalSource) {
+                setIsPlaying(false);
+                toast.error("Telefon zablokował ten plik lokalny. Spróbuj ponownie nacisnąć Play lub wybierz inny format MP3/M4A.");
+                return;
+              }
 
-            toast.error("Nie udało się odtworzyć utworu. Przechodzę do następnego...");
-            nextTrackInternal();
+              toast.error("Nie udało się odtworzyć utworu. Przechodzę do następnego...");
+              nextTrackInternal();
+            });
+          }
+        };
+
+        // Najpierw kopia offline (IndexedDB) — gra bez internetu; inaczej normalne źródło sieciowe.
+        getOfflineObjectUrl(currentTrack.id)
+          .then((offlineUrl) => {
+            if (playRequestRef.current !== playToken) return; // utwór zmienił się w międzyczasie
+            if (offlineUrl) startAudio(offlineUrl, true);
+            else startAudio(audioUrl, isLocalBrowserUrl(audioUrl));
+          })
+          .catch(() => {
+            if (playRequestRef.current !== playToken) return;
+            startAudio(audioUrl, isLocalBrowserUrl(audioUrl));
           });
-        }
       } else {
         console.error("[Player] audioRef.current is null!");
       }

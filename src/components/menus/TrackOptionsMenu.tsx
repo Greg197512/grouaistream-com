@@ -17,7 +17,9 @@ import {
   MessageCircle,
   Trash2,
   Scissors,
-  Coffee
+  Coffee,
+  DownloadCloud,
+  Check
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -34,6 +36,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { isOffline, saveOfflineTrack, removeOfflineTrack } from "@/lib/offlineLibrary";
 
 
 interface TrackOptionsMenuProps {
@@ -203,6 +206,40 @@ const TrackOptionsMenuComponent = (
   };
 
   const [downloading, setDownloading] = useState(false);
+
+  // Tryb offline — utwór zapisany w IndexedDB gra bez internetu.
+  const [offlineSaved, setOfflineSaved] = useState(false);
+  const [savingOffline, setSavingOffline] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    isOffline(trackId).then((v) => { if (!cancelled) setOfflineSaved(v); });
+    return () => { cancelled = true; };
+  }, [trackId]);
+
+  const handleOffline = async () => {
+    if (offlineSaved) {
+      await removeOfflineTrack(trackId);
+      setOfflineSaved(false);
+      toast.success("Usunięto z trybu offline");
+      return;
+    }
+    if (!trackUrl) {
+      toast.error("Ten utwór nie ma pliku do pobrania offline");
+      return;
+    }
+    setSavingOffline(true);
+    toast.info("⬇️ Zapisuję do trybu offline…");
+    try {
+      await saveOfflineTrack(trackId, trackUrl, { title: trackTitle, artist: trackArtist });
+      setOfflineSaved(true);
+      toast.success("✅ Dostępne offline — zagra bez internetu");
+    } catch {
+      toast.error("Nie udało się zapisać offline (plik może blokować pobieranie)");
+    } finally {
+      setSavingOffline(false);
+    }
+  };
 
   const handleDownload = async () => {
     if (!trackUrl) {
@@ -543,6 +580,19 @@ const TrackOptionsMenuComponent = (
               <Download className="mr-2 h-4 w-4" />
             )}
             {downloading ? "Wypalanie..." : "Pobierz Utwór"}
+          </DropdownMenuItem>
+
+          {/* Offline — zapisz w telefonie/przeglądarce, gra bez internetu */}
+          <DropdownMenuItem onClick={handleOffline} disabled={savingOffline} className="cursor-pointer">
+            {offlineSaved ? (
+              <Check className="mr-2 h-4 w-4 text-emerald-400" />
+            ) : (
+              <DownloadCloud className="mr-2 h-4 w-4" />
+            )}
+            <span className="flex-1">
+              {savingOffline ? "Zapisuję…" : offlineSaved ? "Dostępne offline" : "Pobierz offline"}
+            </span>
+            {offlineSaved && <span className="text-[10px] text-emerald-400">usuń</span>}
           </DropdownMenuItem>
 
           {/* Open original */}
