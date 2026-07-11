@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { invokeStudioEngine, waitForAceStep, fireCoverGeneration, isSubscriptionError, submitStudioVideo, waitForStudioVideo, fetchStoryboard } from "@/lib/hubStudio";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import { UpgradeModal } from "@/components/modals/UpgradeModal";
 import { exportTeledysk } from "@/lib/teledyskExport";
 
@@ -124,6 +125,7 @@ export function MusicPromptBox({ onTrackReady }: Props) {
   const [clipIdx, setClipIdx] = useState(0);
   const [exporting, setExporting] = useState(false);
   const [exportPct, setExportPct] = useState(0);
+  const [publishing, setPublishing] = useState(false);
   const clipBlobRef = useRef<Blob | null>(null);
   const [stage, setStage] = useState<"idle" | "parsing" | "composing" | "done" | "error">("idle");
   const [planSummary, setPlanSummary] = useState<string>("");
@@ -382,6 +384,45 @@ export function MusicPromptBox({ onTrackReady }: Props) {
       toast.success("Teledysk pobrany 🎥");
     } catch (e: any) {
       toast.error("Nie udało się skleić teledysku — pobierz muzykę i ujęcia osobno");
+    }
+  };
+
+  // Publikacja teledysku na stronie w „Nowe na serwerze" (tracks.video_url).
+  const handleTeledyskToNew = async () => {
+    if (!user) { toast.error("Zaloguj się, aby publikować"); return; }
+    setPublishing(true);
+    try {
+      const file = await buildTeledyskFile();
+      const path = `teledysk-${Date.now()}-${Math.random().toString(36).slice(2, 7)}.mp4`;
+      // Bucket „music" akceptuje uploady zwykłych userów; gdyby odrzucił wideo — próba „tiktok-reels".
+      let bucket = "music";
+      let up = await supabase.storage.from(bucket).upload(path, file, { contentType: "video/mp4", upsert: true });
+      if (up.error) {
+        bucket = "tiktok-reels";
+        up = await supabase.storage.from(bucket).upload(path, file, { contentType: "video/mp4", upsert: true });
+      }
+      if (up.error) throw up.error;
+      const { data: pub } = supabase.storage.from(bucket).getPublicUrl(path);
+      const artistName = user.user_metadata?.display_name || user.email?.split("@")[0] || "GrouAI Studio";
+      const title = prompt.trim().slice(0, 60) || "Teledysk GrouAI";
+      const { error: insErr } = await supabase.from("tracks").insert({
+        user_id: user.id,
+        title,
+        artist: artistName,
+        album: "AI Generated",
+        duration: 30,
+        video_url: pub.publicUrl,
+        cover_url: null,
+        genre: "AI",
+        mood: "generated",
+      });
+      if (insErr) throw insErr;
+      toast.success(`„${title}" jest już na stronie głównej w „Nowe na serwerze"! 🚀`);
+      window.dispatchEvent(new CustomEvent("grouai:generations-changed"));
+    } catch (e: any) {
+      toast.error("Nie udało się opublikować teledysku: " + (e?.message || "błąd"));
+    } finally {
+      setPublishing(false);
     }
   };
 
@@ -739,6 +780,17 @@ export function MusicPromptBox({ onTrackReady }: Props) {
               >
                 <Download className="w-4 h-4 mr-1.5" />
                 Pobierz teledysk MP4
+              </Button>
+              <Button
+                onClick={handleTeledyskToNew}
+                disabled={exporting || publishing}
+                size="sm"
+                variant="secondary"
+                className="font-semibold border border-[#00A3FF]/40 text-[#7fd4ff]"
+                title="Opublikuj teledysk na stronie głównej"
+              >
+                {publishing ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Flame className="w-4 h-4 mr-1.5" />}
+                {publishing ? "Publikuję…" : "Wyślij do NEW"}
               </Button>
             </div>
 
