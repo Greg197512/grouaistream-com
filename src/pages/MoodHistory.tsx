@@ -20,6 +20,7 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { generatePsychologistReport } from "@/utils/generatePsychologistReport";
 import { MoodTrendChart } from "@/components/charts/MoodTrendChart";
+import { NeuroBrainPanel } from "@/components/neuro/NeuroBrainPanel";
 import { FeatureGate } from "@/components/ui/FeatureGate";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -446,6 +447,9 @@ export default function MoodHistory() {
               </Button>
             </div>
           </div>
+
+          {/* Muzyczny Mózg — neuro-profil (AI z zachowań) + haptic bass + tętno */}
+          <NeuroBrainPanel />
 
           {isLoading ? (
             <div className="flex items-center justify-center py-20">
