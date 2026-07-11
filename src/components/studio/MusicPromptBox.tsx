@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { invokeStudioEngine, waitForAceStep, fireCoverGeneration, isSubscriptionError, submitStudioVideo, waitForStudioVideo } from "@/lib/hubStudio";
+import { invokeStudioEngine, waitForAceStep, fireCoverGeneration, isSubscriptionError, submitStudioVideo, waitForStudioVideo, fetchStoryboard } from "@/lib/hubStudio";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { UpgradeModal } from "@/components/modals/UpgradeModal";
@@ -115,9 +115,12 @@ export function MusicPromptBox({ onTrackReady }: Props) {
   const [prompt, setPrompt] = useState("");
   const [language, setLanguage] = useState<Lang>("auto");
   const [instrumental, setInstrumental] = useState(false);
-  const [mode, setMode] = useState<"music" | "video">("music");
+  const [mode, setMode] = useState<"music" | "video" | "teledysk">("music");
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [videoQuality, setVideoQuality] = useState<"good" | "vip">("good");
+  const [videoPrompt, setVideoPrompt] = useState("");
+  const [clip, setClip] = useState<{ audioUrl: string; videoUrls: string[] } | null>(null);
+  const [clipIdx, setClipIdx] = useState(0);
   const [stage, setStage] = useState<"idle" | "parsing" | "composing" | "done" | "error">("idle");
   const [planSummary, setPlanSummary] = useState<string>("");
   const [elapsed, setElapsed] = useState(0);
@@ -161,6 +164,7 @@ export function MusicPromptBox({ onTrackReady }: Props) {
     }
 
     if (mode === "video") return handleGenerateVideo();
+    if (mode === "teledysk") return handleGenerateClip();
 
     setStage("parsing");
     setError("");
@@ -262,6 +266,85 @@ export function MusicPromptBox({ onTrackReady }: Props) {
     }
   };
 
+  // Tryb teledysk: AI SAMO układa film z tekstu/klimatu utworu.
+  // 1) generuje muzykę (plan+tekst), 2) z tekstu robi storyboard (sceny),
+  // 3) generuje z nich klipy (Replicate), 4) składa w zsynchronizowany teledysk.
+  const CLIP_COUNT = 4;
+  const handleGenerateClip = async () => {
+    setStage("parsing");
+    setError("");
+    setPlanSummary("");
+    setElapsed(0);
+    setClip(null);
+    setVideoUrl(null);
+
+    try {
+      const musicPromptFinal = instrumental ? `${prompt.trim()} (instrumentalny, bez wokalu)` : prompt.trim();
+
+      // 1) Muzyka — silnik Studia zwraca plan (tytuł, tagi, tekst) od razu; audio dochodzi w tle.
+      const { data: mData, error: mErr } = await invokeStudioEngine("studio-prompt-engine", {
+        prompt: musicPromptFinal,
+        ...(language !== "auto" ? { language } : {}),
+      });
+      if (mErr) throw new Error(mErr.message || "Błąd muzyki");
+      if (!mData?.success) throw new Error(mData?.message || mData?.error || "Błąd silnika muzyki");
+      const plan = mData.plan || {};
+      window.dispatchEvent(new CustomEvent("grouai:generations-changed"));
+      fireCoverGeneration(mData.task_id, plan?.title || "", plan?.tags || "");
+
+      setStage("composing");
+      setPlanSummary("AI układa sceny teledysku z tekstu utworu i kręci ujęcia…");
+
+      const audioJob = waitForAceStep(mData.task_id, mData.generation_id).then((r) => r.audioUrl);
+
+      // 2) Storyboard z tekstu/klimatu utworu (AI decyduje o scenach). 3) Klipy ze scen.
+      const clipsJob = (async () => {
+        let scenes = await fetchStoryboard({
+          song_prompt: prompt.trim(),
+          title: plan?.title || "",
+          tags: typeof plan?.tags === "string" ? plan.tags : (Array.isArray(plan?.tags) ? plan.tags.join(", ") : ""),
+          lyrics: plan?.lyrics || "",
+          style: videoPrompt.trim() || undefined, // opcjonalna wskazówka stylu
+          count: CLIP_COUNT,
+        });
+        if (!scenes.length) {
+          // Awaryjnie: użyj wskazówki lub opisu utworu jako wspólnej sceny.
+          const base = videoPrompt.trim() || prompt.trim();
+          scenes = Array.from({ length: CLIP_COUNT }).map(() => `${base}, cinematic music video, high quality`);
+        }
+        const jobIds = await Promise.all(
+          scenes.map(async (scene) => {
+            const { data, error: e } = await submitStudioVideo(scene, { quality: videoQuality, aspect: "16:9" });
+            if (e) throw new Error(e.message || "Błąd wideo");
+            if (!data?.job_id) throw new Error(data?.message || "Błąd zlecenia wideo");
+            return data.job_id as string;
+          }),
+        );
+        return await Promise.all(jobIds.map((id) => waitForStudioVideo(id, (sec) => setElapsed(sec))));
+      })();
+
+      const [audioUrl, clipUrls] = await Promise.all([audioJob, clipsJob]);
+
+      setClipIdx(0);
+      setClip({ audioUrl, videoUrls: clipUrls });
+      setStage("done");
+      toast.success("Teledysk gotowy! 🎥");
+      window.dispatchEvent(new CustomEvent("grouai:generations-changed"));
+      setTimeout(() => setStage("idle"), 2500);
+    } catch (e: any) {
+      if (isSubscriptionError(e)) {
+        setStage("idle");
+        setShowUpgrade(true);
+        return;
+      }
+      console.error("[MusicPromptBox teledysk]", e);
+      setStage("error");
+      setError(e.message || "Coś poszło nie tak przy tworzeniu teledysku");
+      toast.error(e.message || "Błąd teledysku");
+      setTimeout(() => setStage("idle"), 6000);
+    }
+  };
+
   return (
     <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="relative w-full">
       {/* Obracająca się poświata za kartą */}
@@ -314,7 +397,7 @@ export function MusicPromptBox({ onTrackReady }: Props) {
           </div>
         </div>
 
-        {/* Przełącznik Muzyka / Video */}
+        {/* Przełącznik Muzyka / Video / Teledysk */}
         <div className="relative z-10 mb-3 flex items-center gap-1 bg-white/5 rounded-full p-1 border border-white/10 w-fit">
           <button
             onClick={() => !isBusy && setMode("music")}
@@ -330,10 +413,17 @@ export function MusicPromptBox({ onTrackReady }: Props) {
           >
             🎬 Video
           </button>
+          <button
+            onClick={() => !isBusy && setMode("teledysk")}
+            disabled={isBusy}
+            className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all ${mode === "teledysk" ? "bg-gradient-to-r from-[#FF6B00] to-[#9333EA] text-white shadow" : "text-white/60 hover:text-white"}`}
+          >
+            🎥 Teledysk
+          </button>
         </div>
 
         {/* Jakość wideo: Good (tani/szybki) vs VIP (najlepszy model) */}
-        {mode === "video" && (
+        {mode !== "music" && (
           <div className="relative z-10 -mt-1 mb-3 flex flex-wrap items-center gap-2">
             <span className="text-[11px] text-white/50">Jakość:</span>
             <div className="flex items-center gap-1 bg-white/5 rounded-full p-1 border border-white/10">
@@ -410,11 +500,31 @@ export function MusicPromptBox({ onTrackReady }: Props) {
                 handleGenerate();
               }
             }}
-            placeholder={mode === "video" ? "Opisz scenę do wideo: np. neonowe miasto nocą, jazda dronem, deszcz…" : placeholder}
+            placeholder={
+              mode === "video"
+                ? "Opisz scenę do wideo: np. neonowe miasto nocą, jazda dronem, deszcz…"
+                : mode === "teledysk"
+                ? "🎵 Opis MUZYKI: np. energetyczny synthwave, męski wokal, 3 min…"
+                : placeholder
+            }
             disabled={isBusy}
             className="min-h-[96px] text-base resize-none bg-black/30 border-white/10 text-white focus-visible:ring-[#FF6B00] placeholder:text-white/35 rounded-2xl"
           />
         </motion.div>
+
+        {/* Drugie pole — OPCJONALNA wskazówka stylu wideo (tylko Teledysk) */}
+        {mode === "teledysk" && (
+          <div className="relative z-10 mt-2">
+            <Textarea
+              value={videoPrompt}
+              onChange={(e) => setVideoPrompt(e.target.value)}
+              placeholder="🎬 Styl wideo (opcjonalnie): np. anime, retro VHS, czarno-białe kino… — zostaw puste, a AI samo dobierze"
+              disabled={isBusy}
+              className="min-h-[56px] text-sm resize-none bg-black/30 border-[#9333EA]/30 text-white focus-visible:ring-[#9333EA] placeholder:text-white/35 rounded-2xl"
+            />
+            <p className="mt-1 text-[10px] text-white/40">✨ Piszesz tylko utwór — <b>AI samo czyta tekst piosenki i układa z niego film</b> ({CLIP_COUNT} ujęcia zsynchronizowane z muzyką). Styl wyżej jest opcjonalny.</p>
+          </div>
+        )}
 
         {/* Pasek akcji */}
         <div className="relative z-10 flex items-center justify-between mt-3 gap-3">
@@ -456,12 +566,14 @@ export function MusicPromptBox({ onTrackReady }: Props) {
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                     {mode === "video"
                       ? (stage === "parsing" ? "Przygotowuję wideo…" : `Tworzę wideo… ${elapsed}s`)
+                      : mode === "teledysk"
+                      ? (stage === "parsing" ? "Reżyseruję teledysk…" : `Kręcę teledysk… ${elapsed}s`)
                       : (stage === "parsing" ? labels.parsing : `${labels.composing} ${elapsed}s`)}
                   </>
                 ) : (
                   <>
                     <Send className="w-4 h-4 mr-2" />
-                    {mode === "video" ? "Generuj wideo" : "Generuj"}
+                    {mode === "video" ? "Generuj wideo" : mode === "teledysk" ? "Stwórz teledysk" : "Generuj"}
                   </>
                 )}
               </span>
@@ -518,6 +630,40 @@ export function MusicPromptBox({ onTrackReady }: Props) {
             >
               <Send className="h-3.5 w-3.5 rotate-90" /> Pobierz wideo
             </a>
+          </motion.div>
+        )}
+
+        {/* Gotowy teledysk — ujęcia lecą po kolei w pętli pod wygenerowaną muzyką */}
+        {clip && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="relative z-10 mt-4"
+          >
+            <div className="relative rounded-xl overflow-hidden border border-white/10 bg-black">
+              <video
+                key={clipIdx}
+                src={clip.videoUrls[clipIdx]}
+                muted
+                autoPlay
+                playsInline
+                onEnded={() => setClipIdx((i) => (i + 1) % clip.videoUrls.length)}
+                className="w-full aspect-video object-cover"
+              />
+              <span className="absolute top-2 right-2 text-[10px] px-1.5 py-0.5 rounded bg-black/60 text-white/80">
+                ujęcie {clipIdx + 1}/{clip.videoUrls.length}
+              </span>
+            </div>
+            <audio src={clip.audioUrl} controls autoPlay className="w-full mt-2" />
+            <div className="mt-2 flex flex-wrap gap-3 text-xs">
+              <a href={clip.audioUrl} download className="text-[#FF9500] hover:underline">Pobierz muzykę</a>
+              {clip.videoUrls.map((u, i) => (
+                <a key={i} href={u} download className="text-[#FF9500] hover:underline">Ujęcie {i + 1}</a>
+              ))}
+            </div>
+            <p className="mt-1 text-[10px] text-white/40">
+              Ujęcia lecą płynnie jedno po drugim pod utworem (start zsynchronizowany). Sklejenie w jeden plik MP4 do pobrania — dołożę jako kolejny krok.
+            </p>
           </motion.div>
         )}
 

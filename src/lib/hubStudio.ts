@@ -215,3 +215,25 @@ export async function waitForStudioVideo(
   }
   throw new Error("Przekroczono czas oczekiwania na wideo");
 }
+
+// ─── Storyboard: AI układa sceny teledysku z tekstu/klimatu utworu ─────────────
+const HUB_STORYBOARD_URL =
+  "https://bmwtydwpevzhbdplilbr.supabase.co/functions/v1/studio-storyboard";
+
+/** Zwraca listę opisów ujęć (po angielsku) wygenerowanych z piosenki. Nigdy nie rzuca. */
+export async function fetchStoryboard(body: {
+  song_prompt?: string;
+  title?: string;
+  tags?: string;
+  lyrics?: string;
+  style?: string;
+  count?: number;
+}): Promise<string[]> {
+  try {
+    const { data, error } = await hubFetch(HUB_STORYBOARD_URL, body);
+    if (error || !Array.isArray(data?.scenes)) return [];
+    return (data.scenes as string[]).filter((s) => typeof s === "string" && s.trim().length > 3);
+  } catch {
+    return [];
+  }
+}
