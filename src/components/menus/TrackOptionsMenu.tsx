@@ -19,7 +19,8 @@ import {
   Scissors,
   Coffee,
   DownloadCloud,
-  Check
+  Check,
+  Gift
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -206,6 +207,23 @@ const TrackOptionsMenuComponent = (
   };
 
   const [downloading, setDownloading] = useState(false);
+
+  // Prezent 🎁 — link do animowanej strony-prezentu (paczka → wir → piosenka+grafika).
+  const giftUrl = `https://grouaistream.com/prezent/${trackId}`;
+  const handleSendGift = async () => {
+    const text = `🎁 Mam dla Ciebie prezent — „${trackTitle}" od ${trackArtist} w GrouAI Studio`;
+    const nav = navigator as any;
+    try {
+      if (nav.share) {
+        await nav.share({ title: "🎁 Prezent GrouAI Studio", text, url: giftUrl });
+        return;
+      }
+    } catch { return; }
+    const a = document.createElement("a");
+    a.href = `https://api.whatsapp.com/send?text=${encodeURIComponent(text + " " + giftUrl)}`;
+    a.target = "_blank"; a.rel = "noopener noreferrer";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  };
 
   // Tryb offline — utwór zapisany w IndexedDB gra bez internetu.
   const [offlineSaved, setOfflineSaved] = useState(false);
@@ -541,6 +559,15 @@ const TrackOptionsMenuComponent = (
           )}
 
           <DropdownMenuSeparator />
+
+          {/* Prezent 🎁 — animowana strona-prezent (paczka → wir → piosenka) */}
+          <DropdownMenuItem
+            onClick={handleSendGift}
+            className="cursor-pointer text-amber-300 focus:text-amber-200 focus:bg-amber-500/10"
+          >
+            <Gift className="mr-2 h-4 w-4" />
+            <span className="flex-1">Wyślij prezent 🎁</span>
+          </DropdownMenuItem>
 
           {/* Share submenu */}
           <DropdownMenuSub>
