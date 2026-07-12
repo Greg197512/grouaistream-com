@@ -1103,6 +1103,75 @@ export const AutoVoiceListener = () => {
       }
     }
 
+    // ==========================================
+    // SAMOUCZĄCY SIĘ RESOLVER — czego reguły nie złapały, rozumie AI i UCZY SIĘ
+    // (zapamiętuje frazę→akcję w hubie; następnym razem wykona od razu)
+    // ==========================================
+    try {
+      const { data: sess } = await supabase.auth.getSession();
+      const tok = sess?.session?.access_token;
+      if (tok) {
+        const ir = await fetch("https://bmwtydwpevzhbdplilbr.supabase.co/functions/v1/voice-intent", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${tok}` },
+          body: JSON.stringify({ command, lang }),
+        });
+        const intent = await ir.json().catch(() => null);
+        if (intent?.ok && intent.action && intent.action !== "answer") {
+          const p = intent.params || {};
+          const done = async (fallbackMsg?: string) => { await safeSpeakAndResume(intent.say || fallbackMsg || "Zrobione"); };
+          switch (intent.action) {
+            case "play": resumePlayback(); await done("Odtwarzam"); return;
+            case "pause": pausePlayback(); await done("Zatrzymuję"); return;
+            case "next": nextTrack(); await done("Następny"); return;
+            case "previous": prevTrack(); await done("Poprzedni"); return;
+            case "restart": restartCurrentTrack(); await done("Od początku"); return;
+            case "seek_end": if ((audioElement?.duration || 0) > 0) { seek(98); await done("Na koniec"); } return;
+            case "seek_forward":
+            case "seek_back": {
+              const dur = audioElement?.duration || 0, cur = audioElement?.currentTime || 0;
+              if (dur > 0) { const sec = Number(p.seconds) || 30; const delta = intent.action === "seek_back" ? -sec : sec; seek((Math.max(0, Math.min(dur, cur + delta)) / dur) * 100); await done("Przewijam"); }
+              return;
+            }
+            case "volume_set": setVolume(Math.max(0, Math.min(100, Number(p.percent) || 50))); await done("Głośność ustawiona"); return;
+            case "volume_up": setVolume(85); await done("Głośniej"); return;
+            case "volume_down": setVolume(25); await done("Ciszej"); return;
+            case "mute": setVolume(0); await done("Wyciszono"); return;
+            case "repeat_toggle": toggleRepeat(); await done("Powtarzanie"); return;
+            case "shuffle_toggle": toggleShuffle(); await done("Losowo"); return;
+            case "add_queue": if (currentTrack) { addToQueue(currentTrack); await done("Dodano do kolejki"); } return;
+            case "like_current":
+              if (currentTrack && user) {
+                await supabase.from("liked_songs").upsert({ user_id: user.id, track_id: currentTrack.id }, { onConflict: "user_id,track_id" });
+                window.dispatchEvent(new CustomEvent("track-like-changed", { detail: { trackId: currentTrack.id, liked: true } }));
+                await done("Polubiono");
+              }
+              return;
+            case "navigate": {
+              const map: Record<string, string> = { home: "/", search: "/search", library: "/library", liked: "/liked", server: "/server", movies: "/movies", radio: "/radio-live", settings: "/settings", mood: "/mood-history", playlists: "/playlist-manager" };
+              const r = map[String(p.page || "").toLowerCase()];
+              if (r) { navigate(r); await done("Otwieram"); }
+              return;
+            }
+            case "search_play": { const q = String(p.query || "").trim(); if (q) { await searchAndPlay(q, Number(p.count) || 10); } return; }
+            case "play_favorites":
+            case "play_recent": {
+              const count = Number(p.count) || (intent.action === "play_recent" ? 10 : 5);
+              if (intent.action === "play_favorites" && user) {
+                const { data: liked } = await supabase.from("liked_songs").select("track_id").eq("user_id", user.id).order("liked_at", { ascending: false }).limit(count);
+                const ids = (liked || []).map((l: any) => l.track_id);
+                if (ids.length) { const { data: tr } = await supabase.from("tracks").select("*").in("id", ids); const ordered = ids.map((id: string) => tr?.find((t: any) => t.id === id)).filter(Boolean); if (ordered.length) { playPlaylist(ordered as any[], 0); await done("Ulubione"); return; } }
+              } else {
+                const { data: tr } = await supabase.from("tracks").select("*").not("audio_url", "is", null).order("created_at", { ascending: false }).limit(count);
+                if (tr?.length) { playPlaylist(tr, 0); await done("Ostatnio wgrane"); return; }
+              }
+              return;
+            }
+          }
+        }
+      }
+    } catch { /* resolver padł → normalna odpowiedź niżej */ }
+
     // AI fallback — answer ANY question via Grok/AI voice endpoint
     try {
       toast.loading(`🧠 Myślę...`, { id: "voice-cmd" });
