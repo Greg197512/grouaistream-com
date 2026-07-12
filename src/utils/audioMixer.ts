@@ -3,7 +3,7 @@
  * Supports crossfade, overlay, and beat-sync styles.
  */
 
-export type MixStyle = "crossfade" | "overlay" | "mashup";
+export type MixStyle = "crossfade" | "overlay" | "mashup" | "mashup_pro";
 
 export interface MixConfig {
   style?: MixStyle;

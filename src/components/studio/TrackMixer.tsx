@@ -11,6 +11,7 @@ import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
 import { WaveformPlayer } from "./WaveformPlayer";
 import { mixAudioFiles, type MixStyle } from "@/utils/audioMixer";
+import { mashupWithStems } from "@/utils/stemsMashup";
 import { NeonWavesLoader } from "./NeonWavesLoader";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
@@ -39,6 +40,7 @@ const MIX_STYLES: { value: MixStyle; label: string; desc: string }[] = [
   { value: "crossfade", label: "Crossfade", desc: "Płynne przejście A → B" },
   { value: "overlay", label: "Overlay", desc: "Oba naraz, pełny mix" },
   { value: "mashup", label: "Mashup", desc: "Stereo blend ze stereo panningiem" },
+  { value: "mashup_pro", label: "🎤 Mashup PRO", desc: "Wokal A na podkładzie B (Demucs) — plan Pro/Ultimate" },
 ];
 
 export const TrackMixer = () => {
@@ -215,17 +217,26 @@ export const TrackMixer = () => {
     setMixing(true);
     setMixResult(null);
     try {
-      const result = await mixAudioFiles(trackA.audio_url, trackB.audio_url, {
-        style: mixStyle,
-        crossfadeDuration: crossfadeDur,
-        gainA: gainA / 100,
-        gainB: gainB / 100,
-      });
-      result.title = `${trackA.title} × ${trackB.title}`;
+      let result;
+      if (mixStyle === "mashup_pro") {
+        // Prawdziwy mashup przez Demucs (rozdziela oba na ścieżki) — wolniejsze.
+        toast.loading("🎤 Mashup PRO — rozdzielam ścieżki…", { id: "mix" });
+        result = await mashupWithStems(trackA.audio_url, trackB.audio_url, (m) => toast.loading(m, { id: "mix" }));
+      } else {
+        result = await mixAudioFiles(trackA.audio_url, trackB.audio_url, {
+          style: mixStyle,
+          crossfadeDuration: crossfadeDur,
+          gainA: gainA / 100,
+          gainB: gainB / 100,
+        });
+      }
+      result.title = `${trackA.title} × ${trackB.title}${mixStyle === "mashup_pro" ? " (PRO)" : ""}`;
       setMixResult(result);
-      toast.success(`🎛️ Mix "${result.title}" gotowy!`);
+      toast.success(`🎛️ Mix "${result.title}" gotowy!`, { id: "mix" });
     } catch (err: any) {
-      toast.error("Błąd miksowania: " + (err.message || "Nieznany błąd"));
+      const msg = err?.message || "Nieznany błąd";
+      if (/subscription|Pro lub Ultimate/i.test(msg)) toast.error("🎤 Mashup PRO wymaga planu Pro lub Ultimate", { id: "mix" });
+      else toast.error("Błąd miksowania: " + msg, { id: "mix" });
     } finally {
       setMixing(false);
     }
