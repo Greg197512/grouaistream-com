@@ -37,7 +37,7 @@ Co potrafi:
 🎚️ Rozdziela utwór na ścieżki, robi okładki, remiksuje
 ✍️ Wystarczy wpisać prompt — nie musisz znać się na muzyce
 
-🔥 Przez ten tydzień cała MUZYKA w Studiu jest ZA DARMO dla wszystkich — bez limitu planu. Wystarczy się zalogować i napisać prompt.
+🔥 Przez ten tydzień cała MUZYKA w Studiu jest ZA DARMO dla wszystkich — bez limitu planu. Wystarczy się zarejestrować lub zalogować i napisać prompt.
 
 👉 Twórz muzykę teraz: https://grouaistream.com/studio
 
