@@ -21,6 +21,27 @@ import {
   UserPlus, Trophy, Newspaper, Bell, Gift, Zap, Webhook, Users,
 } from "lucide-react";
 
+// Gotowa reklama GrouAI Studio (tydzień free) — do użycia przy masowej wysyłce.
+const STUDIO_AD_LINK = "https://claude.ai/code/artifact/993106d3-bb52-42a7-a577-8b2395a0b00d";
+const STUDIO_AD_SUBJECT = "🎁 Otworzyliśmy GrouAI Studio — twórz własną muzykę AI za DARMO (tylko ten tydzień)";
+const STUDIO_AD_BODY = `Cześć!
+
+Mamy coś wielkiego: GrouAI Studio — nasz własny program, który robi prawdziwą, świetnie brzmiącą muzykę z jednego zdania. Bez nut, bez instrumentów. Po prostu opisujesz utwór słowami, a AI tworzy gotową piosenkę.
+
+Co potrafi:
+🎵 Pełne piosenki do 4 minut — z wokalem lub instrumentalne
+🌍 Śpiewa po polsku, angielsku, holendersku i ukraińsku
+🎥 Teledyski i wideo (opcja płatna — plan Pro)
+🎚️ Rozdziela utwór na ścieżki, robi okładki, remiksuje
+✍️ Wystarczy wpisać prompt — nie musisz znać się na muzyce
+
+🔥 Przez ten tydzień cała MUZYKA w Studiu jest ZA DARMO dla wszystkich — bez limitu planu. Wystarczy się zalogować i napisać prompt.
+
+👉 Twórz muzykę teraz: https://grouaistream.com/studio
+
+Do usłyszenia,
+Zespół GrouAI Stream 🎶`;
+
 interface EmailLog {
   id: string;
   message_id: string | null;
@@ -318,6 +339,37 @@ Zwróć WYŁĄCZNIE czysty JSON (bez markdown, bez komentarzy) w formacie:
 
   return (
     <div className="space-y-6">
+      {/* Reklama GrouAI Studio (tydzień free) — gotowiec do masowej wysyłki */}
+      <Card className="border-primary/30 bg-gradient-to-br from-primary/10 to-purple-500/5 backdrop-blur">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Gift className="h-5 w-5 text-primary" /> Reklama GrouAI Studio — tydzień free
+          </CardTitle>
+          <CardDescription>
+            Gotowa treść + podgląd grafiki. Wyślij typem „AI Studio Promo" albo wklej temat i treść poniżej.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" variant="secondary" onClick={() => window.open(STUDIO_AD_LINK, "_blank", "noopener")}>
+              <Eye className="h-4 w-4 mr-1.5" /> Podgląd grafiki
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => { navigator.clipboard.writeText(STUDIO_AD_SUBJECT); toast.success("Temat skopiowany"); }}>
+              Kopiuj temat
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => { navigator.clipboard.writeText(STUDIO_AD_BODY); toast.success("Treść skopiowana"); }}>
+              Kopiuj treść
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => { navigator.clipboard.writeText(STUDIO_AD_LINK); toast.success("Link skopiowany"); }}>
+              Kopiuj link
+            </Button>
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            🎥 Teledyski/wideo są płatne (Pro) — free dotyczy muzyki. Grafika jest prywatna: na stronie podglądu kliknij „Share", by udostępnić odbiorcom.
+          </p>
+        </CardContent>
+      </Card>
+
       <div className="grid gap-4 md:grid-cols-5">
         <Card className="border-border/50 bg-card/50 backdrop-blur">
           <CardContent className="pt-4 pb-3">
