@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { invokeHubAI } from "@/lib/hubAI";
 import { sendHubEmail } from "@/lib/hubEmail";
+import { invokeStudioEngine } from "@/lib/hubStudio";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -94,6 +95,7 @@ export function AdminEmailDashboard({ stats, genreStats }: AdminEmailDashboardPr
   const [customMessage, setCustomMessage] = useState("");
   const [generatingEmail, setGeneratingEmail] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
+  const [sendingAd, setSendingAd] = useState(false);
   const [generatedEmail, setGeneratedEmail] = useState<GeneratedEmail | null>(null);
   const [newEmailCount, setNewEmailCount] = useState(0);
 
@@ -138,8 +140,12 @@ export function AdminEmailDashboard({ stats, genreStats }: AdminEmailDashboardPr
       if (ctx && !htmlBody.toLowerCase().includes(ctx.slice(0, Math.min(30, ctx.length)).toLowerCase())) {
         htmlBody = `${htmlBody}<p style="margin-top:16px">${ctx.replace(/</g, "&lt;")}</p>`;
       }
+      // Grafika reklamowa na górze maila (jeśli wygenerowana).
+      const heroImg = generatedEmail.heroImageUrl
+        ? `<img src="${generatedEmail.heroImageUrl}" alt="" style="width:100%;max-width:600px;border-radius:14px;display:block;margin:0 auto 20px" />`
+        : "";
       // Wysyłka przez HUB (Resend) — funkcja mass na bvstv była martwa.
-      const res = await sendHubEmail({ mode: "mass", audience, subject: generatedEmail.subject, html: htmlBody });
+      const res = await sendHubEmail({ mode: "mass", audience, subject: generatedEmail.subject, html: heroImg + htmlBody });
       if (!res.success) throw new Error(res.error || "Błąd masowej wysyłki");
       setLastDispatch({
         recipientCount: res.recipientCount || 0,
@@ -155,6 +161,41 @@ export function AdminEmailDashboard({ stats, genreStats }: AdminEmailDashboardPr
       toast.error(e instanceof Error ? e.message : "Błąd masowej wysyłki");
     } finally {
       setDispatching(false);
+    }
+  };
+
+  // Jeden klik: gotowa, kompletna reklama GrouAI Studio (grafika + treść) → do WSZYSTKICH.
+  const sendStudioAd = async () => {
+    if (!confirm("Wysłać gotową reklamę GrouAI Studio do WSZYSTKICH zarejestrowanych? To pójdzie NA ŻYWO.")) return;
+    setSendingAd(true);
+    const tId = toast.loading("🎨 Dorabiam grafikę i wysyłam reklamę Studia…");
+    try {
+      let heroUrl: string | null = null;
+      try {
+        const { data: cov } = await invokeStudioEngine("studio-cover", {
+          id: `studio-ad-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+          title: "GrouAI Studio — twórz muzykę AI",
+          style: "GrouAI Studio music app promo banner, neon orange and purple, energetic, cinematic, no text",
+          description: "GrouAI Studio — twórz własną muzykę AI, tydzień za darmo",
+        });
+        if (cov?.cover_url) heroUrl = cov.cover_url as string;
+      } catch { /* grafika opcjonalna */ }
+
+      const heroImg = heroUrl
+        ? `<img src="${heroUrl}" alt="" style="width:100%;max-width:600px;border-radius:14px;display:block;margin:0 auto 20px" />`
+        : "";
+      const bodyHtml = STUDIO_AD_BODY.split("\n\n")
+        .map((p) => `<p style="margin:0 0 14px">${p.replace(/</g, "&lt;").replace(/\n/g, "<br>")}</p>`)
+        .join("");
+
+      const res = await sendHubEmail({ mode: "mass", subject: STUDIO_AD_SUBJECT, html: heroImg + bodyHtml });
+      if (!res.success) throw new Error(res.error || "Nie udało się wysłać");
+      toast.success(`🚀 Reklama Studia wysłana — ${res.recipientCount} odbiorców (wysłano: ${res.sent}${res.skipped ? `, pominięto: ${res.skipped}` : ""})`, { id: tId, duration: 7000 });
+      fetchEmailLogs();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Błąd wysyłki reklamy", { id: tId });
+    } finally {
+      setSendingAd(false);
     }
   };
 
@@ -258,15 +299,31 @@ Zwróć WYŁĄCZNIE czysty JSON (bez markdown, bez komentarzy) w formacie:
       if (!jsonMatch) throw new Error("AI nie zwróciło poprawnego formatu");
       const parsed = JSON.parse(jsonMatch[0]);
       if (!parsed.subject || !parsed.body) throw new Error("Brak tematu lub treści");
+
+      // Grafika reklamowa do maila — darmowy silnik obrazów (HF FLUX przez studio-cover).
+      let heroUrl: string | null = null;
+      try {
+        toast.loading("🎨 Dorabiam grafikę do maila…", { id: "email-hero" });
+        const imgId = `email-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+        const { data: cov } = await invokeStudioEngine("studio-cover", {
+          id: imgId,
+          title: String(parsed.subject),
+          style: "GrouAI Stream music platform promo banner, neon, vibrant, energetic, cinematic, no text",
+          description: (customMessage || String(parsed.subject)).slice(0, 300),
+        });
+        if (cov?.cover_url) heroUrl = cov.cover_url as string;
+        toast.dismiss("email-hero");
+      } catch { toast.dismiss("email-hero"); /* grafika opcjonalna */ }
+
       setGeneratedEmail({
         subject: String(parsed.subject),
         body: String(parsed.body),
         preview: String(parsed.body).replace(/<[^>]*>/g, "").slice(0, 140),
-        heroImageUrl: null,
+        heroImageUrl: heroUrl,
         type: emailType,
         generatedAt: new Date().toISOString(),
       });
-      toast.success("E-mail wygenerowany przez AI!");
+      toast.success(heroUrl ? "E-mail + grafika gotowe!" : "E-mail wygenerowany (bez grafiki)");
     } catch (error) {
       console.error("Error generating email:", error);
       toast.error("Błąd generowania e-maila — spróbuj ponownie");
@@ -292,12 +349,17 @@ Zwróć WYŁĄCZNIE czysty JSON (bez markdown, bez komentarzy) w formacie:
         }
       }
 
+      // Grafika reklamowa na górze maila (jeśli wygenerowana).
+      const heroImg = generatedEmail.heroImageUrl
+        ? `<img src="${generatedEmail.heroImageUrl}" alt="" style="width:100%;max-width:600px;border-radius:14px;display:block;margin:0 auto 20px" />`
+        : "";
+
       // Wysyłka przez HUB (Resend) — funkcja bvstv była martwa.
       const res = await sendHubEmail({
         mode: "single",
         to: recipientEmail.trim(),
         subject: generatedEmail.subject,
-        html: htmlBody,
+        html: heroImg + htmlBody,
       });
       if (!res.success) throw new Error(res.error || "Nie udało się wysłać");
       toast.success(`✉️ E-mail wysłany do ${recipientEmail}!`);
@@ -348,8 +410,19 @@ Zwróć WYŁĄCZNIE czysty JSON (bez markdown, bez komentarzy) w formacie:
               Kopiuj link
             </Button>
           </div>
+
+          <Button
+            onClick={sendStudioAd}
+            disabled={sendingAd || dispatching}
+            className="w-full gap-2 font-bold text-white border-0"
+            style={{ background: "linear-gradient(135deg, #FF6B00, #9333EA)" }}
+          >
+            {sendingAd ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+            {sendingAd ? "Wysyłam reklamę…" : "🚀 Wyślij gotową reklamę Studia do WSZYSTKICH"}
+          </Button>
+
           <p className="text-[11px] text-muted-foreground">
-            🎥 Teledyski/wideo są płatne (Pro) — free dotyczy muzyki. Grafika jest prywatna: na stronie podglądu kliknij „Share", by udostępnić odbiorcom.
+            Jeden klik = gotowa reklama (grafika + treść) leci do wszystkich zarejestrowanych. 🎥 Teledyski/wideo są płatne (Pro) — free dotyczy muzyki.
           </p>
         </CardContent>
       </Card>

@@ -9,6 +9,7 @@ export interface HubEmailResult {
   recipientCount?: number;
   sent?: number;
   errors?: number;
+  skipped?: number;
   subject?: string;
   mode?: string;
   error?: string;
