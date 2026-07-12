@@ -52,6 +52,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Track, usePlayer } from "@/contexts/PlayerContext";
+import { finalizeTrackDeletion } from "@/lib/trackDeletion";
+import { fetchGeoList, UserGeo } from "@/lib/hubGeo";
 import { RadioStationManager } from "@/components/admin/RadioStationManager";
 import { StorageStats } from "@/components/admin/StorageStats";
 import { CoverFillPanel } from "@/components/admin/CoverFillPanel";
@@ -107,6 +109,13 @@ interface TrackData {
 
 // GeneratedEmail type removed - now handled in AdminEmailDashboard
 
+// Kod kraju ISO (np. "PL") → emoji flagi.
+const flagEmoji = (cc?: string | null) => {
+  if (!cc || cc.length !== 2) return "";
+  const base = 0x1f1e6;
+  return String.fromCodePoint(...[...cc.toUpperCase()].map((c) => base + c.charCodeAt(0) - 65));
+};
+
 export default function Admin() {
   const { isAdmin, loading, user } = useAdminAuth();
   const navigate = useNavigate();
@@ -121,6 +130,8 @@ export default function Admin() {
   const [loadingData, setLoadingData] = useState(true);
   const [testingTrack, setTestingTrack] = useState<string | null>(null);
   const [testedTracks, setTestedTracks] = useState<Map<string, boolean>>(new Map());
+  // Lokalizacja userów (IP/miasto) — z huba, kluczowane po user_id oraz e-mailu.
+  const [geoByUser, setGeoByUser] = useState<Record<string, UserGeo>>({});
   
   // Email state removed - now handled in AdminEmailDashboard
   // Verification state
@@ -164,6 +175,17 @@ export default function Admin() {
         }));
         setUsers(mappedUsers);
       }
+
+      // Lokalizacja userów (IP/miasto) z huba — mapujemy po user_id oraz e-mailu.
+      try {
+        const geoRows = await fetchGeoList();
+        const map: Record<string, UserGeo> = {};
+        for (const g of geoRows) {
+          if (g.user_id) map[g.user_id] = g;
+          if (g.email) map[g.email.toLowerCase()] = g;
+        }
+        setGeoByUser(map);
+      } catch { /* geo opcjonalne */ }
 
       // Fetch genre breakdown
       const { data: allTracks } = await supabase
@@ -507,8 +529,17 @@ export default function Admin() {
         .eq("id", trackId);
       
       if (error) throw error;
-      
-      toast.success(`Usunięto "${trackTitle}"`);
+
+      // Skasuj pliki ze storage + rozgłoś usunięcie do CAŁEJ apki (player + listy + inni użytkownicy).
+      const deleted = recentTracks.find(t => t.id === trackId);
+      await finalizeTrackDeletion({
+        id: trackId,
+        audio_url: deleted?.audio_url,
+        video_url: deleted?.video_url,
+        cover_url: (deleted as { cover_url?: string | null } | undefined)?.cover_url,
+      });
+
+      toast.success(`Usunięto "${trackTitle}" z całej aplikacji`);
       setTracks(prev => prev.filter(t => t.id !== trackId));
       setRecentTracks(prev => prev.filter(t => t.id !== trackId));
     } catch (error) {
@@ -1113,6 +1144,8 @@ export default function Admin() {
                             <TableHead>E-mail</TableHead>
                             <TableHead>Rejestracja</TableHead>
                             <TableHead>Ostatnie logowanie</TableHead>
+                            <TableHead>Lokalizacja</TableHead>
+                            <TableHead>IP</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -1158,11 +1191,34 @@ export default function Admin() {
                                   : "Nigdy"
                                 }
                               </TableCell>
+                              {(() => {
+                                const g = geoByUser[u.id] || (u.email ? geoByUser[u.email.toLowerCase()] : undefined);
+                                const loc = g ? [g.city, g.country].filter(Boolean).join(", ") : "";
+                                return (
+                                  <>
+                                    <TableCell className="text-sm">
+                                      {loc ? (
+                                        <span className="inline-flex items-center gap-1">
+                                          {g?.country_code && (
+                                            <span className="text-base leading-none">{flagEmoji(g.country_code)}</span>
+                                          )}
+                                          <span>{loc}</span>
+                                        </span>
+                                      ) : (
+                                        <span className="text-muted-foreground/60 italic text-xs">— (od następnego logowania)</span>
+                                      )}
+                                    </TableCell>
+                                    <TableCell className="text-xs font-mono text-muted-foreground">
+                                      {g?.ip || "—"}
+                                    </TableCell>
+                                  </>
+                                );
+                              })()}
                             </TableRow>
                           ))}
                           {users.length === 0 && (
                             <TableRow>
-                              <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                              <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                                 Brak zarejestrowanych użytkowników
                               </TableCell>
                             </TableRow>

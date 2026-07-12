@@ -72,6 +72,8 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   const userIdRef = useRef<string | null>(null);
   // Token unieważniający zaległe (asynchroniczne) starty audio przy szybkiej zmianie utworu.
   const playRequestRef = useRef(0);
+  // Smart Shuffle — ID-ki utworów już wylosowanych w bieżącym cyklu (bez powtórek aż przejdzie cała kolejka).
+  const shuffleHistoryRef = useRef<Set<string>>(new Set());
   
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -97,6 +99,66 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
 
   // Keep refs in sync
   useEffect(() => { isVideoModeRef.current = isVideoMode; }, [isVideoMode]);
+  // Refy z najświeższym stanem kolejki — używane przez globalne czyszczenie usuniętych utworów.
+  const queueRef = useRef<Track[]>([]);
+  const queueIndexRef = useRef(0);
+  const currentTrackRef = useRef<Track | null>(null);
+  useEffect(() => { queueRef.current = queue; }, [queue]);
+  useEffect(() => { queueIndexRef.current = queueIndex; }, [queueIndex]);
+  useEffect(() => { currentTrackRef.current = currentTrack; }, [currentTrack]);
+
+  // Usuń skasowany utwór z odtwarzacza NATYCHMIAST (kolejka + bieżący). Idempotentne.
+  const purgeDeletedTrack = useCallback((trackId: string) => {
+    if (!trackId) return;
+    const q = queueRef.current;
+    const idxInQueue = q.findIndex((t) => t.id === trackId);
+    const isCurrent = currentTrackRef.current?.id === trackId;
+    if (idxInQueue === -1 && !isCurrent) return;
+
+    const newQueue = q.filter((t) => t.id !== trackId);
+
+    if (isCurrent) {
+      if (newQueue.length === 0) {
+        // Nie ma co grać — zatrzymaj i wyczyść.
+        if (audioRef.current) { audioRef.current.pause(); audioRef.current.removeAttribute("src"); }
+        setIsPlaying(false);
+        setCurrentTrack(null);
+        setQueue([]);
+        setQueueIndex(0);
+        return;
+      }
+      const newIndex = Math.min(idxInQueue === -1 ? 0 : idxInQueue, newQueue.length - 1);
+      setQueue(newQueue);
+      setQueueIndex(newIndex);
+      setCurrentTrack(newQueue[newIndex]); // przeskocz na następny dostępny
+    } else {
+      const curIdx = queueIndexRef.current;
+      setQueue(newQueue);
+      if (idxInQueue !== -1 && idxInQueue < curIdx) setQueueIndex(curIdx - 1);
+    }
+  }, []);
+
+  // Globalne usuwanie utworu z CAŁEJ aplikacji: Realtime DELETE (u wszystkich) + event lokalny (natychmiast).
+  useEffect(() => {
+    const onDeleted = (e: Event) => {
+      const id = (e as CustomEvent).detail?.trackId as string | undefined;
+      if (id) purgeDeletedTrack(id);
+    };
+    window.addEventListener("grouai:track-deleted", onDeleted as EventListener);
+
+    const ch = supabase
+      .channel("tracks-deletions")
+      .on("postgres_changes", { event: "DELETE", schema: "public", table: "tracks" }, (payload) => {
+        const id = (payload.old as { id?: string })?.id;
+        if (id) purgeDeletedTrack(id);
+      })
+      .subscribe();
+
+    return () => {
+      window.removeEventListener("grouai:track-deleted", onDeleted as EventListener);
+      supabase.removeChannel(ch);
+    };
+  }, [purgeDeletedTrack]);
 
   // Get user ID from Supabase auth directly to avoid circular dependency
   // Use ref to avoid re-triggering playback when auth state changes
@@ -190,20 +252,41 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
       }
     }
     
-    let nextIndex = queueIndex + 1;
-    if (nextIndex >= queue.length) {
-      if (repeatMode === 'all') {
-        nextIndex = 0;
-      } else {
-        setIsPlaying(false);
-        return;
+    let nextIndex: number;
+
+    if (isShuffled && queue.length > 1) {
+      // SMART SHUFFLE: nie powtarzaj utworu, aż przejdzie cała kolejka; unikaj tego samego artysty pod rząd.
+      const history = shuffleHistoryRef.current;
+      if (currentTrack) history.add(currentTrack.id);
+
+      const allIdx = queue.map((_, i) => i);
+      let candidates = allIdx.filter((i) => queue[i].id !== currentTrack?.id && !history.has(queue[i].id));
+
+      if (candidates.length === 0) {
+        // Cały cykl odtworzony.
+        if (repeatMode !== 'all') { setIsPlaying(false); return; }
+        history.clear();
+        if (currentTrack) history.add(currentTrack.id);
+        candidates = allIdx.filter((i) => queue[i].id !== currentTrack?.id);
+      }
+
+      // Miękkie: preferuj innego artystę niż aktualny (jak się da).
+      const diffArtist = candidates.filter((i) => (queue[i].artist || "") !== (currentTrack?.artist || ""));
+      const pool = diffArtist.length > 0 ? diffArtist : candidates;
+      nextIndex = pool[Math.floor(Math.random() * pool.length)];
+      history.add(queue[nextIndex].id);
+    } else {
+      nextIndex = queueIndex + 1;
+      if (nextIndex >= queue.length) {
+        if (repeatMode === 'all') {
+          nextIndex = 0;
+        } else {
+          setIsPlaying(false);
+          return;
+        }
       }
     }
-    
-    if (isShuffled) {
-      nextIndex = Math.floor(Math.random() * queue.length);
-    }
-    
+
     setQueueIndex(nextIndex);
     setCurrentTrack(queue[nextIndex]);
   }, [queue, queueIndex, repeatMode, isShuffled, currentTrack, currentTime, duration, recordSkip, getSkipAnalysis, triggerAIAdaptation]);
@@ -419,6 +502,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
       : 0;
 
     setStreamSource(source);
+    shuffleHistoryRef.current = new Set(); // nowa lista → świeży cykl smart shuffle
     setQueue(playableTracks);
     setQueueIndex(playableStartIndex >= 0 ? playableStartIndex : 0);
     setCurrentTrack(playableTracks[playableStartIndex >= 0 ? playableStartIndex : 0]);
@@ -597,7 +681,12 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const toggleShuffle = () => {
-    setIsShuffled(!isShuffled);
+    setIsShuffled((prev) => {
+      const next = !prev;
+      // Włączamy shuffle → świeży cykl (bez powtórek); w historii tylko bieżący utwór.
+      shuffleHistoryRef.current = new Set(currentTrack ? [currentTrack.id] : []);
+      return next;
+    });
   };
 
   const toggleRepeat = () => {

@@ -13,6 +13,7 @@ import { useNavigate } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { finalizeTrackDeletion } from "@/lib/trackDeletion";
 import { TrackOptionsMenu, LikeButton } from "@/components/menus/TrackOptionsMenu";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel,
@@ -60,13 +61,20 @@ const MyTracks = () => {
 
   const handleDelete = async (trackId: string) => {
     setDeletingId(trackId);
+    const target = tracks.find(t => t.id === trackId);
     const { error } = await supabase.from("tracks").delete().eq("id", trackId);
     if (error) {
       toast.error(t("myTracks.deleteError"));
     } else {
       toast.success(t("myTracks.deleted"));
       setTracks(prev => prev.filter(t => t.id !== trackId));
-      window.dispatchEvent(new Event("track-list-changed"));
+      // Storage + rozgłoszenie do całej apki (player + listy + inni użytkownicy przez Realtime).
+      await finalizeTrackDeletion({
+        id: trackId,
+        audio_url: target?.audio_url,
+        video_url: (target as { video_url?: string | null } | undefined)?.video_url,
+        cover_url: target?.cover_url,
+      });
     }
     setDeletingId(null);
   };

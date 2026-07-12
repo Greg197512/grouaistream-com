@@ -36,6 +36,9 @@ const DURATION_FALLBACK_SEC = 180;
 const MODERATION_TIMEOUT_MS = 30000;
 // Minimum duration required for non-admin uploads to pass moderation: 3:00
 const MODERATION_MIN_APPROVED_SEC = 180;
+// Maksymalna długość wgrywanego utworu: 4:00 (240 s). Dłuższe nie przechodzą.
+const MAX_DURATION_SEC = 240;
+const fmtDur = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 
 function buildLocalModerationFallback(durationSec?: number | null, isAdmin = false) {
   const duration = Math.round(durationSec || DURATION_FALLBACK_SEC);
@@ -229,10 +232,15 @@ const Upload = () => {
       }
 
       if (data?.success) {
+        const sunoDur = data.duration || 180;
+        if (sunoDur > MAX_DURATION_SEC) {
+          toast.error(`Utwór trwa ${fmtDur(sunoDur)} — maksymalnie może 4:00. Wybierz krótszy.`);
+          return;
+        }
         setSunoResolved({
           audioUrl: data.audioUrl,
           imageUrl: data.imageUrl,
-          duration: data.duration || 180,
+          duration: sunoDur,
         });
 
         // Auto-fill title if empty
@@ -282,7 +290,10 @@ const Upload = () => {
       setAudioDuration(dur);
       if (dur < MIN_DURATION_SEC) {
         setDurationError(true);
-        toast.error(`${Math.floor(dur / 60)}:${String(Math.floor(dur % 60)).padStart(2, "0")} — ${t("upload.fileTooShort")}`);
+        toast.error(`${fmtDur(dur)} — ${t("upload.fileTooShort")}`);
+      } else if (dur > MAX_DURATION_SEC) {
+        setDurationError(true);
+        toast.error(`${fmtDur(dur)} — utwór może trwać maksymalnie 4:00. Skróć plik i wgraj ponownie.`);
       }
     } catch {
       toast.info("Telefon nie podał metadanych pliku, ale upload będzie kontynuowany.");
@@ -300,7 +311,7 @@ const Upload = () => {
       return;
     }
     if (audioFile && durationError) {
-      toast.error(t("upload.tooShort"));
+      toast.error("Długość utworu musi mieścić się w zakresie 0:10–4:00.");
       return;
     }
 
@@ -328,6 +339,10 @@ const Upload = () => {
             if (resolvedDuration < MIN_DURATION_SEC) {
               setDurationError(true);
               throw new Error(t("upload.tooShort"));
+            }
+            if (resolvedDuration > MAX_DURATION_SEC) {
+              setDurationError(true);
+              throw new Error(`Utwór trwa ${fmtDur(resolvedDuration)} — maksymalnie może 4:00. Skróć plik i wgraj ponownie.`);
             }
           }
         }
