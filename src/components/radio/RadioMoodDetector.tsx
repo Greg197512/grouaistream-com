@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useAISafe } from "@/contexts/AIContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePlayer, Track } from "@/contexts/PlayerContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -31,6 +32,7 @@ export const RadioMoodDetector = () => {
   const ai = useAISafe();
   const { t } = useLanguage();
   const { user } = useAuth();
+  const { playPlaylist } = usePlayer();
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const progressTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -102,11 +104,34 @@ export const RadioMoodDetector = () => {
     }
   }, []);
 
+  // Fallback bez orchestratora AI: dobierz utwory z bazy po gatunku/nastroju i zagraj.
+  const playCategoryFallback = useCallback(async (mood: typeof QUICK_MOODS[0]) => {
+    try {
+      const [byGenre, byMood] = await Promise.all([
+        supabase.from("tracks").select("*").ilike("genre", `%${mood.genre}%`).limit(20),
+        supabase.from("tracks").select("*").ilike("mood", `%${mood.mood}%`).limit(20),
+      ]);
+      const merged = [...(byGenre.data || []), ...(byMood.data || [])] as Track[];
+      const seen = new Set<string>();
+      let tracks = merged.filter((t) => (seen.has(t.id) ? false : (seen.add(t.id), true))).filter((t) => t.audio_url || t.video_url);
+      if (!tracks.length) {
+        const fb = await supabase.from("tracks").select("*").not("audio_url", "is", null).limit(20);
+        tracks = (fb.data as Track[]) || [];
+      }
+      if (!tracks.length) { toast.error("Brak utworów do tej kategorii"); return; }
+      for (let i = tracks.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [tracks[i], tracks[j]] = [tracks[j], tracks[i]]; }
+      playPlaylist(tracks, 0, "radio-mood");
+    } catch (e) {
+      console.warn("[mood-detector] fallback play failed", e);
+    }
+  }, [playPlaylist]);
+
   const applyMood = useCallback(async (mood: typeof QUICK_MOODS[0], confidence: number, source: "manual" | "webcam", emotions?: any) => {
     setActiveMood(mood.mood);
     setDetectedConfidence(source === "webcam" ? confidence : null);
 
     if (ai?.handleMoodDetected) {
+      // autoPlay=true → klik kategorii OD RAZU przełącza granie na utwory z tego nastroju/gatunku.
       await ai.handleMoodDetected({
         mood: mood.mood,
         confidence,
@@ -114,7 +139,10 @@ export const RadioMoodDetector = () => {
         color: mood.color,
         genre: mood.genre,
         source,
-      }, false);
+      }, true);
+    } else {
+      // Brak orchestratora AI (fallback) — sami dobierz i zagraj utwory z kategorii.
+      await playCategoryFallback(mood);
     }
 
     toast.success(`${mood.emoji} Nastrój: ${mood.mood} → gatunek: ${mood.genre}${source === "webcam" ? ` (${confidence}%)` : ""}`);
@@ -123,7 +151,7 @@ export const RadioMoodDetector = () => {
       await fetchShrinkAnalysis(mood.mood, confidence, emotions);
       await claimBonus();
     }
-  }, [ai, fetchShrinkAnalysis, claimBonus]);
+  }, [ai, fetchShrinkAnalysis, claimBonus, playCategoryFallback]);
 
   // Capture a snapshot from the video element as JPEG base64
   const captureSnapshot = (video: HTMLVideoElement): string | null => {
