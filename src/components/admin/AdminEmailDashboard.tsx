@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { invokeHubAI } from "@/lib/hubAI";
+import { sendHubEmail } from "@/lib/hubEmail";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -126,35 +127,29 @@ export function AdminEmailDashboard({ stats, genreStats }: AdminEmailDashboardPr
   };
 
   const massDispatch = async () => {
+    if (!generatedEmail) { toast.error("Najpierw wygeneruj e-mail przyciskiem Generuj AI"); return; }
     const audienceLabel = audience === "all_users" ? "wszystkich użytkowników" : "subskrybentów bloga";
-    const modeLabel = dispatchMode === "direct" ? "BEZPOŚREDNIO (przez naszą kolejkę)" : "przez n8n";
-    if (!confirm(`Wysłać "${emailType}" do ${audienceLabel} ${modeLabel}?`)) return;
+    if (!confirm(`Wysłać „${generatedEmail.subject}" do ${audienceLabel}? To pójdzie NA ŻYWO.`)) return;
     setDispatching(true);
     setLastDispatch(null);
     try {
-      const { data, error } = await supabase.functions.invoke("mass-email-dispatch", {
-        body: {
-          emailType,
-          language,
-          customSubject: customSubject || undefined,
-          customMessage: customMessage || undefined,
-          audience,
-          mode: dispatchMode,
-          webhookOverride: dispatchMode === "n8n" ? (n8nWebhookUrl.trim() || undefined) : undefined,
-        },
-      });
-      if (error) throw error;
-      if (!data?.success) throw new Error(data?.error || `Status: ${data?.n8nStatus || "unknown"}`);
+      let htmlBody = generatedEmail.body;
+      const ctx = customMessage.trim();
+      if (ctx && !htmlBody.toLowerCase().includes(ctx.slice(0, Math.min(30, ctx.length)).toLowerCase())) {
+        htmlBody = `${htmlBody}<p style="margin-top:16px">${ctx.replace(/</g, "&lt;")}</p>`;
+      }
+      // Wysyłka przez HUB (Resend) — funkcja mass na bvstv była martwa.
+      const res = await sendHubEmail({ mode: "mass", audience, subject: generatedEmail.subject, html: htmlBody });
+      if (!res.success) throw new Error(res.error || "Błąd masowej wysyłki");
       setLastDispatch({
-        recipientCount: data.recipientCount,
-        heroImageUrl: data.heroImageUrl,
-        subject: data.subject,
-        queued: data.queued,
-        errors: data.errors,
-        mode: data.mode,
+        recipientCount: res.recipientCount || 0,
+        heroImageUrl: null,
+        subject: res.subject || generatedEmail.subject,
+        queued: res.sent,
+        errors: res.errors,
+        mode: "direct",
       });
-      const queuedMsg = data.mode === "direct" ? ` (zakolejkowano: ${data.queued}, błędy: ${data.errors})` : "";
-      toast.success(`🚀 ${data.recipientCount} odbiorców${queuedMsg}`);
+      toast.success(`🚀 ${res.recipientCount} odbiorców (wysłano: ${res.sent}, błędy: ${res.errors})`);
       fetchEmailLogs();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Błąd masowej wysyłki");
@@ -287,35 +282,24 @@ Zwróć WYŁĄCZNIE czysty JSON (bez markdown, bez komentarzy) w formacie:
     }
     setSendingEmail(true);
     try {
-      const id = crypto.randomUUID();
-      // Treść maila w plain-text (z HTML AI)
-      let messagePlain = generatedEmail.body.replace(/<[^>]*>/g, "").replace(/\n{3,}/g, "\n\n").trim();
-
-      // BEZPIECZNIK: jeśli admin podał kontekst, a AI go zignorował → doklej go ręcznie do treści
+      // Treść HTML z generatora + bezpiecznik: dołóż kontekst admina, jeśli AI go pominął.
+      let htmlBody = generatedEmail.body;
       const ctx = customMessage.trim();
       if (ctx) {
         const ctxStart = ctx.slice(0, Math.min(30, ctx.length)).toLowerCase();
-        const bodyLower = messagePlain.toLowerCase();
-        if (!bodyLower.includes(ctxStart)) {
-          messagePlain = `${messagePlain}\n\n— Od redakcji GrouAI —\n${ctx}`;
+        if (!htmlBody.toLowerCase().includes(ctxStart)) {
+          htmlBody = `${htmlBody}<p style="margin-top:16px">${ctx.replace(/</g, "&lt;")}</p>`;
         }
       }
 
-      const { data, error } = await supabase.functions.invoke("send-transactional-email", {
-        body: {
-          templateName: "admin-notification",
-          recipientEmail: recipientEmail.trim(),
-          idempotencyKey: `admin-email-${id}`,
-          templateData: {
-            title: generatedEmail.subject,
-            message: messagePlain,
-            recipientName: recipientName || undefined,
-            heroImageUrl: generatedEmail.heroImageUrl || undefined,
-            emailType: emailType === "invitation" ? "Zaproszenie" : emailType === "challenge" ? "Wyzwanie" : emailType === "newsletter" ? "Newsletter" : emailType === "easter" ? "Życzenia wielkanocne" : "Podsumowanie",
-          },
-        },
+      // Wysyłka przez HUB (Resend) — funkcja bvstv była martwa.
+      const res = await sendHubEmail({
+        mode: "single",
+        to: recipientEmail.trim(),
+        subject: generatedEmail.subject,
+        html: htmlBody,
       });
-      if (error) throw error;
+      if (!res.success) throw new Error(res.error || "Nie udało się wysłać");
       toast.success(`✉️ E-mail wysłany do ${recipientEmail}!`);
       fetchEmailLogs();
     } catch (error) {
