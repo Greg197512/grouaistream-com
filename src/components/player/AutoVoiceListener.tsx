@@ -727,6 +727,14 @@ export const AutoVoiceListener = () => {
       return;
     }
 
+    // Rozdziel bieżący utwór na ścieżki (stemy) — otwiera odtwarzacz solo/mute
+    if (includesAny(normalized, ["rozdziel na sciezki", "na sciezki", "stemy", "sciezki utworu", "rozbij na sciezki", "pokaz sciezki", "split stems", "separate stems", "wokal osobno", "aparte tracks", "op sporen", "розділи на доріжки"])) {
+      if (!currentTrack?.audio_url) { await safeSpeakAndResume("Najpierw włącz jakiś utwór"); return; }
+      window.dispatchEvent(new CustomEvent("grouai:open-stems", { detail: { audioUrl: currentTrack.audio_url, title: currentTrack.title } }));
+      await safeSpeakAndResume({ pl: "Rozdzielam na ścieżki", en: "Splitting into stems", nl: "Splitsen in sporen", ua: "Розділяю на доріжки" }[lang]);
+      return;
+    }
+
     // Next track
     if (includesAny(lower, ["następn", "dalej", "skip", "next", "volgende", "overslaan", "наступн", "далі"])) {
       nextTrack();
@@ -1140,6 +1148,7 @@ export const AutoVoiceListener = () => {
             case "repeat_toggle": toggleRepeat(); await done("Powtarzanie"); return;
             case "shuffle_toggle": toggleShuffle(); await done("Losowo"); return;
             case "add_queue": if (currentTrack) { addToQueue(currentTrack); await done("Dodano do kolejki"); } return;
+            case "split_stems": if (currentTrack?.audio_url) { window.dispatchEvent(new CustomEvent("grouai:open-stems", { detail: { audioUrl: currentTrack.audio_url, title: currentTrack.title } })); await done("Rozdzielam na ścieżki"); } return;
             case "like_current":
               if (currentTrack && user) {
                 await supabase.from("liked_songs").upsert({ user_id: user.id, track_id: currentTrack.id }, { onConflict: "user_id,track_id" });

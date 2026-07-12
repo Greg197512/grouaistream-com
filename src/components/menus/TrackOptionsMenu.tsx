@@ -20,7 +20,8 @@ import {
   Coffee,
   DownloadCloud,
   Check,
-  Gift
+  Gift,
+  Headphones
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -559,6 +560,17 @@ const TrackOptionsMenuComponent = (
           )}
 
           <DropdownMenuSeparator />
+
+          {/* Rozdziel na ścieżki (stemy) — otwiera odtwarzacz solo/mute */}
+          {trackUrl && (
+            <DropdownMenuItem
+              onClick={() => window.dispatchEvent(new CustomEvent("grouai:open-stems", { detail: { audioUrl: trackUrl, title: trackTitle } }))}
+              className="cursor-pointer text-cyan-300 focus:text-cyan-200 focus:bg-cyan-500/10"
+            >
+              <Headphones className="mr-2 h-4 w-4" />
+              <span className="flex-1">Rozdziel na ścieżki 🎚️</span>
+            </DropdownMenuItem>
+          )}
 
           {/* Prezent 🎁 — animowana strona-prezent (paczka → wir → piosenka) */}
           <DropdownMenuItem

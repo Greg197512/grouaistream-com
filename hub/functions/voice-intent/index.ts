@@ -23,7 +23,8 @@ play — wznów/graj | pause — zatrzymaj | next — następny | previous — p
 restart — od początku | seek_forward{seconds} — przewiń w przód | seek_back{seconds} — cofnij
 seek_end — na koniec | volume_set{percent} — ustaw głośność 0-100 | volume_up | volume_down | mute
 repeat_toggle — powtarzanie | shuffle_toggle — losowo | like_current — polub grany utwór
-add_queue — dodaj grany do kolejki | search_play{query,count} — znajdź i graj (gatunek/tytuł/artysta)
+add_queue — dodaj grany do kolejki | split_stems — rozdziel bieżący utwór na ścieżki (wokal/bas/perkusja)
+search_play{query,count} — znajdź i graj (gatunek/tytuł/artysta)
 play_favorites{count} — graj ulubione | play_recent{count} — graj ostatnio wgrane
 navigate{page} — otwórz stronę (home,search,library,liked,server,movies,radio,settings,mood,playlists)
 answer — to nie komenda sterująca, tylko pytanie/rozmowa (odpowiedz normalnie)
