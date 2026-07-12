@@ -7,12 +7,52 @@ import { CreditCard, ExternalLink, Wallet, Receipt, Loader2, Crown, TrendingUp, 
 // Ceny planów (PLN/mies) — do szacunku miesięcznego przychodu z aktywnych subskrypcji.
 const PRO_PLN = 19;
 const ULT_PLN = 39;
-const PADDLE_DASHBOARD = "https://vendor.paddle.com/";
+const PADDLE_DASHBOARD = "https://vendors.paddle.com/";
+const HUB_PADDLE = "https://bmwtydwpevzhbdplilbr.supabase.co/functions/v1/paddle-report";
+
+// Kwoty z Paddle są w najniższej jednostce (grosze/centy) → dziel przez 100.
+const money = (amt: number, cur: string) => `${(amt / 100).toFixed(2)} ${cur}`;
+
+interface PaddleLive {
+  ok: boolean;
+  env?: string;
+  count?: number;
+  totals?: Record<string, number>;
+  recent?: { amount: number; currency: string; status: string; date: string }[];
+  error?: string;
+  message?: string;
+}
 
 export function PaddleAdminPanel() {
   const [loading, setLoading] = useState(true);
   const [pro, setPro] = useState(0);
   const [ult, setUlt] = useState(0);
+  const [live, setLive] = useState<PaddleLive | null>(null);
+  const [liveLoading, setLiveLoading] = useState(true);
+
+  // Realne płatności z Paddle (API) — przez funkcję huba (admin).
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLiveLoading(true);
+      try {
+        const { data: s } = await supabase.auth.getSession();
+        const token = s?.session?.access_token;
+        if (!token) { if (!cancelled) { setLiveLoading(false); } return; }
+        const r = await fetch(HUB_PADDLE, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: "{}",
+        });
+        const j = (await r.json().catch(() => null)) as PaddleLive | null;
+        if (!cancelled) setLive(j);
+      } catch {
+        if (!cancelled) setLive(null);
+      }
+      if (!cancelled) setLiveLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -70,6 +110,59 @@ export function PaddleAdminPanel() {
               {stat("Ultimate (× 39 zł)", String(ult), <Crown className="h-5 w-5 text-amber-400" />, "text-amber-400")}
               {stat("Szac. przychód / mies.", `${mrr} zł`, <TrendingUp className="h-5 w-5 text-emerald-400" />, "text-emerald-400")}
             </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Realne płatności z Paddle (API) */}
+      <Card className="border-border/50 bg-card/50 backdrop-blur">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Receipt className="h-5 w-5 text-primary" /> Na żywo z Paddle
+            {live?.ok && live.env && (
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/15 text-primary uppercase">{live.env}</span>
+            )}
+          </CardTitle>
+          <CardDescription>Prawdziwe zakończone transakcje prosto z Paddle API.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {liveLoading ? (
+            <div className="flex items-center justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>
+          ) : live?.ok ? (
+            <div className="space-y-3">
+              {(!live.totals || Object.keys(live.totals).length === 0) ? (
+                <p className="text-sm text-muted-foreground">Brak zakończonych płatności w Paddle (jeszcze). Gdy ktoś zapłaci przez Paddle, pojawi się tu automatycznie.</p>
+              ) : (
+                <div className="flex flex-wrap gap-3">
+                  {Object.entries(live.totals).map(([cur, amt]) => (
+                    <div key={cur} className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-2">
+                      <p className="text-[11px] text-muted-foreground">Wpłynęło ({cur})</p>
+                      <p className="text-xl font-bold text-emerald-400">{money(amt, cur)}</p>
+                    </div>
+                  ))}
+                  <div className="rounded-xl border border-border/50 bg-card/50 px-4 py-2">
+                    <p className="text-[11px] text-muted-foreground">Transakcje</p>
+                    <p className="text-xl font-bold">{live.count ?? 0}</p>
+                  </div>
+                </div>
+              )}
+              {live.recent && live.recent.length > 0 && (
+                <div className="mt-2 divide-y divide-border/40 rounded-lg border border-border/40">
+                  {live.recent.map((t, i) => (
+                    <div key={i} className="flex items-center justify-between px-3 py-1.5 text-sm">
+                      <span className="text-muted-foreground">{new Date(t.date).toLocaleDateString("pl-PL", { day: "2-digit", month: "2-digit", year: "numeric" })}</span>
+                      <span className="font-medium">{money(t.amount, t.currency)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : live?.error === "no_key" ? (
+            <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-100/90">
+              Żeby zobaczyć tu realne wpłaty, dodaj <b>klucz API Paddle</b> (Paddle → Developer Tools → Authentication → API keys). Wklej go administratorowi — podłączy dane na żywo.
+            </div>
+          ) : (
+            <p className="text-sm text-red-300">Błąd Paddle: {live?.message || "nie udało się pobrać"}</p>
           )}
         </CardContent>
       </Card>
