@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { X } from "lucide-react";
 import { isStudioPromoActive } from "@/contexts/SubscriptionContext";
 
-const SESSION_KEY = "grouai-studio-sticker-shown";
+const SESSION_KEY = "grouai-studio-sticker-shown-v2";
 const SHOW_DELAY_MS = 900;    // po wejściu na stronę
 const AUTO_DISMISS_MS = 40000; // po 40 s rozpływa się
 
@@ -57,8 +57,8 @@ export const StudioPromoIntro = () => {
           animate={{ opacity: 1, scale: 1, rotate: -8 }}
           exit={{ opacity: 0, scale: 1.35, filter: "blur(16px)", transition: { duration: 1.1, ease: "easeInOut" } }}
           transition={{ type: "spring", damping: 12, stiffness: 200 }}
-          className="fixed bottom-28 left-3 z-[90] sm:left-4"
-          style={{ width: 150, height: 150 }}
+          className="fixed top-20 right-3 z-[90] sm:top-24 sm:right-6"
+          style={{ width: 140, height: 140 }}
         >
           {/* delikatne bujanie — przyciąga oko */}
           <motion.button
