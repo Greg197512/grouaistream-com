@@ -48,6 +48,22 @@ const DOCK_W = 720;
 const DOCK_H = 460;
 const DOCK_BOTTOM_OFFSET = 140; // odstęp od dołu, żeby nie zasłaniać PlayerBar
 
+// Czat asystenta działa na HUBIE (LIVE bvstv nie ma klucza AI).
+const HUB_STUDIO_CHAT = "https://bmwtydwpevzhbdplilbr.supabase.co/functions/v1/studio-chat";
+
+// Wyciąga gotowy prompt z odpowiedzi asystenta (blok [[PROMPT]]...[[/PROMPT]]).
+const extractPrompt = (c: string): string | null => {
+  const m = c.match(/\[\[PROMPT\]\]([\s\S]*?)\[\[\/PROMPT\]\]/);
+  return m ? m[1].trim() : null;
+};
+const stripPromptMarkers = (c: string) => c.replace(/\[\[\/?PROMPT\]\]/g, "").trim();
+// Wysyła prompt do głównego edytora Studia (MusicPromptBox nasłuchuje).
+const pushToMainEditor = (text: string, mode: "replace" | "append") => {
+  if (!text.trim()) return;
+  window.dispatchEvent(new CustomEvent("grouai:studio-set-prompt", { detail: { text: text.trim(), mode } }));
+  toast.success(mode === "replace" ? "Wstawiono do pola Studia ✍️" : "Dodano do pola Studia ➕");
+};
+
 export const StudioGrokDock = () => {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
@@ -56,7 +72,7 @@ export const StudioGrokDock = () => {
 
   // Chat state
   const [messages, setMessages] = useState<Msg[]>([
-    { role: "assistant", content: "Cześć 🎧 Jestem **GrouAI Studio**. Opisz utwór, wgraj sample lub wybierz utwory z biblioteki — zmiksuję, zremiksuję albo stworzę coś nowego." },
+    { role: "assistant", content: "Cześć 🎧 Jestem asystentem promptów **GrouAI Studio**. Powiedz kilka słów albo pół pomysłu — ułożę Ci **perfekcyjny prompt** (muzyka lub teledysk/wideo). Znam gatunki, instrumenty, aranż i jak pisać prompty. Potem kliknij **„Wstaw do pola"**, żeby wrzucić gotowca do głównego okna Studia." },
   ]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
@@ -140,12 +156,9 @@ export const StudioGrokDock = () => {
     ).join("\n");
     const fullText = [text.trim(), attachLines].filter(Boolean).join("\n\n");
 
-    // === ROUTING: jeśli prompt brzmi jak "wygeneruj" → studio-generate, inaczej chat
-    const lower = text.toLowerCase();
-    const isGenerate =
-      text.includes("moich ostatnich 10") || text.includes("moje top 10") || text.includes("ulubionych — weź mój") ||
-      /\b(wygenerz|wygeneruj|stwórz|zr[oó]b|skomponuj|nagraj|generate|create|make)\b/.test(lower) ||
-      /\b(banger|utw[oó]r|piosenk|track|song|beat|melodi)/.test(lower);
+    // Panel = asystent-promptownik: wszystko idzie do czatu (hub); gotowy prompt
+    // wstawiasz do głównego pola Studia przyciskami pod odpowiedzią.
+    const isGenerate: boolean = false;
 
     if (isGenerate) {
       setMessages((p) => [...p, { role: "user", content: fullText }]);
@@ -192,9 +205,9 @@ export const StudioGrokDock = () => {
 
     try {
       const { data: s } = await supabase.auth.getSession();
-      const r = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/studio-chat`, {
+      const r = await fetch(HUB_STUDIO_CHAT, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${s?.session?.access_token}`, apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${s?.session?.access_token}` },
         body: JSON.stringify({
           messages: [...messages, userMsg].slice(-12).map((m) => ({ role: m.role, content: m.content })),
           ai_engine: engine,
@@ -352,7 +365,29 @@ export const StudioGrokDock = () => {
                       }`}>
                         {m.role === "assistant" ? (
                           <div className="prose prose-xs prose-invert max-w-none [&_p]:my-0.5 [&_p]:leading-relaxed [&_a]:text-primary">
-                            <ReactMarkdown>{m.content}</ReactMarkdown>
+                            <ReactMarkdown>{stripPromptMarkers(m.content)}</ReactMarkdown>
+                            {i > 0 && (() => {
+                              const p = extractPrompt(m.content) || stripPromptMarkers(m.content);
+                              if (!p) return null;
+                              return (
+                                <div className="mt-1.5 flex flex-wrap gap-1 not-prose">
+                                  <button
+                                    type="button"
+                                    onClick={() => pushToMainEditor(p, "replace")}
+                                    className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary hover:bg-primary hover:text-primary-foreground transition"
+                                  >
+                                    ✍️ Wstaw do pola
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => pushToMainEditor(p, "append")}
+                                    className="inline-flex items-center gap-1 rounded-full border border-border bg-card/60 px-2 py-0.5 text-[10px] font-semibold text-muted-foreground hover:text-foreground hover:border-primary/40 transition"
+                                  >
+                                    ➕ Dodaj
+                                  </button>
+                                </div>
+                              );
+                            })()}
                           </div>
                         ) : (
                           <p className="whitespace-pre-wrap leading-relaxed">{m.content}</p>

@@ -156,6 +156,19 @@ export function MusicPromptBox({ onTrackReady }: Props) {
     return () => clearInterval(id);
   }, [prompt]);
 
+  // Panel boczny „GrAIstudio" wysyła tu gotowy prompt (przyciski Wstaw/Dodaj).
+  useEffect(() => {
+    const onSet = (e: Event) => {
+      const d = (e as CustomEvent).detail as { text?: string; mode?: "replace" | "append" } | undefined;
+      if (!d?.text) return;
+      setMode("music");
+      setPrompt((p) => (d.mode === "append" && p.trim() ? `${p.trim()}, ${d.text}` : d.text!));
+      setTimeout(() => textareaRef.current?.focus(), 60);
+    };
+    window.addEventListener("grouai:studio-set-prompt", onSet as EventListener);
+    return () => window.removeEventListener("grouai:studio-set-prompt", onSet as EventListener);
+  }, []);
+
   const placeholderLang = language === "auto" ? "pl" : language;
   const placeholder = PLACEHOLDERS[placeholderLang][placeholderIdx];
   const labels = STAGE_LABELS[placeholderLang];
