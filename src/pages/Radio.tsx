@@ -81,7 +81,7 @@ const Radio = () => {
             <Link to="/" className="text-primary hover:text-primary/80 underline underline-offset-4">Home</Link>
             <Link to="/radio-live" className="text-primary hover:text-primary/80 underline underline-offset-4">GrouaRadio Live</Link>
             <Link to="/upload" className="text-primary hover:text-primary/80 underline underline-offset-4">Upload Music</Link>
-            <Link to="/suno" className="text-primary hover:text-primary/80 underline underline-offset-4">AI Music Studio</Link>
+            <Link to="/studio" className="text-primary hover:text-primary/80 underline underline-offset-4">AI Music Studio</Link>
             <Link to="/search" className="text-primary hover:text-primary/80 underline underline-offset-4">Search</Link>
             <Link to="/earn" className="text-primary hover:text-primary/80 underline underline-offset-4">Earn With Us</Link>
           </nav>

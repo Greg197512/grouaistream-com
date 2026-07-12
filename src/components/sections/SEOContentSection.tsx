@@ -49,7 +49,7 @@ export const SEOContentSection = () => {
     { to: "/earn", label: t("seo.cta.earn"), bold: true },
     { to: "/earnings", label: t("seo.cta.earnings") },
     { to: "/upload", label: t("seo.cta.upload") },
-    { to: "/suno", label: t("seo.cta.studio") },
+    { to: "/studio", label: t("seo.cta.studio") },
     { to: "/radio", label: t("seo.cta.radio") },
     { to: "/radio-live", label: t("seo.cta.radioLive") },
     { to: "/library", label: t("seo.cta.library") },

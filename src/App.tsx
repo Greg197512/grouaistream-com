@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { WelcomeConfetti } from "@/components/effects/WelcomeConfetti";
@@ -149,8 +149,9 @@ const AppShell = () => {
           <Route path="/admin/seo" element={<AdminSEO />} />
           <Route path="/legal" element={<Legal />} />
           <Route path="/party/:code" element={<PartyPulpit />} />
-          <Route path="/suno" element={<Suno />} />
           <Route path="/studio" element={<Suno />} />
+          {/* Stary adres /suno przekierowuje na nowy /studio (linki/zakładki nadal działają) */}
+          <Route path="/suno" element={<Navigate to="/studio" replace />} />
           <Route path="/local-player" element={<LocalPlayer />} />
           <Route path="/upload" element={<Upload />} />
           <Route path="/my-tracks" element={<MyTracks />} />
