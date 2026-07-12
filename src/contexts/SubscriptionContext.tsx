@@ -41,6 +41,11 @@ const PLAN_LEVELS: Record<SubscriptionPlan, number> = {
   ultimate: 2,
 };
 
+// PROMOCJA: cały GrouAI Studio (poziom Pro) za darmo dla WSZYSTKICH do tej daty.
+// Po tej dacie promocja wygasa sama. Serwer (hub) ma bliźniaczy warunek: hub_config.studio_free_until.
+export const STUDIO_FREE_UNTIL = new Date("2026-07-19T23:59:59Z");
+export const isStudioPromoActive = () => Date.now() < STUDIO_FREE_UNTIL.getTime();
+
 const SubscriptionContext = createContext<SubscriptionContextType | undefined>(undefined);
 
 export const useSubscription = () => {
@@ -218,11 +223,11 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
 
   const hasAccess = useCallback((requiredPlan: SubscriptionPlan) => {
     if (PLAN_LEVELS[plan] >= PLAN_LEVELS[requiredPlan]) return true;
-    if (requiredPlan === "pro" && isTrialActive) return true;
+    if (requiredPlan === "pro" && (isTrialActive || isStudioPromoActive())) return true;
     return false;
   }, [plan, isTrialActive]);
 
-  const isPro = plan === "pro" || plan === "ultimate" || isTrialActive;
+  const isPro = plan === "pro" || plan === "ultimate" || isTrialActive || isStudioPromoActive();
   const isUltimate = plan === "ultimate";
 
   const canUseAIDJ = isPro;

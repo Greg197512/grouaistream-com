@@ -3,7 +3,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Sparkles, Loader2, Send, Globe, Music2, AlertCircle,
   Flame, Wand2, Mic2, Guitar, CheckCircle2, Download, Share2,
+  BookOpen, Gift, X,
 } from "lucide-react";
+import { isStudioPromoActive, STUDIO_FREE_UNTIL } from "@/contexts/SubscriptionContext";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { invokeStudioEngine, waitForAceStep, fireCoverGeneration, isSubscriptionError, submitStudioVideo, waitForStudioVideo, fetchStoryboard, submitStudioLipsync, waitForStudioLipsync } from "@/lib/hubStudio";
@@ -144,6 +146,7 @@ export function MusicPromptBox({ onTrackReady }: Props) {
   const [error, setError] = useState<string>("");
   const [placeholderIdx, setPlaceholderIdx] = useState(0);
   const [showUpgrade, setShowUpgrade] = useState(false);
+  const [showGuide, setShowGuide] = useState(false);
   const [activeVibes, setActiveVibes] = useState<string[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -527,7 +530,7 @@ export function MusicPromptBox({ onTrackReady }: Props) {
               <h2 className="text-lg font-extrabold tracking-tight text-white leading-none">
                 Stwórz utwór
               </h2>
-              <p className="text-[11px] text-white/50 mt-0.5">Opisz jednym zdaniem — AI zrobi resztę</p>
+              <p className="text-[11px] text-white/50 mt-0.5">✍️ Wystarczy wpisać prompt — nawet jednym zdaniem. AI zrobi resztę.</p>
             </div>
           </div>
 
@@ -641,6 +644,30 @@ export function MusicPromptBox({ onTrackReady }: Props) {
               </button>
             );
           })}
+        </div>
+
+        {/* Promocja: cały tydzień GrouAI Studio za darmo dla wszystkich */}
+        {isStudioPromoActive() && (
+          <div className="relative z-10 mb-3 flex items-center gap-2 rounded-xl border border-emerald-400/30 bg-gradient-to-r from-emerald-500/15 to-teal-500/10 px-3 py-2">
+            <Gift className="h-4 w-4 text-emerald-300 flex-shrink-0" />
+            <p className="text-[11px] text-emerald-100/90 leading-tight">
+              <b>GrouAI Studio za DARMO dla wszystkich</b> — pełna wersja do{" "}
+              {STUDIO_FREE_UNTIL.toLocaleDateString("pl-PL", { day: "2-digit", month: "long" })}. Twórz bez limitu planu!
+            </p>
+          </div>
+        )}
+
+        {/* Delikatny przycisk instrukcji — przy oknie tekstowym */}
+        <div className="relative z-10 mb-1.5 flex items-center justify-between">
+          <span className="text-[10px] text-white/40">Opisz utwór jak chcesz — im dokładniej, tym lepszy efekt.</span>
+          <button
+            onClick={() => setShowGuide(true)}
+            className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-2.5 py-1 text-[11px] font-semibold text-white/70 hover:text-white hover:border-[#FF9500]/50 hover:bg-[#FF6B00]/10 transition-all"
+            title="Jak używać GrouAI Studio + jak pisać świetne prompty"
+          >
+            <BookOpen className="h-3.5 w-3.5 text-[#FF9500]" />
+            Instrukcja GrouAI Studio
+          </button>
         </div>
 
         {/* Pole opisu — z delikatnie pulsującą, świecącą ramką */}
@@ -902,6 +929,104 @@ export function MusicPromptBox({ onTrackReady }: Props) {
       </div>
 
       <UpgradeModal open={showUpgrade} onOpenChange={setShowUpgrade} />
+
+      {/* Pływające okno: INSTRUKCJA GrouAI Studio */}
+      <AnimatePresence>
+        {showGuide && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[120] flex items-center justify-center p-4"
+            onClick={() => setShowGuide(false)}
+          >
+            <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+            <motion.div
+              initial={{ scale: 0.94, y: 16, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              exit={{ scale: 0.94, y: 16, opacity: 0 }}
+              transition={{ type: "spring", damping: 24, stiffness: 260 }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative w-full max-w-lg max-h-[85vh] overflow-y-auto rounded-2xl border border-white/10 bg-[#14121f] p-6 shadow-2xl"
+            >
+              <button
+                onClick={() => setShowGuide(false)}
+                className="absolute top-4 right-4 grid place-items-center h-8 w-8 rounded-full bg-white/5 text-white/60 hover:text-white hover:bg-white/10 transition-all"
+                aria-label="Zamknij"
+              >
+                <X className="h-4 w-4" />
+              </button>
+
+              <div className="flex items-center gap-2.5 mb-4">
+                <div className="grid place-items-center h-9 w-9 rounded-xl bg-gradient-to-br from-[#FF6B00] to-[#9333EA]">
+                  <BookOpen className="h-5 w-5 text-white" />
+                </div>
+                <h3 className="text-lg font-extrabold text-white">Instrukcja GrouAI Studio</h3>
+              </div>
+
+              <p className="text-sm text-white/70 mb-4">
+                Twoje własne studio muzyczne AI — robi muzykę na najwyższym poziomie i śpiewa
+                po <b className="text-white">polsku, angielsku, holendersku i ukraińsku</b>. Nie musisz znać się na muzyce —
+                <b className="text-white"> wystarczy opisać utwór słownie</b>.
+              </p>
+
+              <div className="space-y-3 text-sm text-white/80">
+                <div>
+                  <p className="font-bold text-white mb-1">Jak stworzyć utwór (3 kroki):</p>
+                  <ol className="list-decimal list-inside space-y-1 text-white/70">
+                    <li>Wpisz opis w oknie (możesz kliknąć styl: Pop, Rock, Lo-fi… by dopisać klimat).</li>
+                    <li>Wybierz język (Auto/PL/EN/NL/UK) oraz <b>Z wokalem</b> lub <b>Instrumental</b>.</li>
+                    <li>Kliknij <b>Generuj</b> — AI ułoży tytuł, tekst i aranż, i wygeneruje gotowy utwór (do 4 minut). Pojawi się w „Twoich utworach".</li>
+                  </ol>
+                </div>
+
+                <div>
+                  <p className="font-bold text-white mb-1">Tryby:</p>
+                  <ul className="space-y-1 text-white/70">
+                    <li>🎵 <b>Muzyka</b> — gotowa piosenka z Twojego opisu.</li>
+                    <li>🎬 <b>Video</b> — klip wideo z opisu sceny.</li>
+                    <li>🎥 <b>Teledysk</b> — AI samo reżyseruje film do Twojej piosenki (usta wokalisty w synchro ze słowami).</li>
+                  </ul>
+                </div>
+
+                <div className="rounded-xl border border-[#FF6B00]/30 bg-[#FF6B00]/10 p-3">
+                  <p className="text-white font-extrabold text-base mb-1">⚠️ Prompty muszą być BARDZO szczegółowe!</p>
+                  <p className="text-white/80 text-[13px]">
+                    Im więcej detali, tym lepszy i bardziej naturalny utwór. Podaj: <b>gatunek + podgatunek</b>,
+                    <b> nastrój</b>, <b>tempo (BPM)</b>, <b>instrumenty</b>, <b>typ wokalu</b> (męski/kobiecy, ciepły/ostry)
+                    oraz <b>temat tekstu</b>.
+                  </p>
+                </div>
+
+                <div>
+                  <p className="font-bold text-white mb-1">Przykład świetnego promptu:</p>
+                  <p className="rounded-lg bg-black/40 border border-white/10 p-2.5 text-[13px] text-emerald-200/90 italic">
+                    „Melancholijny synth-pop lat 80, 105 BPM, ciepły męski wokal, analogowe syntezatory z pogłosem,
+                    tekst o tęsknocie za latem, chwytliwy powtarzalny refren."
+                  </p>
+                </div>
+
+                {isStudioPromoActive() && (
+                  <div className="flex items-center gap-2 rounded-xl border border-emerald-400/30 bg-emerald-500/10 p-3">
+                    <Gift className="h-4 w-4 text-emerald-300 flex-shrink-0" />
+                    <p className="text-[13px] text-emerald-100/90">
+                      🎁 Przez ten tydzień <b>całe Studio jest za darmo dla wszystkich</b> — korzystaj bez limitu!
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <Button
+                onClick={() => setShowGuide(false)}
+                className="w-full mt-5 font-bold text-white border-0"
+                style={{ background: "linear-gradient(135deg, #FF6B00, #9333EA)" }}
+              >
+                Rozumiem — tworzę muzykę 🎶
+              </Button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
