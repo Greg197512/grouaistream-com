@@ -12,6 +12,9 @@ const cors = {
 const json = (d: unknown, s = 200) =>
   new Response(JSON.stringify(d), { status: s, headers: { ...cors, "Content-Type": "application/json" } });
 
+// Twarda walidacja e-maila (Resend odrzuca całą partię, jeśli JEDEN adres jest zły).
+const emailOk = (e: string) => /^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]+$/.test(e);
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: cors });
   if (req.method !== "POST") return json({ success: false, error: "method_not_allowed" }, 405);
@@ -48,44 +51,71 @@ Deno.serve(async (req) => {
 
   // Odbiorcy
   let recipients: string[] = [];
+  let skipped = 0;
   if (mode === "single") {
     const to = String(body.to || "").trim();
-    if (!to || !to.includes("@")) return json({ success: false, error: "Podaj poprawny adres odbiorcy" }, 200);
+    if (!to || !emailOk(to)) return json({ success: false, error: "Podaj poprawny adres odbiorcy" }, 200);
     recipients = [to];
   } else {
     try {
       const { data: users, error: uErr } = await live.rpc("get_all_users_for_admin");
       if (uErr) return json({ success: false, error: "Nie udało się pobrać listy userów: " + uErr.message }, 200);
-      const emails = (users || []).map((u: any) => String(u.email || "").trim().toLowerCase()).filter((e: string) => e.includes("@"));
-      recipients = [...new Set(emails)];
+      const all = (users || []).map((u: any) => String(u.email || "").trim().toLowerCase());
+      const valid = all.filter((e: string) => emailOk(e));
+      skipped = all.length - valid.length; // ile adresów pominięto jako niepoprawne
+      recipients = [...new Set(valid)];
     } catch (e) {
       return json({ success: false, error: "Błąd listy odbiorców: " + String(e).slice(0, 120) }, 200);
     }
   }
-  if (!recipients.length) return json({ success: false, error: "Brak odbiorców" }, 200);
+  if (!recipients.length) return json({ success: false, error: "Brak poprawnych odbiorców (wszystkie adresy odrzucone)" }, 200);
 
   const htmlDoc = `<div style="font-family:-apple-system,Segoe UI,sans-serif;font-size:15px;line-height:1.6;color:#111;max-width:600px;margin:0 auto">${rawHtml}<hr style="border:none;border-top:1px solid #eee;margin:24px 0"><p style="font-size:12px;color:#888">GrouAI Stream · <a href="https://grouaistream.com" style="color:#FF6B00">grouaistream.com</a></p></div>`;
 
-  // Wysyłka przez Resend (batch do 100 na request).
+  // Wysyłka przez Resend. Batch do 100/req; jeśli partia padnie — ślij pojedynczo
+  // (żeby jeden problematyczny adres nie zabił całej wysyłki).
+  const rHeaders = { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" };
   let sent = 0, errors = 0, firstErr = "";
+
+  const sendOne = async (to: string): Promise<boolean> => {
+    try {
+      const r = await fetch("https://api.resend.com/emails", {
+        method: "POST", headers: rHeaders,
+        body: JSON.stringify({ from, to, subject, html: htmlDoc }),
+      });
+      if (r.ok) return true;
+      const d = await r.json().catch(() => null);
+      if (!firstErr) firstErr = (d && (d.message || d.name)) ? `${d.name || ""} ${d.message || ""}`.trim() : `Resend HTTP ${r.status}`;
+      return false;
+    } catch (e) {
+      if (!firstErr) firstErr = String(e).slice(0, 140);
+      return false;
+    }
+  };
+
   for (let i = 0; i < recipients.length; i += 100) {
     const chunk = recipients.slice(i, i + 100);
+    let batchOk = false;
     try {
       const r = await fetch("https://api.resend.com/emails/batch", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
+        method: "POST", headers: rHeaders,
         body: JSON.stringify(chunk.map((to) => ({ from, to, subject, html: htmlDoc }))),
       });
-      const data = await r.json().catch(() => null);
-      if (r.ok) {
-        sent += chunk.length;
-      } else {
-        errors += chunk.length;
-        if (!firstErr) firstErr = (data && (data.message || data.name)) ? `${data.name || ""} ${data.message || ""}`.trim() : `Resend HTTP ${r.status}`;
+      if (r.ok) { batchOk = true; sent += chunk.length; }
+      else {
+        const d = await r.json().catch(() => null);
+        if (!firstErr) firstErr = (d && (d.message || d.name)) ? `${d.name || ""} ${d.message || ""}`.trim() : `Resend HTTP ${r.status}`;
       }
     } catch (e) {
-      errors += chunk.length;
       if (!firstErr) firstErr = String(e).slice(0, 140);
+    }
+
+    if (!batchOk) {
+      firstErr = ""; // per-adres damy dokładniejszy błąd
+      for (const to of chunk) {
+        if (await sendOne(to)) sent++; else errors++;
+        await new Promise((res) => setTimeout(res, 550));
+      }
     }
     if (recipients.length > 100 && i + 100 < recipients.length) await new Promise((res) => setTimeout(res, 700));
   }
@@ -107,6 +137,7 @@ Deno.serve(async (req) => {
     queued: sent,
     sent,
     errors,
+    skipped,
     subject,
     mode,
     error: sent > 0 ? undefined : (firstErr || "Nie wysłano — sprawdź Resend"),
