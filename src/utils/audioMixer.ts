@@ -78,6 +78,15 @@ export function detectBPM(buffer: AudioBuffer): number {
   return bestBpm;
 }
 
+// Perceived loudness (RMS) — do wyrównania głośności obu utworów przed miksem.
+function rmsOf(buffer: AudioBuffer): number {
+  const ch = buffer.getChannelData(0);
+  const step = Math.max(1, Math.floor(ch.length / 100000));
+  let s = 0, n = 0;
+  for (let i = 0; i < ch.length; i += step) { s += ch[i] * ch[i]; n++; }
+  return n ? Math.sqrt(s / n) : 0;
+}
+
 // Krzywa równomocna (equal-power) — płynny crossfade bez zapadnięcia głośności.
 function equalPowerCurve(fadeIn: boolean, points = 64): Float32Array {
   const c = new Float32Array(points);
@@ -121,6 +130,12 @@ export async function mixAudioFiles(
   }
   const bLenSamples = Math.floor(bufferB.length / rateB); // efektywna długość B po zmianie tempa
 
+  // ── LOUDNESS MATCH: wyrównaj głośność (RMS) obu, żeby żaden nie dominował ──
+  const rmsA = rmsOf(bufferA), rmsB = rmsOf(bufferB);
+  const target = 0.18;
+  const gA = Math.min(1.2, gainA * (rmsA > 0.002 ? target / rmsA : 1));
+  const gB = Math.min(1.2, gainB * (rmsB > 0.002 ? target / rmsB : 1));
+
   let outputLength: number;
   const cfSamples = Math.floor(crossfadeDuration * sampleRate);
 
@@ -156,10 +171,17 @@ export async function mixAudioFiles(
       fadeOutStart = Math.max(0, Math.round(fadeOutStart / beat) * beat);
     }
     gainNodeA.gain.setValueCurveAtTime(
-      equalPowerCurve(false).map((v) => v * gainA) as unknown as Float32Array,
+      equalPowerCurve(false).map((v) => v * gA) as unknown as Float32Array,
       fadeOutStart, crossfadeDuration,
     );
-    sourceA.connect(gainNodeA).connect(comp);
+    // EQ carving: w trakcie wyjścia A wycinamy jego bas (highpass 20→240 Hz),
+    // żeby bas B wszedł czysto — koniec „muła" nakładających się dołów.
+    const hpA = offlineCtx.createBiquadFilter();
+    hpA.type = "highpass";
+    hpA.frequency.setValueAtTime(20, 0);
+    hpA.frequency.setValueAtTime(20, fadeOutStart);
+    hpA.frequency.linearRampToValueAtTime(240, fadeOutStart + crossfadeDuration);
+    sourceA.connect(gainNodeA).connect(hpA).connect(comp);
     sourceA.start(0);
 
     const sourceB = offlineCtx.createBufferSource();
@@ -168,7 +190,7 @@ export async function mixAudioFiles(
     const gainNodeB = offlineCtx.createGain();
     const bStartTime = fadeOutStart;
     gainNodeB.gain.setValueCurveAtTime(
-      equalPowerCurve(true).map((v) => v * gainB) as unknown as Float32Array,
+      equalPowerCurve(true).map((v) => v * gB) as unknown as Float32Array,
       bStartTime, crossfadeDuration,
     );
     sourceB.connect(gainNodeB).connect(comp);
@@ -178,24 +200,28 @@ export async function mixAudioFiles(
     const sourceA = offlineCtx.createBufferSource();
     sourceA.buffer = bufferA;
     const gainNodeA = offlineCtx.createGain();
-    gainNodeA.gain.setValueAtTime(style === "mashup" ? gainA * 0.72 : gainA, 0);
+    gainNodeA.gain.setValueAtTime(style === "mashup" ? gA * 0.72 : gA, 0);
 
     const sourceB = offlineCtx.createBufferSource();
     sourceB.buffer = bufferB;
     sourceB.playbackRate.value = rateB;
     const gainNodeB = offlineCtx.createGain();
-    gainNodeB.gain.setValueAtTime(style === "mashup" ? gainB * 0.72 : gainB, 0);
+    gainNodeB.gain.setValueAtTime(style === "mashup" ? gB * 0.72 : gB, 0);
 
     if (style === "mashup") {
+      // Bas trzyma B, a A odsiewamy z dołów (highpass ~160 Hz) — czysty, nie zabłocony mashup.
+      const hpA = offlineCtx.createBiquadFilter();
+      hpA.type = "highpass";
+      hpA.frequency.setValueAtTime(160, 0);
       const panA = offlineCtx.createStereoPanner?.();
       const panB = offlineCtx.createStereoPanner?.();
       if (panA && panB) {
         panA.pan.setValueAtTime(-0.25, 0);
         panB.pan.setValueAtTime(0.25, 0);
-        sourceA.connect(gainNodeA).connect(panA).connect(comp);
+        sourceA.connect(gainNodeA).connect(hpA).connect(panA).connect(comp);
         sourceB.connect(gainNodeB).connect(panB).connect(comp);
       } else {
-        sourceA.connect(gainNodeA).connect(comp);
+        sourceA.connect(gainNodeA).connect(hpA).connect(comp);
         sourceB.connect(gainNodeB).connect(comp);
       }
     } else {
