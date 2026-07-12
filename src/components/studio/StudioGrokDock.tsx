@@ -67,12 +67,10 @@ const pushToMainEditor = (text: string, mode: "replace" | "append") => {
 export const StudioGrokDock = () => {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
-  const [pinned, setPinned] = useState(false);
-  const closeTimer = useRef<number | null>(null);
 
   // Chat state
   const [messages, setMessages] = useState<Msg[]>([
-    { role: "assistant", content: "Cześć 🎧 Jestem asystentem promptów **GrouAI Studio**. Powiedz kilka słów albo pół pomysłu — ułożę Ci **perfekcyjny prompt** (muzyka lub teledysk/wideo). Znam gatunki, instrumenty, aranż i jak pisać prompty. Potem kliknij **„Wstaw do pola"**, żeby wrzucić gotowca do głównego okna Studia." },
+    { role: "assistant", content: "Cześć 🎧 Jestem asystentem promptów **GrouAI Studio**. Powiedz kilka słów albo pół pomysłu — ułożę Ci **perfekcyjny prompt** (muzyka lub teledysk/wideo). Znam gatunki, instrumenty, aranż i jak pisać prompty. Potem kliknij przycisk **Wstaw do pola** pod odpowiedzią, żeby wrzucić gotowca do głównego okna Studia." },
   ]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
@@ -98,16 +96,7 @@ export const StudioGrokDock = () => {
     if (el) el.scrollTop = el.scrollHeight;
   }, [messages]);
 
-  // Hover open/close with delay
-  const handleEnter = () => {
-    if (closeTimer.current) { window.clearTimeout(closeTimer.current); closeTimer.current = null; }
-    setOpen(true);
-  };
-  const handleLeave = () => {
-    if (pinned) return;
-    if (closeTimer.current) window.clearTimeout(closeTimer.current);
-    closeTimer.current = window.setTimeout(() => setOpen(false), 350);
-  };
+  // Panel otwiera/zamyka się TYLKO klikiem (bez hover — żeby nie wyjeżdżał sam).
 
   const loadLibrary = useCallback(async () => {
     if (!user) { toast.error("Zaloguj się"); return; }
@@ -270,16 +259,14 @@ export const StudioGrokDock = () => {
     <>
       {/* Right-edge hover zone with vertical "GrAIstudio" tab */}
       <div
-        onMouseEnter={handleEnter}
-        onMouseLeave={handleLeave}
         style={{ bottom: DOCK_BOTTOM_OFFSET + (DOCK_H - 176) / 2 }}
         className="fixed right-0 z-40 flex items-center"
       >
         <button
           type="button"
-          onClick={() => { setOpen(true); setPinned(true); }}
+          onClick={() => setOpen((o) => !o)}
           className="group relative flex h-44 w-9 items-center justify-center rounded-l-xl border border-r-0 border-primary/40 bg-gradient-to-b from-primary/30 via-purple-500/20 to-primary/30 backdrop-blur-xl shadow-[0_0_20px_hsl(var(--primary)/0.4)] hover:shadow-[0_0_30px_hsl(var(--primary)/0.7)] transition-all"
-          aria-label="Otwórz GrAIstudio"
+          aria-label={open ? "Zamknij GrAIstudio" : "Otwórz GrAIstudio"}
         >
           <span
             className="text-[11px] font-bold tracking-[0.25em] text-primary-foreground select-none"
@@ -287,7 +274,11 @@ export const StudioGrokDock = () => {
           >
             GrAIstudio
           </span>
-          <Sparkles className="absolute top-1.5 left-1/2 -translate-x-1/2 h-3 w-3 text-primary animate-pulse" />
+          {open ? (
+            <X className="absolute top-1.5 left-1/2 -translate-x-1/2 h-3.5 w-3.5 text-primary-foreground" />
+          ) : (
+            <Sparkles className="absolute top-1.5 left-1/2 -translate-x-1/2 h-3 w-3 text-primary animate-pulse" />
+          )}
         </button>
       </div>
 
@@ -298,8 +289,6 @@ export const StudioGrokDock = () => {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: DOCK_W }}
             transition={{ type: "spring", damping: 26, stiffness: 240 }}
-            onMouseEnter={handleEnter}
-            onMouseLeave={handleLeave}
             style={{ width: DOCK_W, height: DOCK_H, bottom: DOCK_BOTTOM_OFFSET }}
             className="fixed right-9 z-50 flex flex-col rounded-2xl rounded-r-none border border-r-0 border-primary/30 bg-background/95 backdrop-blur-2xl shadow-2xl shadow-primary/20 overflow-hidden"
           >
@@ -340,7 +329,7 @@ export const StudioGrokDock = () => {
                   variant="ghost"
                   size="icon"
                   className="h-6 w-6 rounded-full hover:bg-destructive/20 hover:text-destructive"
-                  onClick={() => { setPinned(false); setOpen(false); }}
+                  onClick={() => setOpen(false)}
                   aria-label="Zamknij"
                 >
                   <X className="h-3.5 w-3.5" />
@@ -502,7 +491,7 @@ export const StudioGrokDock = () => {
                     </Button>
                   </div>
                   <p className="mt-1 text-center text-[8px] text-muted-foreground">
-                    Najedź na zakładkę po prawej · Shift+Enter = nowa linia
+                    Kliknij zakładkę „GrAIstudio", by otworzyć/zamknąć · Shift+Enter = nowa linia
                   </p>
                 </form>
               </div>
