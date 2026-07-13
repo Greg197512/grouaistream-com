@@ -43,6 +43,28 @@ const STRUCTURE_TAGS = [
   "[Zwrotka 2]", "[Bridge]", "[Solo]", "[Outro]",
 ];
 
+// Wybuch cząsteczek przy udanej generacji („drop").
+const BURST_ICONS = ["🎵", "🎶", "✨", "🔥", "💫", "🎧"];
+const MusicBurst = () => (
+  <div className="pointer-events-none fixed inset-0 z-[120] flex items-center justify-center">
+    {Array.from({ length: 18 }).map((_, i) => {
+      const angle = (i / 18) * Math.PI * 2;
+      const dist = 120 + Math.random() * 160;
+      return (
+        <motion.span
+          key={i}
+          initial={{ x: 0, y: 0, opacity: 1, scale: 0.5 }}
+          animate={{ x: Math.cos(angle) * dist, y: Math.sin(angle) * dist, opacity: 0, scale: 1.4, rotate: (Math.random() - 0.5) * 220 }}
+          transition={{ duration: 1.1 + Math.random() * 0.5, ease: "easeOut" }}
+          className="absolute text-2xl"
+        >
+          {BURST_ICONS[i % BURST_ICONS.length]}
+        </motion.span>
+      );
+    })}
+  </div>
+);
+
 type CoverMode = "auto" | "custom" | "upload";
 
 type Engine = "acestep" | "musicgen";
@@ -62,6 +84,7 @@ export const SunoGeneratePanel = () => {
   const [songs, setSongs] = useState<GeneratedSong[]>([]);
   const [statusMsg, setStatusMsg] = useState("");
   const [masteringId, setMasteringId] = useState<string | null>(null);
+  const [burstKey, setBurstKey] = useState(0);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // ACE-Step: engine choice + editable lyrics (AI proposes → user fixes → ACE sings)
@@ -293,7 +316,10 @@ export const SunoGeneratePanel = () => {
     }));
     setSongs(parsed);
     setStatusMsg(parsed.length > 0 ? `✅ Wygenerowano ${parsed.length} utworów!` : "Brak wyników");
-    if (parsed.length > 0) toast.success(`🎶 Wygenerowano ${parsed.length} utworów!`);
+    if (parsed.length > 0) {
+      toast.success(`🎶 Wygenerowano ${parsed.length} utworów!`);
+      setBurstKey((k) => k + 1); // wybuch cząsteczek
+    }
   };
 
   const playSong = (song: GeneratedSong) => {
@@ -663,6 +689,9 @@ export const SunoGeneratePanel = () => {
 
       {/* Generowanie wymaga planu Pro/Ultimate */}
       <UpgradeModal open={showUpgrade} onOpenChange={setShowUpgrade} />
+
+      {/* Wybuch cząsteczek po udanej generacji */}
+      {burstKey > 0 && <MusicBurst key={burstKey} />}
     </div>
   );
 };

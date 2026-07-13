@@ -531,3 +531,33 @@ html[data-threed="on"] .material-icons {
     );
   }
 }
+
+/* ===== GrouAI Studio — premium szklany hero + aurora ===== */
+.studio-hero-glass {
+  background: rgba(18, 14, 36, 0.35);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 14px 48px -14px rgba(147, 51, 234, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+.studio-aurora {
+  position: absolute;
+  inset: -45%;
+  pointer-events: none;
+  background:
+    radial-gradient(40% 40% at 30% 30%, rgba(255, 107, 0, 0.35), transparent 70%),
+    radial-gradient(45% 45% at 70% 60%, rgba(147, 51, 234, 0.42), transparent 70%),
+    radial-gradient(35% 35% at 55% 82%, rgba(255, 149, 0, 0.25), transparent 70%);
+  filter: blur(30px);
+  animation: studioAuroraSpin 16s linear infinite;
+}
+@keyframes studioAuroraSpin {
+  0% { transform: rotate(0deg) scale(1.1); }
+  50% { transform: rotate(180deg) scale(1.28); }
+  100% { transform: rotate(360deg) scale(1.1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .studio-aurora { animation: none; }
+}

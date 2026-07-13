@@ -112,8 +112,10 @@ export const StudioVisualizer = () => {
   }, []);
 
   return (
-    <div className="relative mx-auto w-full max-w-md h-40 sm:h-48">
-      <canvas ref={canvasRef} className="h-full w-full" />
+    <div className="studio-hero-glass relative mx-auto w-full max-w-md h-40 overflow-hidden rounded-3xl sm:h-48">
+      {/* Animowana aurora za wizualizerem */}
+      <div className="studio-aurora" aria-hidden />
+      <canvas ref={canvasRef} className="relative z-10 h-full w-full" />
     </div>
   );
 };
