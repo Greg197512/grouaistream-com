@@ -51,3 +51,19 @@ try {
 } catch { /* ignore */ }
 
 createRoot(document.getElementById("root")!).render(<App />);
+
+// AUTO-ODŚWIEŻANIE (bez Service Workera): gdy apka — zwłaszcza zainstalowana na
+// telefonie/tablecie/Macu — wróci na wierzch po dłuższym czasie w tle, przeładuj
+// świeżą wersję ze strony. Dzięki temu „zainstalowana apka" ma zawsze aktualne dane.
+try {
+  let hiddenAt = 0;
+  const IDLE_MS = 25 * 60 * 1000; // 25 min w tle → odśwież po powrocie
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) {
+      hiddenAt = Date.now();
+    } else if (hiddenAt && Date.now() - hiddenAt > IDLE_MS) {
+      hiddenAt = 0;
+      window.location.reload();
+    }
+  });
+} catch { /* ignore */ }

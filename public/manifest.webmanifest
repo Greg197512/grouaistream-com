@@ -1,0 +1,20 @@
+{
+  "name": "GrouAI Stream",
+  "short_name": "GrouAI",
+  "description": "Twórz muzykę AI, słuchaj GrouaRadio 24/7 i odkrywaj utwory — uczciwy streaming bez botów.",
+  "id": "/",
+  "start_url": "/?src=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "background_color": "#0a0a0a",
+  "theme_color": "#0a0a0a",
+  "lang": "pl",
+  "dir": "ltr",
+  "categories": ["music", "entertainment"],
+  "icons": [
+    { "src": "/grouai-icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/grouai-icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" },
+    { "src": "/favicon.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}
