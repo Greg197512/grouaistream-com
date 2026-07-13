@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import {
   Settings as SettingsIcon, User, Bell, Shield, LogOut, Camera,
-  Brain, Eye, Mic, Heart, Trash2, Loader2
+  Brain, Eye, Mic, Heart, Trash2, Loader2, Box
 } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -14,10 +14,12 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { SubscriptionManager } from "@/components/settings/SubscriptionManager";
+import { useEffects3D } from "@/contexts/Effects3DContext";
 
 const Settings = () => {
   const { user, signOut } = useAuth();
   const { t } = useLanguage();
+  const { is3D, setIs3D } = useEffects3D();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [displayName, setDisplayName] = useState(user?.user_metadata?.display_name || "");
@@ -226,6 +228,23 @@ const Settings = () => {
             <h2 className="font-semibold">Subskrypcja</h2>
           </div>
           <SubscriptionManager />
+        </section>
+
+        {/* Wygląd / Efekt 3D — działa też na telefonie (przełącznik dostępny bez menu bocznego) */}
+        <section className="groove-card p-6 mb-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Box className="h-5 w-5 text-primary" />
+            <h2 className="font-semibold">Wygląd</h2>
+          </div>
+          <div className="space-y-4">
+            <SettingRow
+              icon={Box}
+              title="Efekt 3D"
+              desc="Wypukłe kafelki i okładki, które żyją pod kursorem, a na telefonie reagują na przechył. Wyłącz, jeśli wolisz płasko lub chcesz oszczędzać baterię."
+              checked={is3D}
+              onChange={setIs3D}
+            />
+          </div>
         </section>
 
         {/* AI & Privacy Section */}
