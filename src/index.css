@@ -561,3 +561,15 @@ html[data-threed="on"] .material-icons {
 @media (prefers-reduced-motion: reduce) {
   .studio-aurora { animation: none; }
 }
+
+/* ===== GrouAI Studio — analogowa konsola (amplituner) ===== */
+.studio-console {
+  background:
+    linear-gradient(180deg, rgba(42, 34, 56, 0.6), rgba(16, 12, 26, 0.9)),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.035) 0 1px, transparent 1px 3px);
+  border: 1px solid rgba(255, 180, 80, 0.18);
+  box-shadow:
+    0 10px 40px -12px rgba(0, 0, 0, 0.7),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 -24px 46px -22px rgba(147, 51, 234, 0.35);
+}
