@@ -41,11 +41,22 @@ function triggerDownload(blob: Blob, filename: string) {
   setTimeout(() => URL.revokeObjectURL(objectUrl), 10_000);
 }
 
+export interface MasterOptions {
+  loudness?: number;   // 0..100 — docelowa głośność (RMS)
+  brightness?: number; // 0..100 — powietrze/obecność (wysokie tony)
+  bass?: number;       // 0..100 — dolna półka (bas)
+}
+
 /**
  * Masteruje audio spod URL i pobiera zmasterowany WAV.
  * Dekodowanie działa jak w downloadAudioAsWav (te same adresy przechodzą CORS).
+ * `opts` (0..100) sterują głośnością, jasnością i basem.
  */
-export async function masterAudioToWav(url: string, filename: string): Promise<void> {
+export async function masterAudioToWav(url: string, filename: string, opts: MasterOptions = {}): Promise<void> {
+  const loudness = opts.loudness ?? 60;
+  const brightness = opts.brightness ?? 50;
+  const bass = opts.bass ?? 50;
+
   const r = await fetch(url);
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
   const arrayBuffer = await r.arrayBuffer();
@@ -62,17 +73,21 @@ export async function masterAudioToWav(url: string, filename: string): Promise<v
     for (let i = 0; i < d.length; i += 64) { sum += d[i] * d[i]; count++; }
   }
   const inputRms = Math.sqrt(sum / Math.max(1, count)) || 0.05;
-  const targetRms = 0.14; // ~ poziom streamingowy
-  const normGain = Math.min(4, Math.max(0.5, targetRms / inputRms));
+  const targetRms = 0.07 + (loudness / 100) * 0.13; // 0.07..0.20
+  const normGain = Math.min(5, Math.max(0.4, targetRms / inputRms));
+
+  const lowGain = -0.5 + (bass / 100) * 5;        // -0.5..+4.5 dB
+  const airGain = -0.5 + (brightness / 100) * 5;  // -0.5..+4.5 dB
+  const presGain = -0.25 + (brightness / 100) * 3; // -0.25..+2.75 dB
 
   const ctx = new OfflineAudioContext(audio.numberOfChannels, audio.length, audio.sampleRate);
   const src = ctx.createBufferSource();
   src.buffer = audio;
 
   const hpf = ctx.createBiquadFilter(); hpf.type = "highpass"; hpf.frequency.value = 30; hpf.Q.value = 0.7;
-  const low = ctx.createBiquadFilter(); low.type = "lowshelf"; low.frequency.value = 110; low.gain.value = 1.5;
-  const pres = ctx.createBiquadFilter(); pres.type = "peaking"; pres.frequency.value = 3000; pres.Q.value = 1; pres.gain.value = 2;
-  const air = ctx.createBiquadFilter(); air.type = "highshelf"; air.frequency.value = 11000; air.gain.value = 2;
+  const low = ctx.createBiquadFilter(); low.type = "lowshelf"; low.frequency.value = 110; low.gain.value = lowGain;
+  const pres = ctx.createBiquadFilter(); pres.type = "peaking"; pres.frequency.value = 3000; pres.Q.value = 1; pres.gain.value = presGain;
+  const air = ctx.createBiquadFilter(); air.type = "highshelf"; air.frequency.value = 11000; air.gain.value = airGain;
 
   const glue = ctx.createDynamicsCompressor();
   glue.threshold.value = -18; glue.knee.value = 30; glue.ratio.value = 2.5; glue.attack.value = 0.01; glue.release.value = 0.25;

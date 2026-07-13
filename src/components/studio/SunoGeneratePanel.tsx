@@ -85,6 +85,10 @@ export const SunoGeneratePanel = () => {
   const [statusMsg, setStatusMsg] = useState("");
   const [masteringId, setMasteringId] = useState<string | null>(null);
   const [burstKey, setBurstKey] = useState(0);
+  // Ustawienia masteringu (0..100)
+  const [masterLoud, setMasterLoud] = useState(60);
+  const [masterBright, setMasterBright] = useState(50);
+  const [masterBass, setMasterBass] = useState(50);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // ACE-Step: engine choice + editable lyrics (AI proposes → user fixes → ACE sings)
@@ -619,6 +623,29 @@ export const SunoGeneratePanel = () => {
             <h3 className="font-bold text-sm flex items-center gap-2 text-white">
               <Music className="h-4 w-4 text-[#FF9500]" /> Wygenerowane utwory
             </h3>
+
+            {/* Ustawienia masteringu — używane przez przycisk „Masteruj" na utworze */}
+            <div className="p-3 rounded-xl border border-emerald-500/20 bg-[#101826]/60 space-y-2">
+              <div className="flex items-center gap-2">
+                <SlidersHorizontal className="h-3.5 w-3.5 text-emerald-400" />
+                <span className="text-xs font-medium text-gray-200">🎚️ Mastering — dostrój przed pobraniem WAV</span>
+              </div>
+              {[
+                { label: "Głośność", val: masterLoud, set: setMasterLoud },
+                { label: "Jasność", val: masterBright, set: setMasterBright },
+                { label: "Bas", val: masterBass, set: setMasterBass },
+              ].map((s) => (
+                <div key={s.label} className="flex items-center gap-2">
+                  <span className="w-16 text-[11px] text-gray-400">{s.label}</span>
+                  <input
+                    type="range" min={0} max={100} value={s.val}
+                    onChange={(e) => s.set(parseInt(e.target.value))}
+                    className="flex-1 accent-emerald-400"
+                  />
+                  <span className="w-8 text-right text-[10px] text-gray-500">{s.val}</span>
+                </div>
+              ))}
+            </div>
             {songs.map((song) => (
               <motion.div
                 key={song.id}
@@ -666,7 +693,7 @@ export const SunoGeneratePanel = () => {
                       setMasteringId(song.id);
                       toast.loading("🎚️ Masteruję (EQ + kompresja + głośność)...", { id: "master" });
                       try {
-                        await masterAudioToWav(url, `${song.title || "grouai-track"} (master).wav`);
+                        await masterAudioToWav(url, `${song.title || "grouai-track"} (master).wav`, { loudness: masterLoud, brightness: masterBright, bass: masterBass });
                         toast.success("Gotowe — pobrano zmasterowany WAV 🎚️", { id: "master" });
                       } catch {
                         toast.error("Nie udało się zmasterować tego pliku", { id: "master" });
