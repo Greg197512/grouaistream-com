@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { useLanguage } from "@/contexts/LanguageContext";
 import logoIcon from "@/assets/logo-full.png";
 import { MatrixNotes } from "@/components/effects/MatrixNotes";
+import { useEffects3D } from "@/contexts/Effects3DContext";
 
 interface SidebarProps {
   collapsed: boolean;
@@ -17,7 +18,7 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
   const location = useLocation();
   const { t } = useLanguage();
   const [activeItem, setActiveItem] = useState(location.pathname);
-  const [matrixEnabled, setMatrixEnabled] = useState(true);
+  const { is3D, toggle: toggle3D } = useEffects3D();
 
   useEffect(() => {
     setActiveItem(location.pathname);
@@ -75,7 +76,7 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
             onClick={() => handleNavClick("/")}
           >
             <div className="absolute -inset-4 overflow-hidden">
-              <MatrixNotes enabled={matrixEnabled} />
+              <MatrixNotes enabled={is3D} />
             </div>
             <img src="/logo-icon.png" alt="GrouAI Stream" className="h-14 w-14 object-contain drop-shadow-[0_0_12px_hsl(var(--primary)/0.5)] relative z-10" />
           </motion.div>
@@ -89,7 +90,7 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
             whileHover={{ scale: 1.03 }}
           >
             <div className="absolute -inset-6 overflow-hidden">
-              <MatrixNotes enabled={matrixEnabled} />
+              <MatrixNotes enabled={is3D} />
             </div>
             <img src={logoIcon} alt="GrouAI Stream by GrouaRock" className="h-24 object-contain relative z-10" />
           </motion.div>
@@ -164,23 +165,23 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
       <div className="border-t border-border p-3 space-y-1">
         <NavItem icon="settings" label={t("nav.settings")} active={activeItem === "/settings"} collapsed={collapsed} onClick={() => handleNavClick("/settings")} />
         <NavItem icon="gavel" label={t("nav.legalDocs")} active={activeItem === "/legal"} collapsed={collapsed} onClick={() => handleNavClick("/legal")} />
-        {/* Matrix notes toggle */}
+        {/* Przełącznik prawdziwego trybu 3D (wypukłe kafelki + przechył pod kursorem/żyroskopem) */}
         <button
-          onClick={() => setMatrixEnabled(!matrixEnabled)}
+          onClick={toggle3D}
           className={cn(
             "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all",
-            matrixEnabled ? "text-accent" : "text-muted-foreground hover:text-sidebar-foreground",
+            is3D ? "text-accent" : "text-muted-foreground hover:text-sidebar-foreground",
             collapsed && "justify-center px-2"
           )}
-          title={matrixEnabled ? "Wyłącz efekt nut" : "Włącz efekt nut"}
+          title={is3D ? "Wyłącz efekt 3D" : "Włącz efekt 3D"}
         >
           <span className={cn(
             "h-3 w-3 rounded-full border-2 transition-all flex-shrink-0",
-            matrixEnabled 
-              ? "bg-accent border-accent shadow-[0_0_8px_hsl(var(--accent)/0.6)]" 
+            is3D
+              ? "bg-accent border-accent shadow-[0_0_8px_hsl(var(--accent)/0.6)]"
               : "bg-transparent border-muted-foreground"
           )} />
-          {!collapsed && <span className="text-left truncate">{matrixEnabled ? "♪ Efekt 3D: ON" : "♪ Efekt 3D: OFF"}</span>}
+          {!collapsed && <span className="text-left truncate">{is3D ? "✦ Efekt 3D: ON" : "✦ Efekt 3D: OFF"}</span>}
         </button>
       </div>
     </motion.aside>

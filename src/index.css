@@ -461,3 +461,73 @@
   border-radius: calc(1rem - 2px);
   overflow: hidden;
 }
+
+/* ============================================================
+   TRYB 3D — przełącznik „✦ Efekt 3D" w menu (html[data-threed="on"]).
+   Kafelki i ikony wyglądają na wypukłe i żywe, a światło idzie
+   za kursorem (na telefonie/tablecie — za przechyłem, żyroskop).
+   Wszystko przez cień/światło/parallax obrazka, więc NIE koliduje
+   z transformami drag-and-drop ani framer-motion.
+   ============================================================ */
+
+/* Uniesione, wypukłe kafelki (drop-shadow nie nadpisuje transformów) */
+html[data-threed="on"] .card-3d {
+  filter: drop-shadow(0 10px 16px rgba(0, 0, 0, 0.55));
+  transition: filter 0.3s ease;
+}
+html[data-threed="on"] .card-3d:hover {
+  filter: drop-shadow(0 20px 28px rgba(0, 0, 0, 0.72));
+}
+
+/* Okładka jak wypukła: górny błysk + dolny wewnętrzny cień + narożny połysk */
+html[data-threed="on"] .cover-3d {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    inset 0 -14px 26px -16px rgba(0, 0, 0, 0.7);
+}
+html[data-threed="on"] .cover-3d::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.10) 0%, transparent 42%);
+  mix-blend-mode: screen;
+  opacity: 0.5;
+}
+
+/* „Żywe naturalne" okładki: parallax za kursorem/przechyłem + zoom na hover */
+@media (prefers-reduced-motion: no-preference) {
+  html[data-threed="on"] .cover-3d img {
+    transform: translate3d(calc(var(--tilt-x, 0) * 4px), calc(var(--tilt-y, 0) * 4px), 0) scale(1.06);
+    transition: transform 0.18s ease-out, filter 0.3s ease;
+    filter: saturate(1.06) contrast(1.03);
+  }
+  html[data-threed="on"] .card-3d:hover .cover-3d img {
+    transform: translate3d(calc(var(--tilt-x, 0) * 6px), calc(var(--tilt-y, 0) * 6px), 0) scale(1.12);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  html[data-threed="on"] .cover-3d img { filter: saturate(1.05) contrast(1.02); }
+}
+
+/* Wypukłe (embossowane) ikony w menu i nagłówkach gatunków */
+html[data-threed="on"] .material-icons {
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.18), 0 2px 5px rgba(0, 0, 0, 0.55);
+}
+
+/* Delikatne światło idące za kursorem / przechyłem telefonu */
+@media (prefers-reduced-motion: no-preference) {
+  html[data-threed="on"] main::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background: radial-gradient(
+      620px circle at calc(50% + var(--tilt-x, 0) * 42%) calc(42% + var(--tilt-y, 0) * 32%),
+      hsl(var(--primary) / 0.06),
+      transparent 62%
+    );
+  }
+}

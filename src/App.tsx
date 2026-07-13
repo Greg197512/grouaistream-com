@@ -11,6 +11,7 @@ import { AIProvider } from "@/contexts/AIContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 
 import { SubscriptionProvider } from "@/contexts/SubscriptionContext";
+import { Effects3DProvider } from "@/contexts/Effects3DContext";
 import { AutoVoiceListener } from "@/components/player/AutoVoiceListener";
 import { StemsModal } from "@/components/studio/StemsModal";
 import { PWAInstallPrompt } from "@/components/pwa/PWAInstallPrompt";
@@ -197,11 +198,13 @@ const App = () => (
         <PlayerProvider>
           <AIProvider>
             <TooltipProvider>
-              <div className="dark">
-                <Toaster />
-                <Sonner />
-                <AppShell />
-              </div>
+              <Effects3DProvider>
+                <div className="dark">
+                  <Toaster />
+                  <Sonner />
+                  <AppShell />
+                </div>
+              </Effects3DProvider>
             </TooltipProvider>
           </AIProvider>
         </PlayerProvider>

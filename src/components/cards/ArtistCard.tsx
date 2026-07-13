@@ -2,6 +2,7 @@ import { useRef } from "react";
 import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
 import { Play, Disc3, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useEffects3D } from "@/contexts/Effects3DContext";
 
 interface ArtistCardProps {
   name: string;
@@ -23,6 +24,7 @@ export const ArtistCard = ({
   onClick,
 }: ArtistCardProps) => {
   const cardRef = useRef<HTMLDivElement>(null);
+  const { is3D } = useEffects3D();
 
   // 3D tilt motion values
   const mouseX = useMotionValue(0);
@@ -33,6 +35,7 @@ export const ArtistCard = ({
   const glowY = useTransform(mouseY, [-0.5, 0.5], ["0%", "100%"]);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!is3D) return;
     const rect = cardRef.current?.getBoundingClientRect();
     if (!rect) return;
     mouseX.set((e.clientX - rect.left) / rect.width - 0.5);
@@ -51,8 +54,8 @@ export const ArtistCard = ({
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
       whileTap={{ scale: 0.96 }}
-      style={{ rotateX, rotateY, transformStyle: "preserve-3d", perspective: 800 }}
-      className="group cursor-pointer p-3 sm:p-4 text-center relative overflow-hidden rounded-2xl bg-card/60 backdrop-blur-sm border border-border/30 hover:border-primary/40 transition-colors duration-300"
+      style={is3D ? { rotateX, rotateY, transformStyle: "preserve-3d", perspective: 800 } : undefined}
+      className="card-3d group cursor-pointer p-3 sm:p-4 text-center relative overflow-hidden rounded-2xl bg-card/60 backdrop-blur-sm border border-border/30 hover:border-primary/40 transition-colors duration-300"
     >
       {/* Dynamic mouse-tracked highlight */}
       <motion.div

@@ -49,7 +49,7 @@ export const DraggableTrackCard = ({
           }}
           transition={{ delay: index * 0.03 }}
           className={cn(
-            "relative group cursor-pointer rounded-lg overflow-hidden bg-secondary/50 hover:bg-secondary transition-all",
+            "card-3d relative group cursor-pointer rounded-lg overflow-hidden bg-secondary/50 hover:bg-secondary transition-all",
             currentTrack?.id === track.id && "ring-2 ring-primary",
             snapshot.isDragging && "ring-2 ring-accent rotate-2"
           )}
@@ -65,8 +65,8 @@ export const DraggableTrackCard = ({
           )}
 
           {/* Cover */}
-          <div 
-            className="relative aspect-square"
+          <div
+            className="cover-3d relative aspect-square"
             onClick={handlePlay}
           >
             {track.cover_url ? (
