@@ -23,6 +23,7 @@ import { MusicPromptBox } from "@/components/studio/MusicPromptBox";
 import { VoiceRecorder } from "@/components/studio/VoiceRecorder";
 import { VoiceLibrary } from "@/components/studio/VoiceLibrary";
 import { StudioGrokDock } from "@/components/studio/StudioGrokDock";
+import { StudioVisualizer } from "@/components/studio/StudioVisualizer";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { uploadToR2 } from "@/lib/r2Upload";
@@ -772,6 +773,9 @@ const Suno = () => {
               Twórz profesjonalne utwory muzyczne z AI. Wybierz styl, wpisz tekst, wybierz głos — i wygeneruj muzykę ze śpiewanym wokalem w jakości studyjnej.
             </p>
           </motion.div>
+
+          {/* Sygnaturowy wizualizer — reaguje na grający utwór */}
+          <StudioVisualizer />
 
           {/* Engine badge */}
           <div className="flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-gradient-to-r from-[#FF6B00]/10 to-[#9333EA]/10 border border-[#FF6B00]/20">
