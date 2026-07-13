@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Music, Loader2, Play, Download, Wand2, Guitar, ImagePlus, Upload, X, Zap, Mic2, FileText, Save } from "lucide-react";
+import { Sparkles, Music, Loader2, Play, Download, Wand2, Guitar, ImagePlus, Upload, X, Zap, Mic2, FileText, Save, Gauge } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -30,6 +30,18 @@ const STYLE_PRESETS = [
   "Ambient", "Trap", "House", "Disco",
 ];
 
+// Polskie gatunki — dedykowane, jednym klikiem (przewaga nad Suno).
+const PL_GENRES = [
+  "Disco Polo", "Rap uliczny", "Rock'n'roll PL", "Metal PL",
+  "Folk", "Poezja śpiewana", "Dance/Eurodance", "Muzyka filmowa",
+];
+
+// Sekcje struktury — klik wstawia znacznik do tekstu (ACE śpiewa wg struktury).
+const STRUCTURE_TAGS = [
+  "[Intro]", "[Zwrotka 1]", "[Pre-refren]", "[Refren]",
+  "[Zwrotka 2]", "[Bridge]", "[Solo]", "[Outro]",
+];
+
 type CoverMode = "auto" | "custom" | "upload";
 
 type Engine = "acestep" | "musicgen";
@@ -55,6 +67,27 @@ export const SunoGeneratePanel = () => {
   const [lyrics, setLyrics] = useState("");
   const [lyricsLang, setLyricsLang] = useState<"pl" | "en" | "nl" | "uk">("pl");
   const [writingLyrics, setWritingLyrics] = useState(false);
+
+  // Slidery wibracji — 0..100 (energia, emocje, oryginalność, radiowość) → opis dokładany do promptu.
+  const [energy, setEnergy] = useState(50);
+  const [emotion, setEmotion] = useState(50);
+  const [originality, setOriginality] = useState(50);
+  const [radioFriendly, setRadioFriendly] = useState(50);
+
+  // Klik w sekcję struktury → dopisuje znacznik do tekstu.
+  const insertStructure = (tag: string) => {
+    setLyrics((prev) => (prev.trim() ? `${prev.replace(/\s+$/, "")}\n\n${tag}\n` : `${tag}\n`));
+  };
+
+  // Buduje słowny opis z suwaków (silnik lepiej rozumie słowa niż liczby).
+  const buildVibe = (): string => {
+    const parts: string[] = [];
+    parts.push(energy < 33 ? "spokojna, stonowana energia" : energy > 66 ? "wysoka energia, mocne uderzenie" : "zrównoważona energia");
+    parts.push(emotion < 33 ? "chłodny, zdystansowany nastrój" : emotion > 66 ? "bardzo emocjonalny, poruszający wokal" : "umiarkowanie emocjonalny");
+    parts.push(originality < 33 ? "klasyczne, sprawdzone brzmienie" : originality > 66 ? "eksperymentalne, oryginalne, nieszablonowe" : "świeże, ale przystępne brzmienie");
+    parts.push(radioFriendly > 66 ? "chwytliwy, radiowy, hitowy refren" : radioFriendly < 33 ? "alternatywne, undergroundowe brzmienie" : "przyjemne dla ucha");
+    return parts.join(", ");
+  };
 
   const [coverMode, setCoverMode] = useState<CoverMode>("auto");
   const [showUpgrade, setShowUpgrade] = useState(false);
@@ -144,11 +177,12 @@ export const SunoGeneratePanel = () => {
     setStatusMsg(`🧠 ${engineLabel} generuje...`);
 
     try {
+      const vibe = buildVibe();
       const fnName = usingAce ? "acestep-generate" : "groua-music-engine";
       const reqBody: any = usingAce
         ? {
             action: "generate",
-            prompt: prompt.trim() + (style ? `, ${style}` : ""),
+            prompt: prompt.trim() + (style ? `, ${style}` : "") + (vibe ? `, ${vibe}` : ""),
             lyrics: instrumental ? "" : lyrics,
             vocal_language: lyricsLang,
             duration,
@@ -158,7 +192,7 @@ export const SunoGeneratePanel = () => {
           }
         : {
             action: "generate",
-            prompt: prompt.trim(),
+            prompt: prompt.trim() + (vibe ? `, ${vibe}` : ""),
             duration: Math.min(duration, 30),
             instrumental,
             use_fingerprint: useFingerprint,
@@ -391,6 +425,19 @@ export const SunoGeneratePanel = () => {
                 rows={6}
                 className="bg-[#0f0f1e] border-[#FF6B00]/20 text-white placeholder:text-gray-600 focus:border-[#FF6B00] resize-none font-mono text-sm"
               />
+              {/* Struktura: klik wstawia sekcję do tekstu */}
+              <div className="flex flex-wrap gap-1.5">
+                {STRUCTURE_TAGS.map((tag) => (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => insertStructure(tag)}
+                    className="text-[10px] px-2 py-1 rounded-md border border-[#9333EA]/30 bg-[#9333EA]/10 text-gray-200 hover:bg-[#9333EA]/25 transition-colors"
+                  >
+                    + {tag}
+                  </button>
+                ))}
+              </div>
               <Button
                 onClick={writeLyricsWithAI}
                 disabled={writingLyrics || !prompt.trim()}
@@ -406,6 +453,32 @@ export const SunoGeneratePanel = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Wibracja — slidery doklejane słownie do promptu silnika */}
+      <div className="p-4 rounded-xl border border-[#9333EA]/20 bg-[#1a1a2e]/60 space-y-3">
+        <div className="flex items-center gap-2">
+          <Gauge className="h-4 w-4 text-[#FF9500]" />
+          <Label className="text-sm font-medium text-gray-200">Wibracja utworu</Label>
+        </div>
+        {[
+          { label: "Energia", val: energy, set: setEnergy, lo: "spokojnie", hi: "mocno" },
+          { label: "Emocje", val: emotion, set: setEmotion, lo: "chłodno", hi: "wzruszająco" },
+          { label: "Oryginalność", val: originality, set: setOriginality, lo: "klasycznie", hi: "eksperyment" },
+          { label: "Radiowość", val: radioFriendly, set: setRadioFriendly, lo: "underground", hi: "hit radiowy" },
+        ].map((s) => (
+          <div key={s.label} className="space-y-1">
+            <div className="flex justify-between text-[11px] text-gray-400">
+              <span className="font-medium text-gray-300">{s.label}</span>
+              <span className="text-gray-500">{s.lo} ↔ {s.hi}</span>
+            </div>
+            <input
+              type="range" min={0} max={100} step={1} value={s.val}
+              onChange={(e) => s.set(parseInt(e.target.value))}
+              className="w-full accent-[#9333EA]"
+            />
+          </div>
+        ))}
+      </div>
 
       {/* Custom mode fields */}
       <AnimatePresence>
@@ -425,6 +498,15 @@ export const SunoGeneratePanel = () => {
                   <Badge key={s}
                     className={`cursor-pointer text-xs px-3 py-1.5 transition-all ${style === s ? "text-white border-transparent" : "bg-transparent border-[#9333EA]/20 text-gray-400 hover:border-[#9333EA]/50"}`}
                     style={style === s ? { background: "linear-gradient(135deg, #9333EA, #FF6B00)" } : undefined}
+                    onClick={() => setStyle(s)}>{s}</Badge>
+                ))}
+              </div>
+              <p className="text-[10px] text-gray-500 mt-2">🇵🇱 Polskie gatunki:</p>
+              <div className="flex flex-wrap gap-1.5">
+                {PL_GENRES.map((s) => (
+                  <Badge key={s}
+                    className={`cursor-pointer text-xs px-3 py-1.5 transition-all ${style === s ? "text-white border-transparent" : "bg-transparent border-[#FF6B00]/20 text-gray-400 hover:border-[#FF6B00]/50"}`}
+                    style={style === s ? { background: "linear-gradient(135deg, #FF6B00, #9333EA)" } : undefined}
                     onClick={() => setStyle(s)}>{s}</Badge>
                 ))}
               </div>
