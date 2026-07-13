@@ -183,31 +183,45 @@ Deno.serve(async (req) => {
 
     const instrumental: boolean = !!body.instrumental;
     const lyrics: string = instrumental ? "[instrumental]" : (body.lyrics || "[instrumental]").trim();
-    const duration: number = Math.min(Math.max(body.duration || body.duration_seconds || 180, 10), 240);
+    const duration: number = Math.min(Math.max(body.duration || body.duration_seconds || 180, 10), 360);
     const title: string = body.title || "GrouAI Track";
 
-    // ROUTING SILNIKÓW:
-    // - wokal → MiniMax music-1.5 (oficjalny model Replicate: jakość i tempo
-    //   klasy Suno, ~49 s na piosenkę, groszowe koszty)
-    // - instrumental → ACE-Step (MiniMax wymaga tekstu)
+    // ROUTING SILNIKÓW (2026-07-14, „najwyższy poziom"):
+    // - wokal → MiniMax music-2.6 (oficjalny, klasa najbliższa Suno: oddech,
+    //   vibrato, BPM/tonacja, do 6 min, szybki streaming)
+    // - instrumental → domyślnie też MiniMax 2.6 (is_instrumental) = wyższa
+    //   jakość niż ACE-Step; hub_config.instrumental_engine="acestep" cofa na tańszy ACE.
+    const mmModel = cfg["vocal_model"] || "minimax/music-2.6";
+    const instrEngine = (cfg["instrumental_engine"] || "minimax").toLowerCase();
+    const qualitySuffix =
+      ", high quality, studio recording, professional mixing, crisp clear master, radio-ready, rich dynamics";
+    const richPrompt = (prompt + qualitySuffix).slice(0, 300);
+
     let rel: Response;
     let engineName: string;
-    if (!instrumental) {
-      engineName = "minimax";
-      const vocalModel = cfg["vocal_model"] || "minimax/music-1.5";
-      const mmPrompt = (prompt + ", high quality, studio recording").slice(0, 300);
-      rel = await fetch(`${REPLICATE_BASE}/models/${vocalModel}/predictions`, {
+    const useMinimax = !instrumental || instrEngine === "minimax";
+
+    if (useMinimax) {
+      engineName = instrumental ? "minimax-inst" : "minimax";
+      const hasLyrics = !instrumental && !!lyrics && lyrics !== "[instrumental]" && lyrics.trim().length > 2;
+      const input: Record<string, unknown> = {
+        prompt: richPrompt.length >= 10 ? richPrompt : richPrompt + ", modern pop",
+        audio_format: "mp3",
+        bitrate: 256000,
+        sample_rate: 44100,
+      };
+      if (instrumental) {
+        input.is_instrumental = true;
+      } else if (hasLyrics) {
+        input.lyrics = lyrics.slice(0, 3500);
+      } else {
+        // Brak tekstu → model sam dopisze tekst pasujący do stylu.
+        input.lyrics_optimizer = true;
+      }
+      rel = await fetch(`${REPLICATE_BASE}/models/${mmModel}/predictions`, {
         method: "POST",
         headers: rHeaders,
-        body: JSON.stringify({
-          input: {
-            prompt: mmPrompt.length >= 10 ? mmPrompt : mmPrompt + ", modern pop",
-            lyrics: lyrics.slice(0, 3000),
-            audio_format: "mp3",
-            bitrate: 256000,
-            sample_rate: 44100,
-          },
-        }),
+        body: JSON.stringify({ input }),
       });
     } else {
       engineName = "acestep";
@@ -220,14 +234,14 @@ Deno.serve(async (req) => {
         return json({ error: "Cannot resolve model version", details: mData }, 502);
       }
       // Jakość: więcej kroków = czystszy dźwięk; strojenie: hub_config.ace_steps.
-      const steps = Math.min(Math.max(parseInt(cfg["ace_steps"] || "120", 10) || 120, 10), 200);
+      const steps = Math.min(Math.max(parseInt(cfg["ace_steps"] || "150", 10) || 150, 10), 200);
       rel = await fetch(`${REPLICATE_BASE}/predictions`, {
         method: "POST",
         headers: rHeaders,
         body: JSON.stringify({
           version,
           input: {
-            tags: prompt + ", high quality, studio recording, professional mixing, crisp clear audio",
+            tags: prompt + qualitySuffix,
             lyrics,
             duration,
             scheduler: cfg["ace_scheduler"] || "euler",
