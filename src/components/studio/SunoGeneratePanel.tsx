@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Music, Loader2, Play, Download, Wand2, Guitar, ImagePlus, Upload, X, Zap, Mic2, FileText, Save, Gauge, SlidersHorizontal } from "lucide-react";
+import { Sparkles, Music, Music2, Loader2, Play, Download, Wand2, Guitar, ImagePlus, Upload, X, Zap, Mic2, FileText, Save, Gauge, SlidersHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { invokeStudioEngine, fireCoverGeneration, isSubscriptionError, downloadAudio } from "@/lib/hubStudio";
 import { masterAudioToWav } from "@/lib/aiMastering";
+import { audioToMidiDownload } from "@/lib/audioToMidi";
 import { UpgradeModal } from "@/components/modals/UpgradeModal";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -84,6 +85,7 @@ export const SunoGeneratePanel = () => {
   const [songs, setSongs] = useState<GeneratedSong[]>([]);
   const [statusMsg, setStatusMsg] = useState("");
   const [masteringId, setMasteringId] = useState<string | null>(null);
+  const [midiId, setMidiId] = useState<string | null>(null);
   const [burstKey, setBurstKey] = useState(0);
   // Ustawienia masteringu (0..100)
   const [masterLoud, setMasterLoud] = useState(60);
@@ -703,6 +705,28 @@ export const SunoGeneratePanel = () => {
                     }}
                   >
                     {masteringId === song.id ? <Loader2 className="h-5 w-5 animate-spin" /> : <SlidersHorizontal className="h-5 w-5" />}
+                  </Button>
+                  <Button
+                    size="icon" variant="ghost"
+                    className="h-10 w-10 text-sky-400 hover:bg-sky-400/20"
+                    title="Pobierz MIDI (dla producentów) — audio→MIDI w przeglądarce"
+                    disabled={midiId === song.id}
+                    onClick={async () => {
+                      const url = song.streamUrl || song.audioUrl;
+                      if (!url) { toast.error("Brak pliku audio"); return; }
+                      setMidiId(song.id);
+                      toast.loading("🎹 Zamieniam na MIDI (ładuję model)...", { id: "midi" });
+                      try {
+                        await audioToMidiDownload(url, `${song.title || "grouai-track"}.mid`);
+                        toast.success("Gotowe — pobrano plik MIDI 🎹", { id: "midi" });
+                      } catch (e: any) {
+                        toast.error("MIDI: " + (e?.message || "nie udało się"), { id: "midi" });
+                      } finally {
+                        setMidiId(null);
+                      }
+                    }}
+                  >
+                    {midiId === song.id ? <Loader2 className="h-5 w-5 animate-spin" /> : <Music2 className="h-5 w-5" />}
                   </Button>
                   <Button size="icon" variant="ghost" className="h-10 w-10 text-[#FF9500] hover:bg-[#FF6B00]/20" onClick={() => saveSongToLibrary(song)} title="Zapisz w bibliotece GrouAI">
                     <Save className="h-5 w-5" />
