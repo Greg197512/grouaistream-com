@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Music, Loader2, Play, Download, Wand2, Guitar, ImagePlus, Upload, X, Zap, Mic2, FileText, Save, Gauge } from "lucide-react";
+import { Sparkles, Music, Loader2, Play, Download, Wand2, Guitar, ImagePlus, Upload, X, Zap, Mic2, FileText, Save, Gauge, SlidersHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { invokeStudioEngine, fireCoverGeneration, isSubscriptionError, downloadAudio } from "@/lib/hubStudio";
+import { masterAudioToWav } from "@/lib/aiMastering";
 import { UpgradeModal } from "@/components/modals/UpgradeModal";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -60,6 +61,7 @@ export const SunoGeneratePanel = () => {
   const [polling, setPolling] = useState(false);
   const [songs, setSongs] = useState<GeneratedSong[]>([]);
   const [statusMsg, setStatusMsg] = useState("");
+  const [masteringId, setMasteringId] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // ACE-Step: engine choice + editable lyrics (AI proposes → user fixes → ACE sings)
@@ -626,6 +628,28 @@ export const SunoGeneratePanel = () => {
                     }}
                   >
                     <Download className="h-5 w-5" />
+                  </Button>
+                  <Button
+                    size="icon" variant="ghost"
+                    className="h-10 w-10 text-emerald-400 hover:bg-emerald-400/20"
+                    title="Masteruj AI (głośniej, pełniej — pod Spotify/YouTube), pobierz WAV"
+                    disabled={masteringId === song.id}
+                    onClick={async () => {
+                      const url = song.streamUrl || song.audioUrl;
+                      if (!url) { toast.error("Brak pliku audio"); return; }
+                      setMasteringId(song.id);
+                      toast.loading("🎚️ Masteruję (EQ + kompresja + głośność)...", { id: "master" });
+                      try {
+                        await masterAudioToWav(url, `${song.title || "grouai-track"} (master).wav`);
+                        toast.success("Gotowe — pobrano zmasterowany WAV 🎚️", { id: "master" });
+                      } catch {
+                        toast.error("Nie udało się zmasterować tego pliku", { id: "master" });
+                      } finally {
+                        setMasteringId(null);
+                      }
+                    }}
+                  >
+                    {masteringId === song.id ? <Loader2 className="h-5 w-5 animate-spin" /> : <SlidersHorizontal className="h-5 w-5" />}
                   </Button>
                   <Button size="icon" variant="ghost" className="h-10 w-10 text-[#FF9500] hover:bg-[#FF6B00]/20" onClick={() => saveSongToLibrary(song)} title="Zapisz w bibliotece GrouAI">
                     <Save className="h-5 w-5" />
