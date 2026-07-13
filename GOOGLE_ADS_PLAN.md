@@ -26,7 +26,7 @@ to założyć konto Google Ads, wpiąć konwersję i włączyć kampanie (to Ty 
 - Lead **B2B** od razu tworzy zlecenie w Aurorze → hub generuje wstępną ofertę.
 - Zapisujemy **tylko za zgodą** (checkbox) — RODO OK.
 
-`HUB_TOKEN` = `377cc52bc557aacc2d2795f858d8a5b4ecb0d1c28af40188`
+`HUB_TOKEN` = (sekret — trzymany w `hub_config.hub_token` na hubie; NIE wpisywać w repo)
 
 ---
 
