@@ -113,13 +113,13 @@ export const BreakEvenPanel = () => {
             <div>
               <div className="text-xs text-muted-foreground">💸 Koszt MTD</div>
               <div className="text-3xl font-bold text-red-300">
-                {status.cost_mtd.toFixed(2)}€
+                {status.cost_mtd.toFixed(2)}$
               </div>
             </div>
             <div>
               <div className="text-xs text-muted-foreground">💰 Przychód MTD</div>
               <div className="text-3xl font-bold text-emerald-300">
-                {status.revenue_mtd.toFixed(2)}€
+                {status.revenue_mtd.toFixed(2)}$
               </div>
             </div>
             <div>
@@ -132,7 +132,7 @@ export const BreakEvenPanel = () => {
                 }`}
               >
                 {profitable ? "+" : ""}
-                {(-status.gap).toFixed(2)}€
+                {(-status.gap).toFixed(2)}$
               </div>
             </div>
           </div>
@@ -160,7 +160,7 @@ export const BreakEvenPanel = () => {
                     Nowi subskrybenci Pro
                   </div>
                   <div className="text-2xl font-bold text-primary">
-                    {status.pro_subs_to_break_even} × 9,99€
+                    {status.pro_subs_to_break_even} × 9,99$
                   </div>
                 </div>
                 <div className="bg-amber-500/10 rounded p-3">
@@ -168,7 +168,7 @@ export const BreakEvenPanel = () => {
                     LUB Ultimate
                   </div>
                   <div className="text-2xl font-bold text-amber-300">
-                    {status.ultimate_subs_to_break_even} × 19,99€
+                    {status.ultimate_subs_to_break_even} × 19,99$
                   </div>
                 </div>
               </div>
@@ -176,7 +176,7 @@ export const BreakEvenPanel = () => {
                 <div className="text-xs text-muted-foreground pt-2">
                   Średni dzienny przychód do osiągnięcia:{" "}
                   <strong className="text-foreground">
-                    {status.required_daily_revenue.toFixed(2)}€/dzień
+                    {status.required_daily_revenue.toFixed(2)}$/dzień
                   </strong>
                 </div>
               )}
@@ -197,7 +197,7 @@ export const BreakEvenPanel = () => {
                 Subskrypcje (prorata)
               </div>
               <div className="text-xl font-bold">
-                {status.revenue_breakdown.subscription_revenue_mtd.toFixed(2)}€
+                {status.revenue_breakdown.subscription_revenue_mtd.toFixed(2)}$
               </div>
               <div className="text-xs text-muted-foreground mt-1">
                 Pro: {status.revenue_breakdown.active_pro} · Ultimate:{" "}
@@ -207,7 +207,7 @@ export const BreakEvenPanel = () => {
             <div className="border border-border rounded p-3">
               <div className="text-muted-foreground text-xs">Tipy (10% fee)</div>
               <div className="text-xl font-bold">
-                {status.revenue_breakdown.tip_revenue_mtd.toFixed(2)}€
+                {status.revenue_breakdown.tip_revenue_mtd.toFixed(2)}$
               </div>
               <div className="text-xs text-muted-foreground mt-1">
                 Prowizja platformy

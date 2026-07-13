@@ -688,7 +688,7 @@ const Suno = () => {
               <div className="flex items-center gap-2"><Mic className="h-4 w-4 text-primary" /> Voice cloning &amp; biblioteka głosów</div>
               <div className="flex items-center gap-2"><Blend className="h-4 w-4 text-primary" /> Track Mixer + crossfade + mastering</div>
               <div className="flex items-center gap-2"><Type className="h-4 w-4 text-primary" /> Auto-lyrics + tłumaczenia (4 języki)</div>
-              <div className="flex items-center gap-2"><Wand2 className="h-4 w-4 text-primary" /> Bonus 12€ za 5 utworów Studio</div>
+              <div className="flex items-center gap-2"><Wand2 className="h-4 w-4 text-primary" /> Bonus 12$ za 5 utworów Studio</div>
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3 pt-2">

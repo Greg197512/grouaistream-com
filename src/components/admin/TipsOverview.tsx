@@ -57,7 +57,7 @@ export const TipsOverview = () => {
   const handleTopup = async (userId: string) => {
     const amount = parseFloat(topupAmount);
     if (isNaN(amount) || amount <= 0 || amount > 1000) {
-      toast.error("Kwota 0.01–1000€");
+      toast.error("Kwota 0.01–1000$");
       return;
     }
     setTopingUp(true);
@@ -69,7 +69,7 @@ export const TipsOverview = () => {
       toast.error("Błąd doładowania: " + (error?.message || (data as any)?.error));
       return;
     }
-    toast.success(`Doładowano ${amount}€. Nowe saldo: ${(data as any).new_balance.toFixed(2)}€`);
+    toast.success(`Doładowano ${amount}$. Nowe saldo: ${(data as any).new_balance.toFixed(2)}$`);
     setTopupTarget(null);
     load();
   };
@@ -87,19 +87,19 @@ export const TipsOverview = () => {
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
           <Card><CardContent className="p-3">
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground"><Wallet className="h-3 w-3" />W portfelach</div>
-            <div className="text-lg font-bold text-pink-300">{Number(summary.total_balance).toFixed(2)}€</div>
+            <div className="text-lg font-bold text-pink-300">{Number(summary.total_balance).toFixed(2)}$</div>
           </CardContent></Card>
           <Card><CardContent className="p-3">
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground"><Heart className="h-3 w-3" />Wysłano</div>
-            <div className="text-lg font-bold text-rose-300">{Number(summary.total_sent).toFixed(2)}€</div>
+            <div className="text-lg font-bold text-rose-300">{Number(summary.total_sent).toFixed(2)}$</div>
           </CardContent></Card>
           <Card><CardContent className="p-3">
             <div className="text-xs text-muted-foreground">Otrzymano artyści</div>
-            <div className="text-lg font-bold text-emerald-300">{Number(summary.total_received).toFixed(2)}€</div>
+            <div className="text-lg font-bold text-emerald-300">{Number(summary.total_received).toFixed(2)}$</div>
           </CardContent></Card>
           <Card><CardContent className="p-3">
             <div className="text-xs text-muted-foreground">Prowizja 10%</div>
-            <div className="text-lg font-bold text-amber-300">{Number(summary.total_platform_fees).toFixed(2)}€</div>
+            <div className="text-lg font-bold text-amber-300">{Number(summary.total_platform_fees).toFixed(2)}$</div>
           </CardContent></Card>
           <Card><CardContent className="p-3">
             <div className="text-xs text-muted-foreground">Userów z portfelem</div>
@@ -141,9 +141,9 @@ export const TipsOverview = () => {
                       <div className="font-semibold">{w.display_name || "—"}</div>
                       <div className="text-muted-foreground">{w.email}</div>
                     </TableCell>
-                    <TableCell className="text-right font-bold text-pink-300">{Number(w.balance).toFixed(2)}€</TableCell>
-                    <TableCell className="text-right text-xs text-rose-300">{Number(w.total_sent).toFixed(2)}€</TableCell>
-                    <TableCell className="text-right text-xs text-emerald-300">{Number(w.total_received).toFixed(2)}€</TableCell>
+                    <TableCell className="text-right font-bold text-pink-300">{Number(w.balance).toFixed(2)}$</TableCell>
+                    <TableCell className="text-right text-xs text-rose-300">{Number(w.total_sent).toFixed(2)}$</TableCell>
+                    <TableCell className="text-right text-xs text-emerald-300">{Number(w.total_received).toFixed(2)}$</TableCell>
                     <TableCell className="text-right">
                       {topupTarget === w.user_id ? (
                         <div className="flex items-center justify-end gap-1">
@@ -200,8 +200,8 @@ export const TipsOverview = () => {
                         {t.tx_type === "admin_topup" ? "Admin doładował" : "Tip"}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right text-xs font-bold">{Number(t.amount).toFixed(2)}€</TableCell>
-                    <TableCell className="text-right text-xs text-emerald-300">{Number(t.artist_amount).toFixed(2)}€</TableCell>
+                    <TableCell className="text-right text-xs font-bold">{Number(t.amount).toFixed(2)}$</TableCell>
+                    <TableCell className="text-right text-xs text-emerald-300">{Number(t.artist_amount).toFixed(2)}$</TableCell>
                     <TableCell className="text-xs text-muted-foreground">{new Date(t.created_at).toLocaleString("pl")}</TableCell>
                   </TableRow>
                 ))}

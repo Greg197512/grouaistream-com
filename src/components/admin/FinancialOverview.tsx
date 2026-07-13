@@ -101,29 +101,29 @@ export const FinancialOverview = () => {
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
           <Card><CardContent className="p-4">
             <div className="flex items-center gap-2 text-xs text-muted-foreground"><TrendingUp className="h-3 w-3" />Streamy</div>
-            <div className="text-xl font-bold text-blue-300">{Number(summary.total_streams_paid).toFixed(2)}€</div>
+            <div className="text-xl font-bold text-blue-300">{Number(summary.total_streams_paid).toFixed(2)}$</div>
           </CardContent></Card>
           <Card><CardContent className="p-4">
             <div className="flex items-center gap-2 text-xs text-muted-foreground"><Wallet className="h-3 w-3" />Bonusy</div>
-            <div className="text-xl font-bold text-emerald-300">{Number(summary.total_bonuses_paid).toFixed(2)}€</div>
+            <div className="text-xl font-bold text-emerald-300">{Number(summary.total_bonuses_paid).toFixed(2)}$</div>
           </CardContent></Card>
           <Card><CardContent className="p-4">
             <div className="flex items-center gap-2 text-xs text-muted-foreground"><Sparkles className="h-3 w-3" />Weekend</div>
-            <div className="text-xl font-bold text-amber-300">{Number(summary.total_weekend_paid).toFixed(2)}€</div>
+            <div className="text-xl font-bold text-amber-300">{Number(summary.total_weekend_paid).toFixed(2)}$</div>
           </CardContent></Card>
           <Card><CardContent className="p-4">
             <div className="flex items-center gap-2 text-xs text-muted-foreground">❤️ Polubienia</div>
-            <div className="text-xl font-bold text-pink-300">{Number(summary.total_like_bonuses_paid || 0).toFixed(2)}€</div>
-            <div className="text-[10px] text-muted-foreground">0,10 € / like</div>
+            <div className="text-xl font-bold text-pink-300">{Number(summary.total_like_bonuses_paid || 0).toFixed(2)}$</div>
+            <div className="text-[10px] text-muted-foreground">0,10 $ / like</div>
           </CardContent></Card>
           <Card><CardContent className="p-4">
             <div className="flex items-center gap-2 text-xs text-muted-foreground">💜 Tipy</div>
-            <div className="text-xl font-bold text-fuchsia-300">{Number(summary.total_tips_paid || 0).toFixed(2)}€</div>
+            <div className="text-xl font-bold text-fuchsia-300">{Number(summary.total_tips_paid || 0).toFixed(2)}$</div>
           </CardContent></Card>
           <Card><CardContent className="p-4">
             <div className="flex items-center gap-2 text-xs text-muted-foreground"><TrendingDown className="h-3 w-3" />Wypłacone</div>
-            <div className="text-xl font-bold text-red-300">{Number(summary.total_payouts_paid).toFixed(2)}€</div>
-            <div className="text-[10px] text-muted-foreground">oczekuje: {Number(summary.total_payouts_pending).toFixed(2)}€</div>
+            <div className="text-xl font-bold text-red-300">{Number(summary.total_payouts_paid).toFixed(2)}$</div>
+            <div className="text-[10px] text-muted-foreground">oczekuje: {Number(summary.total_payouts_pending).toFixed(2)}$</div>
           </CardContent></Card>
         </div>
       )}
@@ -133,7 +133,7 @@ export const FinancialOverview = () => {
         <CardContent className="p-4 flex items-center justify-between gap-4">
           <div>
             <div className="font-semibold flex items-center gap-2"><Sparkles className="h-4 w-4 text-amber-300" />Generator wyzwań weekendowych AI</div>
-            <div className="text-xs text-muted-foreground">Tworzy nowe wyzwanie (1-5€) na 72h. Wyłącza poprzednie aktywne.</div>
+            <div className="text-xs text-muted-foreground">Tworzy nowe wyzwanie (1-5$) na 72h. Wyłącza poprzednie aktywne.</div>
           </div>
           <Button onClick={handleGenerate} disabled={generating} className="bg-amber-500 hover:bg-amber-600 text-black">
             {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Calendar className="h-4 w-4 mr-2" />Wygeneruj</>}
@@ -187,7 +187,7 @@ export const FinancialOverview = () => {
                     <TableCell className="text-xs max-w-[300px] truncate">{t.description}</TableCell>
                     <TableCell className="text-xs text-muted-foreground">{new Date(t.created_at).toLocaleString("pl")}</TableCell>
                     <TableCell className={`text-right font-bold ${t.amount < 0 ? "text-red-300" : "text-emerald-300"}`}>
-                      {t.amount < 0 ? "" : "+"}{Number(t.amount).toFixed(2)}€
+                      {t.amount < 0 ? "" : "+"}{Number(t.amount).toFixed(2)}$
                     </TableCell>
                   </TableRow>
                 ))}

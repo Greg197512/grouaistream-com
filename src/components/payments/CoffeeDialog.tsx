@@ -32,7 +32,7 @@ interface CoffeeDialogProps {
 
 /**
  * Reużywalny dialog "Postaw kawę" — uruchamia Paddle one-time checkout
- * z opcjami 1€/3€/5€. Kontrolowany przez parent (open / onOpenChange).
+ * z opcjami 1$/3$/5$. Kontrolowany przez parent (open / onOpenChange).
  *
  * Webhook (payments-webhook) zapisuje kawę do `one_time_purchases` oraz
  * nabija `creator_earnings` typu `tip` (90% kwoty) na `recipientUserId`.
@@ -108,7 +108,7 @@ export function CoffeeDialog({
               {loading === opt.id ? (
                 <Loader2 className="h-5 w-5 animate-spin text-primary" />
               ) : (
-                <span className="text-lg font-bold text-primary">{opt.amount}€</span>
+                <span className="text-lg font-bold text-primary">{opt.amount}$</span>
               )}
             </button>
           ))}

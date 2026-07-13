@@ -77,7 +77,7 @@ export default function PayoutsAdminPanel() {
 
   const markPaid = async (r: PayoutRow) => {
     const amount = Number(r.balance);
-    if (!confirm(`Oznaczyć jako wypłacone ${amount.toFixed(2)} € dla ${r.display_name || r.user_id.slice(0, 8)}?\n\nLicznik u twórcy zostanie wyzerowany.`)) return;
+    if (!confirm(`Oznaczyć jako wypłacone ${amount.toFixed(2)} $ dla ${r.display_name || r.user_id.slice(0, 8)}?\n\nLicznik u twórcy zostanie wyzerowany.`)) return;
     setMarkingPaid(r.user_id);
     const { error } = await supabase.from("payout_requests").insert({
       user_id: r.user_id,
@@ -90,7 +90,7 @@ export default function PayoutsAdminPanel() {
       toast.error("Błąd: " + error.message);
       return;
     }
-    toast.success(`Wypłacono ${amount.toFixed(2)} € — licznik wyzerowany`);
+    toast.success(`Wypłacono ${amount.toFixed(2)} $ — licznik wyzerowany`);
     load();
   };
 
@@ -105,7 +105,7 @@ export default function PayoutsAdminPanel() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-primary">{totalDue.toFixed(2)} €</div>
+            <div className="text-2xl font-bold text-primary">{totalDue.toFixed(2)} $</div>
             <div className="text-xs text-muted-foreground">{payouts.length} twórców</div>
           </CardContent>
         </Card>
@@ -170,9 +170,9 @@ export default function PayoutsAdminPanel() {
                           <div className="font-medium">{r.display_name || "—"}</div>
                           <div className="text-xs text-muted-foreground font-mono">{r.user_id.slice(0, 8)}</div>
                         </td>
-                        <td className="p-3 text-right">{Number(r.total_earned).toFixed(2)} €</td>
-                        <td className="p-3 text-right text-muted-foreground">{Number(r.total_paid).toFixed(2)} €</td>
-                        <td className="p-3 text-right font-bold text-primary">{Number(r.balance).toFixed(2)} €</td>
+                        <td className="p-3 text-right">{Number(r.total_earned).toFixed(2)} $</td>
+                        <td className="p-3 text-right text-muted-foreground">{Number(r.total_paid).toFixed(2)} $</td>
+                        <td className="p-3 text-right font-bold text-primary">{Number(r.balance).toFixed(2)} $</td>
                         <td className="p-3">
                           {r.bank_account ? (
                             <div className="space-y-1">
@@ -325,7 +325,7 @@ export default function PayoutsAdminPanel() {
                           </div>
                         </td>
                         <td className="p-3 text-right font-semibold">
-                          {Number(r.earnings_total).toFixed(2)} €
+                          {Number(r.earnings_total).toFixed(2)} $
                         </td>
                         <td className="p-3 text-xs text-muted-foreground">
                           {new Date(r.last_seen).toLocaleDateString("pl-PL")}

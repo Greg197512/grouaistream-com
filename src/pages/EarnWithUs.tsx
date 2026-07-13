@@ -225,7 +225,7 @@ const EarnWithUs = () => {
                 Każdy użytkownik ma swój <strong className="text-foreground">link polecający</strong>.
                 Gdy osoba z Twojego linku wykupi abonament Pro lub Ultimate, dostajesz{" "}
                 <strong className="text-foreground">20% prowizji od każdej jej płatności przez 12 miesięcy</strong>.
-                Prowizje wypłacasz razem z resztą zarobków (od 50 PLN).
+                Prowizje wypłacasz razem z resztą zarobków (od 50 $).
               </p>
               <p className="text-xs text-muted-foreground/70 max-w-lg mx-auto">
                 Program jednopoziomowy — zarabiasz wyłącznie od realnych abonamentów osób,
@@ -346,7 +346,7 @@ const EarnWithUs = () => {
                   </div>
                   <div className="flex items-baseline gap-1">
                     <span className="text-3xl font-black text-primary">4.49</span>
-                    <span className="text-sm text-muted-foreground">€/{t("earnPage.month")}</span>
+                    <span className="text-sm text-muted-foreground">$/{t("earnPage.month")}</span>
                   </div>
                   <ul className="space-y-2">
                     {["earnPage.creatorPro1", "earnPage.creatorPro2", "earnPage.creatorPro3", "earnPage.creatorPro4"].map((key) => (
@@ -382,7 +382,7 @@ const EarnWithUs = () => {
                   </div>
                   <div className="flex items-baseline gap-1">
                     <span className="text-3xl font-black text-amber-400">8.99</span>
-                    <span className="text-sm text-muted-foreground">€/{t("earnPage.month")}</span>
+                    <span className="text-sm text-muted-foreground">$/{t("earnPage.month")}</span>
                   </div>
                   <ul className="space-y-2">
                     {["earnPage.creatorUlt1", "earnPage.creatorUlt2", "earnPage.creatorUlt3", "earnPage.creatorUlt4", "earnPage.creatorUlt5"].map((key) => (

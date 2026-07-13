@@ -59,7 +59,7 @@ export const RatingLikeModal = ({
         toast.error(errMap[res?.error || ""] || res?.error || "Nie udało się zapisać oceny");
         return;
       }
-      const bonus = (data as any)?.bonus_granted ? ` (+0,10 € dla artysty 🎁)` : "";
+      const bonus = (data as any)?.bonus_granted ? ` (+0,10 $ dla artysty 🎁)` : "";
       toast.success(`Oceniono ${stars}★ — dodano do polubionych ❤️${bonus}`);
       onSuccess?.();
       handleClose();
@@ -134,7 +134,7 @@ export const RatingLikeModal = ({
           </div>
           {!tooShort && (
             <p className="mt-2 text-center text-[11px] text-muted-foreground">
-              💝 Artysta dostanie <span className="text-primary font-semibold">+0,10 €</span> za Twoje polubienie
+              💝 Artysta dostanie <span className="text-primary font-semibold">+0,10 $</span> za Twoje polubienie
             </p>
           )}
         </div>

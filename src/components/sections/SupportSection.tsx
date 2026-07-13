@@ -101,7 +101,7 @@ export const SupportSection = () => {
               <div className={cn("font-bold text-lg mb-1", c.text)}>{c.name}</div>
               <div className="text-xs text-muted-foreground mb-4">{c.desc}</div>
               <div className="flex items-center justify-between">
-                <span className={cn("text-2xl font-extrabold", c.text)}>{c.price}€</span>
+                <span className={cn("text-2xl font-extrabold", c.text)}>{c.price}$</span>
                 {loading === c.id ? (
                   <Loader2 className="h-5 w-5 animate-spin text-primary" />
                 ) : (

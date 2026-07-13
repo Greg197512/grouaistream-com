@@ -120,7 +120,7 @@ const CreatorEarnings = () => {
       setTipEarnings(tipData.reduce((sum, e) => sum + Number(e.amount), 0));
     }
 
-    // Like bonuses (0,10 € za każde polubienie od fana po 30s odsłuchu)
+    // Like bonuses (0,10 $ za każde polubienie od fana po 30s odsłuchu)
     const { data: likeBonusData } = await supabase
       .from("creator_earnings")
       .select("amount")
@@ -247,14 +247,14 @@ const CreatorEarnings = () => {
       const { data, error } = await (supabase as any).rpc(fnMap[type]);
       if (error) throw error;
       if (data?.success) {
-        toast.success(`🎁 +${Number(data.amount).toFixed(2)} € trafiło do Twoich zarobków!`);
+        toast.success(`🎁 +${Number(data.amount).toFixed(2)} $ trafiło do Twoich zarobków!`);
         loadData();
       } else if (data?.error === "not_eligible") {
         toast.error(`Potrzebujesz ${data.required}, masz ${data.current}`);
       } else if (data?.error === "already_claimed") {
         toast.info("Ten bonus został już odebrany");
       } else if (data?.error === "requires_ultimate") {
-        toast.error("Ten bonus wymaga subskrypcji Ultimate (9.99 €/mc)");
+        toast.error("Ten bonus wymaga subskrypcji Ultimate (9.99 $/mc)");
       } else {
         toast.error("Nie udało się odebrać bonusu");
       }
@@ -382,7 +382,7 @@ const CreatorEarnings = () => {
               </div>
               <div className="flex-1">
                 <p className="text-base font-bold text-red-300">
-                  Twoja wypłata {Number(p.amount).toFixed(2)} € została zrealizowana ✅
+                  Twoja wypłata {Number(p.amount).toFixed(2)} $ została zrealizowana ✅
                 </p>
                 <p className="text-xs text-red-400/80 mt-0.5">
                   Potwierdzono: {new Date(p.processed_at!).toLocaleString("pl-PL")} • Komunikat zniknie po 24h
@@ -411,11 +411,11 @@ const CreatorEarnings = () => {
         {/* Stats Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
           {[
-            { label: t("earnings.totalEarnings"), value: `${totalEarnings.toFixed(2)} €`, icon: DollarSign, color: "text-primary" },
-            { label: t("earnings.thisMonth"), value: `${monthlyEarnings.toFixed(2)} €`, icon: TrendingUp, color: "text-accent" },
+            { label: t("earnings.totalEarnings"), value: `${totalEarnings.toFixed(2)} $`, icon: DollarSign, color: "text-primary" },
+            { label: t("earnings.thisMonth"), value: `${monthlyEarnings.toFixed(2)} $`, icon: TrendingUp, color: "text-accent" },
             { label: t("earnings.totalStreams"), value: totalStreams.toLocaleString(), icon: BarChart3, color: "text-muted-foreground" },
-            { label: t("earnings.tipsTotal"), value: `${tipEarnings.toFixed(2)} €`, icon: Heart, color: "text-pink-400" },
-            { label: "Z polubień", value: `${likeBonusEarnings.toFixed(2)} €`, icon: Heart, color: "text-rose-400" },
+            { label: t("earnings.tipsTotal"), value: `${tipEarnings.toFixed(2)} $`, icon: Heart, color: "text-pink-400" },
+            { label: "Z polubień", value: `${likeBonusEarnings.toFixed(2)} $`, icon: Heart, color: "text-rose-400" },
           ].map((stat, i) => (
             <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}>
               <Card className="bg-card/50 backdrop-blur border-white/10">
@@ -451,7 +451,7 @@ const CreatorEarnings = () => {
                   <p className="text-[10px] text-muted-foreground">{t("earnings.fromTips")}</p>
                 </div>
                 <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/15">
-                  <p className="text-lg font-bold text-rose-400">0,10 €</p>
+                  <p className="text-lg font-bold text-rose-400">0,10 $</p>
                   <p className="text-[10px] text-muted-foreground">za polubienie ❤️ (po 30s)</p>
                 </div>
                 <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/15">
@@ -478,7 +478,7 @@ const CreatorEarnings = () => {
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
                     <Music className="h-4 w-4 text-emerald-400" />
-                    <span className="text-sm font-semibold">50 utworów = +12 €</span>
+                    <span className="text-sm font-semibold">50 utworów = +12 $</span>
                   </div>
                   <Badge className="bg-emerald-500/15 text-emerald-400 border-emerald-500/25 text-[10px]">
                     {Math.min(uploadCount, 50)}/50
@@ -499,7 +499,7 @@ const CreatorEarnings = () => {
                   onClick={() => claimMilestone("uploads")}
                   className="w-full bg-emerald-600 hover:bg-emerald-500 text-white"
                 >
-                  {uploadBonusClaimed ? "✓ Odebrane" : uploadCount < 50 ? `Dodaj jeszcze ${50 - uploadCount}` : "Odbierz 12 €"}
+                  {uploadBonusClaimed ? "✓ Odebrane" : uploadCount < 50 ? `Dodaj jeszcze ${50 - uploadCount}` : "Odbierz 12 $"}
                 </Button>
               </div>
 
@@ -508,7 +508,7 @@ const CreatorEarnings = () => {
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
                     <Heart className="h-4 w-4 text-pink-400" />
-                    <span className="text-sm font-semibold">50 polubień = +12 €</span>
+                    <span className="text-sm font-semibold">50 polubień = +12 $</span>
                   </div>
                   <Badge className="bg-pink-500/15 text-pink-400 border-pink-500/25 text-[10px]">
                     {Math.min(likesCount, 50)}/50
@@ -526,7 +526,7 @@ const CreatorEarnings = () => {
                   onClick={() => claimMilestone("likes")}
                   className="w-full bg-pink-600 hover:bg-pink-500 text-white"
                 >
-                  {likesBonusClaimed ? "✓ Odebrane" : likesCount < 50 ? `Brakuje ${50 - likesCount}` : "Odbierz 12 €"}
+                  {likesBonusClaimed ? "✓ Odebrane" : likesCount < 50 ? `Brakuje ${50 - likesCount}` : "Odbierz 12 $"}
                 </Button>
               </div>
 
@@ -535,7 +535,7 @@ const CreatorEarnings = () => {
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
                     <BarChart3 className="h-4 w-4 text-purple-400" />
-                    <span className="text-sm font-semibold">5 analiz nastroju = +5 €</span>
+                    <span className="text-sm font-semibold">5 analiz nastroju = +5 $</span>
                   </div>
                   <Badge className="bg-purple-500/15 text-purple-400 border-purple-500/25 text-[10px]">
                     {Math.min(moodSessionsCount, 5)}/5
@@ -553,7 +553,7 @@ const CreatorEarnings = () => {
                   onClick={() => claimMilestone("mood")}
                   className="w-full bg-purple-600 hover:bg-purple-500 text-white"
                 >
-                  {moodBonusClaimed ? "✓ Odebrane" : moodSessionsCount < 5 ? `Jeszcze ${5 - moodSessionsCount} analiz` : "Odbierz 5 €"}
+                  {moodBonusClaimed ? "✓ Odebrane" : moodSessionsCount < 5 ? `Jeszcze ${5 - moodSessionsCount} analiz` : "Odbierz 5 $"}
                 </Button>
               </div>
 
@@ -574,7 +574,7 @@ const CreatorEarnings = () => {
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
                     <Rocket className={cn("h-4 w-4", isUltimate ? "text-amber-400" : "text-muted-foreground")} />
-                    <span className="text-sm font-semibold">5 utworów AI = +12 €</span>
+                    <span className="text-sm font-semibold">5 utworów AI = +12 $</span>
                   </div>
                   {isUltimate && (
                     <Badge className="bg-amber-500/15 text-amber-400 border-amber-500/25 text-[10px]">
@@ -595,7 +595,7 @@ const CreatorEarnings = () => {
                     onClick={() => claimMilestone("studio")}
                     className="w-full bg-amber-600 hover:bg-amber-500 text-white"
                   >
-                    {studioBonusClaimed ? "✓ Odebrane" : studioCount < 5 ? `Stwórz jeszcze ${5 - studioCount}` : "Odbierz 12 €"}
+                    {studioBonusClaimed ? "✓ Odebrane" : studioCount < 5 ? `Stwórz jeszcze ${5 - studioCount}` : "Odbierz 12 $"}
                   </Button>
                 ) : (
                   <Button
@@ -604,7 +604,7 @@ const CreatorEarnings = () => {
                     className="w-full bg-gradient-to-r from-amber-500 to-orange-600 text-white gap-1"
                   >
                     <Lock className="h-3 w-3" />
-                    Ulepsz do Ultimate (9.99 €)
+                    Ulepsz do Ultimate (9.99 $)
                   </Button>
                 )}
               </div>
@@ -614,7 +614,7 @@ const CreatorEarnings = () => {
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
                     <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />
-                    <span className="text-sm font-semibold">50 ocen utworów (1-5★) = +12 €</span>
+                    <span className="text-sm font-semibold">50 ocen utworów (1-5★) = +12 $</span>
                   </div>
                   <Badge className="bg-yellow-500/15 text-yellow-400 border-yellow-500/25 text-[10px]">
                     {Math.min(ratingsCount, 50)}/50
@@ -635,7 +635,7 @@ const CreatorEarnings = () => {
                   onClick={() => claimMilestone("ratings")}
                   className="w-full bg-yellow-600 hover:bg-yellow-500 text-white"
                 >
-                  {ratingsBonusClaimed ? "✓ Odebrane" : ratingsCount < 50 ? `Brakuje ${50 - ratingsCount} ocen` : "Odbierz 12 €"}
+                  {ratingsBonusClaimed ? "✓ Odebrane" : ratingsCount < 50 ? `Brakuje ${50 - ratingsCount} ocen` : "Odbierz 12 $"}
                 </Button>
               </div>
             </CardContent>
@@ -685,7 +685,7 @@ const CreatorEarnings = () => {
                   <Wallet className="h-5 w-5 text-amber-400 shrink-0 mt-0.5" />
                   <div className="flex-1">
                     <p className="text-sm font-semibold text-amber-200">
-                      Masz {available.toFixed(2)} € do wypłaty 🎉
+                      Masz {available.toFixed(2)} $ do wypłaty 🎉
                     </p>
                     <p className="text-xs text-amber-100/80 mt-0.5">
                       Dodaj swój numer konta, żebyśmy mogli przelać Ci pieniądze.
@@ -710,11 +710,11 @@ const CreatorEarnings = () => {
                     const totalCredited = totalEarnings + bonusPayoutFallback;
                     const reserved = payouts.filter(p => p.status !== "rejected").reduce((s, p) => s + Number(p.amount), 0);
                     return Math.max(0, totalCredited - reserved).toFixed(2);
-                  })()} €
+                  })()} $
                 </p>
                 {bonusEarnings > 0 && (
                   <p className="text-[10px] text-emerald-400">
-                    🎁 W tym {bonusEarnings.toFixed(2)} € z bonusów
+                    🎁 W tym {bonusEarnings.toFixed(2)} $ z bonusów
                   </p>
                 )}
                 <p className="text-[10px] text-muted-foreground">{t("earnings.minPayoutInfo")}</p>
@@ -739,7 +739,7 @@ const CreatorEarnings = () => {
                       <Clock className="h-3.5 w-3.5 text-muted-foreground" />
                       <span className="text-sm">{new Date(p.requested_at).toLocaleDateString()}</span>
                     </div>
-                    <span className="text-sm font-semibold">{Number(p.amount).toFixed(2)} €</span>
+                    <span className="text-sm font-semibold">{Number(p.amount).toFixed(2)} $</span>
                     <Badge className={cn(
                       "text-[10px]",
                       p.status === "completed" ? "bg-green-500/15 text-green-400 border-green-500/25" :
@@ -815,7 +815,7 @@ const CreatorEarnings = () => {
                         </div>
                         <div>
                           <p className="text-xs text-muted-foreground">{t("earnings.earned")}</p>
-                          <p className="text-sm font-semibold text-primary">{Number(track.total_earnings).toFixed(2)} €</p>
+                          <p className="text-sm font-semibold text-primary">{Number(track.total_earnings).toFixed(2)} $</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">

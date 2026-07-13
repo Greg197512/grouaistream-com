@@ -13,7 +13,7 @@ const PACKAGES = [
     id: "aurora_sponsored_blog_one",
     icon: Megaphone,
     name: "Sponsored Blog Post",
-    price: "9,99 €",
+    price: "9,99 $",
     badge: "Najpopularniejsze",
     desc: "Twoja marka w jednym z artykułów Aurory na blogu GrouAI Stream.",
     bullets: [
@@ -26,7 +26,7 @@ const PACKAGES = [
     id: "aurora_niche_landing_monthly",
     icon: Globe2,
     name: "Niche Landing Sponsorship",
-    price: "19,99 €/mies",
+    price: "19,99 $/mies",
     badge: "Subskrypcja",
     desc: "Bądź sponsorem dedykowanej strony niszowej (/n/dj-na-wesele, /n/muzyka-do-medytacji…).",
     bullets: [
@@ -39,7 +39,7 @@ const PACKAGES = [
     id: "aurora_partnership_boost_one",
     icon: Handshake,
     name: "Partnership Boost",
-    price: "49 €",
+    price: "49 $",
     badge: "1× akcja",
     desc: "Aurora pisze dla Ciebie newsletter + post na bloga + scenariusz TikTok.",
     bullets: [

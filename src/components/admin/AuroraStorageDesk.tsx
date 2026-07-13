@@ -241,9 +241,9 @@ export function AuroraStorageDesk() {
             <Card><CardContent className="pt-6"><div className="text-2xl font-bold">{summary.total_clients}</div><div className="text-xs text-muted-foreground">klientów</div></CardContent></Card>
             <Card><CardContent className="pt-6"><div className="text-2xl font-bold">{summary.total_used_gb} GB</div><div className="text-xs text-muted-foreground">storage razem</div></CardContent></Card>
             <Card><CardContent className="pt-6"><div className="text-2xl font-bold">{summary.total_egress_gb} GB</div><div className="text-xs text-muted-foreground">egress / mc</div></CardContent></Card>
-            <Card><CardContent className="pt-6"><div className="text-2xl font-bold text-green-500">€{summary.total_revenue_eur}</div><div className="text-xs text-muted-foreground">przychód MRR</div></CardContent></Card>
-            <Card><CardContent className="pt-6"><div className="text-2xl font-bold text-orange-500">€{(Number(summary.total_r2_cost_eur) + Number(summary.total_egress_cost_eur || 0)).toFixed(2)}</div><div className="text-xs text-muted-foreground">koszt R2 + egress</div></CardContent></Card>
-            <Card><CardContent className="pt-6"><div className="text-2xl font-bold text-emerald-500">€{summary.total_margin_eur}</div><div className="text-xs text-muted-foreground">marża netto</div></CardContent></Card>
+            <Card><CardContent className="pt-6"><div className="text-2xl font-bold text-green-500">${summary.total_revenue_eur}</div><div className="text-xs text-muted-foreground">przychód MRR</div></CardContent></Card>
+            <Card><CardContent className="pt-6"><div className="text-2xl font-bold text-orange-500">${(Number(summary.total_r2_cost_eur) + Number(summary.total_egress_cost_eur || 0)).toFixed(2)}</div><div className="text-xs text-muted-foreground">koszt R2 + egress</div></CardContent></Card>
+            <Card><CardContent className="pt-6"><div className="text-2xl font-bold text-emerald-500">${summary.total_margin_eur}</div><div className="text-xs text-muted-foreground">marża netto</div></CardContent></Card>
           </div>
         )}
 
@@ -267,9 +267,9 @@ export function AuroraStorageDesk() {
                       {c.egress_billing_enabled && <Badge className="bg-blue-500/20 text-blue-500 hover:bg-blue-500/30">egress on</Badge>}
                     </div>
                     <div className="text-xs text-muted-foreground mt-1">
-                      {c.storage_used_gb} / {c.plan_storage_gb} GB · storage €{c.r2_real_cost_eur}
-                      {c.egress_billing_enabled && <> · egress {c.egress_used_gb}GB → €{c.r2_egress_cost_eur}</>}
-                      {" · "}marża: <span className={c.plan_margin_eur > 0 ? "text-green-500" : "text-red-500"}>€{c.plan_margin_eur}</span>
+                      {c.storage_used_gb} / {c.plan_storage_gb} GB · storage ${c.r2_real_cost_eur}
+                      {c.egress_billing_enabled && <> · egress {c.egress_used_gb}GB → ${c.r2_egress_cost_eur}</>}
+                      {" · "}marża: <span className={c.plan_margin_eur > 0 ? "text-green-500" : "text-red-500"}>${c.plan_margin_eur}</span>
                     </div>
                   </div>
                   {c.suggested_upgrade && (
@@ -299,7 +299,7 @@ export function AuroraStorageDesk() {
                     <span className="text-xs">Naliczaj egress</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Label className="text-xs whitespace-nowrap">Stawka €/GB:</Label>
+                    <Label className="text-xs whitespace-nowrap">Stawka $/GB:</Label>
                     <Input
                       type="number"
                       step="0.0001"
@@ -334,7 +334,7 @@ export function AuroraStorageDesk() {
             <select className="w-full border rounded-md px-3 py-2 text-sm bg-background" value={newOffer.plan_code} onChange={e => setNewOffer({ ...newOffer, plan_code: e.target.value })}>
               <option value="">— wybierz plan —</option>
               {plans.map(p => (
-                <option key={p.code} value={p.code}>{p.name} — {p.storage_gb}GB — €{p.price_eur}/mc</option>
+                <option key={p.code} value={p.code}>{p.name} — {p.storage_gb}GB — ${p.price_eur}/mc</option>
               ))}
             </select>
             <Textarea placeholder="uzasadnienie oferty (opcjonalne — Aurora wypełni jeśli puste)" value={newOffer.rationale} onChange={e => setNewOffer({ ...newOffer, rationale: e.target.value })} rows={2} />
@@ -358,7 +358,7 @@ export function AuroraStorageDesk() {
                       <Badge variant="secondary">{o.status}</Badge>
                     </div>
                     <div className="text-xs text-muted-foreground mt-1">
-                      €{o.monthly_price_eur}/mc · marża €{o.margin_eur} · ważna do {o.expires_at ? new Date(o.expires_at).toLocaleDateString() : "—"}
+                      ${o.monthly_price_eur}/mc · marża ${o.margin_eur} · ważna do {o.expires_at ? new Date(o.expires_at).toLocaleDateString() : "—"}
                     </div>
                     {o.rationale && <p className="text-xs mt-2">{o.rationale}</p>}
                   </div>
@@ -446,7 +446,7 @@ export function AuroraStorageDesk() {
                   <div className="font-semibold">{p.name} <Badge variant="outline" className="ml-2">{p.storage_gb}GB</Badge></div>
                   <div className="text-xs text-muted-foreground">code: {p.code} · paddle: {p.paddle_price_id || <span className="text-red-500">brak</span>}</div>
                 </div>
-                <div className="text-lg font-bold">€{p.price_eur}/mc</div>
+                <div className="text-lg font-bold">${p.price_eur}/mc</div>
               </div>
             ))}
           </CardContent>

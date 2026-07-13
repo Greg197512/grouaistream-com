@@ -83,7 +83,7 @@ export const ReferralPanel = () => {
             Udostępnij swój link. Gdy polecona osoba wykupi abonament (Pro lub
             Ultimate), dostajesz <strong className="text-foreground">20% prowizji od każdej jej
             płatności przez 12 miesięcy</strong>. Prowizje wpadają do Twoich zarobków
-            i wypłacasz je razem z resztą (od 50 PLN).
+            i wypłacasz je razem z resztą (od 50 $).
           </p>
 
           <div className="flex gap-2">

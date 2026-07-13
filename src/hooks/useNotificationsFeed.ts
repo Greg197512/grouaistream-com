@@ -14,7 +14,7 @@ export type FeedItem = {
 const STORAGE_KEY = "grouai:notifications:lastSeen";
 
 const fmtMoney = (n: number) =>
-  n >= 1 ? `€${n.toFixed(2)}` : `${(n * 100).toFixed(1)}¢`;
+  n >= 1 ? `$${n.toFixed(2)}` : `${(n * 100).toFixed(1)}¢`;
 
 const since = (iso: string) => {
   const d = (Date.now() - new Date(iso).getTime()) / 1000;

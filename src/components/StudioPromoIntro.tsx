@@ -86,7 +86,7 @@ export const StudioPromoIntro = () => {
               <text x="100" y="58" textAnchor="middle" fontSize="12.5" fontWeight="800" letterSpacing="1.5" fill="#ffd9a8" fontFamily="system-ui, sans-serif">GrouAI STUDIO</text>
               <text x="100" y="104" textAnchor="middle" fontSize="42" fontWeight="900" fill="#ffffff" fontFamily="system-ui, sans-serif">FREE</text>
               <text x="100" y="128" textAnchor="middle" fontSize="14" fontWeight="800" letterSpacing="1.5" fill="#8affc9" fontFamily="system-ui, sans-serif">CAŁY TYDZIEŃ</text>
-              <text x="100" y="149" textAnchor="middle" fontSize="10.5" fontWeight="600" fill="rgba(255,255,255,0.6)" fontFamily="system-ui, sans-serif">potem 9,90 zł Pro</text>
+              <text x="100" y="149" textAnchor="middle" fontSize="10.5" fontWeight="600" fill="rgba(255,255,255,0.6)" fontFamily="system-ui, sans-serif">potem 9,90 $ Pro</text>
             </svg>
           </motion.button>
 

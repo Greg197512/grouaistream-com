@@ -4,9 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { CreditCard, ExternalLink, Wallet, Receipt, Loader2, Crown, TrendingUp, AlertTriangle } from "lucide-react";
 
-// Ceny planów (PLN/mies) — do szacunku miesięcznego przychodu z aktywnych subskrypcji.
-const PRO_PLN = 19;
-const ULT_PLN = 39;
+// Ceny planów (USD/mies) — do szacunku miesięcznego przychodu z aktywnych subskrypcji.
+const PRO_USD = 19;
+const ULT_USD = 39;
 const PADDLE_DASHBOARD = "https://vendors.paddle.com/";
 const HUB_PADDLE = "https://bmwtydwpevzhbdplilbr.supabase.co/functions/v1/paddle-report";
 
@@ -73,7 +73,7 @@ export function PaddleAdminPanel() {
     return () => { cancelled = true; };
   }, []);
 
-  const mrr = pro * PRO_PLN + ult * ULT_PLN;
+  const mrr = pro * PRO_USD + ult * ULT_USD;
 
   const stat = (label: string, value: string, icon: React.ReactNode, accent = "text-primary") => (
     <Card className="border-border/50 bg-card/50 backdrop-blur">
@@ -106,9 +106,9 @@ export function PaddleAdminPanel() {
           ) : (
             <div className="grid gap-4 md:grid-cols-4">
               {stat("Aktywne subskrypcje", String(pro + ult), <Crown className="h-5 w-5 text-primary" />)}
-              {stat("Pro (× 19 zł)", String(pro), <CreditCard className="h-5 w-5 text-sky-400" />, "text-sky-400")}
-              {stat("Ultimate (× 39 zł)", String(ult), <Crown className="h-5 w-5 text-amber-400" />, "text-amber-400")}
-              {stat("Szac. przychód / mies.", `${mrr} zł`, <TrendingUp className="h-5 w-5 text-emerald-400" />, "text-emerald-400")}
+              {stat("Pro (× 19 $)", String(pro), <CreditCard className="h-5 w-5 text-sky-400" />, "text-sky-400")}
+              {stat("Ultimate (× 39 $)", String(ult), <Crown className="h-5 w-5 text-amber-400" />, "text-amber-400")}
+              {stat("Szac. przychód / mies.", `${mrr} $`, <TrendingUp className="h-5 w-5 text-emerald-400" />, "text-emerald-400")}
             </div>
           )}
         </CardContent>

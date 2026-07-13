@@ -82,7 +82,7 @@ export const RadioMoodDetector = () => {
       const result = data as { success: boolean; amount?: number; error?: string };
       if (result?.success && result.amount) {
         setBonusGranted(result.amount);
-        toast.success(`🎁 +${result.amount} zł na Twoje zarobki za pierwszą analizę!`, { duration: 6000 });
+        toast.success(`🎁 +${result.amount} $ na Twoje zarobki za pierwszą analizę!`, { duration: 6000 });
       }
     } catch (e) {
       console.warn("[bonus] failed", e);
@@ -272,7 +272,7 @@ export const RadioMoodDetector = () => {
         </div>
         <div>
           <h3 className="text-sm font-bold">AI Mood Detection</h3>
-          <p className="text-[10px] text-muted-foreground">Pierwsza analiza = +10 zł na zarobki 🎁</p>
+          <p className="text-[10px] text-muted-foreground">Pierwsza analiza = +10 $ na zarobki 🎁</p>
         </div>
         <Sparkles className="h-3 w-3 text-primary ml-auto animate-pulse" />
       </div>
@@ -378,7 +378,7 @@ export const RadioMoodDetector = () => {
             <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border border-yellow-500/30">
               <Gift className="h-4 w-4 text-yellow-400" />
               <span className="text-xs font-bold text-yellow-200">
-                +{bonusGranted} zł trafiło na Twoje zarobki!
+                +{bonusGranted} $ trafiło na Twoje zarobki!
               </span>
             </div>
           </motion.div>

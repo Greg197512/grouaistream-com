@@ -206,12 +206,12 @@ export const TopEarners = () => {
               <div className="rounded-lg bg-background/40 p-2.5 text-center">
                 <DollarSign className="h-3.5 w-3.5 mx-auto text-primary mb-1" />
                 <p className="text-xs text-muted-foreground">Zarobki ogółem</p>
-                <p className="text-sm font-bold text-primary">{earner.total_earnings.toFixed(2)} €</p>
+                <p className="text-sm font-bold text-primary">{earner.total_earnings.toFixed(2)} $</p>
               </div>
               <div className="rounded-lg bg-background/40 p-2.5 text-center">
                 <TrendingUp className="h-3.5 w-3.5 mx-auto text-accent mb-1" />
                 <p className="text-xs text-muted-foreground">Ten miesiąc</p>
-                <p className="text-sm font-bold text-accent">{earner.monthly_earnings.toFixed(2)} €</p>
+                <p className="text-sm font-bold text-accent">{earner.monthly_earnings.toFixed(2)} $</p>
               </div>
               <div className="rounded-lg bg-background/40 p-2.5 text-center">
                 <BarChart3 className="h-3.5 w-3.5 mx-auto text-muted-foreground mb-1" />
@@ -221,7 +221,7 @@ export const TopEarners = () => {
               <div className="rounded-lg bg-background/40 p-2.5 text-center">
                 <Heart className="h-3.5 w-3.5 mx-auto text-pink-400 mb-1" />
                 <p className="text-xs text-muted-foreground">Tipy</p>
-                <p className="text-sm font-bold text-pink-400">{earner.tip_earnings.toFixed(2)} €</p>
+                <p className="text-sm font-bold text-pink-400">{earner.tip_earnings.toFixed(2)} $</p>
               </div>
             </div>
 

@@ -73,7 +73,7 @@ export const PartnerCRMPanel = () => {
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="text-sm font-bold text-orange-400">{Number(c.partnership_value_eur).toLocaleString("pl-PL")} €</div>
+                  <div className="text-sm font-bold text-orange-400">{Number(c.partnership_value_eur).toLocaleString("pl-PL")} $</div>
                   {c.website && <a href={c.website} target="_blank" rel="noreferrer" className="text-[10px] text-blue-400 hover:underline">www</a>}
                 </div>
               </div>

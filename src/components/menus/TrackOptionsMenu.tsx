@@ -554,7 +554,7 @@ const TrackOptionsMenuComponent = (
               >
                 <Coffee className="mr-2 h-4 w-4" />
                 <span className="flex-1">Postaw kawę twórcy ☕</span>
-                <span className="text-[10px] text-muted-foreground">1€ / 3€ / 5€</span>
+                <span className="text-[10px] text-muted-foreground">1$ / 3$ / 5$</span>
               </DropdownMenuItem>
             </>
           )}

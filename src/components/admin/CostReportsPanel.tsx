@@ -108,19 +108,19 @@ export const CostReportsPanel = () => {
             <div>
               <div className="text-xs text-muted-foreground">Stałe</div>
               <div className="text-2xl font-bold text-blue-300">
-                {Number(current?.fixed_total ?? 0).toFixed(2)}€
+                {Number(current?.fixed_total ?? 0).toFixed(2)}$
               </div>
             </div>
             <div>
               <div className="text-xs text-muted-foreground">Zmienne</div>
               <div className="text-2xl font-bold text-amber-300">
-                {Number(current?.variable_total ?? 0).toFixed(2)}€
+                {Number(current?.variable_total ?? 0).toFixed(2)}$
               </div>
             </div>
             <div>
               <div className="text-xs text-muted-foreground">RAZEM</div>
               <div className="text-2xl font-bold text-foreground">
-                {Number(current?.total ?? 0).toFixed(2)}€
+                {Number(current?.total ?? 0).toFixed(2)}$
               </div>
               {prev && (
                 <div className={`text-xs flex items-center gap-1 ${delta >= 0 ? 'text-red-400' : 'text-emerald-400'}`}>
@@ -159,7 +159,7 @@ export const CostReportsPanel = () => {
                       style={{ width: `${widthPct}%` }}
                     />
                     <div className="absolute inset-0 flex items-center px-2 text-xs font-semibold">
-                      {Number(m.total).toFixed(2)}€
+                      {Number(m.total).toFixed(2)}$
                       <span className="text-muted-foreground ml-2 font-normal">
                         ({Number(m.fixed_total).toFixed(0)} fix / {Number(m.variable_total).toFixed(0)} var)
                       </span>
@@ -213,7 +213,7 @@ export const CostReportsPanel = () => {
                       {b.notes || JSON.stringify(b.usage_metric).slice(0, 60)}
                     </TableCell>
                     <TableCell className="text-right font-bold">
-                      {Number(b.amount_eur).toFixed(2)}€
+                      {Number(b.amount_eur).toFixed(2)}$
                     </TableCell>
                   </TableRow>
                 ))}

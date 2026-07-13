@@ -35,7 +35,7 @@ export default function AdSubmission() {
   });
 
   useEffect(() => {
-    document.title = `Wrzuć reklamę na GrouAI Stream — ${AD_PRICE_EUR}€`;
+    document.title = `Wrzuć reklamę na GrouAI Stream — ${AD_PRICE_EUR}$`;
     if (!token) { setLoading(false); return; }
     (async () => {
       try {
@@ -136,7 +136,7 @@ export default function AdSubmission() {
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-3xl font-bold text-primary">{submitted.amount ?? AD_PRICE_EUR} €</div>
+                <div className="text-3xl font-bold text-primary">{submitted.amount ?? AD_PRICE_EUR} $</div>
                 <div className="text-xs text-muted-foreground">jednorazowo · 30 dni</div>
               </div>
             </div>
@@ -166,7 +166,7 @@ export default function AdSubmission() {
                 className="w-full h-14 text-base font-bold bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg shadow-primary/30"
               >
                 <CreditCard className="w-5 h-5 mr-2" />
-                {payingCard ? "Otwieram płatność…" : `Zapłać 5 € kartą — natychmiast aktywuj reklamę`}
+                {payingCard ? "Otwieram płatność…" : `Zapłać 5 $ kartą — natychmiast aktywuj reklamę`}
               </Button>
               <p className="text-[11px] text-center text-muted-foreground">
                 Płatność obsługiwana przez Paddle (Merchant of Record) · Faktura VAT od razu na maila · Zwrot do 14 dni
@@ -184,7 +184,7 @@ export default function AdSubmission() {
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-xl font-bold">{submitted.amount ?? AD_PRICE_EUR} €</div>
+                <div className="text-xl font-bold">{submitted.amount ?? AD_PRICE_EUR} $</div>
               </div>
             </div>
 
@@ -312,7 +312,7 @@ export default function AdSubmission() {
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
             Dotrzyj do tysięcy słuchaczy, twórców i odbiorców muzyki nowej generacji.
             <br />
-            <strong className="text-foreground">{AD_PRICE_EUR} € jednorazowo · 30 dni publikacji · 24h na opłatę po dodaniu</strong>
+            <strong className="text-foreground">{AD_PRICE_EUR} $ jednorazowo · 30 dni publikacji · 24h na opłatę po dodaniu</strong>
           </p>
         </div>
       </div>
@@ -368,7 +368,7 @@ export default function AdSubmission() {
               <strong className="text-primary">Jak to działa:</strong>
               <ol className="list-decimal pl-5 mt-2 space-y-1 text-muted-foreground">
                 <li>Wysyłasz formularz — reklama publikuje się natychmiast na blogu</li>
-                <li>W kolejnym kroku dostajesz dane do płatności Revolut ({AD_PRICE_EUR} €)</li>
+                <li>W kolejnym kroku dostajesz dane do płatności Revolut ({AD_PRICE_EUR} $)</li>
                 <li>Na email dostajesz od razu pełne podsumowanie wysłanego zgłoszenia</li>
                 <li>Masz 24h na opłatę — w przeciwnym razie reklama zostanie usunięta</li>
               </ol>

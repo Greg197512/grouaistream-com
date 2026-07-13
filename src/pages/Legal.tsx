@@ -367,10 +367,10 @@ const Legal = () => {
               </div>
 
               <Section title="Available plans / Dostępne plany">
-                <p><strong>Free</strong> — €0 — basic playback, limited generations.</p>
-                <p><strong>Pro</strong> — €9.99 / month — unlimited generations, AI DJ, mood radio.</p>
-                <p><strong>Ultimate</strong> — €19.99 / month — everything in Pro + commercial license, priority support.</p>
-                <p><strong>Coffee tips</strong> — €1 / €3 / €5 — one-time donations supporting the project and creators.</p>
+                <p><strong>Free</strong> — $0 — basic playback, limited generations.</p>
+                <p><strong>Pro</strong> — $9.99 / month — unlimited generations, AI DJ, mood radio.</p>
+                <p><strong>Ultimate</strong> — $19.99 / month — everything in Pro + commercial license, priority support.</p>
+                <p><strong>Coffee tips</strong> — $1 / $3 / $5 — one-time donations supporting the project and creators.</p>
               </Section>
 
               <Section title="Billing cycle / Cykl rozliczeniowy">

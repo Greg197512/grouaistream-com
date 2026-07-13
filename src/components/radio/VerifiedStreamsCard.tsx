@@ -4,7 +4,7 @@ import { Shield, Users, TrendingUp, Eye, Zap, Lock } from "lucide-react";
 const STATS = [
   { icon: Shield, label: "Anti-Bot Protection", value: "Active", color: "text-emerald-400" },
   { icon: Users, label: "Verified Listeners", value: "100%", color: "text-primary" },
-  { icon: TrendingUp, label: "Fair Royalties", value: "€0.0007/stream", color: "text-yellow-400" },
+  { icon: TrendingUp, label: "Fair Royalties", value: "$0.0007/stream", color: "text-yellow-400" },
 ];
 
 const FEATURES = [

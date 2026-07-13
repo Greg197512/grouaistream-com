@@ -37,7 +37,7 @@ export const PayoutRequestModal = ({ open, onOpenChange, availableAmount, onSucc
       const result = data as any;
       if (!result?.success) {
         if (result?.error === "insufficient_balance") {
-          toast.error(`Niewystarczające saldo (${Number(result.available || 0).toFixed(2)} €)`);
+          toast.error(`Niewystarczające saldo (${Number(result.available || 0).toFixed(2)} $)`);
         } else if (result?.error === "invalid_data") {
           toast.error("Nieprawidłowe dane");
         } else {
@@ -45,7 +45,7 @@ export const PayoutRequestModal = ({ open, onOpenChange, availableAmount, onSucc
         }
         return;
       }
-      toast.success(`Wniosek o wypłatę ${Number(result.amount).toFixed(2)} € został wysłany ✅`);
+      toast.success(`Wniosek o wypłatę ${Number(result.amount).toFixed(2)} $ został wysłany ✅`);
       setFullName(""); setCity(""); setBankAccount("");
       onOpenChange(false);
       onSuccess();
@@ -72,7 +72,7 @@ export const PayoutRequestModal = ({ open, onOpenChange, availableAmount, onSucc
 
         <div className="rounded-lg bg-primary/10 border border-primary/20 p-3 text-center">
           <p className="text-xs text-muted-foreground uppercase">Do wypłaty</p>
-          <p className="text-3xl font-bold text-primary">{availableAmount.toFixed(2)} €</p>
+          <p className="text-3xl font-bold text-primary">{availableAmount.toFixed(2)} $</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">

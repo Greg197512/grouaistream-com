@@ -45,14 +45,14 @@ export const TipWelcomeModal = () => {
                   <Sparkles className="h-4 w-4 text-amber-300" />
                 </div>
                 <h2 className="text-3xl font-extrabold bg-gradient-to-r from-pink-300 via-rose-200 to-amber-200 bg-clip-text text-transparent">
-                  Masz 5 € na tipy 🎁
+                  Masz 5 $ na tipy 🎁
                 </h2>
               </div>
 
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Otrzymujesz <span className="text-pink-300 font-bold">5 € startowych credit&apos;ów</span> do wsparcia ulubionych artystów.
+                Otrzymujesz <span className="text-pink-300 font-bold">5 $ startowych credit&apos;ów</span> do wsparcia ulubionych artystów.
                 <br />
-                Klikaj <Heart className="inline h-3.5 w-3.5 text-pink-400 fill-pink-400 mx-0.5" /> przy utworach i wybieraj kwotę: <span className="font-bold text-foreground">1 € · 2 € · 5 € · 10 €</span>
+                Klikaj <Heart className="inline h-3.5 w-3.5 text-pink-400 fill-pink-400 mx-0.5" /> przy utworach i wybieraj kwotę: <span className="font-bold text-foreground">1 $ · 2 $ · 5 $ · 10 $</span>
               </p>
 
               <div className="bg-pink-500/10 border border-pink-500/20 rounded-xl p-3 text-xs text-pink-200/90">

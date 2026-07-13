@@ -422,7 +422,7 @@ export const AuroraPanel = () => {
               <CardDescription>
                 Aurora codziennie wymyśla SEO posty, landingi pod nisze, partnerstwa, scenariusze TikTok i newslettery.
                 Zatwierdź te które rezonują — Aurora opublikuje je sama.
-                Szacowany potencjał oczekujących: <strong className="text-amber-300">{proposedRevenue.toFixed(2)}€</strong>.
+                Szacowany potencjał oczekujących: <strong className="text-amber-300">{proposedRevenue.toFixed(2)}$</strong>.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -434,7 +434,7 @@ export const AuroraPanel = () => {
                         <Badge variant="outline" className="capitalize">{a.action_type.replace(/_/g, " ")}</Badge>
                         {a.estimated_revenue_eur > 0 && (
                           <Badge variant="secondary" className="bg-amber-500/15 text-amber-300 border-amber-500/30">
-                            ~{Number(a.estimated_revenue_eur).toFixed(2)}€
+                            ~{Number(a.estimated_revenue_eur).toFixed(2)}$
                           </Badge>
                         )}
                         <span className="text-xs text-muted-foreground ml-auto">
@@ -521,7 +521,7 @@ export const AuroraPanel = () => {
                   </Badge>
                 </CardTitle>
                 <CardDescription>
-                  Co 6h Aurora sama: skanuje nisze → uruchamia te z ufnością ≥{Math.round((autopilot.min_confidence || 0) * 100)}% i przychodem ≥{autopilot.min_revenue_eur}€ → automatycznie publikuje SEO posty na blogu.
+                  Co 6h Aurora sama: skanuje nisze → uruchamia te z ufnością ≥{Math.round((autopilot.min_confidence || 0) * 100)}% i przychodem ≥{autopilot.min_revenue_eur}$ → automatycznie publikuje SEO posty na blogu.
                   {autopilot.last_run_at && (
                     <span className="block mt-1 text-xs">Ostatni cykl: {formatDistanceToNow(new Date(autopilot.last_run_at), { addSuffix: true, locale: pl })}</span>
                   )}
@@ -542,7 +542,7 @@ export const AuroraPanel = () => {
                       className="bg-background border border-border rounded px-2 py-1" disabled={savingAutopilot} />
                   </label>
                   <label className="flex flex-col gap-1">
-                    <span className="text-muted-foreground">Min. przychód €/mies</span>
+                    <span className="text-muted-foreground">Min. przychód $/mies</span>
                     <input type="number" min={0} value={autopilot.min_revenue_eur}
                       onChange={(e) => updateAutopilot({ min_revenue_eur: parseFloat(e.target.value || "0") })}
                       className="bg-background border border-border rounded px-2 py-1" disabled={savingAutopilot} />
@@ -605,7 +605,7 @@ export const AuroraPanel = () => {
                         <div className="flex items-center gap-2 flex-wrap mb-1">
                           <Badge variant="outline" className="capitalize">{n.category}</Badge>
                           <Badge variant="secondary" className="bg-fuchsia-500/15 text-fuchsia-300 border-fuchsia-500/30">
-                            ~{Number(n.estimated_monthly_revenue_eur).toFixed(0)}€/mies
+                            ~{Number(n.estimated_monthly_revenue_eur).toFixed(0)}$/mies
                           </Badge>
                           <Badge variant="outline" className="text-[10px]">
                             ufność {Math.round(Number(n.confidence_score) * 100)}%

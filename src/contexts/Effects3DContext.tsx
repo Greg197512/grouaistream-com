@@ -17,6 +17,19 @@ const persist = (v: boolean) => {
   }
 };
 
+// iOS 13+ wymaga ZGODY na żyroskop, i to wywołanej gestem użytkownika (tap na przełączniku).
+// Bez tego `deviceorientation` na iPhonie nigdy nie odpala i przechył „nie działa".
+async function requestMotionPermission() {
+  try {
+    const DOE: any = typeof window !== "undefined" ? (window as any).DeviceOrientationEvent : undefined;
+    if (DOE && typeof DOE.requestPermission === "function") {
+      await DOE.requestPermission();
+    }
+  } catch {
+    /* użytkownik odmówił lub brak czujnika — mamy łagodny dryf jako fallback */
+  }
+}
+
 export const Effects3DProvider = ({ children }: { children: ReactNode }) => {
   const [is3D, setIs3DState] = useState<boolean>(() => {
     try {
@@ -29,6 +42,7 @@ export const Effects3DProvider = ({ children }: { children: ReactNode }) => {
 
   const setIs3D = useCallback((v: boolean) => {
     persist(v);
+    if (v) void requestMotionPermission(); // wołane z gestu (Switch/przycisk) — iOS to zaakceptuje
     setIs3DState(v);
   }, []);
 
@@ -36,6 +50,7 @@ export const Effects3DProvider = ({ children }: { children: ReactNode }) => {
     setIs3DState((prev) => {
       const next = !prev;
       persist(next);
+      if (next) void requestMotionPermission();
       return next;
     });
   }, []);
@@ -45,8 +60,10 @@ export const Effects3DProvider = ({ children }: { children: ReactNode }) => {
     document.documentElement.setAttribute("data-threed", is3D ? "on" : "off");
   }, [is3D]);
 
-  // Globalny parallax: pozycja kursora / przechył telefonu -> zmienne CSS --tilt-x/--tilt-y (-1..1).
-  // Dzięki temu „światło" i głębia idą za tym, na co patrzysz.
+  // Globalny parallax -> zmienne CSS --tilt-x/--tilt-y (-1..1). Sterowane myszką (desktop)
+  // i żyroskopem (telefon/tablet). Gdy przez chwilę nie ma ruchu, włącza się delikatny
+  // „żywy" dryf — dzięki temu na telefonie EFEKT WIDAĆ nawet bez ruszania (i gdy iOS nie da
+  // zgody na żyroskop). Pętla pauzuje, gdy karta jest schowana; szanuje prefers-reduced-motion.
   useEffect(() => {
     const root = document.documentElement;
     if (!is3D) {
@@ -60,32 +77,58 @@ export const Effects3DProvider = ({ children }: { children: ReactNode }) => {
     let raf = 0;
     let tx = 0;
     let ty = 0;
-    const apply = () => {
-      raf = 0;
-      root.style.setProperty("--tilt-x", tx.toFixed(3));
-      root.style.setProperty("--tilt-y", ty.toFixed(3));
-    };
-    const schedule = () => {
-      if (!raf) raf = requestAnimationFrame(apply);
-    };
+    let lastInput = 0;
+    let lastWrite = 0;
+    const start = performance.now();
+
     const onMouse = (e: MouseEvent) => {
       tx = (e.clientX / window.innerWidth) * 2 - 1;
       ty = (e.clientY / window.innerHeight) * 2 - 1;
-      schedule();
+      lastInput = performance.now();
     };
     const onOrient = (e: DeviceOrientationEvent) => {
+      if (e.gamma == null && e.beta == null) return;
       // gamma: lewo-prawo, beta: przód-tył (telefon/tablet)
-      const g = Math.max(-45, Math.min(45, e.gamma ?? 0)) / 45;
-      const b = Math.max(-45, Math.min(45, (e.beta ?? 40) - 40)) / 45;
-      tx = g;
-      ty = b;
-      schedule();
+      tx = Math.max(-45, Math.min(45, e.gamma ?? 0)) / 45;
+      ty = Math.max(-45, Math.min(45, (e.beta ?? 40) - 40)) / 45;
+      lastInput = performance.now();
     };
+
+    const loop = () => {
+      const now = performance.now();
+      let x = tx;
+      let y = ty;
+      // Brak ruchu przez ~1,6 s → łagodny dryf (sinus), żeby okładki „żyły".
+      if (now - lastInput > 1600) {
+        const t = (now - start) / 1000;
+        x = Math.sin(t * 0.45) * 0.55;
+        y = Math.sin(t * 0.32 + 1.1) * 0.4;
+      }
+      // Throttle zapisu do ~30 fps — mniej obciąża słabe telefony.
+      if (now - lastWrite > 33) {
+        lastWrite = now;
+        root.style.setProperty("--tilt-x", x.toFixed(3));
+        root.style.setProperty("--tilt-y", y.toFixed(3));
+      }
+      raf = requestAnimationFrame(loop);
+    };
+
+    const onVis = () => {
+      if (document.hidden) {
+        if (raf) { cancelAnimationFrame(raf); raf = 0; }
+      } else if (!raf) {
+        raf = requestAnimationFrame(loop);
+      }
+    };
+
     window.addEventListener("mousemove", onMouse, { passive: true });
     window.addEventListener("deviceorientation", onOrient, { passive: true });
+    document.addEventListener("visibilitychange", onVis);
+    raf = requestAnimationFrame(loop);
     return () => {
       window.removeEventListener("mousemove", onMouse);
       window.removeEventListener("deviceorientation", onOrient);
+      document.removeEventListener("visibilitychange", onVis);
       if (raf) cancelAnimationFrame(raf);
     };
   }, [is3D]);

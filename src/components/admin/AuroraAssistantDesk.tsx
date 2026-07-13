@@ -210,7 +210,7 @@ export const AuroraAssistantDesk = () => {
                           "bg-blue-500/20 text-blue-300"
                         }>{d.status}</Badge>
                         {d.confidence != null && <span className="text-xs text-muted-foreground">conf: {(d.confidence * 100).toFixed(0)}%</span>}
-                        {d.budget_eur != null && <span className="text-xs">€{d.budget_eur}</span>}
+                        {d.budget_eur != null && <span className="text-xs">${d.budget_eur}</span>}
                         {d.deadline && <span className="text-xs">⏰ {d.deadline}</span>}
                       </div>
                       {client && <div className="text-xs text-muted-foreground">{client.full_name ?? client.email ?? "?"} · {client.company ?? ""}</div>}
@@ -343,7 +343,7 @@ export const AuroraAssistantDesk = () => {
                     {c.email && <span>📧 {c.email}</span>}
                     {c.phone && <span>📞 {c.phone}</span>}
                     <span>🛒 {c.total_orders} zleceń</span>
-                    <span>💰 €{Number(c.total_revenue_eur).toFixed(0)}</span>
+                    <span>💰 ${Number(c.total_revenue_eur).toFixed(0)}</span>
                     {c.last_contact_at && <span>⏱️ {formatDistanceToNow(new Date(c.last_contact_at), { addSuffix: true, locale: pl })}</span>}
                   </div>
                   {c.notes && <div className="text-xs text-muted-foreground mt-1 italic">{c.notes}</div>}

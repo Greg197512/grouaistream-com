@@ -97,7 +97,7 @@ export default function AdOutreachPanel() {
         </Card>
         <Card className="p-4 border-primary/30">
           <div className="text-xs text-primary uppercase">Przychód (potwierdzony)</div>
-          <div className="text-2xl font-bold">{stats.confirmedRevenue.toFixed(2)} €</div>
+          <div className="text-2xl font-bold">{stats.confirmedRevenue.toFixed(2)} $</div>
         </Card>
       </div>
 
@@ -132,7 +132,7 @@ export default function AdOutreachPanel() {
                       <span><Mail className="w-3 h-3 inline" /> {c.contact_email}</span>
                       <a href={c.ad_url} target="_blank" rel="noreferrer" className="text-primary hover:underline"><ExternalLink className="w-3 h-3 inline" /> {c.ad_url.slice(0, 40)}…</a>
                       <span><Clock className="w-3 h-3 inline" /> Deadline: {new Date(c.payment_deadline).toLocaleString("pl-PL")}</span>
-                      <span className="font-bold text-foreground">{c.amount_eur} €</span>
+                      <span className="font-bold text-foreground">{c.amount_eur} $</span>
                     </div>
                   </div>
                   <div className="flex gap-2 shrink-0">

@@ -159,7 +159,7 @@ export const QuickMoodDetector = ({ isOpen, onClose }: QuickMoodDetectorProps) =
 
       const result = data as { success?: boolean; amount?: number; error?: string } | null;
       if (result?.success && typeof result.amount === "number" && result.amount > 0) {
-        toast.success(`🎁 +${result.amount.toFixed(2)} € trafiło do Twoich zarobków`);
+        toast.success(`🎁 +${result.amount.toFixed(2)} $ trafiło do Twoich zarobków`);
       }
     } catch (error) {
       console.error("Mood bonus claim error:", error);

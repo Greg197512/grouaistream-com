@@ -291,7 +291,7 @@ export default function AdminAurora() {
               <div className="grid md:grid-cols-3 gap-3 mb-4">
                 <Card><CardContent className="pt-6"><div className="text-2xl font-bold">{ranked.length}</div><div className="text-xs text-muted-foreground">w rankingu</div></CardContent></Card>
                 <Card><CardContent className="pt-6"><div className="text-2xl font-bold">{launched.length}</div><div className="text-xs text-muted-foreground">aktywne</div></CardContent></Card>
-                <Card><CardContent className="pt-6"><div className="text-2xl font-bold">€{launched.reduce((s, n) => s + (Number(n.estimated_monthly_revenue_eur) || 0), 0).toFixed(0)}</div><div className="text-xs text-muted-foreground">est. miesięczny przychód</div></CardContent></Card>
+                <Card><CardContent className="pt-6"><div className="text-2xl font-bold">${launched.reduce((s, n) => s + (Number(n.estimated_monthly_revenue_eur) || 0), 0).toFixed(0)}</div><div className="text-xs text-muted-foreground">est. miesięczny przychód</div></CardContent></Card>
               </div>
 
               <ScrollArea className="h-[600px]">
@@ -308,7 +308,7 @@ export default function AdminAurora() {
                             <span>📊 score: <strong className="text-foreground">{Number(n.opportunity_score || 0).toFixed(1)}</strong></span>
                             <span>🔍 vol: {n.search_volume_estimate}</span>
                             <span>⚔️ {n.competition_level}</span>
-                            <span>💶 €{n.estimated_monthly_revenue_eur}/mies.</span>
+                            <span>💶 ${n.estimated_monthly_revenue_eur}/mies.</span>
                           </div>
                         </div>
                         <div className="flex gap-2 shrink-0">
@@ -542,7 +542,7 @@ export default function AdminAurora() {
                 <Card><CardContent className="pt-6"><div className="text-2xl font-bold">{storageOverview?.total_files || 0}</div><div className="text-xs text-muted-foreground">plików w R2</div></CardContent></Card>
                 <Card><CardContent className="pt-6"><div className="text-2xl font-bold">{formatBytes(storageOverview?.total_bytes || 0)}</div><div className="text-xs text-muted-foreground">zajęte miejsce</div></CardContent></Card>
                 <Card><CardContent className="pt-6"><div className="text-2xl font-bold">{storageOverview?.active_subscriptions || 0}</div><div className="text-xs text-muted-foreground">aktywni klienci</div></CardContent></Card>
-                <Card><CardContent className="pt-6"><div className="text-2xl font-bold text-emerald-400">€{Number(storageOverview?.mrr_eur || 0).toFixed(2)}</div><div className="text-xs text-muted-foreground">MRR R2</div></CardContent></Card>
+                <Card><CardContent className="pt-6"><div className="text-2xl font-bold text-emerald-400">${Number(storageOverview?.mrr_eur || 0).toFixed(2)}</div><div className="text-xs text-muted-foreground">MRR R2</div></CardContent></Card>
               </div>
 
               <Card>
@@ -555,7 +555,7 @@ export default function AdminAurora() {
                           <strong>{p.name}</strong>
                           <Switch checked={p.active} onCheckedChange={v => togglePlan(p.id, v)} />
                         </div>
-                        <div className="text-2xl font-bold">€{Number(p.price_eur).toFixed(2)}<span className="text-xs text-muted-foreground">/mies</span></div>
+                        <div className="text-2xl font-bold">${Number(p.price_eur).toFixed(2)}<span className="text-xs text-muted-foreground">/mies</span></div>
                         <div className="text-xs text-muted-foreground mt-1">{p.storage_gb} GB · {p.bandwidth_gb_month} GB transferu</div>
                         <ul className="text-xs mt-2 space-y-0.5">
                           {(p.features || []).map((f, i) => <li key={i}>✓ {f}</li>)}
@@ -572,7 +572,7 @@ export default function AdminAurora() {
                   <div>
                     <Label>Pakiet</Label>
                     <select className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm" value={newSub.plan_code} onChange={e => setNewSub({ ...newSub, plan_code: e.target.value })}>
-                      {storagePlans.filter(p => p.active).map(p => <option key={p.code} value={p.code}>{p.name} · €{p.price_eur}</option>)}
+                      {storagePlans.filter(p => p.active).map(p => <option key={p.code} value={p.code}>{p.name} · ${p.price_eur}</option>)}
                     </select>
                   </div>
                   <div><Label>Email klienta</Label><Input value={newSub.client_email} onChange={e => setNewSub({ ...newSub, client_email: e.target.value })} /></div>

@@ -105,7 +105,7 @@ export const BoostPurchaseModal = ({ isOpen, onClose, trackId, trackTitle }: Boo
             <div className="rounded-2xl bg-background/40 border border-white/5 p-5 mb-5">
               <div className="flex items-baseline gap-1 mb-3">
                 <span className="text-4xl font-bold">{PRICE}</span>
-                <span className="text-lg text-muted-foreground">€</span>
+                <span className="text-lg text-muted-foreground">$</span>
                 <span className="ml-auto text-[10px] uppercase tracking-wider text-amber-400 font-bold">
                   Jednorazowo
                 </span>
@@ -140,7 +140,7 @@ export const BoostPurchaseModal = ({ isOpen, onClose, trackId, trackTitle }: Boo
               ) : (
                 <>
                   <Rocket className="h-4 w-4" />
-                  Kup Basic Boost — {PRICE}€
+                  Kup Basic Boost — {PRICE}$
                 </>
               )}
             </Button>

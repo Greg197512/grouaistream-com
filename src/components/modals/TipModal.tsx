@@ -45,7 +45,7 @@ export const TipModal = ({ isOpen, onClose, trackId, trackTitle, trackArtist }: 
       return;
     }
     if (insufficientFunds) {
-      toast.error(`Brak środków. Saldo: ${balance.toFixed(2)}€`);
+      toast.error(`Brak środków. Saldo: ${balance.toFixed(2)}$`);
       return;
     }
 
@@ -61,7 +61,7 @@ export const TipModal = ({ isOpen, onClose, trackId, trackTitle, trackArtist }: 
       const result = data as any;
       if (!result?.success) {
         const errMap: Record<string, string> = {
-          insufficient_balance: `Brak środków. Saldo: ${result.balance?.toFixed(2)}€`,
+          insufficient_balance: `Brak środków. Saldo: ${result.balance?.toFixed(2)}$`,
           cannot_self_tip: "Nie możesz wysłać tipa na własny utwór 😉",
           track_no_owner: "Ten utwór nie ma właściciela",
           invalid_amount: "Nieprawidłowa kwota",
@@ -71,7 +71,7 @@ export const TipModal = ({ isOpen, onClose, trackId, trackTitle, trackArtist }: 
         return;
       }
 
-      toast.success(`Wysłano ${selected}€ ❤️ → artysta dostał ${result.artist_received.toFixed(2)}€`);
+      toast.success(`Wysłano ${selected}$ ❤️ → artysta dostał ${result.artist_received.toFixed(2)}$`);
       // Brain event
       supabase.rpc("emit_agent_event", {
         _event_type: "tip.sent",
@@ -136,7 +136,7 @@ export const TipModal = ({ isOpen, onClose, trackId, trackTitle, trackArtist }: 
                   <Wallet className="h-3.5 w-3.5 text-pink-300" />
                   <span className="text-muted-foreground">Twoje saldo tipów:</span>
                 </div>
-                <span className="font-bold text-pink-300">{balance.toFixed(2)} €</span>
+                <span className="font-bold text-pink-300">{balance.toFixed(2)} $</span>
               </div>
 
               {/* Amount buttons */}
@@ -160,7 +160,7 @@ export const TipModal = ({ isOpen, onClose, trackId, trackTitle, trackArtist }: 
                       )}
                     >
                       {amount}
-                      <span className="text-xs font-normal block">€</span>
+                      <span className="text-xs font-normal block">$</span>
                     </motion.button>
                   );
                 })}
@@ -169,13 +169,13 @@ export const TipModal = ({ isOpen, onClose, trackId, trackTitle, trackArtist }: 
               {/* Info */}
               <div className="flex items-center gap-2 text-xs text-muted-foreground bg-secondary/40 rounded-lg p-2.5">
                 <ShieldCheck className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
-                <span>Artysta dostaje 90% (= {(selected * 0.9).toFixed(2)} €). Tipy nie do wypłaty.</span>
+                <span>Artysta dostaje 90% (= {(selected * 0.9).toFixed(2)} $). Tipy nie do wypłaty.</span>
               </div>
 
               {/* Brak środków — komunikat */}
               {insufficientFunds && (
                 <div className="text-xs text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-lg p-2.5 text-center">
-                  Brak środków na tip {selected} €. Poczekaj na doładowanie od admina.
+                  Brak środków na tip {selected} $. Poczekaj na doładowanie od admina.
                 </div>
               )}
 
@@ -190,7 +190,7 @@ export const TipModal = ({ isOpen, onClose, trackId, trackTitle, trackArtist }: 
                 ) : (
                   <Heart className="h-4 w-4" />
                 )}
-                {sending ? "Wysyłanie..." : `Wyślij ${selected} €`}
+                {sending ? "Wysyłanie..." : `Wyślij ${selected} $`}
               </Button>
             </CardContent>
           </Card>

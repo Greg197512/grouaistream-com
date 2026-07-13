@@ -175,7 +175,7 @@ export const AuroraNegotiatorPanel = ({ orderId }: { orderId: string }) => {
 
                     <div className="flex items-center gap-3 text-xs text-muted-foreground">
                       {r.proposal_eta_minutes ? <span>⏱ ~{r.proposal_eta_minutes} min</span> : null}
-                      {r.proposal_extra_cost_eur ? <span>💰 +{r.proposal_extra_cost_eur} €</span> : <span>💰 bez dopłat</span>}
+                      {r.proposal_extra_cost_eur ? <span>💰 +{r.proposal_extra_cost_eur} $</span> : <span>💰 bez dopłat</span>}
                     </div>
 
                     {r.status === "proposed" && (

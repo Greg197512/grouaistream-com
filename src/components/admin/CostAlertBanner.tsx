@@ -55,7 +55,7 @@ export const CostAlertBanner = () => {
               <div className="font-semibold">{a.message}</div>
               <div className="text-xs opacity-75 mt-1">
                 {new Date(a.triggered_at).toLocaleString("pl-PL")} · ratio{" "}
-                {a.ratio_pct}% · gap {(a.cost_amount - a.revenue_amount).toFixed(2)}€
+                {a.ratio_pct}% · gap {(a.cost_amount - a.revenue_amount).toFixed(2)}$
               </div>
             </div>
             <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => dismiss(a.id)}>

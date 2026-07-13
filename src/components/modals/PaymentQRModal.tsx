@@ -17,7 +17,7 @@ interface PaymentQRModalProps {
 const PLAN_CONFIG = {
   pro: {
     name: "Pro",
-    price: "9,99 €",
+    price: "9,99 $",
     priceNum: 9.99,
     icon: Zap,
     color: "text-primary",
@@ -28,7 +28,7 @@ const PLAN_CONFIG = {
   },
   ultimate: {
     name: "Ultimate",
-    price: "19,99 €",
+    price: "19,99 $",
     priceNum: 19.99,
     icon: Crown,
     color: "text-amber-400",
@@ -235,7 +235,7 @@ export const PaymentQRModal = ({ open, onOpenChange, plan }: PaymentQRModalProps
                   )}
 
                   <p className="text-[10px] text-muted-foreground/60 text-center mt-3">
-                    Płatność powyżej 10 € – jeśli bank zapyta, potwierdź w apce
+                    Płatność powyżej 10 $ – jeśli bank zapyta, potwierdź w apce
                   </p>
                 </motion.div>
               )}

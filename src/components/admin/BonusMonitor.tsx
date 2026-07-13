@@ -153,7 +153,7 @@ export const BonusMonitor = () => {
                           <Copy className="h-3 w-3" />
                         </button>
                       </TableCell>
-                      <TableCell className="text-right font-bold text-primary">{Number(p.amount).toFixed(2)} €</TableCell>
+                      <TableCell className="text-right font-bold text-primary">{Number(p.amount).toFixed(2)} $</TableCell>
                       <TableCell className="text-right">
                         <Button size="sm" onClick={() => handleAcknowledge(p.detail_id)} disabled={acking === p.detail_id}>
                           {acking === p.detail_id ? <Loader2 className="h-3 w-3 animate-spin" /> : <><CheckCircle2 className="h-3 w-3 mr-1" />Wysłano</>}
@@ -190,7 +190,7 @@ export const BonusMonitor = () => {
                     <div className="flex flex-wrap gap-1">
                       {ready.map(m => (
                         <Badge key={m.key} className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30">
-                          🎁 {m.label} (+{m.amount}€)
+                          🎁 {m.label} (+{m.amount}$)
                         </Badge>
                       ))}
                     </div>
@@ -253,9 +253,9 @@ export const BonusMonitor = () => {
                       );
                     })}
                     <TableCell className="text-right">
-                      <div className="text-sm font-bold text-primary">{Number(u.total_earned).toFixed(2)} €</div>
+                      <div className="text-sm font-bold text-primary">{Number(u.total_earned).toFixed(2)} $</div>
                       {Number(u.total_requested) > 0 && (
-                        <div className="text-[10px] text-muted-foreground">wypł: {Number(u.total_requested).toFixed(2)} €</div>
+                        <div className="text-[10px] text-muted-foreground">wypł: {Number(u.total_requested).toFixed(2)} $</div>
                       )}
                     </TableCell>
                   </TableRow>

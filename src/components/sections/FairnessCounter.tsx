@@ -87,7 +87,7 @@ export const FairnessCounter = () => {
   const compare = [
     { feature: "Zweryfikowane, ludzkie odsłuchania", groua: true, others: false },
     { feature: "Twórca dostaje 65–90% przychodu", groua: true, others: false },
-    { feature: "Wypłata bezpośrednio na konto (od 50 zł)", groua: true, others: false },
+    { feature: "Wypłata bezpośrednio na konto (od 50 $)", groua: true, others: false },
     { feature: "Zero botów i sztucznego nabijania", groua: true, others: false },
     { feature: "Przejrzysty, uczciwy model AI", groua: true, others: false },
   ];
