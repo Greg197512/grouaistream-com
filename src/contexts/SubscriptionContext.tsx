@@ -46,6 +46,19 @@ const PLAN_LEVELS: Record<SubscriptionPlan, number> = {
 export const STUDIO_FREE_UNTIL = new Date("2026-07-19T23:59:59Z");
 export const isStudioPromoActive = () => Date.now() < STUDIO_FREE_UNTIL.getTime();
 
+// Inteligentny status promocji — sterowany DATĄ (sam się przełącza):
+//  active  → jeszcze sporo czasu
+//  soon    → kończy się w ciągu 3 dni (delikatny nudge)
+//  ended   → czas promocyjny minął (teraz VIP)
+export type PromoState = "active" | "soon" | "ended";
+export function getStudioPromoStatus(): { state: PromoState; daysLeft: number; endDate: Date } {
+  const dayMs = 86_400_000;
+  const msLeft = STUDIO_FREE_UNTIL.getTime() - Date.now();
+  const daysLeft = Math.max(0, Math.ceil(msLeft / dayMs));
+  const state: PromoState = msLeft <= 0 ? "ended" : msLeft <= 3 * dayMs ? "soon" : "active";
+  return { state, daysLeft, endDate: STUDIO_FREE_UNTIL };
+}
+
 const SubscriptionContext = createContext<SubscriptionContextType | undefined>(undefined);
 
 export const useSubscription = () => {

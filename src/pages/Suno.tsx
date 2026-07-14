@@ -24,6 +24,7 @@ import { VoiceRecorder } from "@/components/studio/VoiceRecorder";
 import { VoiceLibrary } from "@/components/studio/VoiceLibrary";
 import { StudioGrokDock } from "@/components/studio/StudioGrokDock";
 import { StudioVisualizer } from "@/components/studio/StudioVisualizer";
+import { PromoStatusNotice } from "@/components/studio/PromoStatusNotice";
 import { StudioConsole } from "@/components/studio/StudioConsole";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -790,6 +791,9 @@ const Suno = () => {
                 : <>Napędzany przez <span className="text-[#FF9500] font-semibold">GrouAI Multi-Engine Router</span> — auto-routing przez n8n</>}
             </span>
           </div>
+
+          {/* Inteligentny status promocji (sam wykrywa koniec po dacie) */}
+          <PromoStatusNotice />
 
           {/* === NATURAL LANGUAGE PROMPT BOX (PL/EN/NL/UK) === */}
           <MusicPromptBox
