@@ -26,6 +26,8 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useSubscription } from "@/contexts/SubscriptionContext";
+import { EarnVipGate } from "@/components/earnings/EarnVipGate";
 
 interface MonetizedTrack {
   id: string;
@@ -50,6 +52,7 @@ interface PayoutRequest {
 const CreatorEarnings = () => {
   const { user } = useAuth();
   const { t } = useLanguage();
+  const { plan } = useSubscription();
   const navigate = useNavigate();
   const [tracks, setTracks] = useState<MonetizedTrack[]>([]);
   const [totalEarnings, setTotalEarnings] = useState(0);
@@ -354,6 +357,17 @@ const CreatorEarnings = () => {
     const ageMs = Date.now() - new Date(p.processed_at).getTime();
     return ageMs < 24 * 60 * 60 * 1000;
   });
+
+  // Zarabianie tylko dla VIP (płatny plan). Promocja na stronie się zakończyła —
+  // tworzenie muzyki zostaje darmowe, ale wypłaty/monetyzacja wymagają VIP.
+  const canEarn = plan === "pro" || plan === "ultimate";
+  if (!canEarn) {
+    return (
+      <MainLayout>
+        <EarnVipGate />
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout>
