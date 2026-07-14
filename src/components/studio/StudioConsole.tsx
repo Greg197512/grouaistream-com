@@ -100,11 +100,10 @@ export const StudioConsole = () => {
       ctx.clearRect(0, 0, w, h);
 
       const L = ref.current;
-      const t = performance.now() / 1000;
       const live = playing.current;
       // Cele igieł: L=bas, R=soprany (z „oddechem" w ciszy)
-      const tL = live ? Math.min(1, L.bass * 1.1) : 0.28 + 0.14 * Math.sin(t * 1.3);
-      const tR = live ? Math.min(1, L.treble * 1.25) : 0.24 + 0.12 * Math.sin(t * 1.7 + 1);
+      const tL = live ? Math.min(1, L.bass * 1.1) : 0.18;
+      const tR = live ? Math.min(1, L.treble * 1.25) : 0.15;
       nL += (tL - nL) * 0.18;
       nR += (tR - nR) * 0.18;
 
@@ -120,7 +119,7 @@ export const StudioConsole = () => {
       // Słupki
       const bw = (x1 - x0) / N;
       for (let i = 0; i < N; i++) {
-        const v = live ? freqs[i] : Math.max(0.05, 0.2 + 0.16 * Math.sin(t * 2 + i * 0.6));
+        const v = live ? freqs[i] : 0.12 + ((i * 7) % 5) * 0.03;
         const bx = x0 + i * bw;
         const bh = (baseY - top) * v;
         const hue = 275 - v * 235;
@@ -130,7 +129,7 @@ export const StudioConsole = () => {
       // Świecąca krzywa (gładka)
       ctx.beginPath();
       for (let i = 0; i < N; i++) {
-        const v = live ? freqs[i] : Math.max(0.05, 0.2 + 0.16 * Math.sin(t * 2 + i * 0.6));
+        const v = live ? freqs[i] : 0.12 + ((i * 7) % 5) * 0.03;
         const bx = x0 + i * bw + bw / 2;
         const by = baseY - (baseY - top) * v;
         if (i === 0) ctx.moveTo(bx, by);

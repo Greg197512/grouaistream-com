@@ -45,8 +45,7 @@ export const StudioVisualizer = () => {
       const minSide = Math.min(w, h);
       const baseR = minSide * 0.17;
       const maxBar = minSide * 0.3;
-      const t = performance.now() / 1000;
-      rot += 0.0022 + overall * 0.006;
+      // Statycznie w tle — brak rotacji i „oddechu"; ruch tylko przy muzyce.
 
       // Żarzący się rdzeń
       const coreR = baseR * (0.75 + overall * 0.6);
@@ -65,10 +64,8 @@ export const StudioVisualizer = () => {
       for (let i = 0; i < N; i++) {
         const a = rot + (i / N) * Math.PI * 2;
         const raw = freqs[i] ?? 0;
-        // Gdy cisza — delikatny „oddech" sinusem, żeby wizualizer żył.
-        const v = playingRef.current
-          ? raw
-          : 0.14 + 0.1 * Math.sin(t * 1.4 + i * 0.5) + 0.07 * Math.sin(t * 2.2 + i);
+        // Gdy cisza — statyczny, spokojny wzór (bez ruchu).
+        const v = playingRef.current ? raw : 0.1 + ((i * 7) % 5) * 0.02;
         const len = baseR + Math.max(0.04, v) * maxBar;
         const x1 = cx + Math.cos(a) * baseR;
         const y1 = cy + Math.sin(a) * baseR;

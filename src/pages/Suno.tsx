@@ -732,13 +732,11 @@ const Suno = () => {
                 boxShadow: "0 0 40px #FF6B0060, 0 0 80px #9333EA30",
               }}
             >
-              {/* Obracająca się poświata w tle */}
-              <motion.div
+              {/* Statyczna poświata w tle (bez wirowania) */}
+              <div
                 aria-hidden
-                className="absolute -inset-6 opacity-40"
-                style={{ background: "conic-gradient(from 0deg, transparent, #ffffff88, transparent 40%)" }}
-                animate={{ rotate: 360 }}
-                transition={{ duration: 6, repeat: Infinity, ease: "linear" }}
+                className="absolute -inset-6 opacity-25"
+                style={{ background: "conic-gradient(from 45deg, transparent, #ffffff55, transparent 40%)" }}
               />
               {/* Autorski equalizer — fala dźwiękowa */}
               <div className="relative z-10 flex items-end gap-[3px] h-12">
