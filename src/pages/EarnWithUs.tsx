@@ -12,6 +12,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useSubscription } from "@/contexts/SubscriptionContext";
 import { cn } from "@/lib/utils";
 import type { Easing } from "framer-motion";
 
@@ -30,6 +31,8 @@ const EarnWithUs = () => {
   const { user } = useAuth();
   const { t } = useLanguage();
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const { plan, showUpgradeFor } = useSubscription();
+  const canEarn = plan === "pro" || plan === "ultimate";
 
   const earningMethods = [
     {
@@ -132,6 +135,42 @@ const EarnWithUs = () => {
             </p>
           </motion.div>
         </motion.section>
+
+        {/* Delikatna informacja: zarabianie = VIP (po zakończeniu promocji) */}
+        <motion.div
+          variants={fadeUp}
+          initial="hidden"
+          animate="visible"
+          custom={4}
+          className="mx-auto max-w-3xl rounded-2xl border border-amber-500/25 bg-gradient-to-br from-amber-500/10 to-transparent p-5"
+        >
+          <div className="flex items-start gap-3">
+            <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-500/20 text-amber-400">
+              <Crown className="h-4 w-4" />
+            </div>
+            <div className="min-w-0 flex-1 text-left">
+              <p className="text-sm font-semibold">Zarabianie jest częścią pakietu VIP</p>
+              <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+                Tworzenie muzyki w GrouAI Studio zostaje darmowe. Natomiast{" "}
+                <b>wypłaty, monetyzacja utworów, napiwki i bonusy</b> są dostępne dla użytkowników{" "}
+                <b>VIP</b> — po zakończeniu okresu promocyjnego to jedyny sposób, żeby zarabiać przez
+                naszą stronę.
+              </p>
+              {canEarn ? (
+                <p className="mt-1.5 inline-flex items-center gap-1.5 text-xs font-medium text-emerald-400">
+                  <CheckCircle className="h-3.5 w-3.5" /> Masz VIP — możesz zarabiać
+                </p>
+              ) : (
+                <button
+                  onClick={() => showUpgradeFor?.("Zarabianie na GrouAI Stream (VIP)")}
+                  className="mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 px-3.5 py-1.5 text-xs font-semibold text-white transition-transform hover:scale-[1.03]"
+                >
+                  <Crown className="h-3.5 w-3.5" /> Dołącz do VIP
+                </button>
+              )}
+            </div>
+          </div>
+        </motion.div>
 
         {/* Earning Methods */}
         <motion.section
