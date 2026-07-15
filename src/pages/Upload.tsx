@@ -196,7 +196,7 @@ const Upload = () => {
   const [moderationResult, setModerationResult] = useState<any>(null);
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [audioDuration, setAudioDuration] = useState<number | null>(null);
-  const [durationError, setDurationError] = useState(false);
+  const [durationErrorType, setDurationErrorType] = useState<'too-short' | 'too-long' | null>(null);
   const [coverUrl, setCoverUrl] = useState("");
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [insertedTrackId, setInsertedTrackId] = useState<string | null>(null);
@@ -277,7 +277,7 @@ const Upload = () => {
 
     setAudioFile(file);
     setAudioDuration(null);
-    setDurationError(false);
+    setDurationErrorType(null);
 
     try {
       const dur = await getAudioDuration(file);
@@ -289,11 +289,13 @@ const Upload = () => {
 
       setAudioDuration(dur);
       if (dur < MIN_DURATION_SEC) {
-        setDurationError(true);
+        setDurationErrorType('too-short');
         toast.error(`${fmtDur(dur)} — ${t("upload.fileTooShort")}`);
       } else if (dur > MAX_DURATION_SEC) {
-        setDurationError(true);
+        setDurationErrorType('too-long');
         toast.error(`${fmtDur(dur)} — utwór może trwać maksymalnie 4:00. Skróć plik i wgraj ponownie.`);
+      } else {
+        setDurationErrorType(null);
       }
     } catch {
       toast.info("Telefon nie podał metadanych pliku, ale upload będzie kontynuowany.");
@@ -310,7 +312,7 @@ const Upload = () => {
       toast.error(t("upload.addFileOrLink"));
       return;
     }
-    if (audioFile && durationError) {
+    if (audioFile && durationErrorType !== null) {
       toast.error("Długość utworu musi mieścić się w zakresie 0:10–4:00.");
       return;
     }
@@ -337,11 +339,11 @@ const Upload = () => {
           if (resolvedDuration) {
             setAudioDuration(resolvedDuration);
             if (resolvedDuration < MIN_DURATION_SEC) {
-              setDurationError(true);
+              setDurationErrorType('too-short');
               throw new Error(t("upload.tooShort"));
             }
             if (resolvedDuration > MAX_DURATION_SEC) {
-              setDurationError(true);
+              setDurationErrorType('too-long');
               throw new Error(`Utwór trwa ${fmtDur(resolvedDuration)} — maksymalnie może 4:00. Skróć plik i wgraj ponownie.`);
             }
           }
@@ -510,7 +512,7 @@ const Upload = () => {
     setModerationResult(null);
     setAudioFile(null);
     setAudioDuration(null);
-    setDurationError(false);
+    setDurationErrorType(null);
     setCoverUrl("");
     setUploadProgress(null);
     setInsertedTrackId(null);
@@ -715,7 +717,7 @@ const Upload = () => {
               <div
                 onClick={() => fileInputRef.current?.click()}
                 className={`border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition-all ${
-                  durationError
+                  durationErrorType !== null
                     ? "border-red-500/50 bg-red-500/5"
                     : audioFile
                     ? "border-green-500/50 bg-green-500/5"
@@ -724,19 +726,19 @@ const Upload = () => {
               >
                 {audioFile ? (
                   <div className="flex items-center justify-center gap-3">
-                    {durationError ? (
+                    {durationErrorType ? (
                       <XCircle className="h-5 w-5 text-red-500 shrink-0" />
                     ) : (
                       <CheckCircle className="h-5 w-5 text-green-500 shrink-0" />
                     )}
                     <div className="text-left">
                       <p className="text-sm font-medium truncate">{audioFile.name}</p>
-                      <p className={`text-xs ${durationError ? "text-red-400" : "text-muted-foreground"}`}>
+                      <p className={`text-xs ${durationErrorType ? "text-red-400" : "text-muted-foreground"}`}>
                         {audioDuration !== null
                           ? `${Math.floor(audioDuration / 60)}:${String(Math.floor(audioDuration % 60)).padStart(2, "0")}`
                           : "..."}{" "}
                         • {(audioFile.size / 1024 / 1024).toFixed(1)} MB
-                        {durationError && ` — ${t("upload.fileTooShort")}`}
+                        {durationErrorType && ` — ${durationErrorType === 'too-short' ? 'za krótki' : 'za długi'}`}
                       </p>
                     </div>
                     <Button
@@ -747,7 +749,7 @@ const Upload = () => {
                         e.stopPropagation();
                         setAudioFile(null);
                         setAudioDuration(null);
-                        setDurationError(false);
+                        setDurationErrorType(null);
                         if (fileInputRef.current) fileInputRef.current.value = "";
                       }}
                     >
@@ -962,7 +964,7 @@ const Upload = () => {
             <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }} className="pt-2">
               <Button
                 type="submit"
-                disabled={isSubmitting || durationError}
+                disabled={isSubmitting || durationErrorType !== null}
                 className="w-full h-12 text-base font-semibold bg-green-500 hover:bg-green-400 text-black rounded-full gap-2"
               >
                 {isSubmitting ? (
