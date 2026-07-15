@@ -8,23 +8,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const LOVABLE_AI_CHAT_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
-const LOVABLE_AI_MODEL = "google/gemini-3-flash-preview";
-
-const lovableAiHeaders = (apiKey: string) => ({
-  "Lovable-API-Key": apiKey,
-  "X-Lovable-AIG-SDK": "raw-openai-compatible",
-  "Content-Type": "application/json",
-});
-
-const createLovableGateway = (apiKey: string) => createOpenAICompatible({
-  name: "lovable",
-  baseURL: "https://ai.gateway.lovable.dev/v1",
-  headers: {
-    "Lovable-API-Key": apiKey,
-    "X-Lovable-AIG-SDK": "vercel-ai-sdk",
-  },
-});
+// Lovable AI gateway removed — using keyword-based fallback parsing for music generation
 
 serve(async (req) => {
 
@@ -58,8 +42,7 @@ serve(async (req) => {
     const { message, history: rawHistory, userContext, attachments } = await req.json();
     const history = Array.isArray(rawHistory) ? rawHistory : [];
 
-    // API keys — Lovable AI is the primary provider for the assistant
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY") || "";
+    // API keys
     const GROK_API_KEY = Deno.env.get("GROK_API_KEY") || Deno.env.get("OPENROUTER_API_KEY") || "";
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
 
@@ -443,71 +426,9 @@ serve(async (req) => {
     let generateResult: { style: string; style2?: string; blendRatio?: number; instrumental: boolean; title?: string; mood?: string; energy?: string; tempoOverride?: number; prompt: string } | null = null;
 
     if (hasGenerateIntent) {
-      // Use AI to parse the complex prompt into generation parameters
-      if (LOVABLE_API_KEY) {
-        try {
-          const parseResponse = await fetch(LOVABLE_AI_CHAT_URL, {
-            method: "POST",
-            headers: lovableAiHeaders(LOVABLE_API_KEY),
-            body: JSON.stringify({
-              model: LOVABLE_AI_MODEL,
-            messages: [
-              { role: "system", content: `You are a music production AI that parses user prompts into generation parameters. Analyze the user's request and extract parameters. Available styles: Pop, Rock, Electronic, Hip-Hop, Jazz, Classical, Lo-fi, Ambient, Metal, R&B, Reggae, Trap, House, Disco, Indie, Country. Available moods: dark, bright, melancholic, euphoric, aggressive, dreamy, romantic, tense. Available energy: low, medium, high, extreme.` },
-              { role: "user", content: message },
-            ],
-            tools: [{
-              type: "function",
-              function: {
-                name: "set_music_params",
-                description: "Set music generation parameters based on user's prompt",
-                parameters: {
-                  type: "object",
-                  properties: {
-                    style: { type: "string", description: "Primary music style/genre" },
-                    style2: { type: "string", description: "Secondary style for blending (optional)" },
-                    blendRatio: { type: "number", description: "Blend ratio 0-1 (optional, default 0.5)" },
-                    mood: { type: "string", enum: ["dark", "bright", "melancholic", "euphoric", "aggressive", "dreamy", "romantic", "tense"] },
-                    energy: { type: "string", enum: ["low", "medium", "high", "extreme"] },
-                    instrumental: { type: "boolean", description: "True if no vocals/lyrics requested" },
-                    title: { type: "string", description: "Suggested title based on the prompt" },
-                    tempoOverride: { type: "number", description: "Specific BPM if user requested (optional)" },
-                  },
-                  required: ["style", "mood", "energy", "instrumental", "title"],
-                  additionalProperties: false,
-                },
-              },
-            }],
-            tool_choice: { type: "function", function: { name: "set_music_params" } },
-          }),
-          });
+      // Note: Lovable AI gateway removed — using keyword-based fallback for music generation parsing
 
-          if (parseResponse.ok) {
-            const parseData = await parseResponse.json();
-            const toolCall = parseData.choices?.[0]?.message?.tool_calls?.[0];
-            if (toolCall?.function?.arguments) {
-              const params = JSON.parse(toolCall.function.arguments);
-              generateResult = {
-                style: params.style || "Pop",
-                style2: params.style2 || undefined,
-                blendRatio: params.blendRatio || undefined,
-                instrumental: params.instrumental ?? false,
-                title: params.title || undefined,
-                mood: params.mood || undefined,
-                energy: params.energy || undefined,
-                tempoOverride: params.tempoOverride || undefined,
-                prompt: message,
-              };
-            }
-          } else {
-            console.error("Lovable AI prompt parsing error:", parseResponse.status, await parseResponse.text());
-          }
-        } catch (parseErr) {
-          console.error("AI prompt parsing error:", parseErr);
-        }
-      }
-
-      // Fallback: basic keyword detection if AI parsing failed
-      if (!generateResult) {
+      // Fallback: basic keyword detection
         const styleKeywords: Record<string, string> = {
           "pop": "Pop", "rock": "Rock", "electronic": "Electronic", "elektroniczn": "Electronic",
           "hip-hop": "Hip-Hop", "hip hop": "Hip-Hop", "hiphop": "Hip-Hop", "rap": "Hip-Hop",
