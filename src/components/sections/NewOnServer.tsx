@@ -196,6 +196,36 @@ export const NewOnServer = () => {
       }
       if (mountedRef.current) {
         setTracks(tracksData.map(t => ({ ...t, uploader: t.user_id ? profilesMap[t.user_id] || null : null })));
+
+        // Wznów generowanie okładek dla brakujących
+        tracksData.forEach(track => {
+          if (!track.cover_url && track.id && track.title && track.genre) {
+            supabase.functions.invoke("ai-cover-generate", {
+              body: {
+                title: track.title,
+                style: track.genre,
+                description: "",
+                mode: "auto",
+              },
+            }).then(({ data: coverData }) => {
+              if (coverData?.cover_url && track.id) {
+                supabase.from("tracks")
+                  .update({ cover_url: coverData.cover_url })
+                  .eq("id", track.id)
+                  .then(() => {
+                    window.dispatchEvent(new Event("track-list-changed"));
+                  });
+              }
+            }).catch(() => {
+              // Fallback na ai-cover jeśli ai-cover-generate zawiedzie
+              if (track.id) {
+                supabase.functions.invoke("ai-cover", {
+                  body: { trackId: track.id },
+                }).catch(() => {});
+              }
+            });
+          }
+        });
       }
     } catch (err) {
       console.error("[NewOnServer]", err);
