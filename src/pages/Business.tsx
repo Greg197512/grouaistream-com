@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 import { speak, stopSpeaking } from "@/utils/tts";
 import businessHeroBg from "@/assets/business-hero-bg.jpg";
 import { AuroraBackground } from "@/components/effects/AuroraBackground";
+import { BrainVisualization } from "@/components/effects/BrainVisualization";
 import { ServicesScroller } from "@/components/business/ServicesScroller";
 import { askAuroraB2B } from "@/lib/hubAurora";
 
@@ -401,15 +402,12 @@ export default function BusinessPage() {
               ))}
               {loading && (
                 <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="flex gap-3 justify-start"
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="flex justify-center w-full py-8"
                 >
-                  <div className="h-8 w-8 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center flex-shrink-0">
-                    <Sparkles className="h-4 w-4 text-white animate-pulse" />
-                  </div>
-                  <div className="bg-secondary/80 rounded-2xl rounded-bl-sm px-4 py-3 border border-border/50">
-                    <Loader2 className="h-4 w-4 animate-spin text-cyan-300" />
+                  <div className="w-full max-w-xs">
+                    <BrainVisualization isThinking={true} intensity="high" />
                   </div>
                 </motion.div>
               )}
