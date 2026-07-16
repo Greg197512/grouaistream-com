@@ -3,20 +3,15 @@
   <head>
     <meta charset="UTF-8" />
     <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests" />
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-    <meta http-equiv="Pragma" content="no-cache" />
-    <meta http-equiv="Expires" content="0" />
-    <meta http-equiv="Strict-Transport-Security" content="max-age=31536000; includeSubDomains; preload" />
-    <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+    <!-- HSTS i nosniff są ustawiane jako prawdziwe nagłówki HTTP w vercel.json
+         (meta http-equiv dla tych dyrektyw jest ignorowane przez przeglądarki). -->
     <meta http-equiv="X-Frame-Options" content="SAMEORIGIN" />
     <meta name="referrer" content="strict-origin-when-cross-origin" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover" />
 
-    <!-- Performance: preconnect to critical origins -->
+    <!-- Performance: preconnect to critical origins (fonty są self-hosted, bez Google Fonts) -->
     <link rel="preconnect" href="https://bvstvawnigyczvofzhps.supabase.co" crossorigin />
     <link rel="dns-prefetch" href="https://bvstvawnigyczvofzhps.supabase.co" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
-    <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://play.radioking.io" crossorigin />
 
     <title>GrouAI Stream – Uczciwy streaming AI bez botów</title>
@@ -34,9 +29,6 @@
     <link rel="icon" type="image/svg+xml" href="/grouai-icon.svg" />
     <link rel="icon" type="image/png" href="/favicon.png">
     <link rel="apple-touch-icon" href="/favicon.png" />
-
-    <!-- Material Icons -->
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons|Material+Icons+Outlined" rel="stylesheet" />
 
     <!-- Open Graph -->
     
@@ -66,9 +58,6 @@
     <meta name="google-site-verification" content="" />
     <meta name="yandex-verification" content="" />
     <meta name="msvalidate.01" content="341d2d9c09bfecf945973b6d84e4d5f6" />
-    <link rel="alternate" hreflang="pl" href="https://grouaistream.com/" />
-    <link rel="alternate" hreflang="en" href="https://grouaistream.com/" />
-    <link rel="alternate" hreflang="x-default" href="https://grouaistream.com/" />
 
     <!-- JSON-LD WebApplication -->
     <script type="application/ld+json">
@@ -90,12 +79,6 @@
         "@type": "Organization",
         "name": "GrouAI",
         "url": "https://grouaistream.com"
-      },
-      "aggregateRating": {
-        "@type": "AggregateRating",
-        "ratingValue": "4.8",
-        "ratingCount": "150",
-        "bestRating": "5"
       },
       "featureList": [
         "AI Mood Detection",
@@ -182,7 +165,6 @@
       "name": "GrouAI Stream – AI-Curated Playlists",
       "url": "https://grouaistream.com/",
       "description": "AI-generated and community-curated playlists across 15+ genres. Mood detection adapts your playlist in real time.",
-      "numTracks": 1000,
       "genre": ["EDM", "House", "Trance", "Rock", "Pop", "Hip-Hop", "R&B", "Disco", "Punk", "Lo-Fi", "Jazz", "Ambient"],
       "creator": {
         "@type": "Organization",
