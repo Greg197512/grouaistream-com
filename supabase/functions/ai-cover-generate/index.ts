@@ -53,10 +53,12 @@ async function generateImageBase64(prompt: string, apiKey: string): Promise<stri
 
   for (const attempt of attempts) {
     try {
-      const response = await fetchWithTimeout("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      const response = await fetchWithTimeout("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${apiKey}`,
+          "HTTP-Referer": "https://grouaistream.com",
+          "X-Title": "GrouAI Stream",
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
