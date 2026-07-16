@@ -1,4 +1,4 @@
-import { useState, useEffect, forwardRef } from "react";
+import { useState, useEffect, useRef, forwardRef } from "react";
 import { motion } from "framer-motion";
 import { useFloatingHearts, FloatingHeartsOverlay } from "@/components/effects/FloatingHearts";
 import { RatingLikeModal } from "@/components/modals/RatingLikeModal";
@@ -21,7 +21,8 @@ import {
   DownloadCloud,
   Check,
   Gift,
-  Headphones
+  Headphones,
+  ImagePlus
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -386,6 +387,54 @@ const TrackOptionsMenuComponent = (
     }
   };
 
+  // Nowa okładka 🎨 — właściciel utworu może podmienić grafikę.
+  // Plik idzie do publicznego bucketa "music" (covers/...), a tracks.cover_url
+  // dostaje nowy adres. RLS przepuszcza UPDATE tylko dla właściciela utworu.
+  const coverInputRef = useRef<HTMLInputElement | null>(null);
+  const [coverUploading, setCoverUploading] = useState(false);
+
+  const handleCoverPicked = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("To nie jest grafika — wybierz obrazek (JPG, PNG lub WebP)");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Okładka może ważyć maksymalnie 5 MB");
+      return;
+    }
+    setCoverUploading(true);
+    toast.info("🎨 Przymierzam nową okładkę…");
+    try {
+      const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+      const path = `covers/${trackId}-${Date.now()}.${ext}`;
+      const up = await supabase.storage
+        .from("music")
+        .upload(path, file, { contentType: file.type, upsert: true });
+      if (up.error) throw up.error;
+      const { data: pub } = supabase.storage.from("music").getPublicUrl(path);
+      const { data: updated, error: updErr } = await supabase
+        .from("tracks")
+        .update({ cover_url: pub.publicUrl })
+        .eq("id", trackId)
+        .select("id");
+      if (updErr) throw updErr;
+      if (!updated || updated.length === 0) {
+        throw new Error("Tylko autor utworu może zmienić jego okładkę");
+      }
+      toast.success(`✨ Gotowe! „${trackTitle}" ma nową okładkę`);
+      window.dispatchEvent(new CustomEvent("track-list-changed"));
+    } catch (err) {
+      console.error("Cover update failed:", err);
+      const msg = err instanceof Error ? err.message : "";
+      toast.error(msg.includes("autor") ? msg : "Nie udało się założyć nowej okładki — spróbuj ponownie");
+    } finally {
+      setCoverUploading(false);
+    }
+  };
+
   const handleCutTrack = async () => {
     // Store track data in clipboard for cut/paste functionality
     const trackData = JSON.stringify({ trackId, trackTitle, trackArtist, playlistId });
@@ -538,6 +587,20 @@ const TrackOptionsMenuComponent = (
             </DropdownMenuSubContent>
           </DropdownMenuSub>
 
+          {/* Nowa okładka — tylko dla autora utworu (RLS i tak pilnuje) */}
+          {user && trackOwnerId === user.id && (
+            <DropdownMenuItem
+              onClick={() => coverInputRef.current?.click()}
+              disabled={coverUploading}
+              className="cursor-pointer text-fuchsia-300 focus:text-fuchsia-200 focus:bg-fuchsia-500/10"
+            >
+              <ImagePlus className="mr-2 h-4 w-4" />
+              <span className="flex-1">
+                {coverUploading ? "Przymierzam okładkę…" : "Ubierz w nową okładkę 🎨"}
+              </span>
+            </DropdownMenuItem>
+          )}
+
           {/* Cut/Copy for moving */}
           <DropdownMenuItem onClick={handleCutTrack} className="cursor-pointer">
             <Scissors className="mr-2 h-4 w-4" />
@@ -676,6 +739,15 @@ const TrackOptionsMenuComponent = (
           )}
         </DropdownMenuContent>
       </DropdownMenu>
+
+      {/* Ukryty picker pliku dla nowej okładki (otwierany z menu) */}
+      <input
+        ref={coverInputRef}
+        type="file"
+        accept="image/png,image/jpeg,image/webp,image/gif"
+        className="hidden"
+        onChange={handleCoverPicked}
+      />
 
       {/* Coffee Dialog (real-money tip via Paddle, 90% → twórca utworu) */}
       <CoffeeDialog
