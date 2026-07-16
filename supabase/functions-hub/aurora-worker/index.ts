@@ -10,11 +10,104 @@
 // Auth: ?t=<hub_token> lub nagłówek x-hub-token (wartość w tabeli hub_config).
 // Deploy: verify_jwt = false.
 import { createClient } from "npm:@supabase/supabase-js@2.45.0";
+import { markdownToPdf } from "./pdf.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-hub-token",
 };
+
+const SERVICE_LABELS: Record<string, string> = {
+  seo_audit: "Audyt SEO", seo_content: "SEO Content", landing_page: "Landing Page",
+  social_post: "Social / TikTok / Reels", automation_flow: "Automatyzacja",
+  lead_research: "Lead Research", other: "Projekt B2B",
+};
+
+const emailOk = (e: unknown): e is string =>
+  typeof e === "string" && /^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]+$/.test(e.trim());
+
+// Uint8Array → base64 (porcjami, żeby nie przepełnić stosu przy dużych plikach).
+function bytesToBase64(bytes: Uint8Array): string {
+  let bin = "";
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    bin += String.fromCharCode(...bytes.subarray(i, i + chunk));
+  }
+  return btoa(bin);
+}
+
+function esc(s: unknown): string {
+  return String(s ?? "").replace(/[&<>"]/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c] || c));
+}
+
+// Markdown → uproszczony, ładny HTML do treści maila (pełne polskie znaki, bez zależności).
+function markdownToEmailHtml(md: string): string {
+  const lines = md.replace(/\r\n/g, "\n").split("\n");
+  const out: string[] = [];
+  let inList = false;
+  const closeList = () => { if (inList) { out.push("</ul>"); inList = false; } };
+  const inline = (t: string) =>
+    esc(t).replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>").replace(/`([^`]+)`/g, "$1");
+  for (const raw of lines) {
+    const t = raw.trim();
+    if (!t) { closeList(); continue; }
+    if (/^#{1}\s+/.test(t)) { closeList(); out.push(`<h2 style="color:#101010;margin:18px 0 8px">${inline(t.replace(/^#\s+/, ""))}</h2>`); continue; }
+    if (/^#{2}\s+/.test(t)) { closeList(); out.push(`<h3 style="color:#FF6B00;margin:16px 0 6px">${inline(t.replace(/^#{2}\s+/, ""))}</h3>`); continue; }
+    if (/^#{3,}\s+/.test(t)) { closeList(); out.push(`<h4 style="color:#101010;margin:14px 0 4px">${inline(t.replace(/^#{3,}\s+/, ""))}</h4>`); continue; }
+    if (/^(-{3,}|_{3,}|\*{3,})$/.test(t)) { closeList(); out.push('<hr style="border:none;border-top:1px solid #eee;margin:16px 0">'); continue; }
+    if (/^[-*•]\s+/.test(t)) { if (!inList) { out.push('<ul style="margin:6px 0;padding-left:20px">'); inList = true; } out.push(`<li style="margin:3px 0">${inline(t.replace(/^[-*•]\s+/, ""))}</li>`); continue; }
+    const num = t.match(/^(\d{1,2})[.)]\s+(.*)$/);
+    if (num) { closeList(); out.push(`<p style="margin:6px 0"><strong>${num[1]}.</strong> ${inline(num[2])}</p>`); continue; }
+    closeList();
+    out.push(`<p style="margin:8px 0;line-height:1.6">${inline(t)}</p>`);
+  }
+  closeList();
+  return out.join("\n");
+}
+
+// Wysyła klientowi gotowy materiał: e-mail z załączonym PDF (kopia dla zespołu w BCC).
+async function emailDeliverable(cfg: Record<string, string>, args: {
+  to: string; clientName?: string | null; serviceLabel: string;
+  orderId: string | null; pdf: Uint8Array; markdown: string;
+}): Promise<{ ok: boolean; id?: string; error?: string }> {
+  const key = cfg["resend_api_key"];
+  if (!key) return { ok: false, error: "resend_api_key_missing" };
+  const from = cfg["lead_from_email"] || "GrouAI Stream <noreply@grouarock.com>";
+  const teamEmail = cfg["lead_notify_email"] || "grouarock@gmail.com";
+  const greeting = args.clientName ? `Cześć ${esc(args.clientName)}!` : "Cześć!";
+  const fileBase = `GrouAI_${(args.serviceLabel || "materiał").replace(/[^\p{L}\p{N}]+/gu, "_")}${args.orderId ? "_" + args.orderId : ""}`;
+  const html = `<div style="font-family:-apple-system,Segoe UI,sans-serif;font-size:15px;line-height:1.6;color:#111;max-width:640px;margin:0 auto">
+<p style="font-size:12px;letter-spacing:1px;text-transform:uppercase;color:#FF6B00;margin:0 0 4px">GrouAI Stream · ${esc(args.serviceLabel)}</p>
+<h1 style="font-size:22px;margin:0 0 12px">${greeting}</h1>
+<p style="margin:0 0 14px">Zgodnie z ustaleniami przygotowaliśmy dla Ciebie <strong>pełny materiał w formacie PDF</strong> — znajdziesz go w załączniku${args.orderId ? ` (zlecenie <strong>${esc(args.orderId)}</strong>)` : ""}. Poniżej ta sama treść do szybkiego podglądu:</p>
+<div style="background:#f7f7f7;border-radius:10px;padding:18px 20px;margin:0 0 18px">${markdownToEmailHtml(args.markdown)}</div>
+<p style="margin:0 0 6px">Masz pytania albo chcesz ruszyć z wdrożeniem? Po prostu odpowiedz na tego maila — czyta go nasz zespół.</p>
+<hr style="border:none;border-top:1px solid #eee;margin:22px 0">
+<p style="font-size:12px;color:#888">GrouAI Stream · <a href="https://grouaistream.com" style="color:#FF6B00">grouaistream.com</a> · kontakt: ${esc(teamEmail)}</p>
+</div>`;
+  try {
+    const payload: Record<string, unknown> = {
+      from,
+      to: [args.to],
+      reply_to: teamEmail,
+      subject: `Twój materiał od GrouAI Stream: ${args.serviceLabel}${args.orderId ? " — " + args.orderId : ""}`,
+      html,
+      attachments: [{ filename: `${fileBase}.pdf`, content: bytesToBase64(args.pdf) }],
+    };
+    if (emailOk(teamEmail) && teamEmail.toLowerCase() !== args.to.toLowerCase()) payload.bcc = [teamEmail];
+    const r = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const b = await r.json().catch(() => ({}));
+    if (!r.ok) return { ok: false, error: (b?.name || b?.message) ? `${b.name || ""} ${b.message || ""}`.trim() : `resend_${r.status}` };
+    return { ok: true, id: b?.id ?? "sent" };
+  } catch (e) {
+    return { ok: false, error: String(e).slice(0, 160) };
+  }
+}
 
 const json = (data: unknown, status = 200) =>
   new Response(JSON.stringify(data), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -175,6 +268,46 @@ Deno.serve(async (req) => {
         order_id: orderId, run_id: runId, service_type: serviceType,
         brief: brief.slice(0, 4000), deliverable: result.content, model: result.model,
       });
+
+      // ── Dostarczenie klientowi: PDF w mailu (to, co Aurora obiecuje w czacie) ──
+      const payloadObj = (body.payload ?? {}) as Record<string, any>;
+      const clientObj = (body.client ?? {}) as Record<string, any>;
+      const clientEmail = [payloadObj.email, clientObj.email, body.client_email]
+        .find((e) => emailOk(e)) as string | undefined;
+      const clientName = payloadObj.full_name || clientObj.name || clientObj.full_name || null;
+      const serviceLabel = SERVICE_LABELS[serviceType] ?? "Projekt B2B";
+
+      if (clientEmail) {
+        try {
+          const pdf = await markdownToPdf({
+            title: `${serviceLabel} — GrouAI Stream`,
+            subtitle: orderId ? `Zlecenie ${orderId}` : undefined,
+            markdown: result.content,
+          });
+          const sent = await emailDeliverable(cfg, {
+            to: clientEmail, clientName, serviceLabel, orderId, pdf, markdown: result.content,
+          });
+          await db.from("hub_log").insert({
+            source: "aurora-worker", level: sent.ok ? "info" : "error",
+            message: sent.ok
+              ? `PDF wysłany do klienta (${clientEmail})${orderId ? ` order=${orderId}` : ""} [${sent.id}]`
+              : `NIE wysłano PDF do ${clientEmail}: ${sent.error}`,
+            data: { order_id: orderId, run_id: runId, pdf_bytes: pdf.length },
+          });
+        } catch (pe) {
+          await db.from("hub_log").insert({
+            source: "aurora-worker", level: "error",
+            message: `Błąd generowania/wysyłki PDF (${serviceType}): ${String(pe).slice(0, 180)}`,
+            data: { order_id: orderId, run_id: runId, client_email: clientEmail },
+          });
+        }
+      } else {
+        await db.from("hub_log").insert({
+          source: "aurora-worker", level: "warn",
+          message: `Brak e-maila klienta — PDF wygenerowany, ale nie ma gdzie wysłać${orderId ? ` order=${orderId}` : ""}`,
+          data: { order_id: orderId, run_id: runId },
+        });
+      }
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       if (runId && callbackUrl) {
