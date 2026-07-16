@@ -31,26 +31,36 @@ const FIELD_DEFS: Array<{ key: string; label: string; description: string; requi
 const SERVICE_LABELS: Record<string, string> = {
   seo_audit: "Audyt SEO", seo_content: "SEO Content", landing_page: "Landing Page",
   social_post: "Social / TikTok / Reels", automation_flow: "Automatyzacja",
-  lead_research: "Lead Research", other: "Inne (muzyka / radio / hosting / Aurora)",
+  lead_research: "Lead Research",
+  music_production: "Muzyka / produkcja audio",
+  video_edit: "Montaż video",
+  video_ad: "Reklama / klip video",
+  graphic_design: "Grafika / branding",
+  other: "Inne (broker — dobieramy wykonawcę)",
 };
 
 const SYSTEM_PROMPT = `Jesteś **Aurora** — autonomiczna, bardzo inteligentna i ciepła asystentka biznesowa platformy GrouAI Stream (grouaistream.com, marka GrouaRock®).
 Rozmawiasz jak najlepszy konsultant: konkretnie, empatycznie, z pasją. Prowadzisz klienta do złożenia zlecenia.
 
-══════ CO OFERUJEMY (umiesz wstępnie wycenić) ══════
-1. Audyt SEO — od 149 € · techniczne SEO, Core Web Vitals, Lighthouse, schema, plan 90 dni.
-2. SEO Content — od 49 €/art · artykuły 1500-3000 słów, klastry, interlinking, publikacja.
-3. Landing Page — od 299 €, 48h · strategia + copy + design + formularz + hosting.
-4. Social / TikTok / Reels — od 19 €/post · hooki, scenariusze 9:16, grafiki, pakiety 5/10/20.
-5. Automatyzacja — od 199 € · workflow, webhooki, AI, CRM, lead routing, raporty.
-6. Lead Research — od 99 €/100 leadów · ICP, segmenty, LEGALNY opt-in (bez scrapingu maili!), scoring.
-7. Muzyka na zamówienie — utwory AI, jingle, intro/outro, miks/mastering.
-8. Radio dla marki · Hosting audio R2 · Sponsoring blogowy/radiowy · Aurora jako asystentka na stronie klienta.
+Jesteś BARDZO inteligentna — na poziomie najlepszego modelu AI. Rozumiesz każdy typ zlecenia, dopytujesz mądrze, doradzasz, myślisz jak doświadczony producent i konsultant.
+
+══════ CO ROBIMY (bardzo szeroko — umiesz wstępnie wycenić) ══════
+Marketing i web: Audyt SEO (od 149 €), SEO Content (od 49 €/art), Landing Page (od 299 €), Social/TikTok/Reels (od 19 €/post), Automatyzacje n8n/Make (od 199 €), Lead Research (od 99 €/100).
+Audio/muzyka: utwory na zamówienie, jingle, intro/outro, podkłady, miks i mastering, radio dla marki, hosting audio, voiceover/lektor, identyfikacja audio.
+Video: montaż video, klipy i shorty (9:16/1:1/16:9), reklamy video, motion graphics, animacje, napisy, kolor, thumbnaile.
+Grafika/branding: logo, key visual, grafiki social, materiały reklamowe.
+Plus: sponsoring, wdrożenie Aurory u klienta i inne projekty.
 Kontakt zespołu: grouarock@gmail.com · +48 570 598 552.
 
+══════ MODEL PRACY — JESTEŚMY TEŻ POŚREDNIKIEM ══════
+Jeśli klient chce coś, czego NIE mamy bezpośrednio w standardowej ofercie — NIE odmawiaj. Powiedz, że to ogarniemy: jesteśmy pośrednikiem i dobieramy najlepszego wykonawcę pod dane zlecenie. Zawsze zależy nam na NAJLEPSZEJ jakości i NAJLEPSZEJ cenie dla klienta — porównujemy wykonawców i pilnujemy dostarczenia. Dla takich zleceń użyj service_type "other" (albo najbliższego pasującego) i zbierz brief tak samo.
+
 ══════ TYP USŁUGI (service_type) — wybierz jeden ══════
-seo_audit | seo_content | landing_page | social_post | automation_flow | lead_research | other
-(other = muzyka, radio, hosting, sponsoring, Aurora-on-site)
+seo_audit | seo_content | landing_page | social_post | automation_flow | lead_research | music_production | video_edit | video_ad | graphic_design | other
+(music_production = muzyka/audio/jingle/lektor/radio; video_edit = montaż; video_ad = reklama/klip video; graphic_design = grafika/branding; other = wszystko inne, gdzie jesteśmy pośrednikiem)
+
+══════ ZAŁĄCZNIKI KLIENTA ══════
+Klient może przesłać pliki (dokumenty, brief, grafiki, referencje audio/video). Jeśli w wiadomości pojawi się sekcja [ZAŁĄCZNIKI KLIENTA], przeanalizuj ją: rozpoznaj o czym jest dokument/plik, wyciągnij kluczowe informacje do briefu i potwierdź klientowi, co zrozumiałaś z przesłanych materiałów.
 
 ══════ JAK PRACUJESZ ══════
 - Zbierz brief w MAX 2-3 turach. WYMAGANE minimum: service_type, brief (≥30 znaków), email.
@@ -329,6 +339,20 @@ Deno.serve(async (req) => {
     clientHint.full_name ? `imię: ${clientHint.full_name}` : "",
   ].filter(Boolean).join(" · ");
 
+  // ── Załączniki klienta (dokumenty/pliki) — front przesyła rozpoznaną treść/metadane ──
+  // Kształt: body.attachments = [{ name, type, text?, note? }]. text = wyciągnięta treść dokumentu.
+  const attachments = Array.isArray(body.attachments) ? body.attachments.slice(0, 6) : [];
+  const attachmentsBlock = attachments.length
+    ? "\n\n[ZAŁĄCZNIKI KLIENTA]\n" + attachments.map((a: any, idx: number) => {
+        const name = String(a?.name ?? `plik_${idx + 1}`).slice(0, 120);
+        const type = String(a?.type ?? "").slice(0, 60);
+        const note = typeof a?.note === "string" ? a.note.slice(0, 300) : "";
+        const text = typeof a?.text === "string" ? a.text.slice(0, 4000) : "";
+        return `• ${name}${type ? ` (${type})` : ""}${note ? ` — ${note}` : ""}${text ? `\nTREŚĆ:\n${text}` : ""}`;
+      }).join("\n\n")
+    : "";
+  const userMessageForAI = userText + attachmentsBlock;
+
   // ── Potwierdzenie płatności działa NIEZALEŻNIE od AI (regex) — obsłuż zanim zawołamy model ──
   const PAYMENT_RE = /(zap[łl]aci|op[łl]aci|przela[łl]|przelew\s*(zrobi|wys[łl]a|wykona|posz|gotow)|zrobi[łl]em\s*przelew|dokona[łl]em\s*(p[łl]atno|wp[łl]aty|przelew)|wp[łl]aci[łl]|potwierdzenie\s*(przelewu|wp[łl]aty|p[łl]atno)|za\s*p[łl]aci[łl]|paid|payment\s*(sent|done|made)|transfer\s*(sent|done))/i;
   if (PAYMENT_RE.test(userText)) {
@@ -346,7 +370,7 @@ Deno.serve(async (req) => {
   const messages = [
     { role: "system", content: SYSTEM_PROMPT + (hintLine ? `\n\n[Znane dane klienta z konta: ${hintLine} — użyj ich, nie pytaj ponownie.]` : "") },
     ...history,
-    { role: "user", content: userText },
+    { role: "user", content: userMessageForAI },
   ];
 
   // 1) Próba w trybie JSON; 2) fallback bez json_mode; 3) fallback zwykły czat.

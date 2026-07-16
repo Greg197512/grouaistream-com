@@ -20,7 +20,12 @@ const corsHeaders = {
 const SERVICE_LABELS: Record<string, string> = {
   seo_audit: "Audyt SEO", seo_content: "SEO Content", landing_page: "Landing Page",
   social_post: "Social / TikTok / Reels", automation_flow: "Automatyzacja",
-  lead_research: "Lead Research", other: "Projekt B2B",
+  lead_research: "Lead Research",
+  music_production: "Muzyka / produkcja audio",
+  video_edit: "Montaż video",
+  video_ad: "Reklama / klip video",
+  graphic_design: "Grafika / branding",
+  other: "Projekt B2B",
 };
 
 const emailOk = (e: unknown): e is string =>
@@ -124,8 +129,16 @@ const SERVICE_PROMPTS: Record<string, string> = {
     "Jesteś architektem automatyzacji. Zaprojektuj workflow automatyzacji na podstawie briefu: trigger, kroki (nazwa, cel, narzędzie), zmienne, obsługa błędów, oczekiwany efekt, szacowany czas wdrożenia. Zwróć w markdown z diagramem tekstowym kroków.",
   lead_research:
     "Jesteś analitykiem sprzedaży. Na podstawie briefu przygotuj plan lead-research po polsku: profil idealnego klienta (ICP), 5 segmentów docelowych, legalne źródła pozyskania kontaktów (bez scrapingu maili!), szablon wiadomości opt-in, plan działań na 2 tygodnie.",
+  music_production:
+    "Jesteś producentem muzycznym. Na podstawie briefu przygotuj szczegółową propozycję realizacji audio (utwór / jingiel / podkład / lektor): koncepcja i nastrój, gatunek, tempo/tonacja, instrumentarium, struktura, referencje, etapy produkcji (kompozycja, aranżacja, nagranie/generacja, miks, mastering), warianty, oraz co dokładnie klient otrzyma (pliki WAV/MP3, stems, licencja).",
+  video_edit:
+    "Jesteś montażystą i producentem video. Na podstawie briefu przygotuj szczegółową propozycję montażu: koncepcja i narracja, struktura scen, tempo, styl, grafika/animacje/motion, napisy, muzyka i dźwięk, korekcja koloru, formaty eksportu (16:9 / 9:16 / 1:1), etapy realizacji i co klient otrzyma (pliki, długości, wersje).",
+  video_ad:
+    "Jesteś reżyserem reklam i klipów video. Na podstawie briefu przygotuj koncepcję reklamy/klipu: mocny hook (pierwsze 3 s), scenariusz/storyboard, lista ujęć, tempo, muzyka, lektor, CTA, warianty pod platformy (TikTok/Reels/YouTube/Meta), oraz co klient otrzyma (formaty, długości, warianty A/B).",
+  graphic_design:
+    "Jesteś dyrektorem artystycznym. Na podstawie briefu przygotuj propozycję realizacji grafiki/brandingu: koncepcja, styl, kolory, typografia, warianty, zastosowania (logo/key visual/social/reklama), etapy i co klient otrzyma (pliki źródłowe, formaty, licencja).",
   other:
-    "Jesteś wszechstronnym konsultantem biznesowym. Wykonaj zadanie z briefu najlepiej jak potrafisz i zwróć konkretny, gotowy do użycia rezultat po polsku w markdown.",
+    "Jesteś wszechstronnym konsultantem biznesowym i BROKEREM usług — jeśli zlecenie wykracza poza standard, planujesz je i dobierasz najlepszego wykonawcę (najlepsza jakość + cena dla klienta). Wykonaj zadanie z briefu najlepiej jak potrafisz i zwróć konkretny plan realizacji po polsku w markdown, z jasnym wskazaniem co dostarczymy i jak (samodzielnie lub przez zweryfikowanego wykonawcę).",
 };
 
 async function generateDeliverable(cfg: Record<string, string>, serviceType: string, brief: string, extra: unknown) {
