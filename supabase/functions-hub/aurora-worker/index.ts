@@ -26,6 +26,22 @@ const SERVICE_LABELS: Record<string, string> = {
 const emailOk = (e: unknown): e is string =>
   typeof e === "string" && /^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]+$/.test(e.trim());
 
+// Dane do przelewu (stałe konto rozliczeniowe GrouAI / Grzegorz Karon).
+const BANK = { name: "Grzegorz Karon", iban: "LT39 3250 0225 7672 5699", bic: "REVOLT21" };
+
+// Sekcja płatności doklejana do oferty (trafia i do PDF, i do maila).
+function paymentSectionMarkdown(orderId: string | null, payUrl?: string | null): string {
+  const title = orderId ? `GrouAI ${orderId}` : "GrouAI zlecenie";
+  const card = payUrl
+    ? `\n\n**2. Karta / online (Paddle)**\n- Zapłać kartą: ${payUrl}`
+    : "";
+  return `\n\n---\n\n## Płatność\n\nKwota: zgodnie z wyceną w ofercie powyżej. Wybierz wygodną metodę:\n\n**1. Przelew bankowy (SEPA / Revolut)**\n- Odbiorca: ${BANK.name}\n- IBAN: ${BANK.iban}\n- BIC/SWIFT: ${BANK.bic}\n- Tytuł przelewu: ${title}${card}\n\nPo opłaceniu **prześlij potwierdzenie w oknie czatu Aurory** (lub odpowiedz na tego maila) — Aurora od razu zapisze płatność do Twoich dokumentów, ruszamy z realizacją i otwieramy Twój panel klienta.`;
+}
+
+// Wspólny dopisek do promptu: wymusza bardzo szczegółowy zakres + konkretną cenę.
+const DETAIL_SUFFIX =
+  "\n\nWAŻNE: Materiał ma być BARDZO SZCZEGÓŁOWY i gotowy do realizacji. Na końcu ZAWSZE dodaj sekcję \"## Zakres i wycena\" zawierającą: (a) dokładny, punktowany zakres prac — co konkretnie wykonamy, krok po kroku; (b) co dokładnie klient otrzyma (konkretne rezultaty/pliki); (c) termin realizacji; (d) KONKRETNĄ cenę w EUR (jednorazowo) dobraną do zakresu. Pisz po polsku, rzeczowo, bez lania wody. NIE dodawaj sekcji o płatności ani danych do przelewu — dopisze je system.";
+
 // Uint8Array → base64 (porcjami, żeby nie przepełnić stosu przy dużych plikach).
 function bytesToBase64(bytes: Uint8Array): string {
   let bin = "";
@@ -41,35 +57,11 @@ function esc(s: unknown): string {
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c] || c));
 }
 
-// Markdown → uproszczony, ładny HTML do treści maila (pełne polskie znaki, bez zależności).
-function markdownToEmailHtml(md: string): string {
-  const lines = md.replace(/\r\n/g, "\n").split("\n");
-  const out: string[] = [];
-  let inList = false;
-  const closeList = () => { if (inList) { out.push("</ul>"); inList = false; } };
-  const inline = (t: string) =>
-    esc(t).replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>").replace(/`([^`]+)`/g, "$1");
-  for (const raw of lines) {
-    const t = raw.trim();
-    if (!t) { closeList(); continue; }
-    if (/^#{1}\s+/.test(t)) { closeList(); out.push(`<h2 style="color:#101010;margin:18px 0 8px">${inline(t.replace(/^#\s+/, ""))}</h2>`); continue; }
-    if (/^#{2}\s+/.test(t)) { closeList(); out.push(`<h3 style="color:#FF6B00;margin:16px 0 6px">${inline(t.replace(/^#{2}\s+/, ""))}</h3>`); continue; }
-    if (/^#{3,}\s+/.test(t)) { closeList(); out.push(`<h4 style="color:#101010;margin:14px 0 4px">${inline(t.replace(/^#{3,}\s+/, ""))}</h4>`); continue; }
-    if (/^(-{3,}|_{3,}|\*{3,})$/.test(t)) { closeList(); out.push('<hr style="border:none;border-top:1px solid #eee;margin:16px 0">'); continue; }
-    if (/^[-*•]\s+/.test(t)) { if (!inList) { out.push('<ul style="margin:6px 0;padding-left:20px">'); inList = true; } out.push(`<li style="margin:3px 0">${inline(t.replace(/^[-*•]\s+/, ""))}</li>`); continue; }
-    const num = t.match(/^(\d{1,2})[.)]\s+(.*)$/);
-    if (num) { closeList(); out.push(`<p style="margin:6px 0"><strong>${num[1]}.</strong> ${inline(num[2])}</p>`); continue; }
-    closeList();
-    out.push(`<p style="margin:8px 0;line-height:1.6">${inline(t)}</p>`);
-  }
-  closeList();
-  return out.join("\n");
-}
-
-// Wysyła klientowi gotowy materiał: e-mail z załączonym PDF (kopia dla zespołu w BCC).
+// Wysyła klientowi gotowy materiał: KRÓTKI e-mail + pełna oferta w załączonym PDF
+// (treść nie jest dublowana w body — cały zakres/wycena/płatność są w PDF). Kopia dla zespołu w BCC.
 async function emailDeliverable(cfg: Record<string, string>, args: {
   to: string; clientName?: string | null; serviceLabel: string;
-  orderId: string | null; pdf: Uint8Array; markdown: string;
+  orderId: string | null; pdf: Uint8Array;
 }): Promise<{ ok: boolean; id?: string; error?: string }> {
   const key = cfg["resend_api_key"];
   if (!key) return { ok: false, error: "resend_api_key_missing" };
@@ -77,13 +69,13 @@ async function emailDeliverable(cfg: Record<string, string>, args: {
   const teamEmail = cfg["lead_notify_email"] || "grouarock@gmail.com";
   const greeting = args.clientName ? `Cześć ${esc(args.clientName)}!` : "Cześć!";
   const fileBase = `GrouAI_${(args.serviceLabel || "materiał").replace(/[^\p{L}\p{N}]+/gu, "_")}${args.orderId ? "_" + args.orderId : ""}`;
-  const html = `<div style="font-family:-apple-system,Segoe UI,sans-serif;font-size:15px;line-height:1.6;color:#111;max-width:640px;margin:0 auto">
+  const html = `<div style="font-family:-apple-system,Segoe UI,sans-serif;font-size:15px;line-height:1.6;color:#111;max-width:560px;margin:0 auto">
 <p style="font-size:12px;letter-spacing:1px;text-transform:uppercase;color:#FF6B00;margin:0 0 4px">GrouAI Stream · ${esc(args.serviceLabel)}</p>
-<h1 style="font-size:22px;margin:0 0 12px">${greeting}</h1>
-<p style="margin:0 0 14px">Zgodnie z ustaleniami przygotowaliśmy dla Ciebie <strong>pełny materiał w formacie PDF</strong> — znajdziesz go w załączniku${args.orderId ? ` (zlecenie <strong>${esc(args.orderId)}</strong>)` : ""}. Poniżej ta sama treść do szybkiego podglądu:</p>
-<div style="background:#f7f7f7;border-radius:10px;padding:18px 20px;margin:0 0 18px">${markdownToEmailHtml(args.markdown)}</div>
-<p style="margin:0 0 6px">Masz pytania albo chcesz ruszyć z wdrożeniem? Po prostu odpowiedz na tego maila — czyta go nasz zespół.</p>
-<hr style="border:none;border-top:1px solid #eee;margin:22px 0">
+<h1 style="font-size:21px;margin:0 0 12px">${greeting}</h1>
+<p style="margin:0 0 12px">W załączniku znajdziesz <strong>pełną ofertę w PDF</strong>${args.orderId ? ` (zlecenie <strong>${esc(args.orderId)}</strong>)` : ""} — szczegółowy zakres prac, wycenę i dane do płatności.</p>
+<p style="margin:0 0 12px">Po opłaceniu prześlij potwierdzenie w czacie Aurory — ruszamy z realizacją i otwieramy Twój panel klienta.</p>
+<p style="margin:0 0 6px">Masz pytania? Po prostu odpowiedz na tego maila.</p>
+<hr style="border:none;border-top:1px solid #eee;margin:20px 0">
 <p style="font-size:12px;color:#888">GrouAI Stream · <a href="https://grouaistream.com" style="color:#FF6B00">grouaistream.com</a> · kontakt: ${esc(teamEmail)}</p>
 </div>`;
   try {
@@ -156,7 +148,7 @@ async function generateDeliverable(cfg: Record<string, string>, serviceType: str
         body: JSON.stringify({
           model,
           messages: [
-            { role: "system", content: SERVICE_PROMPTS[serviceType] ?? SERVICE_PROMPTS.other },
+            { role: "system", content: (SERVICE_PROMPTS[serviceType] ?? SERVICE_PROMPTS.other) + DETAIL_SUFFIX },
             {
               role: "user",
               content: `BRIEF KLIENTA:\n${brief}\n\nDODATKOWY KONTEKST (JSON):\n${JSON.stringify(extra ?? {}).slice(0, 3000)}`,
@@ -279,13 +271,17 @@ Deno.serve(async (req) => {
 
       if (clientEmail) {
         try {
+          const payUrl = cfg["pay_url_base"] && orderId
+            ? `${cfg["pay_url_base"]}?order=${encodeURIComponent(orderId)}`
+            : null;
+          const fullMarkdown = result.content + paymentSectionMarkdown(orderId, payUrl);
           const pdf = await markdownToPdf({
             title: `${serviceLabel} — GrouAI Stream`,
-            subtitle: orderId ? `Zlecenie ${orderId}` : undefined,
-            markdown: result.content,
+            subtitle: orderId ? `Oferta i zakres · zlecenie ${orderId}` : undefined,
+            markdown: fullMarkdown,
           });
           const sent = await emailDeliverable(cfg, {
-            to: clientEmail, clientName, serviceLabel, orderId, pdf, markdown: result.content,
+            to: clientEmail, clientName, serviceLabel, orderId, pdf,
           });
           await db.from("hub_log").insert({
             source: "aurora-worker", level: sent.ok ? "info" : "error",

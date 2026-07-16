@@ -61,9 +61,19 @@ seo_audit | seo_content | landing_page | social_post | automation_flow | lead_re
   • zapisze zlecenie u nas (hub_leads, status "new"),
   • przekaże je Aurorze-wykonawcy (aurora-worker), która wygeneruje gotowy materiał,
   • człowiek z zespołu zweryfikuje i odezwie się na podany e-mail (SLA: 24h SEO/content/leady, 48h landing/automatyzacja).
-- Po ustawieniu ready:true w polu "reply" potwierdź ciepło: "Świetnie — przekazuję Twoje zlecenie naszemu zespołowi. Odezwiemy się na <email>."
+- Po ustawieniu ready:true w polu "reply" potwierdź ciepło i podaj numer zgłoszenia: "Świetnie — Twoje zgłoszenie zostało przyjęte. Za chwilę dostaniesz na <email> potwierdzenie z numerem, a zaraz potem szczegółową ofertę PDF z zakresem prac i płatnością."
 - Wykryj język klienta (PL/EN/UA/DE/NL...) i ODPOWIADAJ W TYM SAMYM JĘZYKU. Domyślnie polski.
 - Jeśli klient pyta o samą platformę (player, radio, AI-DJ, Studio) — odpowiedz krótko z pasją, potem wróć do B2B.
+
+══════ PŁATNOŚĆ (gdy klient pyta „jak/gdzie zapłacić") ══════
+Podaj dane do przelewu:
+- Odbiorca: Grzegorz Karon · IBAN: LT39 3250 0225 7672 5699 · BIC/SWIFT: REVOLT21 · Tytuł: numer zgłoszenia.
+Dokładna kwota jest w ofercie PDF, którą klient dostaje mailem. Można też zapłacić kartą (link w ofercie).
+Po opłaceniu klient ma przesłać potwierdzenie tutaj w czacie — Ty ustawiasz wtedy "payment_confirmation": true.
+
+══════ POTWIERDZENIE PŁATNOŚCI ══════
+Jeśli klient pisze, że zapłacił / zrobił przelew / wysyła potwierdzenie wpłaty → ustaw "payment_confirmation": true,
+a w "reply" podziękuj ciepło: "Dziękuję, zapisuję Twoją płatność do dokumentów. Zespół zweryfikuje wpływ i ruszamy — dostęp do panelu klienta dostaniesz mailem." NIE ustawiaj wtedy "ready".
 
 ══════ FORMAT ODPOWIEDZI — ZAWSZE czysty JSON, nic poza nim ══════
 {
@@ -72,6 +82,7 @@ seo_audit | seo_content | landing_page | social_post | automation_flow | lead_re
   "brief": "zwięzłe podsumowanie tego, co klient chce (buduj narastająco z całej rozmowy)",
   "fields": { "email": "...|null", "url": "...|null", "deadline": "...|null", "budget": "...|null", "full_name": "...|null", "company": "...|null" },
   "ready": false,
+  "payment_confirmation": false,
   "next_question": "jedno kolejne pytanie do klienta albo null gdy ready"
 }
 Zwracaj wyłącznie ten obiekt JSON. Buduj brief i fields NARASTAJĄCO — nie gub danych podanych wcześniej.`;
@@ -183,6 +194,105 @@ async function notifyTeam(
   }
 }
 
+// Natychmiastowe potwierdzenie dla KLIENTA: podziękowanie + numer zgłoszenia + co dalej.
+async function notifyClient(
+  cfg: Record<string, string>,
+  order: { orderId: string; serviceLabel: string; email: string; fullName?: string | null },
+): Promise<string | null> {
+  const key = cfg["resend_api_key"];
+  if (!key || !isValidEmail(order.email)) return null;
+  const from = cfg["lead_from_email"] || "GrouAI Stream <noreply@grouarock.com>";
+  const team = cfg["lead_notify_email"] || "grouarock@gmail.com";
+  const greeting = order.fullName ? `Cześć ${esc(order.fullName)}!` : "Cześć!";
+  const html = `<div style="font-family:-apple-system,Segoe UI,sans-serif;font-size:15px;line-height:1.6;color:#111;max-width:600px;margin:0 auto">
+<p style="font-size:12px;letter-spacing:1px;text-transform:uppercase;color:#FF6B00;margin:0 0 4px">Zgłoszenie przyjęte</p>
+<h1 style="font-size:22px;margin:0 0 10px">${greeting} Dziękujemy 🙌</h1>
+<p style="margin:0 0 14px">Przyjęliśmy Twoje zgłoszenie i nadaliśmy mu numer:</p>
+<p style="margin:0 0 16px"><span style="display:inline-block;background:#101010;color:#fff;font-weight:700;letter-spacing:1px;padding:10px 18px;border-radius:8px;font-size:18px">${esc(order.orderId)}</span></p>
+<p style="margin:0 0 6px"><strong>Usługa:</strong> ${esc(order.serviceLabel)}</p>
+<p style="margin:14px 0 6px"><strong>Co dalej?</strong></p>
+<ol style="margin:0 0 14px;padding-left:20px">
+<li style="margin:4px 0">Aurora przygotowuje dla Ciebie <strong>szczegółową ofertę PDF</strong> — z dokładnym zakresem prac, wyceną i danymi do płatności. Dostaniesz ją na tego maila w ciągu kilku minut.</li>
+<li style="margin:4px 0">Opłacasz (przelew lub karta — instrukcja w ofercie).</li>
+<li style="margin:4px 0">Przesyłasz potwierdzenie w czacie Aurory — zapisujemy je i ruszamy z realizacją, a Ty dostajesz dostęp do panelu klienta.</li>
+</ol>
+<p style="margin:0 0 6px">Masz pytania? Po prostu odpowiedz na tego maila.</p>
+<hr style="border:none;border-top:1px solid #eee;margin:22px 0">
+<p style="font-size:12px;color:#888">GrouAI Stream · <a href="https://grouaistream.com/business" style="color:#FF6B00">grouaistream.com/business</a> · kontakt: ${esc(team)}</p>
+</div>`;
+  try {
+    const r = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        from, to: [order.email], reply_to: team,
+        subject: `Zgłoszenie ${order.orderId} przyjęte — GrouAI Stream`,
+        html,
+      }),
+    });
+    const b = await r.json().catch(() => ({}));
+    return r.ok ? (b?.id ?? "sent") : null;
+  } catch {
+    return null;
+  }
+}
+
+// Klient zgłasza płatność w czacie → zapis do dokumentów (hub_leads.meta) + mail do zespołu do weryfikacji.
+async function handlePaymentConfirmation(
+  db: any, cfg: Record<string, string>, conversationId: string, clientHint: any, userText: string,
+): Promise<{ ok: boolean; orderId?: string }> {
+  // Znajdź zlecenie po konwersacji (najnowsze), a jak brak — po e-mailu klienta.
+  let lead: any = null;
+  const byConv = await db.from("hub_leads").select("id, email, name, aurora_order_id, meta, status")
+    .contains("meta", { conversation_id: conversationId }).order("created_at", { ascending: false }).limit(1).maybeSingle();
+  lead = byConv.data;
+  if (!lead && isValidEmail(clientHint?.email)) {
+    const byEmail = await db.from("hub_leads").select("id, email, name, aurora_order_id, meta, status")
+      .eq("email", String(clientHint.email).trim()).order("created_at", { ascending: false }).limit(1).maybeSingle();
+    lead = byEmail.data;
+  }
+  if (!lead) return { ok: false };
+
+  const meta = { ...(lead.meta ?? {}) };
+  const payments = Array.isArray(meta.payments) ? meta.payments : [];
+  payments.push({ reported_at: new Date().toISOString(), note: String(userText).slice(0, 500), channel: "aurora_chat" });
+  meta.payments = payments;
+  await db.from("hub_leads").update({ status: "payment_reported", meta }).eq("id", lead.id);
+  await db.from("hub_log").insert({
+    source: "aurora-b2b-chat", level: "info",
+    message: `Klient zgłosił płatność za ${lead.aurora_order_id ?? lead.id} (${lead.email ?? "?"}) — do weryfikacji`,
+    data: { lead_id: lead.id, order_id: lead.aurora_order_id },
+  });
+
+  // Mail do zespołu: sprawdź wpływ na koncie i potwierdź.
+  const key = cfg["resend_api_key"];
+  if (key) {
+    const from = cfg["lead_from_email"] || "GrouAI Stream <noreply@grouarock.com>";
+    const team = cfg["lead_notify_email"] || "grouarock@gmail.com";
+    const html = `<div style="font-family:-apple-system,Segoe UI,sans-serif;font-size:15px;color:#111;max-width:600px;margin:0 auto">
+<p style="font-size:12px;letter-spacing:1px;text-transform:uppercase;color:#FF6B00;margin:0 0 4px">Zgłoszona płatność · do weryfikacji</p>
+<h2 style="margin:0 0 12px">Klient zgłosił wpłatę: ${esc(lead.aurora_order_id ?? lead.id)}</h2>
+<p style="margin:0 0 6px"><strong>Klient:</strong> ${esc(lead.name ?? "—")} · ${esc(lead.email ?? "—")}</p>
+<p style="margin:0 0 6px"><strong>Wiadomość klienta:</strong></p>
+<div style="background:#f6f6f6;border-radius:8px;padding:12px 14px;white-space:pre-wrap">${esc(userText).slice(0, 800)}</div>
+<p style="margin:14px 0 0;color:#888;font-size:13px">Sprawdź wpływ na koncie (Revolut ${esc(BANK_BIC)}) i potwierdź zlecenie.</p>
+</div>`;
+    try {
+      await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          from, to: [team], reply_to: isValidEmail(lead.email) ? lead.email : team,
+          subject: `💳 Zgłoszona płatność: ${lead.aurora_order_id ?? lead.id}`, html,
+        }),
+      });
+    } catch { /* best-effort */ }
+  }
+  return { ok: true, orderId: lead.aurora_order_id ?? undefined };
+}
+
+const BANK_BIC = "REVOLT21";
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   if (req.method !== "POST") return json({ ok: false, error: "method_not_allowed" }, 405);
@@ -218,6 +328,20 @@ Deno.serve(async (req) => {
     clientHint.email ? `email klienta: ${clientHint.email}` : "",
     clientHint.full_name ? `imię: ${clientHint.full_name}` : "",
   ].filter(Boolean).join(" · ");
+
+  // ── Potwierdzenie płatności działa NIEZALEŻNIE od AI (regex) — obsłuż zanim zawołamy model ──
+  const PAYMENT_RE = /(zap[łl]aci|op[łl]aci|przela[łl]|przelew\s*(zrobi|wys[łl]a|wykona|posz|gotow)|zrobi[łl]em\s*przelew|dokona[łl]em\s*(p[łl]atno|wp[łl]aty|przelew)|wp[łl]aci[łl]|potwierdzenie\s*(przelewu|wp[łl]aty|p[łl]atno)|za\s*p[łl]aci[łl]|paid|payment\s*(sent|done|made)|transfer\s*(sent|done))/i;
+  if (PAYMENT_RE.test(userText)) {
+    const pr = await handlePaymentConfirmation(db, cfg, conversationId, clientHint, userText);
+    return json({
+      ok: true, conversation_id: conversationId,
+      reply: pr.ok
+        ? "Dziękuję! 💛 Zapisuję Twoją płatność do dokumentów zlecenia. Zespół zweryfikuje wpływ na koncie i ruszamy z realizacją — dostęp do panelu klienta dostaniesz mailem."
+        : "Dziękuję za informację o płatności! Zapisałam zgłoszenie. Podaj proszę numer zlecenia (AUR-...) albo e-mail użyty przy zamówieniu, a od razu spinam to z Twoją sprawą.",
+      brief_state: { collected: {}, missing: [], table: [], next_question: null },
+      tool_results: [{ tool: "payment_reported", ok: pr.ok, short_id: pr.orderId ?? null }],
+    });
+  }
 
   const messages = [
     { role: "system", content: SYSTEM_PROMPT + (hintLine ? `\n\n[Znane dane klienta z konta: ${hintLine} — użyj ich, nie pytaj ponownie.]` : "") },
@@ -277,19 +401,40 @@ Deno.serve(async (req) => {
 
   const tool_results: any[] = [];
 
+  // ── Potwierdzenie płatności od klienta (wykryte przez AI) ──
+  if (parsed?.payment_confirmation === true) {
+    const pr = await handlePaymentConfirmation(db, cfg, conversationId, clientHint, userText);
+    tool_results.push({ tool: "payment_reported", ok: pr.ok, short_id: pr.orderId ?? null });
+    reply = typeof parsed?.reply === "string" && parsed.reply.trim()
+      ? parsed.reply.trim()
+      : "Dziękuję, zapisuję Twoją płatność do dokumentów. Zespół zweryfikuje wpływ i ruszamy — dostęp do panelu klienta dostaniesz mailem. 💛";
+    return json({ ok: true, conversation_id: conversationId, reply, brief_state, tool_results });
+  }
+
   // ── Złóż zlecenie: hub_leads + aurora-worker (bez n8n) ──────────────────────
   if (ready && !alreadyOrdered) {
     const orderId = shortId();
     try {
-      await db.from("hub_leads").insert({
-        email: fields.email, name: fields.full_name, company: fields.company,
+      // hub_leads ma unikalny indeks na (lower(email), segment) — indeks wyrażeniowy, więc onConflict
+      // nie zadziała. Wzorzec jak w capture-lead: znajdź istniejący lead → update, inaczej insert.
+      const emailNorm = (fields.email || "").toLowerCase();
+      const leadRow = {
+        email: emailNorm, name: fields.full_name, company: fields.company,
         brief: brief.slice(0, 4000), segment: serviceType, source: "aurora-b2b-chat",
         status: "new", aurora_order_id: orderId, consent_marketing: false,
         landing_path: "/business",
         meta: { conversation_id: conversationId, service_label: SERVICE_LABELS[serviceType], ...fields },
-      });
+      };
+      const { data: existingLead } = await db.from("hub_leads").select("id")
+        .eq("email", emailNorm).eq("segment", serviceType).maybeSingle();
+      const { error: leadErr } = existingLead
+        ? await db.from("hub_leads").update(leadRow).eq("id", existingLead.id)
+        : await db.from("hub_leads").insert(leadRow);
+      if (leadErr) {
+        await db.from("hub_log").insert({ source: "aurora-b2b-chat", level: "error", message: `hub_leads zapis (${orderId}): ${leadErr.message ?? JSON.stringify(leadErr).slice(0, 200)}`, data: { order_id: orderId, email: emailNorm } });
+      }
     } catch (e) {
-      db.from("hub_log").insert({ source: "aurora-b2b-chat", level: "error", message: `hub_leads insert: ${String(e).slice(0, 200)}` }).then(() => {});
+      await db.from("hub_log").insert({ source: "aurora-b2b-chat", level: "error", message: `hub_leads insert throw (${orderId}): ${String(e).slice(0, 200)}` });
     }
 
     // Przekaż do Aurory-wykonawcy — ona realnie wykona pracę i zapisze deliverable.
@@ -330,7 +475,22 @@ Deno.serve(async (req) => {
       });
     };
 
-    const dispatchAll = async () => { await Promise.allSettled([fireWorker(), notifyTeamAndLog()]); };
+    // Natychmiastowe potwierdzenie dla klienta (podziękowanie + numer zgłoszenia).
+    const notifyClientAndLog = async () => {
+      const cid = await notifyClient(cfg, {
+        orderId, serviceLabel: SERVICE_LABELS[serviceType] || serviceType,
+        email: fields.email!, fullName: fields.full_name,
+      });
+      await db.from("hub_log").insert({
+        source: "aurora-b2b-chat", level: cid ? "info" : "warn",
+        message: cid
+          ? `Zlecenie ${orderId} → potwierdzenie do klienta (${fields.email}) [${cid}]`
+          : `Zlecenie ${orderId}: nie wysłano potwierdzenia do klienta`,
+        data: { order_id: orderId, email: fields.email },
+      });
+    };
+
+    const dispatchAll = async () => { await Promise.allSettled([fireWorker(), notifyTeamAndLog(), notifyClientAndLog()]); };
     try { // @ts-ignore
       EdgeRuntime.waitUntil(dispatchAll());
     } catch { await dispatchAll(); }
