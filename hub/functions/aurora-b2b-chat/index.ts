@@ -117,6 +117,72 @@ function isValidEmail(x: unknown): x is string {
   return typeof x === "string" && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(x.trim());
 }
 
+function esc(s: unknown): string {
+  return String(s ?? "").replace(/[&<>"]/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c] || c));
+}
+
+// Aurora przesyła każde zebrane zlecenie mailem do zespołu (grouarock@gmail.com).
+// Nadawca: hub_config.lead_from_email (domena grouarock.com), odbiorca: hub_config.lead_notify_email.
+// reply_to = e-mail klienta, więc Greg odpisuje wprost klientowi. Zwraca id maila albo null.
+async function notifyTeam(
+  cfg: Record<string, string>,
+  order: {
+    orderId: string;
+    serviceLabel: string;
+    brief: string;
+    fields: Record<string, string | null>;
+    conversationId: string;
+  },
+): Promise<string | null> {
+  const key = cfg["resend_api_key"];
+  if (!key) return null;
+  const from = cfg["lead_from_email"] || "GrouAI Stream <noreply@grouarock.com>";
+  const to = cfg["lead_notify_email"] || "grouarock@gmail.com";
+  const f = order.fields;
+  const rows: Array<[string, string | null | undefined]> = [
+    ["Usługa", order.serviceLabel],
+    ["Osoba", f.full_name],
+    ["Firma", f.company],
+    ["E-mail klienta", f.email],
+    ["Strona / marka", f.url],
+    ["Termin", f.deadline],
+    ["Budżet", f.budget],
+  ];
+  const rowsHtml = rows
+    .filter(([, v]) => v)
+    .map(([k, v]) => `<tr><td style="padding:4px 12px 4px 0;color:#888;white-space:nowrap;vertical-align:top">${esc(k)}</td><td style="padding:4px 0;color:#111;font-weight:600">${esc(v)}</td></tr>`)
+    .join("");
+  const html = `<div style="font-family:-apple-system,Segoe UI,sans-serif;font-size:15px;line-height:1.6;color:#111;max-width:600px;margin:0 auto">
+<p style="font-size:12px;letter-spacing:1px;text-transform:uppercase;color:#FF6B00;margin:0 0 4px">Nowe zlecenie B2B · ${esc(order.orderId)}</p>
+<h2 style="margin:0 0 16px;font-size:20px">Aurora zebrała zlecenie od klienta</h2>
+<table style="border-collapse:collapse;margin:0 0 20px">${rowsHtml}</table>
+<p style="color:#888;margin:0 0 6px;font-size:13px">Brief:</p>
+<div style="background:#f6f6f6;border-radius:8px;padding:14px 16px;white-space:pre-wrap">${esc(order.brief)}</div>
+<p style="margin:20px 0 0"><a href="mailto:${esc(f.email)}" style="background:#FF6B00;color:#fff;text-decoration:none;padding:10px 20px;border-radius:8px;display:inline-block;font-weight:600">Odpisz klientowi</a></p>
+<hr style="border:none;border-top:1px solid #eee;margin:24px 0">
+<p style="font-size:12px;color:#888">Zlecenie ${esc(order.orderId)} · konwersacja ${esc(order.conversationId)} · zapisane w hub_leads.<br>GrouAI Stream · <a href="https://grouaistream.com/business" style="color:#FF6B00">grouaistream.com/business</a></p>
+</div>`;
+  try {
+    const payload: Record<string, unknown> = {
+      from,
+      to: [to],
+      subject: `🚀 Nowe zlecenie B2B: ${order.serviceLabel} — ${order.orderId}`,
+      html,
+    };
+    if (isValidEmail(f.email)) payload.reply_to = f.email;
+    const r = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const b = await r.json().catch(() => ({}));
+    return r.ok ? (b?.id ?? "sent") : null;
+  } catch {
+    return null;
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   if (req.method !== "POST") return json({ ok: false, error: "method_not_allowed" }, 405);
@@ -247,11 +313,27 @@ Deno.serve(async (req) => {
       }
     };
 
-    // Uwaga: NIE wysyłamy zlecenia na publiczny Discord (zawiera e-mail klienta = prywatność,
-    // a Greg prosił, by nie zaśmiecać serwera). Lead jest w hub_leads dla admina.
+    // Aurora przekazuje zlecenie zespołowi MAILEM na grouarock@gmail.com (nie Discord —
+    // e-mail klienta = prywatność). Lead jest też w hub_leads dla admina.
+    const notifyTeamAndLog = async () => {
+      const mailId = await notifyTeam(cfg, {
+        orderId, serviceLabel: SERVICE_LABELS[serviceType] || serviceType,
+        brief, fields, conversationId,
+      });
+      await db.from("hub_log").insert({
+        source: "aurora-b2b-chat",
+        level: mailId ? "info" : "error",
+        message: mailId
+          ? `Zlecenie ${orderId} → mail do zespołu (${cfg["lead_notify_email"] || "grouarock@gmail.com"}) [${mailId}]`
+          : `Zlecenie ${orderId}: NIE wysłano maila do zespołu (brak resend_api_key lub błąd Resend)`,
+        data: { order_id: orderId, email: fields.email },
+      });
+    };
+
+    const dispatchAll = async () => { await Promise.allSettled([fireWorker(), notifyTeamAndLog()]); };
     try { // @ts-ignore
-      EdgeRuntime.waitUntil(fireWorker());
-    } catch { await fireWorker(); }
+      EdgeRuntime.waitUntil(dispatchAll());
+    } catch { await dispatchAll(); }
 
     tool_results.push({ tool: "place_order", ok: true, short_id: orderId, worker: "Aurora (GrouAI Hub)" });
   } else if (hasRequired || brief.length >= 30) {
