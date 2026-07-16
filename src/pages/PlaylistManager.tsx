@@ -266,7 +266,7 @@ const PlaylistManager = () => {
         .select("id, title, gradient, cover_url")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false }),
-      supabase.from("tracks").select("*").order("title").limit(500),
+      supabase.from("tracks").select("*").not("audio_url", "is", null).order("title").limit(500),
     ]);
 
     const tracks: Track[] = (tracksRes.data || []).map((t) => ({

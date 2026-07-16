@@ -42,6 +42,7 @@ const AlbumCreator = () => {
     const { data } = await supabase
       .from("tracks")
       .select("id, title, artist, duration, audio_url")
+      .not("audio_url", "is", null)
       .order("created_at", { ascending: false })
       .limit(200);
     if (data) setTracks(data);

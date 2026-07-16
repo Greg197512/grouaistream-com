@@ -308,6 +308,7 @@ export default function MoodHistory() {
       const { data: tracks } = await supabase
         .from("tracks")
         .select("*")
+        .not("audio_url", "is", null)
         .or(`${genreFilter},mood.ilike.%${mood}%`)
         .limit(20);
 
@@ -318,6 +319,7 @@ export default function MoodHistory() {
         const { data: fallback } = await supabase
           .from("tracks")
           .select("*")
+          .not("audio_url", "is", null)
           .limit(15);
         setRecommendedTracks(fallback || []);
       }

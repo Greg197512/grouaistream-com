@@ -786,6 +786,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
         .from('tracks')
         .select('*')
         .ilike('title', pattern)
+        .not('audio_url', 'is', null)
         .limit(1)
         .then(({ data }) => {
           if (data && data.length > 0) {

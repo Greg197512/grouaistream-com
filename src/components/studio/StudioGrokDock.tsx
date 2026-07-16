@@ -104,6 +104,7 @@ export const StudioGrokDock = () => {
     const { data } = await supabase
       .from("tracks")
       .select("id,title,artist,audio_url,cover_url")
+      .not("audio_url", "is", null)
       .or(`user_id.eq.${user.id},is_public.eq.true`)
       .order("created_at", { ascending: false })
       .limit(40);

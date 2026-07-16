@@ -85,6 +85,7 @@ const Movies = () => {
       .from("tracks")
       .select("id, title, artist, video_url, cover_url, genre")
       .not("user_id", "is", null)
+      .not("video_url", "is", null)
       .order("video_url", { ascending: false, nullsFirst: false })
       .order("created_at", { ascending: false })
       .limit(200);

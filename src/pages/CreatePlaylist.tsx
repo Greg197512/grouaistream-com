@@ -235,6 +235,7 @@ const CreatePlaylist = () => {
       const { data } = await supabase
         .from("tracks")
         .select("*")
+        .not("audio_url", "is", null)
         .order("title", { ascending: true })
         .limit(500);
       setAllTracks((data || []) as Track[]);

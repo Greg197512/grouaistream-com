@@ -46,9 +46,18 @@ serve(async (req) => {
     // Get current track count
     const { count: existingCount } = await supabase
       .from('tracks')
-      .select('*', { count: 'exact', head: true });
+      .select('*', { count: 'exact', head: true })
+      .not('audio_url', 'is', null);
 
-    console.log(`Current library: ${existingCount} tracks. Batch: ${batch}, size: ${batchSize}`);
+    console.log(`Current library (playable): ${existingCount} tracks. Batch: ${batch}, size: ${batchSize}`);
+
+    // KILL-SWITCH: biblioteka pełna → nic nie dosypujemy (chroni przed zalewem).
+    if ((existingCount || 0) >= 20000) {
+      return new Response(JSON.stringify({
+        success: true, added: 0, totalLibrary: existingCount,
+        skipped: 'library_full', target: 20000, progress: 100,
+      }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
 
     let totalAdded = 0;
     const results: Record<string, number> = {};
@@ -86,11 +95,14 @@ serve(async (req) => {
               audioUrl = mp3?.download_url || t.files[0]?.download_url;
             }
 
+            // Bez działającego audio NIE wstawiamy — martwe utwory psują player.
+            if (!audioUrl) continue;
+
             insertData.push({
               title,
               artist,
               genre: tag.charAt(0).toUpperCase() + tag.slice(1),
-              audio_url: audioUrl || null,
+              audio_url: audioUrl,
               duration: 180 + Math.floor(Math.random() * 120),
               mood: GENRE_CONFIG.find(g => g.tags.includes(tag))?.moods[0] || 'chill',
               album: `CC Mixter - ${t.license_name || 'CC BY'}`,
@@ -162,7 +174,8 @@ Include artists from: USA, UK, Poland, Korea, Spain, Brazil, Japan, France, Germ
           }
 
           const insertData = songs
-            .filter((s: any) => s.title && s.artist)
+            // Tylko wpisy z realnym video (YouTube) — bez tego utwór jest nieodtwarzalny.
+            .filter((s: any) => s.title && s.artist && s.videoId)
             .map((s: any) => ({
               title: s.title,
               artist: s.artist,
@@ -194,26 +207,8 @@ Include artists from: USA, UK, Poland, Korea, Spain, Brazil, Japan, France, Germ
       }
     }
 
-    // STEP 3: Royalty-free music from known sources
-    if (source === 'all' || source === 'royaltyfree') {
-      const rfSources = [
-        { name: 'Bensound', baseUrl: 'https://www.bensound.com', genre: 'Ambient' },
-        { name: 'Audionautix', baseUrl: 'https://audionautix.com', genre: 'Various' },
-      ];
-
-      // Add a batch of curated royalty-free tracks
-      const rfTracks = generateRoyaltyFreeBatch(batch, batchSize);
-      if (rfTracks.length > 0) {
-        for (let i = 0; i < rfTracks.length; i += 100) {
-          const chunk = rfTracks.slice(i, i + 100);
-          const { error } = await supabase.from('tracks').insert(chunk);
-          if (!error) {
-            totalAdded += chunk.length;
-          }
-        }
-        results['royalty_free'] = rfTracks.length;
-      }
-    }
+    // STEP 3 (royaltyfree) USUNIĘTY: wstawiał utwory z audio_url = null (same tytuły,
+    // bez plików) i zalał bibliotekę dziesiątkami tysięcy nieodtwarzalnych rekordów.
 
     // Final count
     const { count: finalCount } = await supabase
@@ -245,6 +240,7 @@ Include artists from: USA, UK, Poland, Korea, Spain, Brazil, Japan, France, Germ
   }
 });
 
+// Nieużywane — zostawione tylko dla historii; STEP 3 usunięty (wstawiał martwe utwory).
 function generateRoyaltyFreeBatch(batch: number, size: number) {
   // Curated list of royalty-free / CC tracks with known working sources
   const templates = [

@@ -108,8 +108,8 @@ export const RadioMoodDetector = () => {
   const playCategoryFallback = useCallback(async (mood: typeof QUICK_MOODS[0]) => {
     try {
       const [byGenre, byMood] = await Promise.all([
-        supabase.from("tracks").select("*").ilike("genre", `%${mood.genre}%`).limit(20),
-        supabase.from("tracks").select("*").ilike("mood", `%${mood.mood}%`).limit(20),
+        supabase.from("tracks").select("*").not("audio_url", "is", null).ilike("genre", `%${mood.genre}%`).limit(20),
+        supabase.from("tracks").select("*").not("audio_url", "is", null).ilike("mood", `%${mood.mood}%`).limit(20),
       ]);
       const merged = [...(byGenre.data || []), ...(byMood.data || [])] as Track[];
       const seen = new Set<string>();

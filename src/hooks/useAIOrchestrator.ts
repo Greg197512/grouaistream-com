@@ -146,12 +146,14 @@ export const useAIOrchestrator = () => {
       const { data: genreTracks } = await supabase
         .from("tracks")
         .select("*")
+        .not("audio_url", "is", null)
         .ilike("genre", `%${targetGenre}%`)
         .limit(15);
 
       const { data: moodTracks } = await supabase
         .from("tracks")
         .select("*")
+        .not("audio_url", "is", null)
         .ilike("mood", `%${targetMood}%`)
         .limit(15);
 
@@ -170,6 +172,7 @@ export const useAIOrchestrator = () => {
       const { data: fallback } = await supabase
         .from("tracks")
         .select("*")
+        .not("audio_url", "is", null)
         .limit(20);
 
       return fallback ? [...fallback].sort(() => Math.random() - 0.5) : [];
