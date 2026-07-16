@@ -157,7 +157,7 @@ const escape = (s) =>
     .replace(/"/g, "&quot;");
 
 let written = 0;
-for (const route of ROUTES) {
+function renderRoute(route) {
   const url = `${BASE}${route.path === "/" ? "/" : route.path}`;
   let html = template;
 
@@ -215,6 +215,128 @@ for (const route of ROUTES) {
   writeFileSync(resolve(outDir, "index.html"), html, "utf8");
   written++;
   console.log(`  ✓ prerendered ${route.path} -> ${outDir}/index.html`);
+}
+
+for (const route of ROUTES) renderRoute(route);
+
+/* ------------------------------------------------------------------ */
+/* Blog: prerender postów + świeży sitemap.xml (dane z Supabase).      */
+/*                                                                     */
+/* Fail-safe z założenia: każdy błąd (sieć, RLS, zmiana schematu)      */
+/* tylko loguje warning — build NIGDY się przez to nie wywala,         */
+/* a w dist/ zostaje statyczny public/sitemap.xml jako fallback.       */
+/* ------------------------------------------------------------------ */
+
+function readEnvVar(name, fallback) {
+  if (process.env[name]) return process.env[name];
+  try {
+    const env = readFileSync(resolve(__dirname, "..", ".env"), "utf8");
+    const m = env.match(new RegExp(`^${name}="?([^"\\n]+)"?`, "m"));
+    if (m) return m[1];
+  } catch { /* brak .env — użyj fallbacku */ }
+  return fallback;
+}
+
+const SUPABASE_URL = readEnvVar("VITE_SUPABASE_URL", "https://bvstvawnigyczvofzhps.supabase.co");
+const SUPABASE_KEY = readEnvVar("VITE_SUPABASE_PUBLISHABLE_KEY", "");
+
+// Markdown -> czytelny tekst dla crawlerów (bez renderera; wystarczy do SEO).
+const mdToHtml = (md) =>
+  escape(String(md || ""))
+    .split(/\n{2,}/)
+    .map((p) => `<p>${p.replace(/^#{1,6}\s*/gm, "").replace(/[*_`]/g, "").trim()}</p>`)
+    .filter((p) => p !== "<p></p>")
+    .join("\n");
+
+const STATIC_SITEMAP_URLS = [
+  { loc: "/", changefreq: "daily", priority: "1.0" },
+  { loc: "/radio", changefreq: "hourly", priority: "0.9" },
+  { loc: "/radio-live", changefreq: "hourly", priority: "0.9" },
+  { loc: "/upload", changefreq: "daily", priority: "0.8" },
+  { loc: "/earn", changefreq: "weekly", priority: "0.9" },
+  { loc: "/studio", changefreq: "weekly", priority: "0.8" },
+  { loc: "/search", changefreq: "weekly", priority: "0.8" },
+  { loc: "/library", changefreq: "weekly", priority: "0.7" },
+  { loc: "/movies", changefreq: "weekly", priority: "0.7" },
+  { loc: "/blog", changefreq: "daily", priority: "0.9" },
+  { loc: "/business", changefreq: "weekly", priority: "0.8" },
+  { loc: "/dla-firm", changefreq: "weekly", priority: "0.8" },
+  { loc: "/artysta", changefreq: "weekly", priority: "0.8" },
+  { loc: "/sponsor", changefreq: "weekly", priority: "0.7" },
+  { loc: "/auth", changefreq: "monthly", priority: "0.5" },
+  { loc: "/legal", changefreq: "monthly", priority: "0.3" },
+];
+
+async function fetchPublishedPosts() {
+  const url =
+    `${SUPABASE_URL}/rest/v1/seo_blog_posts` +
+    `?select=slug,title,description,content,tags,created_at,updated_at` +
+    `&is_published=eq.true&order=created_at.desc&limit=1000`;
+  const res = await fetch(url, {
+    headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` },
+    signal: AbortSignal.timeout(20000),
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const data = await res.json();
+  if (!Array.isArray(data)) throw new Error("unexpected response shape");
+  return data;
+}
+
+function writeSitemap(posts) {
+  const today = new Date().toISOString().split("T")[0];
+  const urls = STATIC_SITEMAP_URLS.map(
+    (u) =>
+      `  <url><loc>${BASE}${u.loc === "/" ? "/" : u.loc}</loc><lastmod>${today}</lastmod><changefreq>${u.changefreq}</changefreq><priority>${u.priority}</priority></url>`
+  );
+  for (const p of posts) {
+    const lastmod = String(p.updated_at || p.created_at || today).split("T")[0];
+    urls.push(
+      `  <url><loc>${BASE}/blog/${encodeURIComponent(p.slug)}</loc><lastmod>${lastmod}</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>`
+    );
+  }
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.join("\n")}\n</urlset>\n`;
+  writeFileSync(resolve(DIST, "sitemap.xml"), xml, "utf8");
+  console.log(`  ✓ sitemap.xml: ${urls.length} URL-i (w tym ${posts.length} postów bloga)`);
+}
+
+try {
+  if (!SUPABASE_KEY) throw new Error("brak VITE_SUPABASE_PUBLISHABLE_KEY");
+  const posts = await fetchPublishedPosts();
+
+  for (const post of posts) {
+    if (!post.slug || !/^[a-z0-9-]+$/i.test(post.slug)) continue;
+    renderRoute({
+      path: `/blog/${post.slug}`,
+      title: `${post.title} | GrouAI Stream`,
+      description: post.description || post.title,
+      h1: post.title,
+      body: `
+        ${mdToHtml(post.content)}
+        <nav aria-label="Blog"><a href="/blog">← Wszystkie wpisy</a> · <a href="/">GrouAI Stream</a></nav>
+      `,
+    });
+  }
+
+  // Indeks bloga z linkami do wszystkich postów (crawlowalne bez JS)
+  renderRoute({
+    path: "/blog",
+    title: "Blog – GrouAI Stream | AI, muzyka i uczciwy streaming",
+    description:
+      "Artykuły o muzyce AI, uczciwym streamingu bez botów, zarabianiu dla artystów i technologii GrouAI Stream.",
+    h1: "Blog GrouAI Stream",
+    body: `
+      <ul>
+        ${posts
+          .filter((p) => p.slug && /^[a-z0-9-]+$/i.test(p.slug))
+          .map((p) => `<li><a href="/blog/${p.slug}">${escape(p.title)}</a> — ${escape(p.description || "")}</li>`)
+          .join("\n        ")}
+      </ul>
+    `,
+  });
+
+  writeSitemap(posts);
+} catch (err) {
+  console.warn(`[prerender] Pomijam blog/sitemap (fallback: statyczny sitemap z public/): ${err?.message || err}`);
 }
 
 console.log(`\n[prerender] Wrote ${written} static SEO pages to dist/`);
