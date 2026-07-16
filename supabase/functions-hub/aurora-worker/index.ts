@@ -141,6 +141,27 @@ const SERVICE_PROMPTS: Record<string, string> = {
     "Jesteś wszechstronnym konsultantem biznesowym i BROKEREM usług — jeśli zlecenie wykracza poza standard, planujesz je i dobierasz najlepszego wykonawcę (najlepsza jakość + cena dla klienta). Wykonaj zadanie z briefu najlepiej jak potrafisz i zwróć konkretny plan realizacji po polsku w markdown, z jasnym wskazaniem co dostarczymy i jak (samodzielnie lub przez zweryfikowanego wykonawcę).",
 };
 
+// Usługi, przy których Aurora robi REALNY skan strony klienta (aurora-tools) przed pisaniem.
+const TOOLS_SERVICES = ["seo_audit", "seo_content", "landing_page"];
+
+// Realne dane z aurora-tools (skan on-page + robots + sitemap + PageSpeed + słowa kluczowe).
+async function fetchToolsData(cfg: Record<string, string>, serviceType: string, siteUrl: string): Promise<string> {
+  if (!TOOLS_SERVICES.includes(serviceType) || !siteUrl || !/[\w-]+\.[a-z]{2,}/i.test(siteUrl)) return "";
+  try {
+    const r = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/aurora-tools`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-hub-token": cfg["hub_token"] || "" },
+      body: JSON.stringify({ action: "seo_scan", url: siteUrl, lang: "pl" }),
+      signal: AbortSignal.timeout(75000),
+    });
+    const j = await r.json().catch(() => null);
+    if (!r.ok || !j?.ok) return "";
+    return `\n\n=== REALNE DANE ZE SKANU STRONY KLIENTA (aurora-tools, nie zgaduj — użyj ich!) ===\n${JSON.stringify(j.data).slice(0, 3500)}\n=== KONIEC DANYCH ZE SKANU ===`;
+  } catch {
+    return "";
+  }
+}
+
 async function generateDeliverable(cfg: Record<string, string>, serviceType: string, brief: string, extra: unknown) {
   const key = cfg["openrouter_api_key"];
   if (!key) throw new Error("hub_ai_key_missing");
@@ -250,7 +271,17 @@ Deno.serve(async (req) => {
           status: "success", message: `Hub przyjął zadanie (${serviceType})`,
         });
       }
-      const result = await generateDeliverable(cfg, serviceType, brief, body.payload ?? body.client ?? {});
+      // Realny skan strony klienta dla usług SEO/landing — dane trafiają do promptu AI.
+      const siteUrl = String(body.payload?.url ?? body.client?.url ?? "").trim();
+      const toolsData = await fetchToolsData(cfg, serviceType, siteUrl);
+      if (toolsData) {
+        await db.from("hub_log").insert({
+          source: "aurora-worker", level: "info",
+          message: `aurora-tools: realny skan ${siteUrl} dla ${serviceType}${orderId ? ` order=${orderId}` : ""}`,
+          data: { order_id: orderId },
+        });
+      }
+      const result = await generateDeliverable(cfg, serviceType, brief + toolsData, body.payload ?? body.client ?? {});
       const output = {
         deliverable_markdown: result.content,
         summary: result.content.slice(0, 400),
