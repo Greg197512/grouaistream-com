@@ -85,6 +85,10 @@ Po opłaceniu klient ma przesłać potwierdzenie tutaj w czacie — Ty ustawiasz
 Jeśli klient pisze, że zapłacił / zrobił przelew / wysyła potwierdzenie wpłaty → ustaw "payment_confirmation": true,
 a w "reply" podziękuj ciepło: "Dziękuję, zapisuję Twoją płatność do dokumentów. Zespół zweryfikuje wpływ i ruszamy — dostęp do panelu klienta dostaniesz mailem." NIE ustawiaj wtedy "ready".
 
+══════ GDY CZEGOŚ NIE WIESZ → PYTASZ ADMINA ══════
+Jesteś autonomiczna, ale nie zmyślasz. Jeśli klient pyta o coś, czego NIE możesz wiarygodnie potwierdzić (nietypowa usługa spoza oferty i nie wiesz czy/za ile ją ogarniemy, warunki prawne, bardzo specyficzne wymagania techniczne, cokolwiek gdzie zgadywanie byłoby ryzykiem) → ustaw "ask_admin": { "question": "zwięzłe, konkretne pytanie do admina (grouarock@gmail.com) z kontekstem klienta" }.
+Wtedy w "reply" powiedz ciepło, że dopytasz zespół i wrócisz z odpowiedzią — nie zmyślaj odpowiedzi. To NIE blokuje zbierania briefu: możesz jednocześnie prowadzić rozmowę. Używaj tego oszczędnie — tylko gdy realnie nie wiesz.
+
 ══════ FORMAT ODPOWIEDZI — ZAWSZE czysty JSON, nic poza nim ══════
 {
   "reply": "Twoja wiadomość do klienta (markdown OK, ciepło i konkretnie)",
@@ -93,6 +97,7 @@ a w "reply" podziękuj ciepło: "Dziękuję, zapisuję Twoją płatność do dok
   "fields": { "email": "...|null", "url": "...|null", "deadline": "...|null", "budget": "...|null", "full_name": "...|null", "company": "...|null" },
   "ready": false,
   "payment_confirmation": false,
+  "ask_admin": null,
   "next_question": "jedno kolejne pytanie do klienta albo null gdy ready"
 }
 Zwracaj wyłącznie ten obiekt JSON. Buduj brief i fields NARASTAJĄCO — nie gub danych podanych wcześniej.`;
@@ -303,6 +308,53 @@ async function handlePaymentConfirmation(
 
 const BANK_BIC = "REVOLT21";
 
+// Aurora nie wie → pyta admina (grouarock@gmail.com) mailem. Best-effort, zwraca id maila / null.
+async function escalateToAdmin(
+  db: any, cfg: Record<string, string>,
+  q: { question: string; conversationId: string; clientHint: any; serviceType?: string; brief?: string; userText: string },
+): Promise<string | null> {
+  const key = cfg["resend_api_key"];
+  const from = cfg["lead_from_email"] || "GrouAI Stream <noreply@grouarock.com>";
+  const admin = cfg["lead_notify_email"] || "grouarock@gmail.com";
+  const clientEmail = isValidEmail(q.clientHint?.email) ? String(q.clientHint.email).trim() : null;
+  const html = `<div style="font-family:-apple-system,Segoe UI,sans-serif;font-size:15px;line-height:1.6;color:#111;max-width:600px;margin:0 auto">
+<p style="font-size:12px;letter-spacing:1px;text-transform:uppercase;color:#2E7BFF;margin:0 0 4px">Aurora pyta admina · wymagana decyzja</p>
+<h2 style="margin:0 0 12px">Pytanie od Aurory (B2B)</h2>
+<div style="background:#eef4ff;border-left:3px solid #2E7BFF;border-radius:8px;padding:14px 16px;margin:0 0 16px"><strong>${esc(q.question)}</strong></div>
+${q.serviceType ? `<p style="margin:0 0 6px"><strong>Usługa:</strong> ${esc(SERVICE_LABELS[q.serviceType] || q.serviceType)}</p>` : ""}
+${clientEmail ? `<p style="margin:0 0 6px"><strong>Klient:</strong> ${esc(q.clientHint?.full_name ?? "—")} · ${esc(clientEmail)}</p>` : ""}
+<p style="margin:12px 0 6px;color:#888;font-size:13px">Ostatnia wiadomość klienta:</p>
+<div style="background:#f6f6f6;border-radius:8px;padding:12px 14px;white-space:pre-wrap">${esc(q.userText).slice(0, 800)}</div>
+${q.brief ? `<p style="margin:12px 0 6px;color:#888;font-size:13px">Brief:</p><div style="background:#f6f6f6;border-radius:8px;padding:12px 14px;white-space:pre-wrap">${esc(q.brief).slice(0, 800)}</div>` : ""}
+<p style="margin:16px 0 0;color:#888;font-size:13px">Odpisz na tego maila${clientEmail ? " (trafi wprost do klienta)" : ""}, a Aurora dokończy rozmowę. Konwersacja: ${esc(q.conversationId)}</p>
+</div>`;
+  if (!key) return null;
+  try {
+    const payload: Record<string, unknown> = {
+      from, to: [admin],
+      subject: `❓ Aurora pyta: ${q.question.slice(0, 80)}`,
+      html,
+    };
+    if (clientEmail) payload.reply_to = clientEmail;
+    const r = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const b = await r.json().catch(() => ({}));
+    const id = r.ok ? (b?.id ?? "sent") : null;
+    await db.from("hub_log").insert({
+      source: "aurora-b2b-chat", level: id ? "info" : "error",
+      message: id ? `Aurora → pytanie do admina [${id}]: ${q.question.slice(0, 120)}` : `Aurora: nie wysłano pytania do admina`,
+      data: { conversation_id: q.conversationId, client_email: clientEmail },
+    });
+    return id;
+  } catch (e) {
+    await db.from("hub_log").insert({ source: "aurora-b2b-chat", level: "error", message: `escalateToAdmin throw: ${String(e).slice(0, 160)}` });
+    return null;
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   if (req.method !== "POST") return json({ ok: false, error: "method_not_allowed" }, 405);
@@ -433,6 +485,22 @@ Deno.serve(async (req) => {
       ? parsed.reply.trim()
       : "Dziękuję, zapisuję Twoją płatność do dokumentów. Zespół zweryfikuje wpływ i ruszamy — dostęp do panelu klienta dostaniesz mailem. 💛";
     return json({ ok: true, conversation_id: conversationId, reply, brief_state, tool_results });
+  }
+
+  // ── Aurora nie wie → pyta admina (best-effort, w tle) ──
+  const adminQ = parsed?.ask_admin;
+  const adminQuestion = adminQ && typeof adminQ === "object" && typeof adminQ.question === "string"
+    ? adminQ.question.trim()
+    : (typeof adminQ === "string" ? adminQ.trim() : "");
+  if (adminQuestion) {
+    const runEscalate = () => escalateToAdmin(db, cfg, {
+      question: adminQuestion, conversationId, clientHint,
+      serviceType: serviceType || undefined, brief: brief || undefined, userText,
+    });
+    try { // @ts-ignore
+      EdgeRuntime.waitUntil(runEscalate());
+    } catch { await runEscalate(); }
+    tool_results.push({ tool: "ask_admin", ok: true });
   }
 
   // ── Złóż zlecenie: hub_leads + aurora-worker (bez n8n) ──────────────────────
