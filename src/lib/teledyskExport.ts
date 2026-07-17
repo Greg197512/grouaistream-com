@@ -58,7 +58,7 @@ export async function exportScenesOnly(
   await ff.writeFile("slist.txt", new TextEncoder().encode(list));
   const readOut = async () => {
     const data = (await ff.readFile("scenes.mp4")) as Uint8Array;
-    return new Blob([data], { type: "video/mp4" });
+    return new Blob([data as BlobPart], { type: "video/mp4" });
   };
   try {
     await ff.exec([
@@ -118,7 +118,7 @@ export async function exportTeledysk(
 
   const readOut = async () => {
     const data = (await ff.readFile("out.mp4")) as Uint8Array;
-    return new Blob([data], { type: "video/mp4" });
+    return new Blob([data as BlobPart], { type: "video/mp4" });
   };
 
   try {

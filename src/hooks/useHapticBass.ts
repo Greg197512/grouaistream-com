@@ -36,7 +36,7 @@ export function useHapticBass(audioEl: HTMLAudioElement | null, enabled: boolean
       analyser.fftSize = 256;
       analyser.smoothingTimeConstant = 0.5;
       source.connect(analyser); // tap tylko do odczytu (nie do głośnika)
-      data = new Uint8Array(analyser.frequencyBinCount);
+      data = new Uint8Array(new ArrayBuffer(analyser.frequencyBinCount));
     } catch {
       return; // nie udało się — audio playera nietknięte
     }
@@ -44,7 +44,7 @@ export function useHapticBass(audioEl: HTMLAudioElement | null, enabled: boolean
     const loop = () => {
       rafRef.current = requestAnimationFrame(loop);
       if (!analyser || !data) return;
-      analyser.getByteFrequencyData(data);
+      analyser.getByteFrequencyData(data as Uint8Array<ArrayBuffer>);
       let bass = 0;
       for (let i = 0; i < 5; i++) bass += data[i]; // najniższe pasma
       bass /= 5;
