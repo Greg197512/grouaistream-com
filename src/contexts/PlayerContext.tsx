@@ -726,20 +726,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
             return;
           }
         }
-        // Fallback: pick any track with audio
-        supabase
-          .from('tracks')
-          .select('*')
-          .not('audio_url', 'is', null)
-          .limit(1)
-          .then(({ data: fallback }) => {
-            if (fallback && fallback.length > 0) {
-              const track = fallback[0] as Track;
-              setCurrentTrack(track);
-              setQueue([track]);
-              setQueueIndex(0);
-            }
-          });
+        // Brak fallback - jeśli track dla danego języka nie istnieje, nic się nie wczytuje
       });
   }, []);
 
