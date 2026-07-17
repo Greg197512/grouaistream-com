@@ -1,23 +1,49 @@
-## Cel
-Zamienić pulsującą pomarańczową obwódkę na grafice w radiu na **powoli podróżujący neonowy przebłysk**, który okrąża całą ramkę (góra → prawo → dół → lewo) zamiast jednolicie pulsować.
+## Add `face_detections` table
 
-## Modyfikacje
+Create migration with the pasted schema plus mandatory `GRANT` statements (Data API requires them explicitly).
 
-### 1. Nowa klasa CSS `.radio-neon-orbit`
-W `src/index.css` (w sekcji `@layer utilities` lub na końcu pliku) dodać efekt „obrączki z obrotowym neonem”:
-- Wrapper `position: relative; overflow: hidden; border-radius: 1rem;`
-- Pseudoelement `::before` z `conic-gradient` od transparent → `#ff8a00` → `#ffb347` → transparent.
-- Animacja rotacji `rotate` 4–6 s liniowo, nieskończona.
-- Środkowy element (zdjęcie) lekko wcięty (`inset: 2px`) z `bg-black`, żeby widoczny był tylko obracający się pasek neonu (grubość ~2–3 px).
-- Dodatkowy `box-shadow` w kolorze pomarańczowym dla efektu rozbłysku na krawędzi.
+### SQL
 
-### 2. Zmiana DOM w `src/pages/RadioLive.tsx`
-- Zdjęcie (`<img>`) opakować w nowy `<div className="radio-neon-orbit">`.
-- Usunąć lub pozostawić klasę `.radio-neon-pulse` tylko na zewnętrznym karcie (wg potrzeby), ale na samym zdjęciu zastąpić ją orbitującą ramką.
+```sql
+CREATE TABLE IF NOT EXISTS public.face_detections (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  dominant_emotion text NOT NULL,
+  confidence numeric,
+  emotions jsonb NOT NULL DEFAULT '{}'::jsonb,
+  eye_state text,
+  gaze text,
+  micro_expressions jsonb DEFAULT '[]'::jsonb,
+  valence numeric,
+  arousal numeric,
+  engagement numeric,
+  frames_count int NOT NULL DEFAULT 1,
+  source text NOT NULL DEFAULT 'webcam',
+  model text,
+  playing_track_id uuid,
+  language text
+);
 
-### 3. Fallback / kompatybilność
-- Użyć standardowego `::before` + `z-index`, bez zewnętrznych bibliotek.
-- Efekt ma działać na Chromium/WebKit (zgodny z używanym preview).
+CREATE INDEX IF NOT EXISTS idx_face_detections_user ON public.face_detections (user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_face_detections_emotion ON public.face_detections (dominant_emotion, created_at DESC);
 
-## Rezultat
-Grafika w oknie radia będzie miała wokół siebie delikatną, pomarańczową linię neonu, która powoli „biega" wokół krawędzi jak świetlny pierścień.
+GRANT SELECT, INSERT ON public.face_detections TO authenticated;
+GRANT ALL ON public.face_detections TO service_role;
+
+ALTER TABLE public.face_detections ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users insert own face_detections" ON public.face_detections
+  FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users read own face_detections" ON public.face_detections
+  FOR SELECT TO authenticated USING (auth.uid() = user_id);
+CREATE POLICY "Admins read all face_detections" ON public.face_detections
+  FOR SELECT TO authenticated USING (public.has_role(auth.uid(), 'admin'));
+```
+
+### Notes
+- No UPDATE/DELETE policies — detection rows are append-only telemetry.
+- `has_role` function already exists in the project.
+- No frontend changes in this step; hooks (`useFaceDetection`, `DJCrowdCamera`, `MoodDetector`) can start writing to this table in a follow-up if you want.
+
+Confirm to run the migration.
