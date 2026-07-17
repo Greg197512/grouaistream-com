@@ -9,6 +9,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { DetectedMood } from "@/hooks/useAIOrchestrator";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { generateMusic } from "@/utils/musicGenerator";
+import { uploadToR2 } from "@/lib/r2Upload";
 
 interface MoodResult {
   mood: string;
@@ -101,6 +103,9 @@ export const QuickMoodDetector = ({ isOpen, onClose }: QuickMoodDetectorProps) =
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const dragControls = useDragControls();
   const [detectedEmotion, setDetectedEmotion] = useState<string>("");
+  // Zgoda użytkownika: AI odczytał aurę i pyta, czy może dobrać/utworzyć utwór.
+  const [consent, setConsent] = useState<{ mood: MoodResult; analysis: DeepAnalysis | null; emotionKey: string } | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
 
   const isModelLoaded = true;
   const isLoadingModel = false;
@@ -241,6 +246,93 @@ export const QuickMoodDetector = ({ isOpen, onClose }: QuickMoodDetectorProps) =
     }
   }, [playPlaylist, aiHandleMood, detectedEmotion, t]);
 
+  // Tworzy utwór w GrouAI Studio dopasowany do aury, wrzuca do tracks
+  // (pojawia się w "New") i odtwarza. Używane, gdy brak pasującego utworu.
+  const createAuraTrack = useCallback(async (mood: MoodResult, emotionKey: string) => {
+    if (!user) { toast.error(t("moodDet.loginToCreate") || "Zaloguj się, aby utworzyć utwór"); return; }
+    setIsCreating(true);
+    toast.loading("🎼 GrouAI Studio tworzy utwór dopasowany do Twojej aury…", { id: "aura-gen" });
+    try {
+      const genMood = (({
+        happy: "bright", sad: "melancholic", angry: "aggressive", fearful: "tense",
+        disgusted: "dark", surprised: "euphoric", neutral: "dreamy",
+        energetic: "euphoric", romantic: "romantic", focused: "dreamy",
+      } as Record<string, string>)[emotionKey] || "dreamy") as any;
+
+      const track = await generateMusic({
+        style: mood.genre || "Pop",
+        durationSeconds: 30,
+        instrumental: false,
+        title: `Aura • ${mood.mood}`,
+        mood: genMood,
+        energy: "medium",
+      });
+
+      const safe = `Aura_${mood.mood}`.replace(/[^a-zA-Z0-9]/g, "_").slice(0, 40);
+      const file = new File([track.audioBlob], `${safe}_${Date.now()}.wav`, { type: "audio/wav" });
+      const up = await uploadToR2({ file, folder: `studio/${user.id}` });
+
+      const { data: inserted, error } = await supabase.from("tracks").insert({
+        user_id: user.id,
+        title: `Aura • ${mood.mood}`,
+        artist: "GrouAI Studio",
+        album: "AI Aura",
+        duration: 30,
+        audio_url: up.publicUrl,
+        genre: mood.genre,
+        mood: emotionKey,
+      }).select("*").single();
+      if (error) throw error;
+
+      toast.success("✨ Utwór gotowy — dodany do New i odtwarzam!", { id: "aura-gen" });
+      if (inserted) {
+        playPlaylist([inserted as any]);
+        setTracksPlaying(true);
+        window.dispatchEvent(new CustomEvent("track-list-changed"));
+      }
+    } catch (e: any) {
+      console.error("Aura track creation failed:", e);
+      toast.error("Nie udało się utworzyć utworu: " + (e?.message || "błąd"), { id: "aura-gen" });
+    } finally {
+      setIsCreating(false);
+    }
+  }, [user, playPlaylist, t]);
+
+  // Po zgodzie: najpierw szuka pasującego utworu; jeśli brak — tworzy w Studio.
+  const applyAura = useCallback(async () => {
+    if (!consent) return;
+    const { mood, analysis, emotionKey } = consent;
+    setConsent(null);
+    try {
+      const genres = analysis?.suggestedGenres?.length
+        ? analysis.suggestedGenres
+        : moodBoostGenres[emotionKey] || [mood.genre, "Pop"];
+      const targetMoods = analysis?.suggestedMoods?.length
+        ? analysis.suggestedMoods
+        : ["Happy", "Energetic", "Relaxed"];
+      const genreFilters = genres.map((g) => `genre.ilike.%${g}%`).join(",");
+      const moodFilters = targetMoods.map((m) => `mood.ilike.%${m}%`).join(",");
+
+      const { data: tracks } = await supabase
+        .from("tracks")
+        .select("id")
+        .not("audio_url", "is", null)
+        .or(`${genreFilters},${moodFilters}`)
+        .limit(5);
+
+      if (tracks && tracks.length > 0) {
+        // Jest dopasowany utwór — odtwarzamy jak dotychczas (reszta bez zmian).
+        await playMoodPlaylist(mood, analysis);
+      } else {
+        // Brak dopasowania — tworzymy nowy w GrouAI Studio i wrzucamy do New.
+        await createAuraTrack(mood, emotionKey);
+      }
+    } catch (e) {
+      console.error("applyAura error:", e);
+      await createAuraTrack(mood, emotionKey);
+    }
+  }, [consent, playMoodPlaylist, createAuraTrack]);
+
   const stopCamera = useCallback(() => {
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
@@ -267,6 +359,8 @@ export const QuickMoodDetector = ({ isOpen, onClose }: QuickMoodDetectorProps) =
     setShowFullAnalysis(false);
     setTracksPlaying(false);
     setDetectedEmotion("");
+    setConsent(null);
+    setIsCreating(false);
   }, [stopCamera]);
 
   const captureSnapshot = useCallback(() => {
@@ -393,14 +487,15 @@ export const QuickMoodDetector = ({ isOpen, onClose }: QuickMoodDetectorProps) =
       setIsActive(false);
       setAnalysisStep("");
 
-      await playMoodPlaylist(detectedMood, analysis);
+      // Nie odtwarzamy automatycznie — AI pyta o zgodę, zanim dobierze/utworzy utwór.
+      setConsent({ mood: detectedMood, analysis, emotionKey });
     } catch (error) {
       console.error("Vision mood detection error:", error);
       if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
       setIsAnalyzing(false);
       toast.error(t("moodDet.faceError"));
     }
-  }, [captureFrames, recordDetection, fetchDeepAnalysis, claimBonus, playMoodPlaylist, getMoodMapping, t]);
+  }, [captureFrames, recordDetection, fetchDeepAnalysis, claimBonus, getMoodMapping, t]);
 
   const startCamera = async () => {
     setIsLoading(true);
@@ -732,6 +827,38 @@ export const QuickMoodDetector = ({ isOpen, onClose }: QuickMoodDetectorProps) =
 
           {/* Controls */}
           <div className="p-3 space-y-2">
+            {/* Zgoda: AI odczytał aurę i pyta, czy może dobrać/utworzyć utwór */}
+            {consent && !tracksPlaying && (
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="rounded-xl border border-primary/30 bg-primary/5 p-3 space-y-2"
+              >
+                <p className="text-xs text-white/85 leading-relaxed">
+                  🔮 AI odczytał Twoją aurę: <b>{consent.mood.mood}</b>. Czy mogę dobrać pasujący
+                  utwór — a jeśli nie mam idealnego, stworzyć nowy w GrouAI Studio i dodać do <b>New</b>?
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => void applyAura()}
+                    disabled={isCreating}
+                    className="flex-1 h-9 groove-gradient-bg text-white"
+                  >
+                    {isCreating ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Sparkles className="h-4 w-4 mr-1" />}
+                    {isCreating ? "Tworzę…" : "Tak, zrób to"}
+                  </Button>
+                  <Button
+                    onClick={() => setConsent(null)}
+                    variant="outline"
+                    disabled={isCreating}
+                    className="flex-1 h-9"
+                  >
+                    Nie, dziękuję
+                  </Button>
+                </div>
+              </motion.div>
+            )}
+
             {!deepAnalysis && !isDeepAnalyzing && (
               <div className="flex gap-2">
                 {!isActive && !currentMood ? (
