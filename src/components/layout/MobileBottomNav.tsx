@@ -19,6 +19,7 @@ const navItems = [
   { icon: "playlist_play", labelKey: "nav.managePlaylists", href: "/playlist-manager" },
   { icon: "favorite", labelKey: "nav.likedSongs", href: "/liked" },
   { icon: "psychology", labelKey: "nav.moodHistory", href: "/mood-history" },
+  { icon: "handshake", labelKey: "nav.business", href: "/business", neon: true },
   { icon: "payments", labelKey: "nav.earnings", href: "/earnings", neon: true },
   { icon: "rocket_launch", labelKey: "nav.earnWithUs", href: "/earn", neon: true },
 ];
