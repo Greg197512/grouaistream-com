@@ -735,8 +735,9 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (hasAutoPlayed.current || currentTrack) return;
     hasAutoPlayed.current = true;
-    const lang = localStorage.getItem("grooveai-language") || "en";
-    loadLangTrack(lang);
+    // Disabled: gracz na starcie pozostaje pusty
+    // const lang = localStorage.getItem("grooveai-language") || "en";
+    // loadLangTrack(lang);
   }, []);
 
   // Auto-play language track on first login (SIGNED_IN event)
