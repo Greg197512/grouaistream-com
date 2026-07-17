@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import {
   Sparkles, Send, Bot, User, Loader2, ArrowRight, Check,
   Search, FileText, Layout, Share2, Workflow, Target,
-  Music, Radio, HardDrive, Megaphone, Mail, MessageSquare, Mic, MicOff, Volume2,
+  Music, Radio, HardDrive, Megaphone, Mail, MessageSquare, Mic, MicOff, Volume2, PhoneCall, PhoneOff,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -94,6 +94,9 @@ export default function BusinessPage() {
   const [briefState, setBriefState] = useState<BriefState | null>(null);
   const [voiceEnabled, setVoiceEnabled] = useState(false);
   const [listening, setListening] = useState(false);
+  // Tryb ciągłej rozmowy (jak w GPT/Grok): po odpowiedzi Aurora sama znów słucha.
+  const [convoMode, setConvoMode] = useState(false);
+  const convoModeRef = useRef(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
 
@@ -106,6 +109,15 @@ export default function BusinessPage() {
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, loading]);
+
+  // Sprzątanie przy wyjściu: zatrzymaj mikrofon i mowę.
+  useEffect(() => {
+    return () => {
+      convoModeRef.current = false;
+      if (recognitionRef.current) { try { recognitionRef.current.stop(); } catch {} }
+      stopSpeaking();
+    };
+  }, []);
 
   const send = async (text?: string) => {
     const msg = (text ?? input).trim();
@@ -145,7 +157,13 @@ export default function BusinessPage() {
 
       const reply = data.reply || "…";
       setMessages((m) => [...m, { role: "assistant", content: reply, ts: Date.now() }]);
-      if (voiceEnabled) void speak(reply.replace(/[*_`#]/g, ""), { lang: "pl-PL", mode: "assistant" });
+      if (voiceEnabled || convoModeRef.current) {
+        await speak(reply.replace(/[*_`#]/g, ""), { lang: "pl-PL", mode: "assistant" });
+        // Rozmowa ciągła: po zakończeniu mowy Aurora znów słucha (hands-free).
+        if (convoModeRef.current) {
+          setTimeout(() => { if (convoModeRef.current) startVoiceInput(); }, 250);
+        }
+      }
     } catch (e: any) {
       toast.error(e?.message || "Błąd komunikacji z Aurorą");
       setMessages((m) => [
@@ -177,9 +195,19 @@ export default function BusinessPage() {
     recognition.interimResults = false;
     recognition.onstart = () => setListening(true);
     recognition.onend = () => setListening(false);
-    recognition.onerror = () => {
+    recognition.onerror = (e: any) => {
       setListening(false);
-      toast.error("Nie mogę odczytać mikrofonu. Sprawdź zgodę w przeglądarce.");
+      const err = e?.error;
+      // W trybie rozmowy cisza to normalka — słuchaj dalej, nie strasz błędem.
+      if (convoModeRef.current && (err === "no-speech" || err === "aborted")) {
+        setTimeout(() => { if (convoModeRef.current) startVoiceInput(); }, 400);
+        return;
+      }
+      if (err === "not-allowed" || err === "audio-capture") {
+        convoModeRef.current = false;
+        setConvoMode(false);
+        toast.error("Nie mogę odczytać mikrofonu. Sprawdź zgodę w przeglądarce.");
+      }
     };
     recognition.onresult = (event: any) => {
       const transcript = event.results?.[0]?.[0]?.transcript?.trim();
@@ -194,6 +222,22 @@ export default function BusinessPage() {
     setVoiceEnabled(next);
     if (!next) stopSpeaking();
     else toast.success("Rozmowa głosowa Aurory włączona");
+  };
+
+  // Ciągła rozmowa głosowa (jak w GPT/Grok): mikrofon + mowa w pętli, hands-free.
+  const toggleConvo = () => {
+    const next = !convoMode;
+    setConvoMode(next);
+    convoModeRef.current = next;
+    if (next) {
+      setVoiceEnabled(true);
+      toast.success("🎙️ Rozmowa z Aurorą — mów swobodnie, odpowiada głosem i słucha dalej");
+      startVoiceInput();
+    } else {
+      if (recognitionRef.current) { try { recognitionRef.current.stop(); } catch {} }
+      stopSpeaking();
+      setListening(false);
+    }
   };
 
   return (
@@ -436,11 +480,26 @@ export default function BusinessPage() {
               type="button"
               variant="outline"
               onClick={startVoiceInput}
-              disabled={loading || listening}
-              className={cn("shrink-0 border-cyan-400/30", listening && "bg-cyan-400/10 text-cyan-300")}
-              title="Mów do Aurory"
+              disabled={loading || listening || convoMode}
+              className={cn("shrink-0 border-cyan-400/30", listening && !convoMode && "bg-cyan-400/10 text-cyan-300")}
+              title="Powiedz jedno pytanie"
             >
-              {listening ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mic className="h-4 w-4" />}
+              {listening && !convoMode ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mic className="h-4 w-4" />}
+            </Button>
+            {/* Ciągła rozmowa głosowa jak w GPT/Grok */}
+            <Button
+              type="button"
+              variant={convoMode ? "default" : "outline"}
+              onClick={toggleConvo}
+              className={cn(
+                "shrink-0",
+                convoMode
+                  ? "bg-gradient-to-r from-cyan-500 to-blue-600 text-white animate-pulse"
+                  : "border-cyan-400/30"
+              )}
+              title={convoMode ? "Zakończ rozmowę głosową" : "Rozmawiaj z Aurorą głosem (jak w GPT/Grok)"}
+            >
+              {convoMode ? <PhoneOff className="h-4 w-4" /> : <PhoneCall className="h-4 w-4" />}
             </Button>
             <Input
               value={input}
