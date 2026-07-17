@@ -24,6 +24,7 @@ const pl: TranslationKeys = {
   "nav.legalDocs": "Dokumenty prawne",
   "nav.aiFeatures": "Funkcje AI",
   "nav.myTracks": "Moje Utwory",
+  "nav.business": "B2B & Firmy",
   "nav.earnings": "Moje Zarobki",
   "nav.earnWithUs": "Zarabiaj z nami",
   "nav.artistLanding": "Dla artystów",

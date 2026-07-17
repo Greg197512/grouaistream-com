@@ -24,6 +24,7 @@ const nl: TranslationKeys = {
   "nav.legalDocs": "Juridische Documenten",
   "nav.aiFeatures": "AI Functies",
   "nav.myTracks": "Mijn Nummers",
+  "nav.business": "B2B & Zakelijk",
   "nav.earnings": "Mijn Inkomsten",
   "nav.earnWithUs": "Verdien met ons",
   "nav.artistLanding": "Voor artiesten",
