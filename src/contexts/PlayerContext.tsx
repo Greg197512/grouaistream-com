@@ -700,7 +700,12 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     toast.success(`Added "${track.title}" to queue`);
   };
 
-  // Shared: load language-specific track into player
+  // Shared: load language-specific track into player.
+  // Szuka utworu po tytule niezależnie od hostingu audio (R2 / Vercel / Lovable —
+  // wszystkie dają zwykły publiczny URL w kolumnie audio_url). Najpierw próbuje
+  // dokładnego dopasowania tytułu, potem częściowego (na wypadek drobnych różnic
+  // w zapisie), i zawsze wybiera rekord z prawdziwym linkiem http. BEZ losowego
+  // fallbacku — jeśli danego utworu nie ma, nic się nie odpala.
   const loadLangTrack = useCallback((lang: string) => {
     const langTrackMap: Record<string, string> = {
       pl: 'Holenderski Club Peak',
@@ -710,30 +715,49 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     };
     const trackTitle = langTrackMap[lang] || langTrackMap.en;
 
-    supabase
-      .from('tracks')
-      .select('*')
-      .eq('title', trackTitle)
-      .not('audio_url', 'is', null)
-      .limit(1)
-      .then(({ data }) => {
-        if (data && data.length > 0) {
-          const track = data[0] as Track;
-          if (track.audio_url || track.video_url) {
-            setCurrentTrack(track);
-            setQueue([track]);
-            setQueueIndex(0);
-            if (audioRef.current) {
-              setTimeout(() => {
-                if (audioRef.current) {
-                  audioRef.current.play().catch(() => {});
-                }
-              }, 100);
-            }
-            return;
-          }
-        }
-      });
+    const startTrack = (track: Track) => {
+      setCurrentTrack(track);
+      setQueue([track]);
+      setQueueIndex(0);
+      setTimeout(() => {
+        if (audioRef.current) audioRef.current.play().catch(() => {});
+      }, 120);
+    };
+
+    // Preferuj rekord z publicznym linkiem http (R2/Vercel/Lovable), potem video.
+    const pickPlayable = (rows: Track[] | null): Track | null => {
+      if (!rows || rows.length === 0) return null;
+      return (
+        rows.find((r) => (r.audio_url ?? "").startsWith("http")) ||
+        rows.find((r) => !!r.audio_url) ||
+        rows.find((r) => !!r.video_url) ||
+        null
+      );
+    };
+
+    (async () => {
+      // 1) Dokładne dopasowanie tytułu.
+      const exact = await supabase
+        .from('tracks')
+        .select('*')
+        .eq('title', trackTitle)
+        .not('audio_url', 'is', null)
+        .limit(5);
+      let track = pickPlayable(exact.data as Track[] | null);
+
+      // 2) Częściowe dopasowanie TEGO SAMEGO tytułu (drobne różnice w zapisie).
+      if (!track) {
+        const partial = await supabase
+          .from('tracks')
+          .select('*')
+          .ilike('title', `%${trackTitle}%`)
+          .not('audio_url', 'is', null)
+          .limit(5);
+        track = pickPlayable(partial.data as Track[] | null);
+      }
+
+      if (track) startTrack(track);
+    })();
   }, []);
 
   // Auto-play language-specific track on app start (no login required)
@@ -758,49 +782,18 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     return () => subscription.unsubscribe();
   }, [loadLangTrack]);
 
-  // Auto-play specific track when language changes
+  // Auto-play specific track when language changes — ta sama odporna logika
+  // co przy starcie (jedno źródło prawdy: loadLangTrack).
   useEffect(() => {
     const handleLanguageChange = (e: Event) => {
       const lang = (e as CustomEvent).detail?.language;
       if (!lang) return;
-
-      // Map language to a specific track
-      const langTrackMap: Record<string, string> = {
-        pl: '%Holenderski Club Peak%',
-        en: '%Drop Chant Stream%',
-        nl: '%Amsterdam Drop Call%',
-        ua: '%Kyiv Club Signal%',
-      };
-
-      const pattern = langTrackMap[lang];
-      if (!pattern) return;
-
-      supabase
-        .from('tracks')
-        .select('*')
-        .ilike('title', pattern)
-        .limit(1)
-        .then(({ data }) => {
-          if (data && data.length > 0) {
-            const track = data[0] as Track;
-            if (track.audio_url || track.video_url) {
-              setCurrentTrack(track);
-              setQueue([track]);
-              setQueueIndex(0);
-              // Zaplanuj odtwarzanie po ustabilizowaniu się state'u
-              setTimeout(() => {
-                if (audioRef.current) {
-                  audioRef.current.play().catch(() => {});
-                }
-              }, 100);
-            }
-          }
-        });
+      loadLangTrack(lang);
     };
 
     window.addEventListener("grooveai-language-change", handleLanguageChange);
     return () => window.removeEventListener("grooveai-language-change", handleLanguageChange);
-  }, []);
+  }, [loadLangTrack]);
 
   // Reset track start time when track changes
   useEffect(() => {
