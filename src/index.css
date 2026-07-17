@@ -582,12 +582,8 @@ html[data-threed="on"] .material-icons {
   position: absolute;
   inset: -30%;
   pointer-events: none;
-  background:
-    radial-gradient(40% 40% at 30% 30%, rgba(255, 107, 0, 0.30), transparent 70%),
-    radial-gradient(45% 45% at 70% 60%, rgba(147, 51, 234, 0.36), transparent 70%),
-    radial-gradient(35% 35% at 55% 82%, rgba(255, 149, 0, 0.22), transparent 70%);
-  filter: blur(26px);
-  /* Bez wirowania — statyczna, spokojna poświata (zero migania). */
+  background: transparent;
+  filter: none;
 }
 
 /* ===== GrouAI Studio — analogowa konsola (amplituner) ===== */
