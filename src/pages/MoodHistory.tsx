@@ -120,9 +120,14 @@ const healingFrequencies: Record<string, { hz: number; purpose: string }[]> = {
   ],
 };
 
+// Minimalna liczba skanów (twarz / słuchanie muzyki) zanim AI wyda realną,
+// wiarygodną opinię. Poniżej tego progu prosimy o więcej danych.
+const MIN_PSYCH_SCANS = 3;
+
 export default function MoodHistory() {
   const { user } = useAuth();
   const { playPlaylist } = usePlayer();
+  const { canUsePsychologist } = useSubscription();
   const navigate = useNavigate();
   
   
@@ -390,18 +395,28 @@ export default function MoodHistory() {
               </Tabs>
               
               {analysis && (
-                <FeatureGate requiredPlan="ultimate" featureName="AI Psychologist Reports" mode="hide" fallback={
-                  <Button 
+                <FeatureGate requiredPlan="pro" featureName="AI Psychologist Reports" mode="hide" fallback={
+                  <Button
                     onClick={() => {}}
                     className="bg-background hover:bg-muted border-2 border-muted p-1 opacity-50"
                     size="sm"
-                    title="Ultimate plan required"
+                    title="Wymagany plan Pro lub VIP"
                   >
                     <Lock className="h-5 w-5 text-muted-foreground" />
                   </Button>
                 }>
-                  <Button 
+                  <Button
+                    disabled={moodSessions.length < MIN_PSYCH_SCANS}
+                    title={moodSessions.length < MIN_PSYCH_SCANS
+                      ? `Potrzeba co najmniej ${MIN_PSYCH_SCANS} skanów twarzy / słuchania muzyki`
+                      : "Wygeneruj realną opinię AI"}
                     onClick={async () => {
+                      if (moodSessions.length < MIN_PSYCH_SCANS) {
+                        toast.info(
+                          `🧠 Zbierz jeszcze trochę danych — AI potrzebuje min. ${MIN_PSYCH_SCANS} skanów (twarz / słuchanie muzyki), żeby analiza była wiarygodna. Masz ${moodSessions.length}.`
+                        );
+                        return;
+                      }
                       toast.loading("🧠 AI analizuje stan emocjonalny...", { id: "ai-report" });
                       try {
                         const { data, error } = await supabase.functions.invoke("ai-psychologist", {
