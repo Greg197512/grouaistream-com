@@ -760,27 +760,9 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     })();
   }, []);
 
-  // Auto-play language-specific track on app start (no login required)
-  const hasAutoPlayed = useRef(false);
-  useEffect(() => {
-    if (hasAutoPlayed.current || currentTrack) return;
-    hasAutoPlayed.current = true;
-    const lang = localStorage.getItem("grooveai-language") || "en";
-    loadLangTrack(lang);
-  }, [loadLangTrack]);
-
-  // Auto-play language track on first login (SIGNED_IN event)
-  const hasPlayedOnLogin = useRef(false);
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "SIGNED_IN" && !hasPlayedOnLogin.current) {
-        hasPlayedOnLogin.current = true;
-        const lang = localStorage.getItem("grooveai-language") || "en";
-        loadLangTrack(lang);
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, [loadLangTrack]);
+  // Bez auto-startu utworu przy wejściu do aplikacji ani po zalogowaniu —
+  // player startuje pusty. Utwór językowy odpala się tylko przy RĘCZNEJ
+  // zmianie języka (poniżej).
 
   // Auto-play specific track when language changes — ta sama odporna logika
   // co przy starcie (jedno źródło prawdy: loadLangTrack).
