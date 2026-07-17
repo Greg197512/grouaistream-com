@@ -8,6 +8,7 @@ import { usePlayer } from "@/contexts/PlayerContext";
 import { supabase } from "@/integrations/supabase/client";
 import { DetectedMood } from "@/hooks/useAIOrchestrator";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface MoodResult {
   mood: string;
@@ -80,8 +81,9 @@ const createFallbackDeepAnalysis = (mood: MoodResult, emotion: string, language:
 
 export const QuickMoodDetector = ({ isOpen, onClose }: QuickMoodDetectorProps) => {
   const { handleMoodDetected: aiHandleMood } = useAI();
-  const { playPlaylist } = usePlayer();
+  const { playPlaylist, currentTrack } = usePlayer();
   const { t, language } = useLanguage();
+  const { user } = useAuth();
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isActive, setIsActive] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -281,6 +283,46 @@ export const QuickMoodDetector = ({ isOpen, onClose }: QuickMoodDetectorProps) =
     return canvas.toDataURL("image/jpeg", 0.85);
   }, []);
 
+  // Kilka klatek w krótkim odstępie — pozwala wychwycić mikroekspresje i ruch oczu
+  // (mocniejsze i stabilniejsze niż pojedynczy snapshot).
+  const captureFrames = useCallback(async (count = 4, gapMs = 320): Promise<string[]> => {
+    const frames: string[] = [];
+    for (let i = 0; i < count; i++) {
+      const shot = captureSnapshot();
+      if (shot) frames.push(shot);
+      if (i < count - 1) await new Promise((r) => setTimeout(r, gapMs));
+    }
+    return frames;
+  }, [captureSnapshot]);
+
+  // Nagraj każdą detekcję do zbioru uczącego (RLS: tylko własne). Nie blokuje UX —
+  // jeśli tabela jeszcze nie wdrożona lub brak uprawnień, po cichu pomijamy.
+  const recordDetection = useCallback(async (data: any, framesCount: number) => {
+    if (!user) return;
+    try {
+      const { error } = await (supabase as any).from("face_detections").insert({
+        user_id: user.id,
+        dominant_emotion: data.dominantEmotion ?? "neutral",
+        confidence: typeof data.confidence === "number" ? data.confidence : null,
+        emotions: data.emotions ?? {},
+        eye_state: data.eyeState ?? null,
+        gaze: data.gaze ?? null,
+        micro_expressions: data.microExpressions ?? [],
+        valence: typeof data.valence === "number" ? data.valence : null,
+        arousal: typeof data.arousal === "number" ? data.arousal : null,
+        engagement: typeof data.engagement === "number" ? data.engagement : null,
+        frames_count: data.framesCount ?? framesCount,
+        source: "webcam",
+        model: data.model ?? null,
+        playing_track_id: currentTrack?.id ?? null,
+        language,
+      });
+      if (error) console.warn("[face_detections] zapis pominięty:", error.message);
+    } catch (e) {
+      console.warn("[face_detections] zapis pominięty:", e);
+    }
+  }, [user, currentTrack?.id, language]);
+
   const startAnalysis = useCallback(async () => {
     if (!videoRef.current) {
       toast.error(t("moodDet.loadingAI"));
@@ -302,12 +344,12 @@ export const QuickMoodDetector = ({ isOpen, onClose }: QuickMoodDetectorProps) =
     }, 60);
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 700));
-      const snapshot = captureSnapshot();
-      if (!snapshot) throw new Error("snapshot_failed");
+      await new Promise((resolve) => setTimeout(resolve, 400));
+      const frames = await captureFrames(4, 320);
+      if (!frames.length) throw new Error("snapshot_failed");
 
       const { data, error } = await supabase.functions.invoke("ai-vision-mood", {
-        body: { imageBase64: snapshot },
+        body: { frames },
       });
 
       if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
@@ -321,6 +363,9 @@ export const QuickMoodDetector = ({ isOpen, onClose }: QuickMoodDetectorProps) =
         toast.error(t("moodDet.noFace"));
         return;
       }
+
+      // Nagraj pełną detekcję (emocje + oczy + mikroekspresje) do zbioru uczącego.
+      void recordDetection(data, frames.length);
 
       const emotionKey = data.dominantEmotion;
       setDetectedEmotion(emotionKey);
@@ -355,7 +400,7 @@ export const QuickMoodDetector = ({ isOpen, onClose }: QuickMoodDetectorProps) =
       setIsAnalyzing(false);
       toast.error(t("moodDet.faceError"));
     }
-  }, [captureSnapshot, fetchDeepAnalysis, claimBonus, playMoodPlaylist, getMoodMapping, t]);
+  }, [captureFrames, recordDetection, fetchDeepAnalysis, claimBonus, playMoodPlaylist, getMoodMapping, t]);
 
   const startCamera = async () => {
     setIsLoading(true);
