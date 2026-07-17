@@ -247,7 +247,8 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
   const canUseMoodDetection = isPro;
   const canGenerateAIPlaylist = isPro;
   const canDownloadOffline = isPro;
-  const canUsePsychologist = isUltimate;
+  // AI Psycholog dostępny w Pro i VIP (Ultimate) — realne analizy po kilku skanach.
+  const canUsePsychologist = isPro;
   const canCustomizeDJ = isUltimate;
   const canUseUnlimitedSkips = isPro;
   const canUseHQAudio = isPro;
