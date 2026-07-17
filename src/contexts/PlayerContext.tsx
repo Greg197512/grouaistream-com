@@ -760,9 +760,18 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     })();
   }, []);
 
-  // Bez auto-startu utworu przy wejściu do aplikacji ani po zalogowaniu —
-  // player startuje pusty. Utwór językowy odpala się tylko przy RĘCZNEJ
-  // zmianie języka (poniżej).
+  // Auto-play językowego utworu przy wejściu do aplikacji. Używa odpornego
+  // loadLangTrack (dokładny → częściowy tytuł, wybór rekordu z linkiem http),
+  // BEZ losowego fallbacku — więc odpala WYŁĄCZNIE właściwą piosenkę danego
+  // języka (PL: Holenderski Club Peak, EN: Neon Floor Directions,
+  // NL: Amsterdam Drop Call, UA: Kyiv Club Signal), nigdy przypadkowego utworu.
+  const hasAutoPlayed = useRef(false);
+  useEffect(() => {
+    if (hasAutoPlayed.current || currentTrack) return;
+    hasAutoPlayed.current = true;
+    const lang = localStorage.getItem("grooveai-language") || "en";
+    loadLangTrack(lang);
+  }, [loadLangTrack]);
 
   // Auto-play specific track when language changes — ta sama odporna logika
   // co przy starcie (jedno źródło prawdy: loadLangTrack).
