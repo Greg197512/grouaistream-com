@@ -246,12 +246,14 @@ export const QuickMoodDetector = ({ isOpen, onClose }: QuickMoodDetectorProps) =
     }
   }, [playPlaylist, aiHandleMood, detectedEmotion, t]);
 
-  // Tworzy utwór w GrouAI Studio dopasowany do aury, wrzuca do tracks
-  // (pojawia się w "New") i odtwarza. Używane, gdy brak pasującego utworu.
+  // Tworzy PRYWATNY utwór w GrouAI Studio dopasowany do aury i odtwarza go.
+  // Zapisujemy do prywatnej historii Studio (generations, RLS per-user) —
+  // NIE do wspólnego "New". Widzi go tylko właściciel. Używane, gdy brak
+  // pasującego utworu.
   const createAuraTrack = useCallback(async (mood: MoodResult, emotionKey: string) => {
-    if (!user) { toast.error(t("moodDet.loginToCreate") || "Zaloguj się, aby utworzyć utwór"); return; }
+    if (!user) { toast.error("Zaloguj się, aby utworzyć utwór"); return; }
     setIsCreating(true);
-    toast.loading("🎼 GrouAI Studio tworzy utwór dopasowany do Twojej aury…", { id: "aura-gen" });
+    toast.loading("🎼 GrouAI Studio tworzy prywatny utwór dopasowany do Twojej aury…", { id: "aura-gen" });
     try {
       const genMood = (({
         happy: "bright", sad: "melancholic", angry: "aggressive", fearful: "tense",
@@ -272,31 +274,42 @@ export const QuickMoodDetector = ({ isOpen, onClose }: QuickMoodDetectorProps) =
       const file = new File([track.audioBlob], `${safe}_${Date.now()}.wav`, { type: "audio/wav" });
       const up = await uploadToR2({ file, folder: `studio/${user.id}` });
 
-      const { data: inserted, error } = await supabase.from("tracks").insert({
+      // Prywatna historia Studio — tylko dla właściciela (nie pojawia się w New).
+      const { data: gen } = await supabase.from("generations").insert({
         user_id: user.id,
+        title: `Aura • ${mood.mood}`,
+        genre: mood.genre || "AI",
+        prompt: `Aura auto-mood: ${mood.mood} (${emotionKey})`,
+        instrumental: false,
+        status: "completed",
+        audio_url: up.publicUrl,
+        engine: "grouai-aura",
+      }).select("id").single();
+
+      // Odtwarzamy z pamięci (bez wrzucania do publicznego katalogu).
+      const playable = {
+        id: gen?.id || (crypto as any).randomUUID?.() || `aura-${Date.now()}`,
         title: `Aura • ${mood.mood}`,
         artist: "GrouAI Studio",
         album: "AI Aura",
         duration: 30,
         audio_url: up.publicUrl,
-        genre: mood.genre,
+        video_url: null,
+        cover_url: null,
+        genre: mood.genre || null,
         mood: emotionKey,
-      }).select("*").single();
-      if (error) throw error;
+      };
 
-      toast.success("✨ Utwór gotowy — dodany do New i odtwarzam!", { id: "aura-gen" });
-      if (inserted) {
-        playPlaylist([inserted as any]);
-        setTracksPlaying(true);
-        window.dispatchEvent(new CustomEvent("track-list-changed"));
-      }
+      toast.success("✨ Prywatny utwór gotowy — odtwarzam (widoczny w Twoim Studio)", { id: "aura-gen" });
+      playPlaylist([playable as any]);
+      setTracksPlaying(true);
     } catch (e: any) {
       console.error("Aura track creation failed:", e);
       toast.error("Nie udało się utworzyć utworu: " + (e?.message || "błąd"), { id: "aura-gen" });
     } finally {
       setIsCreating(false);
     }
-  }, [user, playPlaylist, t]);
+  }, [user, playPlaylist]);
 
   // Po zgodzie: najpierw szuka pasującego utworu; jeśli brak — tworzy w Studio.
   const applyAura = useCallback(async () => {
@@ -836,7 +849,8 @@ export const QuickMoodDetector = ({ isOpen, onClose }: QuickMoodDetectorProps) =
               >
                 <p className="text-xs text-white/85 leading-relaxed">
                   🔮 AI odczytał Twoją aurę: <b>{consent.mood.mood}</b>. Czy mogę dobrać pasujący
-                  utwór — a jeśli nie mam idealnego, stworzyć nowy w GrouAI Studio i dodać do <b>New</b>?
+                  utwór — a jeśli nie mam idealnego, stworzyć <b>prywatny</b> utwór w GrouAI Studio
+                  (tylko dla Ciebie) i go odtworzyć?
                 </p>
                 <div className="flex gap-2">
                   <Button
