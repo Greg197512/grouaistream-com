@@ -794,6 +794,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
               setCurrentTrack(track);
               setQueue([track]);
               setQueueIndex(0);
+              setIsPlaying(true);
             }
           }
         });
