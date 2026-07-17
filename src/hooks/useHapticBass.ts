@@ -44,7 +44,7 @@ export function useHapticBass(audioEl: HTMLAudioElement | null, enabled: boolean
     const loop = () => {
       rafRef.current = requestAnimationFrame(loop);
       if (!analyser || !data) return;
-      analyser.getByteFrequencyData(data);
+      analyser.getByteFrequencyData(data as Uint8Array<ArrayBuffer>);
       let bass = 0;
       for (let i = 0; i < 5; i++) bass += data[i]; // najniższe pasma
       bass /= 5;
