@@ -15,20 +15,64 @@ interface MoodSession {
   detected_at: string;
 }
 
-interface MoodAnalysis {
-  dominantMood: string;
-  moodDistribution: Record<string, number>;
-  averageConfidence: number;
-  sessionsCount: number;
-  patterns: string[];
-  recommendations: {
-    music: string[];
-    frequencies: string[];
-    symptoms: string[];
-    advice: string[];
-  };
-  suggestedGenres: string[];
-  healingFrequencies: { hz: number; purpose: string }[];
+// Darmowe silniki AI w kolejności prób. Używamy tego klucza, który jest
+// skonfigurowany w projekcie — bez dodatkowych kosztów:
+//  1) Lovable AI Gateway (LOVABLE_API_KEY) — subsydiowany przez Lovable, Gemini.
+//  2) OpenRouter (OPENROUTER_API_KEY) — darmowy model Gemma.
+type Provider = {
+  name: string;
+  key: string | undefined;
+  url: string;
+  model: string;
+};
+
+async function runAI(
+  providers: Provider[],
+  systemPrompt: string,
+  userPrompt: string,
+): Promise<{ opinion: string; provider: string } | { error: string; status: number }> {
+  let lastErr = "Brak skonfigurowanego silnika AI";
+  let lastStatus = 500;
+
+  for (const p of providers) {
+    if (!p.key) continue;
+    try {
+      const res = await fetch(p.url, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${p.key}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: p.model,
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt },
+          ],
+          temperature: 0.4,
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const opinion = data.choices?.[0]?.message?.content;
+        if (opinion) return { opinion, provider: p.name };
+        lastErr = "Silnik AI zwrócił pustą odpowiedź";
+        lastStatus = 502;
+        continue;
+      }
+
+      // 429/402 — spróbuj kolejnego darmowego silnika zamiast się poddawać.
+      lastStatus = res.status;
+      lastErr = `${p.name}: HTTP ${res.status}`;
+      console.error(lastErr, (await res.text()).slice(0, 200));
+    } catch (e) {
+      lastErr = `${p.name}: ${e instanceof Error ? e.message : "błąd sieci"}`;
+      console.error(lastErr);
+    }
+  }
+
+  return { error: lastErr, status: lastStatus };
 }
 
 serve(async (req) => {
@@ -64,10 +108,34 @@ serve(async (req) => {
     // --- End authentication ---
 
     const { analysis, sessions, selectedDays, userName } = await req.json();
-    const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY");
 
-    if (!OPENROUTER_API_KEY) {
-      throw new Error("OPENROUTER_API_KEY not configured");
+    // Darmowe silniki — kolejność prób. Pierwszy z ustawionym kluczem wygrywa.
+    const providers: Provider[] = [
+      {
+        name: "Lovable/Gemini",
+        key: Deno.env.get("LOVABLE_API_KEY"),
+        url: "https://ai.gateway.lovable.dev/v1/chat/completions",
+        model: "google/gemini-2.5-flash",
+      },
+      {
+        name: "OpenRouter/Gemma",
+        key: Deno.env.get("OPENROUTER_API_KEY"),
+        url: "https://openrouter.ai/api/v1/chat/completions",
+        model: "google/gemma-2-9b-it:free",
+      },
+      {
+        name: "OpenRouter/Llama",
+        key: Deno.env.get("OPENROUTER_API_KEY"),
+        url: "https://openrouter.ai/api/v1/chat/completions",
+        model: "meta-llama/llama-3.3-70b-instruct:free",
+      },
+    ];
+
+    if (!providers.some((p) => p.key)) {
+      return new Response(
+        JSON.stringify({ error: "Brak klucza AI (LOVABLE_API_KEY lub OPENROUTER_API_KEY)." }),
+        { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
 
     // Build detailed context for AI psychologist
@@ -77,119 +145,107 @@ serve(async (req) => {
 
     const sessionDetails = (sessions as MoodSession[]).slice(0, 20).map((s) => {
       const date = new Date(s.detected_at);
-      return `${date.toLocaleDateString("pl-PL")} ${date.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" })} - ${s.mood} (${s.confidence}%)`;
+      const src = s.source === "webcam" ? "skan twarzy" : s.source === "voice" ? "głos" : s.source;
+      return `${date.toLocaleDateString("pl-PL")} ${date.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" })} - ${s.mood} (${s.confidence}%, ${src})`;
     }).join("\n");
 
-    const systemPrompt = `Jesteś doświadczonym psychologiem klinicznym specjalizującym się w psychologii emocji i muzykoterapii. 
-Przeprowadzasz profesjonalną analizę stanu emocjonalnego pacjenta na podstawie danych z automatycznego wykrywania nastroju.
+    // Prompt oparty na dowodach: ramy kliniczne + uczciwość co do ograniczeń.
+    const systemPrompt = `Jesteś psychologiem klinicznym i muzykoterapeutą. Tworzysz analizę stanu emocjonalnego
+opartą WYŁĄCZNIE na uznanej, recenzowanej wiedzy naukowej i praktyce opartej na dowodach (evidence-based practice).
 
-ZASADY:
-1. Pisz profesjonalnie ale zrozumiale dla laika
-2. Używaj terminologii psychologicznej z wyjaśnieniami
-3. Bądź empatyczny ale obiektywny
-4. Podawaj konkretne, praktyczne zalecenia
-5. Zwracaj uwagę na potencjalne ryzyka zdrowotne
-6. Rekomenduj kiedy pacjent powinien skonsultować się ze specjalistą
-7. Odpowiadaj TYLKO po polsku
+PODSTAWY NAUKOWE, z których korzystasz (i do których się odwołujesz ogólnie, bez wymyślania nazw badań):
+- Modele afektu: model kołowy emocji Russella (valence/arousal), skale PANAS.
+- Afektywna neuronauka i regulacja emocji (np. reappraisal, wg Grossa).
+- Muzykoterapia oparta na dowodach: przeglądy systematyczne i metaanalizy (m.in. Cochrane) nt. wpływu muzyki
+  na lęk, nastrój i stres; wytyczne organizacji muzykoterapeutycznych.
+- Podejścia kliniczne o udowodnionej skuteczności: CBT, uważność (MBSR/MBCT), higiena snu, aktywacja behawioralna.
+- Standardy przesiewowe (np. logika PHQ-2/PHQ-9, GAD-7) — jako ORIENTACJA, nie diagnoza.
 
-FORMAT ODPOWIEDZI (użyj dokładnie tych nagłówków):
+ŻELAZNE ZASADY:
+1. To NIE jest diagnoza medyczna — to orientacyjna analiza wspierająca. Zaznacz to wyraźnie.
+2. NIE wymyślaj konkretnych badań, nazwisk, szpitali ani liczb. Jeśli powołujesz się na dowody,
+   pisz o TYPIE dowodu ("metaanalizy nt. muzykoterapii wskazują, że…"), nie o zmyślonym cytacie.
+3. Rozróżniaj fakty o wysokim poparciu dowodowym od hipotez. Przy tzw. "częstotliwościach leczniczych" (Hz)
+   uczciwie zaznacz, że dowody są słabe/anegdotyczne — możesz je proponować jako relaks, nie jako terapię.
+4. Uwzględnij ograniczenia danych: automatyczny odczyt emocji z twarzy/głosu bywa zawodny; im mniej skanów,
+   tym mniejsza pewność. Podaj poziom pewności analizy.
+5. Przy sygnałach wysokiego ryzyka (utrzymujący się bardzo niski nastrój, silny lęk) zalecaj kontakt ze
+   specjalistą, a przy myślach o samookaleczeniu podaj pomoc kryzysową: w Polsce 112 oraz Telefon Zaufania 116 123.
+6. Empatyczny, konkretny, po polsku.
+
+FORMAT (użyj dokładnie tych nagłówków):
 
 ## OCENA OGÓLNA
-[2-3 zdania podsumowujące ogólny stan emocjonalny pacjenta]
+[2-3 zdania. Zaznacz, że to analiza orientacyjna, nie diagnoza.]
 
-## DIAGNOZA KLINICZNA
-[Szczegółowa analiza dominującego nastroju i wzorców emocjonalnych. Opisz co mogą oznaczać wykryte stany.]
+## PODSTAWA W BADANIACH
+[Krótko: na jakich uznanych ramach naukowych opierasz tę analizę — model afektu, muzykoterapia oparta na dowodach itd.]
+
+## ANALIZA WZORCÓW EMOCJONALNYCH
+[Interpretacja dominującego nastroju i rozkładu w świetle modelu valence/arousal. Co sugerują wzorce.]
+
+## POZIOM PEWNOŚCI I OGRANICZENIA
+[Oceń pewność (niska/średnia/wysoka) na podstawie liczby skanów i średniej pewności detekcji. Wymień ograniczenia metody.]
 
 ## ANALIZA RYZYKA
-[Oceń poziom ryzyka (niski/średni/wysoki) dla zdrowia psychicznego. Wyjaśnij dlaczego.]
+[Poziom ryzyka (niski/średni/wysoki) + uzasadnienie. Jeśli wysoki — jasne wezwanie do kontaktu ze specjalistą.]
 
-## WYKRYTE SYMPTOMY
-[Lista konkretnych symptomów, które mogą wymagać uwagi. Jeśli brak - napisz "Nie wykryto niepokojących symptomów."]
-
-## DIAGNOZA RÓŻNICOWA
-[Jakie stany psychologiczne mogą odpowiadać zaobserwowanym wzorcom. Wymień 2-3 możliwości.]
-
-## ZALECENIA TERAPEUTYCZNE
-[Konkretne działania które pacjent powinien podjąć, w tym:
-- Muzykoterapia (gatunki, częstotliwości lecznicze Hz)
-- Techniki relaksacyjne
-- Zmiany w stylu życia
-- Kiedy szukać pomocy profesjonalnej]
+## ZALECENIA OPARTE NA DOWODACH
+[Konkretne, evidence-based:
+- Muzykoterapia: gatunki/tempo dopasowane do celu (uspokojenie vs aktywacja) z krótkim uzasadnieniem naukowym.
+- Techniki regulacji emocji o udowodnionej skuteczności (oddech, uważność, aktywacja behawioralna, sen).
+- Częstotliwości Hz — tylko jako opcjonalny relaks z zastrzeżeniem o słabych dowodach.
+- Kiedy szukać profesjonalnej pomocy.]
 
 ## PROGNOZA
-[Krótka prognoza przy zastosowaniu zaleceń vs bez interwencji]
+[Realistyczna, z zastrzeżeniem niepewności.]
 
 ## UWAGI KOŃCOWE
-[Osobista wiadomość wsparcia dla pacjenta]`;
+[Wspierająca wiadomość + przypomnienie: to nie zastępuje konsultacji z profesjonalistą.]`;
 
-    const userPrompt = `DANE PACJENTA:
+    const userPrompt = `DANE UŻYTKOWNIKA (odczyt automatyczny — skan twarzy / głos / słuchanie muzyki):
 Imię: ${userName || "Nieznane"}
 Okres analizy: ${selectedDays} dni
-Liczba skanów nastroju: ${analysis.sessionsCount}
-
-DOMINUJĄCY NASTRÓJ: ${analysis.dominantMood}
+Liczba skanów: ${analysis.sessionsCount}
+Dominujący nastrój: ${analysis.dominantMood}
 Średnia pewność detekcji: ${analysis.averageConfidence}%
 
 ROZKŁAD NASTROJÓW:
 ${moodSummary}
 
-WYKRYTE WZORCE:
+WYKRYTE WZORCE (wstępne, algorytmiczne):
 ${analysis.patterns.length > 0 ? analysis.patterns.join("\n") : "Brak wystarczających danych dla wykrycia wzorców"}
 
-HISTORIA SKANÓW (chronologicznie):
+HISTORIA SKANÓW (chronologicznie, ze źródłem):
 ${sessionDetails}
 
-WSTĘPNIE WYKRYTE SYMPTOMY:
-${analysis.recommendations.symptoms.length > 0 ? analysis.recommendations.symptoms.join("\n") : "Brak wstępnych symptomów"}
+Przeprowadź analizę zgodnie z formatem i zasadami. Pamiętaj: pewność analizy zależy od liczby skanów
+(${analysis.sessionsCount}) i średniej pewności detekcji (${analysis.averageConfidence}%).`;
 
-Przeprowadź pełną analizę psychologiczną i wygeneruj profesjonalną opinię kliniczną.`;
+    const result = await runAI(providers, systemPrompt, userPrompt);
 
-    const aiResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${OPENROUTER_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemma-2-9b-it:free",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-      }),
-    });
-
-    if (!aiResponse.ok) {
-      const errorText = await aiResponse.text();
-      console.error("AI Gateway error:", aiResponse.status, errorText);
-
-      if (aiResponse.status === 429) {
-        return new Response(
-          JSON.stringify({ error: "Zbyt wiele zapytań. Spróbuj ponownie za chwilę." }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      if (aiResponse.status === 402) {
-        return new Response(
-          JSON.stringify({ error: "Brak kredytów AI. Skontaktuj się z administratorem." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      throw new Error("AI Gateway error");
+    if ("error" in result) {
+      const status = result.status === 429 ? 429 : result.status === 402 ? 402 : 502;
+      const msg = status === 429
+        ? "Zbyt wiele zapytań do AI. Spróbuj ponownie za chwilę."
+        : status === 402
+          ? "Wyczerpany limit darmowego AI. Spróbuj później."
+          : "Silnik AI chwilowo niedostępny.";
+      return new Response(JSON.stringify({ error: msg }), {
+        status,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    const aiData = await aiResponse.json();
-    const opinion = aiData.choices?.[0]?.message?.content || "Nie udało się wygenerować opinii.";
-
     return new Response(
-      JSON.stringify({ opinion }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({ opinion: result.opinion, provider: result.provider }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (error) {
     console.error("AI Psychologist error:", error);
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
-      { status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
+      { status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } },
     );
   }
 });
