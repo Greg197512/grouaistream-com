@@ -36,7 +36,7 @@ export function useHapticBass(audioEl: HTMLAudioElement | null, enabled: boolean
       analyser.fftSize = 256;
       analyser.smoothingTimeConstant = 0.5;
       source.connect(analyser); // tap tylko do odczytu (nie do głośnika)
-      data = new Uint8Array(analyser.frequencyBinCount);
+      data = new Uint8Array(new ArrayBuffer(analyser.frequencyBinCount));
     } catch {
       return; // nie udało się — audio playera nietknięte
     }
