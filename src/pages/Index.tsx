@@ -10,7 +10,6 @@ import { NewOnServer } from "@/components/sections/NewOnServer";
 import { AdminMarquee } from "@/components/sections/AdminMarquee";
 import { UploadCTA } from "@/components/sections/UploadCTA";
 import { SupportSection } from "@/components/sections/SupportSection";
-import { FairnessCounter } from "@/components/sections/FairnessCounter";
 import { PromotedTracksSection } from "@/components/sections/PromotedTracks";
 import { SEOContentSection } from "@/components/sections/SEOContentSection";
 
@@ -34,7 +33,6 @@ const Index = () => {
       <Section name="marquee"><AdminMarquee /></Section>
       <Section name="new-on-server"><NewOnServer /></Section>
       <Section name="recently-played"><RecentlyPlayed /></Section>
-      <Section name="fairness"><FairnessCounter /></Section>
 
       <Section name="g-pop"><GenreSection genre="Pop" title={t("section.pop")} icon="star" color="text-accent" limit={12} /></Section>
       <Section name="g-rock"><GenreSection genre="Rock" title={t("section.rock")} icon="electric_bolt" color="text-primary" limit={12} /></Section>
