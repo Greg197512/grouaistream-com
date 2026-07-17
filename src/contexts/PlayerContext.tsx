@@ -703,17 +703,17 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   // Shared: load language-specific track into player
   const loadLangTrack = useCallback((lang: string) => {
     const langTrackMap: Record<string, string> = {
-      pl: '%Holenderski Club Peak%',
-      en: '%Neon Floor Directions%',
-      nl: '%Amsterdam Drop Call%',
-      ua: '%Kyiv Club Signal%',
+      pl: 'Holenderski Club Peak',
+      en: 'Neon Floor Directions',
+      nl: 'Amsterdam Drop Call',
+      ua: 'Kyiv Club Signal',
     };
-    const pattern = langTrackMap[lang] || langTrackMap.en;
+    const trackTitle = langTrackMap[lang] || langTrackMap.en;
 
     supabase
       .from('tracks')
       .select('*')
-      .ilike('title', pattern)
+      .eq('title', trackTitle)
       .not('audio_url', 'is', null)
       .limit(1)
       .then(({ data }) => {
@@ -723,10 +723,16 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
             setCurrentTrack(track);
             setQueue([track]);
             setQueueIndex(0);
+            if (audioRef.current) {
+              setTimeout(() => {
+                if (audioRef.current) {
+                  audioRef.current.play().catch(() => {});
+                }
+              }, 100);
+            }
             return;
           }
         }
-        // Brak fallback - jeśli track dla danego języka nie istnieje, nic się nie wczytuje
       });
   }, []);
 
@@ -735,10 +741,9 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (hasAutoPlayed.current || currentTrack) return;
     hasAutoPlayed.current = true;
-    // Disabled: gracz na starcie pozostaje pusty
-    // const lang = localStorage.getItem("grooveai-language") || "en";
-    // loadLangTrack(lang);
-  }, []);
+    const lang = localStorage.getItem("grooveai-language") || "en";
+    loadLangTrack(lang);
+  }, [loadLangTrack]);
 
   // Auto-play language track on first login (SIGNED_IN event)
   const hasPlayedOnLogin = useRef(false);
