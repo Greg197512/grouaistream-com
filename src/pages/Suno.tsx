@@ -636,8 +636,8 @@ const Suno = () => {
     }
   };
 
-  // === ULTIMATE GATE: GrouAI Studio dostępne tylko dla Ultimate (również niezalogowani) ===
-  if (!isUltimate) {
+  // === PROMO: GrouAI Studio jest darmowe dla wszystkich — brak paywall ===
+  if (false) {
     return (
       <MainLayout>
         <div className="min-h-screen flex items-center justify-center px-4" style={{ background: "#0F0F1A" }}>
