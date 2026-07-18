@@ -41,6 +41,7 @@ export type TranslationKeys = {
    "nav.earnings": string;
    "nav.earnWithUs": string;
    "nav.artistLanding": string;
+   "nav.business": string;
 
   // TopBar
   "topbar.searchPlaceholder": string;
