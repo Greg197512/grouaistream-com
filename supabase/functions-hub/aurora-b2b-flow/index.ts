@@ -43,6 +43,14 @@ const SELLER = {
   email: "grouarock@gmail.com",
 };
 
+// Auto-wycena Aurory — cena bazowa wg typu usługi (€). Aurora wycenia sama;
+// admin tylko potwierdza zlecenie. hub_config.price_<segment> może nadpisać.
+const PRICE_MAP: Record<string, number> = {
+  seo_audit: 149, seo_content: 49, landing_page: 299, social_post: 19,
+  automation_flow: 199, lead_research: 99, music_production: 99,
+  video_edit: 149, video_ad: 199, graphic_design: 99, other: 99,
+};
+
 async function hmacKey(hubToken: string, role: string, orderId: string) {
   const data = new TextEncoder().encode(`${hubToken}:${role}:${orderId}`);
   const hash = await crypto.subtle.digest("SHA-256", data);
@@ -138,6 +146,21 @@ async function buildPdf(kind: "offer" | "invoice", d: {
   }
 }
 
+// Wysyła ofertę PDF do klienta (z wyliczoną kwotą), zapisuje stan. Zwraca id maila.
+async function offerToClient(db: any, o: any, lead: any, orderId: string, amount: number, note: string) {
+  const label = SERVICE_LABELS[lead.segment] ?? "Projekt B2B";
+  const kClient = await hmacKey(o.hubToken, "client", orderId);
+  const paidUrl = `${o.self}?stage=client_paid&order=${encodeURIComponent(orderId)}&kc=${kClient}`;
+  const pdfB64 = await buildPdf("offer", { orderId, label, brief: String(lead.brief ?? ""), amount, currency: "EUR", clientName: lead.name, clientEmail: lead.email, company: lead.company });
+  const html = `<div style="font-family:-apple-system,Segoe UI,sans-serif;font-size:15px;line-height:1.6;color:#111;max-width:620px;margin:0 auto">${brandHeader()}<p style="font-size:12px;letter-spacing:1px;text-transform:uppercase;color:#2E7BFF;margin:0 0 4px">Twoja oferta · ${esc(orderId)}</p><h1 style="font-size:22px;margin:0 0 10px">${lead.name ? "Cześć " + esc(lead.name) + "!" : "Cześć!"} Oto wycena 🎯</h1><p style="margin:0 0 6px"><strong>Usługa:</strong> ${esc(label)}</p><p style="margin:0 0 6px"><strong>Do zapłaty:</strong> <span style="color:#FF6B00;font-weight:700;font-size:18px">${amount.toFixed(2)} €</span></p>${note ? `<p style="margin:8px 0;color:#555">${esc(note)}</p>` : ""}<p style="margin:12px 0 6px">Szczegóły w załączonym PDF. Płatność przelewem:</p><div style="background:#f6f6f6;border-radius:8px;padding:12px 14px;font-size:14px">Odbiorca: ${esc(SELLER.name)}<br>IBAN: ${esc(SELLER.iban)} · BIC: ${esc(SELLER.bic)}<br>Tytuł przelewu: <strong>${esc(orderId)}</strong></div><p style="margin:16px 0 6px">Po opłaceniu kliknij, aby potwierdzić — zespół zweryfikuje wpływ i ruszamy:</p><p style="margin:14px 0"><a href="${paidUrl}" style="background:#16a34a;color:#fff;text-decoration:none;padding:14px 26px;border-radius:10px;display:inline-block;font-weight:700;font-size:16px">✅ Zapłaciłem / Akceptuję ofertę</a></p><p style="font-size:12px;color:#888">Pytania? Odpisz na tego maila.</p></div>`;
+  const attachments = pdfB64 ? [{ filename: `Oferta-${orderId}.pdf`, content: pdfB64 }] : undefined;
+  const mid = o.resend ? await sendMail(o.resend, o.from, [lead.email], `Oferta ${orderId}: ${label} — ${amount.toFixed(2)} €`, html, o.admin, attachments) : null;
+  const meta = { ...(lead.meta ?? {}), offer_amount: amount, offer_note: note, offer_sent_at: new Date().toISOString() };
+  await db.from("hub_leads").update({ meta, status: "offer_sent" }).eq("id", lead.id);
+  await db.from("hub_log").insert({ source: "aurora-b2b-flow", level: mid ? "info" : "error", message: mid ? `Oferta ${orderId} (${amount} €) -> klient [${mid}]` : `Oferta ${orderId}: mail nie wyszedl`, data: { order_id: orderId } });
+  return mid;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: cors });
 
@@ -194,66 +217,50 @@ ${brandHeader()}
     return json({ ok: true, sent: !!mid });
   }
 
-  // ── 2) CONFIRM_ORDER: admin klika → strona z polem kwoty ──
+  // ── 2) CONFIRM_ORDER: admin klika „Potwierdź" → Aurora SAMA wycenia i wysyła ofertę PDF ──
+  //     (opcjonalny override ceny: &amount=NNN w linku)
   if (stage === "confirm_order" && req.method === "GET") {
     const k = url.searchParams.get("k") || "";
     if (!orderId || k !== await hmacKey(hubToken, "admin", orderId)) return page("Nieprawidłowy link", "Link jest niepoprawny lub wygasł.", false);
     const lead = await leadByOrder();
     if (!lead) return page("Nie znaleziono zlecenia", `Zlecenie ${esc(orderId)} nie istnieje.`, false);
-    if (lead.meta?.offer_sent_at) return page("Oferta już wysłana", `Ofertę dla ${esc(orderId)} już wysłano klientowi (${esc(lead.meta.offer_amount)} €).`);
+    if (lead.meta?.offer_sent_at) return page("Oferta już wysłana ✅", `Ofertę dla ${esc(orderId)} już wysłano klientowi (${esc(lead.meta.offer_amount)} €).`);
+    if (!emailOk(lead.email)) return page("Brak e-maila klienta", "Zlecenie nie ma poprawnego adresu klienta.", false);
+
     const label = SERVICE_LABELS[lead.segment] ?? "Projekt B2B";
-    const form = `<form method="POST" action="${self}?stage=send_offer&order=${encodeURIComponent(orderId)}&k=${k}" style="margin-top:24px;text-align:left">
-<label style="display:block;color:#fff;font-size:14px;font-weight:600;margin-bottom:8px">💶 Kwota do zapłaty (€)</label>
-<input name="amount" type="number" inputmode="decimal" step="0.01" min="1" required autofocus placeholder="np. 150" style="width:100%;box-sizing:border-box;padding:18px;border-radius:12px;border:2px solid #FF6B00;background:#ffffff;color:#111;font-size:22px;font-weight:700;text-align:center">
-<label style="display:block;color:#bbb;font-size:13px;margin:16px 0 6px">Notatka do oferty (opcjonalnie)</label>
-<input name="note" type="text" placeholder="np. termin, zakres prac" style="width:100%;box-sizing:border-box;padding:14px;border-radius:10px;border:1px solid #666;background:#ffffff;color:#111;font-size:15px">
-<button type="submit" style="width:100%;margin-top:20px;background:#FF6B00;color:#fff;border:0;padding:18px;border-radius:12px;font-weight:800;font-size:17px;cursor:pointer">Wyślij ofertę do klienta →</button>
-</form>`;
-    return page(`Wyceń: ${esc(label)}`, `Zlecenie ${esc(orderId)} dla ${esc(lead.email ?? "klienta")}. Wpisz kwotę — Aurora wyśle klientowi ofertę PDF z przyciskiem do zapłaty.`, true, form);
+    // Aurora wycenia sama: nadpisanie z linku → hub_config.price_<segment> → cennik bazowy.
+    const override = parseFloat(url.searchParams.get("amount") || "");
+    const cfgPrice = parseFloat(cfg["price_" + lead.segment] || "");
+    const amount = isFinite(override) && override > 0 ? override
+      : isFinite(cfgPrice) && cfgPrice > 0 ? cfgPrice
+      : (PRICE_MAP[lead.segment] ?? 99);
+
+    const mid = await offerToClient(db, { resend, from, admin, self, hubToken }, lead, orderId, amount, "");
+    return page(mid ? "Zatwierdzono i wysłano ofertę ✅" : "Uwaga",
+      mid
+        ? `Aurora wyceniła „${esc(label)}" na <b>${amount.toFixed(2)} €</b> i wysłała ofertę PDF do klienta (${esc(lead.email)}). Klient dostał przycisk „Zapłaciłem". Możesz zamknąć tę stronę.`
+        : `Zapisano wycenę ${amount.toFixed(2)} €, ale maila nie udało się wysłać (sprawdź resend_api_key).`,
+      !!mid);
   }
 
-  // ── 3) SEND_OFFER: admin wysłał kwotę → PDF oferta do klienta + przycisk "Zapłaciłem" ──
-  if (stage === "send_offer" && req.method === "POST") {
+  // ── 3) SEND_OFFER (override manualny, np. z formularza/parametru): wysyła ofertę z podaną kwotą ──
+  if (stage === "send_offer" && (req.method === "POST" || req.method === "GET")) {
     const k = url.searchParams.get("k") || "";
     if (!orderId || k !== await hmacKey(hubToken, "admin", orderId)) return page("Nieprawidłowy link", "Link jest niepoprawny lub wygasł.", false);
     const lead = await leadByOrder();
     if (!lead) return page("Nie znaleziono zlecenia", `Zlecenie ${esc(orderId)} nie istnieje.`, false);
-    const form = await req.formData().catch(() => null);
+    if (lead.meta?.offer_sent_at) return page("Oferta już wysłana ✅", `Ofertę dla ${esc(orderId)} już wysłano (${esc(lead.meta.offer_amount)} €).`);
+    const form = req.method === "POST" ? await req.formData().catch(() => null) : null;
     const amountRaw = (form?.get("amount") ?? url.searchParams.get("amount") ?? "") as string;
     const noteRaw = (form?.get("note") ?? url.searchParams.get("note") ?? "") as string;
     const amount = Math.round(parseFloat(String(amountRaw)) * 100) / 100;
     const note = String(noteRaw).slice(0, 400);
-    if (!isFinite(amount) || amount <= 0) return page("Zła kwota", "Wpisz poprawną kwotę większą od zera.", false);
+    if (!isFinite(amount) || amount <= 0) return page("Zła kwota", "Podaj poprawną kwotę większą od zera.", false);
     if (!emailOk(lead.email)) return page("Brak e-maila klienta", "Zlecenie nie ma poprawnego adresu klienta.", false);
-
-    const label = SERVICE_LABELS[lead.segment] ?? "Projekt B2B";
-    const kClient = await hmacKey(hubToken, "client", orderId);
-    const paidUrl = `${self}?stage=client_paid&order=${encodeURIComponent(orderId)}&kc=${kClient}`;
-    const pdfB64 = await buildPdf("offer", {
-      orderId, label, brief: String(lead.brief ?? ""), amount, currency: "EUR",
-      clientName: lead.name, clientEmail: lead.email, company: lead.company,
-    });
-    const html = `<div style="font-family:-apple-system,Segoe UI,sans-serif;font-size:15px;line-height:1.6;color:#111;max-width:620px;margin:0 auto">
-${brandHeader()}
-<p style="font-size:12px;letter-spacing:1px;text-transform:uppercase;color:#2E7BFF;margin:0 0 4px">Twoja oferta · ${esc(orderId)}</p>
-<h1 style="font-size:22px;margin:0 0 10px">${lead.name ? "Cześć " + esc(lead.name) + "!" : "Cześć!"} Oto wycena 🎯</h1>
-<p style="margin:0 0 6px"><strong>Usługa:</strong> ${esc(label)}</p>
-<p style="margin:0 0 6px"><strong>Do zapłaty:</strong> <span style="color:#FF6B00;font-weight:700;font-size:18px">${amount.toFixed(2)} €</span></p>
-${note ? `<p style="margin:8px 0;color:#555">${esc(note)}</p>` : ""}
-<p style="margin:12px 0 6px">Szczegóły w załączonym PDF. Płatność przelewem:</p>
-<div style="background:#f6f6f6;border-radius:8px;padding:12px 14px;font-size:14px">Odbiorca: ${esc(SELLER.name)}<br>IBAN: ${esc(SELLER.iban)} · BIC: ${esc(SELLER.bic)}<br>Tytuł przelewu: <strong>${esc(orderId)}</strong></div>
-<p style="margin:16px 0 6px">Po opłaceniu kliknij, aby potwierdzić — zespół zweryfikuje wpływ i ruszamy z realizacją:</p>
-<p style="margin:14px 0"><a href="${paidUrl}" style="background:#16a34a;color:#fff;text-decoration:none;padding:14px 26px;border-radius:10px;display:inline-block;font-weight:700;font-size:16px">✅ Zapłaciłem / Akceptuję ofertę</a></p>
-<p style="font-size:12px;color:#888">Pytania? Odpisz na tego maila.</p>
-</div>`;
-    const attachments = pdfB64 ? [{ filename: `Oferta-${orderId}.pdf`, content: pdfB64 }] : undefined;
-    const mid = resend ? await sendMail(resend, from, [lead.email], `Oferta ${orderId}: ${label} — ${amount.toFixed(2)} €`, html, admin, attachments) : null;
-    const meta = { ...(lead.meta ?? {}), offer_amount: amount, offer_note: note, offer_sent_at: new Date().toISOString() };
-    await db.from("hub_leads").update({ meta, status: "offer_sent" }).eq("id", lead.id);
-    await log(mid ? "info" : "error", mid ? `Oferta ${orderId} (${amount} €) → klient [${mid}]` : `Oferta ${orderId}: mail nie wyszedł`, { order_id: orderId });
+    const mid = await offerToClient(db, { resend, from, admin, self, hubToken }, lead, orderId, amount, note);
     return page(mid ? "Oferta wysłana ✅" : "Uwaga", mid
-      ? `Oferta ${esc(orderId)} na ${amount.toFixed(2)} € poszła do klienta (${esc(lead.email)}) z PDF i przyciskiem do potwierdzenia płatności.`
-      : `Zapisano kwotę, ale maila nie udało się wysłać (sprawdź resend_api_key).`, !!mid);
+      ? `Oferta ${esc(orderId)} na ${amount.toFixed(2)} € poszła do klienta (${esc(lead.email)}).`
+      : `Zapisano kwotę, ale maila nie udało się wysłać.`, !!mid);
   }
 
   // ── 4) CLIENT_PAID: klient klika "Zapłaciłem" → mail do admina z przyciskiem potwierdzenia ──
