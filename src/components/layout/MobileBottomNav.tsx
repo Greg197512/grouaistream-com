@@ -20,6 +20,7 @@ const navItems = [
   { icon: "favorite", labelKey: "nav.likedSongs", href: "/liked" },
   { icon: "psychology", labelKey: "nav.moodHistory", href: "/mood-history" },
   { icon: "handshake", labelKey: "nav.business", href: "/business", neon: true },
+  { icon: "dashboard", labelKey: "nav.clientDashboard", href: "/client-dashboard", neon: true },
   { icon: "payments", labelKey: "nav.earnings", href: "/earnings", neon: true },
   { icon: "rocket_launch", labelKey: "nav.earnWithUs", href: "/earn", neon: true },
 ];

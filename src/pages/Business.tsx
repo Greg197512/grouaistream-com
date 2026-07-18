@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   Sparkles, Send, Bot, User, Loader2, ArrowRight, Check,
   Search, FileText, Layout, Share2, Workflow, Target,
@@ -77,6 +77,7 @@ const STREAM_OFFER = [
 
 export default function BusinessPage() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       role: "assistant",
@@ -155,6 +156,34 @@ export default function BusinessPage() {
           fetch(
             `https://bmwtydwpevzhbdplilbr.supabase.co/functions/v1/aurora-b2b-flow?stage=kick&order=${encodeURIComponent(orderHit.short_id)}`,
           ).catch(() => {});
+        }
+        // Zalogowany klient: zapisz zlecenie do dashboardu (aurora_business_orders) i otwórz panel.
+        if (user) {
+          const collected = briefState?.collected ?? {};
+          void (async () => {
+            try {
+              const { data: inserted } = await supabase
+                .from("aurora_business_orders")
+                .insert({
+                  user_id: user.id,
+                  client_email: email || user.email || null,
+                  client_name: user.user_metadata?.display_name || null,
+                  service_type: collected.service_type || "other",
+                  brief: (collected.brief || msg).slice(0, 4000),
+                  status: "received",
+                  payment_status: "pending",
+                  source: "aurora-chat",
+                  aurora_order_id: orderHit.short_id || null,
+                } as any)
+                .select("id")
+                .single();
+              const target = inserted?.id ? `/client-dashboard?order=${inserted.id}` : "/client-dashboard";
+              setTimeout(() => navigate(target), 2500);
+            } catch {
+              // Jeśli RLS nie pozwala na zapis z frontu — przekieruj mimo to; panel pokaże istniejące zlecenia.
+              setTimeout(() => navigate("/client-dashboard"), 2500);
+            }
+          })();
         }
       } else if (draftHit && !draftSaved) {
         setDraftSaved(true);

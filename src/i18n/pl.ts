@@ -25,6 +25,7 @@ const pl: TranslationKeys = {
   "nav.aiFeatures": "Funkcje AI",
   "nav.myTracks": "Moje Utwory",
   "nav.business": "B2B & Firmy",
+  "nav.clientDashboard": "Mój Panel",
   "nav.earnings": "Moje Zarobki",
   "nav.earnWithUs": "Zarabiaj z nami",
   "nav.artistLanding": "Dla artystów",

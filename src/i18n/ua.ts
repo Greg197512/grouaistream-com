@@ -25,6 +25,7 @@ const ua: TranslationKeys = {
   "nav.aiFeatures": "Функції AI",
   "nav.myTracks": "Мої Треки",
   "nav.business": "B2B & Бізнес",
+  "nav.clientDashboard": "Мій Панель",
   "nav.earnings": "Мої Заробітки",
   "nav.earnWithUs": "Заробляй з нами",
   "nav.artistLanding": "Для артистів",
