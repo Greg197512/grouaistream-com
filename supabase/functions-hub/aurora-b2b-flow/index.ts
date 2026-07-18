@@ -202,10 +202,12 @@ ${brandHeader()}
     if (!lead) return page("Nie znaleziono zlecenia", `Zlecenie ${esc(orderId)} nie istnieje.`, false);
     if (lead.meta?.offer_sent_at) return page("Oferta już wysłana", `Ofertę dla ${esc(orderId)} już wysłano klientowi (${esc(lead.meta.offer_amount)} €).`);
     const label = SERVICE_LABELS[lead.segment] ?? "Projekt B2B";
-    const form = `<form method="POST" action="${self}?stage=send_offer&order=${encodeURIComponent(orderId)}&k=${k}" style="margin-top:22px">
-<input name="amount" type="number" step="0.01" min="1" required placeholder="Kwota (€)" style="width:160px;padding:12px 14px;border-radius:10px;border:1px solid #333;background:#15151c;color:#fff;font-size:16px;text-align:center">
-<input name="note" type="text" placeholder="Notatka do oferty (opcjonalnie)" style="width:100%;margin-top:10px;padding:10px 14px;border-radius:10px;border:1px solid #333;background:#15151c;color:#fff;font-size:14px">
-<button type="submit" style="margin-top:14px;background:#FF6B00;color:#fff;border:0;padding:14px 26px;border-radius:10px;font-weight:700;font-size:16px;cursor:pointer">Wyślij ofertę do klienta →</button>
+    const form = `<form method="POST" action="${self}?stage=send_offer&order=${encodeURIComponent(orderId)}&k=${k}" style="margin-top:24px;text-align:left">
+<label style="display:block;color:#fff;font-size:14px;font-weight:600;margin-bottom:8px">💶 Kwota do zapłaty (€)</label>
+<input name="amount" type="number" inputmode="decimal" step="0.01" min="1" required autofocus placeholder="np. 150" style="width:100%;box-sizing:border-box;padding:18px;border-radius:12px;border:2px solid #FF6B00;background:#ffffff;color:#111;font-size:22px;font-weight:700;text-align:center">
+<label style="display:block;color:#bbb;font-size:13px;margin:16px 0 6px">Notatka do oferty (opcjonalnie)</label>
+<input name="note" type="text" placeholder="np. termin, zakres prac" style="width:100%;box-sizing:border-box;padding:14px;border-radius:10px;border:1px solid #666;background:#ffffff;color:#111;font-size:15px">
+<button type="submit" style="width:100%;margin-top:20px;background:#FF6B00;color:#fff;border:0;padding:18px;border-radius:12px;font-weight:800;font-size:17px;cursor:pointer">Wyślij ofertę do klienta →</button>
 </form>`;
     return page(`Wyceń: ${esc(label)}`, `Zlecenie ${esc(orderId)} dla ${esc(lead.email ?? "klienta")}. Wpisz kwotę — Aurora wyśle klientowi ofertę PDF z przyciskiem do zapłaty.`, true, form);
   }
@@ -217,8 +219,10 @@ ${brandHeader()}
     const lead = await leadByOrder();
     if (!lead) return page("Nie znaleziono zlecenia", `Zlecenie ${esc(orderId)} nie istnieje.`, false);
     const form = await req.formData().catch(() => null);
-    const amount = Math.round(parseFloat(String(form?.get("amount") ?? "")) * 100) / 100;
-    const note = String(form?.get("note") ?? "").slice(0, 400);
+    const amountRaw = (form?.get("amount") ?? url.searchParams.get("amount") ?? "") as string;
+    const noteRaw = (form?.get("note") ?? url.searchParams.get("note") ?? "") as string;
+    const amount = Math.round(parseFloat(String(amountRaw)) * 100) / 100;
+    const note = String(noteRaw).slice(0, 400);
     if (!isFinite(amount) || amount <= 0) return page("Zła kwota", "Wpisz poprawną kwotę większą od zera.", false);
     if (!emailOk(lead.email)) return page("Brak e-maila klienta", "Zlecenie nie ma poprawnego adresu klienta.", false);
 
