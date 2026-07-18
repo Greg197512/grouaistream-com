@@ -25,6 +25,7 @@ const en: TranslationKeys = {
   "nav.aiFeatures": "AI Features",
   "nav.myTracks": "My Tracks",
   "nav.business": "B2B & Business",
+  "nav.clientDashboard": "My Dashboard",
   "nav.earnings": "My Earnings",
   "nav.earnWithUs": "Earn With Us",
   "nav.artistLanding": "For Artists",
