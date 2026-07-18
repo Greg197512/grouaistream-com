@@ -173,7 +173,7 @@ export default function BusinessPage() {
                   status: "received",
                   payment_status: "pending",
                   source: "aurora-chat",
-                  aurora_order_id: orderHit.short_id || null,
+                  payload: { aurora_order_id: orderHit.short_id || null, conversation_id: conversationId },
                 } as any)
                 .select("id")
                 .single();
