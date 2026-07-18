@@ -75,6 +75,7 @@ import { TikTokStoriesPanel } from "@/components/admin/TikTokStoriesPanel";
 import { TikTokReelsStudio } from "@/components/admin/TikTokReelsStudio";
 import { AIBuilderProgress } from "@/components/admin/AIBuilderProgress";
 import { FaceLearningPanel } from "@/components/admin/FaceLearningPanel";
+import { B2BPricingPanel } from "@/components/admin/B2BPricingPanel";
 import { CostReportsPanel } from "@/components/admin/CostReportsPanel";
 import { BreakEvenPanel } from "@/components/admin/BreakEvenPanel";
 import { CostAlertBanner } from "@/components/admin/CostAlertBanner";
@@ -830,6 +831,10 @@ export default function Admin() {
                   <Sparkles className="h-4 w-4" />
                   Aura AI 🧠
                 </TabsTrigger>
+                <TabsTrigger value="b2b-pricing" className="gap-2">
+                  <DollarSign className="h-4 w-4" />
+                  Ceny B2B 💶
+                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="seo">
@@ -847,6 +852,10 @@ export default function Admin() {
 
               <TabsContent value="face-learning">
                 <FaceLearningPanel />
+              </TabsContent>
+
+              <TabsContent value="b2b-pricing">
+                <B2BPricingPanel />
               </TabsContent>
 
               {/* Break-even Tab */}
