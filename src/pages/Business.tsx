@@ -149,7 +149,13 @@ export default function BusinessPage() {
       if (orderHit) {
         setOrderPlaced(true);
         setDraftSaved(true);
-        toast.success(`🚀 Zlecenie #${orderHit.short_id} przekazane do ${orderHit.worker}`, { duration: 6000 });
+        toast.success(`🚀 Zlecenie #${orderHit.short_id} przyjęte — sprawdź e-mail`, { duration: 6000 });
+        // Wystartuj przyciskowy przepływ B2B: mail do admina "Potwierdź zlecenie i wyceń".
+        if (orderHit.short_id) {
+          fetch(
+            `https://bmwtydwpevzhbdplilbr.supabase.co/functions/v1/aurora-b2b-flow?stage=kick&order=${encodeURIComponent(orderHit.short_id)}`,
+          ).catch(() => {});
+        }
       } else if (draftHit && !draftSaved) {
         setDraftSaved(true);
         toast.success("✨ Twój brief został zapisany u Aurory");
