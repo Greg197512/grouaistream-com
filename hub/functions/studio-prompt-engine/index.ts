@@ -1,6 +1,25 @@
-// GROUAI HUB — studio-prompt-engine
-// Jedno zdanie → AI układa całą piosenkę → generacja na Replicate.
-// Auth: JWT LIVE (bvstv). AI: hub_config.openrouter_api_key. Replicate: hub_config.replicate_api_token.
+// GROUAI HUB — studio-prompt-engine v4 „GrouAI Engine"
+// Tryb "jak Suno, tylko lepiej": jedno zdanie od użytkownika → AI układa całą
+// piosenkę (tytuł, styl, pełny tekst) → od razu startuje generacja na Replicate.
+//
+// Co dodaje v3 ponad klasyczne podejście Suno:
+//  1. SILNIK EMOCJI — wyuczony profil afektywny użytkownika (tabela
+//     face_detections na LIVE: walencja/pobudzenie/emocje z detekcji twarzy)
+//     warunkuje parametry muzyczne wg badań psychologii muzyki
+//     (Russell 1980 — model kołowy afektu; Gabrielsson & Lindström 2010 —
+//     cechy ekspresji; Juslin 2019 — mechanizmy BRECVEMA).
+//  2. JAKOŚĆ JĘZYKA — reguły natywnej prozodii i rymu dla PL/EN/NL/UA
+//     + drugi przebieg redakcyjny (krytyk poprawia tekst przed generacją).
+//  3. UCZENIE — każda generacja loguje profil emocji + plan do engine_learning
+//     (hub), z którego silnik strojony jest w czasie.
+//  4. (v4) PROZODIA SYLABICZNA — równe sylaby w parach linii = wokal frazuje
+//     naturalnie; OCENA JAKOŚCI tekstu (krytyk daje score, słaby tekst dostaje
+//     drugą poprawkę); MiniMax music-2.6 dla wokalu I instrumentali (oddech,
+//     vibrato, do 6 min); inteligentne pakowanie tagów w budżet 300 znaków.
+//
+// Auth: JWT użytkownika LIVE (bvstv). AI: hub_config.openrouter_api_key.
+// Replicate: hub_config.replicate_api_token. Kontrakt bez zmian:
+// {success, plan, engine, generation_id, task_id}.
 import { createClient } from "npm:@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
@@ -20,15 +39,117 @@ const json = (body: unknown, status = 200) =>
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 
+function hubAdmin() {
+  return createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+  );
+}
+
 async function loadConfig(): Promise<Record<string, string>> {
-  const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-  const { data } = await db.from("hub_config").select("key, value");
+  const { data } = await hubAdmin().from("hub_config").select("key, value");
   const cfg: Record<string, string> = {};
   for (const row of data || []) cfg[row.key] = row.value ?? "";
   return cfg;
 }
 
-async function callModel(model: string, apiKey: string, messages: Array<{ role: string; content: string }>): Promise<string> {
+// ─── SILNIK EMOCJI ─────────────────────────────────────────────────────────────
+// Walencja steruje trybem/harmonią, pobudzenie tempem/dynamiką — kierunki
+// potwierdzone w literaturze (Gabrielsson & Lindström 2010, tab. 14.1).
+
+interface Aura {
+  valence: number | null;   // -1..1
+  arousal: number | null;   // 0..1
+  engagement?: number | null;
+  emotion?: string | null;  // dominanta z detekcji
+  samples?: number;         // ile odczytów uczących złożyło się na profil
+}
+
+const EMOTION_MUSIC: Record<string, { mode: string; bpm: [number, number]; tags: string; vocal: string }> = {
+  happy:     { mode: "major key", bpm: [112, 128], tags: "bright uplifting harmony, bouncy groove, staccato accents, warm plucks, consonant chords", vocal: "warm smiling vocal tone, energetic phrasing" },
+  sad:       { mode: "minor key", bpm: [62, 84],   tags: "melancholic, sparse arrangement, soft felt piano, legato strings, gentle dynamics, low register", vocal: "intimate fragile vocals, slight breathiness, falling phrase endings" },
+  angry:     { mode: "minor key with phrygian color", bpm: [140, 165], tags: "aggressive, distorted guitars or hard 808s, sharp attacks, dissonant stabs, relentless percussion", vocal: "forceful gritty delivery, clipped consonants" },
+  fearful:   { mode: "minor key", bpm: [92, 112],  tags: "tense, tremolo strings, dissonant clusters, irregular accents, dark low drones", vocal: "hushed unstable vocals, wide vibrato" },
+  disgusted: { mode: "dark minor key", bpm: [88, 104], tags: "gritty detuned synths, industrial textures, heavy low end", vocal: "cold detached delivery" },
+  surprised: { mode: "major key with sudden modulations", bpm: [124, 138], tags: "euphoric, big builds and drops, bright arps, playful syncopation", vocal: "expressive dynamic vocals, wide range" },
+  neutral:   { mode: "modal harmony with lydian color", bpm: [92, 108], tags: "dreamy, lush pads, smooth groove, balanced dynamics", vocal: "smooth relaxed vocals" },
+  calm:      { mode: "major key", bpm: [64, 84],   tags: "peaceful, warm pads, slow attack textures, gentle percussion, wide reverb", vocal: "soft airy vocals, long sustained notes" },
+  romantic:  { mode: "major key with added 7ths and 9ths", bpm: [70, 92], tags: "intimate, warm rhodes, silky strings, slow groove, close-mic feel", vocal: "tender breathy vocals, close and intimate" },
+  energetic: { mode: "major key", bpm: [126, 140], tags: "high-energy four-on-the-floor, punchy kick, risers, sidechain pumping", vocal: "powerful confident vocals" },
+  focused:   { mode: "minimal harmonic movement", bpm: [100, 116], tags: "steady hypnotic pulse, minimal arrangement, evolving subtle motifs", vocal: "calm even delivery" },
+};
+
+function emotionDirectives(aura: Aura): { tags: string; note: string } {
+  const v = typeof aura.valence === "number" ? aura.valence : 0.2;
+  const a = typeof aura.arousal === "number" ? aura.arousal : 0.5;
+  const key = String(aura.emotion || "").toLowerCase();
+  let base = EMOTION_MUSIC[key];
+  if (!base) {
+    // Ćwiartki modelu kołowego, gdy nie znamy nazwanej emocji.
+    base = v >= 0
+      ? (a >= 0.55 ? EMOTION_MUSIC.happy : EMOTION_MUSIC.calm)
+      : (a >= 0.55 ? EMOTION_MUSIC.angry : EMOTION_MUSIC.sad);
+  }
+  // Pobudzenie dostraja tempo wewnątrz zakresu typowego dla emocji.
+  const clampA = Math.min(Math.max(a, 0), 1);
+  const bpm = Math.round(base.bpm[0] + (base.bpm[1] - base.bpm[0]) * clampA);
+  const tags = `${base.mode}, ${bpm} bpm, ${base.tags}, ${base.vocal}`;
+  const note = `walencja=${v.toFixed(2)}, pobudzenie=${a.toFixed(2)}` +
+    (aura.emotion ? `, emocja=${aura.emotion}` : "") +
+    (aura.samples ? `, odczytów uczących=${aura.samples}` : "");
+  return { tags, note };
+}
+
+// Wyuczony profil użytkownika: ważona średnia ostatnich detekcji twarzy
+// (świeższe ważą więcej), czytana przez RLS jako ten użytkownik.
+async function fetchAuraProfile(live: ReturnType<typeof createClient>): Promise<Aura | null> {
+  try {
+    const { data } = await live
+      .from("face_detections")
+      .select("dominant_emotion, valence, arousal, engagement")
+      .order("created_at", { ascending: false })
+      .limit(40);
+    if (!data || data.length === 0) return null;
+    let v = 0, vW = 0, a = 0, aW = 0, e = 0, eW = 0;
+    const hist: Record<string, number> = {};
+    data.forEach((row: any, i: number) => {
+      const w = 1 / (1 + i * 0.12);
+      if (row.dominant_emotion) hist[row.dominant_emotion] = (hist[row.dominant_emotion] || 0) + w;
+      if (typeof row.valence === "number") { v += row.valence * w; vW += w; }
+      if (typeof row.arousal === "number") { a += row.arousal * w; aW += w; }
+      if (typeof row.engagement === "number") { e += row.engagement * w; eW += w; }
+    });
+    const top = Object.entries(hist).sort((x, y) => y[1] - x[1])[0]?.[0] || null;
+    return {
+      valence: vW ? v / vW : null,
+      arousal: aW ? a / aW : null,
+      engagement: eW ? e / eW : null,
+      emotion: top,
+      samples: data.length,
+    };
+  } catch {
+    return null;
+  }
+}
+
+// Zapis do zbioru uczącego silnika (hub, tylko service-role) — nie blokuje odpowiedzi.
+function logLearning(row: Record<string, unknown>) {
+  const p = hubAdmin().from("engine_learning").insert(row).then(
+    ({ error }) => { if (error) console.warn("[engine_learning]", error.message); },
+  );
+  // @ts-ignore — EdgeRuntime.waitUntil jest dostępne w Supabase Edge Runtime
+  if (typeof EdgeRuntime !== "undefined" && EdgeRuntime.waitUntil) EdgeRuntime.waitUntil(p);
+}
+
+// ─── LLM ───────────────────────────────────────────────────────────────────────
+
+async function callModel(
+  model: string,
+  apiKey: string,
+  messages: Array<{ role: string; content: string }>,
+  timeoutMs = 45000,
+  maxTokens = 3000,
+): Promise<string> {
   const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -40,11 +161,11 @@ async function callModel(model: string, apiKey: string, messages: Array<{ role: 
     body: JSON.stringify({
       model,
       messages,
-      max_tokens: 3000,
-      temperature: 0.75,
+      max_tokens: maxTokens,
+      temperature: 0.7,
       response_format: { type: "json_object" },
     }),
-    signal: AbortSignal.timeout(45000),
+    signal: AbortSignal.timeout(timeoutMs),
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const out = await res.json();
@@ -90,31 +211,71 @@ async function planWithModels(
   return null;
 }
 
-const PLANNER_PROMPT = `Jesteś światowej klasy producentem muzycznym i tekściarzem GrouAI Studio — poziom nagrania ze studia klasy premium (jak Suno v4 / Udio, tylko lepiej). Użytkownik opisze utwór jednym lub kilkoma zdaniami. Ułóż KOMPLETNY, PROFESJONALNY plan piosenki brzmiącej jak prawdziwe nagranie studyjne.
+const LANG_NAMES: Record<string, string> = { pl: "Polish", en: "English", nl: "Dutch", uk: "Ukrainian", ua: "Ukrainian" };
 
-KROK 1 — JĘZYK: rozpoznaj język użytkownika z jego opisu (jeśli nie podano wprost). Obsługujesz perfekcyjnie: polski (pl), angielski (en), holenderski (nl), ukraiński (uk). Tekst piosenki napisz DOKŁADNIE w tym języku — natywnie, bez błędów gramatycznych, z naturalną składnią i akcentowaniem. Ma brzmieć jak napisany przez człowieka i NIEROZPOZNAWALNY jako AI: prawdziwe emocje, konkretne obrazy, bez banałów, sztucznych rymów i wypełniaczy.
+const PLANNER_PROMPT = `Jesteś nagradzanym producentem muzycznym i tekściarzem GrouAI Studio — poziom wyżej niż Suno. Użytkownik opisze utwór jednym lub kilkoma zdaniami. Ułóż KOMPLETNY, PROFESJONALNY plan piosenki brzmiącej jak nagranie ze studia klasy światowej.
 
-KROK 2 — Odpowiedz WYŁĄCZNIE poprawnym JSON (bez komentarzy) o polach:
+Odpowiedz WYŁĄCZNIE poprawnym JSON (bez komentarzy) o polach:
 {
-  "title": "chwytliwy, oryginalny tytuł w języku utworu",
-  "tags": "BOGATE angielskie tagi produkcyjne po przecinku — MUSZĄ zawierać: gatunek+podgatunek, nastrój, tempo (konkretne BPM), 3-5 konkretnych instrumentów, typ wokalu (np. 'warm female vocal', 'raspy male vocal'), oraz tagi jakości: 'studio quality, professional mix, mastered, wide stereo, punchy drums, clear vocals, radio-ready, hi-fi'",
+  "title": "chwytliwy, oryginalny tytuł",
+  "tags": "BOGATE angielskie tagi produkcyjne oddzielone przecinkami — MUSZĄ zawierać: (1) gatunek + podgatunek, (2) nastrój, (3) dokładne tempo BPM, (4) konkretne instrumenty, (5) typ i barwę wokalu (np. 'warm female vocals, emotive'), (6) tagi produkcji/jakości: 'studio quality, professional mix, mastered, wide stereo, punchy drums, clear vocals, radio-ready, hi-fi'",
   "instrumental": false,
-  "lyrics": "PEŁNY tekst w języku użytkownika. Struktura: [verse] 4 linie, [chorus] 4 linie, [verse] 4 linie, [chorus] (powtórz refren), a jeśli mieści się w limicie [bridge] 2 linie. WYKORZYSTAJ budżet 540-590 znaków (pełniejszy tekst = dłuższy, bogatszy utwór). TWARDY limit 590 znaków. Jeśli instrumental=true wpisz '[instrumental]'",
-  "duration_seconds": 240,
+  "lyrics": "PEŁNY tekst — WYKORZYSTAJ prawie cały limit 560-590 znaków (dłuższy tekst = dłuższy utwór!): [verse] (4 linie) + [chorus] (4 linie) + [verse 2] (4 linie) + [chorus] (powtórz refren) w języku użytkownika. MAX 590 znaków; jeśli instrumental=true wpisz '[instrumental]'",
+  "duration_seconds": 210,
   "language": "pl|en|nl|uk",
   "human_summary": "jedno zdanie po polsku co tworzysz"
 }
 
-Zasady jakości (klasa premium):
-- Rozpoznanie języka jest KLUCZOWE — pl/en/nl/uk muszą być perfekcyjne, natywne i naturalne.
-- Refren: chwytliwy, powtarzalny hook. Zwrotki: sensowny, nienachalny rym + konkretny obraz i emocja.
-- tags ZAWSZE bogate i po angielsku (wymóg silnika) + tagi jakości.
-- lyrics DŁUGIE i pełne: verse+chorus+verse+chorus(+bridge), 540-590 znaków. Nigdy krótki tekst (krótki = krótki, ubogi utwór).
-- duration_seconds: 240 (4 min) domyślnie; krótsze (min 120) tylko gdy user wprost prosi "krótki".
-- Jeśli user podał własny tekst — użyj go (przytnij do ~590 znaków, jeśli za długi).
-- Jeśli user prosi instrumental / muzykę tła bez wokalu — instrumental=true.
+JAKOŚĆ JĘZYKA (poziom native, bezwzględny wymóg):
+- POLSKI: żywa, współczesna polszczyzna — ZERO kalk z angielskiego i pustych fraz („czuję to w sercu", „lecimy w noc"). Akcent paroksytoniczny: akcentowana sylaba pada na mocną miarę taktu. Rymy dokładne, najlepiej żeńskie; UNIKAJ rymów gramatycznych (-ować/-ować, -ała/-ała). Konkret i obraz zamiast abstrakcji.
+- ENGLISH: idiomatic, contemporary, natural stress on strong beats, no awkward inversions, concrete imagery.
+- NEDERLANDS: natuurlijk hedendaags Nederlands, geen anglicismen, klemtoon op sterke tellen, concrete beelden.
+- УКРАЇНСЬКА: жива сучасна мова, природні наголоси в такт, точні рими, конкретні образи (не суржик).
+- ŚPIEWALNOŚĆ: otwarte samogłoski (a, o) na długich nutach refrenu; frazy krótkie, oddechowe; hook refrenu = max 6 słów, powtarzalny.
+- PROZODIA SYLABICZNA (kluczowe dla naturalnego śpiewu): linie w PARACH mają RÓWNĄ liczbę sylab (±1) — zwrotka 8-11 sylab/linia, refren 6-9 sylab/linia. Model muzyczny frazuje wtedy jak człowiek, bez połykania i rozciągania słów.
+- EMOCJE: pokazuj obrazem i detalem („show, don't tell") — słuchacz ma POCZUĆ, nie przeczytać o uczuciu.
+
+ZASADY PRODUKCJI (jak Suno i lepiej):
+- tags bogate i konkretne — im więcej trafnych deskryptorów produkcji, tym lepszy dźwięk. ZAWSZE dodaj tagi jakości ('studio quality, professional mix, mastered, hi-fi') oraz tag natywnego wokalu w języku tekstu, np. 'native Polish vocals, clear pronunciation'.
+- Refren = hook: chwytliwy, powtarzalny. Zwrotki z narracją, która rośnie.
+- PEŁNA struktura utworu z [intro] i [outro].
+- lyrics DŁUGIE: wykorzystaj 560-590 znaków (twardy limit 590 — dłużej = ODRZUCONE).
+- duration_seconds: 180-300 (domyślnie 240 = pełny utwór; krócej tylko gdy user prosi „krótki").
+- Jeśli user podał własny tekst — użyj go, dodaj tylko znaczniki struktury.
+- Jeśli user prosi instrumental — instrumental=true.
+- Tekst w języku użytkownika; tags ZAWSZE po angielsku (wymóg silnika).
+- Jeśli dostaniesz PROFIL EMOCJONALNY słuchacza — muzyka i tekst mają AUTENTYCZNIE oddawać ten stan: wpleć podane parametry (tryb, tempo, instrumentarium, barwę wokalu) do tags, a emocję do treści tekstu.
 
 BARDZO WAŻNE: Odpowiedz WYŁĄCZNIE surowym obiektem JSON. Zacznij od { i zakończ na }. Bez wyjaśnień, rozumowania, markdown ani <think>.`;
+
+const REFINE_PROMPT = `Jesteś bezlitosnym redaktorem tekstów piosenek — native speaker języka, który dostaniesz. Otrzymasz JSON {"language": "...", "lyrics": "..."}.
+Popraw tekst pod kątem: (1) naturalności — usuń kalki językowe i puste frazesy, (2) prozodii — akcenty wyrazowe na mocne miary, RÓWNE sylaby w parach linii (±1), (3) rymów — dokładne zamiast częstochowskich/gramatycznych, (4) śpiewalności — otwarte samogłoski na długich nutach refrenu, krótkie frazy, (5) obrazowości — konkret zamiast abstrakcji.
+ZACHOWAJ: język, sens, strukturę ze znacznikami [verse]/[chorus]/[intro]/[outro], limit 590 znaków. Jeśli tekst jest już świetny — zwróć go bez zmian.
+Na końcu oceń POPRAWIONY tekst w skali 1-10 (10 = poziom zawodowego tekściarza: prozodia, rymy, obraz, hook).
+Odpowiedz WYŁĄCZNIE JSON: {"lyrics":"...","score":8}.`;
+
+// ─── Pakowanie tagów w budżet 300 znaków MiniMax ──────────────────────────────
+// Najpierw to, co najbardziej steruje brzmieniem (gatunek/BPM/wokal/emocje),
+// quality-suffix na końcu; deduplikacja, twarde cięcie na granicy tagu.
+function packTags(parts: string[], budget = 300): string {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  let len = 0;
+  for (const part of parts) {
+    for (const raw of part.split(",")) {
+      const tag = raw.trim();
+      if (!tag) continue;
+      const key = tag.toLowerCase();
+      if (seen.has(key)) continue;
+      const add = (out.length ? 2 : 0) + tag.length;
+      if (len + add > budget) continue;
+      seen.add(key);
+      out.push(tag);
+      len += add;
+    }
+  }
+  return out.join(", ");
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -129,6 +290,7 @@ Deno.serve(async (req) => {
   const models = (cfg["openrouter_models"] || "meta-llama/llama-3.3-70b-instruct:free")
     .split(",").map((m) => m.trim()).filter(Boolean);
 
+  // Użytkownik LIVE
   const authHeader = req.headers.get("Authorization") ?? "";
   const live = createClient(BVSTV_URL, BVSTV_ANON, {
     global: { headers: { Authorization: authHeader } },
@@ -137,14 +299,13 @@ Deno.serve(async (req) => {
   const userId = userData?.user?.id;
   if (!userId) return json({ success: false, error: "unauthorized" }, 401);
 
+  // Generowanie tylko dla planów płatnych (Pro/Ultimate) lub admina.
   const [{ data: isAdmin }, { data: subRow }] = await Promise.all([
     live.rpc("has_role", { _user_id: userId, _role: "admin" }),
     live.from("user_subscriptions").select("plan, status").eq("user_id", userId).eq("status", "active").maybeSingle(),
   ]);
   const paidPlan = subRow && (subRow.plan === "pro" || subRow.plan === "ultimate");
-  // PROMOCJA: do daty w hub_config.studio_free_until Studio jest darmowe dla WSZYSTKICH zalogowanych.
-  const studioPromo = !!cfg["studio_free_until"] && Date.now() < Date.parse(cfg["studio_free_until"]);
-  if (!isAdmin && !paidPlan && !studioPromo) {
+  if (!isAdmin && !paidPlan) {
     return json({
       success: false,
       error: "subscription_required",
@@ -157,12 +318,38 @@ Deno.serve(async (req) => {
 
   const prompt: string = String(body.prompt ?? "").trim();
   if (prompt.length < 3) return json({ success: false, error: "prompt_too_short" }, 400);
-  const langHint = body.language ? `\n(Użytkownik wybrał język: ${body.language} — pisz tekst w tym języku)` : "";
+  const langHint = body.language ? `\n(Użytkownik wybrał język: ${body.language})` : "";
 
   try {
+    // ===== 0. Profil emocjonalny: przekazany wprost (świeża detekcja aury)
+    //          albo wyuczony z historii face_detections tego użytkownika. =====
+    let aura: Aura | null = null;
+    if (body.aura && typeof body.aura === "object") {
+      aura = {
+        valence: typeof body.aura.valence === "number" ? body.aura.valence : null,
+        arousal: typeof body.aura.arousal === "number" ? body.aura.arousal : null,
+        engagement: typeof body.aura.engagement === "number" ? body.aura.engagement : null,
+        emotion: body.aura.emotion ? String(body.aura.emotion) : null,
+      };
+    }
+    const learned = await fetchAuraProfile(live);
+    if (!aura && learned) aura = learned;
+    else if (aura && learned) {
+      // Świeża detekcja ma priorytet; historia uzupełnia braki.
+      aura.valence ??= learned.valence;
+      aura.arousal ??= learned.arousal;
+      aura.emotion ??= learned.emotion;
+      aura.samples = learned.samples;
+    }
+    const emo = aura ? emotionDirectives(aura) : null;
+    const auraMsg = emo
+      ? `\n\nPROFIL EMOCJONALNY SŁUCHACZA (wyuczony z detekcji twarzy; ${emo.note}):\nParametry muzyczne do wplecenia w tags: ${emo.tags}\nTekst ma autentycznie oddawać ten stan emocjonalny.`
+      : "";
+
+    // ===== 1. AI układa plan piosenki =====
     const planned = await planWithModels(models, orKey, [
       { role: "system", content: PLANNER_PROMPT },
-      { role: "user", content: prompt + langHint },
+      { role: "user", content: prompt + langHint + auraMsg },
     ]);
     if (!planned) {
       return json({ success: false, error: "Nie udało się ułożyć planu utworu — spróbuj ponownie za chwilę." }, 200);
@@ -171,34 +358,77 @@ Deno.serve(async (req) => {
     const result = { model: planned.model };
 
     const instrumental = !!plan.instrumental;
-    const lyrics = instrumental ? "[instrumental]" : String(plan.lyrics || "[instrumental]");
-    const duration = Math.min(Math.max(Number(plan.duration_seconds) || 240, 60), 240);
+    let lyrics = instrumental ? "[instrumental]" : String(plan.lyrics || "[instrumental]");
+    const duration = Math.min(Math.max(Number(plan.duration_seconds) || 240, 60), 360);
     const title = String(plan.title || "GrouAI Track").slice(0, 120);
-    const tags = String(plan.tags);
+    const language = String(plan.language || body.language || "pl").toLowerCase();
+    let tags = String(plan.tags);
 
+    // Tag natywnego wokalu — pilnuje poprawnej wymowy w danym języku.
+    const langName = LANG_NAMES[language];
+    if (!instrumental && langName && !tags.toLowerCase().includes(langName.toLowerCase())) {
+      tags += `, native ${langName} vocals, clear pronunciation`;
+    }
+    // Warunkowanie emocjonalne trafia też wprost do silnika audio.
+    if (emo) tags += `, ${emo.tags}`;
+
+    // ===== 1b. Redaktor-krytyk: poprawia tekst i OCENIA go (1-10). Jeśli po
+    //           poprawce score < 8 — jeszcze jedna runda (max 2). Cicha
+    //           rezygnacja przy błędzie. hub_config.engine_refine=off wyłącza. =====
+    let lyricsScore: number | null = null;
+    if (!instrumental && cfg["engine_refine"] !== "off" && lyrics.length > 40) {
+      for (let round = 0; round < 2; round++) {
+        try {
+          const refined = await callModel(models[0], orKey, [
+            { role: "system", content: REFINE_PROMPT },
+            { role: "user", content: JSON.stringify({ language, lyrics }) },
+          ], 22000, 1200);
+          const rj = extractJson(refined);
+          const newLyrics = rj && typeof rj.lyrics === "string" ? rj.lyrics.trim() : "";
+          if (newLyrics.length > 40 && newLyrics.length <= 640) lyrics = newLyrics;
+          lyricsScore = typeof rj?.score === "number" ? rj.score : null;
+          if (lyricsScore === null || lyricsScore >= 8) break;
+        } catch { break; /* zostaje ostatnia dobra wersja */ }
+      }
+    }
+
+    // ===== 2. Start generacji (routing silników, poziom v4) =====
+    // Wokal ORAZ instrumental → MiniMax music-2.6 (oddech, vibrato, do 6 min,
+    // najbliżej Suno i wyżej). ACE-Step tylko gdy hub_config.instrumental_engine=acestep.
     const rHeaders = { "Content-Type": "application/json", "Authorization": `Bearer ${repToken}` };
+    const instrEngine = (cfg["instrumental_engine"] || "minimax").toLowerCase();
+    const useMinimax = !instrumental || instrEngine === "minimax";
     let rel: Response;
     let engineName: string;
-    if (!instrumental) {
-      engineName = "minimax";
-      const vocalModel = cfg["vocal_model"] || "minimax/music-1.5";
-      const mmPrompt = (tags + ", studio quality, professional mix, mastered, clear vocals, hi-fi").slice(0, 300);
-      // MiniMax przyjmuje tekst 10-600 znaków i sam rozwija go w pełny utwór.
-      let mmLyrics = lyrics.replace(/\[(intro|outro)\][^\[]*/gi, "").trim();
-      if (mmLyrics.length > 595) mmLyrics = mmLyrics.slice(0, 595).replace(/\s+\S*$/, "");
-      if (mmLyrics.length < 10) mmLyrics = lyrics.slice(0, 595);
+    if (useMinimax) {
+      engineName = instrumental ? "minimax-inst" : "minimax";
+      const vocalModel = cfg["vocal_model"] || "minimax/music-2.6";
+      // Tagi pakowane wg priorytetu brzmieniowego; quality-suffix na końcu.
+      const mmPrompt = packTags([
+        tags,
+        "studio quality, professional mix, mastered, clear vocals, radio-ready, rich dynamics, hi-fi",
+      ]);
+      const input: Record<string, unknown> = {
+        prompt: mmPrompt.length >= 10 ? mmPrompt : mmPrompt + ", modern pop, studio quality",
+        audio_format: "mp3",
+        bitrate: parseInt(cfg["minimax_bitrate"] || "256000", 10) || 256000,
+        sample_rate: 44100,
+      };
+      if (instrumental) {
+        input.is_instrumental = true;
+      } else {
+        // MiniMax przyjmuje tekst 10-600 znaków i sam rozwija go w pełny utwór.
+        let mmLyrics = lyrics
+          .replace(/\[(intro|outro)\][^\[]*/gi, "")
+          .trim();
+        if (mmLyrics.length > 595) mmLyrics = mmLyrics.slice(0, 595).replace(/\s+\S*$/, "");
+        if (mmLyrics.length < 10) mmLyrics = lyrics.slice(0, 595);
+        input.lyrics = mmLyrics;
+      }
       rel = await fetch(`${REPLICATE_BASE}/models/${vocalModel}/predictions`, {
         method: "POST",
         headers: rHeaders,
-        body: JSON.stringify({
-          input: {
-            prompt: mmPrompt.length >= 10 ? mmPrompt : mmPrompt + ", modern pop, studio quality",
-            lyrics: mmLyrics,
-            audio_format: "mp3",
-            bitrate: parseInt(cfg["minimax_bitrate"] || "256000", 10) || 256000,
-            sample_rate: 44100,
-          },
-        }),
+        body: JSON.stringify({ input }),
       });
     } else {
       engineName = "acestep";
@@ -235,14 +465,16 @@ Deno.serve(async (req) => {
     const predId = relData?.id;
     if (!predId) return json({ success: false, error: "no_prediction_id" }, 200);
 
+    // Okładka AI startuje automatycznie po stronie serwera — każdy utwór ją dostaje.
     const coverReq = fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/studio-cover`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: authHeader },
       body: JSON.stringify({ id: predId, title, style: tags }),
     }).catch(() => null);
-    // @ts-ignore
+    // @ts-ignore — EdgeRuntime.waitUntil jest dostępne w Supabase Edge Runtime
     if (typeof EdgeRuntime !== "undefined" && EdgeRuntime.waitUntil) EdgeRuntime.waitUntil(coverReq);
 
+    // ===== 3. Rekord w Studio (LIVE) + log uczący (hub) =====
     const { data: gen } = await live.from("generations").insert({
       user_id: userId,
       title,
@@ -255,18 +487,33 @@ Deno.serve(async (req) => {
       engine: engineName,
     }).select().single();
 
+    logLearning({
+      user_id: userId,
+      source: body.source === "aura" ? "aura" : "studio",
+      prompt: prompt.slice(0, 2000),
+      language,
+      aura: aura ?? null,
+      plan: { title, tags: tags.slice(0, 1500), lyrics: lyrics.slice(0, 1500), instrumental, duration, lyrics_score: lyricsScore },
+      engine: engineName,
+      task_id: predId,
+    });
+
     return json({
       success: true,
       engine: engineName,
       task_id: predId,
       generation_id: gen?.id ?? null,
       plan: {
-        title, tags, lyrics, instrumental,
+        title,
+        tags,
+        lyrics,
+        instrumental,
         duration_seconds: duration,
-        language: plan.language || "pl",
+        language,
         human_summary: String(plan.human_summary || `Tworzę: ${title}`),
         genre: tags.split(",")[0]?.trim(),
         mood: tags.split(",")[1]?.trim(),
+        ...(emo ? { emotion_profile: emo.note } : {}),
       },
       model: result.model,
     });

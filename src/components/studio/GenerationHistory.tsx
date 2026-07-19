@@ -5,8 +5,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { usePlayer } from "@/contexts/PlayerContext";
 import {
   Music, Heart, Download, Play, Loader2, RefreshCw, Library, Trash2, Plus,
-  MoreHorizontal, AudioLines, ImagePlus, Crown, FileAudio, Link2, Share2, ExternalLink,
+  MoreHorizontal, AudioLines, ImagePlus, Crown, FileAudio, Link2, Share2, ExternalLink, Sparkles,
 } from "lucide-react";
+import { masterAudioToWav } from "@/lib/aiMastering";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
@@ -152,6 +153,22 @@ export const GenerationHistory = () => {
       toast.success("WAV pobrany 🎧", { id: "wav" });
     } catch (e: any) {
       toast.error("Błąd WAV: " + (e?.message || "spróbuj MP3"), { id: "wav" });
+    } finally {
+      setDownloadingId(null);
+    }
+  };
+
+  // Master WAV: łańcuch masteringu w przeglądarce (EQ + kompresja glue +
+  // normalizacja głośności + limiter) — brzmienie gotowe pod Spotify/YouTube.
+  const downloadMastered = async (gen: Generation) => {
+    if (!gen.audio_url) return;
+    setDownloadingId(gen.id);
+    toast.loading("🎛️ Masteruję (EQ + kompresja + głośność)…", { id: "master" });
+    try {
+      await masterAudioToWav(gen.audio_url, `${gen.title || "grouai-track"} (master).wav`);
+      toast.success("Master WAV pobrany 🎚️", { id: "master" });
+    } catch (e: any) {
+      toast.error("Błąd masteringu: " + (e?.message || "spróbuj zwykły WAV"), { id: "master" });
     } finally {
       setDownloadingId(null);
     }
@@ -361,6 +378,9 @@ export const GenerationHistory = () => {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-60 bg-[#1a1a2e] border-[#FF6B00]/30 text-white">
                         {/* Pobieranie */}
+                        <DropdownMenuItem className="cursor-pointer gap-2" onClick={() => void downloadMastered(gen)}>
+                          <Sparkles className="h-4 w-4 text-[#FF9500]" /> Master WAV (Studio HQ)
+                        </DropdownMenuItem>
                         <DropdownMenuItem className="cursor-pointer gap-2" onClick={() => void downloadWav(gen)}>
                           <FileAudio className="h-4 w-4 text-[#FF9500]" /> Pobierz WAV (HQ)
                         </DropdownMenuItem>
