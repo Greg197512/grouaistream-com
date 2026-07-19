@@ -94,7 +94,7 @@ export const SunoGeneratePanel = () => {
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // ACE-Step: engine choice + editable lyrics (AI proposes → user fixes → ACE sings)
-  const [engine, setEngine] = useState<Engine>("acestep");
+  const [engine, setEngine] = useState<Engine>("suno");
   const [lyrics, setLyrics] = useState("");
   const [lyricsLang, setLyricsLang] = useState<"pl" | "en" | "nl" | "uk">("pl");
   const [writingLyrics, setWritingLyrics] = useState(false);
