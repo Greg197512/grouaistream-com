@@ -708,10 +708,10 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   // fallbacku — jeśli danego utworu nie ma, nic się nie odpala.
   const loadLangTrack = useCallback((lang: string) => {
     const langTrackMap: Record<string, string> = {
-      pl: 'Holenderski Club Peak',
-      en: 'Neon Floor Directions',
-      nl: 'Amsterdam Drop Call',
-      ua: 'Kyiv Club Signal',
+      pl: 'Neonowe Serce',
+      en: 'Neon Nights, Electric Soul',
+      nl: 'Canals of Ghosts (Amsterdam Midnight)',
+      ua: 'FENIKS (Qux)',
     };
     const trackTitle = langTrackMap[lang] || langTrackMap.en;
 
@@ -724,7 +724,6 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
       }, 120);
     };
 
-    // Preferuj rekord z publicznym linkiem http (R2/Vercel/Lovable), potem video.
     const pickPlayable = (rows: Track[] | null): Track | null => {
       if (!rows || rows.length === 0) return null;
       return (
@@ -736,7 +735,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     };
 
     (async () => {
-      // 1) Dokładne dopasowanie tytułu.
+      // 1) Exact title.
       const exact = await supabase
         .from('tracks')
         .select('*')
@@ -745,15 +744,26 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
         .limit(5);
       let track = pickPlayable(exact.data as Track[] | null);
 
-      // 2) Częściowe dopasowanie TEGO SAMEGO tytułu (drobne różnice w zapisie).
+      // 2) Partial title.
       if (!track) {
         const partial = await supabase
           .from('tracks')
           .select('*')
-          .ilike('title', `%${trackTitle}%`)
+          .ilike('title', `%${trackTitle.split(' ')[0]}%`)
           .not('audio_url', 'is', null)
           .limit(5);
         track = pickPlayable(partial.data as Track[] | null);
+      }
+
+      // 3) Safety fallback — always play SOMETHING at start.
+      if (!track) {
+        const any = await supabase
+          .from('tracks')
+          .select('*')
+          .not('audio_url', 'is', null)
+          .order('created_at', { ascending: false })
+          .limit(10);
+        track = pickPlayable(any.data as Track[] | null);
       }
 
       if (track) startTrack(track);
