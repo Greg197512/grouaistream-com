@@ -3785,6 +3785,66 @@ export type Database = {
         }
         Relationships: []
       }
+      face_detections: {
+        Row: {
+          arousal: number | null
+          confidence: number | null
+          created_at: string
+          dominant_emotion: string
+          emotions: Json
+          engagement: number | null
+          eye_state: string | null
+          frames_count: number
+          gaze: string | null
+          id: string
+          language: string | null
+          micro_expressions: Json | null
+          model: string | null
+          playing_track_id: string | null
+          source: string
+          user_id: string
+          valence: number | null
+        }
+        Insert: {
+          arousal?: number | null
+          confidence?: number | null
+          created_at?: string
+          dominant_emotion: string
+          emotions?: Json
+          engagement?: number | null
+          eye_state?: string | null
+          frames_count?: number
+          gaze?: string | null
+          id?: string
+          language?: string | null
+          micro_expressions?: Json | null
+          model?: string | null
+          playing_track_id?: string | null
+          source?: string
+          user_id: string
+          valence?: number | null
+        }
+        Update: {
+          arousal?: number | null
+          confidence?: number | null
+          created_at?: string
+          dominant_emotion?: string
+          emotions?: Json
+          engagement?: number | null
+          eye_state?: string | null
+          frames_count?: number
+          gaze?: string | null
+          id?: string
+          language?: string | null
+          micro_expressions?: Json | null
+          model?: string | null
+          playing_track_id?: string | null
+          source?: string
+          user_id?: string
+          valence?: number | null
+        }
+        Relationships: []
+      }
       favorites: {
         Row: {
           created_at: string

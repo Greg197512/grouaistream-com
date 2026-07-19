@@ -1,10 +1,3 @@
-## Add `face_detections` table
-
-Create migration with the pasted schema plus mandatory `GRANT` statements (Data API requires them explicitly).
-
-### SQL
-
-```sql
 CREATE TABLE IF NOT EXISTS public.face_detections (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -39,11 +32,3 @@ CREATE POLICY "Users read own face_detections" ON public.face_detections
   FOR SELECT TO authenticated USING (auth.uid() = user_id);
 CREATE POLICY "Admins read all face_detections" ON public.face_detections
   FOR SELECT TO authenticated USING (public.has_role(auth.uid(), 'admin'));
-```
-
-### Notes
-- No UPDATE/DELETE policies — detection rows are append-only telemetry.
-- `has_role` function already exists in the project.
-- No frontend changes in this step; hooks (`useFaceDetection`, `DJCrowdCamera`, `MoodDetector`) can start writing to this table in a follow-up if you want.
-
-Confirm to run the migration.
