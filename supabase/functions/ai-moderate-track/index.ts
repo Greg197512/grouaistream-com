@@ -40,7 +40,7 @@ function clampScore(value: unknown, min = 0, max = 20): number {
 
 function getLengthScoreCap(durationSec: number): number {
   if (durationSec <= 0) return 8;
-  if (durationSec < 180) return 0;   // < 3:00 → 0
+  if (durationSec < 120) return 0;   // < 2:00 → 0
   if (durationSec < 210) return 10;  // 3:00–3:30
   if (durationSec < 240) return 14;  // 3:30–4:00
   if (durationSec < 300) return 17;  // 4:00–5:00
