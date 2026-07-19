@@ -374,7 +374,17 @@ export const SunoGeneratePanel = () => {
           </div>
           <span className="text-[11px] text-gray-400">{duration}s</span>
         </div>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-3 gap-2">
+          <button
+            onClick={() => setEngine("suno")}
+            className={`p-3 rounded-lg border text-left transition-all ${engine === "suno" ? "border-[#FFD400] bg-[#FFD400]/10 shadow-[0_0_18px_rgba(255,212,0,0.35)]" : "border-[#FFD400]/25 bg-[#1a1a2e]/40 hover:border-[#FFD400]/60"}`}
+          >
+            <div className="flex items-center gap-1.5">
+              <Sparkles className="h-3.5 w-3.5 text-[#FFD400]" />
+              <span className="text-xs font-semibold text-white">Suno V5 ⭐</span>
+            </div>
+            <p className="text-[10px] text-gray-400 mt-1">GPT-5.5 pisze tekst + Suno V5 śpiewa (studio HQ, PL)</p>
+          </button>
           <button
             onClick={() => setEngine("acestep")}
             className={`p-3 rounded-lg border text-left transition-all ${engine === "acestep" ? "border-[#FF6B00] bg-[#FF6B00]/10" : "border-[#FF6B00]/20 bg-[#1a1a2e]/40 hover:border-[#FF6B00]/50"}`}
@@ -393,21 +403,28 @@ export const SunoGeneratePanel = () => {
               <Music className="h-3.5 w-3.5 text-[#9333EA]" />
               <span className="text-xs font-semibold text-white">MusicGen</span>
             </div>
-            <p className="text-[10px] text-gray-400 mt-1">Instrumental, bez wokalu (fallback)</p>
+            <p className="text-[10px] text-gray-400 mt-1">Instrumental, bez wokalu</p>
           </button>
         </div>
-        <div className="space-y-1">
-          <Label className="text-xs text-gray-400">Długość: {duration}s</Label>
-          <input
-            type="range"
-            min={engine === "acestep" ? 15 : 4}
-            max={engine === "acestep" ? 180 : 30}
-            step={1}
-            value={duration}
-            onChange={(e) => setDuration(parseInt(e.target.value))}
-            className="w-full accent-[#FF6B00]"
-          />
-        </div>
+        {engine !== "suno" && (
+          <div className="space-y-1">
+            <Label className="text-xs text-gray-400">Długość: {duration}s</Label>
+            <input
+              type="range"
+              min={engine === "acestep" ? 15 : 4}
+              max={engine === "acestep" ? 180 : 30}
+              step={1}
+              value={duration}
+              onChange={(e) => setDuration(parseInt(e.target.value))}
+              className="w-full accent-[#FF6B00]"
+            />
+          </div>
+        )}
+        {engine === "suno" && (
+          <p className="text-[10px] text-[#FFD400]/80 leading-relaxed">
+            🎙️ Suno V5 sam wybiera długość (~2–4 min). GPT-5.5 przepisuje Twój opis na idealny prompt + fonetycznie poprawny polski tekst przed generacją.
+          </p>
+        )}
         <div className="flex items-center justify-between p-2.5 rounded-lg bg-[#9333EA]/5 border border-[#9333EA]/20">
           <div className="flex items-center gap-2">
             <Sparkles className="h-3.5 w-3.5 text-[#9333EA]" />
