@@ -295,7 +295,7 @@ export const SunoGeneratePanel = () => {
       }
       try {
         const { data, error } = await invokeStudioEngine(fnName, {
-          action: "status", prediction_id: predictionId, task_id: predictionId, generation_id: generationId,
+          action: "status", prediction_id: predictionId, task_id: predictionId, taskId: predictionId, generation_id: generationId,
         });
         if (error) throw error;
         const status = data?.status;
