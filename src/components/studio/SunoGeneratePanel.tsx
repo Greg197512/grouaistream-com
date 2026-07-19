@@ -383,7 +383,7 @@ export const SunoGeneratePanel = () => {
               <Sparkles className="h-3.5 w-3.5 text-[#FFD400]" />
               <span className="text-xs font-semibold text-white">GrouAI Studio ⭐</span>
             </div>
-            <p className="text-[10px] text-gray-400 mt-1">GPT-5.5 pisze tekst + Suno V5 śpiewa (studio HQ, PL)</p>
+            <p className="text-[10px] text-gray-400 mt-1">Pełny wokal + studyjna jakość (PL/EN/NL/UK)</p>
           </button>
           <button
             onClick={() => setEngine("acestep")}
