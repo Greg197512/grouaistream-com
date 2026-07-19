@@ -70,7 +70,7 @@ export const useSubscription = () => {
 };
 
 export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
-  const { user, profile, loading: authLoading } = useAuth();
+  const { user, profile, loading: authLoading, refreshProfile } = useAuth();
   const [plan, setPlan] = useState<SubscriptionPlan>("free");
   const [isLoading, setIsLoading] = useState(true);
   const [trialEndsAt, setTrialEndsAt] = useState<string | null>(null);
@@ -187,24 +187,35 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (!user) return;
 
+    const refreshAll = () => {
+      void fetchSubscription();
+      void refreshProfile();
+    };
+
     const channel = supabase
       .channel(`sub-updates-${user.id}`)
       .on("postgres_changes", {
         event: "*", schema: "public", table: "user_subscriptions", filter: `user_id=eq.${user.id}`,
-      }, () => void fetchSubscription())
+      }, refreshAll)
       .on("postgres_changes", {
         event: "*", schema: "public", table: "subscriptions", filter: `user_id=eq.${user.id}`,
-      }, () => void fetchSubscription())
+      }, refreshAll)
+      .on("postgres_changes", {
+        event: "*", schema: "public", table: "profiles", filter: `id=eq.${user.id}`,
+      }, refreshAll)
+      .on("postgres_changes", {
+        event: "*", schema: "public", table: "user_roles", filter: `user_id=eq.${user.id}`,
+      }, refreshAll)
       .subscribe();
 
     // Fallback gdy realtime nie obejmuje tych tabel: odśwież po powrocie do karty
-    // (np. po zamknięciu okna płatności Paddle) i co minutę w tle.
-    const onFocus = () => void fetchSubscription();
+    // (np. po zamknięciu okna płatności Paddle) i co 30s w tle.
+    const onFocus = () => refreshAll();
     window.addEventListener("focus", onFocus);
     document.addEventListener("visibilitychange", onFocus);
     const interval = window.setInterval(() => {
-      if (document.visibilityState === "visible") void fetchSubscription();
-    }, 60_000);
+      if (document.visibilityState === "visible") refreshAll();
+    }, 30_000);
 
     return () => {
       supabase.removeChannel(channel);
@@ -212,7 +223,7 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
       document.removeEventListener("visibilitychange", onFocus);
       window.clearInterval(interval);
     };
-  }, [user, fetchSubscription]);
+  }, [user, fetchSubscription, refreshProfile]);
 
   useEffect(() => {
     const stored = localStorage.getItem("grooveai-ai-playlists-date");
