@@ -197,6 +197,7 @@ export const SunoGeneratePanel = () => {
     if (!prompt.trim() && !customMode) { toast.error("Wpisz opis utworu"); return; }
 
     const usingAce = engine === "acestep";
+    const usingSuno = engine === "suno";
     if (usingAce && !instrumental && !lyrics.trim()) {
       toast.error('Dodaj tekst lub kliknij "AI napisz tekst"');
       return;
@@ -204,13 +205,27 @@ export const SunoGeneratePanel = () => {
 
     setGenerating(true);
     setSongs([]);
-    const engineLabel = usingAce ? "ACE-Step (śpiewa)" : "GrouAI Engine (MusicGen)";
+    const engineLabel = usingSuno
+      ? "Suno V5 + GPT-5.5 (studio quality)"
+      : usingAce
+      ? "ACE-Step (śpiewa)"
+      : "GrouAI Engine (MusicGen)";
     setStatusMsg(`🧠 ${engineLabel} generuje...`);
 
     try {
       const vibe = buildVibe();
-      const fnName = usingAce ? "acestep-generate" : "groua-music-engine";
-      const reqBody: any = usingAce
+      const fnName = usingSuno ? "suno-generate" : usingAce ? "acestep-generate" : "groua-music-engine";
+      const reqBody: any = usingSuno
+        ? {
+            action: "generate",
+            prompt: prompt.trim() + (vibe ? `, ${vibe}` : ""),
+            style: style || undefined,
+            title: title || undefined,
+            instrumental,
+            vocal_language: lyricsLang,
+            enhance: true,
+          }
+        : usingAce
         ? {
             action: "generate",
             prompt: prompt.trim() + (style ? `, ${style}` : "") + (vibe ? `, ${vibe}` : ""),
