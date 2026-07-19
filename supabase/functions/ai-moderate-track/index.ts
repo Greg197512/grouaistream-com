@@ -29,8 +29,8 @@ interface EvaluationPayload {
   rejection_reasons?: string[];
 }
 
-// Minimum required duration for non-admin uploads: 3:00 (180s)
-const MIN_DURATION_SEC = 180;
+// Minimum required duration for non-admin uploads: 2:00 (120s)
+const MIN_DURATION_SEC = 120;
 
 function clampScore(value: unknown, min = 0, max = 20): number {
   const numeric = Number(value);
