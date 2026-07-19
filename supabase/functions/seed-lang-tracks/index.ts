@@ -10,7 +10,7 @@ const cors = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-seed-secret",
 };
 
-const MUSICGEN_VERSION = "671ac645ce5e552cc63a54a2bbff63fcf798043055f2a04b1d735e6ee09b7bd6";
+const MUSICGEN_VERSION = "671ac645ce5e552cc63a54a2bbff63fcf798043055d2dac5fc9e36a837eedcfb";
 const ARTIST_ID = "72237062-02b7-45e7-8a67-deab4f1c5dbb"; // Grouarock
 
 interface LangTrack {
