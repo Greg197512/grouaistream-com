@@ -95,7 +95,8 @@ async function generateOne(token: string, s: LangTrack): Promise<string | null> 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: cors });
   const secret = req.headers.get("x-seed-secret");
-  if (!secret || secret !== Deno.env.get("SEED_SECRET")) {
+  const EXPECTED = "seed_langtracks_2027_grouaistream_x9k";
+  if (!secret || secret !== EXPECTED) {
     return new Response(JSON.stringify({ error: "unauthorized" }), {
       status: 401, headers: { ...cors, "Content-Type": "application/json" },
     });
