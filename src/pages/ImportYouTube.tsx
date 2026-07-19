@@ -83,6 +83,7 @@ const ImportYouTube = () => {
     setLoading(true);
     try {
       const { error } = await supabase.from("tracks").insert({
+        user_id: user.id,
         title: title.trim(),
         artist: artist.trim() || "Unknown Artist",
         genre: genre.trim() || null,
