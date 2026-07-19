@@ -422,7 +422,7 @@ export const SunoGeneratePanel = () => {
         )}
         {engine === "suno" && (
           <p className="text-[10px] text-[#FFD400]/80 leading-relaxed">
-            🎙️ Suno V5 sam wybiera długość (~2–4 min). GPT-5.5 przepisuje Twój opis na idealny prompt + fonetycznie poprawny polski tekst przed generacją.
+            🎙️ GrouAI Studio sam dobiera długość (~2–4 min) i przepisuje Twój opis na idealny prompt + fonetycznie poprawny polski tekst przed generacją.
           </p>
         )}
         <div className="flex items-center justify-between p-2.5 rounded-lg bg-[#9333EA]/5 border border-[#9333EA]/20">
