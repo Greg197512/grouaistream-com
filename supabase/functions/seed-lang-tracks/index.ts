@@ -112,10 +112,13 @@ serve(async (req) => {
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
 
+  // Optional lang param — process just one language per call (avoids gateway timeout).
+  let targetLang: string | null = null;
+  try { const b = await req.json(); targetLang = b?.lang || null; } catch {}
+  const list = targetLang ? SEEDS.filter((s) => s.lang === targetLang) : SEEDS;
+
   const results: any[] = [];
-  // Sequential to be gentle on Replicate quota
-  for (const s of SEEDS) {
-    // Skip if already seeded
+  for (const s of list) {
     const { data: existing } = await supabase
       .from("tracks").select("id").eq("title", s.title).limit(1);
     if (existing && existing.length > 0) {
