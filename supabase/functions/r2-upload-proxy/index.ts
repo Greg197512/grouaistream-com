@@ -75,76 +75,7 @@ serve(async (req) => {
       ? folderValue.trim().replace(/^\/+|\/+$/g, "")
       : "tracks";
 
-    // PRO subscription guard for media uploads (tracks/covers)
-    if (folder === "tracks" || folder === "covers") {
-      const userId = claimsData.claims.sub;
-      const userRole = (claimsData.claims as any).user_role
-        || (claimsData.claims as any).app_metadata?.role;
-
-      // Bypass for admins / owners
-      const isAdmin = userRole === "admin" || userRole === "owner";
-
-      if (!isAdmin) {
-        const supabaseAdmin = createClient(
-          requireEnv("SUPABASE_URL"),
-          requireEnv("SUPABASE_SERVICE_ROLE_KEY"),
-        );
-
-        // Check Paddle subscriptions (any environment)
-        const { data: paddleSub } = await supabaseAdmin
-          .from("subscriptions")
-          .select("status, current_period_end")
-          .eq("user_id", userId)
-          .in("status", ["active", "trialing", "past_due"])
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        let hasPro = false;
-        if (paddleSub) {
-          const end = paddleSub.current_period_end ? new Date(paddleSub.current_period_end) : null;
-          hasPro = !end || end > new Date();
-        }
-
-        // Fallback: legacy user_subscriptions / trial / role
-        if (!hasPro) {
-          const { data: legacy } = await supabaseAdmin
-            .from("user_subscriptions")
-            .select("plan, status, trial_ends_at")
-            .eq("user_id", userId)
-            .maybeSingle();
-          if (legacy) {
-            const planOk = legacy.plan === "pro" || legacy.plan === "ultimate";
-            const trialOk = legacy.trial_ends_at && new Date(legacy.trial_ends_at) > new Date();
-            const statusOk = legacy.status === "active" || legacy.status === "trialing";
-            if ((planOk && statusOk) || trialOk) hasPro = true;
-          }
-        }
-
-        // Fallback: check profile role (admin / pro)
-        if (!hasPro) {
-          const { data: profile } = await supabaseAdmin
-            .from("profiles")
-            .select("role")
-            .eq("id", userId)
-            .maybeSingle();
-          if (profile && (profile.role === "admin" || profile.role === "owner" || profile.role === "pro")) {
-            hasPro = true;
-          }
-        }
-
-        if (!hasPro) {
-          return new Response(JSON.stringify({
-            error: "PRO subscription required",
-            code: "PRO_REQUIRED",
-            message: "Upload utworów wymaga planu PRO",
-          }), {
-            status: 403,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
-        }
-      }
-    }
+    // Upload otwarty dla wszystkich zalogowanych użytkowników (bez gate PRO)
 
     const endpoint = normalizeEndpoint(requireEnv("S3_ENDPOINT"));
     const accessKeyId = requireEnv("S3_ACCESS_KEY_ID");
