@@ -24,6 +24,7 @@ import { VoiceRecorder } from "@/components/studio/VoiceRecorder";
 import { VoiceLibrary } from "@/components/studio/VoiceLibrary";
 import { StudioGrokDock } from "@/components/studio/StudioGrokDock";
 import { StudioVisualizer } from "@/components/studio/StudioVisualizer";
+import { StudioSparksBackdrop } from "@/components/studio/StudioSparksBackdrop";
 import { StudioConsole } from "@/components/studio/StudioConsole";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { useLanguage } from "@/contexts/LanguageContext";
