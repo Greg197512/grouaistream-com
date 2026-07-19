@@ -206,7 +206,7 @@ export const SunoGeneratePanel = () => {
     setGenerating(true);
     setSongs([]);
     const engineLabel = usingSuno
-      ? "Suno V5 + GPT-5.5 (studio quality)"
+      ? "GrouAI Studio (studio quality)"
       : usingAce
       ? "ACE-Step (śpiewa)"
       : "GrouAI Engine (MusicGen)";
