@@ -881,6 +881,9 @@ const Suno = () => {
             </p>
           )}
 
+          {/* Iskry w tle podczas generowania — stabilne, bez błysków */}
+          <StudioSparksBackdrop active={generating} />
+
           {/* Loading Animation */}
           <AnimatePresence>
             {generating && (
