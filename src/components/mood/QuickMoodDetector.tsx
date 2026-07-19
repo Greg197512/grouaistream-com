@@ -11,6 +11,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { generateMusic } from "@/utils/musicGenerator";
 import { uploadToR2 } from "@/lib/r2Upload";
+import { invokeStudioEngine, waitForAceStep } from "@/lib/hubStudio";
 
 interface MoodResult {
   mood: string;
@@ -104,7 +105,12 @@ export const QuickMoodDetector = ({ isOpen, onClose }: QuickMoodDetectorProps) =
   const dragControls = useDragControls();
   const [detectedEmotion, setDetectedEmotion] = useState<string>("");
   // Zgoda użytkownika: AI odczytał aurę i pyta, czy może dobrać/utworzyć utwór.
-  const [consent, setConsent] = useState<{ mood: MoodResult; analysis: DeepAnalysis | null; emotionKey: string } | null>(null);
+  const [consent, setConsent] = useState<{
+    mood: MoodResult;
+    analysis: DeepAnalysis | null;
+    emotionKey: string;
+    vision?: { valence: number | null; arousal: number | null; engagement: number | null };
+  } | null>(null);
   const [isCreating, setIsCreating] = useState(false);
 
   const isModelLoaded = true;
@@ -250,10 +256,56 @@ export const QuickMoodDetector = ({ isOpen, onClose }: QuickMoodDetectorProps) =
   // Zapisujemy do prywatnej historii Studio (generations, RLS per-user) —
   // NIE do wspólnego "New". Widzi go tylko właściciel. Używane, gdy brak
   // pasującego utworu.
-  const createAuraTrack = useCallback(async (mood: MoodResult, emotionKey: string) => {
+  const createAuraTrack = useCallback(async (
+    mood: MoodResult,
+    emotionKey: string,
+    vision?: { valence: number | null; arousal: number | null; engagement: number | null },
+  ) => {
     if (!user) { toast.error("Zaloguj się, aby utworzyć utwór"); return; }
     setIsCreating(true);
     toast.loading("🎼 GrouAI Studio tworzy prywatny utwór dopasowany do Twojej aury…", { id: "aura-gen" });
+
+    // 1) Prawdziwy silnik GrouAI (hub): pełny utwór AI warunkowany aurą
+    //    (walencja/pobudzenie z detekcji + wyuczony profil z historii skanów).
+    //    Rekord trafia do prywatnych generations (RLS per-user), nie do "New".
+    try {
+      const { data, error } = await invokeStudioEngine("studio-prompt-engine", {
+        prompt: `Utwór, który autentycznie odda moją aurę dnia: ${mood.mood}, klimat ${mood.genre || "Pop"}. ${mood.dayDescription || ""}`.trim(),
+        language,
+        source: "aura",
+        aura: {
+          emotion: emotionKey,
+          valence: vision?.valence ?? null,
+          arousal: vision?.arousal ?? null,
+          engagement: vision?.engagement ?? null,
+        },
+      });
+      if (!error && data?.success && data.task_id) {
+        toast.loading("🎼 Silnik GrouAI komponuje pełny utwór pod Twoją aurę (~1 min)…", { id: "aura-gen" });
+        const { audioUrl, coverUrl } = await waitForAceStep(data.task_id, data.generation_id);
+        const playable = {
+          id: data.generation_id || `aura-${Date.now()}`,
+          title: data.plan?.title || `Aura • ${mood.mood}`,
+          artist: "GrouAI Studio",
+          album: "AI Aura",
+          duration: data.plan?.duration_seconds || 210,
+          audio_url: audioUrl,
+          video_url: null,
+          cover_url: coverUrl,
+          genre: data.plan?.genre || mood.genre || null,
+          mood: emotionKey,
+        };
+        toast.success("✨ Prywatny utwór z Twojej aury gotowy — odtwarzam (jest w Twoim Studio)", { id: "aura-gen" });
+        playPlaylist([playable as any]);
+        setTracksPlaying(true);
+        setIsCreating(false);
+        return;
+      }
+    } catch (e) {
+      console.warn("[aura] silnik GrouAI niedostępny — używam lokalnego syntezatora:", e);
+    }
+
+    // 2) Fallback: lokalny syntezator (darmowy, natychmiastowy).
     try {
       const genMood = (({
         happy: "bright", sad: "melancholic", angry: "aggressive", fearful: "tense",
@@ -309,12 +361,12 @@ export const QuickMoodDetector = ({ isOpen, onClose }: QuickMoodDetectorProps) =
     } finally {
       setIsCreating(false);
     }
-  }, [user, playPlaylist]);
+  }, [user, playPlaylist, language]);
 
   // Po zgodzie: najpierw szuka pasującego utworu; jeśli brak — tworzy w Studio.
   const applyAura = useCallback(async () => {
     if (!consent) return;
-    const { mood, analysis, emotionKey } = consent;
+    const { mood, analysis, emotionKey, vision } = consent;
     setConsent(null);
     try {
       const genres = analysis?.suggestedGenres?.length
@@ -337,12 +389,12 @@ export const QuickMoodDetector = ({ isOpen, onClose }: QuickMoodDetectorProps) =
         // Jest dopasowany utwór — odtwarzamy jak dotychczas (reszta bez zmian).
         await playMoodPlaylist(mood, analysis);
       } else {
-        // Brak dopasowania — tworzymy nowy w GrouAI Studio i wrzucamy do New.
-        await createAuraTrack(mood, emotionKey);
+        // Brak dopasowania — silnik GrouAI tworzy prywatny utwór z aury.
+        await createAuraTrack(mood, emotionKey, vision);
       }
     } catch (e) {
       console.error("applyAura error:", e);
-      await createAuraTrack(mood, emotionKey);
+      await createAuraTrack(mood, emotionKey, vision);
     }
   }, [consent, playMoodPlaylist, createAuraTrack]);
 
@@ -501,7 +553,16 @@ export const QuickMoodDetector = ({ isOpen, onClose }: QuickMoodDetectorProps) =
       setAnalysisStep("");
 
       // Nie odtwarzamy automatycznie — AI pyta o zgodę, zanim dobierze/utworzy utwór.
-      setConsent({ mood: detectedMood, analysis, emotionKey });
+      setConsent({
+        mood: detectedMood,
+        analysis,
+        emotionKey,
+        vision: {
+          valence: typeof data.valence === "number" ? data.valence : null,
+          arousal: typeof data.arousal === "number" ? data.arousal : null,
+          engagement: typeof data.engagement === "number" ? data.engagement : null,
+        },
+      });
     } catch (error) {
       console.error("Vision mood detection error:", error);
       if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);

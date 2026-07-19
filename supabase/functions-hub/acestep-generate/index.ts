@@ -41,6 +41,48 @@ async function loadConfig(): Promise<Record<string, string>> {
   return cfg;
 }
 
+// ─── SILNIK EMOCJI (wersja kompaktowa; pełna w studio-prompt-engine) ──────────
+// Walencja→tryb, pobudzenie→tempo — wg badań psychologii muzyki (Russell 1980;
+// Gabrielsson & Lindström 2010). body.aura = {valence, arousal, emotion}.
+const EMOTION_MUSIC: Record<string, { mode: string; bpm: [number, number]; tags: string }> = {
+  happy:     { mode: "major key", bpm: [112, 128], tags: "bright uplifting harmony, bouncy groove, warm smiling vocal tone" },
+  sad:       { mode: "minor key", bpm: [62, 84],   tags: "melancholic, sparse soft piano, legato strings, intimate fragile vocals" },
+  angry:     { mode: "minor key", bpm: [140, 165], tags: "aggressive, distorted, sharp attacks, forceful gritty delivery" },
+  fearful:   { mode: "minor key", bpm: [92, 112],  tags: "tense, tremolo strings, dark low drones, hushed unstable vocals" },
+  disgusted: { mode: "dark minor key", bpm: [88, 104], tags: "gritty detuned synths, industrial textures, cold detached delivery" },
+  surprised: { mode: "major key", bpm: [124, 138], tags: "euphoric, big builds and drops, expressive dynamic vocals" },
+  neutral:   { mode: "modal harmony", bpm: [92, 108], tags: "dreamy, lush pads, smooth relaxed vocals" },
+  calm:      { mode: "major key", bpm: [64, 84],   tags: "peaceful, warm pads, gentle percussion, soft airy vocals" },
+  romantic:  { mode: "major key with added 7ths", bpm: [70, 92], tags: "intimate, warm rhodes, silky strings, tender breathy vocals" },
+  energetic: { mode: "major key", bpm: [126, 140], tags: "high-energy four-on-the-floor, punchy kick, powerful confident vocals" },
+  focused:   { mode: "minimal harmonic movement", bpm: [100, 116], tags: "steady hypnotic pulse, minimal arrangement, calm even delivery" },
+};
+
+function emotionTags(aura: Record<string, unknown> | null | undefined): string {
+  if (!aura || typeof aura !== "object") return "";
+  const v = typeof aura.valence === "number" ? (aura.valence as number) : 0.2;
+  const a = typeof aura.arousal === "number" ? (aura.arousal as number) : 0.5;
+  const key = String(aura.emotion || "").toLowerCase();
+  let base = EMOTION_MUSIC[key];
+  if (!base) {
+    base = v >= 0
+      ? (a >= 0.55 ? EMOTION_MUSIC.happy : EMOTION_MUSIC.calm)
+      : (a >= 0.55 ? EMOTION_MUSIC.angry : EMOTION_MUSIC.sad);
+  }
+  const clampA = Math.min(Math.max(a, 0), 1);
+  const bpm = Math.round(base.bpm[0] + (base.bpm[1] - base.bpm[0]) * clampA);
+  return `${base.mode}, ${bpm} bpm, ${base.tags}`;
+}
+
+// Zapis do zbioru uczącego silnika (hub) — nie blokuje odpowiedzi.
+function logLearning(row: Record<string, unknown>) {
+  const p = hubAdmin().from("engine_learning").insert(row).then(
+    ({ error }) => { if (error) console.warn("[engine_learning]", error.message); },
+  );
+  // @ts-ignore — EdgeRuntime.waitUntil jest dostępne w Supabase Edge Runtime
+  if (typeof EdgeRuntime !== "undefined" && EdgeRuntime.waitUntil) EdgeRuntime.waitUntil(p);
+}
+
 function extractAudioUrl(output: unknown): string {
   if (!output) return "";
   if (typeof output === "string") return output;
@@ -184,6 +226,11 @@ Deno.serve(async (req) => {
     const duration: number = Math.min(Math.max(body.duration || body.duration_seconds || 60, 10), 240);
     const title: string = body.title || "GrouAI Track";
 
+    // Warunkowanie emocjonalne: świeża detekcja aury (body.aura) dostraja
+    // tryb/tempo/barwę tak, by utwór realnie oddawał stan słuchacza.
+    const emoTags = emotionTags(body.aura);
+    const promptWithEmo = emoTags ? `${prompt}, ${emoTags}` : prompt;
+
     // ROUTING SILNIKÓW:
     // - wokal → MiniMax music-1.5 (oficjalny model Replicate: jakość i tempo
     //   klasy Suno, ~49 s na piosenkę, groszowe koszty)
@@ -193,7 +240,7 @@ Deno.serve(async (req) => {
     if (!instrumental) {
       engineName = "minimax";
       const vocalModel = cfg["vocal_model"] || "minimax/music-1.5";
-      const mmPrompt = (prompt + ", high quality, studio recording").slice(0, 300);
+      const mmPrompt = (promptWithEmo + ", high quality, studio recording").slice(0, 300);
       rel = await fetch(`${REPLICATE_BASE}/models/${vocalModel}/predictions`, {
         method: "POST",
         headers: rHeaders,
@@ -225,7 +272,7 @@ Deno.serve(async (req) => {
         body: JSON.stringify({
           version,
           input: {
-            tags: prompt + ", high quality, studio recording, professional mixing, crisp clear audio",
+            tags: promptWithEmo + ", high quality, studio recording, professional mixing, crisp clear audio",
             lyrics,
             duration,
             scheduler: cfg["ace_scheduler"] || "euler",
@@ -271,6 +318,17 @@ Deno.serve(async (req) => {
       replicate_id: predId,
       engine: engineName,
     }).select().single();
+
+    logLearning({
+      user_id: userId,
+      source: body.source === "aura" ? "aura" : "studio-direct",
+      prompt: prompt.slice(0, 2000),
+      language: body.language || null,
+      aura: body.aura && typeof body.aura === "object" ? body.aura : null,
+      plan: { title, tags: promptWithEmo.slice(0, 1500), instrumental, duration },
+      engine: engineName,
+      task_id: predId,
+    });
 
     return json({
       id: predId,
