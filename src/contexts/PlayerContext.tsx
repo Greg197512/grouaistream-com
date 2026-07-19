@@ -708,10 +708,10 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   // fallbacku — jeśli danego utworu nie ma, nic się nie odpala.
   const loadLangTrack = useCallback((lang: string) => {
     const langTrackMap: Record<string, string> = {
-      pl: 'Neonowe Serce',
-      en: 'Neon Nights, Electric Soul',
-      nl: 'Canals of Ghosts (Amsterdam Midnight)',
-      ua: 'FENIKS (Qux)',
+      pl: 'GrouAIStream — Neonowe Serce',
+      en: 'GrouAIStream — Neon Nights',
+      nl: 'GrouAIStream — Amsterdam Pulse',
+      ua: 'GrouAIStream — Kyiv Signal',
     };
     const trackTitle = langTrackMap[lang] || langTrackMap.en;
 
