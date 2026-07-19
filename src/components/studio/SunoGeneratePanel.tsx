@@ -206,7 +206,7 @@ export const SunoGeneratePanel = () => {
     setGenerating(true);
     setSongs([]);
     const engineLabel = usingSuno
-      ? "Suno V5 + GPT-5.5 (studio quality)"
+      ? "GrouAI Studio (studio quality)"
       : usingAce
       ? "ACE-Step (śpiewa)"
       : "GrouAI Engine (MusicGen)";
@@ -381,9 +381,9 @@ export const SunoGeneratePanel = () => {
           >
             <div className="flex items-center gap-1.5">
               <Sparkles className="h-3.5 w-3.5 text-[#FFD400]" />
-              <span className="text-xs font-semibold text-white">Suno V5 ⭐</span>
+              <span className="text-xs font-semibold text-white">GrouAI Studio ⭐</span>
             </div>
-            <p className="text-[10px] text-gray-400 mt-1">GPT-5.5 pisze tekst + Suno V5 śpiewa (studio HQ, PL)</p>
+            <p className="text-[10px] text-gray-400 mt-1">Pełny wokal + studyjna jakość (PL/EN/NL/UK)</p>
           </button>
           <button
             onClick={() => setEngine("acestep")}
@@ -422,7 +422,7 @@ export const SunoGeneratePanel = () => {
         )}
         {engine === "suno" && (
           <p className="text-[10px] text-[#FFD400]/80 leading-relaxed">
-            🎙️ Suno V5 sam wybiera długość (~2–4 min). GPT-5.5 przepisuje Twój opis na idealny prompt + fonetycznie poprawny polski tekst przed generacją.
+            🎙️ GrouAI Studio sam dobiera długość (~2–4 min) i przepisuje Twój opis na idealny prompt + fonetycznie poprawny polski tekst przed generacją.
           </p>
         )}
         <div className="flex items-center justify-between p-2.5 rounded-lg bg-[#9333EA]/5 border border-[#9333EA]/20">
