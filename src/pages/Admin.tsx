@@ -76,6 +76,7 @@ import { TikTokReelsStudio } from "@/components/admin/TikTokReelsStudio";
 import { AIBuilderProgress } from "@/components/admin/AIBuilderProgress";
 import { FaceLearningPanel } from "@/components/admin/FaceLearningPanel";
 import { B2BPricingPanel } from "@/components/admin/B2BPricingPanel";
+import { B2BOrdersPanel } from "@/components/admin/B2BOrdersPanel";
 import { CostReportsPanel } from "@/components/admin/CostReportsPanel";
 import { BreakEvenPanel } from "@/components/admin/BreakEvenPanel";
 import { CostAlertBanner } from "@/components/admin/CostAlertBanner";
@@ -835,6 +836,10 @@ export default function Admin() {
                   <DollarSign className="h-4 w-4" />
                   Ceny B2B 💶
                 </TabsTrigger>
+                <TabsTrigger value="b2b-orders" className="gap-2">
+                  <DollarSign className="h-4 w-4" />
+                  Zlecenia B2B 📋
+                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="seo">
@@ -856,6 +861,10 @@ export default function Admin() {
 
               <TabsContent value="b2b-pricing">
                 <B2BPricingPanel />
+              </TabsContent>
+
+              <TabsContent value="b2b-orders">
+                <B2BOrdersPanel />
               </TabsContent>
 
               {/* Break-even Tab */}
