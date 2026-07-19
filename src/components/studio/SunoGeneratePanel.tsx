@@ -68,7 +68,7 @@ const MusicBurst = () => (
 
 type CoverMode = "auto" | "custom" | "upload";
 
-type Engine = "acestep" | "musicgen";
+type Engine = "suno" | "acestep" | "musicgen";
 
 export const SunoGeneratePanel = () => {
   const { playTrack } = usePlayer();
