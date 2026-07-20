@@ -31,13 +31,13 @@ const AUDIO_TYPES = [
   "audio/mpeg", "audio/wav", "audio/mp3", "audio/x-wav", "audio/mp4", "audio/x-m4a",
   "audio/ogg", "audio/flac", "audio/aac", "audio/opus", "audio/webm",
 ];
-const MIN_DURATION_SEC = 10;
+const MIN_DURATION_SEC = 150;
 const DURATION_FALLBACK_SEC = 180;
 const MODERATION_TIMEOUT_MS = 30000;
-// Minimum duration required for non-admin uploads to pass moderation: 2:00
-const MODERATION_MIN_APPROVED_SEC = 120;
-// Maksymalna długość wgrywanego utworu: 4:00 (240 s). Dłuższe nie przechodzą.
-const MAX_DURATION_SEC = 240;
+// Minimum duration required for non-admin uploads to pass moderation: 2:30
+const MODERATION_MIN_APPROVED_SEC = 150;
+// Maksymalna długość wgrywanego utworu: 6:00 (360 s). Dłuższe nie przechodzą.
+const MAX_DURATION_SEC = 360;
 const fmtDur = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 
 function buildLocalModerationFallback(durationSec?: number | null, isAdmin = false) {
