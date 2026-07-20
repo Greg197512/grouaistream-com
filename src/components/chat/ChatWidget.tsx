@@ -467,7 +467,9 @@ export const ChatWidget = () => {
             )}
           </motion.div>
         )}
-      </AnimatePresence>
+        </AnimatePresence>,
+        document.body
+      )}
     </>
   );
 };
