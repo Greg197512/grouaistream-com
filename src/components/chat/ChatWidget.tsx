@@ -271,15 +271,16 @@ export const ChatWidget = () => {
         )}
       </button>
 
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ opacity: 0, y: 20, scale: 0.97 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 20, scale: 0.97 }}
-            transition={{ duration: 0.18 }}
-            className="fixed z-[100] bottom-20 right-2 sm:right-6 w-[min(380px,calc(100vw-1rem))] h-[min(560px,calc(100dvh-6rem))] rounded-2xl border border-primary/30 bg-black/95 backdrop-blur-xl shadow-[0_0_40px_hsl(38_100%_50%/0.25)] flex flex-col overflow-hidden"
-          >
+      {createPortal(
+        <AnimatePresence>
+          {open && (
+            <motion.div
+              initial={{ opacity: 0, y: 20, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 20, scale: 0.97 }}
+              transition={{ duration: 0.18 }}
+              className="fixed z-[9999] bottom-20 right-2 sm:right-6 w-[min(380px,calc(100vw-1rem))] h-[min(560px,calc(100dvh-6rem))] rounded-2xl border border-primary/30 bg-black/95 backdrop-blur-xl shadow-[0_0_40px_hsl(38_100%_50%/0.25)] flex flex-col overflow-hidden"
+            >
             {/* Header */}
             <div className="flex items-center gap-2 px-3 py-2 border-b border-border/50 bg-gradient-to-r from-primary/10 to-transparent">
               {activeId && (
