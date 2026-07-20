@@ -74,7 +74,30 @@ export const ChatWidget = () => {
     })();
   }, [open, user]);
 
-  // Subscribe to new incoming messages globally for unread counter
+  // Play notification bell sound
+  const playBell = () => {
+    try {
+      const AC = (window as any).AudioContext || (window as any).webkitAudioContext;
+      if (!AC) return;
+      const ctx = new AC();
+      const now = ctx.currentTime;
+      [880, 1320, 1760].forEach((f, i) => {
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.type = "sine";
+        o.frequency.value = f;
+        g.gain.setValueAtTime(0.0001, now + i * 0.12);
+        g.gain.exponentialRampToValueAtTime(0.25, now + i * 0.12 + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, now + i * 0.12 + 0.35);
+        o.connect(g).connect(ctx.destination);
+        o.start(now + i * 0.12);
+        o.stop(now + i * 0.12 + 0.4);
+      });
+      setTimeout(() => ctx.close(), 1500);
+    } catch {}
+  };
+
+  // Subscribe to new incoming messages globally for unread counter + toast
   useEffect(() => {
     if (!user) return;
     const ch = supabase
@@ -82,21 +105,54 @@ export const ChatWidget = () => {
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "chat_messages" },
-        (payload) => {
+        async (payload) => {
           const m = payload.new as ChatMsg;
           if (m.sender_id === user.id) return;
           // only messages relevant to me
           if (!m.is_broadcast && m.recipient_id !== user.id) return;
-          if (!open) setUnread((u) => u + 1);
-          // If matching current view, append
-          setMessages((prev) => {
-            if (!activeId) return prev;
-            const belongs =
-              (activeId === BROADCAST_ID && m.is_broadcast) ||
+
+          // If matching current open view, just append
+          const belongsToOpenView =
+            open &&
+            activeId &&
+            ((activeId === BROADCAST_ID && m.is_broadcast) ||
               (activeId !== BROADCAST_ID &&
                 !m.is_broadcast &&
-                (m.sender_id === activeId || m.recipient_id === activeId));
-            return belongs ? [...prev, m] : prev;
+                (m.sender_id === activeId || m.recipient_id === activeId)));
+
+          if (belongsToOpenView) {
+            setMessages((prev) => [...prev, m]);
+            return;
+          }
+
+          // Unread + bell + toast
+          setUnread((u) => u + 1);
+          playBell();
+
+          // Lookup sender name
+          let senderName = "Ktoś";
+          const known = users.find((x) => x.user_id === m.sender_id);
+          if (known?.display_name) {
+            senderName = known.display_name;
+          } else {
+            const { data: p } = await supabase
+              .from("profiles")
+              .select("display_name")
+              .eq("user_id", m.sender_id)
+              .maybeSingle();
+            if (p?.display_name) senderName = p.display_name;
+          }
+
+          toast(`🔔 Masz wiadomość od ${senderName}`, {
+            description: m.content.slice(0, 80) + (m.content.length > 80 ? "…" : ""),
+            duration: 8000,
+            action: {
+              label: "Odbierz",
+              onClick: () => {
+                setActiveId(m.is_broadcast ? BROADCAST_ID : m.sender_id);
+                setOpen(true);
+              },
+            },
           });
         }
       )
@@ -104,7 +160,7 @@ export const ChatWidget = () => {
     return () => {
       supabase.removeChannel(ch);
     };
-  }, [user, open, activeId]);
+  }, [user, open, activeId, users]);
 
   // Load conversation on active change
   useEffect(() => {
