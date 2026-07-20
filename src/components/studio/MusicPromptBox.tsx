@@ -87,38 +87,38 @@ interface Props {
 
 // Losowe iskry/płomienie zapalające się i gasnące — niepowtarzalny efekt
 function EmberField({ active }: { active: boolean }) {
-  const embers = useMemo(
+  const sparks = useMemo(
     () =>
-      Array.from({ length: 14 }).map((_, i) => ({
+      Array.from({ length: 18 }).map((_, i) => ({
         id: i,
-        left: `${8 + Math.random() * 84}%`,
-        bottom: `${Math.random() * 40}%`,
-        delay: Math.random() * 4,
-        dur: 2.5 + Math.random() * 3,
-        size: 8 + Math.random() * 12,
+        left: `${5 + Math.random() * 90}%`,
+        delay: Math.random() * 5,
+        dur: 4 + Math.random() * 3,
+        size: 1.5 + Math.random() * 1.8,
+        drift: (Math.random() - 0.5) * 30,
+        hue: 18 + Math.random() * 22,
       })),
     []
   );
+  if (!active) return null;
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-3xl">
-      {embers.map((e) => (
-        <motion.div
-          key={e.id}
-          className="absolute"
-          style={{ left: e.left, bottom: e.bottom }}
-          initial={{ opacity: 0, y: 0, scale: 0.6 }}
-          animate={{
-            opacity: active ? [0, 0.9, 0] : [0, 0.35, 0],
-            y: active ? [-4, -60] : [-2, -24],
-            scale: [0.6, 1, 0.5],
+      {sparks.map((s) => (
+        <motion.span
+          key={s.id}
+          className="absolute rounded-full"
+          style={{
+            left: s.left,
+            bottom: -6,
+            width: s.size,
+            height: s.size,
+            background: `hsl(${s.hue} 100% 60%)`,
+            boxShadow: `0 0 6px hsl(${s.hue} 100% 55% / 0.9)`,
           }}
-          transition={{ duration: e.dur, repeat: Infinity, delay: e.delay, ease: "easeOut" }}
-        >
-          <Flame
-            style={{ width: e.size, height: e.size }}
-            className={active ? "text-orange-400" : "text-primary/50"}
-          />
-        </motion.div>
+          initial={{ y: 0, opacity: 0.9, x: 0 }}
+          animate={{ y: "-100%", x: s.drift, opacity: 0.9 }}
+          transition={{ duration: s.dur, repeat: Infinity, delay: s.delay, ease: "linear" }}
+        />
       ))}
     </div>
   );
