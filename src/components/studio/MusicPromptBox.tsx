@@ -514,16 +514,14 @@ export function MusicPromptBox({ onTrackReady }: Props) {
 
   return (
     <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="relative w-full">
-      {/* Obracająca się poświata za kartą */}
-      <motion.div
+      {/* Delikatna, statyczna neonowa poświata (bez obrotu) */}
+      <div
         aria-hidden
-        className="absolute -inset-[2px] -z-10 rounded-[26px] opacity-70 blur-md"
+        className="absolute -inset-[1px] -z-10 rounded-[26px] opacity-40 blur-md"
         style={{
           background:
-            "conic-gradient(from 0deg, #FF6B00, #9333EA, #FF9500, #FF6B00)",
+            "linear-gradient(135deg, rgba(255,107,0,0.35), rgba(147,51,234,0.25), rgba(255,149,0,0.3))",
         }}
-        animate={{ rotate: isBusy ? 360 : [0, 360] }}
-        transition={{ duration: isBusy ? 4 : 18, repeat: Infinity, ease: "linear" }}
       />
 
       <div className="relative overflow-hidden rounded-[24px] border border-white/10 bg-[#12101c]/90 backdrop-blur-2xl p-6 shadow-2xl">
