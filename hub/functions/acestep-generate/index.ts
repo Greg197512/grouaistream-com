@@ -157,6 +157,50 @@ Deno.serve(async (req) => {
       const predId = body.task_id || body.prediction_id || body.replicate_id;
       if (!predId) return json({ error: "prediction_id required" }, 400);
 
+      // Zadania Suno V5/V5_5 (api.sunoapi.org) — task_id z prefiksem "suno-".
+      if (String(predId).startsWith("suno-")) {
+        const sunoKey = (cfg["suno_api_key"] || "").trim();
+        if (!sunoKey) return json({ error: "suno_api_key not configured (hub_config)" }, 500);
+        const tid = String(predId).slice(5);
+        const r = await fetch(
+          `https://api.sunoapi.org/api/v1/generate/record-info?taskId=${encodeURIComponent(tid)}`,
+          { headers: { Authorization: `Bearer ${sunoKey}` } },
+        );
+        const d = await r.json().catch(() => null);
+        const st = String(d?.data?.status || "");
+        if (st === "SUCCESS" || st === "FIRST_SUCCESS") {
+          const track = d?.data?.response?.sunoData?.[0];
+          const audioUrl = track?.audioUrl || track?.streamAudioUrl || "";
+          if (audioUrl) {
+            // Archiwizacja do storage huba — linki CDN bywają czasowe.
+            const archived = await archiveToHubStorage(audioUrl, String(predId));
+            const finalUrl = archived || audioUrl;
+            if (body.generation_id) {
+              await live.from("generations").update({
+                status: "completed",
+                audio_url: finalUrl,
+              }).eq("id", body.generation_id);
+            }
+            return json({
+              id: predId,
+              status: "succeeded",
+              output: finalUrl,
+              audio_url: finalUrl,
+              cover_url: track?.imageUrl ||
+                `${Deno.env.get("SUPABASE_URL")}/storage/v1/object/public/acestep/${predId}-cover.jpg`,
+              r2_archived: !!archived,
+            });
+          }
+        }
+        if (["CREATE_TASK_FAILED", "GENERATE_AUDIO_FAILED", "SENSITIVE_WORD_ERROR", "CALLBACK_EXCEPTION"].includes(st)) {
+          if (body.generation_id) {
+            await live.from("generations").update({ status: "failed" }).eq("id", body.generation_id);
+          }
+          return json({ id: predId, status: "failed", error: st });
+        }
+        return json({ id: predId, status: "processing" });
+      }
+
       const r = await fetch(`${REPLICATE_BASE}/predictions/${predId}`, { headers: rHeaders });
       const data = await r.json();
       if (!r.ok) return json({ error: "Replicate poll failed", details: data }, r.status);
@@ -231,15 +275,51 @@ Deno.serve(async (req) => {
     const emoTags = emotionTags(body.aura);
     const promptWithEmo = emoTags ? `${prompt}, ${emoTags}` : prompt;
 
-    // ROUTING SILNIKÓW (poziom v4):
-    // - wokal ORAZ instrumental → MiniMax music-2.6 (oddech, vibrato, BPM/tonacja,
-    //   do 6 min — klasa najbliższa Suno i wyżej)
-    // - ACE-Step tylko gdy hub_config.instrumental_engine="acestep" (tańszy wariant)
+    // ROUTING SILNIKÓW (poziom v6):
+    // TIER 1: Suno V5/V5_5 (api.sunoapi.org, hub_config.suno_api_key) — jakość
+    //         referencyjna: polski wokal i czyste instrumenty klasy studia.
+    // TIER 2: MiniMax music-2.6 — automatyczny fallback.
+    // TIER 3: ACE-Step — gdy hub_config.instrumental_engine="acestep".
+    const qualitySuffix = ", high quality, studio recording, professional mixing, crisp clear master, radio-ready, rich dynamics";
+    let predId: string | null = null;
+    let engineName = "";
+
+    const sunoKey = (cfg["suno_api_key"] || "").trim();
+    if (sunoKey) {
+      try {
+        const sunoModel = cfg["suno_model"] || "V5";
+        const sr = await fetch("https://api.sunoapi.org/api/v1/generate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${sunoKey}` },
+          body: JSON.stringify({
+            customMode: true,
+            instrumental,
+            model: sunoModel,
+            callBackUrl: cfg["suno_callback_url"] ||
+              `${Deno.env.get("SUPABASE_URL")}/functions/v1/suno-callback`,
+            ...(instrumental ? {} : { prompt: lyrics.slice(0, 4900) }),
+            style: (promptWithEmo + qualitySuffix).slice(0, 990),
+            title: title.slice(0, 95),
+          }),
+          signal: AbortSignal.timeout(30000),
+        });
+        const sd = await sr.json().catch(() => null);
+        const tid = sd?.data?.taskId;
+        if (sr.ok && tid) {
+          predId = `suno-${tid}`;
+          engineName = `suno-${String(sunoModel).toLowerCase()}`;
+        } else {
+          console.warn("[suno] start failed:", JSON.stringify(sd).slice(0, 200));
+        }
+      } catch (e) {
+        console.warn("[suno] unreachable:", String(e).slice(0, 120));
+      }
+    }
+
     const instrEngine = (cfg["instrumental_engine"] || "minimax").toLowerCase();
     const useMinimax = !instrumental || instrEngine === "minimax";
-    const qualitySuffix = ", high quality, studio recording, professional mixing, crisp clear master, radio-ready, rich dynamics";
+    if (!predId) {
     let rel: Response;
-    let engineName: string;
     if (useMinimax) {
       engineName = instrumental ? "minimax-inst" : "minimax";
       const vocalModel = cfg["vocal_model"] || "minimax/music-2.6";
@@ -304,8 +384,9 @@ Deno.serve(async (req) => {
       return json({ error: "Replicate create failed", details: relData }, rel.status);
     }
 
-    const predId = relData?.id;
+    predId = relData?.id ?? null;
     if (!predId) return json({ error: "No prediction id from Replicate", details: relData }, 502);
+    } // koniec fallbacku Tier 2/3
 
     // Okładka AI startuje automatycznie po stronie serwera — każdy utwór ją
     // dostaje, niezależnie od tego, skąd przyszło zlecenie (UI, API, testy).

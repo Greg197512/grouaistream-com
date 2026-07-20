@@ -1,4 +1,8 @@
-// GROUAI HUB — studio-prompt-engine v4 „GrouAI Engine"
+// GROUAI HUB — studio-prompt-engine v5 „GrouAI Engine"
+// v5: SILNIK EMOCJI v5 — emocja słyszalna w wykonaniu. Profile akustyczne
+// (Juslin & Laukka 2003), cel przeżyciowy GEMS-9 (Zentner), wyzwalacze ciarek
+// (Sloboda 1991), reguły wykonawcze KTH (Friberg/Sundberg), mieszanka dwóch
+// emocji z histogramu detekcji (głębia zamiast plakatu).
 // Tryb "jak Suno, tylko lepiej": jedno zdanie od użytkownika → AI układa całą
 // piosenkę (tytuł, styl, pełny tekst) → od razu startuje generacja na Replicate.
 //
@@ -53,33 +57,131 @@ async function loadConfig(): Promise<Record<string, string>> {
   return cfg;
 }
 
-// ─── SILNIK EMOCJI ─────────────────────────────────────────────────────────────
-// Walencja steruje trybem/harmonią, pobudzenie tempem/dynamiką — kierunki
-// potwierdzone w literaturze (Gabrielsson & Lindström 2010, tab. 14.1).
+// ─── SILNIK EMOCJI v5 ──────────────────────────────────────────────────────────
+// Emocja ma być SŁYSZALNA w wykonaniu, nie tylko opisana. Zszyte z badań:
+//  • Juslin & Laukka 2003 (meta-analiza 145 badań): profile akustyczne emocji —
+//    tempo, artykulacja (staccato/legato), atak dźwięku, dynamika, barwa,
+//    vibrato, kontur melodyczny (te same kody co w głosie mówionym).
+//  • Gabrielsson & Lindström 2010: walencja→tryb/harmonia, pobudzenie→tempo.
+//  • Zentner (GEMS-9): docelowe PRZEŻYCIE słuchacza (czułość, nostalgia, moc,
+//    cud, spokój...) — tekst i aranż celują w indukcję odczucia, nie sam opis.
+//  • Sloboda 1991 + badania frisson: wyzwalacze ciarek — appoggiatury,
+//    nagła cisza/wybuch dynamiki, niespodziewany akord, wejście nowego głosu,
+//    zejście kwintowe do toniki, podniesienie tonacji w finale.
+//  • KTH rule system (Friberg/Sundberg): frazowanie łukowe, mikro-timing,
+//    rubato, końcowe ritardando.
 
 interface Aura {
   valence: number | null;   // -1..1
   arousal: number | null;   // 0..1
   engagement?: number | null;
   emotion?: string | null;  // dominanta z detekcji
+  emotion2?: string | null; // drugi kolor emocjonalny (mieszanka = głębia)
   samples?: number;         // ile odczytów uczących złożyło się na profil
 }
 
-const EMOTION_MUSIC: Record<string, { mode: string; bpm: [number, number]; tags: string; vocal: string }> = {
-  happy:     { mode: "major key", bpm: [112, 128], tags: "bright uplifting harmony, bouncy groove, staccato accents, warm plucks, consonant chords", vocal: "warm smiling vocal tone, energetic phrasing" },
-  sad:       { mode: "minor key", bpm: [62, 84],   tags: "melancholic, sparse arrangement, soft felt piano, legato strings, gentle dynamics, low register", vocal: "intimate fragile vocals, slight breathiness, falling phrase endings" },
-  angry:     { mode: "minor key with phrygian color", bpm: [140, 165], tags: "aggressive, distorted guitars or hard 808s, sharp attacks, dissonant stabs, relentless percussion", vocal: "forceful gritty delivery, clipped consonants" },
-  fearful:   { mode: "minor key", bpm: [92, 112],  tags: "tense, tremolo strings, dissonant clusters, irregular accents, dark low drones", vocal: "hushed unstable vocals, wide vibrato" },
-  disgusted: { mode: "dark minor key", bpm: [88, 104], tags: "gritty detuned synths, industrial textures, heavy low end", vocal: "cold detached delivery" },
-  surprised: { mode: "major key with sudden modulations", bpm: [124, 138], tags: "euphoric, big builds and drops, bright arps, playful syncopation", vocal: "expressive dynamic vocals, wide range" },
-  neutral:   { mode: "modal harmony with lydian color", bpm: [92, 108], tags: "dreamy, lush pads, smooth groove, balanced dynamics", vocal: "smooth relaxed vocals" },
-  calm:      { mode: "major key", bpm: [64, 84],   tags: "peaceful, warm pads, slow attack textures, gentle percussion, wide reverb", vocal: "soft airy vocals, long sustained notes" },
-  romantic:  { mode: "major key with added 7ths and 9ths", bpm: [70, 92], tags: "intimate, warm rhodes, silky strings, slow groove, close-mic feel", vocal: "tender breathy vocals, close and intimate" },
-  energetic: { mode: "major key", bpm: [126, 140], tags: "high-energy four-on-the-floor, punchy kick, risers, sidechain pumping", vocal: "powerful confident vocals" },
-  focused:   { mode: "minimal harmonic movement", bpm: [100, 116], tags: "steady hypnotic pulse, minimal arrangement, evolving subtle motifs", vocal: "calm even delivery" },
+interface EmotionSpec {
+  mode: string;
+  bpm: [number, number];
+  tags: string;
+  vocal: string;
+  perf: string;    // wykonanie (Juslin&Laukka + KTH): artykulacja/atak/dynamika/timing
+  frisson: string; // wyzwalacze ciarek (Sloboda) dopasowane do emocji
+  gems: string;    // docelowe przeżycie słuchacza (GEMS-9)
+}
+
+const EMOTION_MUSIC: Record<string, EmotionSpec> = {
+  happy: {
+    mode: "major key", bpm: [112, 128],
+    tags: "bright uplifting harmony, bouncy groove, staccato accents, warm plucks, consonant chords",
+    vocal: "warm smiling vocal tone, energetic phrasing",
+    perf: "staccato articulation, fast light tone attacks, bright timbre, steady tempo with playful micro-timing, rising melodic contours, crisp consonants",
+    frisson: "sudden stop-and-drop into the final chorus, joyful key change up in last chorus, unexpected gang vocals entering",
+    gems: "joyful activation — listener should feel like dancing and smiling involuntarily",
+  },
+  sad: {
+    mode: "minor key", bpm: [62, 84],
+    tags: "melancholic, sparse arrangement, soft felt piano, legato strings, gentle dynamics, low register",
+    vocal: "intimate fragile vocals, slight breathiness, falling phrase endings, audible breaths between phrases",
+    perf: "legato articulation, slow soft tone attacks, dull warm timbre, slow expressive vibrato, falling melodic contours, generous rubato, large final ritardando",
+    frisson: "melodic appoggiaturas in the chorus melody, strings entering only at the second chorus, near-silence before the last chorus with a single fragile voice",
+    gems: "nostalgia and tenderness — a lump in the throat, bittersweet longing",
+  },
+  angry: {
+    mode: "minor key with phrygian color", bpm: [140, 165],
+    tags: "aggressive, distorted guitars or hard 808s, sharp attacks, dissonant stabs, relentless percussion",
+    vocal: "forceful gritty delivery, clipped consonants, shouted ad-libs",
+    perf: "sharp staccato attacks, high sound level with abrupt accents on unstable notes, spectral distortion and noise in timbre, no rubato — machine-tight timing",
+    frisson: "sudden half-time breakdown with everything cut except drums and voice, then full-force wall of sound returning",
+    gems: "power — clenched fists, adrenaline, feeling unstoppable",
+  },
+  fearful: {
+    mode: "minor key", bpm: [92, 112],
+    tags: "tense, tremolo strings, dissonant clusters, irregular accents, dark low drones",
+    vocal: "hushed unstable vocals, wide irregular vibrato, whispered doubles",
+    perf: "muted timbre, very soft dynamics with sudden swells, large timing variability, hesitant pauses between phrases, trembling ornaments",
+    frisson: "unexpected dissonant chord under a held vocal note, silence that lasts one beat too long, a distant second voice appearing from nowhere",
+    gems: "tension — held breath, goosebumps of unease resolving into release",
+  },
+  disgusted: {
+    mode: "dark minor key", bpm: [88, 104],
+    tags: "gritty detuned synths, industrial textures, heavy low end",
+    vocal: "cold detached delivery, sneering tone",
+    perf: "detuned smeared timbre, dragging behind-the-beat timing, grinding sustained notes",
+    frisson: "pitch bend collapsing a chord into noise, then snapping back to clean harmony",
+    gems: "tension with dark fascination",
+  },
+  surprised: {
+    mode: "major key with sudden modulations", bpm: [124, 138],
+    tags: "euphoric, big builds and drops, bright arps, playful syncopation",
+    vocal: "expressive dynamic vocals, wide range, sudden octave jumps",
+    perf: "abrupt dynamic contrasts, unexpected rests, fast bright attacks, syncopated accents landing off the grid",
+    frisson: "harmony that resolves somewhere unexpected, a drop that comes one bar early, new instrument entering each section",
+    gems: "wonder — eyes widening, delighted disbelief",
+  },
+  neutral: {
+    mode: "modal harmony with lydian color", bpm: [92, 108],
+    tags: "dreamy, lush pads, smooth groove, balanced dynamics",
+    vocal: "smooth relaxed vocals",
+    perf: "even legato flow, medium soft attacks, arch-shaped phrasing (KTH phrase arch), gentle swell into each chorus",
+    frisson: "slow harmonic bloom — one added chord tone at a time until the texture shimmers",
+    gems: "peaceful wonder — floating, weightless attention",
+  },
+  calm: {
+    mode: "major key", bpm: [64, 84],
+    tags: "peaceful, warm pads, slow attack textures, gentle percussion, wide reverb",
+    vocal: "soft airy vocals, long sustained notes",
+    perf: "very legato, slow soft attacks, warm dark timbre, minimal dynamics, slow breathing tempo with gentle final ritardando",
+    frisson: "a single distant high harmony note entering on the last chorus like light through clouds",
+    gems: "peacefulness — slow exhale, shoulders dropping",
+  },
+  romantic: {
+    mode: "major key with added 7ths and 9ths", bpm: [70, 92],
+    tags: "intimate, warm rhodes, silky strings, slow groove, close-mic feel",
+    vocal: "tender breathy vocals, close and intimate, almost whispered verses",
+    perf: "legato with soft attacks, warm intimate timbre, gentle rubato leaning into downbeats, delicate slow vibrato on long notes",
+    frisson: "appoggiatura on the most important word of the chorus, strings swelling under the final repeat, voice cracking slightly with emotion",
+    gems: "tenderness — warmth in the chest, wanting to hold someone",
+  },
+  energetic: {
+    mode: "major key", bpm: [126, 140],
+    tags: "high-energy four-on-the-floor, punchy kick, risers, sidechain pumping",
+    vocal: "powerful confident vocals",
+    perf: "tight quantized groove, punchy fast attacks, bright forward timbre, dynamics pumping with the kick, shouted hook doubles",
+    frisson: "filter sweep into sudden full-spectrum drop, crowd-style gang vocals on the last hook",
+    gems: "joyful activation and power — chest-out euphoria",
+  },
+  focused: {
+    mode: "minimal harmonic movement", bpm: [100, 116],
+    tags: "steady hypnotic pulse, minimal arrangement, evolving subtle motifs",
+    vocal: "calm even delivery",
+    perf: "metronomic timing, soft even attacks, dry close timbre, dynamics flat by design with one slow build across the whole track",
+    frisson: "a motif that has been repeating suddenly harmonized in thirds near the end",
+    gems: "transcendence through repetition — flow state",
+  },
 };
 
-function emotionDirectives(aura: Aura): { tags: string; note: string } {
+function emotionDirectives(aura: Aura): { tags: string; perf: string; note: string; brief: string } {
   const v = typeof aura.valence === "number" ? aura.valence : 0.2;
   const a = typeof aura.arousal === "number" ? aura.arousal : 0.5;
   const key = String(aura.emotion || "").toLowerCase();
@@ -90,14 +192,34 @@ function emotionDirectives(aura: Aura): { tags: string; note: string } {
       ? (a >= 0.55 ? EMOTION_MUSIC.happy : EMOTION_MUSIC.calm)
       : (a >= 0.55 ? EMOTION_MUSIC.angry : EMOTION_MUSIC.sad);
   }
+  // Drugi kolor emocjonalny (z histogramu detekcji) = głębia zamiast plakatu.
+  const key2 = String(aura.emotion2 || "").toLowerCase();
+  const second = key2 && key2 !== key ? EMOTION_MUSIC[key2] : null;
+
   // Pobudzenie dostraja tempo wewnątrz zakresu typowego dla emocji.
   const clampA = Math.min(Math.max(a, 0), 1);
   const bpm = Math.round(base.bpm[0] + (base.bpm[1] - base.bpm[0]) * clampA);
-  const tags = `${base.mode}, ${bpm} bpm, ${base.tags}, ${base.vocal}`;
+
+  // Tagi brzmieniowe: emocja główna w pełni + drugi kolor jako przyprawa.
+  const tags = `${base.mode}, ${bpm} bpm, ${base.tags}, ${base.vocal}` +
+    (second ? `, with subtle undertones of ${key2}: ${second.vocal}` : "");
+  // Wykonanie (to, co SŁYCHAĆ): artykulacja/atak/dynamika/timing + ciarki.
+  const perf = `${base.perf}, ${base.frisson}`;
+
   const note = `walencja=${v.toFixed(2)}, pobudzenie=${a.toFixed(2)}` +
     (aura.emotion ? `, emocja=${aura.emotion}` : "") +
+    (second ? `+${key2}` : "") +
     (aura.samples ? `, odczytów uczących=${aura.samples}` : "");
-  return { tags, note };
+
+  // Brief dla tekściarza: docelowe PRZEŻYCIE (GEMS) + dramaturgia + ciarki.
+  const brief =
+    `CEL EMOCJONALNY (słuchacz ma to POCZUĆ w ciele): ${base.gems}.` +
+    (second ? ` Drugi plan emocjonalny: ${second.gems}.` : "") +
+    `\nWYKONANIE (ma być słyszalne): ${base.perf}.` +
+    `\nMOMENT CIAREK (wpisz go w strukturę tekstu i aranżu): ${base.frisson}.` +
+    `\nDRAMATURGIA: pierwsza zwrotka intymna i oszczędna → refren otwiera się szerzej → druga zwrotka dokłada detal opowieści → przed ostatnim refrenem zawieszenie/cisza → finał największy emocjonalnie (KTH: frazowanie łukowe, końcowe ritardando gdy emocja tego chce).`;
+
+  return { tags, perf, note, brief };
 }
 
 // Wyuczony profil użytkownika: ważona średnia ostatnich detekcji twarzy
@@ -119,12 +241,16 @@ async function fetchAuraProfile(live: ReturnType<typeof createClient>): Promise<
       if (typeof row.arousal === "number") { a += row.arousal * w; aW += w; }
       if (typeof row.engagement === "number") { e += row.engagement * w; eW += w; }
     });
-    const top = Object.entries(hist).sort((x, y) => y[1] - x[1])[0]?.[0] || null;
+    const ranked = Object.entries(hist).sort((x, y) => y[1] - x[1]);
+    const top = ranked[0]?.[0] || null;
+    // Drugi kolor tylko, gdy realnie obecny (≥25% wagi dominanty) — inaczej szum.
+    const top2 = ranked[1] && ranked[1][1] >= (ranked[0]?.[1] || 0) * 0.25 ? ranked[1][0] : null;
     return {
       valence: vW ? v / vW : null,
       arousal: aW ? a / aW : null,
       engagement: eW ? e / eW : null,
       emotion: top,
+      emotion2: top2,
       samples: data.length,
     };
   } catch {
@@ -238,6 +364,8 @@ JAKOŚĆ JĘZYKA (poziom native, bezwzględny wymóg):
 ZASADY PRODUKCJI (jak Suno i lepiej):
 - tags bogate i konkretne — im więcej trafnych deskryptorów produkcji, tym lepszy dźwięk. ZAWSZE dodaj tagi jakości ('studio quality, professional mix, mastered, hi-fi') oraz tag natywnego wokalu w języku tekstu, np. 'native Polish vocals, clear pronunciation'.
 - Refren = hook: chwytliwy, powtarzalny. Zwrotki z narracją, która rośnie.
+- MOMENT CIAREK (frisson, Sloboda 1991) — KAŻDY utwór ma mieć zaplanowany co najmniej jeden: appoggiatura na najważniejszym słowie refrenu, nagła cisza przed ostatnim refrenem, niespodziewany akord, wejście nowego głosu/harmonii wokalnych w finale albo podniesienie tonacji. Wpisz go w tags (po angielsku) i w strukturę tekstu.
+- DRAMATURGIA EMOCJI: zwrotka 1 intymna/oszczędna → refren szerszy → zwrotka 2 dokłada detal → zawieszenie przed ostatnim refrenem → finał największy. Emocja ma być SŁYSZALNA w wykonaniu (artykulacja, atak, dynamika, oddechy), nie tylko opisana słowami.
 - PEŁNA struktura utworu z [intro] i [outro].
 - lyrics DŁUGIE: wykorzystaj 560-590 znaków (twardy limit 590 — dłużej = ODRZUCONE).
 - duration_seconds: 180-300 (domyślnie 240 = pełny utwór; krócej tylko gdy user prosi „krótki").
@@ -287,7 +415,9 @@ Deno.serve(async (req) => {
   if (!orKey) return json({ success: false, error: "ai_not_configured" }, 200);
   if (!repToken) return json({ success: false, error: "replicate_not_configured" }, 200);
 
-  const models = (cfg["openrouter_models"] || "meta-llama/llama-3.3-70b-instruct:free")
+  // Mózg tekstów: GPT (OpenRouter) jako pierwszy wybór — hub_config.studio_llm_models;
+  // każda awaria/koszt spada automatycznie na kolejny model w łańcuchu.
+  const models = (cfg["studio_llm_models"] || cfg["openrouter_models"] || "meta-llama/llama-3.3-70b-instruct:free")
     .split(",").map((m) => m.trim()).filter(Boolean);
 
   // Użytkownik LIVE
@@ -339,11 +469,12 @@ Deno.serve(async (req) => {
       aura.valence ??= learned.valence;
       aura.arousal ??= learned.arousal;
       aura.emotion ??= learned.emotion;
+      aura.emotion2 = learned.emotion2 ?? null;
       aura.samples = learned.samples;
     }
     const emo = aura ? emotionDirectives(aura) : null;
     const auraMsg = emo
-      ? `\n\nPROFIL EMOCJONALNY SŁUCHACZA (wyuczony z detekcji twarzy; ${emo.note}):\nParametry muzyczne do wplecenia w tags: ${emo.tags}\nTekst ma autentycznie oddawać ten stan emocjonalny.`
+      ? `\n\nPROFIL EMOCJONALNY SŁUCHACZA (wyuczony z detekcji twarzy; ${emo.note}):\nParametry muzyczne do wplecenia w tags: ${emo.tags}\n${emo.brief}`
       : "";
 
     // ===== 1. AI układa plan piosenki =====
@@ -369,8 +500,9 @@ Deno.serve(async (req) => {
     if (!instrumental && langName && !tags.toLowerCase().includes(langName.toLowerCase())) {
       tags += `, native ${langName} vocals, clear pronunciation`;
     }
-    // Warunkowanie emocjonalne trafia też wprost do silnika audio.
-    if (emo) tags += `, ${emo.tags}`;
+    // Warunkowanie emocjonalne trafia też wprost do silnika audio — razem z
+    // tagami WYKONANIA (artykulacja/atak/dynamika/ciarki), żeby emocję było słychać.
+    if (emo) tags += `, ${emo.tags}, ${emo.perf}`;
 
     // ===== 1b. Redaktor-krytyk: poprawia tekst i OCENIA go (1-10). Jeśli po
     //           poprawce score < 8 — jeszcze jedna runda (max 2). Cicha
@@ -392,14 +524,56 @@ Deno.serve(async (req) => {
       }
     }
 
-    // ===== 2. Start generacji (routing silników, poziom v4) =====
-    // Wokal ORAZ instrumental → MiniMax music-2.6 (oddech, vibrato, do 6 min,
-    // najbliżej Suno i wyżej). ACE-Step tylko gdy hub_config.instrumental_engine=acestep.
+    // ===== 2. Start generacji (routing silników, poziom v6) =====
+    // TIER 1: Suno V5/V5_5 przez api.sunoapi.org (hub_config.suno_api_key) —
+    //         jakość referencyjna: najlepszy polski wokal, czyste naturalne
+    //         instrumenty, separacja, miks klasy studyjnej.
+    // TIER 2: MiniMax music-2.6 — automatyczny fallback (brak klucza / awaria).
+    // TIER 3: ACE-Step — tylko gdy hub_config.instrumental_engine=acestep.
     const rHeaders = { "Content-Type": "application/json", "Authorization": `Bearer ${repToken}` };
+    let predId: string | null = null;
+    let engineName = "";
+
+    const sunoKey = (cfg["suno_api_key"] || "").trim();
+    if (sunoKey) {
+      try {
+        const sunoModel = cfg["suno_model"] || "V5";
+        const sunoStyle = packTags([
+          tags,
+          "studio quality, professional mix, mastered, clear vocals, radio-ready, rich dynamics, hi-fi",
+        ], 950);
+        const sr = await fetch("https://api.sunoapi.org/api/v1/generate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${sunoKey}` },
+          body: JSON.stringify({
+            customMode: true,
+            instrumental,
+            model: sunoModel,
+            callBackUrl: cfg["suno_callback_url"] ||
+              `${Deno.env.get("SUPABASE_URL")}/functions/v1/suno-callback`,
+            ...(instrumental ? {} : { prompt: lyrics.slice(0, 4900) }),
+            style: sunoStyle.slice(0, 990),
+            title: title.slice(0, 95),
+          }),
+          signal: AbortSignal.timeout(30000),
+        });
+        const sd = await sr.json().catch(() => null);
+        const tid = sd?.data?.taskId;
+        if (sr.ok && tid) {
+          predId = `suno-${tid}`;
+          engineName = `suno-${String(sunoModel).toLowerCase()}`;
+        } else {
+          console.warn("[suno] start failed:", JSON.stringify(sd).slice(0, 200));
+        }
+      } catch (e) {
+        console.warn("[suno] unreachable:", String(e).slice(0, 120));
+      }
+    }
+
+    if (!predId) {
     const instrEngine = (cfg["instrumental_engine"] || "minimax").toLowerCase();
     const useMinimax = !instrumental || instrEngine === "minimax";
     let rel: Response;
-    let engineName: string;
     if (useMinimax) {
       engineName = instrumental ? "minimax-inst" : "minimax";
       const vocalModel = cfg["vocal_model"] || "minimax/music-2.6";
@@ -462,8 +636,9 @@ Deno.serve(async (req) => {
       }
       return json({ success: false, error: "engine_start_failed", details: relData }, 200);
     }
-    const predId = relData?.id;
+    predId = relData?.id ?? null;
     if (!predId) return json({ success: false, error: "no_prediction_id" }, 200);
+    } // koniec fallbacku Tier 2/3
 
     // Okładka AI startuje automatycznie po stronie serwera — każdy utwór ją dostaje.
     const coverReq = fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/studio-cover`, {
