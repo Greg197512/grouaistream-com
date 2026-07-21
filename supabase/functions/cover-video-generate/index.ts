@@ -43,47 +43,87 @@ serve(async (req) => {
 
   const prompt: string = String(body?.prompt || "").slice(0, 800);
   const imageUrl: string | null = body?.image_url ? String(body.image_url) : null;
+  const quality: string = String(body?.quality || "max"); // "max" | "fast"
   if (!prompt && !imageUrl) return json({ error: "prompt or image_url required" }, 400);
 
-  // minimax/video-01 obsługuje prompt + opcjonalne first_frame_image.
-  // Dla image-to-video z pustym promptem stosujemy generyczny opis ruchu.
-  const finalPrompt = prompt || "cinematic gentle motion, subtle camera drift, atmospheric lighting";
+  const finalPrompt = prompt || "cinematic gentle motion, subtle camera drift, atmospheric lighting, professional music video aesthetic";
 
-  try {
-    const create = await fetch("https://api.replicate.com/v1/models/minimax/video-01/predictions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${REPLICATE}`,
-        "Content-Type": "application/json",
-        Prefer: "wait=55",
+  // Kolejność modeli — od najwyższej jakości. Kling v2.1 Master = top-tier 1080p cinematic.
+  // Fallback: Hailuo-02 (świetne image-to-video), potem minimax/video-01.
+  const models: Array<{ slug: string; input: Record<string, unknown> }> = [];
+
+  if (quality === "max") {
+    // 1) Kling v2.1 Master — najwyższa jakość, 1080p, ~5-10 min
+    models.push({
+      slug: "kwaivgi/kling-v2.1-master",
+      input: {
+        prompt: finalPrompt,
+        duration: 5,
+        aspect_ratio: imageUrl ? undefined : "16:9",
+        negative_prompt: "blurry, low quality, distorted, watermark, text",
+        ...(imageUrl ? { start_image: imageUrl } : {}),
       },
-      body: JSON.stringify({
-        input: {
-          prompt: finalPrompt,
-          prompt_optimizer: true,
-          ...(imageUrl ? { first_frame_image: imageUrl } : {}),
-        },
-      }),
     });
-
-    const data = await create.json();
-    if (!create.ok) {
-      console.error("[cover-video-generate] create failed:", data);
-      return json({ error: data?.detail || data?.error || "replicate_error" }, 502);
-    }
-
-    let videoUrl: string | null = null;
-    const out = data?.output;
-    if (out) videoUrl = typeof out === "string" ? out : Array.isArray(out) ? out[0] : null;
-
-    if (!videoUrl && data?.id) {
-      videoUrl = await pollPrediction(data.id, REPLICATE);
-    }
-
-    if (!videoUrl) return json({ error: "video_generation_timeout" }, 504);
-    return json({ video_url: videoUrl });
-  } catch (e) {
-    console.error("[cover-video-generate] error:", e);
-    return json({ error: e instanceof Error ? e.message : "unknown" }, 500);
+    // 2) Hailuo-02 — bardzo dobra jakość, szybszy fallback
+    models.push({
+      slug: "minimax/hailuo-02",
+      input: {
+        prompt: finalPrompt,
+        duration: 6,
+        resolution: "1080p",
+        prompt_optimizer: true,
+        ...(imageUrl ? { first_frame_image: imageUrl } : {}),
+      },
+    });
   }
+
+  // 3) minimax/video-01 — ostateczny fallback
+  models.push({
+    slug: "minimax/video-01",
+    input: {
+      prompt: finalPrompt,
+      prompt_optimizer: true,
+      ...(imageUrl ? { first_frame_image: imageUrl } : {}),
+    },
+  });
+
+  let lastError: unknown = null;
+  for (const m of models) {
+    try {
+      console.log(`[cover-video-generate] trying ${m.slug}`);
+      const create = await fetch(`https://api.replicate.com/v1/models/${m.slug}/predictions`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${REPLICATE}`,
+          "Content-Type": "application/json",
+          Prefer: "wait=55",
+        },
+        body: JSON.stringify({ input: m.input }),
+      });
+
+      const data = await create.json();
+      if (!create.ok) {
+        console.warn(`[cover-video-generate] ${m.slug} failed:`, data?.detail || data?.error);
+        lastError = data?.detail || data?.error || `HTTP ${create.status}`;
+        continue;
+      }
+
+      let videoUrl: string | null = null;
+      const out = data?.output;
+      if (out) videoUrl = typeof out === "string" ? out : Array.isArray(out) ? out[0] : null;
+
+      if (!videoUrl && data?.id) {
+        // Kling może potrzebować kilku minut — dłuższy timeout dla max quality
+        videoUrl = await pollPrediction(data.id, REPLICATE, m.slug.includes("kling") ? 540000 : 300000);
+      }
+
+      if (videoUrl) return json({ video_url: videoUrl, model: m.slug });
+      lastError = "no output";
+    } catch (e) {
+      console.warn(`[cover-video-generate] ${m.slug} error:`, e);
+      lastError = e instanceof Error ? e.message : String(e);
+    }
+  }
+
+  return json({ error: `video_generation_failed: ${lastError}` }, 502);
 });
