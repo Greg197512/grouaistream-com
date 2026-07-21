@@ -61,7 +61,7 @@ Language: ${langName}`;
       method: "POST",
       headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "openai/gpt-5.5",
+        model: "google/gemini-3-flash-preview",
         messages: [
           { role: "system", content: sys },
           { role: "user", content: usr },
@@ -76,8 +76,11 @@ Language: ${langName}`;
     const j = await res.json();
     const raw = j.choices?.[0]?.message?.content || "{}";
     const parsed = JSON.parse(raw);
+    const CLARITY = "crystal clear mix, pristine high fidelity, 24-bit studio master, wide stereo image, transparent vocals, zero distortion, zero mud, professional mastering, radio-ready";
+    const styleBase = String(parsed.style || input.style || "modern pop, warm analog synth").trim();
+    const mergedStyle = /clear|fidelity|master/i.test(styleBase) ? styleBase : `${styleBase}, ${CLARITY}`;
     return {
-      style: String(parsed.style || input.style || "modern pop, clean mix, radio-ready").slice(0, 200),
+      style: mergedStyle.slice(0, 200),
       title: String(parsed.title || input.title || "GrouAI Track").slice(0, 80),
       lyrics: input.instrumental ? "" : String(parsed.lyrics || ""),
     };
