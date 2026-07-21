@@ -32,6 +32,10 @@ interface UploadItem {
   percent: number;
 }
 
+const MIN_DURATION_SEC = 150;
+const MAX_DURATION_SEC = 1140;
+const fmtDur = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+
 function parseFilename(file: File): { title: string; artist: string } {
   const name = file.name.replace(/\.[^/.]+$/, "");
   const parts = name.split(" - ");
