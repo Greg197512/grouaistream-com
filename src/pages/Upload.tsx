@@ -36,8 +36,8 @@ const DURATION_FALLBACK_SEC = 180;
 const MODERATION_TIMEOUT_MS = 30000;
 // Minimum duration required for non-admin uploads to pass moderation: 2:30
 const MODERATION_MIN_APPROVED_SEC = 150;
-// Maksymalna długość wgrywanego utworu: 10:00 (600 s). Dłuższe nie przechodzą.
-const MAX_DURATION_SEC = 600;
+// Maksymalna długość wgrywanego utworu: 19:00 (1140 s). Dłuższe nie przechodzą.
+const MAX_DURATION_SEC = 1140;
 const fmtDur = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 
 function buildLocalModerationFallback(durationSec?: number | null, isAdmin = false) {
