@@ -40,6 +40,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { isOffline, saveOfflineTrack, removeOfflineTrack } from "@/lib/offlineLibrary";
+import { CoverStudioModal } from "@/components/modals/CoverStudioModal";
 
 
 interface TrackOptionsMenuProps {
@@ -78,6 +79,7 @@ const TrackOptionsMenuComponent = (
   const [loading, setLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [showCoffeeDialog, setShowCoffeeDialog] = useState(false);
+  const [showCoverStudio, setShowCoverStudio] = useState(false);
   const [trackOwnerId, setTrackOwnerId] = useState<string | null>(null);
   const [myPlaylists, setMyPlaylists] = useState<{ id: string; title: string }[]>([]);
   const [playlistsLoaded, setPlaylistsLoaded] = useState(false);
@@ -587,17 +589,14 @@ const TrackOptionsMenuComponent = (
             </DropdownMenuSubContent>
           </DropdownMenuSub>
 
-          {/* Nowa okładka — tylko dla autora utworu (RLS i tak pilnuje) */}
+          {/* Cover Studio — okładki i teledyski AI (tekst→obraz, zdj→obraz, tekst→wideo, zdj→wideo) */}
           {user && trackOwnerId === user.id && (
             <DropdownMenuItem
-              onClick={() => coverInputRef.current?.click()}
-              disabled={coverUploading}
+              onClick={() => setShowCoverStudio(true)}
               className="cursor-pointer text-fuchsia-300 focus:text-fuchsia-200 focus:bg-fuchsia-500/10"
             >
               <ImagePlus className="mr-2 h-4 w-4" />
-              <span className="flex-1">
-                {coverUploading ? "Przymierzam okładkę…" : "Ubierz w nową okładkę 🎨"}
-              </span>
+              <span className="flex-1">Cover Studio 🎨🎬</span>
             </DropdownMenuItem>
           )}
 
@@ -756,6 +755,14 @@ const TrackOptionsMenuComponent = (
         recipientUserId={trackOwnerId ?? undefined}
         recipientTrackId={trackId}
         recipientName={trackArtist}
+      />
+
+      <CoverStudioModal
+        open={showCoverStudio}
+        onOpenChange={setShowCoverStudio}
+        trackId={trackId}
+        trackTitle={trackTitle}
+        trackArtist={trackArtist}
       />
     </div>
   );
