@@ -137,7 +137,7 @@ function finalizeEvaluation(input: ModerationInput, evaluation: EvaluationPayloa
     : [];
 
   if (durationSec > 0 && durationSec < MIN_DURATION_SEC) {
-    rejectionReasons.push("Utwór ma mniej niż 3:00 — wymagane minimum publikacji to 3 minuty.");
+    rejectionReasons.push("Utwór ma mniej niż 2:30 — wymagane minimum publikacji to 2:30.");
   }
 
   return {
