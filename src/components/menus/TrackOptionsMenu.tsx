@@ -42,6 +42,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { isOffline, saveOfflineTrack, removeOfflineTrack } from "@/lib/offlineLibrary";
 import { CoverStudioModal } from "@/components/modals/CoverStudioModal";
+import { triggerCoverVideo } from "@/lib/autoCoverVideo";
+
 
 
 interface TrackOptionsMenuProps {
@@ -429,6 +431,8 @@ const TrackOptionsMenuComponent = (
       }
       toast.success(`✨ Gotowe! „${trackTitle}" ma nową okładkę`);
       window.dispatchEvent(new CustomEvent("track-list-changed"));
+      triggerCoverVideo(trackId);
+
     } catch (err) {
       console.error("Cover update failed:", err);
       const msg = err instanceof Error ? err.message : "";
@@ -463,7 +467,9 @@ const TrackOptionsMenuComponent = (
       if (updErr) throw updErr;
       toast.success("✨ Nowa okładka AI założona!");
       window.dispatchEvent(new CustomEvent("track-list-changed"));
+      triggerCoverVideo(trackId);
     } catch (err) {
+
       console.error("Quick AI cover failed:", err);
       const msg = err instanceof Error ? err.message : "Nie udało się wygenerować okładki";
       toast.error(msg);
