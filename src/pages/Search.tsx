@@ -444,7 +444,7 @@ const Search = () => {
               <h2 className="font-display text-base sm:text-xl font-bold mt-6 sm:mt-8 mb-3 sm:mb-4">{t("search.allTracks")} ({allTracks.length})</h2>
               <div className="space-y-1 sm:space-y-2">
                 {allTracks.slice(0, 50).map((track, index) => (
-                  <TrackRow key={track.id} id={track.id} index={index + 1} title={track.title} artist={track.artist} album={track.album || ""} duration={formatDuration(track.duration)} imageUrl={track.cover_url || undefined} trackUrl={track.video_url || track.audio_url} isPlaying={currentTrack?.id === track.id && isPlaying} onPlay={() => handlePlayTrack(track, index)} />
+                  <TrackRow key={track.id} id={track.id} index={index + 1} title={track.title} artist={track.artist} album={track.album || ""} duration={formatDuration(track.duration)} imageUrl={track.cover_url || undefined} videoUrl={track.video_url || undefined} trackUrl={track.video_url || track.audio_url} isPlaying={currentTrack?.id === track.id && isPlaying} onPlay={() => handlePlayTrack(track, index)} />
                 ))}
               </div>
             </TabsContent>
