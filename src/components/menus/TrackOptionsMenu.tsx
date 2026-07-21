@@ -590,15 +590,13 @@ const TrackOptionsMenuComponent = (
           </DropdownMenuSub>
 
           {/* Cover Studio — okładki i teledyski AI (tekst→obraz, zdj→obraz, tekst→wideo, zdj→wideo) */}
-          {user && trackOwnerId === user.id && (
-            <DropdownMenuItem
-              onClick={() => setShowCoverStudio(true)}
-              className="cursor-pointer text-fuchsia-300 focus:text-fuchsia-200 focus:bg-fuchsia-500/10"
-            >
-              <ImagePlus className="mr-2 h-4 w-4" />
-              <span className="flex-1">Cover Studio 🎨🎬</span>
-            </DropdownMenuItem>
-          )}
+          <DropdownMenuItem
+            onClick={() => setShowCoverStudio(true)}
+            className="cursor-pointer text-fuchsia-300 focus:text-fuchsia-200 focus:bg-fuchsia-500/10"
+          >
+            <ImagePlus className="mr-2 h-4 w-4" />
+            <span className="flex-1">Cover Studio 🎨🎬</span>
+          </DropdownMenuItem>
 
           {/* Cut/Copy for moving */}
           <DropdownMenuItem onClick={handleCutTrack} className="cursor-pointer">
