@@ -112,7 +112,7 @@ serve(async (req) => {
 
       if (!videoUrl && data?.id) {
         // Kling może potrzebować kilku minut — dłuższy timeout dla max quality
-        videoUrl = await pollPrediction(data.id, REPLICATE, m.slug.includes("kling") ? 540000 : 300000);
+        videoUrl = await pollPrediction(data.id, REPLICATE, 130000);
       }
 
       if (videoUrl) return json({ video_url: videoUrl, model: m.slug });
