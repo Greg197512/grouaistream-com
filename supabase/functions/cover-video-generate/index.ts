@@ -53,18 +53,15 @@ serve(async (req) => {
   const models: Array<{ slug: string; input: Record<string, unknown> }> = [];
 
   if (quality === "max") {
-    // 1) Kling v2.1 Master — najwyższa jakość, 1080p, ~5-10 min
+    // 1) wan-2.2-i2v-fast — ~60-90s, mieści się w limicie edge function
     models.push({
-      slug: "kwaivgi/kling-v2.1-master",
+      slug: "wan-video/wan-2.2-i2v-fast",
       input: {
         prompt: finalPrompt,
-        duration: 5,
-        aspect_ratio: imageUrl ? undefined : "16:9",
-        negative_prompt: "blurry, low quality, distorted, watermark, text",
-        ...(imageUrl ? { start_image: imageUrl } : {}),
+        ...(imageUrl ? { image: imageUrl } : {}),
       },
     });
-    // 2) Hailuo-02 — bardzo dobra jakość, szybszy fallback
+    // 2) Hailuo-02 — ~90-120s, wysoka jakość 1080p
     models.push({
       slug: "minimax/hailuo-02",
       input: {
@@ -76,6 +73,7 @@ serve(async (req) => {
       },
     });
   }
+
 
   // 3) minimax/video-01 — ostateczny fallback
   models.push({
@@ -114,7 +112,7 @@ serve(async (req) => {
 
       if (!videoUrl && data?.id) {
         // Kling może potrzebować kilku minut — dłuższy timeout dla max quality
-        videoUrl = await pollPrediction(data.id, REPLICATE, m.slug.includes("kling") ? 540000 : 300000);
+        videoUrl = await pollPrediction(data.id, REPLICATE, 130000);
       }
 
       if (videoUrl) return json({ video_url: videoUrl, model: m.slug });
