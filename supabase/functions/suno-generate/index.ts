@@ -190,11 +190,14 @@ serve(async (req) => {
       }
     }
 
-    // Fallbacks if GPT unavailable
-    if (!finalStyle) finalStyle = "modern pop, warm analog synth, punchy drums, clean mix, radio-ready, high fidelity";
+    // Fallbacks if GPT unavailable — always push for maximum clarity
+    if (!finalStyle) finalStyle = "modern pop, warm analog synth, punchy live drums, transparent vocals, crystal clear mix, pristine high fidelity, 24-bit studio master, wide stereo image, professional mastering, radio-ready";
     if (!finalTitle) finalTitle = "GrouAI Track";
 
     const callBackUrl = `${supabaseUrl}/functions/v1/suno-generate`;
+
+    // Negative tags — everything that ruins a clean mix
+    const NEGATIVE_TAGS = "lofi, low fidelity, muddy, muffled, distorted, clipping, boxy, tape hiss, vinyl crackle, 8-bit, chiptune, phone speaker, AM radio, background noise, harsh sibilance, autotune artifacts, robotic vocals, off-key, out of tune";
 
     // Custom mode gives us full control (style + title + lyrics). We use it whenever we have enhanced output.
     const useCustom = !!(finalStyle || finalTitle || finalLyrics) && (instrumental || finalLyrics.length > 0);
@@ -202,6 +205,7 @@ serve(async (req) => {
     const baseBody: any = {
       customMode: useCustom,
       instrumental: !!instrumental,
+      negativeTags: NEGATIVE_TAGS,
       callBackUrl,
     };
     if (useCustom) {
