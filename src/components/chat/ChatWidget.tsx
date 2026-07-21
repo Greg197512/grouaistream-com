@@ -250,10 +250,8 @@ export const ChatWidget = () => {
         onClick={() => setOpen((o) => !o)}
         title="Czat GrouAI"
         aria-label="Otwórz czat"
-        className="group relative flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-primary/30 to-accent/20 border border-primary/50 hover:border-accent transition-all hover:scale-110 shadow-[0_0_12px_hsl(38_100%_50%/0.5)] hover:shadow-[0_0_22px_hsl(38_100%_50%/0.9)]"
+        className="group relative flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-primary/15 to-accent/10 border border-primary/30 hover:border-accent/60 transition-all hover:scale-105"
       >
-        {/* Pulsujący pierścień */}
-        <span className="absolute inset-0 rounded-full border border-accent/60 animate-ping opacity-40" />
 
         {/* Buźka SVG */}
         <svg viewBox="0 0 40 40" className="h-7 w-7 drop-shadow-[0_0_4px_hsl(38_100%_50%/0.8)]">
