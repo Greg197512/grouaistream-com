@@ -379,7 +379,9 @@ const Search = () => {
                     album={track.album || ""}
                     duration={formatDuration(track.duration)}
                     imageUrl={track.cover_url || undefined}
+                    videoUrl={track.video_url || undefined}
                     trackUrl={track.video_url || track.audio_url}
+
                     isPlaying={currentTrack?.id === track.id && isPlaying}
                     onPlay={() => handlePlayTrack(track, index)}
                   />
