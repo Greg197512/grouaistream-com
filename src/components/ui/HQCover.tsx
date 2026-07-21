@@ -12,7 +12,10 @@ interface HQCoverProps {
   genre?: string | null;
   animated?: boolean;
   artist?: string | null;
+  /** Optional video URL — when provided, HQCover renders an autoplaying muted loop video (image acts as poster). */
+  videoUrl?: string | null;
 }
+
 
 /* ── In-memory cache + rate limiter ── */
 const coverCache = new Map<string, string | null>();
@@ -382,9 +385,12 @@ export const HQCover = ({
   genre,
   animated = true,
   artist,
+  videoUrl,
 }: HQCoverProps) => {
   const [error, setError] = useState(false);
+  const [videoFailed, setVideoFailed] = useState(false);
   const [fetchedCover, setFetchedCover] = useState<string | null>(null);
+
   const [isLoading, setIsLoading] = useState(false);
   const [fetchAttempted, setFetchAttempted] = useState(false);
   const mountedRef = useRef(true);
@@ -440,6 +446,24 @@ export const HQCover = ({
 
   const hqSrc = upgradeToMaxRes(effectiveSrc);
 
+  // If a video clip exists for this cover, show it (muted/looped autoplay).
+  // The still cover acts as poster so the frame is visible while the clip loads.
+  if (videoUrl && !videoFailed) {
+    return (
+      <video
+        src={videoUrl}
+        poster={hqSrc}
+        muted
+        loop
+        playsInline
+        autoPlay
+        preload="metadata"
+        onError={() => setVideoFailed(true)}
+        className={cn("object-cover w-full h-full", className)}
+      />
+    );
+  }
+
   return (
     <img
       src={hqSrc}
@@ -459,3 +483,4 @@ export const HQCover = ({
     />
   );
 };
+

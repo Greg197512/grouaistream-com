@@ -8,6 +8,8 @@ import { Upload, Wand2, Image as ImageIcon, Film, Loader2, Check, Sparkles } fro
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { uploadToR2 } from "@/lib/r2Upload";
+import { triggerCoverVideo } from "@/lib/autoCoverVideo";
+
 
 interface CoverStudioModalProps {
   open: boolean;
@@ -64,7 +66,10 @@ export const CoverStudioModal = ({
     if (!data || data.length === 0) throw new Error("Tylko autor utworu może zmienić jego okładkę");
     window.dispatchEvent(new CustomEvent("track-list-changed"));
     onCoverUpdated?.(url);
+    // Auto-generate matching video clip in the background.
+    triggerCoverVideo(trackId);
   };
+
 
   const persistVideo = async (url: string) => {
     const { data, error } = await supabase.from("tracks").update({ video_url: url }).eq("id", trackId).select("id");

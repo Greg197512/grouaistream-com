@@ -16,6 +16,7 @@ interface TrackRowProps {
   plays?: string;
   isPlaying?: boolean;
   imageUrl?: string;
+  videoUrl?: string | null;
   trackUrl?: string | null;
   genre?: string | null;
   isMonetized?: boolean;
@@ -23,6 +24,7 @@ interface TrackRowProps {
   isAIAssisted?: boolean;
   onPlay?: () => void;
 }
+
 
 const TrackRowComponent = forwardRef<HTMLDivElement, TrackRowProps>(({
   id,
@@ -34,6 +36,7 @@ const TrackRowComponent = forwardRef<HTMLDivElement, TrackRowProps>(({
   plays,
   isPlaying = false,
   imageUrl,
+  videoUrl,
   trackUrl,
   genre,
   isMonetized,
@@ -41,6 +44,7 @@ const TrackRowComponent = forwardRef<HTMLDivElement, TrackRowProps>(({
   isAIAssisted,
   onPlay
 }, ref) => {
+
   const [isHovered, setIsHovered] = useState(false);
 
   return (
@@ -95,7 +99,7 @@ const TrackRowComponent = forwardRef<HTMLDivElement, TrackRowProps>(({
       <div className="flex items-center gap-3 min-w-0">
         {(
           <div className="h-10 w-10 rounded overflow-hidden flex-shrink-0">
-            <HQCover src={imageUrl || null} alt={title} genre={genre} artist={artist} className="h-full w-full" />
+            <HQCover src={imageUrl || null} alt={title} genre={genre} artist={artist} videoUrl={videoUrl} className="h-full w-full" />
           </div>
         )}
         <div className="min-w-0">
