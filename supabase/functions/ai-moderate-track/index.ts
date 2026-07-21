@@ -72,9 +72,9 @@ function buildFallbackEvaluation(input: ModerationInput, isAdmin: boolean): Eval
       score_vocal: 5,
       score_production: 5,
       score_originality: 5,
-      analysis: "Utwór jest zbyt krótki — minimum publikacji to 3:00.",
-      recommendations: "Wydłuż utwór do co najmniej 3 minut, aby przejść moderację.",
-      rejection_reasons: ["Utwór ma mniej niż 3:00 — wymagane minimum to 3 minuty."],
+      analysis: "Utwór jest zbyt krótki — minimum publikacji to 2:30.",
+      recommendations: "Wydłuż utwór do co najmniej 2:30, aby przejść moderację.",
+      rejection_reasons: ["Utwór ma mniej niż 2:30 — wymagane minimum to 2:30."],
     };
   }
 
