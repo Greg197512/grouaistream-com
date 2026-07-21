@@ -685,6 +685,17 @@ const TrackOptionsMenuComponent = (
             <span className="flex-1">{aiCoverBusy ? "Maluję…" : "AI okładka ⚡"}</span>
           </DropdownMenuItem>
 
+          {/* Szybki teledysk AI — najwyższa jakość (Kling v2.1 Master) */}
+          <DropdownMenuItem
+            onClick={handleQuickAIClip}
+            disabled={aiClipBusy}
+            className="cursor-pointer text-rose-300 focus:text-rose-200 focus:bg-rose-500/10"
+          >
+            <Film className="mr-2 h-4 w-4" />
+            <span className="flex-1">{aiClipBusy ? "Kręcę teledysk…" : "AI teledysk 🎬 (max)"}</span>
+          </DropdownMenuItem>
+
+
           {/* Cover Studio — okładki i teledyski AI (tekst→obraz, zdj→obraz, tekst→wideo, zdj→wideo) */}
           <DropdownMenuItem
             onClick={() => setShowCoverStudio(true)}
