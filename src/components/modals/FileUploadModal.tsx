@@ -91,6 +91,13 @@ export const FileUploadModal = ({ isOpen, onClose, onSuccess, playlistId }: File
     try {
       const duration = await getAudioDuration(file);
 
+      // Validate track duration for audio uploads
+      if (!isVideo && duration > 0 && (duration < MIN_DURATION_SEC || duration > MAX_DURATION_SEC)) {
+        const msg = `Długość ${fmtDur(duration)} poza zakresem 2:30–19:00.`;
+        toast.error(msg);
+        throw new Error(msg);
+      }
+
       const { publicUrl } = await uploadToR2({
         file,
         folder,
