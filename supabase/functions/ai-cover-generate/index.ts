@@ -49,8 +49,8 @@ async function generateImageBase64(
   referenceImage?: string | null,
 ): Promise<string | null> {
   const attempts = [
-    { model: "google/gemini-2.5-flash", timeoutMs: 60000 },
-    { model: "google/gemini-2.5-flash", timeoutMs: 70000 },
+    { model: "google/gemini-2.5-flash-image", timeoutMs: 60000 },
+    { model: "google/gemini-2.5-flash-image-preview", timeoutMs: 70000 },
   ];
 
   // Jeśli mamy zdjęcie referencyjne — image-to-image (edycja/restyling).
