@@ -596,7 +596,7 @@ const ua: TranslationKeys = {
   "upload.unsupportedFormat": "Непідтримуваний формат. Використовуйте MP3, WAV, FLAC, OGG, M4A.",
   "upload.fillRequired": "Заповніть усі обов'язкові поля та прийміть умови.",
   "upload.addFileOrLink": "Додайте посилання Suno або завантажте аудіофайл.",
-  "upload.tooShort": "Трек занадто короткий! Мінімум 3 хвилини.",
+  "upload.tooShort": "Трек занадто короткий! Мінімум 2:30.",
   "upload.accepted": "✅ Трек прийнято! Його буде додано на платформу.",
   "upload.submitError": "Помилка при надсиланні",
   "upload.aiCoverLabel": "AI згенерує обкладинку",

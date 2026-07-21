@@ -596,7 +596,7 @@ const pl: TranslationKeys = {
   "upload.unsupportedFormat": "Nieobsługiwany format. Użyj MP3, WAV, FLAC, OGG, M4A.",
   "upload.fillRequired": "Wypełnij wszystkie wymagane pola i zaakceptuj regulamin.",
   "upload.addFileOrLink": "Dodaj link Suno lub prześlij plik audio.",
-  "upload.tooShort": "Utwór jest za krótki! Minimum to 3 minuty.",
+  "upload.tooShort": "Utwór jest za krótki! Minimum to 2:30.",
   "upload.accepted": "✅ Utwór zaakceptowany! Zostanie dodany do platformy.",
   "upload.submitError": "Błąd podczas wysyłania",
   "upload.aiCoverLabel": "AI wygeneruje okładkę",

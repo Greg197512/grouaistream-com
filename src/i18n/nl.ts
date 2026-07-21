@@ -596,7 +596,7 @@ const nl: TranslationKeys = {
   "upload.unsupportedFormat": "Niet-ondersteund formaat. Gebruik MP3, WAV, FLAC, OGG, M4A.",
   "upload.fillRequired": "Vul alle verplichte velden in en accepteer de voorwaarden.",
   "upload.addFileOrLink": "Voeg een Suno-link toe of upload een audiobestand.",
-  "upload.tooShort": "Nummer is te kort! Minimaal 3 minuten.",
+  "upload.tooShort": "Nummer is te kort! Minimaal 2:30.",
   "upload.accepted": "✅ Nummer geaccepteerd! Het wordt toegevoegd aan het platform.",
   "upload.submitError": "Fout bij het indienen",
   "upload.aiCoverLabel": "AI genereert een hoes",
