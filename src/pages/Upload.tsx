@@ -55,7 +55,7 @@ function buildLocalModerationFallback(durationSec?: number | null, isAdmin = fal
       total_score: isTooShort ? 20 : (isAdmin ? 92 : 70),
       status: isTooShort ? "rejected" : "approved",
       analysis: isTooShort
-        ? "Utwór jest zbyt krótki – minimum do publikacji to 3:00."
+        ? "Utwór jest zbyt krótki – minimum do publikacji to 2:30."
         : isAdmin
           ? "Wgrane przez administratora — automatyczna akceptacja (bypass długości)."
           : "Utwór spełnia aktualne wymagania długości i został zaakceptowany lokalnie.",
