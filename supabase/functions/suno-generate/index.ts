@@ -28,21 +28,27 @@ async function enhanceWithGPT(input: {
   const lang = input.language || "pl";
   const langName = { pl: "Polish", en: "English", nl: "Dutch", ua: "Ukrainian" }[lang] || "Polish";
 
-  const sys = `You are a world-class Suno V5 prompt engineer and lyricist. Return STRICT JSON only, no markdown:
+  const sys = `You are a world-class Suno V5 prompt engineer and lyricist for GrouAI Studio.
+Your #1 goal: MAXIMUM AUDIO CLARITY. The output must sound like a professionally mixed and mastered studio record — never muddy, never lo-fi, never distorted, never boxy.
+
+Return STRICT JSON only, no markdown:
 {
-  "style": "<200-char rich style tag: genres, instruments, era, mood, vocal type, mix cues>",
+  "style": "<up to 200-char rich style tag>",
   "title": "<catchy 2-5 word title>",
-  "lyrics": "<full song in ${langName}, with [Verse]/[Chorus]/[Bridge]/[Outro] tags, or empty string if instrumental>"
+  "lyrics": "<full song in ${langName} with [Verse]/[Chorus]/[Bridge]/[Outro] tags, or empty string if instrumental>"
 }
+
 Rules for lyrics:
-- Native ${langName} — natural stress, rhymes, singable syllables. NO awkward foreign phrasing.
-- For Polish: use natural phonetics (unikaj zbitek spółgłosek trudnych do zaśpiewania), regular rhymes AABB/ABAB, 4-8 syllables per line.
+- Native ${langName}, natural stress, singable syllables, regular rhymes (AABB or ABAB), 4-8 syllables per line.
+- For Polish: unikaj trudnych zbitek spółgłoskowych, dobieraj samogłoski wygodne do śpiewu.
 - Structure: [Verse 1] / [Chorus] / [Verse 2] / [Chorus] / [Bridge] / [Chorus] / [Outro].
-Rules for style:
-- Precise instruments (e.g. "warm analog synth pad, punchy 808 kick, glassy Rhodes, live drums, saturated bass").
-- Include vocal descriptor ("emotive male tenor", "breathy female alt", etc.) unless instrumental.
-- Add mix quality tags: "clean mix, wide stereo, professional mastering, radio-ready, high fidelity".
-- Avoid generic words like "nice", "cool".`;
+
+Rules for style (CRITICAL for clean sound):
+- Always include these clarity anchors: "crystal clear mix, pristine high fidelity, 24-bit studio master, wide stereo image, deep controlled sub-bass, airy top end, transparent vocals up-front, zero distortion, zero mud, professional mastering, radio-ready, reference-monitor quality".
+- Name PRECISE instruments and their character (e.g. "warm Rhodes electric piano, felt-hammer grand piano, analog Moog bass, live acoustic drums with tight snare, silky violin section").
+- Include a specific vocal descriptor unless instrumental (e.g. "emotive male tenor, warm intimate delivery, close-mic'd, subtle reverb").
+- Avoid: "lofi", "vintage tape hiss", "8-bit", "compressed radio", "phone speaker", "muffled", "distorted", "trashy", "grunge".
+- Avoid generic filler ("nice", "cool", "good").`;
 
   const usr = `Description: ${input.prompt}
 Requested style hint: ${input.style || "(none, choose best)"}
