@@ -31,6 +31,8 @@ interface EvaluationPayload {
 
 // Minimum required duration for non-admin uploads: 2:30 (150s)
 const MIN_DURATION_SEC = 150;
+// Maximum allowed duration for non-admin uploads: 19:00 (1140s)
+const MAX_DURATION_SEC = 1140;
 
 function clampScore(value: unknown, min = 0, max = 20): number {
   const numeric = Number(value);
@@ -64,7 +66,7 @@ function buildFallbackEvaluation(input: ModerationInput, isAdmin: boolean): Eval
     };
   }
 
-  // Hard reject < 3 min for regular users
+  // Hard reject < 2:30 or > 19:00 for regular users
   if (durationSec > 0 && durationSec < MIN_DURATION_SEC) {
     return {
       score_length: 0,
@@ -72,9 +74,22 @@ function buildFallbackEvaluation(input: ModerationInput, isAdmin: boolean): Eval
       score_vocal: 5,
       score_production: 5,
       score_originality: 5,
-      analysis: "Utwór jest zbyt krótki — minimum publikacji to 3:00.",
-      recommendations: "Wydłuż utwór do co najmniej 3 minut, aby przejść moderację.",
-      rejection_reasons: ["Utwór ma mniej niż 3:00 — wymagane minimum to 3 minuty."],
+      analysis: "Utwór jest zbyt krótki — minimum publikacji to 2:30.",
+      recommendations: "Wydłuż utwór do co najmniej 2:30, aby przejść moderację.",
+      rejection_reasons: ["Utwór ma mniej niż 2:30 — wymagane minimum to 2:30."],
+    };
+  }
+
+  if (durationSec > 0 && durationSec > MAX_DURATION_SEC) {
+    return {
+      score_length: 0,
+      score_lyrics: 5,
+      score_vocal: 5,
+      score_production: 5,
+      score_originality: 5,
+      analysis: "Utwór jest zbyt długi — maksymalna długość publikacji to 19:00.",
+      recommendations: "Skróć utwór do maksymalnie 19:00, aby przejść moderację.",
+      rejection_reasons: ["Utwór trwa dłużej niż 19:00 — maksymalna długość to 19 minut."],
     };
   }
 
@@ -121,8 +136,8 @@ function finalizeEvaluation(input: ModerationInput, evaluation: EvaluationPayloa
   const totalScore = scoreLength + scoreLyrics + scoreVocal + scoreProduction + scoreOriginality;
 
   let status: string;
-  // Hard reject if too short — overrides any score
-  if (durationSec > 0 && durationSec < MIN_DURATION_SEC) {
+  // Hard reject if too short or too long — overrides any score
+  if (durationSec > 0 && (durationSec < MIN_DURATION_SEC || durationSec > MAX_DURATION_SEC)) {
     status = "rejected";
   } else if (totalScore >= 65) {
     status = "approved";
@@ -137,7 +152,10 @@ function finalizeEvaluation(input: ModerationInput, evaluation: EvaluationPayloa
     : [];
 
   if (durationSec > 0 && durationSec < MIN_DURATION_SEC) {
-    rejectionReasons.push("Utwór ma mniej niż 3:00 — wymagane minimum publikacji to 3 minuty.");
+    rejectionReasons.push("Utwór ma mniej niż 2:30 — wymagane minimum publikacji to 2:30.");
+  }
+  if (durationSec > 0 && durationSec > MAX_DURATION_SEC) {
+    rejectionReasons.push("Utwór trwa dłużej niż 19:00 — maksymalna długość publikacji to 19 minut.");
   }
 
   return {
