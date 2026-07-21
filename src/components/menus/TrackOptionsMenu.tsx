@@ -437,6 +437,40 @@ const TrackOptionsMenuComponent = (
     }
   };
 
+  // Szybka okładka AI z 3-kropek — bez otwierania Cover Studio.
+  const [aiCoverBusy, setAiCoverBusy] = useState(false);
+  const handleQuickAICover = async () => {
+    if (aiCoverBusy) return;
+    setAiCoverBusy(true);
+    toast.info("🎨 Maluję okładkę AI…");
+    try {
+      const { data, error } = await supabase.functions.invoke("ai-cover-generate", {
+        body: {
+          title: trackTitle,
+          style: "",
+          description: `${trackTitle} — ${trackArtist}`,
+          mode: "auto",
+        },
+      });
+      if (error) throw error;
+      const coverUrl = data?.cover_url;
+      if (!coverUrl) throw new Error("AI nie zwróciło obrazu");
+      const { error: updErr } = await supabase
+        .from("tracks")
+        .update({ cover_url: coverUrl })
+        .eq("id", trackId);
+      if (updErr) throw updErr;
+      toast.success("✨ Nowa okładka AI założona!");
+      window.dispatchEvent(new CustomEvent("track-list-changed"));
+    } catch (err) {
+      console.error("Quick AI cover failed:", err);
+      const msg = err instanceof Error ? err.message : "Nie udało się wygenerować okładki";
+      toast.error(msg);
+    } finally {
+      setAiCoverBusy(false);
+    }
+  };
+
   const handleCutTrack = async () => {
     // Store track data in clipboard for cut/paste functionality
     const trackData = JSON.stringify({ trackId, trackTitle, trackArtist, playlistId });
@@ -588,6 +622,26 @@ const TrackOptionsMenuComponent = (
               )}
             </DropdownMenuSubContent>
           </DropdownMenuSub>
+
+          {/* Szybkie: wgraj własne zdjęcie jako okładkę */}
+          <DropdownMenuItem
+            onClick={() => coverInputRef.current?.click()}
+            disabled={coverUploading}
+            className="cursor-pointer text-sky-300 focus:text-sky-200 focus:bg-sky-500/10"
+          >
+            <ImagePlus className="mr-2 h-4 w-4" />
+            <span className="flex-1">{coverUploading ? "Wgrywam…" : "Wgraj zdjęcie 📷"}</span>
+          </DropdownMenuItem>
+
+          {/* Szybkie: wygeneruj okładkę AI od razu (bez otwierania Studia) */}
+          <DropdownMenuItem
+            onClick={handleQuickAICover}
+            disabled={aiCoverBusy}
+            className="cursor-pointer text-amber-300 focus:text-amber-200 focus:bg-amber-500/10"
+          >
+            <ImagePlus className="mr-2 h-4 w-4" />
+            <span className="flex-1">{aiCoverBusy ? "Maluję…" : "AI okładka ⚡"}</span>
+          </DropdownMenuItem>
 
           {/* Cover Studio — okładki i teledyski AI (tekst→obraz, zdj→obraz, tekst→wideo, zdj→wideo) */}
           <DropdownMenuItem
