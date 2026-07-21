@@ -254,7 +254,7 @@ export const ChatWidget = () => {
       >
 
         {/* Buźka SVG */}
-        <svg viewBox="0 0 40 40" className="h-7 w-7 drop-shadow-[0_0_4px_hsl(38_100%_50%/0.8)]">
+        <svg viewBox="0 0 40 40" className="h-7 w-7">
           {/* twarz */}
           <circle cx="20" cy="20" r="16" fill="hsl(38 100% 55%)" stroke="hsl(38 100% 30%)" strokeWidth="1.2" />
           {/* oczy — mrugają */}
