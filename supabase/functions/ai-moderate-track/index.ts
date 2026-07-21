@@ -66,7 +66,7 @@ function buildFallbackEvaluation(input: ModerationInput, isAdmin: boolean): Eval
     };
   }
 
-  // Hard reject < 3 min for regular users
+  // Hard reject < 2:30 or > 19:00 for regular users
   if (durationSec > 0 && durationSec < MIN_DURATION_SEC) {
     return {
       score_length: 0,
@@ -77,6 +77,19 @@ function buildFallbackEvaluation(input: ModerationInput, isAdmin: boolean): Eval
       analysis: "Utwór jest zbyt krótki — minimum publikacji to 2:30.",
       recommendations: "Wydłuż utwór do co najmniej 2:30, aby przejść moderację.",
       rejection_reasons: ["Utwór ma mniej niż 2:30 — wymagane minimum to 2:30."],
+    };
+  }
+
+  if (durationSec > 0 && durationSec > MAX_DURATION_SEC) {
+    return {
+      score_length: 0,
+      score_lyrics: 5,
+      score_vocal: 5,
+      score_production: 5,
+      score_originality: 5,
+      analysis: "Utwór jest zbyt długi — maksymalna długość publikacji to 19:00.",
+      recommendations: "Skróć utwór do maksymalnie 19:00, aby przejść moderację.",
+      rejection_reasons: ["Utwór trwa dłużej niż 19:00 — maksymalna długość to 19 minut."],
     };
   }
 
