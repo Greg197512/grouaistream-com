@@ -393,7 +393,9 @@ export const HQCover = ({
 
   const [isLoading, setIsLoading] = useState(false);
   const [fetchAttempted, setFetchAttempted] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
   const mountedRef = useRef(true);
+  const containerRef = useRef<HTMLDivElement | null>(null);
 
   const isLowQuality = src ? isPlaceholder(src) : true;
   const normalizedArtist = (artist || "").trim().toLowerCase();
@@ -404,6 +406,20 @@ export const HQCover = ({
     mountedRef.current = true;
     return () => { mountedRef.current = false; };
   }, []);
+
+  // IntersectionObserver — only activate video when actually visible on screen.
+  // Prevents 30+ simultaneous <video> decoders when a list is rendered.
+  useEffect(() => {
+    if (!videoUrl) return;
+    const el = containerRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      ([entry]) => setIsVisible(entry.isIntersecting),
+      { rootMargin: "100px", threshold: 0.1 }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [videoUrl]);
 
   useEffect(() => {
     if (!needsFetch) return;
@@ -446,21 +462,34 @@ export const HQCover = ({
 
   const hqSrc = upgradeToMaxRes(effectiveSrc);
 
-  // If a video clip exists for this cover, show it (muted/looped autoplay).
-  // The still cover acts as poster so the frame is visible while the clip loads.
+  // Video path: only render <video> when in viewport, otherwise render poster image.
+  // This keeps scrolling smooth on mobile (no 30 concurrent video decoders).
   if (videoUrl && !videoFailed) {
     return (
-      <video
-        src={videoUrl}
-        poster={hqSrc}
-        muted
-        loop
-        playsInline
-        autoPlay
-        preload="metadata"
-        onError={() => setVideoFailed(true)}
-        className={cn("object-cover w-full h-full", className)}
-      />
+      <div ref={containerRef} className={cn("relative w-full h-full", className)}>
+        {isVisible ? (
+          <video
+            src={videoUrl}
+            poster={hqSrc}
+            muted
+            loop
+            playsInline
+            autoPlay
+            preload="none"
+            onError={() => setVideoFailed(true)}
+            className="object-cover w-full h-full"
+          />
+        ) : (
+          <img
+            src={hqSrc}
+            alt={alt}
+            loading="lazy"
+            decoding="async"
+            draggable={false}
+            className="object-cover w-full h-full"
+          />
+        )}
+      </div>
     );
   }
 
@@ -483,4 +512,5 @@ export const HQCover = ({
     />
   );
 };
+
 
