@@ -206,6 +206,28 @@ export const ChatWidget = () => {
     }
   }, [open, activeId]);
 
+  // Co jakiś czas pokazuj chmurkę "porozmawiamy" koło buźki
+  useEffect(() => {
+    if (!user) return;
+    let mounted = true;
+    let hideTimeout: number;
+    let interval: number;
+    const cycle = () => {
+      if (!mounted || open) return;
+      setShowBubble(true);
+      hideTimeout = window.setTimeout(() => {
+        if (mounted) setShowBubble(false);
+      }, 3500);
+    };
+    cycle();
+    interval = window.setInterval(cycle, 9000);
+    return () => {
+      mounted = false;
+      window.clearTimeout(hideTimeout);
+      window.clearInterval(interval);
+    };
+  }, [user, open]);
+
   const sortedUsers = useMemo(() => {
     return [...users].sort((a, b) => {
       const ao = online.has(a.user_id) ? 0 : 1;
