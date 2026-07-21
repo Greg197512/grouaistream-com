@@ -136,8 +136,8 @@ function finalizeEvaluation(input: ModerationInput, evaluation: EvaluationPayloa
   const totalScore = scoreLength + scoreLyrics + scoreVocal + scoreProduction + scoreOriginality;
 
   let status: string;
-  // Hard reject if too short — overrides any score
-  if (durationSec > 0 && durationSec < MIN_DURATION_SEC) {
+  // Hard reject if too short or too long — overrides any score
+  if (durationSec > 0 && (durationSec < MIN_DURATION_SEC || durationSec > MAX_DURATION_SEC)) {
     status = "rejected";
   } else if (totalScore >= 65) {
     status = "approved";
@@ -153,6 +153,9 @@ function finalizeEvaluation(input: ModerationInput, evaluation: EvaluationPayloa
 
   if (durationSec > 0 && durationSec < MIN_DURATION_SEC) {
     rejectionReasons.push("Utwór ma mniej niż 2:30 — wymagane minimum publikacji to 2:30.");
+  }
+  if (durationSec > 0 && durationSec > MAX_DURATION_SEC) {
+    rejectionReasons.push("Utwór trwa dłużej niż 19:00 — maksymalna długość publikacji to 19 minut.");
   }
 
   return {
