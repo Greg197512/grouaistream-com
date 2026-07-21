@@ -37,6 +37,7 @@ export const ChatWidget = () => {
   const [text, setText] = useState("");
   const [emojiOpen, setEmojiOpen] = useState(false);
   const [unread, setUnread] = useState(0);
+  const [showBubble, setShowBubble] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
