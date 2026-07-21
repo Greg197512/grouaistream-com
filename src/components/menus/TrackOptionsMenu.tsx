@@ -472,6 +472,47 @@ const TrackOptionsMenuComponent = (
     }
   };
 
+  // Szybki teledysk AI — najwyższa jakość (Kling v2.1 Master → Hailuo-02 fallback).
+  // Bierze aktualną okładkę utworu jako klatkę startową (image-to-video).
+  const [aiClipBusy, setAiClipBusy] = useState(false);
+  const handleQuickAIClip = async () => {
+    if (aiClipBusy) return;
+    setAiClipBusy(true);
+    toast.info("🎬 Kręcę teledysk AI (max jakość, może potrwać kilka minut)…", { duration: 8000 });
+    try {
+      const { data: trackRow } = await supabase
+        .from("tracks")
+        .select("cover_url")
+        .eq("id", trackId)
+        .maybeSingle();
+      const coverUrl = trackRow?.cover_url || null;
+
+      const { data, error } = await supabase.functions.invoke("cover-video-generate", {
+        body: {
+          prompt: `Music video for "${trackTitle}" by ${trackArtist} — cinematic, atmospheric, dynamic camera movement, professional color grading`,
+          image_url: coverUrl,
+          quality: "max",
+        },
+      });
+      if (error) throw error;
+      const videoUrl = data?.video_url;
+      if (!videoUrl) throw new Error("Nie udało się wygenerować teledysku");
+      const { error: updErr } = await supabase
+        .from("tracks")
+        .update({ video_url: videoUrl })
+        .eq("id", trackId);
+      if (updErr) throw updErr;
+      toast.success("🎬 Teledysk AI gotowy!");
+      window.dispatchEvent(new CustomEvent("track-list-changed"));
+    } catch (err) {
+      console.error("Quick AI clip failed:", err);
+      const msg = err instanceof Error ? err.message : "Nie udało się wygenerować teledysku";
+      toast.error(msg);
+    } finally {
+      setAiClipBusy(false);
+    }
+  };
+
   const handleCutTrack = async () => {
     // Store track data in clipboard for cut/paste functionality
     const trackData = JSON.stringify({ trackId, trackTitle, trackArtist, playlistId });
