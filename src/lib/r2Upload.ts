@@ -37,22 +37,25 @@ function getAnonKey(): string {
 
 async function getAuthToken(): Promise<string> {
   try {
-    const { data, error } = await supabase.auth.getSession();
-    if (!error) {
-      const token = data.session?.access_token;
-      if (token) return token;
-    }
+    const { data } = await supabase.auth.getSession();
+    let token = data.session?.access_token;
+    if (token) return token;
+
+    // Try refreshing the session before giving up
+    const { data: refreshed } = await supabase.auth.refreshSession();
+    token = refreshed.session?.access_token;
+    if (token) return token;
 
     const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID || "bvstvawnigyczvofzhps";
     const storageKey = `sb-${projectId}-auth-token`;
     const raw = localStorage.getItem(storageKey);
     if (raw) {
       const parsed = JSON.parse(raw);
-      const token = parsed?.access_token ?? parsed?.currentSession?.access_token;
-      if (token) return token;
+      const stored = parsed?.access_token ?? parsed?.currentSession?.access_token;
+      if (stored) return stored;
     }
   } catch { /* ignore */ }
-  return getAnonKey();
+  throw new Error("Musisz być zalogowany, aby przesyłać pliki. Zaloguj się ponownie.");
 }
 
 function parseUploadError(responseText: string, status: number): string {
