@@ -268,43 +268,65 @@ export const ChatWidget = () => {
 
   return (
     <>
-      {/* Trigger: animowana gadająca buźka */}
-      <button
-        onClick={() => setOpen((o) => !o)}
-        title="Czat GrouAI"
-        aria-label="Otwórz czat"
-        className="group relative flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-primary/15 to-accent/10 border border-primary/30 hover:border-accent/60 transition-all hover:scale-105"
-      >
+      {/* Trigger: animowana gadająca buźka + chmurka "porozmawiamy" */}
+      <div className="relative">
+        <AnimatePresence>
+          {showBubble && !open && (
+            <motion.div
+              initial={{ opacity: 0, y: 6, scale: 0.85 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 4, scale: 0.9 }}
+              transition={{ type: "spring", stiffness: 420, damping: 22 }}
+              className="absolute bottom-full left-1/2 -translate-x-1/2 z-50 mb-2 pointer-events-none"
+            >
+              <div className="relative px-3 py-1.5 rounded-xl bg-black/90 border border-primary/40 shadow-[0_0_18px_hsl(var(--primary)/0.35)] backdrop-blur-md">
+                <span className="text-xs font-medium text-primary-foreground whitespace-nowrap">porozmawiamy</span>
+                {/* ogon chmurki */}
+                <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-black/90 rotate-45 border-r border-b border-primary/40" />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-        {/* Buźka SVG */}
-        <svg viewBox="0 0 40 40" className="h-7 w-7">
-          {/* twarz */}
-          <circle cx="20" cy="20" r="16" fill="hsl(38 100% 55%)" stroke="hsl(38 100% 30%)" strokeWidth="1.2" />
-          {/* oczy — mrugają */}
-          <g fill="#0a0a0a">
-            <ellipse cx="14" cy="16" rx="1.6" ry="2.2">
-              <animate attributeName="ry" values="2.2;0.15;2.2;2.2;2.2" keyTimes="0;0.05;0.1;0.9;1" dur="4s" repeatCount="indefinite" />
+        <button
+          onClick={() => {
+            setShowBubble(false);
+            setOpen((o) => !o);
+          }}
+          title="Czat GrouAI"
+          aria-label="Otwórz czat"
+          className="group relative flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-primary/15 to-accent/10 border border-primary/30 hover:border-accent/60 transition-all hover:scale-105"
+        >
+          {/* Buźka SVG */}
+          <svg viewBox="0 0 40 40" className="h-7 w-7">
+            {/* twarz */}
+            <circle cx="20" cy="20" r="16" fill="hsl(38 100% 55%)" stroke="hsl(38 100% 30%)" strokeWidth="1.2" />
+            {/* oczy — mrugają */}
+            <g fill="#0a0a0a">
+              <ellipse cx="14" cy="16" rx="1.6" ry="2.2">
+                <animate attributeName="ry" values="2.2;0.15;2.2;2.2;2.2" keyTimes="0;0.05;0.1;0.9;1" dur="4s" repeatCount="indefinite" />
+              </ellipse>
+              <ellipse cx="26" cy="16" rx="1.6" ry="2.2">
+                <animate attributeName="ry" values="2.2;0.15;2.2;2.2;2.2" keyTimes="0;0.05;0.1;0.9;1" dur="4s" repeatCount="indefinite" />
+              </ellipse>
+            </g>
+            {/* usta — gadają */}
+            <ellipse cx="20" cy="25" rx="4.5" ry="1.5" fill="#0a0a0a">
+              <animate attributeName="ry" values="1;3;1.5;3.5;1;2.5;1" dur="1.1s" repeatCount="indefinite" />
+              <animate attributeName="rx" values="4.5;3.5;5;3;4.5;4;4.5" dur="1.1s" repeatCount="indefinite" />
             </ellipse>
-            <ellipse cx="26" cy="16" rx="1.6" ry="2.2">
-              <animate attributeName="ry" values="2.2;0.15;2.2;2.2;2.2" keyTimes="0;0.05;0.1;0.9;1" dur="4s" repeatCount="indefinite" />
-            </ellipse>
-          </g>
-          {/* usta — gadają */}
-          <ellipse cx="20" cy="25" rx="4.5" ry="1.5" fill="#0a0a0a">
-            <animate attributeName="ry" values="1;3;1.5;3.5;1;2.5;1" dur="1.1s" repeatCount="indefinite" />
-            <animate attributeName="rx" values="4.5;3.5;5;3;4.5;4;4.5" dur="1.1s" repeatCount="indefinite" />
-          </ellipse>
-          {/* rumieńce */}
-          <circle cx="11" cy="22" r="1.4" fill="hsl(0 80% 60% / 0.55)" />
-          <circle cx="29" cy="22" r="1.4" fill="hsl(0 80% 60% / 0.55)" />
-        </svg>
+            {/* rumieńce */}
+            <circle cx="11" cy="22" r="1.4" fill="hsl(0 80% 60% / 0.55)" />
+            <circle cx="29" cy="22" r="1.4" fill="hsl(0 80% 60% / 0.55)" />
+          </svg>
 
-        {unread > 0 && (
-          <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-accent text-[10px] font-bold text-black flex items-center justify-center animate-pulse">
-            {unread > 9 ? "9+" : unread}
-          </span>
-        )}
-      </button>
+          {unread > 0 && (
+            <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-accent text-[10px] font-bold text-black flex items-center justify-center animate-pulse">
+              {unread > 9 ? "9+" : unread}
+            </span>
+          )}
+        </button>
+      </div>
 
       {createPortal(
         <AnimatePresence>
