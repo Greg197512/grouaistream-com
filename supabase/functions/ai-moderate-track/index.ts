@@ -31,6 +31,8 @@ interface EvaluationPayload {
 
 // Minimum required duration for non-admin uploads: 2:30 (150s)
 const MIN_DURATION_SEC = 150;
+// Maximum allowed duration for non-admin uploads: 19:00 (1140s)
+const MAX_DURATION_SEC = 1140;
 
 function clampScore(value: unknown, min = 0, max = 20): number {
   const numeric = Number(value);
