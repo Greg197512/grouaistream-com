@@ -234,7 +234,7 @@ const Upload = () => {
       if (data?.success) {
         const sunoDur = data.duration || 180;
         if (sunoDur > MAX_DURATION_SEC) {
-          toast.error(`Utwór trwa ${fmtDur(sunoDur)} — maksymalnie może 4:00. Wybierz krótszy.`);
+          toast.error(`Utwór trwa ${fmtDur(sunoDur)} — maksymalnie może 19:00. Wybierz krótszy.`);
           return;
         }
         setSunoResolved({
@@ -293,7 +293,7 @@ const Upload = () => {
         toast.error(`${fmtDur(dur)} — ${t("upload.fileTooShort")}`);
       } else if (dur > MAX_DURATION_SEC) {
         setDurationErrorType('too-long');
-        toast.error(`${fmtDur(dur)} — utwór może trwać maksymalnie 4:00. Skróć plik i wgraj ponownie.`);
+        toast.error(`${fmtDur(dur)} — utwór może trwać maksymalnie 19:00. Skróć plik i wgraj ponownie.`);
       } else {
         setDurationErrorType(null);
       }
@@ -313,7 +313,7 @@ const Upload = () => {
       return;
     }
     if (audioFile && durationErrorType !== null) {
-      toast.error("Długość utworu musi mieścić się w zakresie 0:10–4:00.");
+      toast.error("Długość utworu musi mieścić się w zakresie 2:30–19:00.");
       return;
     }
 
@@ -344,7 +344,7 @@ const Upload = () => {
             }
             if (resolvedDuration > MAX_DURATION_SEC) {
               setDurationErrorType('too-long');
-              throw new Error(`Utwór trwa ${fmtDur(resolvedDuration)} — maksymalnie może 4:00. Skróć plik i wgraj ponownie.`);
+              throw new Error(`Utwór trwa ${fmtDur(resolvedDuration)} — maksymalnie może 19:00. Skróć plik i wgraj ponownie.`);
             }
           }
         }
