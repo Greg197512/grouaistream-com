@@ -22,7 +22,8 @@ import {
   Check,
   Gift,
   Headphones,
-  ImagePlus
+  ImagePlus,
+  Film
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -471,6 +472,47 @@ const TrackOptionsMenuComponent = (
     }
   };
 
+  // Szybki teledysk AI — najwyższa jakość (Kling v2.1 Master → Hailuo-02 fallback).
+  // Bierze aktualną okładkę utworu jako klatkę startową (image-to-video).
+  const [aiClipBusy, setAiClipBusy] = useState(false);
+  const handleQuickAIClip = async () => {
+    if (aiClipBusy) return;
+    setAiClipBusy(true);
+    toast.info("🎬 Kręcę teledysk AI (max jakość, może potrwać kilka minut)…", { duration: 8000 });
+    try {
+      const { data: trackRow } = await supabase
+        .from("tracks")
+        .select("cover_url")
+        .eq("id", trackId)
+        .maybeSingle();
+      const coverUrl = trackRow?.cover_url || null;
+
+      const { data, error } = await supabase.functions.invoke("cover-video-generate", {
+        body: {
+          prompt: `Music video for "${trackTitle}" by ${trackArtist} — cinematic, atmospheric, dynamic camera movement, professional color grading`,
+          image_url: coverUrl,
+          quality: "max",
+        },
+      });
+      if (error) throw error;
+      const videoUrl = data?.video_url;
+      if (!videoUrl) throw new Error("Nie udało się wygenerować teledysku");
+      const { error: updErr } = await supabase
+        .from("tracks")
+        .update({ video_url: videoUrl })
+        .eq("id", trackId);
+      if (updErr) throw updErr;
+      toast.success("🎬 Teledysk AI gotowy!");
+      window.dispatchEvent(new CustomEvent("track-list-changed"));
+    } catch (err) {
+      console.error("Quick AI clip failed:", err);
+      const msg = err instanceof Error ? err.message : "Nie udało się wygenerować teledysku";
+      toast.error(msg);
+    } finally {
+      setAiClipBusy(false);
+    }
+  };
+
   const handleCutTrack = async () => {
     // Store track data in clipboard for cut/paste functionality
     const trackData = JSON.stringify({ trackId, trackTitle, trackArtist, playlistId });
@@ -642,6 +684,17 @@ const TrackOptionsMenuComponent = (
             <ImagePlus className="mr-2 h-4 w-4" />
             <span className="flex-1">{aiCoverBusy ? "Maluję…" : "AI okładka ⚡"}</span>
           </DropdownMenuItem>
+
+          {/* Szybki teledysk AI — najwyższa jakość (Kling v2.1 Master) */}
+          <DropdownMenuItem
+            onClick={handleQuickAIClip}
+            disabled={aiClipBusy}
+            className="cursor-pointer text-rose-300 focus:text-rose-200 focus:bg-rose-500/10"
+          >
+            <Film className="mr-2 h-4 w-4" />
+            <span className="flex-1">{aiClipBusy ? "Kręcę teledysk…" : "AI teledysk 🎬 (max)"}</span>
+          </DropdownMenuItem>
+
 
           {/* Cover Studio — okładki i teledyski AI (tekst→obraz, zdj→obraz, tekst→wideo, zdj→wideo) */}
           <DropdownMenuItem
