@@ -61,19 +61,33 @@ export const ChatWidget = () => {
     };
   }, [user]);
 
-  // Load user list once open
+  // Load user list — preload on mount + refresh on open
   useEffect(() => {
-    if (!open || !user) return;
-    (async () => {
-      const { data } = await supabase
+    if (!user) return;
+    let cancelled = false;
+    const load = async () => {
+      const { data, error } = await supabase
         .from("profiles")
         .select("user_id, display_name, avatar_url")
         .neq("user_id", user.id)
         .order("display_name", { ascending: true })
-        .limit(500);
+        .limit(1000);
+      if (cancelled) return;
+      if (error) {
+        console.error("[ChatWidget] profiles load error:", error);
+        toast.error("Nie udało się załadować listy: " + error.message);
+        return;
+      }
       setUsers((data as UserRow[]) ?? []);
-    })();
-  }, [open, user]);
+    };
+    load();
+    // refresh every 30s so nowo zarejestrowani się pojawiają
+    const iv = setInterval(load, 30000);
+    return () => {
+      cancelled = true;
+      clearInterval(iv);
+    };
+  }, [user, open]);
 
   // Play notification bell sound
   const playBell = () => {
