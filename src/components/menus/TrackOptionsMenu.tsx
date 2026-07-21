@@ -22,7 +22,8 @@ import {
   Check,
   Gift,
   Headphones,
-  ImagePlus
+  ImagePlus,
+  Film
 } from "lucide-react";
 import {
   DropdownMenu,
