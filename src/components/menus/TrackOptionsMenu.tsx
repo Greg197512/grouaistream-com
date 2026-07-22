@@ -22,7 +22,8 @@ import {
   Check,
   Gift,
   Headphones,
-  ImagePlus
+  ImagePlus,
+  Film
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -40,6 +41,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { isOffline, saveOfflineTrack, removeOfflineTrack } from "@/lib/offlineLibrary";
+import { CoverStudioModal } from "@/components/modals/CoverStudioModal";
+import { triggerCoverVideo } from "@/lib/autoCoverVideo";
+
 
 
 interface TrackOptionsMenuProps {
@@ -78,6 +82,7 @@ const TrackOptionsMenuComponent = (
   const [loading, setLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [showCoffeeDialog, setShowCoffeeDialog] = useState(false);
+  const [showCoverStudio, setShowCoverStudio] = useState(false);
   const [trackOwnerId, setTrackOwnerId] = useState<string | null>(null);
   const [myPlaylists, setMyPlaylists] = useState<{ id: string; title: string }[]>([]);
   const [playlistsLoaded, setPlaylistsLoaded] = useState(false);
@@ -426,12 +431,91 @@ const TrackOptionsMenuComponent = (
       }
       toast.success(`✨ Gotowe! „${trackTitle}" ma nową okładkę`);
       window.dispatchEvent(new CustomEvent("track-list-changed"));
+      triggerCoverVideo(trackId);
+
     } catch (err) {
       console.error("Cover update failed:", err);
       const msg = err instanceof Error ? err.message : "";
       toast.error(msg.includes("autor") ? msg : "Nie udało się założyć nowej okładki — spróbuj ponownie");
     } finally {
       setCoverUploading(false);
+    }
+  };
+
+  // Szybka okładka AI z 3-kropek — bez otwierania Cover Studio.
+  const [aiCoverBusy, setAiCoverBusy] = useState(false);
+  const handleQuickAICover = async () => {
+    if (aiCoverBusy) return;
+    setAiCoverBusy(true);
+    toast.info("🎨 Maluję okładkę AI…");
+    try {
+      const { data, error } = await supabase.functions.invoke("ai-cover-generate", {
+        body: {
+          title: trackTitle,
+          style: "",
+          description: `${trackTitle} — ${trackArtist}`,
+          mode: "auto",
+        },
+      });
+      if (error) throw error;
+      const coverUrl = data?.cover_url;
+      if (!coverUrl) throw new Error("AI nie zwróciło obrazu");
+      const { error: updErr } = await supabase
+        .from("tracks")
+        .update({ cover_url: coverUrl })
+        .eq("id", trackId);
+      if (updErr) throw updErr;
+      toast.success("✨ Nowa okładka AI założona!");
+      window.dispatchEvent(new CustomEvent("track-list-changed"));
+      triggerCoverVideo(trackId);
+    } catch (err) {
+
+      console.error("Quick AI cover failed:", err);
+      const msg = err instanceof Error ? err.message : "Nie udało się wygenerować okładki";
+      toast.error(msg);
+    } finally {
+      setAiCoverBusy(false);
+    }
+  };
+
+  // Szybki teledysk AI — najwyższa jakość (Kling v2.1 Master → Hailuo-02 fallback).
+  // Bierze aktualną okładkę utworu jako klatkę startową (image-to-video).
+  const [aiClipBusy, setAiClipBusy] = useState(false);
+  const handleQuickAIClip = async () => {
+    if (aiClipBusy) return;
+    setAiClipBusy(true);
+    toast.info("🎬 Kręcę teledysk AI (max jakość, może potrwać kilka minut)…", { duration: 8000 });
+    try {
+      const { data: trackRow } = await supabase
+        .from("tracks")
+        .select("cover_url")
+        .eq("id", trackId)
+        .maybeSingle();
+      const coverUrl = trackRow?.cover_url || null;
+
+      const { data, error } = await supabase.functions.invoke("cover-video-generate", {
+        body: {
+          prompt: `Music video for "${trackTitle}" by ${trackArtist} — cinematic, atmospheric, dynamic camera movement, professional color grading`,
+          image_url: coverUrl,
+          quality: "max",
+        },
+      });
+      if (error) throw error;
+      const videoUrl = data?.video_url;
+      if (!videoUrl) throw new Error("Nie udało się wygenerować teledysku");
+      const { error: updErr } = await supabase
+        .from("tracks")
+        .update({ video_url: videoUrl })
+        .eq("id", trackId);
+      if (updErr) throw updErr;
+      toast.success("🎬 Teledysk AI gotowy!");
+      window.dispatchEvent(new CustomEvent("track-list-changed"));
+    } catch (err) {
+      console.error("Quick AI clip failed:", err);
+      const msg = err instanceof Error ? err.message : "Nie udało się wygenerować teledysku";
+      toast.error(msg);
+    } finally {
+      setAiClipBusy(false);
     }
   };
 
@@ -587,19 +671,45 @@ const TrackOptionsMenuComponent = (
             </DropdownMenuSubContent>
           </DropdownMenuSub>
 
-          {/* Nowa okładka — tylko dla autora utworu (RLS i tak pilnuje) */}
-          {user && trackOwnerId === user.id && (
-            <DropdownMenuItem
-              onClick={() => coverInputRef.current?.click()}
-              disabled={coverUploading}
-              className="cursor-pointer text-fuchsia-300 focus:text-fuchsia-200 focus:bg-fuchsia-500/10"
-            >
-              <ImagePlus className="mr-2 h-4 w-4" />
-              <span className="flex-1">
-                {coverUploading ? "Przymierzam okładkę…" : "Ubierz w nową okładkę 🎨"}
-              </span>
-            </DropdownMenuItem>
-          )}
+          {/* Szybkie: wgraj własne zdjęcie jako okładkę */}
+          <DropdownMenuItem
+            onClick={() => coverInputRef.current?.click()}
+            disabled={coverUploading}
+            className="cursor-pointer text-sky-300 focus:text-sky-200 focus:bg-sky-500/10"
+          >
+            <ImagePlus className="mr-2 h-4 w-4" />
+            <span className="flex-1">{coverUploading ? "Wgrywam…" : "Wgraj zdjęcie 📷"}</span>
+          </DropdownMenuItem>
+
+          {/* Szybkie: wygeneruj okładkę AI od razu (bez otwierania Studia) */}
+          <DropdownMenuItem
+            onClick={handleQuickAICover}
+            disabled={aiCoverBusy}
+            className="cursor-pointer text-amber-300 focus:text-amber-200 focus:bg-amber-500/10"
+          >
+            <ImagePlus className="mr-2 h-4 w-4" />
+            <span className="flex-1">{aiCoverBusy ? "Maluję…" : "AI okładka ⚡"}</span>
+          </DropdownMenuItem>
+
+          {/* Szybki teledysk AI — najwyższa jakość (Kling v2.1 Master) */}
+          <DropdownMenuItem
+            onClick={handleQuickAIClip}
+            disabled={aiClipBusy}
+            className="cursor-pointer text-rose-300 focus:text-rose-200 focus:bg-rose-500/10"
+          >
+            <Film className="mr-2 h-4 w-4" />
+            <span className="flex-1">{aiClipBusy ? "Kręcę teledysk…" : "AI teledysk 🎬 (max)"}</span>
+          </DropdownMenuItem>
+
+
+          {/* Cover Studio — okładki i teledyski AI (tekst→obraz, zdj→obraz, tekst→wideo, zdj→wideo) */}
+          <DropdownMenuItem
+            onClick={() => setShowCoverStudio(true)}
+            className="cursor-pointer text-fuchsia-300 focus:text-fuchsia-200 focus:bg-fuchsia-500/10"
+          >
+            <ImagePlus className="mr-2 h-4 w-4" />
+            <span className="flex-1">Cover Studio 🎨🎬</span>
+          </DropdownMenuItem>
 
           {/* Cut/Copy for moving */}
           <DropdownMenuItem onClick={handleCutTrack} className="cursor-pointer">
@@ -756,6 +866,14 @@ const TrackOptionsMenuComponent = (
         recipientUserId={trackOwnerId ?? undefined}
         recipientTrackId={trackId}
         recipientName={trackArtist}
+      />
+
+      <CoverStudioModal
+        open={showCoverStudio}
+        onOpenChange={setShowCoverStudio}
+        trackId={trackId}
+        trackTitle={trackTitle}
+        trackArtist={trackArtist}
       />
     </div>
   );

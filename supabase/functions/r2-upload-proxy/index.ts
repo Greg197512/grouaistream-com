@@ -52,8 +52,18 @@ serve(async (req) => {
     );
 
     const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsError } = await supabaseAuth.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims?.sub) {
+    let userId: string | null = null;
+    try {
+      const { data: claimsData } = await supabaseAuth.auth.getClaims(token);
+      userId = claimsData?.claims?.sub ?? null;
+    } catch { /* fall back */ }
+    if (!userId) {
+      try {
+        const { data: userData } = await supabaseAuth.auth.getUser(token);
+        userId = userData?.user?.id ?? null;
+      } catch { /* ignore */ }
+    }
+    if (!userId) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

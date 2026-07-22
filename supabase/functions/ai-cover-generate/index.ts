@@ -43,13 +43,23 @@ Shot like a global album campaign on Hasselblad or ARRI, 50mm or 85mm lens, high
   return `Premium album cover for "${title || "Untitled"}".${styleHint}${isRap ? " Luxury noir rap aesthetic, neon amber, wet asphalt." : ""}${premiumRules}`;
 }
 
-async function generateImageBase64(prompt: string, apiKey: string): Promise<string | null> {
-  // Kolejność: szybki model (2.5-flash-image, ~30-45s) → fallback flash 3.1-preview (do 90s)
-  // Większość uploadów dostanie okładkę w pierwszej próbie, mieści się w 150s edge limit.
+async function generateImageBase64(
+  prompt: string,
+  apiKey: string,
+  referenceImage?: string | null,
+): Promise<string | null> {
   const attempts = [
-    { model: "google/gemini-2.5-flash", timeoutMs: 60000 },
-    { model: "google/gemini-2.5-flash", timeoutMs: 70000 },
+    { model: "google/gemini-2.5-flash-image", timeoutMs: 60000 },
+    { model: "google/gemini-2.5-flash-image-preview", timeoutMs: 70000 },
   ];
+
+  // Jeśli mamy zdjęcie referencyjne — image-to-image (edycja/restyling).
+  const content: any = referenceImage
+    ? [
+        { type: "text", text: prompt },
+        { type: "image_url", image_url: { url: referenceImage } },
+      ]
+    : prompt;
 
   for (const attempt of attempts) {
     try {
@@ -61,7 +71,7 @@ async function generateImageBase64(prompt: string, apiKey: string): Promise<stri
         },
         body: JSON.stringify({
           model: attempt.model,
-          messages: [{ role: "user", content: prompt }],
+          messages: [{ role: "user", content }],
           modalities: ["image", "text"],
         }),
       }, attempt.timeoutMs);
@@ -89,7 +99,7 @@ serve(async (req) => {
   }
 
   try {
-    const { title, style, description, mode } = await req.json();
+    const { title, style, description, mode, reference_image } = await req.json();
     const OPENROUTER_API_KEY = Deno.env.get("LOVABLE_API_KEY") || Deno.env.get("OPENROUTER_API_KEY");
     if (!OPENROUTER_API_KEY) {
       return new Response(
@@ -98,11 +108,13 @@ serve(async (req) => {
       );
     }
 
-    const prompt = buildPrompt({ title, style, description, mode });
+    const prompt = reference_image
+      ? `Restyle this image into a premium album cover. ${description?.trim() || ""}. Keep the main subject recognizable but transform lighting, mood and color grading. Cinematic, ultra-detailed, magazine-quality, no text, no logos, 1:1 square.`
+      : buildPrompt({ title, style, description, mode });
 
-    console.log(`[ai-cover-generate] Generating cover for "${title}" mode=${mode}`);
+    console.log(`[ai-cover-generate] Generating cover for "${title}" mode=${mode} ref=${!!reference_image}`);
 
-    const imageUrl = await generateImageBase64(prompt, OPENROUTER_API_KEY);
+    const imageUrl = await generateImageBase64(prompt, OPENROUTER_API_KEY, reference_image);
 
     if (!imageUrl) {
       return new Response(

@@ -32,6 +32,10 @@ interface UploadItem {
   percent: number;
 }
 
+const MIN_DURATION_SEC = 150;
+const MAX_DURATION_SEC = 1140;
+const fmtDur = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+
 function parseFilename(file: File): { title: string; artist: string } {
   const name = file.name.replace(/\.[^/.]+$/, "");
   const parts = name.split(" - ");
@@ -86,6 +90,13 @@ export const FileUploadModal = ({ isOpen, onClose, onSuccess, playlistId }: File
 
     try {
       const duration = await getAudioDuration(file);
+
+      // Validate track duration for audio uploads
+      if (!isVideo && duration > 0 && (duration < MIN_DURATION_SEC || duration > MAX_DURATION_SEC)) {
+        const msg = `Długość ${fmtDur(duration)} poza zakresem 2:30–19:00.`;
+        toast.error(msg);
+        throw new Error(msg);
+      }
 
       const { publicUrl } = await uploadToR2({
         file,

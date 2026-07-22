@@ -93,7 +93,7 @@ const LikedSongs = () => {
         {tracks.length > 0 ? (
           <div className="space-y-2">
             {tracks.map((track, index) => (
-              <TrackRow key={track.id} id={track.id} index={index + 1} title={track.title} artist={track.artist} album={track.album || ""} duration={formatDuration(track.duration)} imageUrl={track.cover_url || undefined} trackUrl={track.video_url || track.audio_url} genre={track.genre} isPlaying={currentTrack?.id === track.id && isPlaying} onPlay={() => handlePlayTrack(track, index)} />
+              <TrackRow key={track.id} id={track.id} index={index + 1} title={track.title} artist={track.artist} album={track.album || ""} duration={formatDuration(track.duration)} imageUrl={track.cover_url || undefined} videoUrl={track.video_url || undefined} trackUrl={track.video_url || track.audio_url} genre={track.genre} isPlaying={currentTrack?.id === track.id && isPlaying} onPlay={() => handlePlayTrack(track, index)} />
             ))}
           </div>
         ) : (
