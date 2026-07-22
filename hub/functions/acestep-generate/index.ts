@@ -152,6 +152,75 @@ Deno.serve(async (req) => {
   const action = body.action ?? "generate";
 
   try {
+    // ================= VOICE COVER =================
+    // „Zaśpiewaj moim głosem" — zero-shot konwersja głosu (seed-vc na Replicate,
+    // BEZ klucza Suno, na istniejącym tokenie). Wejście: audio_url (gotowy utwór)
+    // + voice_url (próbka głosu 5-30 s). Wyjście: ten sam utwór zaśpiewany
+    // barwą z próbki. Status pollujemy zwykłym torem Replicate (id bez prefiksu).
+    if (action === "voice_cover") {
+      const { data: userData } = await live.auth.getUser();
+      const userId = userData?.user?.id;
+      if (!userId) return json({ error: "unauthorized" }, 401);
+
+      const songUrl = String(body.audio_url || body.song_url || "").trim();
+      const voiceUrl = String(body.voice_url || body.voiceUrl || "").trim();
+      if (!/^https?:\/\//.test(songUrl) || !/^https?:\/\//.test(voiceUrl)) {
+        return json({ error: "audio_url i voice_url muszą być publicznymi adresami http(s)" }, 400);
+      }
+
+      // Model konfigurowalny (domyślnie seed-vc). Wersję rozwiązujemy przez /models.
+      const vcModel = cfg["voice_convert_model"] || "zsxkib/seed-vc";
+      const mr = await fetch(`${REPLICATE_BASE}/models/${vcModel}`, { headers: rHeaders });
+      const mData = await mr.json();
+      const version = mData?.latest_version?.id;
+      if (!mr.ok || !version) {
+        return json({ error: "Nie mogę ustalić wersji modelu głosu", details: mData }, 502);
+      }
+
+      // seed-vc: source = utwór do przerobienia, target = próbka głosu.
+      // f0_condition=true → tryb śpiewu (zachowuje melodię, zmienia barwę).
+      const steps = Math.min(Math.max(parseInt(cfg["voice_convert_steps"] || "30", 10) || 30, 1), 100);
+      const pitch = Math.min(Math.max(parseInt(String(body.pitch ?? "0"), 10) || 0, -12), 12);
+      const rel = await fetch(`${REPLICATE_BASE}/predictions`, {
+        method: "POST",
+        headers: rHeaders,
+        body: JSON.stringify({
+          version,
+          input: {
+            source: songUrl,
+            target: voiceUrl,
+            diffusion_steps: steps,
+            f0_condition: true,
+            auto_f0_adjust: true,
+            semi_tone_shift: pitch,
+          },
+        }),
+      });
+      const relData = await rel.json();
+      if (!rel.ok) {
+        if (relData?.status === 402 || rel.status === 402) {
+          return json({ error: "Konto Replicate nie ma środków — doładuj na replicate.com/account/billing", details: relData }, 402);
+        }
+        return json({ error: "Nie udało się wystartować konwersji głosu", details: relData }, rel.status);
+      }
+      const predId = relData?.id;
+      if (!predId) return json({ error: "Brak id predykcji", details: relData }, 502);
+
+      // Nowy rekord w Studio (prywatny) — wynik dojdzie przez status polling.
+      const { data: gen } = await live.from("generations").insert({
+        user_id: userId,
+        title: (body.title ? `${body.title} • mój głos` : "Cover • mój głos").slice(0, 120),
+        genre: "voice-cover",
+        prompt: "voice cover (seed-vc)",
+        instrumental: false,
+        status: "pending",
+        replicate_id: predId,
+        engine: "seed-vc",
+      }).select().single();
+
+      return json({ id: predId, generation_id: gen?.id ?? null, status: "starting", engine: "seed-vc" });
+    }
+
     // ================= STATUS =================
     if (action === "status") {
       const predId = body.task_id || body.prediction_id || body.replicate_id;

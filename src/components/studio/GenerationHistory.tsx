@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { usePlayer } from "@/contexts/PlayerContext";
 import {
   Music, Heart, Download, Play, Loader2, RefreshCw, Library, Trash2, Plus,
-  MoreHorizontal, AudioLines, ImagePlus, Crown, FileAudio, Link2, Share2, ExternalLink, Sparkles,
+  MoreHorizontal, AudioLines, ImagePlus, Crown, FileAudio, Link2, Share2, ExternalLink, Sparkles, Mic2,
 } from "lucide-react";
 import { masterAudioToWav } from "@/lib/aiMastering";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,8 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { downloadAudio, downloadAudioAsWav, startStems, waitForStems, invokeStudioEngine, isSubscriptionError } from "@/lib/hubStudio";
+import { downloadAudio, downloadAudioAsWav, startStems, waitForStems, invokeStudioEngine, isSubscriptionError, startVoiceCover, waitForAceStep } from "@/lib/hubStudio";
+import { uploadToR2 } from "@/lib/r2Upload";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -76,6 +77,9 @@ export const GenerationHistory = () => {
   const [loading, setLoading] = useState(true);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [coverVersion, setCoverVersion] = useState(0);
+  const [voicingId, setVoicingId] = useState<string | null>(null);
+  const voiceInputRef = useRef<HTMLInputElement | null>(null);
+  const voiceTargetRef = useRef<Generation | null>(null);
   const [stemsDialog, setStemsDialog] = useState<{
     open: boolean; title: string; loading: boolean; elapsed: number;
     stems: Record<string, string> | null;
@@ -171,6 +175,52 @@ export const GenerationHistory = () => {
       toast.error("Błąd masteringu: " + (e?.message || "spróbuj zwykły WAV"), { id: "master" });
     } finally {
       setDownloadingId(null);
+    }
+  };
+
+  // „Zaśpiewaj moim głosem" — wybór/nagranie próbki głosu, potem zero-shot
+  // konwersja (seed-vc na hubie). Otwiera systemowy wybór pliku audio.
+  const pickVoiceForCover = (gen: Generation) => {
+    if (!gen.audio_url) { toast.error("Ten utwór nie ma jeszcze audio"); return; }
+    if (!user) { toast.error("Zaloguj się"); return; }
+    voiceTargetRef.current = gen;
+    voiceInputRef.current?.click();
+  };
+
+  const onVoiceFilePicked = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // pozwól wybrać ten sam plik ponownie
+    const gen = voiceTargetRef.current;
+    if (!file || !gen || !gen.audio_url || !user) return;
+    if (file.size > 20 * 1024 * 1024) { toast.error("Próbka głosu za duża (max 20 MB)"); return; }
+
+    setVoicingId(gen.id);
+    toast.loading("🎤 Wgrywam głos i przygotowuję konwersję…", { id: "voice-cover" });
+    try {
+      const up = await uploadToR2({ file, folder: `voice/${user.id}` });
+      toast.loading("🎙️ Przenoszę utwór na Twój głos (zero-shot, ~1-3 min)…", { id: "voice-cover" });
+      const { taskId, generationId } = await startVoiceCover(gen.audio_url, up.publicUrl, { title: gen.title });
+      window.dispatchEvent(new CustomEvent("grouai:generations-changed"));
+      const { audioUrl } = await waitForAceStep(taskId, generationId);
+      toast.success("✨ Gotowe — utwór Twoim głosem jest w „Twoje utwory”", { id: "voice-cover" });
+      window.dispatchEvent(new CustomEvent("grouai:generations-changed"));
+      playTrack({
+        id: generationId || `vc-${Date.now()}`,
+        title: `${gen.title} • mój głos`,
+        artist: "GrouAI Studio",
+        album: "AI Generated",
+        duration: 180,
+        audio_url: audioUrl,
+        cover_url: gen.replicate_id ? `${HUB_STORAGE}/${gen.replicate_id}-cover.jpg` : null,
+        genre: gen.genre || "AI",
+        mood: null,
+      } as any);
+    } catch (err: any) {
+      if (isSubscriptionError(err)) toast.error("Konwersja głosu wymaga planu Pro lub Ultimate", { id: "voice-cover" });
+      else toast.error("Nie udało się: " + (err?.message || "błąd konwersji głosu"), { id: "voice-cover" });
+    } finally {
+      setVoicingId(null);
+      voiceTargetRef.current = null;
     }
   };
 
@@ -290,6 +340,14 @@ export const GenerationHistory = () => {
 
   return (
     <div className="space-y-3">
+      {/* Ukryty wybór próbki głosu dla „Zaśpiewaj moim głosem" */}
+      <input
+        ref={voiceInputRef}
+        type="file"
+        accept="audio/*"
+        className="hidden"
+        onChange={(e) => void onVoiceFilePicked(e)}
+      />
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-bold flex items-center gap-2 text-[#FF9500]">
           <Library className="h-5 w-5" />
@@ -400,6 +458,11 @@ export const GenerationHistory = () => {
                         </DropdownMenuItem>
                         <DropdownMenuSeparator className="bg-[#FF6B00]/20" />
                         {/* Obróbka AI */}
+                        <DropdownMenuItem className="cursor-pointer gap-2" disabled={voicingId === gen.id} onClick={() => pickVoiceForCover(gen)}>
+                          {voicingId === gen.id
+                            ? <Loader2 className="h-4 w-4 animate-spin text-cyan-400" />
+                            : <Mic2 className="h-4 w-4 text-cyan-400" />} Zaśpiewaj moim głosem
+                        </DropdownMenuItem>
                         <DropdownMenuItem className="cursor-pointer gap-2" onClick={() => void splitStems(gen)}>
                           <AudioLines className="h-4 w-4 text-purple-400" /> Rozdziel na ścieżki (AI)
                         </DropdownMenuItem>
