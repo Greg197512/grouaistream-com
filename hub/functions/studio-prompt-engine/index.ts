@@ -534,6 +534,13 @@ Deno.serve(async (req) => {
     let predId: string | null = null;
     let engineName = "";
 
+    // Wgrany głos użytkownika (referencja wokalu, jak „Upload Audio" w Suno).
+    // Gdy podany publiczny URL nagrania → tryb upload-cover: Suno śpiewa naszym
+    // tekstem, biorąc barwę/charakter z próbki głosu.
+    const voiceUrl = String(body.voice_url || body.voiceUrl || "").trim();
+    const voiceGender = ["m", "f"].includes(String(body.voice_gender || "").toLowerCase())
+      ? String(body.voice_gender).toLowerCase() : "";
+
     const sunoKey = (cfg["suno_api_key"] || "").trim();
     if (sunoKey) {
       try {
@@ -542,26 +549,37 @@ Deno.serve(async (req) => {
           tags,
           "studio quality, professional mix, mastered, clear vocals, radio-ready, rich dynamics, hi-fi",
         ], 950);
-        const sr = await fetch("https://api.sunoapi.org/api/v1/generate", {
+        const useCover = !!voiceUrl && /^https?:\/\//.test(voiceUrl);
+        const endpoint = useCover
+          ? "https://api.sunoapi.org/api/v1/generate/upload-cover"
+          : "https://api.sunoapi.org/api/v1/generate";
+        const sunoBody: Record<string, unknown> = {
+          customMode: true,
+          instrumental,
+          model: sunoModel,
+          callBackUrl: cfg["suno_callback_url"] ||
+            `${Deno.env.get("SUPABASE_URL")}/functions/v1/suno-callback`,
+          ...(instrumental ? {} : { prompt: lyrics.slice(0, 4900) }),
+          style: sunoStyle.slice(0, 990),
+          title: title.slice(0, 95),
+          ...(useCover ? {
+            uploadUrl: voiceUrl,
+            // audioWeight: jak mocno trzymać się barwy z próbki (0-1).
+            audioWeight: Math.min(Math.max(Number(cfg["suno_voice_weight"] || "0.65"), 0), 1),
+          } : {}),
+          ...(voiceGender ? { vocalGender: voiceGender } : {}),
+        };
+        const sr = await fetch(endpoint, {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${sunoKey}` },
-          body: JSON.stringify({
-            customMode: true,
-            instrumental,
-            model: sunoModel,
-            callBackUrl: cfg["suno_callback_url"] ||
-              `${Deno.env.get("SUPABASE_URL")}/functions/v1/suno-callback`,
-            ...(instrumental ? {} : { prompt: lyrics.slice(0, 4900) }),
-            style: sunoStyle.slice(0, 990),
-            title: title.slice(0, 95),
-          }),
+          body: JSON.stringify(sunoBody),
           signal: AbortSignal.timeout(30000),
         });
         const sd = await sr.json().catch(() => null);
         const tid = sd?.data?.taskId;
         if (sr.ok && tid) {
           predId = `suno-${tid}`;
-          engineName = `suno-${String(sunoModel).toLowerCase()}`;
+          engineName = useCover ? `suno-cover-${String(sunoModel).toLowerCase()}` : `suno-${String(sunoModel).toLowerCase()}`;
         } else {
           console.warn("[suno] start failed:", JSON.stringify(sd).slice(0, 200));
         }
