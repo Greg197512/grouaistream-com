@@ -1,4 +1,5 @@
 import { useRef, useCallback, useEffect, useState } from "react";
+import { getAudioTap, resumeTap } from "@/lib/audioTap";
 
 export interface AudioLevels {
   bass: number;       // 0-1
@@ -87,44 +88,39 @@ export function useAudioAnalyser(audioElement: HTMLAudioElement | null, isPlayin
     }
   }, []);
 
-  // Connect audio element to analyser (only once per element)
+  // Podłącz analizer do WSPÓLNEGO tapa audio (jedno źródło na element — patrz
+  // lib/audioTap). Dzięki temu nie kolidujemy z useHapticBass (drugie
+  // createMediaElementSource rzucało błąd i psuło dźwięk). Analizer tylko czyta
+  // od źródła; do wyjścia (destination) podłącza już sam tap.
   const connect = useCallback(() => {
     if (!audioElement || connectedElementRef.current === audioElement) return;
 
-    // Cross-origin media can become silent when routed through MediaElementAudioSourceNode.
-    // Keep native playback and use simulated analyser values instead.
-    if (isCrossOriginMedia(audioElement)) {
+    const tap = getAudioTap(audioElement);
+    if (!tap) {
+      // Cross-origin / brak Web Audio → tryb symulowany (dźwięk nietknięty).
       hasRealAnalyserRef.current = false;
       connectedElementRef.current = audioElement;
       return;
     }
 
     try {
-      if (!ctxRef.current) {
-        ctxRef.current = new AudioContext();
-      }
-      const ctx = ctxRef.current;
-
-      const analyser = ctx.createAnalyser();
-      // Higher resolution for honest, lively spectrum
+      ctxRef.current = tap.ctx;
+      const analyser = tap.ctx.createAnalyser();
       analyser.fftSize = 1024;
-      // Lower smoothing = more reactive bars (was 0.75)
       analyser.smoothingTimeConstant = 0.55;
       analyser.minDecibels = -85;
       analyser.maxDecibels = -10;
       analyserRef.current = analyser;
 
-      const source = ctx.createMediaElementSource(audioElement);
-      source.connect(analyser);
-      analyser.connect(ctx.destination);
-      sourceRef.current = source;
+      tap.source.connect(analyser); // tylko odczyt — NIE łączymy analysera z destination
+      sourceRef.current = tap.source;
       connectedElementRef.current = audioElement;
       hasRealAnalyserRef.current = true;
     } catch (e) {
       console.warn("AudioAnalyser connect failed:", e);
       hasRealAnalyserRef.current = false;
     }
-  }, [audioElement, isCrossOriginMedia]);
+  }, [audioElement]);
 
   useEffect(() => {
     if (!isPlaying) {
@@ -143,14 +139,20 @@ export function useAudioAnalyser(audioElement: HTMLAudioElement | null, isPlayin
     const analyser = !useSimulated ? analyserRef.current : null;
     const useReal = analyser && hasRealAnalyserRef.current;
 
-    if (useReal && ctxRef.current?.state === "suspended") {
-      ctxRef.current.resume();
-    }
+    if (useReal && ctxRef.current) resumeTap({ ctx: ctxRef.current, source: sourceRef.current! });
 
     const bufferLength = analyser?.frequencyBinCount ?? 128;
     const dataArray = useReal ? new Uint8Array(bufferLength) : null;
 
+    // Throttle React state do ~30 Hz — słupki wyglądają tak samo, a liczba
+    // przerenderowań spada 2× (koniec „skakania" UI). Płynność wizualną i tak
+    // zapewnia canvas czytający dane bezpośrednio, nie stan React.
+    let lastPush = 0;
+    const PUSH_MS = 33;
+
     const tick = () => {
+      const now = performance.now();
+      const shouldPush = now - lastPush >= PUSH_MS;
       if (useReal && analyser && dataArray) {
         analyser.getByteFrequencyData(dataArray);
 
@@ -196,17 +198,21 @@ export function useAudioAnalyser(audioElement: HTMLAudioElement | null, isPlayin
           frequencies.push(Math.pow(blended, 0.7));
         }
 
-        setLevels({
-          bass: Math.min(1, bass * 1.15),
-          mid: Math.min(1, mid * 1.1),
-          treble: Math.min(1, treble * 1.2),
-          overall: Math.min(1, overall),
-          frequencies,
-          rawBass: bassSum / Math.max(1, bassEnd),
-          isReal: true,
-        });
-      } else {
+        if (shouldPush) {
+          lastPush = now;
+          setLevels({
+            bass: Math.min(1, bass * 1.15),
+            mid: Math.min(1, mid * 1.1),
+            treble: Math.min(1, treble * 1.2),
+            overall: Math.min(1, overall),
+            frequencies,
+            rawBass: bassSum / Math.max(1, bassEnd),
+            isReal: true,
+          });
+        }
+      } else if (shouldPush) {
         // Simulated fallback
+        lastPush = now;
         setLevels(generateSimulatedLevels(Date.now(), barCount));
       }
 
