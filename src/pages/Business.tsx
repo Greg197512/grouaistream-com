@@ -14,7 +14,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { speak, stopSpeaking } from "@/utils/tts";
-import businessHeroBg from "@/assets/business-hero-bg.jpg";
+import studioBg from "@/assets/b2b-studio-bg.svg";
 import { AuroraBackground } from "@/components/effects/AuroraBackground";
 import { BrainVisualization } from "@/components/effects/BrainVisualization";
 import { ServicesScroller } from "@/components/business/ServicesScroller";
@@ -279,33 +279,34 @@ export default function BusinessPage() {
   };
 
   return (
-    <div className="min-h-screen text-foreground relative overflow-hidden">
-      {/* B2B corporate backdrop — visible navy/cyan mesh with moving sheen */}
+    <div className="min-h-screen bg-background text-foreground relative overflow-hidden">
+      {/* Tło B2B: biuro / studio radiowe — delikatne, o które prosił klient */}
       <div className="fixed inset-0 -z-20 bg-[#060b18]">
-        {/* Strong mesh gradients — cyan / blue / violet */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_15%_10%,hsl(200_100%_55%/0.55),transparent_55%),radial-gradient(ellipse_at_85%_20%,hsl(260_95%_60%/0.45),transparent_55%),radial-gradient(ellipse_at_50%_100%,hsl(190_100%_55%/0.5),transparent_60%),radial-gradient(ellipse_at_10%_90%,hsl(280_90%_55%/0.35),transparent_55%)]" />
-        {/* Conic sheen — clearly visible */}
-        <motion.div
-          className="absolute -inset-[20%] opacity-40"
-          style={{
-            background:
-              "conic-gradient(from 0deg at 50% 50%, hsl(200 100% 55% / 0.6), transparent 25%, hsl(260 95% 65% / 0.55) 50%, transparent 75%, hsl(190 100% 55% / 0.6))",
-            filter: "blur(80px)",
-          }}
-          animate={{ rotate: 360 }}
-          transition={{ duration: 60, repeat: Infinity, ease: "linear" }}
-        />
-        {/* Engineering grid */}
+        {/* Scena studia radiowego (SVG) */}
         <div
-          className="absolute inset-0 opacity-[0.12]"
+          className="absolute inset-0 bg-cover bg-center opacity-[0.22]"
+          style={{ backgroundImage: `url(${studioBg})` }}
+        />
+        {/* Animowana Aurora — wtopiona (screen) nad studiem, żeby oba były widoczne */}
+        <div className="absolute inset-0 opacity-50 mix-blend-screen">
+          <AuroraBackground showFace />
+        </div>
+      </div>
+
+      {/* Delikatna warstwa szkła + poświata (nie zamalowuj tła na maksa) */}
+      <div className="fixed inset-0 -z-10">
+        <div className="absolute inset-0 bg-gradient-to-b from-background/10 via-background/35 to-background/75" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,hsl(190_100%_50%/0.12),transparent_60%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,hsl(210_100%_45%/0.1),transparent_55%)]" />
+        <div
+          className="absolute inset-0 opacity-[0.04]"
           style={{
             backgroundImage:
-              "linear-gradient(hsl(200 100% 75% / 0.7) 1px, transparent 1px), linear-gradient(90deg, hsl(200 100% 75% / 0.7) 1px, transparent 1px)",
-            backgroundSize: "56px 56px",
+              "linear-gradient(hsl(190 100% 50% / 0.4) 1px, transparent 1px), linear-gradient(90deg, hsl(190 100% 50% / 0.4) 1px, transparent 1px)",
+            backgroundSize: "80px 80px",
           }}
         />
-        {/* Soft vignette only at edges */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_55%,rgba(0,0,0,0.55)_100%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_58%,rgba(0,0,0,0.5)_100%)]" />
       </div>
 
       {/* HERO */}
