@@ -279,7 +279,7 @@ export default function BusinessPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground relative overflow-hidden">
+    <div className="min-h-screen text-foreground relative overflow-hidden">
       {/* B2B corporate backdrop — visible navy/cyan mesh with moving sheen */}
       <div className="fixed inset-0 -z-20 bg-[#060b18]">
         {/* Strong mesh gradients — cyan / blue / violet */}
