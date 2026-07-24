@@ -24,6 +24,7 @@ import { VoiceRecorder } from "@/components/studio/VoiceRecorder";
 import { VoiceLibrary } from "@/components/studio/VoiceLibrary";
 import { StudioGrokDock } from "@/components/studio/StudioGrokDock";
 import { StudioVisualizer } from "@/components/studio/StudioVisualizer";
+import { StudioSparksBackdrop } from "@/components/studio/StudioSparksBackdrop";
 import { StudioConsole } from "@/components/studio/StudioConsole";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -636,8 +637,8 @@ const Suno = () => {
     }
   };
 
-  // === ULTIMATE GATE: GrouAI Studio dostępne tylko dla Ultimate (również niezalogowani) ===
-  if (!isUltimate) {
+  // === PROMO: GrouAI Studio jest darmowe dla wszystkich — brak paywall ===
+  if (false) {
     return (
       <MainLayout>
         <div className="min-h-screen flex items-center justify-center px-4" style={{ background: "#0F0F1A" }}>
@@ -880,6 +881,9 @@ const Suno = () => {
             </p>
           )}
 
+          {/* Iskry w tle podczas generowania — stabilne, bez błysków */}
+          <StudioSparksBackdrop active={generating} />
+
           {/* Loading Animation */}
           <AnimatePresence>
             {generating && (
@@ -897,14 +901,13 @@ const Suno = () => {
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -20, scale: 0.95 }}
                 transition={{ type: "spring", stiffness: 200, damping: 20 }}
-                className="relative p-5 rounded-2xl border border-[#FF6B00]/30 bg-[#1a1a2e]/80 backdrop-blur-sm space-y-4 overflow-hidden"
-                style={{ boxShadow: "0 0 40px #FF6B0020, 0 8px 32px rgba(0,0,0,0.4)" }}
+                className="relative p-5 rounded-2xl border border-[#FF6B00]/40 bg-[#12121c]/85 backdrop-blur-md space-y-4 overflow-hidden"
+                style={{ boxShadow: "inset 0 0 0 1px rgba(255,149,0,0.08), 0 0 24px rgba(255,107,0,0.18), 0 8px 32px rgba(0,0,0,0.45)" }}
               >
-                <motion.div
-                  className="absolute -top-20 -right-20 w-40 h-40 rounded-full"
-                  style={{ background: "radial-gradient(circle, #FF6B0030, transparent 70%)" }}
-                  animate={{ scale: [1, 1.3, 1], opacity: [0.5, 0.8, 0.5] }}
-                  transition={{ duration: 3, repeat: Infinity }}
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute -top-24 -right-24 w-56 h-56 rounded-full"
+                  style={{ background: "radial-gradient(circle, rgba(255,107,0,0.18), transparent 70%)" }}
                 />
 
                 <motion.div

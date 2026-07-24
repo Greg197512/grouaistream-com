@@ -41,6 +41,48 @@ async function loadConfig(): Promise<Record<string, string>> {
   return cfg;
 }
 
+// ─── SILNIK EMOCJI (wersja kompaktowa; pełna w studio-prompt-engine) ──────────
+// Walencja→tryb, pobudzenie→tempo — wg badań psychologii muzyki (Russell 1980;
+// Gabrielsson & Lindström 2010). body.aura = {valence, arousal, emotion}.
+const EMOTION_MUSIC: Record<string, { mode: string; bpm: [number, number]; tags: string }> = {
+  happy:     { mode: "major key", bpm: [112, 128], tags: "bright uplifting harmony, bouncy groove, warm smiling vocal tone" },
+  sad:       { mode: "minor key", bpm: [62, 84],   tags: "melancholic, sparse soft piano, legato strings, intimate fragile vocals" },
+  angry:     { mode: "minor key", bpm: [140, 165], tags: "aggressive, distorted, sharp attacks, forceful gritty delivery" },
+  fearful:   { mode: "minor key", bpm: [92, 112],  tags: "tense, tremolo strings, dark low drones, hushed unstable vocals" },
+  disgusted: { mode: "dark minor key", bpm: [88, 104], tags: "gritty detuned synths, industrial textures, cold detached delivery" },
+  surprised: { mode: "major key", bpm: [124, 138], tags: "euphoric, big builds and drops, expressive dynamic vocals" },
+  neutral:   { mode: "modal harmony", bpm: [92, 108], tags: "dreamy, lush pads, smooth relaxed vocals" },
+  calm:      { mode: "major key", bpm: [64, 84],   tags: "peaceful, warm pads, gentle percussion, soft airy vocals" },
+  romantic:  { mode: "major key with added 7ths", bpm: [70, 92], tags: "intimate, warm rhodes, silky strings, tender breathy vocals" },
+  energetic: { mode: "major key", bpm: [126, 140], tags: "high-energy four-on-the-floor, punchy kick, powerful confident vocals" },
+  focused:   { mode: "minimal harmonic movement", bpm: [100, 116], tags: "steady hypnotic pulse, minimal arrangement, calm even delivery" },
+};
+
+function emotionTags(aura: Record<string, unknown> | null | undefined): string {
+  if (!aura || typeof aura !== "object") return "";
+  const v = typeof aura.valence === "number" ? (aura.valence as number) : 0.2;
+  const a = typeof aura.arousal === "number" ? (aura.arousal as number) : 0.5;
+  const key = String(aura.emotion || "").toLowerCase();
+  let base = EMOTION_MUSIC[key];
+  if (!base) {
+    base = v >= 0
+      ? (a >= 0.55 ? EMOTION_MUSIC.happy : EMOTION_MUSIC.calm)
+      : (a >= 0.55 ? EMOTION_MUSIC.angry : EMOTION_MUSIC.sad);
+  }
+  const clampA = Math.min(Math.max(a, 0), 1);
+  const bpm = Math.round(base.bpm[0] + (base.bpm[1] - base.bpm[0]) * clampA);
+  return `${base.mode}, ${bpm} bpm, ${base.tags}`;
+}
+
+// Zapis do zbioru uczącego silnika (hub) — nie blokuje odpowiedzi.
+function logLearning(row: Record<string, unknown>) {
+  const p = hubAdmin().from("engine_learning").insert(row).then(
+    ({ error }) => { if (error) console.warn("[engine_learning]", error.message); },
+  );
+  // @ts-ignore — EdgeRuntime.waitUntil jest dostępne w Supabase Edge Runtime
+  if (typeof EdgeRuntime !== "undefined" && EdgeRuntime.waitUntil) EdgeRuntime.waitUntil(p);
+}
+
 function extractAudioUrl(output: unknown): string {
   if (!output) return "";
   if (typeof output === "string") return output;
@@ -110,10 +152,123 @@ Deno.serve(async (req) => {
   const action = body.action ?? "generate";
 
   try {
+    // ================= VOICE COVER =================
+    // „Zaśpiewaj moim głosem" — zero-shot konwersja głosu (seed-vc na Replicate,
+    // BEZ klucza Suno, na istniejącym tokenie). Wejście: audio_url (gotowy utwór)
+    // + voice_url (próbka głosu 5-30 s). Wyjście: ten sam utwór zaśpiewany
+    // barwą z próbki. Status pollujemy zwykłym torem Replicate (id bez prefiksu).
+    if (action === "voice_cover") {
+      const { data: userData } = await live.auth.getUser();
+      const userId = userData?.user?.id;
+      if (!userId) return json({ error: "unauthorized" }, 401);
+
+      const songUrl = String(body.audio_url || body.song_url || "").trim();
+      const voiceUrl = String(body.voice_url || body.voiceUrl || "").trim();
+      if (!/^https?:\/\//.test(songUrl) || !/^https?:\/\//.test(voiceUrl)) {
+        return json({ error: "audio_url i voice_url muszą być publicznymi adresami http(s)" }, 400);
+      }
+
+      // Model konfigurowalny (domyślnie seed-vc). Wersję rozwiązujemy przez /models.
+      const vcModel = cfg["voice_convert_model"] || "zsxkib/seed-vc";
+      const mr = await fetch(`${REPLICATE_BASE}/models/${vcModel}`, { headers: rHeaders });
+      const mData = await mr.json();
+      const version = mData?.latest_version?.id;
+      if (!mr.ok || !version) {
+        return json({ error: "Nie mogę ustalić wersji modelu głosu", details: mData }, 502);
+      }
+
+      // seed-vc: source = utwór do przerobienia, target = próbka głosu.
+      // f0_condition=true → tryb śpiewu (zachowuje melodię, zmienia barwę).
+      const steps = Math.min(Math.max(parseInt(cfg["voice_convert_steps"] || "30", 10) || 30, 1), 100);
+      const pitch = Math.min(Math.max(parseInt(String(body.pitch ?? "0"), 10) || 0, -12), 12);
+      const rel = await fetch(`${REPLICATE_BASE}/predictions`, {
+        method: "POST",
+        headers: rHeaders,
+        body: JSON.stringify({
+          version,
+          input: {
+            source: songUrl,
+            target: voiceUrl,
+            diffusion_steps: steps,
+            f0_condition: true,
+            auto_f0_adjust: true,
+            semi_tone_shift: pitch,
+          },
+        }),
+      });
+      const relData = await rel.json();
+      if (!rel.ok) {
+        if (relData?.status === 402 || rel.status === 402) {
+          return json({ error: "Konto Replicate nie ma środków — doładuj na replicate.com/account/billing", details: relData }, 402);
+        }
+        return json({ error: "Nie udało się wystartować konwersji głosu", details: relData }, rel.status);
+      }
+      const predId = relData?.id;
+      if (!predId) return json({ error: "Brak id predykcji", details: relData }, 502);
+
+      // Nowy rekord w Studio (prywatny) — wynik dojdzie przez status polling.
+      const { data: gen } = await live.from("generations").insert({
+        user_id: userId,
+        title: (body.title ? `${body.title} • mój głos` : "Cover • mój głos").slice(0, 120),
+        genre: "voice-cover",
+        prompt: "voice cover (seed-vc)",
+        instrumental: false,
+        status: "pending",
+        replicate_id: predId,
+        engine: "seed-vc",
+      }).select().single();
+
+      return json({ id: predId, generation_id: gen?.id ?? null, status: "starting", engine: "seed-vc" });
+    }
+
     // ================= STATUS =================
     if (action === "status") {
       const predId = body.task_id || body.prediction_id || body.replicate_id;
       if (!predId) return json({ error: "prediction_id required" }, 400);
+
+      // Zadania Suno V5/V5_5 (api.sunoapi.org) — task_id z prefiksem "suno-".
+      if (String(predId).startsWith("suno-")) {
+        const sunoKey = (cfg["suno_api_key"] || "").trim();
+        if (!sunoKey) return json({ error: "suno_api_key not configured (hub_config)" }, 500);
+        const tid = String(predId).slice(5);
+        const r = await fetch(
+          `https://api.sunoapi.org/api/v1/generate/record-info?taskId=${encodeURIComponent(tid)}`,
+          { headers: { Authorization: `Bearer ${sunoKey}` } },
+        );
+        const d = await r.json().catch(() => null);
+        const st = String(d?.data?.status || "");
+        if (st === "SUCCESS" || st === "FIRST_SUCCESS") {
+          const track = d?.data?.response?.sunoData?.[0];
+          const audioUrl = track?.audioUrl || track?.streamAudioUrl || "";
+          if (audioUrl) {
+            // Archiwizacja do storage huba — linki CDN bywają czasowe.
+            const archived = await archiveToHubStorage(audioUrl, String(predId));
+            const finalUrl = archived || audioUrl;
+            if (body.generation_id) {
+              await live.from("generations").update({
+                status: "completed",
+                audio_url: finalUrl,
+              }).eq("id", body.generation_id);
+            }
+            return json({
+              id: predId,
+              status: "succeeded",
+              output: finalUrl,
+              audio_url: finalUrl,
+              cover_url: track?.imageUrl ||
+                `${Deno.env.get("SUPABASE_URL")}/storage/v1/object/public/acestep/${predId}-cover.jpg`,
+              r2_archived: !!archived,
+            });
+          }
+        }
+        if (["CREATE_TASK_FAILED", "GENERATE_AUDIO_FAILED", "SENSITIVE_WORD_ERROR", "CALLBACK_EXCEPTION"].includes(st)) {
+          if (body.generation_id) {
+            await live.from("generations").update({ status: "failed" }).eq("id", body.generation_id);
+          }
+          return json({ id: predId, status: "failed", error: st });
+        }
+        return json({ id: predId, status: "processing" });
+      }
 
       const r = await fetch(`${REPLICATE_BASE}/predictions/${predId}`, { headers: rHeaders });
       const data = await r.json();
@@ -164,14 +319,12 @@ Deno.serve(async (req) => {
 
     // Generowanie tylko dla planów płatnych (Pro/Ultimate) lub admina —
     // każda generacja kosztuje realne pieniądze na Replicate.
-    // PROMOCJA: do daty w hub_config.studio_free_until Studio jest darmowe dla WSZYSTKICH zalogowanych.
     const [{ data: isAdmin }, { data: subRow }] = await Promise.all([
       live.rpc("has_role", { _user_id: userId, _role: "admin" }),
       live.from("user_subscriptions").select("plan, status").eq("user_id", userId).eq("status", "active").maybeSingle(),
     ]);
     const paidPlan = subRow && (subRow.plan === "pro" || subRow.plan === "ultimate");
-    const studioPromo = !!cfg["studio_free_until"] && Date.now() < Date.parse(cfg["studio_free_until"]);
-    if (!isAdmin && !paidPlan && !studioPromo) {
+    if (!isAdmin && !paidPlan) {
       return json({
         error: "subscription_required",
         message: "Generowanie muzyki wymaga planu Pro lub Ultimate.",
@@ -186,28 +339,65 @@ Deno.serve(async (req) => {
     const duration: number = Math.min(Math.max(body.duration || body.duration_seconds || 180, 10), 360);
     const title: string = body.title || "GrouAI Track";
 
-    // ROUTING SILNIKÓW (2026-07-14, „najwyższy poziom"):
-    // - wokal → MiniMax music-2.6 (oficjalny, klasa najbliższa Suno: oddech,
-    //   vibrato, BPM/tonacja, do 6 min, szybki streaming)
-    // - instrumental → domyślnie też MiniMax 2.6 (is_instrumental) = wyższa
-    //   jakość niż ACE-Step; hub_config.instrumental_engine="acestep" cofa na tańszy ACE.
-    const mmModel = cfg["vocal_model"] || "minimax/music-2.6";
+    // Warunkowanie emocjonalne: świeża detekcja aury (body.aura) dostraja
+    // tryb/tempo/barwę tak, by utwór realnie oddawał stan słuchacza.
+    const emoTags = emotionTags(body.aura);
+    const promptWithEmo = emoTags ? `${prompt}, ${emoTags}` : prompt;
+
+    // ROUTING SILNIKÓW (poziom v6):
+    // TIER 1: Suno V5/V5_5 (api.sunoapi.org, hub_config.suno_api_key) — jakość
+    //         referencyjna: polski wokal i czyste instrumenty klasy studia.
+    // TIER 2: MiniMax music-2.6 — automatyczny fallback.
+    // TIER 3: ACE-Step — gdy hub_config.instrumental_engine="acestep".
+    const qualitySuffix = ", high quality, studio recording, professional mixing, crisp clear master, radio-ready, rich dynamics";
+    let predId: string | null = null;
+    let engineName = "";
+
+    const sunoKey = (cfg["suno_api_key"] || "").trim();
+    if (sunoKey) {
+      try {
+        const sunoModel = cfg["suno_model"] || "V5";
+        const sr = await fetch("https://api.sunoapi.org/api/v1/generate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${sunoKey}` },
+          body: JSON.stringify({
+            customMode: true,
+            instrumental,
+            model: sunoModel,
+            callBackUrl: cfg["suno_callback_url"] ||
+              `${Deno.env.get("SUPABASE_URL")}/functions/v1/suno-callback`,
+            ...(instrumental ? {} : { prompt: lyrics.slice(0, 4900) }),
+            style: (promptWithEmo + qualitySuffix).slice(0, 990),
+            title: title.slice(0, 95),
+          }),
+          signal: AbortSignal.timeout(30000),
+        });
+        const sd = await sr.json().catch(() => null);
+        const tid = sd?.data?.taskId;
+        if (sr.ok && tid) {
+          predId = `suno-${tid}`;
+          engineName = `suno-${String(sunoModel).toLowerCase()}`;
+        } else {
+          console.warn("[suno] start failed:", JSON.stringify(sd).slice(0, 200));
+        }
+      } catch (e) {
+        console.warn("[suno] unreachable:", String(e).slice(0, 120));
+      }
+    }
+
     const instrEngine = (cfg["instrumental_engine"] || "minimax").toLowerCase();
-    const qualitySuffix =
-      ", high quality, studio recording, professional mixing, crisp clear master, radio-ready, rich dynamics";
-    const richPrompt = (prompt + qualitySuffix).slice(0, 300);
-
-    let rel: Response;
-    let engineName: string;
     const useMinimax = !instrumental || instrEngine === "minimax";
-
+    if (!predId) {
+    let rel: Response;
     if (useMinimax) {
       engineName = instrumental ? "minimax-inst" : "minimax";
+      const vocalModel = cfg["vocal_model"] || "minimax/music-2.6";
+      const mmPrompt = (promptWithEmo + qualitySuffix).slice(0, 300);
       const hasLyrics = !instrumental && !!lyrics && lyrics !== "[instrumental]" && lyrics.trim().length > 2;
       const input: Record<string, unknown> = {
-        prompt: richPrompt.length >= 10 ? richPrompt : richPrompt + ", modern pop",
+        prompt: mmPrompt.length >= 10 ? mmPrompt : mmPrompt + ", modern pop",
         audio_format: "mp3",
-        bitrate: 256000,
+        bitrate: parseInt(cfg["minimax_bitrate"] || "256000", 10) || 256000,
         sample_rate: 44100,
       };
       if (instrumental) {
@@ -218,7 +408,7 @@ Deno.serve(async (req) => {
         // Brak tekstu → model sam dopisze tekst pasujący do stylu.
         input.lyrics_optimizer = true;
       }
-      rel = await fetch(`${REPLICATE_BASE}/models/${mmModel}/predictions`, {
+      rel = await fetch(`${REPLICATE_BASE}/models/${vocalModel}/predictions`, {
         method: "POST",
         headers: rHeaders,
         body: JSON.stringify({ input }),
@@ -241,7 +431,7 @@ Deno.serve(async (req) => {
         body: JSON.stringify({
           version,
           input: {
-            tags: prompt + qualitySuffix,
+            tags: promptWithEmo + ", high quality, studio recording, professional mixing, crisp clear audio",
             lyrics,
             duration,
             scheduler: cfg["ace_scheduler"] || "euler",
@@ -263,8 +453,9 @@ Deno.serve(async (req) => {
       return json({ error: "Replicate create failed", details: relData }, rel.status);
     }
 
-    const predId = relData?.id;
+    predId = relData?.id ?? null;
     if (!predId) return json({ error: "No prediction id from Replicate", details: relData }, 502);
+    } // koniec fallbacku Tier 2/3
 
     // Okładka AI startuje automatycznie po stronie serwera — każdy utwór ją
     // dostaje, niezależnie od tego, skąd przyszło zlecenie (UI, API, testy).
@@ -287,6 +478,17 @@ Deno.serve(async (req) => {
       replicate_id: predId,
       engine: engineName,
     }).select().single();
+
+    logLearning({
+      user_id: userId,
+      source: body.source === "aura" ? "aura" : "studio-direct",
+      prompt: prompt.slice(0, 2000),
+      language: body.language || null,
+      aura: body.aura && typeof body.aura === "object" ? body.aura : null,
+      plan: { title, tags: promptWithEmo.slice(0, 1500), instrumental, duration },
+      engine: engineName,
+      task_id: predId,
+    });
 
     return json({
       id: predId,

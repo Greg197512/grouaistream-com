@@ -49,7 +49,6 @@ const ClientDashboard = () => {
     const { data } = await supabase.from("aurora_business_orders")
       .select("id, service_type, brief, status, payment_status, price_eur, created_at, workflow_map, progress_pct")
       .eq("user_id", user.id)
-      .in("payment_status", ["paid", "completed"])
       .order("created_at", { ascending: false });
     setOrders((data ?? []) as Order[]);
     if (!activeOrderId && data && data.length > 0) setActiveOrderId(data[0].id);
@@ -86,9 +85,9 @@ const ClientDashboard = () => {
       <MainLayout>
         <div className="max-w-3xl mx-auto py-12 px-4 text-center space-y-6">
           <div className="text-6xl">🎯</div>
-          <h1 className="text-3xl font-bold">Brak opłaconych zleceń</h1>
+          <h1 className="text-3xl font-bold">Brak zleceń</h1>
           <p className="text-muted-foreground">
-            Dashboard zleceniodawcy aktywuje się po pierwszym opłaconym zleceniu B2B. Zamów usługę u Aurory żeby zobaczyć tu mapę działań, dokumenty i panele zarządzania.
+            Twój dashboard aktywuje się po pierwszym zleceniu B2B. Porozmawiaj z Aurorą, żeby zobaczyć tu mapę działań, oferty, faktury i panele zarządzania.
           </p>
           <Button onClick={() => navigate("/business")} size="lg" className="gap-2">
             Zamów usługę B2B <ArrowRight className="w-4 h-4" />

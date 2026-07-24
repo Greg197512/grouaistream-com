@@ -700,108 +700,101 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     toast.success(`Added "${track.title}" to queue`);
   };
 
-  // Shared: load language-specific track into player
+  // Shared: load language-specific track into player.
+  // Szuka utworu po tytule niezależnie od hostingu audio (R2 / Vercel / Lovable —
+  // wszystkie dają zwykły publiczny URL w kolumnie audio_url). Najpierw próbuje
+  // dokładnego dopasowania tytułu, potem częściowego (na wypadek drobnych różnic
+  // w zapisie), i zawsze wybiera rekord z prawdziwym linkiem http. BEZ losowego
+  // fallbacku — jeśli danego utworu nie ma, nic się nie odpala.
   const loadLangTrack = useCallback((lang: string) => {
     const langTrackMap: Record<string, string> = {
-      pl: '%Holenderski Club Peak%',
-      en: '%Neon Floor Directions%',
-      nl: '%Amsterdam Drop Call%',
-      ua: '%Kyiv Club Signal%',
+      pl: 'GrouAIStream — Neonowe Serce',
+      en: 'GrouAIStream — Neon Nights',
+      nl: 'GrouAIStream — Amsterdam Pulse',
+      ua: 'GrouAIStream — Kyiv Signal',
     };
-    const pattern = langTrackMap[lang] || langTrackMap.en;
+    const trackTitle = langTrackMap[lang] || langTrackMap.en;
 
-    supabase
-      .from('tracks')
-      .select('*')
-      .ilike('title', pattern)
-      .not('audio_url', 'is', null)
-      .limit(1)
-      .then(({ data }) => {
-        if (data && data.length > 0) {
-          const track = data[0] as Track;
-          if (track.audio_url || track.video_url) {
-            setCurrentTrack(track);
-            setQueue([track]);
-            setQueueIndex(0);
-            return;
-          }
-        }
-        // Fallback: pick any track with audio
-        supabase
+    const startTrack = (track: Track) => {
+      setCurrentTrack(track);
+      setQueue([track]);
+      setQueueIndex(0);
+      setTimeout(() => {
+        if (audioRef.current) audioRef.current.play().catch(() => {});
+      }, 120);
+    };
+
+    const pickPlayable = (rows: Track[] | null): Track | null => {
+      if (!rows || rows.length === 0) return null;
+      return (
+        rows.find((r) => (r.audio_url ?? "").startsWith("http")) ||
+        rows.find((r) => !!r.audio_url) ||
+        rows.find((r) => !!r.video_url) ||
+        null
+      );
+    };
+
+    (async () => {
+      // 1) Exact title.
+      const exact = await supabase
+        .from('tracks')
+        .select('*')
+        .eq('title', trackTitle)
+        .not('audio_url', 'is', null)
+        .limit(5);
+      let track = pickPlayable(exact.data as Track[] | null);
+
+      // 2) Partial title.
+      if (!track) {
+        const partial = await supabase
+          .from('tracks')
+          .select('*')
+          .ilike('title', `%${trackTitle.split(' ')[0]}%`)
+          .not('audio_url', 'is', null)
+          .limit(5);
+        track = pickPlayable(partial.data as Track[] | null);
+      }
+
+      // 3) Safety fallback — always play SOMETHING at start.
+      if (!track) {
+        const any = await supabase
           .from('tracks')
           .select('*')
           .not('audio_url', 'is', null)
-          .limit(1)
-          .then(({ data: fallback }) => {
-            if (fallback && fallback.length > 0) {
-              const track = fallback[0] as Track;
-              setCurrentTrack(track);
-              setQueue([track]);
-              setQueueIndex(0);
-            }
-          });
-      });
+          .order('created_at', { ascending: false })
+          .limit(10);
+        track = pickPlayable(any.data as Track[] | null);
+      }
+
+      if (track) startTrack(track);
+    })();
   }, []);
 
-  // Auto-play language-specific track on app start (no login required)
+  // Auto-play językowego utworu przy wejściu do aplikacji. Używa odpornego
+  // loadLangTrack (dokładny → częściowy tytuł, wybór rekordu z linkiem http),
+  // BEZ losowego fallbacku — więc odpala WYŁĄCZNIE właściwą piosenkę danego
+  // języka (PL: Holenderski Club Peak, EN: Neon Floor Directions,
+  // NL: Amsterdam Drop Call, UA: Kyiv Club Signal), nigdy przypadkowego utworu.
   const hasAutoPlayed = useRef(false);
   useEffect(() => {
     if (hasAutoPlayed.current || currentTrack) return;
     hasAutoPlayed.current = true;
     const lang = localStorage.getItem("grooveai-language") || "en";
     loadLangTrack(lang);
-  }, []);
-
-  // Auto-play language track on first login (SIGNED_IN event)
-  const hasPlayedOnLogin = useRef(false);
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "SIGNED_IN" && !hasPlayedOnLogin.current) {
-        hasPlayedOnLogin.current = true;
-        const lang = localStorage.getItem("grooveai-language") || "en";
-        loadLangTrack(lang);
-      }
-    });
-    return () => subscription.unsubscribe();
   }, [loadLangTrack]);
 
-  // Auto-play specific track when language changes
+  // Auto-play specific track when language changes — ta sama odporna logika
+  // co przy starcie (jedno źródło prawdy: loadLangTrack).
   useEffect(() => {
     const handleLanguageChange = (e: Event) => {
       const lang = (e as CustomEvent).detail?.language;
       if (!lang) return;
-
-      // Map language to a specific track
-      const langTrackMap: Record<string, string> = {
-        pl: '%Holenderski Club Peak%',
-        en: '%Drop Chant Stream%',
-        nl: '%Amsterdam Drop Call%',
-        ua: '%Kyiv Club Signal%',
-      };
-
-      const pattern = langTrackMap[lang];
-      if (!pattern) return;
-
-      supabase
-        .from('tracks')
-        .select('*')
-        .ilike('title', pattern)
-        .limit(1)
-        .then(({ data }) => {
-          if (data && data.length > 0) {
-            const track = data[0] as Track;
-            if (track.audio_url || track.video_url) {
-              setCurrentTrack(track);
-              setQueue([track]);
-              setQueueIndex(0);
-            }
-          }
-        });
+      loadLangTrack(lang);
     };
 
     window.addEventListener("grooveai-language-change", handleLanguageChange);
     return () => window.removeEventListener("grooveai-language-change", handleLanguageChange);
-  }, []);
+  }, [loadLangTrack]);
 
   // Reset track start time when track changes
   useEffect(() => {

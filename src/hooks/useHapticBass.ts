@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { getAudioTap, resumeTap } from "@/lib/audioTap";
 
 // Haptic bass — telefon wibruje na basie/dropie („poczuj drop").
 // Web Audio robi „tap" (odczep) na elemencie audio playera: source -> destination
@@ -18,25 +19,18 @@ export function useHapticBass(audioEl: HTMLAudioElement | null, enabled: boolean
     let analyser: AnalyserNode | null = null;
     let data: Uint8Array | null = null;
     try {
-      const AC = (window as any).AudioContext || (window as any).webkitAudioContext;
-      if (!AC) return;
-      // Jeden AudioContext + MediaElementSource na element (można utworzyć TYLKO raz) — cache na elemencie.
-      const el = audioEl as any;
-      if (!el.__grouaiCtx) {
-        const ctx: AudioContext = new AC();
-        const source = ctx.createMediaElementSource(audioEl);
-        source.connect(ctx.destination); // zachowaj oryginalny dźwięk
-        el.__grouaiCtx = ctx;
-        el.__grouaiSrc = source;
-      }
-      const ctx: AudioContext = el.__grouaiCtx;
-      const source: AudioNode = el.__grouaiSrc;
-      if (ctx.state === "suspended") ctx.resume?.().catch(() => {});
-      analyser = ctx.createAnalyser();
+      // WSPÓLNY tap audio (jedno źródło na element — patrz lib/audioTap).
+      // Bez tego kolidowaliśmy z useAudioAnalyser (drugie createMediaElementSource
+      // rzucało błąd). Dla cross-origin tap = null → haptyka po prostu nieaktywna,
+      // a dźwięk pozostaje nietknięty.
+      const tap = getAudioTap(audioEl);
+      if (!tap) return;
+      resumeTap(tap);
+      analyser = tap.ctx.createAnalyser();
       analyser.fftSize = 256;
       analyser.smoothingTimeConstant = 0.5;
-      source.connect(analyser); // tap tylko do odczytu (nie do głośnika)
-      data = new Uint8Array(analyser.frequencyBinCount);
+      tap.source.connect(analyser); // tylko odczyt (nie do głośnika)
+      data = new Uint8Array(new ArrayBuffer(analyser.frequencyBinCount));
     } catch {
       return; // nie udało się — audio playera nietknięte
     }
@@ -44,7 +38,7 @@ export function useHapticBass(audioEl: HTMLAudioElement | null, enabled: boolean
     const loop = () => {
       rafRef.current = requestAnimationFrame(loop);
       if (!analyser || !data) return;
-      analyser.getByteFrequencyData(data);
+      analyser.getByteFrequencyData(data as Uint8Array<ArrayBuffer>);
       let bass = 0;
       for (let i = 0; i < 5; i++) bass += data[i]; // najniższe pasma
       bass /= 5;

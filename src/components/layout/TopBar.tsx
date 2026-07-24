@@ -22,6 +22,7 @@ import { UpgradeModal } from "@/components/modals/UpgradeModal";
 import { Language } from "@/i18n/translations";
 import { useNotificationsFeed, FeedItem } from "@/hooks/useNotificationsFeed";
 import { cn } from "@/lib/utils";
+import { ChatWidget } from "@/components/chat/ChatWidget";
 
 const ICONS: Record<FeedItem["icon"], React.ComponentType<{ className?: string }>> = {
   heart: Heart,
@@ -132,6 +133,9 @@ export const TopBar = () => {
             {t("topbar.signIn")}
           </Button>
         )}
+
+        {/* GrouAI Chat — obok logowania */}
+        <ChatWidget />
 
         {/* Discord */}
         <motion.a

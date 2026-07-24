@@ -25,6 +25,7 @@ export const StudioVisualizer = () => {
 
     let raf = 0;
     let rot = 0;
+    let idleFrames = 0; // ile klatek z rzędu bez ruchu (cisza) — potem usypiamy pętlę
 
     const draw = () => {
       const dpr = Math.min(2, window.devicePixelRatio || 1);
@@ -61,11 +62,19 @@ export const StudioVisualizer = () => {
       // Radialne słupki
       ctx.lineCap = "round";
       const barW = Math.max(2, minSide * 0.011);
+      const playing = playingRef.current;
+      // Poświata (shadowBlur) to najdroższa operacja canvas 2D — włączamy ją
+      // tylko podczas grania; w ciszy rysujemy „na płasko", bez obciążania GPU.
+      if (playing) {
+        ctx.shadowBlur = 12;
+      } else {
+        ctx.shadowBlur = 0;
+      }
       for (let i = 0; i < N; i++) {
         const a = rot + (i / N) * Math.PI * 2;
         const raw = freqs[i] ?? 0;
         // Gdy cisza — statyczny, spokojny wzór (bez ruchu).
-        const v = playingRef.current ? raw : 0.1 + ((i * 7) % 5) * 0.02;
+        const v = playing ? raw : 0.1 + ((i * 7) % 5) * 0.02;
         const len = baseR + Math.max(0.04, v) * maxBar;
         const x1 = cx + Math.cos(a) * baseR;
         const y1 = cy + Math.sin(a) * baseR;
@@ -74,8 +83,7 @@ export const StudioVisualizer = () => {
         const hue = 275 - Math.min(1, v) * 235; // fiolet → pomarańcz wraz z energią
         ctx.strokeStyle = `hsl(${hue}, 92%, ${56 + v * 16}%)`;
         ctx.lineWidth = barW;
-        ctx.shadowBlur = 14;
-        ctx.shadowColor = `hsl(${hue}, 92%, 60%)`;
+        if (playing) ctx.shadowColor = `hsl(${hue}, 92%, 60%)`;
         ctx.beginPath();
         ctx.moveTo(x1, y1);
         ctx.lineTo(x2, y2);
@@ -90,20 +98,33 @@ export const StudioVisualizer = () => {
       ctx.arc(cx, cy, baseR, 0, Math.PI * 2);
       ctx.stroke();
 
+      // Gdy nic nie gra, obraz jest statyczny — po kilku klatkach usypiamy pętlę
+      // RAF (zero obciążenia CPU/GPU w bezruchu). „isPlaying" wybudza ją z powrotem.
+      if (!playing) {
+        idleFrames++;
+        if (idleFrames > 3) { raf = 0; return; }
+      } else {
+        idleFrames = 0;
+      }
       raf = requestAnimationFrame(draw);
     };
+
+    const wake = () => { if (!raf && !document.hidden) { idleFrames = 0; raf = requestAnimationFrame(draw); } };
 
     const onVis = () => {
       if (document.hidden) {
         if (raf) { cancelAnimationFrame(raf); raf = 0; }
-      } else if (!raf) {
-        raf = requestAnimationFrame(draw);
+      } else {
+        wake();
       }
     };
     document.addEventListener("visibilitychange", onVis);
     raf = requestAnimationFrame(draw);
+    // Gdy zmieni się stan grania (start utworu) — wybudź uśpioną pętlę.
+    const wakeInterval = window.setInterval(() => { if (playingRef.current) wake(); }, 250);
     return () => {
       document.removeEventListener("visibilitychange", onVis);
+      window.clearInterval(wakeInterval);
       if (raf) cancelAnimationFrame(raf);
     };
   }, []);

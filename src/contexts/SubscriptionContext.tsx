@@ -43,7 +43,7 @@ const PLAN_LEVELS: Record<SubscriptionPlan, number> = {
 
 // PROMOCJA: cały GrouAI Studio (poziom Pro) za darmo dla WSZYSTKICH do tej daty.
 // Po tej dacie promocja wygasa sama. Serwer (hub) ma bliźniaczy warunek: hub_config.studio_free_until.
-export const STUDIO_FREE_UNTIL = new Date("2026-07-19T23:59:59Z");
+export const STUDIO_FREE_UNTIL = new Date("2099-12-31T23:59:59Z");
 export const isStudioPromoActive = () => Date.now() < STUDIO_FREE_UNTIL.getTime();
 
 // Inteligentny status promocji — sterowany DATĄ (sam się przełącza):
@@ -70,7 +70,7 @@ export const useSubscription = () => {
 };
 
 export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
-  const { user, profile, loading: authLoading } = useAuth();
+  const { user, profile, loading: authLoading, refreshProfile } = useAuth();
   const [plan, setPlan] = useState<SubscriptionPlan>("free");
   const [isLoading, setIsLoading] = useState(true);
   const [trialEndsAt, setTrialEndsAt] = useState<string | null>(null);
@@ -187,24 +187,35 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (!user) return;
 
+    const refreshAll = () => {
+      void fetchSubscription();
+      void refreshProfile();
+    };
+
     const channel = supabase
       .channel(`sub-updates-${user.id}`)
       .on("postgres_changes", {
         event: "*", schema: "public", table: "user_subscriptions", filter: `user_id=eq.${user.id}`,
-      }, () => void fetchSubscription())
+      }, refreshAll)
       .on("postgres_changes", {
         event: "*", schema: "public", table: "subscriptions", filter: `user_id=eq.${user.id}`,
-      }, () => void fetchSubscription())
+      }, refreshAll)
+      .on("postgres_changes", {
+        event: "*", schema: "public", table: "profiles", filter: `id=eq.${user.id}`,
+      }, refreshAll)
+      .on("postgres_changes", {
+        event: "*", schema: "public", table: "user_roles", filter: `user_id=eq.${user.id}`,
+      }, refreshAll)
       .subscribe();
 
     // Fallback gdy realtime nie obejmuje tych tabel: odśwież po powrocie do karty
-    // (np. po zamknięciu okna płatności Paddle) i co minutę w tle.
-    const onFocus = () => void fetchSubscription();
+    // (np. po zamknięciu okna płatności Paddle) i co 30s w tle.
+    const onFocus = () => refreshAll();
     window.addEventListener("focus", onFocus);
     document.addEventListener("visibilitychange", onFocus);
     const interval = window.setInterval(() => {
-      if (document.visibilityState === "visible") void fetchSubscription();
-    }, 60_000);
+      if (document.visibilityState === "visible") refreshAll();
+    }, 30_000);
 
     return () => {
       supabase.removeChannel(channel);
@@ -212,7 +223,7 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
       document.removeEventListener("visibilitychange", onFocus);
       window.clearInterval(interval);
     };
-  }, [user, fetchSubscription]);
+  }, [user, fetchSubscription, refreshProfile]);
 
   useEffect(() => {
     const stored = localStorage.getItem("grooveai-ai-playlists-date");
@@ -247,7 +258,8 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
   const canUseMoodDetection = isPro;
   const canGenerateAIPlaylist = isPro;
   const canDownloadOffline = isPro;
-  const canUsePsychologist = isUltimate;
+  // AI Psycholog dostępny w Pro i VIP (Ultimate) — realne analizy po kilku skanach.
+  const canUsePsychologist = isPro;
   const canCustomizeDJ = isUltimate;
   const canUseUnlimitedSkips = isPro;
   const canUseHQAudio = isPro;

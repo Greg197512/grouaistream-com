@@ -1,5 +1,16 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
-import { Language, translations, languageNames, languageFlags } from "@/i18n/translations";
+import { Language, languageNames, languageFlags, pl, type TranslationKeys } from "@/i18n/translations";
+
+// Polski jest w głównym bundlu (domyślny + fallback). Pozostałe języki
+// ładują się dynamicznie jako osobne chunki dopiero, gdy są potrzebne —
+// to zdejmuje ~200 KB z krytycznej ścieżki ładowania strony.
+const dictLoaders: Record<Exclude<Language, "pl">, () => Promise<{ default: TranslationKeys }>> = {
+  en: () => import("@/i18n/en"),
+  nl: () => import("@/i18n/nl"),
+  ua: () => import("@/i18n/ua"),
+};
+
+const dictCache: Partial<Record<Language, TranslationKeys>> = { pl };
 
 interface LanguageContextType {
   language: Language;
@@ -33,6 +44,28 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
     return "en";
   });
 
+  const [dict, setDict] = useState<TranslationKeys>(() => dictCache[language] ?? pl);
+
+  useEffect(() => {
+    let cancelled = false;
+    const cached = dictCache[language];
+    if (cached) {
+      setDict(cached);
+      return;
+    }
+    dictLoaders[language as Exclude<Language, "pl">]()
+      .then((mod) => {
+        dictCache[language] = mod.default;
+        if (!cancelled) setDict(mod.default);
+      })
+      .catch(() => {
+        // Chunk się nie wczytał (np. offline) — zostaje polski fallback.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [language]);
+
   const setLanguage = (lang: Language) => {
     const prevLang = language;
     setLanguageState(lang);
@@ -49,8 +82,7 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const t = (key: string): string => {
-    const trans = translations[language];
-    return (trans as any)[key] || key;
+    return (dict as any)[key] || (pl as any)[key] || key;
   };
 
   return (

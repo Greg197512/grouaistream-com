@@ -31,13 +31,13 @@ const AUDIO_TYPES = [
   "audio/mpeg", "audio/wav", "audio/mp3", "audio/x-wav", "audio/mp4", "audio/x-m4a",
   "audio/ogg", "audio/flac", "audio/aac", "audio/opus", "audio/webm",
 ];
-const MIN_DURATION_SEC = 10;
+const MIN_DURATION_SEC = 150;
 const DURATION_FALLBACK_SEC = 180;
 const MODERATION_TIMEOUT_MS = 30000;
-// Minimum duration required for non-admin uploads to pass moderation: 3:00
-const MODERATION_MIN_APPROVED_SEC = 180;
-// Maksymalna długość wgrywanego utworu: 4:00 (240 s). Dłuższe nie przechodzą.
-const MAX_DURATION_SEC = 240;
+// Minimum duration required for non-admin uploads to pass moderation: 2:30
+const MODERATION_MIN_APPROVED_SEC = 150;
+// Maksymalna długość wgrywanego utworu: 19:00 (1140 s). Dłuższe nie przechodzą.
+const MAX_DURATION_SEC = 1140;
 const fmtDur = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 
 function buildLocalModerationFallback(durationSec?: number | null, isAdmin = false) {
@@ -55,7 +55,7 @@ function buildLocalModerationFallback(durationSec?: number | null, isAdmin = fal
       total_score: isTooShort ? 20 : (isAdmin ? 92 : 70),
       status: isTooShort ? "rejected" : "approved",
       analysis: isTooShort
-        ? "Utwór jest zbyt krótki – minimum do publikacji to 3:00."
+        ? "Utwór jest zbyt krótki – minimum do publikacji to 2:30."
         : isAdmin
           ? "Wgrane przez administratora — automatyczna akceptacja (bypass długości)."
           : "Utwór spełnia aktualne wymagania długości i został zaakceptowany lokalnie.",
@@ -234,7 +234,7 @@ const Upload = () => {
       if (data?.success) {
         const sunoDur = data.duration || 180;
         if (sunoDur > MAX_DURATION_SEC) {
-          toast.error(`Utwór trwa ${fmtDur(sunoDur)} — maksymalnie może 4:00. Wybierz krótszy.`);
+          toast.error(`Utwór trwa ${fmtDur(sunoDur)} — maksymalnie może 19:00. Wybierz krótszy.`);
           return;
         }
         setSunoResolved({
@@ -293,7 +293,7 @@ const Upload = () => {
         toast.error(`${fmtDur(dur)} — ${t("upload.fileTooShort")}`);
       } else if (dur > MAX_DURATION_SEC) {
         setDurationErrorType('too-long');
-        toast.error(`${fmtDur(dur)} — utwór może trwać maksymalnie 4:00. Skróć plik i wgraj ponownie.`);
+        toast.error(`${fmtDur(dur)} — utwór może trwać maksymalnie 19:00. Skróć plik i wgraj ponownie.`);
       } else {
         setDurationErrorType(null);
       }
@@ -313,7 +313,7 @@ const Upload = () => {
       return;
     }
     if (audioFile && durationErrorType !== null) {
-      toast.error("Długość utworu musi mieścić się w zakresie 0:10–4:00.");
+      toast.error("Długość utworu musi mieścić się w zakresie 2:30–19:00.");
       return;
     }
 
@@ -344,7 +344,7 @@ const Upload = () => {
             }
             if (resolvedDuration > MAX_DURATION_SEC) {
               setDurationErrorType('too-long');
-              throw new Error(`Utwór trwa ${fmtDur(resolvedDuration)} — maksymalnie może 4:00. Skróć plik i wgraj ponownie.`);
+              throw new Error(`Utwór trwa ${fmtDur(resolvedDuration)} — maksymalnie może 19:00. Skróć plik i wgraj ponownie.`);
             }
           }
         }

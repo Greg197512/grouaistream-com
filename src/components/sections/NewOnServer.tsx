@@ -241,7 +241,14 @@ export const NewOnServer = () => {
     const channel = supabase.channel("new-tracks-home")
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "tracks" }, () => void fetchLatest())
       .subscribe();
-    return () => { mountedRef.current = false; supabase.removeChannel(channel); };
+    // Odśwież kafelki po zmianach z menu utworu (np. nowa okładka, usunięcie)
+    const onListChanged = () => void fetchLatest();
+    window.addEventListener("track-list-changed", onListChanged);
+    return () => {
+      mountedRef.current = false;
+      supabase.removeChannel(channel);
+      window.removeEventListener("track-list-changed", onListChanged);
+    };
   }, [fetchLatest]);
 
   if (loading) return (

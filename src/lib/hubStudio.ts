@@ -53,6 +53,28 @@ export async function invokeStudioEngine(
 }
 
 /**
+ * „Zaśpiewaj moim głosem" — zero-shot konwersja głosu (seed-vc na hubie, bez
+ * klucza Suno). Bierze gotowy utwór + próbkę głosu i zwraca ten utwór zaśpiewany
+ * Twoją barwą. Zwraca { task_id, generation_id } do pollowania waitForAceStep.
+ */
+export async function startVoiceCover(
+  audioUrl: string,
+  voiceUrl: string,
+  opts?: { title?: string; pitch?: number }
+): Promise<{ taskId: string; generationId: string | null }> {
+  const { data, error } = await hubFetch(HUB_ACESTEP_URL, {
+    action: "voice_cover",
+    audio_url: audioUrl,
+    voice_url: voiceUrl,
+    ...(opts?.title ? { title: opts.title } : {}),
+    ...(typeof opts?.pitch === "number" ? { pitch: opts.pitch } : {}),
+  });
+  if (error) throw error;
+  if (!data?.id) throw new Error(data?.error || "Nie udało się wystartować konwersji głosu");
+  return { taskId: data.id as string, generationId: (data.generation_id as string) ?? null };
+}
+
+/**
  * Pobierz audio jako WAV wysokiej jakości (16-bit PCM 44.1 kHz) —
  * dekodowanie w przeglądarce, bez dodatkowych kosztów serwera.
  */

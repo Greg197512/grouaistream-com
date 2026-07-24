@@ -3377,6 +3377,36 @@ export type Database = {
         }
         Relationships: []
       }
+      chat_messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          is_broadcast: boolean
+          read_at: string | null
+          recipient_id: string | null
+          sender_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          is_broadcast?: boolean
+          read_at?: string | null
+          recipient_id?: string | null
+          sender_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          is_broadcast?: boolean
+          read_at?: string | null
+          recipient_id?: string | null
+          sender_id?: string
+        }
+        Relationships: []
+      }
       compose_feedback: {
         Row: {
           created_at: string
@@ -3782,6 +3812,66 @@ export type Database = {
           id?: string
           token?: string
           used_at?: string | null
+        }
+        Relationships: []
+      }
+      face_detections: {
+        Row: {
+          arousal: number | null
+          confidence: number | null
+          created_at: string
+          dominant_emotion: string
+          emotions: Json
+          engagement: number | null
+          eye_state: string | null
+          frames_count: number
+          gaze: string | null
+          id: string
+          language: string | null
+          micro_expressions: Json | null
+          model: string | null
+          playing_track_id: string | null
+          source: string
+          user_id: string
+          valence: number | null
+        }
+        Insert: {
+          arousal?: number | null
+          confidence?: number | null
+          created_at?: string
+          dominant_emotion: string
+          emotions?: Json
+          engagement?: number | null
+          eye_state?: string | null
+          frames_count?: number
+          gaze?: string | null
+          id?: string
+          language?: string | null
+          micro_expressions?: Json | null
+          model?: string | null
+          playing_track_id?: string | null
+          source?: string
+          user_id: string
+          valence?: number | null
+        }
+        Update: {
+          arousal?: number | null
+          confidence?: number | null
+          created_at?: string
+          dominant_emotion?: string
+          emotions?: Json
+          engagement?: number | null
+          eye_state?: string | null
+          frames_count?: number
+          gaze?: string | null
+          id?: string
+          language?: string | null
+          micro_expressions?: Json | null
+          model?: string | null
+          playing_track_id?: string | null
+          source?: string
+          user_id?: string
+          valence?: number | null
         }
         Relationships: []
       }

@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   Sparkles, Send, Bot, User, Loader2, ArrowRight, Check,
   Search, FileText, Layout, Share2, Workflow, Target,
-  Music, Radio, HardDrive, Megaphone, Mail, MessageSquare, Mic, MicOff, Volume2,
+  Music, Radio, HardDrive, Megaphone, Mail, MessageSquare, Mic, MicOff, Volume2, PhoneCall, PhoneOff,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -19,6 +19,7 @@ import { AuroraBackground } from "@/components/effects/AuroraBackground";
 import { BrainVisualization } from "@/components/effects/BrainVisualization";
 import { ServicesScroller } from "@/components/business/ServicesScroller";
 import { askAuroraB2B } from "@/lib/hubAurora";
+import { supabase } from "@/integrations/supabase/client";
 
 type ChatMessage = { role: "user" | "assistant"; content: string; ts: number };
 type BriefField = { key: string; label: string; description: string; required: boolean; value: any; status: "collected" | "missing_required" | "missing_optional" };
@@ -78,6 +79,7 @@ const STREAM_OFFER = [
 
 export default function BusinessPage() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       role: "assistant",
@@ -95,6 +97,9 @@ export default function BusinessPage() {
   const [briefState, setBriefState] = useState<BriefState | null>(null);
   const [voiceEnabled, setVoiceEnabled] = useState(false);
   const [listening, setListening] = useState(false);
+  // Tryb ciągłej rozmowy (jak w GPT/Grok): po odpowiedzi Aurora sama znów słucha.
+  const [convoMode, setConvoMode] = useState(false);
+  const convoModeRef = useRef(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
 
@@ -107,6 +112,15 @@ export default function BusinessPage() {
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, loading]);
+
+  // Sprzątanie przy wyjściu: zatrzymaj mikrofon i mowę.
+  useEffect(() => {
+    return () => {
+      convoModeRef.current = false;
+      if (recognitionRef.current) { try { recognitionRef.current.stop(); } catch {} }
+      stopSpeaking();
+    };
+  }, []);
 
   const send = async (text?: string) => {
     const msg = (text ?? input).trim();
@@ -138,7 +152,41 @@ export default function BusinessPage() {
       if (orderHit) {
         setOrderPlaced(true);
         setDraftSaved(true);
-        toast.success(`🚀 Zlecenie #${orderHit.short_id} przekazane do ${orderHit.worker}`, { duration: 6000 });
+        toast.success(`🚀 Zlecenie #${orderHit.short_id} przyjęte — sprawdź e-mail`, { duration: 6000 });
+        // Wystartuj przyciskowy przepływ B2B: mail do admina "Potwierdź zlecenie i wyceń".
+        if (orderHit.short_id) {
+          fetch(
+            `https://bmwtydwpevzhbdplilbr.supabase.co/functions/v1/aurora-b2b-flow?stage=kick&order=${encodeURIComponent(orderHit.short_id)}`,
+          ).catch(() => {});
+        }
+        // Zalogowany klient: zapisz zlecenie do dashboardu (aurora_business_orders) i otwórz panel.
+        if (user) {
+          const collected = briefState?.collected ?? {};
+          void (async () => {
+            try {
+              const { data: inserted } = await supabase
+                .from("aurora_business_orders")
+                .insert({
+                  user_id: user.id,
+                  client_email: email || user.email || null,
+                  client_name: user.user_metadata?.display_name || null,
+                  service_type: collected.service_type || "other",
+                  brief: (collected.brief || msg).slice(0, 4000),
+                  status: "received",
+                  payment_status: "pending",
+                  source: "aurora-chat",
+                  payload: { aurora_order_id: orderHit.short_id || null, conversation_id: conversationId },
+                } as any)
+                .select("id")
+                .single();
+              const target = inserted?.id ? `/client-dashboard?order=${inserted.id}` : "/client-dashboard";
+              setTimeout(() => navigate(target), 2500);
+            } catch {
+              // Jeśli RLS nie pozwala na zapis z frontu — przekieruj mimo to; panel pokaże istniejące zlecenia.
+              setTimeout(() => navigate("/client-dashboard"), 2500);
+            }
+          })();
+        }
       } else if (draftHit && !draftSaved) {
         setDraftSaved(true);
         toast.success("✨ Twój brief został zapisany u Aurory");
@@ -146,7 +194,13 @@ export default function BusinessPage() {
 
       const reply = data.reply || "…";
       setMessages((m) => [...m, { role: "assistant", content: reply, ts: Date.now() }]);
-      if (voiceEnabled) void speak(reply.replace(/[*_`#]/g, ""), { lang: "pl-PL", mode: "assistant" });
+      if (voiceEnabled || convoModeRef.current) {
+        await speak(reply.replace(/[*_`#]/g, ""), { lang: "pl-PL", mode: "assistant" });
+        // Rozmowa ciągła: po zakończeniu mowy Aurora znów słucha (hands-free).
+        if (convoModeRef.current) {
+          setTimeout(() => { if (convoModeRef.current) startVoiceInput(); }, 250);
+        }
+      }
     } catch (e: any) {
       toast.error(e?.message || "Błąd komunikacji z Aurorą");
       setMessages((m) => [
@@ -178,9 +232,19 @@ export default function BusinessPage() {
     recognition.interimResults = false;
     recognition.onstart = () => setListening(true);
     recognition.onend = () => setListening(false);
-    recognition.onerror = () => {
+    recognition.onerror = (e: any) => {
       setListening(false);
-      toast.error("Nie mogę odczytać mikrofonu. Sprawdź zgodę w przeglądarce.");
+      const err = e?.error;
+      // W trybie rozmowy cisza to normalka — słuchaj dalej, nie strasz błędem.
+      if (convoModeRef.current && (err === "no-speech" || err === "aborted")) {
+        setTimeout(() => { if (convoModeRef.current) startVoiceInput(); }, 400);
+        return;
+      }
+      if (err === "not-allowed" || err === "audio-capture") {
+        convoModeRef.current = false;
+        setConvoMode(false);
+        toast.error("Nie mogę odczytać mikrofonu. Sprawdź zgodę w przeglądarce.");
+      }
     };
     recognition.onresult = (event: any) => {
       const transcript = event.results?.[0]?.[0]?.transcript?.trim();
@@ -195,6 +259,22 @@ export default function BusinessPage() {
     setVoiceEnabled(next);
     if (!next) stopSpeaking();
     else toast.success("Rozmowa głosowa Aurory włączona");
+  };
+
+  // Ciągła rozmowa głosowa (jak w GPT/Grok): mikrofon + mowa w pętli, hands-free.
+  const toggleConvo = () => {
+    const next = !convoMode;
+    setConvoMode(next);
+    convoModeRef.current = next;
+    if (next) {
+      setVoiceEnabled(true);
+      toast.success("🎙️ Rozmowa z Aurorą — mów swobodnie, odpowiada głosem i słucha dalej");
+      startVoiceInput();
+    } else {
+      if (recognitionRef.current) { try { recognitionRef.current.stop(); } catch {} }
+      stopSpeaking();
+      setListening(false);
+    }
   };
 
   return (
@@ -496,14 +576,14 @@ export default function BusinessPage() {
                 type="button"
                 variant="outline"
                 onClick={startVoiceInput}
-                disabled={loading || listening}
+                disabled={loading || listening || convoMode}
                 className={cn(
                   "shrink-0 rounded-lg border-cyan-400/30 transition-all",
-                  listening && "bg-cyan-500/20 text-cyan-200 border-cyan-400/60 shadow-[0_0_15px_hsl(190_100%_50%/0.5)]"
+                  listening && !convoMode && "bg-cyan-500/20 text-cyan-200 border-cyan-400/60 shadow-[0_0_15px_hsl(190_100%_50%/0.5)]"
                 )}
-                title="Mów do Aurory"
+                title="Powiedz jedno pytanie"
               >
-                {listening ? (
+                {listening && !convoMode ? (
                   <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ duration: 1, repeat: Infinity }}>
                     <Loader2 className="h-4 w-4" />
                   </motion.div>
@@ -513,6 +593,23 @@ export default function BusinessPage() {
               </Button>
             </motion.div>
 
+            {/* Ciągła rozmowa głosowa jak w GPT/Grok */}
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <Button
+                type="button"
+                variant={convoMode ? "default" : "outline"}
+                onClick={toggleConvo}
+                className={cn(
+                  "shrink-0 rounded-lg transition-all",
+                  convoMode
+                    ? "bg-gradient-to-r from-cyan-500 to-blue-600 text-white animate-pulse shadow-lg"
+                    : "border-cyan-400/30 hover:bg-cyan-400/10"
+                )}
+                title={convoMode ? "Zakończ rozmowę głosową" : "Rozmawiaj z Aurorą głosem (jak w GPT/Grok)"}
+              >
+                {convoMode ? <PhoneOff className="h-4 w-4" /> : <PhoneCall className="h-4 w-4" />}
+              </Button>
+            </motion.div>
             <Input
               value={input}
               onChange={(e) => setInput(e.target.value)}
