@@ -14,7 +14,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { speak, stopSpeaking } from "@/utils/tts";
-import businessHeroBg from "@/assets/business-hero-bg.jpg";
+import studioBg from "@/assets/b2b-studio-bg.svg";
 import { AuroraBackground } from "@/components/effects/AuroraBackground";
 import { BrainVisualization } from "@/components/effects/BrainVisualization";
 import { ServicesScroller } from "@/components/business/ServicesScroller";
@@ -282,13 +282,13 @@ export default function BusinessPage() {
     <div className="min-h-screen bg-background text-foreground relative overflow-hidden">
       {/* Subtle office + radio-station photo background */}
       <div className="fixed inset-0 -z-20">
-        {/* Real office / broadcast-studio photo — delikatne, wtopione tło */}
+        {/* Biuro / studio radiowe — delikatne tło o które prosił klient */}
         <div
-          className="absolute inset-0 bg-cover bg-center opacity-[0.14]"
-          style={{ backgroundImage: `url(${businessHeroBg})` }}
+          className="absolute inset-0 bg-cover bg-center opacity-[0.22]"
+          style={{ backgroundImage: `url(${studioBg})` }}
         />
-        {/* Animated Aurora — blended over the photo (screen) so OBOJE są widoczne */}
-        <div className="absolute inset-0 opacity-70 mix-blend-screen">
+        {/* Animated Aurora — wtopiona (screen) nad studiem, żeby oba były widoczne */}
+        <div className="absolute inset-0 opacity-50 mix-blend-screen">
           <AuroraBackground showFace />
         </div>
       </div>
