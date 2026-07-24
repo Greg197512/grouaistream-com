@@ -1,7 +1,15 @@
 import { motion } from "framer-motion";
+import { useMemo } from "react";
 
 export const NeonWavesLoader = () => {
   const bars = Array.from({ length: 24 });
+
+  // Generate random values ONCE during render, not during animation
+  const barConfig = useMemo(() => bars.map(() => ({
+    height1: 40 + Math.random() * 24,
+    height2: 48 + Math.random() * 16,
+    duration: 1.2 + Math.random() * 0.6,
+  })), []);
 
   return (
     <div className="flex flex-col items-center gap-4 py-8">
@@ -15,10 +23,10 @@ export const NeonWavesLoader = () => {
               boxShadow: "0 0 8px #FF6B0080",
             }}
             animate={{
-              height: [8, 40 + Math.random() * 24, 12, 48 + Math.random() * 16, 8],
+              height: [8, barConfig[i].height1, 12, barConfig[i].height2, 8],
             }}
             transition={{
-              duration: 1.2 + Math.random() * 0.6,
+              duration: barConfig[i].duration,
               repeat: Infinity,
               ease: "easeInOut",
               delay: i * 0.05,

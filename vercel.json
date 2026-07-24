@@ -1,11 +1,4 @@
 {
-  "redirects": [
-    {
-      "source": "/~oauth/initiate",
-      "destination": "https://oauth.lovable.app/initiate?project_id=462bddcb-d545-4f42-bc51-5f437cb12bbe&project_env=prod",
-      "permanent": false
-    }
-  ],
   "rewrites": [
     { "source": "/prezent/:id", "destination": "https://bmwtydwpevzhbdplilbr.supabase.co/functions/v1/prezent?t=:id" },
     { "source": "/((?!api/).*)", "destination": "/index.html" }

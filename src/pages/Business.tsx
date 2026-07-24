@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 import { speak, stopSpeaking } from "@/utils/tts";
 import businessHeroBg from "@/assets/business-hero-bg.jpg";
 import { AuroraBackground } from "@/components/effects/AuroraBackground";
+import { BrainVisualization } from "@/components/effects/BrainVisualization";
 import { ServicesScroller } from "@/components/business/ServicesScroller";
 import { askAuroraB2B } from "@/lib/hubAurora";
 import { supabase } from "@/integrations/supabase/client";
@@ -83,7 +84,7 @@ export default function BusinessPage() {
     {
       role: "assistant",
       content:
-        "Cześć! Jestem **Aurora** — autonomiczna asystentka biznesowa GrouAI Stream 🌌\n\nPowiedz mi czego szukasz: audyt SEO, landing page, automatyzacja, lead research, muzyka na zamówienie? Zbiorę brief i nasz zespół wróci do Ciebie z konkretną wyceną.",
+        "Cześć! Jestem **Aurora** — asystentka biznesowa GrouAI Stream 🌌\n\nPowiedz mi czego szukasz: audyt SEO, landing page, automatyzacja, lead research, muzyka na zamówienie? Zbiorę brief i nasz zespół wróci do Ciebie z konkretną wyceną.",
       ts: Date.now(),
     },
   ]);
@@ -105,7 +106,7 @@ export default function BusinessPage() {
   useEffect(() => {
     document.title = "Usługi B2B Aurora — SEO, automatyzacja, muzyka, hosting | GrouAI Stream";
     const m = document.querySelector('meta[name="description"]');
-    if (m) m.setAttribute("content", "Premium usługi B2B prowadzone przez Aurorę — autonomicznego asystenta GrouAI Stream. SEO, automatyzacja n8n, lead research, hosting audio, sponsoring i muzyka na zamówienie.");
+    if (m) m.setAttribute("content", "Premium usługi B2B ze wsparciem Aurory — asystenta GrouAI Stream. SEO, automatyzacja n8n, lead research, hosting audio, sponsoring i muzyka na zamówienie.");
   }, []);
 
   useEffect(() => {
@@ -278,33 +279,49 @@ export default function BusinessPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground relative overflow-hidden">
-      {/* Animated Aurora background (global look) */}
-      <AuroraBackground showFace />
-      {/* Cinematic hero background image */}
-      <div className="absolute inset-0 -z-10">
-        <img
-          src={businessHeroBg}
-          alt=""
-          aria-hidden="true"
-          width={1920}
-          height={1080}
-          className="absolute inset-0 w-full h-[900px] object-cover opacity-40"
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-background/40 via-background/85 to-background" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,hsl(190_100%_50%/0.15),transparent_60%)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,hsl(210_100%_45%/0.12),transparent_55%)]" />
-        <motion.div
-          className="absolute top-20 left-1/2 -translate-x-1/2 h-[500px] w-[900px] rounded-full bg-[hsl(190_100%_50%/0.08)] blur-3xl"
-          animate={{ scale: [1, 1.15, 1], opacity: [0.4, 0.7, 0.4] }}
-          transition={{ duration: 8, repeat: Infinity }}
-        />
-        {/* subtle grid */}
+      {/* Subtle office + radio station background */}
+      <div className="absolute inset-0 -z-20">
+        {/* Office background - very subtle */}
         <div
-          className="absolute inset-0 opacity-[0.04]"
+          className="absolute inset-0 opacity-8"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg width='1920' height='1080' xmlns='http://www.w3.org/2000/svg'%3E%3Cdefs%3E%3ClinearGradient id='office' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%23333333;stop-opacity:1'/%3E%3Cstop offset='100%25' style='stop-color:%23666666;stop-opacity:1'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='1920' height='1080' fill='url(%23office)'/%3E%3Ccircle cx='200' cy='200' r='150' fill='%23888888' opacity='0.3'/%3E%3Crect x='300' y='150' width='400' height='300' fill='%23555555' opacity='0.2'/%3E%3Ccircle cx='1700' cy='800' r='200' fill='%238800ff' opacity='0.15'/%3E%3C/svg%3E")`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+          }}
+        />
+        {/* Animated Aurora background (global look) */}
+        <AuroraBackground showFace />
+      </div>
+
+      {/* Premium glassmorphic overlay */}
+      <div className="absolute inset-0 -z-10">
+        {/* Gradient overlay - subtle */}
+        <div className="absolute inset-0 bg-gradient-to-b from-background/30 via-background/60 to-background/95" />
+
+        {/* Ambient glow */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,hsl(190_100%_50%/0.12),transparent_60%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,hsl(210_100%_45%/0.1),transparent_55%)]" />
+
+        {/* Animated light orbs */}
+        <motion.div
+          className="absolute top-20 left-1/2 -translate-x-1/2 h-[500px] w-[900px] rounded-full bg-[hsl(190_100%_50%/0.06)] blur-3xl"
+          animate={{ scale: [1, 1.15, 1], opacity: [0.3, 0.6, 0.3] }}
+          transition={{ duration: 10, repeat: Infinity }}
+        />
+        <motion.div
+          className="absolute -bottom-32 right-1/4 h-[400px] w-[600px] rounded-full bg-[hsl(210_100%_45%/0.05)] blur-3xl"
+          animate={{ scale: [1, 1.2, 1], opacity: [0.2, 0.5, 0.2] }}
+          transition={{ duration: 12, repeat: Infinity, delay: 1 }}
+        />
+
+        {/* Subtle grid */}
+        <div
+          className="absolute inset-0 opacity-[0.02]"
           style={{
             backgroundImage:
               "linear-gradient(hsl(190 100% 50% / 0.4) 1px, transparent 1px), linear-gradient(90deg, hsl(190 100% 50% / 0.4) 1px, transparent 1px)",
-            backgroundSize: "48px 48px",
+            backgroundSize: "80px 80px",
           }}
         />
       </div>
@@ -316,7 +333,7 @@ export default function BusinessPage() {
           animate={{ opacity: 1, y: 0 }}
           className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-cyan-400/40 bg-cyan-400/10 text-xs text-cyan-300 mb-6 backdrop-blur"
         >
-          <Sparkles className="h-3 w-3" /> Aurora · Autonomiczny dział biznesowy
+          <Sparkles className="h-3 w-3" /> Aurora · Twój asystent działu B2B
         </motion.div>
         <motion.h1
           initial={{ opacity: 0, y: 30 }}
@@ -332,8 +349,8 @@ export default function BusinessPage() {
           transition={{ delay: 0.25 }}
           className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8"
         >
-          Aurora prowadzi rozmowę, zbiera brief, pisze ofertę i pilnuje dostarczenia.
-          Człowiek tylko klika „akceptuję". Reszta dzieje się sama.
+          Aurora pomaga zebrać brief i przygotować wycenę. Każde zapytanie analizuje
+          i realizuje nasz zespół — Ty masz jeden, wygodny punkt kontaktu.
         </motion.p>
         <motion.div
           initial={{ opacity: 0, y: 10 }}
@@ -369,12 +386,28 @@ export default function BusinessPage() {
       </section>
 
       {/* SERVICES — LIVE HORIZONTAL SCROLLER */}
-      <section id="services" className="relative max-w-7xl mx-auto px-4 py-12">
-        <div className="text-center mb-8">
-          <h2 className="text-3xl md:text-4xl font-bold mb-3">Usługi, które robi Aurora</h2>
-          <p className="text-muted-foreground">Przewiń kółkiem myszy lub palcem — Aurora żyje obok Ciebie.</p>
+      <section id="services" className="relative max-w-7xl mx-auto px-4 py-16">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="text-center mb-10"
+        >
+          <h2 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-foreground via-cyan-100 to-blue-200 bg-clip-text text-transparent">
+            Usługi, które robi Aurora
+          </h2>
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            Przewiń kółkiem myszy albo palcem — każda karta przesuwna jak rolka usług. Aurora żyje obok Ciebie 24/7.
+          </p>
+        </motion.div>
+
+        {/* Glassmorphic Services Carousel */}
+        <div className="relative group">
+          <div className="absolute -inset-4 rounded-3xl bg-gradient-to-r from-cyan-500/10 via-blue-500/10 to-purple-500/10 blur-2xl opacity-40 group-hover:opacity-60 transition-opacity" />
+          <div className="relative rounded-2xl backdrop-blur-xl overflow-hidden border border-cyan-400/20">
+            <ServicesScroller services={SERVICES} onPick={quickStart} />
+          </div>
         </div>
-        <ServicesScroller services={SERVICES} onPick={quickStart} />
       </section>
 
       {/* STREAM-NATIVE OFFER */}
@@ -424,17 +457,31 @@ export default function BusinessPage() {
       </section>
 
       {/* CHAT WITH AURORA */}
-      <section id="aurora-chat" className="relative max-w-4xl mx-auto px-4 py-16">
-        <div className="text-center mb-8">
-          <Badge className="mb-3 bg-cyan-500/15 text-cyan-300 border-cyan-400/40">
-            <Bot className="h-3 w-3 mr-1" /> Live · Aurora odpowiada w ~3s
-          </Badge>
-          <h2 className="text-3xl md:text-4xl font-bold mb-2">Pogadaj z Aurorą</h2>
-          <p className="text-muted-foreground">Powiedz, co potrzebujesz. Zbierze brief, pomoże, doradzi.</p>
-        </div>
+      <section id="aurora-chat" className="relative max-w-5xl mx-auto px-4 py-20">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="text-center mb-10"
+        >
+          <motion.div
+            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-cyan-400/40 bg-cyan-400/10 text-xs text-cyan-300 mb-6 backdrop-blur"
+          >
+            <Bot className="h-3.5 w-3.5 animate-pulse" /> Live · Aurora odpowiada w ~3s
+          </motion.div>
+          <h2 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-foreground via-cyan-100 to-blue-200 bg-clip-text text-transparent">
+            Pogadaj z Aurorą
+          </h2>
+          <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
+            Powiedz, co potrzebujesz. Zbierze brief, pomoże, doradzi. Mówisz polszczyzną? Mów! 🎙️
+          </p>
+        </motion.div>
 
-        <Card className="border-cyan-400/30 bg-card/70 backdrop-blur shadow-[0_0_60px_hsl(210_100%_50%/0.1)] overflow-hidden">
-          {!user?.email && (
+        {/* Premium Glassmorphic Chat Container */}
+        <div className="relative group">
+          <div className="absolute -inset-[2px] rounded-3xl bg-gradient-to-br from-cyan-400/40 via-blue-500/30 to-purple-500/40 opacity-50 group-hover:opacity-70 blur-xl transition-opacity" />
+          <Card className="relative border-cyan-400/40 bg-gradient-to-br from-card/90 via-card/80 to-background/70 backdrop-blur-2xl shadow-[0_8px_32px_0_rgba(31,38,135,0.37)] overflow-hidden border border-cyan-400/30">
+            {!user?.email && (
             <div className="border-b border-border/60 p-4 flex flex-col sm:flex-row gap-2 items-stretch sm:items-center bg-background/40">
               <Mail className="h-4 w-4 text-cyan-300 flex-shrink-0" />
               <span className="text-xs text-muted-foreground flex-shrink-0">Twój email (do kontaktu):</span>
@@ -448,49 +495,53 @@ export default function BusinessPage() {
             </div>
           )}
 
-          <div ref={scrollRef} className="h-[480px] overflow-y-auto p-4 sm:p-6 space-y-4">
+          <div ref={scrollRef} className="h-[520px] overflow-y-auto p-6 sm:p-8 space-y-5 bg-gradient-to-b from-background/40 via-background/30 to-background/50">
             <AnimatePresence initial={false}>
               {messages.map((m, i) => (
                 <motion.div
                   key={i}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className={cn("flex gap-3", m.role === "user" ? "justify-end" : "justify-start")}
+                  initial={{ opacity: 0, y: 15, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                  className={cn("flex gap-4", m.role === "user" ? "justify-end" : "justify-start")}
                 >
                   {m.role === "assistant" && (
-                    <div className="h-8 w-8 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center flex-shrink-0 shadow-[0_0_15px_hsl(210_100%_50%/0.4)]">
-                      <Sparkles className="h-4 w-4 text-white" />
-                    </div>
+                    <motion.div
+                      className="h-10 w-10 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center flex-shrink-0 shadow-[0_0_20px_hsl(210_100%_50%/0.6)]"
+                      animate={{ scale: [1, 1.1, 1] }}
+                      transition={{ duration: 2, repeat: Infinity }}
+                    >
+                      <Sparkles className="h-5 w-5 text-white" />
+                    </motion.div>
                   )}
                   <div
                     className={cn(
-                      "max-w-[80%] rounded-2xl px-4 py-2.5 text-sm whitespace-pre-wrap",
+                      "max-w-[75%] rounded-2xl px-5 py-3 text-sm leading-relaxed backdrop-blur-sm transition-all",
                       m.role === "user"
-                        ? "bg-gradient-to-br from-cyan-500 to-blue-600 text-white rounded-br-sm shadow-md"
-                        : "bg-secondary/80 text-foreground rounded-bl-sm border border-border/50"
+                        ? "bg-gradient-to-br from-cyan-500/90 to-blue-600/90 text-white rounded-br-none shadow-lg hover:shadow-xl border border-cyan-400/50"
+                        : "bg-white/10 text-foreground rounded-bl-none border border-cyan-400/30 hover:border-cyan-400/50 hover:bg-white/15"
                     )}
                   >
                     {renderMarkdownLite(m.content)}
                   </div>
                   {m.role === "user" && (
-                    <div className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center flex-shrink-0">
-                      <User className="h-4 w-4" />
+                    <div className="h-10 w-10 rounded-full bg-gradient-to-br from-emerald-500 to-cyan-500 flex items-center justify-center flex-shrink-0 shadow-lg">
+                      <User className="h-5 w-5 text-white" />
                     </div>
                   )}
                 </motion.div>
               ))}
               {loading && (
                 <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="flex gap-3 justify-start"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex justify-center w-full py-10"
                 >
-                  <div className="h-8 w-8 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center flex-shrink-0">
-                    <Sparkles className="h-4 w-4 text-white animate-pulse" />
-                  </div>
-                  <div className="bg-secondary/80 rounded-2xl rounded-bl-sm px-4 py-3 border border-border/50">
-                    <Loader2 className="h-4 w-4 animate-spin text-cyan-300" />
-                  </div>
+                  <motion.div
+                    className="backdrop-blur-sm bg-white/5 rounded-2xl p-8 border border-cyan-400/30"
+                  >
+                    <BrainVisualization isThinking={true} intensity="high" />
+                  </motion.div>
                 </motion.div>
               )}
             </AnimatePresence>
@@ -501,58 +552,90 @@ export default function BusinessPage() {
               e.preventDefault();
               send();
             }}
-            className="border-t border-border/60 p-3 flex gap-2 bg-background/40"
+            className="border-t border-cyan-400/20 p-4 flex gap-3 bg-gradient-to-r from-background/60 via-background/50 to-background/60 backdrop-blur-sm"
           >
-            <Button
-              type="button"
-              variant={voiceEnabled ? "default" : "outline"}
-              onClick={toggleVoice}
-              className={cn("shrink-0", voiceEnabled && "bg-cyan-600 hover:bg-cyan-500 text-white")}
-              title={voiceEnabled ? "Wyłącz odpowiedzi głosowe Aurory" : "Włącz odpowiedzi głosowe Aurory"}
-            >
-              {voiceEnabled ? <Volume2 className="h-4 w-4" /> : <MicOff className="h-4 w-4" />}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={startVoiceInput}
-              disabled={loading || listening || convoMode}
-              className={cn("shrink-0 border-cyan-400/30", listening && !convoMode && "bg-cyan-400/10 text-cyan-300")}
-              title="Powiedz jedno pytanie"
-            >
-              {listening && !convoMode ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mic className="h-4 w-4" />}
-            </Button>
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <Button
+                type="button"
+                variant={voiceEnabled ? "default" : "outline"}
+                onClick={toggleVoice}
+                className={cn(
+                  "shrink-0 rounded-lg transition-all",
+                  voiceEnabled
+                    ? "bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white shadow-lg"
+                    : "border-cyan-400/30 hover:bg-cyan-400/10"
+                )}
+                title={voiceEnabled ? "Wyłącz głos Aurora" : "Włącz głos Aurora"}
+              >
+                {voiceEnabled ? <Volume2 className="h-4 w-4" /> : <MicOff className="h-4 w-4" />}
+              </Button>
+            </motion.div>
+
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={startVoiceInput}
+                disabled={loading || listening || convoMode}
+                className={cn(
+                  "shrink-0 rounded-lg border-cyan-400/30 transition-all",
+                  listening && !convoMode && "bg-cyan-500/20 text-cyan-200 border-cyan-400/60 shadow-[0_0_15px_hsl(190_100%_50%/0.5)]"
+                )}
+                title="Powiedz jedno pytanie"
+              >
+                {listening && !convoMode ? (
+                  <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ duration: 1, repeat: Infinity }}>
+                    <Loader2 className="h-4 w-4" />
+                  </motion.div>
+                ) : (
+                  <Mic className="h-4 w-4" />
+                )}
+              </Button>
+            </motion.div>
+
             {/* Ciągła rozmowa głosowa jak w GPT/Grok */}
-            <Button
-              type="button"
-              variant={convoMode ? "default" : "outline"}
-              onClick={toggleConvo}
-              className={cn(
-                "shrink-0",
-                convoMode
-                  ? "bg-gradient-to-r from-cyan-500 to-blue-600 text-white animate-pulse"
-                  : "border-cyan-400/30"
-              )}
-              title={convoMode ? "Zakończ rozmowę głosową" : "Rozmawiaj z Aurorą głosem (jak w GPT/Grok)"}
-            >
-              {convoMode ? <PhoneOff className="h-4 w-4" /> : <PhoneCall className="h-4 w-4" />}
-            </Button>
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <Button
+                type="button"
+                variant={convoMode ? "default" : "outline"}
+                onClick={toggleConvo}
+                className={cn(
+                  "shrink-0 rounded-lg transition-all",
+                  convoMode
+                    ? "bg-gradient-to-r from-cyan-500 to-blue-600 text-white animate-pulse shadow-lg"
+                    : "border-cyan-400/30 hover:bg-cyan-400/10"
+                )}
+                title={convoMode ? "Zakończ rozmowę głosową" : "Rozmawiaj z Aurorą głosem (jak w GPT/Grok)"}
+              >
+                {convoMode ? <PhoneOff className="h-4 w-4" /> : <PhoneCall className="h-4 w-4" />}
+              </Button>
+            </motion.div>
             <Input
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder={listening ? "Słucham…" : "Napisz albo powiedz Aurorze, czego potrzebujesz…"}
+              placeholder={listening ? "Słucham…" : "Napisz albo mów do Aurora…"}
               disabled={loading}
-              className="flex-1 bg-background/80"
+              className="flex-1 rounded-lg bg-white/10 border-cyan-400/30 focus:border-cyan-400/60 focus:bg-white/15 text-foreground placeholder:text-muted-foreground/60 backdrop-blur-sm transition-all"
             />
-            <Button
-              type="submit"
-              disabled={loading || !input.trim()}
-              className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white"
-            >
-              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-            </Button>
+
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <Button
+                type="submit"
+                disabled={loading || !input.trim()}
+                className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white rounded-lg shadow-lg hover:shadow-xl transition-all disabled:opacity-50"
+              >
+                {loading ? (
+                  <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity }}>
+                    <Loader2 className="h-4 w-4" />
+                  </motion.div>
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
+              </Button>
+            </motion.div>
           </form>
-        </Card>
+          </Card>
+        </div>
 
         {/* Brief checklist — co Aurora już wie, czego jej brakuje */}
         {briefState && briefState.table && briefState.table.length > 0 && (
