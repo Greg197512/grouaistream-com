@@ -7,7 +7,7 @@ import {
   Music, Radio, HardDrive, Megaphone, Mail, MessageSquare, Mic, MicOff, Volume2, PhoneCall, PhoneOff,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
@@ -161,7 +161,8 @@ export default function BusinessPage() {
         }
         // Zalogowany klient: zapisz zlecenie do dashboardu (aurora_business_orders) i otwórz panel.
         if (user) {
-          const collected = briefState?.collected ?? {};
+          // Użyj świeżych danych z tej odpowiedzi (briefState w state jest jeszcze sprzed setState).
+          const collected = (data.brief_state as BriefState | undefined)?.collected ?? briefState?.collected ?? {};
           void (async () => {
             try {
               const { data: inserted } = await supabase
@@ -175,7 +176,7 @@ export default function BusinessPage() {
                   status: "received",
                   payment_status: "pending",
                   source: "aurora-chat",
-                  payload: { aurora_order_id: orderHit.short_id || null, conversation_id: conversationId },
+                  payload: { aurora_order_id: orderHit.short_id || null, conversation_id: data.conversation_id || conversationId },
                 } as any)
                 .select("id")
                 .single();
@@ -279,25 +280,23 @@ export default function BusinessPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground relative overflow-hidden">
-      {/* Subtle office + radio station background */}
-      <div className="absolute inset-0 -z-20">
-        {/* Office background - very subtle */}
+      {/* Subtle office + radio-station photo background */}
+      <div className="fixed inset-0 -z-20">
+        {/* Real office / broadcast-studio photo — delikatne, wtopione tło */}
         <div
-          className="absolute inset-0 opacity-8"
-          style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg width='1920' height='1080' xmlns='http://www.w3.org/2000/svg'%3E%3Cdefs%3E%3ClinearGradient id='office' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%23333333;stop-opacity:1'/%3E%3Cstop offset='100%25' style='stop-color:%23666666;stop-opacity:1'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='1920' height='1080' fill='url(%23office)'/%3E%3Ccircle cx='200' cy='200' r='150' fill='%23888888' opacity='0.3'/%3E%3Crect x='300' y='150' width='400' height='300' fill='%23555555' opacity='0.2'/%3E%3Ccircle cx='1700' cy='800' r='200' fill='%238800ff' opacity='0.15'/%3E%3C/svg%3E")`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-          }}
+          className="absolute inset-0 bg-cover bg-center opacity-[0.14]"
+          style={{ backgroundImage: `url(${businessHeroBg})` }}
         />
-        {/* Animated Aurora background (global look) */}
-        <AuroraBackground showFace />
+        {/* Animated Aurora — blended over the photo (screen) so OBOJE są widoczne */}
+        <div className="absolute inset-0 opacity-70 mix-blend-screen">
+          <AuroraBackground showFace />
+        </div>
       </div>
 
       {/* Premium glassmorphic overlay */}
-      <div className="absolute inset-0 -z-10">
-        {/* Gradient overlay - subtle */}
-        <div className="absolute inset-0 bg-gradient-to-b from-background/30 via-background/60 to-background/95" />
+      <div className="fixed inset-0 -z-10">
+        {/* Gradient overlay - subtle (nie zamalowuj dołu na 95%, żeby tło żyło) */}
+        <div className="absolute inset-0 bg-gradient-to-b from-background/20 via-background/45 to-background/80" />
 
         {/* Ambient glow */}
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,hsl(190_100%_50%/0.12),transparent_60%)]" />
@@ -516,7 +515,7 @@ export default function BusinessPage() {
                   )}
                   <div
                     className={cn(
-                      "max-w-[75%] rounded-2xl px-5 py-3 text-sm leading-relaxed backdrop-blur-sm transition-all",
+                      "max-w-[75%] rounded-2xl px-5 py-3 text-sm leading-relaxed backdrop-blur-sm transition-all whitespace-pre-wrap break-words",
                       m.role === "user"
                         ? "bg-gradient-to-br from-cyan-500/90 to-blue-600/90 text-white rounded-br-none shadow-lg hover:shadow-xl border border-cyan-400/50"
                         : "bg-white/10 text-foreground rounded-bl-none border border-cyan-400/30 hover:border-cyan-400/50 hover:bg-white/15"
@@ -552,7 +551,7 @@ export default function BusinessPage() {
               e.preventDefault();
               send();
             }}
-            className="border-t border-cyan-400/20 p-4 flex gap-3 bg-gradient-to-r from-background/60 via-background/50 to-background/60 backdrop-blur-sm"
+            className="border-t border-cyan-400/20 p-4 flex flex-wrap gap-2 sm:gap-3 bg-gradient-to-r from-background/60 via-background/50 to-background/60 backdrop-blur-sm"
           >
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
               <Button
@@ -621,6 +620,7 @@ export default function BusinessPage() {
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
               <Button
                 type="submit"
+                aria-label="Wyślij wiadomość do Aurory"
                 disabled={loading || !input.trim()}
                 className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white rounded-lg shadow-lg hover:shadow-xl transition-all disabled:opacity-50"
               >

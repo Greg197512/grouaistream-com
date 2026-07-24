@@ -1,0 +1,139 @@
+{
+  "name": "GrouAI — Automatyzacja faktur (Discord + PDF + e-mail)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "grouaistream-invoice",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-invoice",
+      "name": "Webhook: invoice.created",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "grouaistream-invoice"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.body.event }}",
+              "rightValue": "invoice.created",
+              "operator": { "type": "string", "operation": "equals" }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "filter-event",
+      "name": "Tylko invoice.created",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.GOTENBERG_URL }}/forms/chromium/convert/html",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "files",
+              "inputDataFieldName": "index.html"
+            }
+          ]
+        },
+        "options": { "response": { "response": { "responseFormat": "file" } } }
+      },
+      "id": "html-to-pdf",
+      "name": "HTML → PDF (Gotenberg)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 200],
+      "notes": "Wymaga self-hosted Gotenberg (docker). HTML faktury bierzemy z $json.body.data.html i podajemy jako plik index.html."
+    },
+    {
+      "parameters": {
+        "functionCode": "// Zamień HTML faktury na plik binarny 'index.html' dla Gotenberga.\nconst html = $json.body.data.html || '<html><body>Brak HTML faktury</body></html>';\nreturn [{\n  json: $json.body.data,\n  binary: {\n    'index.html': await this.helpers.prepareBinaryData(Buffer.from(html, 'utf-8'), 'index.html', 'text/html')\n  }\n}];"
+      },
+      "id": "prep-html",
+      "name": "Przygotuj HTML jako plik",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.DISCORD_INVOICE_WEBHOOK_URL }}",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "payload_json",
+              "value": "={{ JSON.stringify({ username: 'GrouAI Faktury', embeds: [{ title: '🧾 Faktura ' + $('Przygotuj HTML jako plik').item.json.number, description: 'Nabywca: ' + $('Przygotuj HTML jako plik').item.json.buyer.name + '\\nDo zapłaty: ' + $('Przygotuj HTML jako plik').item.json.gross + ' ' + $('Przygotuj HTML jako plik').item.json.currency, color: 962795 }] }) }}"
+            },
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "data"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "discord-post",
+      "name": "Wyślij PDF na Discord",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1120, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SUPABASE_URL }}/functions/v1/send-transactional-email",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ to: $('Przygotuj HTML jako plik').item.json.buyer.email, subject: 'Faktura ' + $('Przygotuj HTML jako plik').item.json.number + ' — GrouAI Stream', html: $('Przygotuj HTML jako plik').item.json.html }) }}",
+        "options": {}
+      },
+      "id": "email-client",
+      "name": "E-mail faktury do klienta",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1120, 400]
+    },
+    {
+      "parameters": { "respondWith": "json", "responseBody": "={{ { \"ok\": true, \"number\": $('Przygotuj HTML jako plik').item.json.number } }}" },
+      "id": "respond",
+      "name": "Odpowiedz OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1340, 300]
+    }
+  ],
+  "connections": {
+    "Webhook: invoice.created": { "main": [[{ "node": "Tylko invoice.created", "type": "main", "index": 0 }]] },
+    "Tylko invoice.created": { "main": [[{ "node": "Przygotuj HTML jako plik", "type": "main", "index": 0 }]] },
+    "Przygotuj HTML jako plik": { "main": [[{ "node": "HTML → PDF (Gotenberg)", "type": "main", "index": 0 }, { "node": "E-mail faktury do klienta", "type": "main", "index": 0 }]] },
+    "HTML → PDF (Gotenberg)": { "main": [[{ "node": "Wyślij PDF na Discord", "type": "main", "index": 0 }]] },
+    "Wyślij PDF na Discord": { "main": [[{ "node": "Odpowiedz OK", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "pinData": {}
+}
