@@ -36,6 +36,7 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
   const { upgradePromptFeature, dismissUpgradePrompt } = useSubscription();
   const location = useLocation();
   const showFace = location.pathname.startsWith("/admin");
+  const hideAurora = location.pathname.startsWith("/business");
 
   // Auto-show video player when a video track starts playing
   useEffect(() => {
