@@ -82,7 +82,7 @@ export default function BusinessPage() {
     {
       role: "assistant",
       content:
-        "Cześć! Jestem **Aurora** — autonomiczna asystentka biznesowa GrouAI Stream 🌌\n\nPowiedz mi czego szukasz: audyt SEO, landing page, automatyzacja, lead research, muzyka na zamówienie? Zbiorę brief i nasz zespół wróci do Ciebie z konkretną wyceną.",
+        "Cześć! Jestem **Aurora** — asystentka biznesowa GrouAI Stream 🌌\n\nPowiedz mi czego szukasz: audyt SEO, landing page, automatyzacja, lead research, muzyka na zamówienie? Zbiorę brief i nasz zespół wróci do Ciebie z konkretną wyceną.",
       ts: Date.now(),
     },
   ]);
@@ -101,7 +101,7 @@ export default function BusinessPage() {
   useEffect(() => {
     document.title = "Usługi B2B Aurora — SEO, automatyzacja, muzyka, hosting | GrouAI Stream";
     const m = document.querySelector('meta[name="description"]');
-    if (m) m.setAttribute("content", "Premium usługi B2B prowadzone przez Aurorę — autonomicznego asystenta GrouAI Stream. SEO, automatyzacja n8n, lead research, hosting audio, sponsoring i muzyka na zamówienie.");
+    if (m) m.setAttribute("content", "Premium usługi B2B ze wsparciem Aurory — asystenta GrouAI Stream. SEO, automatyzacja n8n, lead research, hosting audio, sponsoring i muzyka na zamówienie.");
   }, []);
 
   useEffect(() => {
@@ -253,7 +253,7 @@ export default function BusinessPage() {
           animate={{ opacity: 1, y: 0 }}
           className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-cyan-400/40 bg-cyan-400/10 text-xs text-cyan-300 mb-6 backdrop-blur"
         >
-          <Sparkles className="h-3 w-3" /> Aurora · Autonomiczny dział biznesowy
+          <Sparkles className="h-3 w-3" /> Aurora · Twój asystent działu B2B
         </motion.div>
         <motion.h1
           initial={{ opacity: 0, y: 30 }}
@@ -269,8 +269,8 @@ export default function BusinessPage() {
           transition={{ delay: 0.25 }}
           className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8"
         >
-          Aurora prowadzi rozmowę, zbiera brief, pisze ofertę i pilnuje dostarczenia.
-          Człowiek tylko klika „akceptuję". Reszta dzieje się sama.
+          Aurora pomaga zebrać brief i przygotować wycenę. Każde zapytanie analizuje
+          i realizuje nasz zespół — Ty masz jeden, wygodny punkt kontaktu.
         </motion.p>
         <motion.div
           initial={{ opacity: 0, y: 10 }}
