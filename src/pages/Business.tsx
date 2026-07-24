@@ -280,49 +280,32 @@ export default function BusinessPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground relative overflow-hidden">
-      {/* Subtle office + radio-station photo background */}
-      <div className="fixed inset-0 -z-20">
-        {/* Real office / broadcast-studio photo — delikatne, wtopione tło */}
-        <div
-          className="absolute inset-0 bg-cover bg-center opacity-[0.14]"
-          style={{ backgroundImage: `url(${businessHeroBg})` }}
-        />
-        {/* Animated Aurora — blended over the photo (screen) so OBOJE są widoczne */}
-        <div className="absolute inset-0 opacity-70 mix-blend-screen">
-          <AuroraBackground showFace />
-        </div>
-      </div>
-
-      {/* Premium glassmorphic overlay */}
-      <div className="fixed inset-0 -z-10">
-        {/* Gradient overlay - subtle (nie zamalowuj dołu na 95%, żeby tło żyło) */}
-        <div className="absolute inset-0 bg-gradient-to-b from-background/20 via-background/45 to-background/80" />
-
-        {/* Ambient glow */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,hsl(190_100%_50%/0.12),transparent_60%)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,hsl(210_100%_45%/0.1),transparent_55%)]" />
-
-        {/* Animated light orbs */}
+      {/* B2B corporate backdrop — deep navy mesh, no face, no photo */}
+      <div className="fixed inset-0 -z-20 bg-[#05070d]">
+        {/* Layered mesh gradients — cyan / blue / violet */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_15%_10%,hsl(200_100%_50%/0.22),transparent_55%),radial-gradient(ellipse_at_85%_20%,hsl(260_90%_55%/0.18),transparent_55%),radial-gradient(ellipse_at_50%_100%,hsl(190_100%_50%/0.18),transparent_60%)]" />
+        {/* Conic sheen */}
         <motion.div
-          className="absolute top-20 left-1/2 -translate-x-1/2 h-[500px] w-[900px] rounded-full bg-[hsl(190_100%_50%/0.06)] blur-3xl"
-          animate={{ scale: [1, 1.15, 1], opacity: [0.3, 0.6, 0.3] }}
-          transition={{ duration: 10, repeat: Infinity }}
+          className="absolute -inset-[20%] opacity-[0.18]"
+          style={{
+            background:
+              "conic-gradient(from 0deg at 50% 50%, hsl(200 100% 50% / 0.35), transparent 25%, hsl(260 90% 60% / 0.3) 50%, transparent 75%, hsl(190 100% 50% / 0.35))",
+            filter: "blur(60px)",
+          }}
+          animate={{ rotate: 360 }}
+          transition={{ duration: 60, repeat: Infinity, ease: "linear" }}
         />
-        <motion.div
-          className="absolute -bottom-32 right-1/4 h-[400px] w-[600px] rounded-full bg-[hsl(210_100%_45%/0.05)] blur-3xl"
-          animate={{ scale: [1, 1.2, 1], opacity: [0.2, 0.5, 0.2] }}
-          transition={{ duration: 12, repeat: Infinity, delay: 1 }}
-        />
-
-        {/* Subtle grid */}
+        {/* Fine engineering grid */}
         <div
-          className="absolute inset-0 opacity-[0.02]"
+          className="absolute inset-0 opacity-[0.06]"
           style={{
             backgroundImage:
-              "linear-gradient(hsl(190 100% 50% / 0.4) 1px, transparent 1px), linear-gradient(90deg, hsl(190 100% 50% / 0.4) 1px, transparent 1px)",
-            backgroundSize: "80px 80px",
+              "linear-gradient(hsl(200 100% 70% / 0.5) 1px, transparent 1px), linear-gradient(90deg, hsl(200 100% 70% / 0.5) 1px, transparent 1px)",
+            backgroundSize: "56px 56px",
           }}
         />
+        {/* Vignette for readability */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_30%,rgba(0,0,0,0.55)_100%)]" />
       </div>
 
       {/* HERO */}
