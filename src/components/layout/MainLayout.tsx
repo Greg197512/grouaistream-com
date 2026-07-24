@@ -55,7 +55,7 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
     <DragDropProvider>
       <div className="flex h-screen flex-col overflow-hidden bg-background relative">
         {/* Aurora animated background */}
-        <AuroraBackground showFace={showFace} />
+        {!hideAurora && <AuroraBackground showFace={showFace} />}
         
         {/* Main Content Area */}
         <div className="flex flex-1 overflow-hidden relative z-10">
