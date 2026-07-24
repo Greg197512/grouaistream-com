@@ -5,6 +5,7 @@ import { extractYouTubeId } from "@/components/player/YouTubePlayer";
 import { useSkipAdaptation } from "@/hooks/useSkipAdaptation";
 import { useStreamCounter } from "@/hooks/useStreamCounter";
 import { isLikelyAudioUrl, isNativeVideoUrl } from "@/lib/mediaPlayback";
+import { getOfflineObjectUrl } from "@/lib/offlineLibrary";
 
 export interface Track {
   id: string;
@@ -69,6 +70,10 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   const isVideoModeRef = useRef(false);
   const nextTrackRef = useRef<(isUserSkip?: boolean) => void>(() => {});
   const userIdRef = useRef<string | null>(null);
+  // Token unieważniający zaległe (asynchroniczne) starty audio przy szybkiej zmianie utworu.
+  const playRequestRef = useRef(0);
+  // Smart Shuffle — ID-ki utworów już wylosowanych w bieżącym cyklu (bez powtórek aż przejdzie cała kolejka).
+  const shuffleHistoryRef = useRef<Set<string>>(new Set());
   
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -94,6 +99,66 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
 
   // Keep refs in sync
   useEffect(() => { isVideoModeRef.current = isVideoMode; }, [isVideoMode]);
+  // Refy z najświeższym stanem kolejki — używane przez globalne czyszczenie usuniętych utworów.
+  const queueRef = useRef<Track[]>([]);
+  const queueIndexRef = useRef(0);
+  const currentTrackRef = useRef<Track | null>(null);
+  useEffect(() => { queueRef.current = queue; }, [queue]);
+  useEffect(() => { queueIndexRef.current = queueIndex; }, [queueIndex]);
+  useEffect(() => { currentTrackRef.current = currentTrack; }, [currentTrack]);
+
+  // Usuń skasowany utwór z odtwarzacza NATYCHMIAST (kolejka + bieżący). Idempotentne.
+  const purgeDeletedTrack = useCallback((trackId: string) => {
+    if (!trackId) return;
+    const q = queueRef.current;
+    const idxInQueue = q.findIndex((t) => t.id === trackId);
+    const isCurrent = currentTrackRef.current?.id === trackId;
+    if (idxInQueue === -1 && !isCurrent) return;
+
+    const newQueue = q.filter((t) => t.id !== trackId);
+
+    if (isCurrent) {
+      if (newQueue.length === 0) {
+        // Nie ma co grać — zatrzymaj i wyczyść.
+        if (audioRef.current) { audioRef.current.pause(); audioRef.current.removeAttribute("src"); }
+        setIsPlaying(false);
+        setCurrentTrack(null);
+        setQueue([]);
+        setQueueIndex(0);
+        return;
+      }
+      const newIndex = Math.min(idxInQueue === -1 ? 0 : idxInQueue, newQueue.length - 1);
+      setQueue(newQueue);
+      setQueueIndex(newIndex);
+      setCurrentTrack(newQueue[newIndex]); // przeskocz na następny dostępny
+    } else {
+      const curIdx = queueIndexRef.current;
+      setQueue(newQueue);
+      if (idxInQueue !== -1 && idxInQueue < curIdx) setQueueIndex(curIdx - 1);
+    }
+  }, []);
+
+  // Globalne usuwanie utworu z CAŁEJ aplikacji: Realtime DELETE (u wszystkich) + event lokalny (natychmiast).
+  useEffect(() => {
+    const onDeleted = (e: Event) => {
+      const id = (e as CustomEvent).detail?.trackId as string | undefined;
+      if (id) purgeDeletedTrack(id);
+    };
+    window.addEventListener("grouai:track-deleted", onDeleted as EventListener);
+
+    const ch = supabase
+      .channel("tracks-deletions")
+      .on("postgres_changes", { event: "DELETE", schema: "public", table: "tracks" }, (payload) => {
+        const id = (payload.old as { id?: string })?.id;
+        if (id) purgeDeletedTrack(id);
+      })
+      .subscribe();
+
+    return () => {
+      window.removeEventListener("grouai:track-deleted", onDeleted as EventListener);
+      supabase.removeChannel(ch);
+    };
+  }, [purgeDeletedTrack]);
 
   // Get user ID from Supabase auth directly to avoid circular dependency
   // Use ref to avoid re-triggering playback when auth state changes
@@ -187,20 +252,41 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
       }
     }
     
-    let nextIndex = queueIndex + 1;
-    if (nextIndex >= queue.length) {
-      if (repeatMode === 'all') {
-        nextIndex = 0;
-      } else {
-        setIsPlaying(false);
-        return;
+    let nextIndex: number;
+
+    if (isShuffled && queue.length > 1) {
+      // SMART SHUFFLE: nie powtarzaj utworu, aż przejdzie cała kolejka; unikaj tego samego artysty pod rząd.
+      const history = shuffleHistoryRef.current;
+      if (currentTrack) history.add(currentTrack.id);
+
+      const allIdx = queue.map((_, i) => i);
+      let candidates = allIdx.filter((i) => queue[i].id !== currentTrack?.id && !history.has(queue[i].id));
+
+      if (candidates.length === 0) {
+        // Cały cykl odtworzony.
+        if (repeatMode !== 'all') { setIsPlaying(false); return; }
+        history.clear();
+        if (currentTrack) history.add(currentTrack.id);
+        candidates = allIdx.filter((i) => queue[i].id !== currentTrack?.id);
+      }
+
+      // Miękkie: preferuj innego artystę niż aktualny (jak się da).
+      const diffArtist = candidates.filter((i) => (queue[i].artist || "") !== (currentTrack?.artist || ""));
+      const pool = diffArtist.length > 0 ? diffArtist : candidates;
+      nextIndex = pool[Math.floor(Math.random() * pool.length)];
+      history.add(queue[nextIndex].id);
+    } else {
+      nextIndex = queueIndex + 1;
+      if (nextIndex >= queue.length) {
+        if (repeatMode === 'all') {
+          nextIndex = 0;
+        } else {
+          setIsPlaying(false);
+          return;
+        }
       }
     }
-    
-    if (isShuffled) {
-      nextIndex = Math.floor(Math.random() * queue.length);
-    }
-    
+
     setQueueIndex(nextIndex);
     setCurrentTrack(queue[nextIndex]);
   }, [queue, queueIndex, repeatMode, isShuffled, currentTrack, currentTime, duration, recordSkip, getSkipAnalysis, triggerAIAdaptation]);
@@ -261,6 +347,9 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (!currentTrack) return;
 
+    // Każde uruchomienie efektu unieważnia zaległe async-starty audio (offline lookup).
+    const playToken = ++playRequestRef.current;
+
     const videoId = getPlayableYouTubeId(currentTrack);
     const nativeVideoUrl = getNativeVideoUrl(currentTrack);
 
@@ -305,40 +394,56 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
 
       if (audioRef.current) {
         const audioElement = audioRef.current;
-        const isLocalSource = isLocalBrowserUrl(audioUrl);
 
-        audioElement.pause();
-        audioElement.removeAttribute("src");
-        audioElement.load();
-        audioElement.crossOrigin = isLocalSource ? null : "anonymous";
-        console.log("[Player] Setting audio src:", audioUrl);
-        audioElement.src = audioUrl;
-        audioElement.load();
+        const startAudio = (srcUrl: string, isLocalSource: boolean) => {
+          audioElement.pause();
+          audioElement.removeAttribute("src");
+          audioElement.load();
+          audioElement.crossOrigin = isLocalSource ? null : "anonymous";
+          console.log("[Player] Setting audio src:", srcUrl.startsWith("blob:") ? "blob (offline)" : srcUrl);
+          audioElement.src = srcUrl;
+          audioElement.load();
 
-        const playPromise = audioElement.play();
-        console.log("[Player] play() called, promise:", !!playPromise);
-        if (playPromise) {
-          playPromise.then(() => {
-            console.log("[Player] play() success");
-            setIsPlaying(true);
-          }).catch((error) => {
-            console.error("[Player] play() error:", error.name, error.message);
-            if (isAutoplayBlockedError(error)) {
-              setIsPlaying(false);
-              toast.info("Na telefonie naciśnij Play, aby rozpocząć odtwarzanie");
-              return;
-            }
+          const playPromise = audioElement.play();
+          if (playPromise) {
+            playPromise.then(() => {
+              console.log("[Player] play() success");
+              setIsPlaying(true);
+            }).catch((error) => {
+              console.error("[Player] play() error:", error.name, error.message);
+              if (isAutoplayBlockedError(error)) {
+                setIsPlaying(false);
+                toast.info("Na telefonie naciśnij Play, aby rozpocząć odtwarzanie");
+                return;
+              }
 
-            if (isLocalSource) {
-              setIsPlaying(false);
-              toast.error("Telefon zablokował ten plik lokalny. Spróbuj ponownie nacisnąć Play lub wybierz inny format MP3/M4A.");
-              return;
-            }
+              if (isLocalSource) {
+                setIsPlaying(false);
+                toast.error("Telefon zablokował ten plik lokalny. Spróbuj ponownie nacisnąć Play lub wybierz inny format MP3/M4A.");
+                return;
+              }
 
-            toast.error("Nie udało się odtworzyć utworu. Przechodzę do następnego...");
-            nextTrackInternal();
+              toast.error("Nie udało się odtworzyć utworu. Przechodzę do następnego...");
+              nextTrackInternal();
+            });
+          }
+        };
+
+        // Najpierw kopia offline (IndexedDB) — gra bez internetu; inaczej normalne źródło sieciowe.
+        // Timeout 2s — jeśli IndexedDB zawiesza się, fallback na R2.
+        Promise.race([
+          getOfflineObjectUrl(currentTrack.id),
+          new Promise<null>((resolve) => setTimeout(() => resolve(null), 2000)),
+        ])
+          .then((offlineUrl) => {
+            if (playRequestRef.current !== playToken) return; // utwór zmienił się w międzyczasie
+            if (offlineUrl) startAudio(offlineUrl, true);
+            else startAudio(audioUrl, isLocalBrowserUrl(audioUrl));
+          })
+          .catch(() => {
+            if (playRequestRef.current !== playToken) return;
+            startAudio(audioUrl, isLocalBrowserUrl(audioUrl));
           });
-        }
       } else {
         console.error("[Player] audioRef.current is null!");
       }
@@ -401,6 +506,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
       : 0;
 
     setStreamSource(source);
+    shuffleHistoryRef.current = new Set(); // nowa lista → świeży cykl smart shuffle
     setQueue(playableTracks);
     setQueueIndex(playableStartIndex >= 0 ? playableStartIndex : 0);
     setCurrentTrack(playableTracks[playableStartIndex >= 0 ? playableStartIndex : 0]);
@@ -579,7 +685,12 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const toggleShuffle = () => {
-    setIsShuffled(!isShuffled);
+    setIsShuffled((prev) => {
+      const next = !prev;
+      // Włączamy shuffle → świeży cykl (bez powtórek); w historii tylko bieżący utwór.
+      shuffleHistoryRef.current = new Set(currentTrack ? [currentTrack.id] : []);
+      return next;
+    });
   };
 
   const toggleRepeat = () => {
@@ -593,108 +704,101 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     toast.success(`Added "${track.title}" to queue`);
   };
 
-  // Shared: load language-specific track into player
+  // Shared: load language-specific track into player.
+  // Szuka utworu po tytule niezależnie od hostingu audio (R2 / Vercel / Lovable —
+  // wszystkie dają zwykły publiczny URL w kolumnie audio_url). Najpierw próbuje
+  // dokładnego dopasowania tytułu, potem częściowego (na wypadek drobnych różnic
+  // w zapisie), i zawsze wybiera rekord z prawdziwym linkiem http. BEZ losowego
+  // fallbacku — jeśli danego utworu nie ma, nic się nie odpala.
   const loadLangTrack = useCallback((lang: string) => {
     const langTrackMap: Record<string, string> = {
-      pl: '%Holenderski Club Peak%',
-      en: '%Neon Floor Directions%',
-      nl: '%Amsterdam Drop Call%',
-      ua: '%Kyiv Club Signal%',
+      pl: 'GrouAIStream — Neonowe Serce',
+      en: 'GrouAIStream — Neon Nights',
+      nl: 'GrouAIStream — Amsterdam Pulse',
+      ua: 'GrouAIStream — Kyiv Signal',
     };
-    const pattern = langTrackMap[lang] || langTrackMap.en;
+    const trackTitle = langTrackMap[lang] || langTrackMap.en;
 
-    supabase
-      .from('tracks')
-      .select('*')
-      .ilike('title', pattern)
-      .not('audio_url', 'is', null)
-      .limit(1)
-      .then(({ data }) => {
-        if (data && data.length > 0) {
-          const track = data[0] as Track;
-          if (track.audio_url || track.video_url) {
-            setCurrentTrack(track);
-            setQueue([track]);
-            setQueueIndex(0);
-            return;
-          }
-        }
-        // Fallback: pick any track with audio
-        supabase
+    const startTrack = (track: Track) => {
+      setCurrentTrack(track);
+      setQueue([track]);
+      setQueueIndex(0);
+      setTimeout(() => {
+        if (audioRef.current) audioRef.current.play().catch(() => {});
+      }, 120);
+    };
+
+    const pickPlayable = (rows: Track[] | null): Track | null => {
+      if (!rows || rows.length === 0) return null;
+      return (
+        rows.find((r) => (r.audio_url ?? "").startsWith("http")) ||
+        rows.find((r) => !!r.audio_url) ||
+        rows.find((r) => !!r.video_url) ||
+        null
+      );
+    };
+
+    (async () => {
+      // 1) Exact title.
+      const exact = await supabase
+        .from('tracks')
+        .select('*')
+        .eq('title', trackTitle)
+        .not('audio_url', 'is', null)
+        .limit(5);
+      let track = pickPlayable(exact.data as Track[] | null);
+
+      // 2) Partial title.
+      if (!track) {
+        const partial = await supabase
+          .from('tracks')
+          .select('*')
+          .ilike('title', `%${trackTitle.split(' ')[0]}%`)
+          .not('audio_url', 'is', null)
+          .limit(5);
+        track = pickPlayable(partial.data as Track[] | null);
+      }
+
+      // 3) Safety fallback — always play SOMETHING at start.
+      if (!track) {
+        const any = await supabase
           .from('tracks')
           .select('*')
           .not('audio_url', 'is', null)
-          .limit(1)
-          .then(({ data: fallback }) => {
-            if (fallback && fallback.length > 0) {
-              const track = fallback[0] as Track;
-              setCurrentTrack(track);
-              setQueue([track]);
-              setQueueIndex(0);
-            }
-          });
-      });
+          .order('created_at', { ascending: false })
+          .limit(10);
+        track = pickPlayable(any.data as Track[] | null);
+      }
+
+      if (track) startTrack(track);
+    })();
   }, []);
 
-  // Auto-play language-specific track on app start (no login required)
+  // Auto-play językowego utworu przy wejściu do aplikacji. Używa odpornego
+  // loadLangTrack (dokładny → częściowy tytuł, wybór rekordu z linkiem http),
+  // BEZ losowego fallbacku — więc odpala WYŁĄCZNIE właściwą piosenkę danego
+  // języka (PL: Holenderski Club Peak, EN: Neon Floor Directions,
+  // NL: Amsterdam Drop Call, UA: Kyiv Club Signal), nigdy przypadkowego utworu.
   const hasAutoPlayed = useRef(false);
   useEffect(() => {
     if (hasAutoPlayed.current || currentTrack) return;
     hasAutoPlayed.current = true;
     const lang = localStorage.getItem("grooveai-language") || "en";
     loadLangTrack(lang);
-  }, []);
-
-  // Auto-play language track on first login (SIGNED_IN event)
-  const hasPlayedOnLogin = useRef(false);
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "SIGNED_IN" && !hasPlayedOnLogin.current) {
-        hasPlayedOnLogin.current = true;
-        const lang = localStorage.getItem("grooveai-language") || "en";
-        loadLangTrack(lang);
-      }
-    });
-    return () => subscription.unsubscribe();
   }, [loadLangTrack]);
 
-  // Auto-play specific track when language changes
+  // Auto-play specific track when language changes — ta sama odporna logika
+  // co przy starcie (jedno źródło prawdy: loadLangTrack).
   useEffect(() => {
     const handleLanguageChange = (e: Event) => {
       const lang = (e as CustomEvent).detail?.language;
       if (!lang) return;
-
-      // Map language to a specific track
-      const langTrackMap: Record<string, string> = {
-        pl: '%Holenderski Club Peak%',
-        en: '%Drop Chant Stream%',
-        nl: '%Amsterdam Drop Call%',
-        ua: '%Kyiv Club Signal%',
-      };
-
-      const pattern = langTrackMap[lang];
-      if (!pattern) return;
-
-      supabase
-        .from('tracks')
-        .select('*')
-        .ilike('title', pattern)
-        .limit(1)
-        .then(({ data }) => {
-          if (data && data.length > 0) {
-            const track = data[0] as Track;
-            if (track.audio_url || track.video_url) {
-              setCurrentTrack(track);
-              setQueue([track]);
-              setQueueIndex(0);
-            }
-          }
-        });
+      loadLangTrack(lang);
     };
 
     window.addEventListener("grooveai-language-change", handleLanguageChange);
     return () => window.removeEventListener("grooveai-language-change", handleLanguageChange);
-  }, []);
+  }, [loadLangTrack]);
 
   // Reset track start time when track changes
   useEffect(() => {
