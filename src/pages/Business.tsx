@@ -280,49 +280,33 @@ export default function BusinessPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground relative overflow-hidden">
-      {/* Subtle office + radio-station photo background */}
-      <div className="fixed inset-0 -z-20">
-        {/* Biuro / studio radiowe — delikatne tło o które prosił klient */}
+      {/* Tło B2B: biuro / studio radiowe — delikatne, o które prosił klient */}
+      <div className="fixed inset-0 -z-20 bg-[#060b18]">
+        {/* Scena studia radiowego (SVG) */}
         <div
           className="absolute inset-0 bg-cover bg-center opacity-[0.22]"
           style={{ backgroundImage: `url(${studioBg})` }}
         />
-        {/* Animated Aurora — wtopiona (screen) nad studiem, żeby oba były widoczne */}
+        {/* Animowana Aurora — wtopiona (screen) nad studiem, żeby oba były widoczne */}
         <div className="absolute inset-0 opacity-50 mix-blend-screen">
           <AuroraBackground showFace />
         </div>
       </div>
 
-      {/* Premium glassmorphic overlay */}
+      {/* Delikatna warstwa szkła + poświata (nie zamalowuj tła na maksa) */}
       <div className="fixed inset-0 -z-10">
-        {/* Gradient overlay - subtle (nie zamalowuj dołu na 95%, żeby tło żyło) */}
-        <div className="absolute inset-0 bg-gradient-to-b from-background/20 via-background/45 to-background/80" />
-
-        {/* Ambient glow */}
+        <div className="absolute inset-0 bg-gradient-to-b from-background/10 via-background/35 to-background/75" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,hsl(190_100%_50%/0.12),transparent_60%)]" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,hsl(210_100%_45%/0.1),transparent_55%)]" />
-
-        {/* Animated light orbs */}
-        <motion.div
-          className="absolute top-20 left-1/2 -translate-x-1/2 h-[500px] w-[900px] rounded-full bg-[hsl(190_100%_50%/0.06)] blur-3xl"
-          animate={{ scale: [1, 1.15, 1], opacity: [0.3, 0.6, 0.3] }}
-          transition={{ duration: 10, repeat: Infinity }}
-        />
-        <motion.div
-          className="absolute -bottom-32 right-1/4 h-[400px] w-[600px] rounded-full bg-[hsl(210_100%_45%/0.05)] blur-3xl"
-          animate={{ scale: [1, 1.2, 1], opacity: [0.2, 0.5, 0.2] }}
-          transition={{ duration: 12, repeat: Infinity, delay: 1 }}
-        />
-
-        {/* Subtle grid */}
         <div
-          className="absolute inset-0 opacity-[0.02]"
+          className="absolute inset-0 opacity-[0.04]"
           style={{
             backgroundImage:
               "linear-gradient(hsl(190 100% 50% / 0.4) 1px, transparent 1px), linear-gradient(90deg, hsl(190 100% 50% / 0.4) 1px, transparent 1px)",
             backgroundSize: "80px 80px",
           }}
         />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_58%,rgba(0,0,0,0.5)_100%)]" />
       </div>
 
       {/* HERO */}
