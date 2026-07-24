@@ -401,7 +401,7 @@ export default function BusinessPage() {
         <div className="relative group">
           <div className="absolute -inset-[2px] rounded-3xl bg-gradient-to-br from-cyan-400/40 via-blue-500/30 to-purple-500/40 opacity-50 group-hover:opacity-70 blur-xl transition-opacity" />
           <Card className="relative border-cyan-400/40 bg-gradient-to-br from-card/90 via-card/80 to-background/70 backdrop-blur-2xl shadow-[0_8px_32px_0_rgba(31,38,135,0.37)] overflow-hidden border border-cyan-400/30">
-          {!user?.email && (
+            {!user?.email && (
             <div className="border-b border-border/60 p-4 flex flex-col sm:flex-row gap-2 items-stretch sm:items-center bg-background/40">
               <Mail className="h-4 w-4 text-cyan-300 flex-shrink-0" />
               <span className="text-xs text-muted-foreground flex-shrink-0">Twój email (do kontaktu):</span>
@@ -537,7 +537,8 @@ export default function BusinessPage() {
               </Button>
             </motion.div>
           </form>
-        </Card>
+          </Card>
+        </div>
 
         {/* Brief checklist — co Aurora już wie, czego jej brakuje */}
         {briefState && briefState.table && briefState.table.length > 0 && (
