@@ -14,7 +14,7 @@ import { gt } from "@/lib/gameI18n";
 const MEDIA = [
   { id: "vinyl", emoji: "🟠", nameKey: "m.vinyl", descKey: "m.vinylD" },
   { id: "cd", emoji: "⚪", nameKey: "m.cd", descKey: "m.cdD" },
-  { id: "nfc", emoji: "🔵", nameKey: "m.nfc", descKey: "m.nfcD" },
+  { id: "card", emoji: "💳", nameKey: "m.card", descKey: "m.cardD" },
 ] as const;
 
 function useCountdown(endsAt?: string) {
@@ -230,7 +230,7 @@ function WinnerClaim({ onDone, L }: { onDone: () => void; L: (k: string, v?: Rec
   const { user } = useAuth();
   const [tracks, setTracks] = useState<{ id: string; title: string }[]>([]);
   const [picked, setPicked] = useState<Record<string, boolean>>({});
-  const [medium, setMedium] = useState<"vinyl" | "cd" | "nfc">("vinyl");
+  const [medium, setMedium] = useState<"vinyl" | "cd" | "card">("vinyl");
   const [name, setName] = useState("");
   const [addr, setAddr] = useState("");
   const [email, setEmail] = useState(user?.email ?? "");

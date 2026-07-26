@@ -181,7 +181,7 @@ Deno.serve(async (req) => {
       // Przyjmujemy obiekty {id,title} (do podglądu w adminie) albo same id.
       const trackIds = Array.isArray(body.tracks) ? body.tracks.slice(0, 10)
         : Array.isArray(body.track_ids) ? body.track_ids.slice(0, 10) : [];
-      const medium = ["vinyl", "cd", "nfc"].includes(body.medium) ? body.medium : "vinyl";
+      const medium = ["vinyl", "cd", "card"].includes(body.medium) ? body.medium : "vinyl";
       await db.from("game_winner_picks").upsert({
         round_id: round.id, user_id: u.id, track_ids: trackIds, medium,
         ship_name: String(body.ship_name || "").slice(0, 200),
