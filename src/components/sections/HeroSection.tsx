@@ -7,6 +7,7 @@ import { usePlayer } from "@/contexts/PlayerContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 import { useAudioAnalyser } from "@/hooks/useAudioAnalyser";
+import { HeroEqualizer } from "@/components/sections/HeroEqualizer";
 import { useTimeRotation } from "@/hooks/useTimeRotation";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -261,69 +262,13 @@ export const HeroSection = () => {
                 </span>
               </span>
 
-              {/* Real-data equalizer */}
-              <div 
-                  className="flex items-end gap-[2px] h-10 mt-0.5 w-full relative"
-                  style={{
-                    filter: isPlaying 
-                      ? `drop-shadow(0 0 ${12 + levels.overall * 20}px hsl(${genrePalette.glowHue} ${genrePalette.saturation}% ${genrePalette.brightness}% / ${0.4 + levels.overall * 0.5})) drop-shadow(0 4px 20px hsl(${genrePalette.glowHue} ${genrePalette.saturation - 5}% ${genrePalette.brightness - 5}% / ${0.2 + levels.bass * 0.35}))`
-                      : `drop-shadow(0 0 4px hsl(${genrePalette.glowHue} ${genrePalette.saturation - 5}% ${genrePalette.brightness}% / 0.15))`,
-                  }}
-                >
-                  {blendedFrequencies.map((freq, i) => {
-                    const isBass = i < 6;
-                    const isMid = i >= 6 && i < 12;
-                    const boosted = Math.min(1, freq * 1.4);
-                    const height = Math.max(10, boosted * 100);
-                    const hBase = isBass ? genrePalette.bassHue : isMid ? genrePalette.midHue : genrePalette.trebleHue;
-                    const sat = genrePalette.saturation;
-                    const bri = genrePalette.brightness;
-                    const darkFactor = 1 - genrePalette.darkness * 0.3;
-                    const bg = isBass
-                      ? `linear-gradient(to top, hsl(${hBase} ${sat}% ${(bri - 12) * darkFactor}% / ${0.5 + boosted * 0.5}), hsl(${hBase + 5} ${sat + 5}% ${(bri - 2) * darkFactor}% / ${0.4 + boosted * 0.45}), hsl(${hBase + 10} ${sat + 5}% ${(bri + 8) * darkFactor}% / ${0.25 + boosted * 0.35}))`
-                      : isMid
-                      ? `linear-gradient(to top, hsl(${hBase} ${sat - 3}% ${(bri - 8) * darkFactor}% / ${0.45 + boosted * 0.45}), hsl(${hBase + 5} ${sat + 3}% ${(bri + 2) * darkFactor}% / ${0.35 + boosted * 0.4}), hsl(${hBase + 10} ${sat + 5}% ${(bri + 12) * darkFactor}% / ${0.2 + boosted * 0.3}))`
-                      : `linear-gradient(to top, hsl(${hBase} ${sat - 7}% ${(bri - 5) * darkFactor}% / ${0.4 + boosted * 0.4}), hsl(${hBase + 5} ${sat}% ${(bri + 5) * darkFactor}% / ${0.3 + boosted * 0.35}), hsl(${hBase + 8} ${sat + 5}% ${(bri + 15) * darkFactor}% / ${0.15 + boosted * 0.25}))`;
-                    const borderColor = `hsl(${hBase + 5} ${sat - 5}% ${bri}% / ${0.25 + boosted * 0.35})`;
-                    return (
-                      <div
-                        key={`eq-${i}`}
-                        className="flex-1 min-w-[2px] rounded-sm relative overflow-hidden"
-                        style={{ 
-                          height: `${height}%`,
-                          background: bg,
-                          backdropFilter: 'blur(8px)',
-                          border: `1px solid ${borderColor}`,
-                          boxShadow: `inset 0 1px 0 hsl(0 0% 100% / ${0.25 + boosted * 0.25}), inset 0 -1px 3px hsl(${hBase} ${sat - 5}% ${(bri - 5) * darkFactor}% / ${boosted * 0.3}), 0 0 ${6 + boosted * 12}px hsl(${hBase} ${sat}% ${bri * darkFactor}% / ${boosted * 0.3}), 0 0 ${boosted * 20}px hsl(${hBase + 5} ${sat - 5}% ${bri * darkFactor}% / ${boosted * 0.15})`,
-                          opacity: 0.5 + boosted * 0.5,
-                          transition: 'height 0.04s ease-out, opacity 0.04s ease-out',
-                        }}
-                      >
-                        {/* Glass reflection */}
-                        <div 
-                          className="absolute inset-0 pointer-events-none"
-                          style={{
-                            background: 'linear-gradient(135deg, hsl(0 0% 100% / 0.35) 0%, transparent 35%, transparent 65%, hsl(0 0% 100% / 0.1) 100%)',
-                          }}
-                        />
-                        {/* Top highlight */}
-                        <div 
-                          className="absolute top-0 left-0 right-0 h-[1px] pointer-events-none"
-                          style={{
-                            background: 'linear-gradient(to right, transparent, hsl(0 0% 100% / 0.5), transparent)',
-                          }}
-                        />
-                      </div>
-                    );
-                  })}
-                  {/* Genre-reactive glow */}
-                  <div 
-                    className="absolute inset-0 pointer-events-none"
-                    style={{ 
-                      background: `radial-gradient(ellipse at ${30 + (isPlaying ? Math.sin(Date.now() / 400) * 20 : 0)}% 50%, hsl(${genrePalette.glowHue} ${genrePalette.saturation}% ${genrePalette.brightness}% / ${isPlaying ? 0.15 + levels.bass * 0.35 : 0.05}) 0%, transparent 65%)`,
-                    }}
-                  />
-                </div>
+              {/* Real-data equalizer — 10 przełączanych stylów (malutki przycisk) */}
+              <HeroEqualizer
+                frequencies={blendedFrequencies}
+                levels={levels}
+                isPlaying={isPlaying}
+                palette={genrePalette}
+              />
             </div>
           </motion.div>
 
