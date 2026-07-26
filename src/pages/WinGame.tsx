@@ -1,36 +1,34 @@
-import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
-import { Trophy, Ticket, Disc3, Sparkles, Gift, Truck, Loader2, Check, Share2, Users } from "lucide-react";
+import { Trophy, Ticket, Disc3, Gift, Truck, Loader2, Check, Users } from "lucide-react";
 import { fetchGameState, gameVote, gameClaim, gameRefer, type GameState } from "@/lib/hubGame";
+import { gt } from "@/lib/gameI18n";
 
 const MEDIA = [
-  { id: "vinyl", emoji: "🟠", name: "Winyl", desc: "Limitowany, numerowany — robi wrażenie." },
-  { id: "cd", emoji: "⚪", name: "CD", desc: "Klasyk, tani i szybki." },
-  { id: "nfc", emoji: "🔵", name: "Karta NFC", desc: "Przyłóż do telefonu — muzyka gra od razu." },
+  { id: "vinyl", emoji: "🟠", nameKey: "m.vinyl", descKey: "m.vinylD" },
+  { id: "cd", emoji: "⚪", nameKey: "m.cd", descKey: "m.cdD" },
+  { id: "nfc", emoji: "🔵", nameKey: "m.nfc", descKey: "m.nfcD" },
 ] as const;
 
 function useCountdown(endsAt?: string) {
   const [now, setNow] = useState(Date.now());
   useEffect(() => { const i = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(i); }, []);
-  if (!endsAt) return { d: 0, h: 0, m: 0, s: 0, done: true };
+  if (!endsAt) return { d: 0, h: 0, m: 0, s: 0 };
   const ms = Math.max(0, new Date(endsAt).getTime() - now);
-  return {
-    d: Math.floor(ms / 86400000),
-    h: Math.floor((ms / 3600000) % 24),
-    m: Math.floor((ms / 60000) % 60),
-    s: Math.floor((ms / 1000) % 60),
-    done: ms <= 0,
-  };
+  return { d: Math.floor(ms / 86400000), h: Math.floor((ms / 3600000) % 24), m: Math.floor((ms / 60000) % 60), s: Math.floor((ms / 1000) % 60) };
 }
 
 export default function WinGame() {
   const { user } = useAuth();
+  const { language } = useLanguage();
+  const L = (k: string, v?: Record<string, string | number>) => gt(language, k, v);
   const [state, setState] = useState<GameState | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const cd = useCountdown(state?.round?.ends_at);
@@ -38,7 +36,6 @@ export default function WinGame() {
   const load = useCallback(async () => { setState(await fetchGameState()); }, []);
   useEffect(() => { void load(); const i = setInterval(() => void load(), 15000); return () => clearInterval(i); }, [load]);
 
-  // Polecenie: jeśli wszedłem z ?ref=<id> i jestem zalogowany → zapraszający dostaje +50 (raz).
   useEffect(() => {
     if (!user) return;
     const ref = new URLSearchParams(window.location.search).get("ref");
@@ -50,30 +47,28 @@ export default function WinGame() {
 
   const inviteLink = user ? `https://grouaistream.com/wygraj?ref=${user.id}` : "https://grouaistream.com/wygraj";
   const invite = async () => {
-    if (!user) { toast.error("Zaloguj się, aby mieć swój link"); return; }
-    const text = "🎧 Gram o własną płytę na GrouAI Stream — dołącz, a oboje zgarniamy losy!";
+    if (!user) { toast.error(L("toast.inviteLogin")); return; }
     try {
-      if (navigator.share) { await navigator.share({ title: "Wygraj swoją płytę", text, url: inviteLink }); }
-      else { await navigator.clipboard.writeText(inviteLink); toast.success("Skopiowano Twój link zapraszający 🎟️"); }
-    } catch { /* użytkownik anulował */ }
+      if (navigator.share) await navigator.share({ title: L("badge.l2"), text: L("invite.text"), url: inviteLink });
+      else { await navigator.clipboard.writeText(inviteLink); toast.success(L("toast.copied")); }
+    } catch { /* anulowano */ }
   };
 
   const doVote = async (kind: "daily" | "vote") => {
-    if (!user) { toast.error("Zaloguj się, aby grać i zbierać losy"); return; }
+    if (!user) { toast.error(L("toast.login")); return; }
     setBusy(kind);
     try {
       const r = await gameVote(kind);
       if (r?.error) throw new Error(r.error);
-      if (r?.reason === "already_claimed") toast.info("Dzisiejsze losy już odebrane — wróć jutro 🙌");
-      else if (r?.reason === "daily_cap") toast.info("Dzienny limit z tego źródła osiągnięty — spróbuj innego 😉");
-      else if (r?.added) toast.success(`+${r.added} losów! Masz teraz ${r.tickets}.`);
+      if (r?.reason === "already_claimed") toast.info(L("toast.dailyDone"));
+      else if (r?.reason === "daily_cap") toast.info(L("toast.cap"));
+      else if (r?.added) toast.success(L("toast.added", { a: r.added, n: r.tickets }));
       await load();
-    } catch (e: any) { toast.error(e?.message || "Nie udało się"); }
+    } catch (e: any) { toast.error(e?.message || "Error"); }
     finally { setBusy(null); }
   };
 
   const me = state?.me;
-  const round = state?.round;
 
   return (
     <MainLayout>
@@ -85,41 +80,34 @@ export default function WinGame() {
         {/* HERO */}
         <section className="grid md:grid-cols-2 gap-8 items-center">
           <div>
-            <p className="text-xs font-bold tracking-[0.18em] uppercase text-[#FFB020]">Konkurs miesiąca · nagroda fizyczna</p>
+            <p className="text-xs font-bold tracking-[0.18em] uppercase text-[#FFB020]">{L("hero.eyebrow")}</p>
             <h1 className="mt-2 font-display text-4xl md:text-5xl font-extrabold leading-tight">
-              Dawaj swoją muzykę.<br />
-              <span className="bg-gradient-to-r from-[#FF7A1A] via-[#FFB020] to-[#B026FF] bg-clip-text text-transparent">Wygraj ją na płycie.</span>
+              {L("hero.h1a")}<br />
+              <span className="bg-gradient-to-r from-[#FF7A1A] via-[#FFB020] to-[#B026FF] bg-clip-text text-transparent">{L("hero.h1b")}</span>
             </h1>
-            <p className="mt-4 text-muted-foreground max-w-md">
-              Słuchaj i głosuj — za aktywność dostajesz losy. Co miesiąc jedna osoba wygrywa i wybiera
-              <b className="text-foreground"> 10 swoich utworów</b> na prawdziwym nośniku: winyl, CD albo karta NFC. Wysyłka gratis.
-            </p>
+            <p className="mt-4 text-muted-foreground max-w-md">{L("hero.lede")}</p>
             <div className="mt-6 flex flex-wrap gap-3">
               <Button size="lg" className="gap-2 bg-gradient-to-br from-[#FF7A1A] to-[#FFB020] text-black font-bold"
                 disabled={busy === "vote"} onClick={() => void doVote("vote")}>
-                {busy === "vote" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Ticket className="h-4 w-4" />} Zagraj i zdobądź losy
+                {busy === "vote" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Ticket className="h-4 w-4" />} {L("hero.play")}
               </Button>
-              <Button size="lg" variant="outline" className="gap-2"
-                disabled={busy === "daily"} onClick={() => void doVote("daily")}>
-                <Gift className="h-4 w-4" /> Odbierz dzienne +10
+              <Button size="lg" variant="outline" className="gap-2" disabled={busy === "daily"} onClick={() => void doVote("daily")}>
+                <Gift className="h-4 w-4" /> {L("hero.daily")}
               </Button>
             </div>
-            {/* countdown */}
             <div className="mt-6 flex gap-2">
-              {[["d", cd.d, "dni"], ["h", cd.h, "godz"], ["m", cd.m, "min"], ["s", cd.s, "sek"]].map(([k, v, l]) => (
-                <div key={k as string} className="rounded-xl border border-border bg-card px-3.5 py-2 text-center min-w-[60px]">
+              {([["d", cd.d, "cd.d"], ["h", cd.h, "cd.h"], ["m", cd.m, "cd.m"], ["s", cd.s, "cd.s"]] as const).map(([k, v, lk]) => (
+                <div key={k} className="rounded-xl border border-border bg-card px-3.5 py-2 text-center min-w-[60px]">
                   <b className="block font-display text-2xl font-extrabold tabular-nums">{String(v).padStart(2, "0")}</b>
-                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{l}</span>
+                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{L(lk)}</span>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* realistyczna, obracająca się płyta CD (opalizacja) */}
+          {/* realistyczna, obracająca się płyta CD */}
           <div className="relative mx-auto w-full max-w-[360px] aspect-square grid place-items-center">
-            <div className="relative w-[84%] aspect-square rounded-full overflow-hidden"
-              style={{ boxShadow: "0 30px 70px -18px #000, 0 0 46px rgba(176,38,255,.28)" }}>
-              {/* warstwa wirująca: tęcza + rowki danych + metalowy hub + otwór */}
+            <div className="relative w-[84%] aspect-square rounded-full overflow-hidden" style={{ boxShadow: "0 30px 70px -18px #000, 0 0 46px rgba(176,38,255,.28)" }}>
               <div className="gv-disc absolute inset-0 rounded-full" style={{
                 background: [
                   "radial-gradient(circle at 50% 50%, hsl(var(--background)) 0 6.5%, transparent 7%)",
@@ -129,36 +117,26 @@ export default function WinGame() {
                   "conic-gradient(from 0deg, #ff5db1, #ffd24d, #7dff9e, #5de1ff, #a98bff, #ff7ad9, #ffd24d, #ff5db1)",
                 ].join(","),
               }} />
-              {/* nieruchomy refleks światła (tak jak na prawdziwej płycie) */}
               <div className="absolute inset-0 rounded-full pointer-events-none" style={{
-                background: [
-                  "radial-gradient(circle at 32% 26%, rgba(255,255,255,.22), transparent 42%)",
-                  "linear-gradient(115deg, transparent 37%, rgba(255,255,255,.30) 47%, rgba(255,255,255,.06) 51%, transparent 60%)",
-                ].join(","),
+                background: ["radial-gradient(circle at 32% 26%, rgba(255,255,255,.22), transparent 42%)", "linear-gradient(115deg, transparent 37%, rgba(255,255,255,.30) 47%, rgba(255,255,255,.06) 51%, transparent 60%)"].join(","),
               }} />
-              {/* delikatny cień krawędzi dla głębi */}
               <div className="absolute inset-0 rounded-full pointer-events-none" style={{ boxShadow: "inset 0 0 22px rgba(0,0,0,.55)" }} />
             </div>
-            <div className="absolute bottom-[2%] left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full px-4 py-1.5 text-xs font-extrabold text-black"
-              style={{ background: "linear-gradient(135deg,#FF7A1A,#FFB020)" }}>🏆 1 zwycięzca · limitowany</div>
+            <div className="absolute bottom-[2%] left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full px-4 py-1.5 text-xs font-extrabold text-black" style={{ background: "linear-gradient(135deg,#FF7A1A,#FFB020)" }}>{L("ribbon")}</div>
           </div>
         </section>
 
-        {/* how it works */}
+        {/* how */}
         <section>
-          <p className="text-xs font-bold tracking-[0.18em] uppercase text-[#FFB020] mb-4">Jak grać</p>
+          <p className="text-xs font-bold tracking-[0.18em] uppercase text-[#FFB020] mb-1">{L("how.title")}</p>
+          <h2 className="font-display text-2xl md:text-3xl font-extrabold mb-4">{L("how.sub")}</h2>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {[
-              { ic: "▶️", t: "Słuchaj i głosuj", p: "Odsłuchania, ♥ i głosy zamieniają się w losy." },
-              { ic: "🎟️", t: "Zbieraj losy", p: "Więcej aktywności = większa szansa. Licznik rośnie na żywo." },
-              { ic: "🏆", t: "Losowanie", p: "Co miesiąc losujemy zwycięzcę — ważone losami, każdy ma szansę." },
-              { ic: "💿", t: "Wybierasz 10 i masz płytę", p: "Zwycięzca wybiera 10 utworów — tłoczymy i wysyłamy gratis." },
-            ].map((s, i) => (
+            {[["▶️", "how.1t", "how.1p"], ["🎟️", "how.2t", "how.2p"], ["🏆", "how.3t", "how.3p"], ["💿", "how.4t", "how.4p"]].map(([ic, tk, pk], i) => (
               <div key={i} className="rounded-2xl border border-border bg-card p-5">
-                <div className="text-2xl">{s.ic}</div>
-                <div className="mt-2 text-xs font-bold text-muted-foreground">KROK {i + 1}</div>
-                <h3 className="mt-1 font-display font-bold">{s.t}</h3>
-                <p className="mt-1 text-sm text-muted-foreground">{s.p}</p>
+                <div className="text-2xl">{ic}</div>
+                <div className="mt-2 text-xs font-bold text-muted-foreground">{L("how.step")} {i + 1}</div>
+                <h3 className="mt-1 font-display font-bold">{L(tk)}</h3>
+                <p className="mt-1 text-sm text-muted-foreground">{L(pk)}</p>
               </div>
             ))}
           </div>
@@ -169,12 +147,12 @@ export default function WinGame() {
           <div className="rounded-2xl border border-border bg-card p-5">
             <div className="flex items-center gap-2 mb-3">
               <span className="text-[11px] font-extrabold tracking-widest text-[#ff5a4d] flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-[#ff5a4d] animate-pulse" /> NA ŻYWO
+                <span className="h-2 w-2 rounded-full bg-[#ff5a4d] animate-pulse" /> {L("lb.live")}
               </span>
-              <span className="text-xs text-muted-foreground ml-auto">{state?.players ?? 0} graczy</span>
+              <span className="text-xs text-muted-foreground ml-auto">{L("lb.players", { n: state?.players ?? 0 })}</span>
             </div>
             {(state?.leaderboard?.length ?? 0) === 0 ? (
-              <p className="py-8 text-center text-sm text-muted-foreground">Czołówka jest jeszcze pusta — bądź pierwszy! Kliknij „Zagraj i zdobądź losy".</p>
+              <p className="py-8 text-center text-sm text-muted-foreground">{L("lb.empty")}</p>
             ) : state!.leaderboard.map((e) => {
               const max = state!.leaderboard[0]?.tickets || 1;
               return (
@@ -186,7 +164,7 @@ export default function WinGame() {
                       <div className="h-full bg-gradient-to-r from-[#FF7A1A] to-[#B026FF]" style={{ width: `${Math.max(6, (e.tickets / max) * 100)}%` }} />
                     </div>
                   </div>
-                  <div className="font-display font-extrabold text-sm tabular-nums">{e.tickets.toLocaleString("pl-PL")} <span className="text-[11px] text-muted-foreground font-semibold">losów</span></div>
+                  <div className="font-display font-extrabold text-sm tabular-nums">{e.tickets.toLocaleString()} <span className="text-[11px] text-muted-foreground font-semibold">{L("lb.tickets")}</span></div>
                 </div>
               );
             })}
@@ -194,53 +172,51 @@ export default function WinGame() {
 
           <div className="rounded-2xl border border-border bg-card p-5">
             <div className="rounded-xl border border-border bg-gradient-to-br from-[#1e1229] to-[#160d20] p-4 text-center mb-4">
-              <span className="text-xs text-muted-foreground">Twoje losy w tej rundzie</span>
-              <b className="block font-display text-3xl font-extrabold tabular-nums">{me?.tickets?.toLocaleString("pl-PL") ?? "0"}</b>
-              <span className="text-xs text-muted-foreground">{me ? `miejsce #${me.rank} z ${state?.players ?? 0}` : "zaloguj się, aby grać"}</span>
+              <span className="text-xs text-muted-foreground">{L("my.title")}</span>
+              <b className="block font-display text-3xl font-extrabold tabular-nums">{me?.tickets?.toLocaleString() ?? "0"}</b>
+              <span className="text-xs text-muted-foreground">{me ? L("my.place", { r: me.rank, n: state?.players ?? 0 }) : L("my.login")}</span>
             </div>
-            <p className="text-xs font-bold tracking-widest uppercase text-[#FFB020] mb-2">Zdobądź więcej</p>
+            <p className="text-xs font-bold tracking-widest uppercase text-[#FFB020] mb-2">{L("earn.title")}</p>
             <ul className="space-y-2.5 text-sm">
-              <li className="flex justify-between"><span>Odsłuchaj utwór do końca</span><span className="font-display font-extrabold text-[#38E8A0]">+1</span></li>
-              <li className="flex justify-between"><span>Polub (♥) utwór</span><span className="font-display font-extrabold text-[#38E8A0]">+2</span></li>
-              <li className="flex justify-between"><span>Zagłosuj „na winyl"</span><span className="font-display font-extrabold text-[#38E8A0]">+5</span></li>
-              <li className="flex justify-between"><span>Codzienne wejście</span><span className="font-display font-extrabold text-[#38E8A0]">+10</span></li>
-              <li className="flex justify-between"><span>Zaproś znajomego (dołączy)</span><span className="font-display font-extrabold text-[#38E8A0]">+50</span></li>
+              <li className="flex justify-between"><span>{L("earn.listen")}</span><span className="font-display font-extrabold text-[#38E8A0]">+1</span></li>
+              <li className="flex justify-between"><span>{L("earn.like")}</span><span className="font-display font-extrabold text-[#38E8A0]">+2</span></li>
+              <li className="flex justify-between"><span>{L("earn.vote")}</span><span className="font-display font-extrabold text-[#38E8A0]">+5</span></li>
+              <li className="flex justify-between"><span>{L("earn.daily")}</span><span className="font-display font-extrabold text-[#38E8A0]">+10</span></li>
+              <li className="flex justify-between"><span>{L("earn.invite")}</span><span className="font-display font-extrabold text-[#38E8A0]">+50</span></li>
             </ul>
             <Button className="w-full mt-4 gap-2" disabled={busy === "daily"} onClick={() => void doVote("daily")}>
-              {busy === "daily" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Ticket className="h-4 w-4" />} Odbierz dzisiejsze losy
+              {busy === "daily" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Ticket className="h-4 w-4" />} {L("earn.claimBtn")}
             </Button>
             <Button variant="outline" className="w-full mt-2 gap-2" onClick={() => void invite()}>
-              <Users className="h-4 w-4" /> Zaproś znajomych <span className="text-[#38E8A0] font-bold">+50</span>
+              <Users className="h-4 w-4" /> {L("earn.inviteBtn")} <span className="text-[#38E8A0] font-bold">+50</span>
             </Button>
           </div>
         </section>
 
         {/* prize */}
         <section>
-          <p className="text-xs font-bold tracking-[0.18em] uppercase text-[#FFB020] mb-1">Nagroda</p>
-          <h2 className="font-display text-2xl md:text-3xl font-extrabold">Twoja muzyka. Twój nośnik.</h2>
-          <p className="text-muted-foreground mt-2 mb-5">Zwycięzca wybiera 10 utworów i format — do każdego dorzucamy cyfrowy master Hi-Res.</p>
+          <p className="text-xs font-bold tracking-[0.18em] uppercase text-[#FFB020] mb-1">{L("prize.eyebrow")}</p>
+          <h2 className="font-display text-2xl md:text-3xl font-extrabold">{L("prize.title")}</h2>
+          <p className="text-muted-foreground mt-2 mb-5">{L("prize.sub")}</p>
           <div className="grid sm:grid-cols-3 gap-4">
             {MEDIA.map((m) => (
               <div key={m.id} className="rounded-2xl border border-border p-5" style={{ background: "linear-gradient(180deg,#1a0f27,#120b1b)" }}>
                 <div className="text-2xl">{m.emoji}</div>
-                <h3 className="mt-2 font-display font-bold">{m.name}</h3>
-                <p className="mt-1 text-sm text-muted-foreground">{m.desc}</p>
+                <h3 className="mt-2 font-display font-bold">{L(m.nameKey)}</h3>
+                <p className="mt-1 text-sm text-muted-foreground">{L(m.descKey)}</p>
               </div>
             ))}
           </div>
         </section>
 
-        {/* winner panel */}
-        {me?.is_winner && <WinnerClaim onDone={load} />}
+        {me?.is_winner && <WinnerClaim onDone={load} L={L} />}
 
-        {/* footer cta */}
         <section className="rounded-2xl border border-border p-6 text-center" style={{ background: "linear-gradient(100deg,#26130a,#1a0f27)" }}>
           <Disc3 className="h-8 w-8 mx-auto text-[#FFB020]" />
-          <h2 className="mt-2 font-display text-xl font-extrabold">Twoja muzyka może wygrać.</h2>
-          <p className="text-muted-foreground text-sm mt-1">Wgraj utwory w Studiu, graj codziennie i zapraszaj znajomych.</p>
+          <h2 className="mt-2 font-display text-xl font-extrabold">{L("cta.title")}</h2>
+          <p className="text-muted-foreground text-sm mt-1">{L("cta.sub")}</p>
           <div className="mt-4 flex flex-wrap gap-3 justify-center">
-            <Button asChild><Link to="/studio">🎧 Stwórz utwór</Link></Button>
+            <Button asChild><Link to="/studio">{L("cta.studio")}</Link></Button>
             <Button variant="outline" asChild><a href="https://grouaistream.com" target="_blank" rel="noreferrer">grouaistream.com</a></Button>
           </div>
         </section>
@@ -250,8 +226,7 @@ export default function WinGame() {
   );
 }
 
-// ── Panel zwycięzcy: wybór 10 utworów + nośnik + adres ──
-function WinnerClaim({ onDone }: { onDone: () => void }) {
+function WinnerClaim({ onDone, L }: { onDone: () => void; L: (k: string, v?: Record<string, string | number>) => string }) {
   const { user } = useAuth();
   const [tracks, setTracks] = useState<{ id: string; title: string }[]>([]);
   const [picked, setPicked] = useState<Record<string, boolean>>({});
@@ -272,42 +247,39 @@ function WinnerClaim({ onDone }: { onDone: () => void }) {
   const chosen = useMemo(() => tracks.filter((t) => picked[t.id]), [tracks, picked]);
   const toggle = (id: string) => setPicked((p) => {
     const n = { ...p }; if (n[id]) delete n[id];
-    else { if (Object.keys(p).filter((k) => p[k]).length >= 10) { toast.info("Maks. 10 utworów"); return p; } n[id] = true; }
+    else { if (Object.keys(p).filter((k) => p[k]).length >= 10) { toast.info(L("toast.max10")); return p; } n[id] = true; }
     return n;
   });
 
   const submit = async () => {
-    if (chosen.length === 0) { toast.error("Wybierz przynajmniej 1 utwór"); return; }
-    if (!name.trim() || !addr.trim()) { toast.error("Podaj imię i adres wysyłki"); return; }
+    if (chosen.length === 0) { toast.error(L("toast.pickTrack")); return; }
+    if (!name.trim() || !addr.trim()) { toast.error(L("toast.addr")); return; }
     setSaving(true);
     try {
       const r = await gameClaim({ tracks: chosen, medium, ship_name: name, ship_address: addr, ship_email: email });
       if (r?.error) throw new Error(r.error);
-      setDone(true); toast.success("🏆 Zgłoszone! Zajmiemy się Twoją płytą."); onDone();
-    } catch (e: any) { toast.error(e?.message || "Nie udało się zgłosić"); }
+      setDone(true); toast.success(L("toast.claimed")); onDone();
+    } catch (e: any) { toast.error(e?.message || "Error"); }
     finally { setSaving(false); }
   };
 
   if (done) return (
     <section className="rounded-2xl border border-[#38E8A0]/40 bg-[#38E8A0]/5 p-6 text-center">
       <Check className="h-8 w-8 mx-auto text-[#38E8A0]" />
-      <h2 className="mt-2 font-display text-xl font-extrabold">Gratulacje — nagroda w drodze!</h2>
-      <p className="text-muted-foreground text-sm mt-1">Zamawiamy Twoją płytę ({medium.toUpperCase()}) z wybranymi utworami i wyślemy ją na podany adres.</p>
+      <h2 className="mt-2 font-display text-xl font-extrabold">{L("win.doneTitle")}</h2>
+      <p className="text-muted-foreground text-sm mt-1">{L("win.doneSub", { m: medium.toUpperCase() })}</p>
     </section>
   );
 
   return (
     <section className="rounded-2xl border-2 p-6" style={{ borderImage: "linear-gradient(135deg,#FF7A1A,#B026FF) 1" }}>
-      <div className="flex items-center gap-2">
-        <Trophy className="h-6 w-6 text-[#FFB020]" />
-        <h2 className="font-display text-2xl font-extrabold">Wygrałeś! Ułóż swoją płytę 🎉</h2>
-      </div>
-      <p className="text-muted-foreground text-sm mt-1">Wybierz do 10 utworów, nośnik i podaj adres — resztę robimy my.</p>
+      <div className="flex items-center gap-2"><Trophy className="h-6 w-6 text-[#FFB020]" /><h2 className="font-display text-2xl font-extrabold">{L("win.title")}</h2></div>
+      <p className="text-muted-foreground text-sm mt-1">{L("win.sub")}</p>
 
       <div className="mt-5">
-        <p className="text-sm font-bold mb-2">1. Wybierz utwory ({chosen.length}/10)</p>
+        <p className="text-sm font-bold mb-2">{L("win.step1", { n: chosen.length })}</p>
         <div className="grid sm:grid-cols-2 gap-2 max-h-64 overflow-y-auto pr-1">
-          {tracks.length === 0 && <p className="text-sm text-muted-foreground">Brak utworów z audio w Twoim Studiu.</p>}
+          {tracks.length === 0 && <p className="text-sm text-muted-foreground">{L("win.noTracks")}</p>}
           {tracks.map((t) => (
             <button key={t.id} onClick={() => toggle(t.id)}
               className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm transition ${picked[t.id] ? "border-[#FF7A1A] bg-[#FF7A1A]/10" : "border-border hover:border-[#FF7A1A]/50"}`}>
@@ -319,27 +291,26 @@ function WinnerClaim({ onDone }: { onDone: () => void }) {
       </div>
 
       <div className="mt-5">
-        <p className="text-sm font-bold mb-2">2. Nośnik</p>
+        <p className="text-sm font-bold mb-2">{L("win.step2")}</p>
         <div className="grid sm:grid-cols-3 gap-2">
           {MEDIA.map((m) => (
             <button key={m.id} onClick={() => setMedium(m.id as any)}
               className={`rounded-xl border p-3 text-left transition ${medium === m.id ? "border-[#FF7A1A] bg-[#FF7A1A]/10" : "border-border hover:border-[#FF7A1A]/50"}`}>
               <div className="text-xl">{m.emoji}</div>
-              <div className="font-display font-bold text-sm mt-1">{m.name}</div>
+              <div className="font-display font-bold text-sm mt-1">{L(m.nameKey)}</div>
             </button>
           ))}
         </div>
       </div>
 
       <div className="mt-5 grid sm:grid-cols-2 gap-3">
-        <div><p className="text-sm font-bold mb-2">3. Adres wysyłki</p>
-          <Input placeholder="Imię i nazwisko" value={name} onChange={(e) => setName(e.target.value)} /></div>
-        <div className="sm:pt-7"><Input placeholder="E-mail do kontaktu" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
-        <div className="sm:col-span-2"><Input placeholder="Ulica, kod, miasto, kraj" value={addr} onChange={(e) => setAddr(e.target.value)} /></div>
+        <div><p className="text-sm font-bold mb-2">{L("win.step3")}</p><Input placeholder={L("win.name")} value={name} onChange={(e) => setName(e.target.value)} /></div>
+        <div className="sm:pt-7"><Input placeholder={L("win.email")} value={email} onChange={(e) => setEmail(e.target.value)} /></div>
+        <div className="sm:col-span-2"><Input placeholder={L("win.addr")} value={addr} onChange={(e) => setAddr(e.target.value)} /></div>
       </div>
 
       <Button className="mt-5 w-full gap-2 bg-gradient-to-br from-[#FF7A1A] to-[#FFB020] text-black font-bold" disabled={saving} onClick={() => void submit()}>
-        {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Truck className="h-4 w-4" />} Zgłoś moją płytę
+        {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Truck className="h-4 w-4" />} {L("win.submit")}
       </Button>
     </section>
   );

@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { gameVote } from "@/lib/hubGame";
+import { gt } from "@/lib/gameI18n";
 
 interface RadioConfig {
   is_active: boolean;
@@ -86,7 +87,7 @@ const HEART_COLORS = [
 const RadioLive = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { pausePlayback } = usePlayer();
   const [config, setConfig] = useState<RadioConfig | null>(null);
   const [rawSchedule, setRawSchedule] = useState<ScheduleTrack[]>([]);
@@ -972,23 +973,23 @@ const RadioLive = () => {
               {/* Głosowanie „na winyl" — losy do gry „Wygraj swoją płytę" (+5) */}
               <button
                 onClick={async () => {
-                  if (!userId) { toast({ title: "Zaloguj się, aby głosować i grać o płytę" }); return; }
+                  if (!userId) { toast({ title: gt(language, "radio.loginVote") }); return; }
                   const r = await gameVote("vote");
                   if (r?.error) toast({ title: r.error });
-                  else if (r?.reason === "daily_cap") toast({ title: "Dzienny limit głosów osiągnięty 😉" });
-                  else if (r?.added) toast({ title: `🎵 +${r.added} losów! Masz ${r.tickets}.` });
+                  else if (r?.reason === "daily_cap") toast({ title: gt(language, "radio.cap") });
+                  else if (r?.added) toast({ title: gt(language, "toast.added", { a: r.added, n: r.tickets }) });
                 }}
                 className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold text-black transition hover:brightness-110"
                 style={{ background: "linear-gradient(135deg,#FF7A1A,#FFB020)" }}
-                title="Zagłosuj na ten utwór — zdobądź losy do gry o płytę"
+                title={gt(language, "radio.vote")}
               >
-                🎵 Głosuj na winyl <span className="text-[10px]">+5</span>
+                🎵 {gt(language, "radio.vote")} <span className="text-[10px]">+5</span>
               </button>
               <a
                 href="https://grouaistream.com/wygraj"
                 className="text-[9px] text-muted-foreground/50 hover:text-primary/70 transition-colors"
               >
-                🏆 Wygraj swoją płytę
+                {gt(language, "radio.win")}
               </a>
             </div>
           </div>
