@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import { Radio, Wifi, Music, Volume2, VolumeX, ArrowLeft, Heart, Sparkles, MessageCircle, Send, X, Trash2, Smile, Play } from "lucide-react";
 import { RadioMoodDetector } from "@/components/radio/RadioMoodDetector";
+import { RadioMoodSwitcher } from "@/components/radio/RadioMoodSwitcher";
 import { VerifiedStreamsCard } from "@/components/radio/VerifiedStreamsCard";
 import { LiveMicBooth } from "@/components/radio/LiveMicBooth";
 import { FeatureGate } from "@/components/ui/FeatureGate";
@@ -930,6 +931,9 @@ const RadioLive = () => {
             </div>
           </div>
         )}
+
+        {/* Global mood switcher — admin/DJ przełącza playlistę radia dla wszystkich (AI/n8n → fallback shuffle) */}
+        <RadioMoodSwitcher />
 
         {/* Mood Detection Module — Pro feature */}
         <FeatureGate requiredPlan="pro" featureName="Radio Mood Detection">
