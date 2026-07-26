@@ -24,7 +24,8 @@ import {
   Plus,
   ToggleLeft,
   ToggleRight,
-  Sparkles
+  Sparkles,
+  Trophy
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -79,6 +80,7 @@ import { B2BPricingPanel } from "@/components/admin/B2BPricingPanel";
 import { B2BOrdersPanel } from "@/components/admin/B2BOrdersPanel";
 import { CostReportsPanel } from "@/components/admin/CostReportsPanel";
 import { BreakEvenPanel } from "@/components/admin/BreakEvenPanel";
+import { GameWinnersPanel } from "@/components/admin/GameWinnersPanel";
 import { CostAlertBanner } from "@/components/admin/CostAlertBanner";
 
 interface UserStats {
@@ -772,6 +774,10 @@ export default function Admin() {
                   <AlertTriangle className="h-4 w-4" />
                   Koszty & Pomysły
                 </TabsTrigger>
+                <TabsTrigger value="game-winners" className="gap-2">
+                  <Trophy className="h-4 w-4" />
+                  Zwycięzcy gry
+                </TabsTrigger>
                 <TabsTrigger value="genres" className="gap-2">
                   <BarChart3 className="h-4 w-4" />
                   Gatunki
@@ -906,6 +912,10 @@ export default function Admin() {
               <TabsContent value="costs" className="space-y-6">
                 <CostReportsPanel />
                 <OperationalCosts />
+              </TabsContent>
+
+              <TabsContent value="game-winners" className="space-y-6">
+                <GameWinnersPanel />
               </TabsContent>
 
               {/* Likes Overview Tab */}

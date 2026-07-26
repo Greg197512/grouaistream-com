@@ -23,6 +23,10 @@ async function hubToken(): Promise<string> {
   const { data } = await admin().from("hub_config").select("value").eq("key", "hub_token").maybeSingle();
   return (data?.value as string) || "";
 }
+async function cfgVal(key: string): Promise<string> {
+  const { data } = await admin().from("hub_config").select("value").eq("key", key).maybeSingle();
+  return (data?.value as string) || "";
+}
 
 // Punkty i dzienne limity dla akcji (anty-spam).
 const RULES: Record<string, { pts: number; cap: number }> = {
@@ -156,7 +160,9 @@ Deno.serve(async (req) => {
       const u = await getUserId(auth);
       if (!u) return json({ error: "unauthorized" }, 401);
       if (round.winner_user_id && round.winner_user_id !== u.id) return json({ error: "not_winner" }, 403);
-      const trackIds = Array.isArray(body.track_ids) ? body.track_ids.slice(0, 10) : [];
+      // Przyjmujemy obiekty {id,title} (do podglądu w adminie) albo same id.
+      const trackIds = Array.isArray(body.tracks) ? body.tracks.slice(0, 10)
+        : Array.isArray(body.track_ids) ? body.track_ids.slice(0, 10) : [];
       const medium = ["vinyl", "cd", "nfc"].includes(body.medium) ? body.medium : "vinyl";
       await db.from("game_winner_picks").upsert({
         round_id: round.id, user_id: u.id, track_ids: trackIds, medium,
@@ -167,6 +173,37 @@ Deno.serve(async (req) => {
       }, { onConflict: "round_id,user_id" });
       // Powiadom admina
       await db.from("hub_log").insert({ source: "game-hub", level: "info", message: `🏆 Zwycięzca ${u.name} wybrał ${trackIds.length} utworów (${medium}) — do wysyłki`, data: { round: round.id, user: u.id } });
+      return json({ ok: true });
+    }
+
+    // ── ADMIN: podgląd zwycięzców (PIN wspólny z panelami B2B) ──
+    if (action === "admin_list") {
+      const pin = String(body.pin || "");
+      if (!pin || pin !== (await cfgVal("pricing_pin"))) return json({ error: "bad_pin" }, 403);
+      const { data: rounds } = await db.from("game_rounds").select("*").order("created_at", { ascending: false }).limit(12);
+      const { data: picks } = await db.from("game_winner_picks").select("*");
+      const byRound: Record<string, any> = {};
+      for (const p of picks || []) byRound[p.round_id] = p;
+      const out = (rounds || []).map((r) => ({
+        id: r.id, title: r.title, status: r.status, ends_at: r.ends_at,
+        winner_name: r.winner_name, winner_email: r.winner_email, winner_user_id: r.winner_user_id,
+        pick: byRound[r.id]
+          ? { medium: byRound[r.id].medium, tracks: byRound[r.id].track_ids,
+              ship_name: byRound[r.id].ship_name, ship_address: byRound[r.id].ship_address,
+              ship_email: byRound[r.id].ship_email, status: byRound[r.id].status }
+          : null,
+      }));
+      // Statystyka aktualnej rundy.
+      const active = out.find((r) => r.status === "active");
+      let players = 0;
+      if (active) { const { count } = await db.from("game_entries").select("*", { count: "exact", head: true }).eq("round_id", active.id); players = count ?? 0; }
+      return json({ ok: true, rounds: out, active_players: players });
+    }
+
+    if (action === "admin_mark_shipped") {
+      const pin = String(body.pin || "");
+      if (!pin || pin !== (await cfgVal("pricing_pin"))) return json({ error: "bad_pin" }, 403);
+      await db.from("game_winner_picks").update({ status: body.status === "shipped" ? "shipped" : "submitted" }).eq("round_id", body.round_id);
       return json({ ok: true });
     }
 
