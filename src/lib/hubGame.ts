@@ -40,7 +40,7 @@ export async function gameVote(kind: "listen" | "like" | "vote" | "daily"): Prom
 /** Zwycięzca: zgłoś 10 utworów + nośnik + adres. */
 export async function gameClaim(payload: {
   tracks: { id: string; title: string }[];
-  medium: "vinyl" | "cd" | "card";
+  medium: "vinyl" | "cd" | "nfc";
   ship_name: string;
   ship_address: string;
   ship_email: string;

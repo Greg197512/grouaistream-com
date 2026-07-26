@@ -11,7 +11,7 @@ import { gameAdminList, gameAdminMarkShipped } from "@/lib/hubGame";
 interface Pick { medium: string; tracks: any[]; ship_name: string; ship_address: string; ship_email: string; status: string; }
 interface Round { id: string; title: string; status: string; ends_at: string; winner_name: string | null; winner_email: string | null; pick: Pick | null; }
 
-const MEDIUM_LABEL: Record<string, string> = { vinyl: "🟠 Winyl", cd: "⚪ CD", card: "💳 Karta magnetyczna", nfc: "💳 Karta magnetyczna" };
+const MEDIUM_LABEL: Record<string, string> = { vinyl: "🟠 Winyl", cd: "⚪ CD", nfc: "🔵 NFC" };
 
 export function GameWinnersPanel() {
   const [rounds, setRounds] = useState<Round[]>([]);
