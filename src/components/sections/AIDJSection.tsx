@@ -4,8 +4,8 @@ import { useState, useEffect, lazy, Suspense } from "react";
 import { Button } from "@/components/ui/button";
 // Lazy — MoodDetector i DJCrowdCamera ciągną face-api (~1 MB). Ładują się
 // dopiero po włączeniu kamery/detekcji, nie przy wejściu na stronę główną.
-const MoodDetector = lazy(() =>
-  import("@/components/mood/MoodDetector").then((m) => ({ default: m.MoodDetector }))
+const MoodDJ = lazy(() =>
+  import("@/components/mood/MoodDJ").then((m) => ({ default: m.MoodDJ }))
 );
 const DJCrowdCamera = lazy(() =>
   import("@/components/dj/DJCrowdCamera").then((m) => ({ default: m.DJCrowdCamera }))
@@ -186,7 +186,7 @@ export const AIDJSection = () => {
           {showMoodDetector && (
             <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="mb-6 overflow-hidden">
               <Suspense fallback={<div className="p-6 text-center text-sm text-muted-foreground">Ładowanie detektora…</div>}>
-                <MoodDetector onMoodDetected={handleMoodDetectorResult} onClose={() => setShowMoodDetector(false)} />
+                <MoodDJ onClose={() => setShowMoodDetector(false)} />
               </Suspense>
             </motion.div>
           )}
