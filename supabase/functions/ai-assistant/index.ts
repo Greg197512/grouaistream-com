@@ -8,23 +8,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const LOVABLE_AI_CHAT_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
-const LOVABLE_AI_MODEL = "google/gemini-3-flash-preview";
-
-const lovableAiHeaders = (apiKey: string) => ({
-  "Lovable-API-Key": apiKey,
-  "X-Lovable-AIG-SDK": "raw-openai-compatible",
-  "Content-Type": "application/json",
-});
-
-const createLovableGateway = (apiKey: string) => createOpenAICompatible({
-  name: "lovable",
-  baseURL: "https://ai.gateway.lovable.dev/v1",
-  headers: {
-    "Lovable-API-Key": apiKey,
-    "X-Lovable-AIG-SDK": "vercel-ai-sdk",
-  },
-});
+// Lovable AI gateway removed — using keyword-based fallback parsing for music generation
 
 serve(async (req) => {
 
@@ -58,8 +42,7 @@ serve(async (req) => {
     const { message, history: rawHistory, userContext, attachments } = await req.json();
     const history = Array.isArray(rawHistory) ? rawHistory : [];
 
-    // API keys — Lovable AI is the primary provider for the assistant
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY") || "";
+    // API keys
     const GROK_API_KEY = Deno.env.get("GROK_API_KEY") || Deno.env.get("OPENROUTER_API_KEY") || "";
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
 
@@ -443,71 +426,9 @@ serve(async (req) => {
     let generateResult: { style: string; style2?: string; blendRatio?: number; instrumental: boolean; title?: string; mood?: string; energy?: string; tempoOverride?: number; prompt: string } | null = null;
 
     if (hasGenerateIntent) {
-      // Use AI to parse the complex prompt into generation parameters
-      if (LOVABLE_API_KEY) {
-        try {
-          const parseResponse = await fetch(LOVABLE_AI_CHAT_URL, {
-            method: "POST",
-            headers: lovableAiHeaders(LOVABLE_API_KEY),
-            body: JSON.stringify({
-              model: LOVABLE_AI_MODEL,
-            messages: [
-              { role: "system", content: `You are a music production AI that parses user prompts into generation parameters. Analyze the user's request and extract parameters. Available styles: Pop, Rock, Electronic, Hip-Hop, Jazz, Classical, Lo-fi, Ambient, Metal, R&B, Reggae, Trap, House, Disco, Indie, Country. Available moods: dark, bright, melancholic, euphoric, aggressive, dreamy, romantic, tense. Available energy: low, medium, high, extreme.` },
-              { role: "user", content: message },
-            ],
-            tools: [{
-              type: "function",
-              function: {
-                name: "set_music_params",
-                description: "Set music generation parameters based on user's prompt",
-                parameters: {
-                  type: "object",
-                  properties: {
-                    style: { type: "string", description: "Primary music style/genre" },
-                    style2: { type: "string", description: "Secondary style for blending (optional)" },
-                    blendRatio: { type: "number", description: "Blend ratio 0-1 (optional, default 0.5)" },
-                    mood: { type: "string", enum: ["dark", "bright", "melancholic", "euphoric", "aggressive", "dreamy", "romantic", "tense"] },
-                    energy: { type: "string", enum: ["low", "medium", "high", "extreme"] },
-                    instrumental: { type: "boolean", description: "True if no vocals/lyrics requested" },
-                    title: { type: "string", description: "Suggested title based on the prompt" },
-                    tempoOverride: { type: "number", description: "Specific BPM if user requested (optional)" },
-                  },
-                  required: ["style", "mood", "energy", "instrumental", "title"],
-                  additionalProperties: false,
-                },
-              },
-            }],
-            tool_choice: { type: "function", function: { name: "set_music_params" } },
-          }),
-          });
+      // Note: Lovable AI gateway removed — using keyword-based fallback for music generation parsing
 
-          if (parseResponse.ok) {
-            const parseData = await parseResponse.json();
-            const toolCall = parseData.choices?.[0]?.message?.tool_calls?.[0];
-            if (toolCall?.function?.arguments) {
-              const params = JSON.parse(toolCall.function.arguments);
-              generateResult = {
-                style: params.style || "Pop",
-                style2: params.style2 || undefined,
-                blendRatio: params.blendRatio || undefined,
-                instrumental: params.instrumental ?? false,
-                title: params.title || undefined,
-                mood: params.mood || undefined,
-                energy: params.energy || undefined,
-                tempoOverride: params.tempoOverride || undefined,
-                prompt: message,
-              };
-            }
-          } else {
-            console.error("Lovable AI prompt parsing error:", parseResponse.status, await parseResponse.text());
-          }
-        } catch (parseErr) {
-          console.error("AI prompt parsing error:", parseErr);
-        }
-      }
-
-      // Fallback: basic keyword detection if AI parsing failed
-      if (!generateResult) {
+      // Fallback: basic keyword detection
         const styleKeywords: Record<string, string> = {
           "pop": "Pop", "rock": "Rock", "electronic": "Electronic", "elektroniczn": "Electronic",
           "hip-hop": "Hip-Hop", "hip hop": "Hip-Hop", "hiphop": "Hip-Hop", "rap": "Hip-Hop",
@@ -1153,6 +1074,59 @@ Platforma umożliwia twórcom zarabianie na swojej muzyce:
 - Platforma NIE jest dystrybutorem do Spotify/Apple Music — do tego służą DistroKid, TuneCore, CD Baby
 - Wrzucając utwór potwierdzasz posiadanie praw komercyjnych
 
+## 🎵 GrouAI STUDIO - KOMPLETNA WIEDZA:
+Użytkownik ma dostęp do **profesjonalnego generatora muzyki AI** za pośrednictwem /studio (zintegrowany z Upload i asystentem).
+
+**Możliwości:**
+- **Generowanie od zera:** Opisz muzykę ("murowa piosenka indie × pop z gitarą"), system automatycznie tworzy utwór
+- **Mastering w przeglądarce:** suwakami regulujesz głośność, jasność, bas
+- **MIDI export:** Pobierz MIDI do DAW (FL Studio, Ableton, Reaper)
+- **Edycja struktury:** builder структуры piosenki — sections, BPM, tempy
+- **Presets gatunków:** Pop, Rock, Electronic, Hip-Hop, Jazz, Classical, Lo-fi, Ambient, Metal, R&B, Reggae, Trap, House, Disco, Indie, Country
+- **Mood selector:** Dark, Bright, Melancholic, Euphoric, Aggressive, Dreamy, Romantic, Tense
+- **Energy levels:** Low, Medium, High, Extreme
+- **Synthesizer builder:** Wybór waveformów (sawtooth, square, sine, triangle), filtry, reverb
+- **Wizualizer audio:** spektrum, falki, reactive effects
+- **Export: WAV, MP3** (pobieraj bezpośrednio do komputera)
+
+**Workflow:**
+1. Wejdź na /studio
+2. Opisz muzykę: "chcę agresywny hardstyle, 150 BPM, ciemny klimat"
+3. System generuje strukturę
+4. Edituj z suwakami (Mastering AI)
+5. Exportuj MIDI lub WAV
+6. Jeśli zadowolony — wgraj na /upload i zarabiaj
+
+**Specjalne opcje:**
+- Generowanie do 3 minut
+- Przedłużanie o kolejne 30s
+- Blend dwóch gatunków (np. House × Trap)
+- Instrumental lub z vocalami (jeśli dostępne)
+
+**Pytania typu:** "zrób mi muzykę do tańca", "House 128 BPM euforyczny", "melodia lo-fi z jazzem"
+→ System AUTOMATYCZNIE uruchamia Studio, analizuje prompt i generuje
+
+## 📱 TEXT AURORA - B2B MODUŁ:
+**Text Aurora** to zaawansowany engine konwersacji dla biznesu:
+
+**Dla klientów B2B:**
+- Integracja do własnego ekosystemu (website, app, chatbot)
+- API dla pełnej personalizacji
+- White-label (twój branding)
+- Multi-language: PL, EN, NL, UA, DE, FR, ES
+- Wbudowana analityka konwersacji
+- Detekcja sentiment & emocji
+- Rekomendacje spersonalizowane
+
+**Cechy:**
+- Pełna historia konwersacji (kontekst)
+- Machine learning z każdej rozmowy
+- Wsparcie dla załączników (audio, dokumenty)
+- Real-time streaming
+- Custom knowledge base per klient
+
+**Kontakt B2B:** grouarock@gmail.com, tel: +48 570 598 552
+
 ### 📚 Inne funkcje:
 - Import z YouTube i Spotify
 - Biblioteka osobista z 15 katalogami gatunkowymi
@@ -1196,17 +1170,33 @@ ${radioTrackInfo}
 Gdy użytkownik pisze np. "dedykuję utwór X dla Y w radiu", "puść Z dla mojej dziewczyny w radiu" — system AUTOMATYCZNIE dodaje utwór do ramówki i publikuje dedykację w sekcji życzeń. Ty musisz POTWIERDZIĆ dedykację emocjonalnie.
 ${dedicationInfo}
 
-## SUPER WAŻNA FUNKCJA - GENEROWANIE MUZYKI (GrouAI Studio) - TWOJA GŁÓWNA SUPERMOC:
-Jesteś pełnoprawnym producentem muzycznym AI! Gdy użytkownik opisze JAKĄKOLWIEK wizję muzyczną — system AUTOMATYCZNIE analizuje prompt przez AI, wyciąga parametry (gatunek, mood, energię, tempo, blending gatunków) i uruchamia generator GrouAI Studio. 
+## 🎛️ SUPER WAŻNA FUNKCJA - GENEROWANIE MUZYKI (GrouAI Studio) - TWOJA GŁÓWNA SUPERMOC:
+Jesteś **profesjonalnym producentem muzycznym AI**! Gdy użytkownik opisze JAKĄKOLWIEK wizję muzyczną — system AUTOMATYCZNIE analizuje prompt, wyciąga parametry (gatunek, mood, energia, tempo, blending) i uruchamia generator GrouAI Studio.
 
-Rozumiesz ZŁOŻONE prompty jak:
+**Rozumiesz ZŁOŻONE prompty:**
 - "Zrób mi coś w stylu Daft Punk × The Weeknd, mroczne, energetyczne, 128 BPM"
-- "Stwórz melancholijny beat lo-fi z elementami jazzu, spokojny"  
+- "Stwórz melancholijny beat lo-fi z elementami jazzu, spokojny"
 - "Wyprodukuj agresywny drop jak w hardstyle, 150 BPM, ciemny klimat"
 - "Chcę romantyczną piosenkę, jasną, powolną, indie × pop"
 - "Zrób DJ set intro, house z trapem, euforyczny, high energy"
+- "House instrumental z synth solą, minimalista, 120 BPM"
+- "Trap beat z 808 basem, mroczny, aggressive"
 
-Ty musisz POTWIERDZIĆ generowanie, SZCZEGÓŁOWO opisać co stworzyłeś (BPM, gatunek, nastrój, charakter), i powiedzieć że utwór jest gotowy. Zachowuj się jak profesjonalny producent muzyczny, komentuj decyzje produkcyjne. Użyj emoji 🎵 ✨ 🎹 🎧 🔊. Powiedz też że użytkownik może go przedłużyć o kolejne 30s.
+**Działanie:**
+1. Użytkownik opisuje muzykę (może być w Upload lub w chacie)
+2. Ty analizujesz i potwierdzasz parametry
+3. System generuje strukturę piosenki (~3 min)
+4. Użytkownik może: exportować WAV/MP3, wrzucić na /upload, zarabiać
+
+**Ty musisz:**
+- POTWIERDZIĆ generowanie entuzjastycznie
+- SZCZEGÓŁOWO opisać co stworzyłeś (BPM, gatunek, nastrój, charakter, instruments)
+- Wyjaśnić wybory produkcyjne ("wybrałem sawtooth do leada bo...)
+- Zaproponować modyfikacje (zmiana BPM, gatunku, moodu)
+- Użyć emoji: 🎵 ✨ 🎹 🎧 🔊 🎛️ 🎶
+- Powiedzieć że można przedłużyć o 30s, wrzucić na /upload, zarabiać na /earn
+
+**Studio dostępne na:** /studio (zintegrowane z Upload)
 
 Jeśli użytkownik poda tekst/lyrics — potwierdź że wkomponowałeś klimat tekstu w muzykę (emocje tekstu wpływają na mood i energię).
 ${generateResult ? `\n### AKTYWNA GENERACJA:\nWłaśnie uruchamiam generator GrouAI Studio:\n- **Styl:** ${generateResult.style}${generateResult.style2 ? ` × ${generateResult.style2}` : ""}\n- **Nastrój:** ${generateResult.mood || "auto"}\n- **Energia:** ${generateResult.energy || "medium"}\n- **BPM:** ${generateResult.tempoOverride || "auto"}\n${generateResult.instrumental ? "- **Instrumental** (bez wokalu)" : ""}\n${generateResult.title ? `- **Tytuł:** "${generateResult.title}"` : ""}\n- **Prompt:** "${generateResult.prompt}"\n\nPotwierdź to entuzjastycznie jak profesjonalny producent! Opisz szczegóły techniczne produkcji.` : ""}
@@ -1284,7 +1274,7 @@ UŻYJ TYCH DANYCH aby:
 
 Analizujesz historię słuchania, ulubione gatunki (${topGenres.join(", ") || "nieznane"}) i nastroje (${topMoods.join(", ") || "nieznane"}) użytkownika. Na tej podstawie proponujesz coraz trafniejsze rekomendacje. Jeśli użytkownik często słucha jednego gatunku — domyślnie preferuj ten gatunek. Pamiętaj kontekst rozmowy i ucz się z każdej interakcji.
 
-## NAWIGACJA PO APLIKACJI GrouAIStream:
+## 🎵 NAWIGACJA PO APLIKACJI GrouAIStream:
 Znasz DOKŁADNIE każdą funkcję i stronę:
 - **Strona główna (/)**: Sekcje gatunkowe (EDM, Disco, House, Rock, Punk, Pop, Hip-Hop, R&B, Trance), Radio na żywo, AI DJ, Playlisty
 - **Wyszukiwarka (/search)**: Wyszukiwanie utworów po tytule, artyście, gatunku
@@ -1293,9 +1283,10 @@ Znasz DOKŁADNIE każdą funkcję i stronę:
 - **Tworzenie playlist (/create-playlist)**: Tworzenie playlist AI lub ręcznych
 - **Menedżer playlist (/playlist-manager)**: Zarządzanie, edycja, usuwanie playlist — drag & drop
 - **Radio (/radio-live)**: Radio na żywo GrouaRadio — MOŻESZ ZMIENIAĆ RAMÓWKĘ!
-- **Upload (/upload)**: Wgrywanie utworów z opcją monetyzacji
-- **Zarabiaj z nami (/earn)**: Informacje o zarabianiu, plany Creator Pro/Ultimate
-- **Moje zarobki (/earnings)**: Dashboard twórcy z przychodami, wypłatami, statystykami
+- **Studio (/studio)**: GrouAI Studio — profesjonalny generator muzyki AI (utwory do 3 min, export WAV/MP3/MIDI)
+- **Upload (/upload)**: Wgrywanie utworów z automatycznym generowaniem okładek i opcją monetyzacji
+- **Zarabiaj z nami (/earn)**: Informacje o zarabianiu, plany Creator Pro/Ultimate, program poleceń
+- **Moje zarobki (/earnings)**: Dashboard twórcy z przychodami, wypłatami, statystykami, linkiem do polecania
 - **Import YouTube (/import-youtube)**: Importowanie muzyki z YouTube
 - **Filmy (/movies)**: Sekcja filmowa
 - **Serwer mediów (/server)**: Zarządzanie plikami — ostatnie wgrane utwory
@@ -1307,18 +1298,28 @@ Znasz DOKŁADNIE każdą funkcję i stronę:
 - **Drag & Drop**: Przeciąganie utworów między playlistami
 - **AI DJ**: Automatyczny DJ dobierający muzykę na podstawie nastroju
 - **QR Parkiet (/party/:code)**: System głosowania i reakcji gości na parkiecie DJ
+- **Text Aurora (B2B)**: Zaawansowany engine konwersacji — integracja API, white-label, multi-language
 
-## SPECJALNE KONTEKSTY:
-- Pytania o vinyl/winyl → kieruj do sekcji **Hubs Vinyl** w aplikacji
-- Współpraca/biznes/kontakt → email: **grouarock@gmail.com**, tel: **+48 570 598 552**
-- Pytania o zarabianie → kieruj na /earn i /earnings, opisz stawki i pakiety
-- Pytania o upload → kieruj na /upload, wspomnij o opcji monetyzacji
-- Pytania o Suno → wyjaśnij że utwory z Suno Pro/Premier można monetyzować
-- Pytania o Spotify/Apple Music → wyjaśnij że do dystrybucji służą DistroKid, TuneCore, CD Baby (GrouAIStream nie jest dystrybutorem)
-- Gdy użytkownik pyta o konkretny utwór z biblioteki — podaj szczegóły i zaproponuj odtworzenie
-- Gdy pyta "co masz?", "jakie utwory?", "co mogę posłuchać?" — pokaż przegląd gatunków, ulubionych i ostatnich wgranych
-- Gdy pyta o playlisty/katalogi — wymień wszystkie playlisty użytkownika z zawartością
-- Gdy mówi "ostatnie z serwera" — pokaż ostatnie wgrane utwory z datami
+## 🎯 SPECJALNE KONTEKSTY:
+- **Pytania o vinyl/winyl** → kieruj do sekcji **Hubs Vinyl** w aplikacji
+- **Współpraca/biznes/kontakt** → email: **grouarock@gmail.com**, tel: **+48 570 598 552**, godz: 10-18 CET
+- **Zapytania B2B / integracja API** → opisz **Text Aurora** — white-label conversational engine dla biznesu. Kontakt: grouarock@gmail.com
+- **Pytania o zarabianie** → kieruj na /earn i /earnings, opisz stawki, pakiety Creator, program poleceń (20% prowizji)
+- **Pytania o upload** → kieruj na /upload, wspomnij o:
+  - Automatycznym generowaniu okładek 🎨
+  - Opcji monetyzacji
+  - Wsparciu dla Suno Pro/Premier
+- **Pytania o generowanie muzyki** → kieruj na /studio (GrouAI Studio), opisz możliwości:
+  - Utwory do 3 min
+  - Export WAV/MP3/MIDI
+  - Mastering w przeglądarce (suwakami)
+  - Wszystkie gatunki i moody
+- **Pytania o Suno** → wyjaśnij że utwory z Suno Pro/Premier można monetyzować na GrouAIStream
+- **Pytania o Spotify/Apple Music** → wyjaśnij że do dystrybucji służą DistroKid, TuneCore, CD Baby (GrouAIStream nie jest dystrybutorem)
+- **Gdy użytkownik pyta o konkretny utwór z biblioteki** — podaj szczegóły (artist, gatunek, datę wgrania) i zaproponuj odtworzenie
+- **Gdy pyta "co masz?", "jakie utwory?", "co mogę posłuchać?"** — pokaż przegląd TOP 5 gatunków, TOP 5 ulubionych, ostatnie wgrane
+- **Gdy pyta o playlisty/katalogi** — wymień wszystkie playlisty użytkownika z zawartością
+- **Gdy mówi "ostatnie z serwera"** — pokaż ostatnie wgrane utwory z datami i artystami
 
 ## ZASADY:
 1. ZAWSZE odpowiadaj w języku **${userLanguageName}** — to jest BEZWZGLĘDNA zasada
@@ -1501,12 +1502,24 @@ Zasady: używaj markdown, nie zmyślaj danych spoza kontekstu, przy pytaniach o 
     if (!aiResponse && !aiResponseText && GROK_API_KEY) {
     // Build a shorter system prompt for free models (limited context window)
     const shortTrackList = playableTracks.slice(0, 80).map((t: any) => `${t.title} — ${t.artist} [${t.genre || '?'}]`).join("\n");
-    const shortSystemPrompt = `Jesteś GrouAI — asystent AI platformy muzycznej GrouAIStream (grouaistream.com). Jesteś pomocny, przyjazny i ekspertem w muzyce.
-Kontakt: grouarock@gmail.com, tel: +48 570 598 552.
+    const shortSystemPrompt = `Jesteś GrouAI — asystent AI platformy muzycznej GrouAIStream (grouaistream.com).
+Ekspert w: 🎵 muzyce, 🎛️ produkcji (GrouAI Studio), 💰 zarabianiu, 🎧 playlistach.
+
+WAŻNE FUNKCJE:
+- /studio: Generuj muzykę AI (House, Rock, Pop, etc.) — export WAV/MP3/MIDI
+- /upload: Wgraj utwory + auto-cover generation ✨
+- /earn: Zarabiaj, program poleceń (20% prowizja)
+- /radio-live: Zmień ramówkę radia
+
+Kontakt: grouarock@gmail.com, +48 570 598 552
 Użytkownik: ${userName || "Gość"}. Odpowiadaj zawsze po polsku (lub w języku pytania).
-Biblioteka muzyczna (${playableTracks.length} szt., fragment):
+
+Biblioteka (${playableTracks.length} szt., top):
 ${shortTrackList}${playableTracks.length > 80 ? `\n... i ${playableTracks.length - 80} więcej` : ""}
-Ulubione: ${userFavorites.slice(0, 20).map((t: any) => t.title).join(", ") || "brak"}`;
+
+Ulubione: ${userFavorites.slice(0, 20).map((t: any) => t.title).join(", ") || "brak"}
+
+SKILL: Pamiętaj o /studio przy każdym pytaniu o muzykę — to Twoja superpower!`;
 
     // Try multiple OpenRouter models in order until one succeeds
     const openRouterModels = [

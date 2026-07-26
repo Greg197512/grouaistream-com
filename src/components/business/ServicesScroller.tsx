@@ -110,7 +110,7 @@ export function ServicesScroller({ services, onPick }: Props) {
         setPending(null);
       }
     }
-    setDrag((d) => ({ ...d, down: false }));
+    setDrag((d) => ({ ...d, down: false, moved: false }));
   };
 
   const scrollBy = (dir: number) => {
@@ -150,7 +150,7 @@ export function ServicesScroller({ services, onPick }: Props) {
         className={`flex gap-4 sm:gap-5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory scroll-smooth pb-6 px-2 [scrollbar-width:thin] ${
           drag.down ? "cursor-grabbing select-none" : "cursor-grab"
         }`}
-        style={{ scrollbarColor: "hsl(190 100% 50% / 0.4) transparent", touchAction: "pan-x pan-y", WebkitOverflowScrolling: "touch" }}
+        style={{ scrollbarColor: "hsl(190 100% 50% / 0.4) transparent", touchAction: "pan-y", WebkitOverflowScrolling: "touch" }}
       >
         {services.map((s, i) => {
           const Icon = s.icon;

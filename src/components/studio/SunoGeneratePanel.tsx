@@ -46,25 +46,31 @@ const STRUCTURE_TAGS = [
 
 // Wybuch cząsteczek przy udanej generacji („drop").
 const BURST_ICONS = ["🎵", "🎶", "✨", "🔥", "💫", "🎧"];
-const MusicBurst = () => (
-  <div className="pointer-events-none fixed inset-0 z-[120] flex items-center justify-center">
-    {Array.from({ length: 18 }).map((_, i) => {
-      const angle = (i / 18) * Math.PI * 2;
-      const dist = 120 + Math.random() * 160;
-      return (
+const MusicBurst = () => {
+  // Generate all random values at render time, not during animation
+  const particles = Array.from({ length: 18 }).map((_, i) => ({
+    angle: (i / 18) * Math.PI * 2,
+    dist: 120 + Math.random() * 160,
+    rotation: (Math.random() - 0.5) * 220,
+    duration: 1.1 + Math.random() * 0.5,
+  }));
+
+  return (
+    <div className="pointer-events-none fixed inset-0 z-[120] flex items-center justify-center">
+      {particles.map((p, i) => (
         <motion.span
           key={i}
           initial={{ x: 0, y: 0, opacity: 1, scale: 0.5 }}
-          animate={{ x: Math.cos(angle) * dist, y: Math.sin(angle) * dist, opacity: 0, scale: 1.4, rotate: (Math.random() - 0.5) * 220 }}
-          transition={{ duration: 1.1 + Math.random() * 0.5, ease: "easeOut" }}
+          animate={{ x: Math.cos(p.angle) * p.dist, y: Math.sin(p.angle) * p.dist, opacity: 0, scale: 1.4, rotate: p.rotation }}
+          transition={{ duration: p.duration, ease: "easeOut" }}
           className="absolute text-2xl"
         >
           {BURST_ICONS[i % BURST_ICONS.length]}
         </motion.span>
-      );
-    })}
-  </div>
-);
+      ))}
+    </div>
+  );
+};
 
 type CoverMode = "auto" | "custom" | "upload";
 

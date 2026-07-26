@@ -100,16 +100,20 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
         { data: legacySub, error: legacyErr },
       ] = await Promise.all([
         supabase.rpc("has_role", { _user_id: user.id, _role: "admin" }),
-        // Source of truth: Paddle-synced subscriptions table (filtered by env)
+        // Source of truth: Paddle-synced subscriptions table (filtered by env).
+        // Multiple rows per (user, env) are allowed (re-subscribe, plan change) — pick the newest
+        // one that still confers access. Access rules:
+        //   active / trialing / past_due  → allowed while current_period_end is null or future
+        //   canceled                      → allowed until current_period_end (grace period)
         supabase
           .from("subscriptions")
           .select("product_id, status, current_period_end, cancel_at_period_end")
           .eq("user_id", user.id)
           .eq("environment", paddleEnv)
-          // past_due is filtered out — webhook downgrades it to canceled per policy
-          .in("status", ["active", "trialing"])
-          // grace period: if current_period_end already passed, exclude
+          .in("status", ["active", "trialing", "past_due", "canceled"])
           .or(`current_period_end.is.null,current_period_end.gt.${new Date().toISOString()}`)
+          .order("created_at", { ascending: false })
+          .limit(1)
           .maybeSingle(),
         // Fallback: legacy mirror (admin overrides + trial)
         supabase
