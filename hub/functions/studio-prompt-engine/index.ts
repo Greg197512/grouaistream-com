@@ -543,48 +543,68 @@ Deno.serve(async (req) => {
 
     const sunoKey = (cfg["suno_api_key"] || "").trim();
     if (sunoKey) {
-      try {
-        const sunoModel = cfg["suno_model"] || "V5";
-        const sunoStyle = packTags([
-          tags,
-          "studio quality, professional mix, mastered, clear vocals, radio-ready, rich dynamics, hi-fi",
-        ], 950);
-        const useCover = !!voiceUrl && /^https?:\/\//.test(voiceUrl);
-        const endpoint = useCover
-          ? "https://api.sunoapi.org/api/v1/generate/upload-cover"
-          : "https://api.sunoapi.org/api/v1/generate";
-        const sunoBody: Record<string, unknown> = {
-          customMode: true,
-          instrumental,
-          model: sunoModel,
-          callBackUrl: cfg["suno_callback_url"] ||
-            `${Deno.env.get("SUPABASE_URL")}/functions/v1/suno-callback`,
-          ...(instrumental ? {} : { prompt: lyrics.slice(0, 4900) }),
-          style: sunoStyle.slice(0, 990),
-          title: title.slice(0, 95),
-          ...(useCover ? {
-            uploadUrl: voiceUrl,
-            // audioWeight: jak mocno trzymać się barwy z próbki (0-1).
-            audioWeight: Math.min(Math.max(Number(cfg["suno_voice_weight"] || "0.65"), 0), 1),
-          } : {}),
-          ...(voiceGender ? { vocalGender: voiceGender } : {}),
-        };
-        const sr = await fetch(endpoint, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${sunoKey}` },
-          body: JSON.stringify(sunoBody),
-          signal: AbortSignal.timeout(30000),
-        });
-        const sd = await sr.json().catch(() => null);
-        const tid = sd?.data?.taskId;
-        if (sr.ok && tid) {
-          predId = `suno-${tid}`;
-          engineName = useCover ? `suno-cover-${String(sunoModel).toLowerCase()}` : `suno-${String(sunoModel).toLowerCase()}`;
-        } else {
-          console.warn("[suno] start failed:", JSON.stringify(sd).slice(0, 200));
+      // Style z mocnymi „kotwicami czystości" — to one najbardziej zbijają
+      // muł/blaszaność i pilnują transparentnego, wyprzedzonego wokalu.
+      const sunoStyle = packTags([
+        tags,
+        "crystal clear studio master, pristine high fidelity, professional mix and master, wide stereo image, deep controlled sub-bass, airy top end, transparent vocals up-front, natural room, balanced loudness, radio-ready, zero distortion, zero mud, reference-monitor quality",
+      ], 950);
+      const useCover = !!voiceUrl && /^https?:\/\//.test(voiceUrl);
+      const endpoint = useCover
+        ? "https://api.sunoapi.org/api/v1/generate/upload-cover"
+        : "https://api.sunoapi.org/api/v1/generate";
+      // Kandydaci modeli: skonfigurowany → pewne fallbacki. Jeśli dany identyfikator
+      // (np. V5_5) nie jest obsługiwany przez API, NIE spadamy na MiniMax —
+      // próbujemy kolejnej wersji Suno. Zawsze gramy najlepszym DOSTĘPNYM Suno.
+      const modelCandidates = [...new Set([(cfg["suno_model"] || "V5"), "V5", "V4_5PLUS"].filter(Boolean))];
+      let sunoErr = "";
+      for (const sunoModel of modelCandidates) {
+        try {
+          const sunoBody: Record<string, unknown> = {
+            customMode: true,
+            instrumental,
+            model: sunoModel,
+            callBackUrl: cfg["suno_callback_url"] ||
+              `${Deno.env.get("SUPABASE_URL")}/functions/v1/suno-callback`,
+            ...(instrumental ? {} : { prompt: lyrics.slice(0, 4900) }),
+            style: sunoStyle.slice(0, 990),
+            title: title.slice(0, 95),
+            ...(useCover ? {
+              uploadUrl: voiceUrl,
+              // audioWeight: jak mocno trzymać się barwy z próbki (0-1).
+              audioWeight: Math.min(Math.max(Number(cfg["suno_voice_weight"] || "0.65"), 0), 1),
+            } : {}),
+            ...(voiceGender ? { vocalGender: voiceGender } : {}),
+          };
+          const sr = await fetch(endpoint, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${sunoKey}` },
+            body: JSON.stringify(sunoBody),
+            signal: AbortSignal.timeout(30000),
+          });
+          const sd = await sr.json().catch(() => null);
+          const tid = sd?.data?.taskId;
+          if (sr.ok && tid) {
+            predId = `suno-${tid}`;
+            engineName = useCover ? `suno-cover-${String(sunoModel).toLowerCase()}` : `suno-${String(sunoModel).toLowerCase()}`;
+            break;
+          }
+          sunoErr = `[${sunoModel}] ${JSON.stringify(sd).slice(0, 160)}`;
+          console.warn("[suno] start failed:", sunoErr);
+        } catch (e) {
+          sunoErr = `[${sunoModel}] ${String(e).slice(0, 120)}`;
+          console.warn("[suno] unreachable:", sunoErr);
         }
-      } catch (e) {
-        console.warn("[suno] unreachable:", String(e).slice(0, 120));
+      }
+      // Diagnostyka: klucz jest, a Suno nie ruszył → zapisz POWÓD (bez sekretu),
+      // by od razu było wiadomo, czy to zły model / brak środków / zły klucz.
+      if (!predId && sunoErr) {
+        try {
+          await hubAdmin().from("hub_log").insert({
+            source: "studio-prompt-engine", level: "warn",
+            message: `Suno nie ruszył — fallback na MiniMax. Powód: ${sunoErr}`,
+          });
+        } catch { /* log best-effort */ }
       }
     }
 
