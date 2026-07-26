@@ -43,7 +43,7 @@ const PLAN_LEVELS: Record<SubscriptionPlan, number> = {
 
 // PROMOCJA: cały GrouAI Studio (poziom Pro) za darmo dla WSZYSTKICH do tej daty.
 // Po tej dacie promocja wygasa sama. Serwer (hub) ma bliźniaczy warunek: hub_config.studio_free_until.
-export const STUDIO_FREE_UNTIL = new Date("2099-12-31T23:59:59Z");
+export const STUDIO_FREE_UNTIL = new Date("2026-08-10T23:59:59Z");
 export const isStudioPromoActive = () => Date.now() < STUDIO_FREE_UNTIL.getTime();
 
 // Inteligentny status promocji — sterowany DATĄ (sam się przełącza):
