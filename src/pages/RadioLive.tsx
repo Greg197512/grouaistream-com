@@ -964,8 +964,7 @@ const RadioLive = () => {
               <p className="text-xs text-muted-foreground truncate">{currentArtist}</p>
             </div>
             <div className="text-right shrink-0 flex flex-col items-end gap-0.5">
-              <p className="text-[10px] text-muted-foreground uppercase">Pozycja</p>
-              <p className="text-sm font-bold tabular-nums">{currentIndex + 1}/{schedule.length}</p>
+              {/* Licznik pozycji (X/N) usunięty na życzenie — zostaje samo brandowanie. */}
               <a
                 href="https://grouarock.com"
                 target="_blank"
