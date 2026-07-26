@@ -155,6 +155,24 @@ Deno.serve(async (req) => {
       return json({ ok: true, added: add, tickets: newTickets });
     }
 
+    // ── REFER: zaproszony rejestruje polecenie → +50 losów dla zapraszającego ──
+    if (action === "refer") {
+      const u = await getUserId(auth);
+      if (!u) return json({ error: "unauthorized" }, 401);
+      const ref = String(body.ref || "").trim();
+      if (!ref || ref === u.id) return json({ ok: true, awarded: 0, reason: "self_or_empty" });
+      // Zapisz polecenie (unikat: zaproszony raz na rundę).
+      const ins = await db.from("game_referrals").insert({ round_id: round.id, referred_user_id: u.id, referrer_user_id: ref }).select().maybeSingle();
+      if (ins.error) return json({ ok: true, awarded: 0, reason: "already" });
+      // Limit: max 20 poleceń/rundę na zapraszającego (anty-abuse).
+      const { count } = await db.from("game_referrals").select("*", { count: "exact", head: true }).eq("round_id", round.id).eq("referrer_user_id", ref);
+      if ((count ?? 0) <= 20) {
+        const { data: e } = await db.from("game_entries").select("tickets").eq("round_id", round.id).eq("user_id", ref).maybeSingle();
+        await db.from("game_entries").upsert({ round_id: round.id, user_id: ref, tickets: (e?.tickets || 0) + 50, updated_at: new Date().toISOString() }, { onConflict: "round_id,user_id" });
+      }
+      return json({ ok: true, awarded: 50 });
+    }
+
     // ── CLAIM: zwycięzca wybiera 10 utworów + nośnik + adres ──
     if (action === "claim") {
       const u = await getUserId(auth);

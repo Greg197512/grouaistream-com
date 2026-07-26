@@ -48,6 +48,11 @@ export async function gameClaim(payload: {
   return call({ action: "claim", ...payload }, true);
 }
 
+/** Zaproszony rejestruje polecenie → +50 losów dla zapraszającego. */
+export async function gameRefer(ref: string): Promise<{ ok: boolean; awarded?: number }> {
+  return call({ action: "refer", ref }, true);
+}
+
 // ── Admin (PIN wspólny z panelami B2B) ──
 export async function gameAdminList(pin: string): Promise<any> {
   return call({ action: "admin_list", pin }, false);

@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { usePlayer } from "@/contexts/PlayerContext";
+import { gameVote } from "@/lib/hubGame";
 
 interface RadioConfig {
   is_active: boolean;
@@ -967,15 +968,27 @@ const RadioLive = () => {
               <p className="text-sm font-semibold truncate">{currentTitle}</p>
               <p className="text-xs text-muted-foreground truncate">{currentArtist}</p>
             </div>
-            <div className="text-right shrink-0 flex flex-col items-end gap-0.5">
-              {/* Licznik pozycji (X/N) usunięty na życzenie — zostaje samo brandowanie. */}
-              <a
-                href="https://grouarock.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-[9px] text-muted-foreground/40 hover:text-primary/60 transition-colors"
+            <div className="text-right shrink-0 flex flex-col items-end gap-1">
+              {/* Głosowanie „na winyl" — losy do gry „Wygraj swoją płytę" (+5) */}
+              <button
+                onClick={async () => {
+                  if (!userId) { toast({ title: "Zaloguj się, aby głosować i grać o płytę" }); return; }
+                  const r = await gameVote("vote");
+                  if (r?.error) toast({ title: r.error });
+                  else if (r?.reason === "daily_cap") toast({ title: "Dzienny limit głosów osiągnięty 😉" });
+                  else if (r?.added) toast({ title: `🎵 +${r.added} losów! Masz ${r.tickets}.` });
+                }}
+                className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold text-black transition hover:brightness-110"
+                style={{ background: "linear-gradient(135deg,#FF7A1A,#FFB020)" }}
+                title="Zagłosuj na ten utwór — zdobądź losy do gry o płytę"
               >
-                grouarock.com
+                🎵 Głosuj na winyl <span className="text-[10px]">+5</span>
+              </button>
+              <a
+                href="https://grouaistream.com/wygraj"
+                className="text-[9px] text-muted-foreground/50 hover:text-primary/70 transition-colors"
+              >
+                🏆 Wygraj swoją płytę
               </a>
             </div>
           </div>

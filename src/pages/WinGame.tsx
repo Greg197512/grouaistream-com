@@ -6,8 +6,8 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { Trophy, Ticket, Disc3, Sparkles, Gift, Truck, Loader2, Check } from "lucide-react";
-import { fetchGameState, gameVote, gameClaim, type GameState } from "@/lib/hubGame";
+import { Trophy, Ticket, Disc3, Sparkles, Gift, Truck, Loader2, Check, Share2, Users } from "lucide-react";
+import { fetchGameState, gameVote, gameClaim, gameRefer, type GameState } from "@/lib/hubGame";
 
 const MEDIA = [
   { id: "vinyl", emoji: "🟠", name: "Winyl", desc: "Limitowany, numerowany — robi wrażenie." },
@@ -37,6 +37,26 @@ export default function WinGame() {
 
   const load = useCallback(async () => { setState(await fetchGameState()); }, []);
   useEffect(() => { void load(); const i = setInterval(() => void load(), 15000); return () => clearInterval(i); }, [load]);
+
+  // Polecenie: jeśli wszedłem z ?ref=<id> i jestem zalogowany → zapraszający dostaje +50 (raz).
+  useEffect(() => {
+    if (!user) return;
+    const ref = new URLSearchParams(window.location.search).get("ref");
+    if (!ref || ref === user.id) return;
+    const key = `gv-ref-done-${ref}`;
+    if (localStorage.getItem(key)) return;
+    void gameRefer(ref).then((r) => { if (r?.ok) localStorage.setItem(key, "1"); });
+  }, [user]);
+
+  const inviteLink = user ? `https://grouaistream.com/wygraj?ref=${user.id}` : "https://grouaistream.com/wygraj";
+  const invite = async () => {
+    if (!user) { toast.error("Zaloguj się, aby mieć swój link"); return; }
+    const text = "🎧 Gram o własną płytę na GrouAI Stream — dołącz, a oboje zgarniamy losy!";
+    try {
+      if (navigator.share) { await navigator.share({ title: "Wygraj swoją płytę", text, url: inviteLink }); }
+      else { await navigator.clipboard.writeText(inviteLink); toast.success("Skopiowano Twój link zapraszający 🎟️"); }
+    } catch { /* użytkownik anulował */ }
+  };
 
   const doVote = async (kind: "daily" | "vote") => {
     if (!user) { toast.error("Zaloguj się, aby grać i zbierać losy"); return; }
@@ -184,9 +204,13 @@ export default function WinGame() {
               <li className="flex justify-between"><span>Polub (♥) utwór</span><span className="font-display font-extrabold text-[#38E8A0]">+2</span></li>
               <li className="flex justify-between"><span>Zagłosuj „na winyl"</span><span className="font-display font-extrabold text-[#38E8A0]">+5</span></li>
               <li className="flex justify-between"><span>Codzienne wejście</span><span className="font-display font-extrabold text-[#38E8A0]">+10</span></li>
+              <li className="flex justify-between"><span>Zaproś znajomego (dołączy)</span><span className="font-display font-extrabold text-[#38E8A0]">+50</span></li>
             </ul>
             <Button className="w-full mt-4 gap-2" disabled={busy === "daily"} onClick={() => void doVote("daily")}>
               {busy === "daily" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Ticket className="h-4 w-4" />} Odbierz dzisiejsze losy
+            </Button>
+            <Button variant="outline" className="w-full mt-2 gap-2" onClick={() => void invite()}>
+              <Users className="h-4 w-4" /> Zaproś znajomych <span className="text-[#38E8A0] font-bold">+50</span>
             </Button>
           </div>
         </section>
