@@ -932,6 +932,9 @@ const RadioLive = () => {
           </div>
         )}
 
+        {/* Global mood switcher — admin/DJ przełącza playlistę radia dla wszystkich (AI/n8n → fallback shuffle) */}
+        <RadioMoodSwitcher />
+
         {/* Mood Detection Module — Pro feature */}
         <FeatureGate requiredPlan="pro" featureName="Radio Mood Detection">
           <RadioMoodDetector />
