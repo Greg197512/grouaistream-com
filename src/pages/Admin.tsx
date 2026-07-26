@@ -25,7 +25,8 @@ import {
   ToggleLeft,
   ToggleRight,
   Sparkles,
-  Trophy
+  Trophy,
+  Brain
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -81,6 +82,7 @@ import { B2BOrdersPanel } from "@/components/admin/B2BOrdersPanel";
 import { CostReportsPanel } from "@/components/admin/CostReportsPanel";
 import { BreakEvenPanel } from "@/components/admin/BreakEvenPanel";
 import { GameWinnersPanel } from "@/components/admin/GameWinnersPanel";
+import { EngineLearningPanel } from "@/components/admin/EngineLearningPanel";
 import { CostAlertBanner } from "@/components/admin/CostAlertBanner";
 
 interface UserStats {
@@ -778,6 +780,10 @@ export default function Admin() {
                   <Trophy className="h-4 w-4" />
                   Zwycięzcy gry
                 </TabsTrigger>
+                <TabsTrigger value="engine-learning" className="gap-2">
+                  <Brain className="h-4 w-4" />
+                  Nauka silnika
+                </TabsTrigger>
                 <TabsTrigger value="genres" className="gap-2">
                   <BarChart3 className="h-4 w-4" />
                   Gatunki
@@ -916,6 +922,10 @@ export default function Admin() {
 
               <TabsContent value="game-winners" className="space-y-6">
                 <GameWinnersPanel />
+              </TabsContent>
+
+              <TabsContent value="engine-learning" className="space-y-6">
+                <EngineLearningPanel />
               </TabsContent>
 
               {/* Likes Overview Tab */}

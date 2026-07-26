@@ -11,8 +11,42 @@ const HUB_COVER_URL =
   "https://bmwtydwpevzhbdplilbr.supabase.co/functions/v1/studio-cover";
 const HUB_STEMS_URL =
   "https://bmwtydwpevzhbdplilbr.supabase.co/functions/v1/studio-stems";
+const HUB_ENGINE_LEARN_URL =
+  "https://bmwtydwpevzhbdplilbr.supabase.co/functions/v1/engine-learn";
 
 type InvokeResult = { data: any; error: Error | null };
+
+/**
+ * NAUKA SILNIKA — pobiera „lekcje" z naszych najlepszych dotychczasowych
+ * utworów w danym języku (in-context learning). Wynik dokleja się do promptu
+ * planera, więc silnik komponuje wzorując się na własnych najlepszych. Ciche
+ * niepowodzenie → "" (generacja i tak rusza).
+ */
+export async function fetchEngineLessons(language: string): Promise<string> {
+  try {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData?.session?.access_token;
+    const r = await fetch(HUB_ENGINE_LEARN_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body: JSON.stringify({ action: "lessons", language }),
+    });
+    const d = await r.json().catch(() => null);
+    return d?.ok && typeof d.lessons === "string" ? d.lessons : "";
+  } catch { return ""; }
+}
+
+/** Pulpit „Nauka silnika" (admin, PIN wspólny z panelami). */
+export async function fetchEngineLearningStats(pin: string): Promise<any> {
+  const { data: sessionData } = await supabase.auth.getSession();
+  const token = sessionData?.session?.access_token;
+  const r = await fetch(HUB_ENGINE_LEARN_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    body: JSON.stringify({ action: "stats", pin }),
+  });
+  return r.json().catch(() => null);
+}
 
 /**
  * Zamiennik supabase.functions.invoke dla silników Studia.

@@ -31,7 +31,7 @@ import { uploadToR2 } from "@/lib/r2Upload";
 import { renderScore } from "@/lib/musicSynth";
 import { generateMusic } from "@/utils/musicGenerator";
 import { Lock, Crown, Download, Share2 } from "lucide-react";
-import { downloadAudio, invokeStudioEngine, waitForAceStep, isSubscriptionError } from "@/lib/hubStudio";
+import { downloadAudio, invokeStudioEngine, waitForAceStep, isSubscriptionError, fetchEngineLessons } from "@/lib/hubStudio";
 import { Link } from "react-router-dom";
 
 const FREE_GENERATION_LIMIT = 1;
@@ -439,11 +439,15 @@ const Suno = () => {
           try {
             // Composed prompt niesie już gatunek/nastrój/tempo/energię/wokal. Gdy jest
             // własny tekst — przekazujemy go dosłownie, by silnik go zaśpiewał.
-            const promptForEngine = instrumental
+            let promptForEngine = instrumental
               ? `${musicPrompt} (instrumentalny, bez wokalu)`
               : (customLyrics.trim()
                   ? `${musicPrompt}. Zaśpiewaj DOKŁADNIE ten tekst:\n${customLyrics.trim()}`
                   : musicPrompt);
+
+            // NAUKA: doklej lekcje z naszych najlepszych utworów (in-context learning).
+            const lessons = await fetchEngineLessons(language);
+            if (lessons) promptForEngine = `${promptForEngine}\n\n${lessons}`;
 
             const { data, error: fnErr } = await invokeStudioEngine("studio-prompt-engine", {
               prompt: promptForEngine,
