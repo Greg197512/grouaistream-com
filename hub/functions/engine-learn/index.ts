@@ -164,6 +164,20 @@ Deno.serve(async (req) => {
           }
         }
       }
+      // Seria dzienna jakości (14 dni) — do wykresu „jakość w czasie" vs Suno.
+      const dayMap: Record<string, { sum: number; n: number }> = {};
+      for (const r of scored) {
+        const d = new Date(r.created_at).toISOString().slice(0, 10);
+        (dayMap[d] ||= { sum: 0, n: 0 });
+        dayMap[d].sum += scoreOf(r); dayMap[d].n += 1;
+      }
+      const daily: { day: string; avg: number; n: number }[] = [];
+      for (let i = 13; i >= 0; i--) {
+        const d = new Date(now - i * 86400000).toISOString().slice(0, 10);
+        const b = dayMap[d];
+        daily.push({ day: d.slice(5), avg: b ? +(b.sum / b.n).toFixed(2) : 0, n: b?.n || 0 });
+      }
+
       const topTags = Object.entries(tagFreq).sort((a, b) => b[1] - a[1]).slice(0, 14).map(([tag, n]) => ({ tag, n }));
       const recent = rows.slice(0, 10).map((r) => ({
         language: r.language, engine: r.engine, score: scoreOf(r) || null,
@@ -177,7 +191,7 @@ Deno.serve(async (req) => {
         ok: true,
         total, scored: scored.length,
         avg_all: avg(scored), avg_7d: avg(scored.filter((r) => within(r, 7))), avg_30d: avg(scored.filter((r) => within(r, 30))),
-        by_language: byLang, by_engine: byEngine, top_tags: topTags, recent,
+        by_language: byLang, by_engine: byEngine, top_tags: topTags, recent, daily,
         catalog: cat,
       });
     }

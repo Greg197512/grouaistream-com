@@ -4,6 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { fetchEngineLearningStats, refreshEngineCatalog } from "@/lib/hubStudio";
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, CartesianGrid, Cell } from "recharts";
+
+// Poziom odniesienia „Suno" — cel jakościowy (nie mierzymy wewnętrznej oceny
+// Suno; to benchmark, do którego dążymy). Wykresy pokazują, jak się zbliżamy.
+const SUNO_REF = 9.2;
 
 // Pulpit „Nauka silnika" — pokazuje, że silnik uczy się na naszych utworach:
 // ile lekcji, średnia jakość (i trend 7 dni), zwycięskie tagi, ostatnie przykłady.
@@ -14,6 +19,7 @@ interface Stats {
   by_engine: Record<string, number>;
   top_tags: { tag: string; n: number }[];
   recent: { language: string; engine: string; score: number | null; title: string; tags: string; hook: string; at: string }[];
+  daily?: { day: string; avg: number; n: number }[];
   catalog?: {
     total: number; sample: number; source: "full" | "public";
     genres: { name: string; n: number }[]; moods: { name: string; n: number }[];
@@ -108,6 +114,54 @@ export function EngineLearningPanel() {
                   <div key={e} className="flex justify-between gap-2"><span className="truncate text-muted-foreground">{e}</span><b className="tabular-nums">{n}</b></div>
                 ))}
               </div>
+            </div>
+          </div>
+
+          {/* Dwa wykresy jakości vs Suno */}
+          <div className="grid lg:grid-cols-2 gap-3">
+            {/* 1) Jakość w czasie vs poziom Suno */}
+            <div className="rounded-xl border border-border p-3">
+              <div className="text-sm font-semibold mb-2">Jakość w czasie <span className="text-muted-foreground font-normal">(nasza vs Suno)</span></div>
+              <div className="h-52">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={stats.daily || []} margin={{ top: 6, right: 8, left: -18, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,.08)" />
+                    <XAxis dataKey="day" tick={{ fontSize: 10, fill: "#9aa0ab" }} interval={2} />
+                    <YAxis domain={[0, 10]} ticks={[0, 2, 4, 6, 8, 10]} tick={{ fontSize: 10, fill: "#9aa0ab" }} />
+                    <Tooltip contentStyle={{ background: "#12101c", border: "1px solid rgba(255,255,255,.12)", borderRadius: 10, fontSize: 12 }} labelStyle={{ color: "#fff" }} />
+                    <ReferenceLine y={SUNO_REF} stroke="#B026FF" strokeDasharray="5 4" label={{ value: "Suno (cel)", fill: "#c99bff", fontSize: 10, position: "insideTopRight" }} />
+                    <Line type="monotone" dataKey="avg" name="GrouAI" stroke="#FF7A1A" strokeWidth={2.5} dot={{ r: 2 }} connectNulls />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-1">Średnia dzienna ocena naszych utworów (0–10) w 14 dni. Fioletowa linia = poziom docelowy Suno.</p>
+            </div>
+
+            {/* 2) GrouAI vs Suno — słupki */}
+            <div className="rounded-xl border border-border p-3">
+              <div className="text-sm font-semibold mb-2">GrouAI vs Suno <span className="text-muted-foreground font-normal">(dystans do celu)</span></div>
+              <div className="h-52">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={[
+                      { name: "30 dni", v: stats.avg_30d || 0 },
+                      { name: "7 dni", v: stats.avg_7d || 0 },
+                      { name: "Ogółem", v: stats.avg_all || 0 },
+                      { name: "Suno (cel)", v: SUNO_REF },
+                    ]}
+                    margin={{ top: 6, right: 8, left: -18, bottom: 0 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,.08)" vertical={false} />
+                    <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#9aa0ab" }} />
+                    <YAxis domain={[0, 10]} ticks={[0, 2, 4, 6, 8, 10]} tick={{ fontSize: 10, fill: "#9aa0ab" }} />
+                    <Tooltip contentStyle={{ background: "#12101c", border: "1px solid rgba(255,255,255,.12)", borderRadius: 10, fontSize: 12 }} labelStyle={{ color: "#fff" }} cursor={{ fill: "rgba(255,255,255,.04)" }} />
+                    <Bar dataKey="v" name="ocena" radius={[6, 6, 0, 0]}>
+                      {["#FFB020", "#FF9500", "#FF7A1A", "#B026FF"].map((c, i) => <Cell key={i} fill={c} />)}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-1">Nasza średnia jakość rośnie ku poziomowi Suno. „Suno (cel)" to benchmark, nie zmierzona ocena Suno.</p>
             </div>
           </div>
 

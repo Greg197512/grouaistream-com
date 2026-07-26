@@ -124,10 +124,56 @@ const flagEmoji = (cc?: string | null) => {
   return String.fromCodePoint(...[...cc.toUpperCase()].map((c) => base + c.charCodeAt(0) - 65));
 };
 
+// Kategorie panelu admina — grupują 27 zakładek w 6 sekcji, żeby nie było
+// ściany przycisków. Każda pozycja: value (musi zgadzać się z TabsContent),
+// etykieta i ikona. Kolejność = kolejność wyświetlania.
+const ADMIN_CATS: { id: string; label: string; Icon: React.ComponentType<{ className?: string }>; tabs: { value: string; label: string; Icon: React.ComponentType<{ className?: string }> }[] }[] = [
+  { id: "finance", label: "Finanse", Icon: DollarSign, tabs: [
+    { value: "break-even", label: "Break-even 💰", Icon: TrendingUp },
+    { value: "finance", label: "Finanse & Weekend AI", Icon: TrendingUp },
+    { value: "costs", label: "Koszty & Pomysły", Icon: AlertTriangle },
+    { value: "subscriptions", label: "Subskrypcje 👑", Icon: DollarSign },
+    { value: "paddle", label: "Paddle 💳", Icon: DollarSign },
+    { value: "payouts-admin", label: "Wypłaty & Fraud 💸", Icon: DollarSign },
+    { value: "bonuses", label: "Bonusy & Wypłaty", Icon: DollarSign },
+    { value: "tips", label: "Tipy & Portfele", Icon: DollarSign },
+    { value: "top-earners", label: "Top Zarobki", Icon: DollarSign },
+  ] },
+  { id: "radio", label: "Rozgłośnia & treść", Icon: RadioIcon, tabs: [
+    { value: "radio", label: "Rozgłośnia", Icon: RadioIcon },
+    { value: "marquee", label: "Pasek", Icon: Megaphone },
+    { value: "ai-rankings", label: "Analiza AI", Icon: Award },
+    { value: "likes", label: "Polubienia ❤️", Icon: DollarSign },
+    { value: "genres", label: "Gatunki", Icon: BarChart3 },
+    { value: "tracks", label: "Utwory", Icon: Music },
+    { value: "seo", label: "SEO Bot", Icon: TrendingUp },
+    { value: "tiktok", label: "Rolki TikTok 🎬", Icon: Music },
+  ] },
+  { id: "engine", label: "Silnik AI & Studio", Icon: Brain, tabs: [
+    { value: "engine-learning", label: "Nauka silnika", Icon: Brain },
+    { value: "face-learning", label: "Aura AI 🧠", Icon: Sparkles },
+    { value: "ai-builder", label: "AI Builder 🤖", Icon: Activity },
+  ] },
+  { id: "game", label: "Gra & konkurs", Icon: Trophy, tabs: [
+    { value: "game-winners", label: "Zwycięzcy gry", Icon: Trophy },
+  ] },
+  { id: "users", label: "Użytkownicy", Icon: Users, tabs: [
+    { value: "users", label: "Użytkownicy", Icon: Users },
+    { value: "email", label: "E-mail AI", Icon: Mail },
+    { value: "codes", label: "Kody dostępu", Icon: Lock },
+    { value: "storage", label: "Dysk", Icon: HardDrive },
+  ] },
+  { id: "b2b", label: "B2B Aurora", Icon: Activity, tabs: [
+    { value: "b2b-pricing", label: "Ceny B2B 💶", Icon: DollarSign },
+    { value: "b2b-orders", label: "Zlecenia B2B 📋", Icon: DollarSign },
+  ] },
+];
+
 export default function Admin() {
   const { isAdmin, loading, user } = useAdminAuth();
   const navigate = useNavigate();
   const { playTrack } = usePlayer();
+  const [activeTab, setActiveTab] = useState<string>("break-even");
   const [stats, setStats] = useState<UserStats | null>(null);
   const [deletingGenre, setDeletingGenre] = useState<string | null>(null);
   const [deletingTrack, setDeletingTrack] = useState<string | null>(null);
@@ -742,117 +788,47 @@ export default function Admin() {
             <CostAlertBanner />
 
             {/* Tabs */}
-            <Tabs defaultValue="break-even" className="space-y-4">
-              <TabsList className="flex-wrap h-auto">
-                <TabsTrigger value="break-even" className="gap-2">
-                  <TrendingUp className="h-4 w-4" />
-                  Break-even 💰
-                </TabsTrigger>
-                <TabsTrigger value="payouts-admin" className="gap-2">
-                  <DollarSign className="h-4 w-4" />
-                  Wypłaty & Fraud 💸
-                </TabsTrigger>
-                <TabsTrigger value="bonuses" className="gap-2">
-                  <DollarSign className="h-4 w-4" />
-                  Bonusy & Wypłaty
-                </TabsTrigger>
-                <TabsTrigger value="finance" className="gap-2">
-                  <TrendingUp className="h-4 w-4" />
-                  Finanse & Weekend AI
-                </TabsTrigger>
-                <TabsTrigger value="tips" className="gap-2">
-                  <DollarSign className="h-4 w-4" />
-                  Tipy & Portfele
-                </TabsTrigger>
-                <TabsTrigger value="subscriptions" className="gap-2">
-                  <DollarSign className="h-4 w-4" />
-                  Subskrypcje 👑
-                </TabsTrigger>
-                <TabsTrigger value="paddle" className="gap-2">
-                  <DollarSign className="h-4 w-4" />
-                  Paddle 💳
-                </TabsTrigger>
-                <TabsTrigger value="costs" className="gap-2">
-                  <AlertTriangle className="h-4 w-4" />
-                  Koszty & Pomysły
-                </TabsTrigger>
-                <TabsTrigger value="game-winners" className="gap-2">
-                  <Trophy className="h-4 w-4" />
-                  Zwycięzcy gry
-                </TabsTrigger>
-                <TabsTrigger value="engine-learning" className="gap-2">
-                  <Brain className="h-4 w-4" />
-                  Nauka silnika
-                </TabsTrigger>
-                <TabsTrigger value="genres" className="gap-2">
-                  <BarChart3 className="h-4 w-4" />
-                  Gatunki
-                </TabsTrigger>
-                <TabsTrigger value="tracks" className="gap-2">
-                  <Music className="h-4 w-4" />
-                  Utwory
-                </TabsTrigger>
-                <TabsTrigger value="users" className="gap-2">
-                  <Users className="h-4 w-4" />
-                  Użytkownicy
-                </TabsTrigger>
-                <TabsTrigger value="email" className="gap-2">
-                  <Mail className="h-4 w-4" />
-                  E-mail AI
-                </TabsTrigger>
-                <TabsTrigger value="codes" className="gap-2">
-                  <Lock className="h-4 w-4" />
-                  Kody dostępu
-                </TabsTrigger>
-                <TabsTrigger value="radio" className="gap-2">
-                  <RadioIcon className="h-4 w-4" />
-                  Rozgłośnia
-                </TabsTrigger>
-                <TabsTrigger value="storage" className="gap-2">
-                  <HardDrive className="h-4 w-4" />
-                  Dysk
-                </TabsTrigger>
-                <TabsTrigger value="ai-rankings" className="gap-2">
-                  <Award className="h-4 w-4" />
-                  Analiza AI
-                </TabsTrigger>
-                <TabsTrigger value="top-earners" className="gap-2">
-                  <DollarSign className="h-4 w-4" />
-                  Top Zarobki
-                </TabsTrigger>
-                <TabsTrigger value="likes" className="gap-2">
-                  <DollarSign className="h-4 w-4" />
-                  Polubienia ❤️
-                </TabsTrigger>
-                <TabsTrigger value="marquee" className="gap-2">
-                  <Megaphone className="h-4 w-4" />
-                  Pasek
-                </TabsTrigger>
-                <TabsTrigger value="seo" className="gap-2">
-                  <TrendingUp className="h-4 w-4" />
-                  SEO Bot
-                </TabsTrigger>
-                <TabsTrigger value="tiktok" className="gap-2">
-                  <Music className="h-4 w-4" />
-                  Rolki TikTok 🎬
-                </TabsTrigger>
-                <TabsTrigger value="ai-builder" className="gap-2">
-                  <Activity className="h-4 w-4" />
-                  AI Builder 🤖
-                </TabsTrigger>
-                <TabsTrigger value="face-learning" className="gap-2">
-                  <Sparkles className="h-4 w-4" />
-                  Aura AI 🧠
-                </TabsTrigger>
-                <TabsTrigger value="b2b-pricing" className="gap-2">
-                  <DollarSign className="h-4 w-4" />
-                  Ceny B2B 💶
-                </TabsTrigger>
-                <TabsTrigger value="b2b-orders" className="gap-2">
-                  <DollarSign className="h-4 w-4" />
-                  Zlecenia B2B 📋
-                </TabsTrigger>
-              </TabsList>
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+              {(() => {
+                const activeCatId = ADMIN_CATS.find((c) => c.tabs.some((t) => t.value === activeTab))?.id ?? ADMIN_CATS[0].id;
+                const activeCat = ADMIN_CATS.find((c) => c.id === activeCatId) ?? ADMIN_CATS[0];
+                return (
+                  <>
+                    {/* Kategorie — pierwszy poziom (6 sekcji zamiast 27 przycisków) */}
+                    <div className="flex flex-wrap gap-2">
+                      {ADMIN_CATS.map((c) => {
+                        const CIcon = c.Icon;
+                        const on = c.id === activeCatId;
+                        return (
+                          <button
+                            key={c.id}
+                            type="button"
+                            onClick={() => setActiveTab(c.tabs[0].value)}
+                            className={`flex items-center gap-2 rounded-xl px-3.5 py-2 text-sm font-semibold transition ${on ? "text-white" : "text-muted-foreground hover:text-foreground bg-muted/40"}`}
+                            style={on ? { background: "linear-gradient(135deg, #FF6B00, #9333EA)", boxShadow: "0 0 16px #FF6B0040" } : undefined}
+                          >
+                            <CIcon className="h-4 w-4" />
+                            {c.label}
+                            <span className={`text-[10px] tabular-nums rounded-full px-1.5 py-0.5 ${on ? "bg-white/20" : "bg-foreground/10"}`}>{c.tabs.length}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {/* Podzakładki aktywnej kategorii — drugi poziom */}
+                    <TabsList className="flex-wrap h-auto">
+                      {activeCat.tabs.map((t) => {
+                        const TIcon = t.Icon;
+                        return (
+                          <TabsTrigger key={t.value} value={t.value} className="gap-2">
+                            <TIcon className="h-4 w-4" />
+                            {t.label}
+                          </TabsTrigger>
+                        );
+                      })}
+                    </TabsList>
+                  </>
+                );
+              })()}
 
               <TabsContent value="seo">
                 <SEODashboard />
