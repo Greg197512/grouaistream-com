@@ -3550,6 +3550,7 @@ export type Database = {
       creator_earnings: {
         Row: {
           amount: number
+          available_at: string | null
           created_at: string
           description: string | null
           earning_type: string
@@ -3559,6 +3560,7 @@ export type Database = {
         }
         Insert: {
           amount?: number
+          available_at?: string | null
           created_at?: string
           description?: string | null
           earning_type?: string
@@ -3568,6 +3570,7 @@ export type Database = {
         }
         Update: {
           amount?: number
+          available_at?: string | null
           created_at?: string
           description?: string | null
           earning_type?: string
@@ -7358,6 +7361,10 @@ export type Database = {
       get_user_generation_count: { Args: { _user_id: string }; Returns: number }
       get_user_id_by_email: { Args: { _email: string }; Returns: string }
       get_user_top_tracks_for_ai: { Args: { _user_id: string }; Returns: Json }
+      has_active_subscription: {
+        Args: { check_env?: string; user_uuid: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
