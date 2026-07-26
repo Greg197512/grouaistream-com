@@ -95,16 +95,31 @@ export default function WinGame() {
             </div>
           </div>
 
-          {/* spinning vinyl */}
+          {/* realistyczna, obracająca się płyta CD (opalizacja) */}
           <div className="relative mx-auto w-full max-w-[360px] aspect-square grid place-items-center">
-            <div className="gv-disc relative w-[82%] aspect-square rounded-full"
-              style={{ background: "repeating-radial-gradient(circle at 50% 50%, #0d0d0f 0 2px, #17151b 2px 4px), radial-gradient(circle at 38% 34%, #2a2730, #050506 70%)", boxShadow: "0 30px 70px -20px #000, inset 0 0 60px #000" }}>
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[34%] aspect-square rounded-full grid place-items-center text-center"
-                style={{ background: "radial-gradient(circle at 40% 35%, #FF7A1A, #B026FF)", boxShadow: "0 0 26px rgba(176,38,255,.5)" }}>
-                <b className="font-display text-[11px] font-extrabold text-white leading-tight">WYGRAJ<br />SWOJĄ<br />PŁYTĘ</b>
-              </div>
+            <div className="relative w-[84%] aspect-square rounded-full overflow-hidden"
+              style={{ boxShadow: "0 30px 70px -18px #000, 0 0 46px rgba(176,38,255,.28)" }}>
+              {/* warstwa wirująca: tęcza + rowki danych + metalowy hub + otwór */}
+              <div className="gv-disc absolute inset-0 rounded-full" style={{
+                background: [
+                  "radial-gradient(circle at 50% 50%, hsl(var(--background)) 0 6.5%, transparent 7%)",
+                  "radial-gradient(circle at 50% 50%, #e6e9ef 7% 10.5%, #9aa0ab 10.5% 12%, transparent 12.3%)",
+                  "radial-gradient(circle at 50% 50%, transparent 12.3% 19.5%, rgba(0,0,0,.28) 19.8% 20.6%, transparent 21%)",
+                  "repeating-radial-gradient(circle at 50% 50%, rgba(255,255,255,.05) 0 1px, rgba(0,0,0,.07) 1px 2.6px)",
+                  "conic-gradient(from 0deg, #ff5db1, #ffd24d, #7dff9e, #5de1ff, #a98bff, #ff7ad9, #ffd24d, #ff5db1)",
+                ].join(","),
+              }} />
+              {/* nieruchomy refleks światła (tak jak na prawdziwej płycie) */}
+              <div className="absolute inset-0 rounded-full pointer-events-none" style={{
+                background: [
+                  "radial-gradient(circle at 32% 26%, rgba(255,255,255,.22), transparent 42%)",
+                  "linear-gradient(115deg, transparent 37%, rgba(255,255,255,.30) 47%, rgba(255,255,255,.06) 51%, transparent 60%)",
+                ].join(","),
+              }} />
+              {/* delikatny cień krawędzi dla głębi */}
+              <div className="absolute inset-0 rounded-full pointer-events-none" style={{ boxShadow: "inset 0 0 22px rgba(0,0,0,.55)" }} />
             </div>
-            <div className="absolute bottom-[3%] left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full px-4 py-1.5 text-xs font-extrabold text-black"
+            <div className="absolute bottom-[2%] left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full px-4 py-1.5 text-xs font-extrabold text-black"
               style={{ background: "linear-gradient(135deg,#FF7A1A,#FFB020)" }}>🏆 1 zwycięzca · limitowany</div>
           </div>
         </section>

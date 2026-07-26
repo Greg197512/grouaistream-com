@@ -16,9 +16,17 @@ export function GameStrip() {
     <Link to="/wygraj" aria-label="Wygraj swoją płytę"
       className="group flex items-center gap-3 rounded-2xl border border-[#FF7A1A]/40 px-4 py-3 transition hover:border-[#FF7A1A]"
       style={{ background: "linear-gradient(100deg,#26130a,#1a0f27)" }}>
-      <span className="relative h-11 w-11 flex-none rounded-full"
-        style={{ background: "repeating-radial-gradient(circle, #111 0 2px, #1a1820 2px 4px)", animation: "gvspin 5s linear infinite" }}>
-        <span className="absolute inset-[38%] rounded-full" style={{ background: "linear-gradient(135deg,#FF7A1A,#B026FF)" }} />
+      <span className="relative h-11 w-11 flex-none rounded-full overflow-hidden" style={{ boxShadow: "0 4px 12px -2px #000" }}>
+        <span className="absolute inset-0 rounded-full" style={{
+          animation: "gvspin 5s linear infinite",
+          background: [
+            "radial-gradient(circle at 50% 50%, hsl(var(--background)) 0 14%, transparent 15%)",
+            "radial-gradient(circle at 50% 50%, #e6e9ef 15% 24%, transparent 25%)",
+            "repeating-radial-gradient(circle, rgba(255,255,255,.06) 0 1px, rgba(0,0,0,.08) 1px 2.5px)",
+            "conic-gradient(from 0deg, #ff5db1,#ffd24d,#7dff9e,#5de1ff,#a98bff,#ff5db1)",
+          ].join(","),
+        }} />
+        <span className="absolute inset-0 rounded-full pointer-events-none" style={{ background: "linear-gradient(120deg,transparent 40%,rgba(255,255,255,.35) 48%,transparent 56%)" }} />
       </span>
       <style>{`@keyframes gvspin{to{transform:rotate(360deg)}}@media (prefers-reduced-motion:reduce){[style*=gvspin]{animation:none!important}}`}</style>
       <div className="min-w-0 flex-1">
