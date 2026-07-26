@@ -13,6 +13,8 @@ const HUB_STEMS_URL =
   "https://bmwtydwpevzhbdplilbr.supabase.co/functions/v1/studio-stems";
 const HUB_ENGINE_LEARN_URL =
   "https://bmwtydwpevzhbdplilbr.supabase.co/functions/v1/engine-learn";
+const HUB_WHISPER_URL =
+  "https://bmwtydwpevzhbdplilbr.supabase.co/functions/v1/whisper-dj";
 
 type InvokeResult = { data: any; error: Error | null };
 
@@ -34,6 +36,32 @@ export async function fetchEngineLessons(language: string): Promise<string> {
     const d = await r.json().catch(() => null);
     return d?.ok && typeof d.lessons === "string" ? d.lessons : "";
   } catch { return ""; }
+}
+
+export interface WhisperReading {
+  ok: boolean;
+  mood_label: string;
+  emoji: string;
+  genres: string[];
+  moods: string[];
+  energy: "low" | "mid" | "high";
+  reply: string;
+  error?: string;
+}
+
+/**
+ * „Szept o 4:17" — piszesz jednym zdaniem jak się czujesz, AI czyta emocję i
+ * zwraca gatunki/nastroje + jedno empatyczne zdanie. Frontend dobiera JEDEN utwór.
+ */
+export async function whisperFeeling(text: string, language: string): Promise<WhisperReading | null> {
+  try {
+    const r = await fetch(HUB_WHISPER_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text, language }),
+    });
+    return (await r.json().catch(() => null)) as WhisperReading | null;
+  } catch { return null; }
 }
 
 /** Pulpit „Nauka silnika" (admin, PIN wspólny z panelami). */

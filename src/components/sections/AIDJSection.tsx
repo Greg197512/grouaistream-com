@@ -1,11 +1,14 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Brain, Headphones, TrendingUp, Play, Pause, Camera, Zap, Eye, QrCode } from "lucide-react";
+import { Sparkles, Brain, Headphones, TrendingUp, Play, Pause, Camera, Zap, Eye, QrCode, Moon } from "lucide-react";
 import { useState, useEffect, lazy, Suspense } from "react";
 import { Button } from "@/components/ui/button";
 // Lazy — MoodDetector i DJCrowdCamera ciągną face-api (~1 MB). Ładują się
 // dopiero po włączeniu kamery/detekcji, nie przy wejściu na stronę główną.
 const MoodDJ = lazy(() =>
   import("@/components/mood/MoodDJ").then((m) => ({ default: m.MoodDJ }))
+);
+const WhisperDJ = lazy(() =>
+  import("@/components/mood/WhisperDJ").then((m) => ({ default: m.WhisperDJ }))
 );
 const DJCrowdCamera = lazy(() =>
   import("@/components/dj/DJCrowdCamera").then((m) => ({ default: m.DJCrowdCamera }))
@@ -64,6 +67,7 @@ export const AIDJSection = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [djActive, setDjActive] = useState(true);
   const [showMoodDetector, setShowMoodDetector] = useState(false);
+  const [showWhisper, setShowWhisper] = useState(false);
   const [showCrowdCamera, setShowCrowdCamera] = useState(false);
   const [showQRSession, setShowQRSession] = useState(false);
   const [showActivationModal, setShowActivationModal] = useState(false);
@@ -163,12 +167,20 @@ export const AIDJSection = () => {
               {showCrowdCamera ? "Ukryj Crowd Vision" : "Crowd Vision"}
             </Button>
             <Button
-              onClick={() => { setShowMoodDetector(!showMoodDetector); if (showCrowdCamera) setShowCrowdCamera(false); if (showQRSession) setShowQRSession(false); }}
+              onClick={() => { setShowMoodDetector(!showMoodDetector); if (showCrowdCamera) setShowCrowdCamera(false); if (showQRSession) setShowQRSession(false); if (showWhisper) setShowWhisper(false); }}
               variant="outline"
               className="gap-2 rounded-full"
             >
               <Camera className="h-4 w-4" />
               {showMoodDetector ? "Ukryj kamerę" : "Wykryj nastrój"}
+            </Button>
+            <Button
+              onClick={() => { setShowWhisper(!showWhisper); if (showMoodDetector) setShowMoodDetector(false); if (showCrowdCamera) setShowCrowdCamera(false); if (showQRSession) setShowQRSession(false); }}
+              variant="outline"
+              className="gap-2 rounded-full border-[#B026FF]/50 text-[#c99bff] hover:bg-[#B026FF]/10"
+            >
+              <Moon className="h-4 w-4" />
+              {showWhisper ? "Ukryj szept" : "Szept o 4:17"}
             </Button>
             <Button 
               onClick={() => setDjActive(!djActive)}
@@ -180,6 +192,17 @@ export const AIDJSection = () => {
             </Button>
           </div>
         </div>
+
+        {/* Szept o 4:17 — empatyczne wyszukiwanie po zdaniu/głosie */}
+        <AnimatePresence>
+          {showWhisper && (
+            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="mb-6 overflow-hidden">
+              <Suspense fallback={<div className="p-6 text-center text-sm text-muted-foreground">Ładowanie…</div>}>
+                <WhisperDJ onClose={() => setShowWhisper(false)} />
+              </Suspense>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Mood Detector Panel */}
         <AnimatePresence>
