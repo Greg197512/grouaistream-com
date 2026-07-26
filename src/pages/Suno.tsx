@@ -23,9 +23,8 @@ import { MusicPromptBox } from "@/components/studio/MusicPromptBox";
 import { VoiceRecorder } from "@/components/studio/VoiceRecorder";
 import { VoiceLibrary } from "@/components/studio/VoiceLibrary";
 import { StudioGrokDock } from "@/components/studio/StudioGrokDock";
-import { StudioVisualizer } from "@/components/studio/StudioVisualizer";
+import { StudioHifi } from "@/components/studio/StudioHifi";
 import { StudioSparksBackdrop } from "@/components/studio/StudioSparksBackdrop";
-import { StudioConsole } from "@/components/studio/StudioConsole";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { uploadToR2 } from "@/lib/r2Upload";
@@ -774,11 +773,8 @@ const Suno = () => {
             </p>
           </motion.div>
 
-          {/* Sygnaturowy wizualizer — reaguje na grający utwór */}
-          <StudioVisualizer />
-
-          {/* Analogowa konsola — VU-metry + krzywa EQ jak w amplitunerze */}
-          <StudioConsole />
+          {/* Wieża hi-fi — gramofon/CD/kaseta + radio i wybór wykonawcy (gra nasz katalog) */}
+          <StudioHifi />
 
           {/* Engine badge */}
           <div className="flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-gradient-to-r from-[#FF6B00]/10 to-[#9333EA]/10 border border-[#FF6B00]/20">
