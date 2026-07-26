@@ -48,6 +48,18 @@ export async function fetchEngineLearningStats(pin: string): Promise<any> {
   return r.json().catch(() => null);
 }
 
+/** Wymusza odświeżenie cache katalogu (20k+ utworów) z bvstv. */
+export async function refreshEngineCatalog(pin: string): Promise<any> {
+  const { data: sessionData } = await supabase.auth.getSession();
+  const token = sessionData?.session?.access_token;
+  const r = await fetch(HUB_ENGINE_LEARN_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    body: JSON.stringify({ action: "refresh_catalog", pin }),
+  });
+  return r.json().catch(() => null);
+}
+
 /**
  * Zamiennik supabase.functions.invoke dla silników Studia.
  * "acestep-generate" → hub; pozostałe funkcje → normalnie na LIVE.
