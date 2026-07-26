@@ -370,7 +370,70 @@ const Suno = () => {
       if (engine === "grouai") {
         setGenStatus("🎼 Silnik komponuje w jakości studyjnej...");
 
-        // Próba właściwa: prawdziwy silnik hub (Suno V5 + GPT + emocje), pollowany
+        // ── STOPIEŃ 1: Suno V5.5 (funkcja suno-generate na LIVE; wymaga sekretu
+        // SUNO_API_KEY). Najwyższa jakość: naturalne instrumenty i wokal jak Suno.
+        // Gdy klucz nie ustawiony / błąd — cicho schodzimy na silnik hubowy. ──
+        const sunoOk = await (async (): Promise<boolean> => {
+          try {
+            const { data: sd, error: se } = await supabase.functions.invoke("suno-generate", {
+              body: {
+                action: "generate",
+                prompt: musicPrompt,
+                style: genreBlend,
+                title: title || undefined,
+                instrumental,
+                vocal_language: language,
+                enhance: true,
+              },
+            });
+            if (se) throw se;
+            if ((sd as any)?.error) throw new Error((sd as any).error);
+            const taskId = (sd as any)?.id || (sd as any)?.task_id;
+            if (!taskId) throw new Error("brak taskId");
+
+            const t0 = Date.now();
+            while (Date.now() - t0 < 300000) { // Suno potrafi renderować do ~5 min
+              await new Promise((r) => setTimeout(r, 4000));
+              const { data: st } = await supabase.functions.invoke("suno-generate", {
+                body: { action: "status", task_id: taskId },
+              });
+              const s = (st as any)?.status;
+              if (s === "succeeded") {
+                const url = (st as any)?.audio_url;
+                if (!url) throw new Error("brak audio");
+                const trackTitle = (st as any)?.title || title || `${genre} Track`;
+                const coverUrl = (st as any)?.cover_url || undefined;
+                const lyrics = customLyrics.trim()
+                  ? parseLyricsFromText(customLyrics, duration)
+                  : generateLyrics(genre, trackTitle, duration, instrumental);
+                setResult({ audioUrl: url, title: trackTitle, genre, durationSeconds: (st as any)?.duration || duration, lyrics, imageUrl: coverUrl });
+                setGenStatus(t("studio.status.done"));
+                toast.success(`🎶 "${trackTitle}" — Suno V5.5, najwyższa jakość!`);
+                await supabase.from("generations").insert({
+                  user_id: user!.id, title: trackTitle, genre,
+                  prompt: musicPrompt, instrumental, status: "completed", audio_url: url,
+                });
+                await supabase.from("tracks").insert({
+                  user_id: user!.id, title: trackTitle, artist: "GrouAI Studio",
+                  album: "AI Generated", duration: (st as any)?.duration || duration,
+                  audio_url: url, cover_url: coverUrl || null, genre, mood,
+                });
+                window.dispatchEvent(new CustomEvent("grouai:generations-changed"));
+                if (!isPro) setFreeUsed((prev) => prev + 1);
+                return true;
+              }
+              if (s === "failed") throw new Error((st as any)?.error || "generacja nie powiodła się");
+              setGenStatus(`⏳ Suno V5.5 renderuje… (${Math.round((Date.now() - t0) / 1000)}s)`);
+            }
+            throw new Error("timeout");
+          } catch (e) {
+            console.warn("[Studio] suno-generate niedostępny — przechodzę na silnik hub:", e);
+            return false;
+          }
+        })();
+        if (sunoOk) return;
+
+        // ── STOPIEŃ 2: prawdziwy silnik hub (Suno V5 + GPT + emocje), pollowany
         // przez waitForAceStep — dokładnie ta sama, sprawdzona ścieżka co MusicPromptBox.
         const studioOk = await (async (): Promise<boolean> => {
           try {
