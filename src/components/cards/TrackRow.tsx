@@ -156,7 +156,7 @@ export const TrackRowHeader = () => (
     <div className="w-4 text-center">#</div>
     <div>Title</div>
     <div className="hidden md:block">Album</div>
-    <div className="hidden md:block">Plays</div>
+    <div className="hidden md:block"></div>
     <div className="flex justify-end pr-10">
       <Clock className="h-4 w-4" />
     </div>
