@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { SlidersHorizontal, Check } from "lucide-react";
+import { SlidersHorizontal } from "lucide-react";
 
 /**
  * HeroEqualizer — 10 wizualizerów audio na froncie, każdy stylizowany na INNY
@@ -23,6 +23,8 @@ interface Props {
 export const EQ_MODES = [
   "Klasyczny", "VU lampowy", "Korektor", "Analizator", "Magnetofon",
   "Gramofon", "Oscyloskop", "Tuner", "Boombox", "Panel LED",
+  "Szpulowiec", "Korektor param.", "Radar", "Plazma",
+  "Winamp", "Milkdrop", "Tunel gwiazd", "Fontanna",
 ] as const;
 
 const KEY = "grouai-eq-mode";
@@ -33,7 +35,6 @@ export function HeroEqualizer({ frequencies, levels, isPlaying, palette }: Props
     const v = typeof window !== "undefined" ? parseInt(localStorage.getItem(KEY) || "0", 10) : 0;
     return Number.isFinite(v) && v >= 0 && v < EQ_MODES.length ? v : 0;
   });
-  const [open, setOpen] = useState(false);
   useEffect(() => { try { localStorage.setItem(KEY, String(mode)); } catch { /* */ } }, [mode]);
 
   const dataRef = useRef({ frequencies, levels, isPlaying, palette });
@@ -104,38 +105,26 @@ export function HeroEqualizer({ frequencies, levels, isPlaying, palette }: Props
   );
 
   return (
-    <div className="relative w-full h-16 sm:h-20 mt-0.5">
-      {mode === 0 ? classic : <canvas ref={canvasRef} className="w-full h-full" />}
+    <div className="w-full mt-0.5">
+      <div className="relative w-full h-16 sm:h-20">
+        {mode === 0 ? classic : <canvas ref={canvasRef} className="w-full h-full" />}
+      </div>
 
-      {/* Ukryty przełącznik — malutki przycisk + lista z nazwami sprzętów */}
-      <button
-        type="button"
-        onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }}
-        className="absolute -right-1 -top-3 grid h-6 w-6 place-items-center rounded-full border border-white/20 bg-black/50 text-white/60 backdrop-blur transition hover:text-white hover:border-white/40"
-        title="Zmień equalizer"
-        aria-label="Zmień equalizer"
-      >
-        <SlidersHorizontal className="h-3 w-3" />
-      </button>
-
-      {open && (
-        <>
-          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-4 z-50 w-44 rounded-xl border border-white/12 bg-[#12101c]/95 p-1 shadow-2xl backdrop-blur">
-            <div className="px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-white/40">Equalizer — sprzęt Hi-Fi</div>
-            {EQ_MODES.map((name, i) => (
-              <button
-                key={name}
-                onClick={() => { setMode(i); setOpen(false); }}
-                className={`flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-xs transition ${i === mode ? "bg-[#FF7A1A]/20 text-[#FFB020]" : "text-white/70 hover:bg-white/5"}`}
-              >
-                <span>{i === 0 ? `${name} ★` : name}</span>
-                {i === mode && <Check className="h-3 w-3" />}
-              </button>
-            ))}
-          </div>
-        </>
-      )}
+      {/* Widoczny przełącznik z nazwami — zawsze klikalny, także podczas grania */}
+      <div className="relative z-20 mt-1.5 flex gap-1 overflow-x-auto pb-1" style={{ scrollbarWidth: "thin" }}>
+        <SlidersHorizontal className="h-3.5 w-3.5 flex-none self-center text-white/35 mr-0.5" />
+        {EQ_MODES.map((name, i) => (
+          <button
+            key={name}
+            type="button"
+            onClick={() => setMode(i)}
+            className={`flex-none whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-semibold transition ${i === mode ? "text-black" : "text-white/55 bg-white/[0.06] hover:text-white hover:bg-white/10"}`}
+            style={i === mode ? { background: "linear-gradient(135deg,#FF7A1A,#FFB020)", boxShadow: "0 2px 10px rgba(255,122,26,.4)" } : undefined}
+          >
+            {i === 0 ? `${name} ★` : name}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
@@ -207,6 +196,103 @@ const DRAWERS: Record<number, Drawer> = {
       }
       if (peakSeg > 0) { ctx.fillStyle = "rgba(255,255,255,.9)"; ctx.fillRect(i * cw + 1, h - peakSeg * segH, cw - 2, 2); }
     }
+  },
+
+  // 10 — SZPULOWIEC: dwie duże otwarte szpule (reel-to-reel) z taśmą.
+  10: (ctx, w, h, N, val, hue, sat, bri, lv, playing, t) => {
+    const cy = h * 0.5, R = Math.min(w * 0.19, h * 0.44), spd = 0.9 + (lv.overall || 0.15) * 3;
+    const reel = (cx: number, dir: number) => {
+      const rot = t * spd * dir;
+      ctx.strokeStyle = "rgba(180,140,90,.55)"; ctx.lineWidth = R * 0.5;
+      ctx.beginPath(); ctx.arc(cx, cy, R * 0.66, 0, TAU); ctx.stroke(); // nawinięta taśma
+      ctx.strokeStyle = "rgba(255,255,255,.28)"; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(cx, cy, R, 0, TAU); ctx.stroke();
+      ctx.beginPath(); ctx.arc(cx, cy, R * 0.9, 0, TAU); ctx.stroke();
+      for (let k = 0; k < 3; k++) {
+        const a = rot + (k * Math.PI) / 3;
+        ctx.strokeStyle = "rgba(255,235,200,.6)"; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.moveTo(cx + Math.cos(a) * R * 0.9, cy + Math.sin(a) * R * 0.9);
+        ctx.lineTo(cx - Math.cos(a) * R * 0.9, cy - Math.sin(a) * R * 0.9); ctx.stroke();
+      }
+      ctx.fillStyle = "rgba(60,50,40,.9)"; ctx.beginPath(); ctx.arc(cx, cy, R * 0.16, 0, TAU); ctx.fill();
+    };
+    reel(w * 0.26, 1); reel(w * 0.74, -1);
+    ctx.strokeStyle = "rgba(180,140,90,.6)"; ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(w * 0.26 + R, cy); ctx.quadraticCurveTo(w * 0.5, cy + R * 0.9 + lv.bass * 8, w * 0.74 - R, cy);
+    ctx.stroke();
+  },
+
+  // 11 — KOREKTOR PARAMETRYCZNY: gładka krzywa odpowiedzi + węzły pasm.
+  11: (ctx, w, h, N, val, hue, sat, bri, lv, playing) => {
+    ctx.strokeStyle = "rgba(255,255,255,.07)"; ctx.lineWidth = 1;
+    for (let y = 0; y <= h; y += h / 4) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke(); }
+    const nodes = 5;
+    const yOf = (k: number) => {
+      const idx = Math.floor((k / (nodes - 1)) * (N - 1));
+      return h - (0.2 + val(idx) * 0.7) * h;
+    };
+    ctx.beginPath(); ctx.moveTo(0, yOf(0));
+    for (let k = 0; k < nodes - 1; k++) {
+      const x1 = (k / (nodes - 1)) * w, x2 = ((k + 1) / (nodes - 1)) * w;
+      const y1 = yOf(k), y2 = yOf(k + 1), mx = (x1 + x2) / 2;
+      ctx.bezierCurveTo(mx, y1, mx, y2, x2, y2);
+    }
+    const line = ctx.getLineDash;
+    ctx.save();
+    ctx.strokeStyle = `hsl(${hue(9)} ${sat}% ${bri + 12}%)`; ctx.lineWidth = 2.5;
+    if (playing) { ctx.shadowBlur = 8; ctx.shadowColor = `hsl(${hue(9)} ${sat}% ${bri}%)`; }
+    ctx.stroke(); ctx.restore(); ctx.shadowBlur = 0; void line;
+    for (let k = 0; k < nodes; k++) {
+      const x = (k / (nodes - 1)) * w, y = yOf(k);
+      ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(x, y, 3, 0, TAU); ctx.fill();
+      ctx.strokeStyle = `hsl(${hue(Math.floor((k / nodes) * N))} ${sat}% ${bri + 10}%)`; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(x, y, 5, 0, TAU); ctx.stroke();
+    }
+  },
+
+  // 12 — RADAR: kołowy analizator z obrotowym promieniem sweep.
+  12: (ctx, w, h, N, val, hue, sat, bri, lv, playing, t) => {
+    const cx = w / 2, cy = h / 2, R = Math.min(w * 0.5, h * 0.46);
+    for (let ring = 1; ring <= 3; ring++) {
+      ctx.strokeStyle = "rgba(80,255,140,.10)"; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.arc(cx, cy, (R * ring) / 3, 0, TAU); ctx.stroke();
+    }
+    const bars = Math.min(N, 24);
+    for (let i = 0; i < bars; i++) {
+      const a = (i / bars) * TAU, v = val(Math.floor((i / bars) * N)), len = R * (0.3 + v * 0.7);
+      ctx.strokeStyle = `hsl(${140 - v * 130} 85% 55% / ${0.4 + v * 0.5})`; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(cx + Math.cos(a) * R * 0.28, cy + Math.sin(a) * R * 0.28);
+      ctx.lineTo(cx + Math.cos(a) * len, cy + Math.sin(a) * len); ctx.stroke();
+    }
+    const sweep = t * 1.6;
+    const g = ctx.createLinearGradient(cx, cy, cx + Math.cos(sweep) * R, cy + Math.sin(sweep) * R);
+    g.addColorStop(0, "rgba(80,255,140,.5)"); g.addColorStop(1, "rgba(80,255,140,0)");
+    ctx.strokeStyle = g; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.cos(sweep) * R, cy + Math.sin(sweep) * R); ctx.stroke();
+  },
+
+  // 13 — PLAZMA: neonowe kolumny plazmy z elektrycznym migotaniem.
+  13: (ctx, w, h, N, val, hue, sat, bri, lv, playing, t) => {
+    ctx.shadowBlur = playing ? 12 : 4;
+    const cols = Math.min(N, 14), cw = w / cols;
+    for (let i = 0; i < cols; i++) {
+      const v = val(Math.floor((i / cols) * N)) * (0.85 + Math.sin(t * 11 + i) * 0.15);
+      const len = Math.max(0.08, v) * h, x = (i + 0.5) * cw;
+      const hu = 190 + (i / cols) * 100; // cyan → fiolet
+      ctx.shadowColor = `hsl(${hu} 100% 60%)`;
+      ctx.strokeStyle = `hsl(${hu} 100% ${60 + v * 20}% / ${0.5 + v * 0.5})`;
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(x, h);
+      let y = h;
+      while (y > h - len) {
+        y -= h * 0.12;
+        ctx.lineTo(x + (Math.random() - 0.5) * cw * 0.5, Math.max(h - len, y));
+      }
+      ctx.stroke();
+      ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(x, h - len, 1.5 + v * 2, 0, TAU); ctx.fill();
+    }
+    ctx.shadowBlur = 0;
   },
 
   // 4 — MAGNETOFON: dwie kręcące się szpule + poziom taśmy (kaseta).
@@ -330,6 +416,77 @@ const DRAWERS: Record<number, Drawer> = {
         const hu = frac < 0.6 ? 140 : frac < 0.85 ? 45 : 8;
         ctx.fillStyle = on ? `hsl(${hu} 90% 55% / .95)` : "rgba(255,255,255,.05)";
         ctx.beginPath(); ctx.arc(i * cw + cw / 2, j * ch + ch / 2, r, 0, TAU); ctx.fill();
+      }
+    }
+  },
+
+  // 14 — WINAMP: kultowe widmo — słupki zieleń→żółć→czerwień + spadające peaki.
+  14: (ctx, w, h, N, val, hue, sat, bri, lv, playing, t, mem) => {
+    const cols = Math.min(N, 20), cw = w / cols, gap = Math.max(1, cw * 0.16);
+    for (let i = 0; i < cols; i++) {
+      const v = val(Math.floor((i / cols) * N)), len = Math.max(2, v * h);
+      const g = ctx.createLinearGradient(0, h, 0, h - len);
+      g.addColorStop(0, "#00e070"); g.addColorStop(0.6, "#e8e000"); g.addColorStop(1, "#ff3b30");
+      ctx.fillStyle = g; ctx.fillRect(i * cw + gap, h - len, cw - gap * 2, len);
+      mem[i] = Math.max((mem[i] || 0) - 0.02, v);
+      ctx.fillStyle = "rgba(220,230,255,.9)";
+      ctx.fillRect(i * cw + gap, h - mem[i] * h - 2, cw - gap * 2, 2);
+    }
+  },
+
+  // 15 — MILKDROP: psychodeliczna plazma (additive) + fala, jak preset AVS.
+  15: (ctx, w, h, N, val, hue, sat, bri, lv, playing, t) => {
+    ctx.globalCompositeOperation = "lighter";
+    const zoom = 1 + lv.bass * 0.35;
+    for (let b = 0; b < 5; b++) {
+      const px = w * (0.5 + 0.42 * Math.sin(t * 0.7 + b * 1.3));
+      const py = h * (0.5 + 0.42 * Math.cos(t * 0.9 + b * 2.1));
+      const r = Math.min(w, h) * 0.55 * zoom * (0.6 + 0.4 * Math.sin(t + b));
+      const hu = (t * 40 + b * 70) % 360;
+      const g = ctx.createRadialGradient(px, py, 0, px, py, Math.max(1, r));
+      g.addColorStop(0, `hsla(${hu},90%,60%,.5)`); g.addColorStop(1, `hsla(${hu},90%,60%,0)`);
+      ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+    }
+    ctx.globalCompositeOperation = "source-over";
+    ctx.strokeStyle = "rgba(255,255,255,.55)"; ctx.lineWidth = 1.5; ctx.beginPath();
+    for (let x = 0; x <= w; x += 4) {
+      const i = Math.floor((x / w) * N);
+      const y = h / 2 - Math.sin(x / 18 + t * 3) * (h * 0.3) * (0.3 + val(i));
+      x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  },
+
+  // 16 — TUNEL GWIAZD: gwiazdy lecące od środka ze smugami (warp), bas = prędkość.
+  16: (ctx, w, h, N, val, hue, sat, bri, lv, playing, t) => {
+    const cx = w / 2, cy = h / 2, speed = 0.35 + (lv.overall || 0.15) * 1.6, maxR = Math.max(w, h) * 0.62;
+    ctx.lineCap = "round";
+    for (let i = 0; i < 120; i++) {
+      const ang = i * 2.399, seed = (i * 0.137) % 1;
+      const prog = (t * speed + seed) % 1;
+      const rad = prog * maxR, rad2 = Math.max(0, prog - 0.06) * maxR;
+      const x = cx + Math.cos(ang) * rad, y = cy + Math.sin(ang) * rad * 0.5;
+      const x2 = cx + Math.cos(ang) * rad2, y2 = cy + Math.sin(ang) * rad2 * 0.5;
+      const a = 0.2 + prog * 0.8;
+      ctx.strokeStyle = `hsl(${hue(i % N)} ${sat}% ${bri + 30}% / ${a})`;
+      ctx.lineWidth = 0.6 + prog * 2;
+      ctx.beginPath(); ctx.moveTo(x2, y2); ctx.lineTo(x, y); ctx.stroke();
+      ctx.fillStyle = `hsl(0 0% 100% / ${a})`;
+      ctx.beginPath(); ctx.arc(x, y, 0.6 + prog * 1.6, 0, TAU); ctx.fill();
+    }
+  },
+
+  // 17 — FONTANNA: kropelki wystrzeliwane z dołu na pasmo (parabola).
+  17: (ctx, w, h, N, val, hue, sat, bri, lv, playing, t) => {
+    const cols = Math.min(N, 12), cw = w / cols;
+    for (let i = 0; i < cols; i++) {
+      const x = (i + 0.5) * cw, v = val(Math.floor((i / cols) * N)), launch = v * h * 1.5;
+      for (let d = 0; d < 4; d++) {
+        const phase = (t * 1.3 + d / 4 + i * 0.1) % 1;
+        const y = h - (launch * phase - 0.5 * launch * 2 * phase * phase);
+        const yy = Math.max(0, Math.min(h, y)), a = 1 - phase;
+        ctx.fillStyle = `hsl(${hue(i)} ${sat}% ${bri + 12}% / ${a * 0.9})`;
+        ctx.beginPath(); ctx.arc(x + (d - 1.5) * 2.2, yy, 1.4 + v * 1.6, 0, TAU); ctx.fill();
       }
     }
   },
