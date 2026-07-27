@@ -26,7 +26,8 @@ import {
   ToggleRight,
   Sparkles,
   Trophy,
-  Brain
+  Brain,
+  UploadCloud
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -83,6 +84,7 @@ import { CostReportsPanel } from "@/components/admin/CostReportsPanel";
 import { BreakEvenPanel } from "@/components/admin/BreakEvenPanel";
 import { GameWinnersPanel } from "@/components/admin/GameWinnersPanel";
 import { EngineLearningPanel } from "@/components/admin/EngineLearningPanel";
+import { BulkMusicUpload } from "@/components/admin/BulkMusicUpload";
 import { CostAlertBanner } from "@/components/admin/CostAlertBanner";
 
 interface UserStats {
@@ -151,6 +153,7 @@ const ADMIN_CATS: { id: string; label: string; Icon: React.ComponentType<{ class
   ] },
   { id: "engine", label: "Silnik AI & Studio", Icon: Brain, tabs: [
     { value: "engine-learning", label: "Nauka silnika", Icon: Brain },
+    { value: "bulk-import", label: "Import muzyki → R2", Icon: UploadCloud },
     { value: "face-learning", label: "Aura AI 🧠", Icon: Sparkles },
     { value: "ai-builder", label: "AI Builder 🤖", Icon: Activity },
   ] },
@@ -902,6 +905,10 @@ export default function Admin() {
 
               <TabsContent value="engine-learning" className="space-y-6">
                 <EngineLearningPanel />
+              </TabsContent>
+
+              <TabsContent value="bulk-import" className="space-y-6">
+                <BulkMusicUpload />
               </TabsContent>
 
               {/* Likes Overview Tab */}
