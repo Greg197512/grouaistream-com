@@ -30,7 +30,8 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { uploadToR2 } from "@/lib/r2Upload";
 import { renderScore } from "@/lib/musicSynth";
 import { generateMusic } from "@/utils/musicGenerator";
-import { Lock, Crown, Download, Share2 } from "lucide-react";
+import { Lock, Crown, Download, Share2, Film } from "lucide-react";
+import { VideoStudio } from "@/components/studio/VideoStudio";
 import { downloadAudio, invokeStudioEngine, waitForAceStep, isSubscriptionError, fetchEngineLessons } from "@/lib/hubStudio";
 import { Link } from "react-router-dom";
 
@@ -248,7 +249,7 @@ const Suno = () => {
   const { user } = useAuth();
   const { isPro, isUltimate, showUpgradeFor } = useSubscription();
   const { t, language } = useLanguage();
-  const [activeTab, setActiveTab] = useState<"generate" | "mix" | "suno">("generate");
+  const [activeTab, setActiveTab] = useState<"generate" | "mix" | "suno" | "video">("generate");
   const [genre, setGenre] = useState("Pop");
   const [genre2, setGenre2] = useState<string | null>(null);
   const [blendRatio, setBlendRatio] = useState(50);
@@ -950,10 +951,21 @@ const Suno = () => {
             >
               <Blend className="h-4 w-4" /> Track Mix
             </button>
+            <button
+              onClick={() => setActiveTab("video")}
+              className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${
+                activeTab === "video" ? "text-white" : "text-gray-400 hover:text-gray-200"
+              }`}
+              style={activeTab === "video" ? { background: "linear-gradient(135deg, #FF6B00, #9333EA)", boxShadow: "0 0 15px #9333EA40" } : undefined}
+            >
+              <Film className="h-4 w-4" /> Video Studio
+            </button>
           </div>
 
           {activeTab === "mix" ? (
             <TrackMixer />
+          ) : activeTab === "video" ? (
+            <VideoStudio />
           ) : (
           <>
           {/* Status */}

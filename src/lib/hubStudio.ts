@@ -317,6 +317,52 @@ export async function waitForStudioVideo(
   throw new Error("Przekroczono czas oczekiwania na wideo");
 }
 
+// ─── VIDEO STUDIO: Higgsfield (gdy wpięty klucz) → w razie braku nasz silnik ─────
+const HUB_HIGGSFIELD_URL =
+  "https://bmwtydwpevzhbdplilbr.supabase.co/functions/v1/higgsfield-video";
+
+export type VideoEngine = "higgsfield" | "replicate";
+
+/**
+ * Zleca wideo z tekstu. Najpierw próbuje Higgsfield (jeśli w hubie jest klucz
+ * API); gdy klucza brak / błąd — automatycznie spada na nasz działający silnik
+ * (Replicate). Zwraca { engine, jobId } do pollowania przez waitForVideoSmart.
+ */
+export async function submitVideoSmart(
+  prompt: string,
+  opts?: { quality?: "good" | "vip"; aspect?: string; duration?: number }
+): Promise<{ engine: VideoEngine; jobId: string }> {
+  // 1) Higgsfield (aktywny dopiero po dodaniu higgsfield_api_key w hubie).
+  try {
+    const hf = await hubFetch(HUB_HIGGSFIELD_URL, {
+      prompt, aspect: opts?.aspect ?? "9:16", duration: opts?.duration ?? 5,
+    });
+    if (hf.data?.ok && hf.data?.job_id) return { engine: "higgsfield", jobId: String(hf.data.job_id) };
+  } catch { /* spadamy na nasz silnik */ }
+  // 2) Nasz silnik (Replicate) — zawsze dostępny.
+  const { data, error } = await submitStudioVideo(prompt, { quality: opts?.quality, aspect: opts?.aspect });
+  if (error) throw error;
+  if (!data?.job_id) throw new Error(data?.message || "Nie udało się zlecić wideo");
+  return { engine: "replicate", jobId: String(data.job_id) };
+}
+
+/** Pollowanie właściwego silnika aż wideo będzie gotowe. Zwraca URL. */
+export async function waitForVideoSmart(
+  engine: VideoEngine, jobId: string, onTick?: (elapsedSeconds: number) => void
+): Promise<string> {
+  if (engine === "replicate") return waitForStudioVideo(jobId, onTick);
+  const maxAttempts = 120; // ~10 minut
+  for (let i = 1; i <= maxAttempts; i++) {
+    await new Promise((res) => setTimeout(res, 5000));
+    onTick?.(i * 5);
+    const { data, error } = await hubFetch(HUB_HIGGSFIELD_URL, { action: "status", job_id: jobId });
+    if (error) continue;
+    if (data?.status === "completed" && data?.video_url) return data.video_url as string;
+    if (data?.status === "failed") throw new Error("Generowanie wideo (Higgsfield) nie powiodło się");
+  }
+  throw new Error("Przekroczono czas oczekiwania na wideo");
+}
+
 // ─── Lip-sync: usta wokalisty zsynchronizowane ze słowami (LatentSync, VIP) ─────
 const HUB_LIPSYNC_URL =
   "https://bmwtydwpevzhbdplilbr.supabase.co/functions/v1/studio-lipsync";
