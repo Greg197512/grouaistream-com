@@ -37,6 +37,17 @@ export function HeroEqualizer({ frequencies, levels, isPlaying, palette }: Props
   });
   useEffect(() => { try { localStorage.setItem(KEY, String(mode)); } catch { /* */ } }, [mode]);
 
+  // Kliknięcie przycisku = następny styl (cykl). Krótko pokazujemy jego nazwę.
+  const [showName, setShowName] = useState(false);
+  const nameTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cycle = () => {
+    setMode((m) => (m + 1) % EQ_MODES.length);
+    setShowName(true);
+    if (nameTimer.current) clearTimeout(nameTimer.current);
+    nameTimer.current = setTimeout(() => setShowName(false), 1600);
+  };
+  useEffect(() => () => { if (nameTimer.current) clearTimeout(nameTimer.current); }, []);
+
   const dataRef = useRef({ frequencies, levels, isPlaying, palette });
   dataRef.current = { frequencies, levels, isPlaying, palette };
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -105,26 +116,26 @@ export function HeroEqualizer({ frequencies, levels, isPlaying, palette }: Props
   );
 
   return (
-    <div className="w-full mt-0.5">
-      <div className="relative w-full h-16 sm:h-20">
-        {mode === 0 ? classic : <canvas ref={canvasRef} className="w-full h-full" />}
-      </div>
+    <div className="relative w-full h-10 mt-0.5">
+      {mode === 0 ? classic : <canvas ref={canvasRef} className="w-full h-full" />}
 
-      {/* Widoczny przełącznik z nazwami — zawsze klikalny, także podczas grania */}
-      <div className="relative z-20 mt-1.5 flex gap-1 overflow-x-auto pb-1" style={{ scrollbarWidth: "thin" }}>
-        <SlidersHorizontal className="h-3.5 w-3.5 flex-none self-center text-white/35 mr-0.5" />
-        {EQ_MODES.map((name, i) => (
-          <button
-            key={name}
-            type="button"
-            onClick={() => setMode(i)}
-            className={`flex-none whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-semibold transition ${i === mode ? "text-black" : "text-white/55 bg-white/[0.06] hover:text-white hover:bg-white/10"}`}
-            style={i === mode ? { background: "linear-gradient(135deg,#FF7A1A,#FFB020)", boxShadow: "0 2px 10px rgba(255,122,26,.4)" } : undefined}
-          >
-            {i === 0 ? `${name} ★` : name}
-          </button>
-        ))}
-      </div>
+      {/* Przycisk equalizera — kliknięcie przełącza na następny styl */}
+      <button
+        type="button"
+        onClick={cycle}
+        className="absolute -right-1 -top-3 z-30 grid h-6 w-6 place-items-center rounded-full border border-white/20 bg-black/50 text-white/60 backdrop-blur transition hover:text-white hover:border-white/40"
+        title={`Equalizer: ${EQ_MODES[mode]} (kliknij, by zmienić)`}
+        aria-label="Zmień equalizer"
+      >
+        <SlidersHorizontal className="h-3 w-3" />
+      </button>
+
+      {/* Krótka nazwa aktualnego stylu po zmianie — pływająca, bez wpływu na layout */}
+      {showName && (
+        <div className="absolute -top-3 right-6 z-30 whitespace-nowrap rounded-full bg-black/75 px-2 py-0.5 text-[10px] font-semibold text-[#FFB020] backdrop-blur pointer-events-none">
+          {mode === 0 ? `${EQ_MODES[mode]} ★` : EQ_MODES[mode]} · {mode + 1}/{EQ_MODES.length}
+        </div>
+      )}
     </div>
   );
 }
