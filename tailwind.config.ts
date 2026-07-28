@@ -68,6 +68,27 @@ export default {
           surface: "hsl(0, 0%, 8%)",
           "surface-hover": "hsl(0, 0%, 11%)",
         },
+        // Paleta modułu „Zatrzymać Starość" — ciemne tło, akcenty złoty
+        // i turkusowy. Celowo poza zmiennymi CSS aplikacji głównej
+        // (pomarańczowej), bo to osobny produkt w tym samym repozytorium.
+        longevity: {
+          void: "#04060A",
+          bg: "#070A0F",
+          surface: "#0C1118",
+          "surface-2": "#121924",
+          line: "rgba(255,255,255,0.07)",
+          ink: "#F4F7FA",
+          muted: "#8894A6",
+          gold: "#E3C27E",
+          "gold-soft": "#F6DCA6",
+          "gold-deep": "#B8974F",
+          teal: "#2DD4BF",
+          "teal-soft": "#7FE7DA",
+          "teal-deep": "#0E7C6F",
+          danger: "#F2707A",
+          warn: "#F0B45E",
+          good: "#4ADE9B",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -107,6 +128,24 @@ export default {
           "0%": { transform: "translateX(0%)" },
           "100%": { transform: "translateX(-50%)" },
         },
+        // Animacje modułu „Zatrzymać Starość". Wszystkie operują wyłącznie
+        // na transform i opacity, więc utrzymują 60 FPS na kompozytorze GPU.
+        "aurora-drift": {
+          "0%, 100%": { transform: "translate3d(-8%, -4%, 0) scale(1.05)" },
+          "50%": { transform: "translate3d(8%, 6%, 0) scale(1.15)" },
+        },
+        "glow-pulse": {
+          "0%, 100%": { opacity: "0.45" },
+          "50%": { opacity: "0.9" },
+        },
+        "rise-in": {
+          from: { opacity: "0", transform: "translate3d(0, 14px, 0)" },
+          to: { opacity: "1", transform: "translate3d(0, 0, 0)" },
+        },
+        "sheen": {
+          "0%": { transform: "translateX(-120%)" },
+          "100%": { transform: "translateX(220%)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -117,6 +156,10 @@ export default {
         "shimmer": "shimmer 2s infinite linear",
         "float": "float 6s ease-in-out infinite",
         "marquee": "marquee 35s linear infinite",
+        "aurora-drift": "aurora-drift 26s ease-in-out infinite",
+        "glow-pulse": "glow-pulse 4s ease-in-out infinite",
+        "rise-in": "rise-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) both",
+        "sheen": "sheen 2.4s ease-in-out infinite",
       },
     },
   },

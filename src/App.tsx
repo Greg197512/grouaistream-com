@@ -11,6 +11,7 @@ import { AIProvider } from "@/contexts/AIContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 
 import { SubscriptionProvider } from "@/contexts/SubscriptionContext";
+import { LongevityProvider } from "@/contexts/LongevityContext";
 import { Effects3DProvider } from "@/contexts/Effects3DContext";
 import { AutoVoiceListener } from "@/components/player/AutoVoiceListener";
 import { StemsModal } from "@/components/studio/StemsModal";
@@ -65,6 +66,24 @@ const WinGame = lazy(() => import("./pages/WinGame"));
 const ArtistLanding = lazy(() => import("./pages/ArtistLanding"));
 const ClientDashboard = lazy(() => import("./pages/ClientDashboard"));
 const Binaural = lazy(() => import("./pages/Binaural"));
+
+// Zatrzymać Starość (Stop Aging AI) — moduł HealthTech.
+// Osobny provider i osobna powłoka wizualna, dzielone konto i backend.
+const LongevityDashboard = lazy(() => import("./pages/longevity/Dashboard"));
+const LongevitySleep = lazy(() => import("./pages/longevity/Sleep"));
+const LongevityStress = lazy(() => import("./pages/longevity/Stress"));
+const LongevityNervousSystem = lazy(() => import("./pages/longevity/NervousSystem"));
+const LongevityBreathing = lazy(() => import("./pages/longevity/Breathing"));
+const LongevityMeditations = lazy(() => import("./pages/longevity/Meditations"));
+const LongevityCoach = lazy(() => import("./pages/longevity/Coach"));
+const LongevityBiologicalAge = lazy(() => import("./pages/longevity/BiologicalAge"));
+const LongevityDiet = lazy(() => import("./pages/longevity/Diet"));
+const LongevityActivity = lazy(() => import("./pages/longevity/Activity"));
+const LongevityTrends = lazy(() => import("./pages/longevity/Trends"));
+const LongevityMissions = lazy(() => import("./pages/longevity/Missions"));
+const LongevityJournal = lazy(() => import("./pages/longevity/Journal"));
+const LongevityDevices = lazy(() => import("./pages/longevity/Devices"));
+const LongevitySettings = lazy(() => import("./pages/longevity/Settings"));
 
 // Empire Platform pages
 const EmpireDashboard = lazy(() => import("./pages/empire/EmpireDashboard"));
@@ -175,6 +194,25 @@ const AppShell = () => {
           <Route path="/client-dashboard" element={<ClientDashboard />} />
           <Route path="/client-dashboard/:orderId" element={<ClientDashboard />} />
           <Route path="/binaural" element={<Binaural />} />
+          {/* Zatrzymać Starość — trasy polskie z aliasem angielskim /stop-aging */}
+          <Route path="/zatrzymac-starosc" element={<LongevityDashboard />} />
+          <Route path="/zatrzymac-starosc/sen" element={<LongevitySleep />} />
+          <Route path="/zatrzymac-starosc/stres" element={<LongevityStress />} />
+          <Route path="/zatrzymac-starosc/uklad-nerwowy" element={<LongevityNervousSystem />} />
+          <Route path="/zatrzymac-starosc/oddech" element={<LongevityBreathing />} />
+          <Route path="/zatrzymac-starosc/medytacje" element={<LongevityMeditations />} />
+          <Route path="/zatrzymac-starosc/coach" element={<LongevityCoach />} />
+          <Route path="/zatrzymac-starosc/wiek" element={<LongevityBiologicalAge />} />
+          <Route path="/zatrzymac-starosc/dieta" element={<LongevityDiet />} />
+          <Route path="/zatrzymac-starosc/aktywnosc" element={<LongevityActivity />} />
+          <Route path="/zatrzymac-starosc/trendy" element={<LongevityTrends />} />
+          <Route path="/zatrzymac-starosc/misje" element={<LongevityMissions />} />
+          <Route path="/zatrzymac-starosc/dziennik" element={<LongevityJournal />} />
+          <Route path="/zatrzymac-starosc/urzadzenia" element={<LongevityDevices />} />
+          <Route path="/zatrzymac-starosc/ustawienia" element={<LongevitySettings />} />
+          <Route path="/stop-aging" element={<Navigate to="/zatrzymac-starosc" replace />} />
+          <Route path="/stop-aging/*" element={<Navigate to="/zatrzymac-starosc" replace />} />
+
           <Route path="/empire" element={<EmpireDashboard />} />
           <Route path="/empire/projects" element={<EmpireProjects />} />
           <Route path="/empire/knowledge" element={<KnowledgeGarden />} />
@@ -199,15 +237,17 @@ const App = () => (
         <SubscriptionProvider>
         <PlayerProvider>
           <AIProvider>
-            <TooltipProvider>
-              <Effects3DProvider>
-                <div className="dark">
-                  <Toaster />
-                  <Sonner />
-                  <AppShell />
-                </div>
-              </Effects3DProvider>
-            </TooltipProvider>
+            <LongevityProvider>
+              <TooltipProvider>
+                <Effects3DProvider>
+                  <div className="dark">
+                    <Toaster />
+                    <Sonner />
+                    <AppShell />
+                  </div>
+                </Effects3DProvider>
+              </TooltipProvider>
+            </LongevityProvider>
           </AIProvider>
         </PlayerProvider>
         </SubscriptionProvider>

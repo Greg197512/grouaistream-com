@@ -113,3 +113,12 @@ project_id = "hkbraboqdsonekzxbntr"
     verify_jwt = false
   [functions.tiktok-story-generate]
     verify_jwt = false
+  # Zatrzymać Starość — AI Coach wymaga zalogowania (koszt modelu, dane zdrowotne).
+  # Klient ma zapas w postaci silnika reguł, więc brak sesji nie blokuje rozmowy.
+  [functions.stop-aging-coach]
+    verify_jwt = true
+  # Wejście danych z urządzeń: webhooki dostawców nie potrafią wysłać JWT Supabase,
+  # dlatego funkcja weryfikuje nadawcę sama — po tokenie użytkownika albo po
+  # powiązaniu (provider, provider_user_id) w longevity_device_links.
+  [functions.stop-aging-sync]
+    verify_jwt = false
