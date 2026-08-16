@@ -14,7 +14,6 @@ import { PromotedTracksSection } from "@/components/sections/PromotedTracks";
 import { SEOContentSection } from "@/components/sections/SEOContentSection";
 
 import SectionErrorBoundary from "@/components/SectionErrorBoundary";
-import { StudioPromoIntro } from "@/components/StudioPromoIntro";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 const Section = ({ name, children }: { name: string; children: React.ReactNode }) => (
@@ -26,7 +25,6 @@ const Index = () => {
 
   return (
     <MainLayout>
-      <StudioPromoIntro />
       <Section name="hero"><HeroSection /></Section>
       <Section name="upload-cta"><UploadCTA /></Section>
       <Section name="promoted"><PromotedTracksSection /></Section>
