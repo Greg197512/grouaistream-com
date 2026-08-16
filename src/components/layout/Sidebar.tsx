@@ -201,22 +201,38 @@ interface NavItemProps {
 const NavItem = ({ icon, label, active, collapsed, onClick, badge, isAI }: NavItemProps) => (
   <motion.button
     onClick={onClick}
-    whileHover={{ x: 2 }}
     whileTap={{ scale: 0.98 }}
     className={cn(
-      "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all",
-      active ? "bg-sidebar-accent text-sidebar-foreground" : "text-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent/50",
+      "group relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium overflow-hidden",
+      "border border-transparent transition-all duration-300",
+      // Efekt szkła na hover — mrożona tafla + wewnętrzny błysk
+      "hover:bg-white/10 hover:backdrop-blur-md hover:border-white/20",
+      "hover:shadow-[inset_0_1px_0_hsl(0_0%_100%/0.28),inset_0_-1px_0_hsl(0_0%_100%/0.06),0_6px_22px_hsl(0_0%_0%/0.35)]",
+      active
+        ? "bg-sidebar-accent text-sidebar-foreground border-white/10"
+        : "text-muted-foreground hover:text-sidebar-foreground",
       collapsed && "justify-center px-2"
     )}
   >
-    <span className={cn("material-icons-outlined text-xl flex-shrink-0", isAI && "text-accent", active && isAI && "text-accent", active && !isAI && "text-primary")}>
+    {/* Górny połysk szklanej butelki */}
+    <span className="pointer-events-none absolute inset-x-0 top-0 h-1/2 rounded-t-xl bg-gradient-to-b from-white/25 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+    {/* Refleks światła przejeżdżający po szkle */}
+    <span className="pointer-events-none absolute inset-y-0 -left-1/3 w-1/3 -skew-x-12 bg-gradient-to-r from-transparent via-white/30 to-transparent opacity-0 group-hover:opacity-100 group-hover:translate-x-[420%] transition-all duration-700 ease-out" />
+
+    <span className={cn(
+      "material-icons-outlined text-xl flex-shrink-0 relative z-10 transition-transform duration-300 group-hover:scale-110",
+      isAI && "text-accent", active && isAI && "text-accent", active && !isAI && "text-primary"
+    )}>
       {icon}
     </span>
     {!collapsed && (
       <>
-        <span className="flex-1 text-left truncate">{label}</span>
+        {/* Nazwa „zapala się" w środku szkła */}
+        <span className="flex-1 text-left truncate relative z-10 transition-all duration-300 group-hover:tracking-wide group-hover:[text-shadow:0_1px_10px_hsl(0_0%_100%/0.5)]">
+          {label}
+        </span>
         {badge && (
-          <span className="groove-gradient-bg px-2 py-0.5 rounded-full text-[10px] font-bold text-primary-foreground animate-pulse">
+          <span className="groove-gradient-bg px-2 py-0.5 rounded-full text-[10px] font-bold text-primary-foreground animate-pulse relative z-10">
             {badge}
           </span>
         )}
