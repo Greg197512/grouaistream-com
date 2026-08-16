@@ -15,6 +15,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { uploadToR2 } from "@/lib/r2Upload";
+import { withTimeout } from "@/lib/withTimeout";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { CoverDesigner } from "@/components/cover/CoverDesigner";
 
@@ -175,7 +176,8 @@ async function getAudioDuration(file: File): Promise<number | null> {
 
 async function getUploadedAudioDuration(audioUrl: string): Promise<number | null> {
   try {
-    return await getAudioDurationFromMediaSource(audioUrl);
+    // Timeout — nie blokuj uploadu, gdy metadane audio nie chcą się wczytać.
+    return await withTimeout(getAudioDurationFromMediaSource(audioUrl), 15000, "Odczyt długości audio");
   } catch {
     return null;
   }
@@ -411,17 +413,23 @@ const Upload = () => {
       }
 
       const finalAudioUrl = audioUrl || (sunoResolved?.audioUrl) || sunoLink || null;
-      const { data: insertedTrack, error: trackInsertErr } = await supabase.from("tracks").insert({
-        title,
-        artist: displayName,
-        genre,
-        duration: Math.round(resolvedDuration || DURATION_FALLBACK_SEC),
-        audio_url: finalAudioUrl,
-        cover_url: coverUrl || null,
-        user_id: user?.id || null,
-        is_monetized: wantMonetize,
-        monetization_enabled_at: wantMonetize ? new Date().toISOString() : null,
-      } as any).select("id").single();
+      // Timeout — jeśli backend (Supabase) jest niedostępny/uśpiony, nie wieszaj strony,
+      // tylko zgłoś czytelny błąd i odblokuj formularz (finally: setIsSubmitting(false)).
+      const { data: insertedTrack, error: trackInsertErr } = await withTimeout(
+        supabase.from("tracks").insert({
+          title,
+          artist: displayName,
+          genre,
+          duration: Math.round(resolvedDuration || DURATION_FALLBACK_SEC),
+          audio_url: finalAudioUrl,
+          cover_url: coverUrl || null,
+          user_id: user?.id || null,
+          is_monetized: wantMonetize,
+          monetization_enabled_at: wantMonetize ? new Date().toISOString() : null,
+        } as any).select("id").single(),
+        20000,
+        "Zapis utworu do bazy"
+      );
 
       if (trackInsertErr) throw trackInsertErr;
 
