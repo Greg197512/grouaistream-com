@@ -42,11 +42,16 @@ Deno.serve(async (req) => {
     const action: 'portal' | 'cancel' | 'change_plan' = body.action || 'portal';
     const env: PaddleEnv = (body.environment === 'live' ? 'live' : 'sandbox') as PaddleEnv;
 
+    // Multiple subscription rows may exist per (user, env) after re-subscribe / plan change.
+    // Pick the newest one so cancel / change_plan / portal actions target the current subscription.
     const { data: sub, error: subErr } = await supabase
       .from('subscriptions')
       .select('paddle_subscription_id, paddle_customer_id, status, current_period_end, price_id')
       .eq('user_id', user.id)
       .eq('environment', env)
+      .in('status', ['active', 'trialing', 'past_due'])
+      .order('created_at', { ascending: false })
+      .limit(1)
       .maybeSingle();
 
     if (subErr || !sub) {

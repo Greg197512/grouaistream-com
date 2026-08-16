@@ -1,4 +1,5 @@
 import { MainLayout } from "@/components/layout/MainLayout";
+import { GameStrip } from "@/components/game/GameStrip";
 import { HeroSection } from "@/components/sections/HeroSection";
 import { AIDJSection } from "@/components/sections/AIDJSection";
 import { RecentlyPlayed } from "@/components/sections/RecentlyPlayed";
@@ -14,18 +15,9 @@ import { PromotedTracksSection } from "@/components/sections/PromotedTracks";
 import { SEOContentSection } from "@/components/sections/SEOContentSection";
 
 import SectionErrorBoundary from "@/components/SectionErrorBoundary";
-import { useLanguage } from "@/contexts/LanguageContext";
-
-const Section = ({ name, children }: { name: string; children: React.ReactNode }) => (
-  <SectionErrorBoundary name={name}>{children}</SectionErrorBoundary>
-);
-
-const Index = () => {
-  const { t } = useLanguage();
-
-  return (
-    <MainLayout>
+      <GameBadge />
       <Section name="hero"><HeroSection /></Section>
+      <Section name="win-game"><div className="px-4 max-w-6xl mx-auto"><GameStrip /></div></Section>
       <Section name="upload-cta"><UploadCTA /></Section>
       <Section name="promoted"><PromotedTracksSection /></Section>
       <Section name="marquee"><AdminMarquee /></Section>

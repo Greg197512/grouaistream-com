@@ -23,3 +23,8 @@ dist-ssr
 *.sln
 *.sw?
 .vercel
+
+# Lokalne narzędzia agenta / skille (nie część aplikacji)
+.agents/
+.claude/skills/
+skills-lock.json

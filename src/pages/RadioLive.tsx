@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import { Radio, Wifi, Music, Volume2, VolumeX, ArrowLeft, Heart, Sparkles, MessageCircle, Send, X, Trash2, Smile, Play } from "lucide-react";
 import { RadioMoodDetector } from "@/components/radio/RadioMoodDetector";
+import { RadioMoodSwitcher } from "@/components/radio/RadioMoodSwitcher";
 import { VerifiedStreamsCard } from "@/components/radio/VerifiedStreamsCard";
 import { LiveMicBooth } from "@/components/radio/LiveMicBooth";
 import { FeatureGate } from "@/components/ui/FeatureGate";
@@ -12,6 +13,8 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { usePlayer } from "@/contexts/PlayerContext";
+import { gameVote } from "@/lib/hubGame";
+import { gt } from "@/lib/gameI18n";
 
 interface RadioConfig {
   is_active: boolean;
@@ -84,7 +87,7 @@ const HEART_COLORS = [
 const RadioLive = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { pausePlayback } = usePlayer();
   const [config, setConfig] = useState<RadioConfig | null>(null);
   const [rawSchedule, setRawSchedule] = useState<ScheduleTrack[]>([]);
@@ -931,6 +934,9 @@ const RadioLive = () => {
           </div>
         )}
 
+        {/* Global mood switcher — admin/DJ przełącza playlistę radia dla wszystkich (AI/n8n → fallback shuffle) */}
+        <RadioMoodSwitcher />
+
         {/* Mood Detection Module — Pro feature */}
         <FeatureGate requiredPlan="pro" featureName="Radio Mood Detection">
           <RadioMoodDetector />
@@ -963,16 +969,27 @@ const RadioLive = () => {
               <p className="text-sm font-semibold truncate">{currentTitle}</p>
               <p className="text-xs text-muted-foreground truncate">{currentArtist}</p>
             </div>
-            <div className="text-right shrink-0 flex flex-col items-end gap-0.5">
-              <p className="text-[10px] text-muted-foreground uppercase">Pozycja</p>
-              <p className="text-sm font-bold tabular-nums">{currentIndex + 1}/{schedule.length}</p>
-              <a
-                href="https://grouarock.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-[9px] text-muted-foreground/40 hover:text-primary/60 transition-colors"
+            <div className="text-right shrink-0 flex flex-col items-end gap-1">
+              {/* Głosowanie „na winyl" — losy do gry „Wygraj swoją płytę" (+5) */}
+              <button
+                onClick={async () => {
+                  if (!userId) { toast({ title: gt(language, "radio.loginVote") }); return; }
+                  const r = await gameVote("vote");
+                  if (r?.error) toast({ title: r.error });
+                  else if (r?.reason === "daily_cap") toast({ title: gt(language, "radio.cap") });
+                  else if (r?.added) toast({ title: gt(language, "toast.added", { a: r.added, n: r.tickets }) });
+                }}
+                className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold text-black transition hover:brightness-110"
+                style={{ background: "linear-gradient(135deg,#FF7A1A,#FFB020)" }}
+                title={gt(language, "radio.vote")}
               >
-                grouarock.com
+                🎵 {gt(language, "radio.vote")} <span className="text-[10px]">+5</span>
+              </button>
+              <a
+                href="https://grouaistream.com/wygraj"
+                className="text-[9px] text-muted-foreground/50 hover:text-primary/70 transition-colors"
+              >
+                {gt(language, "radio.win")}
               </a>
             </div>
           </div>

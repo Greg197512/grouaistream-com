@@ -11,8 +11,82 @@ const HUB_COVER_URL =
   "https://bmwtydwpevzhbdplilbr.supabase.co/functions/v1/studio-cover";
 const HUB_STEMS_URL =
   "https://bmwtydwpevzhbdplilbr.supabase.co/functions/v1/studio-stems";
+const HUB_ENGINE_LEARN_URL =
+  "https://bmwtydwpevzhbdplilbr.supabase.co/functions/v1/engine-learn";
+const HUB_WHISPER_URL =
+  "https://bmwtydwpevzhbdplilbr.supabase.co/functions/v1/whisper-dj";
 
 type InvokeResult = { data: any; error: Error | null };
+
+/**
+ * NAUKA SILNIKA — pobiera „lekcje" z naszych najlepszych dotychczasowych
+ * utworów w danym języku (in-context learning). Wynik dokleja się do promptu
+ * planera, więc silnik komponuje wzorując się na własnych najlepszych. Ciche
+ * niepowodzenie → "" (generacja i tak rusza).
+ */
+export async function fetchEngineLessons(language: string): Promise<string> {
+  try {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData?.session?.access_token;
+    const r = await fetch(HUB_ENGINE_LEARN_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body: JSON.stringify({ action: "lessons", language }),
+    });
+    const d = await r.json().catch(() => null);
+    return d?.ok && typeof d.lessons === "string" ? d.lessons : "";
+  } catch { return ""; }
+}
+
+export interface WhisperReading {
+  ok: boolean;
+  mood_label: string;
+  emoji: string;
+  genres: string[];
+  moods: string[];
+  energy: "low" | "mid" | "high";
+  reply: string;
+  error?: string;
+}
+
+/**
+ * „Szept o 4:17" — piszesz jednym zdaniem jak się czujesz, AI czyta emocję i
+ * zwraca gatunki/nastroje + jedno empatyczne zdanie. Frontend dobiera JEDEN utwór.
+ */
+export async function whisperFeeling(text: string, language: string): Promise<WhisperReading | null> {
+  try {
+    const r = await fetch(HUB_WHISPER_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text, language }),
+    });
+    return (await r.json().catch(() => null)) as WhisperReading | null;
+  } catch { return null; }
+}
+
+/** Pulpit „Nauka silnika" (admin, PIN wspólny z panelami). */
+export async function fetchEngineLearningStats(pin: string): Promise<any> {
+  const { data: sessionData } = await supabase.auth.getSession();
+  const token = sessionData?.session?.access_token;
+  const r = await fetch(HUB_ENGINE_LEARN_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    body: JSON.stringify({ action: "stats", pin }),
+  });
+  return r.json().catch(() => null);
+}
+
+/** Wymusza odświeżenie cache katalogu (20k+ utworów) z bvstv. */
+export async function refreshEngineCatalog(pin: string): Promise<any> {
+  const { data: sessionData } = await supabase.auth.getSession();
+  const token = sessionData?.session?.access_token;
+  const r = await fetch(HUB_ENGINE_LEARN_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    body: JSON.stringify({ action: "refresh_catalog", pin }),
+  });
+  return r.json().catch(() => null);
+}
 
 /**
  * Zamiennik supabase.functions.invoke dla silników Studia.
@@ -239,6 +313,52 @@ export async function waitForStudioVideo(
     if (error) continue; // chwilowy błąd sieci — próbujemy dalej
     if (data?.status === "completed" && data?.video_url) return data.video_url as string;
     if (data?.status === "failed") throw new Error("Generowanie wideo nie powiodło się");
+  }
+  throw new Error("Przekroczono czas oczekiwania na wideo");
+}
+
+// ─── VIDEO STUDIO: Higgsfield (gdy wpięty klucz) → w razie braku nasz silnik ─────
+const HUB_HIGGSFIELD_URL =
+  "https://bmwtydwpevzhbdplilbr.supabase.co/functions/v1/higgsfield-video";
+
+export type VideoEngine = "higgsfield" | "replicate";
+
+/**
+ * Zleca wideo z tekstu. Najpierw próbuje Higgsfield (jeśli w hubie jest klucz
+ * API); gdy klucza brak / błąd — automatycznie spada na nasz działający silnik
+ * (Replicate). Zwraca { engine, jobId } do pollowania przez waitForVideoSmart.
+ */
+export async function submitVideoSmart(
+  prompt: string,
+  opts?: { quality?: "good" | "vip"; aspect?: string; duration?: number }
+): Promise<{ engine: VideoEngine; jobId: string }> {
+  // 1) Higgsfield (aktywny dopiero po dodaniu higgsfield_api_key w hubie).
+  try {
+    const hf = await hubFetch(HUB_HIGGSFIELD_URL, {
+      prompt, aspect: opts?.aspect ?? "9:16", duration: opts?.duration ?? 5,
+    });
+    if (hf.data?.ok && hf.data?.job_id) return { engine: "higgsfield", jobId: String(hf.data.job_id) };
+  } catch { /* spadamy na nasz silnik */ }
+  // 2) Nasz silnik (Replicate) — zawsze dostępny.
+  const { data, error } = await submitStudioVideo(prompt, { quality: opts?.quality, aspect: opts?.aspect });
+  if (error) throw error;
+  if (!data?.job_id) throw new Error(data?.message || "Nie udało się zlecić wideo");
+  return { engine: "replicate", jobId: String(data.job_id) };
+}
+
+/** Pollowanie właściwego silnika aż wideo będzie gotowe. Zwraca URL. */
+export async function waitForVideoSmart(
+  engine: VideoEngine, jobId: string, onTick?: (elapsedSeconds: number) => void
+): Promise<string> {
+  if (engine === "replicate") return waitForStudioVideo(jobId, onTick);
+  const maxAttempts = 120; // ~10 minut
+  for (let i = 1; i <= maxAttempts; i++) {
+    await new Promise((res) => setTimeout(res, 5000));
+    onTick?.(i * 5);
+    const { data, error } = await hubFetch(HUB_HIGGSFIELD_URL, { action: "status", job_id: jobId });
+    if (error) continue;
+    if (data?.status === "completed" && data?.video_url) return data.video_url as string;
+    if (data?.status === "failed") throw new Error("Generowanie wideo (Higgsfield) nie powiodło się");
   }
   throw new Error("Przekroczono czas oczekiwania na wideo");
 }

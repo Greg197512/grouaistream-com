@@ -217,8 +217,8 @@ serve(async (req) => {
       baseBody.prompt = `${prompt} — ${finalStyle}`.slice(0, 400);
     }
 
-    // Try V5 first, fallback to V4_5PLUS on model error.
-    const modelsToTry = ["V5", "V4_5PLUS"];
+    // Try V5_5 (najwyższa jakość) first, then V5, then V4_5PLUS on model error.
+    const modelsToTry = ["V5_5", "V5", "V4_5PLUS"];
     let genData: any = null;
     let genOk = false;
     let usedModel = "";

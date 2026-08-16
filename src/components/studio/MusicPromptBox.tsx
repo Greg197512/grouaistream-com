@@ -8,7 +8,7 @@ import {
 import { isStudioPromoActive, STUDIO_FREE_UNTIL } from "@/contexts/SubscriptionContext";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { invokeStudioEngine, waitForAceStep, fireCoverGeneration, isSubscriptionError, submitStudioVideo, waitForStudioVideo, fetchStoryboard, submitStudioLipsync, waitForStudioLipsync } from "@/lib/hubStudio";
+import { invokeStudioEngine, waitForAceStep, fireCoverGeneration, isSubscriptionError, submitStudioVideo, waitForStudioVideo, fetchStoryboard, submitStudioLipsync, waitForStudioLipsync, fetchEngineLessons } from "@/lib/hubStudio";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -205,7 +205,10 @@ export function MusicPromptBox({ onTrackReady }: Props) {
     setElapsed(0);
 
     try {
-      const finalPrompt = instrumental ? `${prompt.trim()} (instrumentalny, bez wokalu)` : prompt.trim();
+      let finalPrompt = instrumental ? `${prompt.trim()} (instrumentalny, bez wokalu)` : prompt.trim();
+      // NAUKA: doklej lekcje z naszych najlepszych utworów (in-context learning).
+      const lessons = await fetchEngineLessons(language !== "auto" ? language : "pl");
+      if (lessons) finalPrompt = `${finalPrompt}\n\n${lessons}`;
       const { data, error: fnError } = await invokeStudioEngine("studio-prompt-engine", {
         prompt: finalPrompt,
         ...(language !== "auto" ? { language } : {}),

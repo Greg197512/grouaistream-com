@@ -113,6 +113,18 @@ export const ChatWidget = () => {
     } catch {}
   };
 
+  // Wibracja telefonu (Android/Chrome). iOS Safari nie wspiera — cichy no-op.
+  const buzz = () => { try { (navigator as any).vibrate?.([220, 90, 220]); } catch {} };
+
+  // Systemowe powiadomienie — działa też, gdy karta/telefon są w tle.
+  const systemNotify = (title: string, body: string, onClick: () => void) => {
+    try {
+      if (typeof Notification === "undefined" || Notification.permission !== "granted") return;
+      const n = new Notification(title, { body, tag: "grouai-chat", icon: "/favicon.ico", badge: "/favicon.ico", renotify: true } as NotificationOptions);
+      n.onclick = () => { try { window.focus(); } catch { /* */ } onClick(); n.close(); };
+    } catch { /* */ }
+  };
+
   // Subscribe to new incoming messages globally for unread counter + toast
   useEffect(() => {
     if (!user) return;
@@ -141,9 +153,10 @@ export const ChatWidget = () => {
             return;
           }
 
-          // Unread + bell + toast
+          // Unread + dzwonek + wibracja + toast + powiadomienie systemowe
           setUnread((u) => u + 1);
           playBell();
+          buzz();
 
           // Lookup sender name
           let senderName = "Ktoś";
@@ -159,17 +172,16 @@ export const ChatWidget = () => {
             if (p?.display_name) senderName = p.display_name;
           }
 
+          const openConv = () => {
+            setActiveId(m.is_broadcast ? BROADCAST_ID : m.sender_id);
+            setOpen(true);
+          };
           toast(`🔔 Masz wiadomość od ${senderName}`, {
             description: m.content.slice(0, 80) + (m.content.length > 80 ? "…" : ""),
             duration: 8000,
-            action: {
-              label: "Odbierz",
-              onClick: () => {
-                setActiveId(m.is_broadcast ? BROADCAST_ID : m.sender_id);
-                setOpen(true);
-              },
-            },
+            action: { label: "Odbierz", onClick: openConv },
           });
+          systemNotify(`GrouAI — ${senderName}`, m.content.slice(0, 120), openConv);
         }
       )
       .subscribe();
@@ -292,6 +304,12 @@ export const ChatWidget = () => {
           onClick={() => {
             setShowBubble(false);
             setOpen((o) => !o);
+            // Prośba o zgodę na powiadomienia — tylko w geście użytkownika.
+            try {
+              if (typeof Notification !== "undefined" && Notification.permission === "default") {
+                Notification.requestPermission().catch(() => {});
+              }
+            } catch { /* */ }
           }}
           title="Czat GrouAI"
           aria-label="Otwórz czat"

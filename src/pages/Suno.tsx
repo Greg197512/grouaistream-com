@@ -23,16 +23,16 @@ import { MusicPromptBox } from "@/components/studio/MusicPromptBox";
 import { VoiceRecorder } from "@/components/studio/VoiceRecorder";
 import { VoiceLibrary } from "@/components/studio/VoiceLibrary";
 import { StudioGrokDock } from "@/components/studio/StudioGrokDock";
-import { StudioVisualizer } from "@/components/studio/StudioVisualizer";
+import { StudioHifi } from "@/components/studio/StudioHifi";
 import { StudioSparksBackdrop } from "@/components/studio/StudioSparksBackdrop";
-import { StudioConsole } from "@/components/studio/StudioConsole";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { uploadToR2 } from "@/lib/r2Upload";
 import { renderScore } from "@/lib/musicSynth";
 import { generateMusic } from "@/utils/musicGenerator";
-import { Lock, Crown, Download, Share2 } from "lucide-react";
-import { downloadAudio } from "@/lib/hubStudio";
+import { Lock, Crown, Download, Share2, Film } from "lucide-react";
+import { VideoStudio } from "@/components/studio/VideoStudio";
+import { downloadAudio, invokeStudioEngine, waitForAceStep, isSubscriptionError, fetchEngineLessons } from "@/lib/hubStudio";
 import { Link } from "react-router-dom";
 
 const FREE_GENERATION_LIMIT = 1;
@@ -248,8 +248,8 @@ function audioBufferToWav(buffer: AudioBuffer): string {
 const Suno = () => {
   const { user } = useAuth();
   const { isPro, isUltimate, showUpgradeFor } = useSubscription();
-  const { t } = useLanguage();
-  const [activeTab, setActiveTab] = useState<"generate" | "mix" | "suno">("generate");
+  const { t, language } = useLanguage();
+  const [activeTab, setActiveTab] = useState<"generate" | "mix" | "suno" | "video">("generate");
   const [genre, setGenre] = useState("Pop");
   const [genre2, setGenre2] = useState<string | null>(null);
   const [blendRatio, setBlendRatio] = useState(50);
@@ -365,9 +365,127 @@ const Suno = () => {
 
       setGenStatus(t("studio.status.instruments"));
 
-      // === GROUAI SYNTH ENGINE — AI composes JSON score, browser renders audio ===
+      // === GROUAI STUDIO ENGINE — prawdziwy silnik Suno V5 + GPT (studyjna jakość,
+      // czyste instrumenty i śpiewane wokale). Lokalny syntezator TYLKO jako awaryjny
+      // plan B, gdy silnik nie odpowiada (żeby generowanie nigdy nie zawisło). ===
       if (engine === "grouai") {
-        setGenStatus("AI komponuje utwór...");
+        setGenStatus("🎼 Silnik komponuje w jakości studyjnej...");
+
+        // ── STOPIEŃ 1: Suno V5.5 (funkcja suno-generate na LIVE; wymaga sekretu
+        // SUNO_API_KEY). Najwyższa jakość: naturalne instrumenty i wokal jak Suno.
+        // Gdy klucz nie ustawiony / błąd — cicho schodzimy na silnik hubowy. ──
+        const sunoOk = await (async (): Promise<boolean> => {
+          try {
+            const { data: sd, error: se } = await supabase.functions.invoke("suno-generate", {
+              body: {
+                action: "generate",
+                prompt: musicPrompt,
+                style: genreBlend,
+                title: title || undefined,
+                instrumental,
+                vocal_language: language,
+                enhance: true,
+              },
+            });
+            if (se) throw se;
+            if ((sd as any)?.error) throw new Error((sd as any).error);
+            const taskId = (sd as any)?.id || (sd as any)?.task_id;
+            if (!taskId) throw new Error("brak taskId");
+
+            const t0 = Date.now();
+            while (Date.now() - t0 < 300000) { // Suno potrafi renderować do ~5 min
+              await new Promise((r) => setTimeout(r, 4000));
+              const { data: st } = await supabase.functions.invoke("suno-generate", {
+                body: { action: "status", task_id: taskId },
+              });
+              const s = (st as any)?.status;
+              if (s === "succeeded") {
+                const url = (st as any)?.audio_url;
+                if (!url) throw new Error("brak audio");
+                const trackTitle = (st as any)?.title || title || `${genre} Track`;
+                const coverUrl = (st as any)?.cover_url || undefined;
+                const lyrics = customLyrics.trim()
+                  ? parseLyricsFromText(customLyrics, duration)
+                  : generateLyrics(genre, trackTitle, duration, instrumental);
+                setResult({ audioUrl: url, title: trackTitle, genre, durationSeconds: (st as any)?.duration || duration, lyrics, imageUrl: coverUrl });
+                setGenStatus(t("studio.status.done"));
+                toast.success(`🎶 "${trackTitle}" — Suno V5.5, najwyższa jakość!`);
+                await supabase.from("generations").insert({
+                  user_id: user!.id, title: trackTitle, genre,
+                  prompt: musicPrompt, instrumental, status: "completed", audio_url: url,
+                });
+                await supabase.from("tracks").insert({
+                  user_id: user!.id, title: trackTitle, artist: "GrouAI Studio",
+                  album: "AI Generated", duration: (st as any)?.duration || duration,
+                  audio_url: url, cover_url: coverUrl || null, genre, mood,
+                });
+                window.dispatchEvent(new CustomEvent("grouai:generations-changed"));
+                if (!isPro) setFreeUsed((prev) => prev + 1);
+                return true;
+              }
+              if (s === "failed") throw new Error((st as any)?.error || "generacja nie powiodła się");
+              setGenStatus(`⏳ Suno V5.5 renderuje… (${Math.round((Date.now() - t0) / 1000)}s)`);
+            }
+            throw new Error("timeout");
+          } catch (e) {
+            console.warn("[Studio] suno-generate niedostępny — przechodzę na silnik hub:", e);
+            return false;
+          }
+        })();
+        if (sunoOk) return;
+
+        // ── STOPIEŃ 2: prawdziwy silnik hub (Suno V5 + GPT + emocje), pollowany
+        // przez waitForAceStep — dokładnie ta sama, sprawdzona ścieżka co MusicPromptBox.
+        const studioOk = await (async (): Promise<boolean> => {
+          try {
+            // Composed prompt niesie już gatunek/nastrój/tempo/energię/wokal. Gdy jest
+            // własny tekst — przekazujemy go dosłownie, by silnik go zaśpiewał.
+            let promptForEngine = instrumental
+              ? `${musicPrompt} (instrumentalny, bez wokalu)`
+              : (customLyrics.trim()
+                  ? `${musicPrompt}. Zaśpiewaj DOKŁADNIE ten tekst:\n${customLyrics.trim()}`
+                  : musicPrompt);
+
+            // NAUKA: doklej lekcje z naszych najlepszych utworów (in-context learning).
+            const lessons = await fetchEngineLessons(language);
+            if (lessons) promptForEngine = `${promptForEngine}\n\n${lessons}`;
+
+            const { data, error: fnErr } = await invokeStudioEngine("studio-prompt-engine", {
+              prompt: promptForEngine,
+              ...(language ? { language } : {}),
+            });
+            if (fnErr) throw new Error((fnErr as any).message || "Engine error");
+            if (!(data as any)?.success) throw new Error((data as any)?.message || (data as any)?.error || "Engine error");
+
+            const plan = (data as any).plan;
+            const trackTitle = plan?.title || title || `${genre} Track`;
+            const { audioUrl, coverUrl } = await waitForAceStep(
+              (data as any).task_id, (data as any).generation_id,
+              (sec) => setGenStatus(`⏳ Renderuję studyjny mix… (${sec}s)`),
+            );
+
+            const lyrics = customLyrics.trim()
+              ? parseLyricsFromText(customLyrics, duration)
+              : (plan?.full_lyrics ? parseLyricsFromText(plan.full_lyrics, duration) : generateLyrics(genre, trackTitle, duration, instrumental));
+
+            setResult({ audioUrl, title: trackTitle, genre, durationSeconds: duration, lyrics, imageUrl: coverUrl || undefined });
+            setGenStatus(t("studio.status.done"));
+            toast.success(`🎶 "${trackTitle}" — studyjna jakość!`);
+            // Silnik zapisał już utwór (rekord generations) — odśwież „Twoje utwory”.
+            window.dispatchEvent(new CustomEvent("grouai:generations-changed"));
+            if (!isPro) setFreeUsed((prev) => prev + 1);
+            return true;
+          } catch (e) {
+            if (isSubscriptionError(e)) { setShowPaywall(true); setGenStatus(""); throw e; }
+            console.warn("[Studio] studio-prompt-engine niedostępny — plan B (lokalny):", e);
+            return false;
+          }
+        })();
+        if (studioOk) return;
+
+        // Plan B (awaryjny, rzadki): lokalny generator. Sygnalizujemy uczciwie.
+        toast.warning("Silnik studyjny chwilowo niedostępny — używam wersji zapasowej. Spróbuj wygenerować ponownie za chwilę.");
+        setGenStatus("Wersja zapasowa: komponuję lokalnie…");
         let audioBlobUrl: string | null = null;
 
         // Próba 1: kompozycja przez AI (edge function). Gdy serwer/AI padnie —
@@ -774,18 +892,15 @@ const Suno = () => {
             </p>
           </motion.div>
 
-          {/* Sygnaturowy wizualizer — reaguje na grający utwór */}
-          <StudioVisualizer />
-
-          {/* Analogowa konsola — VU-metry + krzywa EQ jak w amplitunerze */}
-          <StudioConsole />
+          {/* Wieża hi-fi — gramofon/CD/kaseta + radio i wybór wykonawcy (gra nasz katalog) */}
+          <StudioHifi />
 
           {/* Engine badge */}
           <div className="flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-gradient-to-r from-[#FF6B00]/10 to-[#9333EA]/10 border border-[#FF6B00]/20">
             <Sparkles className="h-3.5 w-3.5 text-[#FF9500]" />
             <span className="text-xs text-gray-300">
               {engine === "grouai"
-                ? <>Napędzany przez <span className="text-[#FF9500] font-semibold">GrouAI Synth</span> — AI kompozytor + syntezator w przeglądarce</>
+                ? <>Napędzany przez <span className="text-[#FF9500] font-semibold">GrouAI Studio Engine</span> — Suno V5 + GPT, studyjna jakość, śpiewane wokale</>
                 : engine === "elevenlabs"
                 ? <>Napędzany przez <span className="text-[#FF9500] font-semibold">ElevenLabs Music v1</span> — studyjna jakość, śpiewane wokale</>
                 : <>Napędzany przez <span className="text-[#FF9500] font-semibold">GrouAI Multi-Engine Router</span> — auto-routing przez n8n</>}
@@ -836,10 +951,21 @@ const Suno = () => {
             >
               <Blend className="h-4 w-4" /> Track Mix
             </button>
+            <button
+              onClick={() => setActiveTab("video")}
+              className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${
+                activeTab === "video" ? "text-white" : "text-gray-400 hover:text-gray-200"
+              }`}
+              style={activeTab === "video" ? { background: "linear-gradient(135deg, #FF6B00, #9333EA)", boxShadow: "0 0 15px #9333EA40" } : undefined}
+            >
+              <Film className="h-4 w-4" /> Video Studio
+            </button>
           </div>
 
           {activeTab === "mix" ? (
             <TrackMixer />
+          ) : activeTab === "video" ? (
+            <VideoStudio />
           ) : (
           <>
           {/* Status */}
