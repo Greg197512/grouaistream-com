@@ -23,6 +23,7 @@ import { Language } from "@/i18n/translations";
 import { useNotificationsFeed, FeedItem } from "@/hooks/useNotificationsFeed";
 import { cn } from "@/lib/utils";
 import { ChatWidget } from "@/components/chat/ChatWidget";
+import { CatalogKeyLock } from "@/components/layout/CatalogKeyLock";
 
 const ICONS: Record<FeedItem["icon"], React.ComponentType<{ className?: string }>> = {
   heart: Heart,
@@ -133,6 +134,9 @@ export const TopBar = () => {
             {t("topbar.signIn")}
           </Button>
         )}
+
+        {/* Kłódka katalogu — klucz do pełnych ~20 tys. utworów */}
+        <CatalogKeyLock />
 
         {/* GrouAI Chat — obok logowania */}
         <ChatWidget />
