@@ -44,20 +44,25 @@ export const SupportSection = () => {
   const [loading, setLoading] = useState<string | null>(null);
 
   const handleBuy = async (priceId: string) => {
-    if (!user) {
-      toast.error("Zaloguj się, aby postawić kawę");
-      return;
-    }
+    // Kawa/wsparcie działa też dla GOŚCI (bez konta) — Paddle zbierze e-mail
+    // w checkout. Zalogowanym doklejamy dane, żeby powiązać wpłatę z kontem.
     setLoading(priceId);
     try {
       await openPaddleCheckout({
         priceId,
-        customerEmail: user.email,
-        customData: { userId: user.id },
+        ...(user?.email ? { customerEmail: user.email } : {}),
+        customData: user ? { userId: user.id, kind: "coffee" } : { kind: "coffee", guest: "1" },
         successUrl: `${window.location.origin}/?coffee=success`,
       });
     } catch (e: any) {
-      toast.error("Nie udało się otworzyć płatności: " + (e?.message || "spróbuj ponownie"));
+      const msg = String(e?.message || "");
+      // Czytelny powód zamiast cichej porażki.
+      const friendly = /resolve price|not found/i.test(msg)
+        ? "Ta cena nie jest jeszcze skonfigurowana w Paddle (sprawdź w adminie „Sprawdź Paddle”)."
+        : /token/i.test(msg)
+        ? "Płatności nie są skonfigurowane (brak tokenu Paddle)."
+        : (msg || "spróbuj ponownie");
+      toast.error("Nie udało się otworzyć płatności: " + friendly);
     } finally {
       setLoading(null);
     }
