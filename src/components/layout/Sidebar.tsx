@@ -201,22 +201,38 @@ interface NavItemProps {
 const NavItem = ({ icon, label, active, collapsed, onClick, badge, isAI }: NavItemProps) => (
   <motion.button
     onClick={onClick}
-    whileHover={{ x: 2 }}
     whileTap={{ scale: 0.98 }}
     className={cn(
-      "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all",
-      active ? "bg-sidebar-accent text-sidebar-foreground" : "text-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent/50",
+      "group relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium overflow-hidden",
+      "border border-transparent transition-all duration-300",
+      // Prawdziwe szkło + POMARAŃCZOWA poświata na hover (jak cała strona)
+      "hover:backdrop-blur-md hover:bg-[hsl(28_100%_55%/0.10)] hover:border-[hsl(32_100%_62%/0.5)]",
+      "hover:shadow-[inset_0_1px_0_hsl(44_100%_82%/0.55),inset_0_0_18px_hsl(28_100%_55%/0.20),0_8px_32px_hsl(24_100%_52%/0.45)]",
+      active
+        ? "bg-sidebar-accent text-sidebar-foreground border-white/10"
+        : "text-muted-foreground hover:text-[hsl(40_100%_88%)]",
       collapsed && "justify-center px-2"
     )}
   >
-    <span className={cn("material-icons-outlined text-xl flex-shrink-0", isAI && "text-accent", active && isAI && "text-accent", active && !isAI && "text-primary")}>
+    {/* Górny połysk szklanej butelki (ciepłe światło) */}
+    <span className="pointer-events-none absolute inset-x-0 top-0 h-1/2 rounded-t-xl bg-gradient-to-b from-[hsl(44_100%_82%/0.32)] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+    {/* Refleks światła przejeżdżający po szkle (pomarańczowy) */}
+    <span className="pointer-events-none absolute inset-y-0 -left-1/3 w-1/3 -skew-x-12 bg-gradient-to-r from-transparent via-[hsl(40_100%_78%/0.55)] to-transparent opacity-0 group-hover:opacity-100 group-hover:translate-x-[420%] transition-all duration-700 ease-out" />
+
+    <span className={cn(
+      "material-icons-outlined text-xl flex-shrink-0 relative z-10 transition-all duration-300 group-hover:scale-110 group-hover:text-[hsl(32_100%_62%)] group-hover:drop-shadow-[0_0_8px_hsl(28_100%_55%/0.7)]",
+      isAI && "text-accent", active && isAI && "text-accent", active && !isAI && "text-primary"
+    )}>
       {icon}
     </span>
     {!collapsed && (
       <>
-        <span className="flex-1 text-left truncate">{label}</span>
+        {/* Nazwa „zapala się" pomarańczem w środku szkła */}
+        <span className="flex-1 text-left truncate relative z-10 transition-all duration-300 group-hover:tracking-wide group-hover:[text-shadow:0_0_12px_hsl(28_100%_55%/0.85),0_0_4px_hsl(44_100%_80%/0.6)]">
+          {label}
+        </span>
         {badge && (
-          <span className="groove-gradient-bg px-2 py-0.5 rounded-full text-[10px] font-bold text-primary-foreground animate-pulse">
+          <span className="groove-gradient-bg px-2 py-0.5 rounded-full text-[10px] font-bold text-primary-foreground animate-pulse relative z-10">
             {badge}
           </span>
         )}
