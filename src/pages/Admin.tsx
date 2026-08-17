@@ -85,6 +85,7 @@ import { BreakEvenPanel } from "@/components/admin/BreakEvenPanel";
 import { GameWinnersPanel } from "@/components/admin/GameWinnersPanel";
 import { EngineLearningPanel } from "@/components/admin/EngineLearningPanel";
 import { BulkMusicUpload } from "@/components/admin/BulkMusicUpload";
+import { PaddleDiagnosticsPanel } from "@/components/admin/PaddleDiagnosticsPanel";
 import { CostAlertBanner } from "@/components/admin/CostAlertBanner";
 
 interface UserStats {
@@ -136,6 +137,7 @@ const ADMIN_CATS: { id: string; label: string; Icon: React.ComponentType<{ class
     { value: "costs", label: "Koszty & Pomysły", Icon: AlertTriangle },
     { value: "subscriptions", label: "Subskrypcje 👑", Icon: DollarSign },
     { value: "paddle", label: "Paddle 💳", Icon: DollarSign },
+    { value: "paddle-check", label: "Sprawdź Paddle 🩺", Icon: DollarSign },
     { value: "payouts-admin", label: "Wypłaty & Fraud 💸", Icon: DollarSign },
     { value: "bonuses", label: "Bonusy & Wypłaty", Icon: DollarSign },
     { value: "tips", label: "Tipy & Portfele", Icon: DollarSign },
@@ -891,6 +893,10 @@ export default function Admin() {
               {/* Paddle Tab */}
               <TabsContent value="paddle">
                 <PaddleAdminPanel />
+              </TabsContent>
+
+              <TabsContent value="paddle-check" className="space-y-6">
+                <PaddleDiagnosticsPanel />
               </TabsContent>
 
               {/* Operational Costs Tab */}
