@@ -60,35 +60,59 @@ function curatedCover(category, slug) {
   return `https://images.unsplash.com/photo-${id}?w=1200&q=85&fit=crop&crop=center`;
 }
 
-async function generate(models, apiKey, topic) {
-  const system = "Jesteś profesjonalnym copywriterem SEO i dziennikarzem AI/tech dla GrouAI Stream — premium platformy streamingowej z AI, mood detection, voice control, AI DJ, GrouAI Studio i monetyzacją dla twórców (grouaistream.com). Pisz po polsku, premium ale przystępnie, z emocjami, lekkim humorem i wciągającymi opisami. Używaj nagłówków H2/H3 (markdown), list, blockquotes, pogrubień. 1200-1800 słów. Każda sekcja H2 ma 2-4 akapity. Wpleć metafory, konkretne liczby, anegdoty. Zwróć obiekt JSON z polami: title (string), description (string, max 155 znaków, mocny hook), content (string, markdown; wszystkie znaki nowej linii jako \\n).";
-  const user = `Napisz artykuł blogowy SEO na temat: "${topic.topic}". Naturalnie wpleć wzmianki o funkcjach GrouAI Stream (mood detection, AI DJ, komendy głosowe, Groua Radio, GrouAI Studio, monetyzacja 65% dla twórców) i zachętę do rejestracji na końcu. Kategoria: ${topic.category}.`;
+// Jedno wywołanie OpenRouter z fallbackiem modeli → zwraca { parsed, model }.
+async function callOpenRouter(models, apiKey, system, user, maxTokens) {
   let lastErr = "";
   for (const model of models) {
     try {
       const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",
         headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json", "HTTP-Referer": "https://grouaistream.com", "X-Title": "GrouAI Hub Blog" },
-        body: JSON.stringify({ model, response_format: { type: "json_object" }, messages: [{ role: "system", content: system }, { role: "user", content: user }], max_tokens: 4000 }),
-        signal: AbortSignal.timeout(60000),
+        body: JSON.stringify({ model, response_format: { type: "json_object" }, temperature: 0.5, messages: [{ role: "system", content: system }, { role: "user", content: user }], max_tokens: maxTokens }),
+        signal: AbortSignal.timeout(90000),
       });
       if (!res.ok) { lastErr = `HTTP ${res.status} [${model}]`; continue; }
       const out = await res.json();
       if (out.error) { lastErr = `[${model}] ${JSON.stringify(out.error).slice(0, 120)}`; continue; }
       const raw = out.choices?.[0]?.message?.content || "";
-      const cleaned = raw.replace(/^```json\s*/i, "").replace(/```\s*$/, "").trim();
+      // Wytnij ewentualne płotki kodu i weź obiekt JSON między pierwszym { a ostatnim }.
+      let cleaned = raw.split("```").join("").trim();
+      const a = cleaned.indexOf("{");
+      const b = cleaned.lastIndexOf("}");
+      if (a >= 0 && b > a) cleaned = cleaned.slice(a, b + 1);
       let parsed = null;
-      try { parsed = JSON.parse(cleaned); } catch {
-        const m = cleaned.match(/\{[\s\S]*\}/);
-        if (m) { try { parsed = JSON.parse(m[0]); } catch { /* */ } }
-      }
+      try { parsed = JSON.parse(cleaned); } catch { /* niepoprawny JSON — próbujemy dalej */ }
       if (parsed && parsed.title && parsed.content && parsed.content.length > 400) {
-        return { title: String(parsed.title), description: String(parsed.description || "").slice(0, 160), content: String(parsed.content), model };
+        return { parsed, model };
       }
       lastErr = `bad_json [${model}]`;
     } catch (e) { lastErr = `fetch [${model}]: ${String(e).slice(0, 100)}`; }
   }
   throw new Error(lastErr || "all_models_failed");
+}
+
+// Tura 1 — rzetelny szkic (bez zmyślonych faktów).
+async function generate(models, apiKey, topic) {
+  const system = "Jesteś doświadczonym dziennikarzem tech/muzyka i redaktorem SEO dla GrouAI Stream — platformy streamingowej z AI (mood detection, komendy głosowe, AI DJ, Groua Radio, GrouAI Studio, monetyzacja 65% dla twórców; grouaistream.com). Pisz po polsku: premium, przystępnie, konkretnie, bez lania wody. " +
+    "RZETELNOŚĆ NADE WSZYSTKO: opieraj się wyłącznie na faktach powszechnie znanych i pewnych. NIE wymyślaj statystyk, procentów, dat, nazw badań, cytatów ani nazwisk ekspertów. Jeśli nie masz pewnej liczby — pisz ogólnie („wielu twórców”, „znacząco”) zamiast zmyślać konkret. Nie przypisuj firmom/produktom nieprawdziwych danych; o funkcjach GrouAI Stream pisz zgodnie z opisem powyżej. " +
+    "Struktura: 1200-1800 słów, nagłówki H2/H3 (markdown), listy, pogrubienia, maks. jeden przemyślany blockquote. Każda sekcja H2 to 2-4 akapity realnej wartości. Zakończ naturalną zachętą do rejestracji. " +
+    "Zwróć obiekt JSON z polami: title (string), description (string, max 155 znaków, mocny i zgodny z treścią), content (string w formacie markdown).";
+  const user = `Napisz rzetelny artykuł blogowy SEO na temat: "${topic.topic}". Kategoria: ${topic.category}. Wplataj funkcje GrouAI Stream tylko tam, gdzie to naturalne i prawdziwe. Zero zmyślonych danych.`;
+  const { parsed, model } = await callOpenRouter(models, apiKey, system, user, 5000);
+  return { title: String(parsed.title), description: String(parsed.description || "").slice(0, 160), content: String(parsed.content), model };
+}
+
+// Tura 2 — redakcja + fact-check: usuwa/poprawia niepewne twierdzenia.
+async function review(models, apiKey, draft) {
+  const system = "Jesteś rygorystycznym redaktorem naczelnym i fact-checkerem. Dostajesz szkic artykułu po polsku. Zadania: " +
+    "(1) usuń lub popraw KAŻDĄ informację, której nie można uznać za pewną i powszechnie znaną — zmyślone statystyki, procenty, daty, badania, cytaty, nazwiska — zastąp je ostrożnymi, prawdziwymi sformułowaniami; " +
+    "(2) popraw logikę, styl i płynność, usuń powtórzenia i pustosłowie; " +
+    "(3) zachowaj język polski, długość 1200-1800 słów, strukturę H2/H3 i wartość dla czytelnika; " +
+    "(4) dopilnuj, by tytuł i opis (max 155 zn.) były mocne i zgodne z treścią. " +
+    "Zwróć WYŁĄCZNIE finalny obiekt JSON z polami: title, description, content (w formacie markdown). Bez komentarzy.";
+  const user = "Zweryfikuj i dopracuj ten szkic.\n\nTYTUŁ: " + draft.title + "\nOPIS: " + draft.description + "\n\nTREŚĆ:\n" + draft.content;
+  const { parsed, model } = await callOpenRouter(models, apiKey, system, user, 5000);
+  return { title: String(parsed.title), description: String(parsed.description || "").slice(0, 160), content: String(parsed.content), model };
 }
 
 Deno.serve(async (req) => {
@@ -113,7 +137,11 @@ Deno.serve(async (req) => {
     const available = TOPICS.filter((t) => !recentTitles.has(t.topic));
     const pick = (available.length ? available : TOPICS)[Math.floor(Math.random() * (available.length || TOPICS.length))];
 
-    const art = await generate(models, apiKey, pick);
+    const draft = await generate(models, apiKey, pick);
+    // Druga tura: fact-check + redakcja. Gdy padnie — publikujemy rzetelny szkic.
+    let art = draft;
+    let verified = false;
+    try { art = await review(models, apiKey, draft); verified = true; } catch { art = draft; }
     const slug = slugify(art.title) + "-" + Math.random().toString(36).slice(2, 7);
     const cover = curatedCover(pick.category, slug);
 
@@ -124,7 +152,7 @@ Deno.serve(async (req) => {
     }).select("id, slug, title").single();
     if (insErr) throw insErr;
 
-    await db.from("hub_log").insert({ source: "hub-blog-generate", level: "info", message: `Nowy post: "${art.title}" [${art.model}]`, data: { slug, category: pick.category } });
+    await db.from("hub_log").insert({ source: "hub-blog-generate", level: "info", message: `Nowy post: "${art.title}" [${art.model}${verified ? " ✓zweryfikowany" : " (szkic)"}]`, data: { slug, category: pick.category, verified } });
 
     // Jeden elegancki wpis dziennie na Discord (rich embed — nie zaśmiecamy serwera).
     const hook = cfg["discord_webhook_url"];
