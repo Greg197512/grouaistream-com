@@ -70,6 +70,7 @@ import PayoutsAdminPanel from "@/components/admin/PayoutsAdminPanel";
 import { FinancialOverview } from "@/components/admin/FinancialOverview";
 import { TipsOverview } from "@/components/admin/TipsOverview";
 import { SubscriptionsAdminPanel } from "@/components/admin/SubscriptionsAdminPanel";
+import { OnlineNowPanel } from "@/components/admin/OnlineNowPanel";
 import { PaddleAdminPanel } from "@/components/admin/PaddleAdminPanel";
 import { OperationalCosts } from "@/components/admin/OperationalCosts";
 import { LikesOverview } from "@/components/admin/LikesOverview";
@@ -163,6 +164,7 @@ const ADMIN_CATS: { id: string; label: string; Icon: React.ComponentType<{ class
     { value: "game-winners", label: "Zwycięzcy gry", Icon: Trophy },
   ] },
   { id: "users", label: "Użytkownicy", Icon: Users, tabs: [
+    { value: "online", label: "Online teraz", Icon: RadioIcon },
     { value: "users", label: "Użytkownicy", Icon: Users },
     { value: "email", label: "E-mail AI", Icon: Mail },
     { value: "codes", label: "Kody dostępu", Icon: Lock },
@@ -1169,6 +1171,10 @@ export default function Admin() {
               </TabsContent>
 
               {/* Users Tab */}
+              <TabsContent value="online" className="space-y-6">
+                <OnlineNowPanel />
+              </TabsContent>
+
               <TabsContent value="users">
                 <Card className="border-border/50 bg-card/50 backdrop-blur">
                   <CardHeader>
