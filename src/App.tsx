@@ -65,6 +65,7 @@ const WinGame = lazy(() => import("./pages/WinGame"));
 const ArtistLanding = lazy(() => import("./pages/ArtistLanding"));
 const ClientDashboard = lazy(() => import("./pages/ClientDashboard"));
 const Binaural = lazy(() => import("./pages/Binaural"));
+const VideoStudioPage = lazy(() => import("./pages/VideoStudioPage"));
 
 // Empire Platform pages
 const EmpireDashboard = lazy(() => import("./pages/empire/EmpireDashboard"));
@@ -175,6 +176,9 @@ const AppShell = () => {
           <Route path="/client-dashboard" element={<ClientDashboard />} />
           <Route path="/client-dashboard/:orderId" element={<ClientDashboard />} />
           <Route path="/binaural" element={<Binaural />} />
+          {/* Studio Wideo — tworzenie wideo dla wszystkich */}
+          <Route path="/video" element={<VideoStudioPage />} />
+          <Route path="/wideo" element={<VideoStudioPage />} />
           <Route path="/empire" element={<EmpireDashboard />} />
           <Route path="/empire/projects" element={<EmpireProjects />} />
           <Route path="/empire/knowledge" element={<KnowledgeGarden />} />

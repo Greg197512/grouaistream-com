@@ -27,6 +27,7 @@ export type TranslationKeys = {
   "nav.radioLive": string;
   "nav.importYoutube": string;
   "nav.sunoAI": string;
+  "nav.videoStudio": string;
   "nav.localPlayer": string;
   "nav.aiDj": string;
   "nav.moodDetection": string;
