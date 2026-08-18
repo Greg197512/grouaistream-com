@@ -2,10 +2,11 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Radio, Users, MapPin } from "lucide-react";
+import { Radio, Users, MapPin, Monitor, Wifi, TrendingUp } from "lucide-react";
 import { formatDistanceToNowStrict } from "date-fns";
 import { pl } from "date-fns/locale";
-import { fetchGeoList, type UserGeo } from "@/lib/hubGeo";
+import { fetchGeoList, fetchPresenceStats, type UserGeo, type PresenceStats } from "@/lib/hubGeo";
+import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
 const flagEmoji = (cc?: string | null) => {
   if (!cc || cc.length !== 2) return "";
@@ -13,13 +14,16 @@ const flagEmoji = (cc?: string | null) => {
   return String.fromCodePoint(...[...cc.toUpperCase()].map((c) => base + c.charCodeAt(0) - 65));
 };
 
+const hhmm = (epochSec: number) =>
+  new Date(epochSec * 1000).toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
+
 /**
- * „Kto teraz online” — podłącza się do tego samego kanału presence co czat
- * (grouai-presence). Liczba i lista są NA ŻYWO: dokładnie te osoby, które w tej
- * chwili mają otwartą aplikację. To jedyne wiarygodne źródło „aktywni teraz” —
- * presence nie jest nigdzie zapisywane, więc trzeba je czytać na żywo.
- *
- * Admin tylko SŁUCHA (nie track-uje siebie), żeby nie zawyżać liczby.
+ * „Kto teraz online” + statystyki obecności (admin).
+ * — Lista NA ŻYWO z presence (grouai-presence): kto ma teraz otwartą apkę,
+ *   z imieniem, IP, lokalizacją (miasto/region/kraj), urządzeniem/przeglądarką,
+ *   ISP i linkiem do mapy.
+ * — Szczyt dnia + wykres „ilu online w czasie” z heartbeatu (presence_heartbeat).
+ * Admin tylko słucha presence (nie zawyża liczby).
  */
 interface OnlineUser {
   user_id: string;
@@ -33,6 +37,7 @@ export const OnlineNowPanel = () => {
   const [since, setSince] = useState<Record<string, string>>({});
   const [profiles, setProfiles] = useState<Record<string, { display_name: string | null; avatar_url: string | null }>>({});
   const [geo, setGeo] = useState<Record<string, UserGeo>>({});
+  const [stats, setStats] = useState<PresenceStats | null>(null);
 
   useEffect(() => {
     const channel = supabase.channel("grouai-presence");
@@ -49,7 +54,7 @@ export const OnlineNowPanel = () => {
     return () => { supabase.removeChannel(channel); };
   }, []);
 
-  // Geo (IP + lokalizacja) — z tego samego źródła co tabela użytkowników (admin).
+  // Geo (IP, lokalizacja, urządzenie, ISP) — to samo źródło co tabela userów.
   useEffect(() => {
     (async () => {
       const rows = await fetchGeoList();
@@ -60,6 +65,14 @@ export const OnlineNowPanel = () => {
       }
       setGeo(map);
     })();
+  }, []);
+
+  // Statystyki obecności (szczyt dnia + wykres 24h) — odśwież co 60 s.
+  useEffect(() => {
+    const load = () => { void fetchPresenceStats().then((s) => s && setStats(s)); };
+    load();
+    const i = setInterval(load, 60_000);
+    return () => clearInterval(i);
   }, []);
 
   // Dociągnij imiona/avatary dla obecnych user_id.
@@ -91,6 +104,11 @@ export const OnlineNowPanel = () => {
     [ids, profiles, since]
   );
 
+  const chartData = useMemo(
+    () => (stats?.series || []).map((p) => ({ label: hhmm(p.t), c: p.c })),
+    [stats]
+  );
+
   const nameOf = (u: OnlineUser) => u.display_name || `${u.user_id.slice(0, 8)}…`;
 
   return (
@@ -104,11 +122,56 @@ export const OnlineNowPanel = () => {
           </span>
         </CardTitle>
         <CardDescription>
-          Na żywo — osoby, które w tej chwili mają otwartą aplikację (ten sam sygnał, co licznik przy czacie).
-          Ty (admin) nie jesteś tu liczony.
+          Na żywo — osoby, które w tej chwili mają otwartą aplikację. Ty (admin) nie jesteś tu liczony.
+          Poniżej: szczyt dnia i wykres obecności z ostatnich 24 h.
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-5">
+        {/* Statystyki + wykres */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+          <div className="rounded-xl border border-border/50 bg-background/30 p-3">
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground"><Radio className="h-3.5 w-3.5" /> Online teraz</div>
+            <div className="mt-0.5 text-2xl font-extrabold tabular-nums text-emerald-500">{users.length}</div>
+          </div>
+          <div className="rounded-xl border border-border/50 bg-background/30 p-3">
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground"><TrendingUp className="h-3.5 w-3.5" /> Szczyt dziś</div>
+            <div className="mt-0.5 text-2xl font-extrabold tabular-nums">{stats?.peak_today ?? "—"}</div>
+            {stats?.peak_at && (
+              <div className="text-[11px] text-muted-foreground">
+                o {new Date(stats.peak_at).toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" })}
+              </div>
+            )}
+          </div>
+          <div className="rounded-xl border border-border/50 bg-background/30 p-3">
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground"><Users className="h-3.5 w-3.5" /> Sesje 24 h (kubełki 30 min)</div>
+            <div className="mt-0.5 text-2xl font-extrabold tabular-nums">{chartData.length}</div>
+          </div>
+        </div>
+
+        {chartData.length > 0 && (
+          <div className="h-40 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={chartData} margin={{ top: 6, right: 8, left: -20, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="onlineFill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="hsl(160 84% 39%)" stopOpacity={0.5} />
+                    <stop offset="100%" stopColor="hsl(160 84% 39%)" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <XAxis dataKey="label" tick={{ fontSize: 10 }} interval="preserveStartEnd" minTickGap={28} />
+                <YAxis allowDecimals={false} width={28} tick={{ fontSize: 10 }} />
+                <Tooltip
+                  contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}
+                  labelFormatter={(l) => `Godz. ${l}`}
+                  formatter={(v: number) => [`${v} online`, ""]}
+                />
+                <Area type="monotone" dataKey="c" stroke="hsl(160 84% 39%)" strokeWidth={2} fill="url(#onlineFill)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+
+        {/* Lista online */}
         {users.length === 0 ? (
           <div className="flex flex-col items-center gap-2 py-8 text-center text-muted-foreground">
             <Users className="h-8 w-8 opacity-40" />
@@ -119,6 +182,10 @@ export const OnlineNowPanel = () => {
             {users.map((u) => {
               const g = geo[u.user_id];
               const loc = g ? [g.city, g.region, g.country].filter(Boolean).join(", ") : "";
+              const dev = g ? [g.device, g.os, g.browser].filter(Boolean).join(" · ") : "";
+              const mapUrl = g?.lat != null && g?.lng != null
+                ? `https://www.openstreetmap.org/?mlat=${g.lat}&mlon=${g.lng}#map=11/${g.lat}/${g.lng}`
+                : null;
               return (
                 <div key={u.user_id} className="flex items-center gap-3 rounded-lg border border-border/50 bg-background/30 p-2.5">
                   <div className="relative">
@@ -140,9 +207,12 @@ export const OnlineNowPanel = () => {
                           <MapPin className="h-3 w-3" />
                           {g?.country_code && <span className="text-sm leading-none">{flagEmoji(g.country_code)}</span>}
                           {loc}
+                          {mapUrl && <a href={mapUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">mapa</a>}
                         </span>
                       )}
                       <span className="font-mono">IP: {g?.ip || "—"}</span>
+                      {dev && <span className="inline-flex items-center gap-1"><Monitor className="h-3 w-3" /> {dev}</span>}
+                      {g?.isp && <span className="inline-flex items-center gap-1"><Wifi className="h-3 w-3" /> {g.isp}</span>}
                     </div>
                   </div>
                 </div>

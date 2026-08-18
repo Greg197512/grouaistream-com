@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState, ReactNode, useCallback 
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { clearStoredAuthSession, restoreSessionSafely } from "@/lib/authSession";
-import { trackGeo } from "@/lib/hubGeo";
+import { trackGeo, startPresenceHeartbeat, stopPresenceHeartbeat } from "@/lib/hubGeo";
 
 export type ProfileRole = "free" | "artist" | "pro";
 
@@ -103,6 +103,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         // Zapisz lokalizację (IP/miasto) usera — raz na sesję (hub geo-track).
         trackGeo();
+        // Heartbeat obecności — co ~60 s, dopóki apka otwarta (historia „online w czasie”).
+        startPresenceHeartbeat();
 
         if (event === "SIGNED_IN") {
           // Program poleceń: jeśli user przyszedł z linku ?ref=KOD,
@@ -250,6 +252,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signOut = async () => {
+    stopPresenceHeartbeat();
     setUser(null);
     setSession(null);
     setProfile(null);

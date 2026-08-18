@@ -1260,8 +1260,14 @@ export default function Admin() {
                                         <span className="text-muted-foreground/60 italic text-xs">— (od następnego logowania)</span>
                                       )}
                                     </TableCell>
-                                    <TableCell className="text-xs font-mono text-muted-foreground">
-                                      {g?.ip || "—"}
+                                    <TableCell className="text-xs text-muted-foreground">
+                                      <div className="font-mono">{g?.ip || "—"}</div>
+                                      {(g?.device || g?.os || g?.browser) && (
+                                        <div className="text-[11px] text-muted-foreground/70">
+                                          {[g?.device, g?.os, g?.browser].filter(Boolean).join(" · ")}
+                                        </div>
+                                      )}
+                                      {g?.isp && <div className="text-[11px] text-muted-foreground/60 truncate max-w-[180px]">{g.isp}</div>}
                                     </TableCell>
                                   </>
                                 );
