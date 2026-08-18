@@ -71,6 +71,7 @@ import { FinancialOverview } from "@/components/admin/FinancialOverview";
 import { TipsOverview } from "@/components/admin/TipsOverview";
 import { SubscriptionsAdminPanel } from "@/components/admin/SubscriptionsAdminPanel";
 import { OnlineNowPanel } from "@/components/admin/OnlineNowPanel";
+import { SecurityInsightsPanel } from "@/components/admin/SecurityInsightsPanel";
 import { PaddleAdminPanel } from "@/components/admin/PaddleAdminPanel";
 import { OperationalCosts } from "@/components/admin/OperationalCosts";
 import { LikesOverview } from "@/components/admin/LikesOverview";
@@ -165,6 +166,7 @@ const ADMIN_CATS: { id: string; label: string; Icon: React.ComponentType<{ class
   ] },
   { id: "users", label: "Użytkownicy", Icon: Users, tabs: [
     { value: "online", label: "Online teraz", Icon: RadioIcon },
+    { value: "security", label: "Bezpieczeństwo / boty", Icon: Shield },
     { value: "users", label: "Użytkownicy", Icon: Users },
     { value: "email", label: "E-mail AI", Icon: Mail },
     { value: "codes", label: "Kody dostępu", Icon: Lock },
@@ -1173,6 +1175,10 @@ export default function Admin() {
               {/* Users Tab */}
               <TabsContent value="online" className="space-y-6">
                 <OnlineNowPanel />
+              </TabsContent>
+
+              <TabsContent value="security" className="space-y-6">
+                <SecurityInsightsPanel />
               </TabsContent>
 
               <TabsContent value="users">
