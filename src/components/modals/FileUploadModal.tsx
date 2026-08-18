@@ -13,6 +13,7 @@ import {
   MEDIA_FILE_ACCEPT,
 } from "@/lib/mediaFormats";
 import { uploadToR2 } from "@/lib/r2Upload";
+import { postCreatorThankYou } from "@/lib/thankYouMarquee";
 
 interface FileUploadModalProps {
   isOpen: boolean;
@@ -134,6 +135,9 @@ export const FileUploadModal = ({ isOpen, onClose, onSuccess, playlistId }: File
       }
 
       setItems(prev => prev.map((it, idx) => idx === index ? { ...it, status: "done", percent: 100 } : it));
+
+      // Auto-podziękowanie na pasku, że twórca wystawił utwory (1×/dobę na twórcę).
+      void postCreatorThankYou(user.id, artist !== "Unknown Artist" ? artist : displayName);
       return true;
     } catch (err: any) {
       console.error("Upload error:", file.name, err);

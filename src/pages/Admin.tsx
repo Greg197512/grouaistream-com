@@ -70,6 +70,8 @@ import PayoutsAdminPanel from "@/components/admin/PayoutsAdminPanel";
 import { FinancialOverview } from "@/components/admin/FinancialOverview";
 import { TipsOverview } from "@/components/admin/TipsOverview";
 import { SubscriptionsAdminPanel } from "@/components/admin/SubscriptionsAdminPanel";
+import { OnlineNowPanel } from "@/components/admin/OnlineNowPanel";
+import { SecurityInsightsPanel } from "@/components/admin/SecurityInsightsPanel";
 import { PaddleAdminPanel } from "@/components/admin/PaddleAdminPanel";
 import { OperationalCosts } from "@/components/admin/OperationalCosts";
 import { LikesOverview } from "@/components/admin/LikesOverview";
@@ -163,6 +165,8 @@ const ADMIN_CATS: { id: string; label: string; Icon: React.ComponentType<{ class
     { value: "game-winners", label: "Zwycięzcy gry", Icon: Trophy },
   ] },
   { id: "users", label: "Użytkownicy", Icon: Users, tabs: [
+    { value: "online", label: "Online teraz", Icon: RadioIcon },
+    { value: "security", label: "Bezpieczeństwo / boty", Icon: Shield },
     { value: "users", label: "Użytkownicy", Icon: Users },
     { value: "email", label: "E-mail AI", Icon: Mail },
     { value: "codes", label: "Kody dostępu", Icon: Lock },
@@ -1169,6 +1173,14 @@ export default function Admin() {
               </TabsContent>
 
               {/* Users Tab */}
+              <TabsContent value="online" className="space-y-6">
+                <OnlineNowPanel />
+              </TabsContent>
+
+              <TabsContent value="security" className="space-y-6">
+                <SecurityInsightsPanel />
+              </TabsContent>
+
               <TabsContent value="users">
                 <Card className="border-border/50 bg-card/50 backdrop-blur">
                   <CardHeader>
@@ -1239,7 +1251,7 @@ export default function Admin() {
                               </TableCell>
                               {(() => {
                                 const g = geoByUser[u.id] || (u.email ? geoByUser[u.email.toLowerCase()] : undefined);
-                                const loc = g ? [g.city, g.country].filter(Boolean).join(", ") : "";
+                                const loc = g ? [g.city, g.region, g.country].filter(Boolean).join(", ") : "";
                                 return (
                                   <>
                                     <TableCell className="text-sm">
@@ -1254,8 +1266,14 @@ export default function Admin() {
                                         <span className="text-muted-foreground/60 italic text-xs">— (od następnego logowania)</span>
                                       )}
                                     </TableCell>
-                                    <TableCell className="text-xs font-mono text-muted-foreground">
-                                      {g?.ip || "—"}
+                                    <TableCell className="text-xs text-muted-foreground">
+                                      <div className="font-mono">{g?.ip || "—"}</div>
+                                      {(g?.device || g?.os || g?.browser) && (
+                                        <div className="text-[11px] text-muted-foreground/70">
+                                          {[g?.device, g?.os, g?.browser].filter(Boolean).join(" · ")}
+                                        </div>
+                                      )}
+                                      {g?.isp && <div className="text-[11px] text-muted-foreground/60 truncate max-w-[180px]">{g.isp}</div>}
                                     </TableCell>
                                   </>
                                 );

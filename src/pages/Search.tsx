@@ -16,6 +16,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { searchCCMixter, CCMixterTrack } from "@/services/ccMixterService";
 import { cn } from "@/lib/utils";
 import { invokeHubAI } from "@/lib/hubAI";
+import { useCatalogUnlock } from "@/hooks/useCatalogUnlock";
+import { Lock, LockOpen } from "lucide-react";
 
 const formatDuration = (seconds: number): string => {
   const mins = Math.floor(seconds / 60);
@@ -87,6 +89,13 @@ const Search = () => {
   const recognitionRef = useRef<any>(null);
   const { playTrack, playPlaylist, currentTrack, isPlaying, togglePlay } = usePlayer();
   const { t } = useLanguage();
+  const { unlocked } = useCatalogUnlock();
+
+  // Ile utworów pokazujemy w przeglądaniu:
+  // zablokowane → wybrana część (50), odblokowane kluczem → cały katalog.
+  const LOCKED_PREVIEW = 50;
+  const browseTracks = unlocked ? allTracks : allTracks.slice(0, LOCKED_PREVIEW);
+  const hiddenCount = Math.max(0, allTracks.length - LOCKED_PREVIEW);
 
   useEffect(() => {
     const loadTracks = async () => {
@@ -443,9 +452,22 @@ const Search = () => {
                 ))}
               </div>
 
-              <h2 className="font-display text-base sm:text-xl font-bold mt-6 sm:mt-8 mb-3 sm:mb-4">{t("search.allTracks")} ({allTracks.length})</h2>
+              <div className="flex flex-wrap items-center justify-between gap-2 mt-6 sm:mt-8 mb-3 sm:mb-4">
+                <h2 className="font-display text-base sm:text-xl font-bold">
+                  {t("search.allTracks")} ({browseTracks.length}{unlocked ? "" : `/${allTracks.length}`})
+                </h2>
+                {unlocked ? (
+                  <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/40">
+                    <LockOpen className="h-3.5 w-3.5" /> Pełny katalog odblokowany
+                  </span>
+                ) : hiddenCount > 0 ? (
+                  <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-red-500/15 text-red-400 border border-red-500/40">
+                    <Lock className="h-3.5 w-3.5" /> +{hiddenCount} ukrytych — wpisz klucz (kłódka w pasku)
+                  </span>
+                ) : null}
+              </div>
               <div className="space-y-1 sm:space-y-2">
-                {allTracks.slice(0, 50).map((track, index) => (
+                {browseTracks.map((track, index) => (
                   <TrackRow key={track.id} id={track.id} index={index + 1} title={track.title} artist={track.artist} album={track.album || ""} duration={formatDuration(track.duration)} imageUrl={track.cover_url || undefined} videoUrl={track.video_url || undefined} trackUrl={track.video_url || track.audio_url} isPlaying={currentTrack?.id === track.id && isPlaying} onPlay={() => handlePlayTrack(track, index)} />
                 ))}
               </div>
