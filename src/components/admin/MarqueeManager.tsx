@@ -20,6 +20,26 @@ interface MarqueeMsg {
   expires_at: string;
 }
 
+// Gotowe szablony podziękowań (od GrouaRock & GrouAI Stream).
+const THANK_YOU_PRESETS: { label: string; text: string }[] = [
+  {
+    label: "🎤 Szaman — nowe utwory",
+    text: '🎶 Wielkie brawa dla „Szaman"! Nowy członek wystawił swoje piosenki na GrouAI Stream — brzmi świetnie! Dziękujemy, że tworzysz z nami. Wchodźcie, słuchajcie i zostawcie serce ❤️ — GrouaRock & GrouAI Stream',
+  },
+  {
+    label: "🎶 Nowy twórca",
+    text: '🎉 Witamy nowego twórcę na GrouAI Stream! Dziękujemy, że dzielisz się swoją muzyką — Twoje dźwięki mają tu dom. Trzymamy kciuki za każdy utwór! — GrouaRock & GrouAI Stream',
+  },
+  {
+    label: "💿 Nowe piosenki",
+    text: '🔥 Świeże utwory właśnie wjechały na serwer! Dziękujemy naszym twórcom za muzykę robioną sercem. Odsłuchaj i wesprzyj polubieniem — GrouaRock & GrouAI Stream',
+  },
+  {
+    label: "❤️ Podziękowanie",
+    text: '💜 Dziękujemy, że jesteś częścią GrouAI Stream. Bez Was nie ma muzyki — jesteście najlepsi! — GrouaRock',
+  },
+];
+
 export const MarqueeManager = () => {
   const { user } = useAuth();
   const [text, setText] = useState('"Latimer63" Muzyka świetna, polubienia poleciały. Dziękujemy!!');
@@ -109,6 +129,15 @@ export const MarqueeManager = () => {
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="space-y-3">
+          {/* Gotowe podziękowania — jeden klik wstawia treść, potem „Wyślij na pasek”. */}
+          <div className="flex flex-wrap gap-1.5">
+            <span className="text-xs text-muted-foreground self-center mr-1">Szybkie podziękowania:</span>
+            {THANK_YOU_PRESETS.map((p) => (
+              <Button key={p.label} variant="outline" size="sm" className="h-7 text-xs" onClick={() => setText(p.text)}>
+                {p.label}
+              </Button>
+            ))}
+          </div>
           <Textarea
             value={text}
             onChange={(e) => setText(e.target.value)}

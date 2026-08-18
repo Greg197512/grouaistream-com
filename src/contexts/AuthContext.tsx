@@ -135,6 +135,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 await fetchProfile(session.user.id);
                 console.log("First login completed - mood history reset");
 
+                // Pasek z podziękowaniem dla nowego członka — także publicznie na
+                // głównym pasku (widzą wszyscy). Best-effort: jeśli RLS nie pozwala
+                // zwykłemu userowi pisać na pasek, po cichu pomijamy (bez błędu).
+                try {
+                  const welcomeName =
+                    (session.user.user_metadata as any)?.display_name ||
+                    (session.user.user_metadata as any)?.full_name ||
+                    (session.user.user_metadata as any)?.name ||
+                    (session.user.email ? session.user.email.split("@")[0] : "Nowy twórca");
+                  await supabase.from("admin_marquee_messages").insert({
+                    message: `🎶 Witamy nowego twórcę: „${welcomeName}"! Dziękujemy, że dołączyłeś do GrouAI Stream — GrouaRock 🤝`,
+                    created_by: session.user.id,
+                    is_active: true,
+                    expires_at: new Date(Date.now() + 30 * 60_000).toISOString(),
+                  });
+                } catch {
+                  /* RLS/inny błąd — pasek personalny i tak się pokaże */
+                }
+
                 // Fire welcome webhook for first-time logins that bypassed signUp()
                 // (Google OAuth, Apple, magic link, etc.) so the new email shows up
                 // in the system and n8n welcome flow — same as email/password signup.

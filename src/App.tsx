@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { WelcomeConfetti } from "@/components/effects/WelcomeConfetti";
+import { WelcomeThankYouBar } from "@/components/effects/WelcomeThankYouBar";
 import { PlayerProvider } from "@/contexts/PlayerContext";
 import { AIProvider } from "@/contexts/AIContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
@@ -97,7 +98,12 @@ const queryClient = new QueryClient({
 
 const WelcomeOverlay = () => {
   const { isFirstLogin, clearFirstLogin } = useAuth();
-  return <WelcomeConfetti show={isFirstLogin} onComplete={clearFirstLogin} />;
+  return (
+    <>
+      <WelcomeConfetti show={isFirstLogin} onComplete={clearFirstLogin} />
+      <WelcomeThankYouBar />
+    </>
+  );
 };
 
 const AppShell = () => {
