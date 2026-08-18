@@ -118,7 +118,7 @@ export const OnlineNowPanel = () => {
           <div className="space-y-2">
             {users.map((u) => {
               const g = geo[u.user_id];
-              const loc = g ? [g.city, g.country].filter(Boolean).join(", ") : "";
+              const loc = g ? [g.city, g.region, g.country].filter(Boolean).join(", ") : "";
               return (
                 <div key={u.user_id} className="flex items-center gap-3 rounded-lg border border-border/50 bg-background/30 p-2.5">
                   <div className="relative">

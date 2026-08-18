@@ -1245,7 +1245,7 @@ export default function Admin() {
                               </TableCell>
                               {(() => {
                                 const g = geoByUser[u.id] || (u.email ? geoByUser[u.email.toLowerCase()] : undefined);
-                                const loc = g ? [g.city, g.country].filter(Boolean).join(", ") : "";
+                                const loc = g ? [g.city, g.region, g.country].filter(Boolean).join(", ") : "";
                                 return (
                                   <>
                                     <TableCell className="text-sm">
