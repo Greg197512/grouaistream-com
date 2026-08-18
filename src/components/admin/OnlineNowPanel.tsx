@@ -2,9 +2,16 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Radio, Users } from "lucide-react";
+import { Radio, Users, MapPin } from "lucide-react";
 import { formatDistanceToNowStrict } from "date-fns";
 import { pl } from "date-fns/locale";
+import { fetchGeoList, type UserGeo } from "@/lib/hubGeo";
+
+const flagEmoji = (cc?: string | null) => {
+  if (!cc || cc.length !== 2) return "";
+  const base = 0x1f1e6;
+  return String.fromCodePoint(...[...cc.toUpperCase()].map((c) => base + c.charCodeAt(0) - 65));
+};
 
 /**
  * „Kto teraz online” — podłącza się do tego samego kanału presence co czat
@@ -25,6 +32,7 @@ export const OnlineNowPanel = () => {
   const [ids, setIds] = useState<string[]>([]);
   const [since, setSince] = useState<Record<string, string>>({});
   const [profiles, setProfiles] = useState<Record<string, { display_name: string | null; avatar_url: string | null }>>({});
+  const [geo, setGeo] = useState<Record<string, UserGeo>>({});
 
   useEffect(() => {
     const channel = supabase.channel("grouai-presence");
@@ -39,6 +47,19 @@ export const OnlineNowPanel = () => {
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
+  }, []);
+
+  // Geo (IP + lokalizacja) — z tego samego źródła co tabela użytkowników (admin).
+  useEffect(() => {
+    (async () => {
+      const rows = await fetchGeoList();
+      const map: Record<string, UserGeo> = {};
+      for (const r of rows) {
+        map[r.user_id] = r;
+        if (r.email) map[r.email.toLowerCase()] = r;
+      }
+      setGeo(map);
+    })();
   }, []);
 
   // Dociągnij imiona/avatary dla obecnych user_id.
@@ -95,23 +116,38 @@ export const OnlineNowPanel = () => {
           </div>
         ) : (
           <div className="space-y-2">
-            {users.map((u) => (
-              <div key={u.user_id} className="flex items-center gap-3 rounded-lg border border-border/50 bg-background/30 p-2.5">
-                <div className="relative">
-                  <Avatar className="h-9 w-9">
-                    <AvatarImage src={u.avatar_url || undefined} />
-                    <AvatarFallback className="text-xs font-semibold">{nameOf(u).charAt(0).toUpperCase()}</AvatarFallback>
-                  </Avatar>
-                  <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-emerald-500 border-2 border-background" />
+            {users.map((u) => {
+              const g = geo[u.user_id];
+              const loc = g ? [g.city, g.country].filter(Boolean).join(", ") : "";
+              return (
+                <div key={u.user_id} className="flex items-center gap-3 rounded-lg border border-border/50 bg-background/30 p-2.5">
+                  <div className="relative">
+                    <Avatar className="h-9 w-9">
+                      <AvatarImage src={u.avatar_url || undefined} />
+                      <AvatarFallback className="text-xs font-semibold">{nameOf(u).charAt(0).toUpperCase()}</AvatarFallback>
+                    </Avatar>
+                    <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-emerald-500 border-2 border-background" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="truncate text-sm font-medium">{nameOf(u)}</p>
+                      {g?.email && <span className="truncate text-xs text-muted-foreground">· {g.email}</span>}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+                      <span>{u.online_at ? `online od ${formatDistanceToNowStrict(new Date(u.online_at), { locale: pl })}` : "online"}</span>
+                      {loc && (
+                        <span className="inline-flex items-center gap-1">
+                          <MapPin className="h-3 w-3" />
+                          {g?.country_code && <span className="text-sm leading-none">{flagEmoji(g.country_code)}</span>}
+                          {loc}
+                        </span>
+                      )}
+                      <span className="font-mono">IP: {g?.ip || "—"}</span>
+                    </div>
+                  </div>
                 </div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium">{nameOf(u)}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {u.online_at ? `od ${formatDistanceToNowStrict(new Date(u.online_at), { locale: pl })}` : "online"}
-                  </p>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </CardContent>
