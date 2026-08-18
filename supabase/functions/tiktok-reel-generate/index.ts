@@ -9,8 +9,53 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-// Brian — deep cinematic male, Apple-ad style
-const BRIAN_VOICE_ID = "nPczCjzI2devNBz1zQrb";
+// Darmowy lektor bez klucza: Google Translate TTS (limit ~200 znaków/żądanie).
+// Tekst tniemy na kawałki i sklejamy w jedno mp3.
+function chunkText(text: string, max = 200): string[] {
+  const out: string[] = [];
+  const sentences = text.split(/(?<=[.!?…])\s+/);
+  let cur = "";
+  const push = (s: string) => { const t = s.trim(); if (t) out.push(t); };
+  for (const s of sentences) {
+    if ((cur + " " + s).trim().length <= max) { cur = (cur + " " + s).trim(); continue; }
+    push(cur); cur = "";
+    if (s.length <= max) { cur = s; continue; }
+    let w = "";
+    for (const word of s.split(/\s+/)) {
+      if ((w + " " + word).trim().length > max) { push(w); w = word; }
+      else w = (w + " " + word).trim();
+    }
+    cur = w;
+  }
+  push(cur);
+  return out;
+}
+
+async function googleTtsChunk(text: string, lang = "en"): Promise<Uint8Array> {
+  const q = text.slice(0, 200);
+  const url = `https://translate.google.com/translate_tts?ie=UTF-8&tl=${lang}&client=tw-ob&q=${encodeURIComponent(q)}`;
+  const r = await fetch(url, {
+    headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" },
+    signal: AbortSignal.timeout(20000),
+  });
+  if (!r.ok) throw new Error(`Google TTS failed (${r.status})`);
+  return new Uint8Array(await r.arrayBuffer());
+}
+
+async function synthesize(text: string, lang = "en"): Promise<Uint8Array> {
+  const chunks = chunkText(text, 200);
+  const parts: Uint8Array[] = [];
+  for (const c of chunks) {
+    parts.push(await googleTtsChunk(c, lang));
+    await new Promise((res) => setTimeout(res, 150));
+  }
+  const total = parts.reduce((n, b) => n + b.length, 0);
+  if (total < 500) throw new Error("TTS produced no audio");
+  const out = new Uint8Array(total);
+  let off = 0;
+  for (const b of parts) { out.set(b, off); off += b.length; }
+  return out;
+}
 
 interface ReelTemplate {
   id: string;
@@ -53,10 +98,8 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const ELEVENLABS_API_KEY = Deno.env.get("ELEVENLABS_API_KEY");
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    if (!ELEVENLABS_API_KEY) throw new Error("ELEVENLABS_API_KEY not configured");
 
     const supa = createClient(SUPABASE_URL, SERVICE_ROLE);
 
@@ -108,36 +151,8 @@ Deno.serve(async (req) => {
     // Full narration: hook + script + outro
     const fullScript = `${template.hook} ${template.voiceover_script} ${template.outro}`.trim();
 
-    // Generate voiceover with ElevenLabs Brian
-    const ttsResponse = await fetch(
-      `https://api.elevenlabs.io/v1/text-to-speech/${BRIAN_VOICE_ID}?output_format=mp3_44100_128`,
-      {
-        method: "POST",
-        headers: {
-          "xi-api-key": ELEVENLABS_API_KEY,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          text: fullScript,
-          model_id: "eleven_multilingual_v2",
-          voice_settings: {
-            stability: 0.55,
-            similarity_boost: 0.85,
-            style: 0.4,
-            use_speaker_boost: true,
-            speed: 1.05,
-          },
-        }),
-      }
-    );
-
-    if (!ttsResponse.ok) {
-      const errText = await ttsResponse.text();
-      throw new Error(`ElevenLabs TTS failed [${ttsResponse.status}]: ${errText}`);
-    }
-
-    const audioArrayBuffer = await ttsResponse.arrayBuffer();
-    const audioBytes = new Uint8Array(audioArrayBuffer);
+    // Generate voiceover — darmowe Google TTS (bez klucza), sklejane z kawałków.
+    const audioBytes = await synthesize(fullScript, "en");
 
     // Upload MP3 to storage
     const audioFileName = `audio/${template.slug}-${Date.now()}.mp3`;
@@ -173,7 +188,7 @@ Deno.serve(async (req) => {
           outro: template.outro,
           app_route: template.app_route,
           screenshot_paths: template.screenshot_paths,
-          voice: "Brian",
+          voice: "google-tts-en",
           triggered_by: isCron ? "cron" : "admin",
         },
       })
