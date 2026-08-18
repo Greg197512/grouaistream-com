@@ -1,7 +1,7 @@
 // Generates a TikTok reel: picks next template from queue, generates voiceover with ElevenLabs (Brian),
 // builds word-level captions, uploads MP3 to Storage, returns reel record with everything client needs to render MP4.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-import { encode as base64Encode } from "https://deno.land/std@0.168.0/encoding/base64.ts";
+import { synthesizeTTS } from "../_shared/tts.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -9,53 +9,8 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-// Darmowy lektor bez klucza: Google Translate TTS (limit ~200 znaków/żądanie).
-// Tekst tniemy na kawałki i sklejamy w jedno mp3.
-function chunkText(text: string, max = 200): string[] {
-  const out: string[] = [];
-  const sentences = text.split(/(?<=[.!?…])\s+/);
-  let cur = "";
-  const push = (s: string) => { const t = s.trim(); if (t) out.push(t); };
-  for (const s of sentences) {
-    if ((cur + " " + s).trim().length <= max) { cur = (cur + " " + s).trim(); continue; }
-    push(cur); cur = "";
-    if (s.length <= max) { cur = s; continue; }
-    let w = "";
-    for (const word of s.split(/\s+/)) {
-      if ((w + " " + word).trim().length > max) { push(w); w = word; }
-      else w = (w + " " + word).trim();
-    }
-    cur = w;
-  }
-  push(cur);
-  return out;
-}
-
-async function googleTtsChunk(text: string, lang = "en"): Promise<Uint8Array> {
-  const q = text.slice(0, 200);
-  const url = `https://translate.google.com/translate_tts?ie=UTF-8&tl=${lang}&client=tw-ob&q=${encodeURIComponent(q)}`;
-  const r = await fetch(url, {
-    headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" },
-    signal: AbortSignal.timeout(20000),
-  });
-  if (!r.ok) throw new Error(`Google TTS failed (${r.status})`);
-  return new Uint8Array(await r.arrayBuffer());
-}
-
-async function synthesize(text: string, lang = "en"): Promise<Uint8Array> {
-  const chunks = chunkText(text, 200);
-  const parts: Uint8Array[] = [];
-  for (const c of chunks) {
-    parts.push(await googleTtsChunk(c, lang));
-    await new Promise((res) => setTimeout(res, 150));
-  }
-  const total = parts.reduce((n, b) => n + b.length, 0);
-  if (total < 500) throw new Error("TTS produced no audio");
-  const out = new Uint8Array(total);
-  let off = 0;
-  for (const b of parts) { out.set(b, off); off += b.length; }
-  return out;
-}
+// Darmowy neuronowy lektor EN (głęboki, w stylu reklamy): Microsoft Edge TTS.
+const REEL_VOICE = "en-US-ChristopherNeural";
 
 interface ReelTemplate {
   id: string;
@@ -151,8 +106,10 @@ Deno.serve(async (req) => {
     // Full narration: hook + script + outro
     const fullScript = `${template.hook} ${template.voiceover_script} ${template.outro}`.trim();
 
-    // Generate voiceover — darmowe Google TTS (bez klucza), sklejane z kawałków.
-    const audioBytes = await synthesize(fullScript, "en");
+    // Generate voiceover — darmowy neuronowy Edge TTS (Christopher), fallback Google.
+    const { audio: audioBytes, engine: ttsEngine } = await synthesizeTTS(fullScript, {
+      voice: REEL_VOICE, lang: "en", rate: "+3%",
+    });
 
     // Upload MP3 to storage
     const audioFileName = `audio/${template.slug}-${Date.now()}.mp3`;
@@ -188,7 +145,7 @@ Deno.serve(async (req) => {
           outro: template.outro,
           app_route: template.app_route,
           screenshot_paths: template.screenshot_paths,
-          voice: "google-tts-en",
+          voice: ttsEngine,
           triggered_by: isCron ? "cron" : "admin",
         },
       })

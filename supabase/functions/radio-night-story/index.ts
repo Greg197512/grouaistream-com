@@ -1,10 +1,11 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { synthesizeTTS } from "../_shared/tts.ts";
 
 // GROUAI — radio-night-story: NOCNE CZYTANIE o 22:40 (wt/pt).
 // Bierze najnowszy wpis z bloga, przerabia na spokojne nocne opowiadanie (OpenRouter),
-// czyta DARMOWYM TTS (bez ElevenLabs): polski głos Amazon Polly przez StreamElements,
-// z zapasem Google TTS. Audio sklejane z kawałków, wrzucane do bucketa radio-audio
+// czyta DARMOWYM, DOBRYM TTS: neuronowy Microsoft Edge (głos pl-PL-MarekNeural),
+// a gdy padnie — awaryjnie Google TTS. Audio wrzucane do bucketa radio-audio
 // i wstawiane na początek radio_schedule → leci na żywo.
 // Deploy na projekcie aplikacji (radio_schedule / radio-audio / OPENROUTER_API_KEY są tam).
 // NIE wymaga ELEVENLABS_API_KEY.
@@ -14,9 +15,9 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Darmowy lektor PL bez klucza: Google Translate TTS (sprawdzone: 200 audio/mpeg
-// z sieci Supabase). Limit ~200 znaków na żądanie → tekst tniemy na kawałki i sklejamy.
-const TTS_VOICE = "google-tts-pl";
+// Neuronowy polski lektor (darmowy, bez klucza). Marek = ciepły męski głos.
+// Alternatywy: pl-PL-ZofiaNeural (kobieta).
+const TTS_VOICE = "pl-PL-MarekNeural";
 
 const SYSTEM_PROMPT =
   "Jesteś nocnym lektorem radia GrouAI Stream. Jest 22:40 — pora na spokojne, kameralne czytanie. " +
@@ -42,39 +43,6 @@ const stripMarkdown = (md: string): string =>
     .replace(/\n+/g, " ")
     .replace(/\s+/g, " ")
     .trim();
-
-// Tnie tekst na kawałki ≤ max znaków, po granicach zdań (a długie zdania po słowach).
-function chunkText(text: string, max = 280): string[] {
-  const out: string[] = [];
-  const sentences = text.split(/(?<=[.!?…])\s+/);
-  let cur = "";
-  const push = (s: string) => { const t = s.trim(); if (t) out.push(t); };
-  for (const s of sentences) {
-    if ((cur + " " + s).trim().length <= max) { cur = (cur + " " + s).trim(); continue; }
-    push(cur); cur = "";
-    if (s.length <= max) { cur = s; continue; }
-    let w = "";
-    for (const word of s.split(/\s+/)) {
-      if ((w + " " + word).trim().length > max) { push(w); w = word; }
-      else w = (w + " " + word).trim();
-    }
-    cur = w;
-  }
-  push(cur);
-  return out;
-}
-
-// TTS jednego kawałka przez Google Translate TTS (darmowe, bez klucza). Zwraca bajty mp3.
-async function ttsChunk(text: string): Promise<Uint8Array> {
-  const q = text.slice(0, 200);
-  const g = `https://translate.google.com/translate_tts?ie=UTF-8&tl=pl&client=tw-ob&q=${encodeURIComponent(q)}`;
-  const r = await fetch(g, {
-    headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" },
-    signal: AbortSignal.timeout(20000),
-  });
-  if (!r.ok) throw new Error(`Google TTS failed (${r.status})`);
-  return new Uint8Array(await r.arrayBuffer());
-}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -135,19 +103,10 @@ serve(async (req) => {
     if (!script || script.length < 200) script = FALLBACK(post.title, post.description || "");
     script = script.replace(/[*_`#>]/g, "").replace(/\[([^\]]+)\]\([^)]+\)/g, "$1").replace(/\s+/g, " ").trim().slice(0, 4000);
 
-    // DARMOWE TTS: tnij na kawałki ≤200 znaków, każdy przez Google TTS → sklej mp3.
-    // Mała przerwa między żądaniami, żeby nie wpaść w limit Google.
-    const chunks = chunkText(script, 200);
-    const parts: Uint8Array[] = [];
-    for (const c of chunks) {
-      parts.push(await ttsChunk(c));
-      await new Promise((res) => setTimeout(res, 150));
-    }
-    const total = parts.reduce((n, b) => n + b.length, 0);
-    if (total < 500) throw new Error("TTS produced no audio");
-    const audioBytes = new Uint8Array(total);
-    let off = 0;
-    for (const b of parts) { audioBytes.set(b, off); off += b.length; }
+    // DARMOWE, DOBRE TTS: neuronowy Edge (Marek), a gdy padnie — Google.
+    const { audio: audioBytes, engine: ttsEngine } = await synthesizeTTS(script, {
+      voice: TTS_VOICE, lang: "pl", rate: "-8%",
+    });
 
     // Upload do bucketa radio-audio.
     const today = new Date().toISOString().slice(0, 10);
@@ -163,7 +122,7 @@ serve(async (req) => {
     // Zapis do radio_announcements.
     await supabase.from("radio_announcements").insert({
       post_id: post.id, post_title: post.title, post_slug: post.slug,
-      script, audio_url: audioUrl, voice_id: TTS_VOICE,
+      script, audio_url: audioUrl, voice_id: ttsEngine,
       scheduled_for: new Date().toISOString(), kind: "night_story", lang: "pl",
     });
 
