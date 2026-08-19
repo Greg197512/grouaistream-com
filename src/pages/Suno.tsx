@@ -968,6 +968,312 @@ const Suno = () => {
             <VideoStudio />
           ) : (
           <>
+          {/* === RĘCZNY PANEL (jak w Suno): tytuł, styl, tekst, długość, nastrój === */}
+          <div className="space-y-5 p-5 rounded-2xl border border-[#FF6B00]/20 bg-[#12121c]/70 backdrop-blur-md">
+            {/* Szybkie presety — gotowe pomysły */}
+            <div className="space-y-2">
+              <Label className="text-xs text-gray-400 flex items-center gap-1.5"><Zap className="h-3.5 w-3.5 text-[#FF9500]" /> Szybki start</Label>
+              <div className="flex flex-wrap gap-2">
+                {QUICK_PRESETS.map((p) => (
+                  <button
+                    key={p.label}
+                    type="button"
+                    onClick={() => {
+                      setGenre(p.genre);
+                      setMood(p.mood);
+                      setTempo(p.tempo);
+                      setIntensity(p.intensity);
+                      setTitle(p.title);
+                    }}
+                    className="px-3 py-1.5 rounded-full text-xs border border-[#9333EA]/30 bg-[#9333EA]/10 text-gray-200 hover:bg-[#9333EA]/20 hover:border-[#9333EA]/60 transition-colors"
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Tytuł utworu */}
+            <div className="space-y-2">
+              <Label htmlFor="track-title" className="text-xs text-gray-400 flex items-center gap-1.5"><Type className="h-3.5 w-3.5 text-[#FF9500]" /> Tytuł utworu</Label>
+              <Input
+                id="track-title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="np. Nocna jazda"
+                maxLength={80}
+                className="bg-[#1a1a2e]/80 border-[#FF6B00]/20 text-white placeholder:text-gray-600 focus-visible:ring-[#FF6B00]/40"
+              />
+            </div>
+
+            {/* Styl / gatunek */}
+            <div className="space-y-2">
+              <Label className="text-xs text-gray-400 flex items-center gap-1.5"><Guitar className="h-3.5 w-3.5 text-[#FF9500]" /> Styl</Label>
+              <div className="flex flex-wrap gap-2">
+                {GENRES.map((g) => (
+                  <button
+                    key={g}
+                    type="button"
+                    onClick={() => setGenre(g)}
+                    className={`px-3 py-1.5 rounded-full text-xs border transition-colors ${
+                      genre === g
+                        ? "border-[#FF6B00] bg-[#FF6B00]/20 text-white"
+                        : "border-white/10 bg-[#1a1a2e]/60 text-gray-400 hover:text-gray-200 hover:border-[#FF6B00]/40"
+                    }`}
+                  >
+                    {g}
+                  </button>
+                ))}
+              </div>
+
+              {/* Mieszanie dwóch stylów */}
+              <div className="pt-1">
+                <button
+                  type="button"
+                  onClick={() => setGenre2(genre2 ? null : (GENRES.find((g) => g !== genre) || null))}
+                  className="text-[11px] text-[#9333EA] hover:text-[#c084fc] flex items-center gap-1"
+                >
+                  <Blend className="h-3 w-3" /> {genre2 ? "Wyłącz miks stylów" : "Zmiksuj z drugim stylem"}
+                </button>
+                {genre2 && (
+                  <div className="mt-2 space-y-2">
+                    <div className="flex flex-wrap gap-2">
+                      {GENRES.filter((g) => g !== genre).map((g) => (
+                        <button
+                          key={g}
+                          type="button"
+                          onClick={() => setGenre2(g)}
+                          className={`px-2.5 py-1 rounded-full text-[11px] border transition-colors ${
+                            genre2 === g
+                              ? "border-[#9333EA] bg-[#9333EA]/20 text-white"
+                              : "border-white/10 bg-[#1a1a2e]/60 text-gray-400 hover:text-gray-200"
+                          }`}
+                        >
+                          {g}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-[10px] text-gray-500 w-16 truncate">{genre}</span>
+                      <Slider value={[blendRatio]} onValueChange={(v) => setBlendRatio(v[0])} min={10} max={90} step={5} className="flex-1" />
+                      <span className="text-[10px] text-gray-500 w-16 truncate text-right">{genre2}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Długość */}
+            <div className="space-y-2">
+              <Label className="text-xs text-gray-400 flex items-center gap-1.5"><Gauge className="h-3.5 w-3.5 text-[#FF9500]" /> Długość</Label>
+              <div className="flex gap-2">
+                {DURATION_OPTIONS.map((d) => (
+                  <button
+                    key={d}
+                    type="button"
+                    onClick={() => setDuration(d)}
+                    className={`flex-1 py-1.5 rounded-lg text-xs border transition-colors ${
+                      duration === d
+                        ? "border-[#FF6B00] bg-[#FF6B00]/20 text-white"
+                        : "border-white/10 bg-[#1a1a2e]/60 text-gray-400 hover:text-gray-200"
+                    }`}
+                  >
+                    {d < 60 ? `${d}s` : `${d / 60}min`}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Instrumental */}
+            <div className="flex items-center justify-between p-3 rounded-xl bg-[#1a1a2e]/60 border border-white/5">
+              <div className="flex items-center gap-2">
+                <Music className="h-4 w-4 text-[#FF9500]" />
+                <div>
+                  <p className="text-sm text-gray-200">Instrumentalny</p>
+                  <p className="text-[10px] text-gray-500">Bez wokalu — sama muzyka</p>
+                </div>
+              </div>
+              <Switch checked={instrumental} onCheckedChange={setInstrumental} />
+            </div>
+
+            {/* Tekst piosenki — ręcznie */}
+            <AnimatePresence initial={false}>
+              {!instrumental && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="space-y-2 overflow-hidden"
+                >
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="track-lyrics" className="text-xs text-gray-400 flex items-center gap-1.5"><Mic className="h-3.5 w-3.5 text-[#FF9500]" /> Tekst piosenki (ręcznie)</Label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const auto = generateLyrics(genre, title || `${genre} Track`, duration, false)
+                          .map((l) => l.text)
+                          .join("\n");
+                        setCustomLyrics(auto);
+                        toast.success("Wygenerowano szkic tekstu — możesz go dowolnie edytować ✍️");
+                      }}
+                      className="text-[11px] text-[#9333EA] hover:text-[#c084fc] flex items-center gap-1"
+                    >
+                      <Wand2 className="h-3 w-3" /> Podpowiedz tekst
+                    </button>
+                  </div>
+                  <Textarea
+                    id="track-lyrics"
+                    value={customLyrics}
+                    onChange={(e) => setCustomLyrics(e.target.value)}
+                    placeholder={"Wpisz własny tekst — silnik zaśpiewa go dokładnie.\n\n[Zwrotka 1]\n...\n\n[Refren]\n..."}
+                    rows={6}
+                    className="bg-[#1a1a2e]/80 border-[#FF6B00]/20 text-white placeholder:text-gray-600 focus-visible:ring-[#FF6B00]/40 resize-y font-mono text-sm leading-relaxed"
+                  />
+                  <p className="text-[10px] text-gray-500">
+                    Zostaw puste, aby AI napisało tekst automatycznie. Znaczniki jak <span className="text-gray-400">[Zwrotka]</span>, <span className="text-gray-400">[Refren]</span> pomagają w strukturze.
+                  </p>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Zaawansowane: nastrój, tempo, wokal, produkcja */}
+            <div>
+              <button
+                type="button"
+                onClick={() => setShowAdvanced((v) => !v)}
+                className="text-xs text-[#FF9500] hover:text-white flex items-center gap-1.5"
+              >
+                <Sparkles className="h-3.5 w-3.5" /> {showAdvanced ? "Ukryj opcje zaawansowane" : "Opcje zaawansowane (nastrój, tempo, wokal)"}
+              </button>
+              <AnimatePresence initial={false}>
+                {showAdvanced && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="pt-3 space-y-4">
+                      {/* Nastrój */}
+                      <div className="space-y-2">
+                        <Label className="text-[11px] text-gray-400">Nastrój</Label>
+                        <div className="flex flex-wrap gap-2">
+                          {MOODS.map((m) => {
+                            const Icon = m.icon;
+                            return (
+                              <button
+                                key={m.id}
+                                type="button"
+                                onClick={() => setMood(m.id)}
+                                className={`px-2.5 py-1.5 rounded-lg text-[11px] border flex items-center gap-1.5 transition-colors ${
+                                  mood === m.id ? "border-current bg-white/10 text-white" : "border-white/10 bg-[#1a1a2e]/60 text-gray-400 hover:text-gray-200"
+                                }`}
+                                style={mood === m.id ? { color: m.color } : undefined}
+                              >
+                                <Icon className="h-3.5 w-3.5" /> {m.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Tempo */}
+                      <div className="space-y-2">
+                        <Label className="text-[11px] text-gray-400">Tempo</Label>
+                        <div className="flex flex-wrap gap-2">
+                          {TEMPOS.map((tp) => (
+                            <button
+                              key={tp.id}
+                              type="button"
+                              onClick={() => setTempo(tp.id)}
+                              className={`px-2.5 py-1.5 rounded-lg text-[11px] border transition-colors ${
+                                tempo === tp.id ? "border-[#FF6B00] bg-[#FF6B00]/20 text-white" : "border-white/10 bg-[#1a1a2e]/60 text-gray-400 hover:text-gray-200"
+                              }`}
+                            >
+                              {tp.label} <span className="opacity-60">· {tp.bpm}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Styl wokalu — tylko gdy nie instrumentalny */}
+                      {!instrumental && (
+                        <div className="space-y-2">
+                          <Label className="text-[11px] text-gray-400">Styl wokalu</Label>
+                          <div className="flex flex-wrap gap-2">
+                            {VOCAL_STYLES.map((vs) => (
+                              <button
+                                key={vs.id}
+                                type="button"
+                                onClick={() => setVocalStyle(vs.id)}
+                                className={`px-2.5 py-1.5 rounded-lg text-[11px] border transition-colors ${
+                                  vocalStyle === vs.id ? "border-[#9333EA] bg-[#9333EA]/20 text-white" : "border-white/10 bg-[#1a1a2e]/60 text-gray-400 hover:text-gray-200"
+                                }`}
+                              >
+                                {vs.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Intensywność produkcji */}
+                      <div className="space-y-2">
+                        <Label className="text-[11px] text-gray-400">Produkcja</Label>
+                        <div className="flex flex-wrap gap-2">
+                          {INTENSITIES.map((it) => (
+                            <button
+                              key={it.id}
+                              type="button"
+                              onClick={() => setIntensity(it.id)}
+                              className={`px-2.5 py-1.5 rounded-lg text-[11px] border transition-colors ${
+                                intensity === it.id ? "border-[#FF6B00] bg-[#FF6B00]/20 text-white" : "border-white/10 bg-[#1a1a2e]/60 text-gray-400 hover:text-gray-200"
+                              }`}
+                            >
+                              {it.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Twój głos (klonowanie) — nadpisuje głos dobrany po gatunku */}
+                      {!instrumental && (
+                        <div className="space-y-3 pt-1 border-t border-white/5">
+                          <Label className="text-[11px] text-gray-400 flex items-center gap-1.5"><Mic className="h-3.5 w-3.5 text-[#9333EA]" /> Twój głos (opcjonalnie)</Label>
+                          <VoiceLibrary
+                            selectedVoiceId={clonedVoiceId}
+                            onSelect={(id, label) => { setClonedVoiceId(id); setClonedVoiceLabel(label); }}
+                            refreshKey={voiceLibKey}
+                          />
+                          <VoiceRecorder
+                            clonedVoiceId={clonedVoiceId}
+                            clonedVoiceLabel={clonedVoiceLabel}
+                            onVoiceCloned={(id, label) => { setClonedVoiceId(id); setClonedVoiceLabel(label); setVoiceLibKey((k) => k + 1); }}
+                            onCleared={() => { setClonedVoiceId(null); setClonedVoiceLabel(null); }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* Przycisk generowania */}
+            <Button
+              onClick={generate}
+              disabled={generating}
+              className="w-full h-12 text-white font-bold gap-2 border-0 disabled:opacity-60"
+              style={{ background: "linear-gradient(135deg, #FF6B00, #FF9500)", boxShadow: "0 0 20px #FF6B0050" }}
+            >
+              {generating ? (
+                <><span className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" /> Generuję…</>
+              ) : (
+                <><Sparkles className="h-5 w-5" /> Wygeneruj utwór</>
+              )}
+            </Button>
+          </div>
+
           {/* Status */}
           {genStatus && (
             <p className="text-sm text-center text-gray-400">{genStatus}</p>
