@@ -549,19 +549,24 @@ html[data-threed="on"] .material-icons {
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.18), 0 2px 5px rgba(0, 0, 0, 0.55);
 }
 
-/* Delikatne światło idące za kursorem / przechyłem telefonu */
+/* Delikatne światło idące za kursorem / przechyłem telefonu.
+   WAŻNE (wydajność): ruch realizujemy przez transform (kompozytor GPU), a NIE
+   przez zmianę background-position — inaczej pełnoekranowy gradient przemalowuje
+   cały ekran 30×/sek i strona się zacina oraz miga nad aurorą. */
 @media (prefers-reduced-motion: no-preference) {
   html[data-threed="on"] main::before {
     content: "";
     position: fixed;
-    inset: 0;
+    inset: -20%;
     pointer-events: none;
     z-index: 0;
     background: radial-gradient(
-      620px circle at calc(50% + var(--tilt-x, 0) * 42%) calc(42% + var(--tilt-y, 0) * 32%),
+      620px circle at 50% 42%,
       hsl(var(--primary) / 0.06),
       transparent 62%
     );
+    transform: translate3d(calc(var(--tilt-x, 0) * 40px), calc(var(--tilt-y, 0) * 30px), 0);
+    will-change: transform;
   }
 }
 
