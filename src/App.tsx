@@ -67,6 +67,7 @@ const ArtistLanding = lazy(() => import("./pages/ArtistLanding"));
 const ClientDashboard = lazy(() => import("./pages/ClientDashboard"));
 const Binaural = lazy(() => import("./pages/Binaural"));
 const VideoStudioPage = lazy(() => import("./pages/VideoStudioPage"));
+const NightStory = lazy(() => import("./pages/NightStory"));
 
 // Empire Platform pages
 const EmpireDashboard = lazy(() => import("./pages/empire/EmpireDashboard"));
@@ -185,6 +186,9 @@ const AppShell = () => {
           {/* Studio Wideo — tworzenie wideo dla wszystkich */}
           <Route path="/video" element={<VideoStudioPage />} />
           <Route path="/wideo" element={<VideoStudioPage />} />
+          {/* Nocne czytanie z muzyką w tle */}
+          <Route path="/nocne" element={<NightStory />} />
+          <Route path="/night" element={<NightStory />} />
           <Route path="/empire" element={<EmpireDashboard />} />
           <Route path="/empire/projects" element={<EmpireProjects />} />
           <Route path="/empire/knowledge" element={<KnowledgeGarden />} />
