@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
+import { aiCoverUrl } from "@/lib/aiImage";
 
 interface HQCoverProps {
   src?: string | null;
@@ -390,6 +391,7 @@ export const HQCover = ({
   const [error, setError] = useState(false);
   const [videoFailed, setVideoFailed] = useState(false);
   const [fetchedCover, setFetchedCover] = useState<string | null>(null);
+  const [aiFailed, setAiFailed] = useState(false);
 
   const [isLoading, setIsLoading] = useState(false);
   const [fetchAttempted, setFetchAttempted] = useState(false);
@@ -443,7 +445,22 @@ export const HQCover = ({
     });
   }, [needsFetch, artist, alt]);
 
-  const effectiveSrc = (!src || error || isLowQuality) ? fetchedCover : src;
+  const realSrc = (!src || error || isLowQuality) ? fetchedCover : src;
+
+  // Zewnętrzne wyszukiwanie okładki zakończone (znalezione lub nie).
+  const externalDone = !isLoading && (fetchAttempted || shouldSkipExternalFetch);
+
+  // Darmowa okładka AI (Pollinations/Flux) — używana dopiero, gdy nie ma realnej
+  // okładki ani wyniku z cover-search. Deterministyczny seed = stały obraz (bez migotania).
+  // Zero tokenów, zero kosztów: obraz renderuje przeglądarka użytkownika.
+  const aiSrc = useMemo(
+    () => (!realSrc && !aiFailed && externalDone && (alt || "").trim()
+      ? aiCoverUrl(alt, { genre, artist })
+      : null),
+    [realSrc, aiFailed, externalDone, alt, genre, artist]
+  );
+
+  const effectiveSrc = realSrc || aiSrc;
 
   // Show shimmer while loading
   if (isLoading && !effectiveSrc) {
@@ -501,7 +518,9 @@ export const HQCover = ({
       decoding="async"
       draggable={false}
       onError={() => {
-        if (effectiveSrc === fetchedCover) {
+        if (effectiveSrc === aiSrc) {
+          setAiFailed(true);
+        } else if (effectiveSrc === fetchedCover) {
           setFetchedCover(null);
         } else {
           setError(true);
