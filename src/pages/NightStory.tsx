@@ -13,7 +13,8 @@ import { supabase } from "@/integrations/supabase/client";
 const DEFAULT_VOICE =
   "https://bmwtydwpevzhbdplilbr.supabase.co/storage/v1/object/public/night-audio/1787099400474-nocne-czytanie.mp3";
 
-const BED_VOLUME = 0.15;
+const BED_VOLUME = 0.19;
+const BED_FADE_IN = 4000;
 const isHttp = (u?: string | null) => !!u && /^https?:\/\//i.test(u) && !u.includes("open.spotify.com");
 
 interface BedTrack { title: string; artist: string; audio_url: string; }
@@ -163,7 +164,11 @@ export default function NightStory() {
       const b = bedRef.current;
       if (bed && b) {
         b.loop = true; b.volume = 0;
-        void b.play().then(() => fadeTo(b, BED_VOLUME, 2500)).catch(() => startPad(ctx));
+        // Zacznij od spokojnego miejsca w utworze (nie od głośnego intro).
+        b.addEventListener("loadedmetadata", () => {
+          if (b.duration && isFinite(b.duration) && b.duration > 40) b.currentTime = Math.min(20, b.duration * 0.15);
+        }, { once: true });
+        void b.play().then(() => fadeTo(b, BED_VOLUME, BED_FADE_IN)).catch(() => startPad(ctx));
       } else {
         startPad(ctx);
       }
