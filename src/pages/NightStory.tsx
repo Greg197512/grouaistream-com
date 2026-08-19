@@ -5,21 +5,21 @@ import { supabase } from "@/integrations/supabase/client";
 
 /**
  * /nocne — Nocne czytanie z MUZYKĄ W TLE z KATALOGU.
- * Głos gra przez łańcuch Web Audio (ciało + wyrazistość + powietrze + delikatny
- * pogłos studia + kompresja), żeby brzmiał cieplej i bardziej „na żywo", a nie
- * płasko jak surowe TTS. Pod spodem cichy instrumental z katalogu (zapętlony).
- * Gdy katalog nic nie zwróci — awaryjny generatywny pad.
+ * Głos: łańcuch Web Audio (ciało/wyrazistość/powietrze + pogłos + kompresja + lekka
+ * saturacja) i delikatne zwolnienie tempa — cieplej i „na żywo".
+ * Podkład: cichy instrumental z katalogu. Jeśli host (R2) wpuszcza CORS →
+ * przepuszczamy go przez korektor (przyciemniony, chowa się pod głosem); jeśli nie
+ * → gra „na wprost". Gdy katalog nic nie zwróci — awaryjny generatywny pad.
  */
 const DEFAULT_VOICE =
   "https://bmwtydwpevzhbdplilbr.supabase.co/storage/v1/object/public/night-audio/1787099400474-nocne-czytanie.mp3";
 
-const BED_VOLUME = 0.19;
+const BED_VOLUME = 0.2;
 const BED_FADE_IN = 4000;
 const isHttp = (u?: string | null) => !!u && /^https?:\/\//i.test(u) && !u.includes("open.spotify.com");
 
 interface BedTrack { title: string; artist: string; audio_url: string; }
 
-// Cieplejszy impuls pogłosowy (dłuższy, miękki zanik) — „ciepły booth".
 function makeImpulse(ctx: AudioContext, dur = 1.7, decay = 2.1): AudioBuffer {
   const rate = ctx.sampleRate, len = Math.floor(rate * dur);
   const buf = ctx.createBuffer(2, len, rate);
@@ -29,9 +29,7 @@ function makeImpulse(ctx: AudioContext, dur = 1.7, decay = 2.1): AudioBuffer {
   }
   return buf;
 }
-
-// Miękka saturacja (tanh) — odrobina analogowego ciepła i harmonicznych.
-function softCurve(drive = 0.35): Float32Array {
+function softCurve(drive = 0.3): Float32Array {
   const n = 1024, c = new Float32Array(n), k = 1 + drive * 3;
   for (let i = 0; i < n; i++) { const x = (i / (n - 1)) * 2 - 1; c[i] = Math.tanh(x * k) / Math.tanh(k); }
   return c;
@@ -47,13 +45,16 @@ export default function NightStory() {
   const ctxRef = useRef<AudioContext | null>(null);
   const masterRef = useRef<GainNode | null>(null);
   const voiceReadyRef = useRef(false);
+  const bedGainRef = useRef<GainNode | null>(null);
+  const bedRoutedRef = useRef(false);
   const fadeRef = useRef<number | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   const [playing, setPlaying] = useState(false);
   const [bed, setBed] = useState<BedTrack | null>(null);
+  const [bedCors, setBedCors] = useState(true); // spróbuj CORS → korektor; przy błędzie: „na wprost"
 
-  // Dobierz spokojny instrumental z katalogu na podkład.
+  // Dobierz spokojny instrumental z katalogu.
   useEffect(() => {
     (async () => {
       try {
@@ -84,36 +85,45 @@ export default function NightStory() {
     return ctxRef.current;
   }, []);
 
-  // Łańcuch „ożywiający" głos — podpinany raz.
+  // Ożywienie głosu — raz.
   const setupVoice = useCallback((ctx: AudioContext) => {
     if (voiceReadyRef.current) return;
     const el = audioRef.current;
     if (!el) return;
     let src: MediaElementAudioSourceNode;
     try { src = ctx.createMediaElementSource(el); } catch { voiceReadyRef.current = true; return; }
-    // Przytnij cyfrowy „syk" TTS (miękki low-pass u samej góry).
     const deFizz = ctx.createBiquadFilter(); deFizz.type = "lowpass"; deFizz.frequency.value = 11500; deFizz.Q.value = 0.5;
-    // Ciało + ciepło dolnego środka.
     const body = ctx.createBiquadFilter(); body.type = "peaking"; body.frequency.value = 190; body.Q.value = 0.8; body.gain.value = 3.5;
     const warmth = ctx.createBiquadFilter(); warmth.type = "peaking"; warmth.frequency.value = 480; warmth.Q.value = 0.7; warmth.gain.value = 1.6;
-    // Wyrazistość — łagodniej, żeby nie kłuło.
     const pres = ctx.createBiquadFilter(); pres.type = "peaking"; pres.frequency.value = 2600; pres.Q.value = 0.9; pres.gain.value = 2.4;
     const air = ctx.createBiquadFilter(); air.type = "highshelf"; air.frequency.value = 9000; air.gain.value = 2;
-    // Odrobina analogowego ciepła.
     const sat = ctx.createWaveShaper(); sat.curve = softCurve(0.3); sat.oversample = "4x";
-    const satMix = ctx.createGain(); satMix.gain.value = 0.9;
     const comp = ctx.createDynamicsCompressor();
     comp.threshold.value = -22; comp.knee.value = 26; comp.ratio.value = 2.4; comp.attack.value = 0.006; comp.release.value = 0.25;
     const dry = ctx.createGain(); dry.gain.value = 1;
-    // Ciepły, ciemny pogłos: convolver → low-pass ogona → wet.
     const conv = ctx.createConvolver(); conv.buffer = makeImpulse(ctx);
     const wetLP = ctx.createBiquadFilter(); wetLP.type = "lowpass"; wetLP.frequency.value = 2600; wetLP.Q.value = 0.4;
     const wet = ctx.createGain(); wet.gain.value = 0.16;
     src.connect(deFizz); deFizz.connect(body); body.connect(warmth); warmth.connect(pres); pres.connect(air);
-    air.connect(sat); sat.connect(satMix); satMix.connect(comp);
+    air.connect(sat); sat.connect(comp);
     comp.connect(dry); dry.connect(ctx.destination);
     comp.connect(conv); conv.connect(wetLP); wetLP.connect(wet); wet.connect(ctx.destination);
     voiceReadyRef.current = true;
+  }, []);
+
+  // Podkład przez korektor (tylko gdy CORS działa) — przyciemniony, „pod głos".
+  const setupBed = useCallback((ctx: AudioContext): boolean => {
+    if (bedRoutedRef.current) return true;
+    const el = bedRef.current;
+    if (!el) return false;
+    let src: MediaElementAudioSourceNode;
+    try { src = ctx.createMediaElementSource(el); } catch { return false; }
+    const hp = ctx.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = 110;
+    const lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 1850; lp.Q.value = 0.4;
+    const g = ctx.createGain(); g.gain.value = 0;
+    src.connect(hp); hp.connect(lp); lp.connect(g); g.connect(ctx.destination);
+    bedGainRef.current = g; bedRoutedRef.current = true;
+    return true;
   }, []);
 
   const fadeTo = useCallback((el: HTMLAudioElement, target: number, ms: number) => {
@@ -121,21 +131,29 @@ export default function NightStory() {
     const start = el.volume, t0 = performance.now();
     const step = (now: number) => {
       const k = Math.min(1, (now - t0) / ms);
-      el.volume = start + (target - start) * k;
+      el.volume = Math.max(0, Math.min(1, start + (target - start) * k));
       if (k < 1) fadeRef.current = requestAnimationFrame(step);
     };
     fadeRef.current = requestAnimationFrame(step);
   }, []);
 
-  // Awaryjny generatywny pad (tylko gdy brak podkładu z katalogu).
+  const fadeBed = useCallback((target: number, ms: number) => {
+    const ctx = ctxRef.current, el = bedRef.current;
+    if (bedRoutedRef.current && bedGainRef.current && ctx) {
+      const p = bedGainRef.current.gain;
+      p.cancelScheduledValues(ctx.currentTime);
+      p.setValueAtTime(p.value, ctx.currentTime);
+      p.linearRampToValueAtTime(target, ctx.currentTime + ms / 1000);
+    } else if (el) {
+      fadeTo(el, target, ms);
+    }
+  }, [fadeTo]);
+
   const startPad = useCallback((ctx: AudioContext) => {
     if (masterRef.current) { masterRef.current.gain.linearRampToValueAtTime(0.12, ctx.currentTime + 3); return; }
-    const master = ctx.createGain();
-    master.gain.value = 0; master.connect(ctx.destination);
-    master.gain.linearRampToValueAtTime(0.12, ctx.currentTime + 5);
-    masterRef.current = master;
-    const filt = ctx.createBiquadFilter();
-    filt.type = "lowpass"; filt.frequency.value = 640; filt.Q.value = 5; filt.connect(master);
+    const master = ctx.createGain(); master.gain.value = 0; master.connect(ctx.destination);
+    master.gain.linearRampToValueAtTime(0.12, ctx.currentTime + 5); masterRef.current = master;
+    const filt = ctx.createBiquadFilter(); filt.type = "lowpass"; filt.frequency.value = 640; filt.Q.value = 5; filt.connect(master);
     const lfo = ctx.createOscillator(); const lg = ctx.createGain();
     lfo.frequency.value = 0.05; lg.gain.value = 260; lfo.connect(lg); lg.connect(filt.frequency); lfo.start();
     [110, 164.81, 220, 277.18].forEach((f, i) => {
@@ -147,6 +165,21 @@ export default function NightStory() {
     });
   }, []);
 
+  const playBed = useCallback((ctx: AudioContext) => {
+    const b = bedRef.current;
+    if (!bed || !b) { startPad(ctx); return; }
+    b.loop = true;
+    if (bedCors) {
+      const routed = setupBed(ctx);
+      b.volume = 1;
+      if (routed && bedGainRef.current) bedGainRef.current.gain.value = 0;
+      void b.play().then(() => fadeBed(BED_VOLUME, BED_FADE_IN)).catch(() => startPad(ctx));
+    } else {
+      b.volume = 0;
+      void b.play().then(() => fadeTo(b, BED_VOLUME, BED_FADE_IN)).catch(() => startPad(ctx));
+    }
+  }, [bed, bedCors, setupBed, fadeBed, fadeTo, startPad]);
+
   const toggle = useCallback(() => {
     const a = audioRef.current;
     if (!a) return;
@@ -154,50 +187,46 @@ export default function NightStory() {
       const ctx = ensureCtx();
       void ctx.resume();
       setupVoice(ctx);
-      // Lekko wolniej + głębiej (preservesPitch=false) — spokojny, nocny lektor.
       a.playbackRate = 0.95;
-      try {
-        (a as any).preservesPitch = false;
-        (a as any).mozPreservesPitch = false;
-        (a as any).webkitPreservesPitch = false;
-      } catch { /* brak wsparcia — trudno */ }
-      const b = bedRef.current;
-      if (bed && b) {
-        b.loop = true; b.volume = 0;
-        // Zacznij od spokojnego miejsca w utworze (nie od głośnego intro).
-        b.addEventListener("loadedmetadata", () => {
-          if (b.duration && isFinite(b.duration) && b.duration > 40) b.currentTime = Math.min(20, b.duration * 0.15);
-        }, { once: true });
-        void b.play().then(() => fadeTo(b, BED_VOLUME, BED_FADE_IN)).catch(() => startPad(ctx));
-      } else {
-        startPad(ctx);
-      }
+      try { (a as any).preservesPitch = false; (a as any).mozPreservesPitch = false; (a as any).webkitPreservesPitch = false; } catch { /* */ }
+      playBed(ctx);
       void a.play();
       setPlaying(true);
     } else {
       a.pause();
-      const b = bedRef.current;
-      if (b) fadeTo(b, 0, 600);
+      fadeBed(0, 600);
       window.setTimeout(() => bedRef.current?.pause(), 650);
       const ctx = ctxRef.current, m = masterRef.current;
       if (ctx && m) m.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.6);
       setPlaying(false);
     }
-  }, [playing, bed, ensureCtx, setupVoice, startPad, fadeTo]);
+  }, [playing, ensureCtx, setupVoice, playBed, fadeBed]);
+
+  // Gdy R2 nie wpuszcza CORS → element się przeładuje bez CORS; dogrywamy „na wprost".
+  const onBedError = useCallback(() => {
+    if (bedCors) { bedRoutedRef.current = false; bedGainRef.current = null; setBedCors(false); }
+  }, [bedCors]);
+  useEffect(() => {
+    if (!bedCors && playing && bed && bedRef.current) {
+      const b = bedRef.current; b.loop = true; b.volume = 0;
+      void b.play().then(() => fadeTo(b, BED_VOLUME, BED_FADE_IN)).catch(() => { });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bedCors]);
 
   useEffect(() => {
     const a = audioRef.current;
     if (!a) return;
     const onEnd = () => {
       setPlaying(false);
-      const b = bedRef.current;
-      if (b) { fadeTo(b, 0, 3000); window.setTimeout(() => bedRef.current?.pause(), 3100); }
+      fadeBed(0, 3000);
+      window.setTimeout(() => bedRef.current?.pause(), 3100);
       const ctx = ctxRef.current, m = masterRef.current;
       if (ctx && m) m.gain.linearRampToValueAtTime(0, ctx.currentTime + 3);
     };
     a.addEventListener("ended", onEnd);
     return () => { a.removeEventListener("ended", onEnd); };
-  }, [fadeTo]);
+  }, [fadeBed]);
 
   useEffect(() => () => { void ctxRef.current?.close(); }, []);
 
@@ -263,7 +292,20 @@ export default function NightStory() {
         </p>
       </div>
       <audio ref={audioRef} src={voiceUrl} preload="auto" crossOrigin="anonymous" />
-      {bed && <audio ref={bedRef} src={bed.audio_url} preload="auto" />}
+      {bed && (
+        <audio
+          key={bedCors ? "cors" : "plain"}
+          ref={bedRef}
+          src={bed.audio_url}
+          preload="auto"
+          onError={onBedError}
+          onLoadedMetadata={(e) => {
+            const b = e.currentTarget;
+            if (b.duration && isFinite(b.duration) && b.duration > 40) b.currentTime = Math.min(20, b.duration * 0.15);
+          }}
+          {...(bedCors ? { crossOrigin: "anonymous" as const } : {})}
+        />
+      )}
     </div>
   );
 }
