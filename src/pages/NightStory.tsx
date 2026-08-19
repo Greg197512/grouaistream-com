@@ -18,8 +18,8 @@ const isHttp = (u?: string | null) => !!u && /^https?:\/\//i.test(u) && !u.inclu
 
 interface BedTrack { title: string; artist: string; audio_url: string; }
 
-// Krótki impuls pogłosowy (szum z zanikiem) — „mały pokój / booth".
-function makeImpulse(ctx: AudioContext, dur = 1.1, decay = 2.6): AudioBuffer {
+// Cieplejszy impuls pogłosowy (dłuższy, miękki zanik) — „ciepły booth".
+function makeImpulse(ctx: AudioContext, dur = 1.7, decay = 2.1): AudioBuffer {
   const rate = ctx.sampleRate, len = Math.floor(rate * dur);
   const buf = ctx.createBuffer(2, len, rate);
   for (let ch = 0; ch < 2; ch++) {
@@ -27,6 +27,13 @@ function makeImpulse(ctx: AudioContext, dur = 1.1, decay = 2.6): AudioBuffer {
     for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, decay);
   }
   return buf;
+}
+
+// Miękka saturacja (tanh) — odrobina analogowego ciepła i harmonicznych.
+function softCurve(drive = 0.35): Float32Array {
+  const n = 1024, c = new Float32Array(n), k = 1 + drive * 3;
+  for (let i = 0; i < n; i++) { const x = (i / (n - 1)) * 2 - 1; c[i] = Math.tanh(x * k) / Math.tanh(k); }
+  return c;
 }
 
 export default function NightStory() {
@@ -83,17 +90,28 @@ export default function NightStory() {
     if (!el) return;
     let src: MediaElementAudioSourceNode;
     try { src = ctx.createMediaElementSource(el); } catch { voiceReadyRef.current = true; return; }
-    const body = ctx.createBiquadFilter(); body.type = "peaking"; body.frequency.value = 200; body.Q.value = 0.8; body.gain.value = 3.5;
-    const pres = ctx.createBiquadFilter(); pres.type = "peaking"; pres.frequency.value = 2800; pres.Q.value = 0.9; pres.gain.value = 3.5;
-    const air = ctx.createBiquadFilter(); air.type = "highshelf"; air.frequency.value = 8000; air.gain.value = 3;
+    // Przytnij cyfrowy „syk" TTS (miękki low-pass u samej góry).
+    const deFizz = ctx.createBiquadFilter(); deFizz.type = "lowpass"; deFizz.frequency.value = 11500; deFizz.Q.value = 0.5;
+    // Ciało + ciepło dolnego środka.
+    const body = ctx.createBiquadFilter(); body.type = "peaking"; body.frequency.value = 190; body.Q.value = 0.8; body.gain.value = 3.5;
+    const warmth = ctx.createBiquadFilter(); warmth.type = "peaking"; warmth.frequency.value = 480; warmth.Q.value = 0.7; warmth.gain.value = 1.6;
+    // Wyrazistość — łagodniej, żeby nie kłuło.
+    const pres = ctx.createBiquadFilter(); pres.type = "peaking"; pres.frequency.value = 2600; pres.Q.value = 0.9; pres.gain.value = 2.4;
+    const air = ctx.createBiquadFilter(); air.type = "highshelf"; air.frequency.value = 9000; air.gain.value = 2;
+    // Odrobina analogowego ciepła.
+    const sat = ctx.createWaveShaper(); sat.curve = softCurve(0.3); sat.oversample = "4x";
+    const satMix = ctx.createGain(); satMix.gain.value = 0.9;
     const comp = ctx.createDynamicsCompressor();
-    comp.threshold.value = -22; comp.knee.value = 24; comp.ratio.value = 2.6; comp.attack.value = 0.006; comp.release.value = 0.22;
+    comp.threshold.value = -22; comp.knee.value = 26; comp.ratio.value = 2.4; comp.attack.value = 0.006; comp.release.value = 0.25;
     const dry = ctx.createGain(); dry.gain.value = 1;
+    // Ciepły, ciemny pogłos: convolver → low-pass ogona → wet.
     const conv = ctx.createConvolver(); conv.buffer = makeImpulse(ctx);
-    const wet = ctx.createGain(); wet.gain.value = 0.12;
-    src.connect(body); body.connect(pres); pres.connect(air); air.connect(comp);
+    const wetLP = ctx.createBiquadFilter(); wetLP.type = "lowpass"; wetLP.frequency.value = 2600; wetLP.Q.value = 0.4;
+    const wet = ctx.createGain(); wet.gain.value = 0.16;
+    src.connect(deFizz); deFizz.connect(body); body.connect(warmth); warmth.connect(pres); pres.connect(air);
+    air.connect(sat); sat.connect(satMix); satMix.connect(comp);
     comp.connect(dry); dry.connect(ctx.destination);
-    comp.connect(conv); conv.connect(wet); wet.connect(ctx.destination);
+    comp.connect(conv); conv.connect(wetLP); wetLP.connect(wet); wet.connect(ctx.destination);
     voiceReadyRef.current = true;
   }, []);
 
@@ -135,6 +153,13 @@ export default function NightStory() {
       const ctx = ensureCtx();
       void ctx.resume();
       setupVoice(ctx);
+      // Lekko wolniej + głębiej (preservesPitch=false) — spokojny, nocny lektor.
+      a.playbackRate = 0.95;
+      try {
+        (a as any).preservesPitch = false;
+        (a as any).mozPreservesPitch = false;
+        (a as any).webkitPreservesPitch = false;
+      } catch { /* brak wsparcia — trudno */ }
       const b = bedRef.current;
       if (bed && b) {
         b.loop = true; b.volume = 0;
