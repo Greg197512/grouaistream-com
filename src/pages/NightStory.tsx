@@ -5,17 +5,29 @@ import { supabase } from "@/integrations/supabase/client";
 
 /**
  * /nocne — Nocne czytanie z MUZYKĄ W TLE z KATALOGU.
- * Głos (mp3 z ?u= albo najnowszy) gra przez <audio>, a pod spodem — cichy
- * instrumental z naszego katalogu (spokojny gatunek/nastrój), zapętlony i
- * ściszony pod lektora. Gdy katalog nic nie zwróci — awaryjny pad (Web Audio).
+ * Głos gra przez łańcuch Web Audio (ciało + wyrazistość + powietrze + delikatny
+ * pogłos studia + kompresja), żeby brzmiał cieplej i bardziej „na żywo", a nie
+ * płasko jak surowe TTS. Pod spodem cichy instrumental z katalogu (zapętlony).
+ * Gdy katalog nic nie zwróci — awaryjny generatywny pad.
  */
 const DEFAULT_VOICE =
   "https://bmwtydwpevzhbdplilbr.supabase.co/storage/v1/object/public/night-audio/1787099400474-nocne-czytanie.mp3";
 
-const BED_VOLUME = 0.16;
+const BED_VOLUME = 0.15;
 const isHttp = (u?: string | null) => !!u && /^https?:\/\//i.test(u) && !u.includes("open.spotify.com");
 
 interface BedTrack { title: string; artist: string; audio_url: string; }
+
+// Krótki impuls pogłosowy (szum z zanikiem) — „mały pokój / booth".
+function makeImpulse(ctx: AudioContext, dur = 1.1, decay = 2.6): AudioBuffer {
+  const rate = ctx.sampleRate, len = Math.floor(rate * dur);
+  const buf = ctx.createBuffer(2, len, rate);
+  for (let ch = 0; ch < 2; ch++) {
+    const d = buf.getChannelData(ch);
+    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, decay);
+  }
+  return buf;
+}
 
 export default function NightStory() {
   const [params] = useSearchParams();
@@ -26,6 +38,7 @@ export default function NightStory() {
   const bedRef = useRef<HTMLAudioElement | null>(null);
   const ctxRef = useRef<AudioContext | null>(null);
   const masterRef = useRef<GainNode | null>(null);
+  const voiceReadyRef = useRef(false);
   const fadeRef = useRef<number | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -55,6 +68,35 @@ export default function NightStory() {
     })();
   }, []);
 
+  const ensureCtx = useCallback((): AudioContext => {
+    if (!ctxRef.current) {
+      const AC = window.AudioContext || (window as any).webkitAudioContext;
+      ctxRef.current = new AC();
+    }
+    return ctxRef.current;
+  }, []);
+
+  // Łańcuch „ożywiający" głos — podpinany raz.
+  const setupVoice = useCallback((ctx: AudioContext) => {
+    if (voiceReadyRef.current) return;
+    const el = audioRef.current;
+    if (!el) return;
+    let src: MediaElementAudioSourceNode;
+    try { src = ctx.createMediaElementSource(el); } catch { voiceReadyRef.current = true; return; }
+    const body = ctx.createBiquadFilter(); body.type = "peaking"; body.frequency.value = 200; body.Q.value = 0.8; body.gain.value = 3.5;
+    const pres = ctx.createBiquadFilter(); pres.type = "peaking"; pres.frequency.value = 2800; pres.Q.value = 0.9; pres.gain.value = 3.5;
+    const air = ctx.createBiquadFilter(); air.type = "highshelf"; air.frequency.value = 8000; air.gain.value = 3;
+    const comp = ctx.createDynamicsCompressor();
+    comp.threshold.value = -22; comp.knee.value = 24; comp.ratio.value = 2.6; comp.attack.value = 0.006; comp.release.value = 0.22;
+    const dry = ctx.createGain(); dry.gain.value = 1;
+    const conv = ctx.createConvolver(); conv.buffer = makeImpulse(ctx);
+    const wet = ctx.createGain(); wet.gain.value = 0.12;
+    src.connect(body); body.connect(pres); pres.connect(air); air.connect(comp);
+    comp.connect(dry); dry.connect(ctx.destination);
+    comp.connect(conv); conv.connect(wet); wet.connect(ctx.destination);
+    voiceReadyRef.current = true;
+  }, []);
+
   const fadeTo = useCallback((el: HTMLAudioElement, target: number, ms: number) => {
     if (fadeRef.current) cancelAnimationFrame(fadeRef.current);
     const start = el.volume, t0 = performance.now();
@@ -67,11 +109,8 @@ export default function NightStory() {
   }, []);
 
   // Awaryjny generatywny pad (tylko gdy brak podkładu z katalogu).
-  const startPad = useCallback(() => {
-    if (ctxRef.current) { void ctxRef.current.resume(); return; }
-    const AC = window.AudioContext || (window as any).webkitAudioContext;
-    const ctx: AudioContext = new AC();
-    ctxRef.current = ctx;
+  const startPad = useCallback((ctx: AudioContext) => {
+    if (masterRef.current) { masterRef.current.gain.linearRampToValueAtTime(0.12, ctx.currentTime + 3); return; }
     const master = ctx.createGain();
     master.gain.value = 0; master.connect(ctx.destination);
     master.gain.linearRampToValueAtTime(0.12, ctx.currentTime + 5);
@@ -93,11 +132,15 @@ export default function NightStory() {
     const a = audioRef.current;
     if (!a) return;
     if (!playing) {
+      const ctx = ensureCtx();
+      void ctx.resume();
+      setupVoice(ctx);
       const b = bedRef.current;
       if (bed && b) {
-        b.loop = true; b.volume = 0; void b.play().then(() => fadeTo(b, BED_VOLUME, 2500)).catch(() => startPad());
+        b.loop = true; b.volume = 0;
+        void b.play().then(() => fadeTo(b, BED_VOLUME, 2500)).catch(() => startPad(ctx));
       } else {
-        startPad();
+        startPad(ctx);
       }
       void a.play();
       setPlaying(true);
@@ -110,7 +153,7 @@ export default function NightStory() {
       if (ctx && m) m.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.6);
       setPlaying(false);
     }
-  }, [playing, bed, startPad, fadeTo]);
+  }, [playing, bed, ensureCtx, setupVoice, startPad, fadeTo]);
 
   useEffect(() => {
     const a = audioRef.current;
@@ -189,7 +232,7 @@ export default function NightStory() {
           {bed ? `w tle: ${bed.artist} — ${bed.title}` : "podkład generowany na żywo"}
         </p>
       </div>
-      <audio ref={audioRef} src={voiceUrl} preload="auto" />
+      <audio ref={audioRef} src={voiceUrl} preload="auto" crossOrigin="anonymous" />
       {bed && <audio ref={bedRef} src={bed.audio_url} preload="auto" />}
     </div>
   );
