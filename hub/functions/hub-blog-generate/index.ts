@@ -60,6 +60,19 @@ function curatedCover(category, slug) {
   return `https://images.unsplash.com/photo-${id}?w=1200&q=85&fit=crop&crop=center`;
 }
 
+// DARMOWA grafika okładki (Pollinations / Flux, bez klucza). Zwraca bajty JPG albo null.
+async function genCoverImage(title, category) {
+  const prompt = `Editorial cover artwork for an article titled "${title}". Theme: ${category}. Cinematic, moody, atmospheric, aurora light, abstract, premium, highly detailed, no text, no words, no letters.`;
+  const url = "https://image.pollinations.ai/prompt/" + encodeURIComponent(prompt) +
+    "?width=1200&height=630&nologo=true&model=flux&seed=" + Math.floor(Math.random() * 100000);
+  try {
+    const r = await fetch(url, { signal: AbortSignal.timeout(50000) });
+    if (!r.ok) return null;
+    const b = new Uint8Array(await r.arrayBuffer());
+    return b.length > 3000 ? b : null;
+  } catch { return null; }
+}
+
 // Jedno wywołanie OpenRouter z fallbackiem modeli → zwraca { parsed, model }.
 async function callOpenRouter(models, apiKey, system, user, maxTokens) {
   let lastErr = "";
@@ -143,7 +156,20 @@ Deno.serve(async (req) => {
     let verified = false;
     try { art = await review(models, apiKey, draft); verified = true; } catch { art = draft; }
     const slug = slugify(art.title) + "-" + Math.random().toString(36).slice(2, 7);
-    const cover = curatedCover(pick.category, slug);
+
+    // Okładka: darmowa grafika AI (Pollinations) → dysk huba. Fallback: Unsplash.
+    let cover = curatedCover(pick.category, slug);
+    try {
+      const img = await genCoverImage(art.title, pick.category);
+      if (img) {
+        const buckets = await db.storage.listBuckets();
+        if (!buckets.data?.find((b) => b.name === "blog-covers")) {
+          await db.storage.createBucket("blog-covers", { public: true });
+        }
+        const up = await db.storage.from("blog-covers").upload(slug + ".jpg", img, { contentType: "image/jpeg", upsert: true });
+        if (!up.error) cover = db.storage.from("blog-covers").getPublicUrl(slug + ".jpg").data.publicUrl;
+      }
+    } catch { /* zostaje Unsplash */ }
 
     const { data: inserted, error: insErr } = await db.from("hub_blog_posts").insert({
       title: art.title, slug, description: art.description, content: art.content,
