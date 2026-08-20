@@ -166,6 +166,62 @@ export function matchEra(track: EraTrackLike, era: Era): number {
 // Próg, powyżej którego uznajemy, że utwór "brzmi jak" ta epoka.
 export const ERA_MATCH_THRESHOLD = 50;
 
+// Stabilny hash (do deterministycznego rozrzutu remisów między epokami).
+function hashId(s: string): number {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (s.charCodeAt(i) + ((h << 5) - h)) | 0;
+  return Math.abs(h);
+}
+
+export interface EraRank { era: Era; score: number }
+
+// Ranking epok dla utworu. Remisy (np. "Pop" pasujący do kilku epok) rozrzucamy
+// deterministycznie po id utworu — dzięki temu każda epoka ma własny, stabilny
+// zestaw, a nie tę samą listę popu wszędzie.
+export function rankEras(track: EraTrackLike & { id?: string | null }): EraRank[] {
+  const id = track.id || `${track.genre}|${track.mood}`;
+  return ERAS
+    .map((era) => {
+      let score = matchEra(track, era);
+      if (score > 0 && era.key !== "now") {
+        score += (hashId(`${id}::${era.key}`) % 9) * 0.4; // mikro-tiebreak 0..3.2
+      }
+      return { era, score };
+    })
+    .filter((r) => r.score > 0)
+    .sort((a, b) => b.score - a.score);
+}
+
+// Ile najlepszych epok bierze utwór (żeby nie zalewał wszystkich epok naraz).
+export const ERA_TOP_N = 2;
+
+// Czy dany utwór "należy" do epoki: musi ją mieć w TOP-N i przejść próg.
+export function trackBelongsToEra(track: EraTrackLike & { id?: string | null }, eraKey: string): number {
+  const ranked = rankEras(track);
+  const idx = ranked.findIndex((r) => r.era.key === eraKey);
+  if (idx < 0 || idx >= ERA_TOP_N) return 0;
+  const r = ranked[idx];
+  return r.score >= ERA_MATCH_THRESHOLD ? r.score : 0;
+}
+
+// Najlepsza epoka utworu (do liczenia Nostalgia DNA z historii odsłuchów).
+export function bestEra(track: EraTrackLike & { id?: string | null }): Era | undefined {
+  const ranked = rankEras(track);
+  if (!ranked.length) return undefined;
+  if (ranked[0].score < ERA_MATCH_THRESHOLD && ranked[0].era.key === "now") return getEra("now");
+  return ranked[0].era;
+}
+
+// Mapowanie gatunku epoki na listę stylów Studia (Suno GENRES).
+export function eraStudioGenre(era: Era): string {
+  const STUDIO = ["Pop","Rock","Electronic","Hip-Hop","Jazz","Classical","R&B","Country","Reggae","Metal","Indie","Lo-fi","Ambient","Trap","House","Disco"];
+  for (const g of era.genres) {
+    const hit = STUDIO.find((s) => s.toLowerCase() === g || s.toLowerCase().includes(g) || g.includes(s.toLowerCase()));
+    if (hit) return hit;
+  }
+  return "Electronic";
+}
+
 // Deep-link do Studia z presetem epoki (Studio może param zignorować — jest
 // wstecznie zgodne; docelowo wczyta go jako preset "Create an Era").
 export function eraStudioLink(era: Era): string {
