@@ -35,6 +35,7 @@ import { VideoStudio } from "@/components/studio/VideoStudio";
 import { downloadAudio, invokeStudioEngine, waitForAceStep, isSubscriptionError, fetchEngineLessons } from "@/lib/hubStudio";
 import { Link, useSearchParams } from "react-router-dom";
 import { getEra, eraStudioGenre } from "@/lib/eraEngine";
+import { eraUi } from "@/lib/eraContent";
 
 const FREE_GENERATION_LIMIT = 1;
 
@@ -1008,8 +1009,8 @@ const Suno = () => {
                 style={{ borderColor: `${eraPreset.accent}55`, background: `${eraPreset.accent}14` }}>
                 <span className="text-2xl">{eraPreset.emoji}</span>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-white">Tworzysz epokę: GROUA ERA {eraPreset.label}</p>
-                  <p className="text-[11px] text-gray-400">Ustawienia dobrane pod charakter epoki — możesz je dowolnie zmienić.</p>
+                  <p className="text-sm font-semibold text-white">{eraUi(language, "studioBannerTitle")} {eraPreset.label}</p>
+                  <p className="text-[11px] text-gray-400">{eraUi(language, "studioBannerSub")}</p>
                 </div>
                 <Sparkles className="h-4 w-4" style={{ color: eraPreset.accent }} />
               </div>
