@@ -90,6 +90,7 @@ export const LiveMicBooth = ({ open, onClose, radioAudio, baseVolume, sourceId }
   const [selectedDeviceId, setSelectedDeviceId] = useState("default");
   const [activeMicLabel, setActiveMicLabel] = useState<string | null>(null);
   const [broadcastConnected, setBroadcastConnected] = useState(false);
+  const [listenerCount, setListenerCount] = useState(0);
 
   const streamRef = useRef<MediaStream | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
@@ -403,8 +404,18 @@ export const LiveMicBooth = ({ open, onClose, radioAudio, baseVolume, sourceId }
       return false;
     }
 
-    const channel = supabase.channel("radio-live-voice", { config: { broadcast: { self: false } } });
+    const channel = supabase.channel("radio-live-voice", {
+      config: { broadcast: { self: false }, presence: { key: sourceId } },
+    });
     broadcastChannelRef.current = channel;
+
+    // Liczba słuchaczy na żywo (obecność na kanale) — potwierdza, że ktoś odbiera.
+    channel.on("presence", { event: "sync" }, () => {
+      try {
+        const st = channel.presenceState() as Record<string, unknown[]>;
+        setListenerCount(Object.keys(st).length);
+      } catch { /* */ }
+    });
 
     const startSegment = () => {
       if (!broadcastActiveRef.current) return;
@@ -447,16 +458,25 @@ export const LiveMicBooth = ({ open, onClose, radioAudio, baseVolume, sourceId }
     };
 
     channel.subscribe((status) => {
-      if (status !== "SUBSCRIBED") return;
-      broadcastReadyRef.current = true;
-      broadcastActiveRef.current = true;
-      setBroadcastConnected(true);
-      channel.send({
-        type: "broadcast",
-        event: "start",
-        payload: { sourceId, mimeType, sentAt: Date.now() },
-      });
-      startSegment();
+      if (status === "SUBSCRIBED") {
+        broadcastReadyRef.current = true;
+        broadcastActiveRef.current = true;
+        setBroadcastConnected(true);
+        channel.track({ role: "host", at: Date.now() }).catch(() => {});
+        channel.send({
+          type: "broadcast",
+          event: "start",
+          payload: { sourceId, mimeType, sentAt: Date.now() },
+        });
+        startSegment();
+      } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+        // KLUCZOWE: bez tego studio mówiło „jesteś na antenie", choć nic nie leciało.
+        broadcastReadyRef.current = false;
+        broadcastActiveRef.current = false;
+        setBroadcastConnected(false);
+        setErrorMsg("Nie udało się połączyć z anteną (serwer transmisji na żywo). Sprawdź połączenie z internetem i spróbuj ponownie — jeśli powtarza się, odśwież stronę.");
+        toast.error("Antena", { description: "Brak połączenia z serwerem transmisji na żywo (Realtime)." });
+      }
     });
 
     return true;
@@ -644,9 +664,17 @@ export const LiveMicBooth = ({ open, onClose, radioAudio, baseVolume, sourceId }
                 ON AIR
               </span>
               <Badge className="bg-white/20 text-white border-white/30">
-                {broadcastConnected ? "LIVE CLOUD" : "ŁĄCZĘ"}
+                {broadcastConnected ? "LIVE CLOUD" : "ŁĄCZĘ…"}
+              </Badge>
+              <Badge className="bg-white/20 text-white border-white/30">
+                🎧 {Math.max(0, listenerCount)} {listenerCount === 1 ? "słuchacz" : "słuchaczy"}
               </Badge>
             </motion.div>
+          )}
+          {phase === "live" && broadcastConnected && listenerCount <= 1 && (
+            <p className="text-[11px] text-center text-amber-400/90 -mt-1">
+              Nikt jeszcze nie słucha na /radio-live. Nie usłyszysz siebie na tym urządzeniu — otwórz radio na drugim telefonie/komputerze, aby sprawdzić głos.
+            </p>
           )}
 
           {/* VU meter */}
