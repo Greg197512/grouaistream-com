@@ -6,11 +6,14 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { usePlayer, Track } from "@/contexts/PlayerContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { HQCover } from "@/components/ui/HQCover";
 import {
   ERAS, getEra, isAiTrack, eraStudioLink, trackBelongsToEra, bestEra, type Era,
 } from "@/lib/eraEngine";
+import { eraTextFor, eraUi } from "@/lib/eraContent";
 import { freshEraFact } from "@/lib/aiText";
+import type { Language } from "@/i18n/translations";
 
 interface DbTrack {
   id: string; title: string; artist: string; album: string | null;
@@ -43,7 +46,7 @@ async function loadCatalog(): Promise<DbTrack[]> {
 }
 
 /* ── Oś czasu ── */
-const TimelineStrip = ({ activeKey }: { activeKey?: string }) => (
+const TimelineStrip = ({ activeKey, lang }: { activeKey?: string; lang: Language }) => (
   <div className="flex rounded-xl overflow-hidden border border-white/10 font-mono text-[11px]">
     {ERAS.map((e) => (
       <Link key={e.key} to={`/era/${e.key}`}
@@ -53,7 +56,7 @@ const TimelineStrip = ({ activeKey }: { activeKey?: string }) => (
           color: e.key === activeKey ? e.palette.accent : "rgba(255,255,255,.5)",
           fontWeight: e.key === activeKey ? 600 : 400,
         }}>
-        <span className="block truncate">{e.label}</span>
+        <span className="block truncate">{eraTextFor(e, lang).label}</span>
       </Link>
     ))}
   </div>
@@ -68,8 +71,8 @@ const CardSkeleton = () => (
   </div>
 );
 
-/* ══════════════ Nostalgia DNA (z historii odsłuchów) ══════════════ */
-const NostalgiaDna = () => {
+/* ══════════════ Nostalgia DNA ══════════════ */
+const NostalgiaDna = ({ lang }: { lang: Language }) => {
   const { user } = useAuth();
   const [dna, setDna] = useState<{ era: Era; pct: number }[] | null>(null);
 
@@ -86,8 +89,7 @@ const NostalgiaDna = () => {
       const counts = new Map<string, number>();
       for (const r of rows) counts.set(r.track_id, (counts.get(r.track_id) || 0) + 1);
       const ids = [...counts.keys()];
-      const { data: tr } = await supabase
-        .from("tracks").select("id,genre,mood,bpm").in("id", ids);
+      const { data: tr } = await supabase.from("tracks").select("id,genre,mood,bpm").in("id", ids);
       if (!alive) return;
       const meta = new Map((tr as DbTrack[] || []).map((t) => [t.id, t]));
       const tally = new Map<string, number>();
@@ -103,9 +105,7 @@ const NostalgiaDna = () => {
       if (!total) { setDna(null); return; }
       const ranked = [...tally.entries()]
         .map(([k, v]) => ({ era: getEra(k)!, pct: Math.round((v / total) * 100) }))
-        .filter((x) => x.era)
-        .sort((a, b) => b.pct - a.pct)
-        .slice(0, 4);
+        .filter((x) => x.era).sort((a, b) => b.pct - a.pct).slice(0, 4);
       setDna(ranked.length ? ranked : null);
     })();
     return () => { alive = false; };
@@ -118,33 +118,35 @@ const NostalgiaDna = () => {
       style={{ background: "linear-gradient(150deg, rgba(255,138,42,.08), rgba(169,139,255,.06) 70%, transparent)" }}>
       <div className="flex items-center gap-2 mb-1">
         <Sparkles className="h-4 w-4 text-[#FF8A2A]" />
-        <h3 className="font-bold text-white">Twoje Nostalgia DNA</h3>
+        <h3 className="font-bold text-white">{eraUi(lang, "dnaTitle")}</h3>
       </div>
-      <p className="text-xs text-gray-500 mb-4">Z czego naprawdę składa się Twój gust — policzone z historii odsłuchów.</p>
+      <p className="text-xs text-gray-500 mb-4">{eraUi(lang, "dnaSub")}</p>
       <div className="space-y-2.5">
-        {dna.map(({ era, pct }) => (
-          <Link key={era.key} to={`/era/${era.key}`} className="block group">
-            <div className="flex items-center justify-between text-sm mb-1">
-              <span className="text-white group-hover:underline">{era.emoji} {era.label} <span className="text-gray-500">· {era.tagline}</span></span>
-              <span className="font-mono" style={{ color: era.palette.accent }}>{pct}%</span>
-            </div>
-            <div className="h-2 rounded-full bg-white/[.06] overflow-hidden">
-              <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.8, ease: "easeOut" }}
-                className="h-full rounded-full" style={{ background: era.palette.accent, boxShadow: `0 0 10px ${era.palette.glow}` }} />
-            </div>
-          </Link>
-        ))}
+        {dna.map(({ era, pct }) => {
+          const et = eraTextFor(era, lang);
+          return (
+            <Link key={era.key} to={`/era/${era.key}`} className="block group">
+              <div className="flex items-center justify-between text-sm mb-1">
+                <span className="text-white group-hover:underline">{era.emoji} {et.label} <span className="text-gray-500">· {et.tagline}</span></span>
+                <span className="font-mono" style={{ color: era.palette.accent }}>{pct}%</span>
+              </div>
+              <div className="h-2 rounded-full bg-white/[.06] overflow-hidden">
+                <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.8, ease: "easeOut" }}
+                  className="h-full rounded-full" style={{ background: era.palette.accent, boxShadow: `0 0 10px ${era.palette.glow}` }} />
+              </div>
+            </Link>
+          );
+        })}
       </div>
     </motion.div>
   );
 };
 
 /* ══════════════ HUB: /era ══════════════ */
-const EraHub = () => {
+const EraHub = ({ lang }: { lang: Language }) => {
   const { playPlaylist } = usePlayer();
   const [journeyLoading, setJourneyLoading] = useState(false);
 
-  // „Podróż przez czas" — po kilka utworów z każdej epoki, chronologicznie.
   const startJourney = useCallback(async () => {
     setJourneyLoading(true);
     try {
@@ -153,10 +155,7 @@ const EraHub = () => {
       for (const era of ERAS) {
         const picks = cat
           .map((t) => ({ t, s: trackBelongsToEra(t, era.key) }))
-          .filter((x) => x.s > 0)
-          .sort((a, b) => b.s - a.s)
-          .slice(0, 3)
-          .map((x) => x.t);
+          .filter((x) => x.s > 0).sort((a, b) => b.s - a.s).slice(0, 3).map((x) => x.t);
         journey.push(...picks);
       }
       if (journey.length) playPlaylist(journey.map(toPlayerTrack), 0, "era:journey");
@@ -168,81 +167,78 @@ const EraHub = () => {
   return (
     <div className="max-w-6xl mx-auto px-4 py-10 space-y-9">
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="text-center space-y-4">
-        <span className="font-mono text-xs tracking-[.2em] uppercase text-[#FF8A2A]">Groua Era · Nostalgia Engine</span>
-        <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight text-white">Wejdź w epokę</h1>
-        <p className="text-gray-400 max-w-xl mx-auto">Nie „odtwórz następny utwór". Wybierz czas, do którego chcesz wejść — a muzyka zabierze Cię w podróż.</p>
+        <span className="font-mono text-xs tracking-[.2em] uppercase text-[#FF8A2A]">{eraUi(lang, "brand")}</span>
+        <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight text-white">{eraUi(lang, "enterTitle")}</h1>
+        <p className="text-gray-400 max-w-xl mx-auto">{eraUi(lang, "hubSubtitle")}</p>
         <button onClick={startJourney} disabled={journeyLoading}
           className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold text-black transition-transform hover:scale-105 disabled:opacity-60"
           style={{ background: "linear-gradient(135deg,#FF8A2A,#A98BFF)", boxShadow: "0 0 22px rgba(255,138,42,.35)" }}>
           {journeyLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Compass className="h-4 w-4" />}
-          Podróż przez czas — od 70s do dziś
+          {eraUi(lang, "journey")}
         </button>
       </motion.div>
 
-      <NostalgiaDna />
+      <NostalgiaDna lang={lang} />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {ERAS.map((e, i) => (
-          <motion.div key={e.key} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
-            <Link to={`/era/${e.key}`}
-              className="group block rounded-2xl border p-5 h-full transition-transform hover:-translate-y-1"
-              style={{ background: `linear-gradient(160deg, ${e.palette.accentSoft}, ${e.palette.bg})`, borderColor: `${e.palette.accent}40`, boxShadow: `0 0 30px ${e.palette.glow}` }}>
-              <div className="text-3xl mb-3">{e.emoji}</div>
-              <div className="font-extrabold text-2xl text-white leading-none" style={{ letterSpacing: "-.02em" }}>{e.label}</div>
-              <div className="mt-1 text-sm font-medium" style={{ color: e.palette.accent }}>{e.tagline}</div>
-              <div className="mt-2 font-mono text-[10px] tracking-wide text-white/40">{e.yearStart}–{e.yearEnd === 2100 ? "…" : e.yearEnd}</div>
-            </Link>
-          </motion.div>
-        ))}
+        {ERAS.map((e, i) => {
+          const et = eraTextFor(e, lang);
+          return (
+            <motion.div key={e.key} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
+              <Link to={`/era/${e.key}`}
+                className="group block rounded-2xl border p-5 h-full transition-transform hover:-translate-y-1"
+                style={{ background: `linear-gradient(160deg, ${e.palette.accentSoft}, ${e.palette.bg})`, borderColor: `${e.palette.accent}40`, boxShadow: `0 0 30px ${e.palette.glow}` }}>
+                <div className="text-3xl mb-3">{e.emoji}</div>
+                <div className="font-extrabold text-2xl text-white leading-none" style={{ letterSpacing: "-.02em" }}>{et.label}</div>
+                <div className="mt-1 text-sm font-medium" style={{ color: e.palette.accent }}>{et.tagline}</div>
+                <div className="mt-2 font-mono text-[10px] tracking-wide text-white/40">{e.yearStart}–{e.yearEnd === 2100 ? "…" : e.yearEnd}</div>
+              </Link>
+            </motion.div>
+          );
+        })}
       </div>
 
-      <p className="text-center text-xs text-gray-600">„Nie żyłeś w 1987? Nie szkodzi — możesz go odkryć." Każda epoka to <span className="text-gray-400">Współcześni twórcy</span> + <span className="text-gray-400">AI ERA</span>.</p>
+      <p className="text-center text-xs text-gray-600">{eraUi(lang, "hubFooter")}</p>
     </div>
   );
 };
 
 /* ══════════════ SZCZEGÓŁ: /era/:key ══════════════ */
-const EraDetail = ({ era }: { era: Era }) => {
+const EraDetail = ({ era, lang }: { era: Era; lang: Language }) => {
   const navigate = useNavigate();
   const { playPlaylist } = usePlayer();
+  const et = useMemo(() => eraTextFor(era, lang), [era, lang]);
   const [rows, setRows] = useState<DbTrack[]>([]);
   const [loading, setLoading] = useState(true);
-  // Świeża ciekawostka z AI (Pollinations) — fallback do statycznej.
   const [fact, setFact] = useState<string | null>(null);
   const [factLoading, setFactLoading] = useState(false);
 
   useEffect(() => {
     let alive = true;
     setLoading(true);
-    loadCatalog().then((data) => {
-      if (!alive) return;
-      setRows(data);
-      setLoading(false);
-    });
+    loadCatalog().then((data) => { if (!alive) return; setRows(data); setLoading(false); });
     return () => { alive = false; };
   }, [era.key]);
 
   const loadFact = useCallback(async (fresh: boolean) => {
     setFactLoading(true);
-    const f = await freshEraFact(era.label, era.vibe, fresh ? Math.floor(Math.random() * 1e6) : undefined);
+    const f = await freshEraFact(et.label, et.vibe, fresh ? Math.floor(Math.random() * 1e6) : undefined, lang);
     setFact(f);
-    if (f) { try { sessionStorage.setItem(`era-fact-${era.key}`, f); } catch { /* */ } }
+    if (f) { try { sessionStorage.setItem(`era-fact-${era.key}-${lang}`, f); } catch { /* */ } }
     setFactLoading(false);
-  }, [era]);
+  }, [era.key, lang, et.label, et.vibe]);
 
   useEffect(() => {
     let cached: string | null = null;
-    try { cached = sessionStorage.getItem(`era-fact-${era.key}`); } catch { /* */ }
+    try { cached = sessionStorage.getItem(`era-fact-${era.key}-${lang}`); } catch { /* */ }
     if (cached) { setFact(cached); return; }
     setFact(null);
     loadFact(false);
-  }, [era.key, loadFact]);
+  }, [era.key, lang, loadFact]);
 
   const { nowTracks, aiTracks } = useMemo(() => {
-    const scored = rows
-      .map((t) => ({ t, s: trackBelongsToEra(t, era.key) }))
-      .filter((x) => x.s > 0)
-      .sort((a, b) => b.s - a.s);
+    const scored = rows.map((t) => ({ t, s: trackBelongsToEra(t, era.key) }))
+      .filter((x) => x.s > 0).sort((a, b) => b.s - a.s);
     const now: DbTrack[] = [];
     const ai: DbTrack[] = [];
     for (const { t } of scored) (isAiTrack(t) ? ai : now).push(t);
@@ -289,10 +285,10 @@ const EraDetail = ({ era }: { era: Era }) => {
           <button onClick={() => playPlaylist(list.map(toPlayerTrack), 0, `era:${era.key}`)}
             className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold text-black transition-transform hover:scale-105"
             style={{ background: era.palette.accent, boxShadow: `0 0 18px ${era.palette.glow}` }}>
-            <Play className="h-4 w-4 fill-black" /> Odtwórz
+            <Play className="h-4 w-4 fill-black" /> {eraUi(lang, "play")}
           </button>
           <button onClick={() => playPlaylist(shuffle(list).map(toPlayerTrack), 0, `era:${era.key}`)}
-            title="Losowo" className="flex items-center justify-center h-9 w-9 rounded-full border border-white/15 text-white hover:bg-white/10">
+            title={eraUi(lang, "shuffle")} className="flex items-center justify-center h-9 w-9 rounded-full border border-white/15 text-white hover:bg-white/10">
             <Shuffle className="h-4 w-4" />
           </button>
         </div>
@@ -305,25 +301,22 @@ const EraDetail = ({ era }: { era: Era }) => {
       <div className="max-w-6xl mx-auto px-4 py-8 space-y-8">
         <div className="space-y-4">
           <button onClick={() => navigate("/era")} className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-white">
-            <ArrowLeft className="h-4 w-4" /> Wszystkie epoki
+            <ArrowLeft className="h-4 w-4" /> {eraUi(lang, "back")}
           </button>
-          <TimelineStrip activeKey={era.key} />
+          <TimelineStrip activeKey={era.key} lang={lang} />
         </div>
 
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
           className="rounded-2xl border p-6 sm:p-8 relative overflow-hidden"
           style={{ background: `linear-gradient(150deg, ${era.palette.accentSoft}, ${era.palette.bg})`, borderColor: `${era.palette.accent}40`, boxShadow: `0 0 40px ${era.palette.glow}` }}>
-          {/* subtelna tekstura epoki */}
-          <div aria-hidden className="pointer-events-none absolute inset-0 opacity-[0.06]" style={{
-            backgroundImage: "repeating-linear-gradient(0deg, #fff 0, #fff 1px, transparent 2px, transparent 4px)",
-          }} />
+          <div aria-hidden className="pointer-events-none absolute inset-0 opacity-[0.06]" style={{ backgroundImage: "repeating-linear-gradient(0deg, #fff 0, #fff 1px, transparent 2px, transparent 4px)" }} />
           <div className="relative">
             <div className="text-5xl mb-3">{era.emoji}</div>
             <h1 className="text-4xl sm:text-6xl font-extrabold text-white tracking-tight" style={{ letterSpacing: "-.03em" }}>
-              GROUA ERA <span style={{ color: era.palette.accent }}>{era.label}</span>
+              GROUA ERA <span style={{ color: era.palette.accent }}>{et.label}</span>
             </h1>
-            <p className="mt-2 text-lg" style={{ color: era.palette.accent }}>{era.tagline}</p>
-            <p className="mt-3 text-gray-300 max-w-2xl">{era.vibe}</p>
+            <p className="mt-2 text-lg" style={{ color: era.palette.accent }}>{et.tagline}</p>
+            <p className="mt-3 text-gray-300 max-w-2xl">{et.vibe}</p>
             <div className="mt-4 flex flex-wrap gap-2">
               {era.genres.slice(0, 6).map((g) => (
                 <span key={g} className="font-mono text-[11px] px-3 py-1 rounded-full border" style={{ borderColor: `${era.palette.accent}40`, color: era.palette.accent, background: "rgba(0,0,0,.2)" }}>{g}</span>
@@ -334,16 +327,15 @@ const EraDetail = ({ era }: { era: Era }) => {
 
         {/* O EPOCE — warstwa wiedzy */}
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="grid md:grid-cols-3 gap-4">
-          {/* Opis + brzmienie + ciekawostka */}
           <div className="md:col-span-2 rounded-2xl border border-white/10 bg-white/[.02] p-5 space-y-4">
             <div>
-              <h2 className="text-lg font-bold text-white mb-1">O epoce</h2>
-              <p className="text-sm text-gray-300 leading-relaxed">{era.description}</p>
+              <h2 className="text-lg font-bold text-white mb-1">{eraUi(lang, "aboutTitle")}</h2>
+              <p className="text-sm text-gray-300 leading-relaxed">{et.description}</p>
             </div>
             <div>
-              <p className="font-mono text-[10px] tracking-wider uppercase text-gray-500 mb-2">Charakterystyczne brzmienie</p>
+              <p className="font-mono text-[10px] tracking-wider uppercase text-gray-500 mb-2">{eraUi(lang, "soundmarksLabel")}</p>
               <div className="flex flex-wrap gap-2">
-                {era.soundmarks.map((s) => (
+                {et.soundmarks.map((s) => (
                   <span key={s} className="text-[11px] px-2.5 py-1 rounded-full bg-white/[.05] border border-white/10 text-gray-300">{s}</span>
                 ))}
               </div>
@@ -352,37 +344,25 @@ const EraDetail = ({ era }: { era: Era }) => {
               <div className="flex items-start gap-2">
                 <span className="text-base">💡</span>
                 <p className="text-xs text-gray-300 flex-1">
-                  <span className="font-semibold" style={{ color: era.palette.accent }}>Czy wiesz, że…</span>{" "}
-                  {factLoading && !fact ? (
-                    <span className="text-gray-500">świeża ciekawostka od AI…</span>
-                  ) : (
-                    fact || era.didYouKnow
-                  )}
+                  <span className="font-semibold" style={{ color: era.palette.accent }}>{eraUi(lang, "didYouKnowLabel")}</span>{" "}
+                  {factLoading && !fact ? <span className="text-gray-500">{eraUi(lang, "factLoading")}</span> : (fact || et.didYouKnow)}
                 </p>
               </div>
               <div className="flex items-center justify-between mt-2 pl-6">
-                <span className="font-mono text-[9px] uppercase tracking-wider text-gray-600">
-                  {fact ? "ciekawostka AI" : "GrouAI"}
-                </span>
-                <button
-                  onClick={() => loadFact(true)}
-                  disabled={factLoading}
-                  className="flex items-center gap-1 text-[10px] text-gray-400 hover:text-white disabled:opacity-50 transition-colors"
-                  title="Wygeneruj nową ciekawostkę"
-                >
-                  <RefreshCw className={`h-3 w-3 ${factLoading ? "animate-spin" : ""}`} />
-                  Nowa
+                <span className="font-mono text-[9px] uppercase tracking-wider text-gray-600">{fact ? eraUi(lang, "factTagAI") : eraUi(lang, "factTagStatic")}</span>
+                <button onClick={() => loadFact(true)} disabled={factLoading}
+                  className="flex items-center gap-1 text-[10px] text-gray-400 hover:text-white disabled:opacity-50 transition-colors" title={eraUi(lang, "refresh")}>
+                  <RefreshCw className={`h-3 w-3 ${factLoading ? "animate-spin" : ""}`} /> {eraUi(lang, "refresh")}
                 </button>
               </div>
             </div>
           </div>
 
-          {/* Kontekst kulturowy + twórcy */}
           <div className="space-y-4">
             <div className="rounded-2xl border border-white/10 bg-white/[.02] p-5">
-              <p className="font-mono text-[10px] tracking-wider uppercase text-gray-500 mb-3">Kontekst</p>
+              <p className="font-mono text-[10px] tracking-wider uppercase text-gray-500 mb-3">{eraUi(lang, "contextLabel")}</p>
               <div className="space-y-2.5">
-                {era.culture.map((c) => (
+                {et.culture.map((c) => (
                   <div key={c.label} className="flex gap-3 text-sm">
                     <span className="w-24 shrink-0 text-gray-500">{c.label}</span>
                     <span className="text-gray-300">{c.value}</span>
@@ -391,41 +371,39 @@ const EraDetail = ({ era }: { era: Era }) => {
               </div>
             </div>
             <div className="rounded-2xl border border-white/10 bg-white/[.02] p-5">
-              <p className="font-mono text-[10px] tracking-wider uppercase text-gray-500 mb-2">Znani twórcy epoki</p>
+              <p className="font-mono text-[10px] tracking-wider uppercase text-gray-500 mb-2">{eraUi(lang, "artistsLabel")}</p>
               <div className="flex flex-wrap gap-1.5">
                 {era.artists.map((a) => (
                   <span key={a} className="text-[11px] px-2.5 py-1 rounded-md border" style={{ borderColor: `${era.palette.accent}30`, color: era.palette.accent }}>{a}</span>
                 ))}
               </div>
-              <p className="text-[10px] text-gray-600 mt-3 leading-relaxed">
-                Dla kontekstu historycznego. GrouAI gra własny katalog i muzykę AI w klimacie epoki — nie odtwarza ani nie naśladuje tych artystów.
-              </p>
+              <p className="text-[10px] text-gray-600 mt-3 leading-relaxed">{eraUi(lang, "artistsNote")}</p>
             </div>
           </div>
         </motion.div>
 
         {/* NOW */}
         <div className="space-y-3">
-          <SectionHead title="Brzmi jak ta epoka" sub="Współcześni twórcy trzymający ten sound — z żywego katalogu GrouAI"
+          <SectionHead title={eraUi(lang, "nowTitle")} sub={eraUi(lang, "nowSub")}
             icon={<Radio className="h-5 w-5" style={{ color: era.palette.accent }} />} list={nowTracks} />
           {loading ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">{Array.from({ length: 8 }).map((_, i) => <CardSkeleton key={i} />)}</div>
           ) : nowTracks.length ? <Grid list={nowTracks} /> : (
-            <div className="rounded-xl border border-white/10 bg-white/[.02] p-6 text-sm text-gray-500">Brak dopasowań w katalogu — spróbuj sąsiedniej epoki lub stwórz to brzmienie w AI poniżej.</div>
+            <div className="rounded-xl border border-white/10 bg-white/[.02] p-6 text-sm text-gray-500">{eraUi(lang, "nowEmpty")}</div>
           )}
         </div>
 
         {/* AI ERA */}
         <div className="rounded-2xl border p-5 sm:p-6 space-y-4" style={{ borderColor: `${era.palette.accent}30`, background: "rgba(255,255,255,.02)" }}>
-          <SectionHead title="AI ERA" sub="Nowa muzyka AI w charakterze epoki — styl epoki, nie osoby"
+          <SectionHead title={eraUi(lang, "aiTitle")} sub={eraUi(lang, "aiSub")}
             icon={<Sparkles className="h-5 w-5" style={{ color: era.palette.accent }} />} list={aiTracks} />
           {loading ? null : aiTracks.length ? <Grid list={aiTracks} /> : (
-            <div className="rounded-xl border border-white/10 bg-white/[.02] p-6 text-sm text-gray-500">Jeszcze nikt nie stworzył tej epoki w AI. Bądź pierwszy 👇</div>
+            <div className="rounded-xl border border-white/10 bg-white/[.02] p-6 text-sm text-gray-500">{eraUi(lang, "aiEmpty")}</div>
           )}
           <Link to={eraStudioLink(era)}
             className="flex items-center justify-center gap-2 w-full py-3 rounded-xl font-semibold text-black transition-transform hover:scale-[1.01]"
             style={{ background: era.palette.accent, boxShadow: `0 0 20px ${era.palette.glow}` }}>
-            <Wand2 className="h-5 w-5" /> Stwórz ten rok w AI — „tak brzmiałby, gdyby istniało AI"
+            <Wand2 className="h-5 w-5" /> {eraUi(lang, "createInAI")}
           </Link>
         </div>
       </div>
@@ -435,10 +413,11 @@ const EraDetail = ({ era }: { era: Era }) => {
 
 const EraPage = () => {
   const { key } = useParams();
+  const { language } = useLanguage();
   const era = getEra(key);
   return (
     <MainLayout>
-      {era ? <EraDetail era={era} /> : <EraHub />}
+      {era ? <EraDetail era={era} lang={language} /> : <EraHub lang={language} />}
     </MainLayout>
   );
 };
