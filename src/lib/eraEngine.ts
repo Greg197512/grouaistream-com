@@ -203,6 +203,33 @@ export const ERAS: Era[] = [
   },
 ];
 
+// ── Grafika epoki (darmowa, AI: Pollinations/Flux) ──
+// Klimatyczny obraz-tło dla kafelka/nagłówka danej epoki. Prompt po angielsku
+// (najlepsze wyniki), bez tekstu. Seed stały = ten sam obraz (brak migotania).
+const ERA_ART: Record<string, string> = {
+  "1970s": "1970s disco and funk era, warm sepia and gold, mirror ball, vinyl records, groovy retro album poster, soft film grain, cinematic, no text no words",
+  "1980s": "1980s synthwave neon city skyline at night, magenta and cyan grid, chrome, retro 80s poster art, glowing sunset, cinematic, no text no words",
+  "1990s": "1990s rave and grunge era, VHS glitch aesthetic, CRT scanlines, teal and orange, cassette tapes, underground poster, cinematic, no text no words",
+  "y2k": "Y2K aesthetic, liquid chrome and silver, early internet, icy blue, futuristic year 2000 poster, glossy metal, cinematic, no text no words",
+  "2000s": "mid 2000s digital pop era, electric purple and black, glossy club lights, bold poster art, cinematic, no text no words",
+  "2010s": "2010s EDM festival, pink and blue gradient, stage lights, festival crowd silhouette, modern poster art, cinematic, no text no words",
+  "now": "modern music studio 2020s, warm amber glow, sleek minimal futuristic, glowing soundwaves, cinematic, no text no words",
+  "future": "futuristic holographic music of tomorrow, 3D spatial, violet and cool light, AI generative abstract art, sci-fi poster, cinematic, no text no words",
+};
+
+function artSeed(key: string): number {
+  let h = 0;
+  for (let i = 0; i < key.length; i++) h = (key.charCodeAt(i) + ((h << 5) - h)) | 0;
+  return Math.abs(h) % 100000;
+}
+
+/** Darmowy URL grafiki epoki (Pollinations/Flux). */
+export function eraArtUrl(era: Era, width = 512, height = 512): string {
+  const prompt = ERA_ART[era.key] || `${era.label} music era, cinematic album art, no text`;
+  const enc = encodeURIComponent(prompt);
+  return `https://image.pollinations.ai/prompt/${enc}?width=${width}&height=${height}&nologo=true&model=flux&seed=${artSeed(era.key)}`;
+}
+
 export function getEra(key: string | undefined | null): Era | undefined {
   if (!key) return undefined;
   const k = key.toLowerCase();
