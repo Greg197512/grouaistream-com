@@ -354,16 +354,34 @@ export function eraStudioGenre(era: Era): string {
   return "Electronic";
 }
 
-// Deep-link do Studia z presetem epoki (Studio może param zignorować — jest
-// wstecznie zgodne; docelowo wczyta go jako preset "Create an Era").
-export function eraStudioLink(era: Era): string {
+// Deep-link do Studia z presetem epoki (opcjonalnie konkretny rok).
+export function eraStudioLink(era: Era, year?: number): string {
   const genre = era.genres[0] ? era.genres[0] : "";
   const params = new URLSearchParams({
     era: era.key,
     genre,
     tempo: String(Math.round((era.tempo[0] + era.tempo[1]) / 2)),
   });
+  if (year) params.set("year", String(year));
   return `/studio?${params.toString()}`;
+}
+
+// Wykryj rok zapisany w tytule/albumie utworu (np. "GROUA ERA 2025", "Lato 1994").
+export function trackYear(t: { title?: string | null; album?: string | null }): number | undefined {
+  const hay = `${t.title || ""} ${t.album || ""}`;
+  const m = hay.match(/\b(19[7-9]\d|20[0-9]\d)\b/);
+  if (!m) return undefined;
+  const y = parseInt(m[1], 10);
+  return y >= 1970 && y <= 2099 ? y : undefined;
+}
+
+// Epoka obejmująca dany rok (do dobierania brzmienia pod datę w tytule).
+export function eraForYear(year: number): Era | undefined {
+  const hit = ERAS.find((e) => e.key !== "now" && e.key !== "future" && year >= e.yearStart && year <= e.yearEnd);
+  if (hit) return hit;
+  if (year >= 2020) return getEra("now");
+  if (year >= 2026) return getEra("future");
+  return undefined;
 }
 
 // Baza promptu "Tak brzmiałby ten rok, gdyby istniało AI".
