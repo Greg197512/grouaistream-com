@@ -10,7 +10,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { HQCover } from "@/components/ui/HQCover";
 import {
   ERAS, getEra, isAiTrack, eraStudioLink, trackBelongsToEra, bestEra, eraArtUrl,
-  eraYears, eraDefaultYear, type Era,
+  eraYears, eraDefaultYear, trackYear, type Era,
 } from "@/lib/eraEngine";
 import { eraTextFor, eraUi } from "@/lib/eraContent";
 import { freshEraFact } from "@/lib/aiText";
@@ -251,13 +251,40 @@ const EraDetail = ({ era, lang }: { era: Era; lang: Language }) => {
   }, [factKey, loadFact]);
 
   const { nowTracks, aiTracks } = useMemo(() => {
-    const scored = rows.map((t) => ({ t, s: trackBelongsToEra(t, era.key) }))
-      .filter((x) => x.s > 0).sort((a, b) => b.s - a.s);
+    const ELECTRONIC = new Set([
+      "electronic", "techno", "house", "trance", "edm", "trap", "dance",
+      "eurodance", "hardstyle", "dnb", "drum and bass", "idm", "hard techno", "hardcore",
+    ]);
+    const isEl = (t: DbTrack) => ELECTRONIC.has((t.genre || "").toLowerCase().trim());
+
+    // Kandydaci: NOW = cały żywy katalog (elektronika/techno na przód);
+    // pozostałe epoki = dopasowanie po brzmieniu.
+    let candidates: DbTrack[];
+    if (era.key === "now") {
+      candidates = [...rows].sort((a, b) => (isEl(b) ? 1 : 0) - (isEl(a) ? 1 : 0));
+    } else {
+      candidates = rows.map((t) => ({ t, s: trackBelongsToEra(t, era.key) }))
+        .filter((x) => x.s > 0).sort((a, b) => b.s - a.s).map((x) => x.t);
+    }
+
+    // Wybrany rok: utwory oznaczone dokładnie tym rokiem idą na sam przód
+    // (tam trafia muzyka zrobiona „na ten rok" oraz piosenki z datą w tytule).
+    if (year) {
+      const exact = rows.filter((t) => trackYear(t) === year);
+      const seen = new Set(exact.map((t) => t.id));
+      candidates = [...exact, ...candidates.filter((t) => !seen.has(t.id))];
+    }
+
     const now: DbTrack[] = [];
     const ai: DbTrack[] = [];
-    for (const { t } of scored) (isAiTrack(t) ? ai : now).push(t);
-    return { nowTracks: now.slice(0, 40), aiTracks: ai.slice(0, 20) };
-  }, [rows, era]);
+    const seen = new Set<string>();
+    for (const t of candidates) {
+      if (seen.has(t.id)) continue;
+      seen.add(t.id);
+      (isAiTrack(t) ? ai : now).push(t);
+    }
+    return { nowTracks: now.slice(0, 60), aiTracks: ai.slice(0, 30) };
+  }, [rows, era, year]);
 
   const shuffle = (list: DbTrack[]) => {
     const a = [...list];
@@ -436,7 +463,7 @@ const EraDetail = ({ era, lang }: { era: Era; lang: Language }) => {
           {loading ? null : aiTracks.length ? <Grid list={aiTracks} /> : (
             <div className="rounded-xl border border-white/10 bg-white/[.02] p-6 text-sm text-gray-500">{eraUi(lang, "aiEmpty")}</div>
           )}
-          <Link to={eraStudioLink(era)}
+          <Link to={eraStudioLink(era, year)}
             className="flex items-center justify-center gap-2 w-full py-3 rounded-xl font-semibold text-black transition-transform hover:scale-[1.01]"
             style={{ background: era.palette.accent, boxShadow: `0 0 20px ${era.palette.glow}` }}>
             <Wand2 className="h-5 w-5" /> {eraUi(lang, "createInAI")}

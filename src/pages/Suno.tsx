@@ -34,7 +34,7 @@ import { Lock, Crown, Download, Share2, Film } from "lucide-react";
 import { VideoStudio } from "@/components/studio/VideoStudio";
 import { downloadAudio, invokeStudioEngine, waitForAceStep, isSubscriptionError, fetchEngineLessons } from "@/lib/hubStudio";
 import { Link, useSearchParams } from "react-router-dom";
-import { getEra, eraStudioGenre } from "@/lib/eraEngine";
+import { getEra, eraStudioGenre, trackYear, eraForYear } from "@/lib/eraEngine";
 import { eraUi } from "@/lib/eraContent";
 
 const FREE_GENERATION_LIMIT = 1;
@@ -314,10 +314,12 @@ const Suno = () => {
     if (!eraKey) return;
     const era = getEra(eraKey);
     if (!era) return;
+    const yearParam = searchParams.get("year");
+    const y = yearParam && /^\d{4}$/.test(yearParam) ? parseInt(yearParam, 10) : undefined;
     // Gatunek epoki → lista stylów Studia
     setGenre(eraStudioGenre(era));
-    // Tytuł sugerowany
-    setTitle(`GROUA ERA ${era.label}`);
+    // Tytuł sugerowany — z rokiem, żeby utwór trafił do GROUA ERA pod tym rokiem
+    setTitle(`GROUA ERA ${y ?? era.label}`);
     // Tempo epoki → preset tempa
     const midBpm = Math.round((era.tempo[0] + era.tempo[1]) / 2);
     setTempo(midBpm >= 150 ? "very-fast" : midBpm >= 120 ? "fast" : midBpm >= 90 ? "medium" : "slow");
@@ -332,7 +334,7 @@ const Suno = () => {
     setIntensity("rich");
     setShowAdvanced(true);
     setActiveTab("generate");
-    setEraPreset({ label: era.label, accent: era.palette.accent, emoji: era.emoji });
+    setEraPreset({ label: y ? String(y) : era.label, accent: era.palette.accent, emoji: era.emoji });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
@@ -385,7 +387,17 @@ const Suno = () => {
       const tempoDesc = TEMPOS.find(t => t.id === tempo)?.desc || "";
       const intensityDesc = INTENSITIES.find(i => i.id === intensity)?.desc || "";
       const vocalDesc = !instrumental ? VOCAL_STYLES.find(v => v.id === vocalStyle)?.desc || "" : "";
-      const musicPrompt = `${genreBlend} ${title ? `"${title}"` : ""} track, ${moodDesc}, ${tempoDesc}, ${intensityDesc}${vocalDesc ? `, with ${vocalDesc}` : ""}, professional studio quality`.trim().replace(/\s+,/g, ",");
+      let musicPrompt = `${genreBlend} ${title ? `"${title}"` : ""} track, ${moodDesc}, ${tempoDesc}, ${intensityDesc}${vocalDesc ? `, with ${vocalDesc}` : ""}, professional studio quality`.trim().replace(/\s+,/g, ",");
+
+      // === Piosenka z DATĄ w tytule → dobierz brzmienie z tamtych czasów ===
+      // (np. "Lato 1994" → sound lat 90.). Rok trafia też do albumu, żeby utwór
+      // pojawił się w GROUA ERA pod właściwym rokiem.
+      const detectedYear = trackYear({ title });
+      const eraOfYear = detectedYear ? eraForYear(detectedYear) : undefined;
+      if (eraOfYear) {
+        musicPrompt = `${musicPrompt}, ${eraOfYear.vibe}, ${eraOfYear.instrumentation.join(", ")}, authentic sound of the year ${detectedYear}`;
+      }
+      const eraAlbum = detectedYear ? `AI ERA ${detectedYear}` : "AI Generated";
 
       const body: any = {
         prompt: musicPrompt,
@@ -449,7 +461,7 @@ const Suno = () => {
                 });
                 await supabase.from("tracks").insert({
                   user_id: user!.id, title: trackTitle, artist: "GrouAI Studio",
-                  album: "AI Generated", duration: (st as any)?.duration || duration,
+                  album: eraAlbum, duration: (st as any)?.duration || duration,
                   audio_url: url, cover_url: coverUrl || null, genre, mood,
                 });
                 window.dispatchEvent(new CustomEvent("grouai:generations-changed"));
@@ -607,7 +619,7 @@ const Suno = () => {
         if (publicAudioUrl.startsWith("http")) {
           await supabase.from("tracks").insert({
             user_id: user!.id, title: trackTitle, artist: "GrouAI Studio",
-            album: "AI Generated", duration, audio_url: publicAudioUrl, genre, mood,
+            album: eraAlbum, duration, audio_url: publicAudioUrl, genre, mood,
           });
         }
         if (!isPro) setFreeUsed(prev => prev + 1);
@@ -745,7 +757,7 @@ const Suno = () => {
           user_id: user.id,
           title: trackTitle,
           artist: "GrouAI Studio",
-          album: "AI Generated",
+          album: eraAlbum,
           duration,
           audio_url: publicAudioUrl,
           genre,
@@ -774,7 +786,7 @@ const Suno = () => {
         user_id: user.id,
         title: result.title,
         artist: artistName,
-        album: "AI Generated",
+        album: (trackYear({ title: result.title }) ? `AI ERA ${trackYear({ title: result.title })}` : "AI Generated"),
         duration: result.durationSeconds,
         audio_url: result.audioUrl,
         cover_url: result.imageUrl || null,
