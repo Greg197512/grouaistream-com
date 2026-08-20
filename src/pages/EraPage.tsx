@@ -20,9 +20,22 @@ interface DbTrack {
   id: string; title: string; artist: string; album: string | null;
   duration: number | null; cover_url: string | null; audio_url: string | null;
   video_url: string | null; genre: string | null; mood: string | null; bpm: number | null;
+  created_at: string | null;
 }
 
-const TRACK_SELECT = "id,title,artist,album,duration,cover_url,audio_url,video_url,genre,mood,bpm";
+const TRACK_SELECT = "id,title,artist,album,duration,cover_url,audio_url,video_url,genre,mood,bpm,created_at";
+
+// Rok utworu: najpierw z tytułu/albumu (np. "GROUA ERA 2025"), a w razie braku —
+// z daty dodania. Dzięki temu świeże uploady trafiają pod rok, w którym powstały.
+function effectiveYear(t: DbTrack): number | undefined {
+  const ty = trackYear(t);
+  if (ty) return ty;
+  if (t.created_at) {
+    const y = new Date(t.created_at).getFullYear();
+    if (y >= 1970 && y <= 2099) return y;
+  }
+  return undefined;
+}
 
 const fmt = (s: number | null) => {
   const v = Math.max(0, Math.round(s || 0));
@@ -267,10 +280,10 @@ const EraDetail = ({ era, lang }: { era: Era; lang: Language }) => {
         .filter((x) => x.s > 0).sort((a, b) => b.s - a.s).map((x) => x.t);
     }
 
-    // Wybrany rok: utwory oznaczone dokładnie tym rokiem idą na sam przód
-    // (tam trafia muzyka zrobiona „na ten rok" oraz piosenki z datą w tytule).
+    // Wybrany rok: utwory z tego roku (rok w tytule/albumie LUB data dodania)
+    // idą na sam przód — świeże uploady lądują pod właściwym rokiem.
     if (year) {
-      const exact = rows.filter((t) => trackYear(t) === year);
+      const exact = rows.filter((t) => effectiveYear(t) === year);
       const seen = new Set(exact.map((t) => t.id));
       candidates = [...exact, ...candidates.filter((t) => !seen.has(t.id))];
     }
