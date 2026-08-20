@@ -14,12 +14,21 @@ export const CATALOG_ACCESS_CODE = "00008";
 const STORAGE_KEY = "grouai-catalog-key";
 const EVENT = "grouai-catalog-unlock-change";
 
+// Stan współdzielony w pamięci — działa nawet, gdy localStorage jest zablokowany
+// (tryb prywatny), a przez EVENT synchronizuje wszystkie instancje hooka na żywo.
+let memUnlocked = false;
+
 function readUnlocked(): boolean {
+  if (memUnlocked) return true;
   try {
-    return localStorage.getItem(STORAGE_KEY) === CATALOG_ACCESS_CODE;
+    if (localStorage.getItem(STORAGE_KEY) === CATALOG_ACCESS_CODE) {
+      memUnlocked = true;
+      return true;
+    }
   } catch {
-    return false;
+    /* brak dostępu do storage */
   }
+  return false;
 }
 
 export function useCatalogUnlock() {
@@ -39,10 +48,11 @@ export function useCatalogUnlock() {
   const unlock = useCallback((code: string): boolean => {
     const ok = code.trim() === CATALOG_ACCESS_CODE;
     if (ok) {
+      memUnlocked = true;
       try {
         localStorage.setItem(STORAGE_KEY, CATALOG_ACCESS_CODE);
       } catch {
-        /* brak dostępu do storage — zignoruj */
+        /* brak dostępu do storage — działa dalej w pamięci */
       }
       window.dispatchEvent(new Event(EVENT));
       setUnlocked(true);
@@ -52,6 +62,7 @@ export function useCatalogUnlock() {
 
   // Kliknięcie kłódki gdy odblokowane → zamknij dostęp (świeci na czerwono).
   const lock = useCallback(() => {
+    memUnlocked = false;
     try {
       localStorage.removeItem(STORAGE_KEY);
     } catch {
