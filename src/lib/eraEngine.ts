@@ -25,6 +25,12 @@ export interface Era {
   vibe: string;        // opis brzmienia (UI + baza promptu AI)
   visual: string;      // estetyka wizualna
   palette: EraPalette;
+  // ── Warstwa wiedzy (edukacyjno-redakcyjna) ──
+  description: string;              // narracja o epoce (2–3 zdania)
+  artists: string[];               // znani twórcy epoki — KONTEKST/odniesienie, nie do naśladowania
+  soundmarks: string[];            // co definiowało brzmienie
+  culture: { label: string; value: string }[]; // moda / technologia / film / kultura
+  didYouKnow: string;              // ciekawostka
 }
 
 // ── Taksonomia epok (docelowo tabela era_taxonomy; teraz statyczna w aplikacji) ──
@@ -39,6 +45,16 @@ export const ERAS: Era[] = [
     vibe: "Ciepłe, analogowe granie na żywo — groove, funk i disco.",
     visual: "sepia, winyl, ziarno filmu, ciepłe złoto",
     palette: { accent: "#E0A24A", accentSoft: "#2A1F0C", glow: "#E0A24A55", bg: "#15100A" },
+    description: "Złota era disco, funku i soulu — nagrania na żywo, orkiestrowe aranżacje i groove jako religia. To także rozkwit reggae i klasycznego rocka. Muzyka była ciepła, analogowa i taneczna.",
+    artists: ["ABBA", "Bee Gees", "Donna Summer", "Bob Marley", "Stevie Wonder", "Led Zeppelin"],
+    soundmarks: ["orkiestrowe disco", "gitara wah-wah", "slap bass", "chórki", "winyl"],
+    culture: [
+      { label: "Moda", value: "dzwony, afro, glam" },
+      { label: "Technologia", value: "winyl, magnetofon kasetowy" },
+      { label: "Film", value: "Gorączka sobotniej nocy" },
+      { label: "Kultura", value: "kluby disco, Studio 54" },
+    ],
+    didYouKnow: "Studio 54 w Nowym Jorku stało się światowym symbolem nocnej kultury disco.",
   },
   {
     key: "1980s", label: "1980s", tagline: "Neonowy synth", decade: "1980s",
@@ -50,6 +66,16 @@ export const ERAS: Era[] = [
     vibe: "Neonowe syntezatory, wielkie perkusje i romantyczny błysk.",
     visual: "neon, chrom, siatka retro, magenta i cyjan",
     palette: { accent: "#FF3E9A", accentSoft: "#2A0C1D", glow: "#FF3E9A55", bg: "#120A16" },
+    description: "Dekada syntezatorów, automatów perkusyjnych i MTV. Synth-pop, new wave i glam metal rządzą listami, a hip-hop dopiero raczkuje. Wielkie brzmienie, gated reverb i romantyczny neonowy błysk.",
+    artists: ["Michael Jackson", "Madonna", "Depeche Mode", "Prince", "Queen", "a-ha"],
+    soundmarks: ["syntezatory analogowe", "gated reverb na werblu", "drum machine (LinnDrum)", "teledysk MTV"],
+    culture: [
+      { label: "Moda", value: "neon, ramoneska, big hair" },
+      { label: "Technologia", value: "Walkman, debiut CD, pierwsze PC" },
+      { label: "Film", value: "Blade Runner, Powrót do przyszłości" },
+      { label: "Gry", value: "automaty arcade, NES" },
+    ],
+    didYouKnow: "Start MTV w 1981 zamienił muzykę w doświadczenie wizualne — teledysk stał się obowiązkiem.",
   },
   {
     key: "1990s", label: "1990s", tagline: "Surowo i na maksa", decade: "1990s",
@@ -61,6 +87,16 @@ export const ERAS: Era[] = [
     vibe: "Surowa energia — boom-bap, grunge, rave i eurodance.",
     visual: "VHS, CRT, kasety, saturowane barwy",
     palette: { accent: "#28C0B0", accentSoft: "#062220", glow: "#28C0B055", bg: "#0A1413" },
+    description: "Grunge i hip-hop redefiniują mainstream, a w Europie eksplodują rave, techno i eurodance. Surowa energia, sample i breakbeaty, świat na kasetach i VHS. Muzyka stała się buntownicza i bezpośrednia.",
+    artists: ["Nirvana", "Nas", "The Prodigy", "Radiohead", "Dr. Dre", "Backstreet Boys"],
+    soundmarks: ["boom-bap sample", "acid 303", "breakbeaty", "gitara grunge", "eurodance synth"],
+    culture: [
+      { label: "Moda", value: "flanela, dresy, glany" },
+      { label: "Technologia", value: "internet, CD, Discman" },
+      { label: "Film", value: "Matrix, Pulp Fiction" },
+      { label: "Gry", value: "PlayStation, Nintendo 64" },
+    ],
+    didYouKnow: "Kultura rave i wolnych imprez ukształtowała europejską scenę klubową na kolejne dekady.",
   },
   {
     key: "y2k", label: "Y2K", tagline: "Chromowy sen", decade: "2000s",
@@ -72,6 +108,16 @@ export const ERAS: Era[] = [
     vibe: "Błyszczący pop przełomu tysiącleci i euforyczny trance.",
     visual: "chrom, srebro, wczesny internet, lodowaty błękit",
     palette: { accent: "#7FC8FF", accentSoft: "#0A1B2A", glow: "#7FC8FF55", bg: "#0A1017" },
+    description: "Przełom tysiącleci — błyszczący pop, R&B i euforyczny trance. Estetyka chromu, srebra i wczesnego internetu, a auto-tune wchodzi do gry na dobre. Świat wierzył, że przyszłość właśnie się zaczęła.",
+    artists: ["Britney Spears", "*NSYNC", "Eminem", "Destiny's Child", "ATB", "Darude"],
+    soundmarks: ["cyfrowe synthy", "auto-tune", "trance lead (supersaw)", "poler bas"],
+    culture: [
+      { label: "Moda", value: "metaliczne tkaniny, niskie spodnie" },
+      { label: "Technologia", value: "MP3, Napster, telefony z polifonią" },
+      { label: "Film", value: "Matrix Reloaded, Gladiator" },
+      { label: "Kultura", value: "MSN Messenger, fora, blogi" },
+    ],
+    didYouKnow: "Panika roku 2000 (błąd Y2K) nadała nazwę całej estetyce przełomu tysiącleci.",
   },
   {
     key: "2000s", label: "2000s", tagline: "Cyfrowy pop", decade: "2000s",
@@ -83,6 +129,16 @@ export const ERAS: Era[] = [
     vibe: "Śmiały cyfrowy pop, electro i wschodzące indie.",
     visual: "elektryczny fiolet, czerń, glossy, klubowy błysk",
     palette: { accent: "#B57BFF", accentSoft: "#170C2A", glow: "#B57BFF55", bg: "#0E0A16" },
+    description: "Electro-pop, indie i hip-hop rządzą, a muzyka przenosi się do sieci — iPod, YouTube i MySpace zmieniają wszystko. Śmiałe cyfrowe brzmienie, klubowy błysk i pierwsze wielkie gwiazdy internetu.",
+    artists: ["Kanye West", "The Killers", "Rihanna", "Justice", "Arctic Monkeys", "Amy Winehouse"],
+    soundmarks: ["electro synthy", "808", "sidechain pompa", "gitara indie", "cyfrowa produkcja"],
+    culture: [
+      { label: "Moda", value: "skinny jeans, indie sleaze" },
+      { label: "Technologia", value: "iPod, YouTube (2005), MySpace" },
+      { label: "Film", value: "Mroczny Rycerz" },
+      { label: "Gry", value: "Wii, Xbox 360" },
+    ],
+    didYouKnow: "MySpace wypromował całe pokolenie zespołów, zanim zrobiły to wytwórnie.",
   },
   {
     key: "2010s", label: "2010s", tagline: "Era streamingu", decade: "2010s",
@@ -94,6 +150,16 @@ export const ERAS: Era[] = [
     vibe: "Festiwalowe dropy, trap i pop pisany pod playlisty.",
     visual: "gradient różu i błękitu, festiwalowe światła",
     palette: { accent: "#FF7AC6", accentSoft: "#2A0C20", glow: "#FF7AC655", bg: "#120A11" },
+    description: "EDM podbija stadiony, trap staje się językiem popu, a Spotify zmienia sposób słuchania muzyki. Festiwalowe dropy i utwory pisane pod playlisty — hit to coś, co zatrzymuje kciuk w scrollu.",
+    artists: ["Avicii", "Daft Punk", "Drake", "Calvin Harris", "The Weeknd", "Lorde"],
+    soundmarks: ["drop EDM / big-room", "future bass", "hi-haty trap", "wokalne chopy"],
+    culture: [
+      { label: "Moda", value: "streetwear, kultura hype" },
+      { label: "Technologia", value: "smartfon, Spotify, koniec dekady: TikTok" },
+      { label: "Film", value: "Marvel MCU" },
+      { label: "Kultura", value: "memy, influencerzy, festiwale" },
+    ],
+    didYouKnow: "Streaming (Spotify) na nowo zdefiniował, co w ogóle znaczy słowo hit.",
   },
   {
     key: "now", label: "NOW", tagline: "Dziś", decade: "2020s",
@@ -105,6 +171,15 @@ export const ERAS: Era[] = [
     vibe: "Muzyka, którą ludzie tworzą teraz — cały żywy katalog GrouAI.",
     visual: "ciepły bursztyn GrouAI, nowoczesny minimalizm",
     palette: { accent: "#FF8A2A", accentSoft: "#2A1A0C", glow: "#FF8A2A55", bg: "#100C0A" },
+    description: "Muzyka, którą ludzie tworzą teraz — gatunki mieszają się bez granic, a narzędzia AI otwierają tworzenie dla każdego. To cały żywy katalog GrouAI: Ty i społeczność.",
+    artists: ["Twórcy GrouAI", "Ty", "społeczność"],
+    soundmarks: ["hybrydy gatunków", "hyperpop", "drill", "afrobeats", "bedroom-pop"],
+    culture: [
+      { label: "Technologia", value: "AI, spatial audio, TikTok" },
+      { label: "Kultura", value: "niezależni kreatorzy" },
+      { label: "Narzędzia", value: "GrouAI Studio, generacja w minuty" },
+    ],
+    didYouKnow: "Po raz pierwszy w historii każdy może wyprodukować gotowy utwór w kilka minut.",
   },
   {
     key: "future", label: "FUTURE", tagline: "Jutro", decade: "202X+",
@@ -116,6 +191,15 @@ export const ERAS: Era[] = [
     vibe: "Immersyjne, przestrzenne brzmienie jutra — tworzone z AI.",
     visual: "holografia, przestrzeń 3D, fiolet i chłodne światło",
     palette: { accent: "#A98BFF", accentSoft: "#150C2A", glow: "#A98BFF55", bg: "#0B0A14" },
+    description: "Immersyjne, przestrzenne brzmienie tworzone z AI — muzyka reaguje na nastrój, generatywne warstwy i dźwięk 3D. Tu GrouAI komponuje jutro, którego jeszcze nie słyszałeś.",
+    artists: ["AI", "wizjonerzy jutra", "GrouAI Engine"],
+    soundmarks: ["tekstury AI", "spatial audio", "generatywne pady", "granularny bas"],
+    culture: [
+      { label: "Technologia", value: "AI generatywne, VR/AR, spatial" },
+      { label: "Kultura", value: "muzyka adaptacyjna" },
+      { label: "Doświadczenie", value: "dźwięk reagujący na Ciebie" },
+    ],
+    didYouKnow: "Muzyka generatywna potrafi dostosować się do Twojego nastroju w czasie rzeczywistym.",
   },
 ];
 

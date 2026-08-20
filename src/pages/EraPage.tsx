@@ -312,6 +312,55 @@ const EraDetail = ({ era }: { era: Era }) => {
           </div>
         </motion.div>
 
+        {/* O EPOCE — warstwa wiedzy */}
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="grid md:grid-cols-3 gap-4">
+          {/* Opis + brzmienie + ciekawostka */}
+          <div className="md:col-span-2 rounded-2xl border border-white/10 bg-white/[.02] p-5 space-y-4">
+            <div>
+              <h2 className="text-lg font-bold text-white mb-1">O epoce</h2>
+              <p className="text-sm text-gray-300 leading-relaxed">{era.description}</p>
+            </div>
+            <div>
+              <p className="font-mono text-[10px] tracking-wider uppercase text-gray-500 mb-2">Charakterystyczne brzmienie</p>
+              <div className="flex flex-wrap gap-2">
+                {era.soundmarks.map((s) => (
+                  <span key={s} className="text-[11px] px-2.5 py-1 rounded-full bg-white/[.05] border border-white/10 text-gray-300">{s}</span>
+                ))}
+              </div>
+            </div>
+            <div className="flex items-start gap-2 p-3 rounded-xl" style={{ background: era.palette.accentSoft }}>
+              <span className="text-base">💡</span>
+              <p className="text-xs text-gray-300"><span className="font-semibold" style={{ color: era.palette.accent }}>Czy wiesz, że…</span> {era.didYouKnow}</p>
+            </div>
+          </div>
+
+          {/* Kontekst kulturowy + twórcy */}
+          <div className="space-y-4">
+            <div className="rounded-2xl border border-white/10 bg-white/[.02] p-5">
+              <p className="font-mono text-[10px] tracking-wider uppercase text-gray-500 mb-3">Kontekst</p>
+              <div className="space-y-2.5">
+                {era.culture.map((c) => (
+                  <div key={c.label} className="flex gap-3 text-sm">
+                    <span className="w-24 shrink-0 text-gray-500">{c.label}</span>
+                    <span className="text-gray-300">{c.value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="rounded-2xl border border-white/10 bg-white/[.02] p-5">
+              <p className="font-mono text-[10px] tracking-wider uppercase text-gray-500 mb-2">Znani twórcy epoki</p>
+              <div className="flex flex-wrap gap-1.5">
+                {era.artists.map((a) => (
+                  <span key={a} className="text-[11px] px-2.5 py-1 rounded-md border" style={{ borderColor: `${era.palette.accent}30`, color: era.palette.accent }}>{a}</span>
+                ))}
+              </div>
+              <p className="text-[10px] text-gray-600 mt-3 leading-relaxed">
+                Dla kontekstu historycznego. GrouAI gra własny katalog i muzykę AI w klimacie epoki — nie odtwarza ani nie naśladuje tych artystów.
+              </p>
+            </div>
+          </div>
+        </motion.div>
+
         {/* NOW */}
         <div className="space-y-3">
           <SectionHead title="Brzmi jak ta epoka" sub="Współcześni twórcy trzymający ten sound — z żywego katalogu GrouAI"
