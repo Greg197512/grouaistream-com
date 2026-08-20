@@ -33,7 +33,8 @@ import { generateMusic } from "@/utils/musicGenerator";
 import { Lock, Crown, Download, Share2, Film } from "lucide-react";
 import { VideoStudio } from "@/components/studio/VideoStudio";
 import { downloadAudio, invokeStudioEngine, waitForAceStep, isSubscriptionError, fetchEngineLessons } from "@/lib/hubStudio";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
+import { getEra, eraStudioGenre } from "@/lib/eraEngine";
 
 const FREE_GENERATION_LIMIT = 1;
 
@@ -292,6 +293,9 @@ const Suno = () => {
     imageUrl?: string;
   } | null>(null);
   const [errorModal, setErrorModal] = useState<string | null>(null);
+  // Preset epoki z GROUA ERA (deep-link /studio?era=...) — wypełnia panel ręczny.
+  const [searchParams] = useSearchParams();
+  const [eraPreset, setEraPreset] = useState<{ label: string; accent: string; emoji: string } | null>(null);
   const [playbackTime, setPlaybackTime] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -302,6 +306,34 @@ const Suno = () => {
     supabase.rpc("get_user_generation_count", { _user_id: user.id })
       .then(({ data }) => setFreeUsed(typeof data === "number" ? data : 0));
   }, [user?.id, isPro]);
+
+  // === GROUA ERA → Studio: prefill panelu z presetu epoki (deep-link) ===
+  useEffect(() => {
+    const eraKey = searchParams.get("era");
+    if (!eraKey) return;
+    const era = getEra(eraKey);
+    if (!era) return;
+    // Gatunek epoki → lista stylów Studia
+    setGenre(eraStudioGenre(era));
+    // Tytuł sugerowany
+    setTitle(`GROUA ERA ${era.label}`);
+    // Tempo epoki → preset tempa
+    const midBpm = Math.round((era.tempo[0] + era.tempo[1]) / 2);
+    setTempo(midBpm >= 150 ? "very-fast" : midBpm >= 120 ? "fast" : midBpm >= 90 ? "medium" : "slow");
+    // Nastrój epoki → preset nastroju
+    const moodMap: Record<string, string> = {
+      energetic: "energetic", raw: "energetic", festival: "energetic", bold: "energetic", party: "energetic",
+      romantic: "romantic", dreamy: "chill", chill: "chill", nostalgic: "chill", shiny: "happy", happy: "happy",
+      sad: "sad", emotional: "sad", dark: "dark", immersive: "dark", rebellious: "dark",
+    };
+    const em = era.moods.map((m) => moodMap[m]).find(Boolean);
+    if (em) setMood(em);
+    setIntensity("rich");
+    setShowAdvanced(true);
+    setActiveTab("generate");
+    setEraPreset({ label: era.label, accent: era.palette.accent, emoji: era.emoji });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
 
   // Track playback time for lyrics sync
@@ -970,6 +1002,18 @@ const Suno = () => {
           <>
           {/* === RĘCZNY PANEL (jak w Suno): tytuł, styl, tekst, długość, nastrój === */}
           <div className="space-y-5 p-5 rounded-2xl border border-[#FF6B00]/20 bg-[#12121c]/70 backdrop-blur-md">
+            {/* Baner presetu GROUA ERA */}
+            {eraPreset && (
+              <div className="flex items-center gap-3 p-3 rounded-xl border"
+                style={{ borderColor: `${eraPreset.accent}55`, background: `${eraPreset.accent}14` }}>
+                <span className="text-2xl">{eraPreset.emoji}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-white">Tworzysz epokę: GROUA ERA {eraPreset.label}</p>
+                  <p className="text-[11px] text-gray-400">Ustawienia dobrane pod charakter epoki — możesz je dowolnie zmienić.</p>
+                </div>
+                <Sparkles className="h-4 w-4" style={{ color: eraPreset.accent }} />
+              </div>
+            )}
             {/* Szybkie presety — gotowe pomysły */}
             <div className="space-y-2">
               <Label className="text-xs text-gray-400 flex items-center gap-1.5"><Zap className="h-3.5 w-3.5 text-[#FF9500]" /> Szybki start</Label>
