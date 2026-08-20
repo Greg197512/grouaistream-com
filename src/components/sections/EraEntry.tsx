@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Clock } from "lucide-react";
-import { ERAS } from "@/lib/eraEngine";
+import { ERAS, eraArtUrl } from "@/lib/eraEngine";
 import { eraTextFor, eraUi } from "@/lib/eraContent";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -41,12 +41,27 @@ export const EraEntry = () => {
               <motion.div key={e.key} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}>
                 <Link
                   to={`/era/${e.key}`}
-                  className="group flex flex-col items-center justify-center rounded-xl border shrink-0 w-[104px] h-[104px] transition-transform hover:-translate-y-1"
-                  style={{ background: `linear-gradient(160deg, ${e.palette.accentSoft}, ${e.palette.bg})`, borderColor: `${e.palette.accent}40` }}
+                  className="group relative flex flex-col items-center justify-end overflow-hidden rounded-xl border shrink-0 w-[120px] h-[136px] transition-transform hover:-translate-y-1"
+                  style={{ borderColor: `${e.palette.accent}55`, boxShadow: `0 0 16px ${e.palette.glow}` }}
                 >
-                  <span className="text-2xl mb-1">{e.emoji}</span>
-                  <span className="font-extrabold text-white text-lg leading-none">{et.label}</span>
-                  <span className="text-[10px] mt-1 font-medium text-center px-1" style={{ color: e.palette.accent }}>{et.tagline}</span>
+                  {/* Grafika AI epoki */}
+                  <img
+                    src={eraArtUrl(e, 240, 300)}
+                    alt=""
+                    loading="lazy"
+                    decoding="async"
+                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                    onError={(ev) => { (ev.currentTarget as HTMLImageElement).style.display = "none"; }}
+                  />
+                  {/* Fallback gradient (widoczny zanim/gdy obraz się nie załaduje) */}
+                  <div className="absolute inset-0 -z-10" style={{ background: `linear-gradient(160deg, ${e.palette.accentSoft}, ${e.palette.bg})` }} />
+                  {/* Przyciemnienie pod tekst */}
+                  <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(0,0,0,.85) 0%, rgba(0,0,0,.35) 45%, rgba(0,0,0,.15) 100%)" }} />
+                  <div className="relative z-10 flex flex-col items-center pb-2.5 px-1">
+                    <span className="text-xl mb-0.5 drop-shadow-lg">{e.emoji}</span>
+                    <span className="font-extrabold text-white text-lg leading-none drop-shadow-lg">{et.label}</span>
+                    <span className="text-[10px] mt-1 font-semibold text-center leading-tight drop-shadow-lg" style={{ color: e.palette.accent }}>{et.tagline}</span>
+                  </div>
                 </Link>
               </motion.div>
             );

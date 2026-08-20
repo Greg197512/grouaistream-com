@@ -9,7 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { HQCover } from "@/components/ui/HQCover";
 import {
-  ERAS, getEra, isAiTrack, eraStudioLink, trackBelongsToEra, bestEra, type Era,
+  ERAS, getEra, isAiTrack, eraStudioLink, trackBelongsToEra, bestEra, eraArtUrl, type Era,
 } from "@/lib/eraEngine";
 import { eraTextFor, eraUi } from "@/lib/eraContent";
 import { freshEraFact } from "@/lib/aiText";
@@ -186,12 +186,19 @@ const EraHub = ({ lang }: { lang: Language }) => {
           return (
             <motion.div key={e.key} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
               <Link to={`/era/${e.key}`}
-                className="group block rounded-2xl border p-5 h-full transition-transform hover:-translate-y-1"
-                style={{ background: `linear-gradient(160deg, ${e.palette.accentSoft}, ${e.palette.bg})`, borderColor: `${e.palette.accent}40`, boxShadow: `0 0 30px ${e.palette.glow}` }}>
-                <div className="text-3xl mb-3">{e.emoji}</div>
-                <div className="font-extrabold text-2xl text-white leading-none" style={{ letterSpacing: "-.02em" }}>{et.label}</div>
-                <div className="mt-1 text-sm font-medium" style={{ color: e.palette.accent }}>{et.tagline}</div>
-                <div className="mt-2 font-mono text-[10px] tracking-wide text-white/40">{e.yearStart}–{e.yearEnd === 2100 ? "…" : e.yearEnd}</div>
+                className="group relative flex flex-col justify-end overflow-hidden rounded-2xl border h-56 transition-transform hover:-translate-y-1"
+                style={{ borderColor: `${e.palette.accent}55`, boxShadow: `0 0 30px ${e.palette.glow}` }}>
+                <img src={eraArtUrl(e, 480, 560)} alt="" loading="lazy" decoding="async"
+                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                  onError={(ev) => { (ev.currentTarget as HTMLImageElement).style.display = "none"; }} />
+                <div className="absolute inset-0 -z-10" style={{ background: `linear-gradient(160deg, ${e.palette.accentSoft}, ${e.palette.bg})` }} />
+                <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(0,0,0,.9) 0%, rgba(0,0,0,.4) 50%, rgba(0,0,0,.1) 100%)" }} />
+                <div className="relative z-10 p-5">
+                  <div className="text-3xl mb-2 drop-shadow-lg">{e.emoji}</div>
+                  <div className="font-extrabold text-2xl text-white leading-none drop-shadow-lg" style={{ letterSpacing: "-.02em" }}>{et.label}</div>
+                  <div className="mt-1 text-sm font-semibold drop-shadow-lg" style={{ color: e.palette.accent }}>{et.tagline}</div>
+                  <div className="mt-2 font-mono text-[10px] tracking-wide text-white/60">{e.yearStart}–{e.yearEnd === 2100 ? "…" : e.yearEnd}</div>
+                </div>
               </Link>
             </motion.div>
           );
@@ -307,8 +314,13 @@ const EraDetail = ({ era, lang }: { era: Era; lang: Language }) => {
         </div>
 
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
-          className="rounded-2xl border p-6 sm:p-8 relative overflow-hidden"
+          className="rounded-2xl border p-6 sm:p-8 relative overflow-hidden min-h-[240px] flex flex-col justify-end"
           style={{ background: `linear-gradient(150deg, ${era.palette.accentSoft}, ${era.palette.bg})`, borderColor: `${era.palette.accent}40`, boxShadow: `0 0 40px ${era.palette.glow}` }}>
+          {/* Grafika AI epoki jako atmosferyczne tło */}
+          <img src={eraArtUrl(era, 1200, 480)} alt="" loading="lazy" decoding="async"
+            className="absolute inset-0 w-full h-full object-cover"
+            onError={(ev) => { (ev.currentTarget as HTMLImageElement).style.display = "none"; }} />
+          <div className="absolute inset-0" style={{ background: `linear-gradient(120deg, ${era.palette.bg}F2 0%, ${era.palette.bg}CC 40%, rgba(0,0,0,.45) 100%)` }} />
           <div aria-hidden className="pointer-events-none absolute inset-0 opacity-[0.06]" style={{ backgroundImage: "repeating-linear-gradient(0deg, #fff 0, #fff 1px, transparent 2px, transparent 4px)" }} />
           <div className="relative">
             <div className="text-5xl mb-3">{era.emoji}</div>
