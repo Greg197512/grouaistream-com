@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Play, Sparkles, Clock, ArrowLeft, Wand2, Radio, Shuffle, Compass, Loader2 } from "lucide-react";
+import { Play, Sparkles, Clock, ArrowLeft, Wand2, Radio, Shuffle, Compass, Loader2, RefreshCw } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { usePlayer, Track } from "@/contexts/PlayerContext";
@@ -10,6 +10,7 @@ import { HQCover } from "@/components/ui/HQCover";
 import {
   ERAS, getEra, isAiTrack, eraStudioLink, trackBelongsToEra, bestEra, type Era,
 } from "@/lib/eraEngine";
+import { freshEraFact } from "@/lib/aiText";
 
 interface DbTrack {
   id: string; title: string; artist: string; album: string | null;
@@ -206,6 +207,9 @@ const EraDetail = ({ era }: { era: Era }) => {
   const { playPlaylist } = usePlayer();
   const [rows, setRows] = useState<DbTrack[]>([]);
   const [loading, setLoading] = useState(true);
+  // Świeża ciekawostka z AI (Pollinations) — fallback do statycznej.
+  const [fact, setFact] = useState<string | null>(null);
+  const [factLoading, setFactLoading] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -217,6 +221,22 @@ const EraDetail = ({ era }: { era: Era }) => {
     });
     return () => { alive = false; };
   }, [era.key]);
+
+  const loadFact = useCallback(async (fresh: boolean) => {
+    setFactLoading(true);
+    const f = await freshEraFact(era.label, era.vibe, fresh ? Math.floor(Math.random() * 1e6) : undefined);
+    setFact(f);
+    if (f) { try { sessionStorage.setItem(`era-fact-${era.key}`, f); } catch { /* */ } }
+    setFactLoading(false);
+  }, [era]);
+
+  useEffect(() => {
+    let cached: string | null = null;
+    try { cached = sessionStorage.getItem(`era-fact-${era.key}`); } catch { /* */ }
+    if (cached) { setFact(cached); return; }
+    setFact(null);
+    loadFact(false);
+  }, [era.key, loadFact]);
 
   const { nowTracks, aiTracks } = useMemo(() => {
     const scored = rows
@@ -328,9 +348,32 @@ const EraDetail = ({ era }: { era: Era }) => {
                 ))}
               </div>
             </div>
-            <div className="flex items-start gap-2 p-3 rounded-xl" style={{ background: era.palette.accentSoft }}>
-              <span className="text-base">💡</span>
-              <p className="text-xs text-gray-300"><span className="font-semibold" style={{ color: era.palette.accent }}>Czy wiesz, że…</span> {era.didYouKnow}</p>
+            <div className="p-3 rounded-xl" style={{ background: era.palette.accentSoft }}>
+              <div className="flex items-start gap-2">
+                <span className="text-base">💡</span>
+                <p className="text-xs text-gray-300 flex-1">
+                  <span className="font-semibold" style={{ color: era.palette.accent }}>Czy wiesz, że…</span>{" "}
+                  {factLoading && !fact ? (
+                    <span className="text-gray-500">świeża ciekawostka od AI…</span>
+                  ) : (
+                    fact || era.didYouKnow
+                  )}
+                </p>
+              </div>
+              <div className="flex items-center justify-between mt-2 pl-6">
+                <span className="font-mono text-[9px] uppercase tracking-wider text-gray-600">
+                  {fact ? "ciekawostka AI" : "GrouAI"}
+                </span>
+                <button
+                  onClick={() => loadFact(true)}
+                  disabled={factLoading}
+                  className="flex items-center gap-1 text-[10px] text-gray-400 hover:text-white disabled:opacity-50 transition-colors"
+                  title="Wygeneruj nową ciekawostkę"
+                >
+                  <RefreshCw className={`h-3 w-3 ${factLoading ? "animate-spin" : ""}`} />
+                  Nowa
+                </button>
+              </div>
             </div>
           </div>
 
