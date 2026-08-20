@@ -82,6 +82,8 @@ const Search = () => {
   const [results, setResults] = useState<Track[]>([]);
   const [ccResults, setCcResults] = useState<Track[]>([]);
   const [allTracks, setAllTracks] = useState<Track[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [catalogLoading, setCatalogLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [ccLoading, setCcLoading] = useState(false);
   const [youtubeLoading, setYoutubeLoading] = useState(false);
@@ -95,17 +97,49 @@ const Search = () => {
   // zablokowane → wybrana część (50), odblokowane kluczem → cały katalog.
   const LOCKED_PREVIEW = 50;
   const browseTracks = unlocked ? allTracks : allTracks.slice(0, LOCKED_PREVIEW);
-  const hiddenCount = Math.max(0, allTracks.length - LOCKED_PREVIEW);
+  const hiddenCount = Math.max(0, (totalCount || allTracks.length) - LOCKED_PREVIEW);
 
+  // Kolumny potrzebne do listy i odtwarzania (lekki payload nawet przy 20 tys.).
+  const CATALOG_SELECT = "id,title,artist,album,duration,cover_url,audio_url,video_url,genre,mood,created_at";
+  const CATALOG_FILTER = "audio_url.not.is.null,video_url.not.is.null";
+
+  // Ładowanie katalogu: zamknięte → tylko podgląd; odblokowane kluczem → CAŁY
+  // katalog (stronicowanie po 1000, bo PostgREST domyślnie zwraca max 1000 wierszy).
   useEffect(() => {
-    const loadTracks = async () => {
-      const { data, error } = await supabase.from("tracks").select("*").or("audio_url.not.is.null,video_url.not.is.null").order("created_at", { ascending: false });
-      if (error) { console.error("Error loading tracks:", error); return; }
-      const playableTracks = (data || []).filter(isPlayableTrack);
-      setAllTracks(playableTracks);
+    let alive = true;
+
+    const loadPreview = async () => {
+      const { data, error } = await supabase
+        .from("tracks").select(CATALOG_SELECT).or(CATALOG_FILTER)
+        .order("created_at", { ascending: false }).range(0, 119);
+      if (!alive || error) return;
+      setAllTracks((data || []).filter(isPlayableTrack) as Track[]);
     };
-    loadTracks();
-  }, []);
+
+    const loadFull = async () => {
+      setCatalogLoading(true);
+      const PAGE = 1000;
+      const acc: Track[] = [];
+      for (let from = 0; from < 60000; from += PAGE) {
+        const { data, error } = await supabase
+          .from("tracks").select(CATALOG_SELECT).or(CATALOG_FILTER)
+          .order("created_at", { ascending: false }).range(from, from + PAGE - 1);
+        if (error || !data || data.length === 0) break;
+        acc.push(...(data.filter(isPlayableTrack) as Track[]));
+        if (alive) setAllTracks([...acc]); // pokazuj przyrostowo
+        if (data.length < PAGE) break;
+        if (!alive) break;
+      }
+      if (alive) setCatalogLoading(false);
+    };
+
+    // Dokładna liczba utworów (do etykiety „ukryte").
+    supabase.from("tracks").select("id", { count: "exact", head: true }).or(CATALOG_FILTER)
+      .then(({ count }) => { if (alive && typeof count === "number") setTotalCount(count); });
+
+    if (unlocked) loadFull(); else loadPreview();
+    return () => { alive = false; };
+  }, [unlocked]);
 
   // Normalize text for fuzzy matching (remove diacritics, lowercase)
   const normalize = useCallback((text: string) => {
@@ -454,11 +488,13 @@ const Search = () => {
 
               <div className="flex flex-wrap items-center justify-between gap-2 mt-6 sm:mt-8 mb-3 sm:mb-4">
                 <h2 className="font-display text-base sm:text-xl font-bold">
-                  {t("search.allTracks")} ({browseTracks.length}{unlocked ? "" : `/${allTracks.length}`})
+                  {t("search.allTracks")} ({browseTracks.length.toLocaleString()}{unlocked ? "" : `/${(totalCount || allTracks.length).toLocaleString()}`})
                 </h2>
                 {unlocked ? (
                   <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/40">
-                    <LockOpen className="h-3.5 w-3.5" /> Pełny katalog odblokowany
+                    {catalogLoading
+                      ? <><span className="h-3 w-3 rounded-full border-2 border-emerald-400/30 border-t-emerald-400 animate-spin" /> Ładuję pełny katalog… {browseTracks.length.toLocaleString()}</>
+                      : <><LockOpen className="h-3.5 w-3.5" /> Pełny katalog</>}
                   </span>
                 ) : hiddenCount > 0 ? (
                   <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-red-500/15 text-red-400 border border-red-500/40">
