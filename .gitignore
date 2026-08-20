@@ -28,3 +28,6 @@ dist-ssr
 .agents/
 .claude/skills/
 skills-lock.json
+
+# Session scratchpad (temp working files)
+scratchpad/

@@ -13,6 +13,7 @@ import { UploadCTA } from "@/components/sections/UploadCTA";
 import { SupportSection } from "@/components/sections/SupportSection";
 import { PromotedTracksSection } from "@/components/sections/PromotedTracks";
 import { SEOContentSection } from "@/components/sections/SEOContentSection";
+import { EraEntry } from "@/components/sections/EraEntry";
 
 import SectionErrorBoundary from "@/components/SectionErrorBoundary";
 import { GameBadge } from "@/components/game/GameBadge";
@@ -29,6 +30,7 @@ const Index = () => {
     <MainLayout>
       <GameBadge />
       <Section name="hero"><HeroSection /></Section>
+      <Section name="groua-era"><EraEntry /></Section>
       <Section name="win-game"><div className="px-4 max-w-6xl mx-auto"><GameStrip /></div></Section>
       <Section name="upload-cta"><UploadCTA /></Section>
       <Section name="promoted"><PromotedTracksSection /></Section>

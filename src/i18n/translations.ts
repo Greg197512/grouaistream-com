@@ -18,6 +18,7 @@ export type TranslationKeys = {
   // Navigation
   "nav.home": string;
   "nav.search": string;
+  "nav.era": string;
   "nav.library": string;
   "nav.createPlaylist": string;
   "nav.likedSongs": string;

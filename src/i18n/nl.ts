@@ -4,6 +4,7 @@ import type { TranslationKeys } from "./translations";
 const nl: TranslationKeys = {
   "nav.home": "Startpagina",
   "nav.search": "Zoeken",
+  "nav.era": "Tijdperken",
   "nav.library": "Jouw Bibliotheek",
   "nav.createPlaylist": "Afspeellijst Maken",
   "nav.likedSongs": "Favoriete Nummers",

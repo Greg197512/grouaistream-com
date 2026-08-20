@@ -68,6 +68,7 @@ const ClientDashboard = lazy(() => import("./pages/ClientDashboard"));
 const Binaural = lazy(() => import("./pages/Binaural"));
 const VideoStudioPage = lazy(() => import("./pages/VideoStudioPage"));
 const NightStory = lazy(() => import("./pages/NightStory"));
+const EraPage = lazy(() => import("./pages/EraPage"));
 
 // Empire Platform pages
 const EmpireDashboard = lazy(() => import("./pages/empire/EmpireDashboard"));
@@ -186,6 +187,11 @@ const AppShell = () => {
           {/* Studio Wideo — tworzenie wideo dla wszystkich */}
           <Route path="/video" element={<VideoStudioPage />} />
           <Route path="/wideo" element={<VideoStudioPage />} />
+          {/* GROUA ERA — Nostalgia Engine (podróż przez epoki muzyczne) */}
+          <Route path="/era" element={<EraPage />} />
+          <Route path="/era/:key" element={<EraPage />} />
+          <Route path="/epoka" element={<EraPage />} />
+          <Route path="/epoka/:key" element={<EraPage />} />
           {/* Nocne czytanie z muzyką w tle */}
           <Route path="/nocne" element={<NightStory />} />
           <Route path="/night" element={<NightStory />} />

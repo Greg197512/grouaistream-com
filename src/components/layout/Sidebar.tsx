@@ -27,6 +27,7 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
   const navItems = [
     { icon: "home", labelKey: "nav.home", href: "/" },
     { icon: "search", labelKey: "nav.search", href: "/search" },
+    { icon: "schedule", labelKey: "nav.era", href: "/era", badge: "NEW" },
     { icon: "library_music", labelKey: "nav.library", href: "/library" },
   ];
 
