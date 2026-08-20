@@ -9,7 +9,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { HQCover } from "@/components/ui/HQCover";
 import {
-  ERAS, getEra, isAiTrack, eraStudioLink, trackBelongsToEra, bestEra, eraArtUrl, type Era,
+  ERAS, getEra, isAiTrack, eraStudioLink, trackBelongsToEra, bestEra, eraArtUrl,
+  eraYears, eraDefaultYear, type Era,
 } from "@/lib/eraEngine";
 import { eraTextFor, eraUi } from "@/lib/eraContent";
 import { freshEraFact } from "@/lib/aiText";
@@ -215,10 +216,15 @@ const EraDetail = ({ era, lang }: { era: Era; lang: Language }) => {
   const navigate = useNavigate();
   const { playPlaylist } = usePlayer();
   const et = useMemo(() => eraTextFor(era, lang), [era, lang]);
+  const years = useMemo(() => eraYears(era), [era]);
+  const [year, setYear] = useState<number | undefined>(() => eraDefaultYear(era));
   const [rows, setRows] = useState<DbTrack[]>([]);
   const [loading, setLoading] = useState(true);
   const [fact, setFact] = useState<string | null>(null);
   const [factLoading, setFactLoading] = useState(false);
+
+  // Reset wybranego roku przy zmianie epoki.
+  useEffect(() => { setYear(eraDefaultYear(era)); }, [era.key]);
 
   useEffect(() => {
     let alive = true;
@@ -227,21 +233,22 @@ const EraDetail = ({ era, lang }: { era: Era; lang: Language }) => {
     return () => { alive = false; };
   }, [era.key]);
 
+  const factKey = `era-fact-${era.key}-${year ?? "all"}-${lang}`;
   const loadFact = useCallback(async (fresh: boolean) => {
     setFactLoading(true);
-    const f = await freshEraFact(et.label, et.vibe, fresh ? Math.floor(Math.random() * 1e6) : undefined, lang);
+    const f = await freshEraFact(et.label, et.vibe, fresh ? Math.floor(Math.random() * 1e6) : undefined, lang, year);
     setFact(f);
-    if (f) { try { sessionStorage.setItem(`era-fact-${era.key}-${lang}`, f); } catch { /* */ } }
+    if (f) { try { sessionStorage.setItem(factKey, f); } catch { /* */ } }
     setFactLoading(false);
-  }, [era.key, lang, et.label, et.vibe]);
+  }, [factKey, lang, year, et.label, et.vibe]);
 
   useEffect(() => {
     let cached: string | null = null;
-    try { cached = sessionStorage.getItem(`era-fact-${era.key}-${lang}`); } catch { /* */ }
+    try { cached = sessionStorage.getItem(factKey); } catch { /* */ }
     if (cached) { setFact(cached); return; }
     setFact(null);
     loadFact(false);
-  }, [era.key, lang, loadFact]);
+  }, [factKey, loadFact]);
 
   const { nowTracks, aiTracks } = useMemo(() => {
     const scored = rows.map((t) => ({ t, s: trackBelongsToEra(t, era.key) }))
@@ -316,8 +323,8 @@ const EraDetail = ({ era, lang }: { era: Era; lang: Language }) => {
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
           className="rounded-2xl border p-6 sm:p-8 relative overflow-hidden min-h-[240px] flex flex-col justify-end"
           style={{ background: `linear-gradient(150deg, ${era.palette.accentSoft}, ${era.palette.bg})`, borderColor: `${era.palette.accent}40`, boxShadow: `0 0 40px ${era.palette.glow}` }}>
-          {/* Grafika AI epoki jako atmosferyczne tło */}
-          <img src={eraArtUrl(era, 1200, 480)} alt="" loading="lazy" decoding="async"
+          {/* Grafika AI epoki/roku jako atmosferyczne tło */}
+          <img key={year ?? "era"} src={eraArtUrl(era, 1200, 480, year)} alt="" loading="lazy" decoding="async"
             className="absolute inset-0 w-full h-full object-cover"
             onError={(ev) => { (ev.currentTarget as HTMLImageElement).style.display = "none"; }} />
           <div className="absolute inset-0" style={{ background: `linear-gradient(120deg, ${era.palette.bg}F2 0%, ${era.palette.bg}CC 40%, rgba(0,0,0,.45) 100%)` }} />
@@ -325,9 +332,11 @@ const EraDetail = ({ era, lang }: { era: Era; lang: Language }) => {
           <div className="relative">
             <div className="text-5xl mb-3">{era.emoji}</div>
             <h1 className="text-4xl sm:text-6xl font-extrabold text-white tracking-tight" style={{ letterSpacing: "-.03em" }}>
-              GROUA ERA <span style={{ color: era.palette.accent }}>{et.label}</span>
+              GROUA ERA <span style={{ color: era.palette.accent }}>{year ?? et.label}</span>
             </h1>
-            <p className="mt-2 text-lg" style={{ color: era.palette.accent }}>{et.tagline}</p>
+            <p className="mt-2 text-lg" style={{ color: era.palette.accent }}>
+              {year ? <span className="text-white/60 font-normal text-base mr-2">{et.label} ·</span> : null}{et.tagline}
+            </p>
             <p className="mt-3 text-gray-300 max-w-2xl">{et.vibe}</p>
             <div className="mt-4 flex flex-wrap gap-2">
               {era.genres.slice(0, 6).map((g) => (
@@ -336,6 +345,21 @@ const EraDetail = ({ era, lang }: { era: Era; lang: Language }) => {
             </div>
           </div>
         </motion.div>
+
+        {/* Wybór konkretnego roku — grafika i ciekawostka dobierają się pod rok */}
+        {years.length > 0 && (
+          <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
+            {years.map((y) => (
+              <button key={y} onClick={() => setYear(y)}
+                className="shrink-0 px-3.5 py-2 rounded-xl font-mono text-sm font-semibold border transition-colors"
+                style={year === y
+                  ? { background: era.palette.accent, color: "#000", borderColor: era.palette.accent, boxShadow: `0 0 14px ${era.palette.glow}` }
+                  : { background: "rgba(255,255,255,.03)", color: "rgba(255,255,255,.7)", borderColor: "rgba(255,255,255,.12)" }}>
+                {y}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* O EPOCE — warstwa wiedzy */}
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="grid md:grid-cols-3 gap-4">
