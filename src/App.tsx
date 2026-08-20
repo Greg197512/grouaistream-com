@@ -14,6 +14,7 @@ import { LanguageProvider } from "@/contexts/LanguageContext";
 import { SubscriptionProvider } from "@/contexts/SubscriptionContext";
 import { Effects3DProvider } from "@/contexts/Effects3DContext";
 import { AutoVoiceListener } from "@/components/player/AutoVoiceListener";
+import { GlobalLiveVoiceOverlay } from "@/components/radio/GlobalLiveVoiceOverlay";
 import { StemsModal } from "@/components/studio/StemsModal";
 import { PWAInstallPrompt } from "@/components/pwa/PWAInstallPrompt";
 import { TipWelcomeModal } from "@/components/modals/TipWelcomeModal";
@@ -129,6 +130,7 @@ const AppShell = () => {
       <BrowserRouter>
         <CheckoutSuccessHandler />
         <AutoVoiceListener />
+        <GlobalLiveVoiceOverlay />
         <StemsModal />
         <Suspense fallback={<RouteFallback />}>
         <Routes>
