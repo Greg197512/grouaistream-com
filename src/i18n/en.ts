@@ -4,6 +4,7 @@ import type { TranslationKeys } from "./translations";
 const en: TranslationKeys = {
   "nav.home": "Home",
   "nav.search": "Search",
+  "nav.era": "Eras",
   "nav.library": "Your Library",
   "nav.createPlaylist": "Create Playlist",
   "nav.likedSongs": "Liked Songs",
