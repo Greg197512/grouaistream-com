@@ -365,27 +365,6 @@ export const HeroSection = () => {
             <BlogPromoButton />
           </div>
 
-          {/* Manifest text */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.6 }}
-            className="max-w-lg rounded-xl border border-muted/30 bg-card/40 backdrop-blur-sm px-5 py-4 text-sm leading-relaxed text-muted-foreground"
-          >
-            <p>
-              <span className="text-foreground font-semibold">GrouAI Stream</span> {t("hero.manifest1")}
-            </p>
-            <p className="mt-1.5">
-              {t("hero.manifest2").split("{radio}").map((part, i, arr) => (
-                <span key={i}>{part}{i < arr.length - 1 && <span className="text-primary font-medium">GrouaRadio</span>}</span>
-              ))}
-            </p>
-            <p className="mt-1.5">
-              {t("hero.manifest3").split("{ai}").map((part, i, arr) => (
-                <span key={i}>{part}{i < arr.length - 1 && <span className="text-primary font-medium">AI</span>}</span>
-              ))}
-            </p>
-          </motion.div>
         </motion.div>
 
         <motion.div animate={{ y: [0, -10, 0] }} transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }} className="absolute right-10 top-20 hidden lg:block">
