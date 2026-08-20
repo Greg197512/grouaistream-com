@@ -223,11 +223,32 @@ function artSeed(key: string): number {
   return Math.abs(h) % 100000;
 }
 
-/** Darmowy URL grafiki epoki (Pollinations/Flux). */
-export function eraArtUrl(era: Era, width = 512, height = 512): string {
-  const prompt = ERA_ART[era.key] || `${era.label} music era, cinematic album art, no text`;
+/**
+ * Darmowy URL grafiki epoki (Pollinations/Flux).
+ * Gdy podasz `year`, grafika jest dobrana pod konkretny rok (inny obraz i seed
+ * dla 1994 vs 1997) — wciąż stabilny (ten sam rok = ten sam obraz).
+ */
+export function eraArtUrl(era: Era, width = 512, height = 512, year?: number): string {
+  const base = ERA_ART[era.key] || `${era.label} music era, cinematic album art, no text`;
+  const prompt = year ? `${base}, year ${year}` : base;
+  const seedKey = year ? `${era.key}-${year}` : era.key;
   const enc = encodeURIComponent(prompt);
-  return `https://image.pollinations.ai/prompt/${enc}?width=${width}&height=${height}&nologo=true&model=flux&seed=${artSeed(era.key)}`;
+  return `https://image.pollinations.ai/prompt/${enc}?width=${width}&height=${height}&nologo=true&model=flux&seed=${artSeed(seedKey)}`;
+}
+
+/** Lista konkretnych lat epoki (do wyboru roku). FUTURE = pusta (otwarta). */
+export function eraYears(era: Era): number[] {
+  if (era.key === "future" || era.yearEnd >= 2100) return [];
+  const out: number[] = [];
+  for (let y = era.yearStart; y <= era.yearEnd; y++) out.push(y);
+  return out;
+}
+
+/** Domyślny, reprezentatywny rok epoki (środek zakresu). */
+export function eraDefaultYear(era: Era): number | undefined {
+  const ys = eraYears(era);
+  if (!ys.length) return undefined;
+  return ys[Math.floor(ys.length / 2)];
 }
 
 export function getEra(key: string | undefined | null): Era | undefined {
