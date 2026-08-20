@@ -7,6 +7,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { invokeHubAI } from "@/lib/hubAI";
 import { freeChat } from "@/lib/freeChat";
+import { SITE_KNOWLEDGE } from "@/lib/siteKnowledge";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { useDJMode } from "@/hooks/useDJMode";
 import { useAuth } from "@/contexts/AuthContext";
@@ -247,6 +248,7 @@ export const AIAssistant = () => {
       timeOfDay: getTimeOfDay(),
       language: appLang,
       languageName: langMap[appLang] || "English",
+      siteKnowledge: SITE_KNOWLEDGE,
     };
   }, [location.pathname, listeningStats, userName, user?.id, currentTrack]);
 

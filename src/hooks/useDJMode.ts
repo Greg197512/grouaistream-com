@@ -4,6 +4,7 @@ import { speak } from "@/utils/tts";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { getDJTexts, getDJLangFromAppLang, getDJTTSLang, DJLanguage, shortenTitle, shortenArtist } from "@/utils/djTexts";
+import { freeDjLine } from "@/lib/freeChat";
 import { playRandomTransitionEffect, playDJEffect, playDropCombo } from "@/utils/djMixer";
 
 interface DJSession {
@@ -55,15 +56,13 @@ export const useDJMode = () => {
     // Skip announcement for first track (intro already played)
     if (trackCountRef.current <= 1) return;
 
-    // Announce every 2nd track, with occasional 3rd track bonus
-    const shouldAnnounce = trackCountRef.current % 2 === 0 || (trackCountRef.current % 3 === 0 && Math.random() > 0.5);
-    if (!shouldAnnounce) return;
-
+    // DJ wygadany: zapowiada KAŻDY utwór (wcześniej co drugi).
     const lang = getAppLang();
     const texts = getDJTexts(lang);
     const transition = randomFrom(texts.transitions);
     const shortTitle = shortenTitle(currentTrack.title);
     const trackInfo = texts.trackAnnounce(shortTitle, shortenArtist(currentTrack.artist));
+    const trackForLine = { title: currentTrack.title, artist: currentTrack.artist, genre: currentTrack.genre || undefined, mood: currentTrack.mood || undefined };
 
     transitionTimerRef.current = window.setTimeout(async () => {
       // Hard techno effects BEFORE speech
@@ -79,20 +78,21 @@ export const useDJMode = () => {
         playDJEffect("riser");
       }
       
-      // Build SHORT announcement: hype + transition (skip full track info sometimes)
-      let fullAnnouncement = transition;
-      if (Math.random() > 0.5) {
+      // Wygadany DJ: najpierw spróbuj żywej, unikatowej zapowiedzi z AI (darmowo).
+      let fullAnnouncement = "";
+      try {
+        const aiLine = await freeDjLine({ ...trackForLine, lang });
+        if (aiLine) fullAnnouncement = `${randomFrom(texts.hypeLines)} ${aiLine}`;
+      } catch { /* fallback niżej */ }
+
+      // Fallback / gdy AI niedostępne — bogatszy zestaw z szablonów.
+      if (!fullAnnouncement) {
         fullAnnouncement = `${randomFrom(texts.hypeLines)} ${transition}`;
-      }
-      // Add drop line occasionally
-      if (Math.random() > 0.75 && texts.dropLines) {
-        fullAnnouncement += ` ${randomFrom(texts.dropLines)}`;
-      }
-      // Only add track name sometimes (real DJs don't announce every track)
-      if (Math.random() > 0.4) {
+        if (texts.dropLines && Math.random() > 0.5) fullAnnouncement += ` ${randomFrom(texts.dropLines)}`;
         fullAnnouncement += ` ${trackInfo}`;
+        if (texts.mixLines && Math.random() > 0.6) fullAnnouncement += ` ${randomFrom(texts.mixLines)}`;
       }
-      
+
       // Speak with hard energy after effect
       await new Promise(r => setTimeout(r, 250));
       await djSpeak(fullAnnouncement);
