@@ -11,6 +11,8 @@
  * Exposes isSpeaking flag so voice recognition can pause while TTS is active.
  */
 
+import { neuralSynth } from "@/lib/neuralTts";
+
 let _isSpeaking = false;
 let _currentAudio: HTMLAudioElement | null = null;
 let _djAudioContext: AudioContext | null = null;
@@ -230,6 +232,46 @@ export const speak = async (text: string, opts?: {
   stopSpeaking();
 
   const mode = opts?.mode || "assistant";
+
+  // === PRIMARY: darmowy neuronowy głos w przeglądarce (Piper/VITS) ===
+  // Rewelacyjna jakość, zero kosztów i tokenów. Gdy niedostępny — schodzimy
+  // po cichu na ElevenLabs, a potem na głos przeglądarki.
+  try {
+    _isSpeaking = true;
+    duckMusicVolume();
+    const wav = await neuralSynth(text, opts?.lang);
+    if (wav) {
+      const audioUrl = URL.createObjectURL(wav);
+      const audio = new Audio();
+      _currentAudio = audio;
+      audio.preload = "auto";
+      audio.src = audioUrl;
+
+      if (mode === "dj") {
+        await playDJAudioWithEffects(audio);
+        try { URL.revokeObjectURL(audioUrl); } catch { /* */ }
+        restoreMusicVolume();
+        return;
+      }
+      return await new Promise<void>((resolve) => {
+        const cleanup = () => {
+          _isSpeaking = false; _currentAudio = null; restoreMusicVolume();
+          try { URL.revokeObjectURL(audioUrl); } catch { /* */ }
+        };
+        audio.onended = () => { cleanup(); resolve(); };
+        audio.onerror = () => { cleanup(); resolve(); };
+        const p = audio.play();
+        if (p) p.catch(() => { cleanup(); resolve(); });
+      });
+    }
+    // neuronowy niedostępny → przywróć głośność i próbuj dalej
+    _isSpeaking = false;
+    restoreMusicVolume();
+  } catch (e) {
+    console.warn("[tts] neuronowy głos nieudany, próbuję dalej:", e);
+    _isSpeaking = false;
+    restoreMusicVolume();
+  }
 
   // Try ElevenLabs
   try {
