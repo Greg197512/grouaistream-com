@@ -515,7 +515,7 @@ const RadioLive = () => {
 
   useEffect(() => {
     const channel = supabase
-      .channel("radio-live-voice", { config: { broadcast: { self: false } } })
+      .channel("radio-live-voice", { config: { broadcast: { self: false }, presence: { key: radioClientIdRef.current } } })
       .on("broadcast", { event: "chunk" }, ({ payload }) => {
         if (!payload?.audioBase64 || payload.sourceId === radioClientIdRef.current) return;
         try {
@@ -531,7 +531,12 @@ const RadioLive = () => {
           console.warn("[RadioLive] live voice chunk failed", err);
         }
       })
-      .subscribe();
+      .subscribe((status) => {
+        // Zgłoś obecność jako słuchacz — dzięki temu w studiu widać, ilu słucha.
+        if (status === "SUBSCRIBED") {
+          channel.track({ role: "listener", at: Date.now() }).catch(() => {});
+        }
+      });
 
     return () => {
       supabase.removeChannel(channel);
