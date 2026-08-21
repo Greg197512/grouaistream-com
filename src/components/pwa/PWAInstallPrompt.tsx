@@ -50,6 +50,19 @@ export const PWAInstallPrompt = () => {
     setIsIOS(ios);
   }, []);
 
+  // Ręczne wywołanie z Ustawień („Dodaj do ekranu głównego") — pokaż prompt niezależnie
+  // od tego, czy był już zamknięty. Jeśli aplikacja jest już zainstalowana, nic nie robi.
+  useEffect(() => {
+    const showOnDemand = () => {
+      const standalone = window.matchMedia("(display-mode: standalone)").matches || (navigator as any).standalone === true;
+      if (standalone) return;
+      if (isIOS || !deferredPrompt) setIosGuide(!deferredPrompt && !isIOS ? false : isIOS);
+      setShowPrompt(true);
+    };
+    window.addEventListener("grouai-show-install", showOnDemand);
+    return () => window.removeEventListener("grouai-show-install", showOnDemand);
+  }, [isIOS, deferredPrompt]);
+
   // Pokaż po zalogowaniu, jeśli da się zainstalować (Chrome), albo na iOS (ręczna instrukcja).
   useEffect(() => {
     if (!user || isStandalone) return;
