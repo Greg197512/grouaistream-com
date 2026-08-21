@@ -443,6 +443,10 @@ const RadioLive = () => {
       audio.crossOrigin = "anonymous";
       audio.preload = "auto";
       audio.preservesPitch = false;
+      // Granie w tle na telefonie (po wygaszeniu ekranu).
+      audio.setAttribute("playsinline", "");
+      (audio as any).playsInline = true;
+      audio.setAttribute("x-webkit-airplay", "allow");
       audio.volume = muted ? 0 : volume / 100;
       audioRef.current = audio;
       audio.addEventListener("loadedmetadata", () => {
@@ -481,6 +485,35 @@ const RadioLive = () => {
   useEffect(() => {
     if (audioRef.current) audioRef.current.volume = muted ? 0 : volume / 100;
   }, [volume, muted]);
+
+  // MediaSession — radio gra w tle po wygaszeniu ekranu + info na ekranie blokady.
+  useEffect(() => {
+    if (typeof navigator === "undefined" || !("mediaSession" in navigator)) return;
+    const ms = navigator.mediaSession;
+    try {
+      ms.setActionHandler("play", () => { audioRef.current?.play().then(() => setIsPlaying(true)).catch(() => {}); });
+      ms.setActionHandler("pause", () => { audioRef.current?.pause(); setIsPlaying(false); });
+      ms.setActionHandler("stop", () => { audioRef.current?.pause(); setIsPlaying(false); });
+    } catch { /* */ }
+  }, []);
+
+  useEffect(() => {
+    if (typeof navigator === "undefined" || !("mediaSession" in navigator)) return;
+    const ms = navigator.mediaSession;
+    const tr = schedule[currentIndex]?.track as { title?: string; artist?: string; cover_url?: string } | undefined;
+    if (tr && typeof MediaMetadata !== "undefined") {
+      try {
+        const art = tr.cover_url || undefined;
+        ms.metadata = new MediaMetadata({
+          title: tr.title || "GrouaRadio LIVE",
+          artist: tr.artist || "GrouAI Stream",
+          album: "GrouaRadio 24/7",
+          artwork: art ? [128, 256, 512].map((s) => ({ src: art, sizes: `${s}x${s}`, type: "image/jpeg" })) : [],
+        });
+      } catch { /* */ }
+    }
+    try { ms.playbackState = isPlaying ? "playing" : "paused"; } catch { /* */ }
+  }, [schedule, currentIndex, isPlaying]);
 
   useEffect(() => {
     pausePlayback();
