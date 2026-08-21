@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import {
   Settings as SettingsIcon, User, Bell, Shield, LogOut, Camera,
-  Brain, Eye, Mic, Heart, Trash2, Loader2, Box
+  Brain, Eye, Mic, Heart, Trash2, Loader2, Box, Smartphone
 } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -229,6 +229,34 @@ const Settings = () => {
           </div>
           <SubscriptionManager />
         </section>
+
+        {/* Instalacja aplikacji — „Dodaj do ekranu głównego" (PWA) */}
+        {(() => {
+          const isStandalone = typeof window !== "undefined" && (window.matchMedia("(display-mode: standalone)").matches || (navigator as any).standalone === true);
+          return (
+            <section className="groove-card p-6 mb-6">
+              <div className="flex items-center gap-2 mb-2">
+                <Smartphone className="h-5 w-5 text-primary" />
+                <h2 className="font-semibold">Aplikacja na telefon</h2>
+              </div>
+              <p className="text-sm text-muted-foreground mb-4">
+                Dodaj GrouAI do ekranu głównego — pełny ekran, szybciej i lepiej gra w tle po wygaszeniu ekranu. Bezpieczne, w każdej chwili możesz odinstalować.
+              </p>
+              {isStandalone ? (
+                <div className="inline-flex items-center gap-2 text-sm px-3 py-1.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/40">
+                  ✓ Zainstalowano — działasz w trybie aplikacji
+                </div>
+              ) : (
+                <Button
+                  onClick={() => window.dispatchEvent(new Event("grouai-show-install"))}
+                  className="gap-2"
+                >
+                  <Smartphone className="h-4 w-4" /> Dodaj do ekranu głównego
+                </Button>
+              )}
+            </section>
+          );
+        })()}
 
         {/* Wygląd / Efekt 3D — działa też na telefonie (przełącznik dostępny bez menu bocznego) */}
         <section className="groove-card p-6 mb-6">
