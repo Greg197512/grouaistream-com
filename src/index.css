@@ -557,16 +557,16 @@ html[data-threed="on"] .material-icons {
   html[data-threed="on"] main::before {
     content: "";
     position: fixed;
-    inset: -20%;
+    inset: 0;
     pointer-events: none;
     z-index: 0;
+    /* STATYCZNA poświata — bez transformacji sterowanej przechyłem. Wcześniej
+       ta warstwa na cały ekran repaintowała się przy każdym ruchu i migotała. */
     background: radial-gradient(
       620px circle at 50% 42%,
       hsl(var(--primary) / 0.06),
       transparent 62%
     );
-    transform: translate3d(calc(var(--tilt-x, 0) * 40px), calc(var(--tilt-y, 0) * 30px), 0);
-    will-change: transform;
   }
 }
 
