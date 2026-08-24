@@ -26,6 +26,13 @@ function generateIdleFrequencies(barCount: number): number[] {
   return freqs;
 }
 
+// Wspólny styl krystalicznego szklanego przycisku (jednakowe efekty dla wszystkich CTA).
+const GLASS_BTN =
+  "group relative overflow-hidden rounded-full px-7 h-14 gap-2 font-semibold text-base text-white " +
+  "border border-white/25 bg-white/[0.07] backdrop-blur-xl transition-all duration-300 " +
+  "hover:bg-white/[0.14] hover:border-white/50 hover:-translate-y-0.5 " +
+  "shadow-[inset_0_1px_0_rgba(255,255,255,0.3),0_12px_34px_-14px_rgba(0,0,0,0.75),0_0_30px_-10px_hsl(280_100%_66%/0.55)]";
+
 export const HeroSection = () => {
   const navigate = useNavigate();
   const { playPlaylist, isPlaying, audioElement, isVideoMode, currentTrack } = usePlayer();
@@ -223,34 +230,20 @@ export const HeroSection = () => {
           </div>
 
           <div className="flex flex-wrap gap-3 mb-8">
-            <motion.div
-              whileHover={{ scale: 1.04 }}
-              whileTap={{ scale: 0.97 }}
-              animate={{ boxShadow: [
-                "0 10px 34px -10px hsl(268 100% 66% / 0.45)",
-                "0 14px 48px -8px hsl(331 100% 62% / 0.65)",
-                "0 10px 34px -10px hsl(268 100% 66% / 0.45)",
-              ] }}
-              transition={{ boxShadow: { duration: 3, repeat: Infinity, ease: "easeInOut" } }}
-              className="rounded-full"
-            >
-              <Button size="lg" className="group relative overflow-hidden rounded-full px-8 h-14 font-semibold text-base text-white border border-white/25 bg-white/[0.07] backdrop-blur-xl hover:bg-white/[0.13] hover:border-white/45 transition-colors shadow-[inset_0_1px_0_rgba(255,255,255,0.28),0_10px_30px_-12px_rgba(0,0,0,0.7)]" onClick={handleStartListening} disabled={isLoading}>
-                {/* krystaliczny połysk szkła + przesuwający się refleks */}
-                <span aria-hidden className="pointer-events-none absolute inset-0 rounded-full" style={{ background: "linear-gradient(180deg, rgba(255,255,255,.22), transparent 42%)" }} />
-                <span aria-hidden className="pointer-events-none absolute inset-0" style={{ background: "linear-gradient(100deg, transparent 20%, rgba(255,255,255,.3) 50%, transparent 80%)", animation: "shimmer 3.4s ease-in-out infinite", willChange: "transform" }} />
+            <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} className="rounded-full">
+              <Button size="lg" className={GLASS_BTN} onClick={() => navigate("/studio")}>
+                <span aria-hidden className="pointer-events-none absolute inset-0 rounded-full" style={{ background: "linear-gradient(180deg, rgba(255,255,255,.26), transparent 42%)" }} />
+                <span aria-hidden className="pointer-events-none absolute inset-0" style={{ background: "linear-gradient(100deg, transparent 20%, rgba(255,255,255,.32) 50%, transparent 80%)", animation: "shimmer 3.6s ease-in-out infinite", willChange: "transform" }} />
                 <span className="relative z-10 inline-flex items-center gap-2">
-                  {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Play className="h-5 w-5 fill-current" />}
-                  {t("hero.startListening")}
+                  <Sparkles className="h-5 w-5" />
+                  GrouAI Studio
                 </span>
               </Button>
             </motion.div>
             <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} className="rounded-full">
-              <Button
-                size="lg"
-                className="group relative overflow-hidden rounded-full px-7 h-14 gap-2 font-semibold text-base text-white border border-white/25 bg-white/[0.07] backdrop-blur-xl hover:bg-white/[0.13] hover:border-white/45 transition-colors shadow-[inset_0_1px_0_rgba(255,255,255,0.28),0_10px_30px_-12px_rgba(0,0,0,0.7)]"
-                onClick={() => navigate("/radio-live")}
-              >
-                <span aria-hidden className="pointer-events-none absolute inset-0 rounded-full" style={{ background: "linear-gradient(180deg, rgba(255,255,255,.22), transparent 42%)" }} />
+              <Button size="lg" className={GLASS_BTN} onClick={() => navigate("/radio-live")}>
+                <span aria-hidden className="pointer-events-none absolute inset-0 rounded-full" style={{ background: "linear-gradient(180deg, rgba(255,255,255,.26), transparent 42%)" }} />
+                <span aria-hidden className="pointer-events-none absolute inset-0" style={{ background: "linear-gradient(100deg, transparent 20%, rgba(255,255,255,.32) 50%, transparent 80%)", animation: "shimmer 3.6s ease-in-out infinite", animationDelay: "0.6s", willChange: "transform" }} />
                 <span className="relative z-10 inline-flex items-center gap-2">
                   <Radio className="h-5 w-5" />
                   {t("hero.liveRadio")}
