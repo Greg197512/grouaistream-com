@@ -234,55 +234,27 @@ export const HeroSection = () => {
               transition={{ boxShadow: { duration: 3, repeat: Infinity, ease: "easeInOut" } }}
               className="rounded-full"
             >
-              <Button size="lg" className="group relative overflow-hidden groove-gradient-bg animate-gradient text-primary-foreground rounded-full px-8 h-14 font-semibold text-base border border-white/15" onClick={handleStartListening} disabled={isLoading}>
-                {/* przesuwający się połysk */}
-                <span aria-hidden className="pointer-events-none absolute inset-0" style={{ background: "linear-gradient(100deg, transparent 20%, rgba(255,255,255,.35) 50%, transparent 80%)", animation: "shimmer 3s ease-in-out infinite", willChange: "transform" }} />
+              <Button size="lg" className="group relative overflow-hidden rounded-full px-8 h-14 font-semibold text-base text-white border border-white/25 bg-white/[0.07] backdrop-blur-xl hover:bg-white/[0.13] hover:border-white/45 transition-colors shadow-[inset_0_1px_0_rgba(255,255,255,0.28),0_10px_30px_-12px_rgba(0,0,0,0.7)]" onClick={handleStartListening} disabled={isLoading}>
+                {/* krystaliczny połysk szkła + przesuwający się refleks */}
+                <span aria-hidden className="pointer-events-none absolute inset-0 rounded-full" style={{ background: "linear-gradient(180deg, rgba(255,255,255,.22), transparent 42%)" }} />
+                <span aria-hidden className="pointer-events-none absolute inset-0" style={{ background: "linear-gradient(100deg, transparent 20%, rgba(255,255,255,.3) 50%, transparent 80%)", animation: "shimmer 3.4s ease-in-out infinite", willChange: "transform" }} />
                 <span className="relative z-10 inline-flex items-center gap-2">
                   {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Play className="h-5 w-5 fill-current" />}
                   {t("hero.startListening")}
                 </span>
               </Button>
             </motion.div>
-            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="relative">
-              {/* Iskierki unoszące się znad przycisku */}
-              <div className="pointer-events-none absolute -inset-x-2 -top-8 bottom-0 overflow-visible" aria-hidden="true">
-                {Array.from({ length: 14 }).map((_, i) => {
-                  const left = (i / 14) * 100 + (Math.random() * 8 - 4);
-                  const size = 1.5 + Math.random() * 2.5;
-                  const delay = Math.random() * 4;
-                  const duration = 2.2 + Math.random() * 2.8;
-                  const drift = (Math.random() - 0.5) * 30;
-                  const hue =
-                    Math.random() > 0.6
-                      ? "hsl(189 100% 62%)"
-                      : Math.random() > 0.3
-                      ? "hsl(331 100% 62%)"
-                      : "hsl(268 100% 66%)";
-                  return (
-                    <span
-                      key={`liveradio-spark-${i}`}
-                      className="liveradio-spark absolute rounded-full"
-                      style={{
-                        left: `${left}%`,
-                        width: `${size}px`,
-                        height: `${size}px`,
-                        background: hue,
-                        boxShadow: `0 0 ${size * 4}px ${hue}`,
-                        animationDelay: `${delay}s`,
-                        animationDuration: `${duration}s`,
-                        ["--drift" as string]: `${drift}px`,
-                      }}
-                    />
-                  );
-                })}
-              </div>
+            <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} className="rounded-full">
               <Button
                 size="lg"
-                className="liveradio-burning-btn relative gap-2 rounded-full px-6 h-14 font-semibold text-base text-primary-foreground border-0 overflow-hidden"
+                className="group relative overflow-hidden rounded-full px-7 h-14 gap-2 font-semibold text-base text-white border border-white/25 bg-white/[0.07] backdrop-blur-xl hover:bg-white/[0.13] hover:border-white/45 transition-colors shadow-[inset_0_1px_0_rgba(255,255,255,0.28),0_10px_30px_-12px_rgba(0,0,0,0.7)]"
                 onClick={() => navigate("/radio-live")}
               >
-                <Radio className="h-5 w-5 relative z-10" />
-                <span className="relative z-10">{t("hero.liveRadio")}</span>
+                <span aria-hidden className="pointer-events-none absolute inset-0 rounded-full" style={{ background: "linear-gradient(180deg, rgba(255,255,255,.22), transparent 42%)" }} />
+                <span className="relative z-10 inline-flex items-center gap-2">
+                  <Radio className="h-5 w-5" />
+                  {t("hero.liveRadio")}
+                </span>
               </Button>
             </motion.div>
             <BlogPromoButton />
