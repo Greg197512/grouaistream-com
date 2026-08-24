@@ -15,6 +15,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { gameVote } from "@/lib/hubGame";
 import { gt } from "@/lib/gameI18n";
+import { generateTalkScript, speakTalk, type TalkKind, type TalkLine } from "@/lib/radioTalk";
 
 interface RadioConfig {
   is_active: boolean;
@@ -110,6 +111,12 @@ const RadioLive = () => {
   const [showEmojis, setShowEmojis] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [micBoothOpen, setMicBoothOpen] = useState(false);
+  // GrouAI Talk — dwie osoby rozmawiające (news / opowiadanie), głosy neuronowe.
+  const [talkLoading, setTalkLoading] = useState(false);
+  const [talkActive, setTalkActive] = useState(false);
+  const [talkLine, setTalkLine] = useState<TalkLine | null>(null);
+  const talkActiveRef = useRef(false);
+  const talkSavedVolRef = useRef<number | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const radioClientIdRef = useRef(crypto.randomUUID());
   const liveVoiceQueueRef = useRef<string[]>([]);
@@ -638,6 +645,29 @@ const RadioLive = () => {
     );
   }
 
+  const startTalk = useCallback(async (kind: TalkKind) => {
+    if (talkActiveRef.current || talkLoading) return;
+    const lang = (typeof localStorage !== "undefined" && localStorage.getItem("grooveai-language")) || "pl";
+    setTalkLoading(true);
+    let lines: TalkLine[] = [];
+    try { lines = await generateTalkScript(kind, lang); } catch { /* */ }
+    setTalkLoading(false);
+    if (!lines.length) { toast({ title: "GrouAI Talk", description: "Nie udało się przygotować rozmowy — spróbuj ponownie." }); return; }
+    if (audioRef.current) { talkSavedVolRef.current = audioRef.current.volume; audioRef.current.volume = Math.max(audioRef.current.volume * 0.12, 0.02); }
+    talkActiveRef.current = true;
+    setTalkActive(true);
+    try {
+      await speakTalk(lines, lang, { onLine: setTalkLine, shouldStop: () => !talkActiveRef.current });
+    } finally {
+      talkActiveRef.current = false;
+      setTalkActive(false);
+      setTalkLine(null);
+      if (audioRef.current && talkSavedVolRef.current !== null) { audioRef.current.volume = talkSavedVolRef.current; talkSavedVolRef.current = null; }
+    }
+  }, [talkLoading, toast]);
+
+  const stopTalk = useCallback(() => { talkActiveRef.current = false; }, []);
+
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4 relative overflow-hidden">
       {/* Back button */}
@@ -907,6 +937,34 @@ const RadioLive = () => {
                   className="flex-1"
                 />
               </div>
+
+              {/* GrouAI Talk — dwie osoby rozmawiające (dla wszystkich) */}
+              {talkActive ? (
+                <div className="rounded-xl border border-primary/30 bg-primary/10 p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-primary flex items-center gap-1.5">
+                      <span className="h-2 w-2 rounded-full bg-primary animate-pulse" /> GrouAI Talk — na antenie
+                    </span>
+                    <button onClick={stopTalk} className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1">
+                      <X className="h-3.5 w-3.5" /> Stop
+                    </button>
+                  </div>
+                  {talkLine && (
+                    <p className="text-sm text-foreground/90 leading-snug">
+                      <span className="font-semibold text-primary">{talkLine.speaker === "A" ? "Marek" : "Ola"}:</span> {talkLine.text}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-2">
+                  <Button onClick={() => startTalk("news")} disabled={talkLoading} variant="outline" className="gap-1.5 h-10 border-primary/30">
+                    {talkLoading ? <span className="h-3.5 w-3.5 rounded-full border-2 border-primary/30 border-t-primary animate-spin" /> : "📰"} News (2 głosy)
+                  </Button>
+                  <Button onClick={() => startTalk("story")} disabled={talkLoading} variant="outline" className="gap-1.5 h-10 border-primary/30">
+                    {talkLoading ? <span className="h-3.5 w-3.5 rounded-full border-2 border-primary/30 border-t-primary animate-spin" /> : "📖"} Opowiadanie
+                  </Button>
+                </div>
+              )}
 
               {/* Admin: Live Mic Booth */}
               {isAdmin && (
