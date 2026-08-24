@@ -11,7 +11,7 @@ import { HeroEqualizer } from "@/components/sections/HeroEqualizer";
 import { useTimeRotation } from "@/hooks/useTimeRotation";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import heroBg from "@/assets/hero-bg.jpg";
+import heroBg from "@/assets/hero-neon.jpg";
 import { BassParticles } from "@/components/effects/BassParticles";
 import { getGenrePalette } from "@/utils/genreColors";
 import { BlogPromoButton } from "@/components/sections/BlogPromoButton";
@@ -104,8 +104,8 @@ export const HeroSection = () => {
   return (
     <section className="relative overflow-hidden">
       <div className="absolute inset-0">
-        <img src={heroBg} alt="Hero background" className="h-full w-full object-cover opacity-40" style={{ filter: `hue-rotate(${timeTheme.accentHue - 25}deg)` }} />
-        <div className="absolute inset-0 bg-gradient-to-b from-background/60 via-background/80 to-background" />
+        <img src={heroBg} alt="Hero background" className="h-full w-full object-cover opacity-70" />
+        <div className="absolute inset-0 bg-gradient-to-b from-background/50 via-background/75 to-background" />
         <div className="absolute inset-0 bg-gradient-to-r from-background via-transparent to-background/60" />
         {/* Time-based rotating accent overlay */}
         <div className="absolute inset-0 transition-all duration-[3000ms]" style={{ background: timeTheme.bgOverlay }} />
@@ -116,7 +116,7 @@ export const HeroSection = () => {
           <div
             className="absolute inset-0"
             style={{
-              background: `radial-gradient(ellipse 120% 80% at ${50 + (isPlaying ? Math.sin(Date.now() / 800) * 15 * levels.bass : 0)}% ${60 + (isPlaying ? Math.cos(Date.now() / 1000) * 10 * levels.bass : 0)}%, hsl(15 90% 45% / ${isPlaying ? 0.06 + levels.bass * 0.18 : 0.03}) 0%, transparent 70%)`,
+              background: `radial-gradient(ellipse 120% 80% at ${50 + (isPlaying ? Math.sin(Date.now() / 800) * 15 * levels.bass : 0)}% ${60 + (isPlaying ? Math.cos(Date.now() / 1000) * 10 * levels.bass : 0)}%, hsl(268 100% 62% / ${isPlaying ? 0.08 + levels.bass * 0.2 : 0.04}) 0%, transparent 70%)`,
               transition: 'background 0.15s ease-out',
             }}
           />
@@ -124,7 +124,7 @@ export const HeroSection = () => {
           <div
             className="absolute inset-0"
             style={{
-              background: `radial-gradient(ellipse 90% 60% at ${35 + (isPlaying ? Math.sin(Date.now() / 600 + 2) * 20 * levels.mid : 0)}% ${40 + (isPlaying ? Math.cos(Date.now() / 700 + 1) * 12 * levels.mid : 0)}%, hsl(25 95% 55% / ${isPlaying ? 0.04 + levels.mid * 0.14 : 0.02}) 0%, transparent 60%)`,
+              background: `radial-gradient(ellipse 90% 60% at ${35 + (isPlaying ? Math.sin(Date.now() / 600 + 2) * 20 * levels.mid : 0)}% ${40 + (isPlaying ? Math.cos(Date.now() / 700 + 1) * 12 * levels.mid : 0)}%, hsl(331 100% 60% / ${isPlaying ? 0.04 + levels.mid * 0.16 : 0.02}) 0%, transparent 60%)`,
               transition: 'background 0.12s ease-out',
             }}
           />
@@ -132,7 +132,7 @@ export const HeroSection = () => {
           <div
             className="absolute inset-0"
             style={{
-              background: `radial-gradient(ellipse 60% 40% at ${65 + (isPlaying ? Math.sin(Date.now() / 400 + 4) * 18 * levels.treble : 0)}% ${30 + (isPlaying ? Math.cos(Date.now() / 500 + 3) * 15 * levels.treble : 0)}%, hsl(40 100% 65% / ${isPlaying ? 0.03 + levels.treble * 0.1 : 0.01}) 0%, transparent 50%)`,
+              background: `radial-gradient(ellipse 60% 40% at ${65 + (isPlaying ? Math.sin(Date.now() / 400 + 4) * 18 * levels.treble : 0)}% ${30 + (isPlaying ? Math.cos(Date.now() / 500 + 3) * 15 * levels.treble : 0)}%, hsl(189 100% 62% / ${isPlaying ? 0.03 + levels.treble * 0.12 : 0.015}) 0%, transparent 50%)`,
               transition: 'background 0.08s ease-out',
             }}
           />
@@ -277,7 +277,7 @@ export const HeroSection = () => {
             <BassParticles bass={levels.bass} overall={levels.overall} isPlaying={isPlaying} palette={genrePalette} />
             <h1 className="font-display text-4xl md:text-6xl lg:text-7xl font-bold leading-tight relative z-10">
               <span className="block">Music That</span>
-              <span className="block groove-gradient-text mt-1">Understands</span>
+              <span className="block groove-gradient-text mt-1">Understands You</span>
             </h1>
           </div>
 
