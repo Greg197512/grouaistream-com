@@ -85,38 +85,63 @@ export const FullscreenPlayer = ({ isOpen, onClose }: FullscreenPlayerProps) => 
 
           {/* Content */}
           <div className="relative h-full flex flex-col items-center justify-center px-8 max-w-3xl mx-auto">
-            {/* Artwork */}
+            {/* Artwork — circular cover in glowing rotating ring */}
             <motion.div
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ delay: 0.1 }}
-              className="relative w-72 h-72 md:w-96 md:h-96 rounded-2xl overflow-hidden shadow-2xl mb-8"
+              className="relative w-72 h-72 md:w-80 md:h-80 mb-8 flex items-center justify-center"
             >
-              {currentTrack ? (
-                <HQCover
-                  src={currentTrack.cover_url}
-                  alt={currentTrack.title}
-                  genre={currentTrack.genre}
-                  artist={currentTrack.artist}
-                  className="w-full h-full"
-                />
-              ) : (
-                <div className="w-full h-full groove-gradient-bg animate-gradient" />
-              )}
-              
+              {/* Rotating neon ring */}
+              <motion.div
+                aria-hidden
+                className="absolute inset-0 rounded-full"
+                style={{
+                  background:
+                    "conic-gradient(from 0deg, hsl(331 100% 62%), hsl(268 100% 66%), hsl(189 100% 60%), hsl(331 100% 62%))",
+                  filter: "blur(1px)",
+                }}
+                animate={isPlaying ? { rotate: 360 } : { rotate: 0 }}
+                transition={{ repeat: Infinity, duration: 14, ease: "linear" }}
+              />
+              {/* Dark gap + outer glow */}
+              <div
+                className="absolute rounded-full"
+                style={{
+                  inset: "9px",
+                  background: "hsl(0 0% 4%)",
+                  boxShadow: "0 0 70px -12px hsl(268 100% 66% / 0.65)",
+                }}
+              />
+              {/* Cover circle (breathes while playing) */}
+              <motion.div
+                className="absolute rounded-full overflow-hidden"
+                style={{ inset: "18px" }}
+                animate={isPlaying ? { scale: [1, 1.02, 1] } : { scale: 1 }}
+                transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
+              >
+                {currentTrack ? (
+                  <HQCover
+                    src={currentTrack.cover_url}
+                    alt={currentTrack.title}
+                    genre={currentTrack.genre}
+                    artist={currentTrack.artist}
+                    className="w-full h-full"
+                  />
+                ) : (
+                  <div className="w-full h-full groove-gradient-bg animate-gradient" />
+                )}
+              </motion.div>
+
               {/* Playing animation */}
               {isPlaying && (
-                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1">
+                <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-1 z-10">
                   {[1, 2, 3, 4, 5].map((i) => (
                     <motion.div
                       key={i}
                       className="w-1 bg-white rounded-full"
                       animate={{ height: [8, 24, 8] }}
-                      transition={{ 
-                        repeat: Infinity, 
-                        duration: 0.5,
-                        delay: i * 0.1 
-                      }}
+                      transition={{ repeat: Infinity, duration: 0.5, delay: i * 0.1 }}
                     />
                   ))}
                 </div>
