@@ -14,9 +14,9 @@ export const AuroraBackground = ({ showFace = false }: { showFace?: boolean }) =
       {/* Solid base */}
       <div className="absolute inset-0 bg-background" />
 
-      {/* Subtle blue radial accents */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,hsl(210_90%_55%/0.06),transparent_55%)]" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,hsl(220_85%_60%/0.05),transparent_55%)]" />
+      {/* Subtle neon radial accents (violet / magenta) */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,hsl(268_100%_62%/0.10),transparent_55%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,hsl(331_100%_60%/0.08),transparent_55%)]" />
 
       {/* Aurora WOMAN FACE — ujawnia się gdy LLM gotowy */}
       <motion.div
@@ -58,7 +58,7 @@ export const AuroraBackground = ({ showFace = false }: { showFace?: boolean }) =
         }}
         transition={{ duration: 22, repeat: Infinity, ease: "easeInOut" }}
         className="absolute -top-40 -left-40 h-[500px] w-[500px] rounded-full blur-[120px]"
-        style={{ background: "hsl(210 90% 55% / 0.35)" }}
+        style={{ background: "hsl(268 100% 62% / 0.38)" }}
       />
       <motion.div
         animate={{
@@ -69,7 +69,7 @@ export const AuroraBackground = ({ showFace = false }: { showFace?: boolean }) =
         }}
         transition={{ duration: 26, repeat: Infinity, ease: "easeInOut", delay: 3 }}
         className="absolute top-1/3 -right-32 h-[450px] w-[450px] rounded-full blur-[120px]"
-        style={{ background: "hsl(195 85% 55% / 0.3)" }}
+        style={{ background: "hsl(331 100% 58% / 0.32)" }}
       />
       <motion.div
         animate={{
@@ -79,7 +79,7 @@ export const AuroraBackground = ({ showFace = false }: { showFace?: boolean }) =
         }}
         transition={{ duration: 30, repeat: Infinity, ease: "easeInOut", delay: 7 }}
         className="absolute bottom-0 left-1/4 h-[400px] w-[400px] rounded-full blur-[130px]"
-        style={{ background: "hsl(220 90% 60% / 0.28)" }}
+        style={{ background: "hsl(189 100% 58% / 0.24)" }}
       />
 
       {/* Aurora ribbons — niebieskie wstęgi */}
@@ -93,7 +93,7 @@ export const AuroraBackground = ({ showFace = false }: { showFace?: boolean }) =
         className="absolute top-[20%] left-0 right-0 h-[140px] blur-[60px]"
         style={{
           background:
-            "linear-gradient(90deg, transparent 0%, hsl(210 90% 55% / 0.3) 45%, hsl(195 85% 60% / 0.25) 60%, transparent 100%)",
+            "linear-gradient(90deg, transparent 0%, hsl(268 100% 62% / 0.32) 45%, hsl(331 100% 60% / 0.26) 60%, transparent 100%)",
         }}
       />
       <motion.div
@@ -106,7 +106,7 @@ export const AuroraBackground = ({ showFace = false }: { showFace?: boolean }) =
         className="absolute top-[65%] left-0 right-0 h-[120px] blur-[70px]"
         style={{
           background:
-            "linear-gradient(90deg, transparent 0%, hsl(220 85% 60% / 0.28) 40%, hsl(210 90% 55% / 0.25) 65%, transparent 100%)",
+            "linear-gradient(90deg, transparent 0%, hsl(331 100% 60% / 0.26) 40%, hsl(268 100% 62% / 0.24) 65%, transparent 100%)",
         }}
       />
 
@@ -131,11 +131,11 @@ export const AuroraBackground = ({ showFace = false }: { showFace?: boolean }) =
             bottom: `-${i * 5}px`,
             width: `${1 + (i % 2)}px`,
             height: `${1 + (i % 2)}px`,
-            background: i % 2 === 0 ? "hsl(210 90% 65%)" : "hsl(195 85% 65%)",
+            background: i % 2 === 0 ? "hsl(268 100% 70%)" : "hsl(331 100% 68%)",
             boxShadow:
               i % 2 === 0
-                ? "0 0 6px hsl(210 90% 65%)"
-                : "0 0 6px hsl(195 85% 65%)",
+                ? "0 0 6px hsl(268 100% 70%)"
+                : "0 0 6px hsl(331 100% 68%)",
           }}
         />
       ))}
