@@ -511,12 +511,12 @@ export const PlayerBar = () => {
               onClick={togglePlay}
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
-              className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full bg-white/90 text-background hover:bg-white transition-colors"
+              className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full text-white transition-all groove-gradient-bg shadow-[0_6px_18px_-4px_hsl(331_100%_62%/0.6)] hover:brightness-110"
             >
               {isPlaying ? (
-                <Pause className="h-3.5 w-3.5 sm:h-4 sm:w-4 fill-current" />
+                <Pause className="h-4 w-4 sm:h-4.5 sm:w-4.5 fill-current" />
               ) : (
-                <Play className="h-3.5 w-3.5 sm:h-4 sm:w-4 fill-current ml-0.5" />
+                <Play className="h-4 w-4 sm:h-4.5 sm:w-4.5 fill-current ml-0.5" />
               )}
             </motion.button>
 

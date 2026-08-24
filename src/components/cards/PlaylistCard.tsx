@@ -19,7 +19,7 @@ export const PlaylistCard = ({
   description, 
   imageUrl, 
   isAI,
-  gradient = "from-groove-orange via-groove-amber to-groove-fire",
+  gradient = "from-primary via-accent to-primary",
   onClick 
 }: PlaylistCardProps) => {
   const navigate = useNavigate();
@@ -37,10 +37,10 @@ export const PlaylistCard = ({
       onClick={handleClick}
       whileHover={{ scale: 1.02 }}
       whileTap={{ scale: 0.98 }}
-      className="groove-card group cursor-pointer p-4"
+      className="groove-card group cursor-pointer p-4 rounded-2xl border border-white/5 hover:border-primary/30 hover:shadow-[0_10px_30px_-12px_hsl(268_100%_66%/0.5)]"
     >
       {/* Image */}
-      <div className="relative mb-4 aspect-square overflow-hidden rounded-md shadow-lg">
+      <div className="relative mb-4 aspect-square overflow-hidden rounded-xl shadow-lg">
         {imageUrl ? (
           <HQCover 
             src={imageUrl} 
@@ -61,7 +61,7 @@ export const PlaylistCard = ({
         <motion.button
           initial={{ opacity: 0, y: 10 }}
           whileHover={{ scale: 1.1 }}
-          className="absolute bottom-2 right-2 flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-xl opacity-0 group-hover:opacity-100 transition-all duration-300"
+          className="absolute bottom-2 right-2 flex h-12 w-12 items-center justify-center rounded-full text-white groove-gradient-bg shadow-[0_8px_20px_-6px_hsl(331_100%_62%/0.7)] opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all duration-300"
         >
           <span className="material-icons">play_arrow</span>
         </motion.button>

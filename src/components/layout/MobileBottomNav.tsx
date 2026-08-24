@@ -104,16 +104,17 @@ export const MobileBottomNav = () => {
               key={item.href}
               onClick={() => navigate(item.href)}
               className={cn(
-                "flex flex-col items-center gap-0.5 py-1 px-3 transition-colors flex-shrink-0",
-                isActive ? "text-primary" : isNeon ? "text-accent" : "text-muted-foreground"
+                "flex flex-col items-center gap-0.5 py-1 px-3 my-1 rounded-2xl transition-all flex-shrink-0",
+                isActive ? "text-primary bg-primary/10 ring-1 ring-primary/30" : isNeon ? "text-accent" : "text-muted-foreground"
               )}
               style={{
                 scrollSnapAlign: "center",
                 minWidth: "4rem",
+                ...(isActive ? { boxShadow: "0 0 18px hsl(268 100% 66% / 0.35)" } : {}),
                 ...(isNeon ? {
                   filter: isActive
-                    ? "drop-shadow(0 0 8px hsl(38 100% 50% / 0.8))"
-                    : "drop-shadow(0 0 5px hsl(38 100% 50% / 0.45))",
+                    ? "drop-shadow(0 0 8px hsl(331 100% 62% / 0.85))"
+                    : "drop-shadow(0 0 5px hsl(331 100% 62% / 0.5))",
                 } : {}),
               }}
             >
