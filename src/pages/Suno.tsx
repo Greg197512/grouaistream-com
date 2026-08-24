@@ -261,6 +261,14 @@ const Suno = () => {
   const tempoL = (id: string) => (({ slow: L("Wolne","Slow","Langzaam","Повільне"), medium: L("Średnie","Medium","Gemiddeld","Середнє"), fast: L("Szybkie","Fast","Snel","Швидке"), "very-fast": L("Bardzo szybkie","Very fast","Zeer snel","Дуже швидке") }) as Record<string,string>)[id] || id;
   const vocalL = (id: string) => (({ singing: L("Śpiew","Singing","Zang","Спів"), rap: L("Rap","Rap","Rap","Реп"), whisper: L("Szept","Whisper","Fluister","Шепіт"), powerful: L("Mocny","Powerful","Krachtig","Потужний"), soft: L("Delikatny","Soft","Zacht","Ніжний") }) as Record<string,string>)[id] || id;
   const intensityL = (id: string) => (({ minimal: L("Minimal","Minimal","Minimaal","Мінімал"), balanced: L("Zbalansowany","Balanced","Gebalanceerd","Збалансований"), rich: L("Bogata","Rich","Rijk","Багата"), epic: L("Epicka","Epic","Episch","Епічна") }) as Record<string,string>)[id] || id;
+  const presetL = (pl: string) => (({
+    "🌙 Lo-fi do nauki": L("🌙 Lo-fi do nauki","🌙 Lo-fi for studying","🌙 Lo-fi om te studeren","🌙 Lo-fi для навчання"),
+    "💪 Trening na siłce": L("💪 Trening na siłce","💪 Gym workout","💪 Work-out","💪 Тренування в залі"),
+    "❤️ Pierwszy taniec": L("❤️ Pierwszy taniec","❤️ First dance","❤️ Eerste dans","❤️ Перший танець"),
+    "🎉 Impreza": L("🎉 Impreza","🎉 Party","🎉 Feest","🎉 Вечірка"),
+    "🌧️ Deszczowy poranek": L("🌧️ Deszczowy poranek","🌧️ Rainy morning","🌧️ Regenachtige ochtend","🌧️ Дощовий ранок"),
+    "🚀 Epicki finał": L("🚀 Epicki finał","🚀 Epic finale","🚀 Episch finale","🚀 Епічний фінал"),
+  } as Record<string,string>)[pl] || pl);
   const [activeTab, setActiveTab] = useState<"generate" | "mix" | "suno" | "video">("generate");
   const [genre, setGenre] = useState("Pop");
   const [genre2, setGenre2] = useState<string | null>(null);
@@ -956,10 +964,10 @@ const Suno = () => {
             <Sparkles className="h-3.5 w-3.5 text-[#FF9500]" />
             <span className="text-xs text-gray-300">
               {engine === "grouai"
-                ? <>Napędzany przez <span className="text-[#FF9500] font-semibold">GrouAI Studio Engine</span> — Suno V5 + GPT, studyjna jakość, śpiewane wokale</>
+                ? <>{L("Napędzany przez","Powered by","Aangedreven door","На основі")} <span className="text-[#FF9500] font-semibold">GrouAI Studio Engine</span> — Suno V5 + GPT, {L("studyjna jakość, śpiewane wokale","studio quality, sung vocals","studiokwaliteit, gezongen zang","студійна якість, співаний вокал")}</>
                 : engine === "elevenlabs"
-                ? <>Napędzany przez <span className="text-[#FF9500] font-semibold">ElevenLabs Music v1</span> — studyjna jakość, śpiewane wokale</>
-                : <>Napędzany przez <span className="text-[#FF9500] font-semibold">GrouAI Multi-Engine Router</span> — auto-routing przez n8n</>}
+                ? <>{L("Napędzany przez","Powered by","Aangedreven door","На основі")} <span className="text-[#FF9500] font-semibold">ElevenLabs Music v1</span> — {L("studyjna jakość, śpiewane wokale","studio quality, sung vocals","studiokwaliteit, gezongen zang","студійна якість, співаний вокал")}</>
+                : <>{L("Napędzany przez","Powered by","Aangedreven door","На основі")} <span className="text-[#FF9500] font-semibold">GrouAI Multi-Engine Router</span> — {L("auto-routing przez n8n","auto-routing via n8n","auto-routing via n8n","авто-маршрутизація через n8n")}</>}
             </span>
           </div>
 
@@ -1045,6 +1053,7 @@ const Suno = () => {
                 {QUICK_PRESETS.map((p) => (
                   <button
                     key={p.label}
+                    title={presetL(p.label)}
                     type="button"
                     onClick={() => {
                       setGenre(p.genre);
@@ -1055,7 +1064,7 @@ const Suno = () => {
                     }}
                     className="px-3 py-1.5 rounded-full text-xs border border-[#9333EA]/30 bg-[#9333EA]/10 text-gray-200 hover:bg-[#9333EA]/20 hover:border-[#9333EA]/60 transition-colors"
                   >
-                    {p.label}
+                    {presetL(p.label)}
                   </button>
                 ))}
               </div>
@@ -1182,7 +1191,7 @@ const Suno = () => {
                           .map((l) => l.text)
                           .join("\n");
                         setCustomLyrics(auto);
-                        toast.success("Wygenerowano szkic tekstu — możesz go dowolnie edytować ✍️");
+                        toast.success(L("Wygenerowano szkic tekstu — możesz go dowolnie edytować ✍️","Draft lyrics generated — edit them freely ✍️","Concepttekst gegenereerd — bewerk vrij ✍️","Чернетку тексту згенеровано — редагуй вільно ✍️"));
                       }}
                       className="text-[11px] text-[#9333EA] hover:text-[#c084fc] flex items-center gap-1"
                     >
@@ -1193,12 +1202,12 @@ const Suno = () => {
                     id="track-lyrics"
                     value={customLyrics}
                     onChange={(e) => setCustomLyrics(e.target.value)}
-                    placeholder={"Wpisz własny tekst — silnik zaśpiewa go dokładnie.\n\n[Zwrotka 1]\n...\n\n[Refren]\n..."}
+                    placeholder={L("Wpisz własny tekst — silnik zaśpiewa go dokładnie.\n\n[Zwrotka 1]\n...\n\n[Refren]\n...","Type your own lyrics — the engine will sing them exactly.\n\n[Verse 1]\n...\n\n[Chorus]\n...","Typ je eigen tekst — de engine zingt hem precies.\n\n[Couplet 1]\n...\n\n[Refrein]\n...","Впиши власний текст — рушій заспіває його точно.\n\n[Куплет 1]\n...\n\n[Приспів]\n...")}
                     rows={6}
                     className="bg-[#1a1a2e]/80 border-[#FF6B00]/20 text-white placeholder:text-gray-600 focus-visible:ring-[#FF6B00]/40 resize-y font-mono text-sm leading-relaxed"
                   />
                   <p className="text-[10px] text-gray-500">
-                    Zostaw puste, aby AI napisało tekst automatycznie. Znaczniki jak <span className="text-gray-400">[Zwrotka]</span>, <span className="text-gray-400">[Refren]</span> pomagają w strukturze.
+                    {L("Zostaw puste, aby AI napisało tekst automatycznie. Znaczniki jak [Zwrotka], [Refren] pomagają w strukturze.","Leave empty and AI will write the lyrics. Tags like [Verse], [Chorus] help with structure.","Laat leeg en AI schrijft de tekst. Tags als [Couplet], [Refrein] helpen met de structuur.","Залиш порожнім — AI напише текст. Мітки як [Куплет], [Приспів] допомагають зі структурою.")}
                   </p>
                 </motion.div>
               )}
@@ -1369,7 +1378,7 @@ const Suno = () => {
                   <Sparkles className="h-4 w-4 text-[#9333EA]" />
                 )}
                 <span className="text-gray-300">
-                  Free: <span className="font-bold text-white">{freeUsed} / {FREE_GENERATION_LIMIT}</span> utworów wykorzystanych
+                  Free: <span className="font-bold text-white">{freeUsed} / {FREE_GENERATION_LIMIT}</span> {L("utworów wykorzystanych","tracks used","tracks gebruikt","треків використано")}
                 </span>
               </div>
               {freeUsed >= FREE_GENERATION_LIMIT && (
