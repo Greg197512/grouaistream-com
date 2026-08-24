@@ -250,7 +250,7 @@ export const HeroSection = () => {
                         className="inline-block"
                         style={{ 
                           transform: isPlaying ? `translateY(${-bounce}px)` : undefined,
-                          textShadow: isPlaying ? `0 ${bounce}px ${bounce * 0.7}px hsl(25 95% 55% / ${bounce / 35})` : undefined,
+                          textShadow: isPlaying ? `0 ${bounce}px ${bounce * 0.7}px hsl(331 100% 62% / ${bounce / 35})` : undefined,
                           transition: 'transform 0.06s ease-out, text-shadow 0.06s ease-out',
                           minWidth: char === ' ' ? '0.25em' : undefined,
                         }}
@@ -331,10 +331,10 @@ export const HeroSection = () => {
                   const drift = (Math.random() - 0.5) * 30;
                   const hue =
                     Math.random() > 0.6
-                      ? "hsl(38 100% 65%)"
+                      ? "hsl(189 100% 62%)"
                       : Math.random() > 0.3
-                      ? "hsl(24 100% 60%)"
-                      : "hsl(14 100% 57%)";
+                      ? "hsl(331 100% 62%)"
+                      : "hsl(268 100% 66%)";
                   return (
                     <span
                       key={`liveradio-spark-${i}`}
