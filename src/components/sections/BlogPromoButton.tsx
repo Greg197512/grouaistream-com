@@ -114,15 +114,18 @@ export const BlogPromoButton = () => {
         onTouchEnd={endPress}
         onContextMenu={(e) => e.preventDefault()}
         title={t("hero.blogTooltip")}
-        className="relative overflow-hidden groove-gradient-bg text-primary-foreground hover:opacity-90 gap-2 rounded-full px-6 h-14 font-semibold text-base shadow-[0_0_30px_hsl(var(--primary)/0.3)] select-none"
+        className="group relative overflow-hidden rounded-full px-7 h-14 gap-2 font-semibold text-base text-white border border-white/25 bg-white/[0.07] backdrop-blur-xl hover:bg-white/[0.13] hover:border-white/45 transition-colors shadow-[inset_0_1px_0_rgba(255,255,255,0.28),0_10px_30px_-12px_rgba(0,0,0,0.7)] select-none"
       >
+        <span aria-hidden className="pointer-events-none absolute inset-0 rounded-full" style={{ background: "linear-gradient(180deg, rgba(255,255,255,.22), transparent 42%)" }} />
         <span
-          className="absolute inset-0 bg-primary-foreground/20 origin-left pointer-events-none"
+          className="absolute inset-0 bg-white/25 origin-left pointer-events-none"
           style={{ transform: `scaleX(${progress / 100})`, transition: "transform 0.04s linear" }}
           aria-hidden
         />
-        <Newspaper className="h-5 w-5 relative z-10" />
-        <span className="relative z-10">{t("hero.blog")}</span>
+        <span className="relative z-10 inline-flex items-center gap-2">
+          <Newspaper className="h-5 w-5" />
+          {t("hero.blog")}
+        </span>
       </Button>
     </motion.div>
   );

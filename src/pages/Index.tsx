@@ -18,7 +18,6 @@ import { HomeGreeting } from "@/components/sections/HomeGreeting";
 import { FeaturedTrending } from "@/components/sections/FeaturedTrending";
 
 import SectionErrorBoundary from "@/components/SectionErrorBoundary";
-import { GameBadge } from "@/components/game/GameBadge";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 const Section = ({ name, children }: { name: string; children: React.ReactNode }) => (
@@ -30,7 +29,6 @@ const Index = () => {
 
   return (
     <MainLayout>
-      <GameBadge />
       <Section name="greeting"><HomeGreeting /></Section>
       <Section name="hero"><HeroSection /></Section>
       <Section name="featured-trending"><FeaturedTrending /></Section>
