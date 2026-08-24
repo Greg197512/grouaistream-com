@@ -612,6 +612,32 @@ const RadioLive = () => {
     return `${d.getHours().toString().padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")}`;
   };
 
+  // Uwaga: te hooki MUSZĄ być zdefiniowane przed jakimkolwiek wczesnym return
+  // (isLoading / isOffAir), inaczej liczba hooków zmienia się między renderami
+  // i React crashuje stronę ("Rendered more hooks than during the previous render").
+  const startTalk = useCallback(async (kind: TalkKind) => {
+    if (talkActiveRef.current || talkLoading) return;
+    const lang = (typeof localStorage !== "undefined" && localStorage.getItem("grooveai-language")) || "pl";
+    setTalkLoading(true);
+    let lines: TalkLine[] = [];
+    try { lines = await generateTalkScript(kind, lang); } catch { /* */ }
+    setTalkLoading(false);
+    if (!lines.length) { toast({ title: "GrouAI Talk", description: "Nie udało się przygotować rozmowy — spróbuj ponownie." }); return; }
+    if (audioRef.current) { talkSavedVolRef.current = audioRef.current.volume; audioRef.current.volume = Math.max(audioRef.current.volume * 0.12, 0.02); }
+    talkActiveRef.current = true;
+    setTalkActive(true);
+    try {
+      await speakTalk(lines, lang, { onLine: setTalkLine, shouldStop: () => !talkActiveRef.current });
+    } finally {
+      talkActiveRef.current = false;
+      setTalkActive(false);
+      setTalkLine(null);
+      if (audioRef.current && talkSavedVolRef.current !== null) { audioRef.current.volume = talkSavedVolRef.current; talkSavedVolRef.current = null; }
+    }
+  }, [talkLoading, toast]);
+
+  const stopTalk = useCallback(() => { talkActiveRef.current = false; }, []);
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -644,29 +670,6 @@ const RadioLive = () => {
       </div>
     );
   }
-
-  const startTalk = useCallback(async (kind: TalkKind) => {
-    if (talkActiveRef.current || talkLoading) return;
-    const lang = (typeof localStorage !== "undefined" && localStorage.getItem("grooveai-language")) || "pl";
-    setTalkLoading(true);
-    let lines: TalkLine[] = [];
-    try { lines = await generateTalkScript(kind, lang); } catch { /* */ }
-    setTalkLoading(false);
-    if (!lines.length) { toast({ title: "GrouAI Talk", description: "Nie udało się przygotować rozmowy — spróbuj ponownie." }); return; }
-    if (audioRef.current) { talkSavedVolRef.current = audioRef.current.volume; audioRef.current.volume = Math.max(audioRef.current.volume * 0.12, 0.02); }
-    talkActiveRef.current = true;
-    setTalkActive(true);
-    try {
-      await speakTalk(lines, lang, { onLine: setTalkLine, shouldStop: () => !talkActiveRef.current });
-    } finally {
-      talkActiveRef.current = false;
-      setTalkActive(false);
-      setTalkLine(null);
-      if (audioRef.current && talkSavedVolRef.current !== null) { audioRef.current.volume = talkSavedVolRef.current; talkSavedVolRef.current = null; }
-    }
-  }, [talkLoading, toast]);
-
-  const stopTalk = useCallback(() => { talkActiveRef.current = false; }, []);
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4 relative overflow-hidden">
