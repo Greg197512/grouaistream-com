@@ -7,7 +7,6 @@ import { usePlayer } from "@/contexts/PlayerContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 import { useAudioAnalyser } from "@/hooks/useAudioAnalyser";
-import { HeroEqualizer } from "@/components/sections/HeroEqualizer";
 import { useTimeRotation } from "@/hooks/useTimeRotation";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -262,13 +261,6 @@ export const HeroSection = () => {
                 </span>
               </span>
 
-              {/* Real-data equalizer — 10 przełączanych stylów (malutki przycisk) */}
-              <HeroEqualizer
-                frequencies={blendedFrequencies}
-                levels={levels}
-                isPlaying={isPlaying}
-                palette={genrePalette}
-              />
             </div>
           </motion.div>
 
