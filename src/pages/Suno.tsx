@@ -254,6 +254,13 @@ const Suno = () => {
   const { user } = useAuth();
   const { isPro, isUltimate, showUpgradeFor } = useSubscription();
   const { t, language } = useLanguage();
+  // Lokalny tłumacz Studia — całe UII przełącza się na wybrany język (PL/EN/NL/UA).
+  const L = (pl: string, en: string, nl: string, ua: string) =>
+    language === "en" ? en : language === "nl" ? nl : language === "ua" ? ua : pl;
+  const moodL = (id: string) => (({ happy: L("Radosny","Happy","Vrolijk","Радісний"), sad: L("Melancholijny","Melancholic","Melancholisch","Меланхолійний"), energetic: L("Energetyczny","Energetic","Energiek","Енергійний"), chill: L("Chillout","Chill","Chill","Чіл"), romantic: L("Romantyczny","Romantic","Romantisch","Романтичний"), dark: L("Mroczny","Dark","Duister","Похмурий") }) as Record<string,string>)[id] || id;
+  const tempoL = (id: string) => (({ slow: L("Wolne","Slow","Langzaam","Повільне"), medium: L("Średnie","Medium","Gemiddeld","Середнє"), fast: L("Szybkie","Fast","Snel","Швидке"), "very-fast": L("Bardzo szybkie","Very fast","Zeer snel","Дуже швидке") }) as Record<string,string>)[id] || id;
+  const vocalL = (id: string) => (({ singing: L("Śpiew","Singing","Zang","Спів"), rap: L("Rap","Rap","Rap","Реп"), whisper: L("Szept","Whisper","Fluister","Шепіт"), powerful: L("Mocny","Powerful","Krachtig","Потужний"), soft: L("Delikatny","Soft","Zacht","Ніжний") }) as Record<string,string>)[id] || id;
+  const intensityL = (id: string) => (({ minimal: L("Minimal","Minimal","Minimaal","Мінімал"), balanced: L("Zbalansowany","Balanced","Gebalanceerd","Збалансований"), rich: L("Bogata","Rich","Rijk","Багата"), epic: L("Epicka","Epic","Episch","Епічна") }) as Record<string,string>)[id] || id;
   const [activeTab, setActiveTab] = useState<"generate" | "mix" | "suno" | "video">("generate");
   const [genre, setGenre] = useState("Pop");
   const [genre2, setGenre2] = useState<string | null>(null);
@@ -937,7 +944,7 @@ const Suno = () => {
             </div>
             <h1 className="text-3xl font-bold text-white">GrouAI Studio</h1>
             <p className="text-sm text-gray-400 max-w-md mx-auto leading-relaxed">
-              Twórz profesjonalne utwory muzyczne z AI. Wybierz styl, wpisz tekst, wybierz głos — i wygeneruj muzykę ze śpiewanym wokalem w jakości studyjnej.
+              {L("Twórz profesjonalne utwory muzyczne z AI. Wybierz styl, wpisz tekst, wybierz głos — i wygeneruj muzykę ze śpiewanym wokalem w jakości studyjnej.","Create professional music with AI. Pick a style, write lyrics, choose a voice — and generate a track with studio-quality sung vocals.","Maak professionele muziek met AI. Kies een stijl, schrijf tekst, kies een stem — en genereer een track met gezongen zang in studiokwaliteit.","Створюй професійну музику з AI. Обери стиль, впиши текст, вибери голос — і згенеруй трек зі співаним вокалом студійної якості.")}
             </p>
           </motion.div>
 
@@ -989,7 +996,7 @@ const Suno = () => {
               }`}
               style={activeTab === "generate" ? { background: "linear-gradient(135deg, #FF6B00, #FF9500)", boxShadow: "0 0 15px #FF6B0040" } : undefined}
             >
-              <Sparkles className="h-4 w-4" /> Generator
+              <Sparkles className="h-4 w-4" /> {L("Generator","Generator","Generator","Генератор")}
             </button>
             <button
               onClick={() => setActiveTab("mix")}
@@ -998,7 +1005,7 @@ const Suno = () => {
               }`}
               style={activeTab === "mix" ? { background: "linear-gradient(135deg, #9333EA, #FF6B00)", boxShadow: "0 0 15px #9333EA40" } : undefined}
             >
-              <Blend className="h-4 w-4" /> Track Mix
+              <Blend className="h-4 w-4" /> {L("Track Mix","Track Mix","Track Mix","Мікс треків")}
             </button>
             <button
               onClick={() => setActiveTab("video")}
@@ -1007,7 +1014,7 @@ const Suno = () => {
               }`}
               style={activeTab === "video" ? { background: "linear-gradient(135deg, #FF6B00, #9333EA)", boxShadow: "0 0 15px #9333EA40" } : undefined}
             >
-              <Film className="h-4 w-4" /> Video Studio
+              <Film className="h-4 w-4" /> {L("Video Studio","Video Studio","Video Studio","Відео-студія")}
             </button>
           </div>
 
@@ -1033,7 +1040,7 @@ const Suno = () => {
             )}
             {/* Szybkie presety — gotowe pomysły */}
             <div className="space-y-2">
-              <Label className="text-xs text-gray-400 flex items-center gap-1.5"><Zap className="h-3.5 w-3.5 text-[#FF9500]" /> Szybki start</Label>
+              <Label className="text-xs text-gray-400 flex items-center gap-1.5"><Zap className="h-3.5 w-3.5 text-[#FF9500]" /> {L("Szybki start","Quick start","Snelle start","Швидкий старт")}</Label>
               <div className="flex flex-wrap gap-2">
                 {QUICK_PRESETS.map((p) => (
                   <button
@@ -1056,12 +1063,12 @@ const Suno = () => {
 
             {/* Tytuł utworu */}
             <div className="space-y-2">
-              <Label htmlFor="track-title" className="text-xs text-gray-400 flex items-center gap-1.5"><Type className="h-3.5 w-3.5 text-[#FF9500]" /> Tytuł utworu</Label>
+              <Label htmlFor="track-title" className="text-xs text-gray-400 flex items-center gap-1.5"><Type className="h-3.5 w-3.5 text-[#FF9500]" /> {L("Tytuł utworu","Title","Titel","Назва")}</Label>
               <Input
                 id="track-title"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="np. Nocna jazda"
+                placeholder={L("np. Nocna jazda","e.g. Night drive","bijv. Nachtrit","напр. Нічна їзда")}
                 maxLength={80}
                 className="bg-[#1a1a2e]/80 border-[#FF6B00]/20 text-white placeholder:text-gray-600 focus-visible:ring-[#FF6B00]/40"
               />
@@ -1069,7 +1076,7 @@ const Suno = () => {
 
             {/* Styl / gatunek */}
             <div className="space-y-2">
-              <Label className="text-xs text-gray-400 flex items-center gap-1.5"><Guitar className="h-3.5 w-3.5 text-[#FF9500]" /> Styl</Label>
+              <Label className="text-xs text-gray-400 flex items-center gap-1.5"><Guitar className="h-3.5 w-3.5 text-[#FF9500]" /> {L("Styl","Style","Stijl","Стиль")}</Label>
               <div className="flex flex-wrap gap-2">
                 {GENRES.map((g) => (
                   <button
@@ -1094,7 +1101,7 @@ const Suno = () => {
                   onClick={() => setGenre2(genre2 ? null : (GENRES.find((g) => g !== genre) || null))}
                   className="text-[11px] text-[#9333EA] hover:text-[#c084fc] flex items-center gap-1"
                 >
-                  <Blend className="h-3 w-3" /> {genre2 ? "Wyłącz miks stylów" : "Zmiksuj z drugim stylem"}
+                  <Blend className="h-3 w-3" /> {genre2 ? L("Wyłącz miks stylów","Turn off style mix","Stijlmix uit","Вимкнути мікс") : L("Zmiksuj z drugim stylem","Mix with another style","Meng met andere stijl","Змішати зі стилем")}
                 </button>
                 {genre2 && (
                   <div className="mt-2 space-y-2">
@@ -1126,7 +1133,7 @@ const Suno = () => {
 
             {/* Długość */}
             <div className="space-y-2">
-              <Label className="text-xs text-gray-400 flex items-center gap-1.5"><Gauge className="h-3.5 w-3.5 text-[#FF9500]" /> Długość</Label>
+              <Label className="text-xs text-gray-400 flex items-center gap-1.5"><Gauge className="h-3.5 w-3.5 text-[#FF9500]" /> {L("Długość","Length","Lengte","Тривалість")}</Label>
               <div className="flex gap-2">
                 {DURATION_OPTIONS.map((d) => (
                   <button
@@ -1150,8 +1157,8 @@ const Suno = () => {
               <div className="flex items-center gap-2">
                 <Music className="h-4 w-4 text-[#FF9500]" />
                 <div>
-                  <p className="text-sm text-gray-200">Instrumentalny</p>
-                  <p className="text-[10px] text-gray-500">Bez wokalu — sama muzyka</p>
+                  <p className="text-sm text-gray-200">{L("Instrumentalny","Instrumental","Instrumentaal","Інструментал")}</p>
+                  <p className="text-[10px] text-gray-500">{L("Bez wokalu — sama muzyka","No vocals — music only","Geen zang — alleen muziek","Без вокалу — лише музика")}</p>
                 </div>
               </div>
               <Switch checked={instrumental} onCheckedChange={setInstrumental} />
@@ -1167,7 +1174,7 @@ const Suno = () => {
                   className="space-y-2 overflow-hidden"
                 >
                   <div className="flex items-center justify-between">
-                    <Label htmlFor="track-lyrics" className="text-xs text-gray-400 flex items-center gap-1.5"><Mic className="h-3.5 w-3.5 text-[#FF9500]" /> Tekst piosenki (ręcznie)</Label>
+                    <Label htmlFor="track-lyrics" className="text-xs text-gray-400 flex items-center gap-1.5"><Mic className="h-3.5 w-3.5 text-[#FF9500]" /> {L("Tekst piosenki (ręcznie)","Lyrics (manual)","Songtekst (handmatig)","Текст пісні (вручну)")}</Label>
                     <button
                       type="button"
                       onClick={() => {
@@ -1179,7 +1186,7 @@ const Suno = () => {
                       }}
                       className="text-[11px] text-[#9333EA] hover:text-[#c084fc] flex items-center gap-1"
                     >
-                      <Wand2 className="h-3 w-3" /> Podpowiedz tekst
+                      <Wand2 className="h-3 w-3" /> {L("Podpowiedz tekst","Suggest lyrics","Tekst voorstellen","Підказати текст")}
                     </button>
                   </div>
                   <Textarea
@@ -1204,7 +1211,7 @@ const Suno = () => {
                 onClick={() => setShowAdvanced((v) => !v)}
                 className="text-xs text-[#FF9500] hover:text-white flex items-center gap-1.5"
               >
-                <Sparkles className="h-3.5 w-3.5" /> {showAdvanced ? "Ukryj opcje zaawansowane" : "Opcje zaawansowane (nastrój, tempo, wokal)"}
+                <Sparkles className="h-3.5 w-3.5" /> {showAdvanced ? L("Ukryj opcje zaawansowane","Hide advanced options","Verberg geavanceerd","Сховати додаткові") : L("Opcje zaawansowane (nastrój, tempo, wokal)","Advanced options (mood, tempo, vocals)","Geavanceerd (stemming, tempo, zang)","Додаткові (настрій, темп, вокал)")}
               </button>
               <AnimatePresence initial={false}>
                 {showAdvanced && (
@@ -1217,7 +1224,7 @@ const Suno = () => {
                     <div className="pt-3 space-y-4">
                       {/* Nastrój */}
                       <div className="space-y-2">
-                        <Label className="text-[11px] text-gray-400">Nastrój</Label>
+                        <Label className="text-[11px] text-gray-400">{L("Nastrój","Mood","Stemming","Настрій")}</Label>
                         <div className="flex flex-wrap gap-2">
                           {MOODS.map((m) => {
                             const Icon = m.icon;
@@ -1231,7 +1238,7 @@ const Suno = () => {
                                 }`}
                                 style={mood === m.id ? { color: m.color } : undefined}
                               >
-                                <Icon className="h-3.5 w-3.5" /> {m.label}
+                                <Icon className="h-3.5 w-3.5" /> {moodL(m.id)}
                               </button>
                             );
                           })}
@@ -1240,7 +1247,7 @@ const Suno = () => {
 
                       {/* Tempo */}
                       <div className="space-y-2">
-                        <Label className="text-[11px] text-gray-400">Tempo</Label>
+                        <Label className="text-[11px] text-gray-400">{L("Tempo","Tempo","Tempo","Темп")}</Label>
                         <div className="flex flex-wrap gap-2">
                           {TEMPOS.map((tp) => (
                             <button
@@ -1251,7 +1258,7 @@ const Suno = () => {
                                 tempo === tp.id ? "border-[#FF6B00] bg-[#FF6B00]/20 text-white" : "border-white/10 bg-[#1a1a2e]/60 text-gray-400 hover:text-gray-200"
                               }`}
                             >
-                              {tp.label} <span className="opacity-60">· {tp.bpm}</span>
+                              {tempoL(tp.id)} <span className="opacity-60">· {tp.bpm}</span>
                             </button>
                           ))}
                         </div>
@@ -1260,7 +1267,7 @@ const Suno = () => {
                       {/* Styl wokalu — tylko gdy nie instrumentalny */}
                       {!instrumental && (
                         <div className="space-y-2">
-                          <Label className="text-[11px] text-gray-400">Styl wokalu</Label>
+                          <Label className="text-[11px] text-gray-400">{L("Styl wokalu","Vocal style","Zangstijl","Стиль вокалу")}</Label>
                           <div className="flex flex-wrap gap-2">
                             {VOCAL_STYLES.map((vs) => (
                               <button
@@ -1271,7 +1278,7 @@ const Suno = () => {
                                   vocalStyle === vs.id ? "border-[#9333EA] bg-[#9333EA]/20 text-white" : "border-white/10 bg-[#1a1a2e]/60 text-gray-400 hover:text-gray-200"
                                 }`}
                               >
-                                {vs.label}
+                                {vocalL(vs.id)}
                               </button>
                             ))}
                           </div>
@@ -1280,7 +1287,7 @@ const Suno = () => {
 
                       {/* Intensywność produkcji */}
                       <div className="space-y-2">
-                        <Label className="text-[11px] text-gray-400">Produkcja</Label>
+                        <Label className="text-[11px] text-gray-400">{L("Produkcja","Production","Productie","Продакшн")}</Label>
                         <div className="flex flex-wrap gap-2">
                           {INTENSITIES.map((it) => (
                             <button
@@ -1291,7 +1298,7 @@ const Suno = () => {
                                 intensity === it.id ? "border-[#FF6B00] bg-[#FF6B00]/20 text-white" : "border-white/10 bg-[#1a1a2e]/60 text-gray-400 hover:text-gray-200"
                               }`}
                             >
-                              {it.label}
+                              {intensityL(it.id)}
                             </button>
                           ))}
                         </div>
@@ -1300,7 +1307,7 @@ const Suno = () => {
                       {/* Twój głos (klonowanie) — nadpisuje głos dobrany po gatunku */}
                       {!instrumental && (
                         <div className="space-y-3 pt-1 border-t border-white/5">
-                          <Label className="text-[11px] text-gray-400 flex items-center gap-1.5"><Mic className="h-3.5 w-3.5 text-[#9333EA]" /> Twój głos (opcjonalnie)</Label>
+                          <Label className="text-[11px] text-gray-400 flex items-center gap-1.5"><Mic className="h-3.5 w-3.5 text-[#9333EA]" /> {L("Twój głos (opcjonalnie)","Your voice (optional)","Jouw stem (optioneel)","Твій голос (необов’язково)")}</Label>
                           <VoiceLibrary
                             selectedVoiceId={clonedVoiceId}
                             onSelect={(id, label) => { setClonedVoiceId(id); setClonedVoiceLabel(label); }}
@@ -1328,9 +1335,9 @@ const Suno = () => {
               style={{ background: "linear-gradient(135deg, #FF6B00, #FF9500)", boxShadow: "0 0 20px #FF6B0050" }}
             >
               {generating ? (
-                <><span className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" /> Generuję…</>
+                <><span className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" /> {L("Generuję…","Generating…","Genereren…","Генерую…")}</>
               ) : (
-                <><Sparkles className="h-5 w-5" /> Wygeneruj utwór</>
+                <><Sparkles className="h-5 w-5" /> {L("Wygeneruj utwór","Generate track","Genereer track","Згенерувати трек")}</>
               )}
             </Button>
           </div>
@@ -1344,7 +1351,7 @@ const Suno = () => {
           {user && !isPro && isFreeWeek() && (
             <div className="flex items-center gap-2 p-3 rounded-xl border border-[#FF9500]/50 bg-gradient-to-r from-[#FF6B00]/15 to-[#9333EA]/15">
               <Sparkles className="h-4 w-4 text-[#FF9500]" />
-              <span className="text-sm text-white font-semibold">🎉 Darmowy tydzień — twórz bez limitu!</span>
+              <span className="text-sm text-white font-semibold">{L("🎉 Darmowy tydzień — twórz bez limitu!","🎉 Free week — create without limits!","🎉 Gratis week — maak zonder limiet!","🎉 Безкоштовний тиждень — твори без ліміту!")}</span>
             </div>
           )}
 
@@ -1378,7 +1385,7 @@ const Suno = () => {
 
           {!user && (
             <p className="text-center text-xs text-gray-500">
-              <a href="/auth" className="text-[#FF9500] underline">Zaloguj się</a>, aby generować i zapisywać utwory
+              <a href="/auth" className="text-[#FF9500] underline">{L("Zaloguj się","Sign in","Log in","Увійти")}</a>{L(", aby generować i zapisywać utwory"," to generate and save tracks"," om tracks te maken en op te slaan"," щоб створювати й зберігати треки")}
             </p>
           )}
 
@@ -1460,7 +1467,7 @@ const Suno = () => {
                     className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium text-white border border-white/15 bg-white/5 transition-transform hover:scale-105 hover:bg-white/10"
                   >
                     <Share2 className="h-4 w-4" />
-                    Wyślij
+                    {L("Wyślij","Share","Delen","Поділитися")}
                   </button>
                   <button
                     onClick={() => {
@@ -1472,7 +1479,7 @@ const Suno = () => {
                     style={{ background: "linear-gradient(135deg, #FF6B00, #FF9500)", boxShadow: "0 0 15px #FF6B0040" }}
                   >
                     <Download className="h-4 w-4" />
-                    Pobierz MP3
+                    {L("Pobierz MP3","Download MP3","Download MP3","Завантажити MP3")}
                   </button>
                 </motion.div>
 
