@@ -38,6 +38,9 @@ import { getEra, eraStudioGenre, trackYear, eraForYear } from "@/lib/eraEngine";
 import { eraUi } from "@/lib/eraContent";
 
 const FREE_GENERATION_LIMIT = 1;
+// 🎉 Darmowy tydzień w GrouAI Studio — do tej daty każdy tworzy bez limitu.
+const FREE_WEEK_UNTIL = new Date("2026-08-31T23:59:59Z");
+const isFreeWeek = () => Date.now() < FREE_WEEK_UNTIL.getTime();
 
 const GENRES = [
   "Pop", "Rock", "Electronic", "Hip-Hop", "Jazz", "Classical",
@@ -372,7 +375,8 @@ const Suno = () => {
     }
 
     // === GATE 2: free users get only 1 generation, then paywall ===
-    if (!isPro && freeUsed >= FREE_GENERATION_LIMIT) {
+    // 🎉 Darmowy tydzień — w tym okresie każdy tworzy bez limitu (brak paywalla).
+    if (!isPro && !isFreeWeek() && freeUsed >= FREE_GENERATION_LIMIT) {
       setShowPaywall(true);
       return;
     }
@@ -1336,8 +1340,16 @@ const Suno = () => {
             <p className="text-sm text-center text-gray-400">{genStatus}</p>
           )}
 
+          {/* 🎉 Baner darmowego tygodnia */}
+          {user && !isPro && isFreeWeek() && (
+            <div className="flex items-center gap-2 p-3 rounded-xl border border-[#FF9500]/50 bg-gradient-to-r from-[#FF6B00]/15 to-[#9333EA]/15">
+              <Sparkles className="h-4 w-4 text-[#FF9500]" />
+              <span className="text-sm text-white font-semibold">🎉 Darmowy tydzień — twórz bez limitu!</span>
+            </div>
+          )}
+
           {/* Free-tier usage badge */}
-          {user && !isPro && (
+          {user && !isPro && !isFreeWeek() && (
             <div className={`flex items-center justify-between p-3 rounded-xl border ${
               freeUsed >= FREE_GENERATION_LIMIT
                 ? "border-[#FF6B00]/50 bg-[#FF6B00]/10"
