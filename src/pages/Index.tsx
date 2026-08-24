@@ -15,6 +15,7 @@ import { PromotedTracksSection } from "@/components/sections/PromotedTracks";
 import { SEOContentSection } from "@/components/sections/SEOContentSection";
 import { EraEntry } from "@/components/sections/EraEntry";
 import { HomeGreeting } from "@/components/sections/HomeGreeting";
+import { FeaturedTrending } from "@/components/sections/FeaturedTrending";
 
 import SectionErrorBoundary from "@/components/SectionErrorBoundary";
 import { GameBadge } from "@/components/game/GameBadge";
@@ -32,6 +33,7 @@ const Index = () => {
       <GameBadge />
       <Section name="greeting"><HomeGreeting /></Section>
       <Section name="hero"><HeroSection /></Section>
+      <Section name="featured-trending"><FeaturedTrending /></Section>
       <Section name="groua-era"><EraEntry /></Section>
       <Section name="win-game"><div className="px-4 max-w-6xl mx-auto"><GameStrip /></div></Section>
       <Section name="upload-cta"><UploadCTA /></Section>
