@@ -27,11 +27,12 @@ function generateIdleFrequencies(barCount: number): number[] {
 }
 
 // Wspólny styl krystalicznego szklanego przycisku (jednakowe efekty dla wszystkich CTA).
+// Kolorowy refleks róż↔fiolet: inset ring (magenta) + podwójna poświata (róż + fiolet).
 const GLASS_BTN =
   "group relative overflow-hidden rounded-full px-7 h-14 gap-2 font-semibold text-base text-white " +
   "border border-white/25 bg-white/[0.07] backdrop-blur-xl transition-all duration-300 " +
-  "hover:bg-white/[0.14] hover:border-white/50 hover:-translate-y-0.5 " +
-  "shadow-[inset_0_1px_0_rgba(255,255,255,0.3),0_12px_34px_-14px_rgba(0,0,0,0.75),0_0_30px_-10px_hsl(280_100%_66%/0.55)]";
+  "hover:bg-white/[0.14] hover:border-white/60 hover:-translate-y-0.5 " +
+  "shadow-[inset_0_1px_0_rgba(255,255,255,0.32),inset_0_0_0_1px_hsl(315_100%_72%/0.28),0_12px_34px_-14px_rgba(0,0,0,0.78),0_0_26px_-8px_hsl(331_100%_62%/0.65),0_0_26px_-6px_hsl(268_100%_66%/0.55)]";
 
 export const HeroSection = () => {
   const navigate = useNavigate();
@@ -221,7 +222,7 @@ export const HeroSection = () => {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 + i * 0.1 }}
-                className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3.5 py-1.5 text-xs font-medium text-primary"
+                className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/[0.06] backdrop-blur-md px-3.5 py-1.5 text-xs font-medium text-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.25),inset_0_0_0_1px_hsl(315_100%_72%/0.18),0_0_18px_-8px_hsl(300_100%_66%/0.5)] hover:border-white/40 transition-colors"
               >
                 <tag.icon className="h-3.5 w-3.5" />
                 {tag.label}

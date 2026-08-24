@@ -114,7 +114,7 @@ export const BlogPromoButton = () => {
         onTouchEnd={endPress}
         onContextMenu={(e) => e.preventDefault()}
         title={t("hero.blogTooltip")}
-        className="group relative overflow-hidden rounded-full px-7 h-14 gap-2 font-semibold text-base text-white border border-white/25 bg-white/[0.07] backdrop-blur-xl transition-all duration-300 hover:bg-white/[0.14] hover:border-white/50 hover:-translate-y-0.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.3),0_12px_34px_-14px_rgba(0,0,0,0.75),0_0_30px_-10px_hsl(280_100%_66%/0.55)] select-none"
+        className="group relative overflow-hidden rounded-full px-7 h-14 gap-2 font-semibold text-base text-white border border-white/25 bg-white/[0.07] backdrop-blur-xl transition-all duration-300 hover:bg-white/[0.14] hover:border-white/60 hover:-translate-y-0.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.32),inset_0_0_0_1px_hsl(315_100%_72%/0.28),0_12px_34px_-14px_rgba(0,0,0,0.78),0_0_26px_-8px_hsl(331_100%_62%/0.65),0_0_26px_-6px_hsl(268_100%_66%/0.55)] select-none"
       >
         <span aria-hidden className="pointer-events-none absolute inset-0 rounded-full" style={{ background: "linear-gradient(180deg, rgba(255,255,255,.26), transparent 42%)" }} />
         <span aria-hidden className="pointer-events-none absolute inset-0" style={{ background: "linear-gradient(100deg, transparent 20%, rgba(255,255,255,.32) 50%, transparent 80%)", animation: "shimmer 3.6s ease-in-out infinite", animationDelay: "1.2s", willChange: "transform" }} />
