@@ -275,6 +275,36 @@ export const HeroSection = () => {
           {/* === MAIN TITLE === */}
           <div className="mb-6 relative">
             <BassParticles bass={levels.bass} overall={levels.overall} isPlaying={isPlaying} palette={genrePalette} />
+
+            {/* Equalizer rozciągnięty NAD CAŁYM tytułem — bez obramówek, audio-reaktywny */}
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-x-0 -top-2 bottom-1 z-0 flex items-end gap-[3px] sm:gap-[4px]"
+              style={{
+                opacity: isPlaying ? 0.7 : 0.4,
+                filter: isPlaying
+                  ? `drop-shadow(0 0 ${14 + levels.overall * 18}px hsl(268 100% 66% / 0.5))`
+                  : "drop-shadow(0 0 6px hsl(268 100% 66% / 0.2))",
+                transition: "opacity .3s ease-out",
+              }}
+            >
+              {blendedFrequencies.map((f, i) => {
+                const boosted = Math.min(1, f * 1.55);
+                const hue = i < 6 ? 331 : i < 12 ? 268 : 189; // pink / violet / cyan
+                return (
+                  <div
+                    key={`title-eq-${i}`}
+                    className="flex-1 rounded-t-[3px]"
+                    style={{
+                      height: `${Math.max(6, boosted * 100)}%`,
+                      background: `linear-gradient(to top, hsl(${hue} 100% 62% / 0.5), hsl(${hue} 100% 72% / 0.12))`,
+                      transition: "height 0.06s ease-out",
+                    }}
+                  />
+                );
+              })}
+            </div>
+
             <h1 className="font-display text-4xl md:text-6xl lg:text-7xl font-bold leading-tight relative z-10">
               <span className="block">Music That</span>
               <span className="block groove-gradient-text mt-1">Understands You</span>
