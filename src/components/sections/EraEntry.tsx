@@ -13,9 +13,11 @@ export const EraEntry = () => {
     <div className="px-4 max-w-6xl mx-auto">
       <div
         className="rounded-2xl border border-white/10 p-5 sm:p-7 relative overflow-hidden"
-        style={{ background: "linear-gradient(150deg, rgba(255,138,42,.10), rgba(169,139,255,.08) 60%, transparent)" }}
+        style={{ background: "linear-gradient(150deg, rgba(169,139,255,.12), rgba(56,230,255,.08) 60%, transparent)" }}
       >
-        <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
+        <div className="absolute inset-0 bg-cover bg-center pointer-events-none" style={{ backgroundImage: "url('/bg/era.jpg')", opacity: 0.32 }} />
+        <div className="absolute inset-0 pointer-events-none" style={{ background: "linear-gradient(180deg, rgba(4,4,8,.35), rgba(4,4,8,.75))" }} />
+        <div className="relative z-10 flex items-center justify-between gap-3 flex-wrap mb-4">
           <div>
             <span className="font-mono text-[11px] tracking-[.2em] uppercase text-[#FF8A2A] flex items-center gap-1.5">
               <Clock className="h-3.5 w-3.5" /> {eraUi(language, "brand")}
@@ -34,7 +36,7 @@ export const EraEntry = () => {
           </Link>
         </div>
 
-        <div className="flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
+        <div className="relative z-10 flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
           {ERAS.map((e, i) => {
             const et = eraTextFor(e, language);
             return (
