@@ -314,10 +314,24 @@ export const HeroSection = () => {
           </div>
 
           <div className="flex flex-wrap gap-3 mb-8">
-            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-              <Button size="lg" className="groove-gradient-bg text-primary-foreground hover:opacity-90 gap-2 rounded-full px-8 h-14 font-semibold text-base shadow-[0_0_30px_hsl(var(--primary)/0.3)]" onClick={handleStartListening} disabled={isLoading}>
-                {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Play className="h-5 w-5 fill-current" />}
-                {t("hero.startListening")}
+            <motion.div
+              whileHover={{ scale: 1.04 }}
+              whileTap={{ scale: 0.97 }}
+              animate={{ boxShadow: [
+                "0 10px 34px -10px hsl(268 100% 66% / 0.45)",
+                "0 14px 48px -8px hsl(331 100% 62% / 0.65)",
+                "0 10px 34px -10px hsl(268 100% 66% / 0.45)",
+              ] }}
+              transition={{ boxShadow: { duration: 3, repeat: Infinity, ease: "easeInOut" } }}
+              className="rounded-full"
+            >
+              <Button size="lg" className="group relative overflow-hidden groove-gradient-bg animate-gradient text-primary-foreground rounded-full px-8 h-14 font-semibold text-base border border-white/15" onClick={handleStartListening} disabled={isLoading}>
+                {/* przesuwający się połysk */}
+                <span aria-hidden className="pointer-events-none absolute inset-0" style={{ background: "linear-gradient(100deg, transparent 20%, rgba(255,255,255,.35) 50%, transparent 80%)", animation: "shimmer 3s ease-in-out infinite", willChange: "transform" }} />
+                <span className="relative z-10 inline-flex items-center gap-2">
+                  {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Play className="h-5 w-5 fill-current" />}
+                  {t("hero.startListening")}
+                </span>
               </Button>
             </motion.div>
             <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="relative">
