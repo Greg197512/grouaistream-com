@@ -229,21 +229,17 @@ export const HeroSection = () => {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 + i * 0.1 }}
-                className="relative isolate inline-flex rounded-full"
+                className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/[0.06] backdrop-blur-md px-3.5 py-1.5 text-xs font-medium text-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.25),inset_0_0_0_1px_hsl(315_100%_72%/0.18),0_0_18px_-8px_hsl(300_100%_66%/0.5)] hover:border-white/40 transition-colors"
               >
-                <span aria-hidden className="pointer-events-none absolute -inset-[2px] rounded-full z-0 opacity-55 blur-[4px] animate-spin" style={{ background: "conic-gradient(from 0deg,#ff3d9a,#8b4dff,#38e6ff,#ffb15c,#ff3d9a)", animationDuration: `${6 + i * 1.3}s` }} />
-                <span className="relative z-10 inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/[0.06] backdrop-blur-md px-3.5 py-1.5 text-xs font-medium text-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.25),inset_0_0_0_1px_hsl(315_100%_72%/0.18),0_0_18px_-8px_hsl(300_100%_66%/0.5)]">
-                  <tag.icon className="h-3.5 w-3.5" />
-                  {tag.label}
-                </span>
+                <tag.icon className="h-3.5 w-3.5" />
+                {tag.label}
               </motion.div>
             ))}
           </div>
 
           <div className="flex flex-wrap gap-3 mb-8">
-            <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }} className="relative rounded-full isolate">
-              <span aria-hidden className="pointer-events-none absolute -inset-[2px] rounded-full z-0 opacity-60 blur-[5px] animate-spin" style={{ background: "conic-gradient(from 0deg,#ff3d9a,#8b4dff,#38e6ff,#ffb15c,#ff3d9a)", animationDuration: "6s" }} />
-              <Button size="lg" className={GLASS_BTN + " z-10"} onClick={() => navigate("/studio")}>
+            <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} className="rounded-full">
+              <Button size="lg" className={GLASS_BTN} onClick={() => navigate("/studio")}>
                 <span aria-hidden className="pointer-events-none absolute inset-0 rounded-full" style={{ background: "linear-gradient(180deg, rgba(255,255,255,.26), transparent 42%)" }} />
                 <span aria-hidden className="pointer-events-none absolute inset-0" style={{ background: "linear-gradient(100deg, transparent 20%, rgba(255,255,255,.32) 50%, transparent 80%)", animation: "shimmer 3.6s ease-in-out infinite", willChange: "transform" }} />
                 <span className="relative z-10 inline-flex items-center gap-2">
@@ -252,9 +248,8 @@ export const HeroSection = () => {
                 </span>
               </Button>
             </motion.div>
-            <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }} className="relative rounded-full isolate">
-              <span aria-hidden className="pointer-events-none absolute -inset-[2px] rounded-full z-0 opacity-60 blur-[5px] animate-spin" style={{ background: "conic-gradient(from 180deg,#38e6ff,#8b4dff,#ff3d9a,#ffb15c,#38e6ff)", animationDuration: "7s" }} />
-              <Button size="lg" className={GLASS_BTN + " z-10"} onClick={() => navigate("/radio-live")}>
+            <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} className="rounded-full">
+              <Button size="lg" className={GLASS_BTN} onClick={() => navigate("/radio-live")}>
                 <span aria-hidden className="pointer-events-none absolute inset-0 rounded-full" style={{ background: "linear-gradient(180deg, rgba(255,255,255,.26), transparent 42%)" }} />
                 <span aria-hidden className="pointer-events-none absolute inset-0" style={{ background: "linear-gradient(100deg, transparent 20%, rgba(255,255,255,.32) 50%, transparent 80%)", animation: "shimmer 3.6s ease-in-out infinite", animationDelay: "0.6s", willChange: "transform" }} />
                 <span className="relative z-10 inline-flex items-center gap-2">
