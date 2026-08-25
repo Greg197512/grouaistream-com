@@ -14,6 +14,7 @@ import heroBg from "@/assets/hero-neon.jpg";
 import { BassParticles } from "@/components/effects/BassParticles";
 import { getGenrePalette } from "@/utils/genreColors";
 import { BlogPromoButton } from "@/components/sections/BlogPromoButton";
+import { NaCzasieHits } from "@/components/sections/NaCzasieHits";
 
 // Gentle idle equalizer frequencies
 function generateIdleFrequencies(barCount: number): number[] {
@@ -260,6 +261,9 @@ export const HeroSection = () => {
             </motion.div>
             <BlogPromoButton />
           </div>
+
+          {/* Na czasie — hip-hop / disco, pod przyciskami */}
+          <NaCzasieHits />
 
         </motion.div>
 
