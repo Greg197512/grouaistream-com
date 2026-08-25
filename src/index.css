@@ -605,3 +605,21 @@ html[data-threed="on"] .material-icons {
     inset 0 1px 0 rgba(255, 255, 255, 0.08),
     inset 0 -24px 46px -22px rgba(147, 51, 234, 0.35);
 }
+
+/* ===== Intro splash (logo z kawałków → błysk → rozpłynięcie) ===== */
+@keyframes introAssemble {
+  0%   { opacity: 0; transform: translate(var(--dx), var(--dy)) rotate(var(--rot)) scale(1.5); filter: blur(6px); }
+  55%  { opacity: 1; filter: blur(0); }
+  100% { opacity: 1; transform: translate(0,0) rotate(0deg) scale(1); filter: blur(0); }
+}
+@keyframes introShineBg {
+  0%   { background-position: 190% 0; }
+  100% { background-position: -90% 0; }
+}
+@keyframes introGlow {
+  0%,100% { filter: brightness(1) saturate(1); }
+  50%     { filter: brightness(1.25) saturate(1.2); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .intro-tile { animation: none !important; opacity: 1 !important; transform: none !important; }
+}

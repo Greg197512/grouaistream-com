@@ -13,6 +13,7 @@ import { LanguageProvider } from "@/contexts/LanguageContext";
 
 import { SubscriptionProvider } from "@/contexts/SubscriptionContext";
 import { Effects3DProvider } from "@/contexts/Effects3DContext";
+import { IntroSplash } from "@/components/effects/IntroSplash";
 import { AutoVoiceListener } from "@/components/player/AutoVoiceListener";
 import { GlobalLiveVoiceOverlay } from "@/components/radio/GlobalLiveVoiceOverlay";
 import { StemsModal } from "@/components/studio/StemsModal";
@@ -123,6 +124,7 @@ const AppShell = () => {
 
   return (
     <>
+      <IntroSplash />
       <PaymentTestModeBanner />
       <WelcomeOverlay />
       <TipWelcomeModal />

@@ -80,7 +80,7 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
             <div className="absolute -inset-4 overflow-hidden">
               <MatrixNotes enabled={is3D} />
             </div>
-            <img src="/logo-icon.png" alt="GrouAI Stream" className="h-14 w-14 object-contain drop-shadow-[0_0_12px_hsl(var(--primary)/0.5)] relative z-10" />
+            <img src="/logo-grouaistream.png" alt="GrouAIstream" className="h-16 w-16 object-contain drop-shadow-[0_0_14px_rgba(255,190,60,0.45)] relative z-10" />
           </motion.div>
         ) : (
           <motion.div
@@ -94,7 +94,7 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
             <div className="absolute -inset-6 overflow-hidden">
               <MatrixNotes enabled={is3D} />
             </div>
-            <img src={logoIcon} alt="GrouAI Stream by GrouaRock" className="h-24 object-contain relative z-10" />
+            <img src="/logo-grouaistream.png" alt="GrouAIstream — Global Music Streaming" className="h-28 object-contain relative z-10 drop-shadow-[0_0_18px_rgba(255,190,60,0.4)]" />
           </motion.div>
         )}
       </div>
