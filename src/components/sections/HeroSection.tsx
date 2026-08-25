@@ -20,8 +20,14 @@ function generateIdleFrequencies(barCount: number): number[] {
   const t = Date.now() / 1000;
   const freqs: number[] = [];
   for (let i = 0; i < barCount; i++) {
-    const base = 0.12 + Math.sin(t * 1.2 + i * 0.5) * 0.06 + Math.sin(t * 1.8 + i * 0.9) * 0.05;
-    freqs.push(Math.max(0.05, Math.min(0.3, base)));
+    // Żywszy „idle": większa amplituda, szybciej, więcej warstw fal + delikatny puls.
+    const base =
+      0.26 +
+      Math.sin(t * 2.4 + i * 0.55) * 0.16 +
+      Math.sin(t * 3.7 + i * 0.9) * 0.12 +
+      Math.sin(t * 1.5 + i * 1.7) * 0.08 +
+      Math.sin(t * 5.2 + i * 0.35) * 0.05;
+    freqs.push(Math.max(0.08, Math.min(0.72, base)));
   }
   return freqs;
 }
@@ -168,24 +174,25 @@ export const HeroSection = () => {
               aria-hidden
               className="pointer-events-none absolute inset-x-0 -top-2 bottom-1 z-0 flex items-end gap-[3px] sm:gap-[4px]"
               style={{
-                opacity: isPlaying ? 0.7 : 0.4,
+                opacity: isPlaying ? 0.85 : 0.62,
                 filter: isPlaying
-                  ? `drop-shadow(0 0 ${14 + levels.overall * 18}px hsl(268 100% 66% / 0.5))`
-                  : "drop-shadow(0 0 6px hsl(268 100% 66% / 0.2))",
+                  ? `drop-shadow(0 0 ${18 + levels.overall * 22}px hsl(300 100% 66% / 0.6))`
+                  : "drop-shadow(0 0 12px hsl(300 100% 66% / 0.4))",
                 transition: "opacity .3s ease-out",
               }}
             >
               {blendedFrequencies.map((f, i) => {
-                const boosted = Math.min(1, f * 1.55);
-                const hue = i < 6 ? 331 : i < 12 ? 268 : 189; // pink / violet / cyan
+                const boosted = Math.min(1, f * 1.9);
+                const hue = i < 6 ? 331 : i < 12 ? 285 : 200; // pink / magenta-violet / cyan
                 return (
                   <div
                     key={`title-eq-${i}`}
                     className="flex-1 rounded-t-[3px]"
                     style={{
-                      height: `${Math.max(6, boosted * 100)}%`,
-                      background: `linear-gradient(to top, hsl(${hue} 100% 62% / 0.5), hsl(${hue} 100% 72% / 0.12))`,
-                      transition: "height 0.06s ease-out",
+                      height: `${Math.max(10, boosted * 100)}%`,
+                      background: `linear-gradient(to top, hsl(${hue} 100% 60% / 0.75), hsl(${hue} 100% 74% / 0.22))`,
+                      boxShadow: `0 0 8px hsl(${hue} 100% 65% / ${0.25 + boosted * 0.4})`,
+                      transition: "height 0.05s ease-out",
                     }}
                   />
                 );
