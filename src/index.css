@@ -628,14 +628,13 @@ html[data-threed="on"] .material-icons {
 .hero-flame {
   position: absolute;
   top: 50%;
-  left: -12%;
+  left: 0;
+  margin-top: -21px; /* połowa wysokości — pionowe wyśrodkowanie bez transform */
   width: 42px;
   height: 42px;
-  transform: translateY(-50%);
   mix-blend-mode: screen;
   filter: saturate(1.25);
-  will-change: left, opacity;
-  animation: heroFlameRun 7s linear infinite;
+  will-change: transform, opacity;
 }
 .hero-flame__core {
   position: absolute;
@@ -653,12 +652,6 @@ html[data-threed="on"] .material-icons {
     0 0 22px 5px rgba(255, 150, 60, 0.28),
     0 0 44px 14px rgba(255, 84, 32, 0.14);
   animation: heroFlameFlicker 0.15s ease-in-out infinite alternate;
-}
-@keyframes heroFlameRun {
-  0%   { left: -12%; opacity: 0; }
-  10%  { opacity: 0.95; }
-  90%  { opacity: 0.95; }
-  100% { left: 112%; opacity: 0; }
 }
 @keyframes heroFlameFlicker {
   0%   { transform: rotate(45deg) scale(1, 1); opacity: 0.82; }
