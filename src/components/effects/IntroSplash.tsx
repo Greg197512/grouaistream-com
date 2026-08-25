@@ -49,7 +49,7 @@ export const IntroSplash = () => {
     }
     const t1 = setTimeout(() => setPhase("shine"), 1650);
     const t2 = setTimeout(() => setPhase("dissolve"), 2950);
-    const t3 = setTimeout(() => setShow(false), 4400);
+    const t3 = setTimeout(() => setShow(false), 14950); // powolne rozmycie/zanik ~12 s
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
@@ -63,7 +63,7 @@ export const IntroSplash = () => {
     <div
       aria-hidden
       className={
-        "fixed inset-0 z-[9999] bg-black flex items-center justify-center transition-opacity duration-[900ms] " +
+        "fixed inset-0 z-[9999] bg-black flex items-center justify-center transition-opacity ease-in duration-[12000ms] " +
         (phase === "dissolve" ? "opacity-0 pointer-events-none" : "opacity-100")
       }
     >
@@ -72,9 +72,9 @@ export const IntroSplash = () => {
         style={{
           width: "min(86vw, 560px)",
           aspectRatio: "1 / 1",
-          transition: "filter .9s ease, transform .9s ease",
-          filter: phase === "dissolve" ? "blur(16px)" : "none",
-          transform: phase === "dissolve" ? "scale(1.08)" : "scale(1)",
+          transition: "filter 12s ease-in, transform 12s ease-in",
+          filter: phase === "dissolve" ? "blur(26px)" : "none",
+          transform: phase === "dissolve" ? "scale(1.14)" : "scale(1)",
           animation: phase === "shine" ? "introGlow 1.2s ease-in-out" : undefined,
         }}
       >
