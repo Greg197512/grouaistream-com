@@ -7,7 +7,10 @@ import { HQCover } from "@/components/ui/HQCover";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 const SEL = "id,title,artist,album,duration,cover_url,audio_url,video_url,genre,mood";
-const KW = ["hip-hop", "hip hop", "rap", "trap", "disco", "funk", "nu-disco", "dance"];
+const KW = [
+  "hip-hop", "hip hop", "rap", "trap", "boom", "disco", "funk", "nu-disco",
+  "dance", "house", "techno", "electro", "r&b", "rnb", "soul",
+];
 
 // „Na czasie": JEDNA duża karta hip-hop/disco, przewijanie lewo/prawo
 // (bieżąca zanika i zaokrągla się, wchodzi następna). Do 40 utworów, live.
