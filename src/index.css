@@ -623,3 +623,47 @@ html[data-threed="on"] .material-icons {
 @media (prefers-reduced-motion: reduce) {
   .intro-tile { animation: none !important; opacity: 1 !important; transform: none !important; }
 }
+
+/* ===== Płomień przechodzący przez tagi hero (półprzezroczysty, „jak w butelce") ===== */
+.hero-flame {
+  position: absolute;
+  top: 50%;
+  left: -12%;
+  width: 42px;
+  height: 42px;
+  transform: translateY(-50%);
+  mix-blend-mode: screen;
+  filter: saturate(1.25);
+  will-change: left, opacity;
+  animation: heroFlameRun 7s linear infinite;
+}
+.hero-flame__core {
+  position: absolute;
+  inset: 0;
+  border-radius: 50% 0 50% 50%;
+  transform: rotate(45deg);
+  transform-origin: 70% 70%;
+  background: radial-gradient(60% 60% at 30% 70%,
+    rgba(255, 255, 238, 0.92),
+    rgba(255, 214, 130, 0.62) 34%,
+    rgba(255, 128, 46, 0.36) 60%,
+    rgba(255, 66, 22, 0.16) 80%,
+    transparent 90%);
+  box-shadow:
+    0 0 22px 5px rgba(255, 150, 60, 0.28),
+    0 0 44px 14px rgba(255, 84, 32, 0.14);
+  animation: heroFlameFlicker 0.15s ease-in-out infinite alternate;
+}
+@keyframes heroFlameRun {
+  0%   { left: -12%; opacity: 0; }
+  10%  { opacity: 0.95; }
+  90%  { opacity: 0.95; }
+  100% { left: 112%; opacity: 0; }
+}
+@keyframes heroFlameFlicker {
+  0%   { transform: rotate(45deg) scale(1, 1); opacity: 0.82; }
+  100% { transform: rotate(43deg) scale(0.93, 1.14); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-flame { display: none; }
+}

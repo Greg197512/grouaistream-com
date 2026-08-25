@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Play, Sparkles, Zap, Brain, Radio, Loader2, Volume2, Upload } from "lucide-react";
+import { Play, Sparkles, Zap, Radio, Loader2, Volume2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { usePlayer } from "@/contexts/PlayerContext";
@@ -14,6 +14,7 @@ import heroBg from "@/assets/hero-neon.jpg";
 import { BassParticles } from "@/components/effects/BassParticles";
 import { getGenrePalette } from "@/utils/genreColors";
 import { BlogPromoButton } from "@/components/sections/BlogPromoButton";
+import { HeroTags } from "@/components/sections/HeroTags";
 
 // Gentle idle equalizer frequencies
 function generateIdleFrequencies(barCount: number): number[] {
@@ -218,24 +219,7 @@ export const HeroSection = () => {
           </div>
 
           {/* Tags */}
-          <div className="flex flex-wrap gap-3 mb-8">
-            {[
-              { icon: Zap, label: "Verified Human Streams" },
-              { icon: Brain, label: "AI Anti-Fraud" },
-              { icon: Sparkles, label: "Mood-Based Playlists" },
-            ].map((tag, i) => (
-              <motion.div
-                key={tag.label}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 + i * 0.1 }}
-                className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/[0.06] backdrop-blur-md px-3.5 py-1.5 text-xs font-medium text-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.25),inset_0_0_0_1px_hsl(315_100%_72%/0.18),0_0_18px_-8px_hsl(300_100%_66%/0.5)] hover:border-white/40 transition-colors"
-              >
-                <tag.icon className="h-3.5 w-3.5" />
-                {tag.label}
-              </motion.div>
-            ))}
-          </div>
+          <HeroTags />
 
           <div className="flex flex-nowrap sm:flex-wrap items-stretch gap-2 sm:gap-3 mb-8">
             <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} className="flex-1 sm:flex-none min-w-0 rounded-full">
