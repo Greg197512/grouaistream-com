@@ -50,14 +50,27 @@ export const HomeGreeting = () => {
     loadGenre(c);
   };
 
+  // Mapowanie chipów na pokrewne nazwy gatunków w bazie (elastyczne dopasowanie).
+  const GENRE_ALIASES: Record<string, string[]> = {
+    "Pop": ["pop", "synth-pop", "dance-pop"],
+    "Hip-Hop": ["hip-hop", "hip hop", "rap", "trap"],
+    "Rap": ["rap", "hip-hop", "hip hop", "trap", "drill"],
+    "Techno": ["techno", "electronic", "edm", "house", "dance", "trance"],
+    "Rock": ["rock", "metal", "punk", "alternative", "indie"],
+    "Electronic": ["electronic", "edm", "techno", "house", "dance", "synth", "trance"],
+    "Chill": ["chill", "chillout", "lofi", "lo-fi", "ambient", "relax", "downtempo"],
+  };
+
   const loadGenre = async (genre: string) => {
     setLoading(true);
     setTracks([]);
     try {
+      const keywords = GENRE_ALIASES[genre] || [genre.toLowerCase()];
+      const orFilter = keywords.map((k) => `genre.ilike.%${k}%`).join(",");
       const { data } = await supabase
         .from("tracks")
         .select(SEL)
-        .ilike("genre", `%${genre}%`)
+        .or(orFilter)
         .not("audio_url", "is", null)
         .order("created_at", { ascending: false })
         .limit(40);
