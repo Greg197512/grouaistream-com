@@ -257,6 +257,24 @@ export function getEra(key: string | undefined | null): Era | undefined {
   return ERAS.find((e) => e.key.toLowerCase() === k);
 }
 
+// ── Odsłuch dekady na Spotify (oficjalne playlisty „All Out") ──
+// Wbudowany, niezawodny odtwarzacz z największymi hitami danej dekady.
+// FUTURE nie ma dekady, więc nie ma playlisty.
+const ERA_SPOTIFY: Record<string, string> = {
+  "1970s": "37i9dQZF1DWTJ7xPn4vNaz", // All Out 70s
+  "1980s": "37i9dQZF1DX4UtSsGT1Sbe", // All Out 80s
+  "1990s": "37i9dQZF1DXbTxeAdrVG2l", // All Out 90s
+  "y2k": "37i9dQZF1DX4o1oenSJRJd",   // All Out 2000s
+  "2000s": "37i9dQZF1DX4o1oenSJRJd", // All Out 2000s
+  "2010s": "37i9dQZF1DX5Ejj0EkURtP", // All Out 2010s
+  "now": "37i9dQZF1DX2M1RktxUUHG",   // All Out 2020s
+};
+
+/** ID playlisty Spotify z hitami dekady danej epoki (albo null dla FUTURE). */
+export function eraSpotifyPlaylist(era: Era): string | null {
+  return ERA_SPOTIFY[era.key] || null;
+}
+
 // Utwór traktujemy jak "AI ERA", gdy pochodzi z naszego generatora.
 export function isAiTrack(t: { artist?: string | null; album?: string | null }): boolean {
   const a = (t.artist || "").toLowerCase();

@@ -10,7 +10,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { HQCover } from "@/components/ui/HQCover";
 import {
   ERAS, getEra, isAiTrack, eraStudioLink, trackBelongsToEra, bestEra, eraArtUrl,
-  eraYears, eraDefaultYear, trackYear, type Era,
+  eraYears, eraDefaultYear, trackYear, eraSpotifyPlaylist, type Era,
 } from "@/lib/eraEngine";
 import { eraTextFor, eraUi } from "@/lib/eraContent";
 import { freshEraFact } from "@/lib/aiText";
@@ -400,6 +400,40 @@ const EraDetail = ({ era, lang }: { era: Era; lang: Language }) => {
             ))}
           </div>
         )}
+
+        {/* POSŁUCHAJ DEKADY NA SPOTIFY — wbudowany, niezawodny odtwarzacz */}
+        {(() => {
+          const pid = eraSpotifyPlaylist(era);
+          if (!pid) return null;
+          const t = {
+            title: { pl: "Posłuchaj epoki na Spotify", en: "Listen to this era on Spotify", nl: "Luister naar dit tijdperk op Spotify", ua: "Слухай епоху на Spotify" }[lang] || "Listen to this era on Spotify",
+            sub: { pl: `Największe hity dekady ${era.decade} — pełny odsłuch na Spotify.`, en: `The biggest hits of the ${era.decade} — full playback on Spotify.`, nl: `De grootste hits van de ${era.decade} — volledig afspelen op Spotify.`, ua: `Найбільші хіти ${era.decade} — повне відтворення на Spotify.` }[lang] || `The biggest hits of the ${era.decade}.`,
+          };
+          return (
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+              className="rounded-2xl border p-4 sm:p-5 space-y-3"
+              style={{ borderColor: `${era.palette.accent}30`, background: "rgba(255,255,255,.02)" }}>
+              <div>
+                <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                  <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: "#1DB954", boxShadow: "0 0 10px #1DB95488" }} />
+                  {t.title}
+                </h2>
+                <p className="text-xs text-gray-500">{t.sub}</p>
+              </div>
+              <iframe
+                title={`Spotify · ${era.label}`}
+                src={`https://open.spotify.com/embed/playlist/${pid}?utm_source=generator&theme=0`}
+                width="100%"
+                height={380}
+                frameBorder={0}
+                loading="lazy"
+                allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                style={{ borderRadius: 12 }}
+                className="w-full"
+              />
+            </motion.div>
+          );
+        })()}
 
         {/* O EPOCE — warstwa wiedzy */}
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="grid md:grid-cols-3 gap-4">
