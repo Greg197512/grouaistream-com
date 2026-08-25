@@ -35,7 +35,7 @@ function generateIdleFrequencies(barCount: number): number[] {
 // Wspólny styl krystalicznego szklanego przycisku (jednakowe efekty dla wszystkich CTA).
 // Kolorowy refleks róż↔fiolet: inset ring (magenta) + podwójna poświata (róż + fiolet).
 const GLASS_BTN =
-  "group relative overflow-hidden rounded-full px-7 h-14 gap-2 font-semibold text-base text-white " +
+  "group relative overflow-hidden rounded-full w-full sm:w-auto justify-center px-3 sm:px-7 h-12 sm:h-14 gap-1.5 sm:gap-2 font-semibold text-[13px] sm:text-base text-white " +
   "border border-white/25 bg-white/[0.07] backdrop-blur-xl transition-all duration-300 " +
   "hover:bg-white/[0.14] hover:border-white/60 hover:-translate-y-0.5 " +
   "shadow-[inset_0_1px_0_rgba(255,255,255,0.32),inset_0_0_0_1px_hsl(315_100%_72%/0.28),0_12px_34px_-14px_rgba(0,0,0,0.78),0_0_26px_-8px_hsl(331_100%_62%/0.65),0_0_26px_-6px_hsl(268_100%_66%/0.55)]";
@@ -237,24 +237,24 @@ export const HeroSection = () => {
             ))}
           </div>
 
-          <div className="flex flex-wrap gap-3 mb-8">
-            <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} className="rounded-full">
+          <div className="flex flex-nowrap sm:flex-wrap items-stretch gap-2 sm:gap-3 mb-8">
+            <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} className="flex-1 sm:flex-none min-w-0 rounded-full">
               <Button size="lg" className={GLASS_BTN} onClick={() => navigate("/studio")}>
                 <span aria-hidden className="pointer-events-none absolute inset-0 rounded-full" style={{ background: "linear-gradient(180deg, rgba(255,255,255,.26), transparent 42%)" }} />
                 <span aria-hidden className="pointer-events-none absolute inset-0" style={{ background: "linear-gradient(100deg, transparent 20%, rgba(255,255,255,.32) 50%, transparent 80%)", animation: "shimmer 3.6s ease-in-out infinite", willChange: "transform" }} />
-                <span className="relative z-10 inline-flex items-center gap-2">
-                  <Sparkles className="h-5 w-5" />
-                  GrouAI Studio
+                <span className="relative z-10 inline-flex items-center gap-1.5 sm:gap-2 min-w-0">
+                  <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" />
+                  <span className="truncate"><span className="sm:hidden">Studio</span><span className="hidden sm:inline">GrouAI Studio</span></span>
                 </span>
               </Button>
             </motion.div>
-            <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} className="rounded-full">
+            <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} className="flex-1 sm:flex-none min-w-0 rounded-full">
               <Button size="lg" className={GLASS_BTN} onClick={() => navigate("/radio-live")}>
                 <span aria-hidden className="pointer-events-none absolute inset-0 rounded-full" style={{ background: "linear-gradient(180deg, rgba(255,255,255,.26), transparent 42%)" }} />
                 <span aria-hidden className="pointer-events-none absolute inset-0" style={{ background: "linear-gradient(100deg, transparent 20%, rgba(255,255,255,.32) 50%, transparent 80%)", animation: "shimmer 3.6s ease-in-out infinite", animationDelay: "0.6s", willChange: "transform" }} />
-                <span className="relative z-10 inline-flex items-center gap-2">
-                  <Radio className="h-5 w-5" />
-                  {t("hero.liveRadio")}
+                <span className="relative z-10 inline-flex items-center gap-1.5 sm:gap-2 min-w-0">
+                  <Radio className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" />
+                  <span className="truncate"><span className="sm:hidden">Radio</span><span className="hidden sm:inline">{t("hero.liveRadio")}</span></span>
                 </span>
               </Button>
             </motion.div>
