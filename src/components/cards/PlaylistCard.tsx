@@ -37,7 +37,7 @@ export const PlaylistCard = ({
       onClick={handleClick}
       whileHover={{ scale: 1.02 }}
       whileTap={{ scale: 0.98 }}
-      className="groove-card group cursor-pointer p-4 rounded-2xl border border-white/5 hover:border-primary/30 hover:shadow-[0_10px_30px_-12px_hsl(268_100%_66%/0.5)]"
+      className="group cursor-pointer p-4 rounded-2xl border border-white/12 bg-white/[0.05] backdrop-blur-xl transition-all hover:bg-white/[0.09] hover:border-white/25 hover:-translate-y-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.15),0_14px_34px_-16px_rgba(0,0,0,0.8),0_0_26px_-12px_hsl(300_100%_66%/0.4)]"
     >
       {/* Image */}
       <div className="relative mb-4 aspect-square overflow-hidden rounded-xl shadow-lg">

@@ -414,19 +414,19 @@ export const PlayerBar = () => {
         {/* Player Controls */}
         <div className="flex-1 flex flex-col items-center gap-0.5 md:gap-1.5 max-w-[600px] min-w-0">
           <div className="flex items-center gap-2 sm:gap-3">
-            <button 
+            <button
               onClick={toggleShuffle}
               className={cn(
-                "p-1 transition-colors hidden sm:block",
-                isShuffled ? "text-primary" : "text-white/40 hover:text-white/70"
+                "h-8 w-8 rounded-full grid place-items-center border backdrop-blur-md transition-all hidden sm:grid",
+                isShuffled ? "text-white border-primary/50 bg-primary/20" : "text-white/60 border-white/15 bg-white/[0.06] hover:bg-white/[0.12] hover:text-white"
               )}
             >
               <Shuffle className="h-3.5 w-3.5" />
             </button>
 
-            <button 
+            <button
               onClick={prevTrack}
-              className="p-1 text-white/50 hover:text-white transition-colors"
+              className="h-8 w-8 rounded-full grid place-items-center border border-white/15 bg-white/[0.06] backdrop-blur-md text-white/70 hover:bg-white/[0.12] hover:text-white transition-all"
             >
               <SkipBack className="h-4 w-4" />
             </button>
@@ -520,18 +520,18 @@ export const PlayerBar = () => {
               )}
             </motion.button>
 
-            <button 
+            <button
               onClick={nextTrack}
-              className="p-1 text-white/50 hover:text-white transition-colors"
+              className="h-8 w-8 rounded-full grid place-items-center border border-white/15 bg-white/[0.06] backdrop-blur-md text-white/70 hover:bg-white/[0.12] hover:text-white transition-all"
             >
               <SkipForward className="h-4 w-4" />
             </button>
 
-            <button 
+            <button
               onClick={toggleRepeat}
               className={cn(
-                "relative p-1 transition-colors hidden sm:block",
-                repeatMode !== 'off' ? "text-primary" : "text-white/40 hover:text-white/70"
+                "relative h-8 w-8 rounded-full grid place-items-center border backdrop-blur-md transition-all hidden sm:grid",
+                repeatMode !== 'off' ? "text-white border-primary/50 bg-primary/20" : "text-white/60 border-white/15 bg-white/[0.06] hover:bg-white/[0.12] hover:text-white"
               )}
             >
               <Repeat className="h-3.5 w-3.5" />
