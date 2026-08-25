@@ -120,9 +120,13 @@ export const NaCzasieHits = () => {
               <button
                 onClick={() => playPlaylist(tracks, safe, "na-czasie")}
                 aria-label={L("Odtwórz", "Play", "Afspelen", "Відтворити")}
-                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-20 w-20 rounded-full groove-gradient-bg text-white flex items-center justify-center shadow-[0_14px_34px_-8px_hsl(331_100%_62%/0.7)] hover:scale-110 transition-transform"
+                className="group absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-20 w-20 rounded-full text-white flex items-center justify-center shadow-[0_14px_34px_-8px_hsl(331_100%_62%/0.7)] hover:scale-110 active:scale-95 transition-transform"
               >
-                <Play className="h-9 w-9 fill-current ml-1" />
+                {/* fioletowa warstwa (domyślnie) */}
+                <span aria-hidden className="absolute inset-0 rounded-full groove-gradient-bg transition-opacity duration-150 group-active:opacity-0" />
+                {/* przezroczyste szkło (po wciśnięciu) */}
+                <span aria-hidden className="absolute inset-0 rounded-full bg-white/10 backdrop-blur-md border border-white/40 opacity-0 group-active:opacity-100 transition-opacity duration-150" />
+                <Play className="relative z-10 h-9 w-9 fill-current ml-1" />
               </button>
 
               <div className="absolute left-5 right-5 bottom-5">
