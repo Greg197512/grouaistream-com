@@ -28,14 +28,17 @@ const POOL: Clip[] = [
   { id: "XEdYU7R5x4o", title: "Eclipse of Sound", artist: "ToneFlow", genre: "Techno" },
   { id: "nkQjcLwwPkg", title: "Burning Man", artist: "Techno Mix AI", genre: "Techno" },
   { id: "U1E_1Rkw4kY", title: "Go Now (Car & Girls)", artist: "Official AI", genre: "Techno" },
+  // Hip-Hop / Drill — The Dor Brothers (twórcy „Mad Science") i inni
+  { id: "217f2kdwXAE", title: "The Hardest AI Music Video", artist: "The Dor Brothers", genre: "Hip-Hop" },
+  { id: "iL7qiFEyILY", title: "The Hardest AI Music Video II", artist: "The Dor Brothers", genre: "Hip-Hop" },
+  { id: "TbXZoMocpM8", title: "The Drill", artist: "The Dor Brothers", genre: "Drill" },
+  { id: "_NnNyp1YcL0", title: "Overthinking", artist: "Okwaro Beats", genre: "Hip-Hop" },
+  { id: "yXxpzXEXqZ4", title: "Your Eyes", artist: "AI Music Video", genre: "Hip-Hop" },
   // Disco / Funk / Nu-Disco
   { id: "cxPv3oC-Yis", title: "Make it Easy for Me", artist: "Oscar Morales", genre: "Disco-Funk" },
   { id: "2chbo8q6358", title: "Retro Disco 80s/90s", artist: "Disco AI", genre: "Disco" },
   { id: "phbEOC4U9qg", title: "Funky Firefly", artist: "Groove AI", genre: "Funk" },
   { id: "dg7BElt9ghQ", title: "Moonwalk", artist: "AIVA", genre: "Disco" },
-  { id: "KlrKKmc64r0", title: "Dance AI Disco", artist: "Disco AI", genre: "Disco" },
-  { id: "bX-XOGMbJKI", title: "AI Disco-Funk", artist: "Disco AI", genre: "Disco-Funk" },
-  { id: "Z-TP3xFjyyI", title: "Soulful House", artist: "AI Session", genre: "Nu-Disco" },
 ];
 
 const WEEKLY_COUNT = 10;
@@ -56,13 +59,17 @@ export const NaCzasieHits = () => {
     language === "en" ? en : language === "nl" ? nl : language === "ua" ? ua : pl;
 
   // Tygodniowy wybór 10 z puli (deterministyczny, więc zmienia się co tydzień).
-  const clips = useMemo(() => {
+  const weekly = useMemo(() => {
     const start = (weekIndex() * WEEKLY_COUNT) % POOL.length;
     return Array.from({ length: Math.min(WEEKLY_COUNT, POOL.length) }, (_, i) => POOL[(start + i) % POOL.length]);
   }, []);
 
   const [[index, dir], setIndexDir] = useState<[number, number]>([0, 0]);
   const [playing, setPlaying] = useState(false);
+  // Samoczyszczenie: filmy, których miniatura się nie ładuje (usunięte/prywatne),
+  // są automatycznie pomijane — dzięki temu „niedziałające" znikają same.
+  const [dead, setDead] = useState<Set<string>>(new Set());
+  const clips = weekly.filter((c) => !dead.has(c.id));
 
   const total = clips.length;
   const safe = total ? ((index % total) + total) % total : 0;
@@ -121,6 +128,7 @@ export const NaCzasieHits = () => {
                   src={thumb}
                   alt={clip.title}
                   loading="lazy"
+                  onError={() => setDead((prev) => new Set(prev).add(clip.id))}
                   className="absolute inset-0 w-full h-full object-cover"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-black/35" />
