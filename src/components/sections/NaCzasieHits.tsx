@@ -21,6 +21,8 @@ export const NaCzasieHits = () => {
 
   useEffect(() => {
     let alive = true;
+    const matches = (g?: string | null) => !!g && KW.some((k) => g.toLowerCase().includes(k));
+
     (async () => {
       try {
         const orFilter = KW.map((k) => `genre.ilike.%${k}%`).join(",");
@@ -38,7 +40,21 @@ export const NaCzasieHits = () => {
         if (alive) setLoading(false);
       }
     })();
-    return () => { alive = false; };
+
+    // Live: nowe disco/hip-hop pojawia się tu od razu, gdy ktoś je doda.
+    const channel = supabase
+      .channel("na-czasie-live")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "tracks" }, (payload) => {
+        const row = payload.new as any;
+        if (!alive || !row?.audio_url || !matches(row.genre)) return;
+        setTracks((prev) => [row as Track, ...prev.filter((t) => t.id !== row.id)].slice(0, 40));
+      })
+      .subscribe();
+
+    return () => {
+      alive = false;
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   if (!loading && tracks.length === 0) return null;
