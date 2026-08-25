@@ -19,8 +19,8 @@ function briefFor(kind: TalkKind, lang: string, hosts: { a: string; b: string })
   const pl = lang.startsWith("pl");
   if (kind === "news") {
     return pl
-      ? `Napisz żywą, naturalną rozmowę dwojga prowadzących radia GrouAI — ${hosts.a} i ${hosts.b} — o TYM, CO CIEKAWEGO W MUZYCE I KULTURZE (gatunki, trendy, ciekawostki, klimat na dziś). Ma być energicznie, z humorem i lekko, jak prawdziwa audycja. NIE wymyślaj konkretnych nieprawdziwych faktów, dat ani nazwisk — mów ogólnie i barwnie.`
-      : `Write a lively, natural conversation between two GrouAI radio hosts — ${hosts.a} and ${hosts.b} — about WHAT'S INTERESTING IN MUSIC AND CULTURE (genres, trends, fun facts, today's vibe). Energetic, warm, with humor, like a real show. Do NOT invent specific false facts, dates or names — keep it general and colorful.`;
+      ? `Poprowadź krótki SERWIS INFORMACYJNY radia GrouAI — ${hosts.a} i ${hosts.b} — o TYM, CO DZIEJE SIĘ NA ŚWIECIE (świat, technologia, nauka, kultura, sport, ciekawostki, nastrój dnia). Ton jak w prawdziwym radiowym serwisie: rzeczowo, żywo, z krótkim komentarzem prowadzących. WAŻNE: nie zmyślaj konkretnych „breaking news", dat, liczb ani nazwisk, których nie jesteś pewien — mów o tematach i zjawiskach ogólnie, tak by brzmiało wiarygodnie i aktualnie, bez wprowadzania w błąd.`
+      : `Host a short GrouAI NEWS BULLETIN — ${hosts.a} and ${hosts.b} — about WHAT'S HAPPENING IN THE WORLD (world, technology, science, culture, sport, curiosities, today's mood). Tone like a real radio news segment: factual, lively, with brief host commentary. IMPORTANT: do NOT invent specific breaking news, dates, numbers or names you're unsure of — speak about topics and phenomena in general so it sounds credible and current without misleading.`;
   }
   return pl
     ? `Napisz krótkie, wciągające OPOWIADANIE w formie rozmowy dwojga prowadzących GrouAI — ${hosts.a} i ${hosts.b} — którzy snują wspólnie nastrojową historię na antenie (np. nocna podróż, tajemnica, wspomnienie). Ma wciągać, mieć klimat i puentę.`
