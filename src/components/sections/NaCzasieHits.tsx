@@ -44,7 +44,7 @@ export const NaCzasieHits = () => {
   if (!loading && tracks.length === 0) return null;
 
   return (
-    <div className="mt-2 mb-8">
+    <section className="px-4 sm:px-6 max-w-6xl mx-auto mt-8 mb-2">
       <div className="flex items-center justify-between mb-3">
         <h3 className="font-display text-lg sm:text-xl font-bold flex items-center gap-2">
           <span>🔥</span> {L("Na czasie", "Trending", "Trending", "У тренді")} · Hip-Hop / Disco
@@ -84,6 +84,6 @@ export const NaCzasieHits = () => {
           ))}
         </div>
       )}
-    </div>
+    </section>
   );
 };
