@@ -67,7 +67,10 @@ export const FeedReels = ({
           .from("tracks").select(SEL)
           .or("audio_url.not.is.null,video_url.not.is.null")
           .order("created_at", { ascending: false }).limit(300);
-        if (alive) setSongs(Array.isArray(data) ? (data as unknown as Track[]) : []);
+        const list = Array.isArray(data) ? (data as unknown as Track[]) : [];
+        // Teledyski (utwory z wideo) na przód.
+        list.sort((a, b) => (b.video_url ? 1 : 0) - (a.video_url ? 1 : 0));
+        if (alive) setSongs(list);
       } catch { if (alive) setSongs([]); }
       finally { if (alive) setSongsLoading(false); }
     })();
@@ -129,6 +132,8 @@ export const FeedReels = ({
               setShowSearch(false);
             }
           },
+          // Film niedostępny (404 / brak osadzania) → pomiń na następny.
+          onError: () => { try { playerRef.current?.nextVideo?.(); } catch { /* */ } },
         },
       });
     });

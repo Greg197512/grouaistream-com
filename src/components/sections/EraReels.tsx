@@ -125,6 +125,8 @@ export const EraReels = ({ startEra, lang, onClose }: { startEra: Era; lang: Lan
               setShowSearch(false);
             }
           },
+          // Film niedostępny (404 / brak osadzania) → pomiń na następny.
+          onError: () => { try { playerRef.current?.nextVideo?.(); } catch { /* */ } },
         },
       });
     });
