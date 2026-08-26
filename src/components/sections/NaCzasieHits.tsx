@@ -1,91 +1,20 @@
-import { useMemo, useState } from "react";
-import { Play, ChevronLeft, ChevronRight, ExternalLink } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useState } from "react";
+import { Play, Clapperboard, Plus } from "lucide-react";
+import { AnimatePresence } from "framer-motion";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { FeedReels, type YtItem } from "@/components/sections/FeedReels";
+import { FeedReels } from "@/components/sections/FeedReels";
 
-type Clip = { id: string; title: string; artist: string; genre: string };
+// Playlista YouTube „bez końca" z teledyskami AI (sama pomija martwe filmy).
+const AI_PLAYLIST = "PLmUquWDI4xqs33YgwDAAF5s5MK_a5S0sk";
 
-// Kuratorska pula prawdziwych teledysków AI (disco / techno / hip-hop),
-// znalezionych na YouTube. Aplikacja co tydzień automatycznie wybiera z niej
-// 10 (deterministycznie wg numeru tygodnia) — dzięki temu zestaw sam się zmienia.
-const POOL: Clip[] = [
-  // Hip-Hop / Rap / Trap
-  { id: "2Xy-ax7VyNI", title: "Mad Science", artist: "Nowhere Beach", genre: "Hip-Hop" },
-  { id: "xOSW36TSsiQ", title: "Grow Up", artist: "DJAI", genre: "Hip-Hop" },
-  { id: "1SWBizKojIw", title: "No Replay", artist: "AI Rap Duet", genre: "Trap" },
-  { id: "dYW8tmnyh1c", title: "AI Rap", artist: "Artificial Rap", genre: "Rap" },
-  { id: "0iGWxsKhxHo", title: "Futuristic Hip-Hop", artist: "AI Visuals", genre: "Hip-Hop" },
-  { id: "P2b6tP25UWM", title: "GTA Type Beat", artist: "AI Beats", genre: "Hip-Hop" },
-  // Techno / House / EDM
-  { id: "JPGgtHuw2VA", title: "Neon Fractal Genesis", artist: "KYNTIC", genre: "Techno" },
-  { id: "ix4m9ltlMsY", title: "I Love You", artist: "Bikini Club", genre: "Techno House" },
-  { id: "EG-hGpguNyM", title: "Midnight Circuit", artist: "AI Cinematic", genre: "Techno" },
-  { id: "Q9mxqoIQbkQ", title: "Nafile", artist: "Harmonic Flow", genre: "Techno" },
-  { id: "uUwdopCxTNc", title: "Unusual", artist: "Harmonic Flow", genre: "Techno" },
-  { id: "oZEkSGellX4", title: "All is Well", artist: "Harmonic Flow", genre: "Techno" },
-  { id: "ECIrWFBuOMA", title: "Space Party", artist: "Fahri Yilmaz", genre: "Techno" },
-  { id: "saagINxpPU0", title: "The Majestic Skies", artist: "AI Cinematic", genre: "Techno" },
-  { id: "XEdYU7R5x4o", title: "Eclipse of Sound", artist: "ToneFlow", genre: "Techno" },
-  { id: "nkQjcLwwPkg", title: "Burning Man", artist: "Techno Mix AI", genre: "Techno" },
-  { id: "U1E_1Rkw4kY", title: "Go Now (Car & Girls)", artist: "Official AI", genre: "Techno" },
-  // Hip-Hop / Drill — The Dor Brothers (twórcy „Mad Science") i inni
-  { id: "217f2kdwXAE", title: "The Hardest AI Music Video", artist: "The Dor Brothers", genre: "Hip-Hop" },
-  { id: "iL7qiFEyILY", title: "The Hardest AI Music Video II", artist: "The Dor Brothers", genre: "Hip-Hop" },
-  { id: "TbXZoMocpM8", title: "The Drill", artist: "The Dor Brothers", genre: "Drill" },
-  { id: "_NnNyp1YcL0", title: "Overthinking", artist: "Okwaro Beats", genre: "Hip-Hop" },
-  { id: "yXxpzXEXqZ4", title: "Your Eyes", artist: "AI Music Video", genre: "Hip-Hop" },
-  // Disco / Funk / Nu-Disco
-  { id: "cxPv3oC-Yis", title: "Make it Easy for Me", artist: "Oscar Morales", genre: "Disco-Funk" },
-  { id: "2chbo8q6358", title: "Retro Disco 80s/90s", artist: "Disco AI", genre: "Disco" },
-  { id: "phbEOC4U9qg", title: "Funky Firefly", artist: "Groove AI", genre: "Funk" },
-  { id: "dg7BElt9ghQ", title: "Moonwalk", artist: "AIVA", genre: "Disco" },
-];
-
-const WEEKLY_COUNT = 10;
-
-// Numer tygodnia (rośnie także między latami) — steruje cotygodniową rotacją.
-const weekIndex = () => {
-  const d = new Date();
-  const oneJan = new Date(d.getFullYear(), 0, 1);
-  const days = Math.floor((d.getTime() - oneJan.getTime()) / 86400000);
-  return d.getFullYear() * 53 + Math.floor((days + oneJan.getDay()) / 7);
-};
-
-// „Na czasie": JEDNA duża karta teledysku AI, przewijanie lewo/prawo,
-// 10 najlepszych na tydzień (disco / techno / hip-hop), zmienia się co tydzień.
+// „Na czasie": karta otwierająca pełnoekranowe rolki teledysków AI (bez końca
+// z YouTube — same dobre, martwe filmy są pomijane) + zakładka „Nasze utwory".
 export const NaCzasieHits = () => {
   const { language } = useLanguage();
   const L = (pl: string, en: string, nl: string, ua: string) =>
     language === "en" ? en : language === "nl" ? nl : language === "ua" ? ua : pl;
 
-  // Tygodniowy wybór 10 z puli (deterministyczny, więc zmienia się co tydzień).
-  const weekly = useMemo(() => {
-    const start = (weekIndex() * WEEKLY_COUNT) % POOL.length;
-    return Array.from({ length: Math.min(WEEKLY_COUNT, POOL.length) }, (_, i) => POOL[(start + i) % POOL.length]);
-  }, []);
-
-  const [[index, dir], setIndexDir] = useState<[number, number]>([0, 0]);
   const [reels, setReels] = useState(false);
-  // Samoczyszczenie: filmy, których miniatura się nie ładuje (usunięte/prywatne),
-  // są automatycznie pomijane — dzięki temu „niedziałające" znikają same.
-  const [dead, setDead] = useState<Set<string>>(new Set());
-  const clips = weekly.filter((c) => !dead.has(c.id));
-
-  const total = clips.length;
-  const safe = total ? ((index % total) + total) % total : 0;
-  const clip = clips[safe];
-  const go = (d: number) => setIndexDir(([i]) => [i + d, d]);
-
-  // Rolki startują od aktualnie pokazywanego teledysku.
-  const reelItems: YtItem[] = [...clips.slice(safe), ...clips.slice(0, safe)].map((c) => ({
-    kind: "yt", videoId: c.id, title: c.title, artist: c.artist, genre: c.genre,
-  }));
-
-  if (total === 0) return null;
-
-  const watchUrl = `https://www.youtube.com/watch?v=${clip.id}`;
-  const thumb = `https://i.ytimg.com/vi/${clip.id}/hqdefault.jpg`;
 
   return (
     <section className="px-4 sm:px-6 max-w-6xl mx-auto mt-8 mb-2">
@@ -94,107 +23,49 @@ export const NaCzasieHits = () => {
           <span>🔥</span> {L("Na czasie", "Trending", "Trending", "У тренді")}
         </h3>
         <span className="text-[11px] text-muted-foreground tabular-nums">
-          {safe + 1}/{total} · {L("Teledyski AI tygodnia", "AI videos of the week", "AI-clips van de week", "AI-кліпи тижня")}
+          {L("Teledyski AI · bez końca", "AI videos · endless", "AI-clips · eindeloos", "AI-кліпи · без кінця")}
         </span>
       </div>
 
-      <div className="relative h-[300px] sm:h-[360px] select-none">
-        <AnimatePresence initial={false} custom={dir} mode="popLayout">
-          <motion.div
-            key={clip.id}
-            custom={dir}
-            initial={{ opacity: 0, scale: 0.9, x: dir >= 0 ? 130 : -130, borderRadius: 44 }}
-            animate={{ opacity: 1, scale: 1, x: 0, borderRadius: 24 }}
-            exit={{ opacity: 0, scale: 0.8, x: dir >= 0 ? -130 : 130, borderRadius: 64 }}
-            transition={{ duration: 0.5, ease: [0.2, 0.7, 0.2, 1] }}
-            drag="x"
-            dragConstraints={{ left: 0, right: 0 }}
-            dragElastic={0.18}
-            onDragEnd={(_e, info) => {
-              if (info.offset.x < -60) go(1);
-              else if (info.offset.x > 60) go(-1);
-            }}
-            className="absolute inset-0 overflow-hidden border border-white/12 shadow-[0_24px_50px_-20px_rgba(0,0,0,0.85)] cursor-grab active:cursor-grabbing bg-black"
-          >
-            {(
-              <>
-                <img
-                  src={thumb}
-                  alt={clip.title}
-                  loading="lazy"
-                  onError={() => setDead((prev) => new Set(prev).add(clip.id))}
-                  className="absolute inset-0 w-full h-full object-cover"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-black/35" />
+      <button
+        onClick={() => setReels(true)}
+        className="group relative block w-full h-[300px] sm:h-[360px] rounded-3xl overflow-hidden border border-white/12 shadow-[0_24px_50px_-20px_rgba(0,0,0,0.85)] text-left"
+      >
+        {/* Tło */}
+        <div className="absolute inset-0" style={{ background: "radial-gradient(120% 120% at 20% 10%, hsl(331 100% 62% / 0.55), transparent 55%), radial-gradient(120% 120% at 90% 90%, hsl(268 100% 66% / 0.6), transparent 55%), linear-gradient(160deg, #17101f, #0b0a12)" }} />
+        <div aria-hidden className="absolute inset-0 opacity-[0.07]" style={{ backgroundImage: "repeating-linear-gradient(0deg, #fff 0, #fff 1px, transparent 2px, transparent 5px)" }} />
 
-                <span className="absolute top-4 left-4 text-[11px] font-bold px-2.5 py-1 rounded-full bg-black/50 backdrop-blur text-white/85">
-                  #{safe + 1}
-                </span>
-                <span className="absolute top-4 right-4 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-white/10 backdrop-blur border border-white/20 text-white/90">
-                  {clip.genre}
-                </span>
+        {/* Duży przycisk play (fiolet → przezroczyste szkło po wciśnięciu) */}
+        <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-20 w-20 rounded-full text-white flex items-center justify-center shadow-[0_14px_34px_-8px_hsl(331_100%_62%/0.7)] group-hover:scale-110 group-active:scale-95 transition-transform">
+          <span aria-hidden className="absolute inset-0 rounded-full groove-gradient-bg transition-opacity duration-150 group-active:opacity-0" />
+          <span aria-hidden className="absolute inset-0 rounded-full bg-white/10 backdrop-blur-md border border-white/40 opacity-0 group-active:opacity-100 transition-opacity duration-150" />
+          <Play className="relative z-10 h-9 w-9 fill-current ml-1" />
+        </span>
 
-                <button
-                  onClick={() => setReels(true)}
-                  aria-label={L("Odtwórz", "Play", "Afspelen", "Відтворити")}
-                  className="group absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-20 w-20 rounded-full text-white flex items-center justify-center shadow-[0_14px_34px_-8px_hsl(331_100%_62%/0.7)] hover:scale-110 active:scale-95 transition-transform"
-                >
-                  {/* fioletowa warstwa (domyślnie) */}
-                  <span aria-hidden className="absolute inset-0 rounded-full groove-gradient-bg transition-opacity duration-150 group-active:opacity-0" />
-                  {/* przezroczyste szkło (po wciśnięciu) */}
-                  <span aria-hidden className="absolute inset-0 rounded-full bg-white/10 backdrop-blur-md border border-white/40 opacity-0 group-active:opacity-100 transition-opacity duration-150" />
-                  <Play className="relative z-10 h-9 w-9 fill-current ml-1" />
-                </button>
+        {/* Plakietki */}
+        <span className="absolute top-4 left-4 inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full bg-black/45 backdrop-blur text-white/90">
+          <Clapperboard className="h-3.5 w-3.5" /> {L("Rolki", "Reels", "Reels", "Ролики")}
+        </span>
+        <span className="absolute top-4 right-4 inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-white/10 backdrop-blur border border-white/20 text-white/90">
+          <Plus className="h-3.5 w-3.5" /> {L("Dodaj do playlisty", "Add to playlist", "Aan playlist", "До плейлиста")}
+        </span>
 
-                <div className="absolute left-5 right-5 bottom-5 flex items-end justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="font-display text-2xl sm:text-3xl font-extrabold text-white drop-shadow truncate">
-                      {clip.title}
-                    </div>
-                    <div className="text-sm text-white/80 mt-0.5 truncate">
-                      {clip.artist} · {total} {L("teledysków", "videos", "clips", "кліпів")}
-                    </div>
-                  </div>
-                  <a
-                    href={watchUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={(e) => e.stopPropagation()}
-                    className="shrink-0 inline-flex items-center gap-1 text-[11px] text-white/70 hover:text-white transition-colors"
-                  >
-                    YouTube <ExternalLink className="h-3 w-3" />
-                  </a>
-                </div>
-              </>
-            )}
-          </motion.div>
-        </AnimatePresence>
+        {/* Opis */}
+        <div className="absolute left-5 right-5 bottom-5">
+          <div className="font-display text-2xl sm:text-3xl font-extrabold text-white drop-shadow">
+            {L("Teledyski AI", "AI music videos", "AI-videoclips", "AI-кліпи")}
+          </div>
+          <div className="text-sm text-white/80 mt-0.5">
+            {L("Oglądaj jak rolki — przewijaj, dodawaj do playlisty", "Watch as reels — swipe, add to playlist", "Bekijk als reels — swipe, voeg toe", "Дивись як ролики — гортай, додавай")}
+          </div>
+        </div>
+      </button>
 
-        {total > 1 && (
-          <>
-            <button
-              onClick={() => go(-1)}
-              aria-label="Poprzedni"
-              className="absolute left-2 top-1/2 -translate-y-1/2 z-10 h-10 w-10 rounded-full bg-black/45 backdrop-blur border border-white/15 text-white flex items-center justify-center hover:bg-black/65 transition-colors"
-            >
-              <ChevronLeft className="h-5 w-5" />
-            </button>
-            <button
-              onClick={() => go(1)}
-              aria-label="Następny"
-              className="absolute right-2 top-1/2 -translate-y-1/2 z-10 h-10 w-10 rounded-full bg-black/45 backdrop-blur border border-white/15 text-white flex items-center justify-center hover:bg-black/65 transition-colors"
-            >
-              <ChevronRight className="h-5 w-5" />
-            </button>
-          </>
-        )}
-      </div>
-
-      {/* Pełnoekranowe „Rolki": teledyski AI + nasze wszystkie utwory */}
+      {/* Pełnoekranowe rolki: teledyski AI (bez końca) + nasze utwory */}
       <AnimatePresence>
         {reels && (
           <FeedReels
-            ytTab={{ label: L("Na czasie", "Trending", "Trending", "У тренді"), items: reelItems }}
+            ytTab={{ label: L("Na czasie", "Trending", "Trending", "У тренді"), playlistId: AI_PLAYLIST }}
             includeOurSongs
             lang={language}
             onClose={() => setReels(false)}
