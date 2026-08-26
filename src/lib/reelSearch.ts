@@ -35,13 +35,14 @@ export async function looseSuggestion(query: string): Promise<Track | null> {
   return list[0] || null;
 }
 
-// Szukaj w CAŁYM YouTube przez funkcję edge (tylko osadzalne filmy).
+// Szukaj w CAŁYM YouTube przez funkcję serverless Vercel (tylko osadzalne filmy).
 export async function searchYouTube(query: string): Promise<YtHit[]> {
   const q = query.trim();
   if (!q) return [];
   try {
-    const { data, error } = await supabase.functions.invoke("youtube-search", { body: { q } });
-    if (error) return [];
+    const r = await fetch(`/api/youtube-search?q=${encodeURIComponent(q)}`);
+    if (!r.ok) return [];
+    const data = await r.json();
     const items = (data?.items || []) as YtHit[];
     return items.filter((x) => x.videoId);
   } catch {
