@@ -275,6 +275,24 @@ export function eraSpotifyPlaylist(era: Era): string | null {
   return ERA_SPOTIFY[era.key] || null;
 }
 
+// ── Odsłuch dekady na YouTube (playlisty hitów) — CAŁE utwory, za darmo ──
+// YouTube odtwarza pełne utwory (nie 30-sek zapowiedzi jak Spotify), z okładkami
+// (miniatury) i wykonawcami w tytułach. FUTURE nie ma dekady → brak playlisty.
+const ERA_YOUTUBE: Record<string, string> = {
+  "1970s": "PLGBuKfnErZlAkaUUy57-mR97f8SBgMNHh", // 70's Music Hits
+  "1980s": "PLmXxqSJJq-yXrCPGIT2gn8b34JjOrl4Xf", // 80s Music Hits
+  "1990s": "PLmXxqSJJq-yUvMWKuZQAB_8yxnjZaOZUp", // 90s Hits
+  "y2k": "PL39z-AAkkattOdF6OKCKDYtvOwBjKwY9m",   // 2000s Pop Hits
+  "2000s": "PL39z-AAkkattOdF6OKCKDYtvOwBjKwY9m", // 2000s Pop Hits
+  "2010s": "PLGBuKfnErZlB3AThAEKz8_3kbYTocgfbB", // 2010s Pop Hits
+  "now": "PLYpfY4nUCQSK50IN6TJDYprrr1ERh51G-",   // Top Hits 2020s
+};
+
+/** ID playlisty YouTube z hitami dekady (całe utwory) albo null dla FUTURE. */
+export function eraYoutubePlaylist(era: Era): string | null {
+  return ERA_YOUTUBE[era.key] || null;
+}
+
 // Utwór traktujemy jak "AI ERA", gdy pochodzi z naszego generatora.
 export function isAiTrack(t: { artist?: string | null; album?: string | null }): boolean {
   const a = (t.artist || "").toLowerCase();
