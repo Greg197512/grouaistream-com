@@ -7,10 +7,9 @@ import { HQCover } from "@/components/ui/HQCover";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { FeedReels } from "@/components/sections/FeedReels";
 import { loadYT } from "@/lib/youtubeIframe";
+import { AI_TELEDYSKI } from "@/lib/aiTeledyski";
 
 const SEL = "id,title,artist,album,duration,cover_url,audio_url,video_url,genre,mood";
-// Playlista YouTube „bez końca" — fallback, gdy nie mamy własnych teledysków.
-const AI_PLAYLIST = "PLmUquWDI4xqs33YgwDAAF5s5MK_a5S0sk";
 
 // „Na czasie / Teledyski AI": pokazuje NASZE teledyski (utwory z wideo, np. reset404)
 // jako przewijaną karuzelę — na komputerze widać tytuł „co jest co", strzałki
@@ -130,7 +129,7 @@ export const NaCzasieHits = () => {
       <AnimatePresence>
         {reels && (
           <FeedReels
-            ytTab={{ label: L("Teledyski AI", "AI videos", "AI-clips", "AI-кліпи"), playlistId: AI_PLAYLIST }}
+            ytTab={{ label: L("Teledyski AI", "AI videos", "AI-clips", "AI-кліпи"), videoIds: AI_TELEDYSKI }}
             includeOurSongs
             lang={language}
             onClose={() => setReels(false)}
@@ -155,9 +154,9 @@ const YouTubeFallback = ({ lang, onFullscreen, L }: { lang: string; onFullscreen
       if (cancelled || !mountRef.current) return;
       playerRef.current = new YT.Player(mountRef.current, {
         width: "100%", height: "100%",
-        playerVars: { listType: "playlist", list: AI_PLAYLIST, autoplay: 0, controls: 1, rel: 0, modestbranding: 1, playsinline: 1 },
+        playerVars: { autoplay: 0, controls: 1, rel: 0, modestbranding: 1, playsinline: 1 },
         events: {
-          onReady: () => { setReady(true); setTimeout(refreshMeta, 400); },
+          onReady: () => { try { playerRef.current?.cuePlaylist?.({ playlist: AI_TELEDYSKI, index: 0 }); } catch { /* */ } setReady(true); setTimeout(refreshMeta, 600); },
           onStateChange: () => refreshMeta(),
           onError: () => { try { playerRef.current?.nextVideo?.(); } catch { /* */ } },
         },

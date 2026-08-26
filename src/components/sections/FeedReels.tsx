@@ -28,7 +28,7 @@ export const FeedReels = ({
   lang,
   onClose,
 }: {
-  ytTab?: { label: string; playlistId?: string; items?: YtItem[] };
+  ytTab?: { label: string; playlistId?: string; videoIds?: string[]; items?: YtItem[] };
   includeOurSongs?: boolean;
   lang: Language;
   onClose: () => void;
@@ -38,7 +38,7 @@ export const FeedReels = ({
   const L = (pl: string, en: string, nl: string, ua: string) =>
     lang === "en" ? en : lang === "nl" ? nl : lang === "ua" ? ua : pl;
 
-  const hasYt = !!(ytTab && (ytTab.playlistId || (ytTab.items && ytTab.items.length)));
+  const hasYt = !!(ytTab && (ytTab.playlistId || (ytTab.videoIds && ytTab.videoIds.length) || (ytTab.items && ytTab.items.length)));
 
   const [songs, setSongs] = useState<Track[]>([]);
   const [songsLoading, setSongsLoading] = useState(includeOurSongs);
@@ -94,7 +94,8 @@ export const FeedReels = ({
     if (!ytReadyRef.current || !playerRef.current) return;
     try {
       if (ytTab?.playlistId) playerRef.current.loadPlaylist({ list: ytTab.playlistId, listType: "playlist", index: 0 });
-      else if (ytTab?.items?.length) playerRef.current.loadVideoById(ytTab.items[0].videoId);
+      else if (ytTab?.videoIds?.length) playerRef.current.loadPlaylist({ playlist: ytTab.videoIds, index: 0 });
+      else if (ytTab?.items?.length) playerRef.current.loadPlaylist({ playlist: ytTab.items.map((i) => i.videoId), index: 0 });
     } catch { /* */ }
   };
 
