@@ -401,36 +401,55 @@ const EraDetail = ({ era, lang }: { era: Era; lang: Language }) => {
           </div>
         )}
 
-        {/* POSŁUCHAJ DEKADY NA SPOTIFY — wbudowany, niezawodny odtwarzacz */}
+        {/* POSŁUCHAJ DEKADY NA SPOTIFY — wbudowany odtwarzacz + pełny odsłuch */}
         {(() => {
           const pid = eraSpotifyPlaylist(era);
           if (!pid) return null;
           const t = {
             title: { pl: "Posłuchaj epoki na Spotify", en: "Listen to this era on Spotify", nl: "Luister naar dit tijdperk op Spotify", ua: "Слухай епоху на Spotify" }[lang] || "Listen to this era on Spotify",
-            sub: { pl: `Największe hity dekady ${era.decade} — pełny odsłuch na Spotify.`, en: `The biggest hits of the ${era.decade} — full playback on Spotify.`, nl: `De grootste hits van de ${era.decade} — volledig afspelen op Spotify.`, ua: `Найбільші хіти ${era.decade} — повне відтворення на Spotify.` }[lang] || `The biggest hits of the ${era.decade}.`,
+            sub: { pl: `Największe hity dekady ${era.decade} — okładki, wykonawcy i pełne albumy.`, en: `The biggest hits of the ${era.decade} — covers, artists and full albums.`, nl: `De grootste hits van de ${era.decade} — hoezen, artiesten en volledige albums.`, ua: `Найбільші хіти ${era.decade} — обкладинки, виконавці та повні альбоми.` }[lang] || `The biggest hits of the ${era.decade}.`,
+            openFull: { pl: "Otwórz całość w Spotify", en: "Open full in Spotify", nl: "Open volledig in Spotify", ua: "Відкрити повністю у Spotify" }[lang] || "Open full in Spotify",
+            note: { pl: "Całe utwory grają po zalogowaniu do Spotify. Bez logowania Spotify daje tu tylko krótkie zapowiedzi — pełne albumy odtworzysz przyciskiem powyżej.", en: "Full tracks play when you're logged into Spotify. Without login Spotify only allows short previews here — use the button above for full albums.", nl: "Volledige nummers spelen wanneer je bij Spotify bent ingelogd. Zonder login alleen previews — gebruik de knop hierboven voor volledige albums.", ua: "Повні треки грають після входу в Spotify. Без входу — лише короткі прев'ю; повні альбоми через кнопку вище." }[lang] || "",
+            artists: { pl: "Wykonawcy epoki", en: "Artists of the era", nl: "Artiesten van het tijdperk", ua: "Виконавці епохи" }[lang] || "Artists of the era",
           };
           return (
             <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
               className="rounded-2xl border p-4 sm:p-5 space-y-3"
               style={{ borderColor: `${era.palette.accent}30`, background: "rgba(255,255,255,.02)" }}>
-              <div>
-                <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                  <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: "#1DB954", boxShadow: "0 0 10px #1DB95488" }} />
-                  {t.title}
-                </h2>
-                <p className="text-xs text-gray-500">{t.sub}</p>
+              <div className="flex items-start justify-between gap-3 flex-wrap">
+                <div>
+                  <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                    <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: "#1DB954", boxShadow: "0 0 10px #1DB95488" }} />
+                    {t.title}
+                  </h2>
+                  <p className="text-xs text-gray-500">{t.sub}</p>
+                </div>
+                <a href={`https://open.spotify.com/playlist/${pid}`} target="_blank" rel="noopener noreferrer"
+                  className="shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold text-black transition-transform hover:scale-105 whitespace-nowrap"
+                  style={{ background: "#1DB954", boxShadow: "0 0 16px #1DB95455" }}>
+                  <Play className="h-4 w-4 fill-black" /> {t.openFull}
+                </a>
               </div>
               <iframe
                 title={`Spotify · ${era.label}`}
                 src={`https://open.spotify.com/embed/playlist/${pid}?utm_source=generator&theme=0`}
                 width="100%"
-                height={380}
+                height={420}
                 frameBorder={0}
                 loading="lazy"
                 allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
                 style={{ borderRadius: 12 }}
                 className="w-full"
               />
+              <p className="text-[11px] text-gray-500 leading-relaxed">🔒 {t.note}</p>
+              {era.artists.length > 0 && (
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="font-mono text-[10px] tracking-wider uppercase text-gray-500 mr-1">{t.artists}:</span>
+                  {era.artists.map((a) => (
+                    <span key={a} className="text-[11px] px-2.5 py-1 rounded-md border" style={{ borderColor: `${era.palette.accent}30`, color: era.palette.accent }}>{a}</span>
+                  ))}
+                </div>
+              )}
             </motion.div>
           );
         })()}
