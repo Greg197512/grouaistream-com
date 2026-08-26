@@ -10,16 +10,14 @@ import type { Language } from "@/i18n/translations";
 import { toast } from "sonner";
 
 export type YtItem = { kind: "yt"; videoId: string; title: string; artist: string; genre?: string };
-type TrackItem = { kind: "track"; track: Track };
-type ReelItem = YtItem | TrackItem;
-type ReelTab = { key: string; label: string; items: ReelItem[] };
 
 const FAV_KEY = "grouai-reel-favs-v1";
 const SEL = "id,title,artist,album,duration,cover_url,audio_url,video_url,genre,mood";
 
-// Ujednolicone „Rolki" (TikTok-style): pionowo, pełny ekran.
-// Zakładki u góry przełączają źródło (np. teledyski AI „Na czasie" oraz nasze
-// wszystkie utwory z aplikacji). Swipe w górę = następny, tap = pauza/play,
+// Ujednolicone „Rolki" (TikTok-style): pionowo, na CAŁY ekran telefonu, bez
+// widocznego playera YouTube (controls ukryte), auto-start. Zakładki u góry
+// przełączają źródło: teledyski z playlisty YouTube „bez końca" oraz nasze
+// wszystkie utwory z aplikacji. Swipe = następny/poprzedni, tap = pauza/play,
 // ➕ dodaje do playlisty (nasze utwory → Supabase liked_songs, YT → lokalnie).
 export const FeedReels = ({
   ytTab,
@@ -27,7 +25,7 @@ export const FeedReels = ({
   lang,
   onClose,
 }: {
-  ytTab?: { label: string; items: YtItem[] };
+  ytTab?: { label: string; playlistId?: string; items?: YtItem[] };
   includeOurSongs?: boolean;
   lang: Language;
   onClose: () => void;
@@ -37,13 +35,22 @@ export const FeedReels = ({
   const L = (pl: string, en: string, nl: string, ua: string) =>
     lang === "en" ? en : lang === "nl" ? nl : lang === "ua" ? ua : pl;
 
+  const hasYt = !!(ytTab && (ytTab.playlistId || (ytTab.items && ytTab.items.length)));
+
   const [songs, setSongs] = useState<Track[]>([]);
   const [songsLoading, setSongsLoading] = useState(includeOurSongs);
+  const [tabKey, setTabKey] = useState<"yt" | "songs">(hasYt ? "yt" : "songs");
+  const [songIndex, setSongIndex] = useState(0);
+  const [ytData, setYtData] = useState<{ title?: string; author?: string; video_id?: string }>({});
+  const [ytPlaying, setYtPlaying] = useState(false);
+  const [added, setAdded] = useState(false);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const playerRef = useRef<any>(null);
   const ytMountRef = useRef<HTMLDivElement>(null);
   const ytReadyRef = useRef(false);
+  const tabKeyRef = useRef(tabKey);
+  useEffect(() => { tabKeyRef.current = tabKey; }, [tabKey]);
 
   // Pobierz wszystkie nasze utwory z aplikacji (katalog).
   useEffect(() => {
@@ -62,109 +69,131 @@ export const FeedReels = ({
     return () => { alive = false; };
   }, [includeOurSongs]);
 
-  const tabs: ReelTab[] = useMemo(() => {
-    const out: ReelTab[] = [];
-    if (ytTab && ytTab.items.length) out.push({ key: "yt", label: ytTab.label, items: ytTab.items });
-    if (includeOurSongs && songs.length) out.push({ key: "songs", label: L("Nasze utwory", "Our songs", "Onze nummers", "Наші треки"), items: songs.map((t) => ({ kind: "track", track: t })) });
+  const songTotal = songs.length;
+  const songSafe = songTotal ? ((songIndex % songTotal) + songTotal) % songTotal : 0;
+  const song = songs[songSafe];
+
+  const tabs = useMemo(() => {
+    const out: { key: "yt" | "songs"; label: string }[] = [];
+    if (hasYt) out.push({ key: "yt", label: ytTab!.label });
+    if (includeOurSongs && songTotal) out.push({ key: "songs", label: L("Nasze utwory", "Our songs", "Onze nummers", "Наші треки") });
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ytTab, includeOurSongs, songs, lang]);
+  }, [hasYt, includeOurSongs, songTotal, lang]);
 
-  const [tabKey, setTabKey] = useState<string>(() => (ytTab && ytTab.items.length ? "yt" : "songs"));
-  const [index, setIndex] = useState(0);
-  const [dir, setDir] = useState(0);
-  const [added, setAdded] = useState(false);
+  const activateYt = () => {
+    pausePlayback();
+    if (!ytReadyRef.current || !playerRef.current) return;
+    try {
+      if (ytTab?.playlistId) playerRef.current.loadPlaylist({ list: ytTab.playlistId, listType: "playlist", index: 0 });
+      else if (ytTab?.items?.length) playerRef.current.loadVideoById(ytTab.items[0].videoId);
+    } catch { /* */ }
+  };
 
-  const activeTab = tabs.find((t) => t.key === tabKey) || tabs[0];
-  const total = activeTab ? activeTab.items.length : 0;
-  const safe = total ? ((index % total) + total) % total : 0;
-  const item: ReelItem | undefined = activeTab?.items[safe];
-
-  // Utwórz odtwarzacz YouTube (raz).
+  // Utwórz odtwarzacz YouTube raz (bez kontrolek, auto-start).
   useEffect(() => {
+    if (!hasYt) return;
     let cancelled = false;
     loadYT().then((YT) => {
       if (cancelled || !ytMountRef.current) return;
       playerRef.current = new YT.Player(ytMountRef.current, {
         width: "100%", height: "100%",
-        playerVars: { playsinline: 1, rel: 0, modestbranding: 1, controls: 1 },
-        events: { onReady: () => { ytReadyRef.current = true; syncPlayback(); } },
+        playerVars: {
+          autoplay: 1, controls: 0, disablekb: 1, fs: 0, rel: 0,
+          modestbranding: 1, playsinline: 1, iv_load_policy: 3,
+          list: ytTab?.playlistId, listType: ytTab?.playlistId ? "playlist" : undefined,
+        },
+        events: {
+          onReady: () => { ytReadyRef.current = true; if (tabKeyRef.current === "yt") { activateYt(); try { playerRef.current.playVideo(); } catch { /* */ } } },
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          onStateChange: (e: any) => {
+            setYtPlaying(e.data === 1);
+            try { const d = playerRef.current?.getVideoData?.(); if (d?.video_id) setYtData(d); } catch { /* */ }
+          },
+        },
       });
     });
     return () => { cancelled = true; try { playerRef.current?.destroy?.(); } catch { /* */ } };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Dbaj, by grało tylko aktywne źródło (YouTube albo nasz player), nie oba naraz.
-  const syncPlayback = () => {
-    if (!item) return;
-    if (item.kind === "yt") {
-      pausePlayback();
-      if (ytReadyRef.current) { try { playerRef.current?.loadVideoById?.(item.videoId); } catch { /* */ } }
-    } else {
-      try { playerRef.current?.pauseVideo?.(); } catch { /* */ }
-      playTrack(item.track, "reels");
-    }
-  };
-  useEffect(() => { setAdded(false); syncPlayback(); /* eslint-disable-next-line */ }, [tabKey, safe, item?.kind, (item as YtItem)?.videoId, (item as TrackItem)?.track?.id]);
+  // Przełączenie zakładki — gra tylko aktywne źródło.
+  useEffect(() => {
+    setAdded(false);
+    if (tabKey === "yt") { activateYt(); try { playerRef.current?.playVideo?.(); } catch { /* */ } }
+    else { try { playerRef.current?.pauseVideo?.(); } catch { /* */ } if (song) playTrack(song, "reels"); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tabKey]);
 
-  const go = (d: number) => { setDir(d); setIndex((i) => i + d); };
-  const switchTab = (k: string) => { if (k === tabKey) return; setDir(0); setTabKey(k); setIndex(0); };
+  // Zmiana utworu w zakładce „Nasze utwory".
+  useEffect(() => {
+    if (tabKey !== "songs" || !song) return;
+    try { playerRef.current?.pauseVideo?.(); } catch { /* */ }
+    playTrack(song, "reels");
+    setAdded(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [songSafe]);
+
+  const go = (d: number) => {
+    if (tabKey === "yt") { try { if (d > 0) playerRef.current?.nextVideo?.(); else playerRef.current?.previousVideo?.(); } catch { /* */ } setAdded(false); }
+    else { setSongIndex((i) => i + d); }
+  };
+  const switchTab = (k: "yt" | "songs") => { if (k !== tabKey) setTabKey(k); };
 
   const togglePlayback = () => {
-    if (!item) return;
-    if (item.kind === "yt") {
-      try {
-        const st = playerRef.current?.getPlayerState?.();
-        if (st === 1) playerRef.current?.pauseVideo?.(); else playerRef.current?.playVideo?.();
-      } catch { /* */ }
-    } else {
-      togglePlay();
-    }
+    if (tabKey === "yt") {
+      try { const st = playerRef.current?.getPlayerState?.(); if (st === 1) playerRef.current?.pauseVideo?.(); else playerRef.current?.playVideo?.(); } catch { /* */ }
+    } else { togglePlay(); }
   };
 
   const addToPlaylist = async () => {
-    if (!item) return;
-    if (item.kind === "track") {
+    if (tabKey === "songs") {
+      if (!song) return;
       if (!user) { toast.error(L("Zaloguj się, aby dodać do playlisty", "Log in to add to your playlist", "Log in om toe te voegen", "Увійдіть, щоб додати")); return; }
       try {
-        const { data: existing } = await supabase.from("liked_songs").select("id").eq("user_id", user.id).eq("track_id", item.track.id).maybeSingle();
-        if (!existing) await supabase.from("liked_songs").insert({ user_id: user.id, track_id: item.track.id });
+        const { data: existing } = await supabase.from("liked_songs").select("id").eq("user_id", user.id).eq("track_id", song.id).maybeSingle();
+        if (!existing) await supabase.from("liked_songs").insert({ user_id: user.id, track_id: song.id });
         setAdded(true);
-        toast.success(L("Dodano do Twojej playlisty (Polubione)", "Added to your playlist (Liked)", "Toegevoegd (Leuk)", "Додано (Вподобані)"), { description: item.track.title });
+        toast.success(L("Dodano do Twojej playlisty (Polubione)", "Added to your playlist (Liked)", "Toegevoegd (Leuk)", "Додано (Вподобані)"), { description: song.title });
       } catch { toast.error(L("Nie udało się dodać", "Couldn't add", "Toevoegen mislukt", "Не вдалося додати")); }
     } else {
       try {
+        const d = playerRef.current?.getVideoData?.();
+        if (!d?.video_id) return;
         const raw = localStorage.getItem(FAV_KEY);
         const list: { video_id: string }[] = raw ? JSON.parse(raw) : [];
-        if (!list.find((x) => x.video_id === item.videoId)) {
-          list.unshift({ video_id: item.videoId, title: item.title, artist: item.artist } as never);
+        if (!list.find((x) => x.video_id === d.video_id)) {
+          list.unshift({ video_id: d.video_id, title: d.title, artist: d.author } as never);
           localStorage.setItem(FAV_KEY, JSON.stringify(list.slice(0, 200)));
         }
         setAdded(true);
-        toast.success(L("Zapisano teledysk", "Video saved", "Video opgeslagen", "Відео збережено"), { description: item.title });
+        toast.success(L("Zapisano teledysk", "Video saved", "Video opgeslagen", "Відео збережено"), { description: d.title });
       } catch { /* */ }
     }
   };
 
-  const isTrackPlaying = item?.kind === "track" && currentTrack?.id === item.track.id && isPlaying;
-  const title = item ? (item.kind === "yt" ? item.title : item.track.title) : "";
-  const artist = item ? (item.kind === "yt" ? item.artist : item.track.artist) : "";
+  const onYt = tabKey === "yt";
+  const isTrackPlaying = !onYt && song && currentTrack?.id === song.id && isPlaying;
+  const playingNow = onYt ? ytPlaying : isTrackPlaying;
+  const title = onYt ? (ytData.title || "…") : (song?.title || "");
+  const artist = onYt ? (ytData.author || "") : (song?.artist || "");
 
   return (
     <motion.div className="fixed inset-0 z-[9990] bg-black" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-      {/* Odtwarzacz YouTube (widoczny tylko dla teledysków) */}
-      <div className="absolute inset-0 flex items-center justify-center" style={{ opacity: item?.kind === "yt" ? 1 : 0, pointerEvents: item?.kind === "yt" ? "auto" : "none" }}>
-        <div className="w-full" style={{ aspectRatio: "16 / 9", maxHeight: "100%" }}>
-          <div ref={ytMountRef} className="w-full h-full" />
+      {/* Player YouTube na CAŁY ekran (cover-fill, kontrolki ukryte) */}
+      {hasYt && (
+        <div className="absolute inset-0 overflow-hidden" style={{ opacity: onYt ? 1 : 0, pointerEvents: onYt ? "auto" : "none" }}>
+          <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: "100vw", height: "56.25vw", minHeight: "100vh", minWidth: "177.78vh" }}>
+            <div ref={ytMountRef} className="w-full h-full" />
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Nasz utwór: okładka na cały ekran */}
-      {item?.kind === "track" && (
+      {!onYt && song && (
         <div className="absolute inset-0">
-          <HQCover src={item.track.cover_url} alt={item.track.title} genre={item.track.genre} artist={item.track.artist} videoUrl={item.track.video_url} className="absolute inset-0 w-full h-full" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-black/40" />
+          <HQCover src={song.cover_url} alt={song.title} genre={song.genre} artist={song.artist} videoUrl={song.video_url} className="absolute inset-0 w-full h-full" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-black/40" />
           {!isTrackPlaying && (
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
               <span className="h-20 w-20 rounded-full bg-white/15 backdrop-blur border border-white/30 flex items-center justify-center">
@@ -214,7 +243,7 @@ export const FeedReels = ({
           <span className="text-[10px] font-semibold">{added ? L("Dodano", "Added", "Toegevoegd", "Додано") : L("Dodaj", "Add", "Toevoegen", "Додати")}</span>
         </button>
         <button onClick={togglePlayback} aria-label="Play/Pauza" className="h-11 w-11 rounded-full bg-black/45 border border-white/20 text-white flex items-center justify-center">
-          {isTrackPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5 fill-white" />}
+          {playingNow ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5 fill-white" />}
         </button>
         <button onClick={() => go(-1)} aria-label="Poprzedni" className="h-11 w-11 rounded-full bg-black/45 border border-white/20 text-white flex items-center justify-center">
           <ChevronUp className="h-5 w-5" />
@@ -230,11 +259,10 @@ export const FeedReels = ({
         <div className="text-sm text-white/80 drop-shadow truncate">{artist}</div>
         <div className="text-[11px] text-white/65 flex items-center gap-1 mt-1 drop-shadow">
           <ChevronUp className="h-3 w-3" /> {L("Przewiń w górę = następny", "Swipe up = next", "Veeg omhoog = volgende", "Гортай вгору = далі")}
-          {total > 0 ? ` · ${safe + 1}/${total}` : ""}
+          {!onYt && songTotal ? ` · ${songSafe + 1}/${songTotal}` : ""}
         </div>
       </div>
 
-      {/* Ładowanie naszych utworów / pusto */}
       {songsLoading && tabs.length === 0 && (
         <div className="absolute inset-0 flex items-center justify-center text-white/70 gap-2 z-10">
           <Loader2 className="h-5 w-5 animate-spin" /> {L("Ładuję…", "Loading…", "Laden…", "Завантаження…")}

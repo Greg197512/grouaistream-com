@@ -34,7 +34,8 @@ export const EraReels = ({ startEra, lang, onClose }: { startEra: Era; lang: Lan
         playerVars: {
           listType: "playlist",
           list: eraYoutubePlaylist(startEra) || undefined,
-          autoplay: 1, playsinline: 1, rel: 0, modestbranding: 1, controls: 1,
+          autoplay: 1, playsinline: 1, rel: 0, modestbranding: 1,
+          controls: 0, disablekb: 1, fs: 0, iv_load_policy: 3,
         },
         events: {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -81,9 +82,9 @@ export const EraReels = ({ startEra, lang, onClose }: { startEra: Era; lang: Lan
 
   return (
     <motion.div className="fixed inset-0 z-[9990] bg-black" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-      {/* Odtwarzacz (16:9, wyśrodkowany — czarne pasy jak w rolkach z poziomym wideo) */}
-      <div className="absolute inset-0 flex items-center justify-center">
-        <div className="w-full" style={{ aspectRatio: "16 / 9", maxHeight: "100%" }}>
+      {/* Odtwarzacz na CAŁY ekran (cover-fill, kontrolki ukryte) */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: "100vw", height: "56.25vw", minHeight: "100vh", minWidth: "177.78vh" }}>
           <div ref={mountRef} className="w-full h-full" />
         </div>
       </div>
