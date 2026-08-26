@@ -4,24 +4,89 @@ import { X, Plus, Check, ChevronUp, ChevronDown } from "lucide-react";
 import { ERAS, eraYoutubePlaylist, type Era } from "@/lib/eraEngine";
 import { eraTextFor } from "@/lib/eraContent";
 import { loadYT } from "@/lib/youtubeIframe";
+import { useAuth } from "@/contexts/AuthContext";
 import type { Language } from "@/i18n/translations";
 import { toast } from "sonner";
 
 const FAV_KEY = "grouai-era-favs-v1";
+const POS_KEY = "grouai-reel-pos-v1";       // pozycja (kto co ogląda) per użytkownik+epoka
+const HIST_KEY = "grouai-reel-history-v1";  // historia oglądania per użytkownik
+
+// Wyciągnij wykonawcę, tytuł i rok z tytułu filmu YouTube (best-effort).
+function parseVid(raw: { title?: string; author?: string }, fallbackDecade: string) {
+  const full = (raw.title || "").trim();
+  let artist = (raw.author || "").replace(/\s*-\s*Topic$/i, "").trim();
+  let title = full;
+  const dash = full.split(/\s[-–—]\s/);
+  if (dash.length >= 2) { artist = dash[0].trim(); title = dash.slice(1).join(" - ").trim(); }
+  title = title
+    .replace(/\((?:official[^)]*|lyric[^)]*|audio|visuali[sz]er|hd|hq|4k|remaster[^)]*|explicit)\)/gi, "")
+    .replace(/\[[^\]]*\]/g, "")
+    .replace(/\s{2,}/g, " ").trim();
+  const ym = full.match(/\b(19[5-9]\d|20[0-2]\d)\b/);
+  const year = ym ? ym[1] : fallbackDecade;
+  return { artist, title: title || full, year };
+}
+
+// „Kto co ogląda": zapamiętaj pozycję w playliście epoki (per użytkownik).
+function savePos(userKey: string, eraKey: string, index: number) {
+  try {
+    const raw = localStorage.getItem(POS_KEY);
+    const map = raw ? JSON.parse(raw) : {};
+    map[`${userKey}::${eraKey}`] = index;
+    localStorage.setItem(POS_KEY, JSON.stringify(map));
+  } catch { /* */ }
+}
+function readPos(userKey: string, eraKey: string): number {
+  try {
+    const raw = localStorage.getItem(POS_KEY);
+    const map = raw ? JSON.parse(raw) : {};
+    const v = map[`${userKey}::${eraKey}`];
+    return typeof v === "number" && v >= 0 ? v : 0;
+  } catch { return 0; }
+}
+function logHistory(userKey: string, entry: { videoId: string; title: string; artist: string; era: string }) {
+  try {
+    const raw = localStorage.getItem(HIST_KEY);
+    const list: { user: string; videoId: string }[] = raw ? JSON.parse(raw) : [];
+    if (list[0] && list[0].videoId === entry.videoId && list[0].user === userKey) return;
+    list.unshift({ user: userKey, ts: Date.now(), ...entry } as never);
+    localStorage.setItem(HIST_KEY, JSON.stringify(list.slice(0, 500)));
+  } catch { /* */ }
+}
 
 // „Rolki epoki" — pionowy tryb jak TikTok/rolki: teledysk dekady gra na cały ekran,
 // przewijasz w górę do następnego, ➕ dodajesz do swojej playlisty, u góry przełączasz
 // epoki. Filmy pochodzą z playlisty YouTube danej dekady (całe utwory).
 export const EraReels = ({ startEra, lang, onClose }: { startEra: Era; lang: Language; onClose: () => void }) => {
+  const { user } = useAuth();
+  const userKey = user?.id || "anon";
   const mountRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const playerRef = useRef<any>(null);
   const [era, setEra] = useState<Era>(startEra);
+  const eraRef = useRef<Era>(startEra);
+  useEffect(() => { eraRef.current = era; }, [era]);
   const [added, setAdded] = useState(false);
+  const [vid, setVid] = useState<{ artist: string; title: string; year: string }>({ artist: "", title: "", year: "" });
 
   const erasWithVideos = ERAS.filter((e) => eraYoutubePlaylist(e));
   const L = (pl: string, en: string, nl: string, ua: string) =>
     lang === "en" ? en : lang === "nl" ? nl : lang === "ua" ? ua : pl;
+
+  // Aktualizuj górny pasek (wykonawca · tytuł · rok) + „kto co ogląda".
+  const refreshMeta = () => {
+    try {
+      const d = playerRef.current?.getVideoData?.();
+      if (!d?.video_id) return;
+      const e = eraRef.current;
+      const parsed = parseVid(d, e.decade);
+      setVid(parsed);
+      const idx = playerRef.current?.getPlaylistIndex?.();
+      if (typeof idx === "number" && idx >= 0) savePos(userKey, e.key, idx);
+      logHistory(userKey, { videoId: d.video_id, title: parsed.title, artist: parsed.artist, era: e.key });
+    } catch { /* */ }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -39,8 +104,22 @@ export const EraReels = ({ startEra, lang, onClose }: { startEra: Era; lang: Lan
         },
         events: {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          onReady: (e: any) => { try { e.target.playVideo(); } catch { /* */ } },
-          onStateChange: () => setAdded(false),
+          onReady: (e: any) => {
+            try {
+              // Wznów tam, gdzie ten użytkownik skończył w tej epoce.
+              const id = eraYoutubePlaylist(startEra);
+              const pos = readPos(userKey, startEra.key);
+              if (id && pos > 0) e.target.loadPlaylist({ list: id, listType: "playlist", index: pos });
+              e.target.playVideo();
+            } catch { /* */ }
+            setTimeout(refreshMeta, 400);
+          },
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          onStateChange: (ev: any) => {
+            setAdded(false);
+            // Zmiana filmu (grający/pauza) → odśwież meta + zapisz „kto co ogląda".
+            if (ev?.data === 1 || ev?.data === 5 || ev?.data === 3) refreshMeta();
+          },
         },
       });
     });
@@ -50,12 +129,13 @@ export const EraReels = ({ startEra, lang, onClose }: { startEra: Era; lang: Lan
 
   const switchEra = (e: Era) => {
     setEra(e);
+    eraRef.current = e;
     setAdded(false);
     const id = eraYoutubePlaylist(e);
-    if (id) { try { playerRef.current?.loadPlaylist?.({ list: id, listType: "playlist", index: 0 }); } catch { /* */ } }
+    if (id) { try { playerRef.current?.loadPlaylist?.({ list: id, listType: "playlist", index: readPos(userKey, e.key) }); } catch { /* */ } setTimeout(refreshMeta, 500); }
   };
-  const next = () => { try { playerRef.current?.nextVideo?.(); } catch { /* */ } setAdded(false); };
-  const prev = () => { try { playerRef.current?.previousVideo?.(); } catch { /* */ } setAdded(false); };
+  const next = () => { try { playerRef.current?.nextVideo?.(); } catch { /* */ } setAdded(false); setTimeout(refreshMeta, 400); };
+  const prev = () => { try { playerRef.current?.previousVideo?.(); } catch { /* */ } setAdded(false); setTimeout(refreshMeta, 400); };
   const togglePlay = () => {
     try {
       const st = playerRef.current?.getPlayerState?.();
@@ -100,22 +180,32 @@ export const EraReels = ({ startEra, lang, onClose }: { startEra: Era; lang: Lan
         style={{ touchAction: "none" }}
       />
 
-      {/* Góra: przełączanie epok + zamknięcie */}
-      <div className="absolute top-0 left-0 right-0 p-3 flex items-center gap-2 z-20 bg-gradient-to-b from-black/70 to-transparent">
-        <div className="flex-1 flex gap-1.5 overflow-x-auto" style={{ scrollbarWidth: "none" }}>
-          {erasWithVideos.map((e) => (
-            <button key={e.key} onClick={() => switchEra(e)}
-              className="shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors whitespace-nowrap"
-              style={e.key === era.key
-                ? { background: e.palette.accent, color: "#000", borderColor: e.palette.accent }
-                : { background: "rgba(255,255,255,.08)", color: "#fff", borderColor: "rgba(255,255,255,.22)" }}>
-              {e.emoji} {eraTextFor(e, lang).label}
-            </button>
-          ))}
+      {/* Góra: wykonawca · tytuł · rok + przełączanie epok + zamknięcie */}
+      <div className="absolute top-0 left-0 right-0 p-3 z-20 bg-gradient-to-b from-black/80 via-black/40 to-transparent">
+        <div className="flex items-center gap-2">
+          <div className="flex-1 flex gap-1.5 overflow-x-auto" style={{ scrollbarWidth: "none" }}>
+            {erasWithVideos.map((e) => (
+              <button key={e.key} onClick={() => switchEra(e)}
+                className="shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors whitespace-nowrap"
+                style={e.key === era.key
+                  ? { background: e.palette.accent, color: "#000", borderColor: e.palette.accent }
+                  : { background: "rgba(255,255,255,.08)", color: "#fff", borderColor: "rgba(255,255,255,.22)" }}>
+                {e.emoji} {eraTextFor(e, lang).label}
+              </button>
+            ))}
+          </div>
+          <button onClick={onClose} aria-label="Zamknij" className="shrink-0 h-9 w-9 rounded-full bg-black/50 border border-white/20 text-white flex items-center justify-center">
+            <X className="h-5 w-5" />
+          </button>
         </div>
-        <button onClick={onClose} aria-label="Zamknij" className="shrink-0 h-9 w-9 rounded-full bg-black/50 border border-white/20 text-white flex items-center justify-center">
-          <X className="h-5 w-5" />
-        </button>
+        {/* Wykonawca · tytuł · rok produkcji */}
+        <div className="mt-2.5 pointer-events-none">
+          <div className="text-base font-extrabold text-white drop-shadow truncate">{vid.artist || "…"}</div>
+          <div className="text-sm text-white/85 drop-shadow truncate">
+            {vid.title}
+            {vid.year ? <span className="ml-2 font-mono text-xs px-1.5 py-0.5 rounded" style={{ background: `${era.palette.accent}33`, color: era.palette.accent }}>{vid.year}</span> : null}
+          </div>
+        </div>
       </div>
 
       {/* Prawy pasek akcji (jak TikTok): ➕ dodaj do playlisty */}
