@@ -21,14 +21,16 @@ function generateIdleFrequencies(barCount: number): number[] {
   const t = Date.now() / 1000;
   const freqs: number[] = [];
   for (let i = 0; i < barCount; i++) {
-    // Żywszy „idle": większa amplituda, szybciej, więcej warstw fal + delikatny puls.
+    // Bardzo żywy „idle": duża amplituda, szybciej, więcej warstw fal + puls,
+    // żeby było widać, że muzyka „żyje".
     const base =
-      0.26 +
-      Math.sin(t * 2.4 + i * 0.55) * 0.16 +
-      Math.sin(t * 3.7 + i * 0.9) * 0.12 +
-      Math.sin(t * 1.5 + i * 1.7) * 0.08 +
-      Math.sin(t * 5.2 + i * 0.35) * 0.05;
-    freqs.push(Math.max(0.08, Math.min(0.72, base)));
+      0.30 +
+      Math.sin(t * 3.1 + i * 0.55) * 0.24 +
+      Math.sin(t * 4.7 + i * 0.9) * 0.17 +
+      Math.sin(t * 1.9 + i * 1.7) * 0.11 +
+      Math.sin(t * 6.6 + i * 0.35) * 0.08 +
+      Math.sin(t * 9.0 + i * 0.2) * 0.05;
+    freqs.push(Math.max(0.10, Math.min(0.95, base)));
   }
   return freqs;
 }
@@ -49,8 +51,8 @@ export const HeroSection = () => {
   const [isLoading, setIsLoading] = useState(false);
   const levels = useAudioAnalyser(audioElement, isPlaying, isVideoMode);
   const timeTheme = useTimeRotation();
-  const [idleFrequencies, setIdleFrequencies] = useState(() => generateIdleFrequencies(18));
-  const [blendedFrequencies, setBlendedFrequencies] = useState(() => generateIdleFrequencies(18));
+  const [idleFrequencies, setIdleFrequencies] = useState(() => generateIdleFrequencies(24));
+  const [blendedFrequencies, setBlendedFrequencies] = useState(() => generateIdleFrequencies(24));
   const transitionRef = useRef(0);
   const genrePalette = getGenrePalette(currentTrack?.genre);
 
@@ -61,7 +63,7 @@ export const HeroSection = () => {
       const target = isPlaying ? 1 : 0;
       transitionRef.current += (target - transitionRef.current) * 0.12;
       
-      const idle = generateIdleFrequencies(18);
+      const idle = generateIdleFrequencies(24);
       setIdleFrequencies(idle);
       
       const t = transitionRef.current;
@@ -183,16 +185,16 @@ export const HeroSection = () => {
               }}
             >
               {blendedFrequencies.map((f, i) => {
-                const boosted = Math.min(1, f * 1.9);
-                const hue = i < 6 ? 331 : i < 12 ? 285 : 200; // pink / magenta-violet / cyan
+                const boosted = Math.min(1, f * 2.05);
+                const hue = i < 8 ? 331 : i < 16 ? 285 : 200; // pink / magenta-violet / cyan
                 return (
                   <div
                     key={`title-eq-${i}`}
                     className="flex-1 rounded-t-[3px]"
                     style={{
-                      height: `${Math.max(10, boosted * 100)}%`,
-                      background: `linear-gradient(to top, hsl(${hue} 100% 60% / 0.75), hsl(${hue} 100% 74% / 0.22))`,
-                      boxShadow: `0 0 8px hsl(${hue} 100% 65% / ${0.25 + boosted * 0.4})`,
+                      height: `${Math.max(14, boosted * 100)}%`,
+                      background: `linear-gradient(to top, hsl(${hue} 100% 62% / 0.9), hsl(${hue} 100% 78% / 0.3))`,
+                      boxShadow: `0 0 ${6 + boosted * 12}px hsl(${hue} 100% 66% / ${0.35 + boosted * 0.5})`,
                       transition: "height 0.05s ease-out",
                     }}
                   />
@@ -201,8 +203,14 @@ export const HeroSection = () => {
             </div>
 
             <h1 className="font-display text-4xl md:text-6xl lg:text-7xl font-bold leading-tight relative z-10">
-              <span className="block">Music That</span>
-              <span className="block groove-gradient-text mt-1">Understands You</span>
+              <span className="block relative">
+                Music That
+                <span aria-hidden className="title-glint absolute inset-0">Music That</span>
+              </span>
+              <span className="block relative mt-1">
+                <span className="groove-gradient-text">Understands You</span>
+                <span aria-hidden className="title-glint absolute inset-0">Understands You</span>
+              </span>
             </h1>
           </div>
 
