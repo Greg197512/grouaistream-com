@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
-import { Play, Sparkles, Clock, ArrowLeft, Wand2, Radio, Shuffle, Compass, Loader2, RefreshCw } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Play, Sparkles, Clock, ArrowLeft, Wand2, Radio, Shuffle, Compass, Loader2, RefreshCw, Clapperboard } from "lucide-react";
+import { EraReels } from "@/components/sections/EraReels";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { usePlayer, Track } from "@/contexts/PlayerContext";
@@ -235,6 +236,7 @@ const EraDetail = ({ era, lang }: { era: Era; lang: Language }) => {
   const [loading, setLoading] = useState(true);
   const [fact, setFact] = useState<string | null>(null);
   const [factLoading, setFactLoading] = useState(false);
+  const [reels, setReels] = useState(false);
 
   // Reset wybranego roku przy zmianie epoki.
   useEffect(() => { setYear(eraDefaultYear(era)); }, [era.key]);
@@ -411,6 +413,7 @@ const EraDetail = ({ era, lang }: { era: Era; lang: Language }) => {
             sub: { pl: `Największe hity dekady ${era.decade} — całe utwory, okładki i wykonawcy.`, en: `The biggest hits of the ${era.decade} — full tracks, covers and artists.`, nl: `De grootste hits van de ${era.decade} — volledige nummers, hoezen en artiesten.`, ua: `Найбільші хіти ${era.decade} — повні треки, обкладинки та виконавці.` }[lang] || `The biggest hits of the ${era.decade}.`,
             openYt: { pl: "Otwórz w YouTube", en: "Open in YouTube", nl: "Open in YouTube", ua: "Відкрити в YouTube" }[lang] || "Open in YouTube",
             openSp: { pl: "Otwórz w Spotify", en: "Open in Spotify", nl: "Open in Spotify", ua: "Відкрити у Spotify" }[lang] || "Open in Spotify",
+            reels: { pl: "Oglądaj jak rolki", en: "Watch as reels", nl: "Bekijk als reels", ua: "Дивитись як ролики" }[lang] || "Watch as reels",
             artists: { pl: "Wykonawcy epoki", en: "Artists of the era", nl: "Artiesten van het tijdperk", ua: "Виконавці епохи" }[lang] || "Artists of the era",
           };
           return (
@@ -425,7 +428,14 @@ const EraDetail = ({ era, lang }: { era: Era; lang: Language }) => {
                   </h2>
                   <p className="text-xs text-gray-500">{t.sub}</p>
                 </div>
-                <div className="flex gap-2 shrink-0">
+                <div className="flex gap-2 shrink-0 flex-wrap">
+                  {ytId && (
+                    <button onClick={() => setReels(true)}
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold text-black transition-transform hover:scale-105 whitespace-nowrap"
+                      style={{ background: era.palette.accent, boxShadow: `0 0 16px ${era.palette.glow}` }}>
+                      <Clapperboard className="h-4 w-4" /> {t.reels}
+                    </button>
+                  )}
                   {ytId && (
                     <a href={`https://www.youtube.com/playlist?list=${ytId}`} target="_blank" rel="noopener noreferrer"
                       className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold text-white transition-transform hover:scale-105 whitespace-nowrap"
@@ -548,6 +558,11 @@ const EraDetail = ({ era, lang }: { era: Era; lang: Language }) => {
           </Link>
         </div>
       </div>
+
+      {/* Pełnoekranowe „Rolki epoki" (TikTok-style) */}
+      <AnimatePresence>
+        {reels && <EraReels startEra={era} lang={lang} onClose={() => setReels(false)} />}
+      </AnimatePresence>
     </div>
   );
 };
