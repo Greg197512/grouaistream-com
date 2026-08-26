@@ -428,29 +428,13 @@ const EraDetail = ({ era, lang }: { era: Era; lang: Language }) => {
                   </h2>
                   <p className="text-xs text-gray-500">{t.sub}</p>
                 </div>
-                <div className="flex gap-2 shrink-0 flex-wrap">
-                  {ytId && (
-                    <button onClick={() => setReels(true)}
-                      className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold text-black transition-transform hover:scale-105 whitespace-nowrap"
-                      style={{ background: era.palette.accent, boxShadow: `0 0 16px ${era.palette.glow}` }}>
-                      <Clapperboard className="h-4 w-4" /> {t.reels}
-                    </button>
-                  )}
-                  {ytId && (
-                    <a href={`https://www.youtube.com/playlist?list=${ytId}`} target="_blank" rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold text-white transition-transform hover:scale-105 whitespace-nowrap"
-                      style={{ background: "#FF0000", boxShadow: "0 0 16px #FF000044" }}>
-                      <Play className="h-4 w-4 fill-white" /> {t.openYt}
-                    </a>
-                  )}
-                  {spId && (
-                    <a href={`https://open.spotify.com/playlist/${spId}`} target="_blank" rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold text-black transition-transform hover:scale-105 whitespace-nowrap"
-                      style={{ background: "#1DB954", boxShadow: "0 0 16px #1DB95455" }}>
-                      <Play className="h-4 w-4 fill-black" /> {t.openSp}
-                    </a>
-                  )}
-                </div>
+                {ytId && (
+                  <button onClick={() => setReels(true)}
+                    className="shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold text-black transition-transform hover:scale-105 whitespace-nowrap"
+                    style={{ background: era.palette.accent, boxShadow: `0 0 16px ${era.palette.glow}` }}>
+                    <Clapperboard className="h-4 w-4" /> {t.reels}
+                  </button>
+                )}
               </div>
               {ytId && (
                 <div className="relative w-full overflow-hidden rounded-xl border border-white/10" style={{ aspectRatio: "16 / 9" }}>
