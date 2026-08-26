@@ -14,6 +14,7 @@ import {
   eraYears, eraDefaultYear, trackYear, eraSpotifyPlaylist, eraYoutubePlaylist, type Era,
 } from "@/lib/eraEngine";
 import { eraTextFor, eraUi } from "@/lib/eraContent";
+import { recentReelWatches } from "@/lib/reelHistory";
 import { freshEraFact } from "@/lib/aiText";
 import type { Language } from "@/i18n/translations";
 
@@ -157,6 +158,45 @@ const NostalgiaDna = ({ lang }: { lang: Language }) => {
   );
 };
 
+/* ══════════════ Zainteresowania z rolek (historia oglądania) ══════════════ */
+const ReelInterests = ({ lang }: { lang: Language }) => {
+  const { user } = useAuth();
+  const [top, setTop] = useState<{ artist: string; n: number }[]>([]);
+  const [count, setCount] = useState(0);
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      const list = await recentReelWatches(user?.id || null, 300);
+      if (!alive) return;
+      setCount(list.length);
+      const tally = new Map<string, number>();
+      for (const w of list) { const a = (w.artist || "").trim(); if (a) tally.set(a, (tally.get(a) || 0) + 1); }
+      setTop([...tally.entries()].map(([artist, n]) => ({ artist, n })).sort((a, b) => b.n - a.n).slice(0, 10));
+    })();
+    return () => { alive = false; };
+  }, [user]);
+  if (!top.length) return null;
+  const L = (pl: string, en: string, nl: string, ua: string) => (lang === "en" ? en : lang === "nl" ? nl : lang === "ua" ? ua : pl);
+  return (
+    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+      className="rounded-2xl border border-white/10 p-5 sm:p-6"
+      style={{ background: "linear-gradient(150deg, rgba(255,62,154,.08), rgba(169,139,255,.06) 70%, transparent)" }}>
+      <div className="flex items-center gap-2 mb-1">
+        <Clapperboard className="h-4 w-4 text-[#FF3E9A]" />
+        <h3 className="font-bold text-white">{L("Twoje zainteresowania (rolki)", "Your interests (reels)", "Jouw interesses (reels)", "Твої вподобання (ролики)")}</h3>
+      </div>
+      <p className="text-xs text-gray-500 mb-4">{L(`Na podstawie ${count} obejrzeń`, `Based on ${count} views`, `Op basis van ${count} weergaven`, `На основі ${count} переглядів`)}</p>
+      <div className="flex flex-wrap gap-2">
+        {top.map((t) => (
+          <span key={t.artist} className="text-[12px] px-3 py-1.5 rounded-full border border-white/12 bg-white/[0.05] text-white/90">
+            {t.artist} <span className="text-gray-500">· {t.n}</span>
+          </span>
+        ))}
+      </div>
+    </motion.div>
+  );
+};
+
 /* ══════════════ HUB: /era ══════════════ */
 const EraHub = ({ lang }: { lang: Language }) => {
   const { playPlaylist } = usePlayer();
@@ -194,6 +234,7 @@ const EraHub = ({ lang }: { lang: Language }) => {
       </motion.div>
 
       <NostalgiaDna lang={lang} />
+      <ReelInterests lang={lang} />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {ERAS.map((e, i) => {
