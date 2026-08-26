@@ -506,22 +506,13 @@ export const AIAssistant = () => {
     }
 
     try {
-      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-assistant`;
-      
-      // Use session token if logged in, fallback to anon key
-      let authToken = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.access_token) {
-          authToken = session.access_token;
-        }
-      } catch {}
-      
+      // Asystent działa przez funkcję Vercel /api/assistant (połączoną z AI).
+      const url = "/api/assistant";
+
       const resp = await fetch(url, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${authToken}`,
         },
         body: JSON.stringify({ 
           message: userMessage + saveInfoForAI, 
