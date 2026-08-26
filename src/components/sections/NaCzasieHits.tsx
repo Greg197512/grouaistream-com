@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Play, ChevronLeft, ChevronRight, ExternalLink } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { FeedReels, type YtItem } from "@/components/sections/FeedReels";
 
 type Clip = { id: string; title: string; artist: string; genre: string };
 
@@ -65,7 +66,7 @@ export const NaCzasieHits = () => {
   }, []);
 
   const [[index, dir], setIndexDir] = useState<[number, number]>([0, 0]);
-  const [playing, setPlaying] = useState(false);
+  const [reels, setReels] = useState(false);
   // Samoczyszczenie: filmy, których miniatura się nie ładuje (usunięte/prywatne),
   // są automatycznie pomijane — dzięki temu „niedziałające" znikają same.
   const [dead, setDead] = useState<Set<string>>(new Set());
@@ -74,10 +75,12 @@ export const NaCzasieHits = () => {
   const total = clips.length;
   const safe = total ? ((index % total) + total) % total : 0;
   const clip = clips[safe];
-  const go = (d: number) => {
-    setPlaying(false);
-    setIndexDir(([i]) => [i + d, d]);
-  };
+  const go = (d: number) => setIndexDir(([i]) => [i + d, d]);
+
+  // Rolki startują od aktualnie pokazywanego teledysku.
+  const reelItems: YtItem[] = [...clips.slice(safe), ...clips.slice(0, safe)].map((c) => ({
+    kind: "yt", videoId: c.id, title: c.title, artist: c.artist, genre: c.genre,
+  }));
 
   if (total === 0) return null;
 
@@ -104,7 +107,7 @@ export const NaCzasieHits = () => {
             animate={{ opacity: 1, scale: 1, x: 0, borderRadius: 24 }}
             exit={{ opacity: 0, scale: 0.8, x: dir >= 0 ? -130 : 130, borderRadius: 64 }}
             transition={{ duration: 0.5, ease: [0.2, 0.7, 0.2, 1] }}
-            drag={playing ? false : "x"}
+            drag="x"
             dragConstraints={{ left: 0, right: 0 }}
             dragElastic={0.18}
             onDragEnd={(_e, info) => {
@@ -113,16 +116,7 @@ export const NaCzasieHits = () => {
             }}
             className="absolute inset-0 overflow-hidden border border-white/12 shadow-[0_24px_50px_-20px_rgba(0,0,0,0.85)] cursor-grab active:cursor-grabbing bg-black"
           >
-            {playing ? (
-              <iframe
-                key={`yt-${clip.id}`}
-                title={clip.title}
-                src={`https://www.youtube-nocookie.com/embed/${clip.id}?autoplay=1&rel=0&playsinline=1&modestbranding=1`}
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-                className="absolute inset-0 w-full h-full"
-              />
-            ) : (
+            {(
               <>
                 <img
                   src={thumb}
@@ -141,7 +135,7 @@ export const NaCzasieHits = () => {
                 </span>
 
                 <button
-                  onClick={() => setPlaying(true)}
+                  onClick={() => setReels(true)}
                   aria-label={L("Odtwórz", "Play", "Afspelen", "Відтворити")}
                   className="group absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-20 w-20 rounded-full text-white flex items-center justify-center shadow-[0_14px_34px_-8px_hsl(331_100%_62%/0.7)] hover:scale-110 active:scale-95 transition-transform"
                 >
@@ -195,6 +189,18 @@ export const NaCzasieHits = () => {
           </>
         )}
       </div>
+
+      {/* Pełnoekranowe „Rolki": teledyski AI + nasze wszystkie utwory */}
+      <AnimatePresence>
+        {reels && (
+          <FeedReels
+            ytTab={{ label: L("Na czasie", "Trending", "Trending", "У тренді"), items: reelItems }}
+            includeOurSongs
+            lang={language}
+            onClose={() => setReels(false)}
+          />
+        )}
+      </AnimatePresence>
     </section>
   );
 };
