@@ -3,24 +3,9 @@ import { motion } from "framer-motion";
 import { X, Plus, Check, ChevronUp, ChevronDown } from "lucide-react";
 import { ERAS, eraYoutubePlaylist, type Era } from "@/lib/eraEngine";
 import { eraTextFor } from "@/lib/eraContent";
+import { loadYT } from "@/lib/youtubeIframe";
 import type { Language } from "@/i18n/translations";
 import { toast } from "sonner";
-
-// ── Ładowanie YouTube IFrame API (raz na stronę) ──
-let ytApiPromise: Promise<unknown> | null = null;
-function loadYT(): Promise<{ Player: new (el: HTMLElement, cfg: unknown) => unknown }> {
-  const w = window as unknown as { YT?: { Player?: unknown }; onYouTubeIframeAPIReady?: () => void };
-  if (w.YT && w.YT.Player) return Promise.resolve(w.YT as { Player: new (el: HTMLElement, cfg: unknown) => unknown });
-  if (ytApiPromise) return ytApiPromise as Promise<{ Player: new (el: HTMLElement, cfg: unknown) => unknown }>;
-  ytApiPromise = new Promise((resolve) => {
-    const prev = w.onYouTubeIframeAPIReady;
-    w.onYouTubeIframeAPIReady = () => { prev?.(); resolve(w.YT); };
-    const s = document.createElement("script");
-    s.src = "https://www.youtube.com/iframe_api";
-    document.head.appendChild(s);
-  });
-  return ytApiPromise as Promise<{ Player: new (el: HTMLElement, cfg: unknown) => unknown }>;
-}
 
 const FAV_KEY = "grouai-era-favs-v1";
 
