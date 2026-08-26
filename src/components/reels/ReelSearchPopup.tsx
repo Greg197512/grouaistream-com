@@ -1,20 +1,23 @@
 import { useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { X, Search, Loader2, Play } from "lucide-react";
+import { X, Search, Loader2, Play, Sparkles } from "lucide-react";
 import type { Track } from "@/contexts/PlayerContext";
 import type { Language } from "@/i18n/translations";
 import { searchOurSongs, searchYouTube, looseSuggestion, type YtHit } from "@/lib/reelSearch";
+import { askAssistantOnce } from "@/lib/assistantClient";
 
 // Małe okienko na pauzie: „Może chcesz jakiś utwór, wykonawcę lub specjalny rok?".
 // Po zatwierdzeniu szukamy: najpierw u nas w piosenkach, potem w całym YouTube
 // (tylko działające/osadzalne). Gdy nic — proponujemy i włączamy po potwierdzeniu.
 export const ReelSearchPopup = ({
-  lang, onClose, onPlayTrack, onPlayYt,
+  lang, onClose, onPlayTrack, onPlayYt, currentArtist, currentTitle,
 }: {
   lang: Language;
   onClose: () => void;
   onPlayTrack: (t: Track) => void;
   onPlayYt: (hit: YtHit) => void;
+  currentArtist?: string;
+  currentTitle?: string;
 }) => {
   const L = (pl: string, en: string, nl: string, ua: string) =>
     lang === "en" ? en : lang === "nl" ? nl : lang === "ua" ? ua : pl;
@@ -22,7 +25,24 @@ export const ReelSearchPopup = ({
   const [busy, setBusy] = useState(false);
   const [suggestion, setSuggestion] = useState<Track | null>(null);
   const [empty, setEmpty] = useState(false);
+  const [infoBusy, setInfoBusy] = useState(false);
+  const [info, setInfo] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const about = (currentArtist || currentTitle || "").trim();
+  const askAbout = async () => {
+    if (infoBusy || !about) return;
+    setInfoBusy(true); setInfo("");
+    const prompt = L(
+      `Opowiedz krótko (2-3 zdania) o ${currentArtist ? "wykonawcy " + currentArtist : "utworze"}${currentTitle ? ` i utworze „${currentTitle}"` : ""}. Ciekawostki, rok, gatunek.`,
+      `Tell me briefly (2-3 sentences) about ${currentArtist ? "the artist " + currentArtist : "this track"}${currentTitle ? ` and the track "${currentTitle}"` : ""}. Fun facts, year, genre.`,
+      `Vertel kort over ${currentArtist || currentTitle}.`,
+      `Розкажи коротко про ${currentArtist || currentTitle}.`,
+    );
+    const ans = await askAssistantOnce(prompt);
+    setInfo(ans || L("Nie udało się pobrać informacji.", "Couldn't fetch info.", "Geen info.", "Не вдалося отримати."));
+    setInfoBusy(false);
+  };
 
   const run = async () => {
     const query = q.trim();
@@ -82,6 +102,18 @@ export const ReelSearchPopup = ({
             {L("Szukaj", "Search", "Zoek", "Пошук")}
           </button>
         </div>
+
+        {/* Asystent: opowiedz o tym, co oglądasz */}
+        {about && (
+          <div className="mt-3">
+            <button onClick={askAbout} disabled={infoBusy}
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-white/90 rounded-full border border-white/20 bg-white/[0.07] px-3 py-1.5 hover:bg-white/[0.14] disabled:opacity-50">
+              {infoBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+              {L(`Opowiedz o ${currentArtist || "tym utworze"}`, `Tell me about ${currentArtist || "this"}`, `Vertel over ${currentArtist || "dit"}`, `Розкажи про ${currentArtist || "це"}`)}
+            </button>
+            {info && <p className="mt-2 text-[13px] text-white/85 leading-relaxed">{info}</p>}
+          </div>
+        )}
 
         {suggestion && (
           <div className="mt-3 rounded-xl border border-white/12 bg-white/[0.05] p-3">

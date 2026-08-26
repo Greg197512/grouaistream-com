@@ -306,7 +306,9 @@ export const FeedReels = ({
 
       {/* Popup wyszukiwania po dłuższej pauzie */}
       {showSearch && (
-        <ReelSearchPopup lang={lang} onClose={() => setShowSearch(false)} onPlayTrack={playOurSong} onPlayYt={playYtHit} />
+        <ReelSearchPopup lang={lang} onClose={() => setShowSearch(false)} onPlayTrack={playOurSong} onPlayYt={playYtHit}
+          currentArtist={onYt ? (ytData.author || "") : (song?.artist || "")}
+          currentTitle={onYt ? (ytData.title || "") : (song?.title || "")} />
       )}
     </motion.div>
   );

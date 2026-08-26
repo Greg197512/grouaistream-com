@@ -247,7 +247,8 @@ export const EraReels = ({ startEra, lang, onClose }: { startEra: Era; lang: Lan
 
       {/* Popup wyszukiwania po dłuższej pauzie */}
       {showSearch && (
-        <ReelSearchPopup lang={lang} onClose={() => setShowSearch(false)} onPlayTrack={playOurSong} onPlayYt={playYtHit} />
+        <ReelSearchPopup lang={lang} onClose={() => setShowSearch(false)} onPlayTrack={playOurSong} onPlayYt={playYtHit}
+          currentArtist={vid.artist} currentTitle={vid.title} />
       )}
     </motion.div>
   );
