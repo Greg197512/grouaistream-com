@@ -5,12 +5,15 @@ import { ERAS, eraYoutubePlaylist, type Era } from "@/lib/eraEngine";
 import { eraTextFor } from "@/lib/eraContent";
 import { loadYT } from "@/lib/youtubeIframe";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePlayer, type Track } from "@/contexts/PlayerContext";
+import { ReelSearchPopup } from "@/components/reels/ReelSearchPopup";
+import { logReelWatch } from "@/lib/reelHistory";
+import type { YtHit } from "@/lib/reelSearch";
 import type { Language } from "@/i18n/translations";
 import { toast } from "sonner";
 
 const FAV_KEY = "grouai-era-favs-v1";
 const POS_KEY = "grouai-reel-pos-v1";       // pozycja (kto co ogląda) per użytkownik+epoka
-const HIST_KEY = "grouai-reel-history-v1";  // historia oglądania per użytkownik
 
 // Wyciągnij wykonawcę, tytuł i rok z tytułu filmu YouTube (best-effort).
 function parseVid(raw: { title?: string; author?: string }, fallbackDecade: string) {
@@ -45,22 +48,16 @@ function readPos(userKey: string, eraKey: string): number {
     return typeof v === "number" && v >= 0 ? v : 0;
   } catch { return 0; }
 }
-function logHistory(userKey: string, entry: { videoId: string; title: string; artist: string; era: string }) {
-  try {
-    const raw = localStorage.getItem(HIST_KEY);
-    const list: { user: string; videoId: string }[] = raw ? JSON.parse(raw) : [];
-    if (list[0] && list[0].videoId === entry.videoId && list[0].user === userKey) return;
-    list.unshift({ user: userKey, ts: Date.now(), ...entry } as never);
-    localStorage.setItem(HIST_KEY, JSON.stringify(list.slice(0, 500)));
-  } catch { /* */ }
-}
 
 // „Rolki epoki" — pionowy tryb jak TikTok/rolki: teledysk dekady gra na cały ekran,
 // przewijasz w górę do następnego, ➕ dodajesz do swojej playlisty, u góry przełączasz
 // epoki. Filmy pochodzą z playlisty YouTube danej dekady (całe utwory).
 export const EraReels = ({ startEra, lang, onClose }: { startEra: Era; lang: Language; onClose: () => void }) => {
   const { user } = useAuth();
+  const { playTrack, pausePlayback } = usePlayer();
   const userKey = user?.id || "anon";
+  const [showSearch, setShowSearch] = useState(false);
+  const pauseTimer = useRef<number | null>(null);
   const mountRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const playerRef = useRef<any>(null);
@@ -84,7 +81,7 @@ export const EraReels = ({ startEra, lang, onClose }: { startEra: Era; lang: Lan
       setVid(parsed);
       const idx = playerRef.current?.getPlaylistIndex?.();
       if (typeof idx === "number" && idx >= 0) savePos(userKey, e.key, idx);
-      logHistory(userKey, { videoId: d.video_id, title: parsed.title, artist: parsed.artist, era: e.key });
+      logReelWatch(user?.id || null, { source: "youtube", videoId: d.video_id, title: parsed.title, artist: parsed.artist, era: e.key });
     } catch { /* */ }
   };
 
@@ -119,11 +116,19 @@ export const EraReels = ({ startEra, lang, onClose }: { startEra: Era; lang: Lan
             setAdded(false);
             // Zmiana filmu (grający/pauza) → odśwież meta + zapisz „kto co ogląda".
             if (ev?.data === 1 || ev?.data === 5 || ev?.data === 3) refreshMeta();
+            // Pauza „na dłużej" → po chwili proponuj wyszukiwanie.
+            if (ev?.data === 2) {
+              if (pauseTimer.current) window.clearTimeout(pauseTimer.current);
+              pauseTimer.current = window.setTimeout(() => setShowSearch(true), 3500);
+            } else if (ev?.data === 1) {
+              if (pauseTimer.current) window.clearTimeout(pauseTimer.current);
+              setShowSearch(false);
+            }
           },
         },
       });
     });
-    return () => { cancelled = true; try { playerRef.current?.destroy?.(); } catch { /* */ } };
+    return () => { cancelled = true; if (pauseTimer.current) window.clearTimeout(pauseTimer.current); try { playerRef.current?.destroy?.(); } catch { /* */ } };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -136,6 +141,13 @@ export const EraReels = ({ startEra, lang, onClose }: { startEra: Era; lang: Lan
   };
   const next = () => { try { playerRef.current?.nextVideo?.(); } catch { /* */ } setAdded(false); setTimeout(refreshMeta, 400); };
   const prev = () => { try { playerRef.current?.previousVideo?.(); } catch { /* */ } setAdded(false); setTimeout(refreshMeta, 400); };
+
+  // Wynik wyszukiwania na pauzie:
+  const playOurSong = (t: Track) => { try { playerRef.current?.pauseVideo?.(); } catch { /* */ } playTrack(t, "reels-search"); setShowSearch(false); };
+  const playYtHit = (hit: YtHit) => {
+    try { pausePlayback(); playerRef.current?.loadVideoById?.(hit.videoId); playerRef.current?.playVideo?.(); } catch { /* */ }
+    setShowSearch(false); setTimeout(refreshMeta, 600);
+  };
   const togglePlay = () => {
     try {
       const st = playerRef.current?.getPlayerState?.();
@@ -232,6 +244,11 @@ export const EraReels = ({ startEra, lang, onClose }: { startEra: Era; lang: Lan
           <ChevronUp className="h-3 w-3" /> {L("Przewiń w górę = następny", "Swipe up = next", "Veeg omhoog = volgende", "Гортай вгору = далі")}
         </div>
       </div>
+
+      {/* Popup wyszukiwania po dłuższej pauzie */}
+      {showSearch && (
+        <ReelSearchPopup lang={lang} onClose={() => setShowSearch(false)} onPlayTrack={playOurSong} onPlayYt={playYtHit} />
+      )}
     </motion.div>
   );
 };

@@ -6,6 +6,9 @@ import { usePlayer, Track } from "@/contexts/PlayerContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { HQCover } from "@/components/ui/HQCover";
 import { loadYT } from "@/lib/youtubeIframe";
+import { ReelSearchPopup } from "@/components/reels/ReelSearchPopup";
+import { logReelWatch } from "@/lib/reelHistory";
+import type { YtHit } from "@/lib/reelSearch";
 import type { Language } from "@/i18n/translations";
 import { toast } from "sonner";
 
@@ -44,6 +47,8 @@ export const FeedReels = ({
   const [ytData, setYtData] = useState<{ title?: string; author?: string; video_id?: string }>({});
   const [ytPlaying, setYtPlaying] = useState(false);
   const [added, setAdded] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
+  const pauseTimer = useRef<number | null>(null);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const playerRef = useRef<any>(null);
@@ -108,12 +113,26 @@ export const FeedReels = ({
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           onStateChange: (e: any) => {
             setYtPlaying(e.data === 1);
-            try { const d = playerRef.current?.getVideoData?.(); if (d?.video_id) setYtData(d); } catch { /* */ }
+            try {
+              const d = playerRef.current?.getVideoData?.();
+              if (d?.video_id) {
+                setYtData(d);
+                if (e.data === 1) logReelWatch(user?.id || null, { source: "youtube", videoId: d.video_id, title: d.title, artist: d.author });
+              }
+            } catch { /* */ }
+            // Pauza „na dłużej" (tylko w rolce YT) → po chwili popup wyszukiwania.
+            if (e.data === 2) {
+              if (pauseTimer.current) window.clearTimeout(pauseTimer.current);
+              pauseTimer.current = window.setTimeout(() => { if (tabKeyRef.current === "yt") setShowSearch(true); }, 3500);
+            } else if (e.data === 1) {
+              if (pauseTimer.current) window.clearTimeout(pauseTimer.current);
+              setShowSearch(false);
+            }
           },
         },
       });
     });
-    return () => { cancelled = true; try { playerRef.current?.destroy?.(); } catch { /* */ } };
+    return () => { cancelled = true; if (pauseTimer.current) window.clearTimeout(pauseTimer.current); try { playerRef.current?.destroy?.(); } catch { /* */ } };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -130,9 +149,25 @@ export const FeedReels = ({
     if (tabKey !== "songs" || !song) return;
     try { playerRef.current?.pauseVideo?.(); } catch { /* */ }
     playTrack(song, "reels");
+    logReelWatch(user?.id || null, { source: "track", trackId: song.id, title: song.title, artist: song.artist });
     setAdded(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [songSafe]);
+
+  // Pauza w zakładce „Nasze utwory" → po chwili popup wyszukiwania.
+  useEffect(() => {
+    if (tabKey !== "songs") return;
+    if (isPlaying) { if (pauseTimer.current) window.clearTimeout(pauseTimer.current); setShowSearch(false); return; }
+    const t = window.setTimeout(() => setShowSearch(true), 3500);
+    return () => window.clearTimeout(t);
+  }, [isPlaying, tabKey]);
+
+  // Wynik wyszukiwania na pauzie:
+  const playOurSong = (t: Track) => { try { playerRef.current?.pauseVideo?.(); } catch { /* */ } playTrack(t, "reels-search"); setShowSearch(false); };
+  const playYtHit = (hit: YtHit) => {
+    try { pausePlayback(); playerRef.current?.loadVideoById?.(hit.videoId); playerRef.current?.playVideo?.(); } catch { /* */ }
+    setShowSearch(false);
+  };
 
   const go = (d: number) => {
     if (tabKey === "yt") { try { if (d > 0) playerRef.current?.nextVideo?.(); else playerRef.current?.previousVideo?.(); } catch { /* */ } setAdded(false); }
@@ -267,6 +302,11 @@ export const FeedReels = ({
         <div className="absolute inset-0 flex items-center justify-center text-white/70 gap-2 z-10">
           <Loader2 className="h-5 w-5 animate-spin" /> {L("Ładuję…", "Loading…", "Laden…", "Завантаження…")}
         </div>
+      )}
+
+      {/* Popup wyszukiwania po dłuższej pauzie */}
+      {showSearch && (
+        <ReelSearchPopup lang={lang} onClose={() => setShowSearch(false)} onPlayTrack={playOurSong} onPlayYt={playYtHit} />
       )}
     </motion.div>
   );
