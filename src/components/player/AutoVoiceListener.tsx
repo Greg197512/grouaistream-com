@@ -61,6 +61,7 @@ const NAV_MAP: Record<string, string> = {
   "nastro": "/mood-history",
   "playlist": "/playlist-manager",
   "admin": "/admin",
+  "studio": "/studio", "suno": "/studio",
   // EN
   "home": "/", "main page": "/",
   "search": "/search",
@@ -258,7 +259,7 @@ export const AutoVoiceListener = () => {
     if (restartTimeoutRef.current) { clearTimeout(restartTimeoutRef.current); restartTimeoutRef.current = null; }
     setIsListening(false);
 
-    await speak(text, { mode: "assistant" });
+    await speak(text, { mode: "assistant", lang: LANG_TO_RECOGNITION[getAppLanguage()] });
 
     // Small extra gap to let echo fade
     await new Promise(r => setTimeout(r, 800));
@@ -318,7 +319,7 @@ export const AutoVoiceListener = () => {
           "/": "Strona główna", "/search": "Szukaj", "/library": "Biblioteka",
           "/liked": "Polubione utwory", "/server": "Serwer mediów", "/movies": "Filmy",
           "/radio-live": "Radio", "/settings": "Ustawienia", "/mood-history": "Historia nastroju",
-          "/playlist-manager": "Playlisty", "/admin": "Admin"
+          "/playlist-manager": "Playlisty", "/admin": "Admin", "/studio": "Studio"
         };
         toast.success(`📂 Otwieram: ${pageNames[route] || route}`);
         safeSpeakAndResume(`Otwieram ${pageNames[route] || route}`);

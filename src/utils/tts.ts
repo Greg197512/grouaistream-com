@@ -19,6 +19,23 @@ let _djAudioContext: AudioContext | null = null;
 let _djSourceNode: MediaElementAudioSourceNode | null = null;
 let _savedMusicVolume: number | null = null;
 
+/**
+ * Telefony (Android/iOS) mają zbyt mało pamięci/mocy dla WASM modelu Piper/VITS —
+ * synteza tam bywa niestabilna (czasem długo się ładuje, czasem pada), przez co
+ * asystent losowo przełączał się na ElevenLabs albo głos systemowy przeglądarki
+ * i brzmiał za każdym razem innym głosem. Na mobile pomijamy neuronowy głos
+ * i idziemy od razu do ElevenLabs (spójny, jeden głos).
+ */
+const isMobileDevice = () =>
+  typeof navigator !== "undefined" && /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+
+/** Odpal promise z limitem czasu — model WASM potrafi "zawiesić się" bez błędu na słabszym sprzęcie. */
+const withTimeout = <T,>(promise: Promise<T>, ms: number): Promise<T | null> =>
+  Promise.race([
+    promise,
+    new Promise<null>((resolve) => setTimeout(() => resolve(null), ms)),
+  ]);
+
 /** Returns true if the TTS engine is currently speaking */
 export const isTTSSpeaking = () => _isSpeaking;
 
@@ -236,10 +253,11 @@ export const speak = async (text: string, opts?: {
   // === PRIMARY: darmowy neuronowy głos w przeglądarce (Piper/VITS) ===
   // Rewelacyjna jakość, zero kosztów i tokenów. Gdy niedostępny — schodzimy
   // po cichu na ElevenLabs, a potem na głos przeglądarki.
-  try {
+  // Pomijamy na telefonach — patrz komentarz przy isMobileDevice().
+  if (!isMobileDevice()) try {
     _isSpeaking = true;
     duckMusicVolume();
-    const wav = await neuralSynth(text, opts?.lang);
+    const wav = await withTimeout(neuralSynth(text, opts?.lang), 6000);
     if (wav) {
       const audioUrl = URL.createObjectURL(wav);
       const audio = new Audio();
@@ -290,7 +308,7 @@ export const speak = async (text: string, opts?: {
         apikey: supabaseKey,
         Authorization: `Bearer ${supabaseKey}`,
       },
-      body: JSON.stringify({ text, mode }),
+      body: JSON.stringify({ text, mode, lang: opts?.lang }),
     });
 
     if (!response.ok) {
