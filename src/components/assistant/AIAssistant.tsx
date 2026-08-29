@@ -726,9 +726,12 @@ export const AIAssistant = () => {
         }
       }
 
-      // Fallback rozmowy: jeśli główny endpoint nic nie zwrócił (np. brak
-      // klucza AI po stronie Lovable), dopytaj działający hub GrouAI.
-      if (!assistantContent.trim()) {
+      // Fallback rozmowy: jeśli główny endpoint (Vercel) nic nie zwrócił ALBO
+      // zwrócił własny komunikat błędu (np. brak OPENROUTER_API_KEY w Vercel —
+      // zawsze zaczyna się od "⚠️") — dopytaj działający hub GrouAI (Aurora),
+      // który ma sprawdzony, działający klucz AI niezależny od Vercela.
+      const looksLikeVercelError = /^⚠️/.test(assistantContent.trim());
+      if (!assistantContent.trim() || looksLikeVercelError) {
         const { data: hub } = await invokeHubAI({
           message: userMessage + saveInfoForAI,
           history: messages.slice(-10).map(m => ({ role: m.role, content: m.content })),
@@ -741,7 +744,14 @@ export const AIAssistant = () => {
         }
         if (reply) {
           assistantContent = reply;
-          setMessages(prev => [...prev, { role: "assistant", content: reply }]);
+          setMessages(prev => {
+            const last = prev[prev.length - 1];
+            // Podmień błędną wiadomość Vercela realną odpowiedzią huba (nie dokładaj drugiej dymki).
+            if (looksLikeVercelError && last?.role === "assistant") {
+              return prev.map((m, i) => (i === prev.length - 1 ? { ...m, content: reply } : m));
+            }
+            return [...prev, { role: "assistant", content: reply }];
+          });
         }
       }
 
