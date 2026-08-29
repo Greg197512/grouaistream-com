@@ -11,7 +11,7 @@ const corsHeaders = {
 };
 
 const SUNO_API_BASE = "https://api.sunoapi.org/api/v1";
-const AI_GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
+const AI_GATEWAY = "https://openrouter.ai/api/v1/chat/completions";
 
 // GPT-5.5 rewrites user idea into a top-tier Suno prompt (style + optional lyrics).
 // Optimized for PL phonetics + clean instrumentation cues.
@@ -22,7 +22,7 @@ async function enhanceWithGPT(input: {
   instrumental?: boolean;
   language?: string;
 }): Promise<{ style: string; title: string; lyrics: string } | null> {
-  const key = Deno.env.get("LOVABLE_API_KEY");
+  const key = Deno.env.get("OPENROUTER_API_KEY") || Deno.env.get("LOVABLE_API_KEY");
   if (!key) return null;
 
   const lang = input.language || "pl";
@@ -59,9 +59,14 @@ Language: ${langName}`;
   try {
     const res = await fetch(AI_GATEWAY, {
       method: "POST",
-      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      headers: {
+        Authorization: `Bearer ${key}`,
+        "HTTP-Referer": "https://grouaistream.com",
+        "X-Title": "GrouAI Stream",
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "google/gemini-2.0-flash-exp:free",
         messages: [
           { role: "system", content: sys },
           { role: "user", content: usr },
