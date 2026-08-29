@@ -1391,59 +1391,8 @@ Znasz DOKŁADNIE każdą funkcję i stronę:
     }
 
     const userPrompt = message;
-
-    // Lovable AI first: stream through the Lovable AI gateway
     let aiResponseText = "";
     let aiResponse: Response | null = null;
-    const lovableTrackList = playableTracks.slice(0, 120).map((t: any) => `${t.title} — ${t.artist} [${t.genre || "?"}]`).join("\n");
-    const lovableSystemPrompt = `Jesteś GrouAI — asystent AI platformy muzycznej GrouAIStream i marki GrouaRock®.
-Odpowiadaj zawsze w języku ${userLanguageName}. Bądź pomocny, konkretny, empatyczny i muzyczny.
-Kontakt: grouarock@gmail.com, tel: +48 570 598 552.
-Użytkownik: ${userName || "Gość"}. Aktualna strona: ${currentPage}. Aktualnie gra: ${currentTrack ? `${currentTrack.title} — ${currentTrack.artist}` : "nic"}.
-
-Najważniejsze funkcje: odtwarzanie i rekomendacje muzyki, radio live, upload, playlisty, AI DJ, detekcja nastroju, import YouTube, generowanie muzyki, miksowanie audio, zarobki twórców.
-
-Biblioteka muzyczna (${playableTracks.length} utworów, fragment):
-${lovableTrackList}${playableTracks.length > 120 ? `\n... i ${playableTracks.length - 120} więcej` : ""}
-
-Ulubione użytkownika: ${userFavorites.slice(0, 30).map((t: any) => t.title).join(", ") || "brak"}
-Ostatnio słuchane: ${userListeningHistory.slice(0, 20).map((t: any) => t.title).join(", ") || "brak"}
-
-Jeśli system wykonał akcję, potwierdź ją jasno:
-${radioUpdateResult ? `Radio zmienione: ${radioUpdateResult.genre}, ${radioUpdateResult.trackCount} utworów.` : ""}
-${wishResult ? `Życzenia radiowe wysłane: ${wishResult.wishText}` : ""}
-${dedicationResult ? `Dedykacja radiowa dodana: ${dedicationResult.trackName} dla ${dedicationResult.recipientName}.` : ""}
-${generateResult ? `Generowanie muzyki uruchomione: ${generateResult.style}${generateResult.style2 ? ` × ${generateResult.style2}` : ""}, mood ${generateResult.mood || "auto"}, energia ${generateResult.energy || "medium"}.` : ""}
-${mixRequest ? `Miksowanie audio uruchomione w stylu ${mixRequest.style}.` : ""}
-
-Zasady: używaj markdown, nie zmyślaj danych spoza kontekstu, przy pytaniach o aplikację prowadź użytkownika do właściwej sekcji.${webSearchResult}`;
-
-    if (LOVABLE_API_KEY) {
-      try {
-        const gateway = createLovableGateway(LOVABLE_API_KEY);
-        const result = await generateText({
-          model: gateway(LOVABLE_AI_MODEL),
-          system: lovableSystemPrompt,
-          messages: [
-            ...history.slice(-12).map((m: any) => ({ role: m.role, content: m.content || "" })),
-            { role: "user", content: userPrompt },
-          ],
-          maxOutputTokens: 4096,
-          temperature: 0.8,
-        });
-        aiResponseText = result.text?.trim() || "";
-        if (aiResponseText) {
-          console.log("Lovable AI model used:", LOVABLE_AI_MODEL);
-        } else {
-          console.error("Lovable AI gateway returned empty text");
-        }
-      } catch (e) {
-        console.error("Lovable AI gateway exception:", e);
-        const msg = e instanceof Error ? e.message : String(e);
-        if (msg.includes("402")) aiResponseText = "AI jest podłączone przez Lovable, ale skończyły się kredyty. Doładuj kredyty w ustawieniach workspace i spróbuj ponownie.";
-        if (msg.includes("429")) aiResponseText = "AI jest chwilowo przeciążone limitem zapytań. Spróbuj ponownie za moment.";
-      }
-    }
 
     if (!aiResponse && !aiResponseText && GEMINI_API_KEY) {
       // Try multiple Gemini models — different keys support different models

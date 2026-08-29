@@ -1,8 +1,9 @@
-// redeem-code — odbiór kodu wpisanego w pasku wyszukiwania (tylko Pro/Ultimate).
+// redeem-code — odbiór kodu wpisanego w pasku wyszukiwania (tylko VIP/admin).
 //
-// Walidacja (aktywność kodu + poziom planu) jest CELOWO po stronie serwera:
-// gdyby lista kodów lub reguła planu trafiła do przeglądarki, każdy mógłby
-// je odczytać z devtools. Klient wysyła tylko wpisany tekst.
+// Dostęp to ręczna decyzja admina (rola 'vip' w user_roles, Admin → Użytkownicy),
+// nie plan Paddle. Walidacja jest CELOWO po stronie serwera: gdyby lista kodów
+// albo lista VIP-ów trafiła do przeglądarki, każdy mógłby to odczytać z devtools.
+// Klient wysyła tylko wpisany tekst.
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
@@ -52,42 +53,14 @@ serve(async (req) => {
   if (ucErr) return json({ ok: false, reason: "error", detail: ucErr.message }, 500);
   if (!uc) return json({ ok: false, reason: "invalid_code" });
 
-  // 2) Plan — ta sama logika co SubscriptionContext (Pro/Ultimate lub admin).
-  const PLAN_LEVELS: Record<string, number> = { free: 0, pro: 1, ultimate: 2 };
-  const clientToken = Deno.env.get("PADDLE_CLIENT_TOKEN") || "";
-  const paddleEnv = clientToken.startsWith("test_") ? "sandbox" : "live";
-
-  const [{ data: isAdmin }, { data: paddleSub }, { data: legacySub }] = await Promise.all([
+  // 2) Dostęp — nie plan Paddle, tylko ręczna decyzja admina: rola 'vip'
+  //    (nadawana w Admin → Użytkownicy) lub 'admin' sam w sobie wystarcza.
+  const [{ data: isAdmin }, { data: isVip }] = await Promise.all([
     admin.rpc("has_role", { _user_id: userId, _role: "admin" }),
-    admin
-      .from("subscriptions")
-      .select("product_id, status, current_period_end")
-      .eq("user_id", userId)
-      .eq("environment", paddleEnv)
-      .in("status", ["active", "trialing", "past_due", "canceled"])
-      .or(`current_period_end.is.null,current_period_end.gt.${new Date().toISOString()}`)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle(),
-    admin
-      .from("user_subscriptions")
-      .select("plan, status")
-      .eq("user_id", userId)
-      .eq("status", "active")
-      .maybeSingle(),
+    admin.rpc("has_role", { _user_id: userId, _role: "vip" }),
   ]);
 
-  const paddlePlan = paddleSub
-    ? paddleSub.product_id === "grouai_ultimate" ? "ultimate" : paddleSub.product_id === "grouai_pro" ? "pro" : null
-    : null;
-  const legacyPlan = legacySub?.plan || "free";
-  const plan = isAdmin
-    ? "ultimate"
-    : paddlePlan && PLAN_LEVELS[paddlePlan] >= PLAN_LEVELS[legacyPlan]
-      ? paddlePlan
-      : legacyPlan;
-
-  if (PLAN_LEVELS[plan] < PLAN_LEVELS.pro) {
+  if (!isAdmin && !isVip) {
     return json({ ok: false, reason: "needs_upgrade", label: uc.label });
   }
 

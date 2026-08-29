@@ -31,6 +31,7 @@ import {
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -64,7 +65,7 @@ import { RadioStoriesPanel } from "@/components/admin/RadioStoriesPanel";
 import { AdminEmailDashboard } from "@/components/admin/AdminEmailDashboard";
 import { AIModeratorRankings } from "@/components/admin/AIModeratorRankings";
 import { TopEarners } from "@/components/admin/TopEarners";
-import { Radio as RadioIcon, HardDrive, Award, DollarSign, Megaphone } from "lucide-react";
+import { Radio as RadioIcon, HardDrive, Award, DollarSign, Megaphone, Star } from "lucide-react";
 import { MarqueeManager } from "@/components/admin/MarqueeManager";
 import { BonusMonitor } from "@/components/admin/BonusMonitor";
 import PayoutsAdminPanel from "@/components/admin/PayoutsAdminPanel";
@@ -208,6 +209,29 @@ export default function Admin() {
   const [unlockCodes, setUnlockCodes] = useState<{ id: string; code: string; label: string; is_active: boolean; created_at: string }[]>([]);
   const [newCode, setNewCode] = useState("");
   const [newCodeLabel, setNewCodeLabel] = useState("");
+
+  // VIP state — kto może odbierać kody dostępu (decyduje wyłącznie admin,
+  // nie plan Paddle). Rola 'vip' w user_roles.
+  const [vipUserIds, setVipUserIds] = useState<Set<string>>(new Set());
+  const fetchVipUsers = async () => {
+    const { data, error } = await supabase.from("user_roles").select("user_id").eq("role", "vip");
+    if (error) { console.error("fetchVipUsers error:", error); return; }
+    setVipUserIds(new Set((data || []).map((r: any) => r.user_id)));
+  };
+  const toggleVip = async (userId: string, currentlyVip: boolean) => {
+    if (currentlyVip) {
+      const { error } = await supabase.from("user_roles").delete().eq("user_id", userId).eq("role", "vip");
+      if (error) { toast.error("Nie udało się cofnąć VIP: " + error.message); return; }
+      setVipUserIds((s) => { const n = new Set(s); n.delete(userId); return n; });
+      toast.success("VIP cofnięty");
+    } else {
+      const { error } = await supabase.from("user_roles").insert({ user_id: userId, role: "vip" });
+      if (error) { toast.error("Nie udało się nadać VIP: " + error.message); return; }
+      setVipUserIds((s) => new Set(s).add(userId));
+      toast.success("🌟 Nadano VIP — może odbierać kody dostępu");
+    }
+  };
+
   useEffect(() => {
     if (!loading && !isAdmin) {
       toast.error("Brak uprawnień administratora");
@@ -219,6 +243,7 @@ export default function Admin() {
     if (isAdmin) {
       fetchAdminData();
       fetchUnlockCodes();
+      fetchVipUsers();
     }
   }, [isAdmin]);
 
@@ -1206,6 +1231,7 @@ export default function Admin() {
                             <TableHead>Ostatnie logowanie</TableHead>
                             <TableHead>Lokalizacja</TableHead>
                             <TableHead>IP</TableHead>
+                            <TableHead>VIP</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -1280,11 +1306,22 @@ export default function Admin() {
                                   </>
                                 );
                               })()}
+                              <TableCell>
+                                <Button
+                                  size="sm"
+                                  variant={vipUserIds.has(u.id) ? "default" : "outline"}
+                                  onClick={() => toggleVip(u.id, vipUserIds.has(u.id))}
+                                  className={cn("gap-1 h-7 px-2", vipUserIds.has(u.id) && "bg-amber-500 hover:bg-amber-600 text-black border-0")}
+                                >
+                                  <Star className={cn("h-3.5 w-3.5", vipUserIds.has(u.id) && "fill-current")} />
+                                  {vipUserIds.has(u.id) ? "VIP" : "Nadaj"}
+                                </Button>
+                              </TableCell>
                             </TableRow>
                           ))}
                           {users.length === 0 && (
                             <TableRow>
-                              <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                              <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                                 Brak zarejestrowanych użytkowników
                               </TableCell>
                             </TableRow>
