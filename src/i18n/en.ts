@@ -4,6 +4,7 @@ import type { TranslationKeys } from "./translations";
 const en: TranslationKeys = {
   "nav.home": "Home",
   "nav.search": "Search",
+  "nav.era": "Eras",
   "nav.library": "Your Library",
   "nav.createPlaylist": "Create Playlist",
   "nav.likedSongs": "Liked Songs",
@@ -13,6 +14,7 @@ const en: TranslationKeys = {
   "nav.radioLive": "GrouaRadio Live",
   "nav.importYoutube": "Import YouTube",
   "nav.sunoAI": "GrouAI Studio",
+  "nav.videoStudio": "Video Studio",
   "nav.localPlayer": "Local Player",
   "nav.aiDj": "AI DJ",
   "nav.moodDetection": "Mood Detection",

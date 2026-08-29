@@ -1,5 +1,12 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { synthesizeTTS } from "../_shared/tts.ts";
+
+// Neuronowe głosy Azure per język (darmowy próg F0) + kod języka dla Google (fallback).
+const AZURE_VOICE: Record<string, string> = {
+  pl: "pl-PL-MarekNeural", en: "en-US-ChristopherNeural", nl: "nl-NL-MaartenNeural", ua: "uk-UA-OstapNeural",
+};
+const GOOGLE_LANG: Record<string, string> = { pl: "pl", en: "en", nl: "nl", ua: "uk" };
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -71,10 +78,7 @@ serve(async (req) => {
   try {
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const ELEVENLABS_API_KEY = Deno.env.get("ELEVENLABS_API_KEY");
     const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY");
-
-    if (!ELEVENLABS_API_KEY) throw new Error("ELEVENLABS_API_KEY missing");
 
     const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
     const triggeredBy = req.headers.get("x-trigger") || "cron";
@@ -182,36 +186,12 @@ serve(async (req) => {
       .trim()
       .slice(0, 1500);
 
-    // 3. ElevenLabs TTS — George (multilingual_v2 handles all 4 languages)
-    const ttsResp = await fetch(
-      `https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID_GEORGE}?output_format=mp3_44100_128`,
-      {
-        method: "POST",
-        headers: {
-          "xi-api-key": ELEVENLABS_API_KEY,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          text: script,
-          model_id: "eleven_multilingual_v2",
-          voice_settings: {
-            stability: 0.45,
-            similarity_boost: 0.8,
-            style: 0.4,
-            use_speaker_boost: true,
-            speed: 1.05,
-          },
-        }),
-      }
-    );
-
-    if (!ttsResp.ok) {
-      const errTxt = await ttsResp.text();
-      throw new Error(`ElevenLabs error ${ttsResp.status}: ${errTxt.slice(0, 200)}`);
-    }
-
-    const audioBuffer = await ttsResp.arrayBuffer();
-    const audioBytes = new Uint8Array(audioBuffer);
+    // 3. TTS — darmowy: neuronowy Azure (gdy klucz F0), inaczej Google. Głos per język.
+    const { audio: audioBytes, engine: ttsEngine } = await synthesizeTTS(script, {
+      voice: AZURE_VOICE[lang] || AZURE_VOICE.pl,
+      lang: GOOGLE_LANG[lang] || "pl",
+      rate: "+2%",
+    });
 
     // 4. Upload to storage (lang-suffixed filename)
     const today = new Date().toISOString().slice(0, 10);
@@ -240,7 +220,7 @@ serve(async (req) => {
       post_slug: post.slug,
       script,
       audio_url: audioUrl,
-      voice_id: VOICE_ID_GEORGE,
+      voice_id: ttsEngine,
       scheduled_for: new Date().toISOString(),
       kind: "blog_daily",
       lang,

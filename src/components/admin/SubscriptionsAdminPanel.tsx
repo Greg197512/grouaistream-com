@@ -177,6 +177,17 @@ export function SubscriptionsAdminPanel() {
 
   const activeCount = rows.filter((r) => r.status === "active" && r.plan !== "free").length;
 
+  // Podsumowanie płatności: ilu płaci, rozbicie planów, ile opłat w tym miesiącu.
+  const summary = useMemo(() => {
+    const active = rows.filter((r) => r.status === "active" && r.plan !== "free");
+    const pro = active.filter((r) => r.plan === "pro").length;
+    const ultimate = active.filter((r) => r.plan === "ultimate").length;
+    const now = new Date();
+    const mStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+    const thisMonth = active.filter((r) => r.updated_at && new Date(r.updated_at).getTime() >= mStart).length;
+    return { total: active.length, pro, ultimate, thisMonth };
+  }, [rows]);
+
   return (
     <div className="space-y-4">
       {/* Nagłówek + statystyki */}
@@ -191,6 +202,25 @@ export function SubscriptionsAdminPanel() {
           Odśwież
         </Button>
       </div>
+
+      {/* Podsumowanie płatności */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+        {[
+          { label: "Płacący (aktywni)", value: summary.total, sub: "wszyscy z aktywnym planem" },
+          { label: "PRO", value: summary.pro, sub: "aktywnych" },
+          { label: "ULTIMATE", value: summary.ultimate, sub: "aktywnych" },
+          { label: "Opłaty w tym mies.", value: summary.thisMonth, sub: "nowi / odnowieni" },
+        ].map((t) => (
+          <div key={t.label} className="rounded-xl border border-border p-3">
+            <div className="text-[11px] uppercase tracking-wider text-muted-foreground">{t.label}</div>
+            <div className="font-display text-2xl font-extrabold tabular-nums">{loading ? "…" : t.value}</div>
+            <div className="text-[10px] text-muted-foreground/70">{t.sub}</div>
+          </div>
+        ))}
+      </div>
+      <p className="text-[11px] text-muted-foreground -mt-1">
+        Źródło: tabela <b>user_subscriptions</b> (lustro Paddle, aktualizowane triggerem na żywo). Pełna prawda o pieniądzach: panel <b>Paddle</b> oraz dashboard Paddle (Transactions).
+      </p>
 
       {/* Przyznaj plan ręcznie */}
       <div className="rounded-xl border border-border bg-secondary/30 p-4 space-y-2">

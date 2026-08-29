@@ -6,6 +6,8 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { invokeHubAI } from "@/lib/hubAI";
+import { freeChat } from "@/lib/freeChat";
+import { SITE_KNOWLEDGE } from "@/lib/siteKnowledge";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { useDJMode } from "@/hooks/useDJMode";
 import { useAuth } from "@/contexts/AuthContext";
@@ -114,6 +116,10 @@ export const AIAssistant = () => {
   const [isMicListening, setIsMicListening] = useState(false);
   const [voiceReplies, setVoiceReplies] = useState(() => localStorage.getItem("grouai-voice-replies") === "1");
   const recognitionRef = useRef<any>(null);
+  const micWantRef = useRef(false);        // czy użytkownik chce słuchać (tryb ciągły)
+  const micStreamRef = useRef<MediaStream | null>(null);
+  const sendRef = useRef<(t?: string) => void>(() => {});
+  const loadingRef = useRef(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { playTrack, playPlaylist, currentTrack } = usePlayer();
@@ -242,6 +248,7 @@ export const AIAssistant = () => {
       timeOfDay: getTimeOfDay(),
       language: appLang,
       languageName: langMap[appLang] || "English",
+      siteKnowledge: SITE_KNOWLEDGE,
     };
   }, [location.pathname, listeningStats, userName, user?.id, currentTrack]);
 
@@ -499,22 +506,13 @@ export const AIAssistant = () => {
     }
 
     try {
-      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-assistant`;
-      
-      // Use session token if logged in, fallback to anon key
-      let authToken = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.access_token) {
-          authToken = session.access_token;
-        }
-      } catch {}
-      
+      // Asystent działa przez funkcję Vercel /api/assistant (połączoną z AI).
+      const url = "/api/assistant";
+
       const resp = await fetch(url, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${authToken}`,
         },
         body: JSON.stringify({ 
           message: userMessage + saveInfoForAI, 
@@ -736,7 +734,11 @@ export const AIAssistant = () => {
           history: messages.slice(-10).map(m => ({ role: m.role, content: m.content })),
           userContext,
         });
-        const reply = hub?.response || hub?.answer;
+        let reply = hub?.response || hub?.answer;
+        // Ostatnia, darmowa warstwa rozmowy — płynnie na każdy temat (jak GPT/Grok).
+        if (!reply) {
+          reply = await freeChat(userMessage, messages.slice(-8).map(m => ({ role: m.role, content: m.content })), getSpeechLang()) || "";
+        }
         if (reply) {
           assistantContent = reply;
           setMessages(prev => [...prev, { role: "assistant", content: reply }]);
@@ -758,7 +760,10 @@ export const AIAssistant = () => {
           history: messages.slice(-10).map(m => ({ role: m.role, content: m.content })),
           userContext,
         });
-        const reply = hub?.response || hub?.answer;
+        let reply = hub?.response || hub?.answer;
+        if (!reply) {
+          reply = await freeChat(userMessage, messages.slice(-8).map(m => ({ role: m.role, content: m.content })), getSpeechLang()) || "";
+        }
         setMessages(prev => [...prev, {
           role: "assistant",
           content: reply || "Przepraszam, wystąpił błąd. Spróbuj ponownie za chwilę. 😔",
@@ -784,41 +789,94 @@ export const AIAssistant = () => {
     }
   }, [input, isLoading, messages, userContext, startDJSession, parseDJCommand, attachments, voiceReplies]);
 
-  /** Mikrofon: rozpoznawanie mowy → automatyczne wysłanie wiadomości */
-  const toggleMic = useCallback(() => {
-    if (isMicListening) {
-      recognitionRef.current?.stop();
-      setIsMicListening(false);
-      return;
-    }
+  // Zawsze aktualne referencje dla długożyjących handlerów rozpoznawania mowy.
+  sendRef.current = handleSend;
+  loadingRef.current = isLoading;
+
+  const stopMic = useCallback(() => {
+    micWantRef.current = false;
+    try { recognitionRef.current?.stop(); } catch { /* */ }
+    recognitionRef.current = null;
+    try { micStreamRef.current?.getTracks().forEach((t) => t.stop()); } catch { /* */ }
+    micStreamRef.current = null;
+    setIsMicListening(false);
+  }, []);
+
+  /** Mikrofon: ciągłe słuchanie → automatyczne wysyłanie każdej wypowiedzi. */
+  const toggleMic = useCallback(async () => {
+    if (micWantRef.current) { stopMic(); return; }
+
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SR) {
-      toast.error("Twoja przeglądarka nie wspiera rozpoznawania mowy");
+      toast.error("Ta przeglądarka nie wspiera rozpoznawania mowy. Użyj Chrome lub Edge.");
       return;
     }
-    if (isTTSSpeaking()) stopSpeaking();
-    const rec = new SR();
-    rec.lang = getSpeechLang();
-    rec.continuous = false;
-    rec.interimResults = true;
-    rec.onresult = (event: any) => {
-      let transcript = "";
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        transcript += event.results[i][0].transcript;
-      }
-      setInput(transcript);
-      if (event.results[event.results.length - 1].isFinal && transcript.trim()) {
-        setIsMicListening(false);
-        setInput("");
-        void handleSend(transcript);
-      }
-    };
-    rec.onerror = () => setIsMicListening(false);
-    rec.onend = () => setIsMicListening(false);
-    recognitionRef.current = rec;
-    rec.start();
+
+    // Wyraźna prośba o dostęp do mikrofonu (bez tego często „nie słucha").
+    try {
+      micStreamRef.current = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch {
+      toast.error("Brak dostępu do mikrofonu — zezwól na mikrofon w ustawieniach przeglądarki 🎤");
+      return;
+    }
+
+    micWantRef.current = true;
     setIsMicListening(true);
-  }, [isMicListening, handleSend]);
+
+    const spawn = () => {
+      if (!micWantRef.current) return;
+      const rec = new SR();
+      rec.lang = getSpeechLang();
+      rec.continuous = true;       // słuchaj dalej, nie kończ po jednej frazie
+      rec.interimResults = true;
+      rec.maxAlternatives = 1;
+
+      rec.onstart = () => setIsMicListening(true);
+
+      rec.onresult = (event: any) => {
+        // Ignoruj, gdy asystent właśnie mówi (żeby nie „usłyszał sam siebie").
+        if (isTTSSpeaking()) return;
+        let interim = "";
+        let finalText = "";
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const r = event.results[i];
+          if (r.isFinal) finalText += r[0].transcript;
+          else interim += r[0].transcript;
+        }
+        setInput(interim || finalText);
+        if (finalText.trim() && !loadingRef.current) {
+          setInput("");
+          void sendRef.current(finalText.trim());
+        }
+      };
+
+      rec.onerror = (e: any) => {
+        const err = e?.error;
+        if (err === "not-allowed" || err === "service-not-allowed") {
+          toast.error("Zezwól na mikrofon, aby mówić do asystenta 🎤");
+          stopMic();
+          return;
+        }
+        // 'no-speech' / 'aborted' / 'network' → onend spróbuje wznowić
+      };
+
+      rec.onend = () => {
+        if (!micWantRef.current) { setIsMicListening(false); return; }
+        // Auto-wznowienie (Chrome sam kończy po ciszy). Poczekaj, aż TTS skończy.
+        const delay = isTTSSpeaking() ? 800 : 300;
+        setTimeout(() => { if (micWantRef.current) spawn(); }, delay);
+      };
+
+      recognitionRef.current = rec;
+      try { rec.start(); } catch { /* już wystartował */ }
+    };
+
+    if (isTTSSpeaking()) stopSpeaking();
+    spawn();
+  }, [stopMic]);
+
+  // Sprzątanie przy odmontowaniu.
+  useEffect(() => () => { stopMic(); }, [stopMic]);
 
   const toggleVoiceReplies = useCallback(() => {
     setVoiceReplies((prev) => {

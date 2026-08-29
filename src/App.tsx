@@ -6,13 +6,16 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { WelcomeConfetti } from "@/components/effects/WelcomeConfetti";
+import { WelcomeThankYouBar } from "@/components/effects/WelcomeThankYouBar";
 import { PlayerProvider } from "@/contexts/PlayerContext";
 import { AIProvider } from "@/contexts/AIContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 
 import { SubscriptionProvider } from "@/contexts/SubscriptionContext";
 import { Effects3DProvider } from "@/contexts/Effects3DContext";
+import { IntroSplash } from "@/components/effects/IntroSplash";
 import { AutoVoiceListener } from "@/components/player/AutoVoiceListener";
+import { GlobalLiveVoiceOverlay } from "@/components/radio/GlobalLiveVoiceOverlay";
 import { StemsModal } from "@/components/studio/StemsModal";
 import { PWAInstallPrompt } from "@/components/pwa/PWAInstallPrompt";
 import { TipWelcomeModal } from "@/components/modals/TipWelcomeModal";
@@ -65,6 +68,9 @@ const WinGame = lazy(() => import("./pages/WinGame"));
 const ArtistLanding = lazy(() => import("./pages/ArtistLanding"));
 const ClientDashboard = lazy(() => import("./pages/ClientDashboard"));
 const Binaural = lazy(() => import("./pages/Binaural"));
+const VideoStudioPage = lazy(() => import("./pages/VideoStudioPage"));
+const NightStory = lazy(() => import("./pages/NightStory"));
+const EraPage = lazy(() => import("./pages/EraPage"));
 
 // Empire Platform pages
 const EmpireDashboard = lazy(() => import("./pages/empire/EmpireDashboard"));
@@ -96,7 +102,12 @@ const queryClient = new QueryClient({
 
 const WelcomeOverlay = () => {
   const { isFirstLogin, clearFirstLogin } = useAuth();
-  return <WelcomeConfetti show={isFirstLogin} onComplete={clearFirstLogin} />;
+  return (
+    <>
+      <WelcomeConfetti show={isFirstLogin} onComplete={clearFirstLogin} />
+      <WelcomeThankYouBar />
+    </>
+  );
 };
 
 const AppShell = () => {
@@ -113,6 +124,7 @@ const AppShell = () => {
 
   return (
     <>
+      <IntroSplash />
       <PaymentTestModeBanner />
       <WelcomeOverlay />
       <TipWelcomeModal />
@@ -120,6 +132,7 @@ const AppShell = () => {
       <BrowserRouter>
         <CheckoutSuccessHandler />
         <AutoVoiceListener />
+        <GlobalLiveVoiceOverlay />
         <StemsModal />
         <Suspense fallback={<RouteFallback />}>
         <Routes>
@@ -175,6 +188,17 @@ const AppShell = () => {
           <Route path="/client-dashboard" element={<ClientDashboard />} />
           <Route path="/client-dashboard/:orderId" element={<ClientDashboard />} />
           <Route path="/binaural" element={<Binaural />} />
+          {/* Studio Wideo — tworzenie wideo dla wszystkich */}
+          <Route path="/video" element={<VideoStudioPage />} />
+          <Route path="/wideo" element={<VideoStudioPage />} />
+          {/* GROUA ERA — Nostalgia Engine (podróż przez epoki muzyczne) */}
+          <Route path="/era" element={<EraPage />} />
+          <Route path="/era/:key" element={<EraPage />} />
+          <Route path="/epoka" element={<EraPage />} />
+          <Route path="/epoka/:key" element={<EraPage />} />
+          {/* Nocne czytanie z muzyką w tle */}
+          <Route path="/nocne" element={<NightStory />} />
+          <Route path="/night" element={<NightStory />} />
           <Route path="/empire" element={<EmpireDashboard />} />
           <Route path="/empire/projects" element={<EmpireProjects />} />
           <Route path="/empire/knowledge" element={<KnowledgeGarden />} />

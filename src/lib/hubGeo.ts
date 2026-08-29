@@ -39,10 +39,43 @@ export interface UserGeo {
   first_seen: string;
   last_seen: string;
   hits: number;
+  user_agent?: string | null;
+  device?: string | null;
+  os?: string | null;
+  browser?: string | null;
+  isp?: string | null;
+  lat?: number | null;
+  lng?: number | null;
 }
 
 // Lista lokalizacji userów — tylko admin (hub sprawdza has_role).
 export async function fetchGeoList(): Promise<UserGeo[]> {
   const res = await hubPost("admin-geo-list");
   return res?.ok ? (res.rows as UserGeo[]) : [];
+}
+
+// ── Obecność (heartbeat) ─────────────────────────────────────────────────────
+// Bijemy „serce” co ~60 s gdy apka otwarta → historia „ilu online w czasie”.
+let presenceTimer: number | null = null;
+export function startPresenceHeartbeat() {
+  if (presenceTimer !== null) return;
+  const beat = () => { hubPost("presence-ping").catch(() => {}); };
+  beat();
+  presenceTimer = setInterval(beat, 60_000) as unknown as number;
+}
+export function stopPresenceHeartbeat() {
+  if (presenceTimer !== null) { clearInterval(presenceTimer); presenceTimer = null; }
+}
+
+export interface PresenceStats {
+  online_now: number;
+  peak_today: number;
+  peak_at: string | null;
+  series: { t: number; c: number }[]; // t = epoch (s), c = ilu online w kubełku 30 min
+}
+
+// Statystyki obecności — tylko admin.
+export async function fetchPresenceStats(): Promise<PresenceStats | null> {
+  const res = await hubPost("presence-stats");
+  return res?.ok ? (res.stats as PresenceStats) : null;
 }

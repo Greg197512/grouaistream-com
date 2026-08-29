@@ -25,6 +25,7 @@ import { cn } from "@/lib/utils";
 import { ChatWidget } from "@/components/chat/ChatWidget";
 import { supabase } from "@/integrations/supabase/client";
 import { withTimeout } from "@/lib/withTimeout";
+import { CatalogKeyLock } from "@/components/layout/CatalogKeyLock";
 
 const ICONS: Record<FeedItem["icon"], React.ComponentType<{ className?: string }>> = {
   heart: Heart,
@@ -162,6 +163,9 @@ export const TopBar = () => {
             {t("topbar.signIn")}
           </Button>
         )}
+
+        {/* Kłódka katalogu — klucz do pełnych ~20 tys. utworów */}
+        <CatalogKeyLock />
 
         {/* GrouAI Chat — obok logowania */}
         <ChatWidget />

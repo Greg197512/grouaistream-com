@@ -69,6 +69,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   const trackStartTime = useRef<number>(0);
   const isVideoModeRef = useRef(false);
   const nextTrackRef = useRef<(isUserSkip?: boolean) => void>(() => {});
+  const prevTrackRef = useRef<() => void>(() => {});
   const userIdRef = useRef<string | null>(null);
   // Token unieważniający zaległe (asynchroniczne) starty audio przy szybkiej zmianie utworu.
   const playRequestRef = useRef(0);
@@ -184,6 +185,10 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     audio.volume = volume / 100;
     audio.preload = "auto";
     audio.setAttribute("data-player", "main");
+    // Kluczowe dla telefonów: gra w tle po wygaszeniu ekranu (iOS/Android).
+    audio.setAttribute("playsinline", "");
+    (audio as any).playsInline = true;
+    audio.setAttribute("x-webkit-airplay", "allow");
     audioRef.current = audio;
 
     const handleTimeUpdate = () => {
@@ -225,6 +230,40 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
       audioRef.current.volume = isMuted ? 0 : volume / 100;
     }
   }, [volume, isMuted]);
+
+  // === MediaSession — sterowanie z ekranu blokady + granie w tle na telefonie ===
+  // Bez tego mobilne przeglądarki usypiają audio po wygaszeniu ekranu.
+  useEffect(() => {
+    if (typeof navigator === "undefined" || !("mediaSession" in navigator)) return;
+    const ms = navigator.mediaSession;
+    try {
+      ms.setActionHandler("play", () => {
+        audioRef.current?.play().then(() => setIsPlaying(true)).catch(() => {});
+      });
+      ms.setActionHandler("pause", () => { audioRef.current?.pause(); setIsPlaying(false); });
+      ms.setActionHandler("nexttrack", () => nextTrackRef.current(true));
+      ms.setActionHandler("previoustrack", () => prevTrackRef.current());
+      ms.setActionHandler("stop", () => { audioRef.current?.pause(); setIsPlaying(false); });
+    } catch { /* część akcji może nie być wspierana */ }
+  }, []);
+
+  // Metadata (tytuł/artysta/okładka na ekranie blokady) + stan odtwarzania.
+  useEffect(() => {
+    if (typeof navigator === "undefined" || !("mediaSession" in navigator)) return;
+    const ms = navigator.mediaSession;
+    if (currentTrack && typeof MediaMetadata !== "undefined") {
+      try {
+        const art = currentTrack.cover_url || undefined;
+        ms.metadata = new MediaMetadata({
+          title: currentTrack.title || "GrouAI Stream",
+          artist: currentTrack.artist || "GrouAI",
+          album: currentTrack.album || "GrouaRadio",
+          artwork: art ? [96, 128, 192, 256, 384, 512].map((s) => ({ src: art, sizes: `${s}x${s}`, type: "image/jpeg" })) : [],
+        });
+      } catch { /* */ }
+    }
+    try { ms.playbackState = isPlaying ? "playing" : "paused"; } catch { /* */ }
+  }, [currentTrack, isPlaying]);
 
   const nextTrackInternal = useCallback(async (isUserSkip = false) => {
     if (queue.length === 0) return;
@@ -653,6 +692,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     setQueueIndex(prevIndex);
     setCurrentTrack(queue[prevIndex]);
   };
+  prevTrackRef.current = prevTrack; // dla MediaSession (poprzedni utwór z ekranu blokady)
 
   const seek = (position: number) => {
     if (!currentTrack) return;

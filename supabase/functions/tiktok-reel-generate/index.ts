@@ -1,7 +1,7 @@
 // Generates a TikTok reel: picks next template from queue, generates voiceover with ElevenLabs (Brian),
 // builds word-level captions, uploads MP3 to Storage, returns reel record with everything client needs to render MP4.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-import { encode as base64Encode } from "https://deno.land/std@0.168.0/encoding/base64.ts";
+import { synthesizeTTS } from "../_shared/tts.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -9,8 +9,8 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-// Brian — deep cinematic male, Apple-ad style
-const BRIAN_VOICE_ID = "nPczCjzI2devNBz1zQrb";
+// Darmowy neuronowy lektor EN (głęboki, w stylu reklamy): Microsoft Edge TTS.
+const REEL_VOICE = "en-US-ChristopherNeural";
 
 interface ReelTemplate {
   id: string;
@@ -53,10 +53,8 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const ELEVENLABS_API_KEY = Deno.env.get("ELEVENLABS_API_KEY");
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    if (!ELEVENLABS_API_KEY) throw new Error("ELEVENLABS_API_KEY not configured");
 
     const supa = createClient(SUPABASE_URL, SERVICE_ROLE);
 
@@ -108,36 +106,10 @@ Deno.serve(async (req) => {
     // Full narration: hook + script + outro
     const fullScript = `${template.hook} ${template.voiceover_script} ${template.outro}`.trim();
 
-    // Generate voiceover with ElevenLabs Brian
-    const ttsResponse = await fetch(
-      `https://api.elevenlabs.io/v1/text-to-speech/${BRIAN_VOICE_ID}?output_format=mp3_44100_128`,
-      {
-        method: "POST",
-        headers: {
-          "xi-api-key": ELEVENLABS_API_KEY,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          text: fullScript,
-          model_id: "eleven_multilingual_v2",
-          voice_settings: {
-            stability: 0.55,
-            similarity_boost: 0.85,
-            style: 0.4,
-            use_speaker_boost: true,
-            speed: 1.05,
-          },
-        }),
-      }
-    );
-
-    if (!ttsResponse.ok) {
-      const errText = await ttsResponse.text();
-      throw new Error(`ElevenLabs TTS failed [${ttsResponse.status}]: ${errText}`);
-    }
-
-    const audioArrayBuffer = await ttsResponse.arrayBuffer();
-    const audioBytes = new Uint8Array(audioArrayBuffer);
+    // Generate voiceover — darmowy neuronowy Edge TTS (Christopher), fallback Google.
+    const { audio: audioBytes, engine: ttsEngine } = await synthesizeTTS(fullScript, {
+      voice: REEL_VOICE, lang: "en", rate: "+3%",
+    });
 
     // Upload MP3 to storage
     const audioFileName = `audio/${template.slug}-${Date.now()}.mp3`;
@@ -173,7 +145,7 @@ Deno.serve(async (req) => {
           outro: template.outro,
           app_route: template.app_route,
           screenshot_paths: template.screenshot_paths,
-          voice: "Brian",
+          voice: ttsEngine,
           triggered_by: isCron ? "cron" : "admin",
         },
       })

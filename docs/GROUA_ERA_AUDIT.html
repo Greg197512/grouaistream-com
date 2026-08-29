@@ -1,0 +1,508 @@
+<title>GROUA ERA</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+
+<style>
+:root{
+  --bg:#F7F4EF; --surface:#FFFFFF; --surface-2:#F1ECE3; --border:#E4DDD0;
+  --ink:#1A1720; --ink-soft:#4A4552; --muted:#807A8C;
+  --accent:#DE5E0C; --accent-2:#F0862F; --accent-soft:#FDEEE0;
+  --layer-archive:#A9741B; --layer-now:#0C8A78; --layer-ai:#6A3CD4;
+  --archive-soft:#F6EDD8; --now-soft:#DEF3EE; --ai-soft:#ECE3FB;
+  --good:#137a52; --warn:#9a6a10; --risk:#b23a2e;
+  --shadow:0 1px 2px rgba(26,23,32,.04),0 8px 28px rgba(26,23,32,.07);
+  --radius:14px;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0E0E16; --surface:#16161F; --surface-2:#1D1D29; --border:#2B2B39;
+    --ink:#ECE9F3; --ink-soft:#B7B3C4; --muted:#847F93;
+    --accent:#FF8A2A; --accent-2:#FFA857; --accent-soft:#2A1A0C;
+    --layer-archive:#E4A648; --layer-now:#38CFB7; --layer-ai:#A98BFF;
+    --archive-soft:#231B0C; --now-soft:#0C231F; --ai-soft:#1B1330;
+    --good:#4bd39a; --warn:#e0b04c; --risk:#f0796a;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 34px rgba(0,0,0,.4);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0E0E16; --surface:#16161F; --surface-2:#1D1D29; --border:#2B2B39;
+  --ink:#ECE9F3; --ink-soft:#B7B3C4; --muted:#847F93;
+  --accent:#FF8A2A; --accent-2:#FFA857; --accent-soft:#2A1A0C;
+  --layer-archive:#E4A648; --layer-now:#38CFB7; --layer-ai:#A98BFF;
+  --archive-soft:#231B0C; --now-soft:#0C231F; --ai-soft:#1B1330;
+  --good:#4bd39a; --warn:#e0b04c; --risk:#f0796a;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 34px rgba(0,0,0,.4);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{animation-duration:.001ms!important;transition-duration:.001ms!important}}
+body{
+  margin:0;background:var(--bg);color:var(--ink);
+  font-family:"IBM Plex Sans",system-ui,sans-serif;font-size:17px;line-height:1.62;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+h1,h2,h3,h4{font-family:"Bricolage Grotesque","IBM Plex Sans",sans-serif;line-height:1.08;text-wrap:balance;font-weight:700;letter-spacing:-.01em}
+.mono{font-family:"IBM Plex Mono",ui-monospace,monospace}
+.eyebrow{font-family:"IBM Plex Mono",monospace;font-size:12px;font-weight:500;letter-spacing:.16em;text-transform:uppercase;color:var(--accent)}
+a{color:var(--accent);text-underline-offset:3px}
+
+/* ── Top bar ── */
+.topbar{position:sticky;top:0;z-index:50;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(12px);border-bottom:1px solid var(--border)}
+.topbar .row{display:flex;align-items:center;gap:18px;height:56px}
+.brand{font-family:"Bricolage Grotesque",sans-serif;font-weight:800;font-size:16px;letter-spacing:.02em;display:flex;align-items:center;gap:9px;white-space:nowrap}
+.brand .dot{width:9px;height:9px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px var(--accent-soft)}
+.navlinks{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;margin-left:auto}
+.navlinks::-webkit-scrollbar{display:none}
+.navlinks a{font-family:"IBM Plex Mono",monospace;font-size:12px;letter-spacing:.04em;color:var(--ink-soft);text-decoration:none;padding:6px 10px;border-radius:8px;white-space:nowrap}
+.navlinks a:hover{background:var(--surface-2);color:var(--ink)}
+
+/* ── Hero ── */
+.hero{padding:72px 0 44px;border-bottom:1px solid var(--border);position:relative;overflow:hidden}
+.timeline-strip{display:flex;gap:0;margin:0 0 34px;border:1px solid var(--border);border-radius:12px;overflow:hidden;font-family:"IBM Plex Mono",monospace}
+.timeline-strip .yr{flex:1;padding:9px 4px;text-align:center;font-size:11px;letter-spacing:.03em;color:var(--muted);border-right:1px solid var(--border);background:var(--surface);white-space:nowrap}
+.timeline-strip .yr:last-child{border-right:none}
+.timeline-strip .yr.on{background:linear-gradient(180deg,var(--accent-soft),var(--surface));color:var(--accent);font-weight:600}
+.hero h1{font-size:clamp(2.6rem,7vw,4.7rem);font-weight:800;margin:.1em 0 .18em;letter-spacing:-.03em}
+.hero .lede{font-size:clamp(1.05rem,2.4vw,1.32rem);color:var(--ink-soft);max-width:64ch;margin:0 0 26px}
+.hero .lede b{color:var(--ink);font-weight:600}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{font-family:"IBM Plex Mono",monospace;font-size:12px;padding:6px 12px;border-radius:999px;border:1px solid var(--border);background:var(--surface);color:var(--ink-soft)}
+
+/* ── Sections ── */
+section{padding:52px 0;border-bottom:1px solid var(--border)}
+.sec-head{display:flex;align-items:baseline;gap:14px;margin-bottom:22px;flex-wrap:wrap}
+.sec-head .num{font-family:"IBM Plex Mono",monospace;font-size:13px;color:var(--accent);font-weight:600}
+h2{font-size:clamp(1.7rem,3.6vw,2.4rem);font-weight:700}
+h3{font-size:1.22rem;margin:30px 0 10px}
+p{margin:0 0 16px;max-width:70ch}
+.lead{font-size:1.08rem;color:var(--ink-soft);max-width:72ch}
+strong{font-weight:600}
+ul,ol{margin:0 0 16px;padding-left:20px;max-width:70ch}
+li{margin:5px 0}
+.callout{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:12px;padding:18px 20px;margin:22px 0;box-shadow:var(--shadow)}
+.callout .eyebrow{margin-bottom:6px}
+
+/* ── Cards / grid ── */
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:repeat(2,1fr)}
+.g3{grid-template-columns:repeat(3,1fr)}
+@media (max-width:760px){.g2,.g3{grid-template-columns:1fr}}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow)}
+.card h4{font-size:1.02rem;margin:0 0 8px;display:flex;align-items:center;gap:8px}
+.card p{font-size:.95rem;margin:0;color:var(--ink-soft)}
+.tag{display:inline-block;font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:6px;font-weight:600}
+.t-archive{background:var(--archive-soft);color:var(--layer-archive)}
+.t-now{background:var(--now-soft);color:var(--layer-now)}
+.t-ai{background:var(--ai-soft);color:var(--layer-ai)}
+.t-reuse{background:var(--accent-soft);color:var(--accent)}
+
+/* Layer cards */
+.layer{border-radius:var(--radius);padding:22px;border:1px solid var(--border);background:var(--surface);position:relative;overflow:hidden}
+.layer::before{content:"";position:absolute;inset:0 auto 0 0;width:4px}
+.layer.archive::before{background:var(--layer-archive)}
+.layer.now::before{background:var(--layer-now)}
+.layer.ai::before{background:var(--layer-ai)}
+.layer h4{margin:0 0 4px;font-size:1.1rem}
+.layer .k{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase}
+.layer.archive .k{color:var(--layer-archive)}.layer.now .k{color:var(--layer-now)}.layer.ai .k{color:var(--layer-ai)}
+
+/* ── Table ── */
+.tblwrap{overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);margin:18px 0}
+table{border-collapse:collapse;width:100%;min-width:640px;font-size:.92rem}
+th,td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--border);vertical-align:top}
+th{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);background:var(--surface-2);font-weight:600;position:sticky;top:0}
+tr:last-child td{border-bottom:none}
+td.mono,th.mono{font-family:"IBM Plex Mono",monospace;font-size:.82rem}
+.ok{color:var(--good);font-weight:600}.gap{color:var(--risk);font-weight:600}.ext{color:var(--warn);font-weight:600}
+
+/* ── Flow map ── */
+.flow{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:20px 0}
+@media (max-width:860px){.flow{grid-template-columns:1fr 1fr}}
+.flow .step{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;box-shadow:var(--shadow)}
+.flow .step .lbl{font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);font-weight:600;margin-bottom:8px}
+.flow .step ul{padding-left:16px;margin:0;font-size:.83rem;color:var(--ink-soft)}
+.flow .step li{margin:3px 0}
+
+/* Code block */
+pre{background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:16px 18px;overflow-x:auto;font-family:"IBM Plex Mono",monospace;font-size:.82rem;line-height:1.6;color:var(--ink);margin:16px 0}
+pre .c{color:var(--muted)}
+pre .kw{color:var(--accent);font-weight:600}
+pre .add{color:var(--good)}
+code:not(pre code){font-family:"IBM Plex Mono",monospace;font-size:.86em;background:var(--surface-2);padding:1px 6px;border-radius:5px;border:1px solid var(--border)}
+
+/* MVP rail */
+.mvp{display:flex;flex-direction:column;gap:0}
+.mvp .row{display:grid;grid-template-columns:88px 1fr;gap:18px;padding:18px 0;border-top:1px solid var(--border)}
+.mvp .row:first-child{border-top:none}
+.mvp .ph{font-family:"Bricolage Grotesque",sans-serif;font-weight:800;font-size:1.4rem;color:var(--accent);line-height:1}
+.mvp .ph small{display:block;font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.1em;color:var(--muted);font-weight:500;margin-top:4px;text-transform:uppercase}
+.mvp h4{margin:0 0 6px;font-size:1.05rem}
+.mvp p{margin:0;font-size:.93rem;color:var(--ink-soft)}
+.mvp .badge{display:inline-block;margin-top:8px;font-family:"IBM Plex Mono",monospace;font-size:10.5px;padding:3px 9px;border-radius:6px;background:var(--surface-2);border:1px solid var(--border);color:var(--ink-soft)}
+
+/* answers */
+.qa{border:1px solid var(--border);border-radius:12px;background:var(--surface);margin:10px 0;box-shadow:var(--shadow);overflow:hidden}
+.qa .q{padding:14px 18px;font-weight:600;font-family:"Bricolage Grotesque",sans-serif;display:flex;gap:12px;align-items:baseline;background:var(--surface-2)}
+.qa .q .l{font-family:"IBM Plex Mono",monospace;color:var(--accent);font-size:.85rem}
+.qa .a{padding:14px 18px 16px}
+.qa .a p{margin:0;font-size:.95rem;color:var(--ink-soft)}
+
+.risk-card{border-left-width:3px}
+.risk-tech{border-left-color:var(--warn)}
+.risk-legal{border-left-color:var(--risk)}
+
+footer{padding:40px 0 64px}
+.foot{color:var(--muted);font-size:.86rem;font-family:"IBM Plex Mono",monospace}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+@media (max-width:760px){.two{grid-template-columns:1fr}}
+.hl{background:linear-gradient(180deg,transparent 62%,var(--accent-soft) 62%);padding:0 2px}
+</style>
+
+<div class="topbar">
+  <div class="wrap row">
+    <span class="brand"><span class="dot"></span>GROUA&nbsp;ERA</span>
+    <nav class="navlinks">
+      <a href="#tldr">Wnioski</a>
+      <a href="#audyt">Audyt</a>
+      <a href="#mapa">Mapa</a>
+      <a href="#idea">3 warstwy</a>
+      <a href="#ux">UX</a>
+      <a href="#arch">Architektura</a>
+      <a href="#dane">Model danych</a>
+      <a href="#engine">Silnik</a>
+      <a href="#studio">Studio</a>
+      <a href="#money">Monetyzacja</a>
+      <a href="#ryzyka">Ryzyka</a>
+      <a href="#abc">A–M</a>
+      <a href="#mvp">MVP</a>
+    </nav>
+  </div>
+</div>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="timeline-strip" aria-hidden="true">
+      <span class="yr">1977</span><span class="yr">1984</span><span class="yr">1991</span>
+      <span class="yr on">1997</span><span class="yr">2001</span><span class="yr">2009</span>
+      <span class="yr">2016</span><span class="yr">NOW</span><span class="yr">FUTURE</span>
+    </div>
+    <span class="eyebrow">Audyt istniejącego systemu · architektura nowej warstwy · bez kodowania</span>
+    <h1>GROUA ERA</h1>
+    <p class="lede">Nostalgia Engine — nowy filar odkrywania muzyki nad istniejącym GrouAI&nbsp;Stream. Nie „kolejna zakładka", lecz <b>warstwa doświadczenia: muzyka&nbsp;+&nbsp;czas&nbsp;+&nbsp;emocje</b>. Ten dokument to najpierw <b>audyt tego, co już masz</b>, potem plan, jak zbudować na tym ERA <b>przy minimalnej ingerencji</b>.</p>
+    <div class="chips">
+      <span class="chip">45+ tras / lazy-loaded</span>
+      <span class="chip">audio_features DNA</span>
+      <span class="chip">embeddings similarity</span>
+      <span class="chip">listening_history</span>
+      <span class="chip">mood detection (face-api)</span>
+      <span class="chip">multi-engine AI Studio</span>
+      <span class="chip">creator earnings</span>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+<!-- TLDR -->
+<section id="tldr">
+  <div class="sec-head"><span class="num">00</span><h2>Najważniejszy wniosek</h2></div>
+  <p class="lead">GrouAI Stream ma już <strong>95% klocków</strong>, których ERA potrzebuje: silnik audio-DNA, historię odsłuchów, profil gustu, rekomendacje po embeddingach, mood detection, wielosilnikowe AI Studio i player. Brakuje <strong>jednej rzeczy fundamentalnej</strong> i kilku warstw UI.</p>
+  <div class="callout">
+    <div class="eyebrow">Sedno</div>
+    <p style="margin:0"><strong>W tabeli <code>tracks</code> nie ma metadanych czasowych</strong> — żadnego <code>era_year</code>, <code>decade</code> ani <code>era_tag</code>. Bez „kiedy" nie ma epoki. To jest brakujący gwóźdź, na którym wisi wszystko inne. Cała reszta ERA to <span class="hl">rozszerzenia i skiny na istniejących systemach</span>, nie nowy silnik.</p>
+  </div>
+  <div class="grid g3">
+    <div class="card"><h4>✅ Wykorzystujemy</h4><p><code>audio_features</code>, <code>listening_history</code>, <code>compose_taste_profile</code>, <code>get_similar_tracks_by_embedding</code>, mood detection, PlayerContext, AI Studio, creator earnings.</p></div>
+    <div class="card"><h4>➕ Rozszerzamy</h4><p><code>tracks</code> o kolumny epoki, taste profile o <code>era_weights</code>, Studio o preset „ERA", rekomendacje o filtr epoki, home o hub „dokąd chcesz iść".</p></div>
+    <div class="card"><h4>🆕 Tworzymy</h4><p>Tabelę <code>era_taxonomy</code>, klasyfikator epok (backfill 20k utworów), komponenty Era* i silnik Nostalgia — cienką warstwę orkiestracji nad tym, co jest.</p></div>
+  </div>
+</section>
+
+<!-- AUDYT -->
+<section id="audyt">
+  <div class="sec-head"><span class="num">01</span><h2>Audyt — mapa obecnego systemu</h2></div>
+  <p class="lead">Co realnie jest w kodzie (nie założenia — odczytane z repo: routing, konteksty, funkcje edge/hub, typy bazy).</p>
+  <div class="tblwrap">
+    <table>
+      <thead><tr><th>Podsystem</th><th>Gdzie w kodzie</th><th>Stan</th><th>Jak użyć w ERA</th></tr></thead>
+      <tbody>
+        <tr><td>Layout główny</td><td class="mono">MainLayout, Sidebar, TopBar</td><td class="ok">jest</td><td>Nowe wejście „ERA" w nav; strona ERA używa MainLayout.</td></tr>
+        <tr><td>Player</td><td class="mono">contexts/PlayerContext</td><td class="ok">jest</td><td><code>playPlaylist()</code>, currentTrack, video mode → EraPlayer to skin, nie nowy player.</td></tr>
+        <tr><td>Radio 24/7</td><td class="mono">Radio, RadioLive, radio_day_profile, radio-mood-switch</td><td class="ok">jest</td><td>Kanał „ERA radio" = harmonogram filtrowany po epoce.</td></tr>
+        <tr><td>AI Music Studio</td><td class="mono">Suno.tsx, studio-prompt-engine, groua-music-engine, acestep, ai-compose</td><td class="ok">jest</td><td>Rdzeń „AI ERA" — preset epoki wstrzykiwany w prompt.</td></tr>
+        <tr><td>Biblioteka</td><td class="mono">Library, LikedSongs, MyTracks, playlists / playlist_tracks, favorites</td><td class="ok">jest</td><td>Era playlists = zwykłe playlisty z tagiem epoki.</td></tr>
+        <tr><td>Wyszukiwarka</td><td class="mono">Search.tsx + useCatalogUnlock</td><td class="ok">jest</td><td>Dodaj filtr/oś epoki obok gatunku.</td></tr>
+        <tr><td>Upload</td><td class="mono">Upload, FileUploadModal, r2-upload-proxy, track_submissions, ai-moderate-track</td><td class="ok">jest</td><td>Artysta oznacza epokę/klimat przy uploadzie → warstwa NOW.</td></tr>
+        <tr><td>Profile artystów</td><td class="mono">profiles / public_profiles, ArtistLanding, TopArtists</td><td class="ok">jest</td><td>„Artyści trzymający ten sound" na stronie epoki.</td></tr>
+        <tr><td>System użytkownika</td><td class="mono">AuthContext, profiles (role, subscription_status)</td><td class="ok">jest</td><td>Nostalgia DNA przypięte do usera; gate premium epok.</td></tr>
+        <tr><td>Historia odsłuchów</td><td class="mono">listening_history (track_id, played_at, skipped, mood_detected)</td><td class="ok">jest</td><td>Wprost liczymy Nostalgia DNA (rozkład epok).</td></tr>
+        <tr><td>Mood detection</td><td class="mono">useFaceDetection, face_detections, mood_sessions, ai-mood-analysis, ai-vision-mood</td><td class="ok">jest</td><td>Mood → mapowanie na epokę (energiczny→1997 rave).</td></tr>
+        <tr><td>Party / DJ mode</td><td class="mono">PartyPulpit, dj_sessions, dj_session_votes, useDJMode</td><td class="ok">jest</td><td>„Era Party" — wspólna podróż przez dekadę.</td></tr>
+        <tr><td>Rekomendacje</td><td class="mono">ai-suggest-tracks, get_similar_tracks_by_embedding, useSkipAdaptation, useAILearning</td><td class="ok">jest</td><td>Podstawa Era Recommendation Engine (filtr + embedding).</td></tr>
+        <tr><td>Audio DNA</td><td class="mono">audio_features (bpm, energy, valence, danceability, key, mode…), tracks.bpm/energy/valence</td><td class="ok">jest</td><td>Klasyfikacja epoki bez metadanych ręcznych (sygnatura brzmienia).</td></tr>
+        <tr><td>Profil gustu</td><td class="mono">compose_taste_profile (genre_weights, mood_weights)</td><td class="ok">jest</td><td>Dodać <code>era_weights</code> — gotowy wzorzec.</td></tr>
+        <tr><td>Zarabianie artystów</td><td class="mono">creator_earnings, track_boosts, is_monetized, total_streams, Paddle, tip wallet</td><td class="ok">jest</td><td>ERA packs, boost epoki, marketplace — nowe źródła, ten sam rozliczeniowy rdzeń.</td></tr>
+        <tr><td colspan="4" style="background:var(--archive-soft)"><strong style="color:var(--layer-archive)">⛔ Metadane czasowe utworu (rok / dekada / epoka / pewność)</strong> — <span class="gap">brak</span>. Fundament ERA. Trzeba dodać kolumny + klasyfikator.</td></tr>
+        <tr><td colspan="4" style="background:var(--ai-soft)"><strong style="color:var(--layer-ai)">⛔ Taksonomia epok</strong> (definicje dekad: subgatunki, tempo, instrumentarium, produkcja, estetyka, kontekst kulturowy) — <span class="gap">brak</span>.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- MAPA -->
+<section id="mapa">
+  <div class="sec-head"><span class="num">02</span><h2>Mapa: current → reuse → missing → extend → create</h2></div>
+  <div class="flow">
+    <div class="step"><div class="lbl">Co jest</div><ul><li>audio_features</li><li>listening_history</li><li>taste_profile</li><li>embeddingi</li><li>AI Studio</li><li>mood detection</li><li>player / radio</li><li>earnings</li></ul></div>
+    <div class="step"><div class="lbl">Wykorzystać</div><ul><li>DNA→epoka</li><li>historia→Nostalgia DNA</li><li>similarity→sąsiedzi epoki</li><li>Studio→AI ERA</li><li>player→EraPlayer</li></ul></div>
+    <div class="step"><div class="lbl">Brakuje</div><ul><li>rok/dekada na utworze</li><li>taksonomia epok</li><li>klasyfikator</li><li>UI epoki</li><li>skiny wizualne</li></ul></div>
+    <div class="step"><div class="lbl">Rozszerzyć</div><ul><li>tracks + kolumny</li><li>taste +era_weights</li><li>Studio +preset</li><li>rekom. +filtr</li><li>home +hub</li></ul></div>
+    <div class="step"><div class="lbl">Stworzyć</div><ul><li>era_taxonomy</li><li>Nostalgia Engine</li><li>komponenty Era*</li><li>Era Mix</li><li>theme epok</li></ul></div>
+  </div>
+  <p style="color:var(--muted);font-size:.9rem">Zasada nadrzędna: <strong>żaden istniejący system nie jest zastępowany ani duplikowany</strong>. ERA orkiestruje to, co już działa.</p>
+</section>
+
+<!-- IDEA / 3 WARSTWY -->
+<section id="idea">
+  <div class="sec-head"><span class="num">03</span><h2>Główna idea — trzy warstwy epoki</h2></div>
+  <p class="lead">To nie jest „stara muzyka". Każda epoka ma trzy warstwy — i to ta różnica czyni ERA nowym produktem, nie playlistą retro.</p>
+  <div class="grid g3">
+    <div class="layer archive"><span class="k tag t-archive">Archive</span><h4>Prawdziwa muzyka epoki</h4><p style="margin-top:8px;color:var(--ink-soft);font-size:.95rem">Tylko to, do czego mamy legalne prawa/licencje lub co jest wolne (już masz sekcję CCMixter). <strong>Bez pirackiego katalogu.</strong> Puste? Pokazujemy NOW i AI ERA.</p></div>
+    <div class="layer now"><span class="k tag t-now">Now</span><h4>Współcześni twórcy</h4><p style="margin-top:8px;color:var(--ink-soft);font-size:.95rem">Artyści z GrouAI tworzący w klimacie epoki. „Brzmi jak 1998?" → żywi ludzie utrzymujący ten sound. Napędza follow, wsparcie, zakup.</p></div>
+    <div class="layer ai"><span class="k tag t-ai">AI Era</span><h4>Nowa muzyka AI</h4><p style="margin-top:8px;color:var(--ink-soft);font-size:.95rem">AI interpretuje <strong>cechy epoki</strong> (tempo, instrumentarium, produkcja) i tworzy nowy utwór. Nie kopia piosenki, nie klon głosu artysty — <strong>styl epoki, nie osoby</strong>.</p></div>
+  </div>
+  <div class="callout" style="border-left-color:var(--layer-ai)">
+    <div class="eyebrow" style="color:var(--layer-ai)">Najważniejsza funkcja</div>
+    <p style="margin:0">„<strong>Tak brzmiałby ten rok, gdyby istniało AI</strong>" — <code>1997 · 150 BPM · Hard Trance · acid · analog bass</code> → zupełnie nowa produkcja inspirowana charakterem epoki. To emocjonalny hak całego produktu.</p>
+  </div>
+</section>
+
+<!-- UX -->
+<section id="ux">
+  <div class="sec-head"><span class="num">04</span><h2>UX flow — jedno kliknięcie, resztę robi AI</h2></div>
+  <h3>Home: „Dokąd chcesz iść?"</h3>
+  <p>Nie redesign od zera. Nad istniejącym homem (HeroSection zostaje) dodajemy <strong>jeden pasek-hub wyboru intencji</strong>:</p>
+  <div class="chips" style="margin:0 0 8px">
+    <span class="chip">🎧 MOOD</span><span class="chip" style="border-color:var(--accent);color:var(--accent)">🕰 ERA</span><span class="chip">🔥 GENRE</span><span class="chip">🤖 CREATE</span><span class="chip">📻 RADIO</span><span class="chip">🎬 VIDEO</span>
+  </div>
+  <p style="font-size:.9rem;color:var(--muted)">MOOD/GENRE/RADIO/CREATE/VIDEO już istnieją — po prostu dostają wspólny punkt wejścia. ERA to jedyny nowy.</p>
+
+  <h3>Ścieżka główna</h3>
+  <div class="tblwrap"><table><thead><tr><th>Krok</th><th>Ekran</th><th>Zbudowane na</th></tr></thead><tbody>
+    <tr><td class="mono">1</td><td>ENTER AN ERA → dekady (70s…FUTURE)</td><td class="mono">EraSelector (wzorzec GenreSection)</td></tr>
+    <tr><td class="mono">2</td><td>Wybór roku (np. 1997)</td><td class="mono">EraTimeline (nowy, lekki)</td></tr>
+    <tr><td class="mono">3</td><td>Strona epoki: Archive / Now / AI ERA + kultura</td><td class="mono">EraPage (nowa trasa /era/:key)</td></tr>
+    <tr><td class="mono">4</td><td>Odtwarzanie w skórze epoki</td><td class="mono">PlayerContext + skin</td></tr>
+    <tr><td class="mono">5</td><td>Timeline / Era Mix — ewolucja brzmienia</td><td class="mono">playPlaylist + crossfade (TrackMixer)</td></tr>
+  </tbody></table></div>
+
+  <div class="two">
+    <div>
+      <h3>„Pożyczona nostalgia"</h3>
+      <p>18-latek wybiera 1987. GrouAI: „<em>Nie żyłeś w 1987. Ale możesz go odkryć.</em>" → podróż 1987→1989→1991→…→2026. Słyszysz, jak brzmienie ewoluowało. Technicznie: uporządkowana po latach playlista z płynnym crossfade.</p>
+    </div>
+    <div>
+      <h3>„One song → one era"</h3>
+      <p>Słuchasz „1995 Rave". Zamiast tylko podobnych: <strong>DISCOVER THE ERA</strong> → lata 1994–1997 + subgatunki (Rave, Hard Trance, Acid, Eurodance). Reużywamy <code>get_similar_tracks_by_embedding</code>, dokładając filtr epoki.</p>
+    </div>
+  </div>
+
+  <h3>GROUA Rave Timeline (przykład osi elektronicznej)</h3>
+  <div class="timeline-strip" style="margin-top:6px">
+    <span class="yr">1988<br>Acid</span><span class="yr">1990<br>Rave</span><span class="yr">1992<br>Gabber</span><span class="yr on">1994<br>Hard Trance</span><span class="yr">1998<br>Hard House</span><span class="yr">2000<br>Hardstyle</span><span class="yr">2010<br>Hard Dance</span><span class="yr">2020<br>Hard Techno</span><span class="yr">2026<br>New Rave</span>
+  </div>
+  <p style="font-size:.9rem;color:var(--muted)">Oś to po prostu wiersze w <code>era_taxonomy</code> z łańcuchem subgatunków — przesuwanie odtwarza kolejne etapy.</p>
+</section>
+
+<!-- ARCHITEKTURA -->
+<section id="arch">
+  <div class="sec-head"><span class="num">05</span><h2>Architektura — komponenty i ich reużycie</h2></div>
+  <div class="tblwrap"><table><thead><tr><th>Komponent</th><th>Typ</th><th>Zbudowany na (reużycie)</th></tr></thead><tbody>
+    <tr><td class="mono">EraSelector</td><td><span class="tag t-ai">nowy</span></td><td>wzorzec <code>GenreSection</code> — siatka kafli dekad</td></tr>
+    <tr><td class="mono">EraTimeline</td><td><span class="tag t-ai">nowy</span></td><td>lekki, dane z <code>era_taxonomy</code></td></tr>
+    <tr><td class="mono">EraPage</td><td><span class="tag t-ai">nowa trasa</span></td><td>MainLayout + zapytania do <code>tracks</code> filtrowane po epoce</td></tr>
+    <tr><td class="mono">EraPlayer</td><td><span class="tag t-reuse">skin</span></td><td><code>PlayerContext</code> bez zmian — tylko warstwa wizualna</td></tr>
+    <tr><td class="mono">EraMix</td><td><span class="tag t-reuse">reużycie</span></td><td><code>playPlaylist</code> + crossfade z <code>TrackMixer</code></td></tr>
+    <tr><td class="mono">NostalgiaEngine</td><td><span class="tag t-ai">nowa fn</span></td><td>orkiestracja: <code>ai-suggest-tracks</code> + embeddingi + <code>audio_features</code></td></tr>
+    <tr><td class="mono">NostalgiaProfile</td><td><span class="tag t-reuse">rozszerzenie</span></td><td><code>compose_taste_profile</code> + <code>era_weights</code></td></tr>
+    <tr><td class="mono">AIEraGenerator</td><td><span class="tag t-reuse">rozszerzenie</span></td><td>istniejący <code>generate()</code> w Suno.tsx + preset epoki</td></tr>
+    <tr><td class="mono">EraRecommendationEngine</td><td><span class="tag t-reuse">rozszerzenie</span></td><td>RPC <code>get_similar_tracks_by_embedding</code> + filtr <code>era_year</code></td></tr>
+    <tr><td class="mono">EraMetadata / classifier</td><td><span class="tag t-ai">nowy</span></td><td>edge fn: <code>audio_features</code>+gatunek+artysta → LLM → epoka</td></tr>
+    <tr><td class="mono">EraArtistDiscovery</td><td><span class="tag t-reuse">reużycie</span></td><td><code>TopArtists</code> + tag epoki na profilu</td></tr>
+  </tbody></table></div>
+  <p style="color:var(--muted);font-size:.9rem"><strong>7 z 11</strong> komponentów to reużycie lub rozszerzenie. Realnie nowe: EraSelector, EraTimeline, EraPage, klasyfikator + tabela taksonomii.</p>
+</section>
+
+<!-- MODEL DANYCH -->
+<section id="dane">
+  <div class="sec-head"><span class="num">06</span><h2>Model danych — minimalna zmiana</h2></div>
+  <h3>1. Rozszerz <code>tracks</code> (nie nowa tabela)</h3>
+<pre><span class="c">-- warstwa czasowa: fundament ERA</span>
+<span class="kw">alter table</span> tracks
+  <span class="add">add column</span> era_year        int,          <span class="c">-- 1997</span>
+  <span class="add">add column</span> era_decade      text,         <span class="c">-- '1990s'</span>
+  <span class="add">add column</span> era_tag         text,         <span class="c">-- '1997', 'Y2K'</span>
+  <span class="add">add column</span> era_source      text          <span class="c">-- 'archive' | 'now' | 'ai'</span>
+        <span class="kw">default</span> 'now',
+  <span class="add">add column</span> era_confidence  numeric(3,2); <span class="c">-- 0.00–1.00 z klasyfikatora</span></pre>
+
+  <h3>2. Nowa tabela <code>era_taxonomy</code> — definicje epok</h3>
+<pre><span class="kw">create table</span> era_taxonomy (
+  era_key         text primary key,   <span class="c">-- '1997' | '1990s'</span>
+  decade          text,
+  year_start      int,  year_end int,
+  genres          text[],  subgenres text[],
+  tempo_min       int,  tempo_max int,
+  moods           text[],
+  instrumentation text[],               <span class="c">-- 'analog bass','breakbeats'</span>
+  production_style text,
+  visual_style    jsonb,                <span class="c">-- paleta, tekstury (VHS/chrome/AI)</span>
+  cultural_context text,
+  ai_hero_prompt  text,                 <span class="c">-- baza promptu dla AI ERA</span>
+  color_palette   jsonb
+);</pre>
+
+  <h3>3. Rozszerz profil gustu → Nostalgia DNA</h3>
+<pre><span class="kw">alter table</span> compose_taste_profile
+  <span class="add">add column</span> era_weights   jsonb,  <span class="c">-- {"1990s":0.92,"Y2K":0.87,...}</span>
+  <span class="add">add column</span> favorite_era  text,
+  <span class="add">add column</span> favorite_tempo int;
+<span class="c">-- liczone z listening_history — dane już spływają</span></pre>
+  <div class="callout"><div class="eyebrow">Dlaczego to jest tanie</div><p style="margin:0">Zero nowych tabel dla utworów, zero migracji danych. <strong>5 kolumn + 1 mała tabela słownikowa.</strong> Warstwa AI ERA to po prostu <code>tracks</code> z <code>era_source='ai'</code> — te same wiersze, ten sam player, biblioteka i rozliczenia.</p></div>
+</section>
+
+<!-- SILNIK -->
+<section id="engine">
+  <div class="sec-head"><span class="num">07</span><h2>Nostalgia Engine i Era Recommendation Engine</h2></div>
+  <div class="two">
+    <div>
+      <h3>Klasyfikator epoki (backfill 20k)</h3>
+      <p>Dla utworów bez roku: sygnatura <code>audio_features</code> (bpm, produkcja, loudness, instrumentalness) + gatunek + artysta → LLM/heurystyka → <code>era_year</code> + <code>era_confidence</code>. Uruchamiane wsadowo (jak <code>bulk-audio-features</code>), nie na żywo.</p>
+    </div>
+    <div>
+      <h3>Nostalgia DNA</h3>
+      <p>Agregacja <code>listening_history</code> po epoce odtwarzanych utworów → rozkład procentowy (90s 92%, Y2K 87%…). Zapis do <code>era_weights</code>. Uczy się przy każdym odsłuchu — mechanizm jak <code>useAILearning</code>.</p>
+    </div>
+  </div>
+  <h3>Era Recommendation Engine = istniejące + jeden filtr</h3>
+<pre><span class="c">// nie budujemy nowego rekomendera — dokładamy wymiar epoki</span>
+rpc(<span class="kw">'get_similar_tracks_by_embedding'</span>, { track_id, limit })
+   .filter(era_year <span class="kw">between</span> 1994 <span class="kw">and</span> 1997)     <span class="c">// „discover the era"</span>
+
+<span class="c">// mood → era mapping (łączy istniejące mood detection z ERA)</span>
+energetic → 1997 RAVE      calm → 1984 SYNTH/AMBIENT      sad → 2000s EMO POP</pre>
+  <p>Wejście do miksu: <strong>MOOD + ERA + GENRE + pora dnia (<code>useTimeRotation</code>) + historia</strong>. Wszystkie sygnały już istnieją — Nostalgia Engine tylko je łączy i waży.</p>
+</section>
+
+<!-- STUDIO -->
+<section id="studio">
+  <div class="sec-head"><span class="num">08</span><h2>Rozszerzenie AI Music Studio</h2></div>
+  <p class="lead">Nie nowe studio. Do istniejącego <code>generate()</code> (Suno V5 → hub → plan B) dokładamy preset epoki z <code>era_taxonomy.ai_hero_prompt</code>.</p>
+  <div class="grid g3">
+    <div class="card"><h4><span class="tag t-ai">Create an Era</span></h4><p>Rok + gatunek + energia + tempo → prompt złożony z cech epoki. Wynik zapisany jako <code>tracks(era_source='ai', era_tag)</code>.</p></div>
+    <div class="card"><h4><span class="tag t-ai">Create My Era</span></h4><p>Zakres 1990–2000 → AI łączy charakter całej dekady w jeden utwór.</p></div>
+    <div class="card"><h4><span class="tag t-ai">Era Mix</span></h4><p>90s → Y2K → 2026: płynne przejście brzmienia. Reużywa crossfade z TrackMixer + kolejne generacje/utwory.</p></div>
+  </div>
+  <p style="color:var(--muted);font-size:.9rem">Ważne prawnie: prompt opisuje <strong>cechy epoki i gatunku</strong>, nigdy „w stylu [artysty]" ani klon konkretnego głosu. Zapinamy to jako regułę w budowie promptu.</p>
+</section>
+
+<!-- WIZUAL -->
+<section id="wizual">
+  <div class="sec-head"><span class="num">09</span><h2>Wizualne światy epok — warstwa, nie ograniczenie</h2></div>
+  <p class="lead">Każda ERA ma własny klimat, ale UI zostaje premium. Retro to <strong>tekstura doświadczenia</strong> (paleta, ziarno, typografia akcentu z <code>visual_style</code>), nie „tandetny sklep retro". Masz już <code>Effects3DContext</code>, aurora i motywy — skin epoki to zestaw tokenów CSS ładowany per strona.</p>
+  <div class="grid g3">
+    <div class="card"><h4 style="color:var(--layer-archive)">1990s</h4><p>VHS, CRT, kasety, rave — ciepłe ziarno, saturowane akcenty.</p></div>
+    <div class="card"><h4 style="color:var(--layer-now)">Y2K</h4><p>CD, chrome, wczesny internet, srebro, cyfrowy futuryzm.</p></div>
+    <div class="card"><h4 style="color:var(--layer-ai)">2026 / FUTURE</h4><p>AI, immersyjność, przestrzenność, interfejs spatial.</p></div>
+  </div>
+</section>
+
+<!-- MONETYZACJA -->
+<section id="money">
+  <div class="sec-head"><span class="num">10</span><h2>Monetyzacja — nowe źródła na istniejącym rdzeniu</h2></div>
+  <p class="lead">Nie ruszamy <code>creator_earnings</code>, boostów ani Paddle. Dokładamy powody do płacenia.</p>
+  <div class="grid g2">
+    <div class="card"><h4>🎛 AI Music Marketplace</h4><p>Artyści sprzedają „ERA packs" (AI-produkcje w klimacie epoki). Rozliczenie: istniejący creator earnings + boost.</p></div>
+    <div class="card"><h4>💎 Premium ERA experiences</h4><p>Głębokie epoki, Era Mix bez limitu, ekskluzywne skiny — gate przez obecny <code>subscription_status</code>.</p></div>
+    <div class="card"><h4>⚡ Płatne generacje AI ERA</h4><p>Ponad darmowy limit — ten sam licznik i paywall co teraz w Studio.</p></div>
+    <div class="card"><h4>🎤 Artysta publikuje własną ERA</h4><p>Kolekcja/oś artysty jako produkt; discovery → follow → wsparcie → zakup.</p></div>
+  </div>
+</section>
+
+<!-- RYZYKA -->
+<section id="ryzyka">
+  <div class="sec-head"><span class="num">11</span><h2>Ryzyka</h2></div>
+  <div class="two">
+    <div>
+      <h3>Techniczne</h3>
+      <div class="callout risk-card risk-tech"><div class="eyebrow" style="color:var(--warn)">Klasyfikacja epok</div><p style="margin:0">Trafność datowania 20k utworów bez metadanych. Mitygacja: <code>era_confidence</code>, ręczne korekty w adminie, fallback „NOW".</p></div>
+      <div class="callout risk-card risk-tech"><div class="eyebrow" style="color:var(--warn)">Koszt AI przy skali</div><p style="margin:0">Masowe generacje AI ERA = koszt. Mitygacja: limity (już masz), cache generacji per epoka, darmowe silniki tam gdzie się da.</p></div>
+      <div class="callout risk-card risk-tech"><div class="eyebrow" style="color:var(--warn)">Puste warstwy</div><p style="margin:0">Wczesne epoki mogą mieć pusty Archive/NOW. UX musi elegancko degradować do dostępnej warstwy.</p></div>
+    </div>
+    <div>
+      <h3>Prawne</h3>
+      <div class="callout risk-card risk-legal"><div class="eyebrow" style="color:var(--risk)">Archive = tylko licencje</div><p style="margin:0">Żadnej historycznej muzyki chronionej bez praw. Domyślnie: wolne/CCMixter + treści twórców. Archive bez licencji = wyłączony.</p></div>
+      <div class="callout risk-card risk-legal"><div class="eyebrow" style="color:var(--risk)">AI: styl epoki, nie osoby</div><p style="margin:0">Zakaz „w stylu [artysty]", klonów głosu, imitacji konkretnych utworów. Reguła wpięta w budowę promptu, nie tylko w regulamin.</p></div>
+      <div class="callout risk-card risk-legal"><div class="eyebrow" style="color:var(--risk)">Znaki towarowe / komunikacja</div><p style="margin:0">„Brzmi jak 1998" (opis cech) — OK; nazwy zespołów/tytułów jako etykiet — ostrożnie. Pochodzenie danych treningowych AI — udokumentować.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- A-M -->
+<section id="abc">
+  <div class="sec-head"><span class="num">12</span><h2>Konkretne odpowiedzi A–M</h2></div>
+  <div class="qa"><div class="q"><span class="l">A</span>Co już mamy i wykorzystamy?</div><div class="a"><p>audio_features (DNA), listening_history, compose_taste_profile, embeddingi (<code>get_similar_tracks_by_embedding</code>), mood detection, AI Studio (Suno/hub/acestep/MusicGen), player, radio, playlisty, creator earnings, presence. ~95% fundamentu.</p></div></div>
+  <div class="qa"><div class="q"><span class="l">B</span>Czego brakuje?</div><div class="a"><p>Metadanych czasowych na utworze, taksonomii epok, klasyfikatora, warstw UI (EraSelector/Timeline/Page) i skinów epok.</p></div></div>
+  <div class="qa"><div class="q"><span class="l">C</span>Co zmienić w UI?</div><div class="a"><p>Dodać hub „Dokąd chcesz iść?" nad istniejącym homem (bez redesignu), nową trasę <code>/era/:key</code>, wejście ERA w nav, filtr epoki w Search. Reszta homu zostaje.</p></div></div>
+  <div class="qa"><div class="q"><span class="l">D</span>Co zmienić w backendzie?</div><div class="a"><p>5 kolumn w <code>tracks</code>, tabela <code>era_taxonomy</code>, 3 kolumny w taste profile, funkcja-klasyfikator (wsadowa), rozszerzenie rekomendacji o filtr epoki. Żadnej przebudowy.</p></div></div>
+  <div class="qa"><div class="q"><span class="l">E</span>Jak użyć AI Studio?</div><div class="a"><p>Preset epoki z <code>ai_hero_prompt</code> wstrzykiwany w istniejący <code>generate()</code>. Nowe tryby Create an Era / My Era / Era Mix jako opcje, nie osobny silnik.</p></div></div>
+  <div class="qa"><div class="q"><span class="l">F</span>Jak użyć mood detection?</div><div class="a"><p>Mapa mood→epoka (energetic→1997 rave, calm→1984 synth). Sygnał z face_detections/mood_sessions wchodzi do miksu ERA jako jeden z wymiarów.</p></div></div>
+  <div class="qa"><div class="q"><span class="l">G</span>Jak użyć historii odsłuchów?</div><div class="a"><p>Agregacja <code>listening_history</code> po epoce → Nostalgia DNA (<code>era_weights</code>). Bez nowego trackingu — dane już spływają.</p></div></div>
+  <div class="qa"><div class="q"><span class="l">H</span>Jak zbudować Nostalgia Engine?</div><div class="a"><p>Cienka orkiestracja: klasyfikator (offline) + DNA z historii + łączenie sygnałów (mood+era+genre+czas+historia). Reużywa istniejące funkcje AI.</p></div></div>
+  <div class="qa"><div class="q"><span class="l">I</span>Jak zrobić Era Recommendation Engine?</div><div class="a"><p>Embedding similarity + filtr <code>era_year</code>. „One song → one era" = sąsiedzi w oknie lat + subgatunki z taksonomii.</p></div></div>
+  <div class="qa"><div class="q"><span class="l">J</span>Jak monetyzować?</div><div class="a"><p>ERA packs w marketplace, premium epoki/miksy, płatne generacje AI ERA, artysta publikuje własną ERA — wszystko na obecnym rdzeniu rozliczeń.</p></div></div>
+  <div class="qa"><div class="q"><span class="l">K</span>Największe ryzyka techniczne?</div><div class="a"><p>Trafność klasyfikacji epok, koszt AI przy skali, puste warstwy dla wczesnych lat. Wszystkie mają mitygację (confidence, limity/cache, graceful degradation).</p></div></div>
+  <div class="qa"><div class="q"><span class="l">L</span>Ryzyka prawne?</div><div class="a"><p>Archive tylko na licencjach; AI = styl epoki nie osoby (bez klonów głosu/imitacji utworów); ostrożna komunikacja i pochodzenie danych treningowych.</p></div></div>
+  <div class="qa"><div class="q"><span class="l">M</span>Co wdrożymy bez przebudowy?</div><div class="a"><p><strong>Cały MVP 1.</strong> Kolumny + taksonomia + klasyfikator + EraSelector + EraPage czytające przefiltrowane <code>tracks</code> + reużyty player. Zero ryzyka dla obecnego GrouAI Stream.</p></div></div>
+</section>
+
+<!-- MVP -->
+<section id="mvp">
+  <div class="sec-head"><span class="num">13</span><h2>Priorytety MVP</h2></div>
+  <div class="mvp">
+    <div class="row"><div class="ph">1<small>Fundament</small></div><div><h4>GROUA ERA — rdzeń podróży</h4><p>Kolumny epoki + <code>era_taxonomy</code> + klasyfikator (backfill), EraSelector (dekada→rok), EraPage, Era playlist, Era timeline, rekomendacje z filtrem epoki, prosty AI ERA na presetach.</p><span class="badge">bez przebudowy · reużycie playera</span></div></div>
+    <div class="row"><div class="ph">2<small>Personalizacja</small></div><div><h4>Nostalgia DNA</h4><p>Agregacja historii → <code>era_weights</code>, profil „twoja epoka", wejście DNA do rekomendacji i home huba.</p><span class="badge">reużycie listening_history</span></div></div>
+    <div class="row"><div class="ph">3<small>Kreacja</small></div><div><h4>AI Era Generator</h4><p>Create an Era / Create My Era w Studio, zapis jako <code>era_source='ai'</code>, cache generacji per epoka.</p><span class="badge">rozszerzenie generate()</span></div></div>
+    <div class="row"><div class="ph">4<small>Ruch</small></div><div><h4>Era Mix</h4><p>Płynne przejścia 90s→Y2K→2026, crossfade z TrackMixer, skiny epok.</p><span class="badge">reużycie crossfade</span></div></div>
+    <div class="row"><div class="ph">5<small>Ekonomia</small></div><div><h4>Artyści + Marketplace</h4><p>„Artyści trzymający sound", ERA packs, monetyzacja epok na obecnym creator earnings.</p><span class="badge">reużycie earnings</span></div></div>
+  </div>
+</section>
+
+<!-- BRANDING -->
+<section id="brand">
+  <div class="sec-head"><span class="num">14</span><h2>Marka — AI pod spodem, podróż na wierzchu</h2></div>
+  <p class="lead">GrouAI nie mówi „mamy AI". Użytkownik ma czuć „<em>Groua zabiera mnie gdzieś</em>", nie „Groua pokazuje algorytm". To spójne z tym, co już budujesz — nocne czytanie, radio na żywo, mood.</p>
+  <div class="callout"><div class="eyebrow">Rekomendacja kierunku</div><p style="margin:0"><strong>„ENTER THE ERA"</strong> jako główny CTA (konkret, akcja, pasuje do „ENTER AN ERA" w flow), a <strong>„TRAVEL THROUGH MUSIC"</strong> jako tagline marki. „Music without time" trzymać jako motyw poetycki. Ciepła paleta bursztynu (obecny brand Studio #FF6B00/#FF9500) zostaje kotwicą; epoki dokładają swój akcent, nie zastępują tożsamości.</p></div>
+</section>
+
+<!-- CLOSING -->
+<section id="start">
+  <div class="sec-head"><span class="num">15</span><h2>Ścieżka bez przebudowy — od czego zacząć</h2></div>
+  <ol>
+    <li><strong>Migracja danych</strong> — 5 kolumn w <code>tracks</code> + tabela <code>era_taxonomy</code> (seed 8–10 epok z pełną charakterystyką).</li>
+    <li><strong>Klasyfikator wsadowy</strong> — datowanie istniejącego katalogu z <code>audio_features</code> + <code>era_confidence</code>; ręczne korekty w adminie.</li>
+    <li><strong>EraSelector na home</strong> jako jedno z wejść huba (reszta homu bez zmian).</li>
+    <li><strong>EraPage</strong> czytająca <code>tracks</code> filtrowane po epoce; player bez zmian.</li>
+    <li>Dopiero potem: Nostalgia DNA → AI Era Generator → Era Mix → marketplace.</li>
+  </ol>
+  <div class="callout" style="border-left-color:var(--layer-now)"><p style="margin:0"><strong>Nic z powyższego nie usuwa ani nie duplikuje istniejących funkcji.</strong> ERA to warstwa nad GrouAI Stream, dająca mu nowy, emocjonalny sposób odkrywania muzyki — przy zmianach liczonych w kolumnach, nie w przepisywaniu systemu.</p></div>
+</section>
+
+</main>
+
+<footer class="wrap">
+  <p class="foot">GROUA ERA · Nostalgia Engine — dokument audytowo-architektoniczny. Faza: projekt, nie implementacja. Oparty na realnym stanie repo grouaistream-com.</p>
+</footer>

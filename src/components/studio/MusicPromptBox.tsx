@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { invokeStudioEngine, waitForAceStep, fireCoverGeneration, isSubscriptionError, submitStudioVideo, waitForStudioVideo, fetchStoryboard, submitStudioLipsync, waitForStudioLipsync, fetchEngineLessons } from "@/lib/hubStudio";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { UpgradeModal } from "@/components/modals/UpgradeModal";
 import { exportTeledysk, exportScenesOnly } from "@/lib/teledyskExport";
@@ -125,6 +126,10 @@ function EmberField({ active }: { active: boolean }) {
 }
 
 export function MusicPromptBox({ onTrackReady }: Props) {
+  // Język UI (interfejsu) — osobny od języka piosenki (`language` niżej).
+  const { language: uiLang } = useLanguage();
+  const L = (pl: string, en: string, nl: string, ua: string) =>
+    uiLang === "en" ? en : uiLang === "nl" ? nl : uiLang === "ua" ? ua : pl;
   const { user } = useAuth();
   const [prompt, setPrompt] = useState("");
   const [language, setLanguage] = useState<Lang>("auto");
@@ -542,9 +547,9 @@ export function MusicPromptBox({ onTrackReady }: Props) {
             </motion.div>
             <div>
               <h2 className="text-lg font-extrabold tracking-tight text-white leading-none">
-                Stwórz utwór
+                {L("Stwórz utwór","Create a track","Maak een track","Створи трек")}
               </h2>
-              <p className="text-[11px] text-white/50 mt-0.5">✍️ Wystarczy wpisać prompt — nawet jednym zdaniem. AI zrobi resztę.</p>
+              <p className="text-[11px] text-white/50 mt-0.5">{L("✍️ Wystarczy wpisać prompt — nawet jednym zdaniem. AI zrobi resztę.","✍️ Just type a prompt — even one sentence. AI does the rest.","✍️ Typ gewoon een prompt — al is het één zin. AI doet de rest.","✍️ Просто впиши промт — навіть одне речення. Решту зробить AI.")}</p>
             </div>
           </div>
 
@@ -572,7 +577,7 @@ export function MusicPromptBox({ onTrackReady }: Props) {
             disabled={isBusy}
             className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all ${mode === "music" ? "bg-white text-black shadow" : "text-white/60 hover:text-white"}`}
           >
-            🎵 Muzyka
+            🎵 {L("Muzyka","Music","Muziek","Музика")}
           </button>
           <button
             onClick={() => !isBusy && setMode("video")}
@@ -586,14 +591,14 @@ export function MusicPromptBox({ onTrackReady }: Props) {
             disabled={isBusy}
             className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all ${mode === "teledysk" ? "bg-gradient-to-r from-[#FF6B00] to-[#9333EA] text-white shadow" : "text-white/60 hover:text-white"}`}
           >
-            🎥 Teledysk
+            🎥 {L("Teledysk","Music video","Videoclip","Кліп")}
           </button>
         </div>
 
         {/* Jakość wideo: Good (tani/szybki) vs VIP (najlepszy model) */}
         {mode !== "music" && (
           <div className="relative z-10 -mt-1 mb-3 flex flex-wrap items-center gap-2">
-            <span className="text-[11px] text-white/50">Jakość:</span>
+            <span className="text-[11px] text-white/50">{L("Jakość:","Quality:","Kwaliteit:","Якість:")}</span>
             <div className="flex items-center gap-1 bg-white/5 rounded-full p-1 border border-white/10">
               <button
                 onClick={() => !isBusy && setVideoQuality("good")}
@@ -673,14 +678,14 @@ export function MusicPromptBox({ onTrackReady }: Props) {
 
         {/* Delikatny przycisk instrukcji — przy oknie tekstowym */}
         <div className="relative z-10 mb-1.5 flex items-center justify-between">
-          <span className="text-[10px] text-white/40">Opisz utwór jak chcesz — im dokładniej, tym lepszy efekt.</span>
+          <span className="text-[10px] text-white/40">{L("Opisz utwór jak chcesz — im dokładniej, tym lepszy efekt.","Describe the track however you like — the more detail, the better.","Beschrijf de track zoals je wilt — hoe meer detail, hoe beter.","Опиши трек як хочеш — що детальніше, то краще.")}</span>
           <button
             onClick={() => setShowGuide(true)}
             className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-2.5 py-1 text-[11px] font-semibold text-white/70 hover:text-white hover:border-[#FF9500]/50 hover:bg-[#FF6B00]/10 transition-all"
             title="Jak używać GrouAI Studio + jak pisać świetne prompty"
           >
             <BookOpen className="h-3.5 w-3.5 text-[#FF9500]" />
-            Instrukcja GrouAI Studio
+            {L("Instrukcja GrouAI Studio","GrouAI Studio guide","GrouAI Studio-gids","Інструкція GrouAI Studio")}
           </button>
         </div>
 
@@ -708,9 +713,9 @@ export function MusicPromptBox({ onTrackReady }: Props) {
             }}
             placeholder={
               mode === "video"
-                ? "Opisz scenę do wideo: np. neonowe miasto nocą, jazda dronem, deszcz…"
+                ? L("Opisz scenę do wideo: np. neonowe miasto nocą, jazda dronem, deszcz…","Describe a video scene: e.g. neon city at night, drone flight, rain…","Beschrijf een videoscène: bv. neonstad 's nachts, dronevlucht, regen…","Опиши сцену для відео: напр. неонове місто вночі, політ дрона, дощ…")
                 : mode === "teledysk"
-                ? "🎵 Opis MUZYKI: np. energetyczny synthwave, męski wokal, 3 min…"
+                ? L("🎵 Opis MUZYKI: np. energetyczny synthwave, męski wokal, 3 min…","🎵 MUSIC description: e.g. energetic synthwave, male vocals, 3 min…","🎵 MUZIEK-beschrijving: bv. energieke synthwave, mannelijke zang, 3 min…","🎵 Опис МУЗИКИ: напр. енергійний synthwave, чоловічий вокал, 3 хв…")
                 : placeholder
             }
             disabled={isBusy}
@@ -745,7 +750,7 @@ export function MusicPromptBox({ onTrackReady }: Props) {
             title="Utwór bez wokalu"
           >
             {instrumental ? <Guitar className="h-3.5 w-3.5" /> : <Mic2 className="h-3.5 w-3.5" />}
-            {instrumental ? "Instrumental" : "Z wokalem"}
+            {instrumental ? "Instrumental" : L("Z wokalem","With vocals","Met zang","З вокалом")}
           </button>
 
           <motion.div whileHover={!isBusy ? { scale: 1.03 } : {}} whileTap={!isBusy ? { scale: 0.97 } : {}}>
@@ -771,15 +776,15 @@ export function MusicPromptBox({ onTrackReady }: Props) {
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                     {mode === "video"
-                      ? (stage === "parsing" ? "Przygotowuję wideo…" : `Tworzę wideo… ${elapsed}s`)
+                      ? (stage === "parsing" ? L("Przygotowuję wideo…","Preparing video…","Video voorbereiden…","Готую відео…") : `${L("Tworzę wideo…","Making video…","Video maken…","Створюю відео…")} ${elapsed}s`)
                       : mode === "teledysk"
-                      ? (stage === "parsing" ? "Reżyseruję teledysk…" : `Kręcę teledysk… ${elapsed}s`)
+                      ? (stage === "parsing" ? L("Reżyseruję teledysk…","Directing music video…","Videoclip regisseren…","Режисую кліп…") : `${L("Kręcę teledysk…","Filming music video…","Videoclip filmen…","Знімаю кліп…")} ${elapsed}s`)
                       : (stage === "parsing" ? labels.parsing : `${labels.composing} ${elapsed}s`)}
                   </>
                 ) : (
                   <>
                     <Send className="w-4 h-4 mr-2" />
-                    {mode === "video" ? "Generuj wideo" : mode === "teledysk" ? "Stwórz teledysk" : "Generuj"}
+                    {mode === "video" ? L("Generuj wideo","Generate video","Genereer video","Згенерувати відео") : mode === "teledysk" ? L("Stwórz teledysk","Create music video","Maak videoclip","Створити кліп") : L("Generuj","Generate","Genereer","Згенерувати")}
                   </>
                 )}
               </span>

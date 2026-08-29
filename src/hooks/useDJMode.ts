@@ -1,9 +1,11 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { usePlayer, Track } from "@/contexts/PlayerContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { speak } from "@/utils/tts";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { getDJTexts, getDJLangFromAppLang, getDJTTSLang, DJLanguage, shortenTitle, shortenArtist } from "@/utils/djTexts";
+import { freeDjLine } from "@/lib/freeChat";
 import { playRandomTransitionEffect, playDJEffect, playDropCombo } from "@/utils/djMixer";
 
 interface DJSession {
@@ -25,6 +27,7 @@ const randomFrom = <T>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length
 
 export const useDJMode = () => {
   const { playPlaylist, currentTrack, queue, isPlaying, audioElement } = usePlayer();
+  const { user } = useAuth();
   const [djSession, setDjSession] = useState<DJSession | null>(null);
   const [isDJActive, setIsDJActive] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -55,15 +58,13 @@ export const useDJMode = () => {
     // Skip announcement for first track (intro already played)
     if (trackCountRef.current <= 1) return;
 
-    // Announce every 2nd track, with occasional 3rd track bonus
-    const shouldAnnounce = trackCountRef.current % 2 === 0 || (trackCountRef.current % 3 === 0 && Math.random() > 0.5);
-    if (!shouldAnnounce) return;
-
+    // DJ wygadany: zapowiada KAŻDY utwór (wcześniej co drugi).
     const lang = getAppLang();
     const texts = getDJTexts(lang);
     const transition = randomFrom(texts.transitions);
     const shortTitle = shortenTitle(currentTrack.title);
     const trackInfo = texts.trackAnnounce(shortTitle, shortenArtist(currentTrack.artist));
+    const trackForLine = { title: currentTrack.title, artist: currentTrack.artist, genre: currentTrack.genre || undefined, mood: currentTrack.mood || undefined };
 
     transitionTimerRef.current = window.setTimeout(async () => {
       // Hard techno effects BEFORE speech
@@ -79,20 +80,21 @@ export const useDJMode = () => {
         playDJEffect("riser");
       }
       
-      // Build SHORT announcement: hype + transition (skip full track info sometimes)
-      let fullAnnouncement = transition;
-      if (Math.random() > 0.5) {
+      // Wygadany DJ: najpierw spróbuj żywej, unikatowej zapowiedzi z AI (darmowo).
+      let fullAnnouncement = "";
+      try {
+        const aiLine = await freeDjLine({ ...trackForLine, lang });
+        if (aiLine) fullAnnouncement = `${randomFrom(texts.hypeLines)} ${aiLine}`;
+      } catch { /* fallback niżej */ }
+
+      // Fallback / gdy AI niedostępne — bogatszy zestaw z szablonów.
+      if (!fullAnnouncement) {
         fullAnnouncement = `${randomFrom(texts.hypeLines)} ${transition}`;
-      }
-      // Add drop line occasionally
-      if (Math.random() > 0.75 && texts.dropLines) {
-        fullAnnouncement += ` ${randomFrom(texts.dropLines)}`;
-      }
-      // Only add track name sometimes (real DJs don't announce every track)
-      if (Math.random() > 0.4) {
+        if (texts.dropLines && Math.random() > 0.5) fullAnnouncement += ` ${randomFrom(texts.dropLines)}`;
         fullAnnouncement += ` ${trackInfo}`;
+        if (texts.mixLines && Math.random() > 0.6) fullAnnouncement += ` ${randomFrom(texts.mixLines)}`;
       }
-      
+
       // Speak with hard energy after effect
       await new Promise(r => setTimeout(r, 250));
       await djSpeak(fullAnnouncement);
@@ -152,15 +154,37 @@ export const useDJMode = () => {
         return;
       }
 
-      const shuffle = <T,>(arr: T[]): T[] => [...arr].sort(() => Math.random() - 0.5);
+      // „Świeżo + najlepsze": mniej ostatnio granych na przód + ważenie
+      // popularnością (plays/streams/wyświetlenia/lajki) z odrobiną losowości,
+      // żeby set był świeży, ale trzymał hity. Wszystko z NASZEGO katalogu.
+      let recentIds = new Set<string>();
+      if (user) {
+        try {
+          const { data: hist } = await supabase
+            .from("listening_history").select("track_id")
+            .eq("user_id", user.id).order("played_at", { ascending: false }).limit(80);
+          recentIds = new Set((hist || []).map((r: any) => r.track_id));
+        } catch { /* */ }
+      }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const pop = (t: any) => Number(t?.plays ?? t?.streams ?? t?.view_count ?? t?.likes_count ?? t?.likes ?? 0) || 0;
+      const rank = <T extends { id: string }>(arr: T[]): T[] => {
+        if (arr.length === 0) return arr;
+        const avg = arr.reduce((s, t) => s + pop(t), 0) / arr.length;
+        const weighted = (list: T[]) =>
+          list.map((t) => ({ t, k: pop(t) + Math.random() * (avg + 1) })).sort((a, b) => b.k - a.k).map((x) => x.t);
+        const fresh = weighted(arr.filter((t) => !recentIds.has(t.id)));
+        const stale = weighted(arr.filter((t) => recentIds.has(t.id)));
+        return [...fresh, ...stale];
+      };
 
-      // Set: najpierw shuffle utworów z gatunku, potem shuffle reszty biblioteki.
-      // Gdy "mieszana" (brak gatunku) — cała biblioteka losowo.
+      // Set: najpierw utwory z gatunku (świeżo+najlepsze), potem reszta biblioteki.
+      // Gdy "mieszana" (brak gatunku) — cała biblioteka świeżo+najlepsze.
       const genreIds = new Set(genreTracks.map(t => t.id));
       const restOfLibrary = library.filter(t => !genreIds.has(t.id));
       const ordered = genres.length > 0
-        ? [...shuffle(genreTracks), ...shuffle(restOfLibrary)]
-        : shuffle(library);
+        ? [...rank(genreTracks), ...rank(restOfLibrary)]
+        : rank(library);
 
       // Pełny set (min. trackCount, ale zostaw zapas do ciągłego grania)
       const curatedTracks: Track[] = ordered.slice(0, Math.max(trackCount, 40)) as Track[];

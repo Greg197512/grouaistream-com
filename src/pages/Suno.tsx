@@ -33,9 +33,14 @@ import { generateMusic } from "@/utils/musicGenerator";
 import { Lock, Crown, Download, Share2, Film } from "lucide-react";
 import { VideoStudio } from "@/components/studio/VideoStudio";
 import { downloadAudio, invokeStudioEngine, waitForAceStep, isSubscriptionError, fetchEngineLessons } from "@/lib/hubStudio";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
+import { getEra, eraStudioGenre, trackYear, eraForYear } from "@/lib/eraEngine";
+import { eraUi } from "@/lib/eraContent";
 
 const FREE_GENERATION_LIMIT = 1;
+// 🎉 Darmowy tydzień w GrouAI Studio — do tej daty każdy tworzy bez limitu.
+const FREE_WEEK_UNTIL = new Date("2026-08-31T23:59:59Z");
+const isFreeWeek = () => Date.now() < FREE_WEEK_UNTIL.getTime();
 
 const GENRES = [
   "Pop", "Rock", "Electronic", "Hip-Hop", "Jazz", "Classical",
@@ -249,6 +254,21 @@ const Suno = () => {
   const { user } = useAuth();
   const { isPro, isUltimate, showUpgradeFor } = useSubscription();
   const { t, language } = useLanguage();
+  // Lokalny tłumacz Studia — całe UII przełącza się na wybrany język (PL/EN/NL/UA).
+  const L = (pl: string, en: string, nl: string, ua: string) =>
+    language === "en" ? en : language === "nl" ? nl : language === "ua" ? ua : pl;
+  const moodL = (id: string) => (({ happy: L("Radosny","Happy","Vrolijk","Радісний"), sad: L("Melancholijny","Melancholic","Melancholisch","Меланхолійний"), energetic: L("Energetyczny","Energetic","Energiek","Енергійний"), chill: L("Chillout","Chill","Chill","Чіл"), romantic: L("Romantyczny","Romantic","Romantisch","Романтичний"), dark: L("Mroczny","Dark","Duister","Похмурий") }) as Record<string,string>)[id] || id;
+  const tempoL = (id: string) => (({ slow: L("Wolne","Slow","Langzaam","Повільне"), medium: L("Średnie","Medium","Gemiddeld","Середнє"), fast: L("Szybkie","Fast","Snel","Швидке"), "very-fast": L("Bardzo szybkie","Very fast","Zeer snel","Дуже швидке") }) as Record<string,string>)[id] || id;
+  const vocalL = (id: string) => (({ singing: L("Śpiew","Singing","Zang","Спів"), rap: L("Rap","Rap","Rap","Реп"), whisper: L("Szept","Whisper","Fluister","Шепіт"), powerful: L("Mocny","Powerful","Krachtig","Потужний"), soft: L("Delikatny","Soft","Zacht","Ніжний") }) as Record<string,string>)[id] || id;
+  const intensityL = (id: string) => (({ minimal: L("Minimal","Minimal","Minimaal","Мінімал"), balanced: L("Zbalansowany","Balanced","Gebalanceerd","Збалансований"), rich: L("Bogata","Rich","Rijk","Багата"), epic: L("Epicka","Epic","Episch","Епічна") }) as Record<string,string>)[id] || id;
+  const presetL = (pl: string) => (({
+    "🌙 Lo-fi do nauki": L("🌙 Lo-fi do nauki","🌙 Lo-fi for studying","🌙 Lo-fi om te studeren","🌙 Lo-fi для навчання"),
+    "💪 Trening na siłce": L("💪 Trening na siłce","💪 Gym workout","💪 Work-out","💪 Тренування в залі"),
+    "❤️ Pierwszy taniec": L("❤️ Pierwszy taniec","❤️ First dance","❤️ Eerste dans","❤️ Перший танець"),
+    "🎉 Impreza": L("🎉 Impreza","🎉 Party","🎉 Feest","🎉 Вечірка"),
+    "🌧️ Deszczowy poranek": L("🌧️ Deszczowy poranek","🌧️ Rainy morning","🌧️ Regenachtige ochtend","🌧️ Дощовий ранок"),
+    "🚀 Epicki finał": L("🚀 Epicki finał","🚀 Epic finale","🚀 Episch finale","🚀 Епічний фінал"),
+  } as Record<string,string>)[pl] || pl);
   const [activeTab, setActiveTab] = useState<"generate" | "mix" | "suno" | "video">("generate");
   const [genre, setGenre] = useState("Pop");
   const [genre2, setGenre2] = useState<string | null>(null);
@@ -292,6 +312,9 @@ const Suno = () => {
     imageUrl?: string;
   } | null>(null);
   const [errorModal, setErrorModal] = useState<string | null>(null);
+  // Preset epoki z GROUA ERA (deep-link /studio?era=...) — wypełnia panel ręczny.
+  const [searchParams] = useSearchParams();
+  const [eraPreset, setEraPreset] = useState<{ label: string; accent: string; emoji: string } | null>(null);
   const [playbackTime, setPlaybackTime] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -302,6 +325,36 @@ const Suno = () => {
     supabase.rpc("get_user_generation_count", { _user_id: user.id })
       .then(({ data }) => setFreeUsed(typeof data === "number" ? data : 0));
   }, [user?.id, isPro]);
+
+  // === GROUA ERA → Studio: prefill panelu z presetu epoki (deep-link) ===
+  useEffect(() => {
+    const eraKey = searchParams.get("era");
+    if (!eraKey) return;
+    const era = getEra(eraKey);
+    if (!era) return;
+    const yearParam = searchParams.get("year");
+    const y = yearParam && /^\d{4}$/.test(yearParam) ? parseInt(yearParam, 10) : undefined;
+    // Gatunek epoki → lista stylów Studia
+    setGenre(eraStudioGenre(era));
+    // Tytuł sugerowany — z rokiem, żeby utwór trafił do GROUA ERA pod tym rokiem
+    setTitle(`GROUA ERA ${y ?? era.label}`);
+    // Tempo epoki → preset tempa
+    const midBpm = Math.round((era.tempo[0] + era.tempo[1]) / 2);
+    setTempo(midBpm >= 150 ? "very-fast" : midBpm >= 120 ? "fast" : midBpm >= 90 ? "medium" : "slow");
+    // Nastrój epoki → preset nastroju
+    const moodMap: Record<string, string> = {
+      energetic: "energetic", raw: "energetic", festival: "energetic", bold: "energetic", party: "energetic",
+      romantic: "romantic", dreamy: "chill", chill: "chill", nostalgic: "chill", shiny: "happy", happy: "happy",
+      sad: "sad", emotional: "sad", dark: "dark", immersive: "dark", rebellious: "dark",
+    };
+    const em = era.moods.map((m) => moodMap[m]).find(Boolean);
+    if (em) setMood(em);
+    setIntensity("rich");
+    setShowAdvanced(true);
+    setActiveTab("generate");
+    setEraPreset({ label: y ? String(y) : era.label, accent: era.palette.accent, emoji: era.emoji });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
 
   // Track playback time for lyrics sync
@@ -337,7 +390,8 @@ const Suno = () => {
     }
 
     // === GATE 2: free users get only 1 generation, then paywall ===
-    if (!isPro && freeUsed >= FREE_GENERATION_LIMIT) {
+    // 🎉 Darmowy tydzień — w tym okresie każdy tworzy bez limitu (brak paywalla).
+    if (!isPro && !isFreeWeek() && freeUsed >= FREE_GENERATION_LIMIT) {
       setShowPaywall(true);
       return;
     }
@@ -352,7 +406,17 @@ const Suno = () => {
       const tempoDesc = TEMPOS.find(t => t.id === tempo)?.desc || "";
       const intensityDesc = INTENSITIES.find(i => i.id === intensity)?.desc || "";
       const vocalDesc = !instrumental ? VOCAL_STYLES.find(v => v.id === vocalStyle)?.desc || "" : "";
-      const musicPrompt = `${genreBlend} ${title ? `"${title}"` : ""} track, ${moodDesc}, ${tempoDesc}, ${intensityDesc}${vocalDesc ? `, with ${vocalDesc}` : ""}, professional studio quality`.trim().replace(/\s+,/g, ",");
+      let musicPrompt = `${genreBlend} ${title ? `"${title}"` : ""} track, ${moodDesc}, ${tempoDesc}, ${intensityDesc}${vocalDesc ? `, with ${vocalDesc}` : ""}, professional studio quality`.trim().replace(/\s+,/g, ",");
+
+      // === Piosenka z DATĄ w tytule → dobierz brzmienie z tamtych czasów ===
+      // (np. "Lato 1994" → sound lat 90.). Rok trafia też do albumu, żeby utwór
+      // pojawił się w GROUA ERA pod właściwym rokiem.
+      const detectedYear = trackYear({ title });
+      const eraOfYear = detectedYear ? eraForYear(detectedYear) : undefined;
+      if (eraOfYear) {
+        musicPrompt = `${musicPrompt}, ${eraOfYear.vibe}, ${eraOfYear.instrumentation.join(", ")}, authentic sound of the year ${detectedYear}`;
+      }
+      const eraAlbum = detectedYear ? `AI ERA ${detectedYear}` : "AI Generated";
 
       const body: any = {
         prompt: musicPrompt,
@@ -416,7 +480,7 @@ const Suno = () => {
                 });
                 await supabase.from("tracks").insert({
                   user_id: user!.id, title: trackTitle, artist: "GrouAI Studio",
-                  album: "AI Generated", duration: (st as any)?.duration || duration,
+                  album: eraAlbum, duration: (st as any)?.duration || duration,
                   audio_url: url, cover_url: coverUrl || null, genre, mood,
                 });
                 window.dispatchEvent(new CustomEvent("grouai:generations-changed"));
@@ -574,7 +638,7 @@ const Suno = () => {
         if (publicAudioUrl.startsWith("http")) {
           await supabase.from("tracks").insert({
             user_id: user!.id, title: trackTitle, artist: "GrouAI Studio",
-            album: "AI Generated", duration, audio_url: publicAudioUrl, genre, mood,
+            album: eraAlbum, duration, audio_url: publicAudioUrl, genre, mood,
           });
         }
         if (!isPro) setFreeUsed(prev => prev + 1);
@@ -712,7 +776,7 @@ const Suno = () => {
           user_id: user.id,
           title: trackTitle,
           artist: "GrouAI Studio",
-          album: "AI Generated",
+          album: eraAlbum,
           duration,
           audio_url: publicAudioUrl,
           genre,
@@ -741,7 +805,7 @@ const Suno = () => {
         user_id: user.id,
         title: result.title,
         artist: artistName,
-        album: "AI Generated",
+        album: (trackYear({ title: result.title }) ? `AI ERA ${trackYear({ title: result.title })}` : "AI Generated"),
         duration: result.durationSeconds,
         audio_url: result.audioUrl,
         cover_url: result.imageUrl || null,
@@ -888,7 +952,7 @@ const Suno = () => {
             </div>
             <h1 className="text-3xl font-bold text-white">GrouAI Studio</h1>
             <p className="text-sm text-gray-400 max-w-md mx-auto leading-relaxed">
-              Twórz profesjonalne utwory muzyczne z AI. Wybierz styl, wpisz tekst, wybierz głos — i wygeneruj muzykę ze śpiewanym wokalem w jakości studyjnej.
+              {L("Twórz profesjonalne utwory muzyczne z AI. Wybierz styl, wpisz tekst, wybierz głos — i wygeneruj muzykę ze śpiewanym wokalem w jakości studyjnej.","Create professional music with AI. Pick a style, write lyrics, choose a voice — and generate a track with studio-quality sung vocals.","Maak professionele muziek met AI. Kies een stijl, schrijf tekst, kies een stem — en genereer een track met gezongen zang in studiokwaliteit.","Створюй професійну музику з AI. Обери стиль, впиши текст, вибери голос — і згенеруй трек зі співаним вокалом студійної якості.")}
             </p>
           </motion.div>
 
@@ -900,10 +964,10 @@ const Suno = () => {
             <Sparkles className="h-3.5 w-3.5 text-[#FF9500]" />
             <span className="text-xs text-gray-300">
               {engine === "grouai"
-                ? <>Napędzany przez <span className="text-[#FF9500] font-semibold">GrouAI Studio Engine</span> — Suno V5 + GPT, studyjna jakość, śpiewane wokale</>
+                ? <>{L("Napędzany przez","Powered by","Aangedreven door","На основі")} <span className="text-[#FF9500] font-semibold">GrouAI Studio Engine</span> — Suno V5 + GPT, {L("studyjna jakość, śpiewane wokale","studio quality, sung vocals","studiokwaliteit, gezongen zang","студійна якість, співаний вокал")}</>
                 : engine === "elevenlabs"
-                ? <>Napędzany przez <span className="text-[#FF9500] font-semibold">ElevenLabs Music v1</span> — studyjna jakość, śpiewane wokale</>
-                : <>Napędzany przez <span className="text-[#FF9500] font-semibold">GrouAI Multi-Engine Router</span> — auto-routing przez n8n</>}
+                ? <>{L("Napędzany przez","Powered by","Aangedreven door","На основі")} <span className="text-[#FF9500] font-semibold">ElevenLabs Music v1</span> — {L("studyjna jakość, śpiewane wokale","studio quality, sung vocals","studiokwaliteit, gezongen zang","студійна якість, співаний вокал")}</>
+                : <>{L("Napędzany przez","Powered by","Aangedreven door","На основі")} <span className="text-[#FF9500] font-semibold">GrouAI Multi-Engine Router</span> — {L("auto-routing przez n8n","auto-routing via n8n","auto-routing via n8n","авто-маршрутизація через n8n")}</>}
             </span>
           </div>
 
@@ -940,7 +1004,7 @@ const Suno = () => {
               }`}
               style={activeTab === "generate" ? { background: "linear-gradient(135deg, #FF6B00, #FF9500)", boxShadow: "0 0 15px #FF6B0040" } : undefined}
             >
-              <Sparkles className="h-4 w-4" /> Generator
+              <Sparkles className="h-4 w-4" /> {L("Generator","Generator","Generator","Генератор")}
             </button>
             <button
               onClick={() => setActiveTab("mix")}
@@ -949,7 +1013,7 @@ const Suno = () => {
               }`}
               style={activeTab === "mix" ? { background: "linear-gradient(135deg, #9333EA, #FF6B00)", boxShadow: "0 0 15px #9333EA40" } : undefined}
             >
-              <Blend className="h-4 w-4" /> Track Mix
+              <Blend className="h-4 w-4" /> {L("Track Mix","Track Mix","Track Mix","Мікс треків")}
             </button>
             <button
               onClick={() => setActiveTab("video")}
@@ -958,7 +1022,7 @@ const Suno = () => {
               }`}
               style={activeTab === "video" ? { background: "linear-gradient(135deg, #FF6B00, #9333EA)", boxShadow: "0 0 15px #9333EA40" } : undefined}
             >
-              <Film className="h-4 w-4" /> Video Studio
+              <Film className="h-4 w-4" /> {L("Video Studio","Video Studio","Video Studio","Відео-студія")}
             </button>
           </div>
 
@@ -968,13 +1032,340 @@ const Suno = () => {
             <VideoStudio />
           ) : (
           <>
+          {/* === RĘCZNY PANEL (jak w Suno): tytuł, styl, tekst, długość, nastrój === */}
+          <div className="space-y-5 p-5 rounded-2xl border border-[#FF6B00]/20 bg-[#12121c]/70 backdrop-blur-md">
+            {/* Baner presetu GROUA ERA */}
+            {eraPreset && (
+              <div className="flex items-center gap-3 p-3 rounded-xl border"
+                style={{ borderColor: `${eraPreset.accent}55`, background: `${eraPreset.accent}14` }}>
+                <span className="text-2xl">{eraPreset.emoji}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-white">{eraUi(language, "studioBannerTitle")} {eraPreset.label}</p>
+                  <p className="text-[11px] text-gray-400">{eraUi(language, "studioBannerSub")}</p>
+                </div>
+                <Sparkles className="h-4 w-4" style={{ color: eraPreset.accent }} />
+              </div>
+            )}
+            {/* Szybkie presety — gotowe pomysły */}
+            <div className="space-y-2">
+              <Label className="text-xs text-gray-400 flex items-center gap-1.5"><Zap className="h-3.5 w-3.5 text-[#FF9500]" /> {L("Szybki start","Quick start","Snelle start","Швидкий старт")}</Label>
+              <div className="flex flex-wrap gap-2">
+                {QUICK_PRESETS.map((p) => (
+                  <button
+                    key={p.label}
+                    title={presetL(p.label)}
+                    type="button"
+                    onClick={() => {
+                      setGenre(p.genre);
+                      setMood(p.mood);
+                      setTempo(p.tempo);
+                      setIntensity(p.intensity);
+                      setTitle(p.title);
+                    }}
+                    className="px-3 py-1.5 rounded-full text-xs border border-[#9333EA]/30 bg-[#9333EA]/10 text-gray-200 hover:bg-[#9333EA]/20 hover:border-[#9333EA]/60 transition-colors"
+                  >
+                    {presetL(p.label)}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Tytuł utworu */}
+            <div className="space-y-2">
+              <Label htmlFor="track-title" className="text-xs text-gray-400 flex items-center gap-1.5"><Type className="h-3.5 w-3.5 text-[#FF9500]" /> {L("Tytuł utworu","Title","Titel","Назва")}</Label>
+              <Input
+                id="track-title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder={L("np. Nocna jazda","e.g. Night drive","bijv. Nachtrit","напр. Нічна їзда")}
+                maxLength={80}
+                className="bg-[#1a1a2e]/80 border-[#FF6B00]/20 text-white placeholder:text-gray-600 focus-visible:ring-[#FF6B00]/40"
+              />
+            </div>
+
+            {/* Styl / gatunek */}
+            <div className="space-y-2">
+              <Label className="text-xs text-gray-400 flex items-center gap-1.5"><Guitar className="h-3.5 w-3.5 text-[#FF9500]" /> {L("Styl","Style","Stijl","Стиль")}</Label>
+              <div className="flex flex-wrap gap-2">
+                {GENRES.map((g) => (
+                  <button
+                    key={g}
+                    type="button"
+                    onClick={() => setGenre(g)}
+                    className={`px-3 py-1.5 rounded-full text-xs border transition-colors ${
+                      genre === g
+                        ? "border-[#FF6B00] bg-[#FF6B00]/20 text-white"
+                        : "border-white/10 bg-[#1a1a2e]/60 text-gray-400 hover:text-gray-200 hover:border-[#FF6B00]/40"
+                    }`}
+                  >
+                    {g}
+                  </button>
+                ))}
+              </div>
+
+              {/* Mieszanie dwóch stylów */}
+              <div className="pt-1">
+                <button
+                  type="button"
+                  onClick={() => setGenre2(genre2 ? null : (GENRES.find((g) => g !== genre) || null))}
+                  className="text-[11px] text-[#9333EA] hover:text-[#c084fc] flex items-center gap-1"
+                >
+                  <Blend className="h-3 w-3" /> {genre2 ? L("Wyłącz miks stylów","Turn off style mix","Stijlmix uit","Вимкнути мікс") : L("Zmiksuj z drugim stylem","Mix with another style","Meng met andere stijl","Змішати зі стилем")}
+                </button>
+                {genre2 && (
+                  <div className="mt-2 space-y-2">
+                    <div className="flex flex-wrap gap-2">
+                      {GENRES.filter((g) => g !== genre).map((g) => (
+                        <button
+                          key={g}
+                          type="button"
+                          onClick={() => setGenre2(g)}
+                          className={`px-2.5 py-1 rounded-full text-[11px] border transition-colors ${
+                            genre2 === g
+                              ? "border-[#9333EA] bg-[#9333EA]/20 text-white"
+                              : "border-white/10 bg-[#1a1a2e]/60 text-gray-400 hover:text-gray-200"
+                          }`}
+                        >
+                          {g}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-[10px] text-gray-500 w-16 truncate">{genre}</span>
+                      <Slider value={[blendRatio]} onValueChange={(v) => setBlendRatio(v[0])} min={10} max={90} step={5} className="flex-1" />
+                      <span className="text-[10px] text-gray-500 w-16 truncate text-right">{genre2}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Długość */}
+            <div className="space-y-2">
+              <Label className="text-xs text-gray-400 flex items-center gap-1.5"><Gauge className="h-3.5 w-3.5 text-[#FF9500]" /> {L("Długość","Length","Lengte","Тривалість")}</Label>
+              <div className="flex gap-2">
+                {DURATION_OPTIONS.map((d) => (
+                  <button
+                    key={d}
+                    type="button"
+                    onClick={() => setDuration(d)}
+                    className={`flex-1 py-1.5 rounded-lg text-xs border transition-colors ${
+                      duration === d
+                        ? "border-[#FF6B00] bg-[#FF6B00]/20 text-white"
+                        : "border-white/10 bg-[#1a1a2e]/60 text-gray-400 hover:text-gray-200"
+                    }`}
+                  >
+                    {d < 60 ? `${d}s` : `${d / 60}min`}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Instrumental */}
+            <div className="flex items-center justify-between p-3 rounded-xl bg-[#1a1a2e]/60 border border-white/5">
+              <div className="flex items-center gap-2">
+                <Music className="h-4 w-4 text-[#FF9500]" />
+                <div>
+                  <p className="text-sm text-gray-200">{L("Instrumentalny","Instrumental","Instrumentaal","Інструментал")}</p>
+                  <p className="text-[10px] text-gray-500">{L("Bez wokalu — sama muzyka","No vocals — music only","Geen zang — alleen muziek","Без вокалу — лише музика")}</p>
+                </div>
+              </div>
+              <Switch checked={instrumental} onCheckedChange={setInstrumental} />
+            </div>
+
+            {/* Tekst piosenki — ręcznie */}
+            <AnimatePresence initial={false}>
+              {!instrumental && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="space-y-2 overflow-hidden"
+                >
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="track-lyrics" className="text-xs text-gray-400 flex items-center gap-1.5"><Mic className="h-3.5 w-3.5 text-[#FF9500]" /> {L("Tekst piosenki (ręcznie)","Lyrics (manual)","Songtekst (handmatig)","Текст пісні (вручну)")}</Label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const auto = generateLyrics(genre, title || `${genre} Track`, duration, false)
+                          .map((l) => l.text)
+                          .join("\n");
+                        setCustomLyrics(auto);
+                        toast.success(L("Wygenerowano szkic tekstu — możesz go dowolnie edytować ✍️","Draft lyrics generated — edit them freely ✍️","Concepttekst gegenereerd — bewerk vrij ✍️","Чернетку тексту згенеровано — редагуй вільно ✍️"));
+                      }}
+                      className="text-[11px] text-[#9333EA] hover:text-[#c084fc] flex items-center gap-1"
+                    >
+                      <Wand2 className="h-3 w-3" /> {L("Podpowiedz tekst","Suggest lyrics","Tekst voorstellen","Підказати текст")}
+                    </button>
+                  </div>
+                  <Textarea
+                    id="track-lyrics"
+                    value={customLyrics}
+                    onChange={(e) => setCustomLyrics(e.target.value)}
+                    placeholder={L("Wpisz własny tekst — silnik zaśpiewa go dokładnie.\n\n[Zwrotka 1]\n...\n\n[Refren]\n...","Type your own lyrics — the engine will sing them exactly.\n\n[Verse 1]\n...\n\n[Chorus]\n...","Typ je eigen tekst — de engine zingt hem precies.\n\n[Couplet 1]\n...\n\n[Refrein]\n...","Впиши власний текст — рушій заспіває його точно.\n\n[Куплет 1]\n...\n\n[Приспів]\n...")}
+                    rows={6}
+                    className="bg-[#1a1a2e]/80 border-[#FF6B00]/20 text-white placeholder:text-gray-600 focus-visible:ring-[#FF6B00]/40 resize-y font-mono text-sm leading-relaxed"
+                  />
+                  <p className="text-[10px] text-gray-500">
+                    {L("Zostaw puste, aby AI napisało tekst automatycznie. Znaczniki jak [Zwrotka], [Refren] pomagają w strukturze.","Leave empty and AI will write the lyrics. Tags like [Verse], [Chorus] help with structure.","Laat leeg en AI schrijft de tekst. Tags als [Couplet], [Refrein] helpen met de structuur.","Залиш порожнім — AI напише текст. Мітки як [Куплет], [Приспів] допомагають зі структурою.")}
+                  </p>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Zaawansowane: nastrój, tempo, wokal, produkcja */}
+            <div>
+              <button
+                type="button"
+                onClick={() => setShowAdvanced((v) => !v)}
+                className="text-xs text-[#FF9500] hover:text-white flex items-center gap-1.5"
+              >
+                <Sparkles className="h-3.5 w-3.5" /> {showAdvanced ? L("Ukryj opcje zaawansowane","Hide advanced options","Verberg geavanceerd","Сховати додаткові") : L("Opcje zaawansowane (nastrój, tempo, wokal)","Advanced options (mood, tempo, vocals)","Geavanceerd (stemming, tempo, zang)","Додаткові (настрій, темп, вокал)")}
+              </button>
+              <AnimatePresence initial={false}>
+                {showAdvanced && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="pt-3 space-y-4">
+                      {/* Nastrój */}
+                      <div className="space-y-2">
+                        <Label className="text-[11px] text-gray-400">{L("Nastrój","Mood","Stemming","Настрій")}</Label>
+                        <div className="flex flex-wrap gap-2">
+                          {MOODS.map((m) => {
+                            const Icon = m.icon;
+                            return (
+                              <button
+                                key={m.id}
+                                type="button"
+                                onClick={() => setMood(m.id)}
+                                className={`px-2.5 py-1.5 rounded-lg text-[11px] border flex items-center gap-1.5 transition-colors ${
+                                  mood === m.id ? "border-current bg-white/10 text-white" : "border-white/10 bg-[#1a1a2e]/60 text-gray-400 hover:text-gray-200"
+                                }`}
+                                style={mood === m.id ? { color: m.color } : undefined}
+                              >
+                                <Icon className="h-3.5 w-3.5" /> {moodL(m.id)}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Tempo */}
+                      <div className="space-y-2">
+                        <Label className="text-[11px] text-gray-400">{L("Tempo","Tempo","Tempo","Темп")}</Label>
+                        <div className="flex flex-wrap gap-2">
+                          {TEMPOS.map((tp) => (
+                            <button
+                              key={tp.id}
+                              type="button"
+                              onClick={() => setTempo(tp.id)}
+                              className={`px-2.5 py-1.5 rounded-lg text-[11px] border transition-colors ${
+                                tempo === tp.id ? "border-[#FF6B00] bg-[#FF6B00]/20 text-white" : "border-white/10 bg-[#1a1a2e]/60 text-gray-400 hover:text-gray-200"
+                              }`}
+                            >
+                              {tempoL(tp.id)} <span className="opacity-60">· {tp.bpm}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Styl wokalu — tylko gdy nie instrumentalny */}
+                      {!instrumental && (
+                        <div className="space-y-2">
+                          <Label className="text-[11px] text-gray-400">{L("Styl wokalu","Vocal style","Zangstijl","Стиль вокалу")}</Label>
+                          <div className="flex flex-wrap gap-2">
+                            {VOCAL_STYLES.map((vs) => (
+                              <button
+                                key={vs.id}
+                                type="button"
+                                onClick={() => setVocalStyle(vs.id)}
+                                className={`px-2.5 py-1.5 rounded-lg text-[11px] border transition-colors ${
+                                  vocalStyle === vs.id ? "border-[#9333EA] bg-[#9333EA]/20 text-white" : "border-white/10 bg-[#1a1a2e]/60 text-gray-400 hover:text-gray-200"
+                                }`}
+                              >
+                                {vocalL(vs.id)}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Intensywność produkcji */}
+                      <div className="space-y-2">
+                        <Label className="text-[11px] text-gray-400">{L("Produkcja","Production","Productie","Продакшн")}</Label>
+                        <div className="flex flex-wrap gap-2">
+                          {INTENSITIES.map((it) => (
+                            <button
+                              key={it.id}
+                              type="button"
+                              onClick={() => setIntensity(it.id)}
+                              className={`px-2.5 py-1.5 rounded-lg text-[11px] border transition-colors ${
+                                intensity === it.id ? "border-[#FF6B00] bg-[#FF6B00]/20 text-white" : "border-white/10 bg-[#1a1a2e]/60 text-gray-400 hover:text-gray-200"
+                              }`}
+                            >
+                              {intensityL(it.id)}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Twój głos (klonowanie) — nadpisuje głos dobrany po gatunku */}
+                      {!instrumental && (
+                        <div className="space-y-3 pt-1 border-t border-white/5">
+                          <Label className="text-[11px] text-gray-400 flex items-center gap-1.5"><Mic className="h-3.5 w-3.5 text-[#9333EA]" /> {L("Twój głos (opcjonalnie)","Your voice (optional)","Jouw stem (optioneel)","Твій голос (необов’язково)")}</Label>
+                          <VoiceLibrary
+                            selectedVoiceId={clonedVoiceId}
+                            onSelect={(id, label) => { setClonedVoiceId(id); setClonedVoiceLabel(label); }}
+                            refreshKey={voiceLibKey}
+                          />
+                          <VoiceRecorder
+                            clonedVoiceId={clonedVoiceId}
+                            clonedVoiceLabel={clonedVoiceLabel}
+                            onVoiceCloned={(id, label) => { setClonedVoiceId(id); setClonedVoiceLabel(label); setVoiceLibKey((k) => k + 1); }}
+                            onCleared={() => { setClonedVoiceId(null); setClonedVoiceLabel(null); }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* Przycisk generowania */}
+            <Button
+              onClick={generate}
+              disabled={generating}
+              className="w-full h-12 text-white font-bold gap-2 border-0 disabled:opacity-60"
+              style={{ background: "linear-gradient(135deg, #FF6B00, #FF9500)", boxShadow: "0 0 20px #FF6B0050" }}
+            >
+              {generating ? (
+                <><span className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" /> {L("Generuję…","Generating…","Genereren…","Генерую…")}</>
+              ) : (
+                <><Sparkles className="h-5 w-5" /> {L("Wygeneruj utwór","Generate track","Genereer track","Згенерувати трек")}</>
+              )}
+            </Button>
+          </div>
+
           {/* Status */}
           {genStatus && (
             <p className="text-sm text-center text-gray-400">{genStatus}</p>
           )}
 
+          {/* 🎉 Baner darmowego tygodnia */}
+          {user && !isPro && isFreeWeek() && (
+            <div className="flex items-center gap-2 p-3 rounded-xl border border-[#FF9500]/50 bg-gradient-to-r from-[#FF6B00]/15 to-[#9333EA]/15">
+              <Sparkles className="h-4 w-4 text-[#FF9500]" />
+              <span className="text-sm text-white font-semibold">{L("🎉 Darmowy tydzień — twórz bez limitu!","🎉 Free week — create without limits!","🎉 Gratis week — maak zonder limiet!","🎉 Безкоштовний тиждень — твори без ліміту!")}</span>
+            </div>
+          )}
+
           {/* Free-tier usage badge */}
-          {user && !isPro && (
+          {user && !isPro && !isFreeWeek() && (
             <div className={`flex items-center justify-between p-3 rounded-xl border ${
               freeUsed >= FREE_GENERATION_LIMIT
                 ? "border-[#FF6B00]/50 bg-[#FF6B00]/10"
@@ -987,7 +1378,7 @@ const Suno = () => {
                   <Sparkles className="h-4 w-4 text-[#9333EA]" />
                 )}
                 <span className="text-gray-300">
-                  Free: <span className="font-bold text-white">{freeUsed} / {FREE_GENERATION_LIMIT}</span> utworów wykorzystanych
+                  Free: <span className="font-bold text-white">{freeUsed} / {FREE_GENERATION_LIMIT}</span> {L("utworów wykorzystanych","tracks used","tracks gebruikt","треків використано")}
                 </span>
               </div>
               {freeUsed >= FREE_GENERATION_LIMIT && (
@@ -1003,7 +1394,7 @@ const Suno = () => {
 
           {!user && (
             <p className="text-center text-xs text-gray-500">
-              <a href="/auth" className="text-[#FF9500] underline">Zaloguj się</a>, aby generować i zapisywać utwory
+              <a href="/auth" className="text-[#FF9500] underline">{L("Zaloguj się","Sign in","Log in","Увійти")}</a>{L(", aby generować i zapisywać utwory"," to generate and save tracks"," om tracks te maken en op te slaan"," щоб створювати й зберігати треки")}
             </p>
           )}
 
@@ -1085,7 +1476,7 @@ const Suno = () => {
                     className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium text-white border border-white/15 bg-white/5 transition-transform hover:scale-105 hover:bg-white/10"
                   >
                     <Share2 className="h-4 w-4" />
-                    Wyślij
+                    {L("Wyślij","Share","Delen","Поділитися")}
                   </button>
                   <button
                     onClick={() => {
@@ -1097,7 +1488,7 @@ const Suno = () => {
                     style={{ background: "linear-gradient(135deg, #FF6B00, #FF9500)", boxShadow: "0 0 15px #FF6B0040" }}
                   >
                     <Download className="h-4 w-4" />
-                    Pobierz MP3
+                    {L("Pobierz MP3","Download MP3","Download MP3","Завантажити MP3")}
                   </button>
                 </motion.div>
 

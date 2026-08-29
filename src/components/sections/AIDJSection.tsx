@@ -146,8 +146,10 @@ export const AIDJSection = () => {
 
       <FeatureGate requiredPlan="pro" featureName={t("upgrade.pro.f4")}>
       <section className="px-6 py-12">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
+        <div className="relative overflow-hidden rounded-2xl border border-white/10 p-4 mb-6 flex items-center justify-between gap-3 flex-wrap">
+          <div className="absolute inset-0 bg-cover bg-center pointer-events-none" style={{ backgroundImage: "url('/bg/aidj.jpg')", opacity: 0.4 }} />
+          <div className="absolute inset-0 pointer-events-none" style={{ background: "linear-gradient(90deg, rgba(4,4,8,.82), rgba(4,4,8,.35))" }} />
+          <div className="relative z-10 flex items-center gap-3">
             <div className="groove-gradient-bg h-10 w-10 rounded-xl flex items-center justify-center">
               <Sparkles className="h-5 w-5 text-primary-foreground" />
             </div>
@@ -156,7 +158,7 @@ export const AIDJSection = () => {
               <p className="text-sm text-muted-foreground">Your personal music curator</p>
             </div>
           </div>
-          <div className="flex gap-2 flex-wrap">
+          <div className="relative z-10 flex gap-2 flex-wrap">
             
             <Button
               onClick={() => { setShowCrowdCamera(!showCrowdCamera); if (showMoodDetector) setShowMoodDetector(false); if (showQRSession) setShowQRSession(false); }}

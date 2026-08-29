@@ -103,7 +103,7 @@ export const BlogPromoButton = () => {
   if (loading) return null;
 
   return (
-    <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+    <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="flex-1 sm:flex-none min-w-0 rounded-full">
       <Button
         size="lg"
         onClick={handleClick}
@@ -114,15 +114,19 @@ export const BlogPromoButton = () => {
         onTouchEnd={endPress}
         onContextMenu={(e) => e.preventDefault()}
         title={t("hero.blogTooltip")}
-        className="relative overflow-hidden groove-gradient-bg text-primary-foreground hover:opacity-90 gap-2 rounded-full px-6 h-14 font-semibold text-base shadow-[0_0_30px_hsl(var(--primary)/0.3)] select-none"
+        className="group relative overflow-hidden rounded-full w-full sm:w-auto justify-center px-3 sm:px-7 h-12 sm:h-14 gap-1.5 sm:gap-2 font-semibold text-[13px] sm:text-base text-white border border-white/25 bg-white/[0.07] backdrop-blur-xl transition-all duration-300 hover:bg-white/[0.14] hover:border-white/60 hover:-translate-y-0.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.32),inset_0_0_0_1px_hsl(315_100%_72%/0.28),0_12px_34px_-14px_rgba(0,0,0,0.78),0_0_26px_-8px_hsl(331_100%_62%/0.65),0_0_26px_-6px_hsl(268_100%_66%/0.55)] select-none"
       >
+        <span aria-hidden className="pointer-events-none absolute inset-0 rounded-full" style={{ background: "linear-gradient(180deg, rgba(255,255,255,.26), transparent 42%)" }} />
+        <span aria-hidden className="pointer-events-none absolute inset-0" style={{ background: "linear-gradient(100deg, transparent 20%, rgba(255,255,255,.32) 50%, transparent 80%)", animation: "shimmer 3.6s ease-in-out infinite", animationDelay: "1.2s", willChange: "transform" }} />
         <span
-          className="absolute inset-0 bg-primary-foreground/20 origin-left pointer-events-none"
+          className="absolute inset-0 bg-white/25 origin-left pointer-events-none"
           style={{ transform: `scaleX(${progress / 100})`, transition: "transform 0.04s linear" }}
           aria-hidden
         />
-        <Newspaper className="h-5 w-5 relative z-10" />
-        <span className="relative z-10">{t("hero.blog")}</span>
+        <span className="relative z-10 inline-flex items-center gap-1.5 sm:gap-2 min-w-0">
+          <Newspaper className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" />
+          <span className="truncate">{t("hero.blog")}</span>
+        </span>
       </Button>
     </motion.div>
   );

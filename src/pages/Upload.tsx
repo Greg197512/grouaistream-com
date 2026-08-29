@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { uploadToR2 } from "@/lib/r2Upload";
 import { withTimeout } from "@/lib/withTimeout";
+import { postCreatorThankYou } from "@/lib/thankYouMarquee";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { CoverDesigner } from "@/components/cover/CoverDesigner";
 
@@ -434,6 +435,9 @@ const Upload = () => {
       if (trackInsertErr) throw trackInsertErr;
 
       setInsertedTrackId(insertedTrack?.id || null);
+
+      // Auto-podziękowanie na pasku, że twórca wystawił utwór (1×/dobę na twórcę).
+      if (user?.id) void postCreatorThankYou(user.id, displayName);
 
       // Auto-generate cover in BACKGROUND — does not block user, survives page navigation
       if (!coverUrl && insertedTrack?.id) {

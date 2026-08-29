@@ -27,6 +27,7 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
   const navItems = [
     { icon: "home", labelKey: "nav.home", href: "/" },
     { icon: "search", labelKey: "nav.search", href: "/search" },
+    { icon: "schedule", labelKey: "nav.era", href: "/era", badge: "NEW" },
     { icon: "library_music", labelKey: "nav.library", href: "/library" },
   ];
 
@@ -39,6 +40,7 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
     { icon: "radio", labelKey: "nav.radioLive", href: "/radio-live", badge: "LIVE" },
     { icon: "download", labelKey: "nav.importYoutube", href: "/import-youtube" },
     { icon: "auto_awesome", labelKey: "nav.sunoAI", href: "/studio", badge: "🎵" },
+    { icon: "movie_creation", labelKey: "nav.videoStudio", href: "/video", badge: "🎬" },
     { icon: "headphones", labelKey: "nav.localPlayer", href: "/local-player", badge: "MP3" },
     { icon: "queue_music", labelKey: "nav.myTracks", href: "/my-tracks" },
     { icon: "account_balance_wallet", labelKey: "nav.earnings", href: "/earnings", badge: "💰" },
@@ -78,7 +80,7 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
             <div className="absolute -inset-4 overflow-hidden">
               <MatrixNotes enabled={is3D} />
             </div>
-            <img src="/logo-icon.png" alt="GrouAI Stream" className="h-14 w-14 object-contain drop-shadow-[0_0_12px_hsl(var(--primary)/0.5)] relative z-10" />
+            <img src="/logo-grouaistream.png" alt="GrouAIstream" className="h-16 w-16 object-contain drop-shadow-[0_0_14px_rgba(255,190,60,0.45)] relative z-10" />
           </motion.div>
         ) : (
           <motion.div
@@ -92,7 +94,7 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
             <div className="absolute -inset-6 overflow-hidden">
               <MatrixNotes enabled={is3D} />
             </div>
-            <img src={logoIcon} alt="GrouAI Stream by GrouaRock" className="h-24 object-contain relative z-10" />
+            <img src="/logo-grouaistream.png" alt="GrouAIstream — Global Music Streaming" className="h-28 object-contain relative z-10 drop-shadow-[0_0_18px_rgba(255,190,60,0.4)]" />
           </motion.div>
         )}
       </div>

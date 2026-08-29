@@ -15,6 +15,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { gameVote } from "@/lib/hubGame";
 import { gt } from "@/lib/gameI18n";
+import { generateTalkScript, speakTalk, type TalkKind, type TalkLine } from "@/lib/radioTalk";
 
 interface RadioConfig {
   is_active: boolean;
@@ -110,6 +111,12 @@ const RadioLive = () => {
   const [showEmojis, setShowEmojis] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [micBoothOpen, setMicBoothOpen] = useState(false);
+  // GrouAI Talk — dwie osoby rozmawiające (news / opowiadanie), głosy neuronowe.
+  const [talkLoading, setTalkLoading] = useState(false);
+  const [talkActive, setTalkActive] = useState(false);
+  const [talkLine, setTalkLine] = useState<TalkLine | null>(null);
+  const talkActiveRef = useRef(false);
+  const talkSavedVolRef = useRef<number | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const radioClientIdRef = useRef(crypto.randomUUID());
   const liveVoiceQueueRef = useRef<string[]>([]);
@@ -171,9 +178,9 @@ const RadioLive = () => {
 
     const fetchData = async () => {
       try {
-        const configRes = await supabase.from("radio_config").select("*").limit(1).single();
+        const configRes = await supabase.from("radio_config").select("*").limit(1).maybeSingle();
         if (cancelled) return;
-        if (configRes.data) setConfig(configRes.data as any);
+        const cfg = (configRes.data as RadioConfig | null) || null;
 
         const scheduleRes = await supabase
           .from("radio_schedule")
@@ -182,7 +189,39 @@ const RadioLive = () => {
           .order("position", { ascending: true })
           .limit(2000);
         if (cancelled) return;
-        if (scheduleRes.data) setRawSchedule(scheduleRes.data as any);
+        const rows = Array.isArray(scheduleRes.data) ? (scheduleRes.data as any[]) : [];
+        const playable = rows.filter((r) => r?.track?.audio_url);
+        const offAir = !cfg?.is_active || playable.length === 0;
+
+        if (!offAir) {
+          if (cfg) setConfig(cfg as any);
+          setRawSchedule(rows as any);
+        } else {
+          // Fallback: zawsze grające radio gatunkowe (hip-hop / techno / disco),
+          // gdy admin nie ma aktywnego grafiku. Nie dotyka trybu admina.
+          const kws = ["hip-hop", "hip hop", "rap", "trap", "techno", "house", "edm", "electronic", "disco", "funk", "nu-disco", "dance"];
+          const orFilter = kws.map((k) => `genre.ilike.%${k}%`).join(",");
+          const { data: gx } = await supabase
+            .from("tracks")
+            .select("id,title,artist,duration,audio_url,cover_url,genre")
+            .or(orFilter)
+            .not("audio_url", "is", null)
+            .limit(150);
+          if (cancelled) return;
+          const pool = Array.isArray(gx) ? (gx as any[]) : [];
+          if (pool.length > 0) {
+            const shuffled = [...pool].sort(() => Math.random() - 0.5).slice(0, 120);
+            const synthetic: ScheduleTrack[] = shuffled.map((t, i) => ({
+              position: i, item_type: "track", custom_title: null, custom_duration: 0, custom_audio_url: null, lang: null,
+              track: { id: t.id, title: t.title, artist: t.artist, duration: t.duration, audio_url: t.audio_url, cover_url: t.cover_url },
+            }));
+            setRawSchedule(synthetic as any);
+            setConfig({ is_active: true, mode: "24h", start_time: null, end_time: null, started_at: new Date().toISOString(), station_name: "GrouaRadio · Hip-Hop / Techno / Disco" } as any);
+          } else {
+            if (cfg) setConfig(cfg as any);
+            setRawSchedule(rows as any);
+          }
+        }
       } catch (err) {
         console.error("[RadioLive] Fetch error:", err);
       } finally {
@@ -443,6 +482,10 @@ const RadioLive = () => {
       audio.crossOrigin = "anonymous";
       audio.preload = "auto";
       audio.preservesPitch = false;
+      // Granie w tle na telefonie (po wygaszeniu ekranu).
+      audio.setAttribute("playsinline", "");
+      (audio as any).playsInline = true;
+      audio.setAttribute("x-webkit-airplay", "allow");
       audio.volume = muted ? 0 : volume / 100;
       audioRef.current = audio;
       audio.addEventListener("loadedmetadata", () => {
@@ -482,6 +525,35 @@ const RadioLive = () => {
     if (audioRef.current) audioRef.current.volume = muted ? 0 : volume / 100;
   }, [volume, muted]);
 
+  // MediaSession — radio gra w tle po wygaszeniu ekranu + info na ekranie blokady.
+  useEffect(() => {
+    if (typeof navigator === "undefined" || !("mediaSession" in navigator)) return;
+    const ms = navigator.mediaSession;
+    try {
+      ms.setActionHandler("play", () => { audioRef.current?.play().then(() => setIsPlaying(true)).catch(() => {}); });
+      ms.setActionHandler("pause", () => { audioRef.current?.pause(); setIsPlaying(false); });
+      ms.setActionHandler("stop", () => { audioRef.current?.pause(); setIsPlaying(false); });
+    } catch { /* */ }
+  }, []);
+
+  useEffect(() => {
+    if (typeof navigator === "undefined" || !("mediaSession" in navigator)) return;
+    const ms = navigator.mediaSession;
+    const tr = schedule[currentIndex]?.track as { title?: string; artist?: string; cover_url?: string } | undefined;
+    if (tr && typeof MediaMetadata !== "undefined") {
+      try {
+        const art = tr.cover_url || undefined;
+        ms.metadata = new MediaMetadata({
+          title: tr.title || "GrouaRadio LIVE",
+          artist: tr.artist || "GrouAI Stream",
+          album: "GrouaRadio 24/7",
+          artwork: art ? [128, 256, 512].map((s) => ({ src: art, sizes: `${s}x${s}`, type: "image/jpeg" })) : [],
+        });
+      } catch { /* */ }
+    }
+    try { ms.playbackState = isPlaying ? "playing" : "paused"; } catch { /* */ }
+  }, [schedule, currentIndex, isPlaying]);
+
   useEffect(() => {
     pausePlayback();
   }, [pausePlayback]);
@@ -515,7 +587,7 @@ const RadioLive = () => {
 
   useEffect(() => {
     const channel = supabase
-      .channel("radio-live-voice", { config: { broadcast: { self: false } } })
+      .channel("radio-live-voice", { config: { broadcast: { self: false }, presence: { key: radioClientIdRef.current } } })
       .on("broadcast", { event: "chunk" }, ({ payload }) => {
         if (!payload?.audioBase64 || payload.sourceId === radioClientIdRef.current) return;
         try {
@@ -531,7 +603,12 @@ const RadioLive = () => {
           console.warn("[RadioLive] live voice chunk failed", err);
         }
       })
-      .subscribe();
+      .subscribe((status) => {
+        // Zgłoś obecność jako słuchacz — dzięki temu w studiu widać, ilu słucha.
+        if (status === "SUBSCRIBED") {
+          channel.track({ role: "listener", at: Date.now() }).catch(() => {});
+        }
+      });
 
     return () => {
       supabase.removeChannel(channel);
@@ -566,6 +643,32 @@ const RadioLive = () => {
     const d = new Date(dateStr);
     return `${d.getHours().toString().padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")}`;
   };
+
+  // Uwaga: te hooki MUSZĄ być zdefiniowane przed jakimkolwiek wczesnym return
+  // (isLoading / isOffAir), inaczej liczba hooków zmienia się między renderami
+  // i React crashuje stronę ("Rendered more hooks than during the previous render").
+  const startTalk = useCallback(async (kind: TalkKind) => {
+    if (talkActiveRef.current || talkLoading) return;
+    const lang = (typeof localStorage !== "undefined" && localStorage.getItem("grooveai-language")) || "pl";
+    setTalkLoading(true);
+    let lines: TalkLine[] = [];
+    try { lines = await generateTalkScript(kind, lang); } catch { /* */ }
+    setTalkLoading(false);
+    if (!lines.length) { toast({ title: "GrouAI Talk", description: "Nie udało się przygotować rozmowy — spróbuj ponownie." }); return; }
+    if (audioRef.current) { talkSavedVolRef.current = audioRef.current.volume; audioRef.current.volume = Math.max(audioRef.current.volume * 0.12, 0.02); }
+    talkActiveRef.current = true;
+    setTalkActive(true);
+    try {
+      await speakTalk(lines, lang, { onLine: setTalkLine, shouldStop: () => !talkActiveRef.current });
+    } finally {
+      talkActiveRef.current = false;
+      setTalkActive(false);
+      setTalkLine(null);
+      if (audioRef.current && talkSavedVolRef.current !== null) { audioRef.current.volume = talkSavedVolRef.current; talkSavedVolRef.current = null; }
+    }
+  }, [talkLoading, toast]);
+
+  const stopTalk = useCallback(() => { talkActiveRef.current = false; }, []);
 
   if (isLoading) {
     return (
@@ -869,6 +972,34 @@ const RadioLive = () => {
                   className="flex-1"
                 />
               </div>
+
+              {/* GrouAI Talk — dwie osoby rozmawiające (dla wszystkich) */}
+              {talkActive ? (
+                <div className="rounded-xl border border-primary/30 bg-primary/10 p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-primary flex items-center gap-1.5">
+                      <span className="h-2 w-2 rounded-full bg-primary animate-pulse" /> GrouAI Talk — na antenie
+                    </span>
+                    <button onClick={stopTalk} className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1">
+                      <X className="h-3.5 w-3.5" /> Stop
+                    </button>
+                  </div>
+                  {talkLine && (
+                    <p className="text-sm text-foreground/90 leading-snug">
+                      <span className="font-semibold text-primary">{talkLine.speaker === "A" ? "Marek" : "Ola"}:</span> {talkLine.text}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-2">
+                  <Button onClick={() => startTalk("news")} disabled={talkLoading} variant="outline" className="gap-1.5 h-10 border-primary/30">
+                    {talkLoading ? <span className="h-3.5 w-3.5 rounded-full border-2 border-primary/30 border-t-primary animate-spin" /> : "📰"} News (2 głosy)
+                  </Button>
+                  <Button onClick={() => startTalk("story")} disabled={talkLoading} variant="outline" className="gap-1.5 h-10 border-primary/30">
+                    {talkLoading ? <span className="h-3.5 w-3.5 rounded-full border-2 border-primary/30 border-t-primary animate-spin" /> : "📖"} Opowiadanie
+                  </Button>
+                </div>
+              )}
 
               {/* Admin: Live Mic Booth */}
               {isAdmin && (

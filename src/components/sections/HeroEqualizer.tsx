@@ -104,8 +104,8 @@ export function HeroEqualizer({ frequencies, levels, isPlaying, palette }: Props
               height: `${height}%`,
               background: `linear-gradient(to top, hsl(${hBase} ${sat}% ${(bri - 8) * darkFactor}% / ${0.5 + boosted * 0.45}), hsl(${hBase + 8} ${sat + 5}% ${(bri + 10) * darkFactor}% / ${0.25 + boosted * 0.35}))`,
               backdropFilter: "blur(8px)",
-              border: `1px solid hsl(${hBase + 5} ${sat - 5}% ${bri}% / ${0.25 + boosted * 0.35})`,
-              boxShadow: `inset 0 1px 0 hsl(0 0% 100% / ${0.25 + boosted * 0.25}), 0 0 ${6 + boosted * 12}px hsl(${hBase} ${sat}% ${bri * darkFactor}% / ${boosted * 0.3})`,
+              border: "none",
+              boxShadow: `0 0 ${6 + boosted * 12}px hsl(${hBase} ${sat}% ${bri * darkFactor}% / ${boosted * 0.3})`,
               opacity: 0.5 + boosted * 0.5, transition: "height 0.05s ease-out",
             }}>
             <div className="absolute inset-0 pointer-events-none" style={{ background: "linear-gradient(135deg, hsl(0 0% 100% / 0.35) 0%, transparent 35%)" }} />

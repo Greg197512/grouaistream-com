@@ -238,6 +238,12 @@ export function isSubscriptionError(err: unknown): boolean {
   return msg.includes("subscription_required") || msg.includes("wymaga planu");
 }
 
+/** Czy błąd oznacza wyczerpany dzienny limit wideo */
+export function isDailyLimitError(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err ?? "");
+  return msg.includes("daily_limit") || msg.includes("limit wideo");
+}
+
 /**
  * Odpal generowanie okładki w tle (Pollinations — darmowe). Okładka trafia pod
  * deterministyczny adres {taskId}-cover.jpg, więc nie trzeba czekać na wynik.
@@ -290,13 +296,14 @@ const HUB_VIDEO_URL =
  */
 export async function submitStudioVideo(
   prompt: string,
-  opts?: { quality?: "good" | "vip"; aspect?: string; singing?: boolean }
+  opts?: { quality?: "good" | "vip"; aspect?: string; singing?: boolean; image?: string }
 ): Promise<InvokeResult> {
   return hubFetch(HUB_VIDEO_URL, {
     prompt,
     quality: opts?.quality ?? "good",
     aspect: opts?.aspect ?? "16:9",
     ...(opts?.singing ? { singing: true } : {}),
+    ...(opts?.image ? { image: opts.image } : {}),
   });
 }
 
@@ -330,18 +337,23 @@ export type VideoEngine = "higgsfield" | "replicate";
  */
 export async function submitVideoSmart(
   prompt: string,
-  opts?: { quality?: "good" | "vip"; aspect?: string; duration?: number }
+  opts?: { quality?: "good" | "vip"; aspect?: string; duration?: number; image?: string; singing?: boolean }
 ): Promise<{ engine: VideoEngine; jobId: string }> {
   // 1) Higgsfield (aktywny dopiero po dodaniu higgsfield_api_key w hubie).
+  //    Higgsfield najlepiej robi postać/śpiew — gdy jest zdjęcie i klucz, tu trafi.
   try {
     const hf = await hubFetch(HUB_HIGGSFIELD_URL, {
       prompt, aspect: opts?.aspect ?? "9:16", duration: opts?.duration ?? 5,
+      ...(opts?.image ? { image: opts.image } : {}),
     });
     if (hf.data?.ok && hf.data?.job_id) return { engine: "higgsfield", jobId: String(hf.data.job_id) };
   } catch { /* spadamy na nasz silnik */ }
   // 2) Nasz silnik (Replicate) — zawsze dostępny.
-  const { data, error } = await submitStudioVideo(prompt, { quality: opts?.quality, aspect: opts?.aspect });
-  if (error) throw error;
+  const { data, error } = await submitStudioVideo(prompt, {
+    quality: opts?.quality, aspect: opts?.aspect, image: opts?.image, singing: opts?.singing,
+  });
+  // Przekaż czytelny komunikat (limit dzienny / brak środków / plan) do UI.
+  if (error) throw new Error((data as any)?.message || error.message);
   if (!data?.job_id) throw new Error(data?.message || "Nie udało się zlecić wideo");
   return { engine: "replicate", jobId: String(data.job_id) };
 }

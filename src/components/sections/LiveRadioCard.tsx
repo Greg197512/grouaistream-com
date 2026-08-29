@@ -13,8 +13,10 @@ export const LiveRadioCard = () => {
         className="relative overflow-hidden rounded-2xl"
       >
         {/* Background */}
-        <div className="absolute inset-0 groove-gradient-bg opacity-20" />
-        <div className="absolute inset-0 bg-gradient-to-r from-background via-transparent to-background" />
+        <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: "url('/bg/radio.jpg')", opacity: 0.55 }} />
+        <div className="absolute inset-0 groove-gradient-bg opacity-15" />
+        <div className="absolute inset-0 bg-gradient-to-r from-background via-background/40 to-background" />
+        <div className="absolute inset-0 bg-gradient-to-b from-background/30 via-transparent to-background/70" />
         
         {/* Animated waves */}
         <div className="absolute inset-0 overflow-hidden">
