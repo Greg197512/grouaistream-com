@@ -20,13 +20,11 @@ const SELF = `${SUPABASE_URL}/functions/v1/radio-stream`;
 const FIXED_ANCHOR = Date.parse("2020-01-01T00:00:00Z"); // gdy radio nigdy nie było włączone
 const WINDOW = 6; // ile pozycji w oknie playlisty HLS
 
-// ── Opowiadania: osobna szuflada od muzyki, grana o stałych porach ──
-// (czas polski, niezależnie od strefy serwera). Poza tym oknem radio
-// gra normalną rotację muzyki jak dotychczas.
-const STORY_SLOTS: { key: "morning_kids" | "evening_horror"; startSec: number }[] = [
-  { key: "morning_kids", startSec: 8 * 3600 },   // 08:00 — dla dzieci
-  { key: "evening_horror", startSec: 21 * 3600 }, // 21:00 — horror na wieczór
-];
+// ── Opowiadania / audycje: osobna szuflada od muzyki, grana o dowolnych,
+// stałych porach dnia (czas polski, niezależnie od strefy serwera). Każdy
+// plik ma własną listę godzin (`air_times`) — jeden plik może grać kilka
+// razy dziennie (np. 20:30 i 22:00). Poza tymi oknami radio gra normalną
+// rotację muzyki jak dotychczas.
 
 function warsawNow(d = new Date()) {
   const fmt = new Intl.DateTimeFormat("en-CA", {
@@ -41,37 +39,47 @@ function warsawNow(d = new Date()) {
   return { secondsOfDay, dayIndex };
 }
 
+function parseTimeToSeconds(t: string): number {
+  const [h, m, s] = t.split(":").map((x) => Number(x) || 0);
+  return h * 3600 + m * 60 + s;
+}
+
 interface StoryRow {
   id: string;
   slot: string;
   title: string;
   audio_url: string;
   duration_sec: number | null;
+  air_times: string[] | null;
 }
 
 async function loadStoryOverride(supabase: ReturnType<typeof createClient>) {
   const { secondsOfDay, dayIndex } = warsawNow();
-  for (const slot of STORY_SLOTS) {
-    const dur0 = 60 * 60; // zakładany max czas trwania przed sprawdzeniem realnego duration_sec
-    if (secondsOfDay < slot.startSec || secondsOfDay >= slot.startSec + dur0) continue;
 
-    const { data: stories } = await supabase
-      .from("radio_story_slots")
-      .select("id, slot, title, audio_url, duration_sec")
-      .eq("slot", slot.key)
-      .eq("is_active", true)
-      .order("id", { ascending: true });
+  const { data } = await supabase
+    .from("radio_story_slots")
+    .select("id, slot, title, audio_url, duration_sec, air_times")
+    .eq("is_active", true)
+    .order("id", { ascending: true });
 
-    const rows = (stories || []) as StoryRow[];
-    if (!rows.length) continue;
+  const rows = (data || []) as StoryRow[];
+  if (!rows.length) return null;
 
-    // Ten sam dzień = ta sama historia dla wszystkich słuchaczy (rotacja po dniach).
-    const story = rows[dayIndex % rows.length];
+  // Wszystkie unikalne godziny emisji użyte przez aktywne pliki, od najpóźniejszej.
+  const timeSeconds = new Map<string, number>();
+  for (const r of rows) for (const t of r.air_times || []) if (!timeSeconds.has(t)) timeSeconds.set(t, parseTimeToSeconds(t));
+  const candidateTimes = [...timeSeconds.entries()].sort((a, b) => b[1] - a[1]);
+
+  for (const [timeStr, startSec] of candidateTimes) {
+    if (secondsOfDay < startSec) continue;
+    // Pula plików przypisanych DOKŁADNIE do tej godziny — rotują dzień po dniu.
+    const pool = rows.filter((r) => (r.air_times || []).includes(timeStr));
+    if (!pool.length) continue;
+    const story = pool[dayIndex % pool.length];
     const dur = story.duration_sec || 600;
-    const offset = secondsOfDay - slot.startSec;
+    const offset = secondsOfDay - startSec;
     if (offset < 0 || offset >= dur) continue;
-
-    return { story, slotKey: slot.key, offset, remaining: dur - offset, dur };
+    return { story, timeStr, offset, remaining: dur - offset, dur };
   }
   return null;
 }
@@ -210,7 +218,7 @@ Deno.serve(async (req) => {
     // ── JSON: co teraz gra + adresy ─────────────────────────────
     if (f === "info" || f === "json") {
       if (storyOverride) {
-        const label = storyOverride.slotKey === "evening_horror" ? "Opowiadania na dobranoc (horror)" : "Poranne opowiadania dla dzieci";
+        const label = storyOverride.story.slot || "Audycja specjalna";
         return new Response(
           JSON.stringify({
             station_name: stationName,
