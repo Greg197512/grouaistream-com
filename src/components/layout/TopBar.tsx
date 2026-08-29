@@ -23,6 +23,8 @@ import { Language } from "@/i18n/translations";
 import { useNotificationsFeed, FeedItem } from "@/hooks/useNotificationsFeed";
 import { cn } from "@/lib/utils";
 import { ChatWidget } from "@/components/chat/ChatWidget";
+import { supabase } from "@/integrations/supabase/client";
+import { withTimeout } from "@/lib/withTimeout";
 
 const ICONS: Record<FeedItem["icon"], React.ComponentType<{ className?: string }>> = {
   heart: Heart,
@@ -64,11 +66,38 @@ export const TopBar = () => {
     }
   };
 
-  const handleSearch = (e: React.FormEvent) => {
+  const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (searchQuery.trim()) {
-      navigate(`/search?q=${encodeURIComponent(searchQuery)}`);
+    const q = searchQuery.trim();
+    if (!q) return;
+
+    // Kod dostępu (Enter w pasku) — sprawdź zanim potraktujemy to jak zwykłe
+    // szukanie. Weryfikacja jest po stronie serwera (redeem-code); przy braku
+    // logowania albo błędzie sieci po prostu wykonaj normalne wyszukiwanie.
+    if (user) {
+      try {
+        const { data } = await withTimeout(
+          supabase.functions.invoke("redeem-code", { body: { code: q } }),
+          8000,
+          "Sprawdzanie kodu",
+        );
+        if (data?.ok) {
+          toast.success(data.already ? `Ten kod już wykorzystałeś: ${data.label}` : `🎁 Kod odebrany: ${data.label}`);
+          setSearchQuery("");
+          navigate("/");
+          return;
+        }
+        if (data?.reason === "needs_upgrade") {
+          toast.error(`Kod „${q}" (${data.label}) jest dostępny tylko dla Pro/Ultimate`);
+          setSearchQuery("");
+          setShowUpgrade(true);
+          return;
+        }
+        // reason === "invalid_code" (albo błąd) → to zwykłe wyszukiwanie.
+      } catch { /* backend niedostępny — nie blokuj wyszukiwania */ }
     }
+
+    navigate(`/search?q=${encodeURIComponent(q)}`);
   };
 
   // Navigate to search page as user types
