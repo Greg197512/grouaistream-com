@@ -179,6 +179,17 @@ export const FeedReels = ({
     if (tabKey === "yt") { try { if (d > 0) playerRef.current?.nextVideo?.(); else playerRef.current?.previousVideo?.(); } catch { /* */ } setAdded(false); }
     else { setSongIndex((i) => i + d); }
   };
+
+  // Głosowe „w górę" / „w dół" (AutoVoiceListener) — te same akcje co swipe.
+  useEffect(() => {
+    const onVoiceNav = (e: Event) => {
+      const dir = (e as CustomEvent).detail?.direction;
+      if (dir === "next") go(1); else if (dir === "prev") go(-1);
+    };
+    window.addEventListener("grouai:reel-nav", onVoiceNav);
+    return () => window.removeEventListener("grouai:reel-nav", onVoiceNav);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tabKey]);
   const switchTab = (k: "yt" | "songs") => { if (k !== tabKey) setTabKey(k); };
 
   const togglePlayback = () => {

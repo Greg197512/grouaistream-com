@@ -616,7 +616,7 @@ export const AutoVoiceListener = () => {
 
     // Resume
     if (includesAny(normalized, [
-      "wznow", "kontynuuj", "graj dalej",
+      "wznow", "kontynuuj", "graj dalej", "prosto",
       "resume", "continue", "keep playing",
       "hervat", "ga door", "verder spelen",
       "продовжуй", "далі грай",
@@ -737,7 +737,7 @@ export const AutoVoiceListener = () => {
     }
 
     // Next track
-    if (includesAny(lower, ["następn", "dalej", "skip", "next", "volgende", "overslaan", "наступн", "далі"])) {
+    if (includesAny(lower, ["następn", "dalej", "skip", "next", "volgende", "overslaan", "наступн", "далі", "w prawo", "prawo"])) {
       nextTrack();
       const msgs: Record<Language, string> = { pl: "Następny utwór", en: "Next track", nl: "Volgend nummer", ua: "Наступний трек" };
       await safeSpeakAndResume(msgs[lang]);
@@ -745,9 +745,23 @@ export const AutoVoiceListener = () => {
     }
 
     // Previous track
-    if (includesAny(lower, ["poprzedni", "cofnij", "wstecz", "previous", "back", "vorige", "terug", "попередн", "назад"])) {
+    if (includesAny(lower, ["poprzedni", "cofnij", "wstecz", "previous", "back", "vorige", "terug", "попередн", "назад", "w lewo", "lewo"])) {
       prevTrack();
       const msgs: Record<Language, string> = { pl: "Poprzedni utwór", en: "Previous track", nl: "Vorig nummer", ua: "Попередній трек" };
+      await safeSpeakAndResume(msgs[lang]);
+      return;
+    }
+
+    // Rolki (Reels) — „w górę" / „w dół" naśladują gest swipe (jeśli Rolki są otwarte)
+    if (includesAny(normalized, ["w gore", "do gory", "gora"]) || includesAny(lower, ["up", "omhoog", "вгору"])) {
+      window.dispatchEvent(new CustomEvent("grouai:reel-nav", { detail: { direction: "next" } }));
+      const msgs: Record<Language, string> = { pl: "W górę", en: "Up", nl: "Omhoog", ua: "Вгору" };
+      await safeSpeakAndResume(msgs[lang]);
+      return;
+    }
+    if (includesAny(lower, ["w dół", "na dół", "dół", "dol"]) || includesAny(lower, ["down", "omlaag", "вниз"])) {
+      window.dispatchEvent(new CustomEvent("grouai:reel-nav", { detail: { direction: "prev" } }));
+      const msgs: Record<Language, string> = { pl: "W dół", en: "Down", nl: "Omlaag", ua: "Вниз" };
       await safeSpeakAndResume(msgs[lang]);
       return;
     }
@@ -1014,16 +1028,16 @@ export const AutoVoiceListener = () => {
     // Search & play - multilingual verbs
     const PLAY_VERBS = [
       // PL
-      "włącz", "puść", "zagraj", "odtwórz", "graj", "startuj", "daj", "leć", "dawaj", "odpal", "wrzuć", "kręć",
+      "włącz", "puść", "zagraj", "odtwórz", "graj", "startuj", "daj", "leć", "dawaj", "odpal", "wrzuć", "kręć", "zrób", "rób",
       // EN
-      "play", "start", "put on", "give me",
+      "play", "start", "put on", "give me", "make",
       // NL
-      "speel", "draai", "zet op", "geef",
+      "speel", "draai", "zet op", "geef", "maak",
       // UA
-      "грай", "увімкни", "постав", "давай",
+      "грай", "увімкни", "постав", "давай", "зроби",
     ];
     const hasPlayVerb = PLAY_VERBS.some(v => lower.includes(v));
-    const playMatch = lower.match(/(?:włącz|puść|zagraj|odtwórz|graj|play|start|startuj|daj|leć|dawaj|odpal|wrzuć|kręć|speel|draai|zet\s+op|geef|грай|увімкни|постав|давай|put\s+on|give\s+me)\s+(.+)/i);
+    const playMatch = lower.match(/(?:włącz|puść|zagraj|odtwórz|graj|play|start|startuj|daj|leć|dawaj|odpal|wrzuć|kręć|zrób|rób|make|speel|draai|zet\s+op|geef|maak|грай|увімкни|постав|давай|зроби|put\s+on|give\s+me)\s+(.+)/i);
     
     // Also match number+songs pattern - multilingual
     const hasCountWord = parseNumber(lower) !== undefined;
@@ -1038,7 +1052,7 @@ export const AutoVoiceListener = () => {
       const count = parseNumber(rawQuery);
       const cleanQuery = rawQuery
         .replace(/\d+/g, "")
-        .replace(/(?:włącz|puść|zagraj|odtwórz|graj|play|start|startuj|daj|leć|dawaj|odpal|wrzuć|kręć|speel|draai|zet\s+op|geef|грай|увімкни|постав|давай|put\s+on|give\s+me)\s*/gi, "")
+        .replace(/(?:włącz|puść|zagraj|odtwórz|graj|play|start|startuj|daj|leć|dawaj|odpal|wrzuć|kręć|zrób|rób|make|speel|draai|zet\s+op|geef|maak|грай|увімкни|постав|давай|зроби|put\s+on|give\s+me)\s*/gi, "")
         .replace(/(?:jeden|jedną|jedno|dwa|dwie|dwóch|dwoch|trzy|trzech|cztery|czterech|pięć|piec|pieciu|pięciu|sześć|szesc|sześciu|szesciu|siedem|siedmiu|osiem|ośmiu|osmiu|dziewięć|dziewiec|dziewięciu|dziesięć|dziesiec|dziesięciu|piętnaście|pietnascie|dwadzieścia|dwadziescia|one|two|three|four|five|six|seven|eight|nine|ten|fifteen|twenty|een|één|twee|drie|vier|vijf|zes|zeven|acht|negen|tien|twaalf|vijftien|twintig)\s*/gi, "")
         .replace(/\s*(utw\w*|piosen\w*|track\w*|song\w*|numer\w*|kawalk\w*|nummer\w*|liedje\w*|lied\w*|трек\w*|пісн\w*)\s*/gi, "")
         .replace(/\s*(mi|mnie|jakieś|jakies|jakiś|tam|no|to|me|some|wat|mij|які)\s*/gi, " ")
