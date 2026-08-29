@@ -1,6 +1,6 @@
 import { MainLayout } from "@/components/layout/MainLayout";
 import { GameStrip } from "@/components/game/GameStrip";
-import { ModernHero } from "@/components/sections/ModernHero";
+import { HeroSection } from "@/components/sections/HeroSection";
 import { AIDJSection } from "@/components/sections/AIDJSection";
 import { RecentlyPlayed } from "@/components/sections/RecentlyPlayed";
 import { PlaylistGrid } from "@/components/sections/PlaylistGrid";
@@ -28,7 +28,7 @@ const Index = () => {
   return (
     <MainLayout>
       <GameBadge />
-      <Section name="hero"><ModernHero /></Section>
+      <Section name="hero"><HeroSection /></Section>
       <Section name="win-game"><div className="px-4 max-w-6xl mx-auto"><GameStrip /></div></Section>
       <Section name="upload-cta"><UploadCTA /></Section>
       <Section name="promoted"><PromotedTracksSection /></Section>
