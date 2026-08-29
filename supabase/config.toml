@@ -63,6 +63,8 @@ project_id = "hkbraboqdsonekzxbntr"
     verify_jwt = true
   [functions.elevenlabs-music]
     verify_jwt = false
+  [functions.elevenlabs-tts]
+    verify_jwt = false
   [functions.elevenlabs-voice-clone]
     verify_jwt = true
   [functions.studio-router]
