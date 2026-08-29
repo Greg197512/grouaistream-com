@@ -60,6 +60,7 @@ import { fetchGeoList, UserGeo } from "@/lib/hubGeo";
 import { RadioStationManager } from "@/components/admin/RadioStationManager";
 import { StorageStats } from "@/components/admin/StorageStats";
 import { CoverFillPanel } from "@/components/admin/CoverFillPanel";
+import { RadioStoriesPanel } from "@/components/admin/RadioStoriesPanel";
 import { AdminEmailDashboard } from "@/components/admin/AdminEmailDashboard";
 import { AIModeratorRankings } from "@/components/admin/AIModeratorRankings";
 import { TopEarners } from "@/components/admin/TopEarners";
@@ -143,6 +144,7 @@ const ADMIN_CATS: { id: string; label: string; Icon: React.ComponentType<{ class
   ] },
   { id: "radio", label: "Rozgłośnia & treść", Icon: RadioIcon, tabs: [
     { value: "radio", label: "Rozgłośnia", Icon: RadioIcon },
+    { value: "radio-stories", label: "Opowiadania 🎙️", Icon: RadioIcon },
     { value: "marquee", label: "Pasek", Icon: Megaphone },
     { value: "ai-rankings", label: "Analiza AI", Icon: Award },
     { value: "likes", label: "Polubienia ❤️", Icon: DollarSign },
@@ -1356,6 +1358,11 @@ export default function Admin() {
               {/* Radio Station Tab */}
               <TabsContent value="radio">
                 <RadioStationManager />
+              </TabsContent>
+
+              {/* Radio Stories Tab (opowiadania: horror 21:00 / bajki 8:00) */}
+              <TabsContent value="radio-stories">
+                <RadioStoriesPanel />
               </TabsContent>
 
               {/* Storage Tab */}

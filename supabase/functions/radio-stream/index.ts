@@ -20,6 +20,62 @@ const SELF = `${SUPABASE_URL}/functions/v1/radio-stream`;
 const FIXED_ANCHOR = Date.parse("2020-01-01T00:00:00Z"); // gdy radio nigdy nie było włączone
 const WINDOW = 6; // ile pozycji w oknie playlisty HLS
 
+// ── Opowiadania: osobna szuflada od muzyki, grana o stałych porach ──
+// (czas polski, niezależnie od strefy serwera). Poza tym oknem radio
+// gra normalną rotację muzyki jak dotychczas.
+const STORY_SLOTS: { key: "morning_kids" | "evening_horror"; startSec: number }[] = [
+  { key: "morning_kids", startSec: 8 * 3600 },   // 08:00 — dla dzieci
+  { key: "evening_horror", startSec: 21 * 3600 }, // 21:00 — horror na wieczór
+];
+
+function warsawNow(d = new Date()) {
+  const fmt = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Warsaw",
+    hour12: false,
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", second: "2-digit",
+  });
+  const p = Object.fromEntries(fmt.formatToParts(d).map((x) => [x.type, x.value])) as Record<string, string>;
+  const secondsOfDay = Number(p.hour) * 3600 + Number(p.minute) * 60 + Number(p.second);
+  const dayIndex = Math.floor(Date.parse(`${p.year}-${p.month}-${p.day}T00:00:00Z`) / 86400000);
+  return { secondsOfDay, dayIndex };
+}
+
+interface StoryRow {
+  id: string;
+  slot: string;
+  title: string;
+  audio_url: string;
+  duration_sec: number | null;
+}
+
+async function loadStoryOverride(supabase: ReturnType<typeof createClient>) {
+  const { secondsOfDay, dayIndex } = warsawNow();
+  for (const slot of STORY_SLOTS) {
+    const dur0 = 60 * 60; // zakładany max czas trwania przed sprawdzeniem realnego duration_sec
+    if (secondsOfDay < slot.startSec || secondsOfDay >= slot.startSec + dur0) continue;
+
+    const { data: stories } = await supabase
+      .from("radio_story_slots")
+      .select("id, slot, title, audio_url, duration_sec")
+      .eq("slot", slot.key)
+      .eq("is_active", true)
+      .order("id", { ascending: true });
+
+    const rows = (stories || []) as StoryRow[];
+    if (!rows.length) continue;
+
+    // Ten sam dzień = ta sama historia dla wszystkich słuchaczy (rotacja po dniach).
+    const story = rows[dayIndex % rows.length];
+    const dur = story.duration_sec || 600;
+    const offset = secondsOfDay - slot.startSec;
+    if (offset < 0 || offset >= dur) continue;
+
+    return { story, slotKey: slot.key, offset, remaining: dur - offset, dur };
+  }
+  return null;
+}
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, range",
@@ -139,10 +195,12 @@ Deno.serve(async (req) => {
   const wantsM3u8 = f === "m3u8" || f === "hls" || url.pathname.endsWith(".m3u8") || (!f && !url.pathname.endsWith(".pls") && !url.pathname.endsWith(".m3u"));
 
   try {
+    const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
     const { config, playable } = await loadState();
     const stationName = config?.station_name || "GrouAI Stream Radio";
+    const storyOverride = await loadStoryOverride(supabase).catch(() => null);
 
-    if (playable.length === 0) {
+    if (playable.length === 0 && !storyOverride) {
       return new Response("Radio schedule is empty", {
         status: 503,
         headers: { ...corsHeaders, "Content-Type": "text/plain", "Retry-After": "60" },
@@ -151,6 +209,25 @@ Deno.serve(async (req) => {
 
     // ── JSON: co teraz gra + adresy ─────────────────────────────
     if (f === "info" || f === "json") {
+      if (storyOverride) {
+        const label = storyOverride.slotKey === "evening_horror" ? "Opowiadania na dobranoc (horror)" : "Poranne opowiadania dla dzieci";
+        return new Response(
+          JSON.stringify({
+            station_name: stationName,
+            is_active: config?.is_active ?? true,
+            listeners_synced: true,
+            now_playing: { title: storyOverride.story.title, artist: label, cover_url: null, item_type: "story" },
+            up_next: { title: "Powrót do muzyki", artist: stationName },
+            stream: {
+              hls: `${SELF}?f=m3u8`,
+              current_file: `${SELF}?f=now`,
+              pls: `${SELF}?f=pls`,
+              m3u: `${SELF}?f=m3u`,
+            },
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json", "Cache-Control": "no-cache" } },
+        );
+      }
       const { index, N } = position(playable, config?.started_at ?? null);
       const now = playable[index];
       const next = playable[(index + 1) % N];
@@ -174,6 +251,12 @@ Deno.serve(async (req) => {
 
     // ── 302 do bieżącego pliku (proste odtwarzacze) ─────────────
     if (f === "now" || f === "current" || f === "mp3") {
+      if (storyOverride) {
+        return new Response(null, {
+          status: 302,
+          headers: { ...corsHeaders, Location: storyOverride.story.audio_url, "Cache-Control": "no-cache" },
+        });
+      }
       const { index } = position(playable, config?.started_at ?? null);
       const target = audioUrl(playable[index])!;
       return new Response(null, {
@@ -198,6 +281,26 @@ Deno.serve(async (req) => {
 
     // ── HLS (domyślnie) ─────────────────────────────────────────
     if (wantsM3u8) {
+      if (storyOverride) {
+        const seq = storyOverride.dur > 0 ? Math.floor(Date.now() / (storyOverride.dur * 1000)) : 0;
+        const label = storyOverride.story.title.replace(/[\r\n",]/g, " ").slice(0, 120);
+        const body = [
+          "#EXTM3U",
+          "#EXT-X-VERSION:3",
+          `#EXT-X-TARGETDURATION:${Math.ceil(storyOverride.dur) + 1}`,
+          `#EXT-X-MEDIA-SEQUENCE:${seq}`,
+          "#EXT-X-DISCONTINUITY",
+          `#EXTINF:${storyOverride.dur.toFixed(3)},${label}`,
+          storyOverride.story.audio_url,
+        ].join("\n") + "\n";
+        return new Response(body, {
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/vnd.apple.mpegurl",
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+          },
+        });
+      }
       const body = buildM3U8(playable, config?.started_at ?? null);
       return new Response(body, {
         headers: {
