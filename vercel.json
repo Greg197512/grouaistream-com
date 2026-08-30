@@ -1,6 +1,7 @@
 {
   "rewrites": [
     { "source": "/prezent/:id", "destination": "https://bmwtydwpevzhbdplilbr.supabase.co/functions/v1/prezent?t=:id" },
+    { "source": "/sitemap.xml", "destination": "https://bvstvawnigyczvofzhps.supabase.co/functions/v1/seo-sitemap-generate" },
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ],
   "headers": [
