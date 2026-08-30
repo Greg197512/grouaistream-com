@@ -11,7 +11,7 @@ import { SITE_KNOWLEDGE } from "@/lib/siteKnowledge";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { useDJMode } from "@/hooks/useDJMode";
 import { useAuth } from "@/contexts/AuthContext";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import aiAssistantAvatar from "@/assets/ai-assistant-avatar.jpg";
 import { generateMusic, type GeneratedTrack } from "@/utils/musicGenerator";
@@ -126,6 +126,7 @@ export const AIAssistant = () => {
   const { startDJSession, isDJActive, parseDJCommand } = useDJMode();
   const { user } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const dragControls = useDragControls();
   const hasGreeted = useRef(false);
 
@@ -302,6 +303,47 @@ export const AIAssistant = () => {
     }
     return [];
   };
+
+  // Szuka utworów po tytule/artyście/gatunku (fallback z voice-intent, gdy hub
+  // tylko rozmawia i nie ma dostępu do bazy utworów) i od razu je odtwarza.
+  const searchAndPlayForIntent = useCallback(async (query: string, count: number): Promise<PlaylistTrackInfo[]> => {
+    const q = query.trim();
+    if (!q) return [];
+    let tracks: any[] | null = null;
+
+    if (/^(mix|coś|cos|muzykę|muzyke|muzyka|czegoś|czegos)$/i.test(q)) {
+      const { data } = await supabase.from("tracks").select("*").not("audio_url", "is", null).limit(100);
+      if (data && data.length > 0) tracks = [...data].sort(() => Math.random() - 0.5).slice(0, count);
+    } else {
+      const { data: genreMatches } = await supabase
+        .from("tracks").select("*").ilike("genre", `%${q}%`).not("audio_url", "is", null).limit(count);
+      if (genreMatches && genreMatches.length > 0) tracks = genreMatches;
+    }
+
+    if (!tracks || tracks.length === 0) {
+      const safeQuery = q.replace(/[,()]/g, "").trim();
+      const [{ data: titleMatches }, { data: artistMatches }] = await Promise.all([
+        supabase.from("tracks").select("*").ilike("title", `%${safeQuery}%`).not("audio_url", "is", null).limit(count),
+        supabase.from("tracks").select("*").ilike("artist", `%${safeQuery}%`).not("audio_url", "is", null).limit(count),
+      ]);
+      const seen = new Set<string>();
+      tracks = [...(titleMatches || []), ...(artistMatches || [])]
+        .filter(t => { if (seen.has(t.id)) return false; seen.add(t.id); return true; })
+        .slice(0, count);
+    }
+
+    if (!tracks || tracks.length === 0) return [];
+
+    const orderedTracks = tracks.map(t => ({
+      id: t.id, title: t.title, artist: t.artist,
+      album: t.album || undefined, duration: t.duration,
+      cover_url: t.cover_url || undefined, audio_url: t.audio_url || undefined,
+      video_url: t.video_url || undefined, genre: t.genre || undefined,
+      mood: t.mood || undefined,
+    }));
+    playPlaylist(orderedTracks);
+    return orderedTracks.map(t => ({ id: t.id, title: t.title, artist: t.artist, genre: t.genre as string | undefined }));
+  }, [playPlaylist]);
 
   // Ref to store playlist tracks to attach to the next assistant message
   const pendingPlaylistRef = useRef<{ tracks: PlaylistTrackInfo[]; isDJ: boolean } | null>(null);
@@ -742,15 +784,66 @@ export const AIAssistant = () => {
         if (!reply) {
           reply = await freeChat(userMessage, messages.slice(-8).map(m => ({ role: m.role, content: m.content })), getSpeechLang()) || "";
         }
+
+        // Fallbacki (hub/freeChat) tylko rozmawiają — nie wyszukują ani nie odtwarzają
+        // utworów. Dogrywamy to przez istniejący klasyfikator intencji huba (voice-intent),
+        // tak samo jak w asystencie głosowym. Działa tylko dla zalogowanych.
+        let intentTracks: PlaylistTrackInfo[] = [];
+        try {
+          const { data: sess } = await supabase.auth.getSession();
+          const tok = sess?.session?.access_token;
+          if (tok) {
+            const ir = await fetch("https://bmwtydwpevzhbdplilbr.supabase.co/functions/v1/voice-intent", {
+              method: "POST",
+              headers: { "Content-Type": "application/json", Authorization: `Bearer ${tok}` },
+              body: JSON.stringify({ command: userMessage, lang: userContext.language }),
+            });
+            const intent = await ir.json().catch(() => null);
+            if (intent?.ok && intent.action && intent.action !== "answer") {
+              const p = intent.params || {};
+              if (intent.action === "search_play" && p.query) {
+                intentTracks = await searchAndPlayForIntent(String(p.query), Number(p.count) || 10);
+              } else if (intent.action === "play_favorites" && user) {
+                const { data: liked } = await supabase
+                  .from("liked_songs").select("track_id").eq("user_id", user.id)
+                  .order("liked_at", { ascending: false }).limit(Number(p.count) || 5);
+                const ids = (liked || []).map((l: any) => l.track_id);
+                if (ids.length > 0) intentTracks = await handleAutoPlayTracks(ids);
+              } else if (intent.action === "play_recent") {
+                const { data: recent } = await supabase
+                  .from("tracks").select("id").not("audio_url", "is", null)
+                  .order("created_at", { ascending: false }).limit(Number(p.count) || 10);
+                const ids = (recent || []).map((t: any) => t.id);
+                if (ids.length > 0) intentTracks = await handleAutoPlayTracks(ids);
+              } else if (intent.action === "navigate" && p.page) {
+                const routeMap: Record<string, string> = {
+                  home: "/", search: "/search", library: "/library", liked: "/liked",
+                  server: "/server", movies: "/movies", radio: "/radio-live",
+                  settings: "/settings", mood: "/mood-history", playlists: "/playlist-manager",
+                };
+                const route = routeMap[String(p.page).toLowerCase()];
+                if (route) navigate(route);
+              }
+            }
+          }
+        } catch (e) {
+          console.warn("[AIAssistant] voice-intent fallback error:", e);
+        }
+
         if (reply) {
           assistantContent = reply;
           setMessages(prev => {
             const last = prev[prev.length - 1];
+            const msgData: Message = {
+              role: "assistant",
+              content: reply,
+              playlistTracks: intentTracks.length > 0 ? intentTracks : undefined,
+            };
             // Podmień błędną wiadomość Vercela realną odpowiedzią huba (nie dokładaj drugiej dymki).
             if (looksLikeVercelError && last?.role === "assistant") {
-              return prev.map((m, i) => (i === prev.length - 1 ? { ...m, content: reply } : m));
+              return prev.map((m, i) => (i === prev.length - 1 ? { ...m, ...msgData } : m));
             }
-            return [...prev, { role: "assistant", content: reply }];
+            return [...prev, msgData];
           });
         }
       }

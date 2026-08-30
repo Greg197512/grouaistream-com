@@ -2,6 +2,14 @@
   "rewrites": [
     { "source": "/prezent/:id", "destination": "https://bmwtydwpevzhbdplilbr.supabase.co/functions/v1/prezent?t=:id" },
     { "source": "/sitemap.xml", "destination": "https://bvstvawnigyczvofzhps.supabase.co/functions/v1/seo-sitemap-generate" },
+    {
+      "source": "/",
+      "has": [
+        { "type": "query", "key": "play", "value": "(?<id>.*)" },
+        { "type": "header", "key": "user-agent", "value": ".*(WhatsApp|facebookexternalhit|Twitterbot|TelegramBot|LinkedInBot|Slackbot|Discordbot|Pinterest|redditbot|SkypeUriPreview).*" }
+      ],
+      "destination": "https://bvstvawnigyczvofzhps.supabase.co/functions/v1/og-proxy?id=:id"
+    },
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ],
   "headers": [

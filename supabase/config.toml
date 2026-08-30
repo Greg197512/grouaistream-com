@@ -1,6 +1,8 @@
 project_id = "hkbraboqdsonekzxbntr"
 
 [functions]
+  [functions.og-proxy]
+    verify_jwt = false
   [functions.a-r-scout]
     verify_jwt = false
   [functions.ad-campaign-submit]
@@ -47,10 +49,6 @@ project_id = "hkbraboqdsonekzxbntr"
     verify_jwt = false
   [functions.health-monitor]
     verify_jwt = false
-  [functions.aurora-ab-evaluator]
-    verify_jwt = false
-  [functions.aurora-content-refresher]
-    verify_jwt = false
   [functions.break-even-alert]
     verify_jwt = false
   [functions.analyze-track-features]
@@ -62,6 +60,8 @@ project_id = "hkbraboqdsonekzxbntr"
   [functions.empire-aurora-chat]
     verify_jwt = true
   [functions.elevenlabs-music]
+    verify_jwt = false
+  [functions.elevenlabs-tts]
     verify_jwt = false
   [functions.elevenlabs-voice-clone]
     verify_jwt = true
