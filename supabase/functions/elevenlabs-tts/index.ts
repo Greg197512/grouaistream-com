@@ -45,9 +45,11 @@ serve(async (req) => {
       });
     }
 
-    // DJ mode: trochę szybciej i wyżej — energia imprezowego prowadzącego.
-    const rate = mode === "dj" ? "+18%" : "+0%";
-    const pitch = mode === "dj" ? "+4Hz" : "-2Hz";
+    // DJ mode: gruby, wyraźny głos (niższy pitch) + żwawe tempo — energia
+    // imprezowego prowadzącego bez "piszczenia". (Echo/pogłos usunięty po
+    // stronie klienta w src/utils/tts.ts — tu tylko barwa i tempo głosu.)
+    const rate = mode === "dj" ? "+15%" : "+0%";
+    const pitch = mode === "dj" ? "-15Hz" : "-2Hz";
 
     const { audio, engine } = await synthesizeTTS(text, {
       voice: AZURE_VOICE[langKey] || AZURE_VOICE.pl,

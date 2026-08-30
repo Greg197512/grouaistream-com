@@ -1325,6 +1325,18 @@ export const AutoVoiceListener = () => {
   // Keep ref in sync so safeSpeakAndResume can restart listening
   useEffect(() => { startListeningRef.current = startListening; }, [startListening]);
 
+  // Auto-wznowienie nasłuchu przy wejściu na stronę: jeśli mikrofon był włączony
+  // w poprzedniej sesji (zapamiętane w localStorage), włącz go od razu — bez
+  // czekania aż użytkownik ręcznie kliknie przycisk mikrofonu.
+  const autoResumedListeningRef = useRef(false);
+  useEffect(() => {
+    if (autoResumedListeningRef.current) return;
+    if (!user || !autoListenEnabled) return;
+    if (recognitionRef.current) return;
+    autoResumedListeningRef.current = true;
+    startListening();
+  }, [user, autoListenEnabled, startListening]);
+
   // Restart recognition when app language changes so it listens in the correct locale
   useEffect(() => {
     const onLangChange = () => {
@@ -1357,6 +1369,7 @@ export const AutoVoiceListener = () => {
   const handleNameSubmit = useCallback(async (name: string) => {
     setShowNamingModal(false);
     await saveAssistantName(name);
+    autoResumedListeningRef.current = true; // ten start obsługujemy tu ręcznie z powitaniem
     setAutoListenEnabled(true);
     localStorage.setItem("auto-voice-listen", "true");
     toast.success(`🎤 ${name} aktywowany!`, { duration: 5000 });
@@ -1370,6 +1383,7 @@ export const AutoVoiceListener = () => {
 
   const toggleAutoListen = useCallback(async () => {
     const next = !autoListenEnabled;
+    autoResumedListeningRef.current = true; // ten start (jeśli next) obsługujemy tu ręcznie z powitaniem
     setAutoListenEnabled(next);
     localStorage.setItem("auto-voice-listen", String(next));
     if (next) {

@@ -23,10 +23,12 @@ function buildSystem(ctx: any): string {
   const parts: string[] = [];
   parts.push(
     "Jesteś asystentem tekstowym serwisu muzycznego GrouAI Stream (GrouaRock). " +
-    "Odpowiadasz zwięźle, konkretnie i w języku użytkownika. Znasz stronę i pomagasz " +
-    "w muzyce, radiu, epokach (Groua Era), studiu AI i nawigacji. Możesz działać jak DJ: " +
-    "proponować świeże, najlepsze zestawy utworów (z katalogu GrouAI oraz z YouTube) i " +
-    "opowiadać o wykonawcach i utworach. Bądź pomocny i proaktywny."
+    "Odpowiadasz w języku użytkownika, wyczerpująco i dokładnie — nie skracaj bez potrzeby. " +
+    "Nie bój się dłuższych, wielozdaniowych odpowiedzi gdy temat tego wymaga: dodawaj kontekst, " +
+    "ciekawostki, porównania, konkretne wskazówki. Znasz stronę i pomagasz w muzyce, radiu, " +
+    "epokach (Groua Era), studiu AI i nawigacji. Możesz działać jak DJ: proponować świeże, " +
+    "najlepsze zestawy utworów (z katalogu GrouAI oraz z YouTube) i opowiadać o wykonawcach " +
+    "i utworach. Bądź pomocny, proaktywny i rozmawiaj płynnie na dowolny temat, nie tylko o muzyce."
   );
   if (ctx?.userName) parts.push(`Zalogowany użytkownik: ${ctx.userName}. Zwracaj się po imieniu, pamiętaj jego gust.`);
   if (ctx?.currentPath) parts.push(`Aktualna podstrona: ${ctx.currentPath}.`);
@@ -73,7 +75,7 @@ export default async function handler(req: Request): Promise<Response> {
         "Content-Type": "application/json",
         ...(usingOpenRouter ? { "HTTP-Referer": "https://grouaistream.com", "X-Title": "GrouAI Stream" } : {}),
       },
-      body: JSON.stringify({ model, stream: true, max_tokens: 1200, temperature: 0.8, messages }),
+      body: JSON.stringify({ model, stream: true, max_tokens: 2048, temperature: 0.8, messages }),
     });
     if (!r.ok || !r.body) {
       const t = await r.text().catch(() => "");

@@ -94,9 +94,10 @@ export type TTSMode = "assistant" | "dj";
 
 /**
  * Apply Web Audio API processing to DJ audio for club sound:
- * - Volume boost (gain 2.5x)
- * - Delay echo effect (doubling voice, 80ms + 160ms delays)
- * - Slight compression for punchy sound
+ * - Volume boost (gain, loud and booming)
+ * - EQ (presence + bass boost) for a "gruby", cutting-through tone
+ * - Compression for punchy sound
+ * (Bez echa/delay — czysty, wyraźny głos, pełen temperamentu przez głośność/EQ/kompresję.)
  */
 const playDJAudioWithEffects = (audio: HTMLAudioElement): Promise<void> => {
   return new Promise<void>((resolve) => {
@@ -128,24 +129,6 @@ const playDJAudioWithEffects = (audio: HTMLAudioElement): Promise<void> => {
       compressor.attack.value = 0.003;
       compressor.release.value = 0.15;
 
-      // === DELAY 1: Short echo (voice doubling effect) ===
-      const delay1 = ctx.createDelay(1.0);
-      delay1.delayTime.value = 0.07; // 70ms - tight doubling
-      const delay1Gain = ctx.createGain();
-      delay1Gain.gain.value = 0.45; // Strong echo
-
-      // === DELAY 2: Longer echo (club reverb feel) ===
-      const delay2 = ctx.createDelay(1.0);
-      delay2.delayTime.value = 0.15; // 150ms - room echo
-      const delay2Gain = ctx.createGain();
-      delay2Gain.gain.value = 0.25; // Softer second echo
-
-      // === DELAY 3: Tail echo (fading out) ===
-      const delay3 = ctx.createDelay(1.0);
-      delay3.delayTime.value = 0.28; // 280ms - fading tail
-      const delay3Gain = ctx.createGain();
-      delay3Gain.gain.value = 0.12;
-
       // === HIGH SHELF: Boost presence for "springy" sound ===
       const highShelf = ctx.createBiquadFilter();
       highShelf.type = "highshelf";
@@ -162,28 +145,13 @@ const playDJAudioWithEffects = (audio: HTMLAudioElement): Promise<void> => {
       const masterGain = ctx.createGain();
       masterGain.gain.value = 1.0;
 
-      // Wire up the chain:
-      // Source → Gain → EQ → Compressor → Master (dry path)
+      // Wire up the chain — czysto, bez echa:
+      // Source → Gain → EQ → Compressor → Master → Speakers
       source.connect(gainNode);
       gainNode.connect(highShelf);
       highShelf.connect(lowShelf);
       lowShelf.connect(compressor);
       compressor.connect(masterGain);
-
-      // Echo paths (parallel from compressor output)
-      compressor.connect(delay1);
-      delay1.connect(delay1Gain);
-      delay1Gain.connect(masterGain);
-
-      compressor.connect(delay2);
-      delay2.connect(delay2Gain);
-      delay2Gain.connect(masterGain);
-
-      compressor.connect(delay3);
-      delay3.connect(delay3Gain);
-      delay3Gain.connect(masterGain);
-
-      // Master → Speakers
       masterGain.connect(ctx.destination);
 
       // Cleanup on end

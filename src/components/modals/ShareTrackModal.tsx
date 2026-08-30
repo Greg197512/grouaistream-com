@@ -1,7 +1,7 @@
 import { useRef, useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  X, Share2, Download, Copy, Check, Link2, MessageCircle
+  X, Share2, Download, Copy, Check, Link2, MessageCircle, Radar
 } from "lucide-react";
 import { toast } from "sonner";
 import type { Track } from "@/contexts/PlayerContext";
@@ -199,6 +199,23 @@ export const ShareTrackModal = ({ isOpen, onClose, track }: ShareTrackModalProps
     return () => { cancelled = true; };
   }, [isOpen, track?.id]);
 
+  // --- Podaj osobie obok: natychmiastowe natywne okno udostępniania ---
+  // (AirDrop na iOS, Nearby Share na Androidzie) — bez czekania na wygenerowanie karty.
+  const handleNearbyShare = useCallback(async () => {
+    if (!track) return;
+    const text = `🎵 Słucham "${track.title}" – ${track.artist} na GrouAI Stream!`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: track.title, text, url: shareUrl });
+      } else {
+        await navigator.clipboard.writeText(`${text}\n${shareUrl}`);
+        toast.success("Skopiowano do schowka!");
+      }
+    } catch {
+      // anulowane przez użytkownika
+    }
+  }, [track, shareUrl]);
+
   // sprzątaj blob URL
   useEffect(() => {
     if (cardUrl && prevBlobUrl.current && prevBlobUrl.current !== cardUrl) {
@@ -344,6 +361,16 @@ export const ShareTrackModal = ({ isOpen, onClose, track }: ShareTrackModalProps
 
             {/* przyciski */}
             <div className="px-5 pb-6 space-y-3">
+
+              {/* najszybszy: natywne okno systemowe, AirDrop/Nearby Share — bez czekania na kartę */}
+              <button
+                onClick={handleNearbyShare}
+                className="w-full flex items-center gap-3 rounded-xl bg-accent/20 border border-accent/30 px-4 py-3 hover:bg-accent/30 transition-colors"
+              >
+                <Radar className="h-5 w-5 flex-shrink-0 text-accent" />
+                <span className="text-sm font-medium text-white">Podaj osobie obok</span>
+                <span className="ml-auto text-xs text-white/40">AirDrop / Nearby Share</span>
+              </button>
 
               {/* główny: Web Share API z plikiem */}
               <button

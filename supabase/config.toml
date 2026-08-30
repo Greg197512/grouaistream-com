@@ -1,6 +1,8 @@
 project_id = "hkbraboqdsonekzxbntr"
 
 [functions]
+  [functions.og-proxy]
+    verify_jwt = false
   [functions.a-r-scout]
     verify_jwt = false
   [functions.ad-campaign-submit]
@@ -46,10 +48,6 @@ project_id = "hkbraboqdsonekzxbntr"
   [functions.seo-orchestrator]
     verify_jwt = false
   [functions.health-monitor]
-    verify_jwt = false
-  [functions.aurora-ab-evaluator]
-    verify_jwt = false
-  [functions.aurora-content-refresher]
     verify_jwt = false
   [functions.break-even-alert]
     verify_jwt = false
