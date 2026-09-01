@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Radio, Trash2, Loader2, Upload, Plus, X, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { uploadToR2 } from "@/lib/r2Upload";
 import { toast } from "sonner";
 
@@ -19,6 +20,9 @@ type StoryRow = {
   is_active: boolean;
   created_at: string;
 };
+
+// Ta tabela jest wdrażana niezależnie od automatycznie generowanego pliku typów.
+const radioDb = supabase as unknown as SupabaseClient;
 
 const QUICK_PRESETS = [
   { label: "Horror 21:00", time: "21:00", slot: "Horror na wieczór" },
@@ -58,7 +62,7 @@ export function RadioStoriesPanel() {
 
   const load = async () => {
     setLoading(true);
-    const { data, error } = await supabase
+    const { data, error } = await radioDb
       .from("radio_story_slots")
       .select("*")
       .order("created_at", { ascending: true });
@@ -86,7 +90,7 @@ export function RadioStoriesPanel() {
     try {
       const { publicUrl } = await uploadToR2({ file, folder: "radio-stories", onProgress: setProgress });
       const duration = await getAudioDuration(publicUrl);
-      const { error } = await supabase.from("radio_story_slots").insert({
+      const { error } = await radioDb.from("radio_story_slots").insert({
         slot: slotLabel.trim() || "Audycja specjalna",
         title: title.trim(),
         audio_url: publicUrl,
@@ -110,14 +114,14 @@ export function RadioStoriesPanel() {
   };
 
   const toggleActive = async (row: StoryRow) => {
-    const { error } = await supabase.from("radio_story_slots").update({ is_active: !row.is_active }).eq("id", row.id);
+    const { error } = await radioDb.from("radio_story_slots").update({ is_active: !row.is_active }).eq("id", row.id);
     if (error) { toast.error(error.message); return; }
     setRows((rs) => rs.map((r) => (r.id === row.id ? { ...r, is_active: !r.is_active } : r)));
   };
 
   const remove = async (row: StoryRow) => {
     if (!confirm(`Usunąć „${row.title}”?`)) return;
-    const { error } = await supabase.from("radio_story_slots").delete().eq("id", row.id);
+    const { error } = await radioDb.from("radio_story_slots").delete().eq("id", row.id);
     if (error) { toast.error(error.message); return; }
     setRows((rs) => rs.filter((r) => r.id !== row.id));
   };

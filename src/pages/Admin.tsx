@@ -112,6 +112,8 @@ interface UserData {
   display_name: string | null;
 }
 
+const adminRoleDb = supabase as unknown as import("@supabase/supabase-js").SupabaseClient;
+
 interface TrackData {
   id: string;
   title: string;
@@ -214,18 +216,18 @@ export default function Admin() {
   // nie plan Paddle). Rola 'vip' w user_roles.
   const [vipUserIds, setVipUserIds] = useState<Set<string>>(new Set());
   const fetchVipUsers = async () => {
-    const { data, error } = await supabase.from("user_roles").select("user_id").eq("role", "vip");
+    const { data, error } = await adminRoleDb.from("user_roles").select("user_id").eq("role", "vip");
     if (error) { console.error("fetchVipUsers error:", error); return; }
     setVipUserIds(new Set((data || []).map((r: any) => r.user_id)));
   };
   const toggleVip = async (userId: string, currentlyVip: boolean) => {
     if (currentlyVip) {
-      const { error } = await supabase.from("user_roles").delete().eq("user_id", userId).eq("role", "vip");
+      const { error } = await adminRoleDb.from("user_roles").delete().eq("user_id", userId).eq("role", "vip");
       if (error) { toast.error("Nie udało się cofnąć VIP: " + error.message); return; }
       setVipUserIds((s) => { const n = new Set(s); n.delete(userId); return n; });
       toast.success("VIP cofnięty");
     } else {
-      const { error } = await supabase.from("user_roles").insert({ user_id: userId, role: "vip" });
+      const { error } = await adminRoleDb.from("user_roles").insert({ user_id: userId, role: "vip" });
       if (error) { toast.error("Nie udało się nadać VIP: " + error.message); return; }
       setVipUserIds((s) => new Set(s).add(userId));
       toast.success("🌟 Nadano VIP — może odbierać kody dostępu");

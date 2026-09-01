@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, ReactNode, useCallback 
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { restoreSessionSafely } from "@/lib/authSession";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 export type SubscriptionPlan = "free" | "pro" | "ultimate";
 
@@ -62,6 +63,7 @@ export function getStudioPromoStatus(): { state: PromoState; daysLeft: number; e
 }
 
 const SubscriptionContext = createContext<SubscriptionContextType | undefined>(undefined);
+const roleDb = supabase as unknown as SupabaseClient;
 
 export const useSubscription = () => {
   const context = useContext(SubscriptionContext);
@@ -106,7 +108,7 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
       ] = await Promise.all([
         supabase.rpc("has_role", { _user_id: user.id, _role: "admin" }),
         // VIP: nadawany ręcznie przez admina (Admin → Użytkownicy), niezależny od planu Paddle.
-        supabase.rpc("has_role", { _user_id: user.id, _role: "vip" }),
+        roleDb.rpc("has_role", { _user_id: user.id, _role: "vip" }),
         // Source of truth: Paddle-synced subscriptions table (filtered by env).
         // Multiple rows per (user, env) are allowed (re-subscribe, plan change) — pick the newest
         // one that still confers access. Access rules:
