@@ -103,23 +103,39 @@ export const IntroSplash = () => {
         (phase === "dissolve" ? "opacity-0 pointer-events-none" : "opacity-100")
       }
     >
-      {/* 1–2) Wideo + wir */}
+      {/* 1–2) Wideo + wir — pełny ekran „jak rolka", ale CAŁE wideo widoczne */}
       {(phase === "video" || phase === "vortex") && (
         <div className="absolute inset-0 overflow-hidden">
-          <video
-            src={VIDEO}
-            autoPlay
-            muted
-            playsInline
-            onTimeUpdate={onTime}
-            onEnded={onEnded}
-            onError={onErr}
-            className="absolute inset-0 w-full h-full object-contain"
+          <div
+            className="absolute inset-0"
             style={{
               transformOrigin: "50% 50%",
               animation: phase === "vortex" ? "introVortex 1s cubic-bezier(.7,0,.84,0) forwards" : undefined,
             }}
-          />
+          >
+            {/* Rozmyte tło z tego samego wideo — wypełnia ekran (efekt rolki) */}
+            <video
+              aria-hidden
+              src={VIDEO}
+              autoPlay
+              muted
+              playsInline
+              loop
+              className="absolute inset-0 w-full h-full object-cover"
+              style={{ filter: "blur(40px) brightness(0.45)", transform: "scale(1.25)" }}
+            />
+            {/* Właściwe wideo — całe widoczne (contain), wyśrodkowane */}
+            <video
+              src={VIDEO}
+              autoPlay
+              muted
+              playsInline
+              onTimeUpdate={onTime}
+              onEnded={onEnded}
+              onError={onErr}
+              className="absolute inset-0 w-full h-full object-contain"
+            />
+          </div>
           {phase === "vortex" && (
             <div
               className="absolute inset-0 pointer-events-none"
