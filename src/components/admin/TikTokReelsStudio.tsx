@@ -119,7 +119,7 @@ export function TikTokReelsStudio() {
         await supabase.from("tiktok_reels").update({ video_url: videoUrl, status: "rendered" }).eq("id", reel.id);
         toast.success("🎬 Video rendered & uploaded — downloading…");
         const a = document.createElement("a");
-        a.href = pub.publicUrl;
+        a.href = videoUrl;
         a.download = `grouaistream-${reel.feature_name.toLowerCase().replace(/\s+/g, "-")}.webm`;
         document.body.appendChild(a);
         a.click();
