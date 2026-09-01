@@ -26,7 +26,7 @@ export const IntroSplash = () => {
 
   const [show, setShow] = useState(() => {
     try {
-      return sessionStorage.getItem("grouai-intro-v3") !== "1";
+      return sessionStorage.getItem("grouai-intro-v4") !== "1";
     } catch {
       return true;
     }
@@ -56,7 +56,7 @@ export const IntroSplash = () => {
   );
 
   useEffect(() => {
-    if (show) { try { sessionStorage.setItem("grouai-intro-v3", "1"); } catch { /* */ } }
+    if (show) { try { sessionStorage.setItem("grouai-intro-v4", "1"); } catch { /* */ } }
     return () => { timers.current.forEach(clearTimeout); };
   }, [show]);
 
@@ -87,9 +87,9 @@ export const IntroSplash = () => {
     if (phase !== "assemble" || logoStarted.current || reduce) return;
     logoStarted.current = true;
     push(() => setPhase("hold"), 1500);   // logo złożone → chwila oddechu
-    push(() => setPhase("land"), 2600);   // ~1.1 s „czekania", potem zjazd
-    push(() => setGlint(true), 3450);     // błysk przy dojściu na miejsce
-    push(() => setShow(false), 4000);     // koniec — odsłona strony
+    push(() => setPhase("land"), 2700);   // „czekanie", potem powolny zjazd
+    push(() => setGlint(true), 4550);     // błysk przy dojściu na miejsce
+    push(() => setShow(false), 5000);     // koniec — odsłona strony
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);
 
@@ -108,8 +108,9 @@ export const IntroSplash = () => {
     let target: Box | null = null;
     const imgs = Array.from(document.querySelectorAll('img[src*="logo-grouaistream"]')) as HTMLImageElement[];
     const vis = imgs.find((i) => { const r = i.getBoundingClientRect(); return r.width > 8 && r.height > 8; });
-    if (vis) { const r = vis.getBoundingClientRect(); target = { top: r.top, left: r.left, w: Math.max(r.width, r.height) }; }
-    if (!target) { const w = Math.min(120, 0.3 * window.innerWidth); target = { top: 16, left: 16, w }; }
+    // Ląduje trochę MNIEJSZE niż logo na stronie (delikatniejszy akcent).
+    if (vis) { const r = vis.getBoundingClientRect(); const w = Math.max(r.width, r.height) * 0.72; target = { top: r.top + (r.height - w) / 2, left: r.left + (r.width - w) / 2, w }; }
+    if (!target) { const w = Math.min(90, 0.24 * window.innerWidth); target = { top: 18, left: 18, w }; }
     const raf = requestAnimationFrame(() => setBox(target as Box));
     return () => cancelAnimationFrame(raf);
   }, [phase]);
@@ -192,7 +193,7 @@ export const IntroSplash = () => {
           style={{
             top: box.top, left: box.left, width: box.w, height: box.w,
             transition: landing
-              ? "top 1.15s cubic-bezier(.65,0,.12,1), left 1.15s cubic-bezier(.65,0,.12,1), width 1.15s cubic-bezier(.65,0,.12,1), height 1.15s cubic-bezier(.65,0,.12,1)"
+              ? "top 1.9s cubic-bezier(.6,0,.1,1), left 1.9s cubic-bezier(.6,0,.1,1), width 1.9s cubic-bezier(.6,0,.1,1), height 1.9s cubic-bezier(.6,0,.1,1)"
               : "none",
             animation: phase === "hold" ? "introGlow 1.2s ease-in-out" : undefined,
           }}
