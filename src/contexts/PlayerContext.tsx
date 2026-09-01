@@ -6,6 +6,7 @@ import { useSkipAdaptation } from "@/hooks/useSkipAdaptation";
 import { useStreamCounter } from "@/hooks/useStreamCounter";
 import { isLikelyAudioUrl, isNativeVideoUrl } from "@/lib/mediaPlayback";
 import { getOfflineObjectUrl } from "@/lib/offlineLibrary";
+import { LiveDJEngine, type DJEngineTrack } from "@/utils/liveDJEngine";
 
 export interface Track {
   id: string;
@@ -54,6 +55,19 @@ interface PlayerContextType {
   audioElement: HTMLAudioElement | null;
 }
 
+/**
+ * Gdy aktywne (silnik żywego miksowania gra wieloutworową kolejkę — patrz
+ * playPlaylist) — audioRef jest ignorowany, a play/pause/seek/volume/next
+ * są delegowane do tych handlerów zamiast do zwykłego elementu <audio>.
+ */
+interface ExternalPlaybackHandlers {
+  onPause: () => void;
+  onResume: () => void;
+  onSeek: (percent: number) => void;
+  onSkip: () => void;
+  onVolumeChange: (volume: number, muted: boolean) => void;
+}
+
 const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
 
 export const usePlayer = () => {
@@ -75,6 +89,19 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   const playRequestRef = useRef(0);
   // Smart Shuffle — ID-ki utworów już wylosowanych w bieżącym cyklu (bez powtórek aż przejdzie cała kolejka).
   const shuffleHistoryRef = useRef<Set<string>>(new Set());
+  // Żywy silnik crossfade (beatmatch-lite + EQ carving) — automatycznie przejmuje
+  // odtwarzanie dla każdej wieloutworowej kolejki złożonej z samego audio (patrz
+  // playPlaylist), żeby przejścia między utworami nie "klikały", tylko płynnie się mixowały.
+  const crossfadeEngineRef = useRef<LiveDJEngine | null>(null);
+  const externalPlaybackRef = useRef<ExternalPlaybackHandlers | null>(null);
+
+  const teardownCrossfadeEngine = useCallback(() => {
+    externalPlaybackRef.current = null;
+    if (crossfadeEngineRef.current) {
+      crossfadeEngineRef.current.destroy();
+      crossfadeEngineRef.current = null;
+    }
+  }, []);
   
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -229,7 +256,11 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     if (audioRef.current) {
       audioRef.current.volume = isMuted ? 0 : volume / 100;
     }
+    externalPlaybackRef.current?.onVolumeChange(volume, isMuted);
   }, [volume, isMuted]);
+
+  // Zgaś silnik crossfade przy odmontowaniu providera.
+  useEffect(() => teardownCrossfadeEngine, [teardownCrossfadeEngine]);
 
   // === MediaSession — sterowanie z ekranu blokady + granie w tle na telefonie ===
   // Bez tego mobilne przeglądarki usypiają audio po wygaszeniu ekranu.
@@ -386,6 +417,21 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (!currentTrack) return;
 
+    // Żywy silnik crossfade sam odtwarza audio na własnych deckach (patrz
+    // playPlaylist) — nie dotykamy głównego audioRef, tylko logujemy historię.
+    if (externalPlaybackRef.current) {
+      const uid = userIdRef.current;
+      if (uid) {
+        supabase.from('listening_history').insert({
+          user_id: uid,
+          track_id: currentTrack.id,
+        }).then(({ error }) => {
+          if (error) console.error("Failed to log listening history:", error);
+        });
+      }
+      return;
+    }
+
     // Każde uruchomienie efektu unieważnia zaległe async-starty audio (offline lookup).
     const playToken = ++playRequestRef.current;
 
@@ -516,12 +562,18 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [repeatMode, nextTrackInternal]);
 
+  // Kolejkę da się żywo miksować tylko gdy WSZYSTKIE utwory to zwykłe audio
+  // (bez wideo/YouTube — te idą normalną ścieżką, silnik ich nie obsługuje).
+  const isCrossfadeEligible = (tracks: Track[]) =>
+    tracks.length > 1 && tracks.every((t) => !getPlayableYouTubeId(t) && !getNativeVideoUrl(t) && !!getPlayableAudioUrl(t));
+
   const playTrack = (track: Track, source: string = "direct") => {
     if (!hasPlayableSource(track)) {
       toast.error("Ten utwór nie ma dostępnego źródła audio/video");
       return;
     }
 
+    teardownCrossfadeEngine();
     setStreamSource(source);
     setCurrentTrack(track);
     setQueue([track]);
@@ -539,15 +591,56 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     const playableStartIndex = requestedTrack
       ? playableTracks.findIndex((track) => track.id === requestedTrack.id)
       : 0;
+    const resolvedIndex = playableStartIndex >= 0 ? playableStartIndex : 0;
 
     setStreamSource(source);
     shuffleHistoryRef.current = new Set(); // nowa lista → świeży cykl smart shuffle
     setQueue(playableTracks);
-    setQueueIndex(playableStartIndex >= 0 ? playableStartIndex : 0);
-    setCurrentTrack(playableTracks[playableStartIndex >= 0 ? playableStartIndex : 0]);
+    teardownCrossfadeEngine();
+
+    if (isCrossfadeEligible(playableTracks)) {
+      // Żywy crossfade: silnik sam gra i zgłasza zmiany utworu/postępu z powrotem tutaj.
+      const engine = new LiveDJEngine();
+      crossfadeEngineRef.current = engine;
+      engine.setVolume(volume, isMuted);
+      engine.onTrackChange = (track, index) => {
+        setQueueIndex(index);
+        setCurrentTrack(track as unknown as Track);
+        setIsPlaying(true);
+      };
+      engine.onTimeUpdate = (ct, dur) => {
+        setCurrentTime(ct);
+        setDuration(dur);
+        if (dur > 0) setProgress((ct / dur) * 100);
+      };
+      engine.onSessionEnded = () => {
+        if (repeatMode === "all") {
+          void engine.start(playableTracks as unknown as DJEngineTrack[], 0);
+        } else {
+          setIsPlaying(false);
+        }
+      };
+      externalPlaybackRef.current = {
+        onPause: () => engine.pause(),
+        onResume: () => { void engine.resume(); },
+        onSeek: (pct) => engine.seek(pct),
+        onSkip: () => { void engine.skipToNext(); },
+        onVolumeChange: (vol, muted) => engine.setVolume(vol, muted),
+      };
+      setQueueIndex(resolvedIndex);
+      void engine.start(playableTracks as unknown as DJEngineTrack[], resolvedIndex);
+    } else {
+      setQueueIndex(resolvedIndex);
+      setCurrentTrack(playableTracks[resolvedIndex]);
+    }
   };
 
   const togglePlay = () => {
+    if (externalPlaybackRef.current) {
+      if (isPlaying) { externalPlaybackRef.current.onPause(); setIsPlaying(false); }
+      else { externalPlaybackRef.current.onResume(); setIsPlaying(true); }
+      return;
+    }
     if (isVideoMode) {
       setIsPlaying(!isPlaying);
     } else if (audioRef.current) {
@@ -570,6 +663,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const pausePlayback = () => {
+    if (externalPlaybackRef.current) { externalPlaybackRef.current.onPause(); setIsPlaying(false); return; }
     if (isVideoMode) {
       setIsPlaying(false);
       return;
@@ -583,6 +677,8 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
 
   const resumePlayback = () => {
     if (!currentTrack) return;
+
+    if (externalPlaybackRef.current) { externalPlaybackRef.current.onResume(); setIsPlaying(true); return; }
 
     if (isVideoMode) {
       setIsPlaying(true);
@@ -664,6 +760,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
       }
     }
 
+    if (externalPlaybackRef.current) { externalPlaybackRef.current.onSkip(); return; }
     nextTrackInternal(true); // User-initiated skip
   };
 
@@ -672,6 +769,9 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   }, [getSkipAnalysis]);
 
   const prevTrack = () => {
+    // Żywy crossfade nie umie "cofać" utworu — najbliższy odpowiednik: od nowa bieżący.
+    if (externalPlaybackRef.current) { externalPlaybackRef.current.onSeek(0); return; }
+
     // If more than 3 seconds in, restart current track
     if (currentTime > 3) {
       if (isVideoMode) {
@@ -696,7 +796,9 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
 
   const seek = (position: number) => {
     if (!currentTrack) return;
-    
+
+    if (externalPlaybackRef.current) { externalPlaybackRef.current.onSeek(position); setProgress(position); return; }
+
     const targetDuration = duration || currentTrack.duration;
     const time = (position / 100) * targetDuration;
     

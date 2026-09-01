@@ -29,8 +29,8 @@ function makeImpulse(ctx: AudioContext, dur = 1.7, decay = 2.1): AudioBuffer {
   }
   return buf;
 }
-function softCurve(drive = 0.3): Float32Array {
-  const n = 1024, c = new Float32Array(n), k = 1 + drive * 3;
+function softCurve(drive = 0.3): Float32Array<ArrayBuffer> {
+  const n = 1024, c: Float32Array<ArrayBuffer> = new Float32Array(new ArrayBuffer(1024 * Float32Array.BYTES_PER_ELEMENT)), k = 1 + drive * 3;
   for (let i = 0; i < n; i++) { const x = (i / (n - 1)) * 2 - 1; c[i] = Math.tanh(x * k) / Math.tanh(k); }
   return c;
 }
@@ -64,13 +64,21 @@ export default function NightStory() {
           .not("audio_url", "is", null)
           .or("genre.ilike.%ambient%,genre.ilike.%instrumental%,genre.ilike.%lo-fi%,genre.ilike.%lofi%,genre.ilike.%chill%,genre.ilike.%classical%,mood.ilike.%calm%,mood.ilike.%chill%,mood.ilike.%spok%")
           .limit(30);
-        let pool = (data || []).filter((t: any) => isHttp(t.audio_url));
+        let pool: BedTrack[] = (data || []).filter((t) => isHttp(t.audio_url)).map((t) => ({
+          title: t.title,
+          artist: t.artist,
+          audio_url: t.audio_url as string,
+        }));
         if (pool.length === 0) {
           const { data: any2 } = await supabase.from("tracks").select("title, artist, audio_url").not("audio_url", "is", null).limit(40);
-          pool = (any2 || []).filter((t: any) => isHttp(t.audio_url));
+          pool = (any2 || []).filter((t) => isHttp(t.audio_url)).map((t) => ({
+            title: t.title,
+            artist: t.artist,
+            audio_url: t.audio_url as string,
+          }));
         }
         if (pool.length > 0) {
-          const t = pool[Math.floor(Math.random() * pool.length)] as any;
+          const t = pool[Math.floor(Math.random() * pool.length)];
           setBed({ title: t.title, artist: t.artist, audio_url: t.audio_url });
         }
       } catch { /* brak katalogu → pad awaryjny */ }

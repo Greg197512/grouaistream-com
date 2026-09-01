@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, ReactNode, useCallback 
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { restoreSessionSafely } from "@/lib/authSession";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 export type SubscriptionPlan = "free" | "pro" | "ultimate";
 
@@ -10,6 +11,8 @@ interface SubscriptionContextType {
   isLoading: boolean;
   isPro: boolean;
   isUltimate: boolean;
+  /** Nadany ręcznie przez admina (Admin → Użytkownicy), niezależnie od planu Paddle */
+  isVip: boolean;
   /** Is user in free trial period */
   isTrialActive: boolean;
   trialDaysLeft: number;
@@ -60,6 +63,7 @@ export function getStudioPromoStatus(): { state: PromoState; daysLeft: number; e
 }
 
 const SubscriptionContext = createContext<SubscriptionContextType | undefined>(undefined);
+const roleDb = supabase as unknown as SupabaseClient;
 
 export const useSubscription = () => {
   const context = useContext(SubscriptionContext);
@@ -73,6 +77,7 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
   const { user, profile, loading: authLoading, refreshProfile } = useAuth();
   const [plan, setPlan] = useState<SubscriptionPlan>("free");
   const [isLoading, setIsLoading] = useState(true);
+  const [isVip, setIsVip] = useState(false);
   const [trialEndsAt, setTrialEndsAt] = useState<string | null>(null);
   const [dailyAIPlaylistsUsed, setDailyAIPlaylistsUsed] = useState(0);
   const [upgradePromptFeature, setUpgradePromptFeature] = useState<string | null>(null);
@@ -83,6 +88,7 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
 
       if (!user) {
         setPlan("free");
+        setIsVip(false);
         setTrialEndsAt(null);
         localStorage.setItem("grooveai-current-plan", "free");
         setIsLoading(false);
@@ -96,10 +102,13 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
 
       const [
         { data: isAdmin, error: adminError },
+        { data: vipRole, error: vipError },
         { data: paddleSub, error: paddleErr },
         { data: legacySub, error: legacyErr },
       ] = await Promise.all([
         supabase.rpc("has_role", { _user_id: user.id, _role: "admin" }),
+        // VIP: nadawany ręcznie przez admina (Admin → Użytkownicy), niezależny od planu Paddle.
+        roleDb.rpc("has_role", { _user_id: user.id, _role: "vip" }),
         // Source of truth: Paddle-synced subscriptions table (filtered by env).
         // Multiple rows per (user, env) are allowed (re-subscribe, plan change) — pick the newest
         // one that still confers access. Access rules:
@@ -125,8 +134,10 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
       ]);
 
       if (adminError) console.error("Error checking admin role:", adminError);
+      if (vipError) console.error("Error checking vip role:", vipError);
       if (paddleErr) console.error("Error fetching paddle subscription:", paddleErr);
       if (legacyErr) console.error("Error fetching legacy subscription:", legacyErr);
+      setIsVip(Boolean(isAdmin) || Boolean(vipRole));
 
       // Map Paddle product → plan
       const paddlePlan: SubscriptionPlan | null = paddleSub
@@ -295,6 +306,7 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
         isLoading,
         isPro,
         isUltimate,
+        isVip,
         isTrialActive,
         trialDaysLeft,
         hasAccess,

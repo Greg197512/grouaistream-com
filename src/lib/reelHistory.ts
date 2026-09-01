@@ -1,4 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+const reelDb = supabase as unknown as SupabaseClient;
 
 export type ReelWatch = {
   source: "youtube" | "track";
@@ -32,7 +35,7 @@ export async function logReelWatch(userId: string | null, e: ReelWatch): Promise
   // Na koncie (Supabase) — best-effort; gdy tabela/uprawnienia nieobecne, milczy.
   if (userId) {
     try {
-      await supabase.from("reel_history").insert({
+      await reelDb.from("reel_history").insert({
         user_id: userId,
         source: e.source,
         video_id: e.videoId ?? null,
@@ -49,7 +52,7 @@ export async function logReelWatch(userId: string | null, e: ReelWatch): Promise
 export async function recentReelWatches(userId: string | null, limit = 50): Promise<ReelWatch[]> {
   if (userId) {
     try {
-      const { data } = await supabase
+      const { data } = await reelDb
         .from("reel_history").select("source,video_id,track_id,title,artist,era")
         .eq("user_id", userId).order("created_at", { ascending: false }).limit(limit);
       if (Array.isArray(data) && data.length) {

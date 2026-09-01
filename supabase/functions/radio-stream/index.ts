@@ -20,6 +20,70 @@ const SELF = `${SUPABASE_URL}/functions/v1/radio-stream`;
 const FIXED_ANCHOR = Date.parse("2020-01-01T00:00:00Z"); // gdy radio nigdy nie było włączone
 const WINDOW = 6; // ile pozycji w oknie playlisty HLS
 
+// ── Opowiadania / audycje: osobna szuflada od muzyki, grana o dowolnych,
+// stałych porach dnia (czas polski, niezależnie od strefy serwera). Każdy
+// plik ma własną listę godzin (`air_times`) — jeden plik może grać kilka
+// razy dziennie (np. 20:30 i 22:00). Poza tymi oknami radio gra normalną
+// rotację muzyki jak dotychczas.
+
+function warsawNow(d = new Date()) {
+  const fmt = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Warsaw",
+    hour12: false,
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", second: "2-digit",
+  });
+  const p = Object.fromEntries(fmt.formatToParts(d).map((x) => [x.type, x.value])) as Record<string, string>;
+  const secondsOfDay = Number(p.hour) * 3600 + Number(p.minute) * 60 + Number(p.second);
+  const dayIndex = Math.floor(Date.parse(`${p.year}-${p.month}-${p.day}T00:00:00Z`) / 86400000);
+  return { secondsOfDay, dayIndex };
+}
+
+function parseTimeToSeconds(t: string): number {
+  const [h, m, s] = t.split(":").map((x) => Number(x) || 0);
+  return h * 3600 + m * 60 + s;
+}
+
+interface StoryRow {
+  id: string;
+  slot: string;
+  title: string;
+  audio_url: string;
+  duration_sec: number | null;
+  air_times: string[] | null;
+}
+
+async function loadStoryOverride(supabase: ReturnType<typeof createClient>) {
+  const { secondsOfDay, dayIndex } = warsawNow();
+
+  const { data } = await supabase
+    .from("radio_story_slots")
+    .select("id, slot, title, audio_url, duration_sec, air_times")
+    .eq("is_active", true)
+    .order("id", { ascending: true });
+
+  const rows = (data || []) as StoryRow[];
+  if (!rows.length) return null;
+
+  // Wszystkie unikalne godziny emisji użyte przez aktywne pliki, od najpóźniejszej.
+  const timeSeconds = new Map<string, number>();
+  for (const r of rows) for (const t of r.air_times || []) if (!timeSeconds.has(t)) timeSeconds.set(t, parseTimeToSeconds(t));
+  const candidateTimes = [...timeSeconds.entries()].sort((a, b) => b[1] - a[1]);
+
+  for (const [timeStr, startSec] of candidateTimes) {
+    if (secondsOfDay < startSec) continue;
+    // Pula plików przypisanych DOKŁADNIE do tej godziny — rotują dzień po dniu.
+    const pool = rows.filter((r) => (r.air_times || []).includes(timeStr));
+    if (!pool.length) continue;
+    const story = pool[dayIndex % pool.length];
+    const dur = story.duration_sec || 600;
+    const offset = secondsOfDay - startSec;
+    if (offset < 0 || offset >= dur) continue;
+    return { story, timeStr, offset, remaining: dur - offset, dur };
+  }
+  return null;
+}
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, range",
@@ -139,10 +203,12 @@ Deno.serve(async (req) => {
   const wantsM3u8 = f === "m3u8" || f === "hls" || url.pathname.endsWith(".m3u8") || (!f && !url.pathname.endsWith(".pls") && !url.pathname.endsWith(".m3u"));
 
   try {
+    const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
     const { config, playable } = await loadState();
     const stationName = config?.station_name || "GrouAI Stream Radio";
+    const storyOverride = await loadStoryOverride(supabase).catch(() => null);
 
-    if (playable.length === 0) {
+    if (playable.length === 0 && !storyOverride) {
       return new Response("Radio schedule is empty", {
         status: 503,
         headers: { ...corsHeaders, "Content-Type": "text/plain", "Retry-After": "60" },
@@ -151,6 +217,25 @@ Deno.serve(async (req) => {
 
     // ── JSON: co teraz gra + adresy ─────────────────────────────
     if (f === "info" || f === "json") {
+      if (storyOverride) {
+        const label = storyOverride.story.slot || "Audycja specjalna";
+        return new Response(
+          JSON.stringify({
+            station_name: stationName,
+            is_active: config?.is_active ?? true,
+            listeners_synced: true,
+            now_playing: { title: storyOverride.story.title, artist: label, cover_url: null, item_type: "story" },
+            up_next: { title: "Powrót do muzyki", artist: stationName },
+            stream: {
+              hls: `${SELF}?f=m3u8`,
+              current_file: `${SELF}?f=now`,
+              pls: `${SELF}?f=pls`,
+              m3u: `${SELF}?f=m3u`,
+            },
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json", "Cache-Control": "no-cache" } },
+        );
+      }
       const { index, N } = position(playable, config?.started_at ?? null);
       const now = playable[index];
       const next = playable[(index + 1) % N];
@@ -174,6 +259,12 @@ Deno.serve(async (req) => {
 
     // ── 302 do bieżącego pliku (proste odtwarzacze) ─────────────
     if (f === "now" || f === "current" || f === "mp3") {
+      if (storyOverride) {
+        return new Response(null, {
+          status: 302,
+          headers: { ...corsHeaders, Location: storyOverride.story.audio_url, "Cache-Control": "no-cache" },
+        });
+      }
       const { index } = position(playable, config?.started_at ?? null);
       const target = audioUrl(playable[index])!;
       return new Response(null, {
@@ -198,6 +289,26 @@ Deno.serve(async (req) => {
 
     // ── HLS (domyślnie) ─────────────────────────────────────────
     if (wantsM3u8) {
+      if (storyOverride) {
+        const seq = storyOverride.dur > 0 ? Math.floor(Date.now() / (storyOverride.dur * 1000)) : 0;
+        const label = storyOverride.story.title.replace(/[\r\n",]/g, " ").slice(0, 120);
+        const body = [
+          "#EXTM3U",
+          "#EXT-X-VERSION:3",
+          `#EXT-X-TARGETDURATION:${Math.ceil(storyOverride.dur) + 1}`,
+          `#EXT-X-MEDIA-SEQUENCE:${seq}`,
+          "#EXT-X-DISCONTINUITY",
+          `#EXTINF:${storyOverride.dur.toFixed(3)},${label}`,
+          storyOverride.story.audio_url,
+        ].join("\n") + "\n";
+        return new Response(body, {
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/vnd.apple.mpegurl",
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+          },
+        });
+      }
       const body = buildM3U8(playable, config?.started_at ?? null);
       return new Response(body, {
         headers: {

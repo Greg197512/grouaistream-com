@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search as SearchIcon, Music, Mic, MicOff, Download, Loader2, Youtube, Sparkles, Globe } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
@@ -17,6 +17,7 @@ import { searchCCMixter, CCMixterTrack } from "@/services/ccMixterService";
 import { cn } from "@/lib/utils";
 import { invokeHubAI } from "@/lib/hubAI";
 import { useCatalogUnlock } from "@/hooks/useCatalogUnlock";
+import { useSubscription } from "@/contexts/SubscriptionContext";
 import { Lock, LockOpen } from "lucide-react";
 
 const formatDuration = (seconds: number): string => {
@@ -91,13 +92,29 @@ const Search = () => {
   const recognitionRef = useRef<any>(null);
   const { playTrack, playPlaylist, currentTrack, isPlaying, togglePlay } = usePlayer();
   const { t } = useLanguage();
-  const { unlocked } = useCatalogUnlock();
+  const { unlocked: keyUnlocked } = useCatalogUnlock();
+  const { isUltimate, isVip } = useSubscription();
+  // Pełny katalog: klucz kłódki ALBO plan Ultimate ALBO VIP nadany przez admina.
+  const unlocked = keyUnlocked || isUltimate || isVip;
 
   // Ile utworów pokazujemy w przeglądaniu:
-  // zablokowane → wybrana część (50), odblokowane kluczem → cały katalog.
+  // zablokowane → wybrana część (50), odblokowane (klucz/Ultimate/VIP) → cały katalog.
   const LOCKED_PREVIEW = 50;
   const browseTracks = unlocked ? allTracks : allTracks.slice(0, LOCKED_PREVIEW);
   const hiddenCount = Math.max(0, (totalCount || allTracks.length) - LOCKED_PREVIEW);
+
+  // Pełny katalog (Ultimate/VIP/klucz) — posegregowany po gatunkach zamiast
+  // jednej płaskiej listy. Podgląd (locked) zostaje płaski, jak dotychczas.
+  const genresByTrack = useMemo(() => {
+    if (!unlocked) return null;
+    const groups = new Map<string, Track[]>();
+    for (const t of browseTracks) {
+      const key = (t.genre || "Inne").trim() || "Inne";
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push(t);
+    }
+    return [...groups.entries()].sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0]));
+  }, [unlocked, browseTracks]);
 
   // Kolumny potrzebne do listy i odtwarzania (lekki payload nawet przy 20 tys.).
   const CATALOG_SELECT = "id,title,artist,album,duration,cover_url,audio_url,video_url,genre,mood,created_at";
@@ -498,15 +515,33 @@ const Search = () => {
                   </span>
                 ) : hiddenCount > 0 ? (
                   <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-red-500/15 text-red-400 border border-red-500/40">
-                    <Lock className="h-3.5 w-3.5" /> +{hiddenCount} ukrytych — wpisz klucz (kłódka w pasku)
+                    <Lock className="h-3.5 w-3.5" /> +{hiddenCount} ukrytych — wpisz klucz (kłódka w pasku) albo plan Ultimate / VIP
                   </span>
                 ) : null}
               </div>
-              <div className="space-y-1 sm:space-y-2">
-                {browseTracks.map((track, index) => (
-                  <TrackRow key={track.id} id={track.id} index={index + 1} title={track.title} artist={track.artist} album={track.album || ""} duration={formatDuration(track.duration)} imageUrl={track.cover_url || undefined} videoUrl={track.video_url || undefined} trackUrl={track.video_url || track.audio_url} isPlaying={currentTrack?.id === track.id && isPlaying} onPlay={() => handlePlayTrack(track, index)} />
-                ))}
-              </div>
+              {genresByTrack ? (
+                // Pełny katalog (Ultimate/VIP/klucz) — posegregowany po gatunkach.
+                <div className="space-y-6 sm:space-y-8">
+                  {genresByTrack.map(([genreName, tracksInGenre]) => (
+                    <div key={genreName}>
+                      <h3 className="font-display text-sm sm:text-base font-semibold mb-2 sm:mb-3 text-muted-foreground">
+                        {genreName} <span className="text-xs font-normal">({tracksInGenre.length.toLocaleString()})</span>
+                      </h3>
+                      <div className="space-y-1 sm:space-y-2">
+                        {tracksInGenre.map((track, index) => (
+                          <TrackRow key={track.id} id={track.id} index={index + 1} title={track.title} artist={track.artist} album={track.album || ""} duration={formatDuration(track.duration)} imageUrl={track.cover_url || undefined} videoUrl={track.video_url || undefined} trackUrl={track.video_url || track.audio_url} isPlaying={currentTrack?.id === track.id && isPlaying} onPlay={() => handlePlayTrack(track, index)} />
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-1 sm:space-y-2">
+                  {browseTracks.map((track, index) => (
+                    <TrackRow key={track.id} id={track.id} index={index + 1} title={track.title} artist={track.artist} album={track.album || ""} duration={formatDuration(track.duration)} imageUrl={track.cover_url || undefined} videoUrl={track.video_url || undefined} trackUrl={track.video_url || track.audio_url} isPlaying={currentTrack?.id === track.id && isPlaying} onPlay={() => handlePlayTrack(track, index)} />
+                  ))}
+                </div>
+              )}
             </TabsContent>
 
             <TabsContent value="ccmixter" className="space-y-0">

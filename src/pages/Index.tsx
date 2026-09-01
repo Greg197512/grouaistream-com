@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { GameStrip } from "@/components/game/GameStrip";
 import { HeroSection } from "@/components/sections/HeroSection";
@@ -19,13 +20,49 @@ import { NaCzasieHits } from "@/components/sections/NaCzasieHits";
 
 import SectionErrorBoundary from "@/components/SectionErrorBoundary";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { usePlayer } from "@/contexts/PlayerContext";
+import { supabase } from "@/integrations/supabase/client";
 
 const Section = ({ name, children }: { name: string; children: React.ReactNode }) => (
   <SectionErrorBoundary name={name}>{children}</SectionErrorBoundary>
 );
 
+/**
+ * Odtwarza utwór ze współdzielonego linku (np. z ShareTrackModal:
+ * grouaistream.com/?play=TRACK_ID) i sprząta URL, żeby odświeżenie
+ * strony nie uruchamiało utworu ponownie.
+ */
+const useSharedTrackAutoplay = () => {
+  const { playTrack } = usePlayer();
+
+  useEffect(() => {
+    const trackId = new URLSearchParams(window.location.search).get("play");
+    if (!trackId) return;
+
+    window.history.replaceState({}, "", window.location.pathname);
+
+    supabase
+      .from("tracks")
+      .select("*")
+      .eq("id", trackId)
+      .maybeSingle()
+      .then(({ data: track }) => {
+        if (!track) return;
+        playTrack({
+          id: track.id, title: track.title, artist: track.artist,
+          album: track.album || undefined, duration: track.duration,
+          cover_url: track.cover_url || undefined, audio_url: track.audio_url || undefined,
+          video_url: track.video_url || undefined, genre: track.genre || undefined,
+          mood: track.mood || undefined,
+        }, "shared-link");
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+};
+
 const Index = () => {
   const { t } = useLanguage();
+  useSharedTrackAutoplay();
 
   return (
     <MainLayout>
