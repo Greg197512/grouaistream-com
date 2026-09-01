@@ -7,6 +7,18 @@ const R2_BASE = Deno.env.get('R2_PUBLIC_BASE') || 'https://pub-46ecdc3a5ae341fcb
 
 const isR2 = (u: string | null) => !!u && u.startsWith(R2_BASE);
 
+// Only ephemeral / provider-hosted sources are migrated. Third-party artwork
+// CDNs (mzstatic, dzcdn, picsum, youtube thumbs) stay where they are.
+const MIGRATE_HOSTS = [
+  'supabase.co/storage',
+  'suno.ai',
+  'suno.com',
+  'musicfile.removeai.ai',
+  'replicate.delivery',
+];
+const needsMove = (u: string | null) =>
+  !!u && /^https?:\/\//.test(u) && !isR2(u) && MIGRATE_HOSTS.some((h) => u.includes(h));
+
 function guess(url: string, kind: 'audio' | 'image') {
   const clean = url.split('?')[0].toLowerCase();
   const m = clean.match(/\.([a-z0-9]{2,4})$/);
