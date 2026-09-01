@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, Sparkles, Download, Play, Film, RefreshCw, Camera, Wand2 } from "lucide-react";
 import { toast } from "sonner";
+import { uploadToR2 } from "@/lib/r2Upload";
 
 interface Template {
   id: string;
@@ -90,14 +91,8 @@ export function TikTokReelsStudio() {
       const urls: string[] = [];
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
-        const path = `screenshots/${reel.id}/${Date.now()}-${i}-${file.name.replace(/[^a-z0-9.]/gi, "_")}`;
-        const { error: upErr } = await supabase.storage.from("tiktok-reels").upload(path, file, {
-          contentType: file.type,
-          upsert: false,
-        });
-        if (upErr) throw upErr;
-        const { data } = supabase.storage.from("tiktok-reels").getPublicUrl(path);
-        urls.push(data.publicUrl);
+        const { publicUrl } = await uploadToR2({ file, folder: `tiktok-reels/screenshots/${reel.id}` });
+        urls.push(publicUrl);
       }
       const merged = [...reel.screenshot_urls, ...urls];
       const { error } = await supabase.from("tiktok_reels").update({ screenshot_urls: merged, status: "ready_to_render" }).eq("id", reel.id);
@@ -119,14 +114,9 @@ export function TikTokReelsStudio() {
     setRenderingId(reel.id);
     try {
       await renderReelToWebm(reel, async (blob) => {
-        const path = `videos/${reel.id}-${Date.now()}.webm`;
-        const { error: upErr } = await supabase.storage.from("tiktok-reels").upload(path, blob, {
-          contentType: "video/webm",
-          upsert: false,
-        });
-        if (upErr) throw upErr;
-        const { data: pub } = supabase.storage.from("tiktok-reels").getPublicUrl(path);
-        await supabase.from("tiktok_reels").update({ video_url: pub.publicUrl, status: "rendered" }).eq("id", reel.id);
+        const videoFile = new File([blob], `${reel.id}-${Date.now()}.webm`, { type: "video/webm" });
+        const { publicUrl: videoUrl } = await uploadToR2({ file: videoFile, folder: "tiktok-reels/videos" });
+        await supabase.from("tiktok_reels").update({ video_url: videoUrl, status: "rendered" }).eq("id", reel.id);
         toast.success("🎬 Video rendered & uploaded — downloading…");
         const a = document.createElement("a");
         a.href = pub.publicUrl;

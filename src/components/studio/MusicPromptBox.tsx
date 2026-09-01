@@ -15,6 +15,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { UpgradeModal } from "@/components/modals/UpgradeModal";
 import { exportTeledysk, exportScenesOnly } from "@/lib/teledyskExport";
+import { uploadToR2 } from "@/lib/r2Upload";
 
 type Lang = "auto" | "pl" | "en" | "nl" | "uk";
 
@@ -380,10 +381,9 @@ export function MusicPromptBox({ onTrackReady }: Props) {
           setPlanSummary("Synchronizuję usta wokalisty ze słowami piosenki…");
           const scenesBlob = await exportScenesOnly(clipUrls, undefined, aspect);
           const scenesPath = `lipsync-in-${Date.now()}-${Math.random().toString(36).slice(2, 7)}.mp4`;
-          const up = await supabase.storage.from("music").upload(scenesPath, scenesBlob, { contentType: "video/mp4", upsert: true });
-          if (up.error) throw up.error;
-          const { data: pub } = supabase.storage.from("music").getPublicUrl(scenesPath);
-          const { data: ls, error: lsErr } = await submitStudioLipsync(pub.publicUrl, audioUrl);
+          const scenesFile = new File([scenesBlob], scenesPath, { type: "video/mp4" });
+          const { publicUrl: scenesUrl } = await uploadToR2({ file: scenesFile, folder: "lipsync" });
+          const { data: ls, error: lsErr } = await submitStudioLipsync(scenesUrl, audioUrl);
           if (lsErr || !ls?.job_id) throw new Error(ls?.message || lsErr?.message || "lipsync_submit_failed");
           finalUrl = await waitForStudioLipsync(ls.job_id, (sec) => setElapsed(sec));
         } catch (lsE: any) {
