@@ -4,12 +4,12 @@ const LOGO = "/logo-grouaistream.png";
 const VIDEO = "/intro.mp4";
 const N = 6; // siatka 6×6 = 36 kawałków
 
-type Phase = "video" | "vortex" | "assemble" | "shine" | "dissolve";
+type Phase = "video" | "flash" | "assemble" | "shine" | "dissolve";
 
 // Intro na starcie:
-// 1) leci wideo 3D,
-// 2) w ostatniej sekundzie ekran „wciąga wir",
-// 3) na czarnym tle logo składa się z kawałków i błyszczy,
+// 1) leci wideo 3D (pełny ekran „jak rolka", całe widoczne),
+// 2) w ostatniej sekundzie wideo „rozświetla się" w błysk,
+// 3) z tego światła składa się logo z kawałków i błyszczy,
 // 4) powoli się rozpływa i odsłania stronę.
 export const IntroSplash = () => {
   const reduce =
@@ -58,16 +58,16 @@ export const IntroSplash = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [show, reduce]);
 
-  // Bezpiecznik wideo (gdyby autoplay się zaciął) → przejdź do wiru.
+  // Bezpiecznik wideo (gdyby autoplay się zaciął) → przejdź do błysku.
   useEffect(() => {
     if (!show || reduce || phase !== "video") return;
-    const t = window.setTimeout(() => setPhase("vortex"), 20000);
+    const t = window.setTimeout(() => setPhase("flash"), 20000);
     return () => clearTimeout(t);
   }, [show, reduce, phase]);
 
-  // Wir → logo.
+  // Błysk → logo.
   useEffect(() => {
-    if (phase !== "vortex") return;
+    if (phase !== "flash") return;
     const t = window.setTimeout(() => setPhase("assemble"), 1000);
     return () => clearTimeout(t);
   }, [phase]);
@@ -76,9 +76,9 @@ export const IntroSplash = () => {
   useEffect(() => {
     if (phase !== "assemble" || logoStarted.current || reduce) return;
     logoStarted.current = true;
-    push(() => setPhase("shine"), 1650);
-    push(() => setPhase("dissolve"), 2950);
-    push(() => setShow(false), 14950);
+    push(() => setPhase("shine"), 1750);
+    push(() => setPhase("dissolve"), 3050);
+    push(() => setShow(false), 15050);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);
 
@@ -87,11 +87,11 @@ export const IntroSplash = () => {
   const onTime = (e: React.SyntheticEvent<HTMLVideoElement>) => {
     const v = e.currentTarget;
     if (phase === "video" && isFinite(v.duration) && v.duration > 0 && v.currentTime >= v.duration - 1) {
-      setPhase("vortex");
+      setPhase("flash");
     }
   };
-  const onEnded = () => { if (phase === "video") setPhase("vortex"); };
-  const onErr = () => { if (phase === "video" || phase === "vortex") setPhase("assemble"); };
+  const onEnded = () => { if (phase === "video") setPhase("flash"); };
+  const onErr = () => { if (phase === "video" || phase === "flash") setPhase("assemble"); };
 
   const onLogo = phase === "assemble" || phase === "shine" || phase === "dissolve";
 
@@ -103,59 +103,61 @@ export const IntroSplash = () => {
         (phase === "dissolve" ? "opacity-0 pointer-events-none" : "opacity-100")
       }
     >
-      {/* 1–2) Wideo + wir — pełny ekran „jak rolka", ale CAŁE wideo widoczne */}
-      {(phase === "video" || phase === "vortex") && (
+      {/* 1–2) Wideo — pełny ekran „jak rolka", całe widoczne; na końcu rozświetlenie */}
+      {(phase === "video" || phase === "flash") && (
         <div className="absolute inset-0 overflow-hidden">
-          <div
-            className="absolute inset-0"
+          {/* Rozmyte tło z tego samego wideo — wypełnia ekran (efekt rolki) */}
+          <video
+            aria-hidden
+            src={VIDEO}
+            autoPlay
+            muted
+            playsInline
+            loop
+            className="absolute inset-0 w-full h-full object-cover"
+            style={{
+              filter: "blur(40px) brightness(0.45)",
+              transform: "scale(1.25)",
+              animation: phase === "flash" ? "introBloom 1s ease-in forwards" : undefined,
+            }}
+          />
+          {/* Właściwe wideo — całe widoczne (contain), wyśrodkowane */}
+          <video
+            src={VIDEO}
+            autoPlay
+            muted
+            playsInline
+            onTimeUpdate={onTime}
+            onEnded={onEnded}
+            onError={onErr}
+            className="absolute inset-0 w-full h-full object-contain"
             style={{
               transformOrigin: "50% 50%",
-              animation: phase === "vortex" ? "introVortex 1s cubic-bezier(.7,0,.84,0) forwards" : undefined,
+              animation: phase === "flash" ? "introBloom 1s ease-in forwards" : undefined,
             }}
-          >
-            {/* Rozmyte tło z tego samego wideo — wypełnia ekran (efekt rolki) */}
-            <video
-              aria-hidden
-              src={VIDEO}
-              autoPlay
-              muted
-              playsInline
-              loop
-              className="absolute inset-0 w-full h-full object-cover"
-              style={{ filter: "blur(40px) brightness(0.45)", transform: "scale(1.25)" }}
-            />
-            {/* Właściwe wideo — całe widoczne (contain), wyśrodkowane */}
-            <video
-              src={VIDEO}
-              autoPlay
-              muted
-              playsInline
-              onTimeUpdate={onTime}
-              onEnded={onEnded}
-              onError={onErr}
-              className="absolute inset-0 w-full h-full object-contain"
-            />
-          </div>
-          {phase === "vortex" && (
-            <div
-              className="absolute inset-0 pointer-events-none"
-              style={{
-                background:
-                  "conic-gradient(from 0deg, transparent, rgba(169,139,255,.45), transparent, rgba(56,230,255,.4), transparent, rgba(255,62,154,.4), transparent)",
-                mixBlendMode: "screen",
-                animation: "introSwirl 1s cubic-bezier(.7,0,.84,0) forwards",
-              }}
-            />
-          )}
+          />
         </div>
       )}
 
-      {/* 3–4) Logo z kawałków na czarnym tle */}
+      {/* Błysk łączący wideo z logo (ciągły przez flash → assemble) */}
+      {(phase === "flash" || phase === "assemble") && (
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background:
+              "radial-gradient(circle at 50% 50%, rgba(255,255,255,.95), rgba(200,180,255,.6) 24%, rgba(120,180,255,.25) 46%, transparent 66%)",
+            mixBlendMode: "screen",
+            animation: "introFlash 1.7s ease-out forwards",
+          }}
+        />
+      )}
+
+      {/* 3–4) Logo z kawałków — wyłania się ze światła; dopasowane też w poziomie */}
       {onLogo && (
         <div
           className="relative"
           style={{
-            width: "min(86vw, 560px)",
+            width: "min(86vw, 72vh, 560px)",
             aspectRatio: "1 / 1",
             transition: "filter 12s ease-in, transform 12s ease-in",
             filter: phase === "dissolve" ? "blur(26px)" : "none",
