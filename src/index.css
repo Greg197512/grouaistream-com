@@ -688,3 +688,18 @@ html[data-threed="on"] .material-icons {
 @media (prefers-reduced-motion: reduce) {
   .title-glint { animation: none; opacity: 0; }
 }
+
+/* ===== Intro: wir wciągający ekran (wideo → logo) ===== */
+@keyframes introVortex {
+  0%   { transform: scale(1) rotate(0deg);      filter: blur(0px);  opacity: 1; border-radius: 0; }
+  60%  { filter: blur(4px); }
+  100% { transform: scale(0.03) rotate(1080deg); filter: blur(18px); opacity: 0; border-radius: 50%; }
+}
+@keyframes introSwirl {
+  0%   { transform: scale(1.5) rotate(0deg);   opacity: 0; }
+  30%  { opacity: 0.85; }
+  100% { transform: scale(0.06) rotate(900deg); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .intro-tile { animation: none !important; opacity: 1 !important; transform: none !important; }
+}

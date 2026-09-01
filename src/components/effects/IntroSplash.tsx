@@ -1,32 +1,40 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 const LOGO = "/logo-grouaistream.png";
+const VIDEO = "/intro.mp4";
 const N = 6; // siatka 6×6 = 36 kawałków
 
-// Intro na starcie: na czarnym tle logo składa się z kawałków,
-// błyszczy, po chwili powoli się rozpływa i odsłania stronę.
+type Phase = "video" | "vortex" | "assemble" | "shine" | "dissolve";
+
+// Intro na starcie:
+// 1) leci wideo 3D,
+// 2) w ostatniej sekundzie ekran „wciąga wir",
+// 3) na czarnym tle logo składa się z kawałków i błyszczy,
+// 4) powoli się rozpływa i odsłania stronę.
 export const IntroSplash = () => {
   const reduce =
     typeof matchMedia !== "undefined" && matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   const [show, setShow] = useState(() => {
     try {
-      return sessionStorage.getItem("grouai-intro-v1") !== "1";
+      return sessionStorage.getItem("grouai-intro-v2") !== "1";
     } catch {
       return true;
     }
   });
-  const [phase, setPhase] = useState<"assemble" | "shine" | "dissolve">("assemble");
+  const [phase, setPhase] = useState<Phase>(reduce ? "assemble" : "video");
 
-  // Losowe pozycje kawałków liczone raz (stabilne między renderami).
+  const timers = useRef<number[]>([]);
+  const logoStarted = useRef(false);
+  const push = (fn: () => void, ms: number) => timers.current.push(window.setTimeout(fn, ms));
+
   const tiles = useMemo(
     () =>
       Array.from({ length: N * N }, (_, idx) => {
         const r = Math.floor(idx / N);
         const c = idx % N;
         return {
-          r,
-          c,
+          r, c,
           dx: (Math.random() - 0.5) * 300,
           dy: (Math.random() - 0.5) * 300,
           rot: (Math.random() - 0.5) * 100,
@@ -36,92 +44,152 @@ export const IntroSplash = () => {
     []
   );
 
+  // Zapamiętaj, że intro poszło (raz na sesję) + sprzątnij timery.
   useEffect(() => {
-    if (!show) return;
-    try {
-      sessionStorage.setItem("grouai-intro-v1", "1");
-    } catch {
-      /* ignore */
-    }
-    if (reduce) {
-      const t = setTimeout(() => setShow(false), 1200);
-      return () => clearTimeout(t);
-    }
-    const t1 = setTimeout(() => setPhase("shine"), 1650);
-    const t2 = setTimeout(() => setPhase("dissolve"), 2950);
-    const t3 = setTimeout(() => setShow(false), 14950); // powolne rozmycie/zanik ~12 s
-    return () => {
-      clearTimeout(t1);
-      clearTimeout(t2);
-      clearTimeout(t3);
-    };
+    if (show) { try { sessionStorage.setItem("grouai-intro-v2", "1"); } catch { /* */ } }
+    return () => { timers.current.forEach(clearTimeout); };
+  }, [show]);
+
+  // Reduced motion: krótko pokaż logo i zamknij.
+  useEffect(() => {
+    if (!show || !reduce || logoStarted.current) return;
+    logoStarted.current = true;
+    push(() => setShow(false), 1600);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [show, reduce]);
 
+  // Bezpiecznik wideo (gdyby autoplay się zaciął) → przejdź do wiru.
+  useEffect(() => {
+    if (!show || reduce || phase !== "video") return;
+    const t = window.setTimeout(() => setPhase("vortex"), 20000);
+    return () => clearTimeout(t);
+  }, [show, reduce, phase]);
+
+  // Wir → logo.
+  useEffect(() => {
+    if (phase !== "vortex") return;
+    const t = window.setTimeout(() => setPhase("assemble"), 1000);
+    return () => clearTimeout(t);
+  }, [phase]);
+
+  // Logo: błysk → rozpłynięcie → koniec (uruchamiane raz).
+  useEffect(() => {
+    if (phase !== "assemble" || logoStarted.current || reduce) return;
+    logoStarted.current = true;
+    push(() => setPhase("shine"), 1650);
+    push(() => setPhase("dissolve"), 2950);
+    push(() => setShow(false), 14950);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase]);
+
   if (!show) return null;
+
+  const onTime = (e: React.SyntheticEvent<HTMLVideoElement>) => {
+    const v = e.currentTarget;
+    if (phase === "video" && isFinite(v.duration) && v.duration > 0 && v.currentTime >= v.duration - 1) {
+      setPhase("vortex");
+    }
+  };
+  const onEnded = () => { if (phase === "video") setPhase("vortex"); };
+  const onErr = () => { if (phase === "video" || phase === "vortex") setPhase("assemble"); };
+
+  const onLogo = phase === "assemble" || phase === "shine" || phase === "dissolve";
 
   return (
     <div
       aria-hidden
       className={
-        "fixed inset-0 z-[9999] bg-black flex items-center justify-center transition-opacity ease-in duration-[12000ms] " +
+        "fixed inset-0 z-[9999] bg-black overflow-hidden flex items-center justify-center transition-opacity ease-in duration-[12000ms] " +
         (phase === "dissolve" ? "opacity-0 pointer-events-none" : "opacity-100")
       }
     >
-      <div
-        className="relative"
-        style={{
-          width: "min(86vw, 560px)",
-          aspectRatio: "1 / 1",
-          transition: "filter 12s ease-in, transform 12s ease-in",
-          filter: phase === "dissolve" ? "blur(26px)" : "none",
-          transform: phase === "dissolve" ? "scale(1.14)" : "scale(1)",
-          animation: phase === "shine" ? "introGlow 1.2s ease-in-out" : undefined,
-        }}
-      >
-        {/* Kawałki logo składające się w całość */}
-        {tiles.map((t, idx) => (
-          <div
-            key={idx}
-            className="intro-tile absolute"
+      {/* 1–2) Wideo + wir */}
+      {(phase === "video" || phase === "vortex") && (
+        <div className="absolute inset-0 overflow-hidden">
+          <video
+            src={VIDEO}
+            autoPlay
+            muted
+            playsInline
+            onTimeUpdate={onTime}
+            onEnded={onEnded}
+            onError={onErr}
+            className="absolute inset-0 w-full h-full object-cover"
             style={{
-              left: `${(t.c / N) * 100}%`,
-              top: `${(t.r / N) * 100}%`,
-              width: `${100 / N}%`,
-              height: `${100 / N}%`,
-              backgroundImage: `url('${LOGO}')`,
-              backgroundSize: `${N * 100}% ${N * 100}%`,
-              backgroundPosition: `${(t.c / (N - 1)) * 100}% ${(t.r / (N - 1)) * 100}%`,
-              backgroundRepeat: "no-repeat",
-              ["--dx" as string]: `${t.dx}px`,
-              ["--dy" as string]: `${t.dy}px`,
-              ["--rot" as string]: `${t.rot}deg`,
-              animation: `introAssemble .95s cubic-bezier(.2,.7,.2,1) ${t.delay}s both`,
+              transformOrigin: "50% 50%",
+              animation: phase === "vortex" ? "introVortex 1s cubic-bezier(.7,0,.84,0) forwards" : undefined,
             }}
           />
-        ))}
+          {phase === "vortex" && (
+            <div
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                background:
+                  "conic-gradient(from 0deg, transparent, rgba(169,139,255,.45), transparent, rgba(56,230,255,.4), transparent, rgba(255,62,154,.4), transparent)",
+                mixBlendMode: "screen",
+                animation: "introSwirl 1s cubic-bezier(.7,0,.84,0) forwards",
+              }}
+            />
+          )}
+        </div>
+      )}
 
-        {/* Przesuwający się błysk (mieni się), obcięty do kształtu logo */}
-        {phase !== "assemble" && (
-          <div
-            className="absolute inset-0 pointer-events-none"
-            style={{
-              background:
-                "linear-gradient(110deg, transparent 42%, rgba(255,255,255,.7) 50%, rgba(255,225,150,.5) 54%, transparent 62%)",
-              backgroundSize: "250% 100%",
-              mixBlendMode: "screen",
-              animation: "introShineBg 1.2s ease-in-out",
-              WebkitMaskImage: `url('${LOGO}')`,
-              maskImage: `url('${LOGO}')`,
-              WebkitMaskSize: "contain",
-              maskSize: "contain",
-              WebkitMaskRepeat: "no-repeat",
-              maskRepeat: "no-repeat",
-              WebkitMaskPosition: "center",
-              maskPosition: "center",
-            }}
-          />
-        )}
-      </div>
+      {/* 3–4) Logo z kawałków na czarnym tle */}
+      {onLogo && (
+        <div
+          className="relative"
+          style={{
+            width: "min(86vw, 560px)",
+            aspectRatio: "1 / 1",
+            transition: "filter 12s ease-in, transform 12s ease-in",
+            filter: phase === "dissolve" ? "blur(26px)" : "none",
+            transform: phase === "dissolve" ? "scale(1.14)" : "scale(1)",
+            animation: phase === "shine" ? "introGlow 1.2s ease-in-out" : undefined,
+          }}
+        >
+          {tiles.map((t, idx) => (
+            <div
+              key={idx}
+              className="intro-tile absolute"
+              style={{
+                left: `${(t.c / N) * 100}%`,
+                top: `${(t.r / N) * 100}%`,
+                width: `${100 / N}%`,
+                height: `${100 / N}%`,
+                backgroundImage: `url('${LOGO}')`,
+                backgroundSize: `${N * 100}% ${N * 100}%`,
+                backgroundPosition: `${(t.c / (N - 1)) * 100}% ${(t.r / (N - 1)) * 100}%`,
+                backgroundRepeat: "no-repeat",
+                ["--dx" as string]: `${t.dx}px`,
+                ["--dy" as string]: `${t.dy}px`,
+                ["--rot" as string]: `${t.rot}deg`,
+                animation: `introAssemble .95s cubic-bezier(.2,.7,.2,1) ${t.delay}s both`,
+              }}
+            />
+          ))}
+
+          {phase !== "assemble" && (
+            <div
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                background:
+                  "linear-gradient(110deg, transparent 42%, rgba(255,255,255,.7) 50%, rgba(255,225,150,.5) 54%, transparent 62%)",
+                backgroundSize: "250% 100%",
+                mixBlendMode: "screen",
+                animation: "introShineBg 1.2s ease-in-out",
+                WebkitMaskImage: `url('${LOGO}')`,
+                maskImage: `url('${LOGO}')`,
+                WebkitMaskSize: "contain",
+                maskSize: "contain",
+                WebkitMaskRepeat: "no-repeat",
+                maskRepeat: "no-repeat",
+                WebkitMaskPosition: "center",
+                maskPosition: "center",
+              }}
+            />
+          )}
+        </div>
+      )}
     </div>
   );
 };
