@@ -703,3 +703,14 @@ html[data-threed="on"] .material-icons {
 @media (prefers-reduced-motion: reduce) {
   .intro-tile { animation: none !important; opacity: 1 !important; transform: none !important; }
 }
+
+/* ===== Intro: mgła + błysk „odbicie światła" przy dojściu logo ===== */
+@keyframes introFog {
+  0%   { opacity: 1; }
+  100% { opacity: 0; }
+}
+@keyframes introGlintSweep {
+  0%   { background-position: 190% 0; opacity: 0; }
+  25%  { opacity: 1; }
+  100% { background-position: -90% 0; opacity: 0; }
+}
