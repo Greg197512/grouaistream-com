@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { putToR2 } from "../_shared/r2.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -215,17 +216,14 @@ async function uploadCoverToStorage(supabase: any, dataUrl: string, slug: string
     const ext = mime.split("/")[1] || "png";
     const b64 = match[2];
     const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
-    const path = `covers/${slug}.${ext}`;
-    const { error } = await supabase.storage.from("blog-assets").upload(path, bytes, {
+    const url = await putToR2({
+      body: bytes,
+      folder: "blog-assets/covers",
+      fileName: `${slug}-${Date.now()}.${ext}`,
       contentType: mime,
-      upsert: true,
     });
-    if (error) {
-      console.error("Storage upload failed", error);
-      return null;
-    }
-    const { data } = supabase.storage.from("blog-assets").getPublicUrl(path);
-    return data?.publicUrl || null;
+    if (!url) console.error("R2 cover upload failed");
+    return url;
   } catch (e) {
     console.error("Upload exception", e);
     return null;
