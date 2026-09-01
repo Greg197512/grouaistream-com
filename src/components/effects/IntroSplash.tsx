@@ -114,7 +114,7 @@ export const IntroSplash = () => {
             onTimeUpdate={onTime}
             onEnded={onEnded}
             onError={onErr}
-            className="absolute inset-0 w-full h-full object-cover"
+            className="absolute inset-0 w-full h-full object-contain"
             style={{
               transformOrigin: "50% 50%",
               animation: phase === "vortex" ? "introVortex 1s cubic-bezier(.7,0,.84,0) forwards" : undefined,
