@@ -4,25 +4,36 @@ const LOGO = "/logo-grouaistream.png";
 const VIDEO = "/intro.mp4";
 const N = 6; // siatka 6×6 = 36 kawałków
 
-type Phase = "video" | "flash" | "assemble" | "shine" | "dissolve";
+type Phase = "video" | "flash" | "assemble" | "hold" | "land";
+type Box = { top: number; left: number; w: number };
+
+function centeredBox(): Box {
+  const vw = typeof window !== "undefined" ? window.innerWidth : 1024;
+  const vh = typeof window !== "undefined" ? window.innerHeight : 768;
+  const w = Math.min(0.86 * vw, 0.72 * vh, 560);
+  return { top: (vh - w) / 2, left: (vw - w) / 2, w };
+}
 
 // Intro na starcie:
-// 1) leci wideo 3D (pełny ekran „jak rolka", całe widoczne),
-// 2) w ostatniej sekundzie wideo „rozświetla się" w błysk,
-// 3) z tego światła składa się logo z kawałków i błyszczy,
-// 4) powoli się rozpływa i odsłania stronę.
+// 1) wideo 3D (pełny ekran „jak rolka", całe widoczne),
+// 2) w ostatniej sekundzie wideo rozświetla się w błysk,
+// 3) z tego światła składa się logo i chwilę „czeka",
+// 4) strona wchodzi we mgle, logo zjeżdża na swoje miejsce (mniejsze),
+// 5) na koniec błysk — odbicie światła.
 export const IntroSplash = () => {
   const reduce =
     typeof matchMedia !== "undefined" && matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   const [show, setShow] = useState(() => {
     try {
-      return sessionStorage.getItem("grouai-intro-v2") !== "1";
+      return sessionStorage.getItem("grouai-intro-v3") !== "1";
     } catch {
       return true;
     }
   });
   const [phase, setPhase] = useState<Phase>(reduce ? "assemble" : "video");
+  const [box, setBox] = useState<Box>(() => centeredBox());
+  const [glint, setGlint] = useState(false);
 
   const timers = useRef<number[]>([]);
   const logoStarted = useRef(false);
@@ -38,15 +49,14 @@ export const IntroSplash = () => {
           dx: (Math.random() - 0.5) * 300,
           dy: (Math.random() - 0.5) * 300,
           rot: (Math.random() - 0.5) * 100,
-          delay: (r + c) * 0.045 + Math.random() * 0.06,
+          delay: (r + c) * 0.05 + Math.random() * 0.06,
         };
       }),
     []
   );
 
-  // Zapamiętaj, że intro poszło (raz na sesję) + sprzątnij timery.
   useEffect(() => {
-    if (show) { try { sessionStorage.setItem("grouai-intro-v2", "1"); } catch { /* */ } }
+    if (show) { try { sessionStorage.setItem("grouai-intro-v3", "1"); } catch { /* */ } }
     return () => { timers.current.forEach(clearTimeout); };
   }, [show]);
 
@@ -54,11 +64,11 @@ export const IntroSplash = () => {
   useEffect(() => {
     if (!show || !reduce || logoStarted.current) return;
     logoStarted.current = true;
-    push(() => setShow(false), 1600);
+    push(() => setShow(false), 1700);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [show, reduce]);
 
-  // Bezpiecznik wideo (gdyby autoplay się zaciął) → przejdź do błysku.
+  // Bezpiecznik wideo → przejdź do błysku.
   useEffect(() => {
     if (!show || reduce || phase !== "video") return;
     const t = window.setTimeout(() => setPhase("flash"), 20000);
@@ -72,14 +82,36 @@ export const IntroSplash = () => {
     return () => clearTimeout(t);
   }, [phase]);
 
-  // Logo: błysk → rozpłynięcie → koniec (uruchamiane raz).
+  // Sekwencja logo: złożenie → „czekanie" → zjazd na miejsce → koniec (raz).
   useEffect(() => {
     if (phase !== "assemble" || logoStarted.current || reduce) return;
     logoStarted.current = true;
-    push(() => setPhase("shine"), 1750);
-    push(() => setPhase("dissolve"), 3050);
-    push(() => setShow(false), 15050);
+    push(() => setPhase("hold"), 1500);   // logo złożone → chwila oddechu
+    push(() => setPhase("land"), 2600);   // ~1.1 s „czekania", potem zjazd
+    push(() => setGlint(true), 3450);     // błysk przy dojściu na miejsce
+    push(() => setShow(false), 4000);     // koniec — odsłona strony
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase]);
+
+  // Środek ekranu podczas składania/czekania (reaguje na obrót/resize).
+  useEffect(() => {
+    if (phase === "land") return;
+    const set = () => setBox(centeredBox());
+    set();
+    window.addEventListener("resize", set);
+    return () => window.removeEventListener("resize", set);
+  }, [phase]);
+
+  // „Land": zmierz, gdzie na stronie jest logo, i tam zjedź (trochę mniejsze).
+  useEffect(() => {
+    if (phase !== "land") return;
+    let target: Box | null = null;
+    const imgs = Array.from(document.querySelectorAll('img[src*="logo-grouaistream"]')) as HTMLImageElement[];
+    const vis = imgs.find((i) => { const r = i.getBoundingClientRect(); return r.width > 8 && r.height > 8; });
+    if (vis) { const r = vis.getBoundingClientRect(); target = { top: r.top, left: r.left, w: Math.max(r.width, r.height) }; }
+    if (!target) { const w = Math.min(120, 0.3 * window.innerWidth); target = { top: 16, left: 16, w }; }
+    const raf = requestAnimationFrame(() => setBox(target as Box));
+    return () => cancelAnimationFrame(raf);
   }, [phase]);
 
   if (!show) return null;
@@ -93,43 +125,44 @@ export const IntroSplash = () => {
   const onEnded = () => { if (phase === "video") setPhase("flash"); };
   const onErr = () => { if (phase === "video" || phase === "flash") setPhase("assemble"); };
 
-  const onLogo = phase === "assemble" || phase === "shine" || phase === "dissolve";
+  const onLogo = phase === "assemble" || phase === "hold" || phase === "land";
+  const landing = phase === "land";
 
   return (
-    <div
-      aria-hidden
-      className={
-        "fixed inset-0 z-[9999] bg-black overflow-hidden flex items-center justify-center transition-opacity ease-in duration-[12000ms] " +
-        (phase === "dissolve" ? "opacity-0 pointer-events-none" : "opacity-100")
-      }
-    >
-      {/* 1–2) Wideo — pełny ekran „jak rolka", całe widoczne; na końcu rozświetlenie */}
+    <div aria-hidden className="fixed inset-0 z-[9999] overflow-hidden pointer-events-none">
+      {/* Czarne tło — znika przy „land", żeby odsłonić stronę */}
+      <div
+        className="absolute inset-0 bg-black transition-opacity duration-[1100ms] ease-in-out"
+        style={{ opacity: landing ? 0 : 1 }}
+      />
+
+      {/* Mgła — strona „wchodzi we mgle" (rozmycie się rozwiewa) */}
+      {landing && (
+        <div
+          className="absolute inset-0"
+          style={{
+            backdropFilter: "blur(20px)",
+            WebkitBackdropFilter: "blur(20px)",
+            background: "rgba(255,255,255,0.05)",
+            animation: "introFog 1.25s ease-out forwards",
+          }}
+        />
+      )}
+
+      {/* 1–2) Wideo — pełny ekran, całe widoczne; na końcu rozświetlenie */}
       {(phase === "video" || phase === "flash") && (
         <div className="absolute inset-0 overflow-hidden">
-          {/* Rozmyte tło z tego samego wideo — wypełnia ekran (efekt rolki) */}
           <video
-            aria-hidden
-            src={VIDEO}
-            autoPlay
-            muted
-            playsInline
-            loop
+            aria-hidden src={VIDEO} autoPlay muted playsInline loop
             className="absolute inset-0 w-full h-full object-cover"
             style={{
-              filter: "blur(40px) brightness(0.45)",
-              transform: "scale(1.25)",
+              filter: "blur(40px) brightness(0.45)", transform: "scale(1.25)",
               animation: phase === "flash" ? "introBloom 1s ease-in forwards" : undefined,
             }}
           />
-          {/* Właściwe wideo — całe widoczne (contain), wyśrodkowane */}
           <video
-            src={VIDEO}
-            autoPlay
-            muted
-            playsInline
-            onTimeUpdate={onTime}
-            onEnded={onEnded}
-            onError={onErr}
+            src={VIDEO} autoPlay muted playsInline
+            onTimeUpdate={onTime} onEnded={onEnded} onError={onErr}
             className="absolute inset-0 w-full h-full object-contain"
             style={{
               transformOrigin: "50% 50%",
@@ -139,10 +172,10 @@ export const IntroSplash = () => {
         </div>
       )}
 
-      {/* Błysk łączący wideo z logo (ciągły przez flash → assemble) */}
+      {/* Błysk łączący wideo z logo */}
       {(phase === "flash" || phase === "assemble") && (
         <div
-          className="absolute inset-0 pointer-events-none"
+          className="absolute inset-0"
           style={{
             background:
               "radial-gradient(circle at 50% 50%, rgba(255,255,255,.95), rgba(200,180,255,.6) 24%, rgba(120,180,255,.25) 46%, transparent 66%)",
@@ -152,17 +185,16 @@ export const IntroSplash = () => {
         />
       )}
 
-      {/* 3–4) Logo z kawałków — wyłania się ze światła; dopasowane też w poziomie */}
+      {/* 3–5) Logo — składa się, czeka, zjeżdża na miejsce, błyska */}
       {onLogo && (
         <div
-          className="relative"
+          className="fixed"
           style={{
-            width: "min(86vw, 72vh, 560px)",
-            aspectRatio: "1 / 1",
-            transition: "filter 12s ease-in, transform 12s ease-in",
-            filter: phase === "dissolve" ? "blur(26px)" : "none",
-            transform: phase === "dissolve" ? "scale(1.14)" : "scale(1)",
-            animation: phase === "shine" ? "introGlow 1.2s ease-in-out" : undefined,
+            top: box.top, left: box.left, width: box.w, height: box.w,
+            transition: landing
+              ? "top 1.15s cubic-bezier(.65,0,.12,1), left 1.15s cubic-bezier(.65,0,.12,1), width 1.15s cubic-bezier(.65,0,.12,1), height 1.15s cubic-bezier(.65,0,.12,1)"
+              : "none",
+            animation: phase === "hold" ? "introGlow 1.2s ease-in-out" : undefined,
           }}
         >
           {tiles.map((t, idx) => (
@@ -181,28 +213,21 @@ export const IntroSplash = () => {
                 ["--dx" as string]: `${t.dx}px`,
                 ["--dy" as string]: `${t.dy}px`,
                 ["--rot" as string]: `${t.rot}deg`,
-                animation: `introAssemble .95s cubic-bezier(.2,.7,.2,1) ${t.delay}s both`,
+                animation: `introAssemble 1.05s cubic-bezier(.2,.7,.2,1) ${t.delay}s both`,
               }}
             />
           ))}
 
-          {phase !== "assemble" && (
+          {/* Błysk „odbicie światła" po dojściu na miejsce */}
+          {glint && (
             <div
               className="absolute inset-0 pointer-events-none"
               style={{
                 background:
-                  "linear-gradient(110deg, transparent 42%, rgba(255,255,255,.7) 50%, rgba(255,225,150,.5) 54%, transparent 62%)",
+                  "linear-gradient(115deg, transparent 40%, rgba(255,255,255,.9) 49%, rgba(210,230,255,.7) 52%, transparent 62%)",
                 backgroundSize: "250% 100%",
                 mixBlendMode: "screen",
-                animation: "introShineBg 1.2s ease-in-out",
-                WebkitMaskImage: `url('${LOGO}')`,
-                maskImage: `url('${LOGO}')`,
-                WebkitMaskSize: "contain",
-                maskSize: "contain",
-                WebkitMaskRepeat: "no-repeat",
-                maskRepeat: "no-repeat",
-                WebkitMaskPosition: "center",
-                maskPosition: "center",
+                animation: "introGlintSweep .7s ease-in-out forwards",
               }}
             />
           )}
