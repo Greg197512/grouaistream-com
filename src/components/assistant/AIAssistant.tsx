@@ -19,6 +19,7 @@ import { speak, stopSpeaking, isTTSSpeaking } from "@/utils/tts";
 import { mixAudioFiles, type MixStyle } from "@/utils/audioMixer";
 import { WaveformPlayer } from "@/components/studio/WaveformPlayer";
 import { toast } from "sonner";
+import { uploadToR2 } from "@/lib/r2Upload";
 
 
 interface ChatAttachment {
@@ -467,12 +468,8 @@ export const AIAssistant = () => {
   // Upload attachment to storage, returns public URL
   const uploadAttachment = async (att: ChatAttachment): Promise<string> => {
     if (!att.file) return att.url;
-    const ext = att.name.split(".").pop() || "bin";
-    const path = `chat/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
-    const { error } = await supabase.storage.from("music").upload(path, att.file);
-    if (error) throw error;
-    const { data } = supabase.storage.from("music").getPublicUrl(path);
-    return data.publicUrl;
+    const { publicUrl } = await uploadToR2({ file: att.file, folder: "chat" });
+    return publicUrl;
   };
 
   const handleSend = useCallback(async (overrideText?: string) => {

@@ -2,6 +2,7 @@
 // builds word-level captions, uploads MP3 to Storage, returns reel record with everything client needs to render MP4.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { synthesizeTTS } from "../_shared/tts.ts";
+import { putToR2 } from "../_shared/r2.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -112,15 +113,14 @@ Deno.serve(async (req) => {
     });
 
     // Upload MP3 to storage
-    const audioFileName = `audio/${template.slug}-${Date.now()}.mp3`;
-    const { error: upErr } = await supa.storage.from("tiktok-reels").upload(audioFileName, audioBytes, {
+    const audioFileName = `${template.slug}-${Date.now()}.mp3`;
+    const audioUrl = await putToR2({
+      body: audioBytes,
+      folder: "tiktok-reels/audio",
+      fileName: audioFileName,
       contentType: "audio/mpeg",
-      upsert: false,
     });
-    if (upErr) throw new Error(`Storage upload failed: ${upErr.message}`);
-
-    const { data: pubUrl } = supa.storage.from("tiktok-reels").getPublicUrl(audioFileName);
-    const audioUrl = pubUrl.publicUrl;
+    if (!audioUrl) throw new Error("R2 upload failed (missing credentials or network error)");
 
     // Build kinetic word-chunk captions
     const captions = buildWordCaptions(fullScript, template.duration_seconds);

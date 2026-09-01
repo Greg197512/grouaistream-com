@@ -15,6 +15,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { UpgradeModal } from "@/components/modals/UpgradeModal";
 import { exportTeledysk, exportScenesOnly } from "@/lib/teledyskExport";
+import { uploadToR2 } from "@/lib/r2Upload";
 
 type Lang = "auto" | "pl" | "en" | "nl" | "uk";
 
@@ -380,10 +381,9 @@ export function MusicPromptBox({ onTrackReady }: Props) {
           setPlanSummary("Synchronizuję usta wokalisty ze słowami piosenki…");
           const scenesBlob = await exportScenesOnly(clipUrls, undefined, aspect);
           const scenesPath = `lipsync-in-${Date.now()}-${Math.random().toString(36).slice(2, 7)}.mp4`;
-          const up = await supabase.storage.from("music").upload(scenesPath, scenesBlob, { contentType: "video/mp4", upsert: true });
-          if (up.error) throw up.error;
-          const { data: pub } = supabase.storage.from("music").getPublicUrl(scenesPath);
-          const { data: ls, error: lsErr } = await submitStudioLipsync(pub.publicUrl, audioUrl);
+          const scenesFile = new File([scenesBlob], scenesPath, { type: "video/mp4" });
+          const { publicUrl: scenesUrl } = await uploadToR2({ file: scenesFile, folder: "lipsync" });
+          const { data: ls, error: lsErr } = await submitStudioLipsync(scenesUrl, audioUrl);
           if (lsErr || !ls?.job_id) throw new Error(ls?.message || lsErr?.message || "lipsync_submit_failed");
           finalUrl = await waitForStudioLipsync(ls.job_id, (sec) => setElapsed(sec));
         } catch (lsE: any) {
@@ -465,16 +465,7 @@ export function MusicPromptBox({ onTrackReady }: Props) {
     setPublishing(true);
     try {
       const file = await buildTeledyskFile();
-      const path = `teledysk-${Date.now()}-${Math.random().toString(36).slice(2, 7)}.mp4`;
-      // Bucket „music" akceptuje uploady zwykłych userów; gdyby odrzucił wideo — próba „tiktok-reels".
-      let bucket = "music";
-      let up = await supabase.storage.from(bucket).upload(path, file, { contentType: "video/mp4", upsert: true });
-      if (up.error) {
-        bucket = "tiktok-reels";
-        up = await supabase.storage.from(bucket).upload(path, file, { contentType: "video/mp4", upsert: true });
-      }
-      if (up.error) throw up.error;
-      const { data: pub } = supabase.storage.from(bucket).getPublicUrl(path);
+      const { publicUrl } = await uploadToR2({ file, folder: "teledyski" });
       const artistName = user.user_metadata?.display_name || user.email?.split("@")[0] || "GrouAI Studio";
       const title = prompt.trim().slice(0, 60) || "Teledysk GrouAI";
       const { error: insErr } = await supabase.from("tracks").insert({
@@ -483,7 +474,8 @@ export function MusicPromptBox({ onTrackReady }: Props) {
         artist: artistName,
         album: "AI Generated",
         duration: 30,
-        video_url: pub.publicUrl,
+        video_url: publicUrl,
+
         cover_url: null,
         genre: "AI",
         mood: "generated",
