@@ -7468,7 +7468,7 @@ export type Database = {
       verify_unlock_code: { Args: { candidate: string }; Returns: boolean }
     }
     Enums: {
-      app_role: "admin" | "moderator" | "user"
+      app_role: "admin" | "moderator" | "user" | "vip"
       subscription_plan: "free" | "pro" | "ultimate"
     }
     CompositeTypes: {
@@ -7597,7 +7597,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "moderator", "user"],
+      app_role: ["admin", "moderator", "user", "vip"],
       subscription_plan: ["free", "pro", "ultimate"],
     },
   },
