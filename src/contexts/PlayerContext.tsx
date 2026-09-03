@@ -624,6 +624,22 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
           setIsPlaying(false);
         }
       };
+      // Awaryjnie: gdy plik nie ma CORS (np. świeży upload z R2), crossfade nie
+      // zagra. Porzucamy silnik i gramy listę zwykłym <audio> (bez CORS działa
+      // ZAWSZE) — użytkownik słyszy muzykę, tylko bez płynnego miksowania.
+      engine.onLoadError = () => {
+        teardownCrossfadeEngine();
+        const fallbackTrack = playableTracks[resolvedIndex];
+        // null → utwór wymusza ponowne uruchomienie efektu odtwarzania nawet, gdy
+        // silnik zdążył ustawić ten sam currentTrack (inaczej ten sam ref = brak
+        // re-runu i cisza). Krótki null jest niesłyszalny — i tak nic nie grało.
+        setCurrentTrack(null);
+        setTimeout(() => {
+          if (externalPlaybackRef.current) return; // ktoś w międzyczasie odpalił inny silnik
+          setQueueIndex(resolvedIndex);
+          setCurrentTrack(fallbackTrack);
+        }, 0);
+      };
       externalPlaybackRef.current = {
         onPause: () => engine.pause(),
         onResume: () => { void engine.resume(); },
