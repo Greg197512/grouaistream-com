@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { synthesizeTTS } from "../_shared/tts.ts";
+import { putToR2 } from "../_shared/r2.ts";
 
 // GROUAI — radio-night-story: NOCNE CZYTANIE o 22:40 (wt/pt).
 // Bierze najnowszy wpis z bloga, przerabia na spokojne nocne opowiadanie (OpenRouter),
@@ -110,14 +111,13 @@ serve(async (req) => {
 
     // Upload do bucketa radio-audio.
     const today = new Date().toISOString().slice(0, 10);
-    const filePath = `night-stories/${today}-${post.slug}.mp3`;
-    const { data: buckets } = await supabase.storage.listBuckets();
-    if (!buckets?.find((b) => b.name === "radio-audio")) {
-      await supabase.storage.createBucket("radio-audio", { public: true });
-    }
-    const { error: upErr } = await supabase.storage.from("radio-audio").upload(filePath, audioBytes, { contentType: "audio/mpeg", upsert: true });
-    if (upErr) throw new Error(`Upload failed: ${upErr.message}`);
-    const audioUrl = supabase.storage.from("radio-audio").getPublicUrl(filePath).data.publicUrl;
+    const audioUrl = await putToR2({
+      body: audioBytes,
+      folder: "radio-audio/night-stories",
+      fileName: `${today}-${post.slug}.mp3`,
+      contentType: "audio/mpeg",
+    });
+    if (!audioUrl) throw new Error("R2 upload failed (night story audio)");
 
     // Zapis do radio_announcements.
     await supabase.from("radio_announcements").insert({

@@ -15,6 +15,7 @@ import { UpgradeModal } from "@/components/modals/UpgradeModal";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { uploadToR2 } from "@/lib/r2Upload";
 
 interface GeneratedSong {
   id: string;
@@ -154,12 +155,8 @@ export const SunoGeneratePanel = () => {
 
   const uploadCoverToStorage = async (file: File): Promise<string | null> => {
     try {
-      const ext = file.name.split(".").pop() || "jpg";
-      const safeName = `covers/groua-custom-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-      const { error } = await supabase.storage.from("music").upload(safeName, file, { contentType: file.type, upsert: true });
-      if (error) throw error;
-      const { data } = supabase.storage.from("music").getPublicUrl(safeName);
-      return data.publicUrl;
+      const { publicUrl } = await uploadToR2({ file, folder: "covers" });
+      return publicUrl;
     } catch { return null; }
   };
 

@@ -144,6 +144,17 @@ export const EraReels = ({ startEra, lang, onClose }: { startEra: Era; lang: Lan
   const next = () => { try { playerRef.current?.nextVideo?.(); } catch { /* */ } setAdded(false); setTimeout(refreshMeta, 400); };
   const prev = () => { try { playerRef.current?.previousVideo?.(); } catch { /* */ } setAdded(false); setTimeout(refreshMeta, 400); };
 
+  // Głosowe „w górę" / „w dół" (AutoVoiceListener) — te same akcje co swipe.
+  useEffect(() => {
+    const onVoiceNav = (e: Event) => {
+      const dir = (e as CustomEvent).detail?.direction;
+      if (dir === "next") next(); else if (dir === "prev") prev();
+    };
+    window.addEventListener("grouai:reel-nav", onVoiceNav);
+    return () => window.removeEventListener("grouai:reel-nav", onVoiceNav);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Wynik wyszukiwania na pauzie:
   const playOurSong = (t: Track) => { try { playerRef.current?.pauseVideo?.(); } catch { /* */ } playTrack(t, "reels-search"); setShowSearch(false); };
   const playYtHit = (hit: YtHit) => {

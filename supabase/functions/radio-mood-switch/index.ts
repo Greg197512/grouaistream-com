@@ -80,12 +80,16 @@ Deno.serve(async (req) => {
 
     const callbackUrl = `${SUPABASE_URL}/functions/v1/radio-apply-mood-schedule`;
 
-    // If n8n webhook is configured, call it; else fallback = directly call our own apply with no AI (simple shuffle).
-    if (wf?.enabled && wf?.webhook_url) {
-      const dispatch = await fetch(wf.webhook_url, {
+    // Prefer the dedicated workflow URL; the managed router secret keeps AI mode
+    // available when the n8n connector or the database URL entry is temporarily offline.
+    const n8nWebhookUrl = wf?.webhook_url || Deno.env.get("N8N_ROUTER_WEBHOOK_URL");
+    if (wf?.enabled && n8nWebhookUrl) {
+      const dispatch = await fetch(n8nWebhookUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          workflow_id: "grouai-radio-mood-selector",
+          action: "radio_mood_select",
           mood,
           requested_by: userId,
           callback_url: callbackUrl,
@@ -130,7 +134,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    return new Response(JSON.stringify({ ok: true, mood, dispatched: wf?.enabled ? "n8n" : "fallback" }), {
+    return new Response(JSON.stringify({ ok: true, mood, dispatched: wf?.enabled && n8nWebhookUrl ? "n8n" : "fallback" }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {

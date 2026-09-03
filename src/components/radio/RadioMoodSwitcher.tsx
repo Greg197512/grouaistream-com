@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { speak } from "@/utils/tts";
 
 type Mood = "chill" | "energetic" | "focus" | "party";
 
@@ -15,6 +16,15 @@ const MOODS: { id: Mood; label: string; icon: React.ElementType; color: string; 
   { id: "focus",     label: "Focus",     icon: Brain,        color: "from-emerald-500/80 to-teal-500/80",   desc: "Instrumental · Deep work" },
   { id: "party",     label: "Party",     icon: PartyPopper,  color: "from-fuchsia-500/80 to-pink-500/80",   desc: "Dance · House · Pop" },
 ];
+
+// Krótka zapowiedź DJ-a przy przełączeniu trybu — sam entuzjastyczny głos,
+// bez efektów dźwiękowych (patrz useDJMode.ts / utils/tts.ts).
+const MOOD_ANNOUNCEMENT: Record<Mood, string> = {
+  chill: "Zwalniamy tempo — wchodzimy w tryb Chill. Usiądź wygodnie, lecimy z klimatem.",
+  energetic: "Ładujemy energię — tryb Energetic! Rock, EDM i hip-hop, trzymaj się!",
+  focus: "Tryb Focus — instrumentalnie i na luzie, żeby dobrze Ci się pracowało.",
+  party: "Impreza się zaczyna — tryb Party! Dance, house i pop, dawaj na parkiet!",
+};
 
 export const RadioMoodSwitcher = () => {
   const { user } = useAuth();
@@ -62,6 +72,7 @@ export const RadioMoodSwitcher = () => {
         `🎵 Radio przełączone na "${mood}" (${data?.dispatched === "n8n" ? "AI przez n8n" : "fallback shuffle"}).`,
         { id: "mood-switch", duration: 4000 },
       );
+      void speak(MOOD_ANNOUNCEMENT[mood], { mode: "dj" });
     } catch (e) {
       toast.error(`Nie udało się przełączyć: ${(e as Error).message}`, { id: "mood-switch" });
     } finally {

@@ -35,20 +35,15 @@ export const useDJMode = () => {
   const lastAnnouncedTrackRef = useRef<string | null>(null);
   const trackCountRef = useRef(0);
 
-  // DJ speaks — LOUD, FAST, PUNCHY, HARD, Rotterdam energy
+  // DJ speaks — entuzjastyczny, męski głos; BEZ efektów dźwiękowych (stab/laser
+  // itp.) przed wypowiedzią — tylko sam głos, żeby nic nie "piszczało"/"drapało".
   const djSpeak = useCallback(async (text: string, opts?: { rate?: number; pitch?: number }) => {
     const lang = getAppLang();
     const ttsLang = getDJTTSLang(lang);
-    // Play a subtle effect before DJ speaks for mix feel
-    const preEffect = Math.random();
-    if (preEffect > 0.6) playDJEffect("stab");
-    else if (preEffect > 0.3) playDJEffect("laser");
-    
-    await new Promise(r => setTimeout(r, 150));
     return speak(text, { rate: opts?.rate ?? 1.25, pitch: opts?.pitch ?? 1.1, lang: ttsLang, mode: "dj" });
   }, []);
 
-  // Announce DJ transition between tracks with hard techno effects
+  // Announce DJ transition between tracks
   useEffect(() => {
     if (!isDJActive || !currentTrack || !djSession) return;
     if (lastAnnouncedTrackRef.current === currentTrack.id) return;
@@ -67,19 +62,6 @@ export const useDJMode = () => {
     const trackForLine = { title: currentTrack.title, artist: currentTrack.artist, genre: currentTrack.genre || undefined, mood: currentTrack.mood || undefined };
 
     transitionTimerRef.current = window.setTimeout(async () => {
-      // Hard techno effects BEFORE speech
-      const effectRoll = Math.random();
-      if (effectRoll > 0.7) {
-        playDJEffect("industrial_kick");
-        setTimeout(() => playDJEffect("stab"), 100);
-      } else if (effectRoll > 0.45) {
-        playRandomTransitionEffect();
-      } else if (effectRoll > 0.25) {
-        playDJEffect("scratch");
-      } else {
-        playDJEffect("riser");
-      }
-      
       // Wygadany DJ: najpierw spróbuj żywej, unikatowej zapowiedzi z AI (darmowo).
       let fullAnnouncement = "";
       try {
@@ -95,14 +77,8 @@ export const useDJMode = () => {
         if (texts.mixLines && Math.random() > 0.6) fullAnnouncement += ` ${randomFrom(texts.mixLines)}`;
       }
 
-      // Speak with hard energy after effect
-      await new Promise(r => setTimeout(r, 250));
+      // Sam głos — bez efektów dźwiękowych przed/po (żadnego "piску płyty").
       await djSpeak(fullAnnouncement);
-      
-      // Post-speech effect for mix continuity
-      if (Math.random() > 0.5) {
-        setTimeout(() => playDJEffect(Math.random() > 0.5 ? "impact" : "industrial_kick"), 200);
-      }
     }, 600);
 
     return () => {

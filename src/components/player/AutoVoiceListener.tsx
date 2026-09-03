@@ -61,6 +61,7 @@ const NAV_MAP: Record<string, string> = {
   "nastro": "/mood-history",
   "playlist": "/playlist-manager",
   "admin": "/admin",
+  "studio": "/studio", "suno": "/studio",
   // EN
   "home": "/", "main page": "/",
   "search": "/search",
@@ -258,7 +259,7 @@ export const AutoVoiceListener = () => {
     if (restartTimeoutRef.current) { clearTimeout(restartTimeoutRef.current); restartTimeoutRef.current = null; }
     setIsListening(false);
 
-    await speak(text, { mode: "assistant" });
+    await speak(text, { mode: "assistant", lang: LANG_TO_RECOGNITION[getAppLanguage()] });
 
     // Small extra gap to let echo fade
     await new Promise(r => setTimeout(r, 800));
@@ -318,7 +319,7 @@ export const AutoVoiceListener = () => {
           "/": "Strona główna", "/search": "Szukaj", "/library": "Biblioteka",
           "/liked": "Polubione utwory", "/server": "Serwer mediów", "/movies": "Filmy",
           "/radio-live": "Radio", "/settings": "Ustawienia", "/mood-history": "Historia nastroju",
-          "/playlist-manager": "Playlisty", "/admin": "Admin"
+          "/playlist-manager": "Playlisty", "/admin": "Admin", "/studio": "Studio"
         };
         toast.success(`📂 Otwieram: ${pageNames[route] || route}`);
         safeSpeakAndResume(`Otwieram ${pageNames[route] || route}`);
@@ -615,7 +616,7 @@ export const AutoVoiceListener = () => {
 
     // Resume
     if (includesAny(normalized, [
-      "wznow", "kontynuuj", "graj dalej",
+      "wznow", "kontynuuj", "graj dalej", "prosto",
       "resume", "continue", "keep playing",
       "hervat", "ga door", "verder spelen",
       "продовжуй", "далі грай",
@@ -736,7 +737,7 @@ export const AutoVoiceListener = () => {
     }
 
     // Next track
-    if (includesAny(lower, ["następn", "dalej", "skip", "next", "volgende", "overslaan", "наступн", "далі"])) {
+    if (includesAny(lower, ["następn", "dalej", "skip", "next", "volgende", "overslaan", "наступн", "далі", "w prawo", "prawo"])) {
       nextTrack();
       const msgs: Record<Language, string> = { pl: "Następny utwór", en: "Next track", nl: "Volgend nummer", ua: "Наступний трек" };
       await safeSpeakAndResume(msgs[lang]);
@@ -744,9 +745,23 @@ export const AutoVoiceListener = () => {
     }
 
     // Previous track
-    if (includesAny(lower, ["poprzedni", "cofnij", "wstecz", "previous", "back", "vorige", "terug", "попередн", "назад"])) {
+    if (includesAny(lower, ["poprzedni", "cofnij", "wstecz", "previous", "back", "vorige", "terug", "попередн", "назад", "w lewo", "lewo"])) {
       prevTrack();
       const msgs: Record<Language, string> = { pl: "Poprzedni utwór", en: "Previous track", nl: "Vorig nummer", ua: "Попередній трек" };
+      await safeSpeakAndResume(msgs[lang]);
+      return;
+    }
+
+    // Rolki (Reels) — „w górę" / „w dół" naśladują gest swipe (jeśli Rolki są otwarte)
+    if (includesAny(normalized, ["w gore", "do gory", "gora"]) || includesAny(lower, ["up", "omhoog", "вгору"])) {
+      window.dispatchEvent(new CustomEvent("grouai:reel-nav", { detail: { direction: "next" } }));
+      const msgs: Record<Language, string> = { pl: "W górę", en: "Up", nl: "Omhoog", ua: "Вгору" };
+      await safeSpeakAndResume(msgs[lang]);
+      return;
+    }
+    if (includesAny(lower, ["w dół", "na dół", "dół", "dol"]) || includesAny(lower, ["down", "omlaag", "вниз"])) {
+      window.dispatchEvent(new CustomEvent("grouai:reel-nav", { detail: { direction: "prev" } }));
+      const msgs: Record<Language, string> = { pl: "W dół", en: "Down", nl: "Omlaag", ua: "Вниз" };
       await safeSpeakAndResume(msgs[lang]);
       return;
     }
@@ -1013,16 +1028,16 @@ export const AutoVoiceListener = () => {
     // Search & play - multilingual verbs
     const PLAY_VERBS = [
       // PL
-      "włącz", "puść", "zagraj", "odtwórz", "graj", "startuj", "daj", "leć", "dawaj", "odpal", "wrzuć", "kręć",
+      "włącz", "puść", "zagraj", "odtwórz", "graj", "startuj", "daj", "leć", "dawaj", "odpal", "wrzuć", "kręć", "zrób", "rób",
       // EN
-      "play", "start", "put on", "give me",
+      "play", "start", "put on", "give me", "make",
       // NL
-      "speel", "draai", "zet op", "geef",
+      "speel", "draai", "zet op", "geef", "maak",
       // UA
-      "грай", "увімкни", "постав", "давай",
+      "грай", "увімкни", "постав", "давай", "зроби",
     ];
     const hasPlayVerb = PLAY_VERBS.some(v => lower.includes(v));
-    const playMatch = lower.match(/(?:włącz|puść|zagraj|odtwórz|graj|play|start|startuj|daj|leć|dawaj|odpal|wrzuć|kręć|speel|draai|zet\s+op|geef|грай|увімкни|постав|давай|put\s+on|give\s+me)\s+(.+)/i);
+    const playMatch = lower.match(/(?:włącz|puść|zagraj|odtwórz|graj|play|start|startuj|daj|leć|dawaj|odpal|wrzuć|kręć|zrób|rób|make|speel|draai|zet\s+op|geef|maak|грай|увімкни|постав|давай|зроби|put\s+on|give\s+me)\s+(.+)/i);
     
     // Also match number+songs pattern - multilingual
     const hasCountWord = parseNumber(lower) !== undefined;
@@ -1037,7 +1052,7 @@ export const AutoVoiceListener = () => {
       const count = parseNumber(rawQuery);
       const cleanQuery = rawQuery
         .replace(/\d+/g, "")
-        .replace(/(?:włącz|puść|zagraj|odtwórz|graj|play|start|startuj|daj|leć|dawaj|odpal|wrzuć|kręć|speel|draai|zet\s+op|geef|грай|увімкни|постав|давай|put\s+on|give\s+me)\s*/gi, "")
+        .replace(/(?:włącz|puść|zagraj|odtwórz|graj|play|start|startuj|daj|leć|dawaj|odpal|wrzuć|kręć|zrób|rób|make|speel|draai|zet\s+op|geef|maak|грай|увімкни|постав|давай|зроби|put\s+on|give\s+me)\s*/gi, "")
         .replace(/(?:jeden|jedną|jedno|dwa|dwie|dwóch|dwoch|trzy|trzech|cztery|czterech|pięć|piec|pieciu|pięciu|sześć|szesc|sześciu|szesciu|siedem|siedmiu|osiem|ośmiu|osmiu|dziewięć|dziewiec|dziewięciu|dziesięć|dziesiec|dziesięciu|piętnaście|pietnascie|dwadzieścia|dwadziescia|one|two|three|four|five|six|seven|eight|nine|ten|fifteen|twenty|een|één|twee|drie|vier|vijf|zes|zeven|acht|negen|tien|twaalf|vijftien|twintig)\s*/gi, "")
         .replace(/\s*(utw\w*|piosen\w*|track\w*|song\w*|numer\w*|kawalk\w*|nummer\w*|liedje\w*|lied\w*|трек\w*|пісн\w*)\s*/gi, "")
         .replace(/\s*(mi|mnie|jakieś|jakies|jakiś|tam|no|to|me|some|wat|mij|які)\s*/gi, " ")
@@ -1310,6 +1325,18 @@ export const AutoVoiceListener = () => {
   // Keep ref in sync so safeSpeakAndResume can restart listening
   useEffect(() => { startListeningRef.current = startListening; }, [startListening]);
 
+  // Auto-wznowienie nasłuchu przy wejściu na stronę: jeśli mikrofon był włączony
+  // w poprzedniej sesji (zapamiętane w localStorage), włącz go od razu — bez
+  // czekania aż użytkownik ręcznie kliknie przycisk mikrofonu.
+  const autoResumedListeningRef = useRef(false);
+  useEffect(() => {
+    if (autoResumedListeningRef.current) return;
+    if (!user || !autoListenEnabled) return;
+    if (recognitionRef.current) return;
+    autoResumedListeningRef.current = true;
+    startListening();
+  }, [user, autoListenEnabled, startListening]);
+
   // Restart recognition when app language changes so it listens in the correct locale
   useEffect(() => {
     const onLangChange = () => {
@@ -1342,6 +1369,7 @@ export const AutoVoiceListener = () => {
   const handleNameSubmit = useCallback(async (name: string) => {
     setShowNamingModal(false);
     await saveAssistantName(name);
+    autoResumedListeningRef.current = true; // ten start obsługujemy tu ręcznie z powitaniem
     setAutoListenEnabled(true);
     localStorage.setItem("auto-voice-listen", "true");
     toast.success(`🎤 ${name} aktywowany!`, { duration: 5000 });
@@ -1355,6 +1383,7 @@ export const AutoVoiceListener = () => {
 
   const toggleAutoListen = useCallback(async () => {
     const next = !autoListenEnabled;
+    autoResumedListeningRef.current = true; // ten start (jeśli next) obsługujemy tu ręcznie z powitaniem
     setAutoListenEnabled(next);
     localStorage.setItem("auto-voice-listen", String(next));
     if (next) {
