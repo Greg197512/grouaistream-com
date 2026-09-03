@@ -6,6 +6,7 @@ import { useSkipAdaptation } from "@/hooks/useSkipAdaptation";
 import { useStreamCounter } from "@/hooks/useStreamCounter";
 import { isLikelyAudioUrl, isNativeVideoUrl } from "@/lib/mediaPlayback";
 import { getOfflineObjectUrl } from "@/lib/offlineLibrary";
+import { proxiedMediaUrl } from "@/lib/mediaProxy";
 import { LiveDJEngine, type DJEngineTrack } from "@/utils/liveDJEngine";
 
 export interface Track {
@@ -489,8 +490,10 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
           // go BLOKUJE odtwarzanie plików z R2/hosta bez nagłówków CORS
           // (świeżo wgrane utwory „nie działały"). Zwykłe (opaque) media grają zawsze.
           audioElement.crossOrigin = null;
-          console.log("[Player] Setting audio src:", srcUrl.startsWith("blob:") ? "blob (offline)" : srcUrl);
-          audioElement.src = srcUrl;
+          // Media z R2 puść przez /api/media (poprawny Content-Type + zakresy).
+          const finalUrl = isLocalSource ? srcUrl : (proxiedMediaUrl(srcUrl) || srcUrl);
+          console.log("[Player] Setting audio src:", finalUrl.startsWith("blob:") ? "blob (offline)" : finalUrl);
+          audioElement.src = finalUrl;
           audioElement.load();
 
           const playPromise = audioElement.play();
