@@ -16,8 +16,11 @@
  *  - kompresor/limiter na magistrali głównej, żeby głośność była
  *    spójna między utworami o różnej głośności źródłowej.
  *
- * Wymaga plików serwowanych z nagłówkiem Access-Control-Allow-Origin
- * (sprawdzone: R2, Suno CDN, Supabase Storage — cała biblioteka OK).
+ * Crossfade (Web Audio) wymaga plików z nagłówkiem Access-Control-Allow-Origin.
+ * Gdy pliku bez CORS nie da się załadować (np. część świeżych uploadów z R2),
+ * silnik zgłasza onLoadError — odbiorca (PlayerContext) porzuca wtedy crossfade
+ * i gra listę zwykłym elementem <audio> (bez CORS gra ZAWSZE). Dzięki temu
+ * muzyka nigdy się nie „zacina" przez brak nagłówków — najwyżej bez miksu.
  */
 
 export interface DJEngineTrack {
@@ -57,6 +60,11 @@ export class LiveDJEngine {
   onTrackChange: ((track: DJEngineTrack, index: number) => void) | null = null;
   onTimeUpdate: ((currentTime: number, duration: number) => void) | null = null;
   onSessionEnded: (() => void) | null = null;
+  // Wywoływane, gdy źródło NIE da się odtworzyć przez Web Audio (brak nagłówków
+  // CORS na pliku — częste dla świeżo wgranych utworów z R2). Odbiorca powinien
+  // wtedy porzucić crossfade i zagrać listę zwykłym elementem <audio> (bez CORS).
+  onLoadError: ((track: DJEngineTrack | null) => void) | null = null;
+  private failed = false;
 
   constructor() {
     this.ctx = new AudioContext();
@@ -97,6 +105,16 @@ export class LiveDJEngine {
     deck.audio.pause();
     deck.audio.removeAttribute("src");
     deck.audio.load();
+    // Jednorazowy nasłuch błędu ładowania: gdy plik nie ma CORS, przeglądarka
+    // (przy crossOrigin="anonymous") odrzuca zasób i emituje 'error' — wtedy
+    // zgłaszamy onLoadError, żeby przełączyć się na zwykłe odtwarzanie.
+    const onErr = () => {
+      deck.audio.removeEventListener("error", onErr);
+      if (this.destroyed || this.failed) return;
+      this.failed = true;
+      this.onLoadError?.(track);
+    };
+    deck.audio.addEventListener("error", onErr);
     deck.audio.src = url;
     deck.audio.load();
     deck.track = track;
@@ -119,7 +137,16 @@ export class LiveDJEngine {
       await deck.audio.play();
     } catch (e) {
       console.error("[LiveDJEngine] start play() failed:", e);
+      // Autoplay zablokowany na telefonie to NIE jest błąd źródła — nie przełączaj.
+      const name = (e as { name?: string })?.name;
+      if (name !== "NotAllowedError" && !this.destroyed && !this.failed) {
+        this.failed = true;
+        this.onLoadError?.(first);
+      }
     }
+    // Jeśli w międzyczasie zgłoszono błąd źródła (CORS) lub zniszczono silnik —
+    // nie uruchamiaj pollingu ani nie zgłaszaj zmiany utworu (fallback przejął).
+    if (this.failed || this.destroyed) return;
     this.onTrackChange?.(first, this.queueIndex);
     this.startPolling();
   }

@@ -484,7 +484,11 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
           audioElement.pause();
           audioElement.removeAttribute("src");
           audioElement.load();
-          audioElement.crossOrigin = isLocalSource ? null : "anonymous";
+          // NIE wymuszaj crossOrigin="anonymous". Wizualizer (audioTap) i tak
+          // pomija źródła cross-origin, więc CORS nic tu nie daje, a wymuszenie
+          // go BLOKUJE odtwarzanie plików z R2/hosta bez nagłówków CORS
+          // (świeżo wgrane utwory „nie działały"). Zwykłe (opaque) media grają zawsze.
+          audioElement.crossOrigin = null;
           console.log("[Player] Setting audio src:", srcUrl.startsWith("blob:") ? "blob (offline)" : srcUrl);
           audioElement.src = srcUrl;
           audioElement.load();
@@ -619,6 +623,22 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
         } else {
           setIsPlaying(false);
         }
+      };
+      // Awaryjnie: gdy plik nie ma CORS (np. świeży upload z R2), crossfade nie
+      // zagra. Porzucamy silnik i gramy listę zwykłym <audio> (bez CORS działa
+      // ZAWSZE) — użytkownik słyszy muzykę, tylko bez płynnego miksowania.
+      engine.onLoadError = () => {
+        teardownCrossfadeEngine();
+        const fallbackTrack = playableTracks[resolvedIndex];
+        // null → utwór wymusza ponowne uruchomienie efektu odtwarzania nawet, gdy
+        // silnik zdążył ustawić ten sam currentTrack (inaczej ten sam ref = brak
+        // re-runu i cisza). Krótki null jest niesłyszalny — i tak nic nie grało.
+        setCurrentTrack(null);
+        setTimeout(() => {
+          if (externalPlaybackRef.current) return; // ktoś w międzyczasie odpalił inny silnik
+          setQueueIndex(resolvedIndex);
+          setCurrentTrack(fallbackTrack);
+        }, 0);
       };
       externalPlaybackRef.current = {
         onPause: () => engine.pause(),
