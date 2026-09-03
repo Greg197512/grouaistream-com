@@ -23,6 +23,8 @@
  * muzyka nigdy się nie „zacina" przez brak nagłówków — najwyżej bez miksu.
  */
 
+import { proxiedMediaUrl } from "@/lib/mediaProxy";
+
 export interface DJEngineTrack {
   id: string;
   title: string;
@@ -101,7 +103,8 @@ export class LiveDJEngine {
   }
 
   private loadIntoDeck(deck: Deck, track: DJEngineTrack) {
-    const url = track.audio_url || track.video_url || "";
+    // Media z R2 przez /api/media: same-origin → CORS OK → crossfade działa.
+    const url = proxiedMediaUrl(track.audio_url || track.video_url || "") || "";
     deck.audio.pause();
     deck.audio.removeAttribute("src");
     deck.audio.load();
