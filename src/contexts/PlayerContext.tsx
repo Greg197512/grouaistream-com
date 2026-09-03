@@ -438,7 +438,11 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
           audioElement.pause();
           audioElement.removeAttribute("src");
           audioElement.load();
-          audioElement.crossOrigin = isLocalSource ? null : "anonymous";
+          // NIE wymuszaj crossOrigin="anonymous". Wizualizer (audioTap) i tak
+          // pomija źródła cross-origin, więc CORS nic tu nie daje, a wymuszenie
+          // go BLOKUJE odtwarzanie plików z R2/hosta bez nagłówków CORS
+          // (świeżo wgrane utwory „nie działały"). Zwykłe (opaque) media grają zawsze.
+          audioElement.crossOrigin = null;
           console.log("[Player] Setting audio src:", srcUrl.startsWith("blob:") ? "blob (offline)" : srcUrl);
           audioElement.src = srcUrl;
           audioElement.load();
