@@ -30,20 +30,37 @@ export default async function handler(req: Request): Promise<Response> {
   let rows: unknown[] = [];
   try { rows = await r.json(); } catch { /* */ }
 
+  const probe = url.searchParams.get("probe") === "1";
+
+  async function head(u: string | null): Promise<{ status: number | string; type: string }> {
+    if (!u) return { status: "—", type: "—" };
+    try {
+      const rr = await fetch(u, { method: "GET", headers: { Range: "bytes=0-0" } });
+      // Zamknij ciało, nie pobieraj.
+      try { await rr.body?.cancel(); } catch { /* */ }
+      return { status: rr.status, type: rr.headers.get("content-type") || "—" };
+    } catch {
+      return { status: "ERR", type: "—" };
+    }
+  }
+
   const summary = Array.isArray(rows)
-    ? rows.map((t) => {
+    ? await Promise.all(rows.map(async (t) => {
         const row = t as Record<string, unknown>;
+        const audio = row.audio_url as string | null;
+        const p = probe ? await head(audio) : null;
         return {
           title: row.title,
           artist: row.artist,
           created_at: row.created_at,
           duration: row.duration,
-          audio_host: hostOf(row.audio_url as string | null),
+          audio_host: hostOf(audio),
           video_host: hostOf(row.video_url as string | null),
-          audio_url: row.audio_url,
+          ...(p ? { probe_status: p.status, probe_type: p.type } : {}),
+          audio_url: audio,
           video_url: row.video_url,
         };
-      })
+      }))
     : rows;
 
   return new Response(JSON.stringify({ status, count: Array.isArray(rows) ? rows.length : 0, rows: summary }, null, 2), {
