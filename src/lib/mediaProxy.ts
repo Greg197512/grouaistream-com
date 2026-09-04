@@ -2,7 +2,13 @@
 // zawsze grało (poprawny Content-Type, zakresy, same-origin = działa też
 // crossfade). Wszystko inne (blob:, data:, Suno, YouTube, inne hosty) zwraca
 // bez zmian. Idempotentne — nie owija dwa razy.
-const R2_HOSTS = ["pub-46ecdc3a5ae341fcb16454d732eb9bcd.r2.dev"];
+const R2_HOSTS = [
+  "pub-46ecdc3a5ae341fcb16454d732eb9bcd.r2.dev",
+  "cdn1.suno.ai",
+  "cdn2.suno.ai",
+  "cdn.suno.ai",
+  "audiopipe.suno.ai",
+];
 
 export function proxiedMediaUrl(url: string | null | undefined): string | null {
   if (!url) return url ?? null;

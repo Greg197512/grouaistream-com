@@ -14,6 +14,12 @@ export const config = { runtime: "edge" };
 
 const ALLOWED_HOSTS = new Set<string>([
   "pub-46ecdc3a5ae341fcb16454d732eb9bcd.r2.dev",
+  // Suno CDN — część utworów ma tam audio_url; przez proxy dostają poprawny
+  // Content-Type + same-origin (działa też crossfade).
+  "cdn1.suno.ai",
+  "cdn2.suno.ai",
+  "cdn.suno.ai",
+  "audiopipe.suno.ai",
 ]);
 
 const CORS = {
