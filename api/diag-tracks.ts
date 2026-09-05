@@ -35,7 +35,11 @@ export default async function handler(req: Request): Promise<Response> {
   async function head(u: string | null): Promise<{ status: number | string; type: string }> {
     if (!u) return { status: "—", type: "—" };
     try {
-      const rr = await fetch(u, { method: "GET", headers: { Range: "bytes=0-0" } });
+      const rr = await fetch(u, { method: "GET", headers: {
+        Range: "bytes=0-0",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
+        "Referer": "https://suno.com/",
+      } });
       // Zamknij ciało, nie pobieraj.
       try { await rr.body?.cancel(); } catch { /* */ }
       return { status: rr.status, type: rr.headers.get("content-type") || "—" };

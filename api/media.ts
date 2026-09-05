@@ -66,8 +66,14 @@ export default async function handler(req: Request): Promise<Response> {
   }
 
   // Przekaż zapytanie zakresowe (przewijanie / strumieniowanie audio).
+  // WAŻNE: wysyłamy nagłówki „przeglądarkowe" — niektóre CDN-y (m.in. Suno)
+  // odrzucają (403) żądania bez User-Agent/Referer, a akceptują z nimi.
   const range = req.headers.get("range");
-  const upstreamHeaders: Record<string, string> = {};
+  const upstreamHeaders: Record<string, string> = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
+    "Accept": "*/*",
+    "Referer": "https://suno.com/",
+  };
   if (range) upstreamHeaders["Range"] = range;
 
   let upstream: Response;
