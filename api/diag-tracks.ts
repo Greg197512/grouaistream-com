@@ -17,11 +17,13 @@ export default async function handler(req: Request): Promise<Response> {
   const artist = url.searchParams.get("artist");
   const limit = Math.min(Number(url.searchParams.get("limit") || 12), 50);
 
+  const host = url.searchParams.get("host"); // filtr po hoście audio_url, np. host=suno
   const params = new URLSearchParams();
   params.set("select", "id,title,artist,created_at,duration,audio_url,video_url");
   params.set("order", "created_at.desc");
   params.set("limit", String(limit));
   if (artist) params.set("artist", `ilike.*${artist}*`);
+  if (host) params.set("audio_url", `ilike.*${host}*`);
 
   const r = await fetch(`${SUPABASE_URL}/rest/v1/tracks?${params.toString()}`, {
     headers: { apikey: ANON, Authorization: `Bearer ${ANON}` },
