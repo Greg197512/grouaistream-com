@@ -37,6 +37,7 @@ export const IntroSplash = () => {
 
   const timers = useRef<number[]>([]);
   const logoStarted = useRef(false);
+  const videoPlaying = useRef(false);
   const push = (fn: () => void, ms: number) => timers.current.push(window.setTimeout(fn, ms));
 
   const tiles = useMemo(
@@ -68,12 +69,25 @@ export const IntroSplash = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [show, reduce]);
 
-  // Bezpiecznik wideo → przejdź do błysku.
+  // Bezpieczniki wideo:
+  //  - jeśli w 3,5s wideo NIE zaczęło grać (zablokowany autoplay / nie ładuje
+  //    się na telefonie) → nie trzymaj czarnego ekranu, przejdź dalej,
+  //  - twardy backstop 9s na wypadek, gdyby onEnded/onTime nie zadziałały.
   useEffect(() => {
     if (!show || reduce || phase !== "video") return;
-    const t = window.setTimeout(() => setPhase("flash"), 20000);
-    return () => clearTimeout(t);
+    const tStart = window.setTimeout(() => { if (!videoPlaying.current) setPhase("flash"); }, 3500);
+    const tHard = window.setTimeout(() => setPhase("flash"), 9000);
+    return () => { clearTimeout(tStart); clearTimeout(tHard); };
   }, [show, reduce, phase]);
+
+  // OSTATECZNY bezpiecznik: cokolwiek się stanie, odsłoń stronę max po 12s od
+  // startu (intro nigdy nie może „zawiesić" całej strony pod czarną nakładką).
+  useEffect(() => {
+    if (!show || reduce) return;
+    const t = window.setTimeout(() => setShow(false), 12000);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Błysk → logo.
   useEffect(() => {
@@ -163,6 +177,7 @@ export const IntroSplash = () => {
           />
           <video
             src={VIDEO} autoPlay muted playsInline
+            onPlaying={() => { videoPlaying.current = true; }}
             onTimeUpdate={onTime} onEnded={onEnded} onError={onErr}
             className="absolute inset-0 w-full h-full object-contain"
             style={{
