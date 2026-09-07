@@ -34,7 +34,7 @@ const ROUTES = [
       "Pierwsza platforma muzyczna AI z weryfikacją ludzkich odsłuchań. Zero fake streamów, mood detection, GrouaRadio 24/7. No bots, real vibes.",
     h1: "GrouAI Stream — muzyka, która patrzy Ci w oczy i wie, kim jesteś akurat teraz",
     body: `
-      <p>GrouAI Stream to platforma muzyczna z prawdziwym, weryfikowanym streamingiem — bez botów, bez pompowanych statystyk, bez oszukiwania artystów. Rozpoznajemy Twój nastrój z głosu i kamery, tworzymy utwory na żądanie w 15 gatunkach, uruchamiamy radio 24/7 i pozwalamy artystom zarabiać na każdym uczciwym odsłuchaniu.</p>
+      <p>GrouAI Stream to platforma muzyczna z prawdziwym, weryfikowanym streamingiem — bez botów, bez pompowanych statystyk, bez oszukiwania artystów. Rozpoznajemy Twój nastrój z głosu i kamery, tworzymy utwory na żądanie w 15 gatunkach, uruchamiamy radio 24/7 i dzielimy się z artystami udziałem z realnego przychodu ich muzyki.</p>
       <h2>Co potrafi GrouAI Stream</h2>
       <ul>
         <li><strong>Mood detection</strong> — kamera i głos wyczuwają nastrój, muzyka dopasowuje się w czasie rzeczywistym.</li>
@@ -42,10 +42,10 @@ const ROUTES = [
         <li><strong>AI Music Studio</strong> — generowanie 30-sekundowych utworów z Twoim tekstem w 15 gatunkach.</li>
         <li><strong>Voice commands</strong> — mów do playera po polsku, angielsku, niderlandzku, ukraińsku.</li>
         <li><strong>Party Mode</strong> — QR-kod, głosowanie gości, kamera na tłum, wykrywanie emocji publiczności.</li>
-        <li><strong>Verified human streams</strong> — antybotowa weryfikacja odsłuchań, uczciwe payouty dla twórców.</li>
+        <li><strong>Verified human streams</strong> — antybotowa weryfikacja odsłuchań, udział w realnym przychodzie dla twórców.</li>
       </ul>
       <h2>Dlaczego GrouAI</h2>
-      <p>Zamiast kolejnego playera z algorytmem, dostajesz empatycznego DJ-a, który zna Twój rytm dnia, kontekst nastroju i historię odsłuchów. Artyści zarabiają realnie — bez farm botów zjadających budżety.</p>
+      <p>Zamiast kolejnego playera z algorytmem, dostajesz empatycznego DJ-a, który zna Twój rytm dnia, kontekst nastroju i historię odsłuchów. Artyści dostają udział z realnego przychodu — bez farm botów zjadających budżety.</p>
       <nav aria-label="Główne sekcje">
         <a href="/radio">GrouaRadio</a> ·
         <a href="/radio-live">Radio Live</a> ·
@@ -84,20 +84,20 @@ const ROUTES = [
   },
   {
     path: "/earn",
-    title: "Zarabiaj z GrouAI Stream — payouty dla artystów bez botów",
+    title: "Zarabiaj z GrouAI Stream — udział w realnym przychodzie, bez botów",
     description:
-      "Wgraj muzykę na GrouAI Stream i zarabiaj na każdym zweryfikowanym odsłuchaniu. Uczciwe payouty, program poleceń, weekend challenges, milestone bonusy.",
+      "Wgraj muzykę na GrouAI Stream za darmo. Zarabiasz udziałem z realnego przychodu swojej muzyki (reklamy/subskrypcje) i z tipów słuchaczy — uczciwie, bez obietnic stawki za odsłuch.",
     h1: "Zarabiaj z GrouAI Stream",
     body: `
-      <p>GrouAI Stream płaci artystom za realne, ludzkie odsłuchy — nie za wygenerowane przez farmy botów statystyki. Wgraj utwór, rozdaj link, i zbieraj wypłaty co tydzień.</p>
+      <p>GrouAI Stream daje twórcom za darmo hosting, AI-studio, radio i promocję. Pieniądze pojawiają się z REALNEGO przychodu Twojej muzyki i z tipów — dzielimy się tym, co faktycznie wpłynie. Bez stałej stawki za odsłuch, bez pustych obietnic.</p>
       <h2>Jak zarobić</h2>
       <ol>
-        <li><strong>Wgraj utwór</strong> na <a href="/upload">/upload</a> — minimum 2 minuty, weryfikacja AI moderator.</li>
+        <li><strong>Wgraj utwór</strong> na <a href="/upload">/upload</a> — za darmo, weryfikacja AI moderator.</li>
         <li><strong>Rozdaj link</strong> do swojego profilu i zachęć słuchaczy.</li>
-        <li><strong>Bonusy tygodniowe</strong> — Beginner, Active, Pro — im więcej realnych odsłuchów, tym wyższa stawka.</li>
-        <li><strong>Referral program</strong> — polecaj GrouAI Stream i zbieraj prowizję z odsłuchów zaproszonych artystów.</li>
-        <li><strong>Weekend challenges</strong> — dodatkowe pule nagród co weekend.</li>
-        <li><strong>Milestone bonusy</strong> — jednorazowe wypłaty za 1k, 10k, 100k odsłuchów.</li>
+        <li><strong>Udział w przychodach</strong> — % z reklam/subskrypcji przypisany do Twoich zweryfikowanych odsłuchań, wypłacany z realnej puli po przekroczeniu progu.</li>
+        <li><strong>Tipy</strong> — słuchacze wspierają Cię dobrowolnie, dostajesz 90% każdej wpłaty.</li>
+        <li><strong>Referral program</strong> — polecaj GrouAI Stream i zbieraj prowizję z realnego przychodu zaproszonych artystów.</li>
+        <li><strong>Odznaki milestone</strong> (1k, 10k, 100k odsłuchów) — status i większa widoczność w serwisie.</li>
       </ol>
       <nav aria-label="Zarabianie">
         <a href="/upload">Wgraj muzykę</a> · <a href="/earnings">Moje zarobki</a> · <a href="/auth">Załóż konto</a> · <a href="/legal">Regulamin payoutów</a>
