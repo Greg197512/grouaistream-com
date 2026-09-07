@@ -76,6 +76,21 @@ export default async function handler(req: Request): Promise<Response> {
   };
   if (range) upstreamHeaders["Range"] = range;
 
+  // Tryb diagnostyczny: ?probe=1 → zwróć status + kluczowe nagłówki źródła (JSON),
+  // bez pobierania całego pliku. Do sprawdzania CORS/throttlingu R2.
+  const probe = reqUrl.searchParams.get("probe") === "1";
+  if (probe) {
+    try {
+      const pr = await fetch(target.toString(), { method: "GET", headers: { ...upstreamHeaders, Range: "bytes=0-1" } });
+      try { await pr.body?.cancel(); } catch { /* */ }
+      const h: Record<string, string | null> = {};
+      for (const k of ["content-type","content-length","content-range","accept-ranges","access-control-allow-origin","cache-control","age","cf-cache-status","cf-ray"]) h[k] = pr.headers.get(k);
+      return new Response(JSON.stringify({ status: pr.status, headers: h }, null, 2), { headers: { ...CORS, "Content-Type": "application/json" } });
+    } catch (e) {
+      return new Response(JSON.stringify({ error: String(e) }), { status: 502, headers: { ...CORS, "Content-Type": "application/json" } });
+    }
+  }
+
   let upstream: Response;
   try {
     upstream = await fetch(target.toString(), {

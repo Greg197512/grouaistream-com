@@ -569,10 +569,12 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [repeatMode, nextTrackInternal]);
 
-  // Kolejkę da się żywo miksować tylko gdy WSZYSTKIE utwory to zwykłe audio
-  // (bez wideo/YouTube — te idą normalną ścieżką, silnik ich nie obsługuje).
-  const isCrossfadeEligible = (tracks: Track[]) =>
-    tracks.length > 1 && tracks.every((t) => !getPlayableYouTubeId(t) && !getNativeVideoUrl(t) && !!getPlayableAudioUrl(t));
+  // Żywy crossfade (LiveDJEngine) WYŁĄCZONY. Wymagał Web Audio + CORS na plikach
+  // (crossOrigin="anonymous"); pliki z R2 (r2.dev) nie zawsze dają CORS, przez co
+  // silnik zawodził per-utwór i muzyka „przycinała się"/gubiła. Zwykły <audio>
+  // gra bezpośrednio z R2 (206 audio/mpeg), bez CORS i bez Web Audio — najstabilniej.
+  // (Można wrócić do crossfade dopiero, gdy R2 pójdzie przez własną domenę z CORS.)
+  const isCrossfadeEligible = (_tracks: Track[]) => false;
 
   const playTrack = (track: Track, source: string = "direct") => {
     if (!hasPlayableSource(track)) {
