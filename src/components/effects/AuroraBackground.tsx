@@ -2,8 +2,21 @@ import { motion } from "framer-motion";
 import { useAI } from "@/contexts/AIContext";
 import auroraWomanFace from "@/assets/aurora-woman-face.jpg";
 
-export const AuroraBackground = ({ showFace = false }: { showFace?: boolean }) => {
+export const AuroraBackground = ({ showFace = false, lite = false }: { showFace?: boolean; lite?: boolean }) => {
   const { isProcessing, isLLMReady } = useAI();
+
+  // Tryb oszczędny (stare/słabe urządzenia): tylko tanie, STATYCZNE tło — bez
+  // animowanych, mocno rozmytych plam (blur 120px), wstęg i cząstek, które
+  // najbardziej obciążają GPU. Wygląd zostaje spójny, płynność ratujemy.
+  if (lite) {
+    return (
+      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+        <div className="absolute inset-0 bg-background" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,hsl(268_100%_62%/0.10),transparent_55%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,hsl(331_100%_60%/0.08),transparent_55%)]" />
+      </div>
+    );
+  }
 
   // Twarz pokazywana tylko gdy showFace=true (admin, b2b)
   const faceOpacity = !showFace || !isLLMReady ? 0 : isProcessing ? 0.55 : 0.18;

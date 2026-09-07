@@ -20,6 +20,7 @@ import { usePlayer } from "@/contexts/PlayerContext";
 import { DragDropProvider } from "@/contexts/DragDropContext";
 import { FloatingPlaylistDropZones } from "@/components/dnd/FloatingPlaylistDropZones";
 import { AuroraBackground } from "@/components/effects/AuroraBackground";
+import { isLowPowerDevice } from "@/lib/perf";
 import { useLocation } from "react-router-dom";
 import { UpgradeModal } from "@/components/modals/UpgradeModal";
 import { useSubscription } from "@/contexts/SubscriptionContext";
@@ -54,8 +55,8 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
   return (
     <DragDropProvider>
       <div className="flex h-screen flex-col overflow-hidden bg-background relative">
-        {/* Aurora animated background */}
-        {!hideAurora && <AuroraBackground showFace={showFace} />}
+        {/* Aurora animated background (na słabym sprzęcie: wersja lite = statyczna) */}
+        {!hideAurora && <AuroraBackground showFace={showFace} lite={isLowPowerDevice()} />}
         
         {/* Main Content Area */}
         <div className="flex flex-1 overflow-hidden relative z-10">

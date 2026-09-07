@@ -1,6 +1,11 @@
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
+import { applyPerfMode } from "./lib/perf";
+
+// Tryb oszczędny na słabszym sprzęcie (płynność na starych telefonach/PC) —
+// ustaw znacznik na <html> zanim cokolwiek się narysuje.
+applyPerfMode();
 
 // Global unhandled error/rejection catcher — prevents silent blank screens
 window.addEventListener("error", (event) => {

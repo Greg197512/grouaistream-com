@@ -714,3 +714,24 @@ html[data-threed="on"] .material-icons {
   25%  { opacity: 1; }
   100% { background-position: -90% 0; opacity: 0; }
 }
+
+/* ==========================================================================
+   TRYB OSZCZĘDNY (low-power) — płynność na starych/słabych telefonach i PC.
+   Włączany przez src/lib/perf.ts jako <html data-lowpower="on">.
+   ========================================================================== */
+:root[data-lowpower="on"] * {
+  /* Zeruj rozmycie „szkła" (backdrop-filter) — to jeden z najdroższych efektów
+     na słabym GPU. Panele zostają (mają własne półprzezroczyste tło), tracą
+     tylko rozmycie. Dotyczy wszystkich util. Tailwind backdrop-blur-*. */
+  --tw-backdrop-blur: blur(0) !important;
+}
+:root[data-lowpower="on"] {
+  /* Płynniejszy scroll i mniej repaintów. */
+  scroll-behavior: auto !important;
+}
+/* Wyłącz dekoracyjne, wiecznie animowane tła/poświaty na słabym sprzęcie. */
+:root[data-lowpower="on"] .hero-flame,
+:root[data-lowpower="on"] .title-glint {
+  animation: none !important;
+  opacity: 0 !important;
+}

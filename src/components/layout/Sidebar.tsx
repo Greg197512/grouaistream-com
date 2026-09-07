@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { useLanguage } from "@/contexts/LanguageContext";
 import logoIcon from "@/assets/logo-full.png";
 import { MatrixNotes } from "@/components/effects/MatrixNotes";
+import { isLowPowerDevice } from "@/lib/perf";
 import { useEffects3D } from "@/contexts/Effects3DContext";
 
 interface SidebarProps {
@@ -19,6 +20,8 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
   const { t } = useLanguage();
   const [activeItem, setActiveItem] = useState(location.pathname);
   const { is3D, toggle: toggle3D } = useEffects3D();
+  // Na słabym sprzęcie nie animuj „matrix notes" (oszczędzamy GPU/CPU).
+  const notesOn = is3D && !isLowPowerDevice();
 
   useEffect(() => {
     setActiveItem(location.pathname);
@@ -78,7 +81,7 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
             onClick={() => handleNavClick("/")}
           >
             <div className="absolute -inset-4 overflow-hidden">
-              <MatrixNotes enabled={is3D} />
+              <MatrixNotes enabled={notesOn} />
             </div>
             <img src="/logo-grouaistream.png" alt="GrouAIstream" className="h-16 w-16 object-contain drop-shadow-[0_0_14px_rgba(255,190,60,0.45)] relative z-10" />
           </motion.div>
@@ -92,7 +95,7 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
             whileHover={{ scale: 1.03 }}
           >
             <div className="absolute -inset-6 overflow-hidden">
-              <MatrixNotes enabled={is3D} />
+              <MatrixNotes enabled={notesOn} />
             </div>
             <img src="/logo-grouaistream.png" alt="GrouAIstream — Global Music Streaming" className="h-28 object-contain relative z-10 drop-shadow-[0_0_18px_rgba(255,190,60,0.4)]" />
           </motion.div>
