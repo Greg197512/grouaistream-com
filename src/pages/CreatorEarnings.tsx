@@ -72,14 +72,8 @@ const CreatorEarnings = () => {
   const [likesCount, setLikesCount] = useState(0);
   const [moodSessionsCount, setMoodSessionsCount] = useState(0);
   const [studioCount, setStudioCount] = useState(0);
-  const [uploadBonusClaimed, setUploadBonusClaimed] = useState(false);
-  const [likesBonusClaimed, setLikesBonusClaimed] = useState(false);
-  const [moodBonusClaimed, setMoodBonusClaimed] = useState(false);
-  const [studioBonusClaimed, setStudioBonusClaimed] = useState(false);
   const [ratingsCount, setRatingsCount] = useState(0);
-  const [ratingsBonusClaimed, setRatingsBonusClaimed] = useState(false);
   const [isUltimate, setIsUltimate] = useState(false);
-  const [claimingMilestone, setClaimingMilestone] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     if (!user) return;
@@ -222,51 +216,8 @@ const CreatorEarnings = () => {
       .eq("user_id", user.id);
     setRatingsCount(ratingsC ?? 0);
 
-    const { data: milestoneData } = await (supabase as any)
-      .from("creator_milestone_bonuses")
-      .select("bonus_type")
-      .eq("user_id", user.id);
-    if (milestoneData) {
-      setUploadBonusClaimed(milestoneData.some((m: any) => m.bonus_type === "uploads_50"));
-      setLikesBonusClaimed(milestoneData.some((m: any) => m.bonus_type === "likes_50"));
-      setMoodBonusClaimed(milestoneData.some((m: any) => m.bonus_type === "mood_sessions_5"));
-      setStudioBonusClaimed(milestoneData.some((m: any) => m.bonus_type === "studio_5"));
-      setRatingsBonusClaimed(milestoneData.some((m: any) => m.bonus_type === "ratings_50"));
-    }
-
     setLoading(false);
   }, [user]);
-
-  const claimMilestone = async (type: "uploads" | "likes" | "mood" | "studio" | "ratings") => {
-    setClaimingMilestone(type);
-    try {
-      const fnMap: Record<string, string> = {
-        uploads: "claim_upload_milestone_bonus",
-        likes: "claim_likes_milestone_bonus",
-        mood: "claim_mood_sessions_milestone_bonus",
-        studio: "claim_studio_milestone_bonus",
-        ratings: "claim_ratings_50_milestone_bonus",
-      };
-      const { data, error } = await (supabase as any).rpc(fnMap[type]);
-      if (error) throw error;
-      if (data?.success) {
-        toast.success(`🎁 +${Number(data.amount).toFixed(2)} $ trafiło do Twoich zarobków!`);
-        loadData();
-      } else if (data?.error === "not_eligible") {
-        toast.error(`Potrzebujesz ${data.required}, masz ${data.current}`);
-      } else if (data?.error === "already_claimed") {
-        toast.info("Ten bonus został już odebrany");
-      } else if (data?.error === "requires_ultimate") {
-        toast.error("Ten bonus wymaga subskrypcji Ultimate (9.99 $/mc)");
-      } else {
-        toast.error("Nie udało się odebrać bonusu");
-      }
-    } catch (err: any) {
-      toast.error(err.message || "Błąd");
-    } finally {
-      setClaimingMilestone(null);
-    }
-  };
 
   useEffect(() => {
     loadData();
@@ -483,8 +434,11 @@ const CreatorEarnings = () => {
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-lg">
                 <Rocket className="h-5 w-5 text-amber-400" />
-                Bonusy za osiągnięcia
+                Odznaki za osiągnięcia
               </CardTitle>
+              <p className="text-xs text-muted-foreground mt-1">
+                Punkty i odznaki za aktywność — wyróżnienie w profilu, nie wypłata pieniędzy.
+              </p>
             </CardHeader>
             <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {/* 50 uploadów */}
@@ -492,29 +446,23 @@ const CreatorEarnings = () => {
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
                     <Music className="h-4 w-4 text-emerald-400" />
-                    <span className="text-sm font-semibold">50 utworów = +12 $</span>
+                    <span className="text-sm font-semibold">50 utworów</span>
                   </div>
                   <Badge className="bg-emerald-500/15 text-emerald-400 border-emerald-500/25 text-[10px]">
                     {Math.min(uploadCount, 50)}/50
                   </Badge>
                 </div>
-                <p className="text-[11px] text-amber-400/90 mb-2 font-medium">
-                  🏆 Tylko 3 pierwsze osoby, które dobiją do 50 utworów — kasa leci!
-                </p>
                 <div className="h-1.5 rounded-full bg-secondary/50 mb-3 overflow-hidden">
                   <div
                     className="h-full bg-gradient-to-r from-emerald-500 to-green-500 transition-all"
                     style={{ width: `${Math.min(100, (uploadCount / 50) * 100)}%` }}
                   />
                 </div>
-                <Button
-                  size="sm"
-                  disabled={uploadBonusClaimed || uploadCount < 50 || claimingMilestone === "uploads"}
-                  onClick={() => claimMilestone("uploads")}
-                  className="w-full bg-emerald-600 hover:bg-emerald-500 text-white"
-                >
-                  {uploadBonusClaimed ? "✓ Odebrane" : uploadCount < 50 ? `Dodaj jeszcze ${50 - uploadCount}` : "Odbierz 12 $"}
-                </Button>
+                {uploadCount >= 50 ? (
+                  <div className="w-full text-center text-sm font-semibold text-emerald-400 py-1.5 rounded-md bg-emerald-500/10">🏆 Odznaka zdobyta · +120 pkt</div>
+                ) : (
+                  <div className="w-full text-center text-xs text-muted-foreground py-1.5">Dodaj jeszcze {50 - uploadCount} → odznaka + 120 pkt</div>
+                )}
               </div>
 
               {/* 50 polubień */}
@@ -522,7 +470,7 @@ const CreatorEarnings = () => {
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
                     <Heart className="h-4 w-4 text-pink-400" />
-                    <span className="text-sm font-semibold">50 polubień = +12 $</span>
+                    <span className="text-sm font-semibold">50 polubień</span>
                   </div>
                   <Badge className="bg-pink-500/15 text-pink-400 border-pink-500/25 text-[10px]">
                     {Math.min(likesCount, 50)}/50
@@ -534,14 +482,11 @@ const CreatorEarnings = () => {
                     style={{ width: `${Math.min(100, (likesCount / 50) * 100)}%` }}
                   />
                 </div>
-                <Button
-                  size="sm"
-                  disabled={likesBonusClaimed || likesCount < 50 || claimingMilestone === "likes"}
-                  onClick={() => claimMilestone("likes")}
-                  className="w-full bg-pink-600 hover:bg-pink-500 text-white"
-                >
-                  {likesBonusClaimed ? "✓ Odebrane" : likesCount < 50 ? `Brakuje ${50 - likesCount}` : "Odbierz 12 $"}
-                </Button>
+                {likesCount >= 50 ? (
+                  <div className="w-full text-center text-sm font-semibold text-pink-400 py-1.5 rounded-md bg-pink-500/10">🏆 Odznaka zdobyta · +120 pkt</div>
+                ) : (
+                  <div className="w-full text-center text-xs text-muted-foreground py-1.5">Brakuje {50 - likesCount} → odznaka + 120 pkt</div>
+                )}
               </div>
 
               {/* 5 sesji nastroju */}
@@ -549,7 +494,7 @@ const CreatorEarnings = () => {
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
                     <BarChart3 className="h-4 w-4 text-purple-400" />
-                    <span className="text-sm font-semibold">5 analiz nastroju = +5 $</span>
+                    <span className="text-sm font-semibold">5 analiz nastroju</span>
                   </div>
                   <Badge className="bg-purple-500/15 text-purple-400 border-purple-500/25 text-[10px]">
                     {Math.min(moodSessionsCount, 5)}/5
@@ -561,14 +506,11 @@ const CreatorEarnings = () => {
                     style={{ width: `${Math.min(100, (moodSessionsCount / 5) * 100)}%` }}
                   />
                 </div>
-                <Button
-                  size="sm"
-                  disabled={moodBonusClaimed || moodSessionsCount < 5 || claimingMilestone === "mood"}
-                  onClick={() => claimMilestone("mood")}
-                  className="w-full bg-purple-600 hover:bg-purple-500 text-white"
-                >
-                  {moodBonusClaimed ? "✓ Odebrane" : moodSessionsCount < 5 ? `Jeszcze ${5 - moodSessionsCount} analiz` : "Odbierz 5 $"}
-                </Button>
+                {moodSessionsCount >= 5 ? (
+                  <div className="w-full text-center text-sm font-semibold text-purple-400 py-1.5 rounded-md bg-purple-500/10">🏆 Odznaka zdobyta · +50 pkt</div>
+                ) : (
+                  <div className="w-full text-center text-xs text-muted-foreground py-1.5">Jeszcze {5 - moodSessionsCount} analiz → odznaka + 50 pkt</div>
+                )}
               </div>
 
               {/* 5 utworów Studio - Ultimate */}
@@ -588,7 +530,7 @@ const CreatorEarnings = () => {
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
                     <Rocket className={cn("h-4 w-4", isUltimate ? "text-amber-400" : "text-muted-foreground")} />
-                    <span className="text-sm font-semibold">5 utworów AI = +12 $</span>
+                    <span className="text-sm font-semibold">5 utworów AI</span>
                   </div>
                   {isUltimate && (
                     <Badge className="bg-amber-500/15 text-amber-400 border-amber-500/25 text-[10px]">
@@ -603,14 +545,11 @@ const CreatorEarnings = () => {
                   />
                 </div>
                 {isUltimate ? (
-                  <Button
-                    size="sm"
-                    disabled={studioBonusClaimed || studioCount < 5 || claimingMilestone === "studio"}
-                    onClick={() => claimMilestone("studio")}
-                    className="w-full bg-amber-600 hover:bg-amber-500 text-white"
-                  >
-                    {studioBonusClaimed ? "✓ Odebrane" : studioCount < 5 ? `Stwórz jeszcze ${5 - studioCount}` : "Odbierz 12 $"}
-                  </Button>
+                  studioCount >= 5 ? (
+                    <div className="w-full text-center text-sm font-semibold text-amber-400 py-1.5 rounded-md bg-amber-500/10">🏆 Odznaka zdobyta · +120 pkt</div>
+                  ) : (
+                    <div className="w-full text-center text-xs text-muted-foreground py-1.5">Stwórz jeszcze {5 - studioCount} → odznaka + 120 pkt</div>
+                  )
                 ) : (
                   <Button
                     size="sm"
@@ -628,7 +567,7 @@ const CreatorEarnings = () => {
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
                     <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />
-                    <span className="text-sm font-semibold">50 ocen utworów (1-5★) = +12 $</span>
+                    <span className="text-sm font-semibold">50 ocen utworów (1-5★)</span>
                   </div>
                   <Badge className="bg-yellow-500/15 text-yellow-400 border-yellow-500/25 text-[10px]">
                     {Math.min(ratingsCount, 50)}/50
@@ -643,14 +582,11 @@ const CreatorEarnings = () => {
                     style={{ width: `${Math.min(100, (ratingsCount / 50) * 100)}%` }}
                   />
                 </div>
-                <Button
-                  size="sm"
-                  disabled={ratingsBonusClaimed || ratingsCount < 50 || claimingMilestone === "ratings"}
-                  onClick={() => claimMilestone("ratings")}
-                  className="w-full bg-yellow-600 hover:bg-yellow-500 text-white"
-                >
-                  {ratingsBonusClaimed ? "✓ Odebrane" : ratingsCount < 50 ? `Brakuje ${50 - ratingsCount} ocen` : "Odbierz 12 $"}
-                </Button>
+                {ratingsCount >= 50 ? (
+                  <div className="w-full text-center text-sm font-semibold text-yellow-400 py-1.5 rounded-md bg-yellow-500/10">🏆 Odznaka zdobyta · +120 pkt</div>
+                ) : (
+                  <div className="w-full text-center text-xs text-muted-foreground py-1.5">Brakuje {50 - ratingsCount} ocen → odznaka + 120 pkt</div>
+                )}
               </div>
             </CardContent>
           </Card>
