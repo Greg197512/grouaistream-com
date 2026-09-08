@@ -25,7 +25,6 @@ import {
   ToggleLeft,
   ToggleRight,
   Sparkles,
-  Trophy,
   Brain,
   UploadCloud
 } from "lucide-react";
@@ -86,7 +85,6 @@ import { B2BPricingPanel } from "@/components/admin/B2BPricingPanel";
 import { B2BOrdersPanel } from "@/components/admin/B2BOrdersPanel";
 import { CostReportsPanel } from "@/components/admin/CostReportsPanel";
 import { BreakEvenPanel } from "@/components/admin/BreakEvenPanel";
-import { GameWinnersPanel } from "@/components/admin/GameWinnersPanel";
 import { EngineLearningPanel } from "@/components/admin/EngineLearningPanel";
 import { BulkMusicUpload } from "@/components/admin/BulkMusicUpload";
 import { PaddleDiagnosticsPanel } from "@/components/admin/PaddleDiagnosticsPanel";
@@ -165,9 +163,6 @@ const ADMIN_CATS: { id: string; label: string; Icon: React.ComponentType<{ class
     { value: "bulk-import", label: "Import muzyki → R2", Icon: UploadCloud },
     { value: "face-learning", label: "Aura AI 🧠", Icon: Sparkles },
     { value: "ai-builder", label: "AI Builder 🤖", Icon: Activity },
-  ] },
-  { id: "game", label: "Gra & konkurs", Icon: Trophy, tabs: [
-    { value: "game-winners", label: "Zwycięzcy gry", Icon: Trophy },
   ] },
   { id: "users", label: "Użytkownicy", Icon: Users, tabs: [
     { value: "online", label: "Online teraz", Icon: RadioIcon },
@@ -936,10 +931,6 @@ export default function Admin() {
               <TabsContent value="costs" className="space-y-6">
                 <CostReportsPanel />
                 <OperationalCosts />
-              </TabsContent>
-
-              <TabsContent value="game-winners" className="space-y-6">
-                <GameWinnersPanel />
               </TabsContent>
 
               <TabsContent value="engine-learning" className="space-y-6">

@@ -1,6 +1,5 @@
 import { useEffect } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
-import { GameStrip } from "@/components/game/GameStrip";
 import { HeroSection } from "@/components/sections/HeroSection";
 import { AIDJSection } from "@/components/sections/AIDJSection";
 import { RecentlyPlayed } from "@/components/sections/RecentlyPlayed";
@@ -70,7 +69,6 @@ const Index = () => {
       <Section name="hero"><HeroSection /></Section>
       <Section name="na-czasie"><NaCzasieHits /></Section>
       <Section name="groua-era"><EraEntry /></Section>
-      <Section name="win-game"><div className="px-4 max-w-6xl mx-auto"><GameStrip /></div></Section>
       <Section name="upload-cta"><UploadCTA /></Section>
       <Section name="promoted"><PromotedTracksSection /></Section>
       <Section name="marquee"><AdminMarquee /></Section>
