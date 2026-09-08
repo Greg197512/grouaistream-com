@@ -63,11 +63,8 @@ import { CoverFillPanel } from "@/components/admin/CoverFillPanel";
 import { RadioStoriesPanel } from "@/components/admin/RadioStoriesPanel";
 import { AdminEmailDashboard } from "@/components/admin/AdminEmailDashboard";
 import { AIModeratorRankings } from "@/components/admin/AIModeratorRankings";
-import { TopEarners } from "@/components/admin/TopEarners";
 import { Radio as RadioIcon, HardDrive, Award, DollarSign, Megaphone, Star } from "lucide-react";
 import { MarqueeManager } from "@/components/admin/MarqueeManager";
-import { BonusMonitor } from "@/components/admin/BonusMonitor";
-import PayoutsAdminPanel from "@/components/admin/PayoutsAdminPanel";
 import { FinancialOverview } from "@/components/admin/FinancialOverview";
 import { TipsOverview } from "@/components/admin/TipsOverview";
 import { SubscriptionsAdminPanel } from "@/components/admin/SubscriptionsAdminPanel";
@@ -75,7 +72,6 @@ import { OnlineNowPanel } from "@/components/admin/OnlineNowPanel";
 import { SecurityInsightsPanel } from "@/components/admin/SecurityInsightsPanel";
 import { PaddleAdminPanel } from "@/components/admin/PaddleAdminPanel";
 import { OperationalCosts } from "@/components/admin/OperationalCosts";
-import { LikesOverview } from "@/components/admin/LikesOverview";
 import { SEODashboard } from "@/components/admin/SEODashboard";
 import { TikTokStoriesPanel } from "@/components/admin/TikTokStoriesPanel";
 import { TikTokReelsStudio } from "@/components/admin/TikTokReelsStudio";
@@ -142,17 +138,13 @@ const ADMIN_CATS: { id: string; label: string; Icon: React.ComponentType<{ class
     { value: "subscriptions", label: "Subskrypcje 👑", Icon: DollarSign },
     { value: "paddle", label: "Paddle 💳", Icon: DollarSign },
     { value: "paddle-check", label: "Sprawdź Paddle 🩺", Icon: DollarSign },
-    { value: "payouts-admin", label: "Wypłaty & Fraud 💸", Icon: DollarSign },
-    { value: "bonuses", label: "Bonusy & Wypłaty", Icon: DollarSign },
     { value: "tips", label: "Tipy & Portfele", Icon: DollarSign },
-    { value: "top-earners", label: "Top Zarobki", Icon: DollarSign },
   ] },
   { id: "radio", label: "Rozgłośnia & treść", Icon: RadioIcon, tabs: [
     { value: "radio", label: "Rozgłośnia", Icon: RadioIcon },
     { value: "radio-stories", label: "Opowiadania 🎙️", Icon: RadioIcon },
     { value: "marquee", label: "Pasek", Icon: Megaphone },
     { value: "ai-rankings", label: "Analiza AI", Icon: Award },
-    { value: "likes", label: "Polubienia ❤️", Icon: DollarSign },
     { value: "genres", label: "Gatunki", Icon: BarChart3 },
     { value: "tracks", label: "Utwory", Icon: Music },
     { value: "seo", label: "SEO Bot", Icon: TrendingUp },
@@ -893,16 +885,6 @@ export default function Admin() {
                 <BreakEvenPanel />
               </TabsContent>
 
-              {/* Payouts Admin & Fraud */}
-              <TabsContent value="payouts-admin">
-                <PayoutsAdminPanel />
-              </TabsContent>
-
-              {/* Bonuses & Payouts Tab */}
-              <TabsContent value="bonuses">
-                <BonusMonitor />
-              </TabsContent>
-
               {/* Financial Overview Tab */}
               <TabsContent value="finance">
                 <FinancialOverview />
@@ -939,11 +921,6 @@ export default function Admin() {
 
               <TabsContent value="bulk-import" className="space-y-6">
                 <BulkMusicUpload />
-              </TabsContent>
-
-              {/* Likes Overview Tab */}
-              <TabsContent value="likes">
-                <LikesOverview />
               </TabsContent>
 
               {/* Genres Tab */}
@@ -1427,10 +1404,6 @@ export default function Admin() {
 
               <TabsContent value="ai-rankings">
                 <AIModeratorRankings />
-              </TabsContent>
-
-              <TabsContent value="top-earners">
-                <TopEarners />
               </TabsContent>
 
               <TabsContent value="marquee">
