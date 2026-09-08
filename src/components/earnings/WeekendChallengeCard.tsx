@@ -50,7 +50,7 @@ export const WeekendChallengeCard = () => {
     if (error || !(data as any)?.success) {
       toast.error((data as any)?.error || "Nie udało się odebrać");
     } else {
-      toast.success(`🎉 +${(data as any).amount}$ trafiło do portfela!`);
+      toast.success(`🎉 Wyzwanie ukończone! +${(data as any).amount} pkt`);
       load();
     }
     setClaiming(false);
@@ -84,17 +84,17 @@ export const WeekendChallengeCard = () => {
               <span className="text-muted-foreground">
                 {challenge.progress}/{challenge.target_count} {TYPE_LABELS[challenge.activity_type!] || ""}
               </span>
-              <span className="font-bold text-amber-300">+{challenge.reward_amount} $</span>
+              <span className="font-bold text-amber-300">+{challenge.reward_amount} pkt</span>
             </div>
             <Progress value={pct} className="h-2 [&>div]:bg-amber-400" />
           </div>
           {challenge.claimed ? (
             <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30 w-full justify-center py-2">
-              ✅ Bonus odebrany — w portfelu
+              ✅ Odznaka odebrana — punkty naliczone
             </Badge>
           ) : challenge.eligible ? (
             <Button onClick={handleClaim} disabled={claiming} className="w-full bg-amber-500 hover:bg-amber-600 text-black font-bold">
-              {claiming ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Trophy className="h-4 w-4 mr-2" />Odbierz +{challenge.reward_amount}$</>}
+              {claiming ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Trophy className="h-4 w-4 mr-2" />Odbierz +{challenge.reward_amount} pkt</>}
             </Button>
           ) : (
             <div className="text-xs text-center text-muted-foreground">
