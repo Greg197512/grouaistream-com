@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { getDJTexts, getDJLangFromAppLang, getDJTTSLang, DJLanguage, shortenTitle, shortenArtist } from "@/utils/djTexts";
 import { freeDjLine } from "@/lib/freeChat";
 import { playRandomTransitionEffect, playDJEffect, playDropCombo } from "@/utils/djMixer";
+import { getTaste, tasteScore } from "@/lib/personalize";
 
 interface DJSession {
   tracks: Track[];
@@ -142,13 +143,24 @@ export const useDJMode = () => {
           recentIds = new Set((hist || []).map((r: any) => r.track_id));
         } catch { /* */ }
       }
+      // PERSONALIZACJA „dla danej osoby": profil gustu (gatunki/nastroje/artyści
+      // z realnych odsłuchów, polubień i lajków w radiu). Bezpieczny fallback —
+      // brak danych = zachowanie jak dotąd (świeżość + popularność).
+      const taste = await getTaste(user?.id ?? null);
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const pop = (t: any) => Number(t?.plays ?? t?.streams ?? t?.view_count ?? t?.likes_count ?? t?.likes ?? 0) || 0;
-      const rank = <T extends { id: string }>(arr: T[]): T[] => {
+      const rank = <T extends { id: string; genre?: string | null; mood?: string | null; artist?: string | null }>(arr: T[]): T[] => {
         if (arr.length === 0) return arr;
         const avg = arr.reduce((s, t) => s + pop(t), 0) / arr.length;
+        // k = popularność + gust*(skala) + losowość. Gust ma realną wagę, ale nie
+        // dominuje — zostają świeżość i hity, dochodzi dopasowanie do osoby.
         const weighted = (list: T[]) =>
-          list.map((t) => ({ t, k: pop(t) + Math.random() * (avg + 1) })).sort((a, b) => b.k - a.k).map((x) => x.t);
+          list.map((t) => {
+            const fit = tasteScore(t, taste); // 0..1 (0.5 gdy brak danych)
+            const k = pop(t) + fit * 2.2 * (avg + 1) + Math.random() * 0.8 * (avg + 1);
+            return { t, k };
+          }).sort((a, b) => b.k - a.k).map((x) => x.t);
         const fresh = weighted(arr.filter((t) => !recentIds.has(t.id)));
         const stale = weighted(arr.filter((t) => recentIds.has(t.id)));
         return [...fresh, ...stale];
