@@ -115,7 +115,7 @@ export const useNotificationsFeed = () => {
         id: `ms-${m.id}`,
         ts: m.granted_at,
         icon: "trophy",
-        title: `Milestone +${fmtMoney(Number(m.amount))} 🏆`,
+        title: `Odznaka zdobyta 🏆`,
         body: `Osiągnięcie: ${m.bonus_type.replace(/_/g, " ")}`,
         href: "/creator-earnings",
       });
