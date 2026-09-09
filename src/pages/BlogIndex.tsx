@@ -117,31 +117,30 @@ export default function BlogIndex() {
     <MainLayout>
       <section className="px-4 sm:px-6 py-8 max-w-7xl mx-auto">
 
-        {/* HERO */}
-        <header className="relative mb-12 text-center overflow-hidden rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/10 via-background to-accent/10 px-6 py-16 sm:py-24">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_30%_20%,hsl(var(--primary)/0.3),transparent_55%),radial-gradient(ellipse_at_75%_80%,hsl(var(--accent)/0.25),transparent_50%)] pointer-events-none" />
-          <div className="relative">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/15 border border-primary/30 text-[11px] uppercase tracking-[0.2em] text-primary font-bold mb-6">
-              <Sparkles className="w-3 h-3" />
-              {language === "en" ? "New articles daily" : language === "nl" ? "Dagelijks nieuwe artikelen" : language === "ua" ? "Нові статті щодня" : "Codziennie nowe artykuły AI"}
-            </div>
-            <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black text-foreground mb-4 tracking-tight">
-              Blog{" "}
-              <span className="bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">
-                GrouAI
-              </span>{" "}
-              Stream
-            </h1>
-            <p className="text-base sm:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-              {language === "en"
-                ? "AI, music, mood detection and monetization for independent creators."
-                : language === "nl"
-                ? "AI, muziek, mood detection en monetisatie voor onafhankelijke creators."
-                : language === "ua"
-                ? "AI, музика, визначення настрою та монетизація для незалежних творців."
-                : "AI, muzyka, mood detection i monetyzacja dla niezależnych twórców."}
-            </p>
+        {/* HERO — editorial masthead */}
+        <header className="mb-12 sm:mb-16 pt-4">
+          <div className="flex items-center gap-3 mb-5 text-[11px] uppercase tracking-[0.3em] text-primary font-semibold">
+            <span className="h-px w-8 bg-primary/50" />
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>
+              {language === "en" ? "New articles daily" : language === "nl" ? "Dagelijks nieuwe artikelen" : language === "ua" ? "Нові статті щодня" : "Codziennie nowe artykuły"}
+            </span>
           </div>
+          <h1 className="text-5xl sm:text-7xl lg:text-[5.5rem] font-black text-foreground tracking-[-0.03em] leading-[0.92]">
+            Blog{" "}
+            <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">GrouAI</span>{" "}
+            Stream
+          </h1>
+          <p className="mt-6 text-lg sm:text-xl text-muted-foreground max-w-2xl leading-relaxed">
+            {language === "en"
+              ? "AI, music, sound and the future of streaming — deep dives for people who care how it actually works."
+              : language === "nl"
+              ? "AI, muziek, geluid en de toekomst van streaming — verdiepende artikelen voor wie wil weten hoe het echt werkt."
+              : language === "ua"
+              ? "AI, музика, звук і майбутнє стрімінгу — глибокі матеріали для тих, кому цікаво, як це справді працює."
+              : "AI, muzyka, dźwięk i przyszłość streamingu — pogłębione teksty dla tych, których interesuje, jak to naprawdę działa."}
+          </p>
+          <div className="mt-8 h-px w-full bg-gradient-to-r from-border via-border/50 to-transparent" />
         </header>
 
         {/* SEARCH */}
@@ -169,7 +168,7 @@ export default function BlogIndex() {
                     disabled={count === 0 && c.id !== "all"}
                     className={`group flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all border ${
                       active
-                        ? "bg-gradient-to-r from-primary to-accent text-primary-foreground border-primary shadow-[0_0_20px_hsl(var(--primary)/0.4)]"
+                        ? "bg-primary text-primary-foreground border-primary"
                         : count === 0
                         ? "bg-transparent text-muted-foreground/30 border-transparent cursor-not-allowed"
                         : "bg-card/40 text-muted-foreground border-border/40 hover:border-primary/40 hover:text-foreground hover:bg-card/70"
@@ -209,7 +208,7 @@ export default function BlogIndex() {
             {/* FEATURED — hero card with full-bleed image */}
             {featured && (
               <Link to={`/blog/${featured.slug}`} className="group block mb-8">
-                <article className="relative overflow-hidden rounded-3xl border border-border/50 bg-card hover:border-primary/50 transition-all duration-500 hover:shadow-[0_0_80px_hsl(var(--primary)/0.2)]">
+                <article className="relative overflow-hidden rounded-3xl border border-border/50 bg-card hover:border-primary/50 transition-all duration-500 hover:shadow-2xl hover:shadow-black/40">
                   <div className="aspect-[21/9] sm:aspect-[3/1] overflow-hidden">
                     <img
                       src={getCoverUrl(featured.cover_url, featured.category, featured.slug)}
@@ -258,7 +257,7 @@ export default function BlogIndex() {
               <div className="grid gap-5 md:grid-cols-2 mb-8">
                 {secondary.map((p) => (
                   <Link key={p.id} to={`/blog/${p.slug}`} className="group">
-                    <article className="relative overflow-hidden rounded-2xl border border-border/50 bg-card hover:border-primary/50 transition-all duration-500 hover:shadow-[0_0_50px_hsl(var(--primary)/0.2)] h-full">
+                    <article className="relative overflow-hidden rounded-2xl border border-border/50 bg-card hover:border-primary/50 transition-all duration-500 hover:shadow-xl hover:shadow-black/30 h-full">
                       <div className="aspect-[16/9] overflow-hidden">
                         <img
                           src={getCoverUrl(p.cover_url, p.category, p.slug)}
@@ -287,52 +286,39 @@ export default function BlogIndex() {
               </div>
             )}
 
-            {/* GRID — smaller cards */}
+            {/* GRID — editorial, image-first cards */}
             {rest.length > 0 && (
-              <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
                 {rest.map((p) => {
                   const coverSrc = getCoverUrl(p.cover_url, p.category, p.slug);
                   return (
-                    <Link key={p.id} to={`/blog/${p.slug}`} className="group">
-                      <article className="h-full overflow-hidden rounded-2xl border border-border/50 bg-card hover:border-primary/40 transition-all duration-300 hover:shadow-[0_4px_40px_hsl(var(--primary)/0.18)] flex flex-col">
-                        <div className="aspect-[16/9] overflow-hidden relative flex-shrink-0">
+                    <Link key={p.id} to={`/blog/${p.slug}`} className="group block">
+                      <article className="h-full flex flex-col">
+                        <div className="aspect-[4/3] overflow-hidden rounded-xl bg-muted/30 mb-4 ring-1 ring-border/40 group-hover:ring-primary/40 transition-[box-shadow,transform] duration-300">
                           <img
                             src={coverSrc}
                             alt={localizedField(p, "title", language)}
                             loading="lazy"
-                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                            className="w-full h-full object-cover transition-transform duration-[600ms] ease-out group-hover:scale-[1.04]"
                           />
-                          <div className="absolute inset-0 bg-gradient-to-t from-card/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                         </div>
-                        <div className="p-4 flex flex-col flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Badge variant="secondary" className="text-[9px] px-2 py-0.5">{catLabel(p.category, language)}</Badge>
-                            <span className="text-[10px] text-muted-foreground ml-auto flex items-center gap-1">
-                              <Eye className="w-3 h-3" /> {p.view_count}
-                            </span>
-                          </div>
-                          <h3 className="font-bold text-foreground group-hover:text-primary transition-colors leading-snug line-clamp-2 mb-2 text-sm sm:text-base">
-                            {localizedField(p, "title", language)}
-                          </h3>
-                          <p className="text-xs text-muted-foreground line-clamp-2 flex-1">
-                            {localizedField(p, "description", language)}
-                          </p>
-                          <div className="flex items-center justify-between mt-3 pt-3 border-t border-border/40">
-                            <span className="text-[10px] text-muted-foreground">
-                              {new Date(p.created_at).toLocaleDateString(
-                                language === "ua" ? "uk-UA" : language === "nl" ? "nl-NL" : language === "en" ? "en-US" : "pl-PL",
-                                { day: "numeric", month: "short" }
-                              )}
-                            </span>
-                            {p.tags && p.tags.length > 0 && (
-                              <div className="flex gap-1">
-                                {p.tags.slice(0, 2).map((t) => (
-                                  <span key={t} className="text-[9px] px-1.5 py-0.5 rounded-full bg-muted/50 text-muted-foreground">#{t}</span>
-                                ))}
-                              </div>
+                        <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.12em] text-muted-foreground mb-2">
+                          <span className="text-primary font-semibold">{catLabel(p.category, language)}</span>
+                          <span className="w-1 h-1 rounded-full bg-border" />
+                          <span>
+                            {new Date(p.created_at).toLocaleDateString(
+                              language === "ua" ? "uk-UA" : language === "nl" ? "nl-NL" : language === "en" ? "en-US" : "pl-PL",
+                              { day: "numeric", month: "short" }
                             )}
-                          </div>
+                          </span>
+                          <span className="ml-auto flex items-center gap-1 normal-case tracking-normal"><Eye className="w-3 h-3" /> {p.view_count}</span>
                         </div>
+                        <h3 className="font-bold text-lg leading-snug tracking-tight text-foreground group-hover:text-primary transition-colors line-clamp-2">
+                          {localizedField(p, "title", language)}
+                        </h3>
+                        <p className="mt-2 text-sm text-muted-foreground line-clamp-2 leading-relaxed">
+                          {localizedField(p, "description", language)}
+                        </p>
                       </article>
                     </Link>
                   );
