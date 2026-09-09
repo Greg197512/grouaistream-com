@@ -35,11 +35,11 @@ const InviteMusiciansEmail = ({ recipientName }: InviteMusiciansProps) => (
 
           <Heading style={h2}>💸 Co dostajesz?</Heading>
           <Text style={text}>
-            • <strong>100% przychodów z napiwków</strong> od słuchaczy<br/>
-            • <strong>Realne stawki za każdy stream</strong> (nie ułamki centa jak gdzie indziej)<br/>
-            • <strong>Bonusy za milestones</strong> — pierwsze 100, 1000, 10000 odsłuchań<br/>
-            • <strong>Weekend Challenges</strong> z dodatkową pulą nagród<br/>
-            • <strong>Wypłaty na konto</strong> bez progów ukrytych w gwiazdkach
+            • <strong>Duży udział z napiwków</strong> od słuchaczy (85%)<br/>
+            • <strong>Udział z realnego przychodu</strong> platformy (reklamy/subskrypcje) — bez sztucznej stawki za odsłuch<br/>
+            • <strong>Odznaki i punkty</strong> za osiągnięcia — wyróżnienie w profilu<br/>
+            • <strong>Weekend Challenges</strong> — punkty i odznaki za aktywność<br/>
+            • <strong>Wypłaty na konto</strong> po przekroczeniu progu, bez ukrytych haczyków
           </Text>
 
           <Heading style={h2}>🚀 Co potrafi platforma?</Heading>
