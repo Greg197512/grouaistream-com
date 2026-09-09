@@ -114,7 +114,7 @@ export const FinancialOverview = () => {
           <Card><CardContent className="p-4">
             <div className="flex items-center gap-2 text-xs text-muted-foreground">❤️ Polubienia</div>
             <div className="text-xl font-bold text-pink-300">{Number(summary.total_like_bonuses_paid || 0).toFixed(2)}$</div>
-            <div className="text-[10px] text-muted-foreground">0,10 $ / like</div>
+            <div className="text-[10px] text-muted-foreground">wycofane (Fair Share) — tylko historia</div>
           </CardContent></Card>
           <Card><CardContent className="p-4">
             <div className="flex items-center gap-2 text-xs text-muted-foreground">💜 Tipy</div>
