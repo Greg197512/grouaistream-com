@@ -136,7 +136,7 @@ const ROUTES = [
       <ul>
         <li><strong>Prawa autorskie</strong> — wgrywasz tylko utwory, do których masz prawa. Naruszenia są usuwane w 24h.</li>
         <li><strong>Weryfikacja streamów</strong> — każdy stream przechodzi antybotową weryfikację przed wypłatą.</li>
-        <li><strong>Payouty</strong> — minimalny próg 10 EUR, wypłaty tygodniowe na konto lub Revolut.</li>
+        <li><strong>Payouty</strong> — wypłata po przekroczeniu progu minimalnego; napiwki wypłacalne po 30-dniowym oknie zwrotów. Bez stałej stawki za odsłuch.</li>
         <li><strong>RODO</strong> — masz prawo do dostępu, usunięcia i przeniesienia swoich danych.</li>
         <li><strong>Kontakt</strong> — legal@grouaistream.com</li>
       </ul>
