@@ -100,7 +100,7 @@ const ArtistLanding = () => {
         >
           {[
             { icon: Music, t: "Muzyka w obiegu", d: "Słuchacze, radio i playlisty — zamiast dysku." },
-            { icon: TrendingUp, t: "Realne zarabianie", d: "Wypłaty za odsłuchania i napiwki." },
+            { icon: TrendingUp, t: "Realne zarabianie", d: "Udział z realnego przychodu i napiwki." },
             { icon: Rocket, t: "Szybsze Spotify", d: "Budujesz zasięg, który Spotify nagradza." },
           ].map((b, i) => {
             const Icon = b.icon;
