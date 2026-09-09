@@ -87,9 +87,36 @@ const FALLBACK = [
   `${U}1493225457124-a3eb161ffa5f${Q}`,
 ];
 
+// Kategorie w bazie bywają swobodne (PL/EN, „sound_chronicles", „Technologia i Kultura",
+// „Digital Wellness", „Business Finance"…). Gdy nie ma dokładnego dopasowania, dobieramy
+// pulę zdjęć po SŁOWACH KLUCZOWYCH z nazwy kategorii — żeby grafika pasowała do tematu,
+// a nie leciała do generycznego fallbacku. Kolejność = priorytet (pierwsze trafienie wygrywa).
+const KEYWORD_POOLS: [RegExp, keyof typeof CATEGORY_COVERS][] = [
+  [/sound|music|muzyk|vinyl|winyl|radio|dj|chronicle/i, "industry"],
+  [/\bai\b|sztuczn|neural|gpt|llm|generat|machine.?learning/i, "ai_news"],
+  [/tech|technolog|automat|no.?code|martech|software|cyfrow|digital(?!.*well)/i, "tech_news"],
+  [/psych|mind|mózg|mozg|emoc|sleep|sen\b|wellness|well-?being|health|zdrow|nutrition|gut|nursery|dieta/i, "psychology"],
+  [/monet|financ|finans|money|pieniądz|kasa|revenue|payout|invoice|budget/i, "monetization"],
+  [/market|content|seo|linkedin|podcast|outreach|growth|b2b|brand|reklam/i, "marketing"],
+  [/business|biznes|compliance|legal|prawn|recruit|hiring|talent|strategy|operations|corp/i, "marketing"],
+  [/lifestyle|styl.?życia|styl.?zycia|dining|eco|parent|rodzic|productivity|produktyw/i, "lifestyle"],
+  [/future|przyszł|przysz|trend|prognoz/i, "trends"],
+  [/tutorial|poradnik|how.?to|guide|jak\b/i, "tutorial"],
+];
+
+function resolvePool(category: string): string[] {
+  if (CATEGORY_COVERS[category]) return CATEGORY_COVERS[category];
+  const c = (category || "").toLowerCase();
+  for (const [rx, key] of KEYWORD_POOLS) {
+    if (rx.test(c)) return CATEGORY_COVERS[key] ?? FALLBACK;
+  }
+  return FALLBACK;
+}
+
 /**
  * Returns a real cover image URL. Uses `coverUrl` from DB when available,
- * otherwise picks a deterministic Unsplash photo based on category and slug.
+ * otherwise picks a deterministic Unsplash photo. Exact category match wins;
+ * otherwise a keyword match on the category name keeps the graphic on-topic.
  */
 export function getCoverUrl(
   coverUrl: string | null | undefined,
@@ -97,7 +124,7 @@ export function getCoverUrl(
   slug: string
 ): string {
   if (coverUrl) return coverUrl;
-  const pool = CATEGORY_COVERS[category] ?? FALLBACK;
+  const pool = resolvePool(category);
   // Deterministic index from last 2 chars of slug
   const code = slug ? (slug.charCodeAt(slug.length - 1) + (slug.charCodeAt(slug.length - 2) || 0)) : 0;
   return pool[code % pool.length];
