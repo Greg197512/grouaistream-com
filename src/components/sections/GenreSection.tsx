@@ -7,6 +7,7 @@ import { usePlayer, Track } from "@/contexts/PlayerContext";
 import { useLazyLoad } from "@/hooks/useLazyLoad";
 import { cn } from "@/lib/utils";
 import { DraggableTrackCard } from "@/components/dnd/DraggableTrackCard";
+import { AnimatedGenreIcon } from "@/components/effects/AnimatedGenreIcon";
 import { withTimeout } from "@/lib/withTimeout";
 
 const FETCH_TIMEOUT_MS = 20_000;
@@ -86,7 +87,7 @@ export const GenreSection = ({ genre, title, icon, color, limit = 8 }: GenreSect
     return (
       <section ref={lazyRef} className="px-6 py-6">
         <div className="flex items-center gap-3 mb-4">
-          <span className={cn("material-icons text-2xl", color)}>{icon}</span>
+          <AnimatedGenreIcon icon={icon} className={cn("text-2xl", color)} />
           <h2 className="font-display text-xl font-bold">{title}</h2>
         </div>
         {isVisible && (
@@ -106,7 +107,7 @@ export const GenreSection = ({ genre, title, icon, color, limit = 8 }: GenreSect
     return (
       <section ref={lazyRef} className="px-6 py-6">
         <div className="flex items-center gap-3 mb-4">
-          <span className={cn("material-icons text-2xl", color)}>{icon}</span>
+          <AnimatedGenreIcon icon={icon} className={cn("text-2xl", color)} />
           <h2 className="font-display text-xl font-bold">{title}</h2>
         </div>
         <p className="text-sm text-muted-foreground text-center py-4">
@@ -120,12 +121,7 @@ export const GenreSection = ({ genre, title, icon, color, limit = 8 }: GenreSect
     <section ref={lazyRef} className="px-6 py-6">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
-          <motion.span
-            className={cn("material-icons text-2xl", color)}
-            whileHover={{ scale: 1.2, rotate: 10 }}
-          >
-            {icon}
-          </motion.span>
+          <AnimatedGenreIcon icon={icon} className={cn("text-2xl", color)} />
           <h2 className="font-display text-xl font-bold">{title}</h2>
           <span className="text-xs text-muted-foreground bg-secondary px-2 py-1 rounded-full">
             {visibleTracks.length} tracks
