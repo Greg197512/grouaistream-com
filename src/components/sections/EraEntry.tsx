@@ -1,10 +1,18 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Clock } from "lucide-react";
-import { ERAS, eraArtUrl } from "@/lib/eraEngine";
+import { Clock, Shuffle } from "lucide-react";
+import { ERAS, eraArtUrl, type Era } from "@/lib/eraEngine";
 import { eraTextFor, eraUi } from "@/lib/eraContent";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Tilt3D } from "@/components/ui/Tilt3D";
+import { subscribeShake, ensureMotionPermission } from "@/lib/deviceMotion";
+
+function shuffleEras(arr: Era[]): Era[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+  return a;
+}
 
 // Delikatne ziarno filmowe (SVG feTurbulence jako data-URI) — nakładka „kinowa".
 const GRAIN = `data:image/svg+xml,${encodeURIComponent(
@@ -15,6 +23,20 @@ const GRAIN = `data:image/svg+xml,${encodeURIComponent(
 // istniejącego układu. Zabiera użytkownika w podróż przez epoki.
 export const EraEntry = () => {
   const { language } = useLanguage();
+  const [order, setOrder] = useState<Era[]>(ERAS);
+  const [waking, setWaking] = useState(0); // bump = przebudzenie/tasowanie
+
+  const shuffleNow = () => {
+    setOrder((prev) => shuffleEras(prev));
+    setWaking((n) => n + 1);
+  };
+
+  // Potrząśnięcie telefonem → karty się budzą, mieszają i wracają w innej kolejności.
+  useEffect(() => {
+    ensureMotionPermission();
+    return subscribeShake(() => shuffleNow());
+  }, []);
+
   return (
     <div className="px-4 max-w-6xl mx-auto">
       <div
@@ -33,20 +55,38 @@ export const EraEntry = () => {
             </h2>
             <p className="text-sm text-gray-400 mt-1">{eraUi(language, "entrySubtitle")}</p>
           </div>
-          <Link
-            to="/era"
-            className="px-4 py-2 rounded-full text-sm font-semibold text-black transition-transform hover:scale-105 whitespace-nowrap"
-            style={{ background: "#FF8A2A", boxShadow: "0 0 18px rgba(255,138,42,.4)" }}
-          >
-            {eraUi(language, "allEras")}
-          </Link>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={shuffleNow}
+              title="Potrząśnij telefonem lub kliknij — przetasuj epoki"
+              className="grid h-9 w-9 place-items-center rounded-full border border-white/15 bg-white/5 text-white/80 transition hover:bg-white/10 hover:text-white active:scale-90"
+              aria-label="Przetasuj epoki"
+            >
+              <Shuffle className="h-4 w-4" />
+            </button>
+            <Link
+              to="/era"
+              className="px-4 py-2 rounded-full text-sm font-semibold text-black transition-transform hover:scale-105 whitespace-nowrap"
+              style={{ background: "#FF8A2A", boxShadow: "0 0 18px rgba(255,138,42,.4)" }}
+            >
+              {eraUi(language, "allEras")}
+            </Link>
+          </div>
         </div>
 
         <div className="relative z-10 flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
-          {ERAS.map((e, i) => {
+          {order.map((e, i) => {
             const et = eraTextFor(e, language);
             return (
-              <motion.div key={e.key} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }} className="shrink-0">
+              <motion.div
+                key={e.key}
+                layout
+                initial={{ opacity: 0, y: 12 }}
+                animate={waking ? { opacity: 1, y: 0, scale: [1, 0.88, 1.06, 1], rotate: [0, -5, 5, 0] } : { opacity: 1, y: 0 }}
+                transition={waking ? { duration: 0.6, delay: (i % 8) * 0.05 } : { delay: i * 0.04, layout: { duration: 0.5, ease: [0.22, 1, 0.36, 1] } }}
+                className="shrink-0"
+              >
                 <Tilt3D radius="0.9rem" max={14} className="w-[150px]">
                 <Link
                   to={`/era/${e.key}`}
