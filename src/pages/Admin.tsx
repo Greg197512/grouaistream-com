@@ -83,6 +83,7 @@ import { CostReportsPanel } from "@/components/admin/CostReportsPanel";
 import { BreakEvenPanel } from "@/components/admin/BreakEvenPanel";
 import { EngineLearningPanel } from "@/components/admin/EngineLearningPanel";
 import { BlogPromoPanel } from "@/components/admin/BlogPromoPanel";
+import { OutreachPanel } from "@/components/admin/OutreachPanel";
 import { BulkMusicUpload } from "@/components/admin/BulkMusicUpload";
 import { PaddleDiagnosticsPanel } from "@/components/admin/PaddleDiagnosticsPanel";
 import { CostAlertBanner } from "@/components/admin/CostAlertBanner";
@@ -150,6 +151,7 @@ const ADMIN_CATS: { id: string; label: string; Icon: React.ComponentType<{ class
     { value: "tracks", label: "Utwory", Icon: Music },
     { value: "seo", label: "SEO Bot", Icon: TrendingUp },
     { value: "blog-promo", label: "Promocja bloga 📣", Icon: Megaphone },
+    { value: "outreach", label: "Outreach 📮", Icon: Mail },
     { value: "tiktok", label: "Rolki TikTok 🎬", Icon: Music },
   ] },
   { id: "engine", label: "Silnik AI & Studio", Icon: Brain, tabs: [
@@ -927,6 +929,10 @@ export default function Admin() {
 
               <TabsContent value="blog-promo" className="space-y-6">
                 <BlogPromoPanel />
+              </TabsContent>
+
+              <TabsContent value="outreach" className="space-y-6">
+                <OutreachPanel />
               </TabsContent>
 
               {/* Genres Tab */}
