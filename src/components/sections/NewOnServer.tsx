@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Play, Flame, Loader2, RefreshCw, ChevronLeft, ChevronRight,
+  Play, Loader2, RefreshCw, ChevronLeft, ChevronRight,
   Music2, Waves, Zap, Disc3, Guitar, Radio, Mic2, Drum, Sparkles
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,6 +10,7 @@ import { useNavigate } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
 import { pl } from "date-fns/locale";
 import { HQCover } from "@/components/ui/HQCover";
+import { FlameIcon } from "@/components/effects/FlameIcon";
 import { LikeButton, TrackOptionsMenu } from "@/components/menus/TrackOptionsMenu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { withTimeout } from "@/lib/withTimeout";
@@ -254,8 +255,8 @@ export const NewOnServer = () => {
   if (loading) return (
     <section className="px-6 py-8">
       <div className="flex items-center gap-3 mb-6">
-        <Flame className="h-5 w-5 text-primary" />
-        <h2 className="font-display text-xl font-bold">🔥 Nowe na serwerze</h2>
+        <FlameIcon size={20} />
+        <h2 className="font-display text-xl font-bold">Nowe na serwerze</h2>
       </div>
       <div className="flex justify-center py-8">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -266,8 +267,8 @@ export const NewOnServer = () => {
   if (hasError) return (
     <section className="px-6 py-8">
       <div className="flex items-center gap-3 mb-6">
-        <Flame className="h-5 w-5 text-primary" />
-        <h2 className="font-display text-xl font-bold">🔥 Nowe na serwerze</h2>
+        <FlameIcon size={20} />
+        <h2 className="font-display text-xl font-bold">Nowe na serwerze</h2>
       </div>
       <div className="flex flex-col items-center py-8 gap-3">
         <p className="text-sm text-muted-foreground">Nie udało się załadować</p>
@@ -285,8 +286,8 @@ export const NewOnServer = () => {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <Flame className="h-5 w-5 text-primary" />
-          <h2 className="font-display text-xl font-bold">🔥 Nowe na serwerze</h2>
+          <FlameIcon size={20} />
+          <h2 className="font-display text-xl font-bold">Nowe na serwerze</h2>
           {isPaused && (
             <span className="text-[10px] text-muted-foreground/60 font-medium">⏸ zatrzymano</span>
           )}
