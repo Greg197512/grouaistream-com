@@ -82,6 +82,7 @@ import { B2BOrdersPanel } from "@/components/admin/B2BOrdersPanel";
 import { CostReportsPanel } from "@/components/admin/CostReportsPanel";
 import { BreakEvenPanel } from "@/components/admin/BreakEvenPanel";
 import { EngineLearningPanel } from "@/components/admin/EngineLearningPanel";
+import { BlogPromoPanel } from "@/components/admin/BlogPromoPanel";
 import { BulkMusicUpload } from "@/components/admin/BulkMusicUpload";
 import { PaddleDiagnosticsPanel } from "@/components/admin/PaddleDiagnosticsPanel";
 import { CostAlertBanner } from "@/components/admin/CostAlertBanner";
@@ -148,6 +149,7 @@ const ADMIN_CATS: { id: string; label: string; Icon: React.ComponentType<{ class
     { value: "genres", label: "Gatunki", Icon: BarChart3 },
     { value: "tracks", label: "Utwory", Icon: Music },
     { value: "seo", label: "SEO Bot", Icon: TrendingUp },
+    { value: "blog-promo", label: "Promocja bloga 📣", Icon: Megaphone },
     { value: "tiktok", label: "Rolki TikTok 🎬", Icon: Music },
   ] },
   { id: "engine", label: "Silnik AI & Studio", Icon: Brain, tabs: [
@@ -921,6 +923,10 @@ export default function Admin() {
 
               <TabsContent value="bulk-import" className="space-y-6">
                 <BulkMusicUpload />
+              </TabsContent>
+
+              <TabsContent value="blog-promo" className="space-y-6">
+                <BlogPromoPanel />
               </TabsContent>
 
               {/* Genres Tab */}
