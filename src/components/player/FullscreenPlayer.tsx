@@ -19,6 +19,7 @@ import { usePlayer } from "@/contexts/PlayerContext";
 import { cn } from "@/lib/utils";
 import { HQCover } from "@/components/ui/HQCover";
 import { ShareTrackModal } from "@/components/modals/ShareTrackModal";
+import { HypnoticVisualizer } from "@/components/player/HypnoticVisualizer";
 
 interface FullscreenPlayerProps {
   isOpen: boolean;
@@ -73,6 +74,10 @@ export const FullscreenPlayer = ({ isOpen, onClose }: FullscreenPlayerProps) => 
               style={{ backgroundImage: `url(${currentTrack.cover_url})` }}
             />
           )}
+
+          {/* Hipnotyczny wizualizer (canvas, bez Web Audio; lite na słabym sprzęcie) */}
+          <HypnoticVisualizer active={isPlaying} />
+          <div className="absolute inset-0 bg-background/30 pointer-events-none" />
           <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-transparent" />
 
           {/* Close button */}

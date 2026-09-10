@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { HQCover } from "@/components/ui/HQCover";
+import { Tilt3D } from "@/components/ui/Tilt3D";
 
 interface PlaylistCardProps {
   id?: string;
@@ -33,11 +34,11 @@ export const PlaylistCard = ({
   };
 
   return (
+    <Tilt3D radius="1rem" max={10} className="h-full">
     <motion.div
       onClick={handleClick}
-      whileHover={{ scale: 1.02 }}
       whileTap={{ scale: 0.98 }}
-      className="group cursor-pointer p-4 rounded-2xl border border-white/12 bg-white/[0.05] backdrop-blur-xl transition-all hover:bg-white/[0.09] hover:border-white/25 hover:-translate-y-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.15),0_14px_34px_-16px_rgba(0,0,0,0.8),0_0_26px_-12px_hsl(300_100%_66%/0.4)]"
+      className="group h-full cursor-pointer p-4 rounded-2xl border border-white/12 bg-white/[0.05] backdrop-blur-xl transition-colors hover:bg-white/[0.09] hover:border-white/25 shadow-[inset_0_1px_0_rgba(255,255,255,0.15),0_14px_34px_-16px_rgba(0,0,0,0.8),0_0_26px_-12px_hsl(300_100%_66%/0.4)]"
     >
       {/* Image */}
       <div className="relative mb-4 aspect-square overflow-hidden rounded-xl shadow-lg">
@@ -83,5 +84,6 @@ export const PlaylistCard = ({
         {description}
       </p>
     </motion.div>
+    </Tilt3D>
   );
 };
