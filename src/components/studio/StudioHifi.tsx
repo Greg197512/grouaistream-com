@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePlayer, type Track } from "@/contexts/PlayerContext";
 import { Play, Pause, SkipForward, Radio as RadioIcon, Power } from "lucide-react";
+import { StudioCore } from "@/components/studio/StudioCore";
 
 /**
  * GrouAI Studio — kompaktowa, DZIAŁAJĄCA wieża hi-fi (zamiast equalizera).
@@ -27,7 +28,6 @@ function shuffle<T>(arr: T[]): T[] {
 export const StudioHifi = () => {
   const { playPlaylist, togglePlay, nextTrack, isPlaying, currentTrack } = usePlayer();
   const [pool, setPool] = useState<Track[]>([]);
-  const [trayOpen, setTrayOpen] = useState(false);
   const [activeArtist, setActiveArtist] = useState<string | null>(null);
   const [radioOn, setRadioOn] = useState(false);
   const loadedRef = useRef(false);
@@ -70,7 +70,6 @@ export const StudioHifi = () => {
   }, [pool]);
 
   const playingArtist = currentTrack?.artist?.trim() || null;
-  const spinning = isPlaying;
 
   const startRadio = useCallback(() => {
     if (radioOn && isPlaying) { togglePlay(); return; }
@@ -78,7 +77,6 @@ export const StudioHifi = () => {
     if (pool.length === 0) return;
     setActiveArtist(null);
     setRadioOn(true);
-    setTrayOpen(false);
     playPlaylist(shuffle(pool), 0, "studio-hifi-radio");
   }, [radioOn, isPlaying, currentTrack, pool, playPlaylist, togglePlay]);
 
@@ -86,25 +84,14 @@ export const StudioHifi = () => {
     if (tracks.length === 0) return;
     setActiveArtist(name);
     setRadioOn(false);
-    // Efekt wysuwanej płyty: wysuń → po chwili wsuń i graj.
-    setTrayOpen(true);
-    window.setTimeout(() => {
-      setTrayOpen(false);
-      playPlaylist(shuffle(tracks), 0, "studio-hifi-artist");
-    }, 620);
+    playPlaylist(shuffle(tracks), 0, "studio-hifi-artist");
   }, [playPlaylist]);
 
-  const onTrayClick = () => {
-    if (trayOpen) {
-      // Wsuń szufladę → zagraj wybranego wykonawcę lub całe radio.
-      setTrayOpen(false);
-      const sel = activeArtist ? artists.find((a) => a.name === activeArtist) : null;
-      if (sel) playPlaylist(shuffle(sel.tracks), 0, "studio-hifi-cd");
-      else if (pool.length) { setRadioOn(true); playPlaylist(shuffle(pool), 0, "studio-hifi-cd"); }
-    } else {
-      setTrayOpen(true);
-    }
-  };
+  // Klik w rdzeń: graj/pauza jeśli coś załadowane, inaczej odpal radio.
+  const onCoreClick = useCallback(() => {
+    if (currentTrack) togglePlay();
+    else startRadio();
+  }, [currentTrack, togglePlay, startRadio]);
 
   const title = currentTrack?.title || "GrouAI HiFi";
   const sub = currentTrack ? (currentTrack.artist || "—") : (pool.length ? `${pool.length} utworów · ${artists.length} wykonawców` : "Ładowanie katalogu…");
@@ -122,54 +109,13 @@ export const StudioHifi = () => {
       `}</style>
 
       <div className="relative z-10 grid grid-cols-[104px_1fr] gap-3 sm:grid-cols-[120px_1fr] sm:gap-4">
-        {/* ── WIEŻA ── */}
-        <div className="flex flex-col gap-1.5">
-          {/* Gramofon + winyl */}
-          <div className="relative rounded-xl border border-white/10 bg-black/40 p-2" style={{ boxShadow: "inset 0 1px 0 rgba(255,255,255,.06)" }}>
-            <div className="relative mx-auto aspect-square w-full max-w-[92px]">
-              <div className={`absolute inset-0 rounded-full ${spinning ? "hf-spin-slow" : "hf-spin-slow hf-paused"}`} style={{
-                background: [
-                  "radial-gradient(circle at 50% 50%, #FF7A1A 0 15%, #120a1f 15.5% 20%, transparent 20.4%)",
-                  "repeating-radial-gradient(circle at 50% 50%, rgba(255,255,255,.06) 0 1px, rgba(0,0,0,.5) 1px 3px)",
-                  "radial-gradient(circle at 50% 50%, #1a1a1f 20%, #0b0710 100%)",
-                ].join(","),
-                boxShadow: "0 4px 14px rgba(0,0,0,.6)",
-              }} />
-              {/* refleks */}
-              <div className="pointer-events-none absolute inset-0 rounded-full" style={{ background: "linear-gradient(120deg,transparent 42%,rgba(255,255,255,.18) 50%,transparent 58%)" }} />
-              {/* ramię gramofonu */}
-              <div className="absolute -right-1 -top-1 h-[58%] w-[3px] origin-top rounded-full bg-gradient-to-b from-white/70 to-white/30 transition-transform duration-500"
-                style={{ transform: spinning ? "rotate(24deg)" : "rotate(-6deg)" }} />
-            </div>
-          </div>
-
-          {/* Szuflada CD */}
-          <button type="button" onClick={onTrayClick}
-            className="relative h-9 overflow-hidden rounded-lg border border-white/10 bg-black/50 text-left"
-            aria-label="Szuflada CD">
-            <div className="absolute inset-y-0 left-2 flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider text-white/45">CD</div>
-            <div className={`hf-tray absolute top-1/2 -translate-y-1/2 ${trayOpen ? "translate-x-[42%]" : "translate-x-[100%]"}`} style={{ left: 0, right: 0 }}>
-              <div className={`ml-auto mr-1 h-6 w-6 rounded-full ${spinning && !trayOpen ? "hf-spin" : "hf-spin hf-paused"}`} style={{
-                background: "conic-gradient(from 0deg,#ff5db1,#ffd24d,#7dff9e,#5de1ff,#a98bff,#ff5db1)",
-                boxShadow: "0 0 0 2px rgba(0,0,0,.4)",
-              }}>
-                <div className="absolute left-1/2 top-1/2 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#120a1f]" />
-              </div>
-            </div>
-            <span className="absolute bottom-0.5 right-1.5 text-[8px] font-semibold text-[#FF7A1A]">{trayOpen ? "▸ wsuń" : "◂ wysuń"}</span>
-          </button>
-
-          {/* Magnetofon kasetowy */}
-          <div className="flex items-center justify-around rounded-lg border border-white/10 bg-black/50 px-2 py-1.5">
-            {[0, 1].map((i) => (
-              <div key={i} className={`relative h-5 w-5 rounded-full border border-white/20 ${spinning ? "hf-spin" : "hf-spin hf-paused"}`}
-                style={{ background: "radial-gradient(circle at 50% 50%, #2a2333 30%, #0b0710 32%)" }}>
-                {[0, 60, 120].map((r) => (
-                  <span key={r} className="absolute left-1/2 top-1/2 h-[9px] w-[1.5px] -translate-x-1/2 -translate-y-1/2 rounded bg-white/30" style={{ transform: `rotate(${r}deg)` }} />
-                ))}
-              </div>
-            ))}
-          </div>
+        {/* ── GROUAI CORE (reaktywna kula energii; klik = graj/pauza) ── */}
+        <div className="flex flex-col justify-center">
+          <StudioCore
+            active={isPlaying}
+            onClick={onCoreClick}
+            label={radioOn ? "Radio" : isPlaying ? "Live" : "Core"}
+          />
         </div>
 
         {/* ── PANEL STEROWANIA ── */}
