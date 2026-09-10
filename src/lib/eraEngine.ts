@@ -206,15 +206,18 @@ export const ERAS: Era[] = [
 // ── Grafika epoki (darmowa, AI: Pollinations/Flux) ──
 // Klimatyczny obraz-tło dla kafelka/nagłówka danej epoki. Prompt po angielsku
 // (najlepsze wyniki), bez tekstu. Seed stały = ten sam obraz (brak migotania).
+// Prompty w stylu KINOWEGO KADRU (film still / fotografia), nie plakatu — dają
+// bardziej „filmowy zdjęciowy" efekt. Wspólny sufiks CINE ujednolica jakość.
+const CINE = "cinematic film still, 35mm photograph, anamorphic, dramatic volumetric lighting, shallow depth of field, photorealistic, high detail, subtle film grain, no text, no words, no watermark";
 const ERA_ART: Record<string, string> = {
-  "1970s": "1970s disco and funk era, warm sepia and gold, mirror ball, vinyl records, groovy retro album poster, soft film grain, cinematic, no text no words",
-  "1980s": "1980s synthwave neon city skyline at night, magenta and cyan grid, chrome, retro 80s poster art, glowing sunset, cinematic, no text no words",
-  "1990s": "1990s rave and grunge era, VHS glitch aesthetic, CRT scanlines, teal and orange, cassette tapes, underground poster, cinematic, no text no words",
-  "y2k": "Y2K aesthetic, liquid chrome and silver, early internet, icy blue, futuristic year 2000 poster, glossy metal, cinematic, no text no words",
-  "2000s": "mid 2000s digital pop era, electric purple and black, glossy club lights, bold poster art, cinematic, no text no words",
-  "2010s": "2010s EDM festival, pink and blue gradient, stage lights, festival crowd silhouette, modern poster art, cinematic, no text no words",
-  "now": "modern music studio 2020s, warm amber glow, sleek minimal futuristic, glowing soundwaves, cinematic, no text no words",
-  "future": "futuristic holographic music of tomorrow, 3D spatial, violet and cool light, AI generative abstract art, sci-fi poster, cinematic, no text no words",
+  "1970s": `1970s disco club, warm sepia and gold, mirror ball light beams, vinyl records, hazy analog glow, ${CINE}`,
+  "1980s": `1980s neon city at night, magenta and cyan glow, rain-slick street reflections, chrome, lens flare, ${CINE}`,
+  "1990s": `1990s underground rave, VHS color grade, teal and orange, smoke and laser lights, ${CINE}`,
+  "y2k": `Y2K liquid chrome and silver, icy blue studio light, glossy futuristic surfaces, year 2000 mood, ${CINE}`,
+  "2000s": `mid 2000s club night, electric purple and black, glossy stage lights, bokeh, ${CINE}`,
+  "2010s": `2010s EDM festival at dusk, pink and blue gradient sky, stage lights, crowd silhouettes, ${CINE}`,
+  "now": `modern 2020s music studio, warm amber volumetric light, sleek minimal, glowing soundwaves, ${CINE}`,
+  "future": `futuristic holographic concert, violet and cool light, volumetric 3D holograms, sci-fi, ${CINE}`,
 };
 
 function artSeed(key: string): number {
@@ -229,11 +232,11 @@ function artSeed(key: string): number {
  * dla 1994 vs 1997) — wciąż stabilny (ten sam rok = ten sam obraz).
  */
 export function eraArtUrl(era: Era, width = 512, height = 512, year?: number): string {
-  const base = ERA_ART[era.key] || `${era.label} music era, cinematic album art, no text`;
+  const base = ERA_ART[era.key] || `${era.label} music era, ${CINE}`;
   const prompt = year ? `${base}, year ${year}` : base;
   const seedKey = year ? `${era.key}-${year}` : era.key;
   const enc = encodeURIComponent(prompt);
-  return `https://image.pollinations.ai/prompt/${enc}?width=${width}&height=${height}&nologo=true&model=flux&seed=${artSeed(seedKey)}`;
+  return `https://image.pollinations.ai/prompt/${enc}?width=${width}&height=${height}&nologo=true&enhance=true&model=flux&seed=${artSeed(seedKey)}`;
 }
 
 /** Lista konkretnych lat epoki (do wyboru roku). FUTURE = pusta (otwarta). */

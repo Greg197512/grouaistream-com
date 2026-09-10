@@ -4,6 +4,12 @@ import { Clock } from "lucide-react";
 import { ERAS, eraArtUrl } from "@/lib/eraEngine";
 import { eraTextFor, eraUi } from "@/lib/eraContent";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { Tilt3D } from "@/components/ui/Tilt3D";
+
+// Delikatne ziarno filmowe (SVG feTurbulence jako data-URI) — nakładka „kinowa".
+const GRAIN = `data:image/svg+xml,${encodeURIComponent(
+  "<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(#n)'/></svg>"
+)}`;
 
 // Wejście do GROUA ERA na stronie głównej — dodatkowa sekcja, nie zmienia
 // istniejącego układu. Zabiera użytkownika w podróż przez epoki.
@@ -40,31 +46,40 @@ export const EraEntry = () => {
           {ERAS.map((e, i) => {
             const et = eraTextFor(e, language);
             return (
-              <motion.div key={e.key} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}>
+              <motion.div key={e.key} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }} className="shrink-0">
+                <Tilt3D radius="0.9rem" max={14} className="w-[150px]">
                 <Link
                   to={`/era/${e.key}`}
-                  className="group relative flex flex-col items-center justify-end overflow-hidden rounded-xl border shrink-0 w-[120px] h-[136px] transition-transform hover:-translate-y-1"
-                  style={{ borderColor: `${e.palette.accent}55`, boxShadow: `0 0 16px ${e.palette.glow}` }}
+                  className="group relative flex h-[200px] w-[150px] flex-col items-center justify-end overflow-hidden rounded-[0.9rem] border"
+                  style={{ borderColor: `${e.palette.accent}66`, boxShadow: `0 12px 32px -14px #000, 0 0 22px ${e.palette.glow}` }}
                 >
-                  {/* Grafika AI epoki */}
+                  {/* Filmowa grafika AI epoki (wyższa rozdzielczość) */}
                   <img
-                    src={eraArtUrl(e, 240, 300)}
+                    src={eraArtUrl(e, 512, 680)}
                     alt=""
                     loading="lazy"
                     decoding="async"
-                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.12]"
                     onError={(ev) => { (ev.currentTarget as HTMLImageElement).style.display = "none"; }}
                   />
-                  {/* Fallback gradient (widoczny zanim/gdy obraz się nie załaduje) */}
+                  {/* Fallback gradient */}
                   <div className="absolute inset-0 -z-10" style={{ background: `linear-gradient(160deg, ${e.palette.accentSoft}, ${e.palette.bg})` }} />
-                  {/* Przyciemnienie pod tekst */}
-                  <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(0,0,0,.85) 0%, rgba(0,0,0,.35) 45%, rgba(0,0,0,.15) 100%)" }} />
-                  <div className="relative z-10 flex flex-col items-center pb-2.5 px-1">
-                    <span className="text-xl mb-0.5 drop-shadow-lg">{e.emoji}</span>
-                    <span className="font-extrabold text-white text-lg leading-none drop-shadow-lg">{et.label}</span>
-                    <span className="text-[10px] mt-1 font-semibold text-center leading-tight drop-shadow-lg" style={{ color: e.palette.accent }}>{et.tagline}</span>
+                  {/* Color-grade epoki */}
+                  <div className="absolute inset-0 mix-blend-soft-light" style={{ background: `linear-gradient(150deg, ${e.palette.accent}55, transparent 60%)` }} />
+                  {/* Ziarno filmowe */}
+                  <div className="absolute inset-0 opacity-[0.13] mix-blend-overlay" style={{ backgroundImage: `url("${GRAIN}")`, backgroundSize: "140px" }} />
+                  {/* Winieta + scrim pod tekst */}
+                  <div className="absolute inset-0" style={{ background: "radial-gradient(120% 90% at 50% 28%, transparent 42%, rgba(0,0,0,.55) 100%)" }} />
+                  <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(0,0,0,.92) 0%, rgba(0,0,0,.28) 48%, transparent 100%)" }} />
+                  {/* Światło u góry na hover */}
+                  <div className="pointer-events-none absolute inset-x-0 top-0 h-20 opacity-0 group-hover:opacity-100 transition-opacity duration-500" style={{ background: `linear-gradient(to bottom, ${e.palette.accent}40, transparent)` }} />
+                  <div className="relative z-10 flex flex-col items-center pb-3 px-1.5">
+                    <span className="text-2xl mb-0.5 drop-shadow-[0_2px_8px_rgba(0,0,0,0.6)]">{e.emoji}</span>
+                    <span className="font-display font-extrabold text-white text-xl leading-none drop-shadow-[0_2px_8px_rgba(0,0,0,0.7)] tracking-tight">{et.label}</span>
+                    <span className="text-[10px] mt-1.5 font-semibold text-center leading-tight uppercase tracking-wide drop-shadow-[0_2px_6px_rgba(0,0,0,0.8)]" style={{ color: e.palette.accent }}>{et.tagline}</span>
                   </div>
                 </Link>
+                </Tilt3D>
               </motion.div>
             );
           })}
