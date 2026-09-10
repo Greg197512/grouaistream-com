@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import heroBg from "@/assets/hero-neon.jpg";
 import { BassParticles } from "@/components/effects/BassParticles";
+import { SpatialHeroCanvas } from "@/components/effects/SpatialHeroCanvas";
 import { getGenrePalette } from "@/utils/genreColors";
 import { BlogPromoButton } from "@/components/sections/BlogPromoButton";
 import { HeroTags } from "@/components/sections/HeroTags";
@@ -164,6 +165,9 @@ export const HeroSection = () => {
             }}
           />
         </div>
+
+        {/* Przestrzenna warstwa głębi — tylko na mocnym sprzęcie (inaczej null) */}
+        <SpatialHeroCanvas />
       </div>
 
       <div className="relative px-6 py-16 md:py-24">
