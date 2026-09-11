@@ -70,11 +70,9 @@ function fallbackScript(kind: TalkKind, lang: string, hosts: { a: string; b: str
 }
 
 // ── Opowiadania z NASZEGO bloga ──────────────────────────────────────────────
-// Co 3 h antena bierze świeży wpis (rotacja po „koszyku 3-godzinnym", więc u
-// wszystkich słuchaczy leci ten sam — radio jest zsynchronizowane). Tekst wpisu
-// jest oczyszczany z HTML/Markdown i czytany przez dwoje prowadzących.
-const STORY_BUCKET_MS = 3 * 60 * 60 * 1000;
-
+// Antena bierze wpis z bloga i czyta go JEDNYM głosem (lektor, ElevenLabs).
+// Rotacja DZIENNA: każdego dnia inne opowiadanie (mamy ~70 wpisów), wybór ten
+// sam u wszystkich słuchaczy (radio zsynchronizowane).
 function stripToText(raw: string): string {
   return (raw || "")
     .replace(/```[\s\S]*?```/g, " ")           // bloki kodu
@@ -95,9 +93,10 @@ function sentencesOf(text: string, max: number): string[] {
     .slice(0, max);
 }
 
-/** Pobierz opowiadanie = świeży wpis z bloga (seo_blog_posts), rotacja co 3 h. */
-export async function fetchBlogStory(lang = "pl"): Promise<TalkLine[]> {
-  const hosts = HOSTS[lang.slice(0, 2)] || HOSTS.pl;
+export interface BlogStory { title: string; text: string }
+
+/** Opowiadanie dnia = wpis z bloga (seo_blog_posts), JEDEN głos. Rotacja dzienna. */
+export async function fetchBlogStory(lang = "pl"): Promise<BlogStory | null> {
   const pl = lang.slice(0, 2) === "pl";
   try {
     const { data } = await supabase
@@ -105,23 +104,17 @@ export async function fetchBlogStory(lang = "pl"): Promise<TalkLine[]> {
       .select("title, content")
       .eq("is_published", true)
       .order("created_at", { ascending: false })
-      .limit(40);
+      .limit(80);
     const rows = (Array.isArray(data) ? data : []).filter((r: any) => stripToText(r?.content).length > 200);
-    if (!rows.length) return [];
-    const idx = Math.floor(Date.now() / STORY_BUCKET_MS) % rows.length; // zsynchronizowany wybór
+    if (!rows.length) return null;
+    const idx = Math.floor(Date.now() / 864e5) % rows.length;   // co dzień inny (dzienny koszyk)
     const post: any = rows[idx];
-    const body = sentencesOf(stripToText(post.content), 12);
-    if (body.length < 2) return [];
-    const lines: TalkLine[] = [];
-    lines.push({ speaker: "A", text: pl
-      ? `A teraz opowiadanie z bloga GrouAI: „${post.title}". Z tej strony ${hosts.a} i ${hosts.b}.`
-      : `And now a feature from the GrouAI blog: "${post.title}". This is ${hosts.a} and ${hosts.b}.` });
-    body.forEach((s, i) => lines.push({ speaker: i % 2 === 0 ? "B" : "A", text: s }));
-    lines.push({ speaker: "B", text: pl
-      ? `Cały wpis przeczytacie na blogu GrouAI. Wracamy do muzyki.`
-      : `Read the full post on the GrouAI blog. Back to the music.` });
-    return lines.slice(0, 16);
-  } catch { return []; }
+    const body = sentencesOf(stripToText(post.content), 40).join(" ");
+    if (body.length < 60) return null;
+    const intro = pl ? `Opowiadanie z bloga GrouAI. ${post.title}. ` : `A feature from the GrouAI blog. ${post.title}. `;
+    const outro = pl ? ` To był wpis z bloga GrouAI. Wracamy do muzyki.` : ` That was a post from the GrouAI blog. Back to the music.`;
+    return { title: post.title, text: intro + body + outro };
+  } catch { return null; }
 }
 
 // ── News o świecie z YouTube ─────────────────────────────────────────────────
@@ -167,12 +160,6 @@ function briefFor(kind: TalkKind, lang: string, hosts: { a: string; b: string })
 /** Wygeneruj skrypt rozmowy (6–12 wymian) w formacie A:/B:. */
 export async function generateTalkScript(kind: TalkKind, lang = "pl"): Promise<TalkLine[]> {
   const hosts = HOSTS[lang.slice(0, 2)] || HOSTS.pl;
-  // Opowiadanie = świeży wpis z NASZEGO bloga (rotacja co 3 h). Gdy bloga nie
-  // ma / nie wstał — spadamy do generatora AI, a dalej do wbudowanego skryptu.
-  if (kind === "story") {
-    const fromBlog = await fetchBlogStory(lang);
-    if (fromBlog.length >= 2) return fromBlog;
-  }
   const brief = briefFor(kind, lang, hosts);
   const prompt =
     `${brief}\n\nFORMAT: każda linia zaczyna się od "A:" (${hosts.a}) albo "B:" (${hosts.b}). ` +
