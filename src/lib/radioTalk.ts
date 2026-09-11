@@ -4,6 +4,7 @@
 
 import { freeChat } from "@/lib/freeChat";
 import { neuralSynth, neuralVoiceFor, NEURAL_VOICE_ALT } from "@/lib/neuralTts";
+import { supabase } from "@/integrations/supabase/client";
 
 export type TalkKind = "news" | "story";
 export interface TalkLine { speaker: "A" | "B"; text: string }
@@ -68,6 +69,82 @@ function fallbackScript(kind: TalkKind, lang: string, hosts: { a: string; b: str
   ];
 }
 
+// ── Opowiadania z NASZEGO bloga ──────────────────────────────────────────────
+// Co 3 h antena bierze świeży wpis (rotacja po „koszyku 3-godzinnym", więc u
+// wszystkich słuchaczy leci ten sam — radio jest zsynchronizowane). Tekst wpisu
+// jest oczyszczany z HTML/Markdown i czytany przez dwoje prowadzących.
+const STORY_BUCKET_MS = 3 * 60 * 60 * 1000;
+
+function stripToText(raw: string): string {
+  return (raw || "")
+    .replace(/```[\s\S]*?```/g, " ")           // bloki kodu
+    .replace(/<[^>]+>/g, " ")                    // HTML
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, " ")       // obrazki md
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")     // linki md → tekst
+    .replace(/[#>*_`~|]+/g, " ")                  // znaczniki md
+    .replace(/&[a-z]+;/gi, " ")                   // encje
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function sentencesOf(text: string, max: number): string[] {
+  return text
+    .split(/(?<=[.!?…])\s+/)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 8 && s.length < 320)
+    .slice(0, max);
+}
+
+/** Pobierz opowiadanie = świeży wpis z bloga (seo_blog_posts), rotacja co 3 h. */
+export async function fetchBlogStory(lang = "pl"): Promise<TalkLine[]> {
+  const hosts = HOSTS[lang.slice(0, 2)] || HOSTS.pl;
+  const pl = lang.slice(0, 2) === "pl";
+  try {
+    const { data } = await supabase
+      .from("seo_blog_posts")
+      .select("title, content")
+      .eq("is_published", true)
+      .order("created_at", { ascending: false })
+      .limit(40);
+    const rows = (Array.isArray(data) ? data : []).filter((r: any) => stripToText(r?.content).length > 200);
+    if (!rows.length) return [];
+    const idx = Math.floor(Date.now() / STORY_BUCKET_MS) % rows.length; // zsynchronizowany wybór
+    const post: any = rows[idx];
+    const body = sentencesOf(stripToText(post.content), 12);
+    if (body.length < 2) return [];
+    const lines: TalkLine[] = [];
+    lines.push({ speaker: "A", text: pl
+      ? `A teraz opowiadanie z bloga GrouAI: „${post.title}". Z tej strony ${hosts.a} i ${hosts.b}.`
+      : `And now a feature from the GrouAI blog: "${post.title}". This is ${hosts.a} and ${hosts.b}.` });
+    body.forEach((s, i) => lines.push({ speaker: i % 2 === 0 ? "B" : "A", text: s }));
+    lines.push({ speaker: "B", text: pl
+      ? `Cały wpis przeczytacie na blogu GrouAI. Wracamy do muzyki.`
+      : `Read the full post on the GrouAI blog. Back to the music.` });
+    return lines.slice(0, 16);
+  } catch { return []; }
+}
+
+// ── News o świecie z YouTube ─────────────────────────────────────────────────
+export interface NewsVideo { videoId: string; title: string; author: string }
+
+/** Świeży (dzienny) filmik z wiadomościami ze świata z YouTube — do odtworzenia w radiu. */
+export async function fetchWorldNews(lang = "pl"): Promise<NewsVideo | null> {
+  const day = new Date().toISOString().slice(0, 10); // dzienna rotacja
+  const q = lang.slice(0, 2) === "pl"
+    ? `wiadomości ze świata dziś ${day}`
+    : lang.slice(0, 2) === "ua" ? `новини світу сьогодні ${day}`
+    : lang.slice(0, 2) === "nl" ? `wereldnieuws vandaag ${day}`
+    : `world news today ${day}`;
+  try {
+    const r = await fetch(`/api/youtube-search?cat=25&order=date&days=3&q=${encodeURIComponent(q)}`);
+    if (!r.ok) return null;
+    const data = await r.json();
+    const items = (data?.items || []) as NewsVideo[];
+    const hit = items.find((x) => x.videoId);
+    return hit || null;
+  } catch { return null; }
+}
+
 const HOSTS: Record<string, { a: string; b: string }> = {
   pl: { a: "Marek", b: "Ola" },
   en: { a: "Mark", b: "Olivia" },
@@ -90,6 +167,12 @@ function briefFor(kind: TalkKind, lang: string, hosts: { a: string; b: string })
 /** Wygeneruj skrypt rozmowy (6–12 wymian) w formacie A:/B:. */
 export async function generateTalkScript(kind: TalkKind, lang = "pl"): Promise<TalkLine[]> {
   const hosts = HOSTS[lang.slice(0, 2)] || HOSTS.pl;
+  // Opowiadanie = świeży wpis z NASZEGO bloga (rotacja co 3 h). Gdy bloga nie
+  // ma / nie wstał — spadamy do generatora AI, a dalej do wbudowanego skryptu.
+  if (kind === "story") {
+    const fromBlog = await fetchBlogStory(lang);
+    if (fromBlog.length >= 2) return fromBlog;
+  }
   const brief = briefFor(kind, lang, hosts);
   const prompt =
     `${brief}\n\nFORMAT: każda linia zaczyna się od "A:" (${hosts.a}) albo "B:" (${hosts.b}). ` +

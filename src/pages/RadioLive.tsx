@@ -14,7 +14,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { useSubscription } from "@/contexts/SubscriptionContext";
-import { generateTalkScript, speakTalk, stopSpeaking, type TalkKind, type TalkLine } from "@/lib/radioTalk";
+import { generateTalkScript, speakTalk, stopSpeaking, fetchWorldNews, type TalkKind, type TalkLine, type NewsVideo } from "@/lib/radioTalk";
+import { YouTubePlayer } from "@/components/player/YouTubePlayer";
 
 interface RadioConfig {
   is_active: boolean;
@@ -117,7 +118,11 @@ const RadioLive = () => {
   const [talkLoading, setTalkLoading] = useState(false);
   const [talkActive, setTalkActive] = useState(false);
   const [talkLine, setTalkLine] = useState<TalkLine | null>(null);
+  // News o świecie — świeży filmik z YouTube grany w radiu (muzyka wyciszona).
+  const [newsVideo, setNewsVideo] = useState<NewsVideo | null>(null);
+  const [newsLoading, setNewsLoading] = useState(false);
   const talkActiveRef = useRef(false);
+  const autoStoryDoneRef = useRef<number>(-1);
   const talkSavedVolRef = useRef<number | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const radioClientIdRef = useRef(crypto.randomUUID());
@@ -679,6 +684,60 @@ const RadioLive = () => {
 
   const stopTalk = useCallback(() => { talkActiveRef.current = false; stopSpeaking(); }, []);
 
+  // Wróć muzyką radia do bieżącej (zsynchronizowanej) pozycji po segmencie newsów.
+  const resyncPlayback = useCallback(() => {
+    if (!config?.started_at || schedule.length === 0) return;
+    const startedAt = new Date(config.started_at).getTime();
+    let elapsed = (Date.now() - startedAt) / 1000;
+    const total = schedule.reduce((s, t) => s + getItemDuration(t), 0);
+    if (total <= 0) return;
+    if (config.mode === "24h") elapsed = elapsed % total;
+    let cum = 0;
+    for (let i = 0; i < schedule.length; i++) {
+      const dur = getItemDuration(schedule[i]);
+      if (cum + dur > elapsed) { setCurrentIndex(i); startPlayback(i, elapsed - cum); return; }
+      cum += dur;
+    }
+    setCurrentIndex(0); startPlayback(0, 0);
+  }, [config, schedule, startPlayback]);
+
+  // News o świecie: świeży (dzienny) filmik z YouTube. Po przyciśnięciu wyciszamy
+  // muzykę i puszczamy wiadomości; gdy brak filmu — awaryjnie serwis dwoma głosami.
+  const startNews = useCallback(async () => {
+    if (newsLoading || newsVideo || talkActiveRef.current) return;
+    const lang = (typeof localStorage !== "undefined" && localStorage.getItem("grooveai-language")) || "pl";
+    setNewsLoading(true);
+    let hit: NewsVideo | null = null;
+    try { hit = await fetchWorldNews(lang); } catch { /* */ }
+    setNewsLoading(false);
+    if (!hit) { startTalk("news"); return; }          // fallback: serwis TTS
+    stopCurrentAudio();                                 // wycisz/zatrzymaj muzykę
+    setIsPlaying(false);
+    setNewsVideo(hit);
+    toast({ title: "📰 News o świecie", description: hit.title });
+  }, [newsLoading, newsVideo, stopCurrentAudio, startTalk, toast]);
+
+  const stopNews = useCallback(() => {
+    setNewsVideo(null);
+    resyncPlayback();                                   // wróć muzyką radia
+  }, [resyncPlayback]);
+
+  // Auto co 3 h (gdy radio gra i nic nie leci na antenie) — świeże opowiadanie z bloga.
+  useEffect(() => {
+    if (!isPlaying || talkActive || newsVideo) return;
+    // Bieżący koszyk oznacz jako „zrobiony" — auto-opowiadanie ruszy dopiero na
+    // NASTĘPNEJ granicy 3 h, nie od razu po włączeniu radia.
+    if (autoStoryDoneRef.current === -1) autoStoryDoneRef.current = Math.floor(Date.now() / (3 * 60 * 60 * 1000));
+    const id = window.setInterval(() => {
+      const bucket = Math.floor(Date.now() / (3 * 60 * 60 * 1000));
+      if (autoStoryDoneRef.current === bucket) return;   // ten koszyk już zrobiony
+      if (talkActiveRef.current || newsVideo) return;
+      autoStoryDoneRef.current = bucket;
+      startTalk("story");
+    }, 60 * 1000);
+    return () => window.clearInterval(id);
+  }, [isPlaying, talkActive, newsVideo, startTalk]);
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -1000,8 +1059,33 @@ const RadioLive = () => {
                 />
               </div>
 
-              {/* GrouAI Talk — dwie osoby rozmawiające (dla wszystkich) */}
-              {talkActive ? (
+              {/* Odtwarzacz newsów z YouTube (ukryty — słychać sam dźwięk) */}
+              {newsVideo && (
+                <YouTubePlayer
+                  videoId={newsVideo.videoId}
+                  isPlaying={true}
+                  volume={100}
+                  isMuted={false}
+                  onEnded={stopNews}
+                  onError={() => { toast({ title: "News", description: "Nie udało się odtworzyć — wracam do muzyki." }); stopNews(); }}
+                />
+              )}
+
+              {/* News o świecie — na antenie (muzyka wyciszona) */}
+              {newsVideo ? (
+                <div className="rounded-xl border border-amber-400/40 bg-amber-500/10 p-3 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-amber-300 flex items-center gap-1.5">
+                      <span className="h-2 w-2 rounded-full bg-amber-400 animate-pulse" /> 📰 News o świecie — na antenie
+                    </span>
+                    <button onClick={stopNews} className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1">
+                      <X className="h-3.5 w-3.5" /> Stop
+                    </button>
+                  </div>
+                  <p className="text-sm text-foreground/90 leading-snug">{newsVideo.title}</p>
+                </div>
+              ) : /* GrouAI Talk — dwie osoby rozmawiające (dla wszystkich) */
+              talkActive ? (
                 <div className="rounded-xl border border-primary/30 bg-primary/10 p-3 space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-primary flex items-center gap-1.5">
@@ -1019,8 +1103,8 @@ const RadioLive = () => {
                 </div>
               ) : (
                 <div className="grid grid-cols-2 gap-2">
-                  <Button onClick={() => startTalk("news")} disabled={talkLoading} variant="outline" className="gap-1.5 h-10 border-primary/30">
-                    {talkLoading ? <span className="h-3.5 w-3.5 rounded-full border-2 border-primary/30 border-t-primary animate-spin" /> : "📰"} News (2 głosy)
+                  <Button onClick={startNews} disabled={newsLoading || talkLoading} variant="outline" className="gap-1.5 h-10 border-amber-400/40">
+                    {newsLoading ? <span className="h-3.5 w-3.5 rounded-full border-2 border-amber-400/30 border-t-amber-400 animate-spin" /> : "📰"} News o świecie
                   </Button>
                   <Button onClick={() => startTalk("story")} disabled={talkLoading} variant="outline" className="gap-1.5 h-10 border-primary/30">
                     {talkLoading ? <span className="h-3.5 w-3.5 rounded-full border-2 border-primary/30 border-t-primary animate-spin" /> : "📖"} Opowiadanie
