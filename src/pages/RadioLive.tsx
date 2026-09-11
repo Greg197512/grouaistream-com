@@ -134,6 +134,11 @@ const RadioLive = () => {
   const schedule = useMemo(() => {
     const filtered = rawSchedule.filter((item) => (item.item_type === "track" || !item.item_type) && !!item.track?.audio_url);
 
+    // Stacja jednoartystowa (np. VIP = cały katalog jednego twórcy) — dedup po
+    // artyście zjadłby wszystko poza jednym utworem. Wykryj to i wtedy pomiń.
+    const artistSet = new Set(filtered.map((i) => i.track?.artist?.trim().toLowerCase()).filter(Boolean));
+    const skipArtistDedup = artistSet.size <= 2;
+
     const recentTrackIds: string[] = [];
     const recentArtists: string[] = [];
 
@@ -143,7 +148,7 @@ const RadioLive = () => {
 
       if (!trackId) return true;
       if (recentTrackIds.includes(trackId)) return false;
-      if (artist && recentArtists.includes(artist)) return false;
+      if (!skipArtistDedup && artist && recentArtists.includes(artist)) return false;
 
       recentTrackIds.push(trackId);
       if (artist) recentArtists.push(artist);
