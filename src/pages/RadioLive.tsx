@@ -96,6 +96,7 @@ const RadioLive = () => {
   const [station, setStation] = useState<"public" | "vip">("public");
   const [config, setConfig] = useState<RadioConfig | null>(null);
   const [rawSchedule, setRawSchedule] = useState<ScheduleTrack[]>([]);
+  const [configVersion, setConfigVersion] = useState(0); // bump = przeładuj grafik (np. po zmianie trybu)
   const [isLoading, setIsLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -246,7 +247,19 @@ const RadioLive = () => {
     fetchData();
     return () => { cancelled = true; clearTimeout(timeout); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [station]);
+  }, [station, configVersion]);
+
+  // Realtime: gdy zmieni się radio_config (np. admin przełączy inteligentny tryb),
+  // przeładuj grafik i zresynchronizuj — radio dostosowuje się u wszystkich od razu.
+  useEffect(() => {
+    const ch = supabase
+      .channel("radio-config-live")
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "radio_config" }, () => {
+        setConfigVersion((v) => v + 1);
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, []);
 
   // Fetch likes count for current track
   const fetchLikesCount = useCallback(async (trackId: string) => {
@@ -459,7 +472,9 @@ const RadioLive = () => {
     let elapsed = (now - startedAt) / 1000;
     const totalDuration = schedule.reduce((s, t) => s + getItemDuration(t), 0);
     if (totalDuration <= 0) return;
-    if (config.mode === "24h") elapsed = elapsed % totalDuration;
+    // Radio to pętla 24/7 — zawijamy czas dla każdego trybu (24h ORAZ mood:*),
+    // inaczej po zmianie trybu elapsed przekracza total i nic nie rusza.
+    elapsed = ((elapsed % totalDuration) + totalDuration) % totalDuration;
     let cumulative = 0;
     for (let i = 0; i < schedule.length; i++) {
       const dur = getItemDuration(schedule[i]);
@@ -471,6 +486,7 @@ const RadioLive = () => {
       cumulative += dur;
     }
     setCurrentIndex(0);
+    startPlayback(0, 0);
   }, [config, schedule]);
 
   const startPlayback = useCallback(
