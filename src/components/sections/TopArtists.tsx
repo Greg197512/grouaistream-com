@@ -17,6 +17,10 @@ interface ArtistData {
   imageUrl?: string;
 }
 
+// Konta „na kłódkę" (admin / treści dostępne tylko z kluczem) — NIE pokazujemy ich
+// jako publicznych trending artist. Nazwy porównywane po lowercase.
+const HIDDEN_ARTISTS = new Set(["mr.gregorius", "mr gregorius", "grouaistream"]);
+
 const generateUniqueAvatar = (name: string): string => {
   const styles = ["bottts-neutral", "shapes", "thumbs", "rings", "glass", "identicon"];
   const seed = encodeURIComponent(name.trim().toLowerCase());
@@ -94,6 +98,7 @@ export const TopArtists = () => {
         const name = (t.artist || "").trim();
         if (!name) return;
         const key = name.toLowerCase();
+        if (HIDDEN_ARTISTS.has(key)) return; // pomiń konto admina / treści na kłódkę
         if (!artistMap[key]) artistMap[key] = { count: 0, name, userId: t.user_id ?? null };
         artistMap[key].count += 1;
         if (!artistMap[key].userId && t.user_id) artistMap[key].userId = t.user_id;
