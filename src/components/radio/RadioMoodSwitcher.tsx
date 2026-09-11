@@ -64,14 +64,15 @@ export const RadioMoodSwitcher = () => {
       return;
     }
     setLoadingMood(mood);
-    toast.loading(`🤖 AI buduje nową playlistę "${mood}"...`, { id: "mood-switch" });
+    toast.loading(`🤖 AI dobiera utwory do nastroju "${mood}"...`, { id: "mood-switch" });
     try {
-      const { data, error } = await supabase.functions.invoke("radio-mood-switch", { body: { mood } });
+      // Inteligentny dobór po cechach audio (energy/valence/danceability/bpm) +
+      // gatunkach, prosto w bazie. Podmienia stację public i restartuje zegar —
+      // radio dostosowuje się OD RAZU (bez zależności od n8n/tokenów).
+      const { data, error } = await supabase.rpc("apply_radio_mood", { _mood: mood });
       if (error) throw error;
-      toast.success(
-        `🎵 Radio przełączone na "${mood}" (${data?.dispatched === "n8n" ? "AI przez n8n" : "fallback shuffle"}).`,
-        { id: "mood-switch", duration: 4000 },
-      );
+      const count = (data as { count?: number } | null)?.count ?? 0;
+      toast.success(`🎵 Radio dostosowane do "${mood}" — ${count} utworów na antenie.`, { id: "mood-switch", duration: 4000 });
       void speak(MOOD_ANNOUNCEMENT[mood], { mode: "dj" });
     } catch (e) {
       toast.error(`Nie udało się przełączyć: ${(e as Error).message}`, { id: "mood-switch" });
