@@ -43,6 +43,7 @@ serve(async (req) => {
         .from("tracks")
         .select("id, created_at")
         .not("audio_url", "is", null)
+        .eq("locked", false)
         .order("created_at", { ascending: false })
         .limit(5000),
       supabaseAdmin
