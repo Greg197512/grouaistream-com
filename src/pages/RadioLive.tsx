@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { usePlayer } from "@/contexts/PlayerContext";
+import { useSubscription } from "@/contexts/SubscriptionContext";
 import { generateTalkScript, speakTalk, type TalkKind, type TalkLine } from "@/lib/radioTalk";
 
 interface RadioConfig {
@@ -88,6 +89,9 @@ const RadioLive = () => {
   const { toast } = useToast();
   const { t, language } = useLanguage();
   const { pausePlayback } = usePlayer();
+  const { plan } = useSubscription();
+  const isSubscriber = plan === "pro" || plan === "ultimate";
+  const [station, setStation] = useState<"public" | "vip">("public");
   const [config, setConfig] = useState<RadioConfig | null>(null);
   const [rawSchedule, setRawSchedule] = useState<ScheduleTrack[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -184,6 +188,7 @@ const RadioLive = () => {
           .from("radio_schedule")
           .select("position, item_type, custom_title, custom_duration, custom_audio_url, lang, track:tracks(id, title, artist, duration, audio_url, cover_url)")
           .eq("item_type", "track")
+          .eq("station", station)
           .order("position", { ascending: true })
           .limit(2000);
         if (cancelled) return;
@@ -229,7 +234,8 @@ const RadioLive = () => {
     };
     fetchData();
     return () => { cancelled = true; clearTimeout(timeout); };
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [station]);
 
   // Fetch likes count for current track
   const fetchLikesCount = useCallback(async (trackId: string) => {
@@ -913,6 +919,24 @@ const RadioLive = () => {
               </motion.span>
             )}
           </div>
+
+          {/* Przełącznik stacji: publiczna / VIP (VIP tylko dla subskrybentów) */}
+          {isSubscriber && (
+            <div className="flex items-center justify-center gap-1.5 mt-2">
+              <button
+                onClick={() => setStation("public")}
+                className={`px-3 py-1 rounded-full text-xs font-semibold border transition-colors ${station === "public" ? "bg-primary text-primary-foreground border-primary" : "bg-white/5 text-foreground/70 border-white/15 hover:bg-white/10"}`}
+              >
+                Radio
+              </button>
+              <button
+                onClick={() => setStation("vip")}
+                className={`px-3 py-1 rounded-full text-xs font-semibold border transition-colors inline-flex items-center gap-1 ${station === "vip" ? "bg-gradient-to-r from-amber-500 to-yellow-400 text-black border-amber-400" : "bg-white/5 text-amber-300/80 border-amber-500/30 hover:bg-white/10"}`}
+              >
+                👑 VIP
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Now Playing */}
