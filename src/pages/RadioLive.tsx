@@ -14,7 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { useSubscription } from "@/contexts/SubscriptionContext";
-import { generateTalkScript, speakTalk, type TalkKind, type TalkLine } from "@/lib/radioTalk";
+import { generateTalkScript, speakTalk, stopSpeaking, type TalkKind, type TalkLine } from "@/lib/radioTalk";
 
 interface RadioConfig {
   is_active: boolean;
@@ -672,7 +672,7 @@ const RadioLive = () => {
     }
   }, [talkLoading, toast]);
 
-  const stopTalk = useCallback(() => { talkActiveRef.current = false; }, []);
+  const stopTalk = useCallback(() => { talkActiveRef.current = false; stopSpeaking(); }, []);
 
   if (isLoading) {
     return (
