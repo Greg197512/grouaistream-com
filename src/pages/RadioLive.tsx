@@ -125,6 +125,7 @@ const RadioLive = () => {
   const [newsLoading, setNewsLoading] = useState(false);
   const talkActiveRef = useRef(false);
   const autoStoryDoneRef = useRef<number>(-1);
+  const storyAudioRef = useRef<HTMLAudioElement | null>(null);
   const talkSavedVolRef = useRef<number | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const radioClientIdRef = useRef(crypto.randomUUID());
@@ -699,7 +700,35 @@ const RadioLive = () => {
     }
   }, [talkLoading, muted, volume, toast]);
 
-  const stopTalk = useCallback(() => { talkActiveRef.current = false; stopSpeaking(); stopVoice(); }, []);
+  const stopTalk = useCallback(() => {
+    talkActiveRef.current = false;
+    stopSpeaking(); stopVoice();
+    if (storyAudioRef.current) { try { storyAudioRef.current.pause(); } catch { /* */ } storyAudioRef.current = null; }
+  }, []);
+
+  // Opowiadanie dnia z CDN (jedna generacja dla wszystkich). Zwraca true, gdy zagrało.
+  const playCachedStory = useCallback(async (lang: string): Promise<boolean> => {
+    try {
+      const d = new Date().toISOString().slice(0, 10);
+      const r = await fetch(`/api/radio-story?lang=${encodeURIComponent(lang)}&d=${d}`);
+      const ct = r.headers.get("content-type") || "";
+      if (!r.ok || !ct.includes("audio")) return false;
+      const title = decodeURIComponent(r.headers.get("x-story-title") || "");
+      if (title) setTalkLine({ speaker: "A", text: title });
+      const url = URL.createObjectURL(await r.blob());
+      await new Promise<void>((resolve) => {
+        const a = new Audio(url);
+        storyAudioRef.current = a;
+        a.onended = () => resolve();
+        a.onerror = () => resolve();
+        a.onpause = () => { if (!talkActiveRef.current) resolve(); };
+        a.play().catch(() => resolve());
+      });
+      URL.revokeObjectURL(url);
+      storyAudioRef.current = null;
+      return true;
+    } catch { return false; }
+  }, []);
 
   // Opowiadanie dnia z bloga — czytane JEDNYM głosem (lektor, ElevenLabs).
   // Głośność muzyki przywracamy ZAWSZE do suwaka (żeby radio nie „gubiło głosu").
@@ -716,14 +745,17 @@ const RadioLive = () => {
     setTalkActive(true);
     setTalkLine({ speaker: "A", text: story.title });
     try {
-      await speak(story.text, { lang, mode: "assistant" });
+      // Najpierw współdzielony plik z CDN (jedna generacja/dzień); gdy brak —
+      // czytamy lokalnie przez speak() (jeden głos, z fallbackami).
+      const played = await playCachedStory(lang);
+      if (!played && talkActiveRef.current) await speak(story.text, { lang, mode: "assistant" });
     } finally {
       talkActiveRef.current = false;
       setTalkActive(false);
       setTalkLine(null);
       if (audioRef.current) audioRef.current.volume = muted ? 0 : volume / 100;
     }
-  }, [talkLoading, newsVideo, muted, volume, toast]);
+  }, [talkLoading, newsVideo, muted, volume, toast, playCachedStory]);
 
   // Wróć muzyką radia do bieżącej (zsynchronizowanej) pozycji po segmencie newsów.
   const resyncPlayback = useCallback(() => {
