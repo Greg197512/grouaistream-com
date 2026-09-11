@@ -11,7 +11,7 @@ import { AnimatedGenreIcon } from "@/components/effects/AnimatedGenreIcon";
 import { withTimeout } from "@/lib/withTimeout";
 
 const FETCH_TIMEOUT_MS = 20_000;
-const TRACK_SELECT = "id,title,artist,album,duration,cover_url,audio_url,video_url,genre,mood";
+const TRACK_SELECT = "id,title,artist,album,duration,cover_url,audio_url,video_url,genre,mood,locked";
 
 interface GenreSectionProps {
   genre: string;

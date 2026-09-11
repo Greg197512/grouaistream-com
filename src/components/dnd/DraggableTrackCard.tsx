@@ -1,6 +1,6 @@
 import { Draggable } from "@hello-pangea/dnd";
 import { motion } from "framer-motion";
-import { Play, GripVertical } from "lucide-react";
+import { Play, GripVertical, Lock } from "lucide-react";
 import { Track, usePlayer } from "@/contexts/PlayerContext";
 import { TrackOptionsMenu, LikeButton } from "@/components/menus/TrackOptionsMenu";
 import { HQCover } from "@/components/ui/HQCover";
@@ -113,6 +113,19 @@ export const DraggableTrackCard = ({
             {track.video_url && (
               <div className="absolute top-2 right-2 px-1.5 py-0.5 rounded bg-red-600 text-[10px] text-white font-bold">
                 YT
+              </div>
+            )}
+
+            {/* Badge VIP — treść ekskluzywna (widoczna tylko dla subskrybentów) */}
+            {track.locked && (
+              <div
+                className={cn(
+                  "absolute right-2 z-10 flex items-center gap-1 rounded-full bg-gradient-to-r from-amber-500 to-yellow-400 px-1.5 py-0.5 text-[9px] font-extrabold text-black shadow",
+                  track.video_url ? "top-8" : "top-2"
+                )}
+                title="Ekskluzywne dla subskrybentów VIP"
+              >
+                <Lock className="h-2.5 w-2.5" /> VIP
               </div>
             )}
             

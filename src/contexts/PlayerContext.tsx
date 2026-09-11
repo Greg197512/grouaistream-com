@@ -20,6 +20,7 @@ export interface Track {
   cover_url: string | null;
   genre: string | null;
   mood: string | null;
+  locked?: boolean | null;
 }
 
 interface PlayerContextType {
