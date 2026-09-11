@@ -53,10 +53,12 @@ export const TopArtists = () => {
   const isInView = true;
 
   const handleArtistClick = async (artist: ArtistData) => {
+    // Graj utwory wykonawcy po NAZWIE (niezależnie od konta, z którego je wgrano).
     const { data } = await supabase
       .from("tracks")
       .select("*")
-      .eq("user_id", artist.userId)
+      .eq("artist", artist.name)
+      .or("audio_url.not.is.null,video_url.not.is.null")
       .order("created_at", { ascending: false })
       .limit(50);
     if (data && data.length > 0) playPlaylist(data as Track[], 0);
@@ -69,9 +71,9 @@ export const TopArtists = () => {
       const { data: tracksData } = await withTimeout(
         supabase
           .from("tracks")
-          .select("user_id, artist")
-          .not("user_id", "is", null)
-          .limit(500),
+          .select("user_id, artist, audio_url, video_url")
+          .not("artist", "is", null)
+          .limit(3000),
         15_000,
         "TopArtists tracks"
       );
@@ -79,29 +81,36 @@ export const TopArtists = () => {
       if (!tracksData || tracksData.length === 0) {
         // Pusto może oznaczać przejściowy problem (timeout sesji auth / sieć),
         // a nie faktyczny brak twórców — spróbuj jeszcze raz po chwili.
-        // NIE czyścimy już pokazanych twórców, żeby sekcja nie "znikała".
         if (retryOnEmpty) setTimeout(() => fetchTopArtists({ retryOnEmpty: false }), 2500);
         return;
       }
 
-      const userTrackMap: Record<string, { count: number; artistName: string }> = {};
-      tracksData.forEach(t => {
-        if (!t.user_id) return;
-        if (!userTrackMap[t.user_id]) userTrackMap[t.user_id] = { count: 0, artistName: t.artist };
-        userTrackMap[t.user_id].count += 1;
+      // Grupuj po NAZWIE artysty (nie po koncie) i tylko utwory z grającym źródłem —
+      // dzięki temu widać WSZYSTKICH wykonawców, także tych wgranych ze wspólnego/
+      // masowego konta (wcześniej grupowanie po user_id zwijało ich do kilku kont).
+      const artistMap: Record<string, { count: number; name: string; userId: string | null }> = {};
+      tracksData.forEach((t: { user_id: string | null; artist: string | null; audio_url: string | null; video_url: string | null }) => {
+        if (!t.audio_url && !t.video_url) return;
+        const name = (t.artist || "").trim();
+        if (!name) return;
+        const key = name.toLowerCase();
+        if (!artistMap[key]) artistMap[key] = { count: 0, name, userId: t.user_id ?? null };
+        artistMap[key].count += 1;
+        if (!artistMap[key].userId && t.user_id) artistMap[key].userId = t.user_id;
       });
 
-      const userIds = Object.keys(userTrackMap);
-      if (userIds.length === 0) {
+      const keys = Object.keys(artistMap);
+      if (keys.length === 0) {
         if (retryOnEmpty) setTimeout(() => fetchTopArtists({ retryOnEmpty: false }), 2500);
         return;
       }
 
+      const repUserIds = [...new Set(keys.map(k => artistMap[k].userId).filter(Boolean))] as string[];
       const { data: profiles } = await withTimeout(
         supabase
           .from("profiles")
           .select("user_id, display_name, avatar_url")
-          .in("user_id", userIds),
+          .in("user_id", repUserIds.length ? repUserIds : ["00000000-0000-0000-0000-000000000000"]),
         8_000,
         "TopArtists profiles"
       );
@@ -109,19 +118,20 @@ export const TopArtists = () => {
       const profileMap: Record<string, { name: string | null; avatar: string | null }> = {};
       profiles?.forEach(p => { profileMap[p.user_id] = { name: p.display_name, avatar: p.avatar_url }; });
 
-      const finalArtists: ArtistData[] = userIds
-        .map((uid, index) => {
-          const profile = profileMap[uid];
-          const name = userTrackMap[uid].artistName || profile?.name || "Artist";
+      const finalArtists: ArtistData[] = keys
+        .map((k) => {
+          const a = artistMap[k];
+          const profile = a.userId ? profileMap[a.userId] : undefined;
           return {
-            id: uid, userId: uid, name,
-            trackCount: userTrackMap[uid].count,
-            gradient: gradients[index % gradients.length],
-            imageUrl: profile?.avatar || generateUniqueAvatar(name),
+            id: k, userId: a.userId || "", name: a.name,
+            trackCount: a.count,
+            gradient: gradients[0],
+            imageUrl: profile?.avatar || generateUniqueAvatar(a.name),
           };
         })
         .sort((a, b) => b.trackCount - a.trackCount)
-        .slice(0, 16);
+        .slice(0, 16)
+        .map((a, index) => ({ ...a, gradient: gradients[index % gradients.length] }));
 
       setArtists(finalArtists);
     } catch (error) {
