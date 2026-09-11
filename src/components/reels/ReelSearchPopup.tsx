@@ -107,7 +107,7 @@ export const ReelSearchPopup = ({
 
   return (
     <motion.div
-      className="absolute inset-0 z-[60] flex items-end sm:items-center justify-center p-4"
+      className="absolute inset-0 z-[60] flex items-start justify-center px-4 pt-20 sm:pt-28"
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
