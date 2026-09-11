@@ -20,3 +20,31 @@ export const AI_TELEDYSKI: string[] = [
   "cxPv3oC-Yis", // Oscar Morales – Make it Easy for Me (disco-funk)
   "dg7BElt9ghQ", // AIVA – Moonwalk (disco)
 ];
+
+import { searchYouTube } from "@/lib/reelSearch";
+
+// Rotujące zapytania — dają „więcej nowości" (inny zestaw przy każdym otwarciu).
+const FRESH_QUERIES = [
+  "AI music video 2026",
+  "AI generated music video official",
+  "Suno AI song official video",
+  "AI hip hop music video",
+  "AI techno music video",
+  "AI reggae music video",
+  "AI synthwave music video",
+  "AI pop music video 2026",
+];
+
+// Świeża pula do rolki: kuratorska lista (pewna jakość) + świeże AI-teledyski
+// wyszukane na żywo w YouTube (tylko osadzalne). Dedup, limit. Fallback = kuratorska.
+export async function loadFreshTeledyski(max = 40): Promise<string[]> {
+  try {
+    const picks = [...FRESH_QUERIES].sort(() => Math.random() - 0.5).slice(0, 3);
+    const results = await Promise.all(picks.map((q) => searchYouTube(q).catch(() => [])));
+    const fresh = results.flat().map((h) => h.videoId).filter(Boolean);
+    const merged = [...new Set([...AI_TELEDYSKI, ...fresh])];
+    return merged.slice(0, max);
+  } catch {
+    return AI_TELEDYSKI;
+  }
+}

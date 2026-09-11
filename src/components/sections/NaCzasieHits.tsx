@@ -7,7 +7,7 @@ import { HQCover } from "@/components/ui/HQCover";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { FeedReels } from "@/components/sections/FeedReels";
 import { loadYT } from "@/lib/youtubeIframe";
-import { AI_TELEDYSKI } from "@/lib/aiTeledyski";
+import { AI_TELEDYSKI, loadFreshTeledyski } from "@/lib/aiTeledyski";
 
 const SEL = "id,title,artist,album,duration,cover_url,audio_url,video_url,genre,mood";
 
@@ -25,6 +25,14 @@ export const NaCzasieHits = () => {
   const [loading, setLoading] = useState(true);
   const [[index, dir], setIndexDir] = useState<[number, number]>([0, 0]);
   const [reels, setReels] = useState(false);
+  // Rolka AI-teledysków: kuratorska lista + świeże z YouTube (więcej nowości).
+  const [reelIds, setReelIds] = useState<string[]>(AI_TELEDYSKI);
+
+  useEffect(() => {
+    let alive = true;
+    loadFreshTeledyski(40).then((ids) => { if (alive && ids.length) setReelIds(ids); });
+    return () => { alive = false; };
+  }, []);
 
   // Nasze teledyski = utwory z video_url (najnowsze najpierw).
   useEffect(() => {
@@ -129,7 +137,7 @@ export const NaCzasieHits = () => {
       <AnimatePresence>
         {reels && (
           <FeedReels
-            ytTab={{ label: L("Teledyski AI", "AI videos", "AI-clips", "AI-кліпи"), videoIds: AI_TELEDYSKI }}
+            ytTab={{ label: L("Teledyski AI", "AI videos", "AI-clips", "AI-кліпи"), videoIds: reelIds }}
             includeOurSongs
             lang={language}
             onClose={() => setReels(false)}
@@ -156,7 +164,7 @@ const YouTubeFallback = ({ lang, onFullscreen, L }: { lang: string; onFullscreen
         width: "100%", height: "100%",
         playerVars: { autoplay: 0, controls: 1, rel: 0, modestbranding: 1, playsinline: 1 },
         events: {
-          onReady: () => { try { playerRef.current?.cuePlaylist?.({ playlist: AI_TELEDYSKI, index: 0 }); } catch { /* */ } setReady(true); setTimeout(refreshMeta, 600); },
+          onReady: () => { try { playerRef.current?.cuePlaylist?.({ playlist: reelIds, index: 0 }); } catch { /* */ } setReady(true); setTimeout(refreshMeta, 600); },
           onStateChange: () => refreshMeta(),
           onError: () => { try { playerRef.current?.nextVideo?.(); } catch { /* */ } },
         },
