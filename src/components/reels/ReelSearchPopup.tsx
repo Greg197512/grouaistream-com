@@ -5,6 +5,12 @@ import type { Track } from "@/contexts/PlayerContext";
 import type { Language } from "@/i18n/translations";
 import { searchOurSongs, searchYouTube, looseSuggestion, type YtHit } from "@/lib/reelSearch";
 import { askAssistantOnce } from "@/lib/assistantClient";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
+import { invalidateTaste } from "@/lib/personalize";
+
+const FAV_KEY = "grouai-reel-favs-v1";
 
 // Małe okienko na pauzie: „Może chcesz jakiś utwór, wykonawcę lub specjalny rok?".
 // Po zatwierdzeniu szukamy: najpierw u nas w piosenkach, potem w całym YouTube
@@ -21,6 +27,7 @@ export const ReelSearchPopup = ({
 }) => {
   const L = (pl: string, en: string, nl: string, ua: string) =>
     lang === "en" ? en : lang === "nl" ? nl : lang === "ua" ? ua : pl;
+  const { user } = useAuth();
   const [q, setQ] = useState("");
   const [busy, setBusy] = useState(false);
   const [suggestion, setSuggestion] = useState<Track | null>(null);
@@ -44,17 +51,55 @@ export const ReelSearchPopup = ({
     setInfoBusy(false);
   };
 
+  // Zapis wyboru = sygnał „społeczności słuchania" (strona uczy się popytu).
+  const logRequest = (query: string, m: { match_type: string; track_id?: string | null; video_id?: string | null; title?: string | null; artist?: string | null }) => {
+    try { void supabase.from("reel_requests").insert({ user_id: user?.id ?? null, query, ...m }); } catch { /* */ }
+  };
+  // Dodanie do playlisty użytkownika (nasze → Polubione; YT → lokalne ulubione rolki).
+  const addOurSong = async (t: Track) => {
+    if (!user) return;
+    try {
+      const { data: ex } = await supabase.from("liked_songs").select("id").eq("user_id", user.id).eq("track_id", t.id).maybeSingle();
+      if (!ex) await supabase.from("liked_songs").insert({ user_id: user.id, track_id: t.id });
+      invalidateTaste(user.id); // strona od razu uczy się z tego wyboru
+    } catch { /* */ }
+  };
+  const saveYt = (hit: YtHit) => {
+    try {
+      const raw = localStorage.getItem(FAV_KEY);
+      const list: { video_id: string }[] = raw ? JSON.parse(raw) : [];
+      if (!list.find((x) => x.video_id === hit.videoId)) {
+        list.unshift({ video_id: hit.videoId, title: hit.title, artist: hit.author } as never);
+        localStorage.setItem(FAV_KEY, JSON.stringify(list.slice(0, 200)));
+      }
+    } catch { /* */ }
+  };
+  const addedToast = (title: string, sub: string) =>
+    toast.success(L("Znaleziono i dodano ✓", "Found & added ✓", "Gevonden & toegevoegd ✓", "Знайдено й додано ✓"),
+      { description: `${title}${sub ? " — " + sub : ""}` });
+
   const run = async () => {
     const query = q.trim();
     if (!query || busy) return;
     setBusy(true); setSuggestion(null); setEmpty(false);
     try {
       const ours = await searchOurSongs(query);
-      if (ours.length) { onPlayTrack(ours[0]); onClose(); return; }
+      if (ours.length) {
+        const t = ours[0];
+        await addOurSong(t);
+        logRequest(query, { match_type: "track", track_id: t.id, title: t.title, artist: t.artist });
+        onPlayTrack(t); addedToast(t.title, t.artist); onClose(); return;
+      }
       const yt = await searchYouTube(query);
-      if (yt.length) { onPlayYt(yt[0]); onClose(); return; }
+      if (yt.length) {
+        const h = yt[0];
+        saveYt(h);
+        logRequest(query, { match_type: "youtube", video_id: h.videoId, title: h.title, artist: h.author });
+        onPlayYt(h); addedToast(h.title, h.author); onClose(); return;
+      }
       const sug = await looseSuggestion(query);
-      if (sug) setSuggestion(sug); else setEmpty(true);
+      if (sug) { setSuggestion(sug); logRequest(query, { match_type: "suggestion", track_id: sug.id, title: sug.title, artist: sug.artist }); }
+      else { setEmpty(true); logRequest(query, { match_type: "none" }); }
     } finally {
       setBusy(false);
     }
@@ -125,10 +170,10 @@ export const ReelSearchPopup = ({
                 <div className="text-sm font-semibold text-white truncate">{suggestion.title}</div>
                 <div className="text-xs text-white/60 truncate">{suggestion.artist}</div>
               </div>
-              <button onClick={() => { onPlayTrack(suggestion); onClose(); }}
+              <button onClick={async () => { await addOurSong(suggestion); addedToast(suggestion.title, suggestion.artist); onPlayTrack(suggestion); onClose(); }}
                 className="shrink-0 inline-flex items-center gap-1.5 h-9 px-3 rounded-full font-semibold text-black"
                 style={{ background: "#22c55e" }}>
-                <Play className="h-4 w-4 fill-black" /> {L("Włącz", "Play", "Speel", "Увімкнути")}
+                <Play className="h-4 w-4 fill-black" /> {L("Włącz i dodaj", "Play & add", "Speel & voeg toe", "Увімкнути й додати")}
               </button>
             </div>
           </div>
