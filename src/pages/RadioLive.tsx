@@ -14,7 +14,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { useSubscription } from "@/contexts/SubscriptionContext";
-import { generateTalkScript, speakTalk, stopSpeaking, fetchWorldNews, type TalkKind, type TalkLine, type NewsVideo } from "@/lib/radioTalk";
+import { generateTalkScript, speakTalk, stopSpeaking, fetchWorldNews, fetchBlogStory, type TalkKind, type TalkLine, type NewsVideo } from "@/lib/radioTalk";
+import { speak, stopSpeaking as stopVoice } from "@/utils/tts";
 import { YouTubePlayer } from "@/components/player/YouTubePlayer";
 
 interface RadioConfig {
@@ -669,7 +670,7 @@ const RadioLive = () => {
     try { lines = await generateTalkScript(kind, lang); } catch { /* */ }
     setTalkLoading(false);
     if (!lines.length) { toast({ title: "GrouAI Talk", description: "Nie udało się przygotować rozmowy — spróbuj ponownie." }); return; }
-    if (audioRef.current) { talkSavedVolRef.current = audioRef.current.volume; audioRef.current.volume = Math.max(audioRef.current.volume * 0.12, 0.02); }
+    if (audioRef.current) audioRef.current.volume = Math.max((muted ? 0 : volume / 100) * 0.12, 0.02);
     talkActiveRef.current = true;
     setTalkActive(true);
     try {
@@ -678,11 +679,35 @@ const RadioLive = () => {
       talkActiveRef.current = false;
       setTalkActive(false);
       setTalkLine(null);
-      if (audioRef.current && talkSavedVolRef.current !== null) { audioRef.current.volume = talkSavedVolRef.current; talkSavedVolRef.current = null; }
+      if (audioRef.current) audioRef.current.volume = muted ? 0 : volume / 100;
     }
-  }, [talkLoading, toast]);
+  }, [talkLoading, muted, volume, toast]);
 
-  const stopTalk = useCallback(() => { talkActiveRef.current = false; stopSpeaking(); }, []);
+  const stopTalk = useCallback(() => { talkActiveRef.current = false; stopSpeaking(); stopVoice(); }, []);
+
+  // Opowiadanie dnia z bloga — czytane JEDNYM głosem (lektor, ElevenLabs).
+  // Głośność muzyki przywracamy ZAWSZE do suwaka (żeby radio nie „gubiło głosu").
+  const startStory = useCallback(async () => {
+    if (talkActiveRef.current || talkLoading || newsVideo) return;
+    const lang = (typeof localStorage !== "undefined" && localStorage.getItem("grooveai-language")) || "pl";
+    setTalkLoading(true);
+    let story: Awaited<ReturnType<typeof fetchBlogStory>> = null;
+    try { story = await fetchBlogStory(lang); } catch { /* */ }
+    setTalkLoading(false);
+    if (!story) { toast({ title: "Opowiadanie", description: "Brak wpisów do przeczytania — spróbuj później." }); return; }
+    if (audioRef.current) audioRef.current.volume = Math.max((muted ? 0 : volume / 100) * 0.12, 0.02);
+    talkActiveRef.current = true;
+    setTalkActive(true);
+    setTalkLine({ speaker: "A", text: story.title });
+    try {
+      await speak(story.text, { lang, mode: "assistant" });
+    } finally {
+      talkActiveRef.current = false;
+      setTalkActive(false);
+      setTalkLine(null);
+      if (audioRef.current) audioRef.current.volume = muted ? 0 : volume / 100;
+    }
+  }, [talkLoading, newsVideo, muted, volume, toast]);
 
   // Wróć muzyką radia do bieżącej (zsynchronizowanej) pozycji po segmencie newsów.
   const resyncPlayback = useCallback(() => {
@@ -733,10 +758,10 @@ const RadioLive = () => {
       if (autoStoryDoneRef.current === bucket) return;   // ten koszyk już zrobiony
       if (talkActiveRef.current || newsVideo) return;
       autoStoryDoneRef.current = bucket;
-      startTalk("story");
+      startStory();
     }, 60 * 1000);
     return () => window.clearInterval(id);
-  }, [isPlaying, talkActive, newsVideo, startTalk]);
+  }, [isPlaying, talkActive, newsVideo, startStory]);
 
   if (isLoading) {
     return (
@@ -1097,7 +1122,7 @@ const RadioLive = () => {
                   </div>
                   {talkLine && (
                     <p className="text-sm text-foreground/90 leading-snug">
-                      <span className="font-semibold text-primary">{talkLine.speaker === "A" ? "Marek" : "Ola"}:</span> {talkLine.text}
+                      <span className="font-semibold text-primary">📖</span> {talkLine.text}
                     </p>
                   )}
                 </div>
@@ -1106,7 +1131,7 @@ const RadioLive = () => {
                   <Button onClick={startNews} disabled={newsLoading || talkLoading} variant="outline" className="gap-1.5 h-10 border-amber-400/40">
                     {newsLoading ? <span className="h-3.5 w-3.5 rounded-full border-2 border-amber-400/30 border-t-amber-400 animate-spin" /> : "📰"} News o świecie
                   </Button>
-                  <Button onClick={() => startTalk("story")} disabled={talkLoading} variant="outline" className="gap-1.5 h-10 border-primary/30">
+                  <Button onClick={startStory} disabled={talkLoading} variant="outline" className="gap-1.5 h-10 border-primary/30">
                     {talkLoading ? <span className="h-3.5 w-3.5 rounded-full border-2 border-primary/30 border-t-primary animate-spin" /> : "📖"} Opowiadanie
                   </Button>
                 </div>
