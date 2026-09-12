@@ -66,7 +66,7 @@ export default async function handler(req: any, res: any) {
     const results = await Promise.all(topics.map(async (tp) => {
       const url = tp === "TOP" ? `${base}?${geo}` : `${base}/headlines/section/topic/${tp}?${geo}`;
       const xml = await fetchFeed(url);
-      return { tp, titles: xml ? parseTitles(xml, 12) : [] };
+      return { tp, titles: xml ? parseTitles(xml, 8) : [] };
     }));
 
     // Dedup globalny (te same newsy w kilku działach).
@@ -84,7 +84,8 @@ export default async function handler(req: any, res: any) {
     const total = sections.reduce((n, s) => n + s.items.length, 0);
     if (total < 3) return res.status(200).json({ ok: false, error: "no_items" });
 
-    res.setHeader("Cache-Control", "public, s-maxage=900, stale-while-revalidate=3600");
+    // Krótki cache → bardzo świeże niusy (odświeża się co ~5 min).
+    res.setHeader("Cache-Control", "public, s-maxage=300, stale-while-revalidate=900");
     return res.status(200).json({ ok: true, source: "Google News", sections });
   } catch (e) {
     return res.status(200).json({ ok: false, error: String(e) });
