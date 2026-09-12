@@ -17,6 +17,7 @@ import { useSubscription } from "@/contexts/SubscriptionContext";
 import { generateTalkScript, speakTalk, stopSpeaking, fetchWorldNews, fetchBlogStory, fetchNewsBulletin, type TalkKind, type TalkLine, type NewsVideo } from "@/lib/radioTalk";
 import { speak, stopSpeaking as stopVoice } from "@/utils/tts";
 import { YouTubePlayer } from "@/components/player/YouTubePlayer";
+import { buildPersonalQueue, type Mood } from "@/lib/personalRadio";
 
 interface RadioConfig {
   is_active: boolean;
@@ -97,6 +98,10 @@ const RadioLive = () => {
   const [config, setConfig] = useState<RadioConfig | null>(null);
   const [rawSchedule, setRawSchedule] = useState<ScheduleTrack[]>([]);
   const [configVersion, setConfigVersion] = useState(0); // bump = przeładuj grafik (np. po zmianie trybu)
+  // Tryb osobisty: kolejka zbudowana z danych zalogowanego (słyszy tylko on).
+  const [personalTracks, setPersonalTracks] = useState<ScheduleTrack[]>([]);
+  const [personalMood, setPersonalMood] = useState<Mood | null>(null);
+  const [personalLoading, setPersonalLoading] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -140,12 +145,15 @@ const RadioLive = () => {
 
   // Radio is music-only: no announcements, voices, jingles, ads, or talk slots.
   const schedule = useMemo(() => {
-    const filtered = rawSchedule.filter((item) => (item.item_type === "track" || !item.item_type) && !!item.track?.audio_url);
+    // W trybie osobistym gramy kolejkę użytkownika (bez dedup po artyście).
+    const source = personalMood ? personalTracks : rawSchedule;
+    const filtered = source.filter((item) => (item.item_type === "track" || !item.item_type) && !!item.track?.audio_url);
 
     // Stacja jednoartystowa (np. VIP = cały katalog jednego twórcy) — dedup po
     // artyście zjadłby wszystko poza jednym utworem. Wykryj to i wtedy pomiń.
+    // Tryb osobisty też pomija dedup po artyście (to wybory użytkownika).
     const artistSet = new Set(filtered.map((i) => i.track?.artist?.trim().toLowerCase()).filter(Boolean));
-    const skipArtistDedup = artistSet.size <= 2;
+    const skipArtistDedup = !!personalMood || artistSet.size <= 2;
 
     const recentTrackIds: string[] = [];
     const recentArtists: string[] = [];
@@ -166,7 +174,7 @@ const RadioLive = () => {
 
       return true;
     });
-  }, [rawSchedule]);
+  }, [rawSchedule, personalMood, personalTracks]);
 
   // Auth
   useEffect(() => {
@@ -186,6 +194,7 @@ const RadioLive = () => {
 
   // Fetch config + schedule
   useEffect(() => {
+    if (personalMood) return; // tryb osobisty gra lokalną kolejkę — nie nadpisuj
     let cancelled = false;
     const timeout = setTimeout(() => {
       if (!cancelled) setIsLoading(false);
@@ -467,6 +476,11 @@ const RadioLive = () => {
   };
 
   useEffect(() => {
+    // Tryb osobisty: gramy kolejkę sekwencyjnie od początku (bez synchronizacji z anteną).
+    if (personalMood) {
+      if (schedule.length) { setCurrentIndex(0); startPlayback(0, 0); }
+      return;
+    }
     if (!config?.is_active || !config.started_at || schedule.length === 0) return;
     const startedAt = new Date(config.started_at).getTime();
     const now = Date.now();
@@ -488,7 +502,7 @@ const RadioLive = () => {
     }
     setCurrentIndex(0);
     startPlayback(0, 0);
-  }, [config, schedule]);
+  }, [config, schedule, personalMood]);
 
   const startPlayback = useCallback(
     (index: number, offset = 0) => {
@@ -659,7 +673,7 @@ const RadioLive = () => {
   const currentTitle = currentItem ? getItemTitle(currentItem) : "";
   const currentArtist = currentItem ? getItemArtist(currentItem) : "";
   const currentCover = currentItem?.track?.cover_url || null;
-  const isOffAir = !config?.is_active || schedule.length === 0;
+  const isOffAir = !personalMood && (!config?.is_active || schedule.length === 0);
   const isTrack = currentItem?.item_type === "track" || !currentItem?.item_type;
 
   const isInSchedule = () => {
@@ -820,6 +834,36 @@ const RadioLive = () => {
     setNewsVideo(null);
     resyncPlayback();                                   // wróć muzyką radia
   }, [resyncPlayback]);
+
+  // Osobiste radio: buduj kolejkę z danych zalogowanego i graj lokalnie.
+  const enterPersonal = useCallback(async (mood: Mood) => {
+    if (!userId) { toast({ title: "Osobiste radio", description: "Zaloguj się, aby włączyć swoje radio." }); return; }
+    if (personalLoading) return;
+    setPersonalLoading(true);
+    let queue: Awaited<ReturnType<typeof buildPersonalQueue>> = [];
+    try { queue = await buildPersonalQueue(userId, mood); } catch { /* */ }
+    setPersonalLoading(false);
+    if (queue.length < 3) {
+      toast({ title: "Osobiste radio", description: "Za mało Twoich utworów — słuchaj, polub i twórz playlisty, a radio się nauczy." });
+      return;
+    }
+    const mapped: ScheduleTrack[] = queue.map((t, i) => ({
+      position: i, item_type: "track", custom_title: null, custom_duration: 0, custom_audio_url: null, lang: null,
+      track: { id: t.id, title: t.title, artist: t.artist, duration: t.duration ?? 0, audio_url: t.audio_url ?? null, cover_url: t.cover_url ?? null },
+    }) as ScheduleTrack);
+    stopTalk(); stopCurrentAudio();
+    setNewsVideo(null);
+    setPersonalTracks(mapped);
+    setPersonalMood(mood);
+    toast({ title: `🎧 Twoje radio: ${mood}`, description: `${queue.length} utworów dobranych do Ciebie.` });
+  }, [userId, personalLoading, stopCurrentAudio, stopTalk, toast]);
+
+  const exitPersonal = useCallback(() => {
+    setPersonalMood(null);
+    setPersonalTracks([]);
+    stopCurrentAudio();
+    setConfigVersion((v) => v + 1); // przeładuj wspólną antenę
+  }, [stopCurrentAudio]);
 
   // Auto co 3 h (gdy radio gra i nic nie leci na antenie) — świeże opowiadanie z bloga.
   useEffect(() => {
@@ -1065,10 +1109,18 @@ const RadioLive = () => {
           >
             <Radio className="h-8 w-8 text-primary-foreground" />
           </motion.div>
-          <h1 className="text-xl font-bold">{config?.station_name}</h1>
+          <h1 className="text-xl font-bold">{personalMood ? `Twoje radio · ${personalMood}` : config?.station_name}</h1>
+          {personalMood && (
+            <div className="mt-1 flex items-center justify-center gap-2 text-xs">
+              <span className="px-2 py-0.5 rounded-full bg-primary/20 text-primary font-semibold">🎧 Tryb osobisty — słyszysz tylko Ty</span>
+              <button onClick={exitPersonal} className="px-2 py-0.5 rounded-full border border-white/20 text-foreground/80 hover:bg-white/10">
+                Wróć do wspólnej anteny
+              </button>
+            </div>
+          )}
           <div className="flex items-center justify-center gap-2">
             <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-destructive/20 text-destructive text-xs font-semibold animate-pulse">
-              <Wifi className="h-3 w-3" /> {t("radio.live")}
+              <Wifi className="h-3 w-3" /> {personalMood ? "TWOJE" : t("radio.live")}
             </span>
             {/* Likes counter */}
             {likesCount > 0 && (
@@ -1276,7 +1328,7 @@ const RadioLive = () => {
         )}
 
         {/* Global mood switcher — admin/DJ przełącza playlistę radia dla wszystkich (AI/n8n → fallback shuffle) */}
-        <RadioMoodSwitcher />
+        <RadioMoodSwitcher onPick={enterPersonal} />
 
         {/* Mood Detection Module — Pro feature */}
         <FeatureGate requiredPlan="pro" featureName="Radio Mood Detection">
