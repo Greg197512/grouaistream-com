@@ -105,12 +105,14 @@ export const BrainPanel = () => {
   const triggerBrain = async () => {
     setThinking(true);
     try {
-      const { data, error } = await supabase.functions.invoke("grouai-brain", { body: { source: "manual" } });
+      // Nowy, DARMOWY mózg działa w bazie (pg_cron + Pollinations). Ten przycisk
+      // wywołuje ręczny tick; wnioski pojawią się w zakładce „Pamięć" po ~1 min.
+      const { error } = await supabase.rpc("brain_run_now");
       if (error) throw error;
-      toast.success(`🧠 Mózg przemyślał: ${data?.events_processed || 0} eventów, ${data?.memories_saved || 0} wspomnień, ${data?.decisions_created || 0} decyzji`);
-      await loadAll();
+      toast.success("🧠 Mózg dostał sygnał — analizuje świeże zdarzenia. Wnioski pojawią się w zakładce Pamięć w ~1 min.");
+      setTimeout(loadAll, 9000);
     } catch (e: any) {
-      toast.error(`Błąd Mózgu: ${e.message || "nieznany"}`);
+      toast.error(`Błąd Mózgu: ${e.message || "nieznany"}. (Mózg i tak myśli automatycznie co 10 min.)`);
     } finally {
       setThinking(false);
     }
@@ -167,7 +169,8 @@ export const BrainPanel = () => {
             <Brain className="h-7 w-7 text-primary" /> Mózg GrouAI
           </h2>
           <p className="text-sm text-muted-foreground">
-            Centralny system reasoningu — eventy, pamięć, decyzje agentów. Tick co 5 min automatycznie.
+            Centralny system reasoningu — eventy, pamięć, decyzje agentów. Tick co 10 min automatycznie.
+            <span className="ml-2 inline-flex items-center gap-1 text-emerald-400 font-medium">● silnik: darmowy (Pollinations)</span>
           </p>
         </div>
         <div className="flex gap-2">
