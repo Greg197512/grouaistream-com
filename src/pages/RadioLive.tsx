@@ -525,7 +525,8 @@ const RadioLive = () => {
         return;
       }
       const audio = new Audio(audioUrl);
-      audio.crossOrigin = "anonymous";
+      // NIE wymuszać crossOrigin — pliki R2 nie zwracają nagłówka CORS, więc
+      // crossOrigin="anonymous" powodował błąd wczytania i ciszę (patrz CLAUDE.md).
       audio.preload = "auto";
       audio.preservesPitch = false;
       // Granie w tle na telefonie (po wygaszeniu ekranu).
@@ -556,12 +557,25 @@ const RadioLive = () => {
         if (playbackTokenRef.current !== token) return;
         if (audio.duration) setProgress((audio.currentTime / audio.duration) * 100);
       });
-      audio.addEventListener("ended", () => {
+      const goNext = () => {
         if (playbackTokenRef.current !== token) return;
         const nextIndex = (index + 1) % schedule.length;
         setCurrentIndex(nextIndex);
         startPlayback(nextIndex);
+      };
+      audio.addEventListener("ended", goNext);
+      // KLUCZOWE: gdy plik się nie wczyta (martwy URL, format, sieć), przeskocz
+      // do następnego — bez tego radio zawieszało się po jednym/kilku utworach.
+      audio.addEventListener("error", () => {
+        if (playbackTokenRef.current !== token) return;
+        window.setTimeout(goNext, 400); // krótka pauza, by nie zapętlić przy serii błędów
       });
+      // Watchdog: jeśli w 12 s nic nie zagra (brak canplay), też przeskocz.
+      clearFallbackTimer();
+      fallbackTimerRef.current = window.setTimeout(() => {
+        if (playbackTokenRef.current !== token) return;
+        if (audio.paused && audio.currentTime === 0) goNext();
+      }, 12000);
       audio.load();
     },
     [schedule, volume, muted, stopCurrentAudio]
