@@ -131,6 +131,8 @@ const RadioLive = () => {
   const talkActiveRef = useRef(false);
   const autoStoryDoneRef = useRef<number>(-1);
   const storyAudioRef = useRef<HTMLAudioElement | null>(null);
+  const lastCfgKeyRef = useRef<string | null>(null);
+  const personalMoodRef = useRef<Mood | null>(null);
   const talkSavedVolRef = useRef<number | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const radioClientIdRef = useRef(crypto.randomUUID());
@@ -259,17 +261,29 @@ const RadioLive = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [station, configVersion]);
 
-  // Realtime: gdy zmieni się radio_config (np. admin przełączy inteligentny tryb),
-  // przeładuj grafik i zresynchronizuj — radio dostosowuje się u wszystkich od razu.
+  // Realtime: przeładuj TYLKO gdy realnie zmieni się tryb lub start (mode/started_at).
+  // Inne zapisy do radio_config (np. bieżąca pozycja/updated_at) NIE mogą restartować
+  // odtwarzania — to powodowało „przycinanie" (utwór startował od nowa co zapis).
   useEffect(() => {
     const ch = supabase
       .channel("radio-config-live")
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "radio_config" }, () => {
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "radio_config" }, (p) => {
+        if (personalMoodRef.current) return; // tryb osobisty gra lokalnie — ignoruj antenę
+        const n = p.new as { mode?: string; started_at?: string } | null;
+        const key = `${n?.mode ?? ""}|${n?.started_at ?? ""}`;
+        if (lastCfgKeyRef.current === key) return; // zmiana nieistotna → nie restartuj
+        lastCfgKeyRef.current = key;
         setConfigVersion((v) => v + 1);
       })
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, []);
+
+  // Śledź istotny klucz configu (do porównań w nasłuchu realtime).
+  useEffect(() => {
+    if (config) lastCfgKeyRef.current = `${config.mode ?? ""}|${config.started_at ?? ""}`;
+  }, [config]);
+  useEffect(() => { personalMoodRef.current = personalMood; }, [personalMood]);
 
   // Fetch likes count for current track
   const fetchLikesCount = useCallback(async (trackId: string) => {
@@ -570,12 +584,13 @@ const RadioLive = () => {
         if (playbackTokenRef.current !== token) return;
         window.setTimeout(goNext, 400); // krótka pauza, by nie zapętlić przy serii błędów
       });
-      // Watchdog: jeśli w 12 s nic nie zagra (brak canplay), też przeskocz.
+      // Watchdog: przeskocz tylko gdy po 18 s NIC się nie wczytało (readyState 0)
+      // i nadal cisza — nie ucinaj utworów, które się buforują na wolnej sieci.
       clearFallbackTimer();
       fallbackTimerRef.current = window.setTimeout(() => {
         if (playbackTokenRef.current !== token) return;
-        if (audio.paused && audio.currentTime === 0) goNext();
-      }, 12000);
+        if (audio.readyState === 0 && audio.currentTime === 0) goNext();
+      }, 18000);
       audio.load();
     },
     [schedule, volume, muted, stopCurrentAudio]
