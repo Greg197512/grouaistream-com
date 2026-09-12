@@ -120,16 +120,21 @@ export async function fetchBlogStory(lang = "pl"): Promise<BlogStory | null> {
 // ── News o świecie z YouTube ─────────────────────────────────────────────────
 export interface NewsVideo { videoId: string; title: string; author: string }
 
-/** Świeży (dzienny) filmik z wiadomościami ze świata z YouTube — do odtworzenia w radiu. */
+// Oficjalny kanał Polsat News na YouTube (legalne osadzanie materiałów).
+const POLSAT_NEWS_CHANNEL = "UCb7O4-iI4pEO5UZPlOBr0Ug";
+
+/** Świeży news z YouTube do radia. PL → najnowsze z kanału Polsat News; reszta → wiadomości ze świata. */
 export async function fetchWorldNews(lang = "pl"): Promise<NewsVideo | null> {
-  const day = new Date().toISOString().slice(0, 10); // dzienna rotacja
-  const q = lang.slice(0, 2) === "pl"
-    ? `wiadomości ze świata dziś ${day}`
-    : lang.slice(0, 2) === "ua" ? `новини світу сьогодні ${day}`
-    : lang.slice(0, 2) === "nl" ? `wereldnieuws vandaag ${day}`
-    : `world news today ${day}`;
+  const l = lang.slice(0, 2);
+  const day = new Date().toISOString().slice(0, 10);
+  // PL: najświeższe materiały wprost z oficjalnego kanału Polsat News.
+  const params = l === "pl"
+    ? `channel=${POLSAT_NEWS_CHANNEL}&order=date&days=7&q=${encodeURIComponent("wiadomości")}`
+    : `cat=25&order=date&days=3&q=${encodeURIComponent(
+        l === "ua" ? `новини світу сьогодні ${day}` : l === "nl" ? `wereldnieuws vandaag ${day}` : `world news today ${day}`,
+      )}`;
   try {
-    const r = await fetch(`/api/youtube-search?cat=25&order=date&days=3&q=${encodeURIComponent(q)}`);
+    const r = await fetch(`/api/youtube-search?${params}`);
     if (!r.ok) return null;
     const data = await r.json();
     const items = (data?.items || []) as NewsVideo[];
