@@ -14,7 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { useSubscription } from "@/contexts/SubscriptionContext";
-import { generateTalkScript, speakTalk, stopSpeaking, fetchWorldNews, fetchBlogStory, type TalkKind, type TalkLine, type NewsVideo } from "@/lib/radioTalk";
+import { generateTalkScript, speakTalk, stopSpeaking, fetchWorldNews, fetchBlogStory, fetchNewsBulletin, type TalkKind, type TalkLine, type NewsVideo } from "@/lib/radioTalk";
 import { speak, stopSpeaking as stopVoice } from "@/utils/tts";
 import { YouTubePlayer } from "@/components/player/YouTubePlayer";
 
@@ -782,13 +782,33 @@ const RadioLive = () => {
     setNewsLoading(true);
     let hit: NewsVideo | null = null;
     try { hit = await fetchWorldNews(lang); } catch { /* */ }
+    if (hit) {
+      setNewsLoading(false);
+      stopCurrentAudio();                               // wycisz/zatrzymaj muzykę
+      setIsPlaying(false);
+      setNewsVideo(hit);
+      toast({ title: "📰 News", description: hit.title });
+      return;
+    }
+    // Brak filmu (np. brak YOUTUBE_API_KEY) → serwis z PUBLICZNEGO RSS,
+    // czytany naszym głosem (działa bez żadnego klucza).
+    let bulletin: Awaited<ReturnType<typeof fetchNewsBulletin>> = null;
+    try { bulletin = await fetchNewsBulletin(lang); } catch { /* */ }
     setNewsLoading(false);
-    if (!hit) { startTalk("news"); return; }          // fallback: serwis TTS
-    stopCurrentAudio();                                 // wycisz/zatrzymaj muzykę
-    setIsPlaying(false);
-    setNewsVideo(hit);
-    toast({ title: "📰 News o świecie", description: hit.title });
-  }, [newsLoading, newsVideo, stopCurrentAudio, startTalk, toast]);
+    if (!bulletin) { toast({ title: "News", description: "Brak świeżych wiadomości — spróbuj później." }); return; }
+    if (audioRef.current) audioRef.current.volume = Math.max((muted ? 0 : volume / 100) * 0.12, 0.02);
+    talkActiveRef.current = true;
+    setTalkActive(true);
+    setTalkLine({ speaker: "A", text: bulletin.title });
+    try {
+      await speak(bulletin.text, { lang, mode: "assistant" });
+    } finally {
+      talkActiveRef.current = false;
+      setTalkActive(false);
+      setTalkLine(null);
+      if (audioRef.current) audioRef.current.volume = muted ? 0 : volume / 100;
+    }
+  }, [newsLoading, newsVideo, stopCurrentAudio, muted, volume, toast]);
 
   const stopNews = useCallback(() => {
     setNewsVideo(null);
