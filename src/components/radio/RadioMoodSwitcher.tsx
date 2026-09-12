@@ -26,7 +26,7 @@ const MOOD_ANNOUNCEMENT: Record<Mood, string> = {
   party: "Impreza się zaczyna — tryb Party! Dance, house i pop, dawaj na parkiet!",
 };
 
-export const RadioMoodSwitcher = () => {
+export const RadioMoodSwitcher = ({ onPick }: { onPick?: (mood: Mood) => void } = {}) => {
   const { user } = useAuth();
   const { isAdmin } = useAdminAuth();
   const [currentMode, setCurrentMode] = useState<string>("24h");
@@ -56,23 +56,31 @@ export const RadioMoodSwitcher = () => {
 
   const handlePick = async (mood: Mood) => {
     if (!user) {
-      toast.error("Zaloguj się, aby przełączyć tryb radia.");
+      toast.error("Zaloguj się, aby włączyć swoje osobiste radio.");
       return;
     }
-    if (!isAdmin) {
-      toast.info(`🎧 Tryb radia: ${mood}. Globalna zmiana jest tylko dla admin/DJ.`);
+    // Osobiste radio: budowa kolejki z danych użytkownika dzieje się w RadioLive
+    // (onPick). Tu tylko UI + zapowiedź głosowa.
+    if (onPick) {
+      setLoadingMood(mood);
+      try {
+        onPick(mood);
+        void speak(MOOD_ANNOUNCEMENT[mood], { mode: "dj" });
+      } finally {
+        // krótka blokada, by uniknąć podwójnych kliknięć; RadioLive pokaże stan
+        setTimeout(() => setLoadingMood(null), 800);
+      }
       return;
     }
+    // Fallback (gdyby komponent użyto bez onPick): globalna zmiana tylko dla admina.
+    if (!isAdmin) { toast.info(`🎧 Tryb: ${mood}.`); return; }
     setLoadingMood(mood);
-    toast.loading(`🤖 AI dobiera utwory do nastroju "${mood}"...`, { id: "mood-switch" });
+    toast.loading(`🤖 AI dobiera utwory...`, { id: "mood-switch" });
     try {
-      // Inteligentny dobór po cechach audio (energy/valence/danceability/bpm) +
-      // gatunkach, prosto w bazie. Podmienia stację public i restartuje zegar —
-      // radio dostosowuje się OD RAZU (bez zależności od n8n/tokenów).
       const { data, error } = await supabase.rpc("apply_radio_mood", { _mood: mood });
       if (error) throw error;
       const count = (data as { count?: number } | null)?.count ?? 0;
-      toast.success(`🎵 Radio dostosowane do "${mood}" — ${count} utworów na antenie.`, { id: "mood-switch", duration: 4000 });
+      toast.success(`🎵 Radio dostosowane do "${mood}" — ${count} utworów.`, { id: "mood-switch", duration: 4000 });
       void speak(MOOD_ANNOUNCEMENT[mood], { mode: "dj" });
     } catch (e) {
       toast.error(`Nie udało się przełączyć: ${(e as Error).message}`, { id: "mood-switch" });
@@ -87,7 +95,7 @@ export const RadioMoodSwitcher = () => {
         <div>
           <h3 className="font-display text-sm font-bold tracking-wide">Inteligentne tryby radia</h3>
           <p className="text-[11px] text-muted-foreground">
-            Klik = AI dobiera ~60 utworów do nastroju i puszcza na antenie.
+            Twoje osobiste radio: dobierzemy ~60 utworów z Twoich najczęściej słuchanych, playlist i ulubionych — pod nastrój.
           </p>
         </div>
         {activeMood && (
@@ -126,11 +134,9 @@ export const RadioMoodSwitcher = () => {
         })}
       </div>
 
-      {!isAdmin && (
-        <p className="text-[10px] text-muted-foreground mt-2 italic">
-          * Globalna zmiana radia dla wszystkich słuchaczy — tylko admin/DJ.
-        </p>
-      )}
+      <p className="text-[10px] text-muted-foreground mt-2 italic">
+        * Tryb osobisty — słyszysz tylko Ty. „Wróć do wspólnej anteny” w banerze u góry odtwarzacza.
+      </p>
     </div>
   );
 };
