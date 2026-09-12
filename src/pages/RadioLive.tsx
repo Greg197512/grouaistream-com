@@ -801,7 +801,13 @@ const RadioLive = () => {
     setTalkActive(true);
     setTalkLine({ speaker: "A", text: bulletin.title });
     try {
-      await speak(bulletin.text, { lang, mode: "assistant" });
+      // Serwis jest długi (~kilka–kilkanaście min) — czytamy segment po segmencie,
+      // przerywalnie (Stop). Edge TTS ma limit 2000 zn., stąd podział.
+      for (const seg of bulletin.segments) {
+        if (!talkActiveRef.current) break;
+        setTalkLine({ speaker: "A", text: seg.length > 140 ? seg.slice(0, 140) + "…" : seg });
+        await speak(seg, { lang, mode: "assistant" });
+      }
     } finally {
       talkActiveRef.current = false;
       setTalkActive(false);

@@ -123,25 +123,51 @@ export interface NewsVideo { videoId: string; title: string; author: string }
 // Oficjalny kanał Polsat News na YouTube (legalne osadzanie materiałów).
 const POLSAT_NEWS_CHANNEL = "UCb7O4-iI4pEO5UZPlOBr0Ug";
 
-/** Serwis informacyjny z publicznego RSS (Google News) — czytany na głos.
- *  Działa bez żadnego klucza. Zwraca gotowy tekst do TTS + tytuł, albo null. */
-export async function fetchNewsBulletin(lang = "pl"): Promise<{ title: string; text: string } | null> {
+/** Rozbudowany serwis z publicznego RSS (Google News, wiele działów) — czytany
+ *  na głos, bez klucza. Zwraca tytuł + SEGMENTY (do 1400 zn.), bo edge TTS tnie
+ *  do 2000 zn.; radio czyta je po kolei, więc serwis trwa kilka–kilkanaście minut. */
+export async function fetchNewsBulletin(lang = "pl"): Promise<{ title: string; segments: string[] } | null> {
   const l = lang.slice(0, 2);
+  const pl = l === "pl";
   try {
     const r = await fetch(`/api/news-feed?lang=${encodeURIComponent(l)}`);
     if (!r.ok) return null;
     const data = await r.json();
-    const items = (data?.items || []) as { title: string; source: string }[];
-    if (!items.length) return null;
-    const pl = l === "pl";
-    const head = pl
-      ? "Serwis informacyjny GrouAI. Najważniejsze wiadomości:"
-      : l === "ua" ? "Новини GrouAI. Головне:" : l === "nl" ? "GrouAI nieuws. Het belangrijkste:" : "GrouAI news. Top headlines:";
-    const lines = items.slice(0, 6).map((it, i) => `${i + 1}. ${it.title}${it.source ? `, ${it.source}` : ""}.`);
-    const tail = pl
-      ? "To były najważniejsze wiadomości. Wracamy do muzyki."
-      : l === "ua" ? "Це були головні новини. Повертаємось до музики." : l === "nl" ? "Dat was het nieuws. Terug naar de muziek." : "That was the news. Back to the music.";
-    return { title: pl ? "Serwis informacyjny" : "News", text: `${head} ${lines.join(" ")} ${tail}` };
+    const sections = (data?.sections || []) as { name: string; items: string[] }[];
+    if (!sections.length) return null;
+
+    const now = new Date();
+    const hhmm = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+    const intro = pl
+      ? `Serwis informacyjny GrouAI, godzina ${hhmm}. Przechodzimy do wiadomości.`
+      : l === "ua" ? `Новини GrouAI, ${hhmm}. Переходимо до новин.`
+      : l === "nl" ? `GrouAI nieuws, ${hhmm}. We beginnen met het nieuws.`
+      : `GrouAI news at ${hhmm}. Here are the headlines.`;
+    const sectionWord = pl ? "Dział" : l === "ua" ? "Розділ" : l === "nl" ? "Rubriek" : "Section";
+    const outro = pl
+      ? "To były wszystkie wiadomości w tym wydaniu serwisu GrouAI. Wracamy do muzyki."
+      : l === "ua" ? "Це були всі новини цього випуску. Повертаємось до музики."
+      : l === "nl" ? "Dat was al het nieuws. Terug naar de muziek."
+      : "That was the news. Back to the music.";
+
+    // Poskładaj pełny tekst z nagłówkami działów i ponumerowanymi wiadomościami.
+    const parts: string[] = [intro];
+    for (const s of sections) {
+      parts.push(`${sectionWord}: ${s.name}.`);
+      s.items.forEach((t, i) => parts.push(`${i + 1}. ${t}.`));
+    }
+    parts.push(outro);
+
+    // Potnij na segmenty ≤ 1400 znaków (limit edge = 2000), na granicach zdań.
+    const segments: string[] = [];
+    let cur = "";
+    for (const p of parts) {
+      if ((cur + " " + p).length > 1400 && cur) { segments.push(cur.trim()); cur = ""; }
+      cur += (cur ? " " : "") + p;
+    }
+    if (cur.trim()) segments.push(cur.trim());
+    if (!segments.length) return null;
+    return { title: pl ? "Serwis informacyjny" : "News", segments };
   } catch { return null; }
 }
 
