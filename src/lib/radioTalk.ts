@@ -123,9 +123,26 @@ export interface NewsVideo { videoId: string; title: string; author: string }
 // Oficjalny kanał Polsat News na YouTube (legalne osadzanie materiałów).
 const POLSAT_NEWS_CHANNEL = "UCb7O4-iI4pEO5UZPlOBr0Ug";
 
-/** Rozbudowany serwis z publicznego RSS (Google News, wiele działów) — czytany
- *  na głos, bez klucza. Zwraca tytuł + SEGMENTY (do 1400 zn.), bo edge TTS tnie
- *  do 2000 zn.; radio czyta je po kolei, więc serwis trwa kilka–kilkanaście minut. */
+// Skomponuj naturalny fragment serwisu z nagłówków działu (własnymi słowami,
+// bez cytowania i bez zmyślania). Gdy model milczy → czytelna lista nagłówków.
+async function composeSection(name: string, items: string[], lang: string): Promise<string> {
+  const pl = lang.slice(0, 2) === "pl";
+  const headlines = items.slice(0, 8).map((t) => `- ${t}`).join("\n");
+  const prompt = pl
+    ? `Jesteś prezenterem serwisu informacyjnego radia GrouAI. Na podstawie tych ŚWIEŻYCH nagłówków z działu „${name}" napisz zwięzły, naturalny fragment serwisu po polsku — WŁASNYMI słowami, płynnie, jakbyś czytał na antenie. Zasady: nie cytuj dosłownie, nie dodawaj faktów, których nie ma w nagłówkach, nie zmyślaj liczb ani nazwisk. Zacznij od nazwy działu. 4–7 zdań, bez punktów i myślników.\n\nNagłówki:\n${headlines}`
+    : `You are a GrouAI radio news anchor. From these FRESH headlines in the "${name}" section, write a concise, natural spoken news segment in the user's language — in YOUR OWN words, no verbatim quotes, do not invent facts/numbers/names beyond the headlines. Start with the section name. 4–7 sentences, no bullet points.\n\nHeadlines:\n${headlines}`;
+  try {
+    const out = await freeChat(prompt, [], lang);
+    if (out && out.trim().length > 40) return out.trim();
+  } catch { /* */ }
+  // Fallback: czytelna lista nagłówków działu.
+  const word = pl ? "Dział" : "Section";
+  return `${word}: ${name}. ` + items.slice(0, 8).map((t, i) => `${i + 1}. ${t}.`).join(" ");
+}
+
+/** Bardzo świeży serwis: pobiera najnowsze nagłówki (Google News, wiele działów)
+ *  i KOMPONUJE z nich serwis własnymi słowami (freeChat, równolegle na dział),
+ *  z fallbackiem na nagłówki. Zwraca tytuł + SEGMENTY (≤1400 zn.) do czytania. */
 export async function fetchNewsBulletin(lang = "pl"): Promise<{ title: string; segments: string[] } | null> {
   const l = lang.slice(0, 2);
   const pl = l === "pl";
@@ -139,31 +156,34 @@ export async function fetchNewsBulletin(lang = "pl"): Promise<{ title: string; s
     const now = new Date();
     const hhmm = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
     const intro = pl
-      ? `Serwis informacyjny GrouAI, godzina ${hhmm}. Przechodzimy do wiadomości.`
-      : l === "ua" ? `Новини GrouAI, ${hhmm}. Переходимо до новин.`
-      : l === "nl" ? `GrouAI nieuws, ${hhmm}. We beginnen met het nieuws.`
-      : `GrouAI news at ${hhmm}. Here are the headlines.`;
-    const sectionWord = pl ? "Dział" : l === "ua" ? "Розділ" : l === "nl" ? "Rubriek" : "Section";
+      ? `Serwis informacyjny GrouAI, godzina ${hhmm}. Najświeższe wiadomości.`
+      : l === "ua" ? `Новини GrouAI, ${hhmm}. Найсвіжіші новини.`
+      : l === "nl" ? `GrouAI nieuws, ${hhmm}. Het laatste nieuws.`
+      : `GrouAI news at ${hhmm}. The latest headlines.`;
     const outro = pl
       ? "To były wszystkie wiadomości w tym wydaniu serwisu GrouAI. Wracamy do muzyki."
       : l === "ua" ? "Це були всі новини цього випуску. Повертаємось до музики."
       : l === "nl" ? "Dat was al het nieuws. Terug naar de muziek."
       : "That was the news. Back to the music.";
 
-    // Poskładaj pełny tekst z nagłówkami działów i ponumerowanymi wiadomościami.
-    const parts: string[] = [intro];
-    for (const s of sections) {
-      parts.push(`${sectionWord}: ${s.name}.`);
-      s.items.forEach((t, i) => parts.push(`${i + 1}. ${t}.`));
-    }
-    parts.push(outro);
+    // Komponuj wszystkie działy RÓWNOLEGLE (szybciej po przyciśnięciu).
+    const composed = await Promise.all(sections.map((s) => composeSection(s.name, s.items, lang)));
+    const parts: string[] = [intro, ...composed, outro];
 
-    // Potnij na segmenty ≤ 1400 znaków (limit edge = 2000), na granicach zdań.
+    // Potnij na segmenty ≤ 1400 znaków (limit edge TTS = 2000), na granicach zdań.
     const segments: string[] = [];
     let cur = "";
     for (const p of parts) {
-      if ((cur + " " + p).length > 1400 && cur) { segments.push(cur.trim()); cur = ""; }
-      cur += (cur ? " " : "") + p;
+      let chunk = p.trim();
+      while (chunk.length > 1400) {
+        // bardzo długi fragment: przełam na granicy zdania blisko 1400
+        let cut = chunk.lastIndexOf(". ", 1400);
+        if (cut < 400) cut = 1400;
+        segments.push(chunk.slice(0, cut + 1).trim());
+        chunk = chunk.slice(cut + 1).trim();
+      }
+      if ((cur + " " + chunk).length > 1400 && cur) { segments.push(cur.trim()); cur = ""; }
+      cur += (cur ? " " : "") + chunk;
     }
     if (cur.trim()) segments.push(cur.trim());
     if (!segments.length) return null;
