@@ -123,6 +123,28 @@ export interface NewsVideo { videoId: string; title: string; author: string }
 // Oficjalny kanał Polsat News na YouTube (legalne osadzanie materiałów).
 const POLSAT_NEWS_CHANNEL = "UCb7O4-iI4pEO5UZPlOBr0Ug";
 
+/** Serwis informacyjny z publicznego RSS (Google News) — czytany na głos.
+ *  Działa bez żadnego klucza. Zwraca gotowy tekst do TTS + tytuł, albo null. */
+export async function fetchNewsBulletin(lang = "pl"): Promise<{ title: string; text: string } | null> {
+  const l = lang.slice(0, 2);
+  try {
+    const r = await fetch(`/api/news-feed?lang=${encodeURIComponent(l)}`);
+    if (!r.ok) return null;
+    const data = await r.json();
+    const items = (data?.items || []) as { title: string; source: string }[];
+    if (!items.length) return null;
+    const pl = l === "pl";
+    const head = pl
+      ? "Serwis informacyjny GrouAI. Najważniejsze wiadomości:"
+      : l === "ua" ? "Новини GrouAI. Головне:" : l === "nl" ? "GrouAI nieuws. Het belangrijkste:" : "GrouAI news. Top headlines:";
+    const lines = items.slice(0, 6).map((it, i) => `${i + 1}. ${it.title}${it.source ? `, ${it.source}` : ""}.`);
+    const tail = pl
+      ? "To były najważniejsze wiadomości. Wracamy do muzyki."
+      : l === "ua" ? "Це були головні новини. Повертаємось до музики." : l === "nl" ? "Dat was het nieuws. Terug naar de muziek." : "That was the news. Back to the music.";
+    return { title: pl ? "Serwis informacyjny" : "News", text: `${head} ${lines.join(" ")} ${tail}` };
+  } catch { return null; }
+}
+
 /** Świeży news z YouTube do radia. PL → najnowsze z kanału Polsat News; reszta → wiadomości ze świata. */
 export async function fetchWorldNews(lang = "pl"): Promise<NewsVideo | null> {
   const l = lang.slice(0, 2);
