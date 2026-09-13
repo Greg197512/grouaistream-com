@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none" role="img" aria-label="GrouAI Stream">
+  <defs>
+    <linearGradient id="gaBrand" x1="64" y1="96" x2="448" y2="416" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ff2d9b"/>
+      <stop offset="0.52" stop-color="#9b5cff"/>
+      <stop offset="1" stop-color="#22d3ee"/>
+    </linearGradient>
+    <linearGradient id="gaBar" x1="256" y1="150" x2="256" y2="362" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ff5cb8"/>
+      <stop offset="1" stop-color="#7c5cff"/>
+    </linearGradient>
+    <filter id="gaGlow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="7" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- Neonowy pierścień marki -->
+  <circle cx="256" cy="256" r="196" stroke="url(#gaBrand)" stroke-width="18" opacity="0.95" filter="url(#gaGlow)"/>
+  <circle cx="256" cy="256" r="196" stroke="url(#gaBrand)" stroke-width="4" opacity="0.9"/>
+
+  <!-- Fala dźwięku / equalizer (muzyka) -->
+  <g filter="url(#gaGlow)">
+    <rect x="150" y="228" width="26" height="56"  rx="13" fill="url(#gaBar)"/>
+    <rect x="196" y="196" width="26" height="120" rx="13" fill="url(#gaBar)"/>
+    <rect x="242" y="150" width="28" height="212" rx="14" fill="url(#gaBar)"/>
+    <rect x="290" y="188" width="26" height="136" rx="13" fill="url(#gaBar)"/>
+    <rect x="336" y="230" width="26" height="52"  rx="13" fill="url(#gaBar)"/>
+  </g>
+
+  <!-- Akcent AI: orbita + iskra -->
+  <circle cx="256" cy="256" r="196" stroke="#22d3ee" stroke-width="2" stroke-dasharray="2 26" opacity="0.55"/>
+  <circle cx="398" cy="150" r="16" fill="#22d3ee" filter="url(#gaGlow)"/>
+  <circle cx="398" cy="150" r="7"  fill="#eafcff"/>
+</svg>

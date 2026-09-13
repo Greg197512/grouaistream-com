@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
-const LOGO = "/logo-grouaistream.png";
+const LOGO = "/logo-grouaistream.svg";
 const VIDEO = "/intro.mp4";
 const N = 6; // siatka 6×6 = 36 kawałków
 
