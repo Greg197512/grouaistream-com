@@ -13,18 +13,31 @@
       <feGaussianBlur stdDeviation="6" result="b"/>
       <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
     </filter>
+    <clipPath id="gaClip"><circle cx="256" cy="256" r="180"/></clipPath>
+    <style>
+      .gaBar { transform-box: fill-box; transform-origin: 50% 100%; }
+      @media (prefers-reduced-motion: no-preference) {
+        .gaBar { animation: gaEq 1s ease-in-out infinite; }
+        .b1 { animation-duration: .86s; animation-delay: -.10s; }
+        .b2 { animation-duration: 1.14s; animation-delay: -.45s; }
+        .b3 { animation-duration: .72s;  animation-delay: -.20s; }
+        .b4 { animation-duration: 1.02s; animation-delay: -.60s; }
+        .b5 { animation-duration: .92s;  animation-delay: -.32s; }
+      }
+      @keyframes gaEq { 0%,100% { transform: scaleY(.35); } 50% { transform: scaleY(1); } }
+    </style>
   </defs>
 
   <!-- Okragly neonowy pierscien -->
   <circle cx="256" cy="256" r="196" stroke="url(#gaBrand)" stroke-width="16" filter="url(#gaGlow)"/>
 
-  <!-- Equalizer w srodku -->
-  <g filter="url(#gaGlow)">
-    <rect x="150" y="228" width="26" height="56"  rx="13" fill="url(#gaBar)"/>
-    <rect x="196" y="196" width="26" height="120" rx="13" fill="url(#gaBar)"/>
-    <rect x="242" y="150" width="28" height="212" rx="14" fill="url(#gaBar)"/>
-    <rect x="290" y="188" width="26" height="136" rx="13" fill="url(#gaBar)"/>
-    <rect x="336" y="230" width="26" height="52"  rx="13" fill="url(#gaBar)"/>
+  <!-- Equalizer w srodku (wspolna linia bazowa y=362) — tanczy w okregu -->
+  <g filter="url(#gaGlow)" clip-path="url(#gaClip)">
+    <rect class="gaBar b1" x="150" y="272" width="26" height="90"  rx="13" fill="url(#gaBar)"/>
+    <rect class="gaBar b2" x="196" y="212" width="26" height="150" rx="13" fill="url(#gaBar)"/>
+    <rect class="gaBar b3" x="242" y="150" width="28" height="212" rx="14" fill="url(#gaBar)"/>
+    <rect class="gaBar b4" x="290" y="212" width="26" height="150" rx="13" fill="url(#gaBar)"/>
+    <rect class="gaBar b5" x="336" y="272" width="26" height="90"  rx="13" fill="url(#gaBar)"/>
   </g>
 
   <!-- Iskra AI -->
