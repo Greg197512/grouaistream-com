@@ -36,6 +36,37 @@ function generateIdleFrequencies(barCount: number): number[] {
   return freqs;
 }
 
+// Wielojęzyczne, dopracowane intro. Nagłówek = stały początek + ROTUJĄCE słowo
+// (gradient), które płynnie się zmienia — „na najwyższym poziomie", bez kosztów.
+type HeroCopy = { eyebrow: string; prefix: string; words: string[]; suffix?: string; tagline: string };
+const HERO_COPY: Record<string, HeroCopy> = {
+  pl: {
+    eyebrow: "Muzyka × Sztuczna inteligencja",
+    prefix: "Muzyka, która Cię",
+    words: ["rozumie", "czuje", "porywa", "zna", "zaskakuje"],
+    tagline: "Twórz, słuchaj i odkrywaj dźwięk tworzony i dobierany przez AI — w Twoim rytmie, Twoim nastroju, bez granic.",
+  },
+  en: {
+    eyebrow: "Music × Artificial Intelligence",
+    prefix: "Music that",
+    words: ["understands", "feels", "moves", "knows", "surprises"],
+    suffix: "you",
+    tagline: "Create, listen and discover sound made and curated by AI — in your rhythm, your mood, without limits.",
+  },
+  nl: {
+    eyebrow: "Muziek × Kunstmatige intelligentie",
+    prefix: "Muziek die je",
+    words: ["begrijpt", "voelt", "meesleept", "kent", "verrast"],
+    tagline: "Maak, luister en ontdek geluid dat door AI wordt gemaakt en samengesteld — in jouw ritme, jouw stemming.",
+  },
+  ua: {
+    eyebrow: "Музика × Штучний інтелект",
+    prefix: "Музика, що тебе",
+    words: ["розуміє", "відчуває", "захоплює", "знає", "дивує"],
+    tagline: "Створюй, слухай і відкривай звук, створений і підібраний ШІ — у твоєму ритмі та настрої.",
+  },
+};
+
 // Wspólny styl krystalicznego szklanego przycisku (jednakowe efekty dla wszystkich CTA).
 // Kolorowy refleks róż↔fiolet: inset ring (magenta) + podwójna poświata (róż + fiolet).
 const GLASS_BTN =
@@ -47,9 +78,17 @@ const GLASS_BTN =
 export const HeroSection = () => {
   const navigate = useNavigate();
   const { playPlaylist, isPlaying, audioElement, isVideoMode, currentTrack } = usePlayer();
-  const { t } = useLanguage();
-  
+  const { t, language } = useLanguage();
+  const copy = HERO_COPY[(language as string)?.slice(0, 2)] || HERO_COPY.pl;
+
   const [isLoading, setIsLoading] = useState(false);
+  const [wordIdx, setWordIdx] = useState(0);
+  // Rotacja słowa nagłówka (wyłączona przy prefers-reduced-motion).
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    const id = setInterval(() => setWordIdx((i) => (i + 1) % copy.words.length), 2400);
+    return () => clearInterval(id);
+  }, [copy.words.length]);
   const levels = useAudioAnalyser(audioElement, isPlaying, isVideoMode);
   const timeTheme = useTimeRotation();
   const [idleFrequencies, setIdleFrequencies] = useState(() => generateIdleFrequencies(24));
@@ -172,6 +211,18 @@ export const HeroSection = () => {
 
       <div className="relative px-6 py-16 md:py-24">
         <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }} className="max-w-3xl">
+          {/* === EYEBROW === */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1, duration: 0.6 }}
+            className="inline-flex items-center gap-2 mb-4 rounded-full border border-white/20 bg-white/[0.06] backdrop-blur px-3 py-1.5"
+          >
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full rounded-full bg-primary opacity-70 animate-ping" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
+            </span>
+            <span className="text-[11px] sm:text-xs font-semibold tracking-[0.14em] uppercase text-white/85">{copy.eyebrow}</span>
+          </motion.div>
+
           {/* === MAIN TITLE === */}
           <div className="mb-6 relative">
             <BassParticles bass={levels.bass} overall={levels.overall} isPlaying={isPlaying} palette={genrePalette} />
@@ -206,20 +257,31 @@ export const HeroSection = () => {
               })}
             </div>
 
-            <h1 className="font-display text-4xl md:text-6xl lg:text-7xl font-bold leading-tight relative z-10">
+            <h1 className="font-display text-4xl md:text-6xl lg:text-7xl font-bold leading-[1.05] relative z-10">
               <span className="block relative">
-                Music That
-                <span aria-hidden className="title-glint absolute inset-0">Music That</span>
+                {copy.prefix}
+                <span aria-hidden className="title-glint absolute inset-0">{copy.prefix}</span>
               </span>
-              <span className="block relative mt-1">
-                <span className="groove-gradient-text">Understands You</span>
-                <span aria-hidden className="title-glint absolute inset-0">Understands You</span>
+              <span className="block relative mt-1 min-h-[1.1em]">
+                <AnimatePresence mode="wait">
+                  <motion.span
+                    key={copy.words[wordIdx]}
+                    initial={{ opacity: 0, y: "0.5em", filter: "blur(10px)" }}
+                    animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                    exit={{ opacity: 0, y: "-0.5em", filter: "blur(10px)" }}
+                    transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                    className="groove-gradient-text inline-block"
+                  >
+                    {copy.words[wordIdx]}
+                  </motion.span>
+                </AnimatePresence>
+                {copy.suffix ? <span className="ml-2 sm:ml-3">{copy.suffix}</span> : null}
               </span>
             </h1>
           </div>
 
           <p className="text-base md:text-lg text-muted-foreground mb-4 max-w-xl leading-relaxed">
-            {t("hero.subtitle")}
+            {copy.tagline}
           </p>
           
           {/* Anti-fraud explainer */}
