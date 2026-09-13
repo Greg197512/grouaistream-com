@@ -1,35 +1,37 @@
 <svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="GrouAI">
   <defs>
-    <radialGradient id="bg" cx="50%" cy="36%" r="78%">
-      <stop offset="0" stop-color="#2c1c52"/>
-      <stop offset="55%" stop-color="#160d2b"/>
+    <radialGradient id="bg" cx="50%" cy="36%" r="80%">
+      <stop offset="0" stop-color="#1b1030"/>
+      <stop offset="60%" stop-color="#120a24"/>
       <stop offset="100%" stop-color="#07050e"/>
     </radialGradient>
-    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#FFF6D0"/>
-      <stop offset="34%" stop-color="#F6D97E"/>
-      <stop offset="70%" stop-color="#DBAB3D"/>
-      <stop offset="100%" stop-color="#A9781F"/>
+    <linearGradient id="ring" x1="64" y1="96" x2="448" y2="416" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ff2d9b"/>
+      <stop offset="0.52" stop-color="#9b5cff"/>
+      <stop offset="1" stop-color="#22d3ee"/>
     </linearGradient>
-    <linearGradient id="ring" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#F6D97E"/>
-      <stop offset="50%" stop-color="#7d5f1c"/>
-      <stop offset="100%" stop-color="#F6D97E"/>
+    <linearGradient id="bar" x1="256" y1="150" x2="256" y2="362" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ff5cb8"/>
+      <stop offset="1" stop-color="#7c5cff"/>
     </linearGradient>
     <filter id="glow" x="-45%" y="-45%" width="190%" height="190%">
-      <feGaussianBlur stdDeviation="12" result="b"/>
+      <feGaussianBlur stdDeviation="10" result="b"/>
       <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
     </filter>
   </defs>
 
-  <rect width="512" height="512" fill="url(#bg)"/>
-  <circle cx="256" cy="256" r="196" fill="none" stroke="url(#ring)" stroke-width="6" opacity="0.5"/>
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <circle cx="256" cy="256" r="196" fill="none" stroke="url(#ring)" stroke-width="14" opacity="0.9" filter="url(#glow)"/>
 
   <g filter="url(#glow)">
-    <rect x="161" y="216" width="26" height="80"  rx="13" fill="url(#gold)"/>
-    <rect x="202" y="181" width="26" height="150" rx="13" fill="url(#gold)"/>
-    <rect x="243" y="151" width="26" height="210" rx="13" fill="url(#gold)"/>
-    <rect x="284" y="181" width="26" height="150" rx="13" fill="url(#gold)"/>
-    <rect x="325" y="216" width="26" height="80"  rx="13" fill="url(#gold)"/>
+    <rect x="158" y="220" width="30" height="72"  rx="15" fill="url(#bar)"/>
+    <rect x="204" y="184" width="30" height="144" rx="15" fill="url(#bar)"/>
+    <rect x="248" y="150" width="32" height="212" rx="16" fill="url(#bar)"/>
+    <rect x="296" y="184" width="30" height="144" rx="15" fill="url(#bar)"/>
+    <rect x="342" y="220" width="30" height="72"  rx="15" fill="url(#bar)"/>
   </g>
+
+  <!-- Akcent AI: iskra -->
+  <circle cx="392" cy="150" r="18" fill="#22d3ee" filter="url(#glow)"/>
+  <circle cx="392" cy="150" r="8"  fill="#eafcff"/>
 </svg>
