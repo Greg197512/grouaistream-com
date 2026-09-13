@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Brain, Activity, Lightbulb, Cpu, RefreshCw, Loader2, CheckCircle2, XCircle, Zap, HeartPulse, AlertTriangle, Sparkles, Infinity as InfinityIcon } from "lucide-react";
+import { Brain, Activity, Lightbulb, Cpu, RefreshCw, Loader2, CheckCircle2, XCircle, Zap, HeartPulse, AlertTriangle, Sparkles, Infinity as InfinityIcon, Shield, Database, Megaphone, Radio, Music, Code } from "lucide-react";
 import { AuroraPanel } from "./AuroraPanel";
 import { SingularityPanel } from "@/components/dashboard/SingularityPanel";
 import { toast } from "sonner";
@@ -206,8 +206,9 @@ export const BrainPanel = () => {
         </CardContent></Card>
       </div>
 
-      <Tabs defaultValue="events" className="w-full">
+      <Tabs defaultValue="os" className="w-full">
         <TabsList className="flex-wrap h-auto">
+          <TabsTrigger value="os"><Brain className="h-4 w-4 mr-1" /> Przegląd OS</TabsTrigger>
           <TabsTrigger value="events"><Activity className="h-4 w-4 mr-1" /> Puls platformy</TabsTrigger>
           <TabsTrigger value="memory"><Lightbulb className="h-4 w-4 mr-1" /> Pamięć</TabsTrigger>
           <TabsTrigger value="decisions"><Brain className="h-4 w-4 mr-1" /> Decyzje</TabsTrigger>
@@ -216,6 +217,10 @@ export const BrainPanel = () => {
           <TabsTrigger value="aurora"><Sparkles className="h-4 w-4 mr-1" /> Aurora</TabsTrigger>
           <TabsTrigger value="singularity"><InfinityIcon className="h-4 w-4 mr-1" /> Osobliwość</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="os">
+          <OSOverview agents={agents} memory={memory} decisions={decisions} events={events} />
+        </TabsContent>
 
         <TabsContent value="events">
           <Card>
@@ -377,6 +382,121 @@ export const BrainPanel = () => {
           <SingularityPanel />
         </TabsContent>
       </Tabs>
+    </div>
+  );
+};
+
+// ─── Przegląd OS (piramida agentów) ─────────────────────────────────
+const agentMeta = (name: string): { role: string; icon: React.ElementType } => {
+  if (name === "grouai-brain") return { role: "Orchestrator", icon: Brain };
+  if (name.includes("security")) return { role: "Security", icon: Shield };
+  if (name.includes("data") || name.includes("revenue") || name.includes("scout")) return { role: "Data", icon: Database };
+  if (name.includes("marketing") || name.includes("blog") || name.includes("social")) return { role: "Marketing", icon: Megaphone };
+  if (name.includes("health") || name.includes("monitor")) return { role: "Health", icon: HeartPulse };
+  if (name.includes("radio") || name.includes("music") || name.includes("story")) return { role: "Media", icon: Radio };
+  if (name.includes("dev") || name.includes("build") || name.includes("test")) return { role: "Dev", icon: Code };
+  return { role: "Agent", icon: Cpu };
+};
+
+const statusDot = (a: AgentRegistry) => {
+  if (!a.enabled) return "bg-muted-foreground/40";
+  if (a.last_status === "error") return "bg-red-500";
+  if (a.last_status === "ok" || a.last_status === "sent") return "bg-emerald-500";
+  if (a.last_status === "alerts" || a.last_status === "idle") return "bg-amber-500";
+  return "bg-sky-500";
+};
+
+const OSOverview = ({ agents, memory, decisions, events }: {
+  agents: AgentRegistry[]; memory: BrainMemory[]; decisions: AgentDecision[]; events: AgentEvent[];
+}) => {
+  const brain = agents.find((a) => a.name === "grouai-brain");
+  const others = agents.filter((a) => a.name !== "grouai-brain");
+  const brainFresh = brain?.last_run_at && (Date.now() - new Date(brain.last_run_at).getTime()) < 20 * 60 * 1000;
+  const topInsights = [...memory].sort((a, b) => b.importance - a.importance).slice(0, 4);
+
+  const AgentChip = ({ a }: { a: AgentRegistry }) => {
+    const { role, icon: Icon } = agentMeta(a.name);
+    return (
+      <div className="rounded-xl border border-border bg-card/60 p-3 flex flex-col gap-1">
+        <div className="flex items-center gap-2">
+          <span className={`h-2.5 w-2.5 rounded-full ${statusDot(a)} ${a.enabled && a.last_status !== "error" ? "animate-pulse" : ""}`} />
+          <Icon className="h-4 w-4 text-primary shrink-0" />
+          <span className="font-semibold text-sm truncate">{a.name}</span>
+        </div>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <Badge variant="outline" className="text-[9px]">{role}</Badge>
+          {a.cron_schedule && <span className="text-[9px] text-muted-foreground font-mono">{a.cron_schedule}</span>}
+        </div>
+        <div className="text-[10px] text-muted-foreground">
+          {a.last_run_at ? `ost. ${formatDistanceToNow(new Date(a.last_run_at), { addSuffix: true, locale: pl })}` : "jeszcze nie uruchomiony"}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="space-y-5">
+      {/* Orchestrator */}
+      <Card className="border-primary/40 bg-gradient-to-br from-primary/10 to-transparent">
+        <CardContent className="pt-6">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-3">
+              <div className="h-12 w-12 rounded-2xl bg-primary/20 border border-primary/40 flex items-center justify-center">
+                <Brain className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <div className="font-bold text-lg leading-tight">GrouaAI OS — Orchestrator</div>
+                <div className="text-xs text-muted-foreground">Mózg deleguje agentów, pisze pamięć. Tick co 10 min.</div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full border ${brainFresh ? "text-emerald-400 border-emerald-500/40 bg-emerald-500/10" : "text-amber-400 border-amber-500/40 bg-amber-500/10"}`}>
+                <span className={`h-2 w-2 rounded-full ${brainFresh ? "bg-emerald-500 animate-pulse" : "bg-amber-500"}`} />
+                {brainFresh ? "żywy" : "uśpiony"}
+              </span>
+              <span className="text-[10px] text-emerald-400 font-medium">silnik: darmowy</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Wyspecjalizowani agenci */}
+      <div>
+        <div className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wider">
+          Wyspecjalizowani agenci ({others.filter((a) => a.enabled).length}/{others.length} aktywnych)
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+          {others.map((a) => <AgentChip key={a.id} a={a} />)}
+        </div>
+      </div>
+
+      {/* Pamięć / wiedza */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><Database className="h-4 w-4 text-primary" /> Pamięć i wiedza</CardTitle></CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <div><div className="text-xl font-bold">{memory.length}</div><div className="text-[10px] text-muted-foreground">wspomnień</div></div>
+              <div><div className="text-xl font-bold">{decisions.length}</div><div className="text-[10px] text-muted-foreground">decyzji</div></div>
+              <div><div className="text-xl font-bold">{events.filter((e) => e.processed_by_brain).length}</div><div className="text-[10px] text-muted-foreground">przetworzonych</div></div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><Lightbulb className="h-4 w-4 text-primary" /> Najświeższe wnioski mózgu</CardTitle></CardHeader>
+          <CardContent>
+            <div className="space-y-1.5">
+              {topInsights.map((m) => (
+                <div key={m.id} className="text-xs flex items-start gap-2">
+                  <Badge variant="secondary" className="text-[9px] shrink-0">★{m.importance}</Badge>
+                  <span className="truncate">{m.title}</span>
+                </div>
+              ))}
+              {topInsights.length === 0 && <p className="text-xs text-muted-foreground">Mózg jeszcze nic nie zapisał.</p>}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 };
