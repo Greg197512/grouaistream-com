@@ -715,6 +715,35 @@ html[data-threed="on"] .material-icons {
   100% { background-position: -90% 0; opacity: 0; }
 }
 
+/* ===== Intro kinowe (renderowane w kodzie, bez pliku wideo) ===== */
+@keyframes introAurora {
+  0%   { transform: scale(1.1) rotate(0deg);   opacity: .55; }
+  50%  { transform: scale(1.35) rotate(180deg); opacity: .85; }
+  100% { transform: scale(1.1) rotate(360deg); opacity: .55; }
+}
+@keyframes introRing {
+  0%   { transform: scale(.2);  opacity: 0; }
+  18%  { opacity: .9; }
+  100% { transform: scale(2.4); opacity: 0; }
+}
+@keyframes introCore {
+  0%   { transform: scale(.6);  opacity: .35; filter: blur(6px); }
+  60%  { transform: scale(1.05); opacity: .9;  filter: blur(2px); }
+  100% { transform: scale(1.6); opacity: 1;   filter: blur(0); }
+}
+@keyframes introWordIn {
+  0%   { opacity: 0; letter-spacing: .8em; filter: blur(12px); transform: translateY(6px); }
+  40%  { opacity: 1; }
+  100% { opacity: 1; letter-spacing: .28em; filter: blur(0); transform: translateY(0); }
+}
+@keyframes introEqBar {
+  0%,100% { transform: scaleY(.25); }
+  50%     { transform: scaleY(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .intro-cine * { animation: none !important; }
+}
+
 /* ==========================================================================
    TRYB OSZCZĘDNY (low-power) — płynność na starych/słabych telefonach i PC.
    Włączany przez src/lib/perf.ts jako <html data-lowpower="on">.
