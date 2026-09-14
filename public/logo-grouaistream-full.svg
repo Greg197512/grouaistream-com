@@ -39,7 +39,8 @@
   <circle cx="398" cy="150" r="15" fill="#22d3ee" filter="url(#gfGlow)"/>
   <circle cx="398" cy="150" r="6"  fill="#eafcff"/>
 
-  <!-- Wordmark -->
-  <text x="500" y="300" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="150" font-weight="800" letter-spacing="-4"
+  <!-- Wordmark — textLength trzyma napis w kadrze (dopasowuje/zmniejsza) -->
+  <text x="498" y="300" textLength="648" lengthAdjust="spacingAndGlyphs"
+        font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="150" font-weight="800"
         fill="url(#gfText)" filter="url(#gfGlow)">GrouAIstream</text>
 </svg>
