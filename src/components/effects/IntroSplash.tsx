@@ -5,13 +5,18 @@ const VIDEO = "/intro.mp4";
 const N = 6; // siatka 6×6 = 36 kawałków
 
 type Phase = "video" | "flash" | "assemble" | "hold" | "land";
-type Box = { top: number; left: number; w: number };
+type Box = { top: number; left: number; w: number; h: number };
+
+const LOCK = "/logo-grouaistream-full.svg";
+const ASPECT = 1180 / 512; // proporcje lockupu (szer:wys)
 
 function centeredBox(): Box {
   const vw = typeof window !== "undefined" ? window.innerWidth : 1024;
   const vh = typeof window !== "undefined" ? window.innerHeight : 768;
-  const w = Math.min(0.86 * vw, 0.72 * vh, 560);
-  return { top: (vh - w) / 2, left: (vw - w) / 2, w };
+  let w = Math.min(0.86 * vw, 680);
+  let h = w / ASPECT;
+  if (h > 0.42 * vh) { h = 0.42 * vh; w = h * ASPECT; }
+  return { top: (vh - h) / 2, left: (vw - w) / 2, w, h };
 }
 
 // Intro na starcie:
@@ -26,7 +31,7 @@ export const IntroSplash = () => {
 
   const [show, setShow] = useState(() => {
     try {
-      return sessionStorage.getItem("grouai-intro-v7") !== "1";
+      return sessionStorage.getItem("grouai-intro-v8") !== "1";
     } catch {
       return true;
     }
@@ -57,7 +62,7 @@ export const IntroSplash = () => {
   );
 
   useEffect(() => {
-    if (show) { try { sessionStorage.setItem("grouai-intro-v7", "1"); } catch { /* */ } }
+    if (show) { try { sessionStorage.setItem("grouai-intro-v8", "1"); } catch { /* */ } }
     return () => { timers.current.forEach(clearTimeout); };
   }, [show]);
 
@@ -116,11 +121,12 @@ export const IntroSplash = () => {
   useEffect(() => {
     if (phase !== "land") return;
     let target: Box | null = null;
-    const imgs = Array.from(document.querySelectorAll('img[src*="logo-grouaistream"]')) as HTMLImageElement[];
+    // Celuj w lockup z nazwą na stronie (rozwinięty sidebar); potem sam emblemat.
+    const sel = 'img[src*="logo-grouaistream-full"], img[src*="logo-grouaistream"]';
+    const imgs = Array.from(document.querySelectorAll(sel)) as HTMLImageElement[];
     const vis = imgs.find((i) => { const r = i.getBoundingClientRect(); return r.width > 8 && r.height > 8; });
-    // Ląduje trochę MNIEJSZE niż logo na stronie (delikatniejszy akcent).
-    if (vis) { const r = vis.getBoundingClientRect(); const w = Math.max(r.width, r.height) * 0.72; target = { top: r.top + (r.height - w) / 2, left: r.left + (r.width - w) / 2, w }; }
-    if (!target) { const w = Math.min(90, 0.24 * window.innerWidth); target = { top: 18, left: 18, w }; }
+    if (vis) { const r = vis.getBoundingClientRect(); target = { top: r.top, left: r.left, w: r.width, h: r.height }; }
+    if (!target) { const w = Math.min(300, 0.7 * window.innerWidth); target = { top: 16, left: 16, w, h: w / ASPECT }; }
     const raf = requestAnimationFrame(() => setBox(target as Box));
     return () => cancelAnimationFrame(raf);
   }, [phase]);
@@ -235,38 +241,25 @@ export const IntroSplash = () => {
         />
       )}
 
-      {/* 3–5) Logo — składa się, czeka, zjeżdża na miejsce, błyska */}
+      {/* 3–5) CAŁY LOCKUP (logo + „GrouAIstream") — pojawia się, czeka, zjeżdża
+              na swoje miejsce na stronie (rozwinięty sidebar) jako jedna całość. */}
       {onLogo && (
         <div
           className="fixed"
           style={{
-            top: box.top, left: box.left, width: box.w, height: box.w,
+            top: box.top, left: box.left, width: box.w, height: box.h,
             transition: landing
               ? "top 1.9s cubic-bezier(.6,0,.1,1), left 1.9s cubic-bezier(.6,0,.1,1), width 1.9s cubic-bezier(.6,0,.1,1), height 1.9s cubic-bezier(.6,0,.1,1)"
               : "none",
-            animation: phase === "hold" ? "introGlow 1.2s ease-in-out" : undefined,
+            animation: phase === "assemble" ? "introLockIn .8s cubic-bezier(.2,.7,.2,1) both" : undefined,
           }}
         >
-          {tiles.map((t, idx) => (
-            <div
-              key={idx}
-              className="intro-tile absolute"
-              style={{
-                left: `${(t.c / N) * 100}%`,
-                top: `${(t.r / N) * 100}%`,
-                width: `${100 / N}%`,
-                height: `${100 / N}%`,
-                backgroundImage: `url('${LOGO}')`,
-                backgroundSize: `${N * 100}% ${N * 100}%`,
-                backgroundPosition: `${(t.c / (N - 1)) * 100}% ${(t.r / (N - 1)) * 100}%`,
-                backgroundRepeat: "no-repeat",
-                ["--dx" as string]: `${t.dx}px`,
-                ["--dy" as string]: `${t.dy}px`,
-                ["--rot" as string]: `${t.rot}deg`,
-                animation: `introAssemble 1.05s cubic-bezier(.2,.7,.2,1) ${t.delay}s both`,
-              }}
-            />
-          ))}
+          <img
+            src={LOCK}
+            alt=""
+            className="w-full h-full object-contain"
+            style={{ filter: "drop-shadow(0 0 34px hsl(268 100% 66% / .5))" }}
+          />
 
           {/* Błysk „odbicie światła" po dojściu na miejsce */}
           {glint && (
