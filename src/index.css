@@ -743,6 +743,12 @@ html[data-threed="on"] .material-icons {
 @media (prefers-reduced-motion: reduce) {
   .intro-cine * { animation: none !important; }
 }
+/* Litery nazwy wpadają pojedynczo */
+@keyframes introLetterIn {
+  0%   { opacity: 0; transform: translateY(-46px) rotate(-14deg) scale(1.5); filter: blur(7px); }
+  60%  { opacity: 1; }
+  100% { opacity: 1; transform: translateY(0) rotate(0) scale(1); filter: blur(0); }
+}
 
 /* ==========================================================================
    TRYB OSZCZĘDNY (low-power) — płynność na starych/słabych telefonach i PC.
