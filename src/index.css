@@ -743,6 +743,11 @@ html[data-threed="on"] .material-icons {
 @media (prefers-reduced-motion: reduce) {
   .intro-cine * { animation: none !important; }
 }
+/* Cały lockup (logo + napis) pojawia się przed zjazdem na stronę */
+@keyframes introLockIn {
+  0%   { opacity: 0; transform: scale(.6);  filter: blur(8px); }
+  100% { opacity: 1; transform: scale(1);   filter: blur(0); }
+}
 /* Litery nazwy wpadają pojedynczo */
 @keyframes introLetterIn {
   0%   { opacity: 0; transform: translateY(-46px) rotate(-14deg) scale(1.5); filter: blur(7px); }
