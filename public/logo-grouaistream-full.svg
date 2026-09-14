@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 512" fill="none" role="img" aria-label="GrouAIstream">
+  <defs>
+    <linearGradient id="gfBrand" x1="80" y1="120" x2="432" y2="392" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ff2d9b"/><stop offset="0.52" stop-color="#9b5cff"/><stop offset="1" stop-color="#22d3ee"/>
+    </linearGradient>
+    <linearGradient id="gfBar" x1="256" y1="150" x2="256" y2="362" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ff5cb8"/><stop offset="1" stop-color="#7c5cff"/>
+    </linearGradient>
+    <linearGradient id="gfText" x1="470" y1="200" x2="1160" y2="320" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ff5cb8"/><stop offset="0.55" stop-color="#b487ff"/><stop offset="1" stop-color="#6fe4ff"/>
+    </linearGradient>
+    <filter id="gfGlow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <clipPath id="gfClip"><circle cx="256" cy="256" r="180"/></clipPath>
+    <style>
+      .gfBar { transform-box: fill-box; transform-origin: 50% 100%; }
+      @media (prefers-reduced-motion: no-preference) {
+        .gfBar { animation: gfEq 1s ease-in-out infinite; }
+        .f1 { animation-duration:.86s; animation-delay:-.10s; }
+        .f2 { animation-duration:1.14s; animation-delay:-.45s; }
+        .f3 { animation-duration:.72s;  animation-delay:-.20s; }
+        .f4 { animation-duration:1.02s; animation-delay:-.60s; }
+        .f5 { animation-duration:.92s;  animation-delay:-.32s; }
+      }
+      @keyframes gfEq { 0%,100% { transform: scaleY(.35); } 50% { transform: scaleY(1); } }
+    </style>
+  </defs>
+
+  <!-- Emblemat -->
+  <circle cx="256" cy="256" r="196" stroke="url(#gfBrand)" stroke-width="16" filter="url(#gfGlow)"/>
+  <g filter="url(#gfGlow)" clip-path="url(#gfClip)">
+    <rect class="gfBar f1" x="150" y="272" width="26" height="90"  rx="13" fill="url(#gfBar)"/>
+    <rect class="gfBar f2" x="196" y="212" width="26" height="150" rx="13" fill="url(#gfBar)"/>
+    <rect class="gfBar f3" x="242" y="150" width="28" height="212" rx="14" fill="url(#gfBar)"/>
+    <rect class="gfBar f4" x="290" y="212" width="26" height="150" rx="13" fill="url(#gfBar)"/>
+    <rect class="gfBar f5" x="336" y="272" width="26" height="90"  rx="13" fill="url(#gfBar)"/>
+  </g>
+  <circle cx="398" cy="150" r="15" fill="#22d3ee" filter="url(#gfGlow)"/>
+  <circle cx="398" cy="150" r="6"  fill="#eafcff"/>
+
+  <!-- Wordmark -->
+  <text x="500" y="300" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="150" font-weight="800" letter-spacing="-4"
+        fill="url(#gfText)" filter="url(#gfGlow)">GrouAIstream</text>
+</svg>

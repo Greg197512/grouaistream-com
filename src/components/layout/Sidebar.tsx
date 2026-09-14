@@ -97,7 +97,7 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
             <div className="absolute -inset-6 overflow-hidden">
               <MatrixNotes enabled={notesOn} />
             </div>
-            <img src="/logo-grouaistream.svg" alt="GrouAIstream — Global Music Streaming" className="h-28 object-contain relative z-10 drop-shadow-[0_0_20px_rgba(155,92,255,0.45)]" />
+            <img src="/logo-grouaistream-full.svg" alt="GrouAIstream — Global Music Streaming" className="h-20 object-contain relative z-10 drop-shadow-[0_0_20px_rgba(155,92,255,0.45)]" />
           </motion.div>
         )}
       </div>
