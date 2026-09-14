@@ -26,7 +26,7 @@ export const IntroSplash = () => {
 
   const [show, setShow] = useState(() => {
     try {
-      return sessionStorage.getItem("grouai-intro-v5") !== "1";
+      return sessionStorage.getItem("grouai-intro-v6") !== "1";
     } catch {
       return true;
     }
@@ -57,7 +57,7 @@ export const IntroSplash = () => {
   );
 
   useEffect(() => {
-    if (show) { try { sessionStorage.setItem("grouai-intro-v5", "1"); } catch { /* */ } }
+    if (show) { try { sessionStorage.setItem("grouai-intro-v6", "1"); } catch { /* */ } }
     return () => { timers.current.forEach(clearTimeout); };
   }, [show]);
 
@@ -172,50 +172,38 @@ export const IntroSplash = () => {
           {/* Winieta, żeby środek był głęboki */}
           <div className="absolute inset-0" style={{ background: "radial-gradient(circle at 50% 50%, transparent 30%, rgba(5,3,10,.85) 78%)" }} />
 
-          {/* Pulsujące pierścienie z centrum */}
-          {[0, 0.5, 1].map((d, i) => (
-            <div
-              key={i}
-              className="absolute left-1/2 top-1/2 rounded-full -translate-x-1/2 -translate-y-1/2"
-              style={{
-                width: "min(46vmin, 420px)", height: "min(46vmin, 420px)",
-                border: "1.5px solid hsl(331 100% 70% / .55)",
-                boxShadow: "0 0 40px hsl(268 100% 66% / .35)",
-                animation: `introRing 2.6s ease-out ${d}s infinite`,
-              }}
-            />
-          ))}
-
-          {/* Rdzeń światła */}
+          {/* Miękki rdzeń światła pod napisem */}
           <div
             className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full"
             style={{
-              width: "min(30vmin, 240px)", height: "min(30vmin, 240px)",
-              background: "radial-gradient(circle, rgba(255,255,255,.95), hsl(331 100% 66% / .7) 30%, hsl(268 100% 66% / .35) 55%, transparent 72%)",
-              animation: "introCore 2.6s cubic-bezier(.4,0,.2,1) forwards",
+              width: "min(60vmin, 520px)", height: "min(30vmin, 220px)",
+              background: "radial-gradient(ellipse, hsl(331 100% 66% / .35), hsl(268 100% 66% / .18) 45%, transparent 72%)",
+              filter: "blur(20px)",
             }}
           />
 
-          {/* Equalizer wokół rdzenia */}
-          <div className="absolute left-1/2 top-[calc(50%+min(20vmin,150px))] -translate-x-1/2 flex items-end gap-[5px] h-10">
-            {Array.from({ length: 9 }).map((_, i) => (
-              <span
-                key={i}
-                className="w-[4px] rounded-full h-full origin-bottom"
-                style={{
-                  background: "linear-gradient(to top, hsl(331 100% 62%), hsl(268 100% 72%))",
-                  animation: `introEqBar ${0.7 + (i % 3) * 0.18}s ease-in-out ${i * 0.06}s infinite`,
-                }}
-              />
-            ))}
-          </div>
-
-          {/* Wordmark */}
-          <div
-            className="absolute left-1/2 top-[calc(50%-min(26vmin,200px))] -translate-x-1/2 font-display font-bold text-white/95 text-2xl sm:text-4xl whitespace-nowrap"
-            style={{ textShadow: "0 0 30px hsl(331 100% 62% / .6)", animation: "introWordIn 1.8s cubic-bezier(.2,.7,.2,1) forwards" }}
-          >
-            GrouAI Stream
+          {/* Nazwa wpada litera po literze */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="font-display font-extrabold whitespace-nowrap text-[10vw] sm:text-6xl leading-none flex">
+              {"GrouAIstream".split("").map((ch, i) => {
+                const isAI = i === 4 || i === 5; // "A","I" — akcent cyan
+                return (
+                  <span
+                    key={i}
+                    className="inline-block"
+                    style={{
+                      color: isAI ? "#6fe4ff" : "#ffffff",
+                      textShadow: isAI
+                        ? "0 0 26px hsl(189 100% 60% / .8)"
+                        : "0 0 26px hsl(331 100% 62% / .7), 0 0 44px hsl(268 100% 66% / .5)",
+                      animation: `introLetterIn .62s cubic-bezier(.2,.75,.2,1) ${0.12 + i * 0.085}s both`,
+                    }}
+                  >
+                    {ch}
+                  </span>
+                );
+              })}
+            </div>
           </div>
         </div>
       )}
