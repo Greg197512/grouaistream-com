@@ -26,7 +26,7 @@ export const IntroSplash = () => {
 
   const [show, setShow] = useState(() => {
     try {
-      return sessionStorage.getItem("grouai-intro-v6") !== "1";
+      return sessionStorage.getItem("grouai-intro-v7") !== "1";
     } catch {
       return true;
     }
@@ -57,7 +57,7 @@ export const IntroSplash = () => {
   );
 
   useEffect(() => {
-    if (show) { try { sessionStorage.setItem("grouai-intro-v6", "1"); } catch { /* */ } }
+    if (show) { try { sessionStorage.setItem("grouai-intro-v7", "1"); } catch { /* */ } }
     return () => { timers.current.forEach(clearTimeout); };
   }, [show]);
 
@@ -171,6 +171,20 @@ export const IntroSplash = () => {
           />
           {/* Winieta, żeby środek był głęboki */}
           <div className="absolute inset-0" style={{ background: "radial-gradient(circle at 50% 50%, transparent 30%, rgba(5,3,10,.85) 78%)" }} />
+
+          {/* Pulsujące pierścienie (koła) — wkomponowane za napisem */}
+          {[0, 0.45, 0.9, 1.35].map((d, i) => (
+            <div
+              key={i}
+              className="absolute left-1/2 top-1/2 rounded-full -translate-x-1/2 -translate-y-1/2"
+              style={{
+                width: "min(58vmin, 520px)", height: "min(58vmin, 520px)",
+                border: "1.5px solid hsl(" + (i % 2 ? "268" : "331") + " 100% 70% / .5)",
+                boxShadow: "0 0 44px hsl(268 100% 66% / .3)",
+                animation: `introRing 3s ease-out ${d}s infinite`,
+              }}
+            />
+          ))}
 
           {/* Miękki rdzeń światła pod napisem */}
           <div
