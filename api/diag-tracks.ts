@@ -25,12 +25,28 @@ export default async function handler(req: Request): Promise<Response> {
   if (artist) params.set("artist", `ilike.*${artist}*`);
   if (host) params.set("audio_url", `ilike.*${host}*`);
 
-  const r = await fetch(`${SUPABASE_URL}/rest/v1/tracks?${params.toString()}`, {
-    headers: { apikey: ANON, Authorization: `Bearer ${ANON}` },
-  });
+  let r: Response;
+  try {
+    r = await fetch(`${SUPABASE_URL}/rest/v1/tracks?${params.toString()}`, {
+      headers: { apikey: ANON, Authorization: `Bearer ${ANON}` },
+    });
+  } catch (e) {
+    // Supabase nieosiągalny (uśpiony/limit/awaria) — czytelny błąd zamiast 500.
+    return new Response(
+      JSON.stringify({ ok: false, error: "supabase_unreachable", detail: String(e) }, null, 2),
+      { status: 503, headers: { "Content-Type": "application/json", "Cache-Control": "no-store", "Access-Control-Allow-Origin": "*" } },
+    );
+  }
   const status = r.status;
   let rows: unknown[] = [];
   try { rows = await r.json(); } catch { /* */ }
+  if (!Array.isArray(rows)) {
+    // REST odpowiedział, ale nie listą (np. błąd/komunikat o pauzie) — pokaż surowo.
+    return new Response(
+      JSON.stringify({ ok: false, error: "supabase_error", status, body: rows }, null, 2),
+      { status: status >= 400 ? status : 502, headers: { "Content-Type": "application/json", "Cache-Control": "no-store", "Access-Control-Allow-Origin": "*" } },
+    );
+  }
 
   const probe = url.searchParams.get("probe") === "1";
 
