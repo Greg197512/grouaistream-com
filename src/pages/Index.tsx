@@ -16,6 +16,7 @@ import { SEOContentSection } from "@/components/sections/SEOContentSection";
 import { EraEntry } from "@/components/sections/EraEntry";
 import { HomeGreeting } from "@/components/sections/HomeGreeting";
 import { NaCzasieHits } from "@/components/sections/NaCzasieHits";
+import { GrouaAIOS } from "@/components/sections/GrouaAIOS";
 
 import SectionErrorBoundary from "@/components/SectionErrorBoundary";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -69,6 +70,7 @@ const Index = () => {
       <Section name="hero"><HeroSection /></Section>
       <Section name="na-czasie"><NaCzasieHits /></Section>
       <Section name="groua-era"><EraEntry /></Section>
+      <Section name="groua-ai-os"><GrouaAIOS /></Section>
       <Section name="upload-cta"><UploadCTA /></Section>
       <Section name="promoted"><PromotedTracksSection /></Section>
       <Section name="marquee"><AdminMarquee /></Section>
