@@ -3009,6 +3009,36 @@ export type Database = {
           },
         ]
       }
+      automation_control: {
+        Row: {
+          daily_cap: number
+          day: string
+          enabled: boolean
+          job_name: string
+          last_blocked_at: string | null
+          runs_today: number
+          updated_at: string
+        }
+        Insert: {
+          daily_cap?: number
+          day?: string
+          enabled?: boolean
+          job_name: string
+          last_blocked_at?: string | null
+          runs_today?: number
+          updated_at?: string
+        }
+        Update: {
+          daily_cap?: number
+          day?: string
+          enabled?: boolean
+          job_name?: string
+          last_blocked_at?: string | null
+          runs_today?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       blog_affiliate_links: {
         Row: {
           brand: string
@@ -7424,6 +7454,7 @@ export type Database = {
         }
         Returns: string
       }
+      automation_allowed: { Args: { _job: string }; Returns: boolean }
       brain_delegate: { Args: never; Returns: Json }
       brain_propose: {
         Args: {
