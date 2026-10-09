@@ -43,6 +43,17 @@ Deno.serve(async (req) => {
 
   const RES = "https://pub-46ecdc3a5ae341fcb16454d732eb9bcd.r2.dev/intro/result.json";
   if (mode === "result") { const r = await fetch(RES + "?t=" + Date.now()); return j(r.ok ? await r.json() : { pending: true, status: r.status }); }
+  if (mode === "recover") {
+    const h = await (await fetch("https://api.elevenlabs.io/v1/history?page_size=3", { headers: { "xi-api-key": el } })).json();
+    const it = h.history?.[0];
+    if (!it) return j({ none: true });
+    const a = await fetch(`https://api.elevenlabs.io/v1/history/${it.history_item_id}/audio`, { headers: { "xi-api-key": el } });
+    const buf = await a.arrayBuffer();
+    let url = null, err = null;
+    try { url = await putToR2({ body: buf, folder: "intro", fileName: "grouai-intro.mp3", contentType: "audio/mpeg" }); } catch (e) { err = String(e); }
+    const head = await fetch("https://pub-46ecdc3a5ae341fcb16454d732eb9bcd.r2.dev/intro/grouai-intro.mp3", { method: "HEAD" });
+    return j({ items: h.history.length, text: it.text, chars: it.character_count_change_to - it.character_count_change_from, date: it.date_unix, bytes: buf.byteLength, url, err, r2_head: head.status });
+  }
   if (mode === "generate") {
     const ex = await fetch(RES + "?t=" + Date.now());
     if (ex.ok) return j({ already_done: true });
