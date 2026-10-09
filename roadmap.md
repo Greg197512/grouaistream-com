@@ -1,5 +1,5 @@
 # Roadmap
-- [ ] Dopracować Studio, przywrócić equalizer i płomyki oraz cotygodniową rotację tła bez naruszania funkcji strony.
+- [x] Dopracować Studio, przywrócić equalizer i płomyki oraz cotygodniową rotację tła bez naruszania funkcji strony.
 
 - [x] Profesjonalna grafika strony i intro ze statycznym nagraniem, bez cyklicznych kosztów AI.
 
