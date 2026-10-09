@@ -1,0 +1,1 @@
+UPDATE public.brain_ai_config SET api_key = NULL, enabled = false WHERE id=1;

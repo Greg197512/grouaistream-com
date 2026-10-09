@@ -8,6 +8,13 @@
       "when": 1791507444953,
       "tag": "0000_security_supervisor_guard",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1791587922670,
+      "tag": "0001_remove_plaintext_xai_key",
+      "breakpoints": true
     }
   ]
 }
