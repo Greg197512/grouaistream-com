@@ -71,6 +71,11 @@
 
     /* Amber pozostaje wyłącznie jako premium akcent (5%) */
     --brand-amber: 32 100% 52%;
+    --premium-highlight: 36 85% 65%;
+    --premium-button: 32 95% 55%;
+    --premium-button-foreground: 0 0% 4%;
+    --premium-home-shade: linear-gradient(90deg, hsl(var(--background) / .97), hsl(var(--background) / .84) 40%, hsl(var(--background) / .08) 100%);
+    --premium-intro-shade: linear-gradient(180deg, hsl(var(--background) / .4), hsl(var(--background) / .5), hsl(var(--background) / .9));
 
     /* Custom GrouAI tokens - Neon (violet / magenta / pink) */
     --groove-gradient: linear-gradient(135deg, hsl(331, 100%, 63%) 0%, hsl(280, 100%, 66%) 52%, hsl(258, 100%, 66%) 100%);
@@ -774,4 +779,23 @@ html[data-threed="on"] .material-icons {
 :root[data-lowpower="on"] .title-glint {
   animation: none !important;
   opacity: 0 !important;
+}
+
+/* Restrained premium entry — static imagery, bounded motion only. */
+.premium-home { background: hsl(var(--background)); }
+.premium-home-shade { background: var(--premium-home-shade); }
+.premium-intro-shade { background: var(--premium-intro-shade); }
+.premium-heading-accent, .premium-eyebrow { color: hsl(var(--premium-highlight)); }
+.premium-primary { background: hsl(var(--premium-button)); color: hsl(var(--premium-button-foreground)); }
+.premium-primary:hover { background: hsl(var(--premium-highlight)); }
+.premium-status { background: hsl(var(--premium-highlight)); }
+@media (prefers-reduced-motion: no-preference) {
+  .premium-intro-lockup { animation: premium-entry 1s ease-out both; }
+}
+@keyframes premium-entry {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (max-width: 640px) {
+  .premium-home-shade { background: hsl(var(--background) / .8); }
 }

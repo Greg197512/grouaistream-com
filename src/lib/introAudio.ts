@@ -1,0 +1,2 @@
+// Reuse the existing one-off Grok/ElevenLabs production; playback never generates audio.
+export const INTRO_AUDIO_URL = "https://bvstvawnigyczvofzhps.supabase.co/storage/v1/object/public/aurora-voice/intro/grouai-intro.mp3";
