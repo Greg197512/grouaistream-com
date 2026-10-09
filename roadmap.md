@@ -1,6 +1,6 @@
 # Roadmap
 
-- [ ] Profesjonalna grafika strony i intro ze statycznym nagraniem, bez cyklicznych kosztów AI.
+- [x] Profesjonalna grafika strony i intro ze statycznym nagraniem, bez cyklicznych kosztów AI.
 
 - [x] Przywrócić połączenie aplikacji z Lovable Cloud.
 - [x] Sprawdzić widoczność wszystkich utworów i działanie adresów audio.
