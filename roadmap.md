@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Profesjonalna grafika strony i intro ze statycznym nagraniem, bez cyklicznych kosztów AI.
+
 - [x] Przywrócić połączenie aplikacji z Lovable Cloud.
 - [x] Sprawdzić widoczność wszystkich utworów i działanie adresów audio.
 - [x] Podłączyć tryby globalnego radia do workflow AI n8n przez aktywny router automatyzacji.
