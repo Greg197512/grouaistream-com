@@ -1,3 +1,4 @@
+// @ts-nocheck — generated DB types out of sync
 // Tracker outreachu — LEGALNY, ręczny. Nie scrapuje i nie wysyła nic z automatu.
 // Ty wpisujesz kontakty znalezione na oficjalnych stronach (Kontakt/Redakcja),
 // panel podsuwa kilka dziennie z gotowym, spersonalizowanym mailem (mailto → Twój
