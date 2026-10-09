@@ -799,3 +799,20 @@ html[data-threed="on"] .material-icons {
 @media (max-width: 640px) {
   .premium-home-shade { background: hsl(var(--background) / .8); }
 }
+
+/* Studio surfaces preserve all generator behavior and the sparks-only backdrop. */
+.studio-premium-mark, .studio-premium-selected {
+  color: hsl(var(--premium-highlight));
+  background: hsl(var(--premium-button) / .1);
+}
+.studio-premium-selected:hover { background: hsl(var(--premium-button) / .16); }
+.studio-premium :is(input, textarea, select) {
+  border-color: hsl(var(--border));
+  background-color: hsl(var(--card));
+  color: hsl(var(--foreground));
+  border-radius: 8px;
+}
+.studio-premium :is(input, textarea, select):focus-visible {
+  outline-color: hsl(var(--premium-highlight));
+  border-color: hsl(var(--premium-highlight) / .6);
+}

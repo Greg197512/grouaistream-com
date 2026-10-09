@@ -900,67 +900,24 @@ const Suno = () => {
 
   return (
     <MainLayout>
-      <div className="min-h-screen" style={{ background: "#0F0F1A" }}>
+      <div className="studio-premium min-h-screen bg-background">
         <div className="max-w-6xl mx-auto px-4 py-8 xl:grid xl:grid-cols-[minmax(0,1fr)_400px] xl:gap-8 xl:items-start">
           <div className="space-y-8 w-full max-w-2xl mx-auto xl:mx-0 min-w-0">
-          {/* Header */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center space-y-4"
-          >
-            <div className="mx-auto w-24 h-24 rounded-2xl flex items-center justify-center relative overflow-hidden"
-              style={{
-                background: "linear-gradient(135deg, #FF6B00, #FF9500, #9333EA)",
-                boxShadow: "0 0 40px #FF6B0060, 0 0 80px #9333EA30",
-              }}
-            >
-              {/* Statyczna poświata w tle (bez wirowania) */}
-              <div
-                aria-hidden
-                className="absolute -inset-6 opacity-25"
-                style={{ background: "conic-gradient(from 45deg, transparent, #ffffff55, transparent 40%)" }}
-              />
-              {/* Autorski equalizer — fala dźwiękowa */}
-              <div className="relative z-10 flex items-end gap-[3px] h-12">
-                {[0.55, 0.85, 0.35, 1, 0.5, 0.75, 0.4].map((base, i) => (
-                  <motion.span
-                    key={i}
-                    className="w-[4px] rounded-full bg-white"
-                    style={{ boxShadow: "0 0 6px rgba(255,255,255,0.7)" }}
-                    animate={{ scaleY: [base, 1, base * 0.5, 0.9, base] }}
-                    transition={{ duration: 1.1, repeat: Infinity, delay: i * 0.09, ease: "easeInOut" }}
-                    initial={{ height: "100%", transformOrigin: "bottom" }}
-                  />
-                ))}
-              </div>
-              {/* Iskra AI w rogu */}
-              <motion.div
-                className="absolute top-2 right-2 z-10"
-                animate={{ scale: [1, 1.4, 1], opacity: [0.7, 1, 0.7], rotate: [0, 90, 0] }}
-                transition={{ duration: 2.2, repeat: Infinity }}
-              >
-                <Sparkles className="h-4 w-4 text-white" />
-              </motion.div>
-              {/* Pulsująca ramka */}
-              <motion.div
-                className="absolute inset-0 rounded-2xl"
-                style={{ border: "2px solid #FF6B0080" }}
-                animate={{ scale: [1, 1.08, 1], opacity: [0.6, 0.2, 0.6] }}
-                transition={{ duration: 2.5, repeat: Infinity }}
-              />
+          {/* Premium studio identity — no looping header animations. */}
+          <header className="studio-premium-header border-b border-border pb-7">
+            <div className="mb-5 flex items-center gap-3 text-xs text-muted-foreground">
+              <span className="studio-premium-mark flex h-10 w-10 items-center justify-center rounded-lg"><Music className="h-5 w-5" /></span>
+              <span>GrouaRock ® / {L("Przestrzeń twórcza","Creative space","Creatieve ruimte","Творчий простір")}</span>
             </div>
-            <h1 className="text-3xl font-bold text-white">GrouAI Studio</h1>
-            <p className="text-sm text-gray-400 max-w-md mx-auto leading-relaxed">
-              {L("Twórz profesjonalne utwory muzyczne z AI. Wybierz styl, wpisz tekst, wybierz głos — i wygeneruj muzykę ze śpiewanym wokalem w jakości studyjnej.","Create professional music with AI. Pick a style, write lyrics, choose a voice — and generate a track with studio-quality sung vocals.","Maak professionele muziek met AI. Kies een stijl, schrijf tekst, kies een stem — en genereer een track met gezongen zang in studiokwaliteit.","Створюй професійну музику з AI. Обери стиль, впиши текст, вибери голос — і згенеруй трек зі співаним вокалом студійної якості.")}
-            </p>
-          </motion.div>
+            <h1 className="font-display text-4xl font-bold text-foreground sm:text-5xl">GrouAI <span className="premium-heading-accent">Studio</span></h1>
+            <p className="mt-4 max-w-md text-sm leading-relaxed text-muted-foreground">{L("Twój pomysł. Twój głos. Twoje brzmienie.","Your idea. Your voice. Your sound.","Jouw idee. Jouw stem. Jouw geluid.","Твоя ідея. Твій голос. Твоє звучання.")}</p>
+          </header>
 
           {/* Wieża hi-fi — gramofon/CD/kaseta + radio i wybór wykonawcy (gra nasz katalog) */}
           <StudioHifi />
 
           {/* Engine badge */}
-          <div className="flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-gradient-to-r from-[#FF6B00]/10 to-[#9333EA]/10 border border-[#FF6B00]/20">
+          <div className="flex items-start gap-2 border-b border-border px-1 py-3 text-muted-foreground">
             <Sparkles className="h-3.5 w-3.5 text-[#FF9500]" />
             <span className="text-xs text-gray-300">
               {engine === "grouai"
@@ -995,35 +952,15 @@ const Suno = () => {
             }}
           />
 
-          {/* Tabs */}
-          <div className="flex gap-2 p-1 rounded-xl bg-[#1a1a2e]/80 border border-[#FF6B00]/10">
-            <button
-              onClick={() => setActiveTab("generate")}
-              className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${
-                activeTab === "generate" ? "text-white" : "text-gray-400 hover:text-gray-200"
-              }`}
-              style={activeTab === "generate" ? { background: "linear-gradient(135deg, #FF6B00, #FF9500)", boxShadow: "0 0 15px #FF6B0040" } : undefined}
-            >
-              <Sparkles className="h-4 w-4" /> {L("Generator","Generator","Generator","Генератор")}
-            </button>
-            <button
-              onClick={() => setActiveTab("mix")}
-              className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${
-                activeTab === "mix" ? "text-white" : "text-gray-400 hover:text-gray-200"
-              }`}
-              style={activeTab === "mix" ? { background: "linear-gradient(135deg, #9333EA, #FF6B00)", boxShadow: "0 0 15px #9333EA40" } : undefined}
-            >
-              <Blend className="h-4 w-4" /> {L("Track Mix","Track Mix","Track Mix","Мікс треків")}
-            </button>
-            <button
-              onClick={() => setActiveTab("video")}
-              className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${
-                activeTab === "video" ? "text-white" : "text-gray-400 hover:text-gray-200"
-              }`}
-              style={activeTab === "video" ? { background: "linear-gradient(135deg, #FF6B00, #9333EA)", boxShadow: "0 0 15px #9333EA40" } : undefined}
-            >
-              <Film className="h-4 w-4" /> {L("Video Studio","Video Studio","Video Studio","Відео-студія")}
-            </button>
+          {/* Modes — stable controls with no animated backgrounds. */}
+          <div className="grid grid-cols-3 gap-1 border-b border-border pb-2" role="tablist" aria-label="Studio">
+            {([
+              { id: "generate", icon: Sparkles, label: L("Generator","Generator","Generator","Генератор") },
+              { id: "mix", icon: Blend, label: L("Miks","Mix","Mix","Мікс") },
+              { id: "video", icon: Film, label: L("Wideo","Video","Video","Відео") },
+            ] as const).map(({ id, icon: Icon, label }) => (
+              <Button key={id} variant="ghost" role="tab" aria-selected={activeTab === id} onClick={() => setActiveTab(id)} className={activeTab === id ? "studio-premium-selected" : "text-muted-foreground hover:bg-secondary"}><Icon className="h-4 w-4" />{label}</Button>
+            ))}
           </div>
 
           {activeTab === "mix" ? (
