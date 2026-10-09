@@ -1,0 +1,23 @@
+# Darmowy monitor stanu strony — zastępuje cron w bazie (health-monitor-5min),
+# który budził bazę co 5 minut i pożerał kredyty Lovable Cloud.
+# GitHub Actions: darmowe dla publicznych repo (limit: harmonogram co ~5-15 min).
+name: Health Monitor
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping health endpoint
+        run: |
+          STATUS=$(curl -s -o /tmp/health.json -w "%{http_code}" --max-time 20 https://grouaistream.com/api/health)
+          echo "HTTP $STATUS"
+          cat /tmp/health.json
+          if [ "$STATUS" != "200" ]; then
+            echo "::warning::Baza lub strona nie odpowiada (HTTP $STATUS)"
+            exit 1
+          fi
