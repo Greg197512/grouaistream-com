@@ -3016,6 +3016,7 @@ export type Database = {
           enabled: boolean
           job_name: string
           last_blocked_at: string | null
+          last_run_at: string | null
           runs_today: number
           updated_at: string
         }
@@ -3025,6 +3026,7 @@ export type Database = {
           enabled?: boolean
           job_name: string
           last_blocked_at?: string | null
+          last_run_at?: string | null
           runs_today?: number
           updated_at?: string
         }
@@ -3034,6 +3036,7 @@ export type Database = {
           enabled?: boolean
           job_name?: string
           last_blocked_at?: string | null
+          last_run_at?: string | null
           runs_today?: number
           updated_at?: string
         }
