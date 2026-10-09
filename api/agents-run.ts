@@ -3,6 +3,7 @@
 // (brain_reason_collect). Co 2 h robi executive summary; codziennie ~08:00 UTC
 // uruchamia Developer + Tester. Wszystko darmowe po stronie Vercela (poza Grok).
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { runGuardian } from "./site-guardian";
 
 export default async function handler(req: any, res: any) {
   const URL = process.env.VITE_SUPABASE_URL;
@@ -29,6 +30,13 @@ export default async function handler(req: any, res: any) {
   const full = String(req.query?.full || "") === "1";
 
   const ran: any[] = [];
+  // Strażnik strony — zawsze pierwszy; gdy baza leży, reszta botów czeka.
+  const guard = await runGuardian();
+  ran.push({ name: "site_guardian", ok: guard.ok, healed: guard.healed, bad: guard.checks.filter((c) => !c.ok) });
+  if (!guard.checks.find((c) => c.name === "baza_utwory")?.ok) {
+    res.setHeader("Cache-Control", "no-store");
+    return res.status(200).json({ ok: false, at: now.toISOString(), paused: "baza niedostępna", ran });
+  }
   // Zawsze: pozbieraj gotowe odpowiedzi AI (Grok) do pamięci.
   ran.push(await rpc("brain_reason_collect"));
   // Co 2 h: executive summary managera.
