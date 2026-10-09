@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { INTRO_AUDIO_URL } from "@/lib/introAudio";
-import heroBg from "@/assets/hero-premium-audio.jpg";
+import { weeklyArtwork } from "@/lib/weeklyArtwork";
+import { HomeMusicVisualizer } from "@/components/effects/HomeMusicVisualizer";
 
 const COPY: Record<string, { eyebrow: string; title: string; text: string; studio: string; radio: string; intro: string; stop: string; footer: string }> = {
   pl: { eyebrow: "Niezależni twórcy. Inteligentne radio.", title: "Twój dźwiękowy dom.", text: "Oryginalne utwory niezależnych artystów. Radio na żywo i muzyka dobrana do Twojego nastroju przez AI. Stworzone z pasją przez jednego twórcę.", studio: "GrouAI Studio", radio: "Radio na żywo", intro: "Posłuchaj intro", stop: "Zatrzymaj intro", footer: "Muzyka · Technologia · Niezależność" },
@@ -20,6 +21,11 @@ export const HeroSection = () => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [speaking, setSpeaking] = useState(false);
   const [failed, setFailed] = useState(false);
+  const [heroBg, setHeroBg] = useState(() => weeklyArtwork());
+  useEffect(() => {
+    const timer = window.setInterval(() => setHeroBg(weeklyArtwork()), 3600000);
+    return () => clearInterval(timer);
+  }, []);
   useEffect(() => () => { audioRef.current?.pause(); }, []);
   const toggleIntro = () => {
     if (speaking) { audioRef.current?.pause(); setSpeaking(false); return; }
@@ -38,6 +44,7 @@ export const HeroSection = () => {
       <div className="premium-home-shade absolute inset-0" />
       <div className="relative px-6 py-12 md:px-10 md:py-16">
         <p className="premium-eyebrow mb-7 text-xs font-medium">{copy.eyebrow}</p>
+        <div className="relative mb-5 h-20 max-w-md overflow-hidden" data-testid="home-equalizer"><HomeMusicVisualizer /></div>
         <h1 className="font-display text-4xl font-bold leading-tight sm:text-5xl lg:text-6xl">GrouAI Stream<span className="premium-heading-accent mt-2 block text-3xl sm:text-4xl lg:text-5xl">{copy.title}</span></h1>
         <p className="mt-6 max-w-md text-base leading-relaxed text-muted-foreground">{copy.text}</p>
         <div className="mt-8 flex flex-wrap gap-3">
