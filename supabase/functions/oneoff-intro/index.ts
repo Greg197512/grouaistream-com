@@ -47,12 +47,18 @@ Deno.serve(async (req) => {
     const h = await (await fetch("https://api.elevenlabs.io/v1/history?page_size=3", { headers: { "xi-api-key": el } })).json();
     const it = h.history?.[0];
     if (!it) return j({ none: true });
-    const a = await fetch(`https://api.elevenlabs.io/v1/history/${it.history_item_id}/audio`, { headers: { "xi-api-key": el } });
-    const buf = await a.arrayBuffer();
-    let url = null, err = null;
-    try { url = await putToR2({ body: buf, folder: "intro", fileName: "grouai-intro.mp3", contentType: "audio/mpeg" }); } catch (e) { err = String(e); }
-    const head = await fetch("https://pub-46ecdc3a5ae341fcb16454d732eb9bcd.r2.dev/intro/grouai-intro.mp3", { method: "HEAD" });
-    return j({ items: h.history.length, text: it.text, chars: it.character_count_change_to - it.character_count_change_from, date: it.date_unix, bytes: buf.byteLength, url, err, r2_head: head.status });
+    const buf = await (await fetch(`https://api.elevenlabs.io/v1/history/${it.history_item_id}/audio`, { headers: { "xi-api-key": el } })).arrayBuffer();
+    const up = await sb.storage.from("aurora-voice").upload("intro/grouai-intro.mp3", buf, { contentType: "audio/mpeg", upsert: true });
+    const pub = sb.storage.from("aurora-voice").getPublicUrl("intro/grouai-intro.mp3").data.publicUrl;
+    return j({ items: h.history.length, text: it.text, date: it.date_unix, bytes: buf.byteLength, up_err: up.error?.message, url: pub });
+  }
+  if (mode === "copy") {
+    const g = await fetch("https://api.x.ai/v1/chat/completions", { signal: AbortSignal.timeout(40000),
+      method: "POST", headers: { Authorization: `Bearer ${xaiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ model: "grok-4.20-0309-non-reasoning", max_tokens: 500, temperature: 0.7, messages: [
+        { role: "user", content: `Polish homepage hero copy for "GrouAI Stream": AI music radio & streaming, built by a solo founder, unique catalog of original tracks from registered creators, 24/7 live radio, AI mood DJ, GrouAI Studio. Premium, confident, warm, not cheesy. Return ONLY JSON {"eyebrow":"<=5 words","headline":"<=9 words","sub":"<=35 words","cta_primary":"<=3 words","cta_secondary":"<=3 words"}` }] }) });
+    const t = await g.json();
+    return j({ status: g.status, content: t.choices?.[0]?.message?.content, usage: t.usage });
   }
   if (mode === "generate") {
     const ex = await fetch(RES + "?t=" + Date.now());
