@@ -41,7 +41,18 @@ Deno.serve(async (req) => {
     return j(out);
   }
 
+  const RES = "https://pub-46ecdc3a5ae341fcb16454d732eb9bcd.r2.dev/intro/result.json";
+  if (mode === "result") { const r = await fetch(RES + "?t=" + Date.now()); return j(r.ok ? await r.json() : { pending: true, status: r.status }); }
   if (mode === "generate") {
+    const ex = await fetch(RES + "?t=" + Date.now());
+    if (ex.ok) return j({ already_done: true });
+    // @ts-ignore
+    EdgeRuntime.waitUntil((async () => { const resp = await gen(); const t = await resp.text();
+      await putToR2({ body: new TextEncoder().encode(t), folder: "intro", fileName: "result.json", contentType: "application/json" }); })());
+    return j({ started: true });
+  }
+  return j({ error: "mode" }, 400);
+  async function gen() {
     const g = await fetch("https://api.x.ai/v1/chat/completions", {
       method: "POST", headers: { Authorization: `Bearer ${xaiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -67,5 +78,4 @@ Deno.serve(async (req) => {
     const url = await putToR2({ body: audio, folder: "intro", fileName: "grouai-intro.mp3", contentType: "audio/mpeg" });
     return j({ copy, grok_usage: usage, chars: copy.voiceover.length, bytes: audio.byteLength, url });
   }
-  return j({ error: "mode" }, 400);
 });
