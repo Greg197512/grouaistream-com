@@ -1,6 +1,7 @@
 // One-off: test xAI + ElevenLabs keys, and (mode=generate) create the homepage intro ONCE.
 // Not scheduled anywhere. Admin-triggered only via SEED_SECRET header.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { putToR2 } from "../_shared/r2.ts";
 import { encode } from "https://deno.land/std@0.168.0/encoding/base64.ts";
 
 const cors = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "*" };
@@ -63,7 +64,8 @@ Deno.serve(async (req) => {
     });
     if (!v.ok) return j({ step: "eleven", status: v.status, body: (await v.text()).slice(0, 300), copy }, 502);
     const audio = await v.arrayBuffer();
-    return j({ copy, grok_usage: usage, chars: copy.voiceover.length, audio_b64: encode(audio) });
+    const url = await putToR2({ body: audio, folder: "intro", fileName: "grouai-intro.mp3", contentType: "audio/mpeg" });
+    return j({ copy, grok_usage: usage, chars: copy.voiceover.length, bytes: audio.byteLength, url });
   }
   return j({ error: "mode" }, 400);
 });
