@@ -3,7 +3,7 @@
 ## ✅ Co już DZIAŁA (zrobione automatycznie 2026-06-11)
 
 Harmonogram (19 zadań cron) jest **zainstalowany i aktywny** — w Twoim projekcie
-Supabase „grouaistream" (`hkbraboqdsonekzxbntr`), który działa jako sterownik
+Supabase „grouaistream" (`bvstvawnigyczvofzhps`), który działa jako sterownik
 i wywołuje funkcje żywego projektu. Od teraz codziennie, bez niczyjego udziału:
 
 | Godzina (UTC) | Co się dzieje |

@@ -9,7 +9,7 @@
 // radio_schedule (stare zachowanie), żeby radio nigdy nie zamilkło.
 const BV = "https://bvstvawnigyczvofzhps.supabase.co/rest/v1";
 const ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ2c3R2YXduaWd5Y3p2b2Z6aHBzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg3NDEwMzEsImV4cCI6MjA4NDMxNzAzMX0.Mp6lpKIcFGsduODIwm1V7FcRQmaN5DtPM5aaqj9i_Xw";
-const SELF = "https://hkbraboqdsonekzxbntr.supabase.co/functions/v1/radio-stream";
+const SELF = "https://bvstvawnigyczvofzhps.supabase.co/functions/v1/radio-stream";
 const FIXED_ANCHOR = Date.parse("2020-01-01T00:00:00Z");
 const WINDOW = 6;
 const H = {
