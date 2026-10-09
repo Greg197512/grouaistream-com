@@ -17,6 +17,9 @@ import { getGenrePalette } from "@/utils/genreColors";
 import { BlogPromoButton } from "@/components/sections/BlogPromoButton";
 import { HeroTags } from "@/components/sections/HeroTags";
 
+// One-off professional voice-over (generated once, static file — no recurring cost).
+const INTRO_VO_URL = "https://bvstvawnigyczvofzhps.supabase.co/storage/v1/object/public/aurora-voice/intro/grouai-intro.mp3";
+
 // Gentle idle equalizer frequencies
 function generateIdleFrequencies(barCount: number): number[] {
   const t = Date.now() / 1000;
@@ -280,9 +283,16 @@ export const HeroSection = () => {
             </h1>
           </div>
 
-          <p className="text-base md:text-lg text-muted-foreground mb-4 max-w-xl leading-relaxed">
+          <p className="text-base md:text-lg text-muted-foreground mb-3 max-w-xl leading-relaxed">
             {copy.tagline}
           </p>
+          <button
+            type="button"
+            onClick={() => { const a = new Audio(INTRO_VO_URL); a.play().catch(() => {}); }}
+            className="mb-4 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 text-sm text-foreground hover:bg-primary/20 transition-colors"
+          >
+            <Volume2 className="h-4 w-4 text-primary" /> Posłuchaj intro
+          </button>
           
           {/* Anti-fraud explainer */}
           <div className="flex items-start gap-3 mb-6 max-w-xl rounded-lg border border-primary/20 bg-primary/5 backdrop-blur-sm px-4 py-3">
