@@ -3269,6 +3269,90 @@ export type Database = {
           },
         ]
       }
+      blog_promo_posts: {
+        Row: {
+          blog_slug: string
+          blog_title: string
+          body: string
+          created_at: string
+          id: string
+          platform: string
+          status: string
+          url: string
+          week_of: string
+        }
+        Insert: {
+          blog_slug: string
+          blog_title: string
+          body: string
+          created_at?: string
+          id?: string
+          platform: string
+          status?: string
+          url: string
+          week_of?: string
+        }
+        Update: {
+          blog_slug?: string
+          blog_title?: string
+          body?: string
+          created_at?: string
+          id?: string
+          platform?: string
+          status?: string
+          url?: string
+          week_of?: string
+        }
+        Relationships: []
+      }
+      brain_ai_config: {
+        Row: {
+          api_key: string | null
+          enabled: boolean | null
+          endpoint: string | null
+          id: number
+          model: string | null
+          provider: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          api_key?: string | null
+          enabled?: boolean | null
+          endpoint?: string | null
+          id?: number
+          model?: string | null
+          provider?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          api_key?: string | null
+          enabled?: boolean | null
+          endpoint?: string | null
+          id?: number
+          model?: string | null
+          provider?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      brain_ai_pending: {
+        Row: {
+          created_at: string | null
+          purpose: string
+          request_id: number
+        }
+        Insert: {
+          created_at?: string | null
+          purpose?: string
+          request_id: number
+        }
+        Update: {
+          created_at?: string | null
+          purpose?: string
+          request_id?: number
+        }
+        Relationships: []
+      }
       brain_external_sources: {
         Row: {
           created_at: string
@@ -3374,6 +3458,24 @@ export type Database = {
           source_url?: string | null
           summary?: string | null
           title?: string
+        }
+        Relationships: []
+      }
+      brain_pending: {
+        Row: {
+          created_at: string
+          event_ids: string[]
+          request_id: number
+        }
+        Insert: {
+          created_at?: string
+          event_ids?: string[]
+          request_id: number
+        }
+        Update: {
+          created_at?: string
+          event_ids?: string[]
+          request_id?: number
         }
         Relationships: []
       }
@@ -3555,6 +3657,7 @@ export type Database = {
           description: string | null
           earning_type: string
           id: string
+          payable: boolean
           track_id: string
           user_id: string
         }
@@ -3565,6 +3668,7 @@ export type Database = {
           description?: string | null
           earning_type?: string
           id?: string
+          payable?: boolean
           track_id: string
           user_id: string
         }
@@ -3575,6 +3679,7 @@ export type Database = {
           description?: string | null
           earning_type?: string
           id?: string
+          payable?: boolean
           track_id?: string
           user_id?: string
         }
@@ -4541,6 +4646,42 @@ export type Database = {
         }
         Relationships: []
       }
+      outreach_contacts: {
+        Row: {
+          category: string
+          contact_email: string
+          created_at: string
+          id: string
+          last_contacted_at: string | null
+          notes: string | null
+          org_name: string
+          source_url: string | null
+          status: string
+        }
+        Insert: {
+          category?: string
+          contact_email: string
+          created_at?: string
+          id?: string
+          last_contacted_at?: string | null
+          notes?: string | null
+          org_name: string
+          source_url?: string | null
+          status?: string
+        }
+        Update: {
+          category?: string
+          contact_email?: string
+          created_at?: string
+          id?: string
+          last_contacted_at?: string | null
+          notes?: string | null
+          org_name?: string
+          source_url?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
       paddle_transactions: {
         Row: {
           amount: number
@@ -5381,6 +5522,7 @@ export type Database = {
           lang: string | null
           played_at: string | null
           position: number
+          station: string
           track_id: string | null
         }
         Insert: {
@@ -5393,6 +5535,7 @@ export type Database = {
           lang?: string | null
           played_at?: string | null
           position?: number
+          station?: string
           track_id?: string | null
         }
         Update: {
@@ -5405,6 +5548,7 @@ export type Database = {
           lang?: string | null
           played_at?: string | null
           position?: number
+          station?: string
           track_id?: string | null
         }
         Relationships: [
@@ -5416,6 +5560,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      reel_requests: {
+        Row: {
+          artist: string | null
+          created_at: string
+          id: string
+          match_type: string
+          query: string
+          title: string | null
+          track_id: string | null
+          user_id: string | null
+          video_id: string | null
+        }
+        Insert: {
+          artist?: string | null
+          created_at?: string
+          id?: string
+          match_type?: string
+          query: string
+          title?: string | null
+          track_id?: string | null
+          user_id?: string | null
+          video_id?: string | null
+        }
+        Update: {
+          artist?: string | null
+          created_at?: string
+          id?: string
+          match_type?: string
+          query?: string
+          title?: string | null
+          track_id?: string | null
+          user_id?: string | null
+          video_id?: string | null
+        }
+        Relationships: []
       }
       seo_activity_log: {
         Row: {
@@ -6629,6 +6809,7 @@ export type Database = {
           id: string
           is_boosted: boolean
           is_monetized: boolean
+          locked: boolean
           monetization_enabled_at: string | null
           mood: string | null
           title: string
@@ -6654,6 +6835,7 @@ export type Database = {
           id?: string
           is_boosted?: boolean
           is_monetized?: boolean
+          locked?: boolean
           monetization_enabled_at?: string | null
           mood?: string | null
           title: string
@@ -6679,6 +6861,7 @@ export type Database = {
           id?: string
           is_boosted?: boolean
           is_monetized?: boolean
+          locked?: boolean
           monetization_enabled_at?: string | null
           mood?: string | null
           title?: string
@@ -7185,6 +7368,11 @@ export type Database = {
         Args: { _amount: number; _user_id: string }
         Returns: Json
       }
+      ai_ask: {
+        Args: { _purpose: string; _system: string; _user: string }
+        Returns: Json
+      }
+      apply_radio_mood: { Args: { _mood: string }; Returns: Json }
       aurora_approve_intake_draft: {
         Args: { _draft_id: string }
         Returns: string
@@ -7236,6 +7424,22 @@ export type Database = {
         }
         Returns: string
       }
+      brain_delegate: { Args: never; Returns: Json }
+      brain_propose: {
+        Args: {
+          _action: Json
+          _agent: string
+          _dtype: string
+          _reasoning: string
+        }
+        Returns: undefined
+      }
+      brain_reason: { Args: never; Returns: Json }
+      brain_reason_collect: { Args: never; Returns: Json }
+      brain_run_now: { Args: never; Returns: Json }
+      brain_tick: { Args: never; Returns: Json }
+      brain_tick_collect: { Args: never; Returns: undefined }
+      brain_tick_send: { Args: never; Returns: undefined }
       claim_likes_milestone_bonus: { Args: never; Returns: Json }
       claim_mood_analysis_bonus: { Args: never; Returns: Json }
       claim_mood_sessions_milestone_bonus: { Args: never; Returns: Json }
@@ -7248,10 +7452,12 @@ export type Database = {
       }
       cleanup_brain_ingest_dedup: { Args: never; Returns: number }
       cleanup_expired_brain_memory: { Args: never; Returns: number }
+      data_digest: { Args: never; Returns: Json }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
       }
+      developer_agent: { Args: never; Returns: Json }
       dismiss_cost_alert: { Args: { _id: string }; Returns: Json }
       email_queue_dispatch: { Args: never; Returns: undefined }
       emit_agent_event: {
@@ -7279,6 +7485,7 @@ export type Database = {
         }[]
       }
       expire_unpaid_ad_campaigns: { Args: never; Returns: number }
+      generate_weekly_blog_promo: { Args: { _limit?: number }; Returns: number }
       get_active_cost_alerts: {
         Args: never
         Returns: {
@@ -7385,6 +7592,7 @@ export type Database = {
         Returns: string
       }
       mark_tip_welcome_seen: { Args: never; Returns: Json }
+      marketing_lite: { Args: never; Returns: Json }
       move_to_dlq: {
         Args: {
           dlq_name: string
@@ -7406,6 +7614,7 @@ export type Database = {
           read_ct: number
         }[]
       }
+      rebuild_radio_schedules: { Args: never; Returns: undefined }
       record_stream:
         | {
             Args: {
@@ -7444,6 +7653,7 @@ export type Database = {
           title: string
         }[]
       }
+      security_scan: { Args: never; Returns: Json }
       send_tip: { Args: { _amount: number; _track_id: string }; Returns: Json }
       set_radio_current_schedule: {
         Args: { _schedule_id: string }
@@ -7464,6 +7674,7 @@ export type Database = {
           subscription_status: string
         }[]
       }
+      tester_agent: { Args: never; Returns: Json }
       trigger_cost_report: { Args: { _month?: string }; Returns: Json }
       verify_unlock_code: { Args: { candidate: string }; Returns: boolean }
     }
