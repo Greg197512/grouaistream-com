@@ -25,7 +25,7 @@ Deno.serve(async (req) => {
   const token = url.searchParams.get("t") || req.headers.get("x-hub-token") || "";
   if (!cfg["hub_token"] || token !== cfg["hub_token"]) return json({ error: "unauthorized" }, 401);
 
-  const infoUrl = cfg["radio_info_url"] || "https://hkbraboqdsonekzxbntr.supabase.co/functions/v1/radio-stream?f=info";
+  const infoUrl = cfg["radio_info_url"] || "https://bvstvawnigyczvofzhps.supabase.co/functions/v1/radio-stream?f=info";
   const m3u8Url = infoUrl.replace("?f=info", "?f=m3u8");
 
   const checks: Record<string, unknown> = {};

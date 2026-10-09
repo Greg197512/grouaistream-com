@@ -89,7 +89,7 @@ INSERT INTO public.hub_config (key, value) VALUES
   ('telegram_bot_token', ''),
   ('telegram_chat_id', ''),
   ('discord_webhook_url', ''),
-  ('radio_info_url', 'https://hkbraboqdsonekzxbntr.supabase.co/functions/v1/radio-stream?f=info')
+  ('radio_info_url', 'https://bvstvawnigyczvofzhps.supabase.co/functions/v1/radio-stream?f=info')
 ON CONFLICT (key) DO NOTHING;
 
 -- ------------------------------------------------------------
