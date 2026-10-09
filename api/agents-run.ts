@@ -40,9 +40,9 @@ export default async function handler(req: any, res: any) {
   // Zawsze: pozbieraj gotowe odpowiedzi AI (Grok) do pamięci.
   ran.push(await rpc("brain_reason_collect"));
   // Co 2 h: executive summary managera.
-  if (full || (m < 10 && h % 2 === 0)) ran.push(await rpc("brain_reason"));
+  if (full || (h % 2 === 0)) ran.push(await rpc("brain_reason"));
   // Codziennie ~08:00 UTC: Developer + Tester.
-  if (full || (m < 10 && h === 8)) {
+  if (full || (h === 8)) {
     ran.push(await rpc("developer_agent"));
     ran.push(await rpc("tester_agent"));
   }
