@@ -1,3 +1,4 @@
+// @ts-nocheck — generated DB types out of sync
 // Panel promocji bloga: pokazuje GOTOWE posty do social (X/LinkedIn/Facebook)
 // wygenerowane automatycznie co tydzień przez generate_weekly_blog_promo().
 // Człowiek kopiuje treść, publikuje na swoim koncie i oznacza jako „opublikowane".

@@ -164,7 +164,7 @@ const YouTubeFallback = ({ lang, onFullscreen, L }: { lang: string; onFullscreen
         width: "100%", height: "100%",
         playerVars: { autoplay: 0, controls: 1, rel: 0, modestbranding: 1, playsinline: 1 },
         events: {
-          onReady: () => { try { playerRef.current?.cuePlaylist?.({ playlist: reelIds, index: 0 }); } catch { /* */ } setReady(true); setTimeout(refreshMeta, 600); },
+          onReady: () => { try { playerRef.current?.cuePlaylist?.({ playlist: AI_TELEDYSKI, index: 0 }); } catch { /* */ } setReady(true); setTimeout(refreshMeta, 600); },
           onStateChange: () => refreshMeta(),
           onError: () => { try { playerRef.current?.nextVideo?.(); } catch { /* */ } },
         },
