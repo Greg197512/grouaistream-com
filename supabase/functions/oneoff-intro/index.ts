@@ -44,7 +44,7 @@ Deno.serve(async (req) => {
     const g = await fetch("https://api.x.ai/v1/chat/completions", {
       method: "POST", headers: { Authorization: `Bearer ${xaiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "grok-3-mini", max_tokens: 600, temperature: 0.7,
+        model: "grok-4.3", max_tokens: 1500, temperature: 0.7,
         messages: [
           { role: "system", content: "You are a senior brand copywriter. Return ONLY JSON." },
           { role: "user", content: `Write a polished, professional homepage hero intro in Polish for "GrouAI Stream" — an AI music radio and streaming platform, built by a solo founder, with a unique catalog of original tracks from registered creators, live 24/7 radio, AI mood DJ, and GrouAI Studio. Premium, confident, warm, not cheesy. Return JSON: {"eyebrow": "<=5 words", "headline": "<=9 words", "sub": "1-2 sentences, <=35 words", "cta_primary": "<=3 words", "cta_secondary": "<=3 words", "voiceover": "spoken radio intro in Polish, 25-35 words, ~12 seconds"}` },
