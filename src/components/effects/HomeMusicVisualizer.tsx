@@ -30,9 +30,9 @@ export const HomeMusicVisualizer = () => {
       canvas.width = width * dpr; canvas.height = height * dpr;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       barGrad = ctx.createLinearGradient(0, height, 0, 0);
-      barGrad.addColorStop(0, `hsl(${HUE} ${SAT}% 38%)`);
-      barGrad.addColorStop(0.55, `hsl(${HUE} ${SAT}% 56%)`);
-      barGrad.addColorStop(1, `hsl(${HUE + 8} ${SAT}% 72%)`);
+      barGrad.addColorStop(0, `hsl(${HUE} ${SAT}% 46%)`);
+      barGrad.addColorStop(0.55, `hsl(${HUE} ${SAT}% 60%)`);
+      barGrad.addColorStop(1, `hsl(${HUE + 8} ${SAT}% 74%)`);
     };
     const observer = new ResizeObserver(resize); observer.observe(canvas); resize();
     const draw = (now: number) => {
