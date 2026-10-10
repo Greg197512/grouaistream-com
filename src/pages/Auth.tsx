@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
+import { lovable } from "@/integrations/lovable/index";
 import { AuroraBackground } from "@/components/effects/AuroraBackground";
 import { toast } from "sonner";
 
@@ -26,22 +27,23 @@ const Auth = () => {
   const handleGoogleSignIn = async () => {
     setGoogleLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: `${window.location.origin}/`,
-          // Pozwól wybrać konto Google zamiast auto-logowania ostatnim.
-          queryParams: { access_type: "offline", prompt: "select_account" },
-        },
+      const result = await lovable.auth.signInWithOAuth("google", {
+        redirect_uri: window.location.origin,
+        // Pozwól wybrać konto Google zamiast auto-logowania ostatnim.
+        extraParams: { access_type: "offline", prompt: "select_account" },
       });
-      if (error) {
-        // Najczęstsza przyczyna: provider Google nie włączony w Supabase Auth
-        // albo URL powrotny nie jest na whiteliście (Auth → URL Configuration).
-        toast.error(error.message || "Nie udało się zalogować przez Google");
+      if (result.error) {
+        toast.error(result.error.message || "Nie udało się zalogować przez Google");
         setGoogleLoading(false);
         return;
       }
-      // Sukces = przeglądarka przekierowuje do Google (nie resetujemy loadera).
+      if (result.redirected) {
+        // Przeglądarka przechodzi do Google — nie resetujemy loadera.
+        return;
+      }
+      // Sesja już ustawiona (popup) — wracamy na stronę główną.
+      setGoogleLoading(false);
+      navigate("/");
     } catch (e: any) {
       toast.error(e?.message || "Błąd logowania Google");
       setGoogleLoading(false);
