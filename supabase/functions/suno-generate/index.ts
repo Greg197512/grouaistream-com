@@ -195,6 +195,11 @@ serve(async (req) => {
       }
     }
 
+    // Explicit user-written lyrics/style override the enhancer.
+    if (typeof body.lyrics === "string" && body.lyrics.trim()) finalLyrics = body.lyrics.trim();
+    if (!enhance && style) finalStyle = style;
+    if (!enhance && title) finalTitle = title;
+
     // Fallbacks if GPT unavailable — always push for maximum clarity
     if (!finalStyle) finalStyle = "modern pop, warm analog synth, punchy live drums, transparent vocals, crystal clear mix, pristine high fidelity, 24-bit studio master, wide stereo image, professional mastering, radio-ready";
     if (!finalTitle) finalTitle = "GrouAI Track";
