@@ -42,16 +42,16 @@ export const HomeMusicVisualizer = () => {
         const { levels: l, isPlaying: playing } = state.current;
         const step = width / 32;
         for (let i = 0; i < 32; i++) {
-          const value = playing && !reduced.matches ? (l.frequencies[i] || .12) : .12 + Math.sin(i * .7) * .07;
-          const bar = Math.max(4, value * height * .62);
+          const value = playing && !reduced.matches ? (l.frequencies[i] || .12) : .16 + Math.sin(i * .7) * .09;
+          const bar = Math.max(5, value * height * .62);
           // 1) soft orange glow behind the bar (cheap, no shadowBlur)
-          ctx.fillStyle = `hsl(${HUE + 4} 100% 55% / ${.10 + value * .16})`;
+          ctx.fillStyle = `hsl(${HUE + 4} 100% 55% / ${.14 + value * .2})`;
           ctx.fillRect(i * step - 1, height - bar, Math.max(4, step), bar + 3);
           // 2) amber→orange gradient body
           ctx.fillStyle = barGrad || `hsl(${HUE} ${SAT}% 55%)`;
           ctx.fillRect(i * step + 2, height - bar, Math.max(2, step - 4), bar);
-          // 3) bright cap
-          ctx.fillStyle = `hsl(${HUE + 12} 100% 80% / .9)`;
+          // 3) bright holographic cap
+          ctx.fillStyle = `hsl(${HUE + 14} 100% 84% / .95)`;
           ctx.fillRect(i * step + 2, height - bar - 2, Math.max(2, step - 4), 2);
         }
         // 4) holographic iridescent sheen — one gradient, composited only onto
