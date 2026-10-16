@@ -1,67 +1,31 @@
-## Cel
-Każda okładka utworu (wgrane zdjęcie, AI-cover, import) ma być automatycznie zamieniana na krótki teledysk (image-to-video). Na listach, w albumach, w playerze i wszędzie tam, gdzie dziś pokazuje się okładka, ma się wyświetlać wideo (autoplay, muted, loop), z fallbackiem do zdjęcia gdy wideo jeszcze się renderuje.
+# Naprawa utworów, przycisk Blog, bot radia weekendowego, blog z historii, studio
 
-## Zakres
+## 1. Utwory nie grają (diagnoza, potem naprawa)
+Stan w bazie: 1508 utworów na R2, 46 na skasowanych linkach Suno, 35 na hubie, 3 bez pliku.
+- Sprawdzić w przeglądarce kilkanaście utworów z panelu głównego i zapisać, które błędy padają (plik nie istnieje, zły format, blokada odtwarzacza).
+- Naprawić przyczynę w odtwarzaczu lub w danych (np. poprawić złe adresy plików).
+- Utwory bez działającego pliku ukryć z panelu głównego, radia i wyszukiwarki (nie kasować), żeby każdy widoczny utwór grał.
+- Dodać do katalogu 4 nowe piosenki Suno (Algorytm Serca, Cichy Twórca, Granica Nieskończoności, Most…) — skopiować nagrania na stałe na R2.
 
-### 1. Backend — auto-konwersja
-- Nowa edge function **`auto-cover-video`**: przyjmuje `track_id`, pobiera `cover_url`, wywołuje istniejący `cover-video-generate` w trybie `image-to-video` (wan-2.2-i2v-fast → Hailuo-02 fallback), zapisuje wynik do `tracks.video_url`. Pracuje w tle (fire-and-forget z klienta), więc UX nie czeka.
-- Guard: pomijaj, jeśli `video_url` już istnieje (chyba że `force: true`).
+## 2. Przycisk Blog
+Przycisk Blog istnieje, ale nie jest nigdzie wstawiony. Przywrócić go na stronie głównej obok przycisków w górnej sekcji oraz w menu bocznym i dolnym na telefonie.
 
-### 2. Trigger — wszędzie gdzie ustawiana jest okładka
-Wywołanie `auto-cover-video` (fire-and-forget, bez blokowania UI) po:
-- `TrackOptionsMenu` — „Wgraj zdjęcie 📷", „AI okładka ⚡", Cover Studio (upload/text-to-image/image-to-image)
-- `Upload.tsx` — po wgraniu utworu z okładką
-- `FileUploadModal.tsx` — analogicznie
-- `ImportYouTube.tsx` — po zaimportowaniu (używa thumbnaila YT jako okładki)
-- `Suno.tsx` / studio — po wygenerowaniu utworu z okładką
+## 3. Bot radia weekendowego
+- Od piątku 20:00 do niedzieli 23:59 (czas polski) radio przełącza się na tryb „Party / Dance": utwory dyskotekowe, EDM, dance.
+- W poniedziałek wraca do zwykłego trybu.
+- Bot co godzinę sprawdza, czy radio gra, i naprawia kolejkę, gdy jest pusta.
+- Bez płatnego AI, z wyłącznikiem i dziennym limitem jak pozostałe boty.
 
-Toast: „🎬 Kręcę teledysk z okładki w tle…" + `track-list-changed` po sukcesie, żeby listy odświeżyły klip.
+## 4. Blog: nowe opowiadania z najnowszych historii
+- Codziennie jeden wpis-opowiadanie inspirowany najnowszymi wiadomościami (istniejący darmowy czytnik newsów), pisany darmowym AI.
+- Publikacja automatyczna, z okładką z istniejących grafik (bez płatnej generacji).
 
-### 3. Frontend — jednolity komponent `<CoverMedia>`
-Nowy komponent `src/components/media/CoverMedia.tsx`:
-- Props: `coverUrl`, `videoUrl`, `alt`, `className`, `autoplay=true`
-- Renderuje `<video muted loop playsInline autoPlay poster={coverUrl}>` gdy jest `videoUrl`; w przeciwnym razie `<img>`
-- Na mobile (viewport ≤ 640px) — tylko `poster` + odtwarza wideo dopiero przy dotknięciu (oszczędność transferu i baterii)
-- Obsługa błędu ładowania wideo → fallback do `<img>`
-
-### 4. Podmiana `<img>` na `<CoverMedia>`
-W miejscach, gdzie wyświetlana jest okładka utworu:
-- `src/components/cards/TrackRow.tsx`, `PlaylistCard.tsx`, `ArtistCard.tsx`
-- `src/components/layout/PlayerBar.tsx` (mały cover w pasku)
-- `src/pages/Library.tsx`, `MyTracks.tsx`, `LikedSongs.tsx`, `Search.tsx`, `PlaylistDetail.tsx`, `AlbumCreator.tsx`, `RadioLive.tsx`, `Server.tsx`
-- `src/components/player/QueueSidebar.tsx`
-
-Miejsc z inną semantyką (blog, TikTok, admin) NIE ruszam.
+## 5. GrouAI Studio
+- Przetestować pełną ścieżkę tworzenia piosenki zalogowanym kontem: wpisanie opisu, generowanie, odsłuch, zapis.
+- Naprawić każdy znaleziony błąd; gotowe utwory zapisywać na R2, żeby nie wygasały.
 
 ## Szczegóły techniczne
-
-**auto-cover-video (edge function):**
-```ts
-// body: { track_id: string, force?: boolean }
-// 1. select cover_url, video_url from tracks where id=track_id
-// 2. if video_url && !force → return { skipped: true }
-// 3. invoke cover-video-generate with { image_url: cover_url, quality: "max" }
-// 4. update tracks set video_url=<result> where id=track_id
-```
-
-**Wywołanie z klienta (helper `src/lib/autoCoverVideo.ts`):**
-```ts
-export const triggerCoverVideo = (trackId: string) =>
-  supabase.functions.invoke("auto-cover-video", { body: { track_id: trackId } })
-    .then(() => window.dispatchEvent(new CustomEvent("track-list-changed")))
-    .catch((e) => console.warn("[auto-cover-video]", e));
-```
-Wywołane fire-and-forget (bez `await`) tam, gdzie ustawiana jest okładka.
-
-**CoverMedia — kluczowy fragment:**
-```tsx
-if (videoUrl) return (
-  <video src={videoUrl} poster={coverUrl} muted loop playsInline autoPlay
-         onError={() => setFailed(true)} className={className} />
-);
-return <img src={coverUrl} alt={alt} className={className} loading="lazy" />;
-```
-
-## Poza zakresem
-- Backfill istniejących utworów bez `video_url` (jeśli chcesz, mogę to zrobić w drugim kroku — job admina „Wygeneruj brakujące teledyski")
-- Blog/TikTok/admin — nie ruszam
+- Weryfikacja odtwarzania: Playwright + test HEAD/zakresów na próbce URL-i; flaga ukrycia (np. kolumna `is_playable`) zamiast usuwania.
+- Bot weekendowy: funkcja serwerowa + harmonogram (managed HTTP schedule), korzysta z `apply_radio_mood('party')` i `automation_allowed`.
+- Blog: rozszerzenie istniejącego generatora wpisów o źródło z newsfeed; darmowy model OpenRouter.
+- Zakres płatny: brak nowych płatnych generacji poza kopiowaniem 4 gotowych nagrań.
