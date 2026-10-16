@@ -1,0 +1,2 @@
+ALTER TABLE public.tracks ADD COLUMN IF NOT EXISTS dead_audio_url text;
+COMMENT ON COLUMN public.tracks.dead_audio_url IS 'Original audio URL that stopped working (kept for recovery); audio_url is cleared so the track is hidden.';

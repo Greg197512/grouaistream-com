@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowUpRight, Radio, Sparkles, Volume2, Square } from "lucide-react";
+import { ArrowUpRight, Radio, Sparkles, Volume2, Square, Newspaper } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -50,6 +50,7 @@ export const HeroSection = () => {
         <div className="mt-8 flex flex-wrap gap-3">
           <Button size="lg" className="premium-primary" onClick={() => navigate("/radio-live")}><Radio />{copy.radio}<ArrowUpRight /></Button>
           <Button size="lg" variant="outline" className="border-foreground/20 bg-background/60 hover:bg-secondary" onClick={() => navigate("/studio")}><Sparkles />{copy.studio}</Button>
+          <Button size="lg" variant="outline" className="border-foreground/20 bg-background/60 hover:bg-secondary" onClick={() => navigate("/blog")}><Newspaper />Blog</Button>
         </div>
         <Button variant="ghost" onClick={toggleIntro} aria-pressed={speaking} className="mt-4 px-0 text-muted-foreground hover:bg-transparent hover:text-foreground">{speaking ? <Square /> : <Volume2 />}{speaking ? copy.stop : copy.intro}<span className="text-xs opacity-60">PL</span></Button>
         {failed && <p role="status" className="text-sm text-muted-foreground">{String(language).startsWith("pl") ? "Nagranie jest chwilowo niedostępne." : "The recording is temporarily unavailable."}</p>}

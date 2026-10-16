@@ -6835,6 +6835,7 @@ export type Database = {
           cover_url: string | null
           created_at: string
           danceability: number | null
+          dead_audio_url: string | null
           duration: number
           energy: number | null
           features_analyzed_at: string | null
@@ -6861,6 +6862,7 @@ export type Database = {
           cover_url?: string | null
           created_at?: string
           danceability?: number | null
+          dead_audio_url?: string | null
           duration?: number
           energy?: number | null
           features_analyzed_at?: string | null
@@ -6887,6 +6889,7 @@ export type Database = {
           cover_url?: string | null
           created_at?: string
           danceability?: number | null
+          dead_audio_url?: string | null
           duration?: number
           energy?: number | null
           features_analyzed_at?: string | null

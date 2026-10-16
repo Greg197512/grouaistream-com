@@ -4,6 +4,7 @@
 //   status   → { status: "processing"|"succeeded"|"failed", audio_url?, cover_url?, title?, duration? }
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { archiveToR2 } from "../_shared/r2.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -159,11 +160,20 @@ serve(async (req) => {
       const first = Array.isArray(items) ? items[0] : null;
       let norm: any = { status: "processing", raw_status: s };
       if (s === "SUCCESS" || s === "COMPLETE" || first?.audioUrl) {
+        // Linki Suno wygasają — kopiujemy nagranie i okładkę na stałe do R2.
+        const rawAudio = first?.audioUrl || first?.sourceAudioUrl || first?.streamAudioUrl;
+        const rawCover = first?.imageUrl || first?.sourceImageUrl || "";
+        const permAudio = first?.audioUrl || first?.sourceAudioUrl
+          ? await archiveToR2({ sourceUrl: rawAudio, folder: "suno", id: first?.id || taskId })
+          : null;
+        const permCover = rawCover
+          ? await archiveToR2({ sourceUrl: rawCover, folder: "suno-covers", id: first?.id || taskId, ext: "jpg", contentType: "image/jpeg" })
+          : null;
         norm = {
           status: "succeeded",
           id: taskId,
-          audio_url: first?.audioUrl || first?.streamAudioUrl || first?.sourceAudioUrl,
-          cover_url: first?.imageUrl || first?.sourceImageUrl || "",
+          audio_url: permAudio || rawAudio,
+          cover_url: permCover || rawCover,
           title: first?.title || "",
           duration: first?.duration || 0,
           all: items,
