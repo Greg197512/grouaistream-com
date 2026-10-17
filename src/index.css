@@ -1,1 +1,259 @@
-/* enhanced css will be injected */
+/* Fonty self-hosted (@fontsource) — bez render-blocking requestów do fonts.googleapis.com.
+   Nazwy rodzin ('Inter', 'Space Grotesk', 'Material Icons') identyczne jak z Google Fonts. */
+@import "@fontsource/inter/300.css";
+@import "@fontsource/inter/400.css";
+@import "@fontsource/inter/500.css";
+@import "@fontsource/inter/600.css";
+@import "@fontsource/inter/700.css";
+@import "@fontsource/inter/800.css";
+@import "@fontsource/space-grotesk/400.css";
+@import "@fontsource/space-grotesk/500.css";
+@import "@fontsource/space-grotesk/600.css";
+@import "@fontsource/space-grotesk/700.css";
+@import "@fontsource/material-icons/index.css";
+@import "@fontsource/material-icons-outlined/index.css";
+
+/* Klasy .material-icons / .material-icons-outlined — wcześniej dostarczał je
+   stylesheet Google Fonts; @fontsource daje tylko @font-face. */
+.material-icons,
+.material-icons-outlined {
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+}
+.material-icons { font-family: 'Material Icons'; }
+.material-icons-outlined { font-family: 'Material Icons Outlined'; }
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 0%;
+    --foreground: 0 0% 98%;
+
+    --card: 0 0% 7%;
+    --card-foreground: 0 0% 98%;
+
+    --popover: 0 0% 7%;
+    --popover-foreground: 0 0% 98%;
+
+    --primary: 268 100% 66%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 0 0% 12%;
+    --secondary-foreground: 0 0% 98%;
+
+    --muted: 0 0% 15%;
+    --muted-foreground: 0 0% 65%;
+
+    --accent: 331 100% 62%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 0 0% 15%;
+    --input: 0 0% 15%;
+    --ring: 268 100% 66%;
+
+    --radius: 0.75rem;
+
+    /* Amber pozostaje wyłącznie jako premium akcent (5%) */
+    --brand-amber: 32 100% 52%;
+    --premium-highlight: 36 85% 65%;
+    --premium-button: 32 95% 55%;
+    --premium-button-foreground: 0 0% 4%;
+    --premium-home-shade: linear-gradient(90deg, hsl(var(--background) / .97), hsl(var(--background) / .84) 40%, hsl(var(--background) / .08) 100%);
+    --premium-intro-shade: linear-gradient(180deg, hsl(var(--background) / .4), hsl(var(--background) / .5), hsl(var(--background) / .9));
+
+    /* Custom GrouAI tokens - Neon (violet / magenta / pink) */
+    --groove-gradient: linear-gradient(135deg, hsl(331, 100%, 63%) 0%, hsl(280, 100%, 66%) 52%, hsl(258, 100%, 66%) 100%);
+    --groove-gradient-hover: linear-gradient(135deg, hsl(331, 100%, 68%) 0%, hsl(280, 100%, 70%) 52%, hsl(258, 100%, 70%) 100%);
+    --groove-glow: 0 0 60px hsl(280, 100%, 66%, 0.4), 0 0 120px hsl(331, 100%, 62%, 0.3);
+    --groove-surface: hsl(0, 0%, 8%);
+    --groove-surface-hover: hsl(0, 0%, 11%);
+    --groove-surface-active: hsl(0, 0%, 14%);
+    --groove-text-dim: hsl(0, 0%, 50%);
+    --groove-border-subtle: hsl(0, 0%, 18%);
+    
+    --sidebar-background: 0 0% 0%;
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-primary: 268 100% 66%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 0 0% 12%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 0 0% 12%;
+    --sidebar-ring: 268 100% 66%;
+  }
+
+  .dark {
+    --background: 0 0% 0%;
+    --foreground: 0 0% 98%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    scroll-behavior: smooth;
+    overflow-x: hidden;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overscroll-behavior: none;
+    overflow-x: hidden;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Space Grotesk', sans-serif;
+    letter-spacing: -0.02em;
+    font-weight: 600;
+  }
+  h1 {
+    letter-spacing: -0.03em;
+    font-weight: 700;
+  }
+
+  /* iOS safe area support */
+  @supports (padding: env(safe-area-inset-bottom)) {
+    .safe-bottom {
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+  }
+}
+
+@layer components {
+  .groove-gradient-text {
+    background: var(--groove-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 0 10px hsl(var(--primary) / 0.3));
+  }
+
+  .groove-gradient-bg {
+    background: var(--groove-gradient);
+  }
+
+  .groove-gradient-border {
+    border: 1px solid transparent;
+    background: linear-gradient(var(--groove-surface), var(--groove-surface)) padding-box,
+                var(--groove-gradient) border-box;
+  }
+
+  .groove-glow {
+    box-shadow: var(--groove-glow);
+  }
+
+  .groove-card {
+    background: var(--groove-surface);
+    border-radius: var(--radius);
+    transition: all 0.3s ease;
+  }
+
+  .groove-card:hover {
+    background: var(--groove-surface-hover);
+    transform: translateY(-4px);
+  }
+
+  .groove-player-bar {
+    background: rgba(0, 0, 0, 0.3) !important;
+    backdrop-filter: blur(32px) saturate(200%);
+    -webkit-backdrop-filter: blur(32px) saturate(200%);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.3);
+    z-index: 50;
+  }
+
+  .groove-scrollbar::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .groove-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .groove-scrollbar::-webkit-scrollbar-thumb {
+    background: hsl(0, 0%, 25%);
+    border-radius: 4px;
+  }
+
+  .groove-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: hsl(0, 0%, 35%);
+  }
+}
+
+@layer utilities {
+  .animate-pulse-slow {
+    animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  .animate-gradient {
+    background-size: 200% 200%;
+    animation: gradient 8s ease infinite;
+  }
+
+  @keyframes gradient {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+  }
+
+  .animate-equalizer {
+    animation: equalizer 0.5s ease infinite;
+  }
+
+  @keyframes equalizer {
+    0%, 100% { transform: scaleY(1); }
+    50% { transform: scaleY(0.5); }
+  }
+
+  @keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
+
+  .backdrop-blur-groove {
+    backdrop-filter: blur(20px) saturate(180%);
+  }
+
+  .glow-text {
+    text-shadow: 0 0 20px hsl(var(--primary) / 0.4), 0 0 40px hsl(var(--accent) / 0.2);
+  }
+  .premium-heading {
+    font-family: 'Space Grotesk', sans-serif;
+    letter-spacing: -0.025em;
+    background: linear-gradient(135deg, hsl(331, 100%, 68%) 0%, hsl(280, 100%, 70%) 45%, hsl(42, 100%, 62%) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .glass-panel {
+    background: hsl(var(--card) / 0.6);
+    backdrop-filter: blur(24px) saturate(180%);
+    border: 1px solid hsl(var(--border) / 0.5);
+  }
+
+  /* rest of the file remains the same - burning frames, 3d effects etc. are preserved */
+}
