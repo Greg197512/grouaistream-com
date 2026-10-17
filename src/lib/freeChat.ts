@@ -56,8 +56,8 @@ export async function freeChat(
 }
 
 /**
- * Żywa, wygadana zapowiedź DJ-a dla utworu (darmowo, przez Pollinations).
- * Zwraca 1–2 charyzmatyczne zdania w języku użytkownika, albo null (fallback do szablonów).
+ * Naturalna, ludzka zapowiedź DJ-a (disco / techno / house party).
+ * Nie robot — prawdziwy didżej, który zagadywa i miksuje.
  */
 export async function freeDjLine(
   opts: { title: string; artist: string; genre?: string; mood?: string; lang?: string },
@@ -67,16 +67,16 @@ export async function freeDjLine(
   const sys = {
     role: "system",
     content:
-      `Jesteś GrouAI DJ — energetyczny, charyzmatyczny i WYGADANY radiowy didżej. ` +
-      `Mówisz z pazurem, humorem i luzem, jak prawdziwy prowadzący na żywo. ` +
-      `Zwróć TYLKO 1–2 krótkie, żywe zdania zapowiedzi (bez cudzysłowów, bez opisu, bez emoji), po ${langNames[lang] || "polsku"}.`,
+      `Jesteś prawdziwym, ludzkim DJ-em na disco, techno i house party. ` +
+      `Mówisz naturalnie, z oddechem, emocją i luzem — jak człowiek za konsolą. ` +
+      `Krótko, konkretnie, z pazurem. Zagadujesz ludzi, komentujesz miks, budujesz napięcie. ` +
+      `Zwróć TYLKO 1–2 naturalne zdania (bez cudzysłowów, bez emoji), po ${langNames[lang] || "polsku"}.`,
   };
   const user = {
     role: "user",
-    content: `Zapowiedz utwór „${opts.title}” — ${opts.artist}${opts.genre ? ` (${opts.genre})` : ""}${opts.mood ? `, nastrój: ${opts.mood}` : ""}. Rozkręć słuchaczy.`,
+    content: `Naturalnie zapowiedz utwór „${opts.title}” (${opts.artist}${opts.genre ? `, ${opts.genre}` : ""}). Mów jak człowiek na imprezie. Wspomnij o miksie, dropie albo przejściu.`,
   };
   const line = await pollinationsChat([sys, user], 7000);
   if (!line) return null;
-  // pierwsze 2 zdania, bez cudzysłowów
-  return line.replace(/^["'“”„»«\s]+|["'“”„»«\s]+$/g, "").split("\n")[0].slice(0, 240).trim() || null;
+  return line.replace(/^["'“”„»«\s]+|["'“”„»«\s]+$/g, "").split("\n")[0].slice(0, 260).trim() || null;
 }
