@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Play, Clock, Loader2, GripVertical } from "lucide-react";
+import { Play, Clock, GripVertical } from "lucide-react";
 import { Droppable, Draggable } from "@hello-pangea/dnd";
 import { supabase } from "@/integrations/supabase/client";
 import { usePlayer, Track } from "@/contexts/PlayerContext";
@@ -167,8 +167,16 @@ export const RecentlyPlayed = () => {
           <Clock className="h-5 w-5 text-muted-foreground" />
           <h2 className="font-display text-xl font-bold">Jump Back In</h2>
         </div>
-        <div className="flex items-center justify-center py-8">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3" aria-busy="true">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-3 p-3">
+              <div className="grou-skeleton h-12 w-12 rounded-md" />
+              <div className="flex-1 space-y-2">
+                <div className="grou-skeleton h-3 w-2/3" />
+                <div className="grou-skeleton h-2 w-1/3" />
+              </div>
+            </div>
+          ))}
         </div>
       </section>
     );

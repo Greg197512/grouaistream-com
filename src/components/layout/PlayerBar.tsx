@@ -153,6 +153,45 @@ export const PlayerBar = () => {
     return () => { cancelled = true; };
   }, [currentTrack]);
 
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      const tag = target?.tagName;
+      if (
+        tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || tag === "BUTTON" || tag === "A"
+        || target?.isContentEditable || target?.closest("[role='slider']")
+      ) return;
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+      const dur = duration || currentTrack?.duration || 0;
+      if (event.code === "Space") {
+        event.preventDefault();
+        togglePlay();
+      } else if (event.key === "ArrowRight" && event.shiftKey) {
+        event.preventDefault();
+        nextTrack();
+      } else if (event.key === "ArrowLeft" && event.shiftKey) {
+        event.preventDefault();
+        prevTrack();
+      } else if (event.key === "ArrowRight" && dur > 0) {
+        event.preventDefault();
+        seek(Math.min(100, ((currentTime + 5) / dur) * 100));
+      } else if (event.key === "ArrowLeft" && dur > 0) {
+        event.preventDefault();
+        seek(Math.max(0, ((currentTime - 5) / dur) * 100));
+      } else if (event.key === "ArrowUp") {
+        event.preventDefault();
+        setPlayerVolume(Math.min(100, volume + 5));
+      } else if (event.key === "ArrowDown") {
+        event.preventDefault();
+        setPlayerVolume(Math.max(0, volume - 5));
+      } else if (event.key === "m" || event.key === "M") {
+        toggleMute();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [togglePlay, nextTrack, prevTrack, seek, setPlayerVolume, toggleMute, volume, currentTime, duration, currentTrack]);
+
   // Handle seeking for YouTube
   useEffect(() => {
     if (seekPosition !== null && youtubePlayerRef.current && isVideoMode) {
@@ -284,6 +323,13 @@ export const PlayerBar = () => {
           WebkitBackdropFilter: "blur(40px) saturate(200%)",
         }}
       >
+        <div className="pointer-events-none absolute top-0 left-0 right-0 h-[3px] bg-white/10" aria-hidden>
+          <div
+            className="h-full groove-gradient-bg transition-[width] duration-200 ease-out"
+            style={{ width: `${Math.max(0, Math.min(100, progress))}%` }}
+          />
+        </div>
+
         {/* Drag Handle */}
         <motion.div
           onPointerDown={(e) => dragControls.start(e)}
@@ -511,6 +557,7 @@ export const PlayerBar = () => {
               onClick={togglePlay}
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
+              title="Spacja: odtwarzaj lub pauza"
               className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full text-white transition-all groove-gradient-bg shadow-[0_6px_18px_-4px_hsl(331_100%_62%/0.6)] hover:brightness-110"
             >
               {isPlaying ? (

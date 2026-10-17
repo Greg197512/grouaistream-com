@@ -20,6 +20,9 @@ import { mixAudioFiles, type MixStyle } from "@/utils/audioMixer";
 import { WaveformPlayer } from "@/components/studio/WaveformPlayer";
 import { toast } from "sonner";
 import { uploadToR2 } from "@/lib/r2Upload";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { isExplicitDjPhrase, parseVoiceCommand } from "@/lib/voiceCommands";
+import { useVoiceActions } from "@/hooks/useVoiceActions";
 
 
 interface ChatAttachment {
@@ -59,10 +62,10 @@ const getTimeOfDay = () => {
 };
 
 /** Locale kod dla Web Speech API wg języka aplikacji */
-const getSpeechLang = () => {
-  const lang = localStorage.getItem("grooveai-language") || "pl";
+const getSpeechLang = (lang?: string | null) => {
+  const value = lang || localStorage.getItem("grooveai-language") || "pl";
   const map: Record<string, string> = { pl: "pl-PL", en: "en-US", nl: "nl-NL", ua: "uk-UA" };
-  return map[lang] || "pl-PL";
+  return map[value] || "pl-PL";
 };
 
 /** Markdown → czysty tekst do odczytania przez TTS */
@@ -124,6 +127,11 @@ export const AIAssistant = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { playTrack, playPlaylist, currentTrack } = usePlayer();
+  const { language } = useLanguage();
+  const { runVoiceIntent } = useVoiceActions(language);
+  const speechLangRef = useRef(getSpeechLang(language));
+  speechLangRef.current = getSpeechLang(language);
+  const pendingVoiceRef = useRef("");
   const { startDJSession, isDJActive, parseDJCommand } = useDJMode();
   const { user } = useAuth();
   const location = useLocation();
@@ -519,12 +527,26 @@ export const AIAssistant = () => {
     let assistantContent = "";
     let currentTrackLink: Message["trackLink"] = undefined;
 
+    // Komendy odtwarzacza wykonujemy od razu. Samo „rock” albo „puść jazz”
+    // nie uruchamia setu DJ — set startuje tylko na wyraźną prośbę.
+    const voiceIntent = !hasMediaAttachments ? parseVoiceCommand(userMessage) : null;
+    if (voiceIntent && voiceIntent.kind !== "shutdown") {
+      try {
+        const say = await runVoiceIntent(voiceIntent);
+        setMessages(prev => [...prev, { role: "assistant", content: say }]);
+        if (voiceReplies && say) void speak(say, { lang: getSpeechLang(language) });
+      } catch {
+        setMessages(prev => [...prev, { role: "assistant", content: "Nie udało się wykonać komendy. Spróbuj jeszcze raz." }]);
+      } finally {
+        setIsLoading(false);
+      }
+      return;
+    }
+
     // === KOMENDA DJ — obsługa LOKALNA (natychmiast, bez serwera AI) ===
-    // "puść disco", "zagraj rock", "muzyka mieszana" itd. → startDJSession
-    // od razu pobiera utwory z bazy, miksuje i zapowiada — jak żywy DJ.
     try {
       const djCmd = parseDJCommand(userMessage);
-      if (djCmd.isDJCommand) {
+      if (djCmd.isDJCommand && isExplicitDjPhrase(userMessage)) {
         const genreLabel = djCmd.genres.length ? djCmd.genres.join(", ") : "impreza";
         setMessages(prev => [...prev, {
           role: "assistant",
@@ -887,11 +909,18 @@ export const AIAssistant = () => {
       pendingGeneratedTrackRef.current = null;
       setIsLoading(false);
     }
-  }, [input, isLoading, messages, userContext, startDJSession, parseDJCommand, attachments, voiceReplies]);
+  }, [input, isLoading, messages, userContext, startDJSession, parseDJCommand, attachments, voiceReplies, runVoiceIntent, language]);
 
   // Zawsze aktualne referencje dla długożyjących handlerów rozpoznawania mowy.
   sendRef.current = handleSend;
   loadingRef.current = isLoading;
+
+  useEffect(() => {
+    if (isLoading || !pendingVoiceRef.current) return;
+    const text = pendingVoiceRef.current;
+    pendingVoiceRef.current = "";
+    void sendRef.current(text);
+  }, [isLoading]);
 
   const stopMic = useCallback(() => {
     micWantRef.current = false;
@@ -926,7 +955,7 @@ export const AIAssistant = () => {
     const spawn = () => {
       if (!micWantRef.current) return;
       const rec = new SR();
-      rec.lang = getSpeechLang();
+      rec.lang = speechLangRef.current;
       rec.continuous = true;       // słuchaj dalej, nie kończ po jednej frazie
       rec.interimResults = true;
       rec.maxAlternatives = 1;
@@ -944,9 +973,12 @@ export const AIAssistant = () => {
           else interim += r[0].transcript;
         }
         setInput(interim || finalText);
-        if (finalText.trim() && !loadingRef.current) {
-          setInput("");
-          void sendRef.current(finalText.trim());
+        if (finalText.trim()) {
+          if (loadingRef.current) pendingVoiceRef.current = finalText.trim();
+          else {
+            setInput("");
+            void sendRef.current(finalText.trim());
+          }
         }
       };
 

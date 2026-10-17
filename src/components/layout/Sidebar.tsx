@@ -214,7 +214,7 @@ const NavItem = ({ icon, label, active, collapsed, onClick, badge, isAI }: NavIt
       "hover:backdrop-blur-md hover:bg-[hsl(28_100%_55%/0.10)] hover:border-[hsl(32_100%_62%/0.5)]",
       "hover:shadow-[inset_0_1px_0_hsl(44_100%_82%/0.55),inset_0_0_18px_hsl(28_100%_55%/0.20),0_8px_32px_hsl(24_100%_52%/0.45)]",
       active
-        ? "bg-sidebar-accent text-sidebar-foreground border-white/10"
+        ? "bg-sidebar-accent text-sidebar-foreground border-white/10 shadow-[inset_3px_0_0_hsl(var(--primary))]"
         : "text-muted-foreground hover:text-[hsl(40_100%_88%)]",
       collapsed && "justify-center px-2"
     )}
