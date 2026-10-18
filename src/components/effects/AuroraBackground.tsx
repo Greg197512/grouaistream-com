@@ -12,8 +12,9 @@ export const AuroraBackground = ({ showFace = false, lite = false }: { showFace?
     return (
       <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
         <div className="absolute inset-0 bg-background" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,hsl(268_100%_62%/0.10),transparent_55%)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,hsl(331_100%_60%/0.08),transparent_55%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,hsl(268_100%_62%/0.16),transparent_55%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,hsl(331_100%_60%/0.12),transparent_55%)]" />
+        <div className="aurora-mesh absolute inset-0 [animation:none]" />
       </div>
     );
   }
@@ -28,8 +29,10 @@ export const AuroraBackground = ({ showFace = false, lite = false }: { showFace?
       <div className="absolute inset-0 bg-background" />
 
       {/* Subtle neon radial accents (violet / magenta) */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,hsl(268_100%_62%/0.10),transparent_55%)]" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,hsl(331_100%_60%/0.08),transparent_55%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,hsl(268_100%_62%/0.16),transparent_55%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,hsl(331_100%_60%/0.12),transparent_55%)]" />
+      <div className="aurora-mesh absolute inset-0" />
+      <div className="aurora-floor absolute inset-x-[-10%] bottom-0 h-[46%]" />
 
       {/* Aurora WOMAN FACE — ujawnia się gdy LLM gotowy */}
       <motion.div
@@ -67,7 +70,7 @@ export const AuroraBackground = ({ showFace = false, lite = false }: { showFace?
           x: [0, 120, -40, 0],
           y: [0, -80, 40, 0],
           scale: [1, 1.15, 0.95, 1],
-          opacity: [0.08, 0.14, 0.06, 0.08],
+          opacity: [0.14, 0.24, 0.1, 0.14],
         }}
         transition={{ duration: 22, repeat: Infinity, ease: "easeInOut" }}
         className="absolute -top-40 -left-40 h-[500px] w-[500px] rounded-full blur-[120px]"
@@ -78,7 +81,7 @@ export const AuroraBackground = ({ showFace = false, lite = false }: { showFace?
           x: [0, -120, 60, 0],
           y: [0, 60, -40, 0],
           scale: [1, 0.9, 1.2, 1],
-          opacity: [0.06, 0.12, 0.05, 0.06],
+          opacity: [0.12, 0.2, 0.08, 0.12],
         }}
         transition={{ duration: 26, repeat: Infinity, ease: "easeInOut", delay: 3 }}
         className="absolute top-1/3 -right-32 h-[450px] w-[450px] rounded-full blur-[120px]"
@@ -88,7 +91,7 @@ export const AuroraBackground = ({ showFace = false, lite = false }: { showFace?
         animate={{
           x: [0, 80, -80, 0],
           y: [0, -60, 80, 0],
-          opacity: [0.05, 0.1, 0.04, 0.05],
+          opacity: [0.1, 0.18, 0.08, 0.1],
         }}
         transition={{ duration: 30, repeat: Infinity, ease: "easeInOut", delay: 7 }}
         className="absolute bottom-0 left-1/4 h-[400px] w-[400px] rounded-full blur-[130px]"

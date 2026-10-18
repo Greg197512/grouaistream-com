@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRef, useState, useEffect } from "react";
 
 import { toast } from "sonner";
+import { meltNavigate } from "@/lib/meltNavigate";
 
 const navItems = [
   { icon: "home", labelKey: "nav.home", href: "/" },
@@ -102,7 +103,7 @@ export const MobileBottomNav = () => {
           return (
             <button
               key={item.href}
-              onClick={() => navigate(item.href)}
+              onClick={(e) => meltNavigate(navigate, item.href, e.currentTarget)}
               className={cn(
                 "flex flex-col items-center gap-0.5 py-1 px-3 my-1 rounded-2xl transition-all flex-shrink-0",
                 isActive ? "text-primary bg-primary/10 ring-1 ring-primary/30" : isNeon ? "text-accent" : "text-muted-foreground"
@@ -126,7 +127,7 @@ export const MobileBottomNav = () => {
 
         {/* Account / Sign In */}
         <button
-          onClick={() => navigate(user ? "/settings" : "/auth")}
+          onClick={(e) => meltNavigate(navigate, user ? "/settings" : "/auth", e.currentTarget)}
           className={cn(
             "flex flex-col items-center gap-0.5 py-1 px-3 transition-colors relative flex-shrink-0",
             (location.pathname === "/settings" || location.pathname === "/auth")
