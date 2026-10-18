@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Play, Loader2 } from "lucide-react";
+import { Play } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { usePlayer, Track } from "@/contexts/PlayerContext";
@@ -152,15 +152,21 @@ export const HomeGreeting = () => {
           </div>
 
           {loading ? (
-            <div className="flex items-center justify-center h-40 text-muted-foreground gap-2">
-              <Loader2 className="h-5 w-5 animate-spin" /> {L("Ładuję utwory…", "Loading tracks…", "Nummers laden…", "Завантаження…")}
+            <div className="shelf-row" aria-busy="true" aria-label={L("Ładuję utwory…", "Loading tracks…", "Nummers laden…", "Завантаження…")}>
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="flex-none w-[150px]">
+                  <div className="grou-skeleton h-[150px] w-[150px]" />
+                  <div className="grou-skeleton mt-2 h-3 w-24" />
+                  <div className="grou-skeleton mt-2 h-2 w-16" />
+                </div>
+              ))}
             </div>
           ) : tracks.length === 0 ? (
             <div className="flex items-center justify-center h-40 text-muted-foreground text-sm text-center px-4">
               {L("Brak utworów w tym gatunku — spróbuj innego.", "No tracks in this genre — try another.", "Geen nummers in dit genre.", "Немає треків у цьому жанрі.")}
             </div>
           ) : (
-            <div className="flex gap-3 overflow-x-auto pb-2" style={{ scrollbarWidth: "none", scrollSnapType: "x mandatory" }}>
+            <div className="shelf-row">
               {tracks.map((tk, i) => (
                 <div key={tk.id || i} className="flex-none w-[150px]" style={{ scrollSnapAlign: "start" }}>
                   <div className="relative w-[150px] h-[150px] rounded-2xl overflow-hidden border border-white/12
@@ -172,7 +178,7 @@ export const HomeGreeting = () => {
                       aria-label={L("Odtwórz", "Play", "Afspelen", "Відтворити")}
                       className="absolute bottom-2 right-2 h-11 w-11 rounded-full groove-gradient-bg text-white
                                  flex items-center justify-center shadow-[0_8px_20px_-6px_hsl(331_100%_62%/0.7)]
-                                 opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all"
+                                 opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 group-focus-within:opacity-100 group-focus-within:translate-y-0 transition-all"
                     >
                       <Play className="h-5 w-5 fill-current ml-0.5" />
                     </button>

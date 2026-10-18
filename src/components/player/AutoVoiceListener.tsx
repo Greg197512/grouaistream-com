@@ -15,6 +15,9 @@ import { cn } from "@/lib/utils";
 import { useClapControl } from "@/hooks/useClapControl";
 import { useDJMode } from "@/hooks/useDJMode";
 import type { Language } from "@/i18n/translations";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { isConversational, isExplicitDjPhrase, parseVoiceCommand, voiceMissedReply } from "@/lib/voiceCommands";
+import { useVoiceActions } from "@/hooks/useVoiceActions";
 
 interface SpeechRecognitionEvent extends Event {
   resultIndex: number;
@@ -35,12 +38,19 @@ interface SpeechRecognitionInstance extends EventTarget {
   abort: () => void;
 }
 
-const SILENCE_TIMEOUT_MS = 300_000; // 5 minutes
+/** Język UI ustawiany z LanguageContext. Rozpoznawanie mowy ma iść tym samym torem. */
+let syncedLanguage: Language | null = null;
 
-/** Get current app language */
+/** Get current app language. Polski jest domyślny, gdy nic nie wybrano i przeglądarka nie jest EN/NL/UK. */
 const getAppLanguage = (): Language => {
+  if (syncedLanguage) return syncedLanguage;
   const saved = localStorage.getItem("grooveai-language");
-  return (saved as Language) || "en";
+  if (saved === "pl" || saved === "en" || saved === "nl" || saved === "ua") return saved;
+  const browser = (typeof navigator !== "undefined" ? navigator.language : "pl").toLowerCase();
+  if (browser.startsWith("nl")) return "nl";
+  if (browser.startsWith("uk")) return "ua";
+  if (browser.startsWith("en")) return "en";
+  return "pl";
 };
 
 /** Speech recognition locale code */
@@ -169,7 +179,14 @@ export const AutoVoiceListener = () => {
   const processVoiceCommand = aiContext?.processVoiceCommand;
   const isAIEnabled = aiContext?.isAIEnabled ?? false;
   const isProcessing = aiContext?.isProcessing ?? false;
-  const { playPlaylist, nextTrack, prevTrack, setVolume, pausePlayback, resumePlayback, restartCurrentTrack, seek, audioElement, toggleRepeat, toggleShuffle, currentTrack, addToQueue } = usePlayer();
+  const { playPlaylist, nextTrack, prevTrack, setVolume, pausePlayback, resumePlayback, restartCurrentTrack, seek, audioElement, toggleRepeat, toggleShuffle, currentTrack, addToQueue, volume } = usePlayer();
+  const { language } = useLanguage();
+  const { runVoiceIntent, volumeRef } = useVoiceActions(language);
+  const preDuckVolumeRef = useRef<number | null>(null);
+  const duckForSpeechRef = useRef<() => void>(() => {});
+  const restoreDuckRef = useRef<() => void>(() => {});
+  const processCommandRef = useRef<(command: string) => void>(() => {});
+  const listenGenRef = useRef(0);
   const navigate = useNavigate();
   const { assistantName, needsNaming, saveAssistantName } = useAssistantConfig();
   const { startDJSession, parseDJCommand, isDJActive, stopDJSession } = useDJMode();
@@ -192,6 +209,21 @@ export const AutoVoiceListener = () => {
 
   // Keep ref in sync with state so async handlers always have latest value
   useEffect(() => { autoListenRef.current = autoListenEnabled; }, [autoListenEnabled]);
+  useEffect(() => { syncedLanguage = language; }, [language]);
+  volumeRef.current = volume;
+  duckForSpeechRef.current = () => {
+    if (preDuckVolumeRef.current != null) return;
+    const current = volumeRef.current;
+    if (current <= 12) return;
+    preDuckVolumeRef.current = current;
+    setVolume(Math.max(8, Math.round(current * 0.22)));
+  };
+  restoreDuckRef.current = () => {
+    if (preDuckVolumeRef.current == null) return;
+    const previous = preDuckVolumeRef.current;
+    preDuckVolumeRef.current = null;
+    setVolume(previous);
+  };
 
   useEffect(() => {
     const stored = localStorage.getItem("auto-voice-listen");
@@ -207,12 +239,10 @@ export const AutoVoiceListener = () => {
   const resetSilenceTimer = useCallback(() => {
     if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
     silenceTimerRef.current = window.setTimeout(() => {
-      if (recognitionRef.current) { try { recognitionRef.current.abort(); } catch {} }
-      setIsListening(false);
-      setAutoListenEnabled(false);
-      localStorage.setItem("auto-voice-listen", "false");
-      toast.info("🎙️ Mikrofon wyłączony po 2 minutach ciszy");
-    }, SILENCE_TIMEOUT_MS);
+      // Cisza nie wyłącza asystenta — Chrome i tak kończy sesję, a onend ją wznawia.
+      if (!autoListenRef.current || speakRestartingRef.current || isSpeakingRef.current) return;
+      startListeningRef.current?.();
+    }, 45_000);
   }, []);
 
   const fetchAISuggestions = useCallback(async () => {
@@ -506,6 +536,7 @@ export const AutoVoiceListener = () => {
 
   // Guard against concurrent command processing
   const isProcessingCommandRef = useRef(false);
+  const pendingCommandRef = useRef<string | null>(null);
 
   const processCommand = useCallback(async (command: string) => {
     const lower = command.toLowerCase().trim();
@@ -518,7 +549,8 @@ export const AutoVoiceListener = () => {
 
     // Guard: ignore if already processing a command
     if (isProcessingCommandRef.current) {
-      console.log("[Voice] Ignored - already processing:", command);
+      pendingCommandRef.current = command;
+      console.log("[Voice] Queued while busy:", command);
       return;
     }
     isProcessingCommandRef.current = true;
@@ -527,8 +559,30 @@ export const AutoVoiceListener = () => {
     setShowIndicator(true);
     resetSilenceTimer();
 
+    const lockWatchdog = window.setTimeout(() => { isProcessingCommandRef.current = false; }, 12_000);
     try {
     const lang = getAppLanguage();
+
+    const intent = parseVoiceCommand(command, { assistantName });
+    if (intent) {
+      if (intent.kind === "shutdown") {
+        shutdownMic();
+        return;
+      }
+      if (intent.kind === "stop_dj" && isDJActive) {
+        await stopDJSession();
+      }
+      const touchesVolume = intent.kind === "volume_up" || intent.kind === "volume_down" || intent.kind === "volume_set" || intent.kind === "mute" || intent.kind === "unmute";
+      const baseVolume = preDuckVolumeRef.current ?? volumeRef.current;
+      if (!touchesVolume) restoreDuckRef.current();
+      const msg = await runVoiceIntent(intent.kind === "stop_dj" && !isDJActive ? { kind: "pause" } : intent, { baseVolume });
+      if (touchesVolume) preDuckVolumeRef.current = null;
+      toast.success(msg);
+      await safeSpeakAndResume(msg);
+      return;
+    }
+
+    const conversational = isConversational(command);
 
     // STOP command - HIGHEST PRIORITY - all languages
     const stopRequested = includesAny(normalized, [
@@ -543,7 +597,7 @@ export const AutoVoiceListener = () => {
       "стоп", "пауза", "зупини", "тиша",
     ]) || includesAny(lower, ["stop", "pauza", "zatrzymaj", "wstrzymaj", "pause", "pauzeer", "стоп", "пауза"]);
 
-    if (stopRequested) {
+    if (!conversational && stopRequested) {
       pausePlayback();
       const msgs: Record<Language, string> = { pl: "Zatrzymuję", en: "Pausing", nl: "Gepauzeerd", ua: "Зупиняю" };
       await safeSpeakAndResume(msgs[lang]);
@@ -562,7 +616,7 @@ export const AutoVoiceListener = () => {
 
     // DJ Mode commands
     const djResult = parseDJCommand(command);
-    if (djResult.isDJCommand) {
+    if (!conversational && djResult.isDJCommand && isExplicitDjPhrase(command)) {
       const djMsgs: Record<Language, string> = {
         pl: "DJ GrouAI przygotowuje set...",
         en: "DJ GrouAI preparing set...",
@@ -641,9 +695,7 @@ export const AutoVoiceListener = () => {
     }
 
     // Simple play/resume (short commands)
-    if ((lower.includes("graj") || lower.includes("play") || lower.includes("speel") || lower.includes("грай"))
-        && !lower.includes("następ") && !lower.includes("odtwarz") && !lower.includes("next") && !lower.includes("volgende")
-        && lower.split(" ").length <= 2) {
+    if (!conversational && /^(graj|play|speel|грай|resume|wznow|kontynuuj)$/.test(normalized)) {
       resumePlayback();
       const msgs: Record<Language, string> = { pl: "Odtwarzam", en: "Playing", nl: "Afspelen", ua: "Граю" };
       await safeSpeakAndResume(msgs[lang]);
@@ -745,7 +797,7 @@ export const AutoVoiceListener = () => {
     }
 
     // Previous track
-    if (includesAny(lower, ["poprzedni", "cofnij", "wstecz", "previous", "back", "vorige", "terug", "попередн", "назад", "w lewo", "lewo"])) {
+    if (!conversational && includesAny(lower, ["poprzedni", "cofnij", "wstecz", "previous", "vorige", "terug", "попередн", "назад", "w lewo", "lewo"])) {
       prevTrack();
       const msgs: Record<Language, string> = { pl: "Poprzedni utwór", en: "Previous track", nl: "Vorig nummer", ua: "Попередній трек" };
       await safeSpeakAndResume(msgs[lang]);
@@ -753,13 +805,13 @@ export const AutoVoiceListener = () => {
     }
 
     // Rolki (Reels) — „w górę" / „w dół" naśladują gest swipe (jeśli Rolki są otwarte)
-    if (includesAny(normalized, ["w gore", "do gory", "gora"]) || includesAny(lower, ["up", "omhoog", "вгору"])) {
+    if (!conversational && (includesAny(normalized, ["w gore", "do gory"]) || /^(up|omhoog|вгору)$/.test(normalized))) {
       window.dispatchEvent(new CustomEvent("grouai:reel-nav", { detail: { direction: "next" } }));
       const msgs: Record<Language, string> = { pl: "W górę", en: "Up", nl: "Omhoog", ua: "Вгору" };
       await safeSpeakAndResume(msgs[lang]);
       return;
     }
-    if (includesAny(lower, ["w dół", "na dół", "dół", "dol"]) || includesAny(lower, ["down", "omlaag", "вниз"])) {
+    if (!conversational && (includesAny(normalized, ["w dol", "na dol"]) || includesAny(lower, ["w dół", "na dół"]) || /^(down|omlaag|вниз)$/.test(normalized))) {
       window.dispatchEvent(new CustomEvent("grouai:reel-nav", { detail: { direction: "prev" } }));
       const msgs: Record<Language, string> = { pl: "W dół", en: "Down", nl: "Omlaag", ua: "Вниз" };
       await safeSpeakAndResume(msgs[lang]);
@@ -907,8 +959,6 @@ export const AutoVoiceListener = () => {
     if (includesAny(lower, ["otwórz", "włącz", "pokaż", "przejdź", "idź", "open", "show", "go to", "navigate", "toon", "ga naar", "відкрий", "покажи", "перейди"])) {
       if (tryNavigate(lower)) return;
     }
-    if (tryNavigate(lower)) return;
-
     // ==========================================
     // FAVORITES PLAY COMMAND - multilingual
     // ==========================================
@@ -1227,103 +1277,118 @@ export const AutoVoiceListener = () => {
         await safeSpeakAndResume(answer);
       } else {
         // Last resort fallback
-        const errMsgs: Record<Language, string> = {
-          pl: "Przepraszam, nie udało mi się znaleźć odpowiedzi. Spróbuj ponownie.",
-          en: "Sorry, I couldn't find an answer. Please try again.",
-          nl: "Sorry, ik kon geen antwoord vinden. Probeer het opnieuw.",
-          ua: "Вибачте, не вдалося знайти відповідь. Спробуйте ще раз.",
-        };
-        await safeSpeakAndResume(errMsgs[lang]);
-        toast.info(`🤖 ${errMsgs[lang]}`, { id: "voice-cmd" });
+        const missed = voiceMissedReply(lang, command);
+        await safeSpeakAndResume(missed);
+        toast.info(missed, { id: "voice-cmd" });
       }
     } catch {
       const lang = getAppLanguage();
-      const errMsgs: Record<Language, string> = {
-        pl: "Przepraszam, wystąpił błąd. Spróbuj ponownie.",
-        en: "Sorry, an error occurred. Please try again.",
-        nl: "Sorry, er is een fout opgetreden. Probeer het opnieuw.",
-        ua: "Вибачте, сталася помилка. Спробуйте ще раз.",
-      };
-      await safeSpeakAndResume(errMsgs[lang]);
-      toast.error(errMsgs[lang], { id: "voice-cmd" });
+      const missed = voiceMissedReply(lang, command);
+      await safeSpeakAndResume(missed);
+      toast.error(missed, { id: "voice-cmd" });
     }
     } finally {
+      clearTimeout(lockWatchdog);
       isProcessingCommandRef.current = false;
+      const queued = pendingCommandRef.current;
+      pendingCommandRef.current = null;
+      if (queued && queued !== command) {
+        window.setTimeout(() => { void processCommand(queued); }, 40);
+      }
     }
-  }, [isAIEnabled, processVoiceCommand, playPlaylist, nextTrack, prevTrack, setVolume, tryNavigate, searchAndPlay, resetSilenceTimer, assistantName, fetchAISuggestions, shutdownMic, showSuggestions, aiSuggestions, pausePlayback, resumePlayback, restartCurrentTrack, parseNumber, handlePlayFromAI, safeSpeakAndResume, seek, audioElement, toggleRepeat, toggleShuffle, currentTrack, addToQueue, user]);
+  }, [isAIEnabled, processVoiceCommand, playPlaylist, nextTrack, prevTrack, setVolume, tryNavigate, searchAndPlay, resetSilenceTimer, assistantName, fetchAISuggestions, shutdownMic, showSuggestions, aiSuggestions, pausePlayback, resumePlayback, restartCurrentTrack, parseNumber, handlePlayFromAI, safeSpeakAndResume, seek, audioElement, toggleRepeat, toggleShuffle, currentTrack, addToQueue, user, runVoiceIntent, isDJActive, stopDJSession, language]);
 
   const startListening = useCallback(() => {
-    if (!user) return;
+    if (!user || !autoListenRef.current) return;
     const SpeechAPI = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechAPI) { toast.error("Brak wsparcia mowy w przeglądarce"); return; }
-    if (recognitionRef.current) { try { recognitionRef.current.abort(); } catch {} recognitionRef.current = null; }
+    if (!SpeechAPI) {
+      toast.error(language === "pl"
+        ? "Ta przeglądarka nie rozpoznaje mowy. Użyj Chrome lub Edge."
+        : "This browser can't recognize speech. Use Chrome or Edge.");
+      return;
+    }
+
+    const generation = ++listenGenRef.current;
+    const previous = recognitionRef.current;
+    recognitionRef.current = null;
+    if (previous) {
+      previous.onresult = null;
+      previous.onerror = null;
+      previous.onend = null;
+      try { previous.abort(); } catch { /* już zamknięte */ }
+    }
+    if (restartTimeoutRef.current) { clearTimeout(restartTimeoutRef.current); restartTimeoutRef.current = null; }
 
     try {
       const rec = new SpeechAPI() as SpeechRecognitionInstance;
       rec.continuous = true;
       rec.interimResults = true;
-      rec.lang = LANG_TO_RECOGNITION[getAppLanguage()] || "en-US";
+      rec.lang = LANG_TO_RECOGNITION[getAppLanguage()] || "pl-PL";
       rec.onresult = (event: SpeechRecognitionEvent) => {
-        // Guard: ignore anything picked up while TTS is speaking
-        if (isSpeakingRef.current) return;
-
-        // Keep microphone session alive while user is speaking
+        if (generation !== listenGenRef.current || isSpeakingRef.current) return;
         resetSilenceTimer();
 
-        const last = event.results[event.results.length - 1];
-        if (last?.isFinal) {
-          const transcript = last[0].transcript.trim();
-          // Deduplicate: ignore if same text as last processed command within 3s
-          if (transcript === lastProcessedRef.current.text && Date.now() - lastProcessedRef.current.time < 3000) {
-            console.log("[Voice] Duplicate ignored:", transcript);
-            return;
+        let interim = "";
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const result = event.results[i];
+          const transcript = result?.[0]?.transcript?.trim() || "";
+          if (!transcript) continue;
+          if (result.isFinal) {
+            const repeatable = /^(next|skip|dalej|nastepny|następny|poprzedni|previous)$/i.test(transcript);
+            const windowMs = repeatable ? 450 : 1200;
+            if (transcript === lastProcessedRef.current.text && Date.now() - lastProcessedRef.current.time < windowMs) continue;
+            lastProcessedRef.current = { text: transcript, time: Date.now() };
+            setLastTranscript(transcript);
+            setShowIndicator(true);
+            processCommandRef.current(transcript);
+          } else {
+            interim += `${transcript} `;
           }
-          lastProcessedRef.current = { text: transcript, time: Date.now() };
-          console.log("[Voice] Final transcript:", transcript);
-          processCommand(transcript);
+        }
+        if (interim.trim()) {
+          setLastTranscript(interim.trim());
+          setShowIndicator(true);
+          duckForSpeechRef.current();
         }
       };
       rec.onerror = (event: SpeechRecognitionErrorEvent) => {
+        if (generation !== listenGenRef.current) return;
         console.log("[Voice] Recognition error:", event.error);
         if (event.error === "not-allowed" || event.error === "service-not-allowed") {
-          setAutoListenEnabled(false); localStorage.setItem("auto-voice-listen", "false");
-          setIsListening(false); toast.error("🎙️ Brak dostępu do mikrofonu"); return;
-        }
-        if (event.error === "aborted") return;
-        if (event.error === "no-speech") {
-          // Don't restart here — onend will handle it
+          autoListenRef.current = false;
+          setAutoListenEnabled(false);
+          localStorage.setItem("auto-voice-listen", "false");
+          setIsListening(false);
+          toast.error(language === "pl"
+            ? "Brak dostępu do mikrofonu. Zezwól na mikrofon w przeglądarce i włącz asystenta jeszcze raz."
+            : "Microphone blocked. Allow the mic in the browser and turn the assistant on again.");
           return;
         }
-        setIsListening(false);
+        // no-speech, network, audio-capture, aborted — onend wznawia, jeśli asystent jest włączony
       };
       rec.onend = () => {
-        console.log("[Voice] Recognition ended, speakRestarting:", speakRestartingRef.current, "autoListen:", autoListenRef.current);
+        if (generation !== listenGenRef.current) return;
         setIsListening(false);
-        // If safeSpeakAndResume is handling restart, don't interfere
-        if (speakRestartingRef.current) return;
-        if (isSpeakingRef.current) return;
-        
-        if (autoListenRef.current) {
-          // Create a fresh recognition instance instead of reusing aborted one
-          restartTimeoutRef.current = window.setTimeout(() => {
-            console.log("[Voice] Auto-restarting recognition from onend");
-            startListeningRef.current?.();
-          }, 400);
-        }
+        if (recognitionRef.current === rec) recognitionRef.current = null;
+        if (speakRestartingRef.current || isSpeakingRef.current || !autoListenRef.current) return;
+        restartTimeoutRef.current = window.setTimeout(() => {
+          if (generation !== listenGenRef.current) return;
+          startListeningRef.current?.();
+        }, 350);
       };
-      rec.start();
       recognitionRef.current = rec;
+      rec.start();
       setIsListening(true);
       resetSilenceTimer();
-      console.log("[Voice] Recognition started successfully");
     } catch (e) {
       console.error("[Voice] Failed to start recognition:", e);
-      toast.error("Nie udało się uruchomić mikrofonu");
+      toast.error(language === "pl" ? "Nie udało się uruchomić mikrofonu" : "Couldn't start the microphone");
     }
-  }, [user, processCommand, resetSilenceTimer]);
+  }, [user, resetSilenceTimer, language]);
 
   // Keep ref in sync so safeSpeakAndResume can restart listening
   useEffect(() => { startListeningRef.current = startListening; }, [startListening]);
+  useEffect(() => { processCommandRef.current = (text) => { void processCommand(text); }; }, [processCommand]);
 
   // Auto-wznowienie nasłuchu przy wejściu na stronę: jeśli mikrofon był włączony
   // w poprzedniej sesji (zapamiętane w localStorage), włącz go od razu — bez
@@ -1341,8 +1406,11 @@ export const AutoVoiceListener = () => {
   useEffect(() => {
     const onLangChange = () => {
       if (recognitionRef.current && isListening) {
-        console.log("[Voice] Language changed, restarting recognition");
-        try { recognitionRef.current.abort(); } catch {}
+        const previous = recognitionRef.current;
+        previous.onresult = null;
+        previous.onerror = null;
+        previous.onend = null;
+        try { previous.abort(); } catch { /* */ }
         recognitionRef.current = null;
         setTimeout(() => startListeningRef.current?.(), 300);
       }
@@ -1375,29 +1443,46 @@ export const AutoVoiceListener = () => {
     toast.success(`🎤 ${name} aktywowany!`, { duration: 5000 });
     // Speak greeting FIRST, then start listening (prevents mic from hearing its own TTS)
     isSpeakingRef.current = true;
-    await speak(`Cześć! Miło mi że mnie tak nazwałeś — ${name}. Jestem Twoim asystentem muzycznym. Powiedz moje imię kiedy będziesz mnie potrzebować!`);
+    await speak(`Cześć! Jestem ${name}. Słucham cały czas — mów komendę, na przykład: graj, pauza, następny, głośniej albo włącz radio.`);
     await new Promise(r => setTimeout(r, 600));
     isSpeakingRef.current = false;
+    autoListenRef.current = true;
     startListening();
   }, [saveAssistantName, startListening]);
 
   const toggleAutoListen = useCallback(async () => {
     const next = !autoListenEnabled;
     autoResumedListeningRef.current = true; // ten start (jeśli next) obsługujemy tu ręcznie z powitaniem
+    if (next) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+        });
+        stream.getTracks().forEach((track) => track.stop());
+      } catch {
+        autoListenRef.current = false;
+        setAutoListenEnabled(false);
+        localStorage.setItem("auto-voice-listen", "false");
+        toast.error(language === "pl"
+          ? "Brak dostępu do mikrofonu. Zezwól na mikrofon w przeglądarce."
+          : "Microphone blocked. Allow the mic in the browser.");
+        return;
+      }
+    }
+    autoListenRef.current = next;
     setAutoListenEnabled(next);
     localStorage.setItem("auto-voice-listen", String(next));
     if (next) {
-      toast.success("🎙️ Mikrofon AI włączony");
-      // Speak greeting FIRST, then start listening (prevents mic from hearing its own TTS)
+      toast.success("🎙️ Mikrofon AI włączony — słucham komend");
       isSpeakingRef.current = true;
-      await speak(`Mikrofon włączony.${assistantName ? ` Jestem ${assistantName}.` : ""} Słucham.`);
+      await speak(`Mikrofon włączony.${assistantName ? ` Jestem ${assistantName}.` : ""} Słucham. Powiedz: graj, pauza, następny, głośniej albo włącz radio.`);
       await new Promise(r => setTimeout(r, 600));
       isSpeakingRef.current = false;
       startListening();
     } else {
       shutdownMic();
     }
-  }, [autoListenEnabled, startListening, assistantName, shutdownMic]);
+  }, [autoListenEnabled, startListening, assistantName, shutdownMic, language]);
 
   // Listen for toggle from InfinityWidget
   useEffect(() => {
@@ -1505,9 +1590,9 @@ export const AutoVoiceListener = () => {
           >
             <div className="flex items-center gap-1.5 mb-0.5">
               <Sparkles className="h-3 w-3 text-primary/70" />
-              <span className="text-[9px] font-semibold text-primary/80">{assistantName || "AI"}</span>
+              <span className="text-[9px] font-semibold text-primary/80">{assistantName || "AI"} · {language === "pl" ? "usłyszałam" : "heard"}</span>
             </div>
-            <p className="text-[10px] text-foreground/80">"{lastTranscript}"</p>
+            <p className="text-[11px] text-foreground/90">“{lastTranscript}”</p>
             {isProcessing && <p className="text-[9px] text-muted-foreground/60 mt-0.5 animate-pulse">Przetwarzam...</p>}
           </motion.div>
         )}

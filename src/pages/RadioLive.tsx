@@ -195,6 +195,23 @@ const RadioLive = () => {
     });
   }, []);
 
+  useEffect(() => {
+    const startFromVoice = () => {
+      const audio = audioRef.current;
+      if (!audio) return;
+      audio.play().then(() => {
+        setIsPlaying(true);
+        setAutoplayBlocked(false);
+      }).catch(() => setAutoplayBlocked(true));
+    };
+    window.addEventListener("grouai:start-radio", startFromVoice);
+    if (sessionStorage.getItem("grouai-radio-autostart") === "1") {
+      sessionStorage.removeItem("grouai-radio-autostart");
+      window.setTimeout(startFromVoice, 900);
+    }
+    return () => window.removeEventListener("grouai:start-radio", startFromVoice);
+  }, []);
+
   // Fetch config + schedule
   useEffect(() => {
     if (personalMood) return; // tryb osobisty gra lokalną kolejkę — nie nadpisuj

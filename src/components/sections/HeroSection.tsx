@@ -6,6 +6,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { INTRO_AUDIO_URL } from "@/lib/introAudio";
 import { weeklyArtwork } from "@/lib/weeklyArtwork";
 import { HomeMusicVisualizer } from "@/components/effects/HomeMusicVisualizer";
+import { meltNavigate } from "@/lib/meltNavigate";
 
 const COPY: Record<string, { eyebrow: string; title: string; text: string; studio: string; radio: string; intro: string; stop: string; footer: string }> = {
   pl: { eyebrow: "Radio na żywo. Muzyka, która słucha.", title: "Twój dźwiękowy dom.", text: "Oryginalne utwory niezależnych artystów. Muzyka dobrana do Twojego nastroju przez AI. Radio na żywo gra teraz — dołącz, zanim skończy się ten utwór.", studio: "GrouAI Studio", radio: "Radio na żywo", intro: "Posłuchaj intro", stop: "Zatrzymaj intro", footer: "Muzyka · Technologia · Niezależność" },
@@ -42,15 +43,16 @@ export const HeroSection = () => {
     <section className="premium-home relative isolate overflow-hidden border-b border-border">
       <img src={heroBg} alt="" width={1920} height={1024} fetchPriority="high" className="absolute inset-0 h-full w-full object-cover object-right" />
       <div className="premium-home-shade absolute inset-0" />
+      <div className="hero-aurora pointer-events-none absolute inset-0" aria-hidden="true" />
       <div className="relative px-6 py-12 md:px-10 md:py-16">
         <p className="premium-eyebrow mb-7 text-xs font-medium">{copy.eyebrow}</p>
-        <div className="relative mb-5 h-20 max-w-md overflow-hidden" data-testid="home-equalizer"><HomeMusicVisualizer /></div>
+        <div className="relative mb-5 h-40 max-w-lg overflow-hidden" data-testid="home-equalizer"><HomeMusicVisualizer /></div>
         <h1 className="font-display text-4xl font-bold leading-tight sm:text-5xl lg:text-6xl">GrouAI Stream<span className="premium-heading-accent mt-2 block text-3xl sm:text-4xl lg:text-5xl">{copy.title}</span></h1>
         <p className="mt-6 max-w-md text-base leading-relaxed text-muted-foreground">{copy.text}</p>
         <div className="mt-8 flex flex-wrap gap-3">
-          <Button size="lg" className="premium-primary" onClick={() => navigate("/radio-live")}><Radio />{copy.radio}<ArrowUpRight /></Button>
-          <Button size="lg" variant="outline" className="border-foreground/20 bg-background/60 hover:bg-secondary" onClick={() => navigate("/studio")}><Sparkles />{copy.studio}</Button>
-          <Button size="lg" variant="outline" className="border-foreground/20 bg-background/60 hover:bg-secondary" onClick={() => navigate("/blog")}><Newspaper />Blog</Button>
+          <Button size="lg" className="premium-primary" onClick={(e) => meltNavigate(navigate, "/radio-live", e.currentTarget)}><Radio />{copy.radio}<ArrowUpRight /></Button>
+          <Button size="lg" variant="outline" className="border-foreground/20 bg-background/60 hover:bg-secondary" onClick={(e) => meltNavigate(navigate, "/studio", e.currentTarget)}><Sparkles />{copy.studio}</Button>
+          <Button size="lg" variant="outline" className="border-foreground/20 bg-background/60 hover:bg-secondary" onClick={(e) => meltNavigate(navigate, "/blog", e.currentTarget)}><Newspaper />Blog</Button>
         </div>
         <Button variant="ghost" onClick={toggleIntro} aria-pressed={speaking} className="mt-4 px-0 text-muted-foreground hover:bg-transparent hover:text-foreground">{speaking ? <Square /> : <Volume2 />}{speaking ? copy.stop : copy.intro}<span className="text-xs opacity-60">PL</span></Button>
         {failed && <p role="status" className="text-sm text-muted-foreground">{String(language).startsWith("pl") ? "Nagranie jest chwilowo niedostępne." : "The recording is temporarily unavailable."}</p>}

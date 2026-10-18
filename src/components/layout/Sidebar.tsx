@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, type MouseEvent } from "react";
 import { motion } from "framer-motion";
 import { useNavigate, useLocation } from "react-router-dom";
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -8,6 +8,7 @@ import logoIcon from "@/assets/logo-full.png";
 import { MatrixNotes } from "@/components/effects/MatrixNotes";
 import { isLowPowerDevice } from "@/lib/perf";
 import { useEffects3D } from "@/contexts/Effects3DContext";
+import { meltNavigate } from "@/lib/meltNavigate";
 
 interface SidebarProps {
   collapsed: boolean;
@@ -60,9 +61,9 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
     { icon: "admin_panel_settings", labelKey: "nav.adminPanel", href: "/admin", adminOnly: true },
   ];
 
-  const handleNavClick = (href: string) => {
+  const handleNavClick = (href: string, el?: HTMLElement | null) => {
     setActiveItem(href);
-    navigate(href);
+    meltNavigate(navigate, href, el);
   };
 
   return (
@@ -78,7 +79,7 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
           <motion.div 
             className="relative flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-xl cursor-pointer mx-auto"
             whileHover={{ scale: 1.1, rotate: 5 }}
-            onClick={() => handleNavClick("/")}
+            onClick={(e) => handleNavClick("/", e.currentTarget)}
           >
             <div className="absolute -inset-4 overflow-hidden">
               <MatrixNotes enabled={notesOn} />
@@ -91,7 +92,7 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -10 }}
             className="relative cursor-pointer flex items-center"
-            onClick={() => handleNavClick("/")}
+            onClick={(e) => handleNavClick("/", e.currentTarget)}
             whileHover={{ scale: 1.03 }}
           >
             <div className="absolute -inset-6 overflow-hidden">
@@ -114,7 +115,7 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
       <nav className="flex-1 overflow-y-auto groove-scrollbar px-3 py-4">
         <div className="space-y-1">
           {navItems.map((item) => (
-            <NavItem key={item.href} icon={item.icon} label={t(item.labelKey)} active={activeItem === item.href} collapsed={collapsed} onClick={() => handleNavClick(item.href)} />
+            <NavItem key={item.href} icon={item.icon} label={t(item.labelKey)} active={activeItem === item.href} collapsed={collapsed} onClick={(e) => handleNavClick(item.href, e.currentTarget)} />
           ))}
         </div>
 
@@ -122,7 +123,7 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
 
         {/* Business B2B — animated blue glow */}
         <button
-          onClick={() => handleNavClick("/business")}
+          onClick={(e) => handleNavClick("/business", e.currentTarget)}
           className={cn(
             "group relative flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition-all overflow-hidden",
             "bg-gradient-to-r from-cyan-500/20 via-blue-500/15 to-transparent",
@@ -148,7 +149,7 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
 
         <div className="space-y-1">
           {playlistItems.map((item) => (
-            <NavItem key={item.href} icon={item.icon} label={t(item.labelKey)} active={activeItem === item.href} collapsed={collapsed} onClick={() => handleNavClick(item.href)} badge={item.badge} />
+            <NavItem key={item.href} icon={item.icon} label={t(item.labelKey)} active={activeItem === item.href} collapsed={collapsed} onClick={(e) => handleNavClick(item.href, e.currentTarget)} badge={item.badge} />
           ))}
         </div>
 
@@ -161,15 +162,15 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
         )}
         <div className="space-y-1">
           {aiFeatures.map((item) => (
-            <NavItem key={item.href + item.labelKey} icon={item.icon} label={t(item.labelKey)} active={activeItem === item.href} collapsed={collapsed} onClick={() => handleNavClick(item.href)} isAI />
+            <NavItem key={item.href + item.labelKey} icon={item.icon} label={t(item.labelKey)} active={activeItem === item.href} collapsed={collapsed} onClick={(e) => handleNavClick(item.href, e.currentTarget)} isAI />
           ))}
         </div>
       </nav>
 
       {/* Settings & Legal */}
       <div className="border-t border-border p-3 space-y-1">
-        <NavItem icon="settings" label={t("nav.settings")} active={activeItem === "/settings"} collapsed={collapsed} onClick={() => handleNavClick("/settings")} />
-        <NavItem icon="gavel" label={t("nav.legalDocs")} active={activeItem === "/legal"} collapsed={collapsed} onClick={() => handleNavClick("/legal")} />
+        <NavItem icon="settings" label={t("nav.settings")} active={activeItem === "/settings"} collapsed={collapsed} onClick={(e) => handleNavClick("/settings", e.currentTarget)} />
+        <NavItem icon="gavel" label={t("nav.legalDocs")} active={activeItem === "/legal"} collapsed={collapsed} onClick={(e) => handleNavClick("/legal", e.currentTarget)} />
         {/* Przełącznik prawdziwego trybu 3D (wypukłe kafelki + przechył pod kursorem/żyroskopem) */}
         <button
           onClick={toggle3D}
@@ -198,7 +199,7 @@ interface NavItemProps {
   label: string;
   active: boolean;
   collapsed: boolean;
-  onClick: () => void;
+  onClick: (event: MouseEvent<HTMLButtonElement>) => void;
   badge?: string;
   isAI?: boolean;
 }
@@ -214,7 +215,7 @@ const NavItem = ({ icon, label, active, collapsed, onClick, badge, isAI }: NavIt
       "hover:backdrop-blur-md hover:bg-[hsl(28_100%_55%/0.10)] hover:border-[hsl(32_100%_62%/0.5)]",
       "hover:shadow-[inset_0_1px_0_hsl(44_100%_82%/0.55),inset_0_0_18px_hsl(28_100%_55%/0.20),0_8px_32px_hsl(24_100%_52%/0.45)]",
       active
-        ? "bg-sidebar-accent text-sidebar-foreground border-white/10"
+        ? "bg-sidebar-accent text-sidebar-foreground border-white/10 shadow-[inset_3px_0_0_hsl(var(--primary))]"
         : "text-muted-foreground hover:text-[hsl(40_100%_88%)]",
       collapsed && "justify-center px-2"
     )}

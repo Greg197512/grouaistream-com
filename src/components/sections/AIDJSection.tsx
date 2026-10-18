@@ -75,6 +75,12 @@ export const AIDJSection = () => {
   const [crowdEnergy, setCrowdEnergy] = useState<CrowdEnergy | null>(null);
 
   useEffect(() => {
+    const openParty = () => setShowActivationModal(true);
+    window.addEventListener("grouai:open-party", openParty);
+    return () => window.removeEventListener("grouai:open-party", openParty);
+  }, []);
+
+  useEffect(() => {
     if (aiCurrentMood) {
       const matchingMood = moods.find(m => 
         m.mood.toLowerCase() === aiCurrentMood.mood.toLowerCase()
