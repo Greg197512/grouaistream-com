@@ -28,6 +28,7 @@ import { StudioSparksBackdrop } from "@/components/studio/StudioSparksBackdrop";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { uploadToR2 } from "@/lib/r2Upload";
+import { mirrorToR2, isPersistentAudioUrl } from "@/lib/mirrorAudio";
 import { renderScore } from "@/lib/musicSynth";
 import { generateMusic } from "@/utils/musicGenerator";
 import { Lock, Crown, Download, Share2, Film } from "lucide-react";
@@ -463,13 +464,16 @@ const Suno = () => {
               });
               const s = (st as any)?.status;
               if (s === "succeeded") {
-                const url = (st as any)?.audio_url;
-                if (!url) throw new Error("brak audio");
+                const remoteUrl = (st as any)?.audio_url;
+                if (!remoteUrl) throw new Error("brak audio");
                 const trackTitle = (st as any)?.title || title || `${genre} Track`;
                 const coverUrl = (st as any)?.cover_url || undefined;
                 const lyrics = customLyrics.trim()
                   ? parseLyricsFromText(customLyrics, duration)
                   : generateLyrics(genre, trackTitle, duration, instrumental);
+                // Kopia na R2 — adres dostawcy nie jest trwały (zniknął Storage projektu).
+                setGenStatus(t("studio.status.uploading"));
+                const url = await mirrorToR2(remoteUrl, trackTitle, user!.id);
                 setResult({ audioUrl: url, title: trackTitle, genre, durationSeconds: (st as any)?.duration || duration, lyrics, imageUrl: coverUrl });
                 setGenStatus(t("studio.status.done"));
                 toast.success(`🎶 "${trackTitle}" — Suno V5.5, najwyższa jakość!`);
@@ -798,6 +802,10 @@ const Suno = () => {
   const saveToLibrary = async () => {
     if (!result) return;
     if (!user) { toast.error("Zaloguj się, aby zapisać"); return; }
+    if (!isPersistentAudioUrl(result.audioUrl)) {
+      toast.error("Plik nie został jeszcze zapisany na serwerze — spróbuj wygenerować ponownie.");
+      return;
+    }
     try {
       const artistName = user.user_metadata?.display_name || user.email?.split("@")[0] || "GrouAI Studio";
       const { error } = await supabase.from("tracks").insert({
