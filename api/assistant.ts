@@ -75,10 +75,13 @@ export default async function handler(req: Request): Promise<Response> {
   ].filter((p) => !!p.key);
   const provider = PROVIDERS[0];
   if (!provider) {
+    // Użytkownik widzi tylko neutralny komunikat; szczegóły konfiguracji idą do logów.
+    console.error("[assistant] brak klucza AI — ustaw OPENROUTER_API_KEY / GROQ_API_KEY / XAI_API_KEY / OPENAI_API_KEY w Vercel");
+    const en = (payload as { userContext?: { language?: string } }).userContext?.language === "en";
     return sseText(
-      "⚠️ Asystent nie ma klucza AI. W Vercel (projekt grouaistream-com → Settings → Environment Variables) " +
-      "dodaj jedną z zmiennych: OPENROUTER_API_KEY, GROQ_API_KEY (darmowy plan), XAI_API_KEY albo OPENAI_API_KEY, " +
-      "a potem zrób redeploy."
+      en
+        ? "The assistant is temporarily unavailable. Please try again in a few minutes 🙏"
+        : "Asystent jest chwilowo niedostępny. Spróbuj ponownie za kilka minut 🙏"
     );
   }
   const key = provider.key as string;
