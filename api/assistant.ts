@@ -65,8 +65,23 @@ export default async function handler(req: Request): Promise<Response> {
   let payload: { message?: string; history?: { role: string; content: string }[]; userContext?: unknown; documentContext?: string } = {};
   try { payload = await req.json(); } catch { /* */ }
 
-  const key = process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY;
-  if (!key) return sseText("⚠️ Asystent nie jest jeszcze skonfigurowany — ustaw OPENROUTER_API_KEY w zmiennych Vercel.");
+  // Dostawcy w kolejności pierwszeństwa — bierzemy pierwszy, dla którego jest klucz.
+  // Wszyscy mówią protokołem OpenAI (stream SSE), więc klient bez zmian.
+  const PROVIDERS = [
+    { name: "openrouter", key: process.env.OPENROUTER_API_KEY, url: "https://openrouter.ai/api/v1/chat/completions", model: "anthropic/claude-3.5-sonnet" },
+    { name: "groq", key: process.env.GROQ_API_KEY, url: "https://api.groq.com/openai/v1/chat/completions", model: "llama-3.3-70b-versatile" },
+    { name: "xai", key: process.env.XAI_API_KEY, url: "https://api.x.ai/v1/chat/completions", model: "grok-4.3" },
+    { name: "openai", key: process.env.OPENAI_API_KEY, url: "https://api.openai.com/v1/chat/completions", model: "gpt-4o-mini" },
+  ].filter((p) => !!p.key);
+  const provider = PROVIDERS[0];
+  if (!provider) {
+    return sseText(
+      "⚠️ Asystent nie ma klucza AI. W Vercel (projekt grouaistream-com → Settings → Environment Variables) " +
+      "dodaj jedną z zmiennych: OPENROUTER_API_KEY, GROQ_API_KEY (darmowy plan), XAI_API_KEY albo OPENAI_API_KEY, " +
+      "a potem zrób redeploy."
+    );
+  }
+  const key = provider.key as string;
 
   const message = (payload.message || "").toString();
   if (!message.trim()) return sseText("Napisz, w czym mogę pomóc 🙂");
@@ -84,11 +99,8 @@ export default async function handler(req: Request): Promise<Response> {
     { role: "user", content: message.slice(0, 48000) }, // + dokumenty (do 40 tys. znaków)
   ];
 
-  const usingOpenRouter = !!process.env.OPENROUTER_API_KEY;
-  const endpoint = usingOpenRouter
-    ? "https://openrouter.ai/api/v1/chat/completions"
-    : "https://api.openai.com/v1/chat/completions";
-  const model = process.env.ASSISTANT_MODEL || (usingOpenRouter ? "anthropic/claude-3.5-sonnet" : "gpt-4o-mini");
+  const endpoint = provider.url;
+  const model = process.env.ASSISTANT_MODEL || provider.model;
 
   try {
     const r = await fetch(endpoint, {
@@ -96,7 +108,7 @@ export default async function handler(req: Request): Promise<Response> {
       headers: {
         Authorization: `Bearer ${key}`,
         "Content-Type": "application/json",
-        ...(usingOpenRouter ? { "HTTP-Referer": "https://grouaistream.com", "X-Title": "GrouAI Stream" } : {}),
+        ...(provider.name === "openrouter" ? { "HTTP-Referer": "https://grouaistream.com", "X-Title": "GrouAI Stream" } : {}),
       },
       body: JSON.stringify({ model, stream: true, max_tokens: 2048, temperature: 0.8, messages }),
     });
