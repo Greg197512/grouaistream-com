@@ -7,6 +7,7 @@ import type { Language } from "@/i18n/translations";
 import { searchOurSongs, searchYouTube, looseSuggestion, type YtHit } from "@/lib/reelSearch";
 import { askAssistantOnce } from "@/lib/assistantClient";
 import { supabase } from "@/integrations/supabase/client";
+import { rawDb } from "@/lib/untypedSupabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { invalidateTaste } from "@/lib/personalize";
@@ -54,7 +55,7 @@ export const ReelSearchPopup = ({
 
   // Zapis wyboru = sygnał „społeczności słuchania" (strona uczy się popytu).
   const logRequest = (query: string, m: { match_type: string; track_id?: string | null; video_id?: string | null; title?: string | null; artist?: string | null }) => {
-    try { void supabase.from("reel_requests").insert({ user_id: user?.id ?? null, query, ...m }); } catch { /* */ }
+    try { void rawDb.from("reel_requests").insert({ user_id: user?.id ?? null, query, ...m }); } catch { /* */ }
   };
   // Dodanie do playlisty użytkownika (nasze → Polubione; YT → lokalne ulubione rolki).
   const addOurSong = async (t: Track) => {

@@ -268,6 +268,10 @@ const CreatorEarnings = () => {
     }
   };
 
+  // Recent paid payouts within last 24h (for red confirmation banner)
+  const [dismissedBanners, setDismissedBanners] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem("dismissed_payout_banners") || "[]"); } catch { return []; }
+  });
   if (!user) {
     return (
       <MainLayout>
@@ -281,10 +285,6 @@ const CreatorEarnings = () => {
     );
   }
 
-  // Recent paid payouts within last 24h (for red confirmation banner)
-  const [dismissedBanners, setDismissedBanners] = useState<string[]>(() => {
-    try { return JSON.parse(localStorage.getItem("dismissed_payout_banners") || "[]"); } catch { return []; }
-  });
   const dismissBanner = (id: string) => {
     const next = [...dismissedBanners, id];
     setDismissedBanners(next);

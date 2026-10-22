@@ -51,7 +51,7 @@ export const RelatedPosts = ({ currentPostId, category, tags }: Props) => {
         .order("created_at", { ascending: false })
         .limit(3);
 
-      let result = (sameCat as Post[]) || [];
+      const result = (sameCat as Post[]) || [];
       if (result.length < 3) {
         const have = new Set(result.map((p) => p.id).concat(currentPostId));
         const { data: recent } = await supabase

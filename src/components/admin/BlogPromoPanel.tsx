@@ -5,6 +5,7 @@
 // Zero autopostowania i zero wysyłki maili — świadomie (RODO/ePrivacy + deliverability).
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { rawDb } from "@/lib/untypedSupabase";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -37,7 +38,7 @@ export function BlogPromoPanel() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const { data } = await supabase
+    const { data } = await rawDb
       .from("blog_promo_posts")
       .select("id, blog_slug, blog_title, platform, body, url, status, week_of, created_at")
       .eq("status", "draft")
@@ -75,7 +76,7 @@ export function BlogPromoPanel() {
   };
 
   const setStatus = async (p: PromoPost, status: "posted" | "skipped") => {
-    await supabase.from("blog_promo_posts").update({ status }).eq("id", p.id);
+    await rawDb.from("blog_promo_posts").update({ status }).eq("id", p.id);
     setPosts((list) => list.filter((x) => x.id !== p.id));
   };
 

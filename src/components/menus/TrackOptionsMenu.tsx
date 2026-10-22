@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, forwardRef } from "react";
 import { motion } from "framer-motion";
 import { useFloatingHearts, FloatingHeartsOverlay } from "@/components/effects/FloatingHearts";
 import { RatingLikeModal } from "@/components/modals/RatingLikeModal";
-import { usePlayer } from "@/contexts/PlayerContext";
+import { usePlayerOptional } from "@/contexts/PlayerContext";
 import { CoffeeDialog } from "@/components/payments/CoffeeDialog";
 import { 
   MoreHorizontal, 
@@ -894,7 +894,7 @@ const LikeButtonComponent = (
   ref: React.ForwardedRef<HTMLButtonElement>
 ) => {
   const { user } = useAuth();
-  const player = (() => { try { return usePlayer(); } catch { return null; } })();
+  const player = usePlayerOptional();
   const [isLiked, setIsLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
   const [loading, setLoading] = useState(false);

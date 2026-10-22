@@ -1,6 +1,7 @@
 // @ts-nocheck — generated DB types out of sync
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { rawDb } from "@/lib/untypedSupabase";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -108,7 +109,7 @@ export const BrainPanel = () => {
     try {
       // Nowy, DARMOWY mózg działa w bazie (pg_cron + Pollinations). Ten przycisk
       // wywołuje ręczny tick; wnioski pojawią się w zakładce „Pamięć" po ~1 min.
-      const { error } = await supabase.rpc("brain_run_now");
+      const { error } = await rawDb.rpc("brain_run_now");
       if (error) throw error;
       toast.success("🧠 Mózg dostał sygnał — analizuje świeże zdarzenia. Wnioski pojawią się w zakładce Pamięć w ~1 min.");
       setTimeout(loadAll, 9000);

@@ -58,7 +58,7 @@ export function SubscriptionsAdminPanel() {
       if (error) throw error;
 
       const userIds = (subs ?? []).map((s) => s.user_id);
-      let names: Record<string, string> = {};
+      const names: Record<string, string> = {};
       if (userIds.length) {
         const { data: profiles } = await supabase
           .from("profiles")
@@ -68,7 +68,7 @@ export function SubscriptionsAdminPanel() {
       }
 
       // Bonus: szczegóły Paddle (cancel_at_period_end), jeśli RLS pozwoli.
-      let paddleFlags: Record<string, boolean | null> = {};
+      const paddleFlags: Record<string, boolean | null> = {};
       try {
         const { data: paddleRows } = await supabase
           .from("subscriptions")

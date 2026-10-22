@@ -72,6 +72,8 @@ interface ExternalPlaybackHandlers {
 
 const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
 
+// Wersja opcjonalna: zwraca null poza PlayerProvider (bez wyjątku, zgodna z regułami hooków).
+export const usePlayerOptional = () => useContext(PlayerContext) ?? null;
 export const usePlayer = () => {
   const context = useContext(PlayerContext);
   if (!context) {

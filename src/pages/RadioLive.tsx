@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { rawDb } from "@/lib/untypedSupabase";
 import { motion, AnimatePresence } from "framer-motion";
 import { Radio, Wifi, Music, Volume2, VolumeX, ArrowLeft, Heart, Sparkles, MessageCircle, Send, X, Trash2, Smile, Play } from "lucide-react";
 import { RadioMoodDetector } from "@/components/radio/RadioMoodDetector";
@@ -227,7 +228,7 @@ const RadioLive = () => {
         if (cancelled) return;
         const cfg = (configRes.data as RadioConfig | null) || null;
 
-        const scheduleRes = await supabase
+        const scheduleRes = await rawDb
           .from("radio_schedule")
           .select("position, item_type, custom_title, custom_duration, custom_audio_url, lang, track:tracks(id, title, artist, duration, audio_url, cover_url)")
           .eq("item_type", "track")

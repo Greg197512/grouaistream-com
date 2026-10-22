@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Loader2, Coffee, Flame, Brain, PartyPopper } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { rawDb } from "@/lib/untypedSupabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { toast } from "sonner";
@@ -78,7 +79,7 @@ export const RadioMoodSwitcher = ({ onPick }: { onPick?: (mood: Mood) => void } 
     setLoadingMood(mood);
     toast.loading(`🤖 AI dobiera utwory...`, { id: "mood-switch" });
     try {
-      const { data, error } = await supabase.rpc("apply_radio_mood", { _mood: mood });
+      const { data, error } = await rawDb.rpc("apply_radio_mood", { _mood: mood });
       if (error) throw error;
       const count = (data as { count?: number } | null)?.count ?? 0;
       toast.success(`🎵 Radio dostosowane do "${mood}" — ${count} utworów.`, { id: "mood-switch", duration: 4000 });

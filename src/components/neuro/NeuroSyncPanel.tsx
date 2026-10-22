@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Activity, HeartPulse, Vibrate, Bluetooth } from "lucide-react";
-import { usePlayer } from "@/contexts/PlayerContext";
+import { usePlayerOptional } from "@/contexts/PlayerContext";
 import { useHapticBass } from "@/hooks/useHapticBass";
 import { useHeartRate } from "@/hooks/useHeartRate";
 import { toast } from "sonner";
@@ -9,7 +9,7 @@ import { toast } from "sonner";
 // Panel Neuro-Sync: haptic bass (wibracja na drop) + tętno przez Web Bluetooth.
 // Wszystko web-native, opt-in, bez instalacji apek.
 export function NeuroSyncPanel() {
-  const player = (() => { try { return usePlayer(); } catch { return null; } })();
+  const player = usePlayerOptional();
   const [haptic, setHaptic] = useState<boolean>(() => localStorage.getItem("grouai-haptic") === "1");
   const hasVibrate = typeof navigator !== "undefined" && typeof (navigator as any).vibrate === "function";
 

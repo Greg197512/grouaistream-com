@@ -146,7 +146,7 @@ export const PlaylistGrid = ({ title, subtitle, showAll = true }: PlaylistGridPr
     toast.loading("Loading playlist...", { id: "trending-playlist" });
     
     try {
-      let query = supabase
+      const query = supabase
         .from("tracks")
         .select("*");
       
