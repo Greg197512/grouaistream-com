@@ -19,6 +19,7 @@ import { speak, stopSpeaking as stopVoice } from "@/utils/tts";
 import { YouTubePlayer } from "@/components/player/YouTubePlayer";
 import { buildPersonalQueue, type Mood } from "@/lib/personalRadio";
 import { buildDailyRadio } from "@/lib/radioDaily";
+import { fetchUpcomingRequests, type UpcomingRequest } from "@/lib/radioRequest";
 
 interface RadioConfig {
   is_active: boolean;
@@ -896,6 +897,98 @@ const RadioLive = () => {
     setConfigVersion((v) => v + 1); // przeładuj wspólną antenę
   }, [stopCurrentAudio]);
 
+  // ── Zamówienia słuchaczy („zagraj X o 20:30") ────────────────────────────────
+  // Lista nadchodzących próśb na tę stację (realtime + odświeżanie co minutę).
+  // Każda prośba odpala się LOKALNIE u słuchacza, gdy nadejdzie jej godzina —
+  // utwór z katalogu gra w miejsce muzyki radia, wideo z YouTube otwiera się w oknie.
+  const [requests, setRequests] = useState<UpcomingRequest[]>([]);
+  const [requestVideo, setRequestVideo] = useState<UpcomingRequest | null>(null);
+  const firedRequestIdsRef = useRef<Set<string>>(new Set());
+  const requestPlayingRef = useRef(false);
+
+  useEffect(() => {
+    if (personalMood) return; // tryb osobisty — zamówienia są dla anteny
+    let alive = true;
+    const load = () => {
+      fetchUpcomingRequests(station).then((r) => { if (alive) setRequests(r); }).catch(() => {});
+    };
+    load();
+    const ch = supabase
+      .channel(`radio-requests-${station}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "radio_requests" }, load)
+      .subscribe();
+    const iv = window.setInterval(load, 60_000);
+    return () => { alive = false; window.clearInterval(iv); supabase.removeChannel(ch); };
+  }, [station, personalMood]);
+
+  const closeRequestVideo = useCallback(() => {
+    setRequestVideo(null);
+    requestPlayingRef.current = false;
+    resyncPlayback();
+  }, [resyncPlayback]);
+
+  const playRequest = useCallback((req: UpcomingRequest) => {
+    stopTalk();
+    stopCurrentAudio();
+    playbackTokenRef.current++; // unieważnij zaplanowane przejścia harmonogramu
+    setIsPlaying(false);
+    toast({
+      title: "🎶 Zamówienie na antenie",
+      description: `${req.artist ? `${req.artist} — ` : ""}${req.title}${req.requester_name ? ` · dla ${req.requester_name}` : ""}`,
+    });
+
+    if (req.youtube_id) {
+      requestPlayingRef.current = true;
+      setRequestVideo(req);
+      return;
+    }
+    if (!req.audio_url) return;
+
+    requestPlayingRef.current = true;
+    const audio = new Audio(req.audio_url);
+    audio.preload = "auto";
+    audio.setAttribute("playsinline", "");
+    audio.volume = muted ? 0 : volume / 100;
+    audioRef.current = audio;
+    const finish = () => {
+      if (audioRef.current === audio) audioRef.current = null;
+      requestPlayingRef.current = false;
+      resyncPlayback(); // wróć do zsynchronizowanej pozycji anteny
+    };
+    audio.addEventListener("ended", finish);
+    audio.addEventListener("error", finish);
+    audio.play().then(() => setIsPlaying(true)).catch(finish);
+  }, [stopTalk, stopCurrentAudio, muted, volume, toast, resyncPlayback]);
+
+  // Sprawdzaj co sekundę, czy któraś prośba przyszła godzina (jedna naraz).
+  useEffect(() => {
+    if (personalMood) return;
+    const id = window.setInterval(() => {
+      if (requestPlayingRef.current) return;
+      const now = Date.now();
+      const due = requests.find((r) => !firedRequestIdsRef.current.has(r.id) && now >= new Date(r.play_at).getTime());
+      if (!due) return;
+      firedRequestIdsRef.current.add(due.id);
+      playRequest(due);
+    }, 1000);
+    return () => window.clearInterval(id);
+  }, [requests, personalMood, playRequest]);
+
+  // Wideo z YouTube: zamknij, gdy się skończy (zdarzenie playerState=0), a na wszelki
+  // wypadek po 15 min.
+  useEffect(() => {
+    if (!requestVideo) return;
+    const onMsg = (e: MessageEvent) => {
+      if (typeof e.origin !== "string" || !e.origin.includes("youtube")) return;
+      let d: any;
+      try { d = typeof e.data === "string" ? JSON.parse(e.data) : e.data; } catch { return; }
+      if (d?.event === "infoDelivery" && d?.info?.playerState === 0) closeRequestVideo();
+    };
+    window.addEventListener("message", onMsg);
+    const safety = window.setTimeout(closeRequestVideo, 15 * 60_000);
+    return () => { window.removeEventListener("message", onMsg); window.clearTimeout(safety); };
+  }, [requestVideo, closeRequestVideo]);
+
   // Auto co 3 h (gdy radio gra i nic nie leci na antenie) — świeże opowiadanie z bloga.
   useEffect(() => {
     if (!isPlaying || talkActive || newsVideo) return;
@@ -967,6 +1060,40 @@ const RadioLive = () => {
           </span>
         )}
       </Button>
+
+      {/* Zamówione wideo z YouTube — otwiera się w oknie radia, muzyka anteny wyciszona */}
+      {requestVideo?.youtube_id && (
+        <div className="fixed inset-0 z-[80] bg-black/85 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-3xl space-y-3">
+            <div className="flex items-center justify-between gap-3 text-white">
+              <div className="min-w-0">
+                <p className="text-xs uppercase tracking-wider text-primary">🎶 Zamówienie w radiu</p>
+                <p className="font-semibold truncate">{requestVideo.title}</p>
+                {requestVideo.requester_name && (
+                  <p className="text-xs text-white/70">dla {requestVideo.requester_name}</p>
+                )}
+              </div>
+              <button
+                onClick={closeRequestVideo}
+                className="shrink-0 px-3 py-1 rounded-full border border-white/20 text-sm text-white hover:bg-white/10"
+              >
+                Zamknij
+              </button>
+            </div>
+            <div className="w-full aspect-video rounded-xl overflow-hidden bg-black">
+              <iframe
+                key={requestVideo.id}
+                title={requestVideo.title}
+                src={`https://www.youtube.com/embed/${requestVideo.youtube_id}?autoplay=1&rel=0&modestbranding=1&enablejsapi=1&origin=${encodeURIComponent(window.location.origin)}`}
+                allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+                allowFullScreen
+                className="w-full h-full border-0"
+                onLoad={(e) => e.currentTarget.contentWindow?.postMessage(JSON.stringify({ event: "listening" }), "*")}
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Floating Hearts */}
       <div className="fixed inset-0 pointer-events-none z-30">
