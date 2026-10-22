@@ -20,6 +20,7 @@ import { mixAudioFiles, type MixStyle } from "@/utils/audioMixer";
 import { WaveformPlayer } from "@/components/studio/WaveformPlayer";
 import { toast } from "sonner";
 import { uploadToR2 } from "@/lib/r2Upload";
+import { parseRadioRequest, submitRadioRequest } from "@/lib/radioRequest";
 
 
 interface ChatAttachment {
@@ -542,6 +543,20 @@ export const AIAssistant = () => {
       }
     } catch (e) {
       console.warn("[AIAssistant] DJ parse error:", e);
+    }
+
+    // === PROŚBA O UTWÓR DO RADIA — „zagraj Wykonawca - Tytuł o 20:30" lub link z YouTube ===
+    const radioReq = uploadedAttachments.length === 0 ? parseRadioRequest(userMessage) : null;
+    if (radioReq) {
+      let reply = "Nie udało się zamówić utworu. Spróbuj za chwilę.";
+      try {
+        reply = (await submitRadioRequest(radioReq, "public")).message;
+      } catch (e) {
+        console.warn("[AIAssistant] radio request error:", e);
+      }
+      setMessages(prev => [...prev, { role: "assistant", content: reply }]);
+      setIsLoading(false);
+      return;
     }
 
     try {
