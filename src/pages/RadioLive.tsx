@@ -19,6 +19,7 @@ import { generateTalkScript, speakTalk, stopSpeaking, fetchWorldNews, fetchBlogS
 import { speak, stopSpeaking as stopVoice } from "@/utils/tts";
 import { YouTubePlayer } from "@/components/player/YouTubePlayer";
 import { buildPersonalQueue, type Mood } from "@/lib/personalRadio";
+import { buildDailyRadio } from "@/lib/radioDaily";
 
 interface RadioConfig {
   is_active: boolean;
@@ -203,6 +204,22 @@ const RadioLive = () => {
       if (!cancelled) setIsLoading(false);
     }, 10000);
 
+    // Dzienne radio (rotacja co dzień + nastrój dnia tygodnia; przy padniętej
+    // bazie gra ze snapshotu/R2). Używane, gdy admin nie ma aktywnego grafiku
+    // ORAZ jako fallback, gdy zapytania do bazy się wywalą.
+    const applyDaily = async (): Promise<boolean> => {
+      const daily = await buildDailyRadio(station);
+      if (cancelled) return false;
+      if (!daily || daily.tracks.length === 0) return false;
+      const synthetic: ScheduleTrack[] = daily.tracks.map((t, i) => ({
+        position: i, item_type: "track", custom_title: null, custom_duration: 0, custom_audio_url: null, lang: null,
+        track: { id: t.id, title: t.title, artist: t.artist, duration: t.duration, audio_url: t.audio_url, cover_url: t.cover_url },
+      }));
+      setRawSchedule(synthetic as any);
+      setConfig({ is_active: true, mode: "24h", start_time: null, end_time: null, started_at: daily.startedAtISO, station_name: daily.stationName } as any);
+      return true;
+    };
+
     const fetchData = async () => {
       try {
         const configRes = await supabase.from("radio_config").select("*").limit(1).maybeSingle();
@@ -222,36 +239,21 @@ const RadioLive = () => {
         const offAir = !cfg?.is_active || playable.length === 0;
 
         if (!offAir) {
+          // Admin ma aktywny grafik — szanujemy go.
           if (cfg) setConfig(cfg as any);
           setRawSchedule(rows as any);
         } else {
-          // Fallback: zawsze grające radio gatunkowe (hip-hop / techno / disco),
-          // gdy admin nie ma aktywnego grafiku. Nie dotyka trybu admina.
-          const kws = ["hip-hop", "hip hop", "rap", "trap", "techno", "house", "edm", "electronic", "disco", "funk", "nu-disco", "dance"];
-          const orFilter = kws.map((k) => `genre.ilike.%${k}%`).join(",");
-          const { data: gx } = await supabase
-            .from("tracks")
-            .select("id,title,artist,duration,audio_url,cover_url,genre")
-            .or(orFilter)
-            .not("audio_url", "is", null)
-            .limit(150);
-          if (cancelled) return;
-          const pool = Array.isArray(gx) ? (gx as any[]) : [];
-          if (pool.length > 0) {
-            const shuffled = [...pool].sort(() => Math.random() - 0.5).slice(0, 120);
-            const synthetic: ScheduleTrack[] = shuffled.map((t, i) => ({
-              position: i, item_type: "track", custom_title: null, custom_duration: 0, custom_audio_url: null, lang: null,
-              track: { id: t.id, title: t.title, artist: t.artist, duration: t.duration, audio_url: t.audio_url, cover_url: t.cover_url },
-            }));
-            setRawSchedule(synthetic as any);
-            setConfig({ is_active: true, mode: "24h", start_time: null, end_time: null, started_at: new Date().toISOString(), station_name: "GrouaRadio · Hip-Hop / Techno / Disco" } as any);
-          } else {
+          // Brak aktywnego grafiku → dzienne radio (rotacja + nastrój dnia).
+          const ok = await applyDaily();
+          if (!ok && !cancelled) {
             if (cfg) setConfig(cfg as any);
             setRawSchedule(rows as any);
           }
         }
       } catch (err) {
         console.error("[RadioLive] Fetch error:", err);
+        // Baza offline → spróbuj zagrać dzienne radio ze snapshotu (R2).
+        try { await applyDaily(); } catch { /* */ }
       } finally {
         clearTimeout(timeout);
         if (!cancelled) setIsLoading(false);
