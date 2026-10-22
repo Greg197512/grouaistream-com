@@ -74,6 +74,8 @@ export default async function handler(req: Request): Promise<Response> {
     { name: "openrouter", key: process.env.OPENROUTER_API_KEY, url: "https://openrouter.ai/api/v1/chat/completions", model: "google/gemma-4-31b-it:free" },
     { name: "xai", key: process.env.XAI_API_KEY, url: "https://api.x.ai/v1/chat/completions", model: "grok-4.3" },
     { name: "openai", key: process.env.OPENAI_API_KEY, url: "https://api.openai.com/v1/chat/completions", model: "gpt-4o-mini" },
+    // Bez klucza: publiczny endpoint Pollinations — działa też, gdy nie ustawiono żadnej zmiennej.
+    { name: "pollinations", key: "keyless", url: "https://text.pollinations.ai/openai", model: "openai" },
   ].filter((p) => !!p.key);
   const provider = PROVIDERS[0];
   if (!provider) {
@@ -111,7 +113,31 @@ export default async function handler(req: Request): Promise<Response> {
   const endpoint = provider.url;
   const model = process.env.ASSISTANT_MODEL || provider.model;
 
+  const UNAVAILABLE = "Asystent jest chwilowo niedostępny. Spróbuj ponownie za kilka minut 🙏";
   try {
+    if (provider.name === "pollinations") {
+      // Bez klucza i bez gwarancji stream — bierzemy całą odpowiedź i wysyłamy ją jako SSE.
+      const ac = new AbortController();
+      const timer = setTimeout(() => ac.abort(), 25_000);
+      try {
+        const r = await fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ model, stream: false, messages }),
+          signal: ac.signal,
+        });
+        const j = (await r.json().catch(() => null)) as { choices?: { message?: { content?: string } }[] } | null;
+        const content = j?.choices?.[0]?.message?.content?.trim();
+        if (!r.ok || !content) {
+          console.error("[assistant] pollinations: HTTP", r.status);
+          return sseText(UNAVAILABLE);
+        }
+        return sseText(content);
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+
     const r = await fetch(endpoint, {
       method: "POST",
       headers: {
@@ -122,12 +148,13 @@ export default async function handler(req: Request): Promise<Response> {
       body: JSON.stringify({ model, stream: true, max_tokens: 2048, temperature: 0.8, messages }),
     });
     if (!r.ok || !r.body) {
-      const t = await r.text().catch(() => "");
-      return sseText(`⚠️ Błąd AI (${r.status}). ${t.slice(0, 200)}`);
+      console.error(`[assistant] ${provider.name}: HTTP ${r.status}`, await r.text().catch(() => ""));
+      return sseText(UNAVAILABLE);
     }
-    // Przekaż strumień SSE bez zmian (OpenRouter/OpenAI = format OpenAI).
+    // Przekaż strumień SSE bez zmian (OpenRouter/OpenAI/Gemini/Groq = format OpenAI).
     return new Response(r.body, { headers: SSE_HEADERS });
   } catch (e) {
-    return sseText("⚠️ Nie mogę teraz połączyć się z AI. Spróbuj ponownie za chwilę.");
+    console.error("[assistant] błąd połączenia:", e);
+    return sseText(UNAVAILABLE);
   }
 }
