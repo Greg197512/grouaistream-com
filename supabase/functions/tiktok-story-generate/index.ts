@@ -33,7 +33,7 @@ async function uploadToR2(key: string, data: Uint8Array, contentType: string): P
   const amzDate = now.toISOString().replace(/[:-]|\.\d{3}/g, "");
   const dateStamp = amzDate.slice(0, 8);
 
-  const payloadHashBuf = await crypto.subtle.digest("SHA-256", data);
+  const payloadHashBuf = await crypto.subtle.digest("SHA-256", data as BufferSource);
   const payloadHash = Array.from(new Uint8Array(payloadHashBuf)).map(b => b.toString(16).padStart(2, "0")).join("");
 
   const host = new URL(S3_ENDPOINT).host;
