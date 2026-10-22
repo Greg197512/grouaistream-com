@@ -1,7 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { withTimeout, TimeoutError } from "@/lib/withTimeout";
 
-const AUTH_RESTORE_TIMEOUT_MS = 15_000;
+const AUTH_RESTORE_TIMEOUT_MS = 5_000; // przy padniętej bazie nie czekamy 15 s na pusty ekran
 
 export const clearStoredAuthSession = () => {
   if (typeof window === "undefined") return;
