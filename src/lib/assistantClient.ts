@@ -13,7 +13,6 @@ export async function askAssistantOnce(message: string, userContext?: any): Prom
     const dec = new TextDecoder();
     let buf = "";
     let out = "";
-    // eslint-disable-next-line no-constant-condition
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;

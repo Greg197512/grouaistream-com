@@ -53,7 +53,7 @@ export const VoiceLibrary = ({ selectedVoiceId, onSelect, refreshKey = 0 }: Voic
     }
   };
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [user?.id, refreshKey]);
+  useEffect(() => { load();   }, [user?.id, refreshKey]);
 
   const remove = async (v: SavedVoice) => {
     if (!confirm(`Usunąć głos "${v.label}"?`)) return;

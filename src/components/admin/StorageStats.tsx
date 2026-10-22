@@ -30,7 +30,7 @@ export const StorageStats = () => {
       });
 
       // List nested folders too
-      let allFiles: any[] = [];
+      const allFiles: any[] = [];
       if (musicFiles) {
         for (const item of musicFiles) {
           if (item.id) {

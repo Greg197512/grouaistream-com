@@ -24,7 +24,7 @@ export const StudioVisualizer = () => {
     if (!ctx) return;
 
     let raf = 0;
-    let rot = 0;
+    const rot = 0;
     let idleFrames = 0; // ile klatek z rzędu bez ruchu (cisza) — potem usypiamy pętlę
 
     const draw = () => {

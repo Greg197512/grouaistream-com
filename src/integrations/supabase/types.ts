@@ -5335,6 +5335,56 @@ export type Database = {
         }
         Relationships: []
       }
+      radio_requests: {
+        Row: {
+          artist: string | null
+          created_at: string
+          id: string
+          play_at: string
+          requester_name: string | null
+          station: string
+          status: string
+          title: string
+          track_id: string | null
+          user_id: string
+          youtube_id: string | null
+        }
+        Insert: {
+          artist?: string | null
+          created_at?: string
+          id?: string
+          play_at: string
+          requester_name?: string | null
+          station?: string
+          status?: string
+          title: string
+          track_id?: string | null
+          user_id: string
+          youtube_id?: string | null
+        }
+        Update: {
+          artist?: string | null
+          created_at?: string
+          id?: string
+          play_at?: string
+          requester_name?: string | null
+          station?: string
+          status?: string
+          title?: string
+          track_id?: string | null
+          user_id?: string
+          youtube_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "radio_requests_track_id_fkey"
+            columns: ["track_id"]
+            isOneToOne: false
+            referencedRelation: "tracks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       radio_program_slot: {
         Row: {
           created_at: string

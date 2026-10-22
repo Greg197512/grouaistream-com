@@ -130,7 +130,7 @@ export const NaCzasieHits = () => {
           )}
         </div>
       ) : (
-        <YouTubeFallback lang={language} onFullscreen={() => setReels(true)} L={L} />
+        <YouTubeFallback lang={language} onFullscreen={() => setReels(true)} L={L} videoIds={reelIds} />
       )}
 
       {/* Pełnoekranowe rolki: nasze utwory + teledyski AI (YouTube bez końca) */}
@@ -149,7 +149,7 @@ export const NaCzasieHits = () => {
 };
 
 // Fallback: okno z playlistą YouTube (gdy nie mamy własnych teledysków).
-const YouTubeFallback = ({ lang, onFullscreen, L }: { lang: string; onFullscreen: () => void; L: (pl: string, en: string, nl: string, ua: string) => string }) => {
+const YouTubeFallback = ({ lang, onFullscreen, L, videoIds }: { lang: string; onFullscreen: () => void; L: (pl: string, en: string, nl: string, ua: string) => string; videoIds: string[] }) => {
   const mountRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const playerRef = useRef<any>(null);
@@ -164,7 +164,7 @@ const YouTubeFallback = ({ lang, onFullscreen, L }: { lang: string; onFullscreen
         width: "100%", height: "100%",
         playerVars: { autoplay: 0, controls: 1, rel: 0, modestbranding: 1, playsinline: 1 },
         events: {
-          onReady: () => { try { playerRef.current?.cuePlaylist?.({ playlist: reelIds, index: 0 }); } catch { /* */ } setReady(true); setTimeout(refreshMeta, 600); },
+          onReady: () => { try { playerRef.current?.cuePlaylist?.({ playlist: videoIds, index: 0 }); } catch { /* */ } setReady(true); setTimeout(refreshMeta, 600); },
           onStateChange: () => refreshMeta(),
           onError: () => { try { playerRef.current?.nextVideo?.(); } catch { /* */ } },
         },

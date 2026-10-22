@@ -59,7 +59,7 @@ export const GenreSection = ({ genre, title, icon, color, limit = 8 }: GenreSect
         );
 
         if (error) throw error;
-        if (isMounted) setTracks((data || []) as Track[]);
+        if (isMounted) setTracks((data || []) as unknown as Track[]);
       } catch (error) {
         console.error(`Error fetching ${genre} tracks:`, error);
         if (isMounted) setHasError(true);

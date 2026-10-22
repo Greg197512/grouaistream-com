@@ -46,7 +46,7 @@ export function EngineLearningPanel() {
     finally { setLoading(false); }
   }, [pin]);
 
-  useEffect(() => { if (pin) void load(); /* eslint-disable-next-line */ }, []);
+  useEffect(() => { if (pin) void load();   }, []);
 
   const [refreshing, setRefreshing] = useState(false);
   const refreshCatalog = async () => {

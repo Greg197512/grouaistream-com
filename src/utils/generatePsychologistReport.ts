@@ -249,7 +249,7 @@ export const generatePsychologistReport = (
     if (analysis.patterns.length > 0) {
       addSectionHeader("2. WYKRYTE WZORCE");
       analysis.patterns.forEach((pattern) => {
-        const cleanPattern = pattern.replace(/^[🔴🔵🟢🟠ℹ️]\s*/, "• ");
+        const cleanPattern = pattern.replace(/^(?:🔴|🔵|🟢|🟠|ℹ️?)\s*/u, "• ");
         yPos = addWrappedText(cleanPattern, margin, yPos, pageWidth - 2 * margin, 10);
         yPos += 3;
       });

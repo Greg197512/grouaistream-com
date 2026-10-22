@@ -353,7 +353,6 @@ const Suno = () => {
     setShowAdvanced(true);
     setActiveTab("generate");
     setEraPreset({ label: y ? String(y) : era.label, accent: era.palette.accent, emoji: era.emoji });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
 

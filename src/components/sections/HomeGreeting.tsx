@@ -31,7 +31,6 @@ export const HomeGreeting = () => {
     if (typeof matchMedia !== "undefined" && matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const id = setInterval(() => setIdx((i) => (i + 1) % states.length), 2600);
     return () => clearInterval(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [states.length]);
 
   // Chipsy gatunków

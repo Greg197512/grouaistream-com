@@ -63,7 +63,6 @@ function evaluateFormula(formula: string, data: string[][]): string {
       return String(v[0] ?? 0);
     });
     if (/^[\d+\-*/.()\s]+$/.test(expr)) {
-      // eslint-disable-next-line no-new-func
       const r = Function(`"use strict";return (${expr})`)();
       return String(typeof r === "number" ? Math.round(r * 1000000) / 1000000 : r);
     }

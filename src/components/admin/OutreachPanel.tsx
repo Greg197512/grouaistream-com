@@ -4,6 +4,7 @@
 // klient pocztowy), loguje wysyłki i prowadzi listę opt-out.
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { rawDb } from "@/lib/untypedSupabase";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -117,7 +118,7 @@ export function OutreachPanel() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const { data } = await supabase
+    const { data } = await rawDb
       .from("outreach_contacts")
       .select("id, org_name, contact_email, category, source_url, status, notes, last_contacted_at, created_at")
       .order("created_at", { ascending: false })
@@ -132,7 +133,7 @@ export function OutreachPanel() {
     if (!form.org_name.trim() || !form.contact_email.trim()) { toast.error("Podaj nazwę i e-mail"); return; }
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(form.contact_email.trim())) { toast.error("Nieprawidłowy e-mail"); return; }
     setSaving(true);
-    const { error } = await supabase.from("outreach_contacts").insert({
+    const { error } = await rawDb.from("outreach_contacts").insert({
       org_name: form.org_name.trim(),
       contact_email: form.contact_email.trim().toLowerCase(),
       category: form.category,
@@ -148,7 +149,7 @@ export function OutreachPanel() {
   const setStatus = async (c: Contact, status: Contact["status"]) => {
     const patch: any = { status };
     if (status === "contacted") patch.last_contacted_at = new Date().toISOString();
-    await supabase.from("outreach_contacts").update(patch).eq("id", c.id);
+    await rawDb.from("outreach_contacts").update(patch).eq("id", c.id);
     setContacts((list) => list.map((x) => (x.id === c.id ? { ...x, ...patch } : x)));
   };
 
