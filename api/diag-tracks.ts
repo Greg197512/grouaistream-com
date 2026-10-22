@@ -4,7 +4,8 @@
 // hostingu audio_url (R2 / Suno / Supabase Storage) i szybkiego podglądu.
 export const config = { runtime: "edge" };
 
-const SUPABASE_URL = "https://bvstvawnigyczvofzhps.supabase.co";
+// Projekt z env (Vercel: VITE_SUPABASE_URL); stały adres to awaryjny domyślny.
+const SUPABASE_URL = process.env.VITE_SUPABASE_URL || "https://bvstvawnigyczvofzhps.supabase.co";
 const ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ2c3R2YXduaWd5Y3p2b2Z6aHBzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg3NDEwMzEsImV4cCI6MjA4NDMxNzAzMX0.Mp6lpKIcFGsduODIwm1V7FcRQmaN5DtPM5aaqj9i_Xw";
 
 function hostOf(u: string | null): string {
