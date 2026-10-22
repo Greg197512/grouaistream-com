@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { motion, AnimatePresence, useDragControls } from "framer-motion";
-import { Send, Loader2, ExternalLink, Music, Power, GripHorizontal, Sparkles, Maximize2, Minimize2, Radio, Waves, Copy, Check, Paperclip, Image, X, FileAudio, Film, Trash2, Mic, Volume2, VolumeX } from "lucide-react";
+import { Send, Loader2, ExternalLink, Music, Power, GripHorizontal, Sparkles, Maximize2, Minimize2, Radio, Waves, Copy, Check, Paperclip, Image, X, FileAudio, Film, Trash2, Mic, Volume2, VolumeX, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -20,11 +20,11 @@ import { mixAudioFiles, type MixStyle } from "@/utils/audioMixer";
 import { WaveformPlayer } from "@/components/studio/WaveformPlayer";
 import { toast } from "sonner";
 import { uploadToR2 } from "@/lib/r2Upload";
-import { parseRadioRequest, submitRadioRequest } from "@/lib/radioRequest";
+import { isDocumentFile, readDocumentText, documentBlock, UNSUPPORTED_DOC_EXT } from "@/lib/chatDocument";
 
 
 interface ChatAttachment {
-  type: "image" | "audio" | "video";
+  type: "image" | "audio" | "video" | "document";
   url: string; // object URL or uploaded URL
   name: string;
   file?: File;
@@ -112,6 +112,8 @@ export const AIAssistant = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [userName, setUserName] = useState("Użytkownik");
   const [attachments, setAttachments] = useState<ChatAttachment[]>([]);
+  // Treść ostatnio wrzuconego dokumentu — model dostaje ją także przy kolejnych pytaniach.
+  const docContextRef = useRef("");
   const [isDragOver, setIsDragOver] = useState(false);
   
   const [listeningStats, setListeningStats] = useState<{ topGenres: string[]; topMoods: string[]; recentTracks: number } | null>(null);
@@ -366,6 +368,10 @@ export const AIAssistant = () => {
         newAttachments.push({ type: "video", url: URL.createObjectURL(file), name: file.name, file });
       } else if (file.type.startsWith("audio/") || file.name.match(/\.(mp3|wav|ogg|flac|m4a|aac|wma|opus)$/i)) {
         newAttachments.push({ type: "audio", url: URL.createObjectURL(file), name: file.name, file });
+      } else if (isDocumentFile(file.name)) {
+        newAttachments.push({ type: "document", url: "", name: file.name, file });
+      } else if (UNSUPPORTED_DOC_EXT.test(file.name)) {
+        toast.error(`PDF/DOCX nie są jeszcze czytane — zapisz jako .txt albo wklej tekst: ${file.name}`);
       } else {
         toast.error(`Nieobsługiwany format: ${file.name}`);
       }
@@ -480,9 +486,23 @@ export const AIAssistant = () => {
     setInput("");
     setAttachments([]);
 
+    // Dokumenty: nie wysyłamy ich na R2 — czytamy treść i dokładamy do wiadomości.
+    let docBlocks = "";
+    for (const att of currentAttachments.filter((a) => a.type === "document" && a.file)) {
+      const text = await readDocumentText(att.file!);
+      docBlocks += text
+        ? documentBlock(att.name, text)
+        : `\n\n[Nie udało się odczytać dokumentu: ${att.name}]`;
+    }
+    if (docBlocks) docContextRef.current = docBlocks;
+
     // Upload attachments (with graceful fallback to blob URLs)
     const uploadedAttachments: ChatAttachment[] = [];
     for (const att of currentAttachments) {
+      if (att.type === "document") {
+        uploadedAttachments.push({ type: "document", url: "", name: att.name });
+        continue;
+      }
       try {
         const publicUrl = await uploadAttachment(att);
         uploadedAttachments.push({ type: att.type, url: publicUrl, name: att.name });
@@ -509,6 +529,12 @@ export const AIAssistant = () => {
         console.error("Error saving to server:", err);
       }
     }
+
+    // Muzyka/wideo: model nie słyszy pliku — dajemy mu znać, żeby odpowiedział uczciwie.
+    const mediaNames = uploadedAttachments.filter(a => a.type === "audio" || a.type === "video").map(a => a.name);
+    const mediaNote = mediaNames.length
+      ? `\n[Użytkownik wrzucił muzykę/wideo: ${mediaNames.join(", ")}. Nie odsłuchujesz plików — odpowiedz na podstawie nazwy i wiadomości, zaproponuj konkretną pomoc (np. tekst, opis, plan miksu) i zapytaj, czego potrzebuje.]`
+      : "";
 
     const saveInfoForAI = serverSaveResult && serverSaveResult.saved > 0
       ? `\n[SYSTEM: Użytkownik wrzucił ${serverSaveResult.saved} plików na serwer: ${serverSaveResult.titles.join(", ")}. Potwierdź to w odpowiedzi.]`
@@ -545,20 +571,6 @@ export const AIAssistant = () => {
       console.warn("[AIAssistant] DJ parse error:", e);
     }
 
-    // === PROŚBA O UTWÓR DO RADIA — „zagraj Wykonawca - Tytuł o 20:30" lub link z YouTube ===
-    const radioReq = uploadedAttachments.length === 0 ? parseRadioRequest(userMessage) : null;
-    if (radioReq) {
-      let reply = "Nie udało się zamówić utworu. Spróbuj za chwilę.";
-      try {
-        reply = (await submitRadioRequest(radioReq, "public")).message;
-      } catch (e) {
-        console.warn("[AIAssistant] radio request error:", e);
-      }
-      setMessages(prev => [...prev, { role: "assistant", content: reply }]);
-      setIsLoading(false);
-      return;
-    }
-
     try {
       // Asystent działa przez funkcję Vercel /api/assistant (połączoną z AI).
       const url = "/api/assistant";
@@ -569,7 +581,8 @@ export const AIAssistant = () => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ 
-          message: userMessage + saveInfoForAI, 
+          message: userMessage + saveInfoForAI + docBlocks + mediaNote,
+          documentContext: docContextRef.current || undefined,
           history: messages, 
           userContext,
           attachments: uploadedAttachments.length > 0 ? uploadedAttachments.map(a => ({ type: a.type, url: a.url, name: a.name })) : undefined,
@@ -1145,6 +1158,12 @@ export const AIAssistant = () => {
                                       <p className="text-[10px] mt-1 truncate text-muted-foreground">{att.name}</p>
                                     </div>
                                   )}
+                                  {att.type === "document" && (
+                                    <div className="flex items-center gap-2 p-2 rounded-lg bg-primary-foreground/10">
+                                      <FileText className="h-4 w-4 shrink-0" />
+                                      <p className="text-[10px] truncate">{att.name}</p>
+                                    </div>
+                                  )}
                                 </div>
                               ))}
                             </div>
@@ -1341,6 +1360,11 @@ export const AIAssistant = () => {
                         <Film className="h-5 w-5 text-accent" />
                         <span className="text-[7px] text-muted-foreground mt-0.5 max-w-[48px] truncate">{att.name}</span>
                       </div>
+                    ) : att.type === "document" ? (
+                      <div className="w-14 h-14 rounded-lg bg-white/5 border border-white/10 flex flex-col items-center justify-center">
+                        <FileText className="h-5 w-5 text-primary" />
+                        <span className="text-[7px] text-muted-foreground mt-0.5 max-w-[48px] truncate">{att.name}</span>
+                      </div>
                     ) : (
                       <div className="w-14 h-14 rounded-lg bg-white/5 border border-white/10 flex flex-col items-center justify-center">
                         <FileAudio className="h-5 w-5 text-primary" />
@@ -1363,7 +1387,7 @@ export const AIAssistant = () => {
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*,audio/*,video/*,.mp4,.webm,.mov,.avi,.mkv,.mp3,.wav,.flac,.m4a,.aac,.ogg,.opus"
+                accept="image/*,audio/*,video/*,.mp4,.webm,.mov,.avi,.mkv,.mp3,.wav,.flac,.m4a,.aac,.ogg,.opus,.txt,.md,.csv,.tsv,.json,.srt,.lrc,.xml,.html,.xlsx,.xls"
                 multiple
                 className="hidden"
                 onChange={(e) => { if (e.target.files) handleFiles(e.target.files); e.target.value = ""; }}
