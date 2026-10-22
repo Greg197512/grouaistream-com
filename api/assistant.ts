@@ -67,16 +67,18 @@ export default async function handler(req: Request): Promise<Response> {
 
   // Dostawcy w kolejności pierwszeństwa — bierzemy pierwszy, dla którego jest klucz.
   // Wszyscy mówią protokołem OpenAI (stream SSE), więc klient bez zmian.
+  // Najpierw darmowe (Gemini, Groq, OpenRouter :free), potem płatne jako zapas.
   const PROVIDERS = [
-    { name: "openrouter", key: process.env.OPENROUTER_API_KEY, url: "https://openrouter.ai/api/v1/chat/completions", model: "anthropic/claude-3.5-sonnet" },
+    { name: "gemini", key: process.env.GEMINI_API_KEY, url: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", model: "gemini-2.5-flash" },
     { name: "groq", key: process.env.GROQ_API_KEY, url: "https://api.groq.com/openai/v1/chat/completions", model: "llama-3.3-70b-versatile" },
+    { name: "openrouter", key: process.env.OPENROUTER_API_KEY, url: "https://openrouter.ai/api/v1/chat/completions", model: "google/gemma-4-31b-it:free" },
     { name: "xai", key: process.env.XAI_API_KEY, url: "https://api.x.ai/v1/chat/completions", model: "grok-4.3" },
     { name: "openai", key: process.env.OPENAI_API_KEY, url: "https://api.openai.com/v1/chat/completions", model: "gpt-4o-mini" },
   ].filter((p) => !!p.key);
   const provider = PROVIDERS[0];
   if (!provider) {
     // Użytkownik widzi tylko neutralny komunikat; szczegóły konfiguracji idą do logów.
-    console.error("[assistant] brak klucza AI — ustaw OPENROUTER_API_KEY / GROQ_API_KEY / XAI_API_KEY / OPENAI_API_KEY w Vercel");
+    console.error("[assistant] brak klucza AI — ustaw GEMINI_API_KEY (darmowy) lub GROQ_API_KEY (darmowy) / OPENROUTER_API_KEY / XAI_API_KEY / OPENAI_API_KEY w Vercel");
     const en = (payload as { userContext?: { language?: string } }).userContext?.language === "en";
     return sseText(
       en
@@ -95,9 +97,13 @@ export default async function handler(req: Request): Promise<Response> {
   const docCtx = typeof payload.documentContext === "string" && !message.includes("--- Dokument:")
     ? payload.documentContext.slice(0, 40000)
     : "";
+  // Jedna wiadomość systemowa (część dostawców nie łyka kilku naraz).
+  const system = [
+    buildSystem(payload.userContext),
+    ...(docCtx ? ["Dokument z tej rozmowy (kontekst, odwołuj się do niego w razie potrzeby):" + docCtx] : []),
+  ].join("\n\n");
   const messages = [
-    { role: "system", content: buildSystem(payload.userContext) },
-    ...(docCtx ? [{ role: "system", content: "Dokument z tej rozmowy (kontekst, odwołuj się do niego w razie potrzeby):" + docCtx }] : []),
+    { role: "system", content: system },
     ...history.map((m) => ({ role: m.role === "assistant" ? "assistant" : "user", content: String(m.content || "").slice(0, 4000) })),
     { role: "user", content: message.slice(0, 48000) }, // + dokumenty (do 40 tys. znaków)
   ];
