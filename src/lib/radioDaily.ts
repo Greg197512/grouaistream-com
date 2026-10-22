@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { loadTrackSnapshot, type SnapshotTrack } from "@/lib/trackSnapshot";
+import { withTimeout } from "@/lib/withTimeout";
 
 // Dzienne „radio z harmonogramem": co dzień inna, deterministyczna playlista
 // (ten sam porządek dla wszystkich słuchaczy danego dnia — czas synchronizowany
@@ -108,11 +109,15 @@ export async function buildDailyRadio(station: "public" | "vip", max = 140): Pro
   // Pula: Supabase → fallback snapshot (R2).
   let pool: DailyRadioTrack[] = [];
   try {
-    const { data, error } = await supabase
-      .from("tracks")
-      .select("id,title,artist,duration,audio_url,cover_url,genre")
-      .not("audio_url", "is", null)
-      .limit(800);
+    const { data, error } = await withTimeout(
+      supabase
+        .from("tracks")
+        .select("id,title,artist,duration,audio_url,cover_url,genre")
+        .not("audio_url", "is", null)
+        .limit(800),
+      4000,
+      "daily tracks",
+    );
     if (!error && Array.isArray(data) && data.length) {
       pool = (data as DailyRadioTrack[]).filter((t) => t.audio_url);
     }

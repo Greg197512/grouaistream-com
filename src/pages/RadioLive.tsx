@@ -21,6 +21,9 @@ import { YouTubePlayer } from "@/components/player/YouTubePlayer";
 import { buildPersonalQueue, type Mood } from "@/lib/personalRadio";
 import { buildDailyRadio } from "@/lib/radioDaily";
 import { fetchUpcomingRequests, type UpcomingRequest } from "@/lib/radioRequest";
+import { withTimeout } from "@/lib/withTimeout";
+
+const RADIO_DB_TIMEOUT_MS = 4000;
 
 interface RadioConfig {
   is_active: boolean;
@@ -223,17 +226,18 @@ const RadioLive = () => {
 
     const fetchData = async () => {
       try {
-        const configRes = await supabase.from("radio_config").select("*").limit(1).maybeSingle();
+        // Limit czasu: wiszący backend nie może zablokować radia — po 4 s idziemy na katalog awaryjny.
+        const configRes = await withTimeout(supabase.from("radio_config").select("*").limit(1).maybeSingle(), RADIO_DB_TIMEOUT_MS, "radio_config");
         if (cancelled) return;
         const cfg = (configRes.data as RadioConfig | null) || null;
 
-        const scheduleRes = await rawDb
+        const scheduleRes = await withTimeout<{ data: unknown }>(rawDb
           .from("radio_schedule")
           .select("position, item_type, custom_title, custom_duration, custom_audio_url, lang, track:tracks(id, title, artist, duration, audio_url, cover_url)")
           .eq("item_type", "track")
           .eq("station", station)
           .order("position", { ascending: true })
-          .limit(2000);
+          .limit(2000), RADIO_DB_TIMEOUT_MS, "radio_schedule");
         if (cancelled) return;
         const rows = Array.isArray(scheduleRes.data) ? (scheduleRes.data as any[]) : [];
         const playable = rows.filter((r) => r?.track?.audio_url);
