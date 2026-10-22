@@ -14,6 +14,7 @@ import { FlameIcon } from "@/components/effects/FlameIcon";
 import { LikeButton, TrackOptionsMenu } from "@/components/menus/TrackOptionsMenu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { withTimeout } from "@/lib/withTimeout";
+import { resilientTracks } from "@/lib/trackSnapshot";
 
 const FETCH_TIMEOUT_MS = 25_000;
 const PROFILE_FETCH_TIMEOUT_MS = 8_000;
@@ -171,17 +172,21 @@ export const NewOnServer = () => {
     setLoading(true);
     setHasError(false);
     try {
-      const { data, error } = await withTimeout(
-        supabase.from("tracks").select(TRACK_SELECT)
-          .or("audio_url.not.is.null,video_url.not.is.null")
-          .order("created_at", { ascending: false })
-          .limit(8),
-        FETCH_TIMEOUT_MS, "NewOnServer tracks"
+      const { rows: tracksData, fromSnapshot } = await resilientTracks<ServerTrack>(
+        () => withTimeout(
+          supabase.from("tracks").select(TRACK_SELECT)
+            .or("audio_url.not.is.null,video_url.not.is.null")
+            .order("created_at", { ascending: false })
+            .limit(8),
+          FETCH_TIMEOUT_MS, "NewOnServer tracks"
+        ) as Promise<{ data: ServerTrack[] | null; error: unknown }>,
+        { order: "created_at", ascending: false, limit: 8, filter: (t) => !!(t.audio_url || t.video_url) },
       );
       if (!mountedRef.current) return;
-      if (error) throw error;
-      const tracksData = (data || []) as ServerTrack[];
-      const userIds = Array.from(new Set(tracksData.map(t => t.user_id).filter(Boolean))) as string[];
+      // Ze snapshotu (baza offline) pomijamy profile uploaderów i generowanie okładek.
+      const userIds = fromSnapshot
+        ? []
+        : (Array.from(new Set(tracksData.map(t => t.user_id).filter(Boolean))) as string[]);
       let profilesMap: Record<string, UploaderProfile> = {};
       if (userIds.length > 0) {
         try {
@@ -198,8 +203,8 @@ export const NewOnServer = () => {
       if (mountedRef.current) {
         setTracks(tracksData.map(t => ({ ...t, uploader: t.user_id ? profilesMap[t.user_id] || null : null })));
 
-        // Wznów generowanie okładek dla brakujących
-        tracksData.forEach(track => {
+        // Wznów generowanie okładek dla brakujących (tylko gdy baza żyje).
+        if (!fromSnapshot) tracksData.forEach(track => {
           if (!track.cover_url && track.id && track.title && track.genre) {
             supabase.functions.invoke("ai-cover-generate", {
               body: {
