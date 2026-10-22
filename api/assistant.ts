@@ -30,6 +30,23 @@ function buildSystem(ctx: any): string {
     "najlepsze zestawy utworów (z katalogu GrouAI oraz z YouTube) i opowiadać o wykonawcach " +
     "i utworach. Bądź pomocny, proaktywny i rozmawiaj płynnie na dowolny temat, nie tylko o muzyce."
   );
+  parts.push(
+    "ZASADY ODPOWIEDZI: odpowiadaj od razu na to, o co pyta użytkownik — bez przygotowań i bez " +
+    "przekierowywania na inne funkcje. Nie zamawiasz ani nie odtwarzasz utworów w radiu; w tej " +
+    "rozmowie tylko rozmawiasz, doradzasz i pomagasz."
+  );
+  parts.push(
+    "DOKUMENTY I TEKSTY: gdy użytkownik wrzuci dokument lub wklei tekst (blok „--- Dokument: … ---”), " +
+    "przeczytaj go uważnie i wykonaj jego prośbę — streść, popraw, przetłumacz, wypunktuj, odpowiedz " +
+    "na pytania, zrób analizę. Gdy prośby nie ma, krótko powiedz, co widzisz w dokumencie i zaproponuj " +
+    "konkretne działania. Przy arkuszach (CSV) odnoś się do kolumn i wartości."
+  );
+  parts.push(
+    "MUZYKA: gdy użytkownik wrzuci plik audio lub wideo, NIE słyszysz go. Powiedz to wprost, nie udawaj " +
+    "odsłuchu. Zareaguj na podstawie nazwy i kontekstu, zaproponuj realną pomoc (tekst piosenki, opis, " +
+    "tytuł i tagi, plan miksu, pomysły na aranż, promocję) i zapytaj, czego potrzebuje. Gdy użytkownik " +
+    "wkleja tekst piosenki — pomagaj: struktura, rymy, interpretacja, poprawki, wersje językowe."
+  );
   if (ctx?.userName) parts.push(`Zalogowany użytkownik: ${ctx.userName}. Zwracaj się po imieniu, pamiętaj jego gust.`);
   if (ctx?.currentPath) parts.push(`Aktualna podstrona: ${ctx.currentPath}.`);
   if (ctx?.currentTrack) parts.push(`Teraz gra: "${ctx.currentTrack.title}" — ${ctx.currentTrack.artist}.`);
@@ -45,7 +62,7 @@ function buildSystem(ctx: any): string {
 
 export default async function handler(req: Request): Promise<Response> {
   if (req.method === "OPTIONS") return new Response("ok", { headers: { "Access-Control-Allow-Origin": "*" } });
-  let payload: { message?: string; history?: { role: string; content: string }[]; userContext?: unknown } = {};
+  let payload: { message?: string; history?: { role: string; content: string }[]; userContext?: unknown; documentContext?: string } = {};
   try { payload = await req.json(); } catch { /* */ }
 
   const key = process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY;
@@ -55,10 +72,16 @@ export default async function handler(req: Request): Promise<Response> {
   if (!message.trim()) return sseText("Napisz, w czym mogę pomóc 🙂");
 
   const history = Array.isArray(payload.history) ? payload.history.slice(-12) : [];
+  // Dokument wrzucony wcześniej w rozmowie — trzymamy go w kontekście, żeby pytania
+  // „a co w punkcie 3?" działały. Pomijamy, gdy dokument jest już w bieżącej wiadomości.
+  const docCtx = typeof payload.documentContext === "string" && !message.includes("--- Dokument:")
+    ? payload.documentContext.slice(0, 40000)
+    : "";
   const messages = [
     { role: "system", content: buildSystem(payload.userContext) },
+    ...(docCtx ? [{ role: "system", content: "Dokument z tej rozmowy (kontekst, odwołuj się do niego w razie potrzeby):" + docCtx }] : []),
     ...history.map((m) => ({ role: m.role === "assistant" ? "assistant" : "user", content: String(m.content || "").slice(0, 4000) })),
-    { role: "user", content: message.slice(0, 8000) },
+    { role: "user", content: message.slice(0, 48000) }, // + dokumenty (do 40 tys. znaków)
   ];
 
   const usingOpenRouter = !!process.env.OPENROUTER_API_KEY;
