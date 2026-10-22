@@ -5509,6 +5509,41 @@ export type Database = {
         }
         Relationships: []
       }
+      radio_program_slot: {
+        Row: {
+          created_at: string
+          day_of_week: number
+          hour: number
+          id: string
+          position: number
+          track_id: string
+        }
+        Insert: {
+          created_at?: string
+          day_of_week: number
+          hour: number
+          id?: string
+          position?: number
+          track_id: string
+        }
+        Update: {
+          created_at?: string
+          day_of_week?: number
+          hour?: number
+          id?: string
+          position?: number
+          track_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "radio_program_slot_track_id_fkey"
+            columns: ["track_id"]
+            isOneToOne: false
+            referencedRelation: "tracks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       radio_requests: {
         Row: {
           artist: string | null
@@ -5552,41 +5587,6 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "radio_requests_track_id_fkey"
-            columns: ["track_id"]
-            isOneToOne: false
-            referencedRelation: "tracks"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      radio_program_slot: {
-        Row: {
-          created_at: string
-          day_of_week: number
-          hour: number
-          id: string
-          position: number
-          track_id: string
-        }
-        Insert: {
-          created_at?: string
-          day_of_week: number
-          hour: number
-          id?: string
-          position?: number
-          track_id: string
-        }
-        Update: {
-          created_at?: string
-          day_of_week?: number
-          hour?: number
-          id?: string
-          position?: number
-          track_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "radio_program_slot_track_id_fkey"
             columns: ["track_id"]
             isOneToOne: false
             referencedRelation: "tracks"
