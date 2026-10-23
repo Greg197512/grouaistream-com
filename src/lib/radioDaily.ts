@@ -90,6 +90,11 @@ function mulberry32(seed: number): () => number {
   };
 }
 
+// Filtr PostgREST: gatunki imprezowe (case-insensitive, częściowe dopasowanie).
+const PARTY_GENRE_FILTER = ["techno", "disco", "hip-hop", "hip hop", "rap", "trap", "dance", "house", "edm"]
+  .map((k) => `genre.ilike.%${k}%`)
+  .join(",");
+
 const matchesKw = (genre: string | null, kws: string[]): boolean => {
   if (!genre) return false;
   const g = genre.toLowerCase();
@@ -109,18 +114,28 @@ export async function buildDailyRadio(station: "public" | "vip", max = 140): Pro
   // Pula: Supabase → fallback snapshot (R2).
   let pool: DailyRadioTrack[] = [];
   try {
-    const { data, error } = await withTimeout(
-      supabase
-        .from("tracks")
-        .select("id,title,artist,duration,audio_url,cover_url,genre")
-        .not("audio_url", "is", null)
-        .limit(800),
-      4000,
-      "daily tracks",
-    );
-    if (!error && Array.isArray(data) && data.length) {
-      pool = (data as DailyRadioTrack[]).filter((t) => t.audio_url);
+    const COLS = "id,title,artist,duration,audio_url,cover_url,genre";
+    // Dwa zapytania: ogólna pula + wszystkie utwory gatunków imprezowych (techno/disco/hip-hop/rap/dance),
+    // żeby weekendowy program nie tracił ich przez losowe ucięcie puli.
+    const [general, party] = await Promise.all([
+      withTimeout(
+        supabase.from("tracks").select(COLS).not("audio_url", "is", null).limit(800),
+        4000,
+        "daily tracks",
+      ),
+      withTimeout(
+        supabase.from("tracks").select(COLS).not("audio_url", "is", null).or(PARTY_GENRE_FILTER).limit(400),
+        4000,
+        "daily party tracks",
+      ),
+    ]);
+    const seen = new Map<string, DailyRadioTrack>();
+    for (const res of [general, party]) {
+      if (!res.error && Array.isArray(res.data)) {
+        for (const t of res.data as DailyRadioTrack[]) if (t.audio_url) seen.set(t.id, t);
+      }
     }
+    pool = [...seen.values()];
   } catch {
     /* baza offline → snapshot poniżej */
   }

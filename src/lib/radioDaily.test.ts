@@ -5,6 +5,7 @@ vi.mock("@/integrations/supabase/client", () => ({
     from: () => ({
       select: () => ({
         not: () => ({
+          or: () => ({ limit: () => Promise.resolve({ data: [], error: null }) }),
           limit: () => Promise.resolve({
             data: [
               { id: "1", title: "A", artist: "X", duration: 180, audio_url: "https://r2/1.mp3", cover_url: null, genre: "Hip-Hop" },
