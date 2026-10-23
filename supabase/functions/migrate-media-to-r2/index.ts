@@ -7,14 +7,19 @@ const R2_BASE = Deno.env.get('R2_PUBLIC_BASE') || 'https://pub-46ecdc3a5ae341fcb
 
 const isR2 = (u: string | null) => !!u && u.startsWith(R2_BASE);
 
-// Only ephemeral / provider-hosted sources are migrated. Third-party artwork
-// CDNs (mzstatic, dzcdn, picsum, youtube thumbs) stay where they are.
+// Wszystkie zewnętrzne media (audio i okładki) przenoszone na nasz R2, żeby
+// katalog nie zależał od cudzych serwisów. Dotyczy też okładek z picsum, mzstatic,
+// YouTube i dzcdn (decyzja właściciela).
 const MIGRATE_HOSTS = [
   'supabase.co/storage',
   'suno.ai',
   'suno.com',
   'musicfile.removeai.ai',
   'replicate.delivery',
+  'picsum.photos',
+  'is1-ssl.mzstatic.com',
+  'img.youtube.com',
+  'cdn-images.dzcdn.net',
 ];
 const needsMove = (u: string | null) =>
   !!u && /^https?:\/\//.test(u) && !isR2(u) && MIGRATE_HOSTS.some((h) => u.includes(h));
