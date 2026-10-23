@@ -156,6 +156,24 @@
     background: var(--groove-gradient);
   }
 
+  /* Premium akcent nagłówków — ciepły gradient bursztyn→pomarańcz z tokenów
+     marki (nie fiolet groove), delikatna poświata. Użyj razem z .animate-gradient
+     dla powolnego, ambientowego ruchu (tło 200% + keyframes "gradient" już istnieją). */
+  .premium-heading-accent {
+    background: linear-gradient(
+      100deg,
+      hsl(var(--premium-highlight)) 0%,
+      hsl(var(--premium-button)) 45%,
+      hsl(var(--brand-amber)) 75%,
+      hsl(var(--premium-highlight)) 100%
+    );
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 2px 20px hsl(var(--premium-button) / 0.32));
+  }
+
   .groove-gradient-border {
     border: 1px solid transparent;
     background: linear-gradient(var(--groove-surface), var(--groove-surface)) padding-box,
