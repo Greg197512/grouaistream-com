@@ -20,7 +20,7 @@ const H = {
 
 // Ramówka tygodniowa: dzień tygodnia (0=niedziela … 6=sobota) → lista gatunków.
 // Gatunki muszą zgadzać się z polem tracks.genre. Kolejność = priorytet.
-const WEEKLY_GENRES = {
+const WEEKLY_GENRES: Record<number, string[]> = {
   0: ["Folk", "Country", "Jazz", "Classical", "Ambient", "Lo-fi", "Acoustic"], // Niedziela — spokojnie
   1: ["Rock", "Metal", "Punk"],                                                 // Poniedziałek — mocniej
   2: ["Pop"],                                                                    // Wtorek — pop
@@ -31,15 +31,35 @@ const WEEKLY_GENRES = {
 };
 const DAY_LABELS = ["Niedziela", "Poniedziałek", "Wtorek", "Środa", "Czwartek", "Piątek", "Sobota"];
 
-function isTrack(i) { return (i.item_type || "track") === "track"; }
-function dur(i) { return isTrack(i) ? ((i.track && i.track.duration) || 180) : (i.custom_duration || 30); }
-function audioUrl(i) { return isTrack(i) ? ((i.track && i.track.audio_url) || null) : (i.custom_audio_url || null); }
-function title(i) { return isTrack(i) ? ((i.track && i.track.title) || "GrouAI Stream") : (i.custom_title || i.item_type || "GrouAI Stream"); }
-function artist(i) { return isTrack(i) ? ((i.track && i.track.artist) || "GrouAI Stream") : "GrouAI Stream"; }
+interface Track {
+  id?: string;
+  duration?: number | null;
+  audio_url?: string | null;
+  title?: string | null;
+  artist?: string | null;
+  cover_url?: string | null;
+}
+interface Item {
+  id?: string;
+  item_type?: string | null;
+  track?: Track | null;
+  custom_duration?: number | null;
+  custom_audio_url?: string | null;
+  custom_title?: string | null;
+}
+interface RadioConfig {
+  is_active?: boolean;
+  started_at?: string | null;
+}
+function isTrack(i: Item) { return (i.item_type || "track") === "track"; }
+function dur(i: Item) { return isTrack(i) ? ((i.track && i.track.duration) || 180) : (i.custom_duration || 30); }
+function audioUrl(i: Item) { return isTrack(i) ? ((i.track && i.track.audio_url) || null) : (i.custom_audio_url || null); }
+function title(i: Item) { return isTrack(i) ? ((i.track && i.track.title) || "GrouAI Stream") : (i.custom_title || i.item_type || "GrouAI Stream"); }
+function artist(i: Item) { return isTrack(i) ? ((i.track && i.track.artist) || "GrouAI Stream") : "GrouAI Stream"; }
 // HLS (auta/aplikacje) obsługuje tylko mp3/aac/m4a/mp4 — WAV/FLAC/OGG psują strumień.
-function hlsSafe(u) { return !!u && /\.(mp3|aac|m4a|mp4|ts|m4s)(\?|$)/i.test(u); }
+function hlsSafe(u: string | null) { return !!u && /\.(mp3|aac|m4a|mp4|ts|m4s)(\?|$)/i.test(u); }
 
-async function rest(path) {
+async function rest<T>(path: string): Promise<T> {
   const r = await fetch(BV + path, { headers: { apikey: ANON, Authorization: "Bearer " + ANON } });
   if (!r.ok) throw new Error("bvstv " + r.status);
   return await r.json();
@@ -52,9 +72,10 @@ function warsawDay() {
     timeZone: "Europe/Warsaw", weekday: "short", year: "numeric", month: "2-digit",
     day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false,
   }).formatToParts(now);
-  const map = {};
+  const map: Record<string, string> = {};
   for (const p of parts) map[p.type] = p.value;
-  const wd = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 }[map.weekday];
+  const weekdays: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+  const wd = weekdays[map.weekday];
   // Sekundy od lokalnej północy → timestamp UTC lokalnej północy = now - sekundy dzisiejsze.
   const secToday = (parseInt(map.hour, 10) * 3600) + (parseInt(map.minute, 10) * 60) + parseInt(map.second, 10);
   const midnight = new Date(now.getTime() - secToday * 1000);
@@ -62,11 +83,11 @@ function warsawDay() {
 }
 
 // Pobierz z bvstv utwory pasujące do listy gatunków (dla ramówki dnia).
-async function loadGenreTracks(genres) {
+async function loadGenreTracks(genres: string[]): Promise<Item[]> {
   if (!genres || !genres.length) return [];
   const inList = "(" + genres.map(function (g) { return '"' + g.replace(/"/g, "") + '"'; }).join(",") + ")";
   const sel = "id,title,artist,duration,audio_url,cover_url,genre";
-  const rows = await rest("/tracks?select=" + encodeURIComponent(sel) +
+  const rows = await rest<Track[]>("/tracks?select=" + encodeURIComponent(sel) +
     "&genre=in." + encodeURIComponent(inList) +
     "&audio_url=not.is.null&order=id.asc&limit=1000");
   // Owiń w kształt zgodny z resztą kodu (item_type track + zagnieżdżony track).
@@ -76,14 +97,14 @@ async function loadGenreTracks(genres) {
 }
 
 async function loadState() {
-  let config = null;
-  try { const c = await rest("/radio_config?select=is_active,mode,started_at,station_name&limit=1"); config = (c && c[0]) || null; } catch (e) { /* ignore */ }
+  let config: RadioConfig | null = null;
+  try { const c = await rest<RadioConfig[]>("/radio_config?select=is_active,mode,started_at,station_name&limit=1"); config = (c && c[0]) || null; } catch (e) { /* ignore */ }
 
   const day = warsawDay();
   const genres = WEEKLY_GENRES[day.dow] || [];
 
   // 1) Spróbuj ramówki tygodniowej (gatunek dnia).
-  let weekly = [];
+  let weekly: Item[] = [];
   try { weekly = await loadGenreTracks(genres); } catch (e) { weekly = []; }
   let weeklyPlayable = weekly.filter(function (i) { return hlsSafe(audioUrl(i)); });
   if (weeklyPlayable.length) {
@@ -94,11 +115,11 @@ async function loadState() {
   }
 
   // 2) Fallback — ręczna kolejka radio_schedule (stare zachowanie).
-  const all = [];
+  const all: Item[] = [];
   const sel = "id,item_type,custom_title,custom_duration,custom_audio_url,track:tracks(title,artist,duration,audio_url,cover_url)";
   for (let off = 0; off < 10000; off += 1000) {
     let page;
-    try { page = await rest("/radio_schedule?select=" + encodeURIComponent(sel) + "&order=position.asc&limit=1000&offset=" + off); } catch (e) { break; }
+    try { page = await rest<Item[]>("/radio_schedule?select=" + encodeURIComponent(sel) + "&order=position.asc&limit=1000&offset=" + off); } catch (e) { break; }
     all.push.apply(all, page || []);
     if (!page || page.length < 1000) break;
   }
@@ -110,7 +131,7 @@ async function loadState() {
   };
 }
 
-function position(playable, startedAt) {
+function position(playable: Item[], startedAt: string | null) {
   const N = playable.length;
   const durations = playable.map(dur);
   const total = durations.reduce(function (s, d) { return s + d; }, 0);
@@ -125,7 +146,7 @@ function position(playable, startedAt) {
   return { index: index, offset: offset, loops: loops, N: N, durations: durations, total: total };
 }
 
-function buildM3U8(playable, startedAt) {
+function buildM3U8(playable: Item[], startedAt: string | null) {
   const p = position(playable, startedAt);
   let maxDur = 10; for (const d of p.durations) if (d > maxDur) maxDur = d;
   const target = Math.min(1200, Math.ceil(maxDur) + 1);
@@ -137,7 +158,7 @@ function buildM3U8(playable, startedAt) {
     lines.push("#EXT-X-DISCONTINUITY");
     const label = (title(it) + " - " + artist(it)).replace(/[\r\n",]/g, " ").slice(0, 120);
     lines.push("#EXTINF:" + p.durations[idx].toFixed(3) + "," + label);
-    lines.push(audioUrl(it));
+    lines.push(audioUrl(it) ?? "");
   }
   return lines.join("\n") + "\n";
 }
@@ -168,7 +189,7 @@ Deno.serve(async function (req) {
     }
     if (f === "now" || f === "current" || f === "mp3") {
       const p = position(playable, startedAt);
-      return new Response(null, { status: 302, headers: Object.assign({}, H, { Location: audioUrl(playable[p.index]), "Cache-Control": "no-cache" }) });
+      return new Response(null, { status: 302, headers: Object.assign({}, H, { Location: audioUrl(playable[p.index]) ?? "", "Cache-Control": "no-cache" }) });
     }
     if (f === "pls") {
       const body = "[playlist]\nNumberOfEntries=1\nFile1=" + SELF + "?f=m3u8\nTitle1=" + station + "\nLength1=-1\nVersion=2\n";
@@ -181,6 +202,6 @@ Deno.serve(async function (req) {
     const body = buildM3U8(playable, startedAt);
     return new Response(body, { headers: Object.assign({}, H, { "Content-Type": "application/vnd.apple.mpegurl", "Cache-Control": "no-cache, no-store, must-revalidate" }) });
   } catch (e) {
-    return new Response("radio-stream error: " + ((e && e.message) || e), { status: 500, headers: Object.assign({}, H, { "Content-Type": "text/plain" }) });
+    return new Response("radio-stream error: " + (e instanceof Error ? e.message : e), { status: 500, headers: Object.assign({}, H, { "Content-Type": "text/plain" }) });
   }
 });
