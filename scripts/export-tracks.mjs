@@ -26,7 +26,7 @@ const ANON =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ2c3R2YXduaWd5Y3p2b2Z6aHBzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg3NDEwMzEsImV4cCI6MjA4NDMxNzAzMX0.Mp6lpKIcFGsduODIwm1V7FcRQmaN5DtPM5aaqj9i_Xw";
 
 const SELECT = "id,title,artist,album,duration,cover_url,audio_url,video_url,genre,mood,created_at";
-const LIMIT = 1000;
+const LIMIT = 5000; // cały katalog z audio (ok. 1,5 tys. utworów), nie tylko pierwsze 1000
 
 async function main() {
   if (!existsSync(DIST)) {
