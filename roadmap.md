@@ -1,4 +1,5 @@
 # Roadmap
+- [ ] Kontynuacja migracji R2 z commit ccdc553: wdrożyć wyłącznie migrator, partie 120 z kursorem, raport sum i końcowych liczników; bez zmian logiki i frontendu.
 - [x] Dopracować Studio, przywrócić equalizer i płomyki oraz cotygodniową rotację tła bez naruszania funkcji strony.
 
 - [x] Profesjonalna grafika strony i intro ze statycznym nagraniem, bez cyklicznych kosztów AI.
