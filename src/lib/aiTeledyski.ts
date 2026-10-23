@@ -24,10 +24,15 @@ export const AI_TELEDYSKI: string[] = [
 import { searchYouTube } from "@/lib/reelSearch";
 
 // Rotujące zapytania — dają „więcej nowości" (inny zestaw przy każdym otwarciu).
+// Mocny nacisk na Suno, bo tam ludzie wrzucają najwięcej AI-teledysków.
 const FRESH_QUERIES = [
+  "Suno AI music video",
+  "made with Suno music video",
+  "Suno AI song official video",
+  "Suno AI official music video",
+  "#sunoai music video",
   "AI music video 2026",
   "AI generated music video official",
-  "Suno AI song official video",
   "AI hip hop music video",
   "AI techno music video",
   "AI reggae music video",
@@ -39,7 +44,7 @@ const FRESH_QUERIES = [
 // wyszukane na żywo w YouTube (tylko osadzalne). Dedup, limit. Fallback = kuratorska.
 export async function loadFreshTeledyski(max = 40): Promise<string[]> {
   try {
-    const picks = [...FRESH_QUERIES].sort(() => Math.random() - 0.5).slice(0, 3);
+    const picks = [...FRESH_QUERIES].sort(() => Math.random() - 0.5).slice(0, 5);
     const results = await Promise.all(picks.map((q) => searchYouTube(q).catch(() => [])));
     const fresh = results.flat().map((h) => h.videoId).filter(Boolean);
     const merged = [...new Set([...AI_TELEDYSKI, ...fresh])];
