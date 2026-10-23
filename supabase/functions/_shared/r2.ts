@@ -20,6 +20,8 @@ export interface ArchiveOptions {
   contentType?: string;
   /** Optional headers passed when fetching the source (e.g. ACE bearer). */
   fetchHeaders?: Record<string, string>;
+  /** Limit czasu pobrania źródła (ms). Domyślnie 20 s — wiszący host nie blokuje funkcji. */
+  timeoutMs?: number;
 }
 
 export async function archiveToR2(opts: ArchiveOptions): Promise<string | null> {
@@ -33,7 +35,10 @@ export async function archiveToR2(opts: ArchiveOptions): Promise<string | null> 
       return null;
     }
 
-    const res = await fetch(opts.sourceUrl, { headers: opts.fetchHeaders });
+    const res = await fetch(opts.sourceUrl, {
+      headers: opts.fetchHeaders,
+      signal: AbortSignal.timeout(opts.timeoutMs ?? 20_000),
+    });
     if (!res.ok) {
       console.error("[archiveToR2] fetch source failed:", res.status);
       return null;
