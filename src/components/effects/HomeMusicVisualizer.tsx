@@ -1,5 +1,4 @@
 import { useEffect, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { useAudioAnalyser } from "@/hooks/useAudioAnalyser";
 
@@ -7,11 +6,10 @@ import { useAudioAnalyser } from "@/hooks/useAudioAnalyser";
  * HomeMusicVisualizer — spektrum na stronie głównej.
  * Przestrzenne (przechył 3D reagujący na bas + wytłoczone słupki + lustrzane
  * odbicie z zanikiem), zawsze dopasowane do motywu strony (kolor z tokenów
- * --primary/--background, nie na sztywno), z animowanym podpisem pod spektrum
- * (co gra teraz / ambientowy tekst w ciszy).
+ * --primary/--background, nie na sztywno).
  */
 export const HomeMusicVisualizer = () => {
-  const { audioElement, isPlaying, isVideoMode, currentTrack } = usePlayer();
+  const { audioElement, isPlaying, isVideoMode } = usePlayer();
   const levels = useAudioAnalyser(audioElement, isPlaying, isVideoMode, 32);
   const state = useRef({ levels, isPlaying });
   state.current = { levels, isPlaying };
@@ -128,38 +126,19 @@ export const HomeMusicVisualizer = () => {
     return () => { cancelAnimationFrame(frame); observer.disconnect(); };
   }, []);
 
-  const label = isPlaying && currentTrack
-    ? `${currentTrack.title}${currentTrack.artist ? ` — ${currentTrack.artist}` : ""}`
-    : "GrouAI Stream · żywy dźwięk, na żywo z Tobą";
-
   return (
-    <div className="flex flex-col gap-1.5">
+    <div
+      ref={tiltRef}
+      className="relative h-20 max-w-md overflow-hidden rounded-xl transition-transform"
+      style={{ transformStyle: "preserve-3d" }}
+      data-testid="home-equalizer"
+    >
       {/* Poświata w kolorach motywu strony, żeby spektrum zawsze pasowało do tła. */}
       <div
-        ref={tiltRef}
-        className="relative h-20 overflow-hidden rounded-xl transition-transform"
-        style={{ transformStyle: "preserve-3d" }}
-      >
-        <div
-          className="pointer-events-none absolute -inset-4"
-          style={{ background: "radial-gradient(ellipse at 50% 30%, hsl(var(--primary) / 0.16), hsl(var(--background) / 0) 70%)" }}
-        />
-        <canvas ref={canvasRef} aria-hidden="true" className="pointer-events-none absolute inset-0 h-full w-full" />
-      </div>
-
-      {/* Podpis pod spektrum — zawsze widoczny, animowany przy zmianie utworu. */}
-      <AnimatePresence mode="wait">
-        <motion.p
-          key={isPlaying ? currentTrack?.id || "playing" : "idle"}
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -6 }}
-          transition={{ duration: 0.35, ease: "easeOut" }}
-          className="groove-gradient-text truncate text-xs font-semibold tracking-wide sm:text-sm"
-        >
-          {label}
-        </motion.p>
-      </AnimatePresence>
+        className="pointer-events-none absolute -inset-4"
+        style={{ background: "radial-gradient(ellipse at 50% 30%, hsl(var(--primary) / 0.16), hsl(var(--background) / 0) 70%)" }}
+      />
+      <canvas ref={canvasRef} aria-hidden="true" className="pointer-events-none absolute inset-0 h-full w-full" />
     </div>
   );
 };
