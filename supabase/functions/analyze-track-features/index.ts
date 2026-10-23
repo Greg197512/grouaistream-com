@@ -8,7 +8,7 @@
 //
 // Public function (verify_jwt = false in config.toml). Auth enforced in code.
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
+import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -92,7 +92,7 @@ Output JSON only:
   }
 }
 
-async function persist(admin: ReturnType<typeof createClient>, f: FeaturesOut) {
+async function persist(admin: SupabaseClient<any, "public", any>, f: FeaturesOut) {
   const now = new Date().toISOString();
   await admin.from("tracks").update({
     bpm: Math.round(f.bpm),

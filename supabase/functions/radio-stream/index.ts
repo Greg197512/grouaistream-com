@@ -11,7 +11,7 @@
 //   • ?f=pls / ?f=m3u            → klasyczne pliki playlist (import w autach/aplikacjach)
 //
 // Strumień jest ZAWSZE aktywny (24/7) — wymóg katalogów typu TuneIn i aut.
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -53,7 +53,7 @@ interface StoryRow {
   air_times: string[] | null;
 }
 
-async function loadStoryOverride(supabase: ReturnType<typeof createClient>) {
+async function loadStoryOverride(supabase: SupabaseClient<any, "public", any>) {
   const { secondsOfDay, dayIndex } = warsawNow();
 
   const { data } = await supabase
