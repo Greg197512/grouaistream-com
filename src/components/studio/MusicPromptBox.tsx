@@ -8,7 +8,7 @@ import {
 import { isStudioPromoActive, STUDIO_FREE_UNTIL } from "@/contexts/SubscriptionContext";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { invokeStudioEngine, waitForAceStep, fireCoverGeneration, isSubscriptionError, submitStudioVideo, waitForStudioVideo, fetchStoryboard, submitStudioLipsync, waitForStudioLipsync } from "@/lib/hubStudio";
+import { isSubscriptionError, submitStudioVideo, waitForStudioVideo, fetchStoryboard, submitStudioLipsync, waitForStudioLipsync } from "@/lib/hubStudio";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -323,33 +323,37 @@ export function MusicPromptBox({ onTrackReady }: Props) {
     setVideoUrl(null);
 
     try {
-      const musicPromptFinal = instrumental ? `${prompt.trim()} (instrumentalny, bez wokalu)` : prompt.trim();
+      const musicPromptFinal = prompt.trim();
 
-      // 1) Muzyka — silnik Studia zwraca plan (tytuł, tagi, tekst) od razu; audio dochodzi w tle.
-      const { data: mData, error: mErr } = await invokeStudioEngine("studio-prompt-engine", {
-        prompt: musicPromptFinal,
-        ...(language !== "auto" ? { language } : {}),
-      });
-      if (mErr) throw new Error(mErr.message || "Błąd muzyki");
-      if (!mData?.success) throw new Error(mData?.message || mData?.error || "Błąd silnika muzyki");
-      const plan = mData.plan || {};
-      window.dispatchEvent(new CustomEvent("grouai:generations-changed"));
-      fireCoverGeneration(mData.task_id, plan?.title || "", plan?.tags || "");
-
+      // 1) Muzyka — Suno (sunoapi.org) renderuje w tle, równolegle ze scenami wideo.
       // AI wykrywa format z tego, co napisał user (utwór + ew. wskazówka stylu).
       const aspect = detectAspect(`${prompt} ${videoPrompt}`);
 
       setStage("composing");
-      setPlanSummary(`AI reżyseruje teledysk z tekstu utworu · ${aspectLabel(aspect)}…`);
+      setPlanSummary(`AI reżyseruje teledysk · ${aspectLabel(aspect)}…`);
 
-      const audioJob = waitForAceStep(mData.task_id, mData.generation_id).then((r) => r.audioUrl);
+      const songJob = generateWithSuno({
+        prompt: musicPromptFinal,
+        instrumental,
+        language: language !== "auto" ? language : undefined,
+        onProgress: (sec) => setElapsed(sec),
+      });
+      const audioJob = songJob.then(async (r) => {
+        await supabase.from("generations").insert({
+          user_id: user.id, title: r.title, genre: "Suno", prompt: prompt.trim(),
+          instrumental, status: "completed", audio_url: r.audioUrl,
+        });
+        window.dispatchEvent(new CustomEvent("grouai:generations-changed"));
+        return r.audioUrl;
+      });
+      const plan = { title: "", tags: "", lyrics: "" };
 
       // 2) Storyboard z tekstu/klimatu utworu (AI decyduje o scenach). 3) Klipy ze scen.
       const clipsJob = (async () => {
         let scenes = await fetchStoryboard({
           song_prompt: prompt.trim(),
           title: plan?.title || "",
-          tags: typeof plan?.tags === "string" ? plan.tags : (Array.isArray(plan?.tags) ? plan.tags.join(", ") : ""),
+          tags: plan.tags,
           lyrics: plan?.lyrics || "",
           style: videoPrompt.trim() || undefined, // opcjonalna wskazówka stylu
           count: CLIP_COUNT,
@@ -428,7 +432,7 @@ export function MusicPromptBox({ onTrackReady }: Props) {
       try {
         if (clip.finalUrl) {
           // Śpiewający teledysk: LatentSync zwraca gotowy plik z audio — tylko pobieramy (przez proxy CORS).
-          const r = await fetch(`https://bmwtydwpevzhbdplilbr.supabase.co/functions/v1/media-proxy?u=${encodeURIComponent(clip.finalUrl)}`);
+          const r = await fetch(`/api/media?u=${encodeURIComponent(clip.finalUrl)}`);
           if (!r.ok) throw new Error("download_failed");
           blob = await r.blob();
         } else {

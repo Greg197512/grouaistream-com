@@ -9,6 +9,9 @@ export type SunoResult = {
   title: string;
   durationSeconds: number;
   taskId: string;
+  /** Tekst i tagi stylu, które napisało Suno (jeśli zwróciło). */
+  lyrics?: string;
+  tags?: string;
 };
 
 export type SunoRequest = {
@@ -64,7 +67,10 @@ export async function generateWithSuno(req: SunoRequest): Promise<SunoResult> {
     }
     if (st?.status === "succeeded") {
       if (!st.audio_url) throw new Error("Suno nie zwróciło pliku audio");
+      const first = Array.isArray(st.all) ? st.all[0] : null;
       return {
+        lyrics: typeof first?.prompt === "string" ? first.prompt : undefined,
+        tags: typeof first?.tags === "string" ? first.tags : undefined,
         audioUrl: st.audio_url,
         coverUrl: st.cover_url || undefined,
         title: st.title || req.title || started?.title || "GrouAI Track",
