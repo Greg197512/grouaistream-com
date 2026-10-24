@@ -8,7 +8,7 @@ import {
 import { isStudioPromoActive, STUDIO_FREE_UNTIL } from "@/contexts/SubscriptionContext";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { invokeStudioEngine, waitForAceStep, fireCoverGeneration, isSubscriptionError, submitStudioVideo, waitForStudioVideo, fetchStoryboard, submitStudioLipsync, waitForStudioLipsync, fetchEngineLessons } from "@/lib/hubStudio";
+import { invokeStudioEngine, waitForAceStep, fireCoverGeneration, isSubscriptionError, submitStudioVideo, waitForStudioVideo, fetchStoryboard, submitStudioLipsync, waitForStudioLipsync } from "@/lib/hubStudio";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -16,6 +16,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { UpgradeModal } from "@/components/modals/UpgradeModal";
 import { exportTeledysk, exportScenesOnly } from "@/lib/teledyskExport";
 import { uploadToR2 } from "@/lib/r2Upload";
+import { generateWithSuno } from "@/lib/sunoClient";
+import { isPersistentAudioUrl } from "@/lib/mirrorAudio";
 
 type Lang = "auto" | "pl" | "en" | "nl" | "uk";
 
@@ -211,42 +213,40 @@ export function MusicPromptBox({ onTrackReady }: Props) {
     setElapsed(0);
 
     try {
-      let finalPrompt = instrumental ? `${prompt.trim()} (instrumentalny, bez wokalu)` : prompt.trim();
-      // NAUKA: doklej lekcje z naszych najlepszych utworów (in-context learning).
-      const lessons = await fetchEngineLessons(language !== "auto" ? language : "pl");
-      if (lessons) finalPrompt = `${finalPrompt}\n\n${lessons}`;
-      const { data, error: fnError } = await invokeStudioEngine("studio-prompt-engine", {
-        prompt: finalPrompt,
-        ...(language !== "auto" ? { language } : {}),
+      // Suno (sunoapi.org): opis trafia wprost do Suno, które samo pisze tekst i aranżację.
+      setStage("composing");
+      const songLang = language !== "auto" ? language : undefined;
+      const r = await generateWithSuno({
+        prompt: prompt.trim(),
+        instrumental,
+        language: songLang,
+        onProgress: (sec) => setElapsed(sec),
       });
 
-      if (fnError) throw new Error(fnError.message || "Generation failed");
-      if (!data?.success) throw new Error(data?.message || data?.error || "Engine error");
-
-      const summary: string = data.plan?.human_summary || "";
-      setPlanSummary(summary);
-      setStage("composing");
-
-      // Utwór jest już w „Twoje utwory” (rekord generations) — odśwież listę od razu
-      window.dispatchEvent(new CustomEvent("grouai:generations-changed"));
-
-      // Okładka AI (darmowa) startuje w tle, dopasowana do tytułu i stylu
-      fireCoverGeneration(data.task_id, data.plan?.title || "", data.plan?.tags || "");
-
-      const { audioUrl, coverUrl } = await waitForAceStep(data.task_id, data.generation_id, (sec) =>
-        setElapsed(sec)
-      );
+      const plan = { title: r.title, genre: "Suno", duration_seconds: r.durationSeconds || 120 };
+      setPlanSummary(r.title);
+      // Zapis do „Twoje utwory" i katalogu (adresy z R2 są trwałe).
+      const { data: gen } = await supabase.from("generations").insert({
+        user_id: user.id, title: r.title, genre: "Suno", prompt: prompt.trim(),
+        instrumental, status: "completed", audio_url: r.audioUrl,
+      }).select("id").maybeSingle();
+      if (isPersistentAudioUrl(r.audioUrl)) {
+        await supabase.from("tracks").insert({
+          user_id: user.id, title: r.title, artist: "GrouAI Studio", album: "AI Generated",
+          duration: r.durationSeconds || null, audio_url: r.audioUrl, cover_url: r.coverUrl || null,
+          genre: "AI",
+        });
+      }
 
       setStage("done");
       toast.success(labels.done);
-      // Gotowy utwór — odśwież „Twoje utwory”, by pokazał się z audio i okładką
       window.dispatchEvent(new CustomEvent("grouai:generations-changed"));
       onTrackReady?.({
-        audioUrl,
-        coverUrl: coverUrl || undefined,
-        generationId: data.generation_id,
-        plan: data.plan,
-        engine: data.engine,
+        audioUrl: r.audioUrl,
+        coverUrl: r.coverUrl,
+        generationId: gen?.id ?? "",
+        plan,
+        engine: "suno",
       });
       setActiveVibes([]);
       setTimeout(() => setStage("idle"), 2500);
