@@ -22,7 +22,9 @@ import { cn } from "@/lib/utils";
 // tytuł, styl, status na żywo, odtwarzanie i pobieranie. Te same funkcje dla
 // wszystkich użytkowników.
 
-const HUB_STORAGE = "https://bmwtydwpevzhbdplilbr.supabase.co/storage/v1/object/public/acestep";
+// Hosty, na których stare pliki już nie istnieją (usunięty projekt hub, wygasłe linki tymczasowe).
+const LOST_HOSTS = ["bmwtydwpevzhbdplilbr.supabase.co", "tempfile.aiquickdraw.com"];
+const isLostUrl = (u: string | null) => !!u && LOST_HOSTS.some((h) => u.includes(h));
 
 interface Generation {
   id: string;
@@ -33,13 +35,13 @@ interface Generation {
   created_at: string;
   status: string;
   replicate_id?: string | null;
+  lost?: boolean; // plik był na usuniętym serwerze — nie da się go odtworzyć
 }
 
 function CoverThumb({ gen, version }: { gen: Generation; version: number }) {
   const [failed, setFailed] = useState(false);
-  const coverUrl = gen.replicate_id
-    ? `${HUB_STORAGE}/${gen.replicate_id}-cover.jpg${version ? `?v=${version}` : ""}`
-    : null;
+  void version; // okładki były na usuniętym serwerze hub — pokazujemy grafikę zastępczą
+  const coverUrl: string | null = null;
 
   if (!coverUrl || failed) {
     return (
@@ -94,7 +96,11 @@ export const GenerationHistory = () => {
       .order("created_at", { ascending: false })
       .limit(30);
 
-    if (!error && data) setGenerations(data as Generation[]);
+    if (!error && data) {
+      setGenerations((data as Generation[]).map((g) =>
+        isLostUrl(g.audio_url) ? { ...g, audio_url: null, lost: true } : g,
+      ));
+    }
     setLoading(false);
   }, []);
 
@@ -127,7 +133,7 @@ export const GenerationHistory = () => {
       album: "AI Generated",
       duration: 180,
       audio_url: gen.audio_url,
-      cover_url: gen.replicate_id ? `${HUB_STORAGE}/${gen.replicate_id}-cover.jpg` : null,
+      cover_url: null,
       genre: gen.genre || "AI",
       mood: null,
     });
@@ -211,7 +217,7 @@ export const GenerationHistory = () => {
         album: "AI Generated",
         duration: 180,
         audio_url: audioUrl,
-        cover_url: gen.replicate_id ? `${HUB_STORAGE}/${gen.replicate_id}-cover.jpg` : null,
+        cover_url: null,
         genre: gen.genre || "AI",
         mood: null,
       } as any);
@@ -271,7 +277,7 @@ export const GenerationHistory = () => {
         album: "AI Generated",
         duration: 180,
         audio_url: gen.audio_url,
-        cover_url: gen.replicate_id ? `${HUB_STORAGE}/${gen.replicate_id}-cover.jpg` : null,
+        cover_url: null,
         genre: gen.genre || "AI",
         mood: "generated",
       });
@@ -390,6 +396,7 @@ export const GenerationHistory = () => {
 
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-sm text-white truncate">{gen.title}</p>
+                  {gen.lost && <p className="text-[11px] text-amber-300/90">Plik usunięty ze starego serwera — wygeneruj ponownie</p>}
                   <p className="text-[11px] text-[#FF9500]/70 truncate">
                     {gen.genre}
                     {gen.instrumental && " • instrumental"}
