@@ -107,7 +107,7 @@ async function findOriginalCover(title: string, artist: string): Promise<string 
 }
 
 async function generateAICover(title: string, artist: string, genre: string | null): Promise<string | null> {
-  const OPENROUTER_API_KEY = Deno.env.get("LOVABLE_API_KEY") || Deno.env.get("OPENROUTER_API_KEY");
+  const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY");
   if (!OPENROUTER_API_KEY) return null;
 
   const genreStyle = genre ? ` The music style is ${genre}.` : "";

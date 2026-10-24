@@ -9,6 +9,7 @@
 // Public function (verify_jwt = false in config.toml). Auth enforced in code.
 
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
+import { chatGateway } from "../_shared/chatGateway.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -18,7 +19,7 @@ const corsHeaders = {
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
-const OPENROUTER_API_KEY = Deno.env.get("LOVABLE_API_KEY") || Deno.env.get("OPENROUTER_API_KEY") || "";
+const OPENROUTER_API_KEY = (chatGateway()?.key ?? "");
 const CRON_SECRET = Deno.env.get("CRON_SECRET") || "";
 
 interface TrackIn {
@@ -63,14 +64,14 @@ Output JSON only:
 [{"id":"...","bpm":120,"energy":0.7,"valence":0.6,"danceability":0.65}]`;
 
   try {
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const res = await fetch(chatGateway()!.url, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${OPENROUTER_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: chatGateway()!.model,
         messages: [
           { role: "system", content: "You are a music analyst. Output ONLY valid JSON arrays. No prose, no markdown." },
           { role: "user", content: prompt },

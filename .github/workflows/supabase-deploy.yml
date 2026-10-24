@@ -46,7 +46,7 @@ jobs:
           set -euo pipefail
           resp=$(curl -sS --fail -X POST "https://api.supabase.com/v1/projects/$PROJECT_REF/database/query" \
             -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" -H "Content-Type: application/json" \
-            -d '{"query":"select substr(name, 4) as k, decrypted_secret as v from vault.decrypted_secrets where name like '"'"'fn\\_%'"'"'"}')
+            -d '{"query":"select substr(name, 4) as k, decrypted_secret as v from vault.decrypted_secrets where name like '"'"'fn\\_%'"'"' and name <> '"'"'fn_LOVABLE_API_KEY'"'"'"}')
           # Maskowanie każdej linii każdej wartości, zanim cokolwiek trafi do logu.
           echo "$resp" | jq -r '.[] | .v | split("\n")[] | select(length > 0) | "::add-mask::" + .'
           mapfile -d '' args < <(echo "$resp" | jq -j '.[] | "\(.k)=\(.v)\u0000"')

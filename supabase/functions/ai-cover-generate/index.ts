@@ -102,7 +102,7 @@ serve(async (req) => {
 
   try {
     const { title, style, description, mode, reference_image } = await req.json();
-    const OPENROUTER_API_KEY = Deno.env.get("LOVABLE_API_KEY") || Deno.env.get("OPENROUTER_API_KEY");
+    const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY");
     if (!OPENROUTER_API_KEY) {
       return new Response(
         JSON.stringify({ error: "OPENROUTER_API_KEY not configured" }),

@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { chatGateway } from "../_shared/chatGateway.ts";
 
 function getCorsHeaders(_req: Request) {
   return {
@@ -17,7 +18,7 @@ interface MoodSession {
 
 // Darmowe silniki AI w kolejności prób. Używamy tego klucza, który jest
 // skonfigurowany w projekcie — bez dodatkowych kosztów:
-//  1) Lovable AI Gateway (LOVABLE_API_KEY) — subsydiowany przez Lovable, Gemini.
+//  1) Gemini (GEMINI_API_KEY, zgodny z OpenAI) albo OpenRouter — patrz _shared/chatGateway.ts.
 //  2) OpenRouter (OPENROUTER_API_KEY) — darmowy model Gemma.
 type Provider = {
   name: string;
@@ -113,9 +114,9 @@ serve(async (req) => {
     const providers: Provider[] = [
       {
         name: "Lovable/Gemini",
-        key: Deno.env.get("LOVABLE_API_KEY"),
-        url: "https://ai.gateway.lovable.dev/v1/chat/completions",
-        model: "google/gemini-2.5-flash",
+        key: chatGateway()?.key,
+        url: chatGateway()?.url ?? "",
+        model: chatGateway()?.model ?? "gemini-2.5-flash",
       },
       {
         name: "OpenRouter/Gemma",
@@ -133,7 +134,7 @@ serve(async (req) => {
 
     if (!providers.some((p) => p.key)) {
       return new Response(
-        JSON.stringify({ error: "Brak klucza AI (LOVABLE_API_KEY lub OPENROUTER_API_KEY)." }),
+        JSON.stringify({ error: "Brak klucza AI (GEMINI_API_KEY lub OPENROUTER_API_KEY)." }),
         { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
