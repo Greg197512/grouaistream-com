@@ -20,6 +20,9 @@ const ALLOWED_HOSTS = new Set<string>([
   "cdn2.suno.ai",
   "cdn.suno.ai",
   "audiopipe.suno.ai",
+  // Replicate — gotowe wideo z lip-syncu (studio-video) pobierane do sklejenia teledysku.
+  "replicate.delivery",
+  "pbxt.replicate.delivery",
 ]);
 
 const CORS = {
