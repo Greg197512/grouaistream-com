@@ -234,16 +234,19 @@ serve(async (req) => {
     // -------- GENERATE --------
     const { prompt = "", style = "", title = "", instrumental = false, vocal_language, language, enhance = true } = body;
 
+    const styleGiven = !!String(style || "").trim();
     let finalStyle = style;
     let finalTitle = title;
     let finalLyrics = ""; // Suno's `prompt` field = lyrics in customMode
 
+    let enhanced = false;
     if (enhance) {
       const boost = await enhanceWithGPT({
         prompt, style, title, instrumental,
         language: vocal_language || language || "pl",
       });
       if (boost) {
+        enhanced = true;
         finalStyle = boost.style;
         finalTitle = boost.title;
         finalLyrics = boost.lyrics;
@@ -278,8 +281,14 @@ serve(async (req) => {
       baseBody.title = finalTitle.slice(0, 80);
       baseBody.prompt = instrumental ? "" : finalLyrics.slice(0, 3000);
     } else {
-      // Non-custom V5 accepts free-form description in `prompt`.
-      baseBody.prompt = `${prompt} — ${finalStyle}`.slice(0, 400);
+      // Tryb opisowy: Suno samo pisze tekst. Wysyłamy opis użytkownika; styl dokładamy tylko
+      // wtedy, gdy podał go użytkownik lub ulepszacz — domyślny „modern pop" zmieniałby gatunek.
+      const lang = String(vocal_language || language || "").toLowerCase();
+      const LANG_HINT: Record<string, string> = { pl: "śpiew po polsku", en: "English vocals", nl: "Nederlandse zang", uk: "вокал українською", ua: "вокал українською" };
+      const parts = [String(prompt).trim()];
+      if (styleGiven || enhanced) parts.push(finalStyle);
+      if (!instrumental && LANG_HINT[lang]) parts.push(LANG_HINT[lang]);
+      baseBody.prompt = parts.filter(Boolean).join(" — ").slice(0, 490);
     }
 
     // Try V5_5 (najwyższa jakość) first, then V5, then V4_5PLUS on model error.
