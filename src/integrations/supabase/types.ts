@@ -7375,6 +7375,14 @@ export type Database = {
       }
     }
     Functions: {
+      _mig_export: {
+        Args: { p_chunk?: number; p_tables: string[]; p_where?: string }
+        Returns: {
+          requests: number
+          rows_sent: number
+          tbl: string
+        }[]
+      }
       acknowledge_payout: { Args: { _detail_id: string }; Returns: Json }
       activate_boost_paid: {
         Args: {
