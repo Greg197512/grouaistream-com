@@ -451,7 +451,11 @@ const Suno = () => {
                 enhance: true,
               },
             });
-            if (se) throw se;
+            if (se) {
+              // Treść odpowiedzi funkcji (np. 401 sesji) zamiast ogólnego „non-2xx".
+              const ctx = await (se as any)?.context?.json?.().catch(() => null);
+              throw new Error(ctx?.error || se.message);
+            }
             if ((sd as any)?.error) throw new Error((sd as any).error);
             const taskId = (sd as any)?.id || (sd as any)?.task_id;
             if (!taskId) throw new Error("brak taskId");
@@ -495,7 +499,8 @@ const Suno = () => {
             }
             throw new Error("timeout");
           } catch (e) {
-            console.warn("[Studio] suno-generate niedostępny — przechodzę na silnik hub:", e);
+            console.warn("[Studio] suno-generate niedostępny — przechodzę na GrouAI Engine:", e);
+            toast.warning(`Suno: ${(e as Error)?.message || "brak odpowiedzi"} — generuję zapasowym silnikiem (instrumentalnie, do 30 s).`, { duration: 9000 });
             return false;
           }
         })();
