@@ -271,10 +271,10 @@ export const SunoGeneratePanel = () => {
         const fp = data.fingerprint_summary;
         setStatusMsg(`🧠 GrouAI Engine + Twój fingerprint (${fp?.genre || "—"}, ${fp?.bpm || "—"} BPM)...`);
       } else {
-        setStatusMsg(`⏳ ${engineLabel} pracuje... (~${Math.round(duration * 1.5)}s)`);
+        setStatusMsg(usingSuno ? `⏳ ${engineLabel} pracuje... (~2-4 min, pełny wokal)` : `⏳ ${engineLabel} pracuje... (~${Math.round(duration * 1.5)}s)`);
       }
       setPolling(true);
-      pollResult(predId, genId, fnName);
+      pollResult(predId, genId, fnName, usingSuno);
     } catch (err: any) {
       if (isSubscriptionError(err)) {
         setShowUpgrade(true);
@@ -286,11 +286,15 @@ export const SunoGeneratePanel = () => {
     } finally { setGenerating(false); }
   };
 
-  const pollResult = (predictionId: string, generationId: string | undefined, fnName: string) => {
+  const pollResult = (predictionId: string, generationId: string | undefined, fnName: string, longRunning = false) => {
     let attempts = 0;
+    let consecutiveErrors = 0;
+    // Suno V5 generuje pełny utwór z wokalem (~2-4 min) + próbuje kilku modeli po kolei
+    // (V5_5 → V5 → V4_5PLUS) zanim odda taskId — realny czas bywa dłuższy niż 4 min.
+    const maxAttempts = longRunning ? 160 : 80; // 160×3s = 8 min, 80×3s = 4 min
     pollRef.current = setInterval(async () => {
       attempts++;
-      if (attempts > 80) {
+      if (attempts > maxAttempts) {
         if (pollRef.current) clearInterval(pollRef.current);
         setPolling(false);
         setStatusMsg("⏰ Timeout silnika");
@@ -301,6 +305,7 @@ export const SunoGeneratePanel = () => {
           action: "status", prediction_id: predictionId, task_id: predictionId, taskId: predictionId, generation_id: generationId,
         });
         if (error) throw error;
+        consecutiveErrors = 0;
         const status = data?.status;
         if (status === "succeeded" || status === "completed" || status === "ready") {
           if (pollRef.current) clearInterval(pollRef.current);
@@ -323,7 +328,15 @@ export const SunoGeneratePanel = () => {
         } else {
           setStatusMsg(`⏳ ${status || "processing"}... (${attempts * 3}s)`);
         }
-      } catch {}
+      } catch (err: any) {
+        consecutiveErrors++;
+        // 5 błędów z rzędu (15s) = realny problem (sieć/auth), nie tylko "jeszcze trwa".
+        if (consecutiveErrors >= 5) {
+          if (pollRef.current) clearInterval(pollRef.current);
+          setPolling(false);
+          setStatusMsg("⚠️ Utracono połączenie z silnikiem: " + (err?.message || "błąd sieci"));
+        }
+      }
     }, 3000);
   };
 
