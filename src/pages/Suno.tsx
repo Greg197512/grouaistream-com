@@ -33,7 +33,7 @@ import { renderScore } from "@/lib/musicSynth";
 import { generateMusic } from "@/utils/musicGenerator";
 import { Lock, Crown, Download, Share2, Film } from "lucide-react";
 import { VideoStudio } from "@/components/studio/VideoStudio";
-import { downloadAudio, invokeStudioEngine, waitForAceStep, isSubscriptionError, fetchEngineLessons } from "@/lib/hubStudio";
+import { downloadAudio, isSubscriptionError } from "@/lib/hubStudio";
 import { Link, useSearchParams } from "react-router-dom";
 import { getEra, eraStudioGenre, trackYear, eraForYear } from "@/lib/eraEngine";
 import { eraUi } from "@/lib/eraContent";
@@ -451,7 +451,11 @@ const Suno = () => {
                 enhance: true,
               },
             });
-            if (se) throw se;
+            if (se) {
+              // Treść odpowiedzi funkcji (np. 401 sesji) zamiast ogólnego „non-2xx".
+              const ctx = await (se as any)?.context?.json?.().catch(() => null);
+              throw new Error(ctx?.error || se.message);
+            }
             if ((sd as any)?.error) throw new Error((sd as any).error);
             const taskId = (sd as any)?.id || (sd as any)?.task_id;
             if (!taskId) throw new Error("brak taskId");
@@ -495,56 +499,61 @@ const Suno = () => {
             }
             throw new Error("timeout");
           } catch (e) {
-            console.warn("[Studio] suno-generate niedostępny — przechodzę na silnik hub:", e);
+            console.warn("[Studio] suno-generate niedostępny — przechodzę na GrouAI Engine:", e);
+            toast.warning(`Suno: ${(e as Error)?.message || "brak odpowiedzi"} — generuję zapasowym silnikiem (instrumentalnie, do 30 s).`, { duration: 9000 });
             return false;
           }
         })();
         if (sunoOk) return;
 
-        // ── STOPIEŃ 2: prawdziwy silnik hub (Suno V5 + GPT + emocje), pollowany
-        // przez waitForAceStep — dokładnie ta sama, sprawdzona ścieżka co MusicPromptBox.
+        // ── STOPIEŃ 2: GrouAI Engine (MusicGen na Replicate, w projekcie Lovable). Zastępuje
+        // dawny silnik „hub" z usuniętego projektu. Instrumentalnie, do 30 s; plik trafia na R2.
         const studioOk = await (async (): Promise<boolean> => {
           try {
-            // Composed prompt niesie już gatunek/nastrój/tempo/energię/wokal. Gdy jest
-            // własny tekst — przekazujemy go dosłownie, by silnik go zaśpiewał.
-            let promptForEngine = instrumental
-              ? `${musicPrompt} (instrumentalny, bez wokalu)`
-              : (customLyrics.trim()
-                  ? `${musicPrompt}. Zaśpiewaj DOKŁADNIE ten tekst:\n${customLyrics.trim()}`
-                  : musicPrompt);
-
-            // NAUKA: doklej lekcje z naszych najlepszych utworów (in-context learning).
-            const lessons = await fetchEngineLessons(language);
-            if (lessons) promptForEngine = `${promptForEngine}\n\n${lessons}`;
-
-            const { data, error: fnErr } = await invokeStudioEngine("studio-prompt-engine", {
-              prompt: promptForEngine,
-              ...(language ? { language } : {}),
+            setGenStatus("🧠 GrouAI Engine komponuje…");
+            const engineDuration = Math.min(Math.max(duration, 8), 30);
+            const { data: gd, error: ge } = await supabase.functions.invoke("groua-music-engine", {
+              body: { action: "generate", prompt: musicPrompt.slice(0, 780), duration: engineDuration, instrumental: true, title: title || undefined },
             });
-            if (fnErr) throw new Error((fnErr as any).message || "Engine error");
-            if (!(data as any)?.success) throw new Error((data as any)?.message || (data as any)?.error || "Engine error");
+            if (ge) throw ge;
+            if ((gd as any)?.error) throw new Error((gd as any).error);
+            const predictionId = (gd as any)?.id as string | undefined;
+            const generationId = (gd as any)?.generation_id as string | undefined;
+            if (!predictionId) throw new Error("brak prediction_id");
 
-            const plan = (data as any).plan;
-            const trackTitle = plan?.title || title || `${genre} Track`;
-            const { audioUrl, coverUrl } = await waitForAceStep(
-              (data as any).task_id, (data as any).generation_id,
-              (sec) => setGenStatus(`⏳ Renderuję studyjny mix… (${sec}s)`),
-            );
+            const t0 = Date.now();
+            let remoteUrl: string | null = null;
+            while (Date.now() - t0 < 240_000) {
+              await new Promise((r) => setTimeout(r, 3000));
+              const { data: st } = await supabase.functions.invoke("groua-music-engine", {
+                body: { action: "status", prediction_id: predictionId, generation_id: generationId },
+              });
+              const s2 = (st as any)?.status;
+              if (s2 === "succeeded") { remoteUrl = (st as any)?.output || null; break; }
+              if (s2 === "failed" || s2 === "canceled") throw new Error((st as any)?.error || "generacja nie powiodła się");
+              setGenStatus(`⏳ GrouAI Engine renderuje… (${Math.round((Date.now() - t0) / 1000)}s)`);
+            }
+            if (!remoteUrl) throw new Error("timeout");
 
-            const lyrics = customLyrics.trim()
-              ? parseLyricsFromText(customLyrics, duration)
-              : (plan?.full_lyrics ? parseLyricsFromText(plan.full_lyrics, duration) : generateLyrics(genre, trackTitle, duration, instrumental));
-
-            setResult({ audioUrl, title: trackTitle, genre, durationSeconds: duration, lyrics, imageUrl: coverUrl || undefined });
+            const trackTitle = title || `${genre} Track`;
+            setGenStatus(t("studio.status.uploading"));
+            const url = await mirrorToR2(remoteUrl, trackTitle, user!.id); // nic nie robi, gdy już na R2
+            const lyrics = generateLyrics(genre, trackTitle, engineDuration, true);
+            setResult({ audioUrl: url, title: trackTitle, genre, durationSeconds: engineDuration, lyrics });
             setGenStatus(t("studio.status.done"));
-            toast.success(`🎶 "${trackTitle}" — studyjna jakość!`);
-            // Silnik zapisał już utwór (rekord generations) — odśwież „Twoje utwory”.
+            toast.success(`🎶 "${trackTitle}" — GrouAI Engine (instrumental)`);
+            if (isPersistentAudioUrl(url)) {
+              await supabase.from("tracks").insert({
+                user_id: user!.id, title: trackTitle, artist: "GrouAI Studio",
+                album: eraAlbum, duration: engineDuration, audio_url: url, genre, mood,
+              });
+            }
             window.dispatchEvent(new CustomEvent("grouai:generations-changed"));
             if (!isPro) setFreeUsed((prev) => prev + 1);
             return true;
           } catch (e) {
             if (isSubscriptionError(e)) { setShowPaywall(true); setGenStatus(""); throw e; }
-            console.warn("[Studio] studio-prompt-engine niedostępny — plan B (lokalny):", e);
+            console.warn("[Studio] GrouAI Engine niedostępny — plan B (lokalny):", e);
             return false;
           }
         })();

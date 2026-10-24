@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { chatGateway } from "../_shared/chatGateway.ts";
 
 function getCorsHeaders(_req: Request) {
   return {
@@ -268,7 +269,7 @@ serve(async (req) => {
     // --- End authentication ---
 
     const { mood, confidence, emotion, userName, language } = await req.json();
-    const OPENROUTER_API_KEY = Deno.env.get("LOVABLE_API_KEY") || Deno.env.get("OPENROUTER_API_KEY");
+    const OPENROUTER_API_KEY = chatGateway()?.key;
 
     if (!OPENROUTER_API_KEY) {
       throw new Error("OPENROUTER_API_KEY not configured");
@@ -288,14 +289,14 @@ serve(async (req) => {
       .replace("{time}", now)
       .replace("{scanId}", scanId);
 
-    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const aiResponse = await fetch(chatGateway()!.url, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${OPENROUTER_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: chatGateway()!.model,
         messages: [
           { role: "system", content: prompts.system },
           { role: "user", content: userPrompt },

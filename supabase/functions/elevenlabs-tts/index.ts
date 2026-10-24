@@ -58,7 +58,7 @@ serve(async (req) => {
       pitch,
     });
 
-    return new Response(audio, {
+    return new Response(new Uint8Array(audio).buffer, {
       headers: { ...corsHeaders, "Content-Type": "audio/mpeg", "X-TTS-Engine": engine },
     });
   } catch (error) {

@@ -284,21 +284,44 @@ export async function waitForAceStep(
   throw new Error("Przekroczono czas oczekiwania na utwór");
 }
 
-// ─── Wideo (teledysk / film z tekstu) — Replicate przez hub ────────────────────
-// good → LTX-Video (szybki, tani), vip → MiniMax video-01 (jakość, plan Pro/Ultimate).
-const HUB_VIDEO_URL =
-  "https://bmwtydwpevzhbdplilbr.supabase.co/functions/v1/studio-video";
+// ─── Wideo (teledysk / film z tekstu) — funkcja studio-video (Replicate) ──────
+// good → Wan 2.2 (szybki), vip → Hailuo-02 (jakość); zapas: MiniMax video-01.
+
+/** Wywołuje studio-video; błąd zawiera treść odpowiedzi funkcji, nie ogólne „non-2xx". */
+async function videoFn(body: Record<string, unknown>): Promise<InvokeResult> {
+  const { data, error } = await supabase.functions.invoke("studio-video", { body });
+  if (error) {
+    const ctx = await (error as any)?.context?.json?.().catch(() => null);
+    return { data: ctx, error: new Error(ctx?.error || error.message) };
+  }
+  if (data?.error) return { data, error: new Error(data.error) };
+  return { data, error: null };
+}
+
+/** Wspólne odpytywanie zadania Replicate aż do gotowego wideo. */
+async function waitForVideoJob(
+  jobId: string, onTick: ((s: number) => void) | undefined, maxAttempts: number, failMsg: string,
+): Promise<string> {
+  for (let i = 1; i <= maxAttempts; i++) {
+    await new Promise((res) => setTimeout(res, 5000));
+    onTick?.(i * 5);
+    const { data, error } = await videoFn({ action: "status", job_id: jobId });
+    if (error) continue; // chwilowy błąd sieci — próbujemy dalej
+    if (data?.status === "completed" && data?.video_url) return data.video_url as string;
+    if (data?.status === "failed") throw new Error(data?.error ? `${failMsg}: ${data.error}` : failMsg);
+  }
+  throw new Error("Przekroczono czas oczekiwania na wideo");
+}
 
 /**
  * Zleca wygenerowanie wideo z tekstu. Zwraca { data, error }.
  * data.job_id → zlecono; odpytuj waitForStudioVideo.
- * error „subscription_required" → jakość VIP wymaga planu.
  */
 export async function submitStudioVideo(
   prompt: string,
   opts?: { quality?: "good" | "vip"; aspect?: string; singing?: boolean; image?: string }
 ): Promise<InvokeResult> {
-  return hubFetch(HUB_VIDEO_URL, {
+  return videoFn({
     prompt,
     quality: opts?.quality ?? "good",
     aspect: opts?.aspect ?? "16:9",
@@ -307,103 +330,46 @@ export async function submitStudioVideo(
   });
 }
 
-/** Odpytuje hub aż wideo będzie gotowe. Zwraca URL albo rzuca błąd. */
-export async function waitForStudioVideo(
-  jobId: string,
-  onTick?: (elapsedSeconds: number) => void
-): Promise<string> {
-  const maxAttempts = 120; // ~10 minut
-  for (let i = 1; i <= maxAttempts; i++) {
-    await new Promise((res) => setTimeout(res, 5000));
-    onTick?.(i * 5);
-    const { data, error } = await hubFetch(HUB_VIDEO_URL, { action: "status", job_id: jobId });
-    if (error) continue; // chwilowy błąd sieci — próbujemy dalej
-    if (data?.status === "completed" && data?.video_url) return data.video_url as string;
-    if (data?.status === "failed") throw new Error("Generowanie wideo nie powiodło się");
-  }
-  throw new Error("Przekroczono czas oczekiwania na wideo");
+/** Odpytuje aż wideo będzie gotowe (~10 min max). Zwraca URL albo rzuca błąd. */
+export function waitForStudioVideo(jobId: string, onTick?: (elapsedSeconds: number) => void): Promise<string> {
+  return waitForVideoJob(jobId, onTick, 120, "Generowanie wideo nie powiodło się");
 }
-
-// ─── VIDEO STUDIO: Higgsfield (gdy wpięty klucz) → w razie braku nasz silnik ─────
-const HUB_HIGGSFIELD_URL =
-  "https://bmwtydwpevzhbdplilbr.supabase.co/functions/v1/higgsfield-video";
 
 export type VideoEngine = "higgsfield" | "replicate";
 
-/**
- * Zleca wideo z tekstu. Najpierw próbuje Higgsfield (jeśli w hubie jest klucz
- * API); gdy klucza brak / błąd — automatycznie spada na nasz działający silnik
- * (Replicate). Zwraca { engine, jobId } do pollowania przez waitForVideoSmart.
- */
+/** Zleca wideo z tekstu (Replicate). Zwraca { engine, jobId } do pollowania przez waitForVideoSmart. */
 export async function submitVideoSmart(
   prompt: string,
   opts?: { quality?: "good" | "vip"; aspect?: string; duration?: number; image?: string; singing?: boolean }
 ): Promise<{ engine: VideoEngine; jobId: string }> {
-  // 1) Higgsfield (aktywny dopiero po dodaniu higgsfield_api_key w hubie).
-  //    Higgsfield najlepiej robi postać/śpiew — gdy jest zdjęcie i klucz, tu trafi.
-  try {
-    const hf = await hubFetch(HUB_HIGGSFIELD_URL, {
-      prompt, aspect: opts?.aspect ?? "9:16", duration: opts?.duration ?? 5,
-      ...(opts?.image ? { image: opts.image } : {}),
-    });
-    if (hf.data?.ok && hf.data?.job_id) return { engine: "higgsfield", jobId: String(hf.data.job_id) };
-  } catch { /* spadamy na nasz silnik */ }
-  // 2) Nasz silnik (Replicate) — zawsze dostępny.
   const { data, error } = await submitStudioVideo(prompt, {
     quality: opts?.quality, aspect: opts?.aspect, image: opts?.image, singing: opts?.singing,
   });
-  // Przekaż czytelny komunikat (limit dzienny / brak środków / plan) do UI.
-  if (error) throw new Error((data as any)?.message || error.message);
+  if (error) throw error;
   if (!data?.job_id) throw new Error(data?.message || "Nie udało się zlecić wideo");
   return { engine: "replicate", jobId: String(data.job_id) };
 }
 
-/** Pollowanie właściwego silnika aż wideo będzie gotowe. Zwraca URL. */
-export async function waitForVideoSmart(
-  engine: VideoEngine, jobId: string, onTick?: (elapsedSeconds: number) => void
+/** Pollowanie zadania aż wideo będzie gotowe. Zwraca URL. */
+export function waitForVideoSmart(
+  _engine: VideoEngine, jobId: string, onTick?: (elapsedSeconds: number) => void
 ): Promise<string> {
-  if (engine === "replicate") return waitForStudioVideo(jobId, onTick);
-  const maxAttempts = 120; // ~10 minut
-  for (let i = 1; i <= maxAttempts; i++) {
-    await new Promise((res) => setTimeout(res, 5000));
-    onTick?.(i * 5);
-    const { data, error } = await hubFetch(HUB_HIGGSFIELD_URL, { action: "status", job_id: jobId });
-    if (error) continue;
-    if (data?.status === "completed" && data?.video_url) return data.video_url as string;
-    if (data?.status === "failed") throw new Error("Generowanie wideo (Higgsfield) nie powiodło się");
-  }
-  throw new Error("Przekroczono czas oczekiwania na wideo");
+  return waitForStudioVideo(jobId, onTick);
 }
 
-// ─── Lip-sync: usta wokalisty zsynchronizowane ze słowami (LatentSync, VIP) ─────
-const HUB_LIPSYNC_URL =
-  "https://bmwtydwpevzhbdplilbr.supabase.co/functions/v1/studio-lipsync";
+// ─── Lip-sync: usta wokalisty zsynchronizowane ze słowami (Kling / sync) ─────
 
 /** Zleca lip-sync całego wideo do utworu. Zwraca { data, error }. */
 export async function submitStudioLipsync(videoUrl: string, audioUrl: string): Promise<InvokeResult> {
-  return hubFetch(HUB_LIPSYNC_URL, { video_url: videoUrl, audio_url: audioUrl });
+  return videoFn({ action: "lipsync", video_url: videoUrl, audio_url: audioUrl });
 }
 
-/** Odpytuje aż lip-sync będzie gotowy. Zwraca URL wideo (z wgranym audio). */
-export async function waitForStudioLipsync(
-  jobId: string,
-  onTick?: (elapsedSeconds: number) => void
-): Promise<string> {
-  const maxAttempts = 180; // ~15 minut — lip-sync jest wolniejszy
-  for (let i = 1; i <= maxAttempts; i++) {
-    await new Promise((res) => setTimeout(res, 5000));
-    onTick?.(i * 5);
-    const { data, error } = await hubFetch(HUB_LIPSYNC_URL, { action: "status", job_id: jobId });
-    if (error) continue;
-    if (data?.status === "completed" && data?.video_url) return data.video_url as string;
-    if (data?.status === "failed") throw new Error("Synchronizacja ust nie powiodła się");
-  }
-  throw new Error("Przekroczono czas oczekiwania na lip-sync");
+/** Odpytuje aż lip-sync będzie gotowy (~15 min max). Zwraca URL wideo z dźwiękiem. */
+export function waitForStudioLipsync(jobId: string, onTick?: (elapsedSeconds: number) => void): Promise<string> {
+  return waitForVideoJob(jobId, onTick, 180, "Synchronizacja ust nie powiodła się");
 }
 
 // ─── Storyboard: AI układa sceny teledysku z tekstu/klimatu utworu ─────────────
-const HUB_STORYBOARD_URL =
-  "https://bmwtydwpevzhbdplilbr.supabase.co/functions/v1/studio-storyboard";
 
 /** Zwraca listę opisów ujęć (po angielsku) wygenerowanych z piosenki. Nigdy nie rzuca. */
 export async function fetchStoryboard(body: {
@@ -416,7 +382,7 @@ export async function fetchStoryboard(body: {
   singing?: boolean;
 }): Promise<string[]> {
   try {
-    const { data, error } = await hubFetch(HUB_STORYBOARD_URL, body);
+    const { data, error } = await videoFn({ action: "storyboard", ...body });
     if (error || !Array.isArray(data?.scenes)) return [];
     return (data.scenes as string[]).filter((s) => typeof s === "string" && s.trim().length > 3);
   } catch {

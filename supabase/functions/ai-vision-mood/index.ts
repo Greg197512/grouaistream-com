@@ -1,6 +1,8 @@
 // AI Vision Mood — wykrywa emocje z twarzy: oczy, wzrok, mikroekspresje.
 // Analizuje SEKWENCJĘ klatek (mocniejsze niż jeden snapshot) w jednym zapytaniu.
 // Darmowo: próbuje kolejno silników widzących z kluczem już obecnym w projekcie.
+import { chatGateway } from "../_shared/chatGateway.ts";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -62,10 +64,10 @@ Deno.serve(async (req) => {
 
     const providers: VisionProvider[] = [
       {
-        name: "Lovable/Gemini",
-        key: Deno.env.get("LOVABLE_API_KEY"),
-        url: "https://ai.gateway.lovable.dev/v1/chat/completions",
-        model: "google/gemini-2.5-flash",
+        name: "Gemini",
+        key: chatGateway()?.key,
+        url: chatGateway()?.url ?? "",
+        model: chatGateway()?.model ?? "gemini-2.5-flash",
       },
       {
         name: "OpenRouter/Llama-Vision",
@@ -83,7 +85,7 @@ Deno.serve(async (req) => {
 
     if (!providers.some((p) => p.key)) {
       return new Response(
-        JSON.stringify({ error: "Brak klucza AI (LOVABLE_API_KEY lub OPENROUTER_API_KEY)." }),
+        JSON.stringify({ error: "Brak klucza AI (GEMINI_API_KEY lub OPENROUTER_API_KEY)." }),
         { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }

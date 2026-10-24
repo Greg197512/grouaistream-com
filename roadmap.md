@@ -1,4 +1,5 @@
 # Roadmap
+- [ ] Kontynuacja migracji R2 z commit ccdc553: wyłącznie migrator wdrożony; blokada: wywołanie narzędziem anulowane, curl po 140 s bez odpowiedzi, brak next_after_id i statystyk; liczniki bez zmian (202 covers_r2, 1340 covers_other, 9 audio_other).
 - [x] Dopracować Studio, przywrócić equalizer i płomyki oraz cotygodniową rotację tła bez naruszania funkcji strony.
 
 - [x] Profesjonalna grafika strony i intro ze statycznym nagraniem, bez cyklicznych kosztów AI.

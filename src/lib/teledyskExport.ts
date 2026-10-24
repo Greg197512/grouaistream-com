@@ -3,12 +3,12 @@
 // Świadomie single-thread core (@ffmpeg/core, NIE core-mt) — nie wymaga
 // SharedArrayBuffer ani nagłówków COOP/COEP, więc NIE psuje CORS mediów w apce
 // (a tego tu pilnujemy). Klipy z replicate.delivery nie mają CORS → pobieramy je
-// przez hub media-proxy. Wynik: krótki teledysk (klipy + utwór), idealny na
+// przez nasze proxy /api/media (Vercel). Wynik: krótki teledysk (klipy + utwór), idealny na
 // TikTok / Shorts / Reels.
 import { FFmpeg } from "@ffmpeg/ffmpeg";
 import { fetchFile } from "@ffmpeg/util";
 
-const PROXY = "https://bmwtydwpevzhbdplilbr.supabase.co/functions/v1/media-proxy?u=";
+const PROXY = "/api/media?u=";
 const CORE_BASE = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd";
 
 const prox = (u: string) => (u.startsWith("blob:") || u.startsWith("data:") ? u : PROXY + encodeURIComponent(u));

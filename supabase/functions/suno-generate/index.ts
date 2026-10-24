@@ -13,6 +13,25 @@ const corsHeaders = {
 
 const SUNO_API_BASE = "https://api.sunoapi.org/api/v1";
 const AI_GATEWAY = "https://openrouter.ai/api/v1/chat/completions";
+// Darmowe modele OpenRouter, próbowane po kolei (stare id bywają wycofywane).
+const ENHANCE_MODELS = ["google/gemma-4-31b-it:free", "meta-llama/llama-3.3-70b-instruct:free"];
+
+const json = (data: unknown, status = 200) =>
+  new Response(JSON.stringify(data), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
+// Kody błędów sunoapi.org → zrozumiały komunikat dla twórcy.
+function sunoReason(code: number | undefined, msg?: string): string {
+  switch (code) {
+    case 401: return "Klucz Suno (SUNO_API_KEY) jest nieprawidłowy lub wygasł";
+    case 402:
+    case 429: return "Brak kredytów na koncie sunoapi.org — doładuj konto";
+    case 405:
+    case 430: return "Zbyt wiele zapytań do Suno — spróbuj za minutę";
+    case 413: return "Opis lub tekst jest za długi dla Suno";
+    case 455: return "Suno ma przerwę techniczną — spróbuj później";
+    default: return msg ? `Suno: ${msg}` : "Suno nie przyjęło zadania";
+  }
+}
 
 // GPT-5.5 rewrites user idea into a top-tier Suno prompt (style + optional lyrics).
 // Optimized for PL phonetics + clean instrumentation cues.
@@ -23,7 +42,8 @@ async function enhanceWithGPT(input: {
   instrumental?: boolean;
   language?: string;
 }): Promise<{ style: string; title: string; lyrics: string } | null> {
-  const key = Deno.env.get("OPENROUTER_API_KEY") || Deno.env.get("LOVABLE_API_KEY");
+  // Ulepszacz działa tylko z kluczem OpenRouter (klucz Lovable nie pasuje do tej bramki).
+  const key = Deno.env.get("OPENROUTER_API_KEY");
   if (!key) return null;
 
   const lang = input.language || "pl";
@@ -57,7 +77,7 @@ Requested title hint: ${input.title || "(auto)"}
 Instrumental: ${input.instrumental ? "yes (lyrics must be empty)" : "no (write full lyrics)"}
 Language: ${langName}`;
 
-  try {
+  for (const model of ENHANCE_MODELS) try {
     const res = await fetch(AI_GATEWAY, {
       method: "POST",
       headers: {
@@ -67,20 +87,22 @@ Language: ${langName}`;
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.0-flash-exp:free",
+        model,
         messages: [
           { role: "system", content: sys },
           { role: "user", content: usr },
         ],
         response_format: { type: "json_object" },
       }),
+      // Ulepszacz jest opcjonalny — nie może blokować generowania.
+      signal: AbortSignal.timeout(20_000),
     });
     if (!res.ok) {
-      console.error("[suno-generate] GPT enhance failed:", res.status, await res.text().catch(() => ""));
-      return null;
+      console.error("[suno-generate] GPT enhance failed:", model, res.status, await res.text().catch(() => ""));
+      continue;
     }
     const j = await res.json();
-    const raw = j.choices?.[0]?.message?.content || "{}";
+    const raw = String(j.choices?.[0]?.message?.content || "{}").replace(/^```(?:json)?\s*|\s*```$/g, "");
     const parsed = JSON.parse(raw);
     const CLARITY = "crystal clear mix, pristine high fidelity, 24-bit studio master, wide stereo image, transparent vocals, zero distortion, zero mud, professional mastering, radio-ready";
     const styleBase = String(parsed.style || input.style || "modern pop, warm analog synth").trim();
@@ -91,9 +113,9 @@ Language: ${langName}`;
       lyrics: input.instrumental ? "" : String(parsed.lyrics || ""),
     };
   } catch (e) {
-    console.error("[suno-generate] GPT enhance error:", e);
-    return null;
+    console.error("[suno-generate] GPT enhance error:", model, e);
   }
+  return null;
 }
 
 async function callSuno(apiKey: string, body: any) {
@@ -101,11 +123,36 @@ async function callSuno(apiKey: string, body: any) {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify(body),
+    signal: AbortSignal.timeout(30_000),
   });
 }
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+
+  const raw = await req.text();
+  let body: any = {};
+  try { body = raw ? JSON.parse(raw) : {}; } catch { /* puste lub nie-JSON */ }
+
+  // Callback sunoapi.org (bez logowania) — wynik i tak odbieramy pollingiem „status".
+  if (body?.data?.callbackType || body?.data?.task_id) return json({ ok: true });
+
+  // Diagnostyka bez kosztów: czy klucz jest ustawiony i ile zostało kredytów.
+  if (body?.action === "health") {
+    const k = Deno.env.get("SUNO_API_KEY");
+    if (!k) return json({ ok: false, configured: false, reason: "Brak sekretu SUNO_API_KEY" });
+    try {
+      const r = await fetch(`${SUNO_API_BASE}/generate/credit`, {
+        headers: { Authorization: `Bearer ${k}` }, signal: AbortSignal.timeout(10_000),
+      });
+      const j = await r.json().catch(() => ({}));
+      const ok = r.ok && j?.code === 200;
+      return json({ ok, configured: true, http: r.status, code: j?.code, credits: ok ? j?.data : undefined,
+        reason: ok ? undefined : sunoReason(j?.code ?? r.status, j?.msg) });
+    } catch (e) {
+      return json({ ok: false, configured: true, reason: `sunoapi.org nie odpowiada: ${String(e)}` });
+    }
+  }
 
   const authHeader = req.headers.get("authorization");
   if (!authHeader?.startsWith("Bearer ")) {
@@ -128,13 +175,10 @@ serve(async (req) => {
 
   const SUNO_API_KEY = Deno.env.get("SUNO_API_KEY");
   if (!SUNO_API_KEY) {
-    return new Response(JSON.stringify({ error: "SUNO_API_KEY not configured" }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return json({ error: "Brak sekretu SUNO_API_KEY w projekcie — dodaj klucz z sunoapi.org" });
   }
 
   try {
-    const body = await req.json();
     const action = body.action || (body.taskId || body.task_id || body.prediction_id ? "status" : "generate");
 
     // -------- STATUS --------
@@ -145,10 +189,11 @@ serve(async (req) => {
           status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      const r = await fetch(`${SUNO_API_BASE}/generate/record-info?taskId=${taskId}`, {
+      const r = await fetch(`${SUNO_API_BASE}/generate/record-info?taskId=${encodeURIComponent(taskId)}`, {
         headers: { Authorization: `Bearer ${SUNO_API_KEY}` },
+        signal: AbortSignal.timeout(20_000),
       });
-      const j = await r.json();
+      const j = await r.json().catch(() => ({}));
       if (!r.ok) {
         return new Response(JSON.stringify({ status: "failed", error: j?.msg || `HTTP ${r.status}` }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -189,16 +234,19 @@ serve(async (req) => {
     // -------- GENERATE --------
     const { prompt = "", style = "", title = "", instrumental = false, vocal_language, language, enhance = true } = body;
 
+    const styleGiven = !!String(style || "").trim();
     let finalStyle = style;
     let finalTitle = title;
     let finalLyrics = ""; // Suno's `prompt` field = lyrics in customMode
 
+    let enhanced = false;
     if (enhance) {
       const boost = await enhanceWithGPT({
         prompt, style, title, instrumental,
         language: vocal_language || language || "pl",
       });
       if (boost) {
+        enhanced = true;
         finalStyle = boost.style;
         finalTitle = boost.title;
         finalLyrics = boost.lyrics;
@@ -233,8 +281,14 @@ serve(async (req) => {
       baseBody.title = finalTitle.slice(0, 80);
       baseBody.prompt = instrumental ? "" : finalLyrics.slice(0, 3000);
     } else {
-      // Non-custom V5 accepts free-form description in `prompt`.
-      baseBody.prompt = `${prompt} — ${finalStyle}`.slice(0, 400);
+      // Tryb opisowy: Suno samo pisze tekst. Wysyłamy opis użytkownika; styl dokładamy tylko
+      // wtedy, gdy podał go użytkownik lub ulepszacz — domyślny „modern pop" zmieniałby gatunek.
+      const lang = String(vocal_language || language || "").toLowerCase();
+      const LANG_HINT: Record<string, string> = { pl: "śpiew po polsku", en: "English vocals", nl: "Nederlandse zang", uk: "вокал українською", ua: "вокал українською" };
+      const parts = [String(prompt).trim()];
+      if (styleGiven || enhanced) parts.push(finalStyle);
+      if (!instrumental && LANG_HINT[lang]) parts.push(LANG_HINT[lang]);
+      baseBody.prompt = parts.filter(Boolean).join(" — ").slice(0, 490);
     }
 
     // Try V5_5 (najwyższa jakość) first, then V5, then V4_5PLUS on model error.
@@ -243,6 +297,7 @@ serve(async (req) => {
     let genOk = false;
     let usedModel = "";
     let lastErr = "";
+    let lastReason = "";
     for (const m of modelsToTry) {
       const res = await callSuno(SUNO_API_KEY, { ...baseBody, model: m });
       const j = await res.json().catch(() => ({}));
@@ -252,14 +307,17 @@ serve(async (req) => {
         usedModel = m;
         break;
       }
+      const code = Number(j?.code ?? res.status);
       lastErr = `[${m}] HTTP ${res.status} ${JSON.stringify(j).slice(0, 300)}`;
-      console.warn("[suno-generate] model failed, trying next:", lastErr);
+      lastReason = sunoReason(code, j?.msg);
+      console.warn("[suno-generate] model failed:", lastErr);
+      // Klucz/kredyty/limit dotyczą konta, nie modelu — kolejny model nic nie zmieni.
+      if ([401, 402, 429, 430, 455].includes(code)) break;
     }
 
     if (!genOk) {
-      return new Response(JSON.stringify({ error: `Suno generate failed: ${lastErr}` }), {
-        status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      // 200 z polem error: klient pokazuje powód zamiast ogólnego „non-2xx".
+      return json({ error: lastReason || "Suno nie przyjęło zadania", detail: lastErr });
     }
 
     const taskId = genData?.data?.taskId || genData?.data?.task_id;

@@ -4321,6 +4321,21 @@ export type Database = {
           },
         ]
       }
+      media_migration_token: {
+        Row: {
+          expires_at: string
+          token_hash: string
+        }
+        Insert: {
+          expires_at: string
+          token_hash: string
+        }
+        Update: {
+          expires_at?: string
+          token_hash?: string
+        }
+        Relationships: []
+      }
       melody_embeddings: {
         Row: {
           catalog_id: string
@@ -7360,6 +7375,14 @@ export type Database = {
       }
     }
     Functions: {
+      _mig_export: {
+        Args: { p_chunk?: number; p_tables: string[]; p_where?: string }
+        Returns: {
+          requests: number
+          rows_sent: number
+          tbl: string
+        }[]
+      }
       acknowledge_payout: { Args: { _detail_id: string }; Returns: Json }
       activate_boost_paid: {
         Args: {
@@ -7680,6 +7703,20 @@ export type Database = {
       }
       mark_tip_welcome_seen: { Args: never; Returns: Json }
       marketing_lite: { Args: never; Returns: Json }
+      mm_apply: {
+        Args: { p_field: string; p_id: string; p_token: string; p_url: string }
+        Returns: undefined
+      }
+      mm_candidates: {
+        Args: { p_after: string; p_limit: number; p_token: string }
+        Returns: {
+          audio_url: string
+          cover_url: string
+          id: string
+          video_url: string
+        }[]
+      }
+      mm_token_ok: { Args: { p_token: string }; Returns: boolean }
       move_to_dlq: {
         Args: {
           dlq_name: string

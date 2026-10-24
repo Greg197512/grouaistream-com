@@ -1,46 +1,89 @@
 {
   "crons": [
-    { "path": "/api/agents-run", "schedule": "0 * * * *" }
+    {
+      "path": "/api/agents-run",
+      "schedule": "0 * * * *"
+    }
   ],
   "rewrites": [
-    { "source": "/prezent/:id", "destination": "https://bmwtydwpevzhbdplilbr.supabase.co/functions/v1/prezent?t=:id" },
-    { "source": "/sitemap.xml", "destination": "https://bvstvawnigyczvofzhps.supabase.co/functions/v1/seo-sitemap-generate" },
+    {
+      "source": "/prezent/:id",
+      "destination": "https://bmwtydwpevzhbdplilbr.supabase.co/functions/v1/prezent?t=:id"
+    },
+    {
+      "source": "/sitemap.xml",
+      "destination": "https://bvstvawnigyczvofzhps.supabase.co/functions/v1/seo-sitemap-generate"
+    },
     {
       "source": "/",
       "has": [
-        { "type": "query", "key": "play", "value": "(?<id>.*)" },
-        { "type": "header", "key": "user-agent", "value": ".*(WhatsApp|facebookexternalhit|Twitterbot|TelegramBot|LinkedInBot|Slackbot|Discordbot|Pinterest|redditbot|SkypeUriPreview).*" }
+        {
+          "type": "query",
+          "key": "play",
+          "value": "(?<id>.*)"
+        },
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(WhatsApp|facebookexternalhit|Twitterbot|TelegramBot|LinkedInBot|Slackbot|Discordbot|Pinterest|redditbot|SkypeUriPreview).*"
+        }
       ],
       "destination": "https://bvstvawnigyczvofzhps.supabase.co/functions/v1/og-proxy?id=:id"
     },
-    { "source": "/((?!api/).*)", "destination": "/index.html" }
+    {
+      "source": "/((?!api/).*)",
+      "destination": "/index.html"
+    }
   ],
   "headers": [
     {
       "source": "/sw.js",
       "headers": [
-        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" },
-        { "key": "Service-Worker-Allowed", "value": "/" }
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        },
+        {
+          "key": "Service-Worker-Allowed",
+          "value": "/"
+        }
       ]
     },
     {
       "source": "/assets/(.*)",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
       ]
     },
     {
       "source": "/((?!assets/).*)",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
       ]
     },
     {
       "source": "/(.*)",
       "headers": [
-        { "key": "Strict-Transport-Security", "value": "max-age=31536000; includeSubDomains" },
-        { "key": "X-Content-Type-Options", "value": "nosniff" }
+        {
+          "key": "Strict-Transport-Security",
+          "value": "max-age=31536000; includeSubDomains"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        }
       ]
     }
-  ]
+  ],
+  "functions": {
+    "api/migrate-media.ts": {
+      "maxDuration": 60
+    }
+  }
 }
