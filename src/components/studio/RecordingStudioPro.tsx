@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Mic, Square, Play, Pause, Trash2, Plus, Download, Save, Loader2,
   Piano, Volume2, VolumeX, Crown, Disc3, Usb, RadioTower, Upload,
+  SlidersHorizontal, ChevronDown, Sparkles, Music4, RotateCcw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -15,6 +16,8 @@ import { uploadToR2 } from "@/lib/r2Upload";
 import { WaveformPlayer } from "@/components/studio/WaveformPlayer";
 import { checkSpotifyReady, type SpotifyReadyCheck } from "@/lib/loudness";
 import { SpotifyReadyBadge } from "@/components/studio/SpotifyReadyBadge";
+import { buildFxChain, DEFAULT_FX, FX_IS_DEFAULT, type TrackFx } from "@/lib/trackEffects";
+import { analyzeSong, type SongAnalysis } from "@/lib/pitchAnalysis";
 
 /**
  * Studio Nagrań Pro (VIP) — wielościeżkowe nagrywanie na prawdziwym sprzęcie:
@@ -31,6 +34,7 @@ type Track = {
   url: string;
   volume: number;
   muted: boolean;
+  fx: TrackFx;
 };
 
 type BackingTrack = { id: string; title: string; audio_url: string };
@@ -46,6 +50,16 @@ function SynthKey({ note, active }: { note: number; active: boolean }) {
   );
 }
 
+// Brzmienia pod klawiaturę MIDI — różny kształt fali + obwiednia głośności.
+type InstrumentVoice = { id: string; label: string; type: OscillatorType; attack: number; release: number; gain: number; detune?: number };
+const INSTRUMENTS: InstrumentVoice[] = [
+  { id: "piano", label: "🎹 Pianino", type: "triangle", attack: 0.008, release: 0.35, gain: 0.28 },
+  { id: "lead", label: "⚡ Lead", type: "sawtooth", attack: 0.02, release: 0.08, gain: 0.22 },
+  { id: "bass", label: "🔊 Bas", type: "sine", attack: 0.01, release: 0.2, gain: 0.35, detune: -1200 },
+  { id: "pad", label: "🌫️ Pad", type: "sine", attack: 0.4, release: 1.1, gain: 0.2 },
+  { id: "pluck", label: "🪕 Pluck", type: "square", attack: 0.002, release: 0.12, gain: 0.16 },
+];
+
 export function RecordingStudioPro() {
   const { user } = useAuth();
   const { isVip, isUltimate, showUpgradeFor } = useSubscription();
@@ -60,6 +74,9 @@ export function RecordingStudioPro() {
   // --- MIDI ---
   const [midiDevices, setMidiDevices] = useState<string[]>([]);
   const [activeNotes, setActiveNotes] = useState<Set<number>>(new Set());
+  const [instrument, setInstrument] = useState("piano");
+  const instrumentRef = useRef(instrument);
+  useEffect(() => { instrumentRef.current = instrument; }, [instrument]);
   const midiAudioCtxRef = useRef<AudioContext | null>(null);
   const midiOscRef = useRef<Map<number, { osc: OscillatorNode; gain: GainNode }>>(new Map());
 
@@ -85,6 +102,10 @@ export function RecordingStudioPro() {
   const [saving, setSaving] = useState(false);
   const [spotifyCheck, setSpotifyCheck] = useState<SpotifyReadyCheck | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [fxOpenId, setFxOpenId] = useState<string | null>(null);
+  const [analysis, setAnalysis] = useState<SongAnalysis | null>(null);
+  const [analyzing, setAnalyzing] = useState(false);
+  const lastMixBufferRef = useRef<AudioBuffer | null>(null);
 
   useEffect(() => {
     if (!unlocked || !user) return;
@@ -133,12 +154,14 @@ export function RecordingStudioPro() {
     const noteOn = (note: number, velocity: number) => {
       if (!midiAudioCtxRef.current) midiAudioCtxRef.current = new AudioContext();
       const ctx = midiAudioCtxRef.current;
+      const voice = INSTRUMENTS.find((v) => v.id === instrumentRef.current) || INSTRUMENTS[0];
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
-      osc.type = "sawtooth";
+      osc.type = voice.type;
       osc.frequency.value = 440 * Math.pow(2, (note - 69) / 12);
+      if (voice.detune) osc.detune.value = voice.detune;
       gain.gain.value = 0;
-      gain.gain.linearRampToValueAtTime((velocity / 127) * 0.25, ctx.currentTime + 0.02);
+      gain.gain.linearRampToValueAtTime((velocity / 127) * voice.gain, ctx.currentTime + voice.attack);
       osc.connect(gain).connect(ctx.destination);
       osc.start();
       midiOscRef.current.set(note, { osc, gain });
@@ -148,8 +171,11 @@ export function RecordingStudioPro() {
       const v = midiOscRef.current.get(note);
       if (v && midiAudioCtxRef.current) {
         const ctx = midiAudioCtxRef.current;
-        v.gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.08);
-        v.osc.stop(ctx.currentTime + 0.1);
+        const voice = INSTRUMENTS.find((x) => x.id === instrumentRef.current) || INSTRUMENTS[0];
+        v.gain.gain.cancelScheduledValues(ctx.currentTime);
+        v.gain.gain.setValueAtTime(v.gain.gain.value, ctx.currentTime);
+        v.gain.gain.linearRampToValueAtTime(0, ctx.currentTime + voice.release);
+        v.osc.stop(ctx.currentTime + voice.release + 0.02);
         midiOscRef.current.delete(note);
       }
       setActiveNotes((s) => { const n = new Set(s); n.delete(note); return n; });
@@ -217,7 +243,7 @@ export function RecordingStudioPro() {
         const blob = new Blob(chunksRef.current, { type: "audio/webm" });
         const url = URL.createObjectURL(blob);
         setTracks((prev) => [...prev, {
-          id: crypto.randomUUID(), name: `Warstwa ${prev.length + 1}`, blob, url, volume: 100, muted: false,
+          id: crypto.randomUUID(), name: `Warstwa ${prev.length + 1}`, blob, url, volume: 100, muted: false, fx: { ...DEFAULT_FX },
         }]);
       };
       mediaRecorderRef.current = mr;
@@ -258,6 +284,8 @@ export function RecordingStudioPro() {
     });
     setMixUrl(null);
     setSpotifyCheck(null);
+    setAnalysis(null);
+    lastMixBufferRef.current = null;
   };
 
   // --- Wgraj własny plik audio jako warstwę (do obróbki/miksu razem z nagranymi) ---
@@ -269,7 +297,7 @@ export function RecordingStudioPro() {
       ctx.close();
       const url = URL.createObjectURL(file);
       setTracks((prev) => [...prev, {
-        id: crypto.randomUUID(), name: file.name.replace(/\.[^.]+$/, "").slice(0, 24), blob: file, url, volume: 100, muted: false,
+        id: crypto.randomUUID(), name: file.name.replace(/\.[^.]+$/, "").slice(0, 24), blob: file, url, volume: 100, muted: false, fx: { ...DEFAULT_FX },
       }]);
       toast.success(`📁 "${file.name}" dodano jako warstwę`);
     } catch {
@@ -277,17 +305,22 @@ export function RecordingStudioPro() {
     }
   };
 
-  // --- Miksdown: łączy wszystkie warstwy (+ opcjonalny podkład) w jeden plik WAV ---
+  const updateTrackFx = (id: string, patch: Partial<TrackFx>) => {
+    setTracks((prev) => prev.map((t) => (t.id === id ? { ...t, fx: { ...t.fx, ...patch } } : t)));
+  };
+
+  // --- Miksdown: łączy wszystkie warstwy (+ efekty per warstwa + opcjonalny podkład) w jeden WAV ---
   const mixdown = async () => {
     if (!tracks.length) { toast.error("Nagraj przynajmniej jedną warstwę"); return; }
     setMixing(true);
     setSpotifyCheck(null);
+    setAnalysis(null);
     try {
       const ctx = new OfflineAudioContext(2, 44100 * 240, 44100);
       const buffers = await Promise.all(
         tracks.filter((t) => !t.muted).map(async (t) => {
           const arr = await t.blob.arrayBuffer();
-          return { buf: await ctx.decodeAudioData(arr), volume: t.volume / 100 };
+          return { buf: await ctx.decodeAudioData(arr), volume: t.volume / 100, fx: t.fx };
         }),
       );
       let maxLen = 0;
@@ -312,7 +345,12 @@ export function RecordingStudioPro() {
         const gain = ctx.createGain();
         gain.gain.value = b.volume;
         src.buffer = b.buf;
-        src.connect(gain).connect(ctx.destination);
+        if (FX_IS_DEFAULT(b.fx)) {
+          src.connect(gain).connect(ctx.destination);
+        } else {
+          const fxInput = buildFxChain(ctx, b.fx, ctx.destination);
+          src.connect(gain).connect(fxInput);
+        }
         src.start(0);
       }
       const rendered = await ctx.startRendering();
@@ -326,6 +364,7 @@ export function RecordingStudioPro() {
       for (let c = 0; c < rendered.numberOfChannels; c++) {
         trimmed.copyToChannel(rendered.getChannelData(c).subarray(0, trimmedLen), c);
       }
+      lastMixBufferRef.current = trimmed;
       setSpotifyCheck(checkSpotifyReady(trimmed));
       toast.success("🎚️ Miks gotowy");
     } catch (e: any) {
@@ -333,6 +372,21 @@ export function RecordingStudioPro() {
     } finally {
       setMixing(false);
     }
+  };
+
+  // --- Analiza: tonacja, zakres wysokości, podpowiedź strojenia dla kapeli ---
+  const runAnalysis = () => {
+    if (!lastMixBufferRef.current) { toast.error("Najpierw zmiksuj warstwy"); return; }
+    setAnalyzing(true);
+    setTimeout(() => {
+      try {
+        setAnalysis(analyzeSong(lastMixBufferRef.current!));
+      } catch {
+        toast.error("Nie udało się przeanalizować utworu");
+      } finally {
+        setAnalyzing(false);
+      }
+    }, 30); // mikro-opóźnienie, żeby UI zdążyło pokazać spinner przed ciężkim liczeniem
   };
 
   const saveMix = async () => {
@@ -410,7 +464,17 @@ export function RecordingStudioPro() {
 
       {/* MIDI */}
       <div className="p-4 rounded-xl border border-white/10 bg-[#1a1a2e]/60 space-y-2">
-        <div className="flex items-center gap-2 text-sm font-semibold text-gray-200"><Piano className="h-4 w-4 text-[#9333EA]" /> Klawiatura / kontroler MIDI</div>
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 text-sm font-semibold text-gray-200"><Piano className="h-4 w-4 text-[#9333EA]" /> Klawiatura / kontroler MIDI</div>
+          <Select value={instrument} onValueChange={setInstrument}>
+            <SelectTrigger className="bg-[#0f0f1e] border-white/10 text-white text-xs h-8 w-36">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {INSTRUMENTS.map((v) => <SelectItem key={v.id} value={v.id}>{v.label}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
         {midiDevices.length === 0 ? (
           <p className="text-[11px] text-gray-500">Nie wykryto urządzenia MIDI — podłącz klawiaturę przez USB, przeglądarka wykryje ją automatycznie.</p>
         ) : (
@@ -475,18 +539,64 @@ export function RecordingStudioPro() {
         <div className="space-y-2">
           <Label className="text-xs text-gray-400">Warstwy ({tracks.length})</Label>
           {tracks.map((t) => (
-            <div key={t.id} className="flex items-center gap-2 p-2.5 rounded-xl border border-white/10 bg-[#1a1a2e]/60">
-              <button onClick={() => setTracks((prev) => prev.map((x) => x.id === t.id ? { ...x, muted: !x.muted } : x))} className="text-gray-400 hover:text-white">
-                {t.muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
-              </button>
-              <span className="text-xs text-gray-300 w-20 truncate">{t.name}</span>
-              <input
-                type="range" min={0} max={100} value={t.volume}
-                onChange={(e) => setTracks((prev) => prev.map((x) => x.id === t.id ? { ...x, volume: parseInt(e.target.value) } : x))}
-                className="flex-1 accent-[#FF9500]"
-              />
-              <audio src={t.url} controls className="h-8 w-40" />
-              <button onClick={() => removeTrack(t.id)} className="text-gray-500 hover:text-red-400"><Trash2 className="h-4 w-4" /></button>
+            <div key={t.id} className="rounded-xl border border-white/10 bg-[#1a1a2e]/60 overflow-hidden">
+              <div className="flex items-center gap-2 p-2.5">
+                <button onClick={() => setTracks((prev) => prev.map((x) => x.id === t.id ? { ...x, muted: !x.muted } : x))} className="text-gray-400 hover:text-white">
+                  {t.muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+                </button>
+                <span className="text-xs text-gray-300 w-20 truncate">{t.name}</span>
+                <input
+                  type="range" min={0} max={100} value={t.volume}
+                  onChange={(e) => setTracks((prev) => prev.map((x) => x.id === t.id ? { ...x, volume: parseInt(e.target.value) } : x))}
+                  className="flex-1 accent-[#FF9500]"
+                />
+                <audio src={t.url} controls className="h-8 w-40" />
+                <button
+                  onClick={() => setFxOpenId((id) => (id === t.id ? null : t.id))}
+                  className={`flex items-center gap-1 rounded-md px-1.5 py-1 text-[10px] font-semibold transition-colors ${!FX_IS_DEFAULT(t.fx) ? "text-[#9333EA]" : "text-gray-500 hover:text-white"}`}
+                  title="Efekty (EQ, kompresja, pogłos, echo)"
+                >
+                  <SlidersHorizontal className="h-3.5 w-3.5" />
+                  <ChevronDown className={`h-3 w-3 transition-transform ${fxOpenId === t.id ? "rotate-180" : ""}`} />
+                </button>
+                <button onClick={() => removeTrack(t.id)} className="text-gray-500 hover:text-red-400"><Trash2 className="h-4 w-4" /></button>
+              </div>
+              <AnimatePresence>
+                {fxOpenId === t.id && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="overflow-hidden border-t border-white/10 bg-black/20 px-3 py-3"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[10px] font-bold uppercase tracking-wide text-gray-500">Efekty — {t.name}</span>
+                      <button onClick={() => updateTrackFx(t.id, { ...DEFAULT_FX })} className="flex items-center gap-1 text-[10px] text-gray-500 hover:text-white">
+                        <RotateCcw className="h-3 w-3" /> Reset
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2">
+                      {([
+                        ["eqLow", "EQ nisko", -12, 12],
+                        ["eqMid", "EQ środek", -12, 12],
+                        ["eqHigh", "EQ wysoko", -12, 12],
+                        ["compress", "Kompresja", 0, 100],
+                        ["reverb", "Pogłos", 0, 100],
+                        ["delay", "Echo", 0, 100],
+                      ] as [keyof TrackFx, string, number, number][]).map(([key, label, min, max]) => (
+                        <div key={key} className="space-y-0.5">
+                          <div className="flex justify-between text-[10px] text-gray-400"><span>{label}</span><span>{t.fx[key]}</span></div>
+                          <input
+                            type="range" min={min} max={max} value={t.fx[key]}
+                            onChange={(e) => updateTrackFx(t.id, { [key]: parseInt(e.target.value) } as Partial<TrackFx>)}
+                            className="w-full accent-[#9333EA]"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           ))}
         </div>
@@ -508,6 +618,10 @@ export function RecordingStudioPro() {
                 {saving ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Save className="h-4 w-4 mr-1.5" />}
                 {saving ? "Zapisuję…" : "Zapisz w bibliotece"}
               </Button>
+              <Button onClick={runAnalysis} disabled={analyzing} variant="outline" className="font-semibold border-[#9333EA]/30 text-gray-200">
+                {analyzing ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Sparkles className="h-4 w-4 mr-1.5" />}
+                {analyzing ? "Analizuję…" : "Analizuj utwór"}
+              </Button>
             </>
           )}
         </div>
@@ -517,6 +631,19 @@ export function RecordingStudioPro() {
         <div className="pt-1 space-y-2">
           <WaveformPlayer audioUrl={mixUrl} title="Miks — podgląd" genre="Studio Pro" compact />
           {spotifyCheck && <SpotifyReadyBadge check={spotifyCheck} />}
+        </div>
+      )}
+
+      {analysis && (
+        <div className="p-4 rounded-xl border border-[#9333EA]/30 bg-[#1a1a2e]/60 space-y-2">
+          <div className="flex items-center gap-2 text-sm font-semibold text-gray-200"><Music4 className="h-4 w-4 text-[#9333EA]" /> Analiza utworu</div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
+            <div><p className="text-gray-500">Tonacja</p><p className="text-white font-bold">{analysis.key}</p></div>
+            <div><p className="text-gray-500">Zakres wysokości</p><p className="text-white font-bold">{analysis.vocalRangeLow} – {analysis.vocalRangeHigh}</p></div>
+            <div><p className="text-gray-500">Jakość analizy</p><p className="text-white font-bold">{analysis.detectedNotes} klatek</p></div>
+          </div>
+          <p className="text-[11px] text-gray-400"><span className="text-gray-300 font-semibold">Strojenie dla kapeli:</span> {analysis.tuningHint}</p>
+          <p className="text-[10px] text-gray-600">Orientacyjna analiza (autokorelacja) — na pojedynczym wokalu/melodii działa najlepiej; na gęstym miksie wielu instrumentów naraz dokładność spada.</p>
         </div>
       )}
     </div>
