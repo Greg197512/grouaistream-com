@@ -214,6 +214,10 @@ serve(async (req) => {
         const permCover = rawCover
           ? await archiveToR2({ sourceUrl: rawCover, folder: "suno-covers", id: first?.id || taskId, ext: "jpg", contentType: "image/jpeg" })
           : null;
+        // Gdy archiwizacja (mimo prób ponawiania w archiveToR2) się nie uda,
+        // audio_url wskazuje na efemeryczny link dostawcy, który wygaśnie —
+        // audio_archived:false ostrzega frontend, żeby user nie dowiedział się
+        // o martwym utworze dopiero po dniach (patrz: "Neon Nights" 25.10).
         norm = {
           status: "succeeded",
           id: taskId,
@@ -222,6 +226,7 @@ serve(async (req) => {
           title: first?.title || "",
           duration: first?.duration || 0,
           all: items,
+          audio_archived: !!permAudio,
         };
       } else if (s === "CREATE_TASK_FAILED" || s === "GENERATE_AUDIO_FAILED" || s === "CALLBACK_EXCEPTION" || s === "SENSITIVE_WORD_ERROR") {
         norm = { status: "failed", error: d?.errorMessage || s };
