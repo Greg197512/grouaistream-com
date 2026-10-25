@@ -534,15 +534,16 @@ const TrackOptionsMenuComponent = (
     if (!user || !playlistId) return;
 
     setDeleteLoading(true);
-    const { error } = await supabase
+    const { data: removedRows, error } = await supabase
       .from("playlist_tracks")
       .delete()
       .eq("playlist_id", playlistId)
-      .eq("track_id", trackId);
+      .eq("track_id", trackId)
+      .select("id");
 
-    if (error) {
+    if (error || !removedRows || removedRows.length === 0) {
       console.error("Error removing track:", error);
-      toast.error("Nie udało się usunąć");
+      toast.error(error?.message || "Nie udało się usunąć");
     } else {
       toast.success(`"${trackTitle}" usunięty z playlisty`);
       onDelete?.();
@@ -586,8 +587,20 @@ const TrackOptionsMenuComponent = (
         .in("playlist_id", playlistIds);
     }
 
-    // Try to delete the track record (works for admins only)
-    await supabase.from("tracks").delete().eq("id", trackId);
+    // Usuń rekord utworu — RLS przepuszcza tylko autora/admina. `.select("id")`
+    // jest konieczne: bez niego DELETE zawsze zwraca data:null (nawet gdy 0 wierszy
+    // faktycznie skasowano), więc nie dało się odróżnić sukcesu od cichej odmowy RLS.
+    const { data: deletedRows, error: delError } = await supabase
+      .from("tracks")
+      .delete()
+      .eq("id", trackId)
+      .select("id");
+
+    if (delError || !deletedRows || deletedRows.length === 0) {
+      toast.error(delError?.message || "Nie możesz usunąć tego utworu — nie jesteś jego autorem");
+      setDeleteLoading(false);
+      return;
+    }
 
     toast.success(`"${trackTitle}" usunięty`);
     onDelete?.();
