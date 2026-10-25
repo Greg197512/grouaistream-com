@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Mic, Square, Play, Pause, Trash2, Plus, Download, Save, Loader2,
-  Piano, Volume2, VolumeX, Crown, Disc3, Usb, RadioTower,
+  Piano, Volume2, VolumeX, Crown, Disc3, Usb, RadioTower, Upload,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -13,6 +13,8 @@ import { useSubscription } from "@/contexts/SubscriptionContext";
 import { supabase } from "@/integrations/supabase/client";
 import { uploadToR2 } from "@/lib/r2Upload";
 import { WaveformPlayer } from "@/components/studio/WaveformPlayer";
+import { checkSpotifyReady, type SpotifyReadyCheck } from "@/lib/loudness";
+import { SpotifyReadyBadge } from "@/components/studio/SpotifyReadyBadge";
 
 /**
  * Studio Nagrań Pro (VIP) — wielościeżkowe nagrywanie na prawdziwym sprzęcie:
@@ -81,6 +83,8 @@ export function RecordingStudioPro() {
   const [mixing, setMixing] = useState(false);
   const [mixUrl, setMixUrl] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [spotifyCheck, setSpotifyCheck] = useState<SpotifyReadyCheck | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!unlocked || !user) return;
@@ -253,12 +257,31 @@ export function RecordingStudioPro() {
       return prev.filter((x) => x.id !== id);
     });
     setMixUrl(null);
+    setSpotifyCheck(null);
+  };
+
+  // --- Wgraj własny plik audio jako warstwę (do obróbki/miksu razem z nagranymi) ---
+  const addFileAsTrack = async (file: File) => {
+    try {
+      const ctx = new AudioContext();
+      const arr = await file.arrayBuffer();
+      await ctx.decodeAudioData(arr.slice(0)); // tylko walidacja, że to prawidłowe audio
+      ctx.close();
+      const url = URL.createObjectURL(file);
+      setTracks((prev) => [...prev, {
+        id: crypto.randomUUID(), name: file.name.replace(/\.[^.]+$/, "").slice(0, 24), blob: file, url, volume: 100, muted: false,
+      }]);
+      toast.success(`📁 "${file.name}" dodano jako warstwę`);
+    } catch {
+      toast.error("Nie udało się odczytać tego pliku audio");
+    }
   };
 
   // --- Miksdown: łączy wszystkie warstwy (+ opcjonalny podkład) w jeden plik WAV ---
   const mixdown = async () => {
     if (!tracks.length) { toast.error("Nagraj przynajmniej jedną warstwę"); return; }
     setMixing(true);
+    setSpotifyCheck(null);
     try {
       const ctx = new OfflineAudioContext(2, 44100 * 240, 44100);
       const buffers = await Promise.all(
@@ -293,9 +316,17 @@ export function RecordingStudioPro() {
         src.start(0);
       }
       const rendered = await ctx.startRendering();
-      const wav = audioBufferToWav(rendered, Math.ceil(maxLen * 44100));
+      const trimmedLen = Math.max(1, Math.ceil(maxLen * 44100));
+      const wav = audioBufferToWav(rendered, trimmedLen);
       const blob = new Blob([wav], { type: "audio/wav" });
       setMixUrl(URL.createObjectURL(blob));
+
+      // Przytnij do realnej długości przed analizą (rendered ma 240s bufora, w tym cisza).
+      const trimmed = new AudioBuffer({ numberOfChannels: rendered.numberOfChannels, length: trimmedLen, sampleRate: rendered.sampleRate });
+      for (let c = 0; c < rendered.numberOfChannels; c++) {
+        trimmed.copyToChannel(rendered.getChannelData(c).subarray(0, trimmedLen), c);
+      }
+      setSpotifyCheck(checkSpotifyReady(trimmed));
       toast.success("🎚️ Miks gotowy");
     } catch (e: any) {
       toast.error("Nie udało się zmiksować: " + (e?.message || "błąd"));
@@ -424,6 +455,19 @@ export function RecordingStudioPro() {
           <p className="text-white font-bold">{recording ? `🔴 Nagrywam… ${elapsed}s` : "Nagraj nową warstwę"}</p>
           <p className="text-[11px] text-gray-500">{micGranted ? "Kliknij, aby zacząć" : "Najpierw podłącz mikrofon powyżej"}</p>
         </div>
+        <div className="ml-auto pl-4 border-l border-white/10">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="audio/*"
+            className="hidden"
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) addFileAsTrack(f); e.target.value = ""; }}
+          />
+          <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} className="gap-1.5 border-[#9333EA]/30 text-gray-300 hover:text-white">
+            <Upload className="h-3.5 w-3.5" /> Wgraj plik
+          </Button>
+          <p className="mt-1 text-[10px] text-gray-500 max-w-[140px]">Dodaj gotowy utwór/stem jako warstwę do obróbki</p>
+        </div>
       </div>
 
       {/* Warstwy */}
@@ -470,8 +514,9 @@ export function RecordingStudioPro() {
       )}
 
       {mixUrl && (
-        <div className="pt-1">
+        <div className="pt-1 space-y-2">
           <WaveformPlayer audioUrl={mixUrl} title="Miks — podgląd" genre="Studio Pro" compact />
+          {spotifyCheck && <SpotifyReadyBadge check={spotifyCheck} />}
         </div>
       )}
     </div>
