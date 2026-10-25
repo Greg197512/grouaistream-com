@@ -15,6 +15,8 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { SubscriptionManager } from "@/components/settings/SubscriptionManager";
 import { useEffects3D } from "@/contexts/Effects3DContext";
+import { ShareQR } from "@/components/share/ShareQR";
+import { QrCode } from "lucide-react";
 
 const Settings = () => {
   const { user, signOut } = useAuth();
@@ -257,6 +259,18 @@ const Settings = () => {
             </section>
           );
         })()}
+
+        {/* Udostępnij aplikację — QR kod (skanuje każdy telefon) + zapis linku na karcie NFC (Android/Chrome) */}
+        <section className="groove-card p-6 mb-6">
+          <div className="flex items-center gap-2 mb-2">
+            <QrCode className="h-5 w-5 text-primary" />
+            <h2 className="font-semibold">Udostępnij aplikację</h2>
+          </div>
+          <p className="text-sm text-muted-foreground mb-4">
+            Pokaż ten kod QR znajomym — zeskanują i mają stronę od razu. Masz Androida z Chrome? Możesz też zapisać link na fizycznej karcie NFC.
+          </p>
+          <ShareQR title="GrouAI Stream — Twój dźwiękowy dom" />
+        </section>
 
         {/* Wygląd / Efekt 3D — działa też na telefonie (przełącznik dostępny bez menu bocznego) */}
         <section className="groove-card p-6 mb-6">
