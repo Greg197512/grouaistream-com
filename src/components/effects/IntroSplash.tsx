@@ -74,10 +74,11 @@ export const IntroSplash = () => {
             playsInline
             onEnded={close}
             onError={close}
-            // object-contain (nie cover): wideo jest poziome (1168×784) — na pionowym
-            // ekranie telefonu "cover" obcinałby boki logo. Tło wideo jest czarne jak
-            // kontener, więc "pasy" są niewidoczne — bez dopasowywania pod konkretny ekran.
-            className="absolute inset-0 h-full w-full object-contain"
+            // Komputer/poziomy ekran: object-cover — pełny ekran, lekki docinek brzegów
+            // niezauważalny (wideo 1168×784 ≈ proporcje ekranu). Telefon pionowo: object-contain,
+            // bo tam cover obcinałby boki logo ("Grou"/"stream" wypadłyby poza kadr) — tło wideo
+            // jest czarne jak kontener, więc "pasy" przy contain są niewidoczne.
+            className="absolute inset-0 h-full w-full object-cover portrait:object-contain"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/40" />
 
