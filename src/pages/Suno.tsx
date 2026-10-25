@@ -30,8 +30,9 @@ import { uploadToR2 } from "@/lib/r2Upload";
 import { mirrorToR2, isPersistentAudioUrl } from "@/lib/mirrorAudio";
 import { renderScore } from "@/lib/musicSynth";
 import { generateMusic } from "@/utils/musicGenerator";
-import { Lock, Crown, Download, Share2, Film } from "lucide-react";
+import { Lock, Crown, Download, Share2, Film, Disc3 } from "lucide-react";
 import { VideoStudio } from "@/components/studio/VideoStudio";
+import { RecordingStudioPro } from "@/components/studio/RecordingStudioPro";
 import { downloadAudio, isSubscriptionError } from "@/lib/hubStudio";
 import { Link, useSearchParams } from "react-router-dom";
 import { getEra, eraStudioGenre, trackYear, eraForYear } from "@/lib/eraEngine";
@@ -269,7 +270,7 @@ const Suno = () => {
     "🌧️ Deszczowy poranek": L("🌧️ Deszczowy poranek","🌧️ Rainy morning","🌧️ Regenachtige ochtend","🌧️ Дощовий ранок"),
     "🚀 Epicki finał": L("🚀 Epicki finał","🚀 Epic finale","🚀 Episch finale","🚀 Епічний фінал"),
   } as Record<string,string>)[pl] || pl);
-  const [activeTab, setActiveTab] = useState<"generate" | "mix" | "suno" | "video">("generate");
+  const [activeTab, setActiveTab] = useState<"generate" | "mix" | "suno" | "video" | "record">("generate");
   const [genre, setGenre] = useState("Pop");
   const [genre2, setGenre2] = useState<string | null>(null);
   const [blendRatio, setBlendRatio] = useState(50);
@@ -968,13 +969,16 @@ const Suno = () => {
           />
 
           {/* Modes — stable controls with no animated backgrounds. */}
-          <div className="grid grid-cols-3 gap-1 border-b border-border pb-2" role="tablist" aria-label="Studio">
+          <div className="grid grid-cols-4 gap-1 border-b border-border pb-2" role="tablist" aria-label="Studio">
             {([
               { id: "generate", icon: Sparkles, label: L("Generator","Generator","Generator","Генератор") },
               { id: "mix", icon: Blend, label: L("Miks","Mix","Mix","Мікс") },
               { id: "video", icon: Film, label: L("Wideo","Video","Video","Відео") },
-            ] as const).map(({ id, icon: Icon, label }) => (
-              <Button key={id} variant="ghost" role="tab" aria-selected={activeTab === id} onClick={() => setActiveTab(id)} className={activeTab === id ? "studio-premium-selected" : "text-muted-foreground hover:bg-secondary"}><Icon className="h-4 w-4" />{label}</Button>
+              { id: "record", icon: Disc3, label: L("Studio Pro","Studio Pro","Studio Pro","Studio Pro"), vip: true },
+            ] as const).map(({ id, icon: Icon, label, vip }) => (
+              <Button key={id} variant="ghost" role="tab" aria-selected={activeTab === id} onClick={() => setActiveTab(id)} className={activeTab === id ? "studio-premium-selected" : "text-muted-foreground hover:bg-secondary"}>
+                <Icon className="h-4 w-4" />{label}{vip && <Crown className="h-3 w-3 text-[#FFD400]" />}
+              </Button>
             ))}
           </div>
 
@@ -982,6 +986,8 @@ const Suno = () => {
             <TrackMixer />
           ) : activeTab === "video" ? (
             <VideoStudio />
+          ) : activeTab === "record" ? (
+            <RecordingStudioPro />
           ) : (
           <>
           {/* === RĘCZNY PANEL (jak w Suno): tytuł, styl, tekst, długość, nastrój === */}
