@@ -33,6 +33,8 @@ import { generateMusic } from "@/utils/musicGenerator";
 import { Lock, Crown, Download, Share2, Film, Disc3 } from "lucide-react";
 import { VideoStudio } from "@/components/studio/VideoStudio";
 import { RecordingStudioPro } from "@/components/studio/RecordingStudioPro";
+import { checkSpotifyReady, type SpotifyReadyCheck } from "@/lib/loudness";
+import { SpotifyReadyBadge } from "@/components/studio/SpotifyReadyBadge";
 import { downloadAudio, isSubscriptionError } from "@/lib/hubStudio";
 import { Link, useSearchParams } from "react-router-dom";
 import { getEra, eraStudioGenre, trackYear, eraForYear } from "@/lib/eraEngine";
@@ -313,6 +315,26 @@ const Suno = () => {
     imageUrl?: string;
   } | null>(null);
   const [errorModal, setErrorModal] = useState<string | null>(null);
+  const [spotifyCheck, setSpotifyCheck] = useState<SpotifyReadyCheck | null>(null);
+
+  // Policz znacznik "gotowe na Spotify" dla świeżo gotowego utworu (parametry
+  // techniczne wg publicznych wytycznych Spotify — nie wysyła nic nigdzie).
+  useEffect(() => {
+    if (!result?.audioUrl) { setSpotifyCheck(null); return; }
+    let cancelled = false;
+    setSpotifyCheck(null);
+    (async () => {
+      try {
+        const r = await fetch(result.audioUrl);
+        const arr = await r.arrayBuffer();
+        const ctx = new AudioContext();
+        const buf = await ctx.decodeAudioData(arr);
+        ctx.close();
+        if (!cancelled) setSpotifyCheck(checkSpotifyReady(buf));
+      } catch { /* cicho — znacznik po prostu się nie pokaże */ }
+    })();
+    return () => { cancelled = true; };
+  }, [result?.audioUrl]);
   // Preset epoki z GROUA ERA (deep-link /studio?era=...) — wypełnia panel ręczny.
   const [searchParams] = useSearchParams();
   const [eraPreset, setEraPreset] = useState<{ label: string; accent: string; emoji: string } | null>(null);
@@ -1421,6 +1443,7 @@ const Suno = () => {
 
                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="relative z-10">
                   <WaveformPlayer audioUrl={result.audioUrl} title={result.title} genre={result.genre} onSaveToLibrary={saveToLibrary} />
+                  {spotifyCheck && <div className="mt-2"><SpotifyReadyBadge check={spotifyCheck} /></div>}
                 </motion.div>
 
                 {/* Pobieranie + Wyślij — jak w Suno */}
