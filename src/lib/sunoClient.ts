@@ -12,6 +12,9 @@ export type SunoResult = {
   /** Tekst i tagi stylu, które napisało Suno (jeśli zwróciło). */
   lyrics?: string;
   tags?: string;
+  /** false = link dostawcy nie trafił na trwały R2 (archiwizacja padła mimo
+   *  ponawiania) — wygaśnie po czasie, ostrzeż usera żeby pobrał od razu. */
+  audioArchived: boolean;
 };
 
 export type SunoRequest = {
@@ -76,6 +79,7 @@ export async function generateWithSuno(req: SunoRequest): Promise<SunoResult> {
         title: st.title || req.title || started?.title || "GrouAI Track",
         durationSeconds: Math.round(st.duration || 0),
         taskId,
+        audioArchived: st.audio_archived !== false,
       };
     }
     if (st?.status === "failed") throw new Error(st.error || "Suno nie wygenerowało utworu");

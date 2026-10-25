@@ -25,6 +25,13 @@ export async function mirrorToR2(remoteUrl: string, title: string, userId: strin
   }
 }
 
-/** Czy adres nadaje się do zapisania w katalogu (trwały, nie blob: z tej przeglądarki). */
+// Hosty znane z tego, że ich linki są efemeryczne (wygasają w godziny/dni) —
+// np. tempfile.aiquickdraw.com (sunoapi.org), replicate.delivery. Taki link
+// "wygląda" na trwały (https://), ale umiera po czasie — dlatego sama
+// kontrola `https://` to za mało (zobacz incydent "Neon Nights" 25.10).
+const EPHEMERAL_HOST_HINTS = ["tempfile.", "replicate.delivery", ".amazonaws.com/replicate"];
+
+/** Czy adres nadaje się do zapisania w katalogu na stałe (trwały, nie blob:
+ *  z tej przeglądarki, i nie host znany z wygasających linków). */
 export const isPersistentAudioUrl = (url: string | null | undefined): url is string =>
-  !!url && url.startsWith("https://");
+  !!url && url.startsWith("https://") && !EPHEMERAL_HOST_HINTS.some((h) => url.includes(h));

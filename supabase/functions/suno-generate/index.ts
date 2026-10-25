@@ -211,6 +211,11 @@ serve(async (req) => {
       if ((s === "SUCCESS" || s === "COMPLETE") && (first?.audioUrl || first?.sourceAudioUrl)) {
         const rawAudio = first?.audioUrl || first?.sourceAudioUrl;
         const rawCover = first?.imageUrl || first?.sourceImageUrl || "";
+        // Gdy archiwizacja (mimo prób ponawiania w archiveToR2, i mimo twardego
+        // stropu 35s poniżej) się nie uda, audio_url wskazuje na efemeryczny
+        // link dostawcy, który wygaśnie — audio_archived:false ostrzega
+        // frontend, żeby user nie dowiedział się o martwym utworze dopiero po
+        // dniach (patrz: "Neon Nights" 25.10).
         const [permAudio, permCover] = await Promise.all([
           capped(archiveToR2({ sourceUrl: rawAudio, folder: "suno", id: first?.id || taskId, timeoutMs: 15_000 })),
           rawCover
@@ -225,6 +230,7 @@ serve(async (req) => {
           title: first?.title || "",
           duration: first?.duration || 0,
           all: items,
+          audio_archived: !!permAudio,
         };
       } else if (s === "CREATE_TASK_FAILED" || s === "GENERATE_AUDIO_FAILED" || s === "CALLBACK_EXCEPTION" || s === "SENSITIVE_WORD_ERROR") {
         norm = { status: "failed", error: d?.errorMessage || s };

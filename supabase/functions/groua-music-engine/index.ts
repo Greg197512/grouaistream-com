@@ -5,7 +5,7 @@
 //   { action: "status",   prediction_id, generation_id? }
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-import { S3Client, PutObjectCommand } from "npm:@aws-sdk/client-s3@3.600.0";
+import { archiveToR2 as sharedArchiveToR2 } from "../_shared/r2.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -15,8 +15,6 @@ const corsHeaders = {
 
 // MusicGen Meta — stereo-large, najlepsza jakość/cena na Replicate
 const MUSICGEN_VERSION = "671ac645ce5e552cc63a54a2bbff63fcf798043055f2a04b1d735e6ee09b7bd6";
-
-const R2_PUBLIC_BASE = "https://pub-46ecdc3a5ae341fcb16454d732eb9bcd.r2.dev";
 
 interface GenerateBody {
   action?: "generate" | "status";
@@ -212,45 +210,12 @@ Deno.serve(async (req) => {
 });
 
 // === Cloudflare R2 archive (pliki Replicate znikają po 24h) ===
+// Cienki wrapper na współdzieloną, wzmocnioną (3x retry) wersję z _shared/r2.ts —
+// pojedyncza przejściowa awaria fetch/upload nie zostawia utworu na wygasającym
+// linku Replicate (patrz: incydent "Neon Nights" 25.10, ten sam wzorzec bugu
+// w suno-generate).
 async function archiveToR2(replicateUrl: string, predictionId: string): Promise<string | null> {
-  try {
-    const endpoint = Deno.env.get("S3_ENDPOINT")?.trim();
-    const accessKeyId = Deno.env.get("S3_ACCESS_KEY_ID")?.trim();
-    const secretAccessKey = Deno.env.get("S3_SECRET_ACCESS_KEY")?.trim();
-    const bucket = Deno.env.get("S3_BUCKET_NAME")?.trim();
-    if (!endpoint || !accessKeyId || !secretAccessKey || !bucket) {
-      console.warn("[archiveToR2] missing R2 env, returning replicate URL");
-      return null;
-    }
-
-    const audioRes = await fetch(replicateUrl);
-    if (!audioRes.ok) {
-      console.error("[archiveToR2] failed to fetch audio:", audioRes.status);
-      return null;
-    }
-    const buffer = new Uint8Array(await audioRes.arrayBuffer());
-
-    const client = new S3Client({
-      region: "auto",
-      endpoint: endpoint.replace(/\/+$/, ""),
-      credentials: { accessKeyId, secretAccessKey },
-    });
-
-    const key = `groua-engine/${Date.now()}-${predictionId}.mp3`;
-    await client.send(new PutObjectCommand({
-      Bucket: bucket,
-      Key: key,
-      Body: buffer,
-      ContentType: "audio/mpeg",
-    }));
-
-    const url = `${R2_PUBLIC_BASE}/${key}`;
-    console.log("[archiveToR2] archived:", url);
-    return url;
-  } catch (e) {
-    console.error("[archiveToR2] error:", e);
-    return null;
-  }
+  return sharedArchiveToR2({ sourceUrl: replicateUrl, folder: "groua-engine", id: predictionId });
 }
 
 function json(body: unknown, status = 200) {

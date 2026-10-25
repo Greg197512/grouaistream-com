@@ -17,7 +17,7 @@ import { UpgradeModal } from "@/components/modals/UpgradeModal";
 import { exportTeledysk, exportScenesOnly } from "@/lib/teledyskExport";
 import { uploadToR2 } from "@/lib/r2Upload";
 import { generateWithSuno } from "@/lib/sunoClient";
-import { isPersistentAudioUrl } from "@/lib/mirrorAudio";
+import { isPersistentAudioUrl, mirrorToR2 } from "@/lib/mirrorAudio";
 import { generateTrack, ENGINE_INFO, type Engine } from "@/lib/engineGenerate";
 import { EngineSelector } from "@/components/studio/EngineSelector";
 
@@ -229,17 +229,28 @@ export function MusicPromptBox({ onTrackReady }: Props) {
       });
 
       const engineLabel = ENGINE_INFO[engine].label;
+
+      // Silnik nie zdołał zarchiwizować na R2 (padło mimo ponawiania po stronie
+      // serwera) → druga szansa z przeglądarki, zanim zapiszemy cokolwiek na stałe.
+      let finalAudioUrl = r.audioUrl;
+      if (!r.audioArchived && !isPersistentAudioUrl(finalAudioUrl)) {
+        finalAudioUrl = await mirrorToR2(finalAudioUrl, r.title, user.id);
+        if (!isPersistentAudioUrl(finalAudioUrl)) {
+          toast.warning("⚠️ Nie udało się zapisać utworu na stałe — link może wygasnąć, pobierz go teraz.", { duration: 9000 });
+        }
+      }
+
       const plan = { title: r.title, genre: engineLabel, duration_seconds: r.durationSeconds || 120 };
       setPlanSummary(r.title);
       // Zapis do „Twoje utwory" i katalogu (adresy z R2 są trwałe).
       const { data: gen } = await supabase.from("generations").insert({
         user_id: user.id, title: r.title, genre: engineLabel, prompt: prompt.trim(),
-        instrumental, status: "completed", audio_url: r.audioUrl,
+        instrumental, status: "completed", audio_url: finalAudioUrl,
       }).select("id").maybeSingle();
-      if (isPersistentAudioUrl(r.audioUrl)) {
+      if (isPersistentAudioUrl(finalAudioUrl)) {
         await supabase.from("tracks").insert({
           user_id: user.id, title: r.title, artist: "GrouAI Studio", album: "AI Generated",
-          duration: r.durationSeconds || null, audio_url: r.audioUrl, cover_url: r.coverUrl || null,
+          duration: r.durationSeconds || null, audio_url: finalAudioUrl, cover_url: r.coverUrl || null,
           genre: "AI",
         });
       }
@@ -248,7 +259,7 @@ export function MusicPromptBox({ onTrackReady }: Props) {
       toast.success(labels.done);
       window.dispatchEvent(new CustomEvent("grouai:generations-changed"));
       onTrackReady?.({
-        audioUrl: r.audioUrl,
+        audioUrl: finalAudioUrl,
         coverUrl: r.coverUrl,
         generationId: gen?.id ?? "",
         plan,
