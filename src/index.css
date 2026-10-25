@@ -275,3 +275,20 @@
 
   /* rest of the file remains the same - burning frames, 3d effects etc. are preserved */
 }
+
+/* Napis przestrzenny (3D) dla nagłówka strony głównej */
+.text-spatial {
+  letter-spacing: -0.02em;
+  text-shadow:
+    0 1px 0 hsl(var(--foreground) / 0.35),
+    0 2px 0 hsl(var(--primary) / 0.55),
+    0 3px 0 hsl(var(--primary) / 0.45),
+    0 4px 0 hsl(var(--primary) / 0.35),
+    0 5px 0 hsl(var(--primary) / 0.25),
+    0 8px 14px hsl(var(--background) / 0.9),
+    0 0 28px hsl(var(--primary) / 0.35);
+  transform: perspective(700px) rotateX(8deg);
+  transform-origin: left bottom;
+}
+.text-spatial > span { text-shadow: 0 0 24px hsl(var(--primary) / 0.45); filter: drop-shadow(0 4px 0 hsl(var(--primary) / 0.3)); }
+@media (prefers-reduced-motion: reduce) { .text-spatial { transform: none; } }
