@@ -993,9 +993,9 @@ const Suno = () => {
           {/* Modes — stable controls with no animated backgrounds. */}
           <div className="grid grid-cols-4 gap-1 border-b border-border pb-2" role="tablist" aria-label="Studio">
             {([
-              { id: "generate", icon: Sparkles, label: L("Generator","Generator","Generator","Генератор") },
-              { id: "mix", icon: Blend, label: L("Miks","Mix","Mix","Мікс") },
-              { id: "video", icon: Film, label: L("Wideo","Video","Video","Відео") },
+              { id: "generate", icon: Sparkles, label: L("Generator","Generator","Generator","Генератор"), vip: false },
+              { id: "mix", icon: Blend, label: L("Miks","Mix","Mix","Мікс"), vip: false },
+              { id: "video", icon: Film, label: L("Wideo","Video","Video","Відео"), vip: false },
               { id: "record", icon: Disc3, label: L("Studio Pro","Studio Pro","Studio Pro","Studio Pro"), vip: true },
             ] as const).map(({ id, icon: Icon, label, vip }) => (
               <Button key={id} variant="ghost" role="tab" aria-selected={activeTab === id} onClick={() => setActiveTab(id)} className={activeTab === id ? "studio-premium-selected" : "text-muted-foreground hover:bg-secondary"}>
