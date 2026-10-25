@@ -204,20 +204,24 @@ serve(async (req) => {
       const items = d?.response?.sunoData || d?.response?.data || [];
       const first = Array.isArray(items) ? items[0] : null;
       let norm: any = { status: "processing", raw_status: s };
-      if (s === "SUCCESS" || s === "COMPLETE" || first?.audioUrl) {
-        // Linki Suno wygasają — kopiujemy nagranie i okładkę na stałe do R2.
-        const rawAudio = first?.audioUrl || first?.sourceAudioUrl || first?.streamAudioUrl;
+      // Archiwizujemy tylko gotowy plik (nie strumień w trakcie) i z twardym limitem czasu,
+      // inaczej zapytanie o stan zawisało do timeoutu bramki.
+      const capped = (p: Promise<string | null>) =>
+        Promise.race([p, new Promise<null>((res) => setTimeout(() => res(null), 35_000))]);
+      if ((s === "SUCCESS" || s === "COMPLETE") && (first?.audioUrl || first?.sourceAudioUrl)) {
+        const rawAudio = first?.audioUrl || first?.sourceAudioUrl;
         const rawCover = first?.imageUrl || first?.sourceImageUrl || "";
-        const permAudio = first?.audioUrl || first?.sourceAudioUrl
-          ? await archiveToR2({ sourceUrl: rawAudio, folder: "suno", id: first?.id || taskId })
-          : null;
-        const permCover = rawCover
-          ? await archiveToR2({ sourceUrl: rawCover, folder: "suno-covers", id: first?.id || taskId, ext: "jpg", contentType: "image/jpeg" })
-          : null;
-        // Gdy archiwizacja (mimo prób ponawiania w archiveToR2) się nie uda,
-        // audio_url wskazuje na efemeryczny link dostawcy, który wygaśnie —
-        // audio_archived:false ostrzega frontend, żeby user nie dowiedział się
-        // o martwym utworze dopiero po dniach (patrz: "Neon Nights" 25.10).
+        // Gdy archiwizacja (mimo prób ponawiania w archiveToR2, i mimo twardego
+        // stropu 35s poniżej) się nie uda, audio_url wskazuje na efemeryczny
+        // link dostawcy, który wygaśnie — audio_archived:false ostrzega
+        // frontend, żeby user nie dowiedział się o martwym utworze dopiero po
+        // dniach (patrz: "Neon Nights" 25.10).
+        const [permAudio, permCover] = await Promise.all([
+          capped(archiveToR2({ sourceUrl: rawAudio, folder: "suno", id: first?.id || taskId, timeoutMs: 15_000 })),
+          rawCover
+            ? capped(archiveToR2({ sourceUrl: rawCover, folder: "suno-covers", id: first?.id || taskId, ext: "jpg", contentType: "image/jpeg", timeoutMs: 10_000 }))
+            : Promise.resolve(null),
+        ]);
         norm = {
           status: "succeeded",
           id: taskId,
