@@ -18,6 +18,8 @@ import { exportTeledysk, exportScenesOnly } from "@/lib/teledyskExport";
 import { uploadToR2 } from "@/lib/r2Upload";
 import { generateWithSuno } from "@/lib/sunoClient";
 import { isPersistentAudioUrl } from "@/lib/mirrorAudio";
+import { generateTrack, ENGINE_INFO, type Engine } from "@/lib/engineGenerate";
+import { EngineSelector } from "@/components/studio/EngineSelector";
 
 type Lang = "auto" | "pl" | "en" | "nl" | "uk";
 
@@ -138,6 +140,7 @@ export function MusicPromptBox({ onTrackReady }: Props) {
   const [language, setLanguage] = useState<Lang>("auto");
   const [instrumental, setInstrumental] = useState(false);
   const [mode, setMode] = useState<"music" | "video" | "teledysk">("music");
+  const [engine, setEngine] = useState<Engine>("suno");
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [videoQuality, setVideoQuality] = useState<"good" | "vip">("good");
   const [videoPrompt, setVideoPrompt] = useState("");
@@ -213,21 +216,24 @@ export function MusicPromptBox({ onTrackReady }: Props) {
     setElapsed(0);
 
     try {
-      // Suno (sunoapi.org): opis trafia wprost do Suno, które samo pisze tekst i aranżację.
+      // Suno pisze tekst/aranż samo; ACE-Step dostaje tekst od AI w tle (engineGenerate);
+      // MusicGen jest zawsze instrumentalny.
       setStage("composing");
       const songLang = language !== "auto" ? language : undefined;
-      const r = await generateWithSuno({
+      const r = await generateTrack({
+        engine,
         prompt: prompt.trim(),
         instrumental,
         language: songLang,
         onProgress: (sec) => setElapsed(sec),
       });
 
-      const plan = { title: r.title, genre: "Suno", duration_seconds: r.durationSeconds || 120 };
+      const engineLabel = ENGINE_INFO[engine].label;
+      const plan = { title: r.title, genre: engineLabel, duration_seconds: r.durationSeconds || 120 };
       setPlanSummary(r.title);
       // Zapis do „Twoje utwory" i katalogu (adresy z R2 są trwałe).
       const { data: gen } = await supabase.from("generations").insert({
-        user_id: user.id, title: r.title, genre: "Suno", prompt: prompt.trim(),
+        user_id: user.id, title: r.title, genre: engineLabel, prompt: prompt.trim(),
         instrumental, status: "completed", audio_url: r.audioUrl,
       }).select("id").maybeSingle();
       if (isPersistentAudioUrl(r.audioUrl)) {
@@ -246,7 +252,7 @@ export function MusicPromptBox({ onTrackReady }: Props) {
         coverUrl: r.coverUrl,
         generationId: gen?.id ?? "",
         plan,
-        engine: "suno",
+        engine,
       });
       setActiveVibes([]);
       setTimeout(() => setStage("idle"), 2500);
@@ -591,6 +597,14 @@ export function MusicPromptBox({ onTrackReady }: Props) {
           </button>
         </div>
 
+        {/* Silnik AI — Suno (najwyższa jakość) / ACE-Step (darmowy, bez limitu) / MusicGen (szybki instrumental) */}
+        {mode === "music" && (
+          <div className="relative z-10 mb-3 flex flex-wrap items-center gap-2">
+            <span className="text-[11px] text-white/50">{L("Silnik:","Engine:","Engine:","Рушій:")}</span>
+            <EngineSelector value={engine} onChange={setEngine} disabled={isBusy} />
+          </div>
+        )}
+
         {/* Jakość wideo: Good (tani/szybki) vs VIP (najlepszy model) */}
         {mode !== "music" && (
           <div className="relative z-10 -mt-1 mb-3 flex flex-wrap items-center gap-2">
@@ -733,20 +747,28 @@ export function MusicPromptBox({ onTrackReady }: Props) {
           </div>
         )}
 
+        {/* MusicGen zawsze gra instrumentalnie — AI samo pisze tekst dla ACE-Step/Suno gdy brak wokalu nie jest wybrany. */}
+        {mode === "music" && engine === "musicgen" && (
+          <p className="relative z-10 -mt-1 mb-1 text-[10px] text-white/40">🎹 MusicGen gra zawsze instrumentalnie (bez wokalu).</p>
+        )}
+        {mode === "music" && engine === "acestep" && !instrumental && (
+          <p className="relative z-10 -mt-1 mb-1 text-[10px] text-white/40">🆓 ACE-Step: AI dopisze tekst piosenki automatycznie z Twojego opisu.</p>
+        )}
+
         {/* Pasek akcji */}
         <div className="relative z-10 flex items-center justify-between mt-3 gap-3">
           <button
-            onClick={() => !isBusy && setInstrumental((v) => !v)}
-            disabled={isBusy}
-            className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-all ${
-              instrumental
+            onClick={() => !isBusy && (mode !== "music" || engine !== "musicgen") && setInstrumental((v) => !v)}
+            disabled={isBusy || (mode === "music" && engine === "musicgen")}
+            className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-all disabled:opacity-40 ${
+              instrumental || (mode === "music" && engine === "musicgen")
                 ? "border-purple-400/50 bg-purple-500/15 text-purple-200"
                 : "border-white/10 bg-white/5 text-white/60 hover:text-white"
             }`}
             title="Utwór bez wokalu"
           >
-            {instrumental ? <Guitar className="h-3.5 w-3.5" /> : <Mic2 className="h-3.5 w-3.5" />}
-            {instrumental ? "Instrumental" : L("Z wokalem","With vocals","Met zang","З вокалом")}
+            {instrumental || (mode === "music" && engine === "musicgen") ? <Guitar className="h-3.5 w-3.5" /> : <Mic2 className="h-3.5 w-3.5" />}
+            {mode === "music" && engine === "musicgen" ? "Instrumental" : instrumental ? "Instrumental" : L("Z wokalem","With vocals","Met zang","З вокалом")}
           </button>
 
           <motion.div whileHover={!isBusy ? { scale: 1.03 } : {}} whileTap={!isBusy ? { scale: 0.97 } : {}}>
