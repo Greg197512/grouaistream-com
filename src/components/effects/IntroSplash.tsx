@@ -74,23 +74,29 @@ export const IntroSplash = () => {
             playsInline
             onEnded={close}
             onError={close}
-            className="absolute inset-0 h-full w-full object-cover"
+            // object-contain (nie cover): wideo jest poziome (1168×784) — na pionowym
+            // ekranie telefonu "cover" obcinałby boki logo. Tło wideo jest czarne jak
+            // kontener, więc "pasy" są niewidoczne — bez dopasowywania pod konkretny ekran.
+            className="absolute inset-0 h-full w-full object-contain"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/40" />
 
-          <div className="relative flex h-full flex-col justify-between px-6 py-6 sm:px-10">
-            <div className="flex items-center justify-between gap-4">
-              <span className="font-display text-sm font-semibold text-white/90">GrouAI Stream</span>
-              <div className="flex items-center gap-2">
+          <div
+            className="relative flex h-full flex-col justify-between px-4 py-4 sm:px-10 sm:py-6"
+            style={{ paddingTop: "max(1rem, env(safe-area-inset-top))", paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
+          >
+            <div className="flex items-center justify-between gap-2 sm:gap-4">
+              <span className="font-display text-xs font-semibold text-white/90 sm:text-sm">GrouAI Stream</span>
+              <div className="flex items-center gap-1.5 sm:gap-2">
                 <button
                   onClick={toggleMute}
                   aria-label={muted ? "Włącz dźwięk" : "Wycisz"}
-                  className="grid h-9 w-9 place-items-center rounded-full bg-white/10 text-white/80 backdrop-blur-sm transition-colors hover:bg-white/20"
+                  className="grid h-9 w-9 flex-shrink-0 place-items-center rounded-full bg-white/10 text-white/80 backdrop-blur-sm transition-colors hover:bg-white/20 active:bg-white/25"
                 >
                   {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
                 </button>
-                <Button autoFocus variant="ghost" onClick={close} className="text-white/90 hover:bg-white/10 hover:text-white">
-                  Przejdź do strony<ArrowRight />
+                <Button autoFocus variant="ghost" onClick={close} size="sm" className="gap-1.5 whitespace-nowrap px-3 text-xs text-white/90 hover:bg-white/10 hover:text-white sm:px-4 sm:text-sm">
+                  Przejdź do strony<ArrowRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 </Button>
               </div>
             </div>
