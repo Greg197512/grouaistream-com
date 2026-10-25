@@ -45,7 +45,7 @@ export const HeroSection = () => {
       <div className="relative px-6 py-12 md:px-10 md:py-16">
         <p className="premium-eyebrow mb-7 text-xs font-medium">{copy.eyebrow}</p>
         <div className="mb-5"><HomeMusicVisualizer /></div>
-        <h1 className="font-display text-4xl font-bold leading-tight tracking-tight sm:text-5xl lg:text-6xl">GrouAI Stream<span className="premium-heading-accent animate-gradient mt-2 block text-3xl font-extrabold sm:text-4xl lg:text-5xl">{copy.title}</span></h1>
+        <h1 className="text-spatial font-display text-4xl font-bold leading-tight tracking-tight sm:text-5xl lg:text-6xl">GrouAI Stream<span className="premium-heading-accent animate-gradient mt-2 block text-3xl font-extrabold sm:text-4xl lg:text-5xl">{copy.title}</span></h1>
         <p className="mt-6 max-w-md text-base leading-relaxed text-foreground/75 sm:text-lg">{copy.text}</p>
         <div className="mt-8 flex flex-wrap gap-3">
           <Button size="lg" className="premium-primary" onClick={() => navigate("/radio-live")}><Radio />{copy.radio}<ArrowUpRight /></Button>
