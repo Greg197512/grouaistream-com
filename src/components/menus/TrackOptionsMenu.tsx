@@ -5,12 +5,12 @@ import { RatingLikeModal } from "@/components/modals/RatingLikeModal";
 import { usePlayerOptional } from "@/contexts/PlayerContext";
 import { CoffeeDialog } from "@/components/payments/CoffeeDialog";
 import { 
-  MoreHorizontal, 
-  Heart, 
-  Share2, 
-  Copy, 
-  Link, 
-  Download, 
+  MoreHorizontal,
+  Heart,
+  Share2,
+  Copy,
+  Link,
+  Download,
   ListPlus,
   ExternalLink,
   Twitter,
@@ -23,7 +23,8 @@ import {
   Gift,
   Headphones,
   ImagePlus,
-  Film
+  Film,
+  QrCode,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -36,6 +37,8 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuSubContent,
 } from "@/components/ui/dropdown-menu";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ShareQR } from "@/components/share/ShareQR";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -83,6 +86,7 @@ const TrackOptionsMenuComponent = (
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [showCoffeeDialog, setShowCoffeeDialog] = useState(false);
   const [showCoverStudio, setShowCoverStudio] = useState(false);
+  const [showQR, setShowQR] = useState(false);
   const [trackOwnerId, setTrackOwnerId] = useState<string | null>(null);
   const [myPlaylists, setMyPlaylists] = useState<{ id: string; title: string }[]>([]);
   const [playlistsLoaded, setPlaylistsLoaded] = useState(false);
@@ -786,6 +790,10 @@ const TrackOptionsMenuComponent = (
                 <Link className="mr-2 h-4 w-4" />
                 Copy Link
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setShowQR(true)} className="cursor-pointer">
+                <QrCode className="mr-2 h-4 w-4" />
+                Kod QR / NFC
+              </DropdownMenuItem>
             </DropdownMenuSubContent>
           </DropdownMenuSub>
 
@@ -888,6 +896,16 @@ const TrackOptionsMenuComponent = (
         trackTitle={trackTitle}
         trackArtist={trackArtist}
       />
+
+      {/* Kod QR (skanuje każdy telefon) + zapis linku na karcie NFC (Android/Chrome) */}
+      <Dialog open={showQR} onOpenChange={setShowQR}>
+        <DialogContent className="max-w-xs">
+          <DialogHeader>
+            <DialogTitle className="truncate">{trackTitle}</DialogTitle>
+          </DialogHeader>
+          <ShareQR url={giftUrl} title={`${trackTitle} — ${trackArtist}`} compact />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
