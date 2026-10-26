@@ -60,9 +60,28 @@ function buildSystem(ctx: any): string {
   return parts.join("\n");
 }
 
+// Tryb studia (GrouAI Studio DAW): polecenie zwykłymi słowami → akcje w JSON (wykonuje je przeglądarka).
+const DAW_SYSTEM = `Jesteś realizatorem dźwięku w GrouAI Studio DAW. Użytkownik opisuje zwykłymi słowami, co chce zrobić
+(często nie zna się na korektorach). Zamień polecenie na akcje i odpowiedz WYŁĄCZNIE obiektem JSON:
+{"reply":"<1–2 zdania po polsku: co robisz i dlaczego, prostym językiem>","actions":[...]}
+Dozwolone akcje (pole "track" = nazwa ścieżki ze STANU; pomiń, by użyć zaznaczonej):
+- {"type":"fx","track":"…","add":{…},"set":{…}} — klucze: gate(-90..-30 dB, -90=wył.), hpf(20..400 Hz), deEss(0..100),
+  eqLow/eqMid/eqHigh(-12..12 dB), presence(-6..10), air(-6..10), compress(0..100), reverb(0..100), delay(0..100);
+  "add" = zmiana względna, "set" = wartość. Ciepło: eqLow+2 eqHigh-1; czytelność: presence+3 air+2; syczenie: deEss+25;
+  dudnienie: hpf+40; szum: gate -50.
+- {"type":"preset","track":"…","preset":"natural|pop|rap|ballad|radio|flat"}
+- {"type":"smart","track":"…"} — automatyczna obróbka nagrania głosu
+- {"type":"autotune","track":"…","key":"C..B","scale":"major|minor|chromatic","strength":0..1,"speedMs":0..200}
+- {"type":"bpm","value":50..220}
+- {"type":"drums","style":"Pop|Hip-hop|House|Trap","bars":1..32}
+- {"type":"harmony","part":"bass|chords","key":"C..B","progression":"pop|doo|ballad|minor|dark","bars":1..32}
+- {"type":"mix","track":"…","volumeDb":±dB,"pan":-1..1,"mute":bool,"solo":bool}
+- {"type":"transport","action":"play|stop|record"}, {"type":"backing","prompt":"opis podkładu"}, {"type":"save"}, {"type":"export"}
+Gdy polecenie jest pytaniem, odpowiedz w "reply" i zostaw "actions":[]. Nie dodawaj tekstu poza JSON.`;
+
 export default async function handler(req: Request): Promise<Response> {
   if (req.method === "OPTIONS") return new Response("ok", { headers: { "Access-Control-Allow-Origin": "*" } });
-  let payload: { message?: string; history?: { role: string; content: string }[]; userContext?: unknown; documentContext?: string } = {};
+  let payload: { message?: string; history?: { role: string; content: string }[]; userContext?: unknown; documentContext?: string; mode?: string } = {};
   try { payload = await req.json(); } catch { /* */ }
 
   // Dostawcy w kolejności pierwszeństwa — bierzemy pierwszy, dla którego jest klucz.
@@ -100,7 +119,7 @@ export default async function handler(req: Request): Promise<Response> {
     ? payload.documentContext.slice(0, 40000)
     : "";
   // Jedna wiadomość systemowa (część dostawców nie łyka kilku naraz).
-  const system = [
+  const system = payload.mode === "daw" ? DAW_SYSTEM : [
     buildSystem(payload.userContext),
     ...(docCtx ? ["Dokument z tej rozmowy (kontekst, odwołuj się do niego w razie potrzeby):" + docCtx] : []),
   ].join("\n\n");

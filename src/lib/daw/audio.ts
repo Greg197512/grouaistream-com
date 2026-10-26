@@ -4,12 +4,23 @@ import {
   chordNotes, DRUM_ROWS, FLAT_FX, midiToHz, PROGRESSIONS, type DrumPattern, type DrumRow, type StripFx,
 } from "./dsp";
 
-export type Clip = { id: string; name: string; buffer: AudioBuffer; start: number; offset: number; duration: number; gain: number };
+export type Clip = {
+  id: string; name: string; buffer: AudioBuffer; start: number; offset: number; duration: number; gain: number;
+  /** Trwały plik na R2 (po zapisie projektu / imporcie). Brak = trzeba wgrać przy zapisie. */
+  url?: string;
+  /** Oryginalny plik nagrania z mikrofonu (mniejszy niż WAV) — wgrywany przy zapisie. */
+  blob?: Blob;
+  /** Bufor sprzed autotune — do cofnięcia. */
+  original?: AudioBuffer;
+};
+/** Skąd pochodzi materiał ścieżki (utwór z katalogu) — do opisu remiksu i praw autorskich. */
+export type TrackSource = { trackId: string; title: string; artist: string; userId: string | null };
 export type TrackKind = "audio" | "vocal" | "instrument";
 export type Track = {
   id: string; name: string; color: string; kind: TrackKind;
   volume: number; pan: number; mute: boolean; solo: boolean; armed: boolean;
   fx: StripFx; clips: Clip[];
+  source?: TrackSource;
 };
 export type Project = { bpm: number; tracks: Track[] };
 
