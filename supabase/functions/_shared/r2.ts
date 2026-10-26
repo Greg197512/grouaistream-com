@@ -82,6 +82,12 @@ export interface PutOptions {
  * or null when R2 credentials are not configured.
  */
 export async function putToR2(opts: PutOptions): Promise<string | null> {
+  const r = await putToR2Checked(opts);
+  return r.url ?? null;
+}
+
+/** Jak putToR2, ale zwraca powód niepowodzenia (do diagnostyki). */
+export async function putToR2Checked(opts: PutOptions): Promise<{ url?: string; error?: string }> {
   try {
     const endpoint = Deno.env.get("S3_ENDPOINT")?.trim();
     const accessKeyId = Deno.env.get("S3_ACCESS_KEY_ID")?.trim();
@@ -89,7 +95,7 @@ export async function putToR2(opts: PutOptions): Promise<string | null> {
     const bucket = Deno.env.get("S3_BUCKET_NAME")?.trim();
     if (!endpoint || !accessKeyId || !secretAccessKey || !bucket) {
       console.warn("[putToR2] missing R2 env, returning null");
-      return null;
+      return { error: "brak sekretów S3_* (R2)" };
     }
 
     const client = new S3Client({
@@ -109,9 +115,9 @@ export async function putToR2(opts: PutOptions): Promise<string | null> {
       ContentType: opts.contentType || "application/octet-stream",
     }));
 
-    return `${R2_PUBLIC_BASE}/${key}`;
+    return { url: `${R2_PUBLIC_BASE}/${key}` };
   } catch (e) {
     console.error("[putToR2] error:", e);
-    return null;
+    return { error: `R2: ${e instanceof Error ? e.message : String(e)}`.slice(0, 300) };
   }
 }

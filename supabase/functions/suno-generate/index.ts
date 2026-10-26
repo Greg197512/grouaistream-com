@@ -4,7 +4,7 @@
 //   status   → { status: "processing"|"succeeded"|"failed", audio_url?, cover_url?, title?, duration? }
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
-import { archiveToR2 } from "../_shared/r2.ts";
+import { archiveToR2, putToR2Checked } from "../_shared/r2.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -127,6 +127,91 @@ async function callSuno(apiKey: string, body: any) {
   });
 }
 
+// ── Odzyskiwanie utworów Studia, których plik zniknął (usunięty serwer „hub")
+// albo został tylko pod tymczasowym adresem Suno (tempfile — wygasa).
+// Źródła: zapis zadania w sunoapi.org (stary adres zawiera suno-<taskId>) albo
+// identyfikator nagrania z tempfile; pobieramy plik lub strumień i kładziemy na R2.
+const LOST_HUB = "bmwtydwpevzhbdplilbr.supabase.co";
+const TEMP_HOST = "tempfile.aiquickdraw.com";
+
+async function fetchAudio(url: string, timeoutMs: number): Promise<Uint8Array | string> {
+  try {
+    const r = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
+    if (!r.ok) return `HTTP ${r.status}`;
+    const buf = new Uint8Array(await r.arrayBuffer());
+    return buf.length > 20_000 ? buf : `za mały plik (${buf.length} B)`;
+  } catch (e) {
+    return String(e).slice(0, 120);
+  }
+}
+
+async function recoverLost(apiKey: string, limit: number, offset: number) {
+  const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+  const { data: rows, error } = await admin
+    .from("generations")
+    .select("id, title, audio_url")
+    .or(`audio_url.like.%${LOST_HUB}%,audio_url.like.%${TEMP_HOST}%`)
+    .order("created_at", { ascending: false })
+    .range(offset, offset + limit - 1);
+  if (error) return { error: error.message };
+
+  const started = Date.now();
+  const results: Record<string, unknown>[] = [];
+  for (const g of rows || []) {
+    if (Date.now() - started > 100_000) break; // limit czasu funkcji
+    const old = String(g.audio_url || "");
+    const sources: string[] = [];
+    let clipId = "";
+    let cover: string | undefined;
+    const taskId = old.includes(LOST_HUB) ? old.match(/suno-([0-9a-f]{16,})/)?.[1] : undefined;
+    if (taskId) {
+      try {
+        const r = await fetch(`${SUNO_API_BASE}/generate/record-info?taskId=${taskId}`, {
+          headers: { Authorization: `Bearer ${apiKey}` }, signal: AbortSignal.timeout(15_000),
+        });
+        const j = await r.json().catch(() => ({}));
+        const items = j?.data?.response?.sunoData || [];
+        const it = items.find((x: any) => x?.title === g.title) || items[0];
+        if (it) {
+          clipId = it.id || "";
+          for (const k of ["audio_url", "audioUrl", "source_audio_url", "sourceAudioUrl", "stream_audio_url", "streamAudioUrl", "source_stream_audio_url", "sourceStreamAudioUrl"]) {
+            if (typeof it[k] === "string" && it[k]) sources.push(it[k]);
+          }
+          cover = it.image_url || it.imageUrl || it.source_image_url || it.sourceImageUrl || undefined;
+        }
+      } catch { /* brak zapisu w Suno */ }
+    } else if (old.includes(TEMP_HOST)) {
+      clipId = old.match(/\/r\/([0-9a-f-]{36})/)?.[1] || "";
+      sources.push(old);
+      if (clipId) sources.push(`https://audiostream.api.box/stream/${clipId}.mp3`);
+    }
+    if (!sources.length) { results.push({ id: g.id, title: g.title, status: "brak źródła" }); continue; }
+
+    let url: string | undefined;
+    const tried: string[] = [];
+    for (const src of [...new Set(sources)]) {
+      const audio = await fetchAudio(src, 60_000);
+      if (typeof audio === "string") { tried.push(`${new URL(src).host}: ${audio}`); continue; }
+      const put = await putToR2Checked({ body: audio, folder: "studio/recovered", fileName: `${clipId || g.id}.mp3`, contentType: "audio/mpeg" });
+      if (put.url) { url = put.url; break; }
+      tried.push(put.error || "R2: nieznany błąd");
+    }
+    if (!url) { results.push({ id: g.id, title: g.title, status: "nie udało się", tried }); continue; }
+
+    let coverUrl: string | null = null;
+    if (cover) {
+      const img = await fetchAudio(cover, 15_000);
+      if (typeof img !== "string") {
+        coverUrl = (await putToR2Checked({ body: img, folder: "studio/recovered", fileName: `${clipId || g.id}.jpg`, contentType: "image/jpeg" })).url ?? null;
+      }
+    }
+    await admin.from("generations").update({ audio_url: url }).eq("id", g.id);
+    await admin.from("tracks").update({ audio_url: url, ...(coverUrl ? { cover_url: coverUrl } : {}) }).eq("audio_url", old);
+    results.push({ id: g.id, title: g.title, status: "odzyskano", url });
+  }
+  return { processed: results.length, recovered: results.filter((r) => r.status === "odzyskano").length, results };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -136,6 +221,14 @@ serve(async (req) => {
 
   // Callback sunoapi.org (bez logowania) — wynik i tak odbieramy pollingiem „status".
   if (body?.data?.callbackType || body?.data?.task_id) return json({ ok: true });
+
+  // Odzyskiwanie utraconych plików Studia — działa tylko na rekordach z naszej bazy
+  // (nie przyjmuje adresów z zewnątrz), więc może je wywołać zadanie serwerowe.
+  if (body?.action === "recover") {
+    const k = Deno.env.get("SUNO_API_KEY");
+    if (!k) return json({ error: "Brak sekretu SUNO_API_KEY" });
+    return json(await recoverLost(k, Math.min(Math.max(Number(body.limit) || 3, 1), 10), Math.max(Number(body.offset) || 0, 0)));
+  }
 
   // Diagnostyka bez kosztów: czy klucz jest ustawiony i ile zostało kredytów.
   if (body?.action === "health") {
@@ -208,9 +301,22 @@ serve(async (req) => {
         // Linki Suno wygasają — kopiujemy nagranie i okładkę na stałe do R2.
         const rawAudio = first?.audioUrl || first?.sourceAudioUrl || first?.streamAudioUrl;
         const rawCover = first?.imageUrl || first?.sourceImageUrl || "";
-        const permAudio = first?.audioUrl || first?.sourceAudioUrl
-          ? await archiveToR2({ sourceUrl: rawAudio, folder: "suno", id: first?.id || taskId })
-          : null;
+        // Kopia na R2: plik (60 s), a gdy się nie uda — strumień Suno. Błąd trafia do odpowiedzi.
+        let permAudio: string | null = null;
+        const archiveErrors: string[] = [];
+        if (first?.audioUrl || first?.sourceAudioUrl) {
+          const clip = first?.id || taskId;
+          const srcs = [first?.audioUrl, first?.sourceAudioUrl, first?.streamAudioUrl, `https://audiostream.api.box/stream/${clip}.mp3`]
+            .filter((u, i, arr): u is string => typeof u === "string" && !!u && arr.indexOf(u) === i);
+          for (const src of srcs) {
+            const audio = await fetchAudio(src, 60_000);
+            if (typeof audio === "string") { archiveErrors.push(`${new URL(src).host}: ${audio}`); continue; }
+            const put = await putToR2Checked({ body: audio, folder: "suno", fileName: `${clip}.mp3`, contentType: "audio/mpeg" });
+            if (put.url) { permAudio = put.url; break; }
+            archiveErrors.push(put.error || "R2: nieznany błąd");
+          }
+          if (!permAudio) console.error("[suno-generate] archiwizacja na R2 nie powiodła się:", archiveErrors);
+        }
         const permCover = rawCover
           ? await archiveToR2({ sourceUrl: rawCover, folder: "suno-covers", id: first?.id || taskId, ext: "jpg", contentType: "image/jpeg" })
           : null;
@@ -222,6 +328,7 @@ serve(async (req) => {
           title: first?.title || "",
           duration: first?.duration || 0,
           all: items,
+          ...(permAudio ? {} : { archive_error: archiveErrors.join(" | ") || "brak pliku" }),
         };
       } else if (s === "CREATE_TASK_FAILED" || s === "GENERATE_AUDIO_FAILED" || s === "CALLBACK_EXCEPTION" || s === "SENSITIVE_WORD_ERROR") {
         norm = { status: "failed", error: d?.errorMessage || s };

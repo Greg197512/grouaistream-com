@@ -22,8 +22,9 @@ import { cn } from "@/lib/utils";
 // tytuł, styl, status na żywo, odtwarzanie i pobieranie. Te same funkcje dla
 // wszystkich użytkowników.
 
-// Hosty, na których stare pliki już nie istnieją (usunięty projekt hub, wygasłe linki tymczasowe).
-const LOST_HOSTS = ["bmwtydwpevzhbdplilbr.supabase.co", "tempfile.aiquickdraw.com"];
+// Tylko usunięty serwer „hub". Tymczasowe adresy Suno (tempfile) działają jeszcze kilka dni,
+// a serwer i tak przenosi je na R2 — nie oznaczamy ich jako utraconych.
+const LOST_HOSTS = ["bmwtydwpevzhbdplilbr.supabase.co"];
 const isLostUrl = (u: string | null) => !!u && LOST_HOSTS.some((h) => u.includes(h));
 
 interface Generation {
@@ -396,7 +397,7 @@ export const GenerationHistory = () => {
 
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-sm text-white truncate">{gen.title}</p>
-                  {gen.lost && <p className="text-[11px] text-amber-300/90">Plik usunięty ze starego serwera — wygeneruj ponownie</p>}
+                  {gen.lost && <p className="text-[11px] text-amber-300/90">Plik niedostępny — odzyskujemy go z Suno, sprawdź za chwilę</p>}
                   <p className="text-[11px] text-[#FF9500]/70 truncate">
                     {gen.genre}
                     {gen.instrumental && " • instrumental"}
