@@ -104,7 +104,7 @@ export const GenerationHistory = () => {
       .limit(30);
 
     if (!error && data) {
-      setGenerations((data as Generation[]).map((g) =>
+      setGenerations((data as unknown as Generation[]).map((g) =>
         isLostUrl(g.audio_url) ? { ...g, audio_url: null, lost: true } : g,
       ));
     }

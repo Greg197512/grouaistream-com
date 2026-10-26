@@ -14,6 +14,7 @@ import { useSubscription } from "@/contexts/SubscriptionContext";
 import { supabase } from "@/integrations/supabase/client";
 import { uploadToR2 } from "@/lib/r2Upload";
 import { WaveformPlayer } from "@/components/studio/WaveformPlayer";
+import { StemsWorkbench } from "@/components/studio/StemsWorkbench";
 import { checkSpotifyReady, type SpotifyReadyCheck } from "@/lib/loudness";
 import { SpotifyReadyBadge } from "@/components/studio/SpotifyReadyBadge";
 import { buildFxChain, DEFAULT_FX, FX_IS_DEFAULT, type TrackFx } from "@/lib/trackEffects";
@@ -646,6 +647,9 @@ export function RecordingStudioPro() {
           <p className="text-[10px] text-gray-600">Orientacyjna analiza (autokorelacja) — na pojedynczym wokalu/melodii działa najlepiej; na gęstym miksie wielu instrumentów naraz dokładność spada.</p>
         </div>
       )}
+
+      {/* Rozkładanie na ścieżki, kafelki, sample */}
+      <StemsWorkbench />
     </div>
   );
 }
