@@ -4055,6 +4055,7 @@ export type Database = {
           instrumental: boolean
           lyrics: string | null
           prompt: string
+          release: Json | null
           replicate_id: string | null
           status: string
           title: string
@@ -4069,6 +4070,7 @@ export type Database = {
           instrumental?: boolean
           lyrics?: string | null
           prompt: string
+          release?: Json | null
           replicate_id?: string | null
           status?: string
           title?: string
@@ -4083,6 +4085,7 @@ export type Database = {
           instrumental?: boolean
           lyrics?: string | null
           prompt?: string
+          release?: Json | null
           replicate_id?: string | null
           status?: string
           title?: string
@@ -6911,6 +6914,8 @@ export type Database = {
           locked: boolean
           monetization_enabled_at: string | null
           mood: string | null
+          release: Json | null
+          studio_certified: boolean
           title: string
           total_earnings: number
           total_streams: number
@@ -6938,6 +6943,8 @@ export type Database = {
           locked?: boolean
           monetization_enabled_at?: string | null
           mood?: string | null
+          release?: Json | null
+          studio_certified?: boolean
           title: string
           total_earnings?: number
           total_streams?: number
@@ -6965,6 +6972,8 @@ export type Database = {
           locked?: boolean
           monetization_enabled_at?: string | null
           mood?: string | null
+          release?: Json | null
+          studio_certified?: boolean
           title?: string
           total_earnings?: number
           total_streams?: number
