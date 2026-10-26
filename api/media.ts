@@ -22,6 +22,9 @@ const ALLOWED_HOSTS = new Set<string>([
   "audiopipe.suno.ai",
   // Replicate — gotowe wideo z lip-syncu (studio-video) pobierane do sklejenia teledysku.
   "replicate.delivery",
+  // Suno przez sunoapi.org — świeże nagrania/okładki (studio przygotowuje z nich pakiet Spotify).
+  "tempfile.aiquickdraw.com",
+  "audiostream.api.box",
   "pbxt.replicate.delivery",
 ]);
 

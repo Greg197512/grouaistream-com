@@ -17,6 +17,7 @@ import { UpgradeModal } from "@/components/modals/UpgradeModal";
 import { exportTeledysk, exportScenesOnly } from "@/lib/teledyskExport";
 import { uploadToR2 } from "@/lib/r2Upload";
 import { generateWithSuno } from "@/lib/sunoClient";
+import { certifyWithToasts } from "@/lib/releasePipeline";
 import { isPersistentAudioUrl, mirrorToR2 } from "@/lib/mirrorAudio";
 import { generateTrack, ENGINE_INFO, type Engine } from "@/lib/engineGenerate";
 import { EngineSelector } from "@/components/studio/EngineSelector";
@@ -247,11 +248,23 @@ export function MusicPromptBox({ onTrackReady }: Props) {
         user_id: user.id, title: r.title, genre: engineLabel, prompt: prompt.trim(),
         instrumental, status: "completed", audio_url: finalAudioUrl,
       }).select("id").maybeSingle();
+      // Od razu w „Nowe na serwerze” — pod nazwą twórcy (tak też pójdzie do Spotify).
+      const artistName = user.user_metadata?.display_name || user.email?.split("@")[0] || "GrouAI Studio";
+      let trackId: string | null = null;
       if (isPersistentAudioUrl(finalAudioUrl)) {
-        await supabase.from("tracks").insert({
-          user_id: user.id, title: r.title, artist: "GrouAI Studio", album: "AI Generated",
+        const { data: tr } = await supabase.from("tracks").insert({
+          user_id: user.id, title: r.title, artist: artistName, album: "GrouAI Studio",
           duration: r.durationSeconds || null, audio_url: finalAudioUrl, cover_url: r.coverUrl || null,
           genre: "AI",
+        }).select("id").maybeSingle();
+        trackId = tr?.id ?? null;
+      }
+
+      // Studio GrouAI: mastering pod Spotify, WAV, okładka 3000×3000, czysty tekst → znaczek.
+      if (isPersistentAudioUrl(finalAudioUrl)) {
+        certifyWithToasts({
+          audioUrl: finalAudioUrl, coverUrl: r.coverUrl, title: r.title, artist: artistName,
+          lyrics: r.lyrics, instrumental, userId: user.id, generationId: gen?.id, trackId,
         });
       }
 

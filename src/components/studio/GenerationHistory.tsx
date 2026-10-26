@@ -6,6 +6,7 @@ import { usePlayer } from "@/contexts/PlayerContext";
 import {
   Music, Heart, Download, Play, Loader2, RefreshCw, Library, Trash2, Plus,
   MoreHorizontal, AudioLines, ImagePlus, Crown, FileAudio, Link2, Share2, ExternalLink, Sparkles, Mic2,
+  BadgeCheck,
 } from "lucide-react";
 import { masterAudioToWav } from "@/lib/aiMastering";
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,9 @@ import { downloadAudio, downloadAudioAsWav, startStems, waitForStems, invokeStud
 import { uploadToR2 } from "@/lib/r2Upload";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { certifyWithToasts, type ReleasePackage } from "@/lib/releasePipeline";
+import { StudioCertifiedBadge } from "@/components/studio/StudioCertifiedBadge";
+import { isPersistentAudioUrl } from "@/lib/mirrorAudio";
 
 // Biblioteka wygenerowanych utworów w stylu Suno: każdy wiersz ma okładkę,
 // tytuł, styl, status na żywo, odtwarzanie i pobieranie. Te same funkcje dla
@@ -37,6 +41,8 @@ interface Generation {
   status: string;
   replicate_id?: string | null;
   lost?: boolean; // plik był na usuniętym serwerze — nie da się go odtworzyć
+  lyrics?: string | null;
+  release?: ReleasePackage | null; // pakiet GrouAI Studio → Spotify (WAV, okładka 3000, kontrola)
 }
 
 function CoverThumb({ gen, version }: { gen: Generation; version: number }) {
@@ -289,6 +295,18 @@ export const GenerationHistory = () => {
     }
   };
 
+  // Starszy utwór bez pakietu → przepuść przez studio (mastering, WAV, okładka, znaczek).
+  const prepareForSpotify = async (gen: Generation) => {
+    if (!user || !isPersistentAudioUrl(gen.audio_url)) return;
+    const { data: tr } = await supabase.from("tracks").select("id, cover_url")
+      .eq("user_id", user.id).eq("audio_url", gen.audio_url).limit(1).maybeSingle();
+    certifyWithToasts({
+      audioUrl: gen.audio_url, coverUrl: tr?.cover_url, title: gen.title, genre: gen.genre,
+      artist: user.user_metadata?.display_name || user.email?.split("@")[0] || "GrouAI Studio",
+      lyrics: gen.lyrics, instrumental: gen.instrumental, userId: user.id, generationId: gen.id, trackId: tr?.id,
+    });
+  };
+
   // Kopiuj link do pobrania
   const copyLink = async (gen: Generation) => {
     if (!gen.audio_url) return;
@@ -397,13 +415,14 @@ export const GenerationHistory = () => {
 
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-sm text-white truncate">{gen.title}</p>
-                  {gen.lost && <p className="text-[11px] text-amber-300/90">Plik niedostępny — odzyskujemy go z Suno, sprawdź za chwilę</p>}
+                  {gen.lost && <p className="text-[11px] text-amber-300/90">Plik usunięty ze starego serwera — wygeneruj ponownie</p>}
                   <p className="text-[11px] text-[#FF9500]/70 truncate">
                     {gen.genre}
                     {gen.instrumental && " • instrumental"}
                     {" • "}
                     {new Date(gen.created_at).toLocaleDateString("pl-PL")}
                   </p>
+                  {gen.release && <div className="mt-1"><StudioCertifiedBadge pkg={gen.release} /></div>}
                   {isPending && (
                     <p className="text-[11px] text-amber-400 flex items-center gap-1 mt-0.5">
                       <Loader2 className="h-3 w-3 animate-spin" /> tworzy się…
@@ -479,6 +498,11 @@ export const GenerationHistory = () => {
                         </DropdownMenuItem>
                         <DropdownMenuSeparator className="bg-[#FF6B00]/20" />
                         {/* Biblioteka */}
+                        {!gen.release && (
+                          <DropdownMenuItem className="cursor-pointer gap-2" onClick={() => void prepareForSpotify(gen)}>
+                            <BadgeCheck className="h-4 w-4 text-emerald-400" /> Przygotuj do Spotify (GrouAI Studio)
+                          </DropdownMenuItem>
+                        )}
                         <DropdownMenuItem className="cursor-pointer gap-2" onClick={() => void addToNew(gen)}>
                           <Plus className="h-4 w-4 text-emerald-400" /> Dodaj do Nowości
                         </DropdownMenuItem>

@@ -28,6 +28,7 @@ import { useSubscription } from "@/contexts/SubscriptionContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { uploadToR2 } from "@/lib/r2Upload";
 import { mirrorToR2, isPersistentAudioUrl } from "@/lib/mirrorAudio";
+import { certifyWithToasts } from "@/lib/releasePipeline";
 import { renderScore } from "@/lib/musicSynth";
 import { generateMusic } from "@/utils/musicGenerator";
 import { Lock, Crown, Download, Share2, Film, Disc3 } from "lucide-react";
@@ -503,16 +504,26 @@ const Suno = () => {
                 setResult({ audioUrl: url, title: trackTitle, genre, durationSeconds: (st as any)?.duration || duration, lyrics, imageUrl: coverUrl });
                 setGenStatus(t("studio.status.done"));
                 toast.success(`🎶 "${trackTitle}" — Suno V5.5, najwyższa jakość!`);
-                await supabase.from("generations").insert({
+                const { data: gen } = await supabase.from("generations").insert({
                   user_id: user!.id, title: trackTitle, genre,
                   prompt: musicPrompt, instrumental, status: "completed", audio_url: url,
-                });
-                await supabase.from("tracks").insert({
-                  user_id: user!.id, title: trackTitle, artist: "GrouAI Studio",
+                }).select("id").maybeSingle();
+                // Od razu w „Nowe na serwerze” — pod nazwą twórcy (tak też pójdzie do Spotify).
+                const artistName = user!.user_metadata?.display_name || user!.email?.split("@")[0] || "GrouAI Studio";
+                const { data: tr } = await supabase.from("tracks").insert({
+                  user_id: user!.id, title: trackTitle, artist: artistName,
                   album: eraAlbum, duration: (st as any)?.duration || duration,
                   audio_url: url, cover_url: coverUrl || null, genre, mood,
-                });
+                }).select("id").maybeSingle();
                 window.dispatchEvent(new CustomEvent("grouai:generations-changed"));
+                // Studio GrouAI: mastering pod Spotify, WAV, okładka 3000×3000, czysty tekst → znaczek.
+                if (isPersistentAudioUrl(url)) {
+                  certifyWithToasts({
+                    audioUrl: url, coverUrl, title: trackTitle, artist: artistName, genre,
+                    lyrics: customLyrics.trim() || (st as any)?.all?.[0]?.prompt || "",
+                    instrumental, userId: user!.id, generationId: gen?.id, trackId: tr?.id,
+                  });
+                }
                 if (!isPro) setFreeUsed((prev) => prev + 1);
                 return true;
               }
