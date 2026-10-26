@@ -73,7 +73,7 @@ export async function archiveToR2(opts: ArchiveOptions): Promise<string | null> 
         Key: key,
         Body: buffer,
         ContentType: opts.contentType || "audio/mpeg",
-      }));
+      }), { abortSignal: AbortSignal.timeout(30_000) });
 
       return `${R2_PUBLIC_BASE}/${key}`;
     } catch (e) {
@@ -128,12 +128,13 @@ export async function putToR2Checked(opts: PutOptions): Promise<{ url?: string; 
     const key = `${opts.folder.replace(/^\/+|\/+$/g, "")}/${safeName}`;
     const body = opts.body instanceof Uint8Array ? opts.body : new Uint8Array(opts.body);
 
+    // Twardy limit: zawieszony zapis S3 nie może blokować funkcji do timeoutu bramki.
     await client.send(new PutObjectCommand({
       Bucket: bucket,
       Key: key,
       Body: body,
       ContentType: opts.contentType || "application/octet-stream",
-    }));
+    }), { abortSignal: AbortSignal.timeout(30_000) });
 
     return { url: `${R2_PUBLIC_BASE}/${key}` };
   } catch (e) {

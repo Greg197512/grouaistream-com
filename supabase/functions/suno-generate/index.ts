@@ -158,7 +158,7 @@ async function recoverLost(apiKey: string, limit: number, offset: number) {
   const started = Date.now();
   const results: Record<string, unknown>[] = [];
   for (const g of rows || []) {
-    if (Date.now() - started > 100_000) break; // limit czasu funkcji
+    if (Date.now() - started > 80_000) break; // limit czasu funkcji
     const old = String(g.audio_url || "");
     const sources: string[] = [];
     let clipId = "";
@@ -190,7 +190,9 @@ async function recoverLost(apiKey: string, limit: number, offset: number) {
     let url: string | undefined;
     const tried: string[] = [];
     for (const src of [...new Set(sources)]) {
-      const audio = await fetchAudio(src, 60_000);
+      const left = 110_000 - (Date.now() - started);
+      if (left < 5_000) { tried.push("limit czasu funkcji"); break; }
+      const audio = await fetchAudio(src, Math.min(40_000, left));
       if (typeof audio === "string") { tried.push(`${new URL(src).host}: ${audio}`); continue; }
       const put = await putToR2Checked({ body: audio, folder: "studio/recovered", fileName: `${clipId || g.id}.mp3`, contentType: "audio/mpeg" });
       if (put.url) { url = put.url; break; }
@@ -200,7 +202,7 @@ async function recoverLost(apiKey: string, limit: number, offset: number) {
 
     let coverUrl: string | null = null;
     if (cover) {
-      const img = await fetchAudio(cover, 15_000);
+      const img = await fetchAudio(cover, 10_000);
       if (typeof img !== "string") {
         coverUrl = (await putToR2Checked({ body: img, folder: "studio/recovered", fileName: `${clipId || g.id}.jpg`, contentType: "image/jpeg" })).url ?? null;
       }
@@ -221,6 +223,13 @@ serve(async (req) => {
 
   // Callback sunoapi.org (bez logowania) — wynik i tak odbieramy pollingiem „status".
   if (body?.data?.callbackType || body?.data?.task_id) return json({ ok: true });
+
+  // Test zapisu na R2 (mały plik tekstowy) — pokazuje, czy sekrety S3 działają i ile trwa zapis.
+  if (body?.action === "r2test") {
+    const t0 = Date.now();
+    const put = await putToR2Checked({ body: new TextEncoder().encode(`ok ${new Date().toISOString()}`), folder: "healthcheck", fileName: "r2-test.txt", contentType: "text/plain" });
+    return json({ ...put, ms: Date.now() - t0 });
+  }
 
   // Odzyskiwanie utraconych plików Studia — działa tylko na rekordach z naszej bazy
   // (nie przyjmuje adresów z zewnątrz), więc może je wywołać zadanie serwerowe.
