@@ -43,6 +43,8 @@ export type GenerateTrackResult = {
   durationSeconds: number;
   /** false = link nie trafił na trwały R2 (wygaśnie) — pokaż userowi ostrzeżenie. */
   audioArchived: boolean;
+  /** Tekst piosenki (Suno: napisany przez Suno; ACE-Step: przygotowany przez AI). */
+  lyrics?: string;
 };
 
 // ACE-Step (via Replicate, hub) wymaga tekstu gdy nie jest instrumentalny — bez
@@ -108,7 +110,7 @@ export async function generateTrack(opts: GenerateTrackOpts): Promise<GenerateTr
     const r = await generateWithSuno({
       prompt, instrumental, title, style, lyrics: opts.lyrics, language, enhance: true, onProgress: opts.onProgress,
     });
-    return { title: r.title, audioUrl: r.audioUrl, coverUrl: r.coverUrl, durationSeconds: r.durationSeconds, audioArchived: r.audioArchived };
+    return { title: r.title, audioUrl: r.audioUrl, coverUrl: r.coverUrl, durationSeconds: r.durationSeconds, audioArchived: r.audioArchived, lyrics: r.lyrics };
   }
 
   if (engine === "acestep") {
@@ -131,7 +133,7 @@ export async function generateTrack(opts: GenerateTrackOpts): Promise<GenerateTr
     const genId = (data as any)?.generation_id;
     if (!predId) throw new Error("ACE-Step nie zwróciło numeru zadania");
     const res = await pollHubEngine("acestep-generate", predId, genId, 100, opts.onProgress); // 100x3s = 5 min
-    return { title: res.title || title || "GrouAI Track", audioUrl: res.audioUrl, coverUrl: res.coverUrl, durationSeconds: res.duration || duration || 0, audioArchived: res.audioArchived };
+    return { title: res.title || title || "GrouAI Track", audioUrl: res.audioUrl, coverUrl: res.coverUrl, durationSeconds: res.duration || duration || 0, audioArchived: res.audioArchived, lyrics };
   }
 
   // musicgen

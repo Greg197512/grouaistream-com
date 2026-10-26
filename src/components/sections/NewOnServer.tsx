@@ -15,10 +15,11 @@ import { LikeButton, TrackOptionsMenu } from "@/components/menus/TrackOptionsMen
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { withTimeout } from "@/lib/withTimeout";
 import { resilientTracks } from "@/lib/trackSnapshot";
+import { StudioCertifiedChip } from "@/components/studio/StudioCertifiedBadge";
 
 const FETCH_TIMEOUT_MS = 25_000;
 const PROFILE_FETCH_TIMEOUT_MS = 8_000;
-const TRACK_SELECT = "id,title,artist,album,duration,cover_url,audio_url,video_url,genre,mood,created_at,user_id";
+const TRACK_SELECT = "id,title,artist,album,duration,cover_url,audio_url,video_url,genre,mood,created_at,user_id,studio_certified";
 const CARDS_VISIBLE = 4;
 const AUTO_MS = 10000;
 
@@ -30,6 +31,7 @@ interface ServerTrack extends Track {
   created_at: string;
   user_id: string | null;
   uploader?: UploaderProfile | null;
+  studio_certified?: boolean | null; // przeszedł przez GrouAI Studio (pakiet Spotify)
 }
 
 // ─── Genre theme map ───────────────────────────────────────────────────────────
@@ -464,6 +466,7 @@ export const NewOnServer = () => {
                   {/* Info */}
                   <div className="p-3">
                     <p className="font-semibold text-sm truncate">{track.title}</p>
+                    {track.studio_certified && <StudioCertifiedChip className="mt-1" />}
                     <p className="text-xs text-muted-foreground truncate">{track.artist}</p>
                     {track.uploader?.display_name && (
                       <div className="flex items-center gap-1.5 mt-1.5">
