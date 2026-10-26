@@ -193,7 +193,7 @@ export async function downloadReleaseZip(pkg: ReleasePackage): Promise<void> {
   if (cover) files["okladka_3000.jpg"] = new Uint8Array(cover);
   if (pkg.lyrics) files["tekst.txt"] = strToU8(pkg.lyrics);
   const zip = zipSync(files, { level: 0 }); // WAV i JPG i tak się nie kompresują
-  const url = URL.createObjectURL(new Blob([zip], { type: "application/zip" }));
+  const url = URL.createObjectURL(new Blob([new Uint8Array(zip)], { type: "application/zip" }));
   const a = document.createElement("a");
   a.href = url;
   a.download = `${pkg.title.replace(/[^\p{L}\p{N}]+/gu, "_")}_spotify.zip`;

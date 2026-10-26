@@ -56,14 +56,15 @@ export type SampleOptions = {
 };
 
 /** Wycina sampel z kanałów, z odwróceniem i zanikaniem (wysokość zmienia odtwarzanie: playbackRate). */
-export function cutSample(channels: Float32Array[], sampleRate: number, o: SampleOptions): Float32Array[] {
+export function cutSample(channels: Float32Array[], sampleRate: number, o: SampleOptions): Float32Array<ArrayBuffer>[] {
   const from = Math.max(0, Math.floor(o.start * sampleRate));
   const to = Math.min(channels[0].length, from + Math.max(1, Math.floor(o.length * sampleRate)));
   const n = Math.max(1, to - from);
   const fin = Math.min(n, Math.floor((o.fadeInMs / 1000) * sampleRate));
   const fout = Math.min(n, Math.floor((o.fadeOutMs / 1000) * sampleRate));
   return channels.map((ch) => {
-    const out = ch.slice(from, from + n);
+    const out = new Float32Array(n); // własny ArrayBuffer — wymagany przez AudioBuffer.copyToChannel
+    out.set(ch.subarray(from, from + n));
     if (o.reverse) out.reverse();
     for (let i = 0; i < n; i++) {
       let g = o.gain;
