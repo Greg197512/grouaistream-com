@@ -30,7 +30,7 @@ export type ReleasePackage = {
 };
 
 /** Plik z innego hosta pobieramy przez nasze proxy (same-origin, poprawny CORS). */
-function viaProxy(url: string): string {
+export function viaProxy(url: string): string {
   if (url.startsWith("blob:") || url.startsWith("data:") || url.startsWith("/")) return url;
   try {
     if (new URL(url).origin === window.location.origin) return url;

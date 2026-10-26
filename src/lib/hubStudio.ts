@@ -9,8 +9,6 @@ const HUB_PROMPT_ENGINE_URL =
   "https://bmwtydwpevzhbdplilbr.supabase.co/functions/v1/studio-prompt-engine";
 const HUB_COVER_URL =
   "https://bmwtydwpevzhbdplilbr.supabase.co/functions/v1/studio-cover";
-const HUB_STEMS_URL =
-  "https://bmwtydwpevzhbdplilbr.supabase.co/functions/v1/studio-stems";
 const HUB_ENGINE_LEARN_URL =
   "https://bmwtydwpevzhbdplilbr.supabase.co/functions/v1/engine-learn";
 const HUB_WHISPER_URL =
@@ -192,24 +190,40 @@ export async function downloadAudioAsWav(url: string, filename: string): Promise
   setTimeout(() => URL.revokeObjectURL(objectUrl), 10_000);
 }
 
-/** Start rozdzielania utworu na ścieżki (Demucs na hubie). Zwraca task_id. */
-export async function startStems(audioUrl: string): Promise<string> {
-  const { data, error } = await hubFetch(HUB_STEMS_URL, { audio_url: audioUrl });
+export type StemsMode = "2" | "4" | "6";
+
+/** studio-stems; błąd zawiera treść odpowiedzi funkcji, nie ogólne „non-2xx". */
+async function stemsFn(body: Record<string, unknown>): Promise<InvokeResult> {
+  const { data, error } = await supabase.functions.invoke("studio-stems", { body });
+  if (error) {
+    const ctx = await (error as any)?.context?.json?.().catch(() => null);
+    return { data: ctx, error: new Error(ctx?.error || error.message) };
+  }
+  if (data?.error) return { data, error: new Error(data.error) };
+  return { data, error: null };
+}
+
+/**
+ * Start rozdzielania utworu na ścieżki (Demucs na Replicate, funkcja studio-stems).
+ * mode: 2 = wokal + akompaniament, 4 = wokal/perkusja/bas/reszta, 6 = + gitara, pianino.
+ */
+export async function startStems(audioUrl: string, mode: StemsMode = "4"): Promise<string> {
+  const { data, error } = await stemsFn({ audio_url: audioUrl, mode });
   if (error) throw error;
-  if (!data?.task_id) throw new Error(data?.error || "Nie udało się wystartować");
+  if (!data?.task_id) throw new Error("Nie udało się wystartować rozdzielania");
   return data.task_id as string;
 }
 
-/** Czekaj na ścieżki (poll co 5 s, max ~5 min). Zwraca mapę nazwa→url. */
+/** Czekaj na ścieżki (poll co 5 s, max ~6 min). Zwraca mapę nazwa→url. */
 export async function waitForStems(
   taskId: string,
-  trackId: string,
+  _trackId: string,
   onTick?: (sec: number) => void
 ): Promise<Record<string, string>> {
-  for (let i = 1; i <= 60; i++) {
+  for (let i = 1; i <= 72; i++) {
     await new Promise((res) => setTimeout(res, 5000));
     onTick?.(i * 5);
-    const { data, error } = await hubFetch(HUB_STEMS_URL, { action: "status", task_id: taskId, id: trackId });
+    const { data, error } = await stemsFn({ action: "status", task_id: taskId });
     if (error) continue;
     if (data?.status === "succeeded" && data?.stems) return data.stems as Record<string, string>;
     if (data?.status === "failed") throw new Error(data?.error || "Rozdzielanie nie powiodło się");
