@@ -186,7 +186,7 @@ export function masterForRelease(channels: Float32Array[], sr: number) {
 }
 
 /** WAV PCM 16 bit z ditheringiem TPDF. */
-export function encodeWav16(channels: Float32Array[], sr: number): Uint8Array {
+export function encodeWav16(channels: Float32Array[], sr: number): Uint8Array<ArrayBuffer> {
   const nCh = channels.length, n = channels[0].length;
   const dataSize = n * nCh * 2;
   const buf = new ArrayBuffer(44 + dataSize);

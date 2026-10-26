@@ -45,11 +45,18 @@ export interface PutOptions {
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const enc = new TextEncoder();
 const hex = (buf: ArrayBuffer) => [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
-const sha256 = async (data: Uint8Array | string) =>
-  hex(await crypto.subtle.digest("SHA-256", typeof data === "string" ? enc.encode(data) : data));
+/** Kopia na płaskim ArrayBuffer — WebCrypto w Deno (TS 5.7) nie przyjmuje `ArrayBufferLike`. */
+const ab = (d: Uint8Array | ArrayBuffer | string): ArrayBuffer => {
+  if (d instanceof ArrayBuffer) return d;
+  const src = typeof d === "string" ? enc.encode(d) : d;
+  const out = new Uint8Array(src.length);
+  out.set(src);
+  return out.buffer;
+};
+const sha256 = async (data: Uint8Array | string) => hex(await crypto.subtle.digest("SHA-256", ab(data)));
 async function hmac(key: ArrayBuffer | Uint8Array, data: string): Promise<ArrayBuffer> {
-  const k = await crypto.subtle.importKey("raw", key, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
-  return crypto.subtle.sign("HMAC", k, enc.encode(data));
+  const k = await crypto.subtle.importKey("raw", ab(key), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  return crypto.subtle.sign("HMAC", k, ab(data));
 }
 
 function r2Env() {
