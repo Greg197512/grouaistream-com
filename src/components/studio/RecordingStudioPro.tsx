@@ -15,6 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { uploadToR2 } from "@/lib/r2Upload";
 import { WaveformPlayer } from "@/components/studio/WaveformPlayer";
 import { StemsWorkbench } from "@/components/studio/StemsWorkbench";
+import { StudioDAW } from "@/components/studio/daw/StudioDAW";
 import { checkSpotifyReady, type SpotifyReadyCheck } from "@/lib/loudness";
 import { SpotifyReadyBadge } from "@/components/studio/SpotifyReadyBadge";
 import { buildFxChain, DEFAULT_FX, FX_IS_DEFAULT, type TrackFx } from "@/lib/trackEffects";
@@ -431,6 +432,9 @@ export function RecordingStudioPro() {
 
   return (
     <div className="space-y-4">
+      {/* Pełne studio: ścieżki, mikser, wokal na żywo, instrumenty, AI, eksport */}
+      <StudioDAW />
+
       <div className="flex items-center gap-2">
         <Disc3 className="h-5 w-5 text-[#FFD400]" />
         <h3 className="text-lg font-extrabold text-white">Studio Nagrań Pro</h3>
