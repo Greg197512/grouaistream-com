@@ -214,6 +214,19 @@ async function uploadToR2ViaProxy({
   });
 }
 
+let corsAttempt: Promise<boolean> | null = null;
+/** Jednorazowe ustawienie CORS zasobnika (stała polityka po stronie serwera). */
+function ensureBucketCors(): Promise<boolean> {
+  corsAttempt ??= fetch(`${getSupabaseUrl()}/functions/v1/r2-upload-proxy`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: getAnonKey(), Authorization: `Bearer ${getAnonKey()}` },
+    body: JSON.stringify({ action: "setup-cors" }),
+  })
+    .then(async (r) => r.ok && Boolean((await r.json())?.ok))
+    .catch(() => false);
+  return corsAttempt;
+}
+
 /**
   * Upload a file to Cloudflare R2.
   * Primary: direct signed URL upload (fastest and avoids proxy timeouts).
@@ -227,7 +240,13 @@ export async function uploadToR2({
   const normalizedFolder = folder || "tracks";
 
   try {
-    return await uploadToSignedUrl({ file, folder: normalizedFolder, onProgress });
+    try {
+      return await uploadToSignedUrl({ file, folder: normalizedFolder, onProgress });
+    } catch (firstError) {
+      // Przeglądarka blokuje PUT, gdy zasobnik nie ma CORS — raz na sesję włączamy CORS i ponawiamy.
+      if (!(firstError instanceof Error && firstError.message.startsWith("Bezpośredni upload")) || !(await ensureBucketCors())) throw firstError;
+      return await uploadToSignedUrl({ file, folder: normalizedFolder, onProgress });
+    }
   } catch (directUploadError) {
     console.warn("Direct R2 upload failed, switching to proxy upload", directUploadError);
 
