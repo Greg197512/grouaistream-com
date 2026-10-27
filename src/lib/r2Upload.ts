@@ -214,6 +214,47 @@ async function uploadToR2ViaProxy({
   });
 }
 
+// ── Główna droga: Vercel podpisuje adres, plik idzie prosto z przeglądarki na R2 (bez limitu rozmiaru) ──
+let vercelCors: Promise<boolean> | null = null;
+const vercelSetupCors = () =>
+  (vercelCors ??= fetch("/api/r2-upload", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "setup-cors" }) })
+    .then(async (r) => r.ok && Boolean((await r.json())?.ok))
+    .catch(() => false));
+
+function putFile(url: string, file: File, onProgress?: (pct: number) => void): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("PUT", url, true);
+    if (file.type) xhr.setRequestHeader("Content-Type", file.type);
+    if (onProgress) xhr.upload.onprogress = (e) => { if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100)); };
+    xhr.onload = () => (xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error(parseUploadError(xhr.responseText, xhr.status))));
+    xhr.onerror = () => reject(Object.assign(new Error("Przeglądarka zablokowała wysyłkę na dysk (CORS)"), { cors: true }));
+    xhr.ontimeout = () => reject(new Error("Wysyłka przekroczyła limit czasu"));
+    xhr.timeout = 900000;
+    xhr.send(file);
+  });
+}
+
+/** null = Vercel bez kluczy R2 (wtedy zapasowo stara droga przez Supabase). */
+async function uploadViaVercel({ file, folder, onProgress }: R2UploadOptions): Promise<R2UploadResult | null> {
+  const token = await getAuthToken();
+  const r = await fetch("/api/r2-upload", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ action: "sign", fileName: file.name, contentType: file.type || "application/octet-stream", folder }),
+  }).catch(() => null);
+  if (!r || r.status === 503 || r.status === 404) return null;
+  const signed = await r.json().catch(() => ({})) as SignedUploadResponse;
+  if (!r.ok || !signed.uploadUrl) throw new Error(signed.error || `Podpis wysyłki nie powiódł się (${r.status})`);
+  try {
+    await putFile(signed.uploadUrl, file, onProgress);
+  } catch (e) {
+    if (!(e as { cors?: boolean }).cors || !(await vercelSetupCors())) throw e;
+    await putFile(signed.uploadUrl, file, onProgress); // CORS właśnie włączony — ponawiamy
+  }
+  return { publicUrl: signed.publicUrl, key: signed.key };
+}
+
 let corsAttempt: Promise<boolean> | null = null;
 /** Jednorazowe ustawienie CORS zasobnika (stała polityka po stronie serwera). */
 function ensureBucketCors(): Promise<boolean> {
@@ -238,6 +279,9 @@ export async function uploadToR2({
   onProgress,
 }: R2UploadOptions): Promise<R2UploadResult> {
   const normalizedFolder = folder || "tracks";
+
+  const viaVercel = await uploadViaVercel({ file, folder: normalizedFolder, onProgress });
+  if (viaVercel) return viaVercel;
 
   try {
     try {
