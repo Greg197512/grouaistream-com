@@ -30,6 +30,7 @@ import { autotune, SCALE_LABELS, type Scale } from "@/lib/daw/autotune";
 import { listProjects, loadProject, saveProject, type ProjectListItem } from "@/lib/daw/projectStore";
 import { applyFxChange, askDawAssistant, parseKey, type DawAction, type DawState } from "@/lib/daw/assistant";
 import { DawAssistant } from "./DawAssistant";
+import { DAW_INSERT_EVENT, getCtx, getCtxIfReady, publishBpm, studioBus, type DawInsert } from "@/lib/daw/context";
 
 const COLORS = ["#FF6B00", "#a78bfa", "#22d3ee", "#34d399", "#f472b6", "#FFD400", "#60a5fa", "#f87171"];
 const HEADER_W = 190;
@@ -38,8 +39,6 @@ const LOST_HOST = "bmwtydwpevzhbdplilbr";
 type Panel = "mixer" | "sound" | "instruments" | "ai" | "export";
 type CatalogHit = { id: string; title: string; artist: string; audio_url: string; user_id: string | null };
 
-let ctxSingleton: AudioContext | null = null;
-const getCtx = () => (ctxSingleton ??= new AudioContext({ latencyHint: "interactive" }));
 const uid = () => Math.random().toString(36).slice(2, 10);
 
 async function decodeUrl(url: string): Promise<AudioBuffer> {
@@ -75,7 +74,8 @@ function ClipWave({ clip, color }: { clip: Clip; color: string }) {
 
 const HEADPHONES_RE = /headphone|słuchawk|headset|airpods|earbud|earphone|buds|kopfh/i;
 
-export function StudioDAW() {
+/** `active` = okno DAW jest widoczne w GrouAI Studio (spacja steruje transportem zawsze, reszta skrótów tylko tutaj). */
+export function StudioDAW({ active = true }: { active?: boolean } = {}) {
   const { user } = useAuth();
   const [project, setProject] = useState<Project>(() => ({ bpm: 100, tracks: [newTrack("Wokal", "vocal", 0, VOCAL_PRESETS[1].fx)] }));
   const [selTrack, setSelTrack] = useState<string>("");
@@ -173,6 +173,19 @@ export function StudioDAW() {
     return t.id;
   }, [edit]);
 
+  // Nagrania z okien Gitara / Instrumenty MIDI trafiają tu jako nowe ścieżki w miejscu wskaźnika.
+  const positionRef = useRef(position);
+  positionRef.current = position;
+  useEffect(() => {
+    const onInsert = (e: Event) => {
+      const d = (e as CustomEvent<DawInsert>).detail;
+      addTrackWithBuffer(d.name, d.kind, d.buffer, positionRef.current); // potwierdzenie pokazuje GrouAI Studio
+    };
+    window.addEventListener(DAW_INSERT_EVENT, onInsert);
+    return () => window.removeEventListener(DAW_INSERT_EVENT, onInsert);
+  }, [addTrackWithBuffer]);
+  useEffect(() => publishBpm(project.bpm), [project.bpm]);
+
   /** Ścieżka po nazwie (z asystenta) — dopasowanie fragmentu nazwy; brak → zaznaczona. */
   const findTrack = (name?: string) => {
     const ts = projectRef.current.tracks;
@@ -201,7 +214,7 @@ export function StudioDAW() {
       const gain = ctx.createGain();
       const analyser = ctx.createAnalyser();
       analyser.fftSize = 1024;
-      gain.connect(analyser).connect(ctx.destination);
+      gain.connect(analyser).connect(studioBus().input);
       masterRef.current = { gain, analyser };
     }
     masterRef.current.gain.gain.value = masterVol;
@@ -246,7 +259,7 @@ export function StudioDAW() {
     let clipHold = 0;
     const tick = () => {
       const p = playRef.current;
-      const ctx = ctxSingleton;
+      const ctx = getCtxIfReady();
       let pos = position;
       if (p && ctx) {
         pos = p.from + Math.max(0, ctx.currentTime - p.t0);
@@ -335,7 +348,7 @@ export function StudioDAW() {
       monitorGain.gain.value = monitor ? (useSpeakers ? 0.5 : 1) : 0;
       const monAnalyser = ctx.createAnalyser();
       monAnalyser.fftSize = 2048;
-      notch.connect(monitorGain).connect(monAnalyser).connect(ctx.destination);
+      notch.connect(monitorGain).connect(monAnalyser).connect(studioBus().input);
       const target = armed ?? track;
       const strip = target ? buildStrip(ctx, target.fx, 1, 0, notch, gate) : null;
       if (strip) source.connect(strip.input);
@@ -484,6 +497,7 @@ export function StudioDAW() {
       const el = e.target as HTMLElement;
       if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable)) return;
       if (e.code === "Space") { e.preventDefault(); togglePlay(); }
+      else if (!active) return;
       else if (e.key === "Delete" || e.key === "Backspace") clipOp("delete");
       else if ((e.ctrlKey || e.metaKey) && e.key === "d") { e.preventDefault(); clipOp("duplicate"); }
       else if ((e.ctrlKey || e.metaKey) && e.key === "s") { e.preventDefault(); void doSaveProject(); }

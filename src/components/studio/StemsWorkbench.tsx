@@ -62,7 +62,7 @@ function downloadBlob(blob: Blob, name: string) {
   setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
 
-export function StemsWorkbench() {
+export function StemsWorkbench({ active = true }: { active?: boolean } = {}) {
   const { user } = useAuth();
   const [tab, setTab] = useState<Tab>("split");
   const [sources, setSources] = useState<Source[]>([]);
@@ -368,13 +368,14 @@ export function StemsWorkbench() {
     const onKey = (e: KeyboardEvent) => {
       const el = e.target as HTMLElement;
       if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable)) return;
+      if (!active) return;
       const i = PAD_KEYS.indexOf(e.key);
       if (i >= 0 && samples[i]) playBuffer(samples[i].buffer, samples[i].gain);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [samples, master]);
+  }, [samples, master, active]);
 
   // Fala źródła sampla z zaznaczonym wycinkiem.
   const wave = useMemo(() => (sampleSource ? peaks(sampleSource.buffer.getChannelData(0), 600) : null), [sampleSource]);

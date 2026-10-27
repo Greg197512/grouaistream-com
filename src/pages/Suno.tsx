@@ -33,7 +33,7 @@ import { renderScore } from "@/lib/musicSynth";
 import { generateMusic } from "@/utils/musicGenerator";
 import { Lock, Crown, Download, Share2, Film, Disc3 } from "lucide-react";
 import { VideoStudio } from "@/components/studio/VideoStudio";
-import { RecordingStudioPro } from "@/components/studio/RecordingStudioPro";
+import { GrouaiStudioShell } from "@/components/studio/daw/GrouaiStudioShell";
 import { checkSpotifyReady, type SpotifyReadyCheck } from "@/lib/loudness";
 import { SpotifyReadyBadge } from "@/components/studio/SpotifyReadyBadge";
 import { downloadAudio, isSubscriptionError } from "@/lib/hubStudio";
@@ -1020,7 +1020,7 @@ const Suno = () => {
           ) : activeTab === "video" ? (
             <VideoStudio />
           ) : activeTab === "record" ? (
-            <RecordingStudioPro />
+            <GrouaiStudioShell />
           ) : (
           <>
           {/* === RĘCZNY PANEL (jak w Suno): tytuł, styl, tekst, długość, nastrój === */}

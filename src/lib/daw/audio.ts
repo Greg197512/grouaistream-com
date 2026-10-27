@@ -230,7 +230,7 @@ function noise(ctx: BaseAudioContext) {
   return b;
 }
 
-function drumHit(ctx: BaseAudioContext, out: AudioNode, row: DrumRow, t: number) {
+export function drumHit(ctx: BaseAudioContext, out: AudioNode, row: DrumRow, t: number) {
   const env = (g: GainNode, peak: number, decay: number) => {
     g.gain.setValueAtTime(peak, t);
     g.gain.exponentialRampToValueAtTime(0.001, t + decay);
