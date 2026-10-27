@@ -1,11 +1,11 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, Music, Guitar, Waves, Blend, Type, Zap, Mic, Heart, Gauge, Flame, Wand2, Sun, Moon, Cloud, Coffee } from "lucide-react";
+import { Sparkles, Music, Guitar, Waves, Blend, Type, Zap, Mic, Heart, Gauge, Flame, Wand2, Sun, Moon, Cloud, Coffee, SlidersHorizontal, ListMusic, Timer } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
 import { motion, AnimatePresence } from "framer-motion";
@@ -13,7 +13,6 @@ import { TrackMixer } from "@/components/studio/TrackMixer";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { WaveformPlayer } from "@/components/studio/WaveformPlayer";
 import { NeonWavesLoader } from "@/components/studio/NeonWavesLoader";
 import { GenerationHistory } from "@/components/studio/GenerationHistory";
 import { LyricsDisplay, generateLyrics, parseLyricsFromText } from "@/components/studio/LyricsDisplay";
@@ -34,6 +33,12 @@ import { generateMusic } from "@/utils/musicGenerator";
 import { Lock, Crown, Download, Share2, Film, Disc3 } from "lucide-react";
 import { VideoStudio } from "@/components/studio/VideoStudio";
 import { GrouaiStudioShell } from "@/components/studio/daw/GrouaiStudioShell";
+import { StudioBrandHeader } from "@/components/studio/create/StudioBrandHeader";
+import { MoodAnalysisCard, type MoodSuggestion } from "@/components/studio/create/MoodAnalysisCard";
+import { PromptCoach } from "@/components/studio/create/PromptCoach";
+import { GeneratedTrackPlayer } from "@/components/studio/create/GeneratedTrackPlayer";
+import { MOOD_STYLE } from "@/lib/moodDetect";
+import { sectionsFromLyrics, SECTION_META, structureToLyrics, structureToPrompt, type SongStructure } from "@/lib/songStructures";
 import { checkSpotifyReady, type SpotifyReadyCheck } from "@/lib/loudness";
 import { SpotifyReadyBadge } from "@/components/studio/SpotifyReadyBadge";
 import { downloadAudio, isSubscriptionError } from "@/lib/hubStudio";
@@ -296,6 +301,17 @@ const Suno = () => {
   const [vocalStyle, setVocalStyle] = useState<string>("singing");
   const [intensity, setIntensity] = useState<string>("balanced");
   const [showAdvanced, setShowAdvanced] = useState(false);
+  // Szybkie generowanie (prompt) vs Studio zaawansowane (struktura, BPM, nastrój)
+  const [createMode, setCreateModeState] = useState<"quick" | "advanced">(() => {
+    try { return localStorage.getItem("studio-create-mode") === "advanced" ? "advanced" : "quick"; } catch { return "quick"; }
+  });
+  const setCreateMode = (m: "quick" | "advanced") => { setCreateModeState(m); try { localStorage.setItem("studio-create-mode", m); } catch { /* brak pamięci */ } };
+  const [quickPrompt, setQuickPrompt] = useState("");
+  const onQuickPrompt = useCallback((p: string) => setQuickPrompt(p), []);
+  const [extraPrompt, setExtraPrompt] = useState("");
+  const [bpm, setBpm] = useState<number | null>(null);
+  const resultRef = useRef<HTMLDivElement>(null);
+  const uiLang: "pl" | "en" = language === "pl" ? "pl" : "en";
   // Engine selector: "grouai" (AI Compose + browser synth), "elevenlabs", "n8n" (multi-engine router)
   const [engine, setEngine] = useState<"grouai" | "elevenlabs" | "n8n">(() => {
     const stored = typeof window !== "undefined" ? localStorage.getItem("studio-engine") : null;
@@ -376,6 +392,7 @@ const Suno = () => {
     setIntensity("rich");
     setShowAdvanced(true);
     setActiveTab("generate");
+    setCreateModeState("advanced");
     setEraPreset({ label: y ? String(y) : era.label, accent: era.palette.accent, emoji: era.emoji });
   }, [searchParams]);
 
@@ -405,6 +422,40 @@ const Suno = () => {
     };
   }, [result?.audioUrl]);
 
+  // Nastrój → styl: w szybkim trybie dopisuje klimat do promptu, w zaawansowanym ustawia gatunek/tempo/nastrój.
+  const applyMoodSuggestion = (sg: MoodSuggestion) => {
+    const st = MOOD_STYLE[sg.mood];
+    if (createMode === "quick") {
+      window.dispatchEvent(new CustomEvent("grouai:studio-set-prompt", { detail: { text: uiLang === "pl" ? st.prompt : st.promptEn, mode: "append" } }));
+    } else {
+      setGenre(st.genre);
+      setMood(sg.mood === "epic" ? "dark" : sg.mood);
+      setTempo(st.tempo);
+      setBpm(null);
+      setIntensity(st.intensity);
+    }
+    toast.success(L(`Styl dopasowany do nastroju: ${st.genre}`,`Style matched to mood: ${st.genre}`,`Stijl afgestemd: ${st.genre}`,`Стиль підібрано: ${st.genre}`));
+  };
+  const applyStructure = (st: SongStructure) => {
+    if (instrumental) { setExtraPrompt((p) => (p.trim() ? `${p.trim()}, ${structureToPrompt(st, uiLang)}` : structureToPrompt(st, uiLang))); return; }
+    if (customLyrics.trim() && !window.confirm(L("Zastąpić obecny tekst szablonem struktury?","Replace current lyrics with the structure template?","Huidige tekst vervangen door sjabloon?","Замінити текст шаблоном?"))) return;
+    setCustomLyrics(structureToLyrics(st, uiLang));
+    setTimeout(() => document.getElementById("track-lyrics")?.focus(), 50);
+  };
+  const lyricSections = sectionsFromLyrics(customLyrics);
+  const moodCard = (
+    <MoodAnalysisCard
+      text={createMode === "quick" ? quickPrompt : `${title} ${genre} ${extraPrompt} ${customLyrics}`}
+      lang={uiLang} L={L}
+      onApply={applyMoodSuggestion}
+    />
+  );
+
+  // Nowy utwór → przewiń do odtwarzacza.
+  useEffect(() => {
+    if (result?.audioUrl) setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 350);
+  }, [result?.audioUrl]);
+
   const generate = async () => {
     // === GATE 1: must be logged in to generate (so we can track usage) ===
     if (!user) {
@@ -429,7 +480,7 @@ const Suno = () => {
       const tempoDesc = TEMPOS.find(t => t.id === tempo)?.desc || "";
       const intensityDesc = INTENSITIES.find(i => i.id === intensity)?.desc || "";
       const vocalDesc = !instrumental ? VOCAL_STYLES.find(v => v.id === vocalStyle)?.desc || "" : "";
-      let musicPrompt = `${genreBlend} ${title ? `"${title}"` : ""} track, ${moodDesc}, ${tempoDesc}, ${intensityDesc}${vocalDesc ? `, with ${vocalDesc}` : ""}, professional studio quality`.trim().replace(/\s+,/g, ",");
+      let musicPrompt = `${genreBlend} ${title ? `"${title}"` : ""} track, ${moodDesc}, ${bpm ? `${bpm} BPM` : tempoDesc}, ${intensityDesc}${vocalDesc ? `, with ${vocalDesc}` : ""}${extraPrompt.trim() ? `, ${extraPrompt.trim()}` : ""}, professional studio quality`.trim().replace(/\s+,/g, ",");
 
       // === Piosenka z DATĄ w tytule → dobierz brzmienie z tamtych czasów ===
       // (np. "Lato 1994" → sound lat 90.). Rok trafia też do albumu, żeby utwór
@@ -950,55 +1001,18 @@ const Suno = () => {
   return (
     <MainLayout>
       <div className="studio-premium min-h-screen bg-background">
-        <div className="max-w-6xl mx-auto px-4 py-8 xl:grid xl:grid-cols-[minmax(0,1fr)_400px] xl:gap-8 xl:items-start">
-          <div className="space-y-8 w-full max-w-2xl mx-auto xl:mx-0 min-w-0">
-          {/* Premium studio identity — no looping header animations. */}
-          <header className="studio-premium-header border-b border-border pb-7">
-            <div className="mb-5 flex items-center gap-3 text-xs text-muted-foreground">
-              <span className="studio-premium-mark flex h-10 w-10 items-center justify-center rounded-lg"><Music className="h-5 w-5" /></span>
-              <span>GrouaRock ® / {L("Przestrzeń twórcza","Creative space","Creatieve ruimte","Творчий простір")}</span>
-            </div>
-            <h1 className="font-display text-4xl font-bold text-foreground sm:text-5xl">GrouAI <span className="premium-heading-accent">Studio</span></h1>
-            <p className="mt-4 max-w-md text-sm leading-relaxed text-muted-foreground">{L("Twój pomysł. Twój głos. Twoje brzmienie.","Your idea. Your voice. Your sound.","Jouw idee. Jouw stem. Jouw geluid.","Твоя ідея. Твій голос. Твоє звучання.")}</p>
-          </header>
-
-          {/* Wieża hi-fi — gramofon/CD/kaseta + radio i wybór wykonawcy (gra nasz katalog) */}
-          <StudioHifi />
-
-          {/* Engine badge */}
-          <div className="flex items-start gap-2 border-b border-border px-1 py-3 text-muted-foreground">
-            <Sparkles className="h-3.5 w-3.5 text-[#FF9500]" />
-            <span className="text-xs text-gray-300">
+        <div className="max-w-7xl mx-auto px-4 py-8 xl:grid xl:grid-cols-[minmax(0,1fr)_380px] xl:gap-8 xl:items-start">
+          <div className="space-y-6 w-full max-w-3xl mx-auto xl:mx-0 xl:max-w-none min-w-0">
+          {/* Branding GrouAI Studio + Verified Human Streams */}
+          <StudioBrandHeader
+            L={L}
+            poweredBy={<>
               {engine === "grouai"
                 ? <>{L("Napędzany przez","Powered by","Aangedreven door","На основі")} <span className="text-[#FF9500] font-semibold">GrouAI Studio Engine</span> — Suno V5 + GPT, {L("studyjna jakość, śpiewane wokale","studio quality, sung vocals","studiokwaliteit, gezongen zang","студійна якість, співаний вокал")}</>
                 : engine === "elevenlabs"
                 ? <>{L("Napędzany przez","Powered by","Aangedreven door","На основі")} <span className="text-[#FF9500] font-semibold">ElevenLabs Music v1</span> — {L("studyjna jakość, śpiewane wokale","studio quality, sung vocals","studiokwaliteit, gezongen zang","студійна якість, співаний вокал")}</>
                 : <>{L("Napędzany przez","Powered by","Aangedreven door","На основі")} <span className="text-[#FF9500] font-semibold">GrouAI Multi-Engine Router</span> — {L("auto-routing przez n8n","auto-routing via n8n","auto-routing via n8n","авто-маршрутизація через n8n")}</>}
-            </span>
-          </div>
-
-          {/* === NATURAL LANGUAGE PROMPT BOX (PL/EN/NL/UK) === */}
-          <MusicPromptBox
-            onTrackReady={(data) => {
-              if (data.audioUrl) {
-                setResult({
-                  audioUrl: data.audioUrl,
-                  imageUrl: data.coverUrl,
-                  title: data.plan?.title || data.plan?.lyrics_theme?.substring(0, 60) || `${data.plan?.genre || "AI"} ${data.plan?.mood || ""}`.trim(),
-                  genre: data.plan?.genre || "AI",
-                  generationId: data.generationId,
-                  durationSeconds: data.plan?.duration_seconds || 30,
-                  lyrics: [],
-                });
-                toast.success(`🎵 Twój utwór jest gotowy!`);
-              } else if (data.processing) {
-                toast.info(
-                  data.engine === "suno"
-                    ? "🎤 Suno komponuje pełny utwór z wokalem (~30-60s)…"
-                    : "🎶 ElevenLabs przygotowuje wokal premium…",
-                );
-              }
-            }}
+            </>}
           />
 
           {/* Modes — stable controls with no animated backgrounds. */}
@@ -1023,8 +1037,58 @@ const Suno = () => {
             <GrouaiStudioShell />
           ) : (
           <>
-          {/* === RĘCZNY PANEL (jak w Suno): tytuł, styl, tekst, długość, nastrój === */}
-          <div className="space-y-5 p-5 rounded-2xl border border-[#FF6B00]/20 bg-[#12121c]/70 backdrop-blur-md">
+          {/* Szybkie generowanie vs Studio zaawansowane */}
+          <div className="grid grid-cols-2 gap-2 rounded-2xl border border-[#1E2A44] bg-[#0B1020] p-1.5" role="tablist" aria-label={L("Tryb tworzenia","Creation mode","Maakmodus","Режим створення")}>
+            {([
+              { id: "quick", icon: Zap, title: L("Szybkie generowanie","Quick Generate","Snel genereren","Швидке створення"), sub: L("Opisz utwór — AI zrobi resztę","Describe it — AI does the rest","Beschrijf het — AI doet de rest","Опиши — решту зробить AI") },
+              { id: "advanced", icon: SlidersHorizontal, title: L("Studio zaawansowane","Advanced Studio","Geavanceerde studio","Розширена студія"), sub: L("Struktura, BPM, nastrój, tekst, głos","Structure, BPM, mood, lyrics, voice","Structuur, BPM, stemming, tekst","Структура, BPM, настрій, текст") },
+            ] as const).map(({ id, icon: Icon, title: tt, sub }) => (
+              <button key={id} type="button" role="tab" aria-selected={createMode === id} onClick={() => setCreateMode(id)}
+                className={`flex items-center gap-3 rounded-xl px-3 py-3 text-left transition-all ${createMode === id ? "bg-gradient-to-br from-[#F5B73B]/20 to-[#3B82F6]/10 ring-1 ring-[#F5B73B]/60 shadow-[0_0_20px_rgba(245,183,59,0.15)]" : "hover:bg-white/5"}`}>
+                <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${createMode === id ? "bg-[#F5B73B] text-[#1a1203]" : "bg-white/5 text-gray-400"}`}><Icon className="h-5 w-5" /></span>
+                <span className="min-w-0">
+                  <span className={`block text-sm font-bold ${createMode === id ? "text-white" : "text-gray-300"}`}>{tt}</span>
+                  <span className="block truncate text-[11px] text-gray-500">{sub}</span>
+                </span>
+              </button>
+            ))}
+          </div>
+
+          {createMode === "quick" ? (
+            <MusicPromptBox
+              onTrackReady={(data) => {
+                if (data.audioUrl) {
+                  setResult({
+                    audioUrl: data.audioUrl,
+                    imageUrl: data.coverUrl,
+                    title: data.plan?.title || data.plan?.lyrics_theme?.substring(0, 60) || `${data.plan?.genre || "AI"} ${data.plan?.mood || ""}`.trim(),
+                    genre: data.plan?.genre || "AI",
+                    generationId: data.generationId,
+                    durationSeconds: data.plan?.duration_seconds || 30,
+                    lyrics: [],
+                  });
+                  toast.success(`🎵 Twój utwór jest gotowy!`);
+                } else if (data.processing) {
+                  toast.info(
+                    data.engine === "suno"
+                      ? "🎤 Suno komponuje pełny utwór z wokalem (~30-60s)…"
+                      : "🎶 ElevenLabs przygotowuje wokal premium…",
+                  );
+                }
+              }}
+              onPromptChange={onQuickPrompt}
+              belowPrompt={
+                <PromptCoach
+                  lang={uiLang} L={L}
+                  structureLabel={L("Przykładowe struktury (zwrotka / refren)","Example structures (verse / chorus)","Voorbeeldstructuren (couplet / refrein)","Приклади структур (куплет / приспів)")}
+                  onHint={(text) => window.dispatchEvent(new CustomEvent("grouai:studio-set-prompt", { detail: { text, mode: "append" } }))}
+                  onStructure={(st) => window.dispatchEvent(new CustomEvent("grouai:studio-set-prompt", { detail: { text: structureToPrompt(st, uiLang), mode: "append" } }))}
+                />
+              }
+            />
+          ) : (
+          /* === STUDIO ZAAWANSOWANE (jak w Suno): tytuł, styl, struktura, tempo, nastrój, tekst === */
+          <div className="space-y-5 rounded-3xl border border-[#F5B73B]/30 bg-[#0B1020]/95 p-5 shadow-[0_0_40px_rgba(59,130,246,0.08)] sm:p-6">
             {/* Baner presetu GROUA ERA */}
             {eraPreset && (
               <div className="flex items-center gap-3 p-3 rounded-xl border"
@@ -1074,6 +1138,25 @@ const Suno = () => {
               />
             </div>
 
+            {/* Opis i klimat (dopisywany do promptu silnika) */}
+            <div className="space-y-2">
+              <Label htmlFor="track-extra" className="text-xs text-gray-400 flex items-center gap-1.5"><Wand2 className="h-3.5 w-3.5 text-[#F5B73B]" /> {L("Opis i klimat (opcjonalnie)","Description & vibe (optional)","Beschrijving & sfeer (optioneel)","Опис і настрій (необов’язково)")}</Label>
+              <Textarea
+                id="track-extra"
+                value={extraPrompt}
+                onChange={(e) => setExtraPrompt(e.target.value)}
+                placeholder={L("np. podróż przez góry o świcie, smyczki i fortepian, narastające aż do wielkiego finału","e.g. a journey through the mountains at dawn, strings and piano building to a huge finale","bijv. een reis door de bergen bij zonsopgang","напр. подорож горами на світанку")}
+                rows={3}
+                className="bg-black/40 border-[#1E2A44] text-white text-base placeholder:text-gray-600 focus-visible:ring-[#F5B73B]/50 resize-y"
+              />
+              <PromptCoach
+                lang={uiLang} L={L}
+                structureLabel={L("Struktura utworu → szablon tekstu","Song structure → lyrics template","Songstructuur → tekstsjabloon","Структура пісні → шаблон тексту")}
+                onHint={(text) => setExtraPrompt((p) => (p.trim() ? `${p.trim()}, ${text}` : text))}
+                onStructure={applyStructure}
+              />
+            </div>
+
             {/* Styl / gatunek */}
             <div className="space-y-2">
               <Label className="text-xs text-gray-400 flex items-center gap-1.5"><Guitar className="h-3.5 w-3.5 text-[#FF9500]" /> {L("Styl","Style","Stijl","Стиль")}</Label>
@@ -1083,10 +1166,10 @@ const Suno = () => {
                     key={g}
                     type="button"
                     onClick={() => setGenre(g)}
-                    className={`px-3 py-1.5 rounded-full text-xs border transition-colors ${
+                    className={`px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
                       genre === g
-                        ? "border-[#FF6B00] bg-[#FF6B00]/20 text-white"
-                        : "border-white/10 bg-[#1a1a2e]/60 text-gray-400 hover:text-gray-200 hover:border-[#FF6B00]/40"
+                        ? "border-[#F5B73B] bg-[#F5B73B]/10 text-[#FFD27A] shadow-[0_0_12px_rgba(245,183,59,0.2)]"
+                        : "border-[#1E2A44] bg-[#0F1629] text-gray-300 hover:text-white hover:border-white/30"
                     }`}
                   >
                     {g}
@@ -1129,6 +1212,76 @@ const Suno = () => {
                   </div>
                 )}
               </div>
+            </div>
+
+            {/* Struktura · tempo · nastrój */}
+            <div className="space-y-4 rounded-2xl border border-[#1E2A44] bg-black/30 p-4">
+              <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.18em] text-gray-300"><SlidersHorizontal className="h-3.5 w-3.5 text-[#F5B73B]" /> {L("Struktura · tempo · nastrój","Structure · tempo · mood","Structuur · tempo · stemming","Структура · темп · настрій")}</p>
+              <div className="space-y-2">
+                <Label className="text-[11px] text-gray-400 flex items-center gap-1.5"><ListMusic className="h-3.5 w-3.5 text-[#3B82F6]" /> {L("Struktura utworu","Song structure","Songstructuur","Структура пісні")}</Label>
+                {lyricSections.length > 0 ? (
+                  <div className="flex h-9 gap-[3px] overflow-hidden rounded-lg">
+                    {lyricSections.map((x, i) => (
+                      <span key={i} title={x.label} className="flex min-w-0 items-center justify-center truncate px-1 text-[10px] font-bold text-black/80"
+                        style={{ flexGrow: Math.max(1, x.lines || 2), background: SECTION_META[x.kind].color }}>{x.label}</span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-gray-500">{L("Wybierz strukturę w „Opis i klimat” — wstawię znaczniki [Zwrotka] / [Refren] do tekstu, a tu zobaczysz jej przebieg.","Pick a structure under “Description & vibe” — I’ll insert [Verse] / [Chorus] tags into the lyrics and show the layout here.","Kies een structuur — ik voeg [Couplet]/[Refrein] toe.","Обери структуру — додам мітки [Куплет]/[Приспів].")}</p>
+                )}
+              </div>
+            {/* Tempo */}
+            <div className="space-y-2">
+              <Label className="text-[11px] text-gray-400">{L("Tempo","Tempo","Tempo","Темп")}</Label>
+              <div className="flex flex-wrap gap-2">
+                {TEMPOS.map((tp) => (
+                  <button
+                    key={tp.id}
+                    type="button"
+                    onClick={() => setTempo(tp.id)}
+                    className={`px-2.5 py-1.5 rounded-lg text-[11px] border transition-colors ${
+                      tempo === tp.id ? "border-[#FF6B00] bg-[#FF6B00]/20 text-white" : "border-white/10 bg-[#1a1a2e]/60 text-gray-400 hover:text-gray-200"
+                    }`}
+                  >
+                    {tempoL(tp.id)} <span className="opacity-60">· {tp.bpm}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+              <div className="flex items-center gap-3">
+                <label className="flex items-center gap-2 text-[11px] text-gray-300">
+                  <Switch checked={bpm !== null} onCheckedChange={(on) => setBpm(on ? ({ slow: 72, medium: 100, fast: 128, "very-fast": 160 } as Record<string, number>)[tempo] ?? 100 : null)} />
+                  {L("Dokładne BPM","Exact BPM","Exacte BPM","Точний BPM")}
+                </label>
+                {bpm !== null && (
+                  <>
+                    <Slider value={[bpm]} onValueChange={(v) => { setBpm(v[0]); setTempo(v[0] >= 150 ? "very-fast" : v[0] >= 118 ? "fast" : v[0] >= 86 ? "medium" : "slow"); }} min={60} max={190} step={1} className="flex-1" />
+                    <span className="w-16 text-right text-sm font-bold tabular-nums text-[#F5B73B]">{bpm} BPM</span>
+                  </>
+                )}
+              </div>
+            {/* Nastrój */}
+            <div className="space-y-2">
+              <Label className="text-[11px] text-gray-400">{L("Nastrój","Mood","Stemming","Настрій")}</Label>
+              <div className="flex flex-wrap gap-2">
+                {MOODS.map((m) => {
+                  const Icon = m.icon;
+                  return (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => setMood(m.id)}
+                      className={`px-2.5 py-1.5 rounded-lg text-[11px] border flex items-center gap-1.5 transition-colors ${
+                        mood === m.id ? "border-current bg-white/10 text-white" : "border-white/10 bg-[#1a1a2e]/60 text-gray-400 hover:text-gray-200"
+                      }`}
+                      style={mood === m.id ? { color: m.color } : undefined}
+                    >
+                      <Icon className="h-3.5 w-3.5" /> {moodL(m.id)}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
             </div>
 
             {/* Długość */}
@@ -1211,7 +1364,7 @@ const Suno = () => {
                 onClick={() => setShowAdvanced((v) => !v)}
                 className="text-xs text-[#FF9500] hover:text-white flex items-center gap-1.5"
               >
-                <Sparkles className="h-3.5 w-3.5" /> {showAdvanced ? L("Ukryj opcje zaawansowane","Hide advanced options","Verberg geavanceerd","Сховати додаткові") : L("Opcje zaawansowane (nastrój, tempo, wokal)","Advanced options (mood, tempo, vocals)","Geavanceerd (stemming, tempo, zang)","Додаткові (настрій, темп, вокал)")}
+                <Sparkles className="h-3.5 w-3.5" /> {showAdvanced ? L("Ukryj opcje zaawansowane","Hide advanced options","Verberg geavanceerd","Сховати додаткові") : L("Więcej opcji (wokal, produkcja, Twój głos)","More options (vocals, production, your voice)","Meer opties (zang, productie, jouw stem)","Більше опцій (вокал, продакшн, твій голос)")}
               </button>
               <AnimatePresence initial={false}>
                 {showAdvanced && (
@@ -1222,48 +1375,6 @@ const Suno = () => {
                     className="overflow-hidden"
                   >
                     <div className="pt-3 space-y-4">
-                      {/* Nastrój */}
-                      <div className="space-y-2">
-                        <Label className="text-[11px] text-gray-400">{L("Nastrój","Mood","Stemming","Настрій")}</Label>
-                        <div className="flex flex-wrap gap-2">
-                          {MOODS.map((m) => {
-                            const Icon = m.icon;
-                            return (
-                              <button
-                                key={m.id}
-                                type="button"
-                                onClick={() => setMood(m.id)}
-                                className={`px-2.5 py-1.5 rounded-lg text-[11px] border flex items-center gap-1.5 transition-colors ${
-                                  mood === m.id ? "border-current bg-white/10 text-white" : "border-white/10 bg-[#1a1a2e]/60 text-gray-400 hover:text-gray-200"
-                                }`}
-                                style={mood === m.id ? { color: m.color } : undefined}
-                              >
-                                <Icon className="h-3.5 w-3.5" /> {moodL(m.id)}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-
-                      {/* Tempo */}
-                      <div className="space-y-2">
-                        <Label className="text-[11px] text-gray-400">{L("Tempo","Tempo","Tempo","Темп")}</Label>
-                        <div className="flex flex-wrap gap-2">
-                          {TEMPOS.map((tp) => (
-                            <button
-                              key={tp.id}
-                              type="button"
-                              onClick={() => setTempo(tp.id)}
-                              className={`px-2.5 py-1.5 rounded-lg text-[11px] border transition-colors ${
-                                tempo === tp.id ? "border-[#FF6B00] bg-[#FF6B00]/20 text-white" : "border-white/10 bg-[#1a1a2e]/60 text-gray-400 hover:text-gray-200"
-                              }`}
-                            >
-                              {tempoL(tp.id)} <span className="opacity-60">· {tp.bpm}</span>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
                       {/* Styl wokalu — tylko gdy nie instrumentalny */}
                       {!instrumental && (
                         <div className="space-y-2">
@@ -1331,8 +1442,8 @@ const Suno = () => {
             <Button
               onClick={generate}
               disabled={generating}
-              className="w-full h-12 text-white font-bold gap-2 border-0 disabled:opacity-60"
-              style={{ background: "linear-gradient(135deg, #FF6B00, #FF9500)", boxShadow: "0 0 20px #FF6B0050" }}
+              className="w-full h-14 text-base font-extrabold uppercase tracking-[0.15em] gap-2 border border-[#93C5FD]/40 text-white disabled:opacity-60"
+              style={{ background: "linear-gradient(135deg, #1D4ED8, #3B82F6 55%, #F5B73B)", boxShadow: "0 0 26px rgba(59,130,246,0.45), inset 0 0 0 1px rgba(255,224,138,0.35)" }}
             >
               {generating ? (
                 <><span className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" /> {L("Generuję…","Generating…","Genereren…","Генерую…")}</>
@@ -1340,7 +1451,12 @@ const Suno = () => {
                 <><Sparkles className="h-5 w-5" /> {L("Wygeneruj utwór","Generate track","Genereer track","Згенерувати трек")}</>
               )}
             </Button>
+            <p className="text-center text-[11px] text-gray-500"><Timer className="mr-1 inline h-3 w-3" />{L("Szacowany czas","Estimated time","Geschatte tijd","Орієнтовний час")}: {engine === "grouai" ? "1–3 min" : "30–60 s"}</p>
           </div>
+          )}
+
+          {/* Analiza nastroju — z opisu, z detektora i z pory dnia (na szerokim ekranie w prawej kolumnie) */}
+          <div className="xl:hidden">{moodCard}</div>
 
           {/* Status */}
           {genStatus && (
@@ -1405,11 +1521,12 @@ const Suno = () => {
           <AnimatePresence>
             {result && (
               <motion.div
+                ref={resultRef}
                 initial={{ opacity: 0, y: 40, scale: 0.92 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -20, scale: 0.95 }}
                 transition={{ type: "spring", stiffness: 200, damping: 20 }}
-                className="relative p-5 rounded-2xl border border-[#FF6B00]/40 bg-[#12121c]/85 backdrop-blur-md space-y-4 overflow-hidden"
+                className="relative p-5 rounded-3xl border border-[#3B82F6]/40 bg-[#0B1020]/95 space-y-4 overflow-hidden"
                 style={{ boxShadow: "inset 0 0 0 1px rgba(255,149,0,0.08), 0 0 24px rgba(255,107,0,0.18), 0 8px 32px rgba(0,0,0,0.45)" }}
               >
                 <div
@@ -1448,12 +1565,18 @@ const Suno = () => {
                     <motion.p className="font-bold text-white text-lg" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.25 }}>
                       {result.title}
                     </motion.p>
-                    <p className="text-xs text-[#FF9500]/70">GrouAI Studio • {result.genre} • {result.durationSeconds}s</p>
+                    <p className="text-xs text-[#F5B73B]/80">GrouAI Studio • {result.genre} • {result.durationSeconds}s</p>
+                    <p className="mt-1 inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-300"><span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />{L("Gotowe · odsłuch","Ready · preview","Klaar · voorbeeld","Готово · прослуховування")}</p>
                   </div>
                 </motion.div>
 
                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="relative z-10">
-                  <WaveformPlayer audioUrl={result.audioUrl} title={result.title} genre={result.genre} onSaveToLibrary={saveToLibrary} />
+                  <GeneratedTrackPlayer
+                    audioUrl={result.audioUrl} title={result.title} autoPlay L={L}
+                    onTime={(tm, pl) => { setPlaybackTime(tm); setIsPlaying(pl); }}
+                    onSave={saveToLibrary}
+                    onDownload={() => { downloadAudio(result.audioUrl, `${result.title || "grouai-track"}.mp3`).catch(() => window.open(result.audioUrl, "_blank")); }}
+                  />
                   {spotifyCheck && <div className="mt-2"><SpotifyReadyBadge check={spotifyCheck} /></div>}
                 </motion.div>
 
@@ -1495,10 +1618,14 @@ const Suno = () => {
 
           </>
           )}
+
+          {/* Wieża hi-fi — gramofon/CD/kaseta + radio i wybór wykonawcy (gra nasz katalog) */}
+          <StudioHifi />
           </div>
 
           {/* Twoje utwory — biblioteka jak w Suno (zawsze widoczna, te same funkcje dla wszystkich) */}
           <aside className="mt-10 xl:mt-0 xl:sticky xl:top-24 w-full max-w-2xl mx-auto xl:mx-0 min-w-0">
+            {activeTab === "generate" && <div className="mb-6 hidden xl:block">{moodCard}</div>}
             <GenerationHistory />
           </aside>
         </div>
