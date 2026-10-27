@@ -90,6 +90,10 @@ interface Props {
     taskId?: string;
     processing?: boolean;
   }) => void;
+  /** Bieżący opis (np. do analizy nastroju na żywo). */
+  onPromptChange?: (prompt: string) => void;
+  /** Dodatkowa treść pod polem opisu (podpowiedzi, struktury). */
+  belowPrompt?: React.ReactNode;
 }
 
 // Losowe iskry/płomienie zapalające się i gasnące — niepowtarzalny efekt
@@ -131,7 +135,7 @@ function EmberField({ active }: { active: boolean }) {
   );
 }
 
-export function MusicPromptBox({ onTrackReady }: Props) {
+export function MusicPromptBox({ onTrackReady, onPromptChange, belowPrompt }: Props) {
   // Język UI (interfejsu) — osobny od języka piosenki (`language` niżej).
   const { language: uiLang } = useLanguage();
   const L = (pl: string, en: string, nl: string, ua: string) =>
@@ -161,6 +165,7 @@ export function MusicPromptBox({ onTrackReady }: Props) {
   const [showGuide, setShowGuide] = useState(false);
   const [activeVibes, setActiveVibes] = useState<string[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => { onPromptChange?.(prompt); }, [prompt, onPromptChange]);
 
   useEffect(() => {
     if (prompt) return;
@@ -174,7 +179,7 @@ export function MusicPromptBox({ onTrackReady }: Props) {
       const d = (e as CustomEvent).detail as { text?: string; mode?: "replace" | "append" } | undefined;
       if (!d?.text) return;
       setMode("music");
-      setPrompt((p) => (d.mode === "append" && p.trim() ? `${p.trim()}, ${d.text}` : d.text!));
+      setPrompt((p) => (d.mode === "append" && p.trim() ? `${p.trim().replace(/[.,;:\s]+$/, "")}, ${d.text}` : d.text!));
       setTimeout(() => textareaRef.current?.focus(), 60);
     };
     window.addEventListener("grouai:studio-set-prompt", onSet as EventListener);
@@ -551,29 +556,30 @@ export function MusicPromptBox({ onTrackReady }: Props) {
       {/* Delikatna, statyczna neonowa poświata (bez obrotu) */}
       <div
         aria-hidden
-        className="absolute -inset-[1px] -z-10 rounded-[26px] opacity-40 blur-md"
+        className="absolute -inset-[2px] -z-10 rounded-[28px] opacity-70 blur-lg"
         style={{
           background:
-            "linear-gradient(135deg, rgba(255,107,0,0.35), rgba(147,51,234,0.25), rgba(255,149,0,0.3))",
+            "linear-gradient(135deg, rgba(245,183,59,0.55), rgba(59,130,246,0.25) 45%, rgba(59,130,246,0.5))",
         }}
       />
 
-      <div className="relative overflow-hidden rounded-[24px] border border-white/10 bg-[#12101c]/90 backdrop-blur-2xl p-6 shadow-2xl">
+      <div className="relative overflow-hidden rounded-[24px] border border-[#F5B73B]/35 bg-[#0B1020]/95 p-5 shadow-2xl sm:p-7">
         <EmberField active={isBusy} />
 
         {/* Header */}
         <div className="relative z-10 flex items-center justify-between mb-4">
           <div className="flex items-center gap-2.5">
             <motion.div
-              className="grid place-items-center h-9 w-9 rounded-xl bg-gradient-to-br from-[#FF6B00] to-[#9333EA] shadow-lg"
+              className="grid place-items-center h-10 w-10 rounded-xl bg-gradient-to-br from-[#FFE08A] to-[#F5B73B] text-[#1a1203] shadow-[0_0_20px_rgba(245,183,59,0.4)]"
               animate={isBusy ? { scale: [1, 1.12, 1] } : { scale: 1 }}
               transition={{ duration: 1, repeat: isBusy ? Infinity : 0 }}
             >
-              {isBusy ? <Flame className="h-5 w-5 text-white" /> : <Wand2 className="h-5 w-5 text-white" />}
+              {isBusy ? <Flame className="h-5 w-5" /> : <Wand2 className="h-5 w-5" />}
             </motion.div>
             <div>
-              <h2 className="text-lg font-extrabold tracking-tight text-white leading-none">
-                {L("Stwórz utwór","Create a track","Maak een track","Створи трек")}
+              <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-[#F5B73B]">{L("Prompt","Prompt","Prompt","Промт")}</p>
+              <h2 className="mt-0.5 text-xl font-extrabold tracking-tight text-white leading-none">
+                {L("Opisz swój utwór","Describe your track","Beschrijf je track","Опиши свій трек")}
               </h2>
               <p className="text-[11px] text-white/50 mt-0.5">{L("✍️ Wystarczy wpisać prompt — nawet jednym zdaniem. AI zrobi resztę.","✍️ Just type a prompt — even one sentence. AI does the rest.","✍️ Typ gewoon een prompt — al is het één zin. AI doet de rest.","✍️ Просто впиши промт — навіть одне речення. Решту зробить AI.")}</p>
             </div>
@@ -677,13 +683,12 @@ export function MusicPromptBox({ onTrackReady }: Props) {
                 key={v.label}
                 onClick={() => toggleVibe(v)}
                 disabled={isBusy}
-                className={`group relative inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium transition-all ${
+                className={`group relative inline-flex items-center gap-1 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-all ${
                   on
-                    ? "border-[#FF6B00] bg-[#FF6B00]/15 text-orange-300"
-                    : "border-white/10 bg-white/5 text-white/60 hover:border-white/25 hover:text-white"
+                    ? "border-[#F5B73B] bg-[#F5B73B]/10 text-[#FFD27A] shadow-[0_0_12px_rgba(245,183,59,0.25)]"
+                    : "border-[#1E2A44] bg-[#0F1629] text-white/70 hover:border-white/30 hover:text-white"
                 }`}
               >
-                <span>{v.emoji}</span>
                 {v.label}
                 {on && (
                   <motion.span
@@ -753,9 +758,13 @@ export function MusicPromptBox({ onTrackReady }: Props) {
                 : placeholder
             }
             disabled={isBusy}
-            className="min-h-[96px] text-base resize-none bg-black/30 border-white/10 text-white focus-visible:ring-[#FF6B00] placeholder:text-white/35 rounded-2xl"
+            className="min-h-[150px] text-lg leading-relaxed resize-y bg-black/40 border-white/10 text-white focus-visible:ring-[#F5B73B] placeholder:text-white/35 rounded-2xl pb-9"
           />
+          <span className={`pointer-events-none absolute bottom-2.5 right-3 rounded-full border px-2 py-0.5 text-[11px] tabular-nums ${prompt.length > 500 ? "border-amber-400/60 text-amber-300" : "border-white/15 text-white/50"}`}>
+            {prompt.length} / 500
+          </span>
         </motion.div>
+        {mode === "music" && belowPrompt && <div className="relative z-10 mt-4">{belowPrompt}</div>}
 
         {/* Drugie pole — OPCJONALNA wskazówka stylu wideo (tylko Teledysk) */}
         {mode === "teledysk" && (
