@@ -556,9 +556,19 @@ export function StudioDAW({ active = true }: { active?: boolean } = {}) {
     if (!found.length) toast.info("Nic nie znaleziono — spróbuj innej nazwy utworu albo wykonawcy");
   });
 
-  const importFile = (f: File) => run("Wczytuję plik…", async () => {
-    addTrackWithBuffer(f.name.replace(/\.[^.]+$/, ""), "audio", await getCtx().decodeAudioData(await f.arrayBuffer()), atBar());
+  /** Pliki z dysku (piosenki, melodie, sample, ścieżki) — każdy na nowej ścieżce; dekodowane lokalnie, bez wysyłania. */
+  const importFiles = (files: File[]) => run(files.length > 1 ? `Wczytuję ${files.length} pliki…` : "Wczytuję plik…", async () => {
+    const ctx = getCtx();
+    let ok = 0;
+    for (const f of files) {
+      let buf: AudioBuffer;
+      try { buf = await ctx.decodeAudioData(await f.arrayBuffer()); } catch { toast.error(`Nie umiem odczytać „${f.name}” — użyj MP3, WAV, M4A, OGG albo FLAC.`); continue; }
+      addTrackWithBuffer(f.name.replace(/\.[^.]+$/, ""), /vocal|wokal|voice|głos/i.test(f.name) ? "vocal" : "audio", buf, atBar());
+      ok++;
+    }
+    if (ok) toast.success(ok === 1 ? `Dodano ścieżkę: ${files[0].name.replace(/\.[^.]+$/, "")}` : `Dodano ${ok} ${ok % 10 >= 2 && ok % 10 <= 4 && (ok % 100 < 12 || ok % 100 > 14) ? "ścieżki" : "ścieżek"}`);
   });
+  const [dragOver, setDragOver] = useState(false);
 
   // ── Projekt: zapis, otwieranie, nowy ──────────────────────────────────────
   const doSaveProject = () => run("Zapisuję projekt…", async () => {
@@ -726,7 +736,14 @@ export function StudioDAW({ active = true }: { active?: boolean } = {}) {
   const hasTuned = !!track?.clips.some((c) => c.original);
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-white/10 bg-[#0e0e17] text-white shadow-2xl">
+    <section
+      className={`relative overflow-hidden rounded-2xl border bg-[#0e0e17] text-white shadow-2xl ${dragOver ? "border-[#FFD400] ring-2 ring-[#FFD400]/50" : "border-white/10"}`}
+      onDragOver={(e) => { if (e.dataTransfer.types.includes("Files")) { e.preventDefault(); setDragOver(true); } }}
+      onDragLeave={(e) => { if (e.currentTarget === e.target) setDragOver(false); }}
+      onDrop={(e) => { e.preventDefault(); setDragOver(false); const fs = Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith("audio/") || /\.(mp3|wav|m4a|aac|ogg|oga|opus|flac|aiff?|webm)$/i.test(f.name)); if (fs.length) void importFiles(fs); else toast.error("Upuść pliki audio (MP3, WAV, M4A, OGG, FLAC)"); }}
+    >
+      {dragOver && <div className="pointer-events-none absolute inset-0 z-40 flex items-center justify-center bg-black/60 text-lg font-bold text-[#FFD400]">Upuść pliki — każdy trafi na nową ścieżkę</div>}
+      <input ref={fileRef} type="file" accept="audio/*,.mp3,.wav,.m4a,.aac,.ogg,.oga,.opus,.flac,.aif,.aiff,.webm" multiple hidden onChange={(e) => { const fs = Array.from(e.target.files ?? []); if (fs.length) void importFiles(fs); e.target.value = ""; }} />
       {/* Projekt */}
       <div className="flex flex-wrap items-center gap-2 border-b border-white/10 bg-[#101019] px-3 py-1.5 text-xs">
         <span className="font-extrabold">GrouAI Studio <span className="text-[#FF9500]">DAW</span></span>
@@ -740,6 +757,9 @@ export function StudioDAW({ active = true }: { active?: boolean } = {}) {
           </select>
         </label>
         <button type="button" onClick={newProject} className={btn}><FilePlus2 className="h-3.5 w-3.5" /> Nowy</button>
+        <button type="button" onClick={() => fileRef.current?.click()} disabled={!!busy} className="ml-auto inline-flex items-center gap-1.5 rounded-md bg-[#FFD400] px-2.5 py-1 font-bold text-black hover:bg-[#ffe066]" title="Piosenki, melodie, sample, ścieżki — możesz też przeciągnąć pliki na DAW">
+          <Upload className="h-3.5 w-3.5" /> Wgraj pliki audio
+        </button>
       </div>
 
       {/* Pasek transportu */}
@@ -1021,7 +1041,6 @@ export function StudioDAW({ active = true }: { active?: boolean } = {}) {
                 <button type="button" disabled={!songUrl || !!busy} onClick={() => void insertSong(mySongs.find((s) => s.url === songUrl)?.title ?? "Utwór", songUrl, false)} className={btn}><Plus className="h-3.5 w-3.5" /> Wstaw cały</button>
                 <button type="button" disabled={!songUrl || !!busy} onClick={() => void insertSong(mySongs.find((s) => s.url === songUrl)?.title ?? "Utwór", songUrl, true)} className={btn}><Scissors className="h-3.5 w-3.5" /> Rozłóż na 4 ścieżki</button>
               </div>
-              <input ref={fileRef} type="file" accept="audio/*" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) void importFile(f); e.target.value = ""; }} />
               <button type="button" onClick={() => fileRef.current?.click()} className={btn}><Upload className="h-3.5 w-3.5" /> Wstaw plik z dysku (próbka, bit, nagranie)</button>
             </div>
           </div>

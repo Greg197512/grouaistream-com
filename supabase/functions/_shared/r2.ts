@@ -11,7 +11,7 @@ const R2_PUBLIC_BASE =
   Deno.env.get("R2_PUBLIC_BASE") ||
   "https://pub-46ecdc3a5ae341fcb16454d732eb9bcd.r2.dev";
 
-const PUT_TIMEOUT_MS = 30_000;
+const PUT_TIMEOUT_MS = 90_000;
 
 export interface ArchiveOptions {
   /** Source URL to fetch the binary from (Replicate, ACE-Step, …). */
@@ -68,43 +68,93 @@ function r2Env() {
   return { endpoint, accessKeyId, secretAccessKey, bucket };
 }
 
-/** PutObject przez fetch + SigV4. Zwraca publiczny URL albo powód błędu. */
-async function signedPut(key: string, body: Uint8Array, contentType: string): Promise<{ url?: string; error?: string }> {
+/**
+ * Żądanie S3 do R2 podpisane SigV4 (fetch + WebCrypto). `key` pusty = operacja na zasobniku,
+ * `query` np. "cors" (podzasób bez wartości).
+ */
+async function signedRequest(opts: { method: string; key: string; query?: string; body?: Uint8Array; contentType?: string; extraHeaders?: Record<string, string> }): Promise<Response> {
   const env = r2Env();
-  if (!env) return { error: "brak sekretów S3_* (R2)" };
+  if (!env) throw new Error("brak sekretów S3_* (R2)");
   // Endpoint bywa podany razem z nazwą zasobnika — nie dublujemy jej w ścieżce.
   const base = env.endpoint.endsWith(`/${env.bucket}`) ? env.endpoint : `${env.endpoint}/${env.bucket}`;
-  const url = new URL(`${base}/${key.split("/").map(encodeURIComponent).join("/")}`);
+  const path = opts.key ? `/${opts.key.split("/").map(encodeURIComponent).join("/")}` : "";
+  const url = new URL(`${base}${path}${opts.query ? `?${opts.query}` : ""}`);
   const amzDate = new Date().toISOString().replace(/[:-]|\.\d{3}/g, "");
   const date = amzDate.slice(0, 8);
+  const body = opts.body ?? new Uint8Array(0);
   const payloadHash = await sha256(body);
   const headers: Record<string, string> = {
-    "content-type": contentType,
     host: url.host,
     "x-amz-content-sha256": payloadHash,
     "x-amz-date": amzDate,
   };
+  if (opts.contentType) headers["content-type"] = opts.contentType;
   const signed = Object.keys(headers).sort();
-  const canonical = ["PUT", url.pathname, "", signed.map((h) => `${h}:${headers[h]}\n`).join(""), signed.join(";"), payloadHash].join("\n");
+  const canonicalQuery = opts.query ? opts.query.split("&").map((q) => (q.includes("=") ? q : `${q}=`)).sort().join("&") : "";
+  const canonical = [opts.method, url.pathname, canonicalQuery, signed.map((h) => `${h}:${headers[h]}\n`).join(""), signed.join(";"), payloadHash].join("\n");
   const scope = `${date}/auto/s3/aws4_request`;
   const toSign = ["AWS4-HMAC-SHA256", amzDate, scope, await sha256(canonical)].join("\n");
   let k = await hmac(enc.encode(`AWS4${env.secretAccessKey}`), date);
   for (const part of ["auto", "s3", "aws4_request"]) k = await hmac(k, part);
   const signature = hex(await hmac(k, toSign));
+  return fetch(url, {
+    method: opts.method,
+    headers: {
+      ...headers,
+      ...(opts.extraHeaders ?? {}),
+      authorization: `AWS4-HMAC-SHA256 Credential=${env.accessKeyId}/${scope}, SignedHeaders=${signed.join(";")}, Signature=${signature}`,
+    },
+    body: opts.method === "GET" || opts.method === "HEAD" ? undefined : body,
+    signal: AbortSignal.timeout(PUT_TIMEOUT_MS),
+  });
+}
+
+/** PutObject przez fetch + SigV4. Zwraca publiczny URL albo powód błędu. */
+async function signedPut(key: string, body: Uint8Array, contentType: string): Promise<{ url?: string; error?: string }> {
   try {
-    const r = await fetch(url, {
-      method: "PUT",
-      headers: {
-        ...headers,
-        authorization: `AWS4-HMAC-SHA256 Credential=${env.accessKeyId}/${scope}, SignedHeaders=${signed.join(";")}, Signature=${signature}`,
-      },
-      body,
-      signal: AbortSignal.timeout(PUT_TIMEOUT_MS),
-    });
+    const r = await signedRequest({ method: "PUT", key, body, contentType });
     if (!r.ok) return { error: `R2 HTTP ${r.status}: ${(await r.text()).slice(0, 200)}` };
     return { url: `${R2_PUBLIC_BASE}/${key}` };
   } catch (e) {
-    return { error: `R2 (${url.host}): ${e instanceof Error ? e.message : String(e)}`.slice(0, 300) };
+    return { error: `R2: ${e instanceof Error ? e.message : String(e)}`.slice(0, 300) };
+  }
+}
+
+/**
+ * CORS zasobnika: przeglądarka może wysyłać pliki prosto na R2 (podpisany PUT) i czytać je (GET),
+ * np. do rysowania fali dźwięku. Bezpieczeństwo zapisu zapewnia podpis URL, nie CORS.
+ */
+const CORS_XML = `<?xml version="1.0" encoding="UTF-8"?>
+<CORSConfiguration><CORSRule><AllowedOrigin>*</AllowedOrigin><AllowedMethod>GET</AllowedMethod><AllowedMethod>HEAD</AllowedMethod><AllowedMethod>PUT</AllowedMethod><AllowedHeader>*</AllowedHeader><ExposeHeader>ETag</ExposeHeader><ExposeHeader>Content-Length</ExposeHeader><ExposeHeader>Content-Range</ExposeHeader><MaxAgeSeconds>86400</MaxAgeSeconds></CORSRule></CORSConfiguration>`;
+
+export async function setupBucketCors(): Promise<{ ok: boolean; status?: number; detail?: string }> {
+  try {
+    const body = enc.encode(CORS_XML);
+    const md5 = await md5Base64(body);
+    const r = await signedRequest({ method: "PUT", key: "", query: "cors", body, contentType: "application/xml", extraHeaders: md5 ? { "content-md5": md5 } : undefined });
+    return { ok: r.ok, status: r.status, detail: (await r.text()).slice(0, 300) };
+  } catch (e) {
+    return { ok: false, detail: e instanceof Error ? e.message : String(e) };
+  }
+}
+
+export async function getBucketCors(): Promise<{ ok: boolean; status?: number; detail?: string }> {
+  try {
+    const r = await signedRequest({ method: "GET", key: "", query: "cors" });
+    return { ok: r.ok, status: r.status, detail: (await r.text()).slice(0, 600) };
+  } catch (e) {
+    return { ok: false, detail: e instanceof Error ? e.message : String(e) };
+  }
+}
+
+/** MD5 (base64) — S3 wymaga Content-MD5 przy PutBucketCors; WebCrypto nie ma MD5, bierzemy std. */
+async function md5Base64(data: Uint8Array): Promise<string | null> {
+  try {
+    const { crypto: stdCrypto } = await import("jsr:@std/crypto@1");
+    const d = await stdCrypto.subtle.digest("MD5", ab(data));
+    return btoa(String.fromCharCode(...new Uint8Array(d)));
+  } catch {
+    return null;
   }
 }
 

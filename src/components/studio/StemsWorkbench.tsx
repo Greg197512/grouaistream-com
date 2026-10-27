@@ -27,7 +27,8 @@ type Layer = {
   mute: boolean;
   solo: boolean;
 };
-type Source = { title: string; url: string };
+type Source = { title: string; url: string; file?: File };
+const AUDIO_ACCEPT = "audio/*,.mp3,.wav,.m4a,.aac,.ogg,.oga,.opus,.flac,.aif,.aiff,.webm";
 type Tab = "split" | "tiles" | "samples" | "settings";
 
 const MODES: { id: StemsMode; label: string; hint: string }[] = [
@@ -96,6 +97,7 @@ export function StemsWorkbench({ active = true }: { active?: boolean } = {}) {
   const [sGain, setSGain] = useState(1);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const sampleFileRef = useRef<HTMLInputElement>(null);
 
   const bar = barSeconds(bpm);
   const stems = layers.filter((l) => l.kind === "stem");
@@ -127,19 +129,50 @@ export function StemsWorkbench({ active = true }: { active?: boolean } = {}) {
   }, [layers, bars]);
 
   // ── Rozdzielanie ────────────────────────────────────────────────────────────
+  /** Wgranie na serwer (potrzebne tylko do rozdzielania — model pobiera plik z adresu). */
+  const uploadSource = async (src: Source): Promise<Source> => {
+    if (!src.file || !src.url.startsWith("blob:")) return src;
+    if (!user) throw new Error("Zaloguj się, aby rozłożyć własny plik na ścieżki (kafelki i sample działają bez logowania).");
+    const { publicUrl } = await uploadToR2({ file: src.file, folder: `studio/${user.id}` });
+    const up = { ...src, url: publicUrl };
+    setSources((p) => p.map((x) => (x === src || x.url === src.url ? up : x)));
+    setSource((cur) => (cur && cur.url === src.url ? up : cur));
+    return up;
+  };
+
+  /** Własny plik działa od razu lokalnie (kafelki, sample, cały utwór); na serwer idzie w tle. */
   const uploadOwn = async (file: File) => {
-    if (!user) { toast.error("Zaloguj się, aby wgrać plik"); return; }
-    setBusy("Wgrywam plik…");
+    setBusy("Wczytuję plik…");
     try {
-      const { publicUrl } = await uploadToR2({ file, folder: `studio/${user.id}` });
-      const s = { title: file.name.replace(/\.[^.]+$/, ""), url: publicUrl };
-      setSources((p) => [s, ...p]);
-      setSource(s);
-    } catch (e) {
-      toast.error(`Nie udało się wgrać pliku: ${e instanceof Error ? e.message : "błąd"}`);
-    } finally {
+      await audioCtx().decodeAudioData(await file.arrayBuffer());
+    } catch {
       setBusy("");
+      toast.error(`Nie umiem odczytać „${file.name}” — użyj MP3, WAV, M4A, OGG albo FLAC.`);
+      return;
     }
+    const s: Source = { title: file.name.replace(/\.[^.]+$/, ""), url: URL.createObjectURL(file), file };
+    setSources((p) => [s, ...p]);
+    setSource(s);
+    setBusy("");
+    toast.success(`Wczytano „${s.title}” — możesz od razu układać kafelki i robić sample`);
+    if (user) void uploadSource(s).catch((e) => toast.warning(`Plik działa lokalnie, ale nie trafił na serwer: ${e instanceof Error ? e.message : "błąd"}. Spróbuję ponownie przy rozkładaniu.`));
+  };
+
+  /** Własne sample z dysku → pady i kafelki (bez wysyłania na serwer). */
+  const importSamples = async (files: File[]) => {
+    let added = 0;
+    for (const f of files) {
+      if (samples.length + added >= PAD_KEYS.length) { toast.error("Masz już 8 padów — usuń któryś sampel"); break; }
+      try {
+        const buffer = await audioCtx().decodeAudioData(await f.arrayBuffer());
+        const name = f.name.replace(/\.[^.]+$/, "").slice(0, 28);
+        setLayers((ls) => [...ls, { id: `sample-${Date.now()}-${added}`, name, kind: "sample", buffer, gain: 1, pan: 0, mute: false, solo: false }]);
+        added++;
+      } catch {
+        toast.error(`Nie umiem odczytać „${f.name}”`);
+      }
+    }
+    if (added) toast.success(`Dodano ${added} ${added === 1 ? "sampel" : "sample"} do padów i kafelków`);
   };
 
   const setStemLayers = async (map: Record<string, string>) => {
@@ -160,8 +193,10 @@ export function StemsWorkbench({ active = true }: { active?: boolean } = {}) {
     if (!source) return;
     stop();
     try {
+      setBusy("Wgrywam plik na serwer…");
+      const src = await uploadSource(source);
       setBusy("Rozkładam utwór na ścieżki… (zwykle 1–3 min)");
-      const taskId = await startStems(source.url, mode);
+      const taskId = await startStems(src.url, mode);
       const map = await waitForStems(taskId, "workbench", (s) => setBusy(`Rozkładam utwór na ścieżki… ${s}s`));
       await setStemLayers(map);
       toast.success(`Gotowe: ${Object.keys(map).length} ścieżek`);
@@ -440,7 +475,7 @@ export function StemsWorkbench({ active = true }: { active?: boolean } = {}) {
             </select>
           </label>
           <div className="flex flex-wrap gap-2">
-            <input ref={fileRef} type="file" accept="audio/*" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) void uploadOwn(f); e.target.value = ""; }} />
+            <input ref={fileRef} type="file" accept={AUDIO_ACCEPT} hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) void uploadOwn(f); e.target.value = ""; }} />
             <Button size="sm" variant="outline" onClick={() => fileRef.current?.click()} disabled={!!busy}>
               <Upload className="mr-1 h-4 w-4" /> Wgraj własny plik
             </Button>
@@ -546,8 +581,15 @@ export function StemsWorkbench({ active = true }: { active?: boolean } = {}) {
 
       {tab === "samples" && (
         <div className="space-y-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <input ref={sampleFileRef} type="file" accept={AUDIO_ACCEPT} multiple hidden onChange={(e) => { const fs = Array.from(e.target.files ?? []); if (fs.length) void importSamples(fs); e.target.value = ""; }} />
+            <Button size="sm" variant="outline" onClick={() => sampleFileRef.current?.click()}>
+              <Upload className="mr-1 h-4 w-4" /> Wgraj własne sample z dysku
+            </Button>
+            <span className="text-[11px] text-gray-500">np. stopa, werbel, wokal, efekt — trafią na pady 1–8 i do kafelków</span>
+          </div>
           {!stems.length ? (
-            <p className="text-sm text-gray-400">Najpierw rozłóż utwór albo wczytaj go w zakładce „Rozdziel”.</p>
+            <p className="text-sm text-gray-400">Wgraj własne sample powyżej albo rozłóż / wczytaj utwór w zakładce „Rozdziel”, żeby wycinać sample z niego.</p>
           ) : (
             <>
               <label className="block text-xs text-gray-400">
