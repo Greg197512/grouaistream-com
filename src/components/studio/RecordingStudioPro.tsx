@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Mic, Square, Play, Pause, Trash2, Plus, Download, Save, Loader2,
-  Piano, Volume2, VolumeX, Crown, Disc3, Usb, RadioTower, Upload,
+  Volume2, VolumeX, Crown, Disc3, Usb, RadioTower, Upload,
   SlidersHorizontal, ChevronDown, Sparkles, Music4, RotateCcw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -14,8 +14,6 @@ import { useSubscription } from "@/contexts/SubscriptionContext";
 import { supabase } from "@/integrations/supabase/client";
 import { uploadToR2 } from "@/lib/r2Upload";
 import { WaveformPlayer } from "@/components/studio/WaveformPlayer";
-import { StemsWorkbench } from "@/components/studio/StemsWorkbench";
-import { StudioDAW } from "@/components/studio/daw/StudioDAW";
 import { checkSpotifyReady, type SpotifyReadyCheck } from "@/lib/loudness";
 import { SpotifyReadyBadge } from "@/components/studio/SpotifyReadyBadge";
 import { buildFxChain, DEFAULT_FX, FX_IS_DEFAULT, type TrackFx } from "@/lib/trackEffects";
@@ -24,8 +22,8 @@ import { analyzeSong, type SongAnalysis } from "@/lib/pitchAnalysis";
 /**
  * Studio Nagrań Pro (VIP) — wielościeżkowe nagrywanie na prawdziwym sprzęcie:
  * mikrofon/interfejs audio (Web Audio API, urządzenie wybierasz z listy — USB
- * audio interface pokazuje się tam jak zwykły mikrofon) + klawiatura MIDI
- * (Web MIDI API — dźwięk gra od razu, prosty syntezator). Nagrywasz warstwy
+ * audio interface pokazuje się tam jak zwykły mikrofon). Klawiatura MIDI ma własne okno
+ * („Instrumenty MIDI”) w GrouAI Studio. Nagrywasz warstwy
  * (wokal, instrument) na podkładzie z Twojej biblioteki, miksujesz, zapisujesz.
  */
 
@@ -41,27 +39,6 @@ type Track = {
 
 type BackingTrack = { id: string; title: string; audio_url: string };
 
-function SynthKey({ note, active }: { note: number; active: boolean }) {
-  const white = ![1, 3, 6, 8, 10].includes(note % 12);
-  return (
-    <div
-      className={`rounded-sm transition-colors ${white ? "h-10 w-3 bg-white/80" : "h-6 w-2 -mx-1 z-10 bg-black"} ${
-        active ? (white ? "!bg-[#FF9500]" : "!bg-[#FF6B00]") : ""
-      }`}
-    />
-  );
-}
-
-// Brzmienia pod klawiaturę MIDI — różny kształt fali + obwiednia głośności.
-type InstrumentVoice = { id: string; label: string; type: OscillatorType; attack: number; release: number; gain: number; detune?: number };
-const INSTRUMENTS: InstrumentVoice[] = [
-  { id: "piano", label: "🎹 Pianino", type: "triangle", attack: 0.008, release: 0.35, gain: 0.28 },
-  { id: "lead", label: "⚡ Lead", type: "sawtooth", attack: 0.02, release: 0.08, gain: 0.22 },
-  { id: "bass", label: "🔊 Bas", type: "sine", attack: 0.01, release: 0.2, gain: 0.35, detune: -1200 },
-  { id: "pad", label: "🌫️ Pad", type: "sine", attack: 0.4, release: 1.1, gain: 0.2 },
-  { id: "pluck", label: "🪕 Pluck", type: "square", attack: 0.002, release: 0.12, gain: 0.16 },
-];
-
 export function RecordingStudioPro() {
   const { user } = useAuth();
   const { isVip, isUltimate, showUpgradeFor } = useSubscription();
@@ -72,15 +49,6 @@ export function RecordingStudioPro() {
   const [selectedInput, setSelectedInput] = useState<string>("");
   const [inputLevel, setInputLevel] = useState(0);
   const [micGranted, setMicGranted] = useState(false);
-
-  // --- MIDI ---
-  const [midiDevices, setMidiDevices] = useState<string[]>([]);
-  const [activeNotes, setActiveNotes] = useState<Set<number>>(new Set());
-  const [instrument, setInstrument] = useState("piano");
-  const instrumentRef = useRef(instrument);
-  useEffect(() => { instrumentRef.current = instrument; }, [instrument]);
-  const midiAudioCtxRef = useRef<AudioContext | null>(null);
-  const midiOscRef = useRef<Map<number, { osc: OscillatorNode; gain: GainNode }>>(new Map());
 
   // --- nagrywanie ---
   const [recording, setRecording] = useState(false);
@@ -148,63 +116,6 @@ export function RecordingStudioPro() {
     navigator.mediaDevices?.addEventListener?.("devicechange", refreshDevices);
     return () => navigator.mediaDevices?.removeEventListener?.("devicechange", refreshDevices);
   }, [refreshDevices]);
-
-  // --- Web MIDI: podłącz klawiaturę/kontroler, graj dźwięk od razu ---
-  useEffect(() => {
-    if (!unlocked) return;
-    let access: any;
-    const noteOn = (note: number, velocity: number) => {
-      if (!midiAudioCtxRef.current) midiAudioCtxRef.current = new AudioContext();
-      const ctx = midiAudioCtxRef.current;
-      const voice = INSTRUMENTS.find((v) => v.id === instrumentRef.current) || INSTRUMENTS[0];
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = voice.type;
-      osc.frequency.value = 440 * Math.pow(2, (note - 69) / 12);
-      if (voice.detune) osc.detune.value = voice.detune;
-      gain.gain.value = 0;
-      gain.gain.linearRampToValueAtTime((velocity / 127) * voice.gain, ctx.currentTime + voice.attack);
-      osc.connect(gain).connect(ctx.destination);
-      osc.start();
-      midiOscRef.current.set(note, { osc, gain });
-      setActiveNotes((s) => new Set(s).add(note));
-    };
-    const noteOff = (note: number) => {
-      const v = midiOscRef.current.get(note);
-      if (v && midiAudioCtxRef.current) {
-        const ctx = midiAudioCtxRef.current;
-        const voice = INSTRUMENTS.find((x) => x.id === instrumentRef.current) || INSTRUMENTS[0];
-        v.gain.gain.cancelScheduledValues(ctx.currentTime);
-        v.gain.gain.setValueAtTime(v.gain.gain.value, ctx.currentTime);
-        v.gain.gain.linearRampToValueAtTime(0, ctx.currentTime + voice.release);
-        v.osc.stop(ctx.currentTime + voice.release + 0.02);
-        midiOscRef.current.delete(note);
-      }
-      setActiveNotes((s) => { const n = new Set(s); n.delete(note); return n; });
-    };
-    const onMessage = (e: any) => {
-      const [status, note, velocity] = e.data;
-      const cmd = status & 0xf0;
-      if (cmd === 0x90 && velocity > 0) noteOn(note, velocity);
-      else if (cmd === 0x80 || (cmd === 0x90 && velocity === 0)) noteOff(note);
-    };
-    const listDevices = (midi: any) => {
-      const names: string[] = [];
-      midi.inputs.forEach((input: any) => {
-        names.push(input.name || "MIDI");
-        input.onmidimessage = onMessage;
-      });
-      setMidiDevices(names);
-    };
-    (navigator as any).requestMIDIAccess?.()
-      .then((midi: any) => {
-        access = midi;
-        listDevices(midi);
-        midi.onstatechange = () => listDevices(midi);
-      })
-      .catch(() => {});
-    return () => { if (access) access.onstatechange = null; };
-  }, [unlocked]);
 
   // --- Miernik poziomu wejścia (podgląd, żeby widzieć że sprzęt gra) ---
   const startMeter = (stream: MediaStream) => {
@@ -432,9 +343,6 @@ export function RecordingStudioPro() {
 
   return (
     <div className="space-y-4">
-      {/* Pełne studio: ścieżki, mikser, wokal na żywo, instrumenty, AI, eksport */}
-      <StudioDAW />
-
       <div className="flex items-center gap-2">
         <Disc3 className="h-5 w-5 text-[#FFD400]" />
         <h3 className="text-lg font-extrabold text-white">Studio Nagrań Pro</h3>
@@ -465,30 +373,6 @@ export function RecordingStudioPro() {
             </div>
           </div>
         )}
-      </div>
-
-      {/* MIDI */}
-      <div className="p-4 rounded-xl border border-white/10 bg-[#1a1a2e]/60 space-y-2">
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 text-sm font-semibold text-gray-200"><Piano className="h-4 w-4 text-[#9333EA]" /> Klawiatura / kontroler MIDI</div>
-          <Select value={instrument} onValueChange={setInstrument}>
-            <SelectTrigger className="bg-[#0f0f1e] border-white/10 text-white text-xs h-8 w-36">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {INSTRUMENTS.map((v) => <SelectItem key={v.id} value={v.id}>{v.label}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-        {midiDevices.length === 0 ? (
-          <p className="text-[11px] text-gray-500">Nie wykryto urządzenia MIDI — podłącz klawiaturę przez USB, przeglądarka wykryje ją automatycznie.</p>
-        ) : (
-          <p className="text-[11px] text-emerald-300">🎹 Podłączono: {midiDevices.join(", ")}</p>
-        )}
-        <div className="flex gap-[1px] mt-1 overflow-x-auto pb-1">
-          {Array.from({ length: 36 }).map((_, i) => <SynthKey key={i} note={48 + i} active={activeNotes.has(48 + i)} />)}
-        </div>
-        <p className="text-[10px] text-gray-500">Graj na podłączonym kontrolerze — dźwięk słychać od razu (wbudowany syntezator).</p>
       </div>
 
       {/* Podkład z biblioteki */}
@@ -651,9 +535,6 @@ export function RecordingStudioPro() {
           <p className="text-[10px] text-gray-600">Orientacyjna analiza (autokorelacja) — na pojedynczym wokalu/melodii działa najlepiej; na gęstym miksie wielu instrumentów naraz dokładność spada.</p>
         </div>
       )}
-
-      {/* Rozkładanie na ścieżki, kafelki, sample */}
-      <StemsWorkbench />
     </div>
   );
 }
