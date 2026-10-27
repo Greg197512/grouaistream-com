@@ -441,8 +441,8 @@ export function StudioDAW({ active = true }: { active?: boolean } = {}) {
       const o = { keyRoot: opts?.key ?? atKey, scale: opts?.scale ?? atScale, strength: (opts?.strength ?? atStrength / 100), speedMs: opts?.speedMs ?? atSpeed };
       const first = autotune(src.getChannelData(0), src.sampleRate, o);
       const out = getCtx().createBuffer(src.numberOfChannels, src.length, src.sampleRate);
-      out.copyToChannel(first.out, 0);
-      for (let ch = 1; ch < src.numberOfChannels; ch++) out.copyToChannel(autotune(src.getChannelData(ch), src.sampleRate, o, first.curve).out, ch);
+      out.copyToChannel(new Float32Array(first.out), 0);
+      for (let ch = 1; ch < src.numberOfChannels; ch++) out.copyToChannel(new Float32Array(autotune(src.getChannelData(ch), src.sampleRate, o, first.curve).out), ch);
       edit((p) => ({ ...p, tracks: p.tracks.map((x) => (x.id !== t.id ? x : { ...x, clips: x.clips.map((cl) => (cl.id === c.id ? { ...cl, buffer: out, original: src, url: undefined, blob: undefined } : cl)) })) }));
       const msg = first.corrected ? `Autotune: poprawiono ${Math.round((first.corrected * 512) / src.sampleRate * 10) / 10} s śpiewu (${NOTE_NAMES[o.keyRoot]} ${SCALE_LABELS[o.scale]}).` : "Autotune: śpiew był czysty — nic nie trzeba było poprawiać.";
       toast.success(msg);
