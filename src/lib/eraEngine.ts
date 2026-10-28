@@ -203,41 +203,25 @@ export const ERAS: Era[] = [
   },
 ];
 
-// ── Grafika epoki (darmowa, AI: Pollinations/Flux) ──
-// Klimatyczny obraz-tło dla kafelka/nagłówka danej epoki. Prompt po angielsku
-// (najlepsze wyniki), bez tekstu. Seed stały = ten sam obraz (brak migotania).
-// Prompty w stylu KINOWEGO KADRU (film still / fotografia), nie plakatu — dają
-// bardziej „filmowy zdjęciowy" efekt. Wspólny sufiks CINE ujednolica jakość.
-const CINE = "cinematic film still, 35mm photograph, anamorphic, dramatic volumetric lighting, shallow depth of field, photorealistic, high detail, subtle film grain, no text, no words, no watermark";
-const ERA_ART: Record<string, string> = {
-  "1970s": `1970s disco club, warm sepia and gold, mirror ball light beams, vinyl records, hazy analog glow, ${CINE}`,
-  "1980s": `1980s neon city at night, magenta and cyan glow, rain-slick street reflections, chrome, lens flare, ${CINE}`,
-  "1990s": `1990s underground rave, VHS color grade, teal and orange, smoke and laser lights, ${CINE}`,
-  "y2k": `Y2K liquid chrome and silver, icy blue studio light, glossy futuristic surfaces, year 2000 mood, ${CINE}`,
-  "2000s": `mid 2000s club night, electric purple and black, glossy stage lights, bokeh, ${CINE}`,
-  "2010s": `2010s EDM festival at dusk, pink and blue gradient sky, stage lights, crowd silhouettes, ${CINE}`,
-  "now": `modern 2020s music studio, warm amber volumetric light, sleek minimal, glowing soundwaves, ${CINE}`,
-  "future": `futuristic holographic concert, violet and cool light, volumetric 3D holograms, sci-fi, ${CINE}`,
-};
-
-function artSeed(key: string): number {
-  let h = 0;
-  for (let i = 0; i < key.length; i++) h = (key.charCodeAt(i) + ((h << 5) - h)) | 0;
-  return Math.abs(h) % 100000;
-}
-
 /**
- * Darmowy URL grafiki epoki (Pollinations/Flux).
- * Gdy podasz `year`, grafika jest dobrana pod konkretny rok (inny obraz i seed
- * dla 1994 vs 1997) — wciąż stabilny (ten sam rok = ten sam obraz).
+ * Grafika epoki: jeden profesjonalny plakat na epokę, zapisany w public/era/{key}.jpg
+ * (generator: scratchpad, styl z palety epoki). Ten sam obraz dla wszystkich lat epoki.
+ * Wymiary parametrów są zachowane dla zgodności, a plik jest skalowany przez object-cover.
  */
-export function eraArtUrl(era: Era, width = 512, height = 512, year?: number): string {
-  const base = ERA_ART[era.key] || `${era.label} music era, ${CINE}`;
-  const prompt = year ? `${base}, year ${year}` : base;
-  const seedKey = year ? `${era.key}-${year}` : era.key;
-  const enc = encodeURIComponent(prompt);
-  return `https://image.pollinations.ai/prompt/${enc}?width=${width}&height=${height}&nologo=true&enhance=true&model=flux&seed=${artSeed(seedKey)}`;
+export function eraArtUrl(era: Era, _width = 512, _height = 512): string {
+  return `/era/${era.key}.jpg`;
 }
+
+/** Autorzy zdjęć wykonawców (wymagane przez licencje CC BY-SA). Źródło: public/era/CREDITS.md. */
+export const ERA_PHOTO_CREDITS: Record<string, { artist: string; author: string; license: string; url: string }> = {
+  "1970s": { artist: "Donna Summer", author: "Francesco Scavullo / Casablanca Records", license: "Public domain", url: "https://commons.wikimedia.org/wiki/File:Donna_Summer_(1977_Casablanca_publicity_headshot).jpg" },
+  "1980s": { artist: "Prince", author: "Warner Bros. Pictures", license: "Public domain", url: "https://commons.wikimedia.org/wiki/File:Prince_(1984_Purple_Rain_promotional_photo).jpg" },
+  "1990s": { artist: "Kurt Cobain", author: "Embassy of the United States, Bern", license: "Public domain", url: "https://commons.wikimedia.org/wiki/File:Photo_of_Kurt_Cobain_from_US_Embassy_in_Bern.jpg" },
+  y2k: { artist: "Eminem", author: "Mika-photography", license: "CC BY-SA 3.0", url: "https://commons.wikimedia.org/wiki/File:Eminem-06-mika.jpg" },
+  "2000s": { artist: "Rihanna", author: "Rajasekharan Parameswaran", license: "CC BY-SA 4.0", url: "https://commons.wikimedia.org/wiki/File:Rihanna_by_Rajasekharan_2019.jpg" },
+  "2010s": { artist: "Thomas Bangalter (Daft Punk)", author: "LucaFazPhoto", license: "CC BY-SA 4.0", url: "https://commons.wikimedia.org/wiki/File:Thomas_Bangalter_at_82nd_Venice_International_Film_Festival-2_(cropped).jpg" },
+  now: { artist: "The Weeknd", author: "Brian Ziff", license: "CC BY-SA 4.0", url: "https://commons.wikimedia.org/wiki/File:The_Weeknd_Portrait_by_Brian_Ziff.jpg" },
+};
 
 /** Lista konkretnych lat epoki (do wyboru roku). FUTURE = pusta (otwarta). */
 export function eraYears(era: Era): number[] {

@@ -10,7 +10,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { HQCover } from "@/components/ui/HQCover";
 import {
-  ERAS, getEra, isAiTrack, eraStudioLink, trackBelongsToEra, bestEra, eraArtUrl,
+  ERAS, getEra, isAiTrack, eraStudioLink, trackBelongsToEra, bestEra, eraArtUrl, ERA_PHOTO_CREDITS,
   eraYears, eraDefaultYear, trackYear, eraSpotifyPlaylist, eraYoutubePlaylist, type Era,
 } from "@/lib/eraEngine";
 import { eraTextFor, eraUi } from "@/lib/eraContent";
@@ -406,12 +406,18 @@ const EraDetail = ({ era, lang }: { era: Era; lang: Language }) => {
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
           className="rounded-2xl border p-6 sm:p-8 relative overflow-hidden min-h-[240px] flex flex-col justify-end"
           style={{ background: `linear-gradient(150deg, ${era.palette.accentSoft}, ${era.palette.bg})`, borderColor: `${era.palette.accent}40`, boxShadow: `0 0 40px ${era.palette.glow}` }}>
-          {/* Grafika AI epoki/roku jako atmosferyczne tło */}
-          <img key={year ?? "era"} src={eraArtUrl(era, 1200, 480, year)} alt="" loading="lazy" decoding="async"
+          {/* Grafika epoki jako atmosferyczne tło */}
+          <img src={eraArtUrl(era, 1200, 480)} alt="" loading="lazy" decoding="async"
             className="absolute inset-0 w-full h-full object-cover"
             onError={(ev) => { (ev.currentTarget as HTMLImageElement).style.display = "none"; }} />
           <div className="absolute inset-0" style={{ background: `linear-gradient(120deg, ${era.palette.bg}F2 0%, ${era.palette.bg}CC 40%, rgba(0,0,0,.45) 100%)` }} />
           <div aria-hidden className="pointer-events-none absolute inset-0 opacity-[0.06]" style={{ backgroundImage: "repeating-linear-gradient(0deg, #fff 0, #fff 1px, transparent 2px, transparent 4px)" }} />
+          {ERA_PHOTO_CREDITS[era.key] && (
+            <a href={ERA_PHOTO_CREDITS[era.key].url} target="_blank" rel="noopener noreferrer"
+              className="absolute bottom-2 right-3 z-10 text-[10px] text-white/55 hover:text-white/90">
+              Zdjęcie / Photo: {ERA_PHOTO_CREDITS[era.key].artist} · {ERA_PHOTO_CREDITS[era.key].author} · {ERA_PHOTO_CREDITS[era.key].license}
+            </a>
+          )}
           <div className="relative">
             <div className="text-5xl mb-3">{era.emoji}</div>
             <h1 className="text-4xl sm:text-6xl font-extrabold text-white tracking-tight" style={{ letterSpacing: "-.03em" }}>
