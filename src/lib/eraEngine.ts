@@ -216,7 +216,7 @@ export function eraArtUrl(era: Era, _width = 512, _height = 512): string {
 export const ERA_PHOTO_CREDITS: Record<string, { artist: string; author: string; license: string; url: string }> = {
   "1970s": { artist: "Donna Summer", author: "Francesco Scavullo / Casablanca Records", license: "Public domain", url: "https://commons.wikimedia.org/wiki/File:Donna_Summer_(1977_Casablanca_publicity_headshot).jpg" },
   "1980s": { artist: "Prince", author: "Warner Bros. Pictures", license: "Public domain", url: "https://commons.wikimedia.org/wiki/File:Prince_(1984_Purple_Rain_promotional_photo).jpg" },
-  "1990s": { artist: "Kurt Cobain", author: "Embassy of the United States, Bern", license: "Public domain", url: "https://commons.wikimedia.org/wiki/File:Photo_of_Kurt_Cobain_from_US_Embassy_in_Bern.jpg" },
+  "1990s": { artist: "Kurt Cobain", author: "Alice Wheeler", license: "Public domain", url: "https://commons.wikimedia.org/wiki/File:Kurt_Cobain_on_Love_Buzz_Big_Cheese_front_cover_(cropped).jpg" },
   y2k: { artist: "Eminem", author: "Mika-photography", license: "CC BY-SA 3.0", url: "https://commons.wikimedia.org/wiki/File:Eminem-06-mika.jpg" },
   "2000s": { artist: "Rihanna", author: "Rajasekharan Parameswaran", license: "CC BY-SA 4.0", url: "https://commons.wikimedia.org/wiki/File:Rihanna_by_Rajasekharan_2019.jpg" },
   "2010s": { artist: "Thomas Bangalter (Daft Punk)", author: "LucaFazPhoto", license: "CC BY-SA 4.0", url: "https://commons.wikimedia.org/wiki/File:Thomas_Bangalter_at_82nd_Venice_International_Film_Festival-2_(cropped).jpg" },
