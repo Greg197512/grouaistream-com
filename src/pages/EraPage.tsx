@@ -9,6 +9,7 @@ import { usePlayer, Track } from "@/contexts/PlayerContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { HQCover } from "@/components/ui/HQCover";
+import { EraYoutubeSearch } from "@/components/era/EraYoutubeSearch";
 import {
   ERAS, getEra, isAiTrack, eraStudioLink, trackBelongsToEra, bestEra, eraArtUrl, ERA_PHOTO_CREDITS,
   eraYears, eraDefaultYear, trackYear, eraSpotifyPlaylist, eraYoutubePlaylist, type Era,
@@ -449,6 +450,9 @@ const EraDetail = ({ era, lang }: { era: Era; lang: Language }) => {
             ))}
           </div>
         )}
+
+        {/* SZUKAJ WIĘCEJ — dowolny tekst i podpowiedzi (gatunki, wykonawcy) → wyniki YouTube */}
+        <EraYoutubeSearch era={era} lang={lang} />
 
         {/* POSŁUCHAJ DEKADY — YouTube gra CAŁE utwory (Spotify jako dodatkowy) */}
         {(() => {
