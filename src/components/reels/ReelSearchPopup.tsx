@@ -85,19 +85,20 @@ export const ReelSearchPopup = ({
     if (!query || busy) return;
     setBusy(true); setSuggestion(null); setEmpty(false);
     try {
+      // Najpierw teledysk w całym YouTube (tytuł + wykonawca), potem nasz katalog jako rezerwa.
+      const yt = await searchYouTube(`${query} official music video`);
+      if (yt.length) {
+        const h = yt[0];
+        saveYt(h);
+        logRequest(query, { match_type: "youtube", video_id: h.videoId, title: h.title, artist: h.author });
+        onPlayYt(h); addedToast(h.title, h.author); onClose(); return;
+      }
       const ours = await searchOurSongs(query);
       if (ours.length) {
         const t = ours[0];
         await addOurSong(t);
         logRequest(query, { match_type: "track", track_id: t.id, title: t.title, artist: t.artist });
         onPlayTrack(t); addedToast(t.title, t.artist); onClose(); return;
-      }
-      const yt = await searchYouTube(query);
-      if (yt.length) {
-        const h = yt[0];
-        saveYt(h);
-        logRequest(query, { match_type: "youtube", video_id: h.videoId, title: h.title, artist: h.author });
-        onPlayYt(h); addedToast(h.title, h.author); onClose(); return;
       }
       const sug = await looseSuggestion(query);
       if (sug) { setSuggestion(sug); logRequest(query, { match_type: "suggestion", track_id: sug.id, title: sug.title, artist: sug.artist }); }
@@ -124,7 +125,7 @@ export const ReelSearchPopup = ({
               {L("Może chcesz jakiś utwór?", "Want a specific track?", "Een specifiek nummer?", "Хочеш конкретний трек?")}
             </h4>
             <p className="text-xs text-white/60 mt-0.5">
-              {L("Wpisz utwór, wykonawcę lub specjalny rok", "Type a track, artist or a special year", "Nummer, artiest of jaar", "Трек, виконавець або рік")}
+              {L("Wpisz tytuł i wykonawcę — znajdę teledysk w YouTube", "Type the title and artist — I'll find the music video on YouTube", "Typ titel en artiest — ik zoek de videoclip op YouTube", "Введи назву і виконавця — знайду відеокліп на YouTube")}
             </p>
           </div>
           <button onClick={onClose} aria-label="Zamknij" className="shrink-0 h-8 w-8 rounded-full bg-white/10 border border-white/20 text-white flex items-center justify-center">
@@ -139,7 +140,7 @@ export const ReelSearchPopup = ({
             onChange={(e) => setQ(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") run(); }}
             autoFocus
-            placeholder={L("np. Daft Punk, disco, 1994…", "e.g. Daft Punk, disco, 1994…", "bijv. Daft Punk, 1994…", "напр. Daft Punk, 1994…")}
+            placeholder={L("np. One More Time – Daft Punk", "e.g. One More Time – Daft Punk", "bijv. One More Time – Daft Punk", "напр. One More Time – Daft Punk")}
             className="flex-1 min-w-0 rounded-full bg-white/10 border border-white/20 px-4 h-11 text-sm text-white placeholder:text-white/40 outline-none focus:border-white/50"
           />
           <button onClick={run} disabled={busy || !q.trim()}
