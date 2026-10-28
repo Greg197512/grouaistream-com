@@ -16,6 +16,7 @@ import { SEOContentSection } from "@/components/sections/SEOContentSection";
 import { EraEntry } from "@/components/sections/EraEntry";
 import { HomeGreeting } from "@/components/sections/HomeGreeting";
 import { NaCzasieHits } from "@/components/sections/NaCzasieHits";
+import { InstructionalVideos } from "@/components/sections/InstructionalVideos";
 
 import SectionErrorBoundary from "@/components/SectionErrorBoundary";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -66,6 +67,7 @@ const Index = () => {
   return (
     <MainLayout>
       <Section name="greeting"><HomeGreeting /></Section>
+      <Section name="instruction-videos"><div className="px-4 max-w-6xl mx-auto flex justify-center"><InstructionalVideos /></div></Section>
       <Section name="hero"><HeroSection /></Section>
       <Section name="na-czasie"><NaCzasieHits /></Section>
       <Section name="groua-era"><EraEntry /></Section>
