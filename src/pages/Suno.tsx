@@ -34,6 +34,7 @@ import { Lock, Crown, Download, Share2, Film, Disc3 } from "lucide-react";
 import { VideoStudio } from "@/components/studio/VideoStudio";
 import { GrouaiStudioShell } from "@/components/studio/daw/GrouaiStudioShell";
 import { StudioBrandHeader } from "@/components/studio/create/StudioBrandHeader";
+import { StudioTutorialButton } from "@/components/studio/StudioTutorialButton";
 import { MoodAnalysisCard, type MoodSuggestion } from "@/components/studio/create/MoodAnalysisCard";
 import { PromptCoach } from "@/components/studio/create/PromptCoach";
 import { GeneratedTrackPlayer } from "@/components/studio/create/GeneratedTrackPlayer";
@@ -1014,6 +1015,8 @@ const Suno = () => {
                 : <>{L("Napędzany przez","Powered by","Aangedreven door","На основі")} <span className="text-[#FF9500] font-semibold">GrouAI Multi-Engine Router</span> — {L("auto-routing przez n8n","auto-routing via n8n","auto-routing via n8n","авто-маршрутизація через n8n")}</>}
             </>}
           />
+
+          <StudioTutorialButton L={L} />
 
           {/* Modes — stable controls with no animated backgrounds. */}
           <div className="grid grid-cols-4 gap-1 border-b border-border pb-2" role="tablist" aria-label="Studio">
