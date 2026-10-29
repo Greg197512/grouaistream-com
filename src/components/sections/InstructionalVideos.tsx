@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Cloud, Play, X } from "lucide-react";
+import { motion } from "framer-motion";
+import { BookOpen, Cloud, Play, X } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -7,6 +8,15 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { HOME_GUIDE, type GuideLang } from "@/lib/homeGuide";
+import { useLanguage } from "@/contexts/LanguageContext";
+
+// Etykieta przycisku przywracającego sekcję, w języku strony.
+const RESTORE_LABEL = {
+  pl: "Instrukcja użytkowania · film",
+  en: "User guide · video",
+  nl: "Gebruikershandleiding · video",
+  ua: "Інструкція користувача · відео",
+} as const;
 
 // Język wybrany na stronie głównej pokazuje instrukcję i film informacyjny.
 // Pliki leżą w public/videos/GrouAI_Stream_{KOD}.mp4.
@@ -41,6 +51,7 @@ export const InstructionalVideos = () => {
   const [lang, setLang] = useState<GuideLang | null>(null);
   const [open, setOpen] = useState(false);
   const [hidden, setHidden] = useState<boolean>(readHidden);
+  const { language } = useLanguage();
 
   if (hidden) {
     return (
@@ -50,9 +61,24 @@ export const InstructionalVideos = () => {
           writeHidden(false);
           setHidden(false);
         }}
-        className="text-xs text-white/60 underline underline-offset-4 hover:text-white"
+        className="inline-flex items-center gap-2 rounded-full px-4 h-10 text-sm font-semibold text-white border border-white/30 bg-white/[0.06] hover:bg-white/[0.14] hover:border-white/60"
       >
-        Pokaż instrukcję startową
+        <motion.span
+          aria-hidden
+          animate={{ x: [0, 5, 0] }}
+          transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut" }}
+          className="text-base leading-none"
+        >
+          👉
+        </motion.span>
+        <motion.span
+          animate={{ opacity: [1, 0.25, 1], scale: [1, 1.15, 1] }}
+          transition={{ duration: 1.4, repeat: Infinity, ease: "easeInOut" }}
+          className="inline-flex"
+        >
+          <BookOpen className="h-5 w-5 text-accent" />
+        </motion.span>
+        <span>{RESTORE_LABEL[language]}</span>
       </button>
     );
   }
