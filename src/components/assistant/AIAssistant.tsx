@@ -797,7 +797,7 @@ export const AIAssistant = () => {
       // zwrócił własny komunikat błędu (np. brak OPENROUTER_API_KEY w Vercel —
       // zawsze zaczyna się od "⚠️") — dopytaj działający hub GrouAI (Aurora),
       // który ma sprawdzony, działający klucz AI niezależny od Vercela.
-      const looksLikeVercelError = /^⚠️/.test(assistantContent.trim());
+      const looksLikeVercelError = /^⚠️|chwilowo niedostępny|temporarily unavailable/i.test(assistantContent.trim());
       if (!assistantContent.trim() || looksLikeVercelError) {
         const { data: hub } = await invokeHubAI({
           message: userMessage + saveInfoForAI,
