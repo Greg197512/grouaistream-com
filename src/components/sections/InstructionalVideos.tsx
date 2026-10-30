@@ -47,11 +47,33 @@ const writeHidden = (value: boolean) => {
   }
 };
 
+// Po obejrzeniu filmu do końca sekcja znika na stałe (per przeglądarka).
+const WATCHED_KEY = "instructionalVideoWatched";
+
+const readWatched = () => {
+  try {
+    return localStorage.getItem(WATCHED_KEY) === "1";
+  } catch {
+    return false;
+  }
+};
+
+const writeWatched = () => {
+  try {
+    localStorage.setItem(WATCHED_KEY, "1");
+  } catch {
+    // brak dostępu do storage: ignorujemy
+  }
+};
+
 export const InstructionalVideos = () => {
   const [lang, setLang] = useState<GuideLang | null>(null);
   const [open, setOpen] = useState(false);
   const [hidden, setHidden] = useState<boolean>(readHidden);
+  const [watched, setWatched] = useState<boolean>(readWatched);
   const { language } = useLanguage();
+
+  if (watched) return null;
 
   if (hidden) {
     return (
@@ -159,6 +181,11 @@ export const InstructionalVideos = () => {
                 autoPlay
                 playsInline
                 preload="metadata"
+                onEnded={() => {
+                  writeWatched();
+                  setWatched(true);
+                  setOpen(false);
+                }}
                 className="w-full rounded-lg bg-black aspect-video"
               />
             </DialogContent>

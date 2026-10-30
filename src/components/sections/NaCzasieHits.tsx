@@ -15,7 +15,7 @@ const SEL = "id,title,artist,album,duration,cover_url,audio_url,video_url,genre,
 // jako przewijaną karuzelę — na komputerze widać tytuł „co jest co", strzałki
 // lewo/prawo, na telefonie/kliknięciu pełny ekran (rolki). Gdy brak własnych
 // teledysków — fallback do playlisty YouTube.
-export const NaCzasieHits = () => {
+const NaCzasiePanel = () => {
   const { language } = useLanguage();
   const { playPlaylist } = usePlayer();
   const L = (pl: string, en: string, nl: string, ua: string) =>
@@ -189,5 +189,28 @@ const YouTubeFallback = ({ lang, onFullscreen, L, videoIds }: { lang: string; on
       <button onClick={onFullscreen} aria-label={L("Pełny ekran", "Fullscreen", "Volledig", "Повний екран")} className="absolute top-3 right-3 z-10 inline-flex items-center gap-1.5 h-9 px-3 rounded-full bg-black/50 backdrop-blur border border-white/15 text-white text-xs font-semibold hover:bg-black/70 transition-colors"><Maximize2 className="h-4 w-4" /> {L("Rolki", "Reels", "Reels", "Ролики")}</button>
       <span className="absolute top-3 left-3 z-[8] inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-white/10 backdrop-blur border border-white/20 text-white/90 pointer-events-none"><Plus className="h-3.5 w-3.5" /> {L("w rolkach", "in reels", "in reels", "у роликах")}</span>
     </div>
+  );
+};
+
+// Okno „Na czasie” nie otwiera się samo po wejściu na stronę — dopiero po przycisku.
+export const NaCzasieHits = () => {
+  const { language } = useLanguage();
+  const [open, setOpen] = useState(false);
+  const L = (pl: string, en: string, nl: string, ua: string) =>
+    language === "en" ? en : language === "nl" ? nl : language === "ua" ? ua : pl;
+
+  if (open) return <NaCzasiePanel />;
+
+  return (
+    <section className="px-4 sm:px-6 max-w-6xl mx-auto mt-8 mb-2">
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="inline-flex items-center gap-2 rounded-full px-5 h-11 font-semibold text-sm text-white border border-white/30 bg-white/[0.06] hover:bg-white/[0.14] hover:border-white/60"
+      >
+        <span>🔥</span>
+        <span>{L("Na czasie · Teledyski AI", "Trending · AI videos", "Trending · AI-clips", "У тренді · AI-кліпи")}</span>
+      </button>
+    </section>
   );
 };
