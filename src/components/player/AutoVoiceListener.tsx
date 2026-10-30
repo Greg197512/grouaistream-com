@@ -189,6 +189,9 @@ export const AutoVoiceListener = () => {
   const silenceTimerRef = useRef<number | null>(null);
   const startListeningRef = useRef<(() => void) | null>(null);
   const autoListenRef = useRef(false);
+  // Mikrofon czatu asystenta (AIAssistant) ma pierwszeństwo: wtedy ten nasłuch stoi,
+  // żeby jedno zdanie nie dostało dwóch odpowiedzi.
+  const chatMicOwnsRef = useRef(false);
 
   // Keep ref in sync with state so async handlers always have latest value
   useEffect(() => { autoListenRef.current = autoListenEnabled; }, [autoListenEnabled]);
@@ -1254,6 +1257,7 @@ export const AutoVoiceListener = () => {
 
   const startListening = useCallback(() => {
     if (!user) return;
+    if (chatMicOwnsRef.current) return;
     const SpeechAPI = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechAPI) { toast.error("Brak wsparcia mowy w przeglądarce"); return; }
     if (recognitionRef.current) { try { recognitionRef.current.abort(); } catch {} recognitionRef.current = null; }
@@ -1336,6 +1340,28 @@ export const AutoVoiceListener = () => {
     autoResumedListeningRef.current = true;
     startListening();
   }, [user, autoListenEnabled, startListening]);
+
+  // Mikrofon czatu AIAssistant włączony → ten nasłuch zamilka; wyłączony → wraca.
+  useEffect(() => {
+    const onChatMic = (event: Event) => {
+      const on = Boolean((event as CustomEvent<{ on: boolean }>).detail?.on);
+      chatMicOwnsRef.current = on;
+      if (on) {
+        if (restartTimeoutRef.current) { clearTimeout(restartTimeoutRef.current); restartTimeoutRef.current = null; }
+        if (recognitionRef.current) {
+          try { recognitionRef.current.abort(); } catch {}
+          recognitionRef.current = null;
+        }
+        setIsListening(false);
+        return;
+      }
+      if (autoListenRef.current) {
+        restartTimeoutRef.current = window.setTimeout(() => startListeningRef.current?.(), 400);
+      }
+    };
+    window.addEventListener("grouai-chat-mic", onChatMic);
+    return () => window.removeEventListener("grouai-chat-mic", onChatMic);
+  }, []);
 
   // Restart recognition when app language changes so it listens in the correct locale
   useEffect(() => {

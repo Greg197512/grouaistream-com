@@ -1,4 +1,5 @@
 // Bramka czatu w formacie OpenAI (zastępuje bramkę AI Lovable).
+// 0) OmniRoute (self-hosted) — OMNIROUTE_BASE_URL + OMNIROUTE_API_KEY, model OMNIROUTE_MODEL (domyślnie "auto")
 // 1) Gemini przez endpoint zgodny z OpenAI — GEMINI_API_KEY
 // 2) OpenRouter — OPENROUTER_API_KEY (ten sam model Gemini)
 export type ChatGateway = { url: string; key: string; model: string; headers: Record<string, string> };
@@ -8,6 +9,15 @@ const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 
 /** Zwraca pierwszą dostępną bramkę albo null, gdy nie ma żadnego klucza. */
 export function chatGateway(): ChatGateway | null {
+  const omniBase = Deno.env.get("OMNIROUTE_BASE_URL");
+  const omniKey = Deno.env.get("OMNIROUTE_API_KEY");
+  if (omniBase && omniKey) {
+    const base = omniBase.replace(/\/+$/, "");
+    return {
+      url: `${base}/v1/chat/completions`, key: omniKey, model: Deno.env.get("OMNIROUTE_MODEL") || "auto",
+      headers: { Authorization: `Bearer ${omniKey}` },
+    };
+  }
   const gemini = Deno.env.get("GEMINI_API_KEY");
   if (gemini) {
     return { url: GEMINI_URL, key: gemini, model: "gemini-2.5-flash", headers: { Authorization: `Bearer ${gemini}` } };

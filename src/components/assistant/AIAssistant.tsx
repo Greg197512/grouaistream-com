@@ -923,6 +923,7 @@ export const AIAssistant = () => {
 
   const stopMic = useCallback(() => {
     micWantRef.current = false;
+    window.dispatchEvent(new CustomEvent("grouai-chat-mic", { detail: { on: false } }));
     try { recognitionRef.current?.stop(); } catch { /* */ }
     recognitionRef.current = null;
     try { micStreamRef.current?.getTracks().forEach((t) => t.stop()); } catch { /* */ }
@@ -949,6 +950,7 @@ export const AIAssistant = () => {
     }
 
     micWantRef.current = true;
+    window.dispatchEvent(new CustomEvent("grouai-chat-mic", { detail: { on: true } }));
     setIsMicListening(true);
 
     const spawn = () => {

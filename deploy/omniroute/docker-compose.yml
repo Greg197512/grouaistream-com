@@ -1,0 +1,22 @@
+# OmniRoute — bramka AI dla GrouAI Stream (osobna usługa, NIE na Vercel).
+# Obraz i domyślny port (20128) wg dokumentacji projektu diegosouzapw/OmniRoute.
+# Sprawdź w README aktualne zmienne wymagane do pierwszego uruchomienia.
+#
+#   cd deploy/omniroute && docker compose up -d
+#
+# Potem w panelu OmniRoute: podłącz dostawców (własne klucze), utwórz klucz API
+# (Dashboard → Endpoints) i ustaw go w Supabase jako OMNIROUTE_API_KEY.
+
+services:
+  omniroute:
+    image: diegosouzapw/omniroute:latest
+    restart: unless-stopped
+    ports:
+      - "20128:20128"
+    volumes:
+      - omniroute-data:/app/data
+    environment:
+      - TZ=Europe/Warsaw
+
+volumes:
+  omniroute-data:

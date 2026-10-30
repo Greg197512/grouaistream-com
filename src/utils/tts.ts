@@ -12,6 +12,8 @@ let _currentAudio: HTMLAudioElement | null = null;
 let _djAudioContext: AudioContext | null = null;
 let _djSourceNode: MediaElementAudioSourceNode | null = null;
 let _savedMusicVolume: number | null = null;
+// Każde wywołanie speak() dostaje numer; zmiana numeru anuluje starsze, jeszcze niegrane mowy.
+let _speakToken = 0;
 
 const isMobileDevice = () =>
   typeof navigator !== "undefined" && /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
@@ -65,6 +67,8 @@ export const stopSpeaking = () => {
   if ("speechSynthesis" in window) {
     window.speechSynthesis.cancel();
   }
+  // Unieważnia wszystkie oczekujące mowy: tylko jeden głos może grać naraz.
+  _speakToken++;
   _isSpeaking = false;
   restoreMusicVolume();
 };
@@ -145,12 +149,14 @@ export const speak = async (text: string, opts?: {
 }): Promise<void> => {
   if (!text || text.trim().length === 0) return;
   stopSpeaking();
+  const token = _speakToken;
   const mode = opts?.mode || "assistant";
 
   if (!isMobileDevice()) try {
     _isSpeaking = true;
     duckMusicVolume();
     const wav = await withTimeout(neuralSynth(text, opts?.lang), 6000);
+    if (token !== _speakToken) return;
     if (wav) {
       const audioUrl = URL.createObjectURL(wav);
       const audio = new Audio();
@@ -213,6 +219,7 @@ export const speak = async (text: string, opts?: {
     if (!contentType?.includes("audio")) throw new Error("Not audio response");
 
     const audioBlob = await response.blob();
+    if (token !== _speakToken) return;
     const audioUrl = URL.createObjectURL(audioBlob);
     const audio = new Audio();
     _currentAudio = audio;
@@ -231,15 +238,17 @@ export const speak = async (text: string, opts?: {
           try { URL.revokeObjectURL(audioUrl); } catch {}
         };
         audio.onended = () => { cleanup(); resolve(); };
-        audio.onerror = () => { cleanup(); speakBrowser(text, opts).then(resolve); };
+        audio.onerror = () => { cleanup(); speakBrowser(text, opts, token).then(resolve); };
         audio.oncanplaythrough = () => {
           if (_currentAudio !== audio) { cleanup(); resolve(); return; }
-          audio.play().catch(() => { cleanup(); speakBrowser(text, opts).then(resolve); });
+          audio.play().catch(() => { cleanup(); speakBrowser(text, opts, token).then(resolve); });
         };
         setTimeout(() => {
           if (_isSpeaking && _currentAudio === audio) {
+            // Zatrzymaj audio z ElevenLabs, zanim przejdziemy na głos przeglądarki (inaczej grają oba).
+            audio.pause();
             cleanup();
-            speakBrowser(text, opts).then(resolve);
+            speakBrowser(text, opts, token).then(resolve);
           }
         }, Math.max(text.length * 150, 8000));
       });
@@ -248,7 +257,8 @@ export const speak = async (text: string, opts?: {
     console.warn("ElevenLabs TTS failed:", err);
     _isSpeaking = false;
     if (mode === "dj") return;
-    return speakBrowser(text, opts);
+    if (token !== _speakToken) return;
+    return speakBrowser(text, opts, token);
   }
 };
 
@@ -257,8 +267,9 @@ const speakBrowser = (text: string, opts?: {
   pitch?: number;
   lang?: string;
   mode?: TTSMode;
-}): Promise<void> => {
+}, token: number = _speakToken): Promise<void> => {
   if (!("speechSynthesis" in window)) return Promise.resolve();
+  if (token !== _speakToken) return Promise.resolve();
   window.speechSynthesis.cancel();
 
   const mode = opts?.mode || "assistant";
