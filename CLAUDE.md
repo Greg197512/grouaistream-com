@@ -18,6 +18,7 @@ i aktualny. Jeśli fakt tu jest — nie weryfikuj go od nowa dziesiątkami wywo�
 - Uploady userów → **Vercel `api/r2-upload`** (token Supabase → podpisany PUT SigV4 → przeglądarka wysyła prosto na R2;
   `{"action":"setup-cors"}` ustawia CORS zasobnika). Wymaga w Vercel: `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`.
   Zapas: edge `r2-signed-url`/`r2-upload-proxy`. NIE używać Lovable (zjada kredyty).
+- Asystent `api/assistant`: klucze AI w Vercel (brak) → Pollinations (bywa 402) → edge `ai-assistant` (ma klucze). Test: `GET /api/assistant?ping=1[&skip=pollinations]`.
 - Zapis na R2 z edge: `_shared/r2.ts` = fetch + SigV4 (NIE @aws-sdk — zawieszał się). Test: `suno-generate` `{"action":"r2test"}`.
 - Studio → Spotify: po każdej generacji `certifyWithToasts` (`src/lib/releasePipeline.ts`, `releasePrep.ts`):
   mastering −14 LUFS/−1 dBTP, WAV 44,1k/16, okładka 3000, czysty tekst → `generations.release`,
