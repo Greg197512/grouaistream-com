@@ -79,39 +79,18 @@ Dozwolone akcje (pole "track" = nazwa ścieżki ze STANU; pomiń, by użyć zazn
 - {"type":"transport","action":"play|stop|record"}, {"type":"backing","prompt":"opis podkładu"}, {"type":"save"}, {"type":"export"}
 Gdy polecenie jest pytaniem, odpowiedz w "reply" i zostaw "actions":[]. Nie dodawaj tekstu poza JSON.`;
 
-export default async function handler(req: Request): Promise<Response> {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: { "Access-Control-Allow-Origin": "*" } });
-  let payload: { message?: string; history?: { role: string; content: string }[]; userContext?: unknown; documentContext?: string; mode?: string } = {};
-  try { payload = await req.json(); } catch { /* */ }
+type Payload = { message?: string; history?: { role: string; content: string }[]; userContext?: unknown; documentContext?: string; mode?: string; attachments?: unknown };
+type Attempt = { provider: string; status: number | string };
 
-  // Dostawcy w kolejności pierwszeństwa — bierzemy pierwszy, dla którego jest klucz.
-  // Wszyscy mówią protokołem OpenAI (stream SSE), więc klient bez zmian.
-  // Najpierw darmowe (Gemini, Groq, OpenRouter :free), potem płatne jako zapas.
-  const PROVIDERS = [
-    { name: "gemini", key: process.env.GEMINI_API_KEY, url: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", model: "gemini-2.5-flash" },
-    { name: "groq", key: process.env.GROQ_API_KEY, url: "https://api.groq.com/openai/v1/chat/completions", model: "llama-3.3-70b-versatile" },
-    { name: "openrouter", key: process.env.OPENROUTER_API_KEY, url: "https://openrouter.ai/api/v1/chat/completions", model: "google/gemma-4-31b-it:free" },
-    { name: "xai", key: process.env.XAI_API_KEY, url: "https://api.x.ai/v1/chat/completions", model: "grok-4.3" },
-    { name: "openai", key: process.env.OPENAI_API_KEY, url: "https://api.openai.com/v1/chat/completions", model: "gpt-4o-mini" },
-    // Bez klucza: publiczny endpoint Pollinations — działa też, gdy nie ustawiono żadnej zmiennej.
-    { name: "pollinations", key: "keyless", url: "https://text.pollinations.ai/openai", model: "openai" },
-  ].filter((p) => !!p.key);
-  const provider = PROVIDERS[0];
-  if (!provider) {
-    // Użytkownik widzi tylko neutralny komunikat; szczegóły konfiguracji idą do logów.
-    console.error("[assistant] brak klucza AI — ustaw GEMINI_API_KEY (darmowy) lub GROQ_API_KEY (darmowy) / OPENROUTER_API_KEY / XAI_API_KEY / OPENAI_API_KEY w Vercel");
-    const en = (payload as { userContext?: { language?: string } }).userContext?.language === "en";
-    return sseText(
-      en
-        ? "The assistant is temporarily unavailable. Please try again in a few minutes 🙏"
-        : "Asystent jest chwilowo niedostępny. Spróbuj ponownie za kilka minut 🙏"
-    );
-  }
-  const key = provider.key as string;
-
+/**
+ * Łańcuch dostawców — próbujemy po kolei, aż któryś odpowie:
+ * 1) klucze w Vercel (Gemini/Groq/OpenRouter za darmo, xAI/OpenAI płatne),
+ * 2) Pollinations bez klucza (bywa wyłączony — HTTP 402),
+ * 3) funkcja ai-assistant w Supabase (ma własne klucze OpenRouter/Gemini; ten sam format SSE,
+ *    klient był pod nią pisany). Dla trybu DAW pomijamy ją — tam klient ma lokalny parser poleceń.
+ */
+async function answer(payload: Payload, attempts: Attempt[]): Promise<Response | null> {
   const message = (payload.message || "").toString();
-  if (!message.trim()) return sseText("Napisz, w czym mogę pomóc 🙂");
-
   const history = Array.isArray(payload.history) ? payload.history.slice(-12) : [];
   // Dokument wrzucony wcześniej w rozmowie — trzymamy go w kontekście, żeby pytania
   // „a co w punkcie 3?" działały. Pomijamy, gdy dokument jest już w bieżącej wiadomości.
@@ -129,51 +108,115 @@ export default async function handler(req: Request): Promise<Response> {
     { role: "user", content: message.slice(0, 48000) }, // + dokumenty (do 40 tys. znaków)
   ];
 
-  const endpoint = provider.url;
-  const model = process.env.ASSISTANT_MODEL || provider.model;
+  const keyed = [
+    { name: "gemini", key: process.env.GEMINI_API_KEY, url: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", model: "gemini-2.5-flash" },
+    { name: "groq", key: process.env.GROQ_API_KEY, url: "https://api.groq.com/openai/v1/chat/completions", model: "llama-3.3-70b-versatile" },
+    { name: "openrouter", key: process.env.OPENROUTER_API_KEY, url: "https://openrouter.ai/api/v1/chat/completions", model: "google/gemma-4-31b-it:free" },
+    { name: "xai", key: process.env.XAI_API_KEY, url: "https://api.x.ai/v1/chat/completions", model: "grok-4.3" },
+    { name: "openai", key: process.env.OPENAI_API_KEY, url: "https://api.openai.com/v1/chat/completions", model: "gpt-4o-mini" },
+  ].filter((p) => !!p.key);
 
-  const UNAVAILABLE = "Asystent jest chwilowo niedostępny. Spróbuj ponownie za kilka minut 🙏";
-  try {
-    if (provider.name === "pollinations") {
-      // Bez klucza i bez gwarancji stream — bierzemy całą odpowiedź i wysyłamy ją jako SSE.
-      const ac = new AbortController();
-      const timer = setTimeout(() => ac.abort(), 25_000);
-      try {
-        const r = await fetch(endpoint, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ model, stream: false, messages }),
-          signal: ac.signal,
-        });
-        const j = (await r.json().catch(() => null)) as { choices?: { message?: { content?: string } }[] } | null;
-        const content = j?.choices?.[0]?.message?.content?.trim();
-        if (!r.ok || !content) {
-          console.error("[assistant] pollinations: HTTP", r.status);
-          return sseText(UNAVAILABLE);
-        }
-        return sseText(content);
-      } finally {
-        clearTimeout(timer);
-      }
+  for (const p of keyed) {
+    try {
+      const r = await fetch(p.url, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${p.key}`,
+          "Content-Type": "application/json",
+          ...(p.name === "openrouter" ? { "HTTP-Referer": "https://grouaistream.com", "X-Title": "GrouAI Stream" } : {}),
+        },
+        body: JSON.stringify({ model: (keyed[0] === p && process.env.ASSISTANT_MODEL) || p.model, stream: true, max_tokens: 2048, temperature: 0.8, messages }),
+        signal: AbortSignal.timeout(25_000),
+      });
+      attempts.push({ provider: p.name, status: r.status });
+      if (r.ok && r.body) return new Response(r.body, { headers: SSE_HEADERS }); // format OpenAI — klient bez zmian
+      console.error(`[assistant] ${p.name}: HTTP ${r.status}`, (await r.text().catch(() => "")).slice(0, 300));
+    } catch (e) {
+      attempts.push({ provider: p.name, status: String(e).slice(0, 80) });
     }
-
-    const r = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${key}`,
-        "Content-Type": "application/json",
-        ...(provider.name === "openrouter" ? { "HTTP-Referer": "https://grouaistream.com", "X-Title": "GrouAI Stream" } : {}),
-      },
-      body: JSON.stringify({ model, stream: true, max_tokens: 2048, temperature: 0.8, messages }),
-    });
-    if (!r.ok || !r.body) {
-      console.error(`[assistant] ${provider.name}: HTTP ${r.status}`, await r.text().catch(() => ""));
-      return sseText(UNAVAILABLE);
-    }
-    // Przekaż strumień SSE bez zmian (OpenRouter/OpenAI/Gemini/Groq = format OpenAI).
-    return new Response(r.body, { headers: SSE_HEADERS });
-  } catch (e) {
-    console.error("[assistant] błąd połączenia:", e);
-    return sseText(UNAVAILABLE);
   }
+
+  // Pollinations bez klucza — cała odpowiedź naraz, wysyłana jako SSE.
+  try {
+    const r = await fetch("https://text.pollinations.ai/openai", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ model: "openai", stream: false, messages }),
+      signal: AbortSignal.timeout(20_000),
+    });
+    attempts.push({ provider: "pollinations", status: r.status });
+    const j = (await r.json().catch(() => null)) as { choices?: { message?: { content?: string } }[] } | null;
+    const content = j?.choices?.[0]?.message?.content?.trim();
+    if (r.ok && content) return sseText(content);
+    console.error("[assistant] pollinations: HTTP", r.status);
+  } catch (e) {
+    attempts.push({ provider: "pollinations", status: String(e).slice(0, 80) });
+  }
+
+  if (payload.mode === "daw") return null;
+  const sbUrl = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "").replace(/\/+$/, "");
+  const sbKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+  if (sbUrl && sbKey) {
+    try {
+      const r = await fetch(`${sbUrl}/functions/v1/ai-assistant`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", apikey: sbKey, Authorization: `Bearer ${sbKey}` },
+        body: JSON.stringify({ message, history, userContext: payload.userContext, attachments: payload.attachments }),
+        signal: AbortSignal.timeout(45_000),
+      });
+      attempts.push({ provider: "supabase-ai-assistant", status: r.status });
+      if (r.ok && r.body) return new Response(r.body, { headers: SSE_HEADERS });
+      console.error("[assistant] supabase ai-assistant: HTTP", r.status, (await r.text().catch(() => "")).slice(0, 300));
+    } catch (e) {
+      attempts.push({ provider: "supabase-ai-assistant", status: String(e).slice(0, 80) });
+    }
+  }
+  return null;
+}
+
+/** Tekst z odpowiedzi SSE (do diagnostyki ?ping=1). */
+async function sseToText(r: Response, max = 400): Promise<string> {
+  const reader = r.body?.getReader();
+  if (!reader) return "";
+  const dec = new TextDecoder();
+  let buf = "", out = "";
+  const deadline = Date.now() + 40_000;
+  while (out.length < max && Date.now() < deadline) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += dec.decode(value, { stream: true });
+    let i: number;
+    while ((i = buf.indexOf("\n")) !== -1) {
+      const line = buf.slice(0, i).trim();
+      buf = buf.slice(i + 1);
+      if (!line.startsWith("data: ") || line === "data: [DONE]") continue;
+      try { out += JSON.parse(line.slice(6))?.choices?.[0]?.delta?.content ?? ""; } catch { /* inne zdarzenia */ }
+    }
+  }
+  reader.cancel().catch(() => {});
+  return out.slice(0, max);
+}
+
+export default async function handler(req: Request): Promise<Response> {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: { "Access-Control-Allow-Origin": "*" } });
+
+  // Diagnostyka: GET /api/assistant?ping=1 → który dostawca odpowiada (bez kluczy w odpowiedzi).
+  if (req.method === "GET" && new URL(req.url).searchParams.has("ping")) {
+    const attempts: Attempt[] = [];
+    const r = await answer({ message: "Odpowiedz jednym krótkim zdaniem: czy działasz?", userContext: { language: "pl" } }, attempts);
+    const sample = r ? await sseToText(r) : "";
+    return new Response(JSON.stringify({ ok: Boolean(sample), sample, attempts }), { headers: { "content-type": "application/json", "cache-control": "no-store" } });
+  }
+
+  let payload: Payload = {};
+  try { payload = await req.json(); } catch { /* */ }
+  const message = (payload.message || "").toString();
+  if (!message.trim()) return sseText("Napisz, w czym mogę pomóc 🙂");
+
+  const attempts: Attempt[] = [];
+  const r = await answer(payload, attempts);
+  if (r) return r;
+  console.error("[assistant] żaden dostawca nie odpowiedział:", JSON.stringify(attempts), "— dodaj w Vercel GEMINI_API_KEY lub GROQ_API_KEY (darmowe)");
+  const en = (payload.userContext as { language?: string } | undefined)?.language === "en";
+  return sseText(en ? "The assistant is temporarily unavailable. Please try again in a few minutes 🙏" : "Asystent jest chwilowo niedostępny. Spróbuj ponownie za kilka minut 🙏");
 }
