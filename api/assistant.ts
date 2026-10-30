@@ -89,7 +89,7 @@ type Attempt = { provider: string; status: number | string };
  * 3) funkcja ai-assistant w Supabase (ma własne klucze OpenRouter/Gemini; ten sam format SSE,
  *    klient był pod nią pisany). Dla trybu DAW pomijamy ją — tam klient ma lokalny parser poleceń.
  */
-async function answer(payload: Payload, attempts: Attempt[]): Promise<Response | null> {
+async function answer(payload: Payload, attempts: Attempt[], skip: string[] = []): Promise<Response | null> {
   const message = (payload.message || "").toString();
   const history = Array.isArray(payload.history) ? payload.history.slice(-12) : [];
   // Dokument wrzucony wcześniej w rozmowie — trzymamy go w kontekście, żeby pytania
@@ -137,7 +137,7 @@ async function answer(payload: Payload, attempts: Attempt[]): Promise<Response |
   }
 
   // Pollinations bez klucza — cała odpowiedź naraz, wysyłana jako SSE.
-  try {
+  if (!skip.includes("pollinations")) try {
     const r = await fetch("https://text.pollinations.ai/openai", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -203,7 +203,8 @@ export default async function handler(req: Request): Promise<Response> {
   // Diagnostyka: GET /api/assistant?ping=1 → który dostawca odpowiada (bez kluczy w odpowiedzi).
   if (req.method === "GET" && new URL(req.url).searchParams.has("ping")) {
     const attempts: Attempt[] = [];
-    const r = await answer({ message: "Odpowiedz jednym krótkim zdaniem: czy działasz?", userContext: { language: "pl" } }, attempts);
+    const skip = (new URL(req.url).searchParams.get("skip") || "").split(",");
+    const r = await answer({ message: "Odpowiedz jednym krótkim zdaniem: czy działasz?", userContext: { language: "pl" } }, attempts, skip);
     const sample = r ? await sseToText(r) : "";
     return new Response(JSON.stringify({ ok: Boolean(sample), sample, attempts }), { headers: { "content-type": "application/json", "cache-control": "no-store" } });
   }
