@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { usePlayer, Track } from "@/contexts/PlayerContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { omitRadioOnlyTracks } from "@/lib/catalogTracks";
 
 export interface DetectedMood {
   mood: string;
@@ -156,7 +157,7 @@ export const useAIOrchestrator = () => {
         .limit(15);
 
       // Merge and deduplicate
-      const allTracks = [...(genreTracks || []), ...(moodTracks || [])];
+      const allTracks = omitRadioOnlyTracks([...(genreTracks || []), ...(moodTracks || [])]);
       const seen = new Set<string>();
       const tracks = allTracks.filter(t => { if (seen.has(t.id)) return false; seen.add(t.id); return true; }).slice(0, 25);
 
@@ -172,7 +173,7 @@ export const useAIOrchestrator = () => {
         .select("*")
         .limit(20);
 
-      return fallback ? [...fallback].sort(() => Math.random() - 0.5) : [];
+      return fallback ? omitRadioOnlyTracks([...fallback]).sort(() => Math.random() - 0.5) : [];
     } catch (error) {
       console.error("AI playlist generation failed:", error);
       throw error;

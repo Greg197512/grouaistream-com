@@ -51,6 +51,19 @@ interface StoryRow {
   audio_url: string;
   duration_sec: number | null;
   air_times: string[] | null;
+  created_at?: string | null;
+}
+
+// Nocna Rozmowa: zawsze najnowszy odcinek (audycja codzienna).
+// Inne szuflady dalej rotują dzień po dniu. Trzymaj zgodność z src/lib/radioStories.ts.
+function isNocnaSlot(slot: string | null | undefined): boolean {
+  return /nocna[\s-]*rozmowa/i.test(slot || "");
+}
+function byNewestStory(a: StoryRow, b: StoryRow): number {
+  const at = Date.parse(a.created_at || "") || 0;
+  const bt = Date.parse(b.created_at || "") || 0;
+  if (bt !== at) return bt - at;
+  return String(b.id).localeCompare(String(a.id));
 }
 
 async function loadStoryOverride(supabase: SupabaseClient<any, "public", any>) {
@@ -58,9 +71,9 @@ async function loadStoryOverride(supabase: SupabaseClient<any, "public", any>) {
 
   const { data } = await supabase
     .from("radio_story_slots")
-    .select("id, slot, title, audio_url, duration_sec, air_times")
+    .select("id, slot, title, audio_url, duration_sec, air_times, created_at")
     .eq("is_active", true)
-    .order("id", { ascending: true });
+    .order("created_at", { ascending: false });
 
   const rows = (data || []) as StoryRow[];
   if (!rows.length) return null;
@@ -72,10 +85,14 @@ async function loadStoryOverride(supabase: SupabaseClient<any, "public", any>) {
 
   for (const [timeStr, startSec] of candidateTimes) {
     if (secondsOfDay < startSec) continue;
-    // Pula plików przypisanych DOKŁADNIE do tej godziny — rotują dzień po dniu.
+    // Pula plików przypisanych DOKŁADNIE do tej godziny.
+    // Horror/bajki rotują dzień po dniu. Nocna Rozmowa: tylko najnowszy odcinek.
     const pool = rows.filter((r) => (r.air_times || []).includes(timeStr));
     if (!pool.length) continue;
-    const story = pool[dayIndex % pool.length];
+    const nocna = pool.filter((r) => isNocnaSlot(r.slot) || isNocnaSlot(r.title));
+    const story = nocna.length
+      ? [...nocna].sort(byNewestStory)[0]
+      : pool[((dayIndex % pool.length) + pool.length) % pool.length];
     const dur = story.duration_sec || 600;
     const offset = secondsOfDay - startSec;
     if (offset < 0 || offset >= dur) continue;

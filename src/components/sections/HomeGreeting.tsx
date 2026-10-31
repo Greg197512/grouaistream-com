@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { usePlayer, Track } from "@/contexts/PlayerContext";
 import { HQCover } from "@/components/ui/HQCover";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { omitRadioOnlyTracks } from "@/lib/catalogTracks";
 
 const SEL = "id,title,artist,album,duration,cover_url,audio_url,video_url,genre,mood";
 
@@ -73,7 +74,7 @@ export const HomeGreeting = () => {
         .not("audio_url", "is", null)
         .order("created_at", { ascending: false })
         .limit(40);
-      setTracks(Array.isArray(data) ? (data as unknown as Track[]) : []);
+      setTracks(omitRadioOnlyTracks(Array.isArray(data) ? (data as unknown as Track[]) : []).slice(0, 24));
     } catch {
       setTracks([]);
     } finally {

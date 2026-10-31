@@ -41,9 +41,18 @@ async function main() {
     if (!r.ok) throw new Error("REST " + r.status);
     const rows = await r.json();
     if (!Array.isArray(rows) || rows.length === 0) throw new Error("pusta/niepoprawna odpowiedź");
-    const snapshot = { generated_at: new Date().toISOString(), count: rows.length, tracks: rows };
+    // Odcinki radiowe (Nocna Rozmowa) nie wchodzą do snapshotu katalogu.
+    const music = rows.filter((t) => {
+      if (t?.catalog_hidden) return false;
+      const title = String(t?.title || "");
+      const url = String(t?.audio_url || "");
+      if (/nocna[\s-]*rozmowa/i.test(title)) return false;
+      if (/nocna-rozmowa/i.test(url)) return false;
+      return true;
+    });
+    const snapshot = { generated_at: new Date().toISOString(), count: music.length, tracks: music };
     writeFileSync(OUT, JSON.stringify(snapshot));
-    console.log(`[export-tracks] zapisano ${rows.length} utworów → dist/tracks.json`);
+    console.log(`[export-tracks] zapisano ${music.length} utworów → dist/tracks.json`);
   } catch (e) {
     console.warn("[export-tracks] nie pobrano katalogu:", e?.message || e);
     if (existsSync(OUT)) {

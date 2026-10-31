@@ -15,6 +15,7 @@ import { LikeButton, TrackOptionsMenu } from "@/components/menus/TrackOptionsMen
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { withTimeout } from "@/lib/withTimeout";
 import { resilientTracks } from "@/lib/trackSnapshot";
+import { omitRadioOnlyTracks } from "@/lib/catalogTracks";
 import { StudioCertifiedChip } from "@/components/studio/StudioCertifiedBadge";
 
 const FETCH_TIMEOUT_MS = 25_000;
@@ -179,7 +180,7 @@ export const NewOnServer = () => {
           supabase.from("tracks").select(TRACK_SELECT)
             .or("audio_url.not.is.null,video_url.not.is.null")
             .order("created_at", { ascending: false })
-            .limit(8),
+            .limit(24),
           FETCH_TIMEOUT_MS, "NewOnServer tracks"
         ) as Promise<{ data: ServerTrack[] | null; error: unknown }>,
         { order: "created_at", ascending: false, limit: 8, filter: (t) => !!(t.audio_url || t.video_url) },
@@ -203,10 +204,11 @@ export const NewOnServer = () => {
         } catch { /* profiles optional */ }
       }
       if (mountedRef.current) {
-        setTracks(tracksData.map(t => ({ ...t, uploader: t.user_id ? profilesMap[t.user_id] || null : null })));
+        const music = omitRadioOnlyTracks(tracksData).slice(0, 8);
+        setTracks(music.map(t => ({ ...t, uploader: t.user_id ? profilesMap[t.user_id] || null : null })));
 
         // Wznów generowanie okładek dla brakujących (tylko gdy baza żyje).
-        if (!fromSnapshot) tracksData.forEach(track => {
+        if (!fromSnapshot) music.forEach(track => {
           if (!track.cover_url && track.id && track.title && track.genre) {
             supabase.functions.invoke("ai-cover-generate", {
               body: {

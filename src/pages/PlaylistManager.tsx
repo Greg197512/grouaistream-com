@@ -26,6 +26,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { HQCover } from "@/components/ui/HQCover";
 import { supabase } from "@/integrations/supabase/client";
+import { omitRadioOnlyTracks } from "@/lib/catalogTracks";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useNavigate } from "react-router-dom";
@@ -269,7 +270,7 @@ const PlaylistManager = () => {
       supabase.from("tracks").select("*").order("title").limit(500),
     ]);
 
-    const tracks: Track[] = (tracksRes.data || []).map((t) => ({
+    const tracks: Track[] = omitRadioOnlyTracks(tracksRes.data || []).map((t) => ({
       id: t.id,
       title: t.title,
       artist: t.artist,

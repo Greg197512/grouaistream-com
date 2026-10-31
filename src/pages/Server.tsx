@@ -12,6 +12,7 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { omitRadioOnlyTracks } from "@/lib/catalogTracks";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { usePlayer, Track } from "@/contexts/PlayerContext";
@@ -178,7 +179,7 @@ const Server = () => {
     }
 
     const { data } = await query;
-    setTracks((data as Track[]) || []);
+    setTracks(omitRadioOnlyTracks((data as Track[]) || []));
     setLoading(false);
   }, [filter]);
 

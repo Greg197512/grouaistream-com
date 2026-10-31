@@ -5,6 +5,7 @@ import { Play, Sparkles, Clock, ArrowLeft, Wand2, Radio, Shuffle, Compass, Loade
 import { EraReels } from "@/components/sections/EraReels";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { supabase } from "@/integrations/supabase/client";
+import { omitRadioOnlyTracks } from "@/lib/catalogTracks";
 import { usePlayer, Track } from "@/contexts/PlayerContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -58,7 +59,7 @@ async function loadCatalog(): Promise<DbTrack[]> {
   const { data } = await supabase
     .from("tracks").select(TRACK_SELECT)
     .or("audio_url.not.is.null,video_url.not.is.null").limit(800);
-  CATALOG = (data as DbTrack[]) || [];
+  CATALOG = omitRadioOnlyTracks((data as DbTrack[]) || []);
   return CATALOG;
 }
 

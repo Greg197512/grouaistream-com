@@ -29,7 +29,7 @@ export const FeaturedTrending = () => {
             .not("audio_url", "is", null)
             .not("cover_url", "is", null)
             .order("created_at", { ascending: false })
-            .limit(12) as unknown as Promise<{ data: (Track & { created_at?: string })[] | null; error: unknown }>,
+            .limit(20) as unknown as Promise<{ data: (Track & { created_at?: string })[] | null; error: unknown }>,
           { order: "created_at", ascending: false, limit: 12, filter: (t) => !!(t.audio_url && t.cover_url) },
         );
         if (alive) setTracks(rows as unknown as Track[]);

@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { useClapControl } from "@/hooks/useClapControl";
 import { useDJMode } from "@/hooks/useDJMode";
 import type { Language } from "@/i18n/translations";
+import { omitRadioOnlyTracks } from "@/lib/catalogTracks";
 
 interface SpeechRecognitionEvent extends Event {
   resultIndex: number;
@@ -958,11 +959,12 @@ export const AutoVoiceListener = () => {
           .select("*")
           .not("audio_url", "is", null)
           .order("created_at", { ascending: false })
-          .limit(count);
-        if (tracks && tracks.length > 0) {
-          playPlaylist(tracks, 0);
-          toast.success(`📥 Odtwarzam ${tracks.length} najnowszych`, { id: "voice-cmd", duration: 4000 });
-          await safeSpeakAndResume(`Odtwarzam ${tracks.length} ostatnio wgranych utworów. Pierwszy to ${tracks[0].title}`);
+          .limit(count + 20);
+        const music = omitRadioOnlyTracks(tracks || []).slice(0, count);
+        if (music.length > 0) {
+          playPlaylist(music, 0);
+          toast.success(`📥 Odtwarzam ${music.length} najnowszych`, { id: "voice-cmd", duration: 4000 });
+          await safeSpeakAndResume(`Odtwarzam ${music.length} ostatnio wgranych utworów. Pierwszy to ${music[0].title}`);
           return;
         }
         toast.error("Brak utworów w bibliotece", { id: "voice-cmd" });
@@ -1189,8 +1191,9 @@ export const AutoVoiceListener = () => {
                 const ids = (liked || []).map((l: any) => l.track_id);
                 if (ids.length) { const { data: tr } = await supabase.from("tracks").select("*").in("id", ids); const ordered = ids.map((id: string) => tr?.find((t: any) => t.id === id)).filter(Boolean); if (ordered.length) { playPlaylist(ordered as any[], 0); await done("Ulubione"); return; } }
               } else {
-                const { data: tr } = await supabase.from("tracks").select("*").not("audio_url", "is", null).order("created_at", { ascending: false }).limit(count);
-                if (tr?.length) { playPlaylist(tr, 0); await done("Ostatnio wgrane"); return; }
+                const { data: tr } = await supabase.from("tracks").select("*").not("audio_url", "is", null).order("created_at", { ascending: false }).limit(count + 20);
+                const music = omitRadioOnlyTracks(tr || []).slice(0, count);
+                if (music.length) { playPlaylist(music, 0); await done("Ostatnio wgrane"); return; }
               }
               return;
             }

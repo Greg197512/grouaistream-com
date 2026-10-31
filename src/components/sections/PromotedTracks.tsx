@@ -6,6 +6,7 @@ import { usePlayer, Track } from "@/contexts/PlayerContext";
 import { HQCover } from "@/components/ui/HQCover";
 import { TrackBadges } from "@/components/ui/TrackBadges";
 import { Badge } from "@/components/ui/badge";
+import { omitRadioOnlyTracks } from "@/lib/catalogTracks";
 
 export const PromotedTracksSection = () => {
   const { playTrack } = usePlayer();
@@ -21,7 +22,7 @@ export const PromotedTracksSection = () => {
         .order("total_streams", { ascending: false })
         .limit(6);
 
-      if (data) setTracks(data);
+      if (data) setTracks(omitRadioOnlyTracks(data));
     };
     load();
   }, []);

@@ -8,6 +8,7 @@ import { getDJTexts, getDJLangFromAppLang, getDJTTSLang, DJLanguage, shortenTitl
 import { freeDjLine } from "@/lib/freeChat";
 import { playRandomTransitionEffect, playDJEffect, playDropCombo } from "@/utils/djMixer";
 import { getTaste, tasteScore } from "@/lib/personalize";
+import { omitRadioOnlyTracks } from "@/lib/catalogTracks";
 
 interface DJSession {
   tracks: Track[];
@@ -114,7 +115,7 @@ export const useDJMode = () => {
           .not("audio_url", "is", null)
           .or(genreFilters)
           .limit(1000);
-        genreTracks = data || [];
+        genreTracks = omitRadioOnlyTracks(data || []);
       }
 
       // Cała biblioteka (do mieszania i dobierania)
@@ -123,7 +124,7 @@ export const useDJMode = () => {
         .select("*")
         .not("audio_url", "is", null)
         .limit(1000);
-      const library = libraryData || [];
+      const library = omitRadioOnlyTracks(libraryData || []);
 
       if (library.length === 0) {
         toast.error("Brak utworów w bibliotece!", { id: "dj-mode" });

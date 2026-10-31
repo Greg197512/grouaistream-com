@@ -8,6 +8,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { FeedReels } from "@/components/sections/FeedReels";
 import { loadYT } from "@/lib/youtubeIframe";
 import { AI_TELEDYSKI, loadFreshTeledyski } from "@/lib/aiTeledyski";
+import { omitRadioOnlyTracks } from "@/lib/catalogTracks";
 
 const SEL = "id,title,artist,album,duration,cover_url,audio_url,video_url,genre,mood";
 
@@ -43,7 +44,7 @@ const NaCzasiePanel = () => {
           .from("tracks").select(SEL)
           .not("video_url", "is", null)
           .order("created_at", { ascending: false }).limit(40);
-        if (alive) setClips(Array.isArray(data) ? (data as unknown as Track[]) : []);
+        if (alive) setClips(omitRadioOnlyTracks(Array.isArray(data) ? (data as unknown as Track[]) : []));
       } catch { if (alive) setClips([]); }
       finally { if (alive) setLoading(false); }
     })();

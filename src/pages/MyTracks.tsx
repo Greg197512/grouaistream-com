@@ -14,6 +14,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { finalizeTrackDeletion } from "@/lib/trackDeletion";
+import { omitRadioOnlyTracks } from "@/lib/catalogTracks";
 import { TrackOptionsMenu, LikeButton } from "@/components/menus/TrackOptionsMenu";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel,
@@ -44,7 +45,7 @@ const MyTracks = () => {
       console.error("Error loading my tracks:", error);
       toast.error(t("myTracks.loadError"));
     } else {
-      setTracks((data || []) as any);
+      setTracks(omitRadioOnlyTracks((data || []) as any) as any);
     }
     setLoading(false);
   }, [user, t]);

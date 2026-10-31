@@ -21,6 +21,7 @@ import { speak, stopSpeaking as stopVoice } from "@/utils/tts";
 import { YouTubePlayer } from "@/components/player/YouTubePlayer";
 import { buildPersonalQueue, type Mood } from "@/lib/personalRadio";
 import { buildDailyRadio } from "@/lib/radioDaily";
+import { useRadioStoryOverride } from "@/lib/radioStories";
 import { fetchUpcomingRequests, type UpcomingRequest } from "@/lib/radioRequest";
 import { withTimeout } from "@/lib/withTimeout";
 
@@ -108,6 +109,8 @@ const RadioLive = () => {
   // Tryb osobisty: kolejka zbudowana z danych zalogowanego (słyszy tylko on).
   const [personalTracks, setPersonalTracks] = useState<ScheduleTrack[]>([]);
   const [personalMood, setPersonalMood] = useState<Mood | null>(null);
+  const { override: storyOverride, ready: storyReady } = useRadioStoryOverride(!personalMood);
+  const storyId = storyOverride?.story.id ?? null;
   const [personalLoading, setPersonalLoading] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -504,6 +507,8 @@ const RadioLive = () => {
       if (schedule.length) { setCurrentIndex(0); startPlayback(0, 0); }
       return;
     }
+    // Audycja (Nocna Rozmowa itd.) zastępuje muzykę tylko w swoim oknie godzinowym.
+    if (!storyReady || storyId) return;
     if (!config?.is_active || !config.started_at || schedule.length === 0) return;
     const startedAt = new Date(config.started_at).getTime();
     const now = Date.now();
@@ -525,7 +530,58 @@ const RadioLive = () => {
     }
     setCurrentIndex(0);
     startPlayback(0, 0);
-  }, [config, schedule, personalMood]);
+  }, [config, schedule, personalMood, storyReady, storyId]);
+
+  // Odtwarzanie audycji z radio_story_slots (ten sam wybór co strumień HLS).
+  // Bez crossOrigin — pliki R2 nie zwracają CORS.
+  useEffect(() => {
+    if (personalMood || !storyId || !storyOverride) return;
+    const token = ++playbackTokenRef.current;
+    const url = storyOverride.story.audio_url;
+    const offset = storyOverride.offset;
+    stopCurrentAudio();
+    if (!url) return;
+    const audio = new Audio(url);
+    audio.preload = "auto";
+    audio.preservesPitch = false;
+    audio.setAttribute("playsinline", "");
+    (audio as HTMLAudioElement & { playsInline?: boolean }).playsInline = true;
+    audio.volume = muted ? 0 : volume / 100;
+    audioRef.current = audio;
+    const alive = () => playbackTokenRef.current === token;
+    audio.addEventListener("loadedmetadata", () => {
+      if (!alive()) return;
+      if (offset > 0.4 && Number.isFinite(audio.duration)) {
+        audio.currentTime = Math.min(offset, Math.max(0, audio.duration - 0.25));
+      }
+    }, { once: true });
+    audio.addEventListener("canplay", () => {
+      if (!alive()) return;
+      audio.play().then(() => {
+        if (!alive()) return;
+        setIsPlaying(true);
+        setAutoplayBlocked(false);
+      }).catch(() => {
+        if (!alive()) return;
+        setAutoplayBlocked(true);
+        setIsPlaying(false);
+      });
+    }, { once: true });
+    audio.addEventListener("timeupdate", () => {
+      if (!alive() || !audio.duration) return;
+      setProgress((audio.currentTime / audio.duration) * 100);
+    });
+    audio.addEventListener("error", () => {
+      if (!alive()) return;
+      setIsPlaying(false);
+    });
+    audio.load();
+    return () => {
+      if (playbackTokenRef.current === token) playbackTokenRef.current += 1;
+    };
+    // Głośność aktualizuje osobny efekt na audioRef — nie restartujemy odcinka.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storyId, personalMood, stopCurrentAudio]);
 
   const startPlayback = useCallback(
     (index: number, offset = 0) => {
@@ -624,19 +680,21 @@ const RadioLive = () => {
     if (typeof navigator === "undefined" || !("mediaSession" in navigator)) return;
     const ms = navigator.mediaSession;
     const tr = schedule[currentIndex]?.track as { title?: string; artist?: string; cover_url?: string } | undefined;
-    if (tr && typeof MediaMetadata !== "undefined") {
+    const metaTitle = storyOverride?.story.title || tr?.title || "GrouaRadio LIVE";
+    const metaArtist = storyOverride ? (storyOverride.story.slot || "Rozmowa") : (tr?.artist || "GrouAI Stream");
+    if ((tr || storyOverride) && typeof MediaMetadata !== "undefined") {
       try {
-        const art = tr.cover_url || undefined;
+        const art = storyOverride ? undefined : tr?.cover_url || undefined;
         ms.metadata = new MediaMetadata({
-          title: tr.title || "GrouaRadio LIVE",
-          artist: tr.artist || "GrouAI Stream",
+          title: metaTitle,
+          artist: metaArtist,
           album: "GrouaRadio 24/7",
           artwork: art ? [128, 256, 512].map((s) => ({ src: art, sizes: `${s}x${s}`, type: "image/jpeg" })) : [],
         });
       } catch { /* */ }
     }
     try { ms.playbackState = isPlaying ? "playing" : "paused"; } catch { /* */ }
-  }, [schedule, currentIndex, isPlaying]);
+  }, [schedule, currentIndex, isPlaying, storyOverride]);
 
   useEffect(() => {
     pausePlayback();
@@ -708,10 +766,12 @@ const RadioLive = () => {
   }, []);
 
   const currentItem = schedule[currentIndex];
-  const currentTitle = currentItem ? getItemTitle(currentItem) : "";
-  const currentArtist = currentItem ? getItemArtist(currentItem) : "";
-  const currentCover = currentItem?.track?.cover_url || null;
-  const isOffAir = !personalMood && (!config?.is_active || schedule.length === 0);
+  const currentTitle = storyOverride ? storyOverride.story.title : (currentItem ? getItemTitle(currentItem) : "");
+  const currentArtist = storyOverride
+    ? `🎙️ ${storyOverride.story.slot || "Rozmowa"}`
+    : (currentItem ? getItemArtist(currentItem) : "");
+  const currentCover = storyOverride ? null : (currentItem?.track?.cover_url || null);
+  const isOffAir = !personalMood && !storyOverride && (!config?.is_active || schedule.length === 0);
   const isTrack = currentItem?.item_type === "track" || !currentItem?.item_type;
 
   const isInSchedule = () => {
@@ -997,7 +1057,7 @@ const RadioLive = () => {
 
   // Auto co 3 h (gdy radio gra i nic nie leci na antenie) — świeże opowiadanie z bloga.
   useEffect(() => {
-    if (!isPlaying || talkActive || newsVideo) return;
+    if (!isPlaying || talkActive || newsVideo || storyId) return;
     // Bieżący koszyk oznacz jako „zrobiony" — auto-opowiadanie ruszy dopiero na
     // NASTĘPNEJ granicy 3 h, nie od razu po włączeniu radia.
     if (autoStoryDoneRef.current === -1) autoStoryDoneRef.current = Math.floor(Date.now() / (3 * 60 * 60 * 1000));
