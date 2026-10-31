@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Radio, Volume2, VolumeX, Play, Pause } from "lucide-react";
 import { fetchRadioSchedule, resolveCurrentRadioPosition, syncRadioCurrentSchedule } from "@/lib/radioSchedule";
+import { useRadioStoryOverride } from "@/lib/radioStories";
 
 interface RadioConfig {
   is_active: boolean;
@@ -40,6 +41,9 @@ const RadioEmbed = () => {
   const [muted, setMuted] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const silentTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { override: storyOverride } = useRadioStoryOverride(true);
+  const storyId = storyOverride?.story.id ?? null;
+  const wasStoryRef = useRef(false);
 
   const schedule = useMemo(
     () => rawSchedule.filter((item) => (item.item_type === "track" || !item.item_type) && !!item.track?.audio_url),
@@ -142,24 +146,64 @@ const RadioEmbed = () => {
   );
 
   const syncAndPlay = useCallback(() => {
+    if (storyId) return;
     if (!config?.is_active || !config.started_at || schedule.length === 0) return;
 
     const current = resolveCurrentRadioPosition(schedule, config);
     if (!current) return;
     setCurrentIndex(current.index);
     startPlayback(current.index, current.offset);
-  }, [config, schedule, startPlayback]);
+  }, [config, schedule, startPlayback, storyId]);
+
+  const playEmbedStory = useCallback((offset: number, url: string) => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+    if (silentTimerRef.current) {
+      clearTimeout(silentTimerRef.current);
+      silentTimerRef.current = null;
+    }
+    const audio = new Audio(url);
+    audio.preload = "auto";
+    audio.volume = muted ? 0 : volume / 100;
+    audioRef.current = audio;
+    audio.addEventListener("loadedmetadata", () => {
+      if (offset > 0.4 && Number.isFinite(audio.duration)) {
+        audio.currentTime = Math.min(offset, Math.max(0, audio.duration - 0.25));
+      }
+      audio.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
+    }, { once: true });
+    audio.load();
+  }, [muted, volume]);
+
+  useEffect(() => {
+    if (!userStarted) return;
+    if (storyOverride?.story.audio_url) {
+      wasStoryRef.current = true;
+      playEmbedStory(storyOverride.offset, storyOverride.story.audio_url);
+      return;
+    }
+    if (wasStoryRef.current) {
+      wasStoryRef.current = false;
+      syncAndPlay();
+    }
+    // Raz na odcinek. Głośność nie restartuje pliku.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userStarted, storyId]);
 
   const handlePlayPause = () => {
     if (!userStarted) {
       setUserStarted(true);
-      syncAndPlay();
+      if (!storyOverride) syncAndPlay();
       return;
     }
     if (isPlaying) {
       audioRef.current?.pause();
       if (silentTimerRef.current) clearTimeout(silentTimerRef.current);
       setIsPlaying(false);
+    } else if (storyOverride && audioRef.current) {
+      audioRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
     } else {
       syncAndPlay();
     }
@@ -179,10 +223,10 @@ const RadioEmbed = () => {
   }, []);
 
   const currentItem = schedule[currentIndex];
-  const currentTitle = currentItem ? getItemTitle(currentItem) : "";
-  const currentArtist = currentItem ? getItemArtist(currentItem) : "";
-  const currentCover = currentItem?.track?.cover_url || null;
-  const isOffAir = !config?.is_active || schedule.length === 0;
+  const currentTitle = storyOverride ? storyOverride.story.title : (currentItem ? getItemTitle(currentItem) : "");
+  const currentArtist = storyOverride ? `🎙️ ${storyOverride.story.slot || "Rozmowa"}` : (currentItem ? getItemArtist(currentItem) : "");
+  const currentCover = storyOverride ? null : (currentItem?.track?.cover_url || null);
+  const isOffAir = !storyOverride && (!config?.is_active || schedule.length === 0);
 
   const isInSchedule = () => {
     if (!config || config.mode !== "scheduled" || !config.start_time || !config.end_time) return true;

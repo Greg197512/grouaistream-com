@@ -3,6 +3,7 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { omitRadioOnlyTracks } from "@/lib/catalogTracks";
 import { motion } from "framer-motion";
 import { 
   Users, 
@@ -273,10 +274,10 @@ export default function Admin() {
       // Fetch genre breakdown
       const { data: allTracks } = await supabase
         .from("tracks")
-        .select("genre");
+        .select("genre, title, audio_url");
       
       const genreCounts = new Map<string, number>();
-      allTracks?.forEach(t => {
+      omitRadioOnlyTracks(allTracks || []).forEach(t => {
         const g = t.genre || "Nieznany";
         genreCounts.set(g, (genreCounts.get(g) || 0) + 1);
       });
@@ -294,8 +295,9 @@ export default function Admin() {
         .order("created_at", { ascending: false })
         .limit(50);
       
-      setRecentTracks(recentData || []);
-      setTracks((recentData || []).map(t => ({
+      const visibleRecent = omitRadioOnlyTracks(recentData || []);
+      setRecentTracks(visibleRecent);
+      setTracks(visibleRecent.map(t => ({
         id: t.id,
         title: t.title,
         artist: t.artist,

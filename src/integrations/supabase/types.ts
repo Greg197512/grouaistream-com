@@ -6926,6 +6926,7 @@ export type Database = {
           artist: string
           audio_url: string | null
           boost_expires_at: string | null
+          catalog_hidden: boolean
           bpm: number | null
           cover_url: string | null
           created_at: string
@@ -6955,6 +6956,7 @@ export type Database = {
           artist: string
           audio_url?: string | null
           boost_expires_at?: string | null
+          catalog_hidden?: boolean
           bpm?: number | null
           cover_url?: string | null
           created_at?: string
@@ -6984,6 +6986,7 @@ export type Database = {
           artist?: string
           audio_url?: string | null
           boost_expires_at?: string | null
+          catalog_hidden?: boolean
           bpm?: number | null
           cover_url?: string | null
           created_at?: string

@@ -1,4 +1,5 @@
 import type { Track } from "@/contexts/PlayerContext";
+import { omitRadioOnlyTracks } from "@/lib/catalogTracks";
 
 // Fallback katalogu: gdy Supabase nie odpowiada (uśpiony/limit/awaria), gramy
 // z ostatniego snapshotu `public|dist/tracks.json` — pliki audio i tak są na R2.
@@ -50,6 +51,7 @@ export function shapeSnapshot(rows: SnapshotTrack[], opts: SnapshotShape = {}): 
     out = out.filter((t) => (t.genre || "").toLowerCase().includes(g));
   }
   if (opts.filter) out = out.filter(opts.filter);
+  out = omitRadioOnlyTracks(out);
   if (opts.order === "created_at") {
     out.sort((a, b) => {
       const av = a.created_at ? Date.parse(a.created_at) : 0;
@@ -73,7 +75,7 @@ export async function resilientTracks<T extends SnapshotTrack>(
   try {
     const { data, error } = await primary();
     if (!error && Array.isArray(data) && data.length > 0) {
-      return { rows: data, fromSnapshot: false };
+      return { rows: omitRadioOnlyTracks(data), fromSnapshot: false };
     }
   } catch {
     /* fallthrough → snapshot */

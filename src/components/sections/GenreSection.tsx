@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { DraggableTrackCard } from "@/components/dnd/DraggableTrackCard";
 import { AnimatedGenreIcon } from "@/components/effects/AnimatedGenreIcon";
 import { withTimeout } from "@/lib/withTimeout";
+import { omitRadioOnlyTracks } from "@/lib/catalogTracks";
 
 const FETCH_TIMEOUT_MS = 20_000;
 const TRACK_SELECT = "id,title,artist,album,duration,cover_url,audio_url,video_url,genre,mood,locked";
@@ -54,13 +55,13 @@ export const GenreSection = ({ genre, title, icon, color, limit = 8 }: GenreSect
         }
 
         const { data, error } = await withTimeout(
-          query.order("created_at", { ascending: false }).limit(limit),
+          query.order("created_at", { ascending: false }).limit(limit + 16),
           FETCH_TIMEOUT_MS,
           `${genre} tracks`
         );
 
         if (error) throw error;
-        if (isMounted) setTracks((data || []) as unknown as Track[]);
+        if (isMounted) setTracks(omitRadioOnlyTracks((data || []) as unknown as Track[]).slice(0, limit));
       } catch (error) {
         console.error(`Error fetching ${genre} tracks:`, error);
         if (isMounted) setHasError(true);

@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Loader2, TrendingUp, Zap } from "lucide-react";
 import { ArtistCard } from "@/components/cards/ArtistCard";
 import { withTimeout } from "@/lib/withTimeout";
+import { isRadioOnlyTrack, omitRadioOnlyTracks } from "@/lib/catalogTracks";
 
 interface ArtistData {
   id: string;
@@ -65,7 +66,8 @@ export const TopArtists = () => {
       .or("audio_url.not.is.null,video_url.not.is.null")
       .order("created_at", { ascending: false })
       .limit(50);
-    if (data && data.length > 0) playPlaylist(data as Track[], 0);
+    const music = omitRadioOnlyTracks((data || []) as Track[]);
+    if (music.length > 0) playPlaylist(music, 0);
     navigate(`/search?q=${encodeURIComponent(artist.name)}`);
   };
 
@@ -75,7 +77,7 @@ export const TopArtists = () => {
       const { data: tracksData } = await withTimeout(
         supabase
           .from("tracks")
-          .select("user_id, artist, audio_url, video_url")
+          .select("user_id, artist, title, audio_url, video_url")
           .not("artist", "is", null)
           .limit(3000),
         15_000,
@@ -93,8 +95,9 @@ export const TopArtists = () => {
       // dzięki temu widać WSZYSTKICH wykonawców, także tych wgranych ze wspólnego/
       // masowego konta (wcześniej grupowanie po user_id zwijało ich do kilku kont).
       const artistMap: Record<string, { count: number; name: string; userId: string | null }> = {};
-      tracksData.forEach((t: { user_id: string | null; artist: string | null; audio_url: string | null; video_url: string | null }) => {
+      tracksData.forEach((t: { user_id: string | null; artist: string | null; title?: string | null; audio_url: string | null; video_url: string | null }) => {
         if (!t.audio_url && !t.video_url) return;
+        if (isRadioOnlyTrack(t)) return;
         const name = (t.artist || "").trim();
         if (!name) return;
         const key = name.toLowerCase();

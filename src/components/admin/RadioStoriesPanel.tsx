@@ -8,6 +8,7 @@ import { Radio, Trash2, Loader2, Upload, Plus, X, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { uploadToR2 } from "@/lib/r2Upload";
+import { publishRadioTalk } from "@/lib/radioStories";
 import { toast } from "sonner";
 
 type StoryRow = {
@@ -27,6 +28,7 @@ const radioDb = supabase as unknown as SupabaseClient;
 const QUICK_PRESETS = [
   { label: "Horror 21:00", time: "21:00", slot: "Horror na wieczór" },
   { label: "Bajki 08:00", time: "08:00", slot: "Bajki dla dzieci" },
+  { label: "Nocna Rozmowa 23:00", time: "23:00", slot: "Nocna Rozmowa" },
 ];
 
 function getAudioDuration(url: string): Promise<number> {
@@ -90,15 +92,14 @@ export function RadioStoriesPanel() {
     try {
       const { publicUrl } = await uploadToR2({ file, folder: "radio-stories", onProgress: setProgress });
       const duration = await getAudioDuration(publicUrl);
-      const { error } = await radioDb.from("radio_story_slots").insert({
+      const published = await publishRadioTalk({
         slot: slotLabel.trim() || "Audycja specjalna",
         title: title.trim(),
-        audio_url: publicUrl,
-        duration_sec: duration,
-        air_times: times,
-        is_active: true,
+        audioUrl: publicUrl,
+        durationSec: duration,
+        airTimes: times,
       });
-      if (error) throw error;
+      if (published.error) throw new Error(published.error);
       toast.success(`🎙️ „${title.trim()}" dodane — gra codziennie o ${times.join(", ")}`);
       setTitle("");
       setSlotLabel("");
@@ -147,10 +148,9 @@ export function RadioStoriesPanel() {
             <Radio className="h-5 w-5 text-primary" /> Audycje / opowiadania radiowe
           </h3>
           <p className="text-sm text-muted-foreground mt-1">
-            Osobna szuflada od muzyki — nie wchodzą do zwykłej rotacji. Każdy plik gra codziennie
-            o wskazanych, stałych godzinach (może być kilka na dzień, np. 20:30 i 22:00), tylko
-            na strumieniu rozgłośni. Kilka plików na tę samą godzinę rotuje dzień po dniu (ten
-            sam dla wszystkich słuchaczy tego dnia).
+            Osobna szuflada od muzyki — nie wchodzą do Nowych ani do zwykłej rotacji. Każdy plik gra codziennie
+            o wskazanych godzinach (czas polski). Kilka plików na tę samą godzinę rotuje dzień po dniu.
+            Nocna Rozmowa jest wyjątkiem: o 23:00 leci zawsze najnowszy odcinek, starsze zostają w archiwum.
           </p>
         </div>
 

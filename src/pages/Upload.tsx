@@ -19,6 +19,7 @@ import { withTimeout } from "@/lib/withTimeout";
 import { postCreatorThankYou } from "@/lib/thankYouMarquee";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { CoverDesigner } from "@/components/cover/CoverDesigner";
+import { isRadioOnlyTrack } from "@/lib/catalogTracks";
 
 const COVER_GENERATION_TIMEOUT_MS = 120000;
 
@@ -317,6 +318,10 @@ const Upload = () => {
     }
     if (audioFile && durationErrorType !== null) {
       toast.error("Długość utworu musi mieścić się w zakresie 2:30–19:00.");
+      return;
+    }
+    if (isRadioOnlyTrack({ title, audio_url: audioFile?.name || "" })) {
+      toast.error("Odcinki „Nocna Rozmowa” nie są utworami. Dodaj je w panelu admina: Rozgłośnia → Jingle / Reklama / Rozmowa — plik wgrywa się od razu i leci o 23:00.");
       return;
     }
 

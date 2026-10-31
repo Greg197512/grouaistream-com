@@ -5,6 +5,7 @@ import { usePlayer } from "@/contexts/PlayerContext";
 import { useAI } from "@/contexts/AIContext";
 
 import { supabase } from "@/integrations/supabase/client";
+import { omitRadioOnlyTracks } from "@/lib/catalogTracks";
 import { toast } from "sonner";
 import { Loader2, Sparkles } from "lucide-react";
 
@@ -123,12 +124,13 @@ export const PlaylistGrid = ({ title, subtitle, showAll = true }: PlaylistGridPr
         `User clicked on "${playlist.title}" playlist card`
       );
 
-      if (tracks && tracks.length > 0) {
-        playPlaylist(tracks);
+      const music = omitRadioOnlyTracks(tracks || []);
+      if (music.length > 0) {
+        playPlaylist(music);
         
         const aiInsight = lastRecommendation?.explanation || "Personalized for your listening style";
         toast.success(
-          `🎵 "${playlist.title}" ready! ${tracks.length} tracks • ${aiInsight}`,
+          `🎵 "${playlist.title}" ready! ${music.length} tracks • ${aiInsight}`,
           { id: "ai-playlist", duration: 4000 }
         );
       } else {
@@ -150,10 +152,10 @@ export const PlaylistGrid = ({ title, subtitle, showAll = true }: PlaylistGridPr
         .from("tracks")
         .select("*");
       
-      const { data: tracks } = await query.limit(20);
-      
-      if (tracks && tracks.length > 0) {
-        const shuffled = [...tracks].sort(() => Math.random() - 0.5);
+      const { data: tracks } = await query.limit(40);
+      const music = omitRadioOnlyTracks(tracks || []);
+      if (music.length > 0) {
+        const shuffled = [...music].sort(() => Math.random() - 0.5).slice(0, 20);
         playPlaylist(shuffled);
         toast.success(`Playing ${shuffled.length} tracks`, { id: "trending-playlist" });
       } else {

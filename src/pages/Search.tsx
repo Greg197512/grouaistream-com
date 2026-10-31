@@ -19,6 +19,7 @@ import { invokeHubAI } from "@/lib/hubAI";
 import { useCatalogUnlock } from "@/hooks/useCatalogUnlock";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { Lock, LockOpen } from "lucide-react";
+import { omitRadioOnlyTracks } from "@/lib/catalogTracks";
 
 const formatDuration = (seconds: number): string => {
   const mins = Math.floor(seconds / 60);
@@ -130,7 +131,7 @@ const Search = () => {
         .from("tracks").select(CATALOG_SELECT).or(CATALOG_FILTER)
         .order("created_at", { ascending: false }).range(0, 119);
       if (!alive || error) return;
-      setAllTracks((data || []).filter(isPlayableTrack) as Track[]);
+      setAllTracks(omitRadioOnlyTracks((data || []) as Track[]).filter(isPlayableTrack));
     };
 
     const loadFull = async () => {
@@ -142,7 +143,7 @@ const Search = () => {
           .from("tracks").select(CATALOG_SELECT).or(CATALOG_FILTER)
           .order("created_at", { ascending: false }).range(from, from + PAGE - 1);
         if (error || !data || data.length === 0) break;
-        acc.push(...(data.filter(isPlayableTrack) as Track[]));
+        acc.push(...omitRadioOnlyTracks(data as Track[]).filter(isPlayableTrack));
         if (alive) setAllTracks([...acc]); // pokazuj przyrostowo
         if (data.length < PAGE) break;
         if (!alive) break;
@@ -208,7 +209,7 @@ const Search = () => {
           .limit(50);
 
         if (dbResults) {
-          const dbPlayable = dbResults.filter(isPlayableTrack);
+          const dbPlayable = omitRadioOnlyTracks(dbResults as Track[]).filter(isPlayableTrack);
           const existingIds = new Set(scored.map(t => t.id));
           const newFromDb = dbPlayable.filter(t => !existingIds.has(t.id));
           setResults([...scored, ...newFromDb]);

@@ -26,6 +26,8 @@ import {
   Upload,
 } from "lucide-react";
 import { uploadToR2 } from "@/lib/r2Upload";
+import { isRadioOnlyTrack, omitRadioOnlyTracks } from "@/lib/catalogTracks";
+import { publishRadioTalk } from "@/lib/radioStories";
 import { useAuth } from "@/contexts/AuthContext";
 import { isAllowedMediaFile, MAX_UPLOAD_SIZE_BYTES, MEDIA_FILE_ACCEPT } from "@/lib/mediaFormats";
 import { fetchRadioSchedule, getRadioItemDuration, resolveCurrentRadioScheduleId } from "@/lib/radioSchedule";
@@ -38,6 +40,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+
+function readLocalDuration(file: File, fallback = 180): Promise<number> {
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(file);
+    const audio = new Audio();
+    const tid = setTimeout(() => { URL.revokeObjectURL(url); resolve(fallback); }, 4000);
+    audio.preload = "metadata";
+    audio.onloadedmetadata = () => {
+      clearTimeout(tid);
+      const d = Math.round(audio.duration);
+      URL.revokeObjectURL(url);
+      resolve(Number.isFinite(d) && d > 0 ? d : fallback);
+    };
+    audio.onerror = () => { clearTimeout(tid); URL.revokeObjectURL(url); resolve(fallback); };
+    audio.src = url;
+  });
+}
 
 interface RadioConfig {
   id: string;
@@ -72,6 +91,7 @@ interface ScheduleTrack {
 export const RadioStationManager = () => {
   const { user } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const talkFileInputRef = useRef<HTMLInputElement>(null);
   const [config, setConfig] = useState<RadioConfig | null>(null);
   const [schedule, setSchedule] = useState<ScheduleTrack[]>([]);
   const [loading, setLoading] = useState(true);
@@ -118,7 +138,7 @@ export const RadioStationManager = () => {
       const blocked = new Set((blocks || []).map((b: any) => String(b.artist || "").toLowerCase()));
 
       const fresh = (candidates || []).filter(
-        (t: any) => !inSchedule.has(t.id) && !blocked.has(String(t.artist || "").toLowerCase()),
+        (t: any) => !inSchedule.has(t.id) && !blocked.has(String(t.artist || "").toLowerCase()) && !isRadioOnlyTrack(t),
       );
 
       // Interleave by artist to avoid back-to-back same artist
@@ -168,6 +188,9 @@ export const RadioStationManager = () => {
   const [customDuration, setCustomDuration] = useState(30);
   const [customAudioUrl, setCustomAudioUrl] = useState("");
   const [customType, setCustomType] = useState<"jingle" | "ad" | "talk">("jingle");
+  const [talkFile, setTalkFile] = useState<File | null>(null);
+  const [talkAirTime, setTalkAirTime] = useState("23:00");
+  const [talkUploading, setTalkUploading] = useState(false);
 
   const radioUrl = `${window.location.origin}/radio-live`;
 
@@ -243,7 +266,7 @@ export const RadioStationManager = () => {
       .select("id, title, artist, duration, audio_url, cover_url, genre")
       .or(`title.ilike.%${searchQuery}%,artist.ilike.%${searchQuery}%`)
       .limit(20);
-    setSearchResults(data || []);
+    setSearchResults(omitRadioOnlyTracks(data || []));
     setSearching(false);
   };
 
@@ -257,7 +280,7 @@ export const RadioStationManager = () => {
       .not("audio_url", "is", null)
       .order("created_at", { ascending: false })
       .range(from, to);
-    setCatalogTracks(data || []);
+    setCatalogTracks(omitRadioOnlyTracks(data || []));
     setCatalogPage(page);
     setCatalogLoading(false);
     setCatalogOpen(true);
@@ -280,6 +303,10 @@ export const RadioStationManager = () => {
         const parts = name.split(" - ");
         const artist = parts.length >= 2 ? parts[0].trim() : "Unknown Artist";
         const title = parts.length >= 2 ? parts.slice(1).join(" - ").trim() : name;
+        if (isRadioOnlyTrack({ title, audio_url: file.name })) {
+          toast.error(`„${title}" to odcinek rozmowy. Dodaj go w zakładce Jingle / Reklama / Rozmowa — nie trafi do katalogu.`);
+          continue;
+        }
 
         // Get duration
         const duration = await new Promise<number>((resolve) => {
@@ -382,6 +409,10 @@ export const RadioStationManager = () => {
         const parts = name.split(" - ");
         const artist = parts.length >= 2 ? parts[0].trim() : "Unknown Artist";
         const title = parts.length >= 2 ? parts.slice(1).join(" - ").trim() : name;
+        if (isRadioOnlyTrack({ title, audio_url: file.name })) {
+          toast.error(`„${title}" to odcinek rozmowy. Dodaj go w zakładce Jingle / Reklama / Rozmowa — nie trafi do katalogu.`);
+          continue;
+        }
         const duration = await new Promise<number>((resolve) => {
           const url = URL.createObjectURL(file);
           const audio = new Audio();
@@ -441,7 +472,58 @@ export const RadioStationManager = () => {
     fetchData();
   };
 
+  const addTalkEpisode = async () => {
+    if (!customTitle.trim()) {
+      toast.error("Podaj nazwę odcinka");
+      return;
+    }
+    if (!talkFile && !customAudioUrl.trim()) {
+      toast.error("Wgraj plik audio albo wklej URL");
+      return;
+    }
+    setTalkUploading(true);
+    try {
+      let audioUrl = customAudioUrl.trim();
+      let duration = customDuration;
+      if (talkFile) {
+        if (!isAllowedMediaFile(talkFile, MAX_UPLOAD_SIZE_BYTES)) {
+          toast.error("Nieobsługiwany format albo za duży plik");
+          return;
+        }
+        duration = await readLocalDuration(talkFile, 600);
+        toast.info(`Przesyłanie: ${customTitle.trim()}...`);
+        const uploaded = await uploadToR2({ file: talkFile, folder: "radio-stories" });
+        audioUrl = uploaded.publicUrl;
+      }
+      const { error } = await publishRadioTalk({
+        title: customTitle.trim(),
+        audioUrl,
+        durationSec: duration,
+        airTimes: [talkAirTime || "23:00"],
+        slot: "Nocna Rozmowa",
+      });
+      if (error) {
+        toast.error("Błąd: " + error);
+        return;
+      }
+      toast.success(`„${customTitle.trim()}" na antenie o ${talkAirTime || "23:00"} (czas polski). Nie pojawi się w Nowych.`);
+      setCustomTitle("");
+      setCustomAudioUrl("");
+      setTalkFile(null);
+      if (talkFileInputRef.current) talkFileInputRef.current.value = "";
+      setCustomDuration(duration);
+    } catch (err: any) {
+      toast.error(err?.message || "Nie udało się dodać rozmowy");
+    } finally {
+      setTalkUploading(false);
+    }
+  };
+
   const addCustomItem = async () => {
+    if (customType === "talk") {
+      await addTalkEpisode();
+      return;
+    }
     if (!customTitle.trim()) {
       toast.error("Podaj nazwę elementu");
       return;
@@ -823,20 +905,48 @@ export const RadioStationManager = () => {
                 </div>
               </div>
 
+              {customType === "talk" && (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <Label>Plik audio</Label>
+                    <Input
+                      ref={talkFileInputRef}
+                      type="file"
+                      accept={MEDIA_FILE_ACCEPT}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0] || null;
+                        setTalkFile(file);
+                        if (!file) return;
+                        const base = file.name.replace(/\.[^/.]+$/, "");
+                        if (!customTitle.trim()) setCustomTitle(base);
+                        void readLocalDuration(file, 600).then(setCustomDuration);
+                      }}
+                    />
+                    {talkFile && <p className="text-xs text-muted-foreground mt-1 truncate">{talkFile.name}</p>}
+                  </div>
+                  <div>
+                    <Label>Godzina emisji (czas polski)</Label>
+                    <Input type="time" value={talkAirTime} onChange={(e) => setTalkAirTime(e.target.value)} />
+                  </div>
+                </div>
+              )}
+
               <div>
-                <Label>URL audio (opcjonalnie)</Label>
+                <Label>{customType === "talk" ? "URL audio (zamiast pliku, opcjonalnie)" : "URL audio (opcjonalnie)"}</Label>
                 <Input
                   placeholder="https://... link do pliku mp3"
                   value={customAudioUrl}
                   onChange={(e) => setCustomAudioUrl(e.target.value)}
                 />
                 <p className="text-xs text-muted-foreground mt-1">
-                  Jeśli nie podasz URL, element będzie odliczany jako przerwa (cisza).
+                  {customType === "talk"
+                    ? "Rozmowa nie wchodzi do katalogu ani do Nowych. Na antenie o podanej godzinie leci najnowszy odcinek. Plik zostaje na R2."
+                    : "Jeśli nie podasz URL, element będzie odliczany jako przerwa (cisza)."}
                 </p>
               </div>
 
-              <Button onClick={addCustomItem} className="w-full gap-2">
-                <Plus className="h-4 w-4" />
+              <Button onClick={addCustomItem} disabled={talkUploading} className="w-full gap-2">
+                {talkUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
                 Dodaj {customType === "jingle" ? "jingiel" : customType === "ad" ? "reklamę" : "rozmowę"}
               </Button>
             </TabsContent>
