@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { playFanfare } from "@/lib/fanfare";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   ChevronLeft, ChevronRight, Search, Bell, User, Crown, LogOut,
@@ -83,7 +84,8 @@ export const TopBar = () => {
           "Sprawdzanie kodu",
         );
         if (data?.ok) {
-          toast.success(data.already ? `Ten kod już wykorzystałeś: ${data.label}` : `🎁 Kod odebrany: ${data.label}`);
+          toast.success(data.already ? `Ten kod już wykorzystałeś: ${data.label}` : data.gift ? `🎁 Bilet aktywowany: ${data.label}! Odświeżam…` : `🎁 Kod odebrany: ${data.label}`);
+          if (data.gift) { playFanfare(); setTimeout(() => window.location.reload(), 2600); }
           setSearchQuery("");
           navigate("/");
           return;
@@ -94,6 +96,7 @@ export const TopBar = () => {
           setShowUpgrade(true);
           return;
         }
+        if (data?.reason === "already_used") { toast.error("Ten bilet został już wykorzystany"); setSearchQuery(""); return; }
         // reason === "invalid_code" (albo błąd) → to zwykłe wyszukiwanie.
       } catch { /* backend niedostępny — nie blokuj wyszukiwania */ }
     }
@@ -101,9 +104,16 @@ export const TopBar = () => {
     navigate(`/search?q=${encodeURIComponent(q)}`);
   };
 
+  // Bilet podarunkowy: rozpoznaj kod GROUA-XXXX-XXXX od razu po wklejeniu.
+  useEffect(() => {
+    if (!user || !/^GROUA-[A-Z0-9]{4}-[A-Z0-9]{4}$/i.test(searchQuery.trim())) return;
+    handleSearch({ preventDefault() {} } as React.FormEvent);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery, user]);
+
   // Navigate to search page as user types
   useEffect(() => {
-    if (!searchQuery.trim()) return;
+    if (!searchQuery.trim() || /^GROUA-[A-Z0-9]{4}-[A-Z0-9]{4}$/i.test(searchQuery.trim())) return;
     const timer = setTimeout(() => {
       navigate(`/search?q=${encodeURIComponent(searchQuery)}`, { replace: true });
     }, 400);

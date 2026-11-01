@@ -6,6 +6,8 @@ import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { getPaddleEnvironment, initializePaddle } from "@/lib/paddle";
 import { SHOP_ADMIN_EMAIL, SHOP_PRODUCTS, type ShopProduct } from "@/data/shopCatalog";
 import { toast } from "sonner";
+import { XmasDecor } from "@/components/shop/XmasDecor";
+import { GiftCelebration } from "@/components/shop/GiftCelebration";
 
 type Line = { id: string; size: string; qty: number };
 const CART_KEY = "gr_cart_v2";
@@ -73,6 +75,7 @@ export default function Shop() {
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<string | null>(null);
   const [orders, setOrders] = useState<any[] | null>(null);
+  const [gift, setGift] = useState<string | null>(null);
   const [ship, setShip] = useState({ name: "", street: "", city: "", zip: "", country: "", phone: "" });
   useEffect(() => { try { localStorage.setItem(CART_KEY, JSON.stringify(cart)); } catch { /* */ } }, [cart]);
   useEffect(() => { document.title = "Sklep Grouarock | Grouaistream"; }, []);
@@ -92,6 +95,22 @@ export default function Shop() {
   }, [user]);
   useEffect(() => { loadOrders(); }, [loadOrders]);
   useEffect(() => { if (new URLSearchParams(window.location.search).get("paid")) { toast.success("Dziękujemy! Płatność przyjęta."); setCart([]); } }, []);
+
+  // Bilet VIP pojawia się, gdy zamówienie zostanie opłacone (webhook albo admin) — pokaż fanfary.
+  const checkGift = useCallback(async () => {
+    if (!user) return;
+    const { data } = await (supabase as any).from("gift_codes").select("code").eq("owner_user_id", user.id).is("redeemed_by", null).order("created_at", { ascending: false }).limit(5);
+    for (const g of data ?? []) {
+      let seen = false; try { seen = localStorage.getItem("gr_gift_seen_" + g.code) === "1"; } catch { /* */ }
+      if (!seen) { try { localStorage.setItem("gr_gift_seen_" + g.code, "1"); } catch { /* */ } setGift(g.code); break; }
+    }
+  }, [user]);
+  useEffect(() => {
+    if (!user) return;
+    checkGift();
+    const t = setInterval(checkGift, 7000);
+    return () => clearInterval(t);
+  }, [user, checkGift]);
 
   const checkout = async () => {
     if (!cart.length) return;
@@ -113,7 +132,9 @@ export default function Shop() {
   const admin = isAdmin || user?.email === SHOP_ADMIN_EMAIL;
   const inp = "h-11 rounded-xl border border-neutral-300 bg-white px-3 text-sm w-full";
   return (
-    <div className="min-h-screen bg-white text-neutral-900" style={{ colorScheme: "light" }}>
+    <div className="min-h-screen bg-gradient-to-b from-sky-50 via-white to-white text-neutral-900" style={{ colorScheme: "light" }}>
+      <XmasDecor />
+      {gift && <GiftCelebration code={gift} onClose={() => setGift(null)} onGo={() => { setGift(null); navigate("/"); toast.info("Wklej kod w pasku wyszukiwania i naciśnij Enter"); }} />}
       <header className="sticky top-0 z-40 flex flex-wrap items-center justify-between gap-3 border-b border-neutral-200 bg-white/85 px-4 py-3 backdrop-blur">
         <div className="flex items-center gap-4"><span className="text-2xl font-black">GROUA<span className="text-orange-500">ROCK</span></span><Link to="/" className="text-sm text-neutral-600 hover:text-neutral-900">← Grouaistream</Link></div>
         <div className="flex flex-wrap items-center gap-2">
@@ -125,8 +146,9 @@ export default function Shop() {
       </header>
 
       <section className="mx-auto max-w-5xl px-4 pb-6 pt-14">
-        <h1 className="text-5xl font-black leading-none sm:text-7xl">Noś swój <span className="bg-gradient-to-r from-orange-500 to-pink-500 bg-clip-text text-transparent">dźwięk.</span></h1>
-        <p className="mt-4 max-w-xl text-lg text-neutral-600">Odzież, dodatki i gadżety AI od Grouarock. Jedno konto z Grouaistream: zalogowany kupujesz od razu.</p>
+        <p className="mb-2 text-sm font-bold uppercase tracking-[.25em] text-red-600">🎄 Świąteczna edycja · Drop 01</p>
+        <h1 className="text-5xl font-black leading-none sm:text-7xl">Noś swój <span className="bg-gradient-to-r from-red-600 via-orange-500 to-pink-500 bg-clip-text text-transparent">dźwięk.</span></h1>
+        <p className="mt-4 max-w-xl text-lg text-neutral-600">Odzież, dodatki i gadżety AI od Grouarock. Jedno konto z Grouaistream. Każdy zakup daje bilet z kodem: VIP w Grouaistream na 30 dni za darmo.</p>
         {done && <p className="mt-4 rounded-xl bg-orange-50 p-4 text-orange-900">Zamówienie #{done} przyjęte. Link do płatności wyślemy na Twój e-mail.</p>}
       </section>
 

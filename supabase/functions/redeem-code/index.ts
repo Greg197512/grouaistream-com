@@ -42,6 +42,13 @@ serve(async (req) => {
   // Od tąd — service_role, żeby ominąć RLS i mieć autorytatywny odczyt.
   const admin = createClient(supabaseUrl, serviceKey);
 
+  // 0) Bilet podarunkowy ze sklepu Grouarock (GROUA-XXXX-XXXX) → VIP na 30 dni.
+  if (/^GROUA-[A-Z0-9]{4}-[A-Z0-9]{4}$/i.test(code)) {
+    const { data: gift, error: gErr } = await admin.rpc("redeem_gift_code", { p_user: userId, p_code: code });
+    if (gErr) return json({ ok: false, reason: "error", detail: gErr.message }, 500);
+    return json(gift);
+  }
+
   // 1) Czy to w ogóle aktywny kod? Jeśli nie — cicho "invalid_code", żeby
   //    front mógł potraktować to jako zwykłe zapytanie wyszukiwania.
   const { data: uc, error: ucErr } = await admin
