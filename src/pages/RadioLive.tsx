@@ -569,47 +569,44 @@ const RadioLive = () => {
     const offset = storyOverride.offset;
     stopCurrentAudio();
     if (!url) return;
-    const audio = new Audio(url);
-    audio.preload = "auto";
-    audio.preservesPitch = false;
-    audio.setAttribute("playsinline", "");
-    (audio as HTMLAudioElement & { playsInline?: boolean }).playsInline = true;
+    const audio = radioEl(); // stały element anteny — audycja startuje też przy zgaszonym ekranie
+    const on = bindRadio(audio);
     audio.volume = muted ? 0 : volume / 100;
     audioRef.current = audio;
     const alive = () => playbackTokenRef.current === token;
-    audio.addEventListener("loadedmetadata", () => {
-      if (!alive()) return;
+    let seeked = false;
+    on("loadedmetadata", () => {
+      if (!alive() || seeked) return;
+      seeked = true;
       if (offset > 0.4 && Number.isFinite(audio.duration)) {
         audio.currentTime = Math.min(offset, Math.max(0, audio.duration - 0.25));
       }
-    }, { once: true });
-    audio.addEventListener("canplay", () => {
-      if (!alive()) return;
-      audio.play().then(() => {
-        if (!alive()) return;
-        setIsPlaying(true);
-        setAutoplayBlocked(false);
-      }).catch(() => {
-        if (!alive()) return;
-        setAutoplayBlocked(true);
-        setIsPlaying(false);
-      });
-    }, { once: true });
-    audio.addEventListener("timeupdate", () => {
+    });
+    on("timeupdate", () => {
       if (!alive() || !audio.duration) return;
       setProgress((audio.currentTime / audio.duration) * 100);
     });
-    audio.addEventListener("error", () => {
+    on("error", () => {
       if (!alive()) return;
       setIsPlaying(false);
     });
+    audio.src = url;
     audio.load();
+    audio.play().then(() => {
+      if (!alive()) return;
+      setIsPlaying(true);
+      setAutoplayBlocked(false);
+    }).catch((err: unknown) => {
+      if (!alive() || (err as { name?: string })?.name === "AbortError") return;
+      setAutoplayBlocked(true);
+      setIsPlaying(false);
+    });
     return () => {
       if (playbackTokenRef.current === token) playbackTokenRef.current += 1;
     };
     // Głośność aktualizuje osobny efekt na audioRef — nie restartujemy odcinka.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [storyId, personalMood, stopCurrentAudio]);
+  }, [storyId, personalMood, stopCurrentAudio, radioEl, bindRadio]);
 
   const startPlayback = useCallback(
     (index: number, offset = 0) => {
