@@ -68,6 +68,8 @@ try {
       hiddenAt = Date.now();
     } else if (hiddenAt && Date.now() - hiddenAt > IDLE_MS) {
       hiddenAt = 0;
+      // Muzyka gra (radio albo odtwarzacz przy zgaszonym ekranie) — nie przeładowuj, bo by ją ucięło.
+      if ("mediaSession" in navigator && navigator.mediaSession.playbackState === "playing") return;
       window.location.reload();
     }
   });
