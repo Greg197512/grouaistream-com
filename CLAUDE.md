@@ -35,6 +35,8 @@ i aktualny. Jeśli fakt tu jest — nie weryfikuj go od nowa dziesiątkami wywo�
 - Crossfade `LiveDJEngine` **WYŁĄCZONY** (`isCrossfadeEligible` = false) — wymagał CORS, psuł R2.
 - `proxiedMediaUrl` = **no-op** (gramy wprost z R2; `/api/media` zostaje tylko do diagnostyki/hostów bez CORS).
 - Player: `src/contexts/PlayerContext.tsx`. Nie wymuszać crossOrigin. Format .wav bywa u twórców.
+- Granie przy zgaszonym ekranie: radio (`RadioLive.tsx`) i player mają **jeden stały `<audio>`** (podmiana `src` + `play()` od razu w `ended`).
+  NIE tworzyć `new Audio()` na kolejny utwór — telefon w tle blokuje start nowego elementu. `main.tsx` nie przeładowuje, gdy `mediaSession.playbackState === "playing"`.
 
 ## Baza `tracks` (stan po sprzątaniu)
 - ~406 realnych utworów. Usunięto 66 600 pustych „widm" (5 CC-artystów: Bensound, Kevin MacLeod,
