@@ -5,6 +5,7 @@ import { usePlayer, Track } from "@/contexts/PlayerContext";
 import { HQCover } from "@/components/ui/HQCover";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { resilientTracks } from "@/lib/trackSnapshot";
+import { omitRadioOnlyTracks } from "@/lib/catalogTracks";
 
 const SEL = "id,title,artist,album,duration,cover_url,audio_url,video_url,genre,mood";
 
@@ -32,7 +33,8 @@ export const FeaturedTrending = () => {
             .limit(20) as unknown as Promise<{ data: (Track & { created_at?: string })[] | null; error: unknown }>,
           { order: "created_at", ascending: false, limit: 12, filter: (t) => !!(t.audio_url && t.cover_url) },
         );
-        if (alive) setTracks(rows as unknown as Track[]);
+        // Audycje (Nocna Rozmowa) to nie muzyka — nie wyróżniamy ich jako nowości.
+        if (alive) setTracks(omitRadioOnlyTracks(rows) as unknown as Track[]);
       } catch {
         /* cicho — sekcja po prostu się nie pokaże */
       }
