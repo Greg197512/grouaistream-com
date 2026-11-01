@@ -11,6 +11,7 @@ import { logReelWatch } from "@/lib/reelHistory";
 import type { YtHit } from "@/lib/reelSearch";
 import type { Language } from "@/i18n/translations";
 import { toast } from "sonner";
+import { omitRadioOnlyTracks } from "@/lib/catalogTracks";
 
 export type YtItem = { kind: "yt"; videoId: string; title: string; artist: string; genre?: string };
 
@@ -67,7 +68,7 @@ export const FeedReels = ({
           .from("tracks").select(SEL)
           .or("audio_url.not.is.null,video_url.not.is.null")
           .order("created_at", { ascending: false }).limit(300);
-        const list = Array.isArray(data) ? (data as unknown as Track[]) : [];
+        const list = omitRadioOnlyTracks(Array.isArray(data) ? (data as unknown as Track[]) : []);
         // Teledyski (utwory z wideo) na przód.
         list.sort((a, b) => (b.video_url ? 1 : 0) - (a.video_url ? 1 : 0));
         if (alive) setSongs(list);
