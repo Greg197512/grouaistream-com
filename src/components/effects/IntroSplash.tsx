@@ -3,10 +3,11 @@ import { AnimatePresence, motion } from "framer-motion";
 import { ArrowRight, Volume2, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-const SESSION_KEY = "grouai-intro-premium-v2";
+const SESSION_KEY = "grouai-intro-canva-v3"; // nowa wersja intro = każdy zobaczy ją raz
 
-/** Intro wideo (logo + dźwięk) — na końcu rozmywa się i odsłania stronę,
- *  która cały czas renderuje się pod spodem (overlay tylko na wierzchu). */
+/** Intro wideo (plansze zaprojektowane w Canvie: znak, hasło, „Słuchaj · Twórz · Zarabiaj”, plansza
+ *  końcowa; źródła w design/intro) — na końcu rozmywa się i odsłania stronę, która cały czas
+ *  renderuje się pod spodem (overlay tylko na wierzchu). */
 export const IntroSplash = () => {
   const [show, setShow] = useState(() => { try { return sessionStorage.getItem(SESSION_KEY) !== "1"; } catch { return true; } });
   const [closing, setClosing] = useState(false);
@@ -28,7 +29,7 @@ export const IntroSplash = () => {
     const escape = (event: KeyboardEvent) => { if (event.key === "Escape") close(); };
     window.addEventListener("keydown", escape);
     // Awaryjny limit — gdyby wideo się nie załadowało/onEnded nie odpalił.
-    const fallback = window.setTimeout(close, 12000);
+    const fallback = window.setTimeout(close, 13000);
     return () => { window.removeEventListener("keydown", escape); clearTimeout(fallback); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [show, reduced]);
@@ -66,7 +67,7 @@ export const IntroSplash = () => {
           initial={{ opacity: 1 }}
           exit={{ opacity: 0, filter: "blur(28px)", scale: 1.04 }}
           transition={{ duration: 0.7, ease: "easeInOut" }}
-          className="fixed inset-0 z-[9999] overflow-hidden bg-black"
+          className="fixed inset-0 z-[9999] overflow-hidden bg-[#010209]"
         >
           <video
             ref={videoRef}
@@ -74,13 +75,11 @@ export const IntroSplash = () => {
             playsInline
             onEnded={close}
             onError={close}
-            // Komputer/poziomy ekran: object-cover — pełny ekran, lekki docinek brzegów
-            // niezauważalny (wideo 1168×784 ≈ proporcje ekranu). Telefon pionowo: object-contain,
-            // bo tam cover obcinałby boki logo ("Grou"/"stream" wypadłyby poza kadr) — tło wideo
-            // jest czarne jak kontener, więc "pasy" przy contain są niewidoczne.
-            className="absolute inset-0 h-full w-full object-cover portrait:object-contain"
+            // object-contain na każdym ekranie: nic nie jest przycinane (odznaka w rogu, napisy),
+            // a tło kontenera ma kolor brzegów klatek (#010209), więc pasy są niewidoczne.
+            className="absolute inset-0 h-full w-full object-contain"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/40" />
+          <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-black/50 to-transparent" />
 
           <div
             className="relative flex h-full flex-col justify-between px-4 py-4 sm:px-10 sm:py-6"
