@@ -145,6 +145,34 @@ const RadioLive = () => {
   const personalMoodRef = useRef<Mood | null>(null);
   const talkSavedVolRef = useRef<number | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  // Jeden stały element <audio> dla całego radia. Przy zgaszonym ekranie telefon pozwala grać dalej
+  // tylko w elemencie, który już grał — nowy `new Audio()` po wygaszeniu ekranu bywa blokowany
+  // (iPhone zawsze, Android w uśpieniu), przez co radio milkło po bieżącym utworze.
+  const radioElRef = useRef<HTMLAudioElement | null>(null);
+  const detachRef = useRef<(() => void) | null>(null);
+  const radioEl = useCallback((): HTMLAudioElement => {
+    if (!radioElRef.current) {
+      const a = new Audio();
+      a.preload = "auto";
+      a.preservesPitch = false;
+      a.setAttribute("playsinline", "");
+      (a as HTMLAudioElement & { playsInline?: boolean }).playsInline = true;
+      a.setAttribute("x-webkit-airplay", "allow");
+      a.setAttribute("data-player", "radio");
+      radioElRef.current = a;
+    }
+    return radioElRef.current;
+  }, []);
+  /** Słuchacze zdarzeń dla bieżącego utworu — przy następnym są odpinane. */
+  const bindRadio = useCallback((audio: HTMLAudioElement) => {
+    detachRef.current?.();
+    const offs: (() => void)[] = [];
+    detachRef.current = () => { offs.forEach((off) => off()); detachRef.current = null; };
+    return <K extends keyof HTMLMediaElementEventMap>(type: K, fn: (e: HTMLMediaElementEventMap[K]) => void) => {
+      audio.addEventListener(type, fn);
+      offs.push(() => audio.removeEventListener(type, fn));
+    };
+  }, []);
   const radioClientIdRef = useRef(crypto.randomUUID());
   const liveVoiceQueueRef = useRef<string[]>([]);
   const liveVoicePlayingRef = useRef(false);
@@ -407,10 +435,10 @@ const RadioLive = () => {
 
   const stopCurrentAudio = useCallback(() => {
     clearFallbackTimer();
+    detachRef.current?.();
     if (!audioRef.current) return;
+    // Stały element tylko pauzujemy — następny utwór podmieni w nim źródło (granie w tle).
     audioRef.current.pause();
-    audioRef.current.removeAttribute("src");
-    audioRef.current.load();
     audioRef.current = null;
   }, [clearFallbackTimer]);
 
@@ -603,36 +631,21 @@ const RadioLive = () => {
         }, remaining * 1000);
         return;
       }
-      const audio = new Audio(audioUrl);
       // NIE wymuszać crossOrigin — pliki R2 nie zwracają nagłówka CORS, więc
       // crossOrigin="anonymous" powodował błąd wczytania i ciszę (patrz CLAUDE.md).
-      audio.preload = "auto";
-      audio.preservesPitch = false;
-      // Granie w tle na telefonie (po wygaszeniu ekranu).
-      audio.setAttribute("playsinline", "");
-      (audio as any).playsInline = true;
-      audio.setAttribute("x-webkit-airplay", "allow");
+      const audio = radioEl();
+      const on = bindRadio(audio);
       audio.volume = muted ? 0 : volume / 100;
       audioRef.current = audio;
-      audio.addEventListener("loadedmetadata", () => {
-        if (playbackTokenRef.current !== token) return;
+      let seeked = false;
+      on("loadedmetadata", () => {
+        if (playbackTokenRef.current !== token || seeked) return;
+        seeked = true;
         if (Number.isFinite(offset) && offset > 0 && Number.isFinite(audio.duration)) {
           audio.currentTime = Math.min(offset, Math.max(0, audio.duration - 0.25));
         }
-      }, { once: true });
-      audio.addEventListener("canplay", () => {
-        if (playbackTokenRef.current !== token) return;
-        audio.play().then(() => {
-          if (playbackTokenRef.current !== token) return;
-          setIsPlaying(true);
-          setAutoplayBlocked(false);
-        }).catch(() => {
-          if (playbackTokenRef.current !== token) return;
-          setAutoplayBlocked(true);
-          setIsPlaying(false);
-        });
-      }, { once: true });
-      audio.addEventListener("timeupdate", () => {
+      });
+      on("timeupdate", () => {
         if (playbackTokenRef.current !== token) return;
         if (audio.duration) setProgress((audio.currentTime / audio.duration) * 100);
       });
@@ -642,10 +655,10 @@ const RadioLive = () => {
         setCurrentIndex(nextIndex);
         startPlayback(nextIndex);
       };
-      audio.addEventListener("ended", goNext);
+      on("ended", goNext);
       // KLUCZOWE: gdy plik się nie wczyta (martwy URL, format, sieć), przeskocz
       // do następnego — bez tego radio zawieszało się po jednym/kilku utworach.
-      audio.addEventListener("error", () => {
+      on("error", () => {
         if (playbackTokenRef.current !== token) return;
         window.setTimeout(goNext, 400); // krótka pauza, by nie zapętlić przy serii błędów
       });
@@ -656,9 +669,22 @@ const RadioLive = () => {
         if (playbackTokenRef.current !== token) return;
         if (audio.readyState === 0 && audio.currentTime === 0) goNext();
       }, 18000);
+      audio.src = audioUrl;
       audio.load();
+      // play() od razu (jeszcze w zdarzeniu „ended” poprzedniego utworu) — tylko tak telefon
+      // z wygaszonym ekranem pozwala wystartować kolejny utwór.
+      audio.play().then(() => {
+        if (playbackTokenRef.current !== token) return;
+        setIsPlaying(true);
+        setAutoplayBlocked(false);
+      }).catch((err: unknown) => {
+        if (playbackTokenRef.current !== token) return;
+        if ((err as { name?: string })?.name === "AbortError") return; // przerwane przez kolejny utwór
+        setAutoplayBlocked(true);
+        setIsPlaying(false);
+      });
     },
-    [schedule, volume, muted, stopCurrentAudio]
+    [schedule, volume, muted, stopCurrentAudio, radioEl, bindRadio]
   );
 
   useEffect(() => {
@@ -762,7 +788,11 @@ const RadioLive = () => {
   }, [muted, volume, playNextLiveVoiceChunk]);
 
   useEffect(() => {
-    return () => { audioRef.current?.pause(); };
+    return () => {
+      detachRef.current?.();
+      const a = radioElRef.current;
+      if (a) { a.pause(); a.removeAttribute("src"); a.load(); }
+    };
   }, []);
 
   const currentItem = schedule[currentIndex];
@@ -1011,20 +1041,25 @@ const RadioLive = () => {
     if (!req.audio_url) return;
 
     requestPlayingRef.current = true;
-    const audio = new Audio(req.audio_url);
-    audio.preload = "auto";
-    audio.setAttribute("playsinline", "");
+    const audio = radioEl(); // ten sam element co antena — gra też przy zgaszonym ekranie
+    const on = bindRadio(audio);
     audio.volume = muted ? 0 : volume / 100;
     audioRef.current = audio;
+    let done = false;
     const finish = () => {
+      if (done) return;
+      done = true;
+      detachRef.current?.();
       if (audioRef.current === audio) audioRef.current = null;
       requestPlayingRef.current = false;
       resyncPlayback(); // wróć do zsynchronizowanej pozycji anteny
     };
-    audio.addEventListener("ended", finish);
-    audio.addEventListener("error", finish);
+    on("ended", finish);
+    on("error", finish);
+    audio.src = req.audio_url;
+    audio.load();
     audio.play().then(() => setIsPlaying(true)).catch(finish);
-  }, [stopTalk, stopCurrentAudio, muted, volume, toast, resyncPlayback]);
+  }, [stopTalk, stopCurrentAudio, muted, volume, toast, resyncPlayback, radioEl, bindRadio]);
 
   // Sprawdzaj co sekundę, czy któraś prośba przyszła godzina (jedna naraz).
   useEffect(() => {
