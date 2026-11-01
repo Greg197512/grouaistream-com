@@ -1,0 +1,59 @@
+# Pobiera eksporty z Canvy (podpisane, wygasające adresy) i zapisuje je w repo,
+# bo środowisko agenta nie ma dostępu do export-download.canva.com.
+# Uruchamiane ręcznie (workflow_dispatch); przyjmuje tylko adresy z Canvy.
+name: Pobierz grafiki z Canvy
+
+on:
+  workflow_dispatch:
+    inputs:
+      urls:
+        description: "Adresy eksportu z Canvy, oddzielone spacją albo nową linią"
+        required: true
+      dest:
+        description: "Katalog w repo, np. design/intro"
+        required: true
+        default: "design/intro"
+      branch:
+        description: "Gałąź, na którą zapisać pliki"
+        required: true
+        default: "claude/grouaistream-analysis-optimization-ivi8w5"
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch }}
+      - name: Pobierz pliki
+        env:
+          URLS: ${{ inputs.urls }}
+          DEST: ${{ inputs.dest }}
+        run: |
+          set -euo pipefail
+          case "$DEST" in design/*) ;; *) echo "Dozwolone tylko katalogi design/*"; exit 1 ;; esac
+          mkdir -p "$DEST"
+          i=1
+          for u in $URLS; do
+            host=$(echo "$u" | sed -E 's#^https://([^/]+)/.*#\1#')
+            if [ "$host" != "export-download.canva.com" ]; then echo "Pomijam host: $host"; continue; fi
+            path=${u%%\?*}
+            ext=${path##*.}
+            name=$(printf "%02d.%s" "$i" "$ext")
+            curl -fsSL --max-time 120 -o "$DEST/$name" "$u"
+            echo "Zapisano $DEST/$name ($(stat -c %s "$DEST/$name") B)"
+            i=$((i+1))
+          done
+      - name: Zapisz w repo
+        env:
+          DEST: ${{ inputs.dest }}
+          BRANCH: ${{ inputs.branch }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$DEST"
+          git commit -m "Grafiki z Canvy: $DEST" || { echo "Brak zmian"; exit 0; }
+          git push origin "HEAD:$BRANCH"
