@@ -2,12 +2,145 @@
 export interface ShopProduct { id:string; name:string; cat:string; tag:string; desc:string; use:string; spec:string[]; pln:number; eurCents:number; preorder:boolean; sizes:boolean; video:boolean }
 export const SHOP_PRODUCTS: ShopProduct[] = [
  {
+  "id": "dropbass",
+  "name": "Koszulka „Drop The Bass”",
+  "cat": "Odzież",
+  "tag": "Nowość",
+  "desc": "Biała koszulka z graffiti-DJ-em za konsoletą, neonowymi kroplami farby i hasłem „Drop the bass, not your standards”. Wielki napis z przodu, mały znak GROUAROCK pod spodem.",
+  "use": "Na imprezę, do klubu i na każdy dzień, kiedy bas ma wygrać.",
+  "spec": [
+   "Bawełna 100%, ok. 180 g/m²",
+   "Krój unisex, rozmiary S–3XL",
+   "Nadruk DTG, odporny na pranie w 30°C",
+   "Metka GROUAROCK na karku"
+  ],
+  "pln": 129,
+  "eurCents": 2990,
+  "preorder": false,
+  "sizes": true,
+  "video": false
+ },
+ {
+  "id": "sleeplater",
+  "name": "Koszulka „Sleep Later, Dance Now”",
+  "cat": "Odzież",
+  "tag": "Neon",
+  "desc": "Czarna koszulka z neonowym tłumem pod laserami i hasłem „Sleep later, dance now”. Różowo-turkusowy nadruk świeci w ciemności klubu.",
+  "use": "Na parkiet, nocne streamy i wszystko po północy.",
+  "spec": [
+   "Bawełna 100%, ok. 180 g/m²",
+   "Krój unisex, rozmiary S–3XL",
+   "Nadruk DTG, odporny na pranie w 30°C",
+   "Metka GROUAROCK na karku"
+  ],
+  "pln": 129,
+  "eurCents": 2990,
+  "preorder": false,
+  "sizes": true,
+  "video": false
+ },
+ {
+  "id": "beat",
+  "name": "Koszulka „The Beat Waits For No One”",
+  "cat": "Odzież",
+  "tag": "Graffiti",
+  "desc": "Biała koszulka w stylu street art. Napis „The beat waits for no one” w pomarańczowo-turkusowo-różowych literach z kroplami farby i podpisem DJ GROUAROCK.",
+  "use": "Mądra sentencja dla każdego, kto spóźnia się na własny drop.",
+  "spec": [
+   "Bawełna 100%, ok. 180 g/m²",
+   "Krój unisex, rozmiary S–3XL",
+   "Nadruk DTG, odporny na pranie w 30°C",
+   "Metka GROUAROCK na karku"
+  ],
+  "pln": 129,
+  "eurCents": 2990,
+  "preorder": false,
+  "sizes": true,
+  "video": false
+ },
+ {
+  "id": "goodvibes",
+  "name": "Koszulka „Good Vibes Only”",
+  "cat": "Odzież",
+  "tag": "Festiwal",
+  "desc": "Granatowa koszulka ze sceną festiwalową, fajerwerkami i bąblowym graffiti. Hasło: „Good vibes only. Bad bass never.”",
+  "use": "Na festiwal, wakacje i każdą imprezę z dobrą ekipą.",
+  "spec": [
+   "Bawełna 100%, ok. 180 g/m²",
+   "Krój unisex, rozmiary S–3XL",
+   "Nadruk DTG, odporny na pranie w 30°C",
+   "Metka GROUAROCK na karku"
+  ],
+  "pln": 129,
+  "eurCents": 2990,
+  "preorder": false,
+  "sizes": true,
+  "video": false
+ },
+ {
+  "id": "3am",
+  "name": "Bluza „Made For The 3 AM Crowd”",
+  "cat": "Odzież",
+  "tag": "Nowość",
+  "desc": "Czarna bluza z kapturem i kieszenią kangurką. Graffiti, słuchawki DJ-a i napis „Made for the 3 AM crowd” dla tych, którzy najlepiej bawią się po północy.",
+  "use": "Na after, studio i długie noce z muzyką.",
+  "spec": [
+   "Bawełna z polarem, ok. 320 g/m²",
+   "Kroje unisex, rozmiary S–3XL",
+   "Nadruk DTG, intensywne kolory",
+   "Metka GROUAROCK"
+  ],
+  "pln": 279,
+  "eurCents": 6490,
+  "preorder": false,
+  "sizes": true,
+  "video": false
+ },
+ {
+  "id": "bassluv",
+  "name": "Bluza oversize „Bass Is My Love Language”",
+  "cat": "Odzież",
+  "tag": "Oversize",
+  "desc": "Szara bluza oversize bez kaptura z czaszką w słuchawkach, graffiti i equalizerem. Hasło: „Bass is my love language”.",
+  "use": "Na koncert, na uczelnię i na zimowe wieczory.",
+  "spec": [
+   "Bawełna z polarem, ok. 320 g/m²",
+   "Kroje unisex, rozmiary S–3XL",
+   "Nadruk DTG, intensywne kolory",
+   "Metka GROUAROCK"
+  ],
+  "pln": 249,
+  "eurCents": 5790,
+  "preorder": false,
+  "sizes": true,
+  "video": false
+ },
+ {
+  "id": "zipdance",
+  "name": "Bluza rozpinana „Live From The Dancefloor”",
+  "cat": "Odzież",
+  "tag": "Nowość",
+  "desc": "Czarna bluza rozpinana z kapturem i klubowym plakatem na froncie: kabina DJ-a, dym i lasery. Napis „Live from the dancefloor”.",
+  "use": "Na wyjście do klubu i festiwalowe poranki.",
+  "spec": [
+   "Bawełna z polarem, ok. 320 g/m²",
+   "Kroje unisex, rozmiary S–3XL",
+   "Nadruk DTG, intensywne kolory",
+   "Metka GROUAROCK"
+  ],
+  "pln": 299,
+  "eurCents": 6990,
+  "preorder": false,
+  "sizes": true,
+  "video": false
+ },
+ {
   "id": "koszulka",
   "name": "Koszulka „Groua Sunset”",
   "cat": "Odzież",
   "tag": "Bestseller",
   "desc": "Biała koszulka z nadrukiem zachodzącego słońca i fali dźwiękowej w ciepłych kolorach zachodu słońca. Logo GROUAROCK z przodu, napis „Groua Sunset” pod spodem. Luźny, prosty krój na co dzień i na koncert.",
-  "use": "Do jeansów, pod bluzę albo solo latem. Pierwszy produkt Dropu 01.",
+  "use": "Do jeansów, pod bluzę albo solo latem. Klasyk, który pasuje do wszystkiego.",
   "spec": [
    "Bawełna 100%, ok. 180 g/m²",
    "Krój unisex, rozmiary S–3XL",
