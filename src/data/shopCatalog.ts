@@ -3,10 +3,10 @@ export interface ShopProduct { id:string; name:string; cat:string; tag:string; d
 export const SHOP_PRODUCTS: ShopProduct[] = [
  {
   "id": "koszulka",
-  "name": "Koszulka „Groua Era 80s”",
+  "name": "Koszulka „Groua Sunset”",
   "cat": "Odzież",
   "tag": "Bestseller",
-  "desc": "Biała koszulka z nadrukiem zachodzącego słońca i fali dźwiękowej w kolorach lat 80. Logo GROUAROCK z przodu, napis „Groua Era 80s” pod spodem. Luźny, prosty krój na co dzień i na koncert.",
+  "desc": "Biała koszulka z nadrukiem zachodzącego słońca i fali dźwiękowej w ciepłych kolorach zachodu słońca. Logo GROUAROCK z przodu, napis „Groua Sunset” pod spodem. Luźny, prosty krój na co dzień i na koncert.",
   "use": "Do jeansów, pod bluzę albo solo latem. Pierwszy produkt Dropu 01.",
   "spec": [
    "Bawełna 100%, ok. 180 g/m²",
@@ -79,7 +79,7 @@ export const SHOP_PRODUCTS: ShopProduct[] = [
  },
  {
   "id": "plakat",
-  "name": "Plakat „Groua Era 80s”",
+  "name": "Plakat „Groua Sunset”",
   "cat": "Dom",
   "tag": "Limitowany",
   "desc": "Plakat z płynącą aurorą nad winylem i logo GROUAROCK. Głęboka czerń, neonowy róż i turkus. Wydruk w wysokiej jakości, gotowy do wstawienia w białą ramę.",

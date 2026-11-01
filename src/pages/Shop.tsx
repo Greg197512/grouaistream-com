@@ -146,7 +146,7 @@ export default function Shop() {
       </header>
 
       <section className="mx-auto max-w-5xl px-4 pb-6 pt-14">
-        <p className="mb-2 text-sm font-bold uppercase tracking-[.25em] text-red-600">🎄 Świąteczna edycja · Drop 01</p>
+        <p className="mb-2 text-sm font-bold uppercase tracking-[.25em] text-red-600">🎄 Świąteczna edycja</p>
         <h1 className="text-5xl font-black leading-none sm:text-7xl">Noś swój <span className="bg-gradient-to-r from-red-600 via-orange-500 to-pink-500 bg-clip-text text-transparent">dźwięk.</span></h1>
         <p className="mt-4 max-w-xl text-lg text-neutral-600">Odzież, dodatki i gadżety AI od Grouarock. Jedno konto z Grouaistream. Każdy zakup daje bilet z kodem: VIP w Grouaistream na 30 dni za darmo.</p>
         {done && <p className="mt-4 rounded-xl bg-orange-50 p-4 text-orange-900">Zamówienie #{done} przyjęte. Link do płatności wyślemy na Twój e-mail.</p>}
