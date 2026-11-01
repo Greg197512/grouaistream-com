@@ -21,6 +21,7 @@ import { PWAInstallPrompt } from "@/components/pwa/PWAInstallPrompt";
 import { TipWelcomeModal } from "@/components/modals/TipWelcomeModal";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
 import { CheckoutSuccessHandler } from "@/components/CheckoutSuccessHandler";
+import { PostLoginRedirect } from "@/components/PostLoginRedirect";
 import { lazy, Suspense } from "react";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
@@ -61,6 +62,7 @@ const BlogIndex = lazy(() => import("./pages/BlogIndex"));
 const BlogPost = lazy(() => import("./pages/BlogPost"));
 const AdSubmission = lazy(() => import("./pages/AdSubmission"));
 const Orders = lazy(() => import("./pages/Orders"));
+const Shop = lazy(() => import("./pages/Shop"));
 const NicheLandingPage = lazy(() => import("./pages/NicheLandingPage"));
 const Sponsor = lazy(() => import("./pages/Sponsor"));
 const Business = lazy(() => import("./pages/Business"));
@@ -130,6 +132,7 @@ const AppShell = () => {
       <PWAInstallPrompt />
       <BrowserRouter>
         <CheckoutSuccessHandler />
+        <PostLoginRedirect />
         <AutoVoiceListener />
         <GlobalLiveVoiceOverlay />
         <StemsModal />
@@ -177,6 +180,7 @@ const AppShell = () => {
           <Route path="/blog/:slug" element={<BlogPost />} />
           <Route path="/reklama/:token" element={<AdSubmission />} />
           <Route path="/orders" element={<Orders />} />
+          <Route path="/shop" element={<Shop />} />
           <Route path="/n/:slug" element={<NicheLandingPage />} />
           <Route path="/sponsor" element={<Sponsor />} />
           <Route path="/business" element={<Business />} />

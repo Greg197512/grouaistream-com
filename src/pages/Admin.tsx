@@ -80,6 +80,7 @@ import { AIBuilderProgress } from "@/components/admin/AIBuilderProgress";
 import { FaceLearningPanel } from "@/components/admin/FaceLearningPanel";
 import { B2BPricingPanel } from "@/components/admin/B2BPricingPanel";
 import { B2BOrdersPanel } from "@/components/admin/B2BOrdersPanel";
+import { ShopAdminPanel } from "@/components/admin/ShopAdminPanel";
 import { CostReportsPanel } from "@/components/admin/CostReportsPanel";
 import { BreakEvenPanel } from "@/components/admin/BreakEvenPanel";
 import { EngineLearningPanel } from "@/components/admin/EngineLearningPanel";
@@ -142,6 +143,7 @@ const ADMIN_CATS: { id: string; label: string; Icon: React.ComponentType<{ class
     { value: "paddle", label: "Paddle 💳", Icon: DollarSign },
     { value: "paddle-check", label: "Sprawdź Paddle 🩺", Icon: DollarSign },
     { value: "tips", label: "Tipy & Portfele", Icon: DollarSign },
+    { value: "shop", label: "Sklep Grouarock 🛍️", Icon: DollarSign },
   ] },
   { id: "radio", label: "Rozgłośnia & treść", Icon: RadioIcon, tabs: [
     { value: "radio", label: "Rozgłośnia", Icon: RadioIcon },
@@ -179,7 +181,7 @@ export default function Admin() {
   const { isAdmin, loading, user } = useAdminAuth();
   const navigate = useNavigate();
   const { playTrack } = usePlayer();
-  const [activeTab, setActiveTab] = useState<string>("break-even");
+  const [activeTab, setActiveTab] = useState<string>(() => new URLSearchParams(window.location.search).get("tab") || "break-even");
   const [stats, setStats] = useState<UserStats | null>(null);
   const [deletingGenre, setDeletingGenre] = useState<string | null>(null);
   const [deletingTrack, setDeletingTrack] = useState<string | null>(null);
@@ -909,6 +911,10 @@ export default function Admin() {
               {/* Paddle Tab */}
               <TabsContent value="paddle">
                 <PaddleAdminPanel />
+              </TabsContent>
+
+              <TabsContent value="shop">
+                <ShopAdminPanel />
               </TabsContent>
 
               <TabsContent value="paddle-check" className="space-y-6">

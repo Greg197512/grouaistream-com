@@ -176,6 +176,12 @@ async function handleTransactionCompleted(data: any, env: PaddleEnv) {
     { onConflict: 'paddle_transaction_id' },
   );
 
+  // Sklep Grouarock: oznacz zamówienie jako opłacone.
+  if (customData?.shopOrderId) {
+    await db().from('shop_orders').update({ status: 'paid', paddle_transaction_id: transactionId, updated_at: new Date().toISOString() })
+      .eq('id', customData.shopOrderId).eq('status', 'new');
+  }
+
   // Coffee tip → one_time_purchases + creator_earnings (30-day hold).
   if (isCoffeePrice(priceExternalId)) {
     const recipientUserId = customData?.recipientUserId ?? null;
