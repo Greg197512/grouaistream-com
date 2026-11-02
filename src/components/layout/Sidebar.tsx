@@ -41,6 +41,7 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
     { icon: "dns", labelKey: "nav.mediaServer", href: "/server" },
     { icon: "movie", labelKey: "nav.movies", href: "/movies" },
     { icon: "radio", labelKey: "nav.radioLive", href: "/radio-live", badge: "LIVE" },
+    { icon: "storefront", labelKey: "Sklep Grouarock", href: "/shop", badge: "NEW" },
     { icon: "download", labelKey: "nav.importYoutube", href: "/import-youtube" },
     { icon: "auto_awesome", labelKey: "nav.sunoAI", href: "/studio", badge: "🎵" },
     { icon: "movie_creation", labelKey: "nav.videoStudio", href: "/video", badge: "🎬" },

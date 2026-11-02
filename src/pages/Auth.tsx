@@ -24,8 +24,11 @@ const Auth = () => {
   const navigate = useNavigate();
   const { signIn, signUp } = useAuth();
 
+  const nextPath = (() => { const n = new URLSearchParams(window.location.search).get("next"); return n && n.startsWith("/") && !n.startsWith("//") ? n : "/"; })();
+
   const handleGoogleSignIn = async () => {
     setGoogleLoading(true);
+    try { if (nextPath !== "/") sessionStorage.setItem("gr_next", nextPath); } catch {}
     try {
       const result = await lovable.auth.signInWithOAuth("google", {
         redirect_uri: window.location.origin,
@@ -43,7 +46,7 @@ const Auth = () => {
       }
       // Sesja już ustawiona (popup) — wracamy na stronę główną.
       setGoogleLoading(false);
-      navigate("/");
+      navigate(nextPath);
     } catch (e: any) {
       toast.error(e?.message || "Błąd logowania Google");
       setGoogleLoading(false);
@@ -61,7 +64,7 @@ const Auth = () => {
           toast.error(error.message || "Failed to sign in");
         } else {
           toast.success(t("auth.welcomeBackMsg"));
-          navigate("/");
+          navigate(nextPath);
         }
       } else {
         if (!displayName.trim() || displayName.trim().length < 2) {
