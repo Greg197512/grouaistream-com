@@ -45,6 +45,8 @@ i aktualny. Jeśli fakt tu jest — nie weryfikuj go od nowa dziesiątkami wywo�
 - Martwe: ~46 na `cdn1.suno.ai` (403 — skasowane po stronie Suno, nieodzyskiwalne bez oryginałów).
 
 ## Deploy (obowiązkowy flow)
+**Od 4.11.2026 (ADLC, `docs/decisions.md`):** zmiany przez PR do `main`; scalenie = produkcja (L3) tylko po zgodzie Grzegorza.
+Zadania i audyt: `docs/agent-todo.md`, `docs/audit/2026-11-audit.md`.
 Gałąź robocza: `claude/grouaistream-analysis-optimization-ivi8w5`.
 `push -u origin <branch>` → `checkout main` → `pull --no-rebase` → `merge --no-ff <branch>` → `push origin main` → wróć na branch.
 Stopka commita: `Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>` + `Claude-Session: <url>`.
