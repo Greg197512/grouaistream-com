@@ -9,24 +9,34 @@ export function XmasDecor() {
     const c = cv.current; if (!c) return;
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (reduce) return;
-    const x = c.getContext("2d")!; let w = 0, h = 0, raf = 0;
-    const fl = Array.from({ length: 90 }, () => ({ x: Math.random(), y: Math.random(), r: 1 + Math.random() * 3.2, s: .25 + Math.random() * .9, d: Math.random() * 6 }));
+    if (document.documentElement.getAttribute("data-lowpower") === "on") return;
+    // Lekki śnieg: bez rozmycia (shadowBlur był bardzo drogi), ~30 kl./s, pauza w trakcie przewijania
+    // i gdy karta jest w tle — żeby przewijanie palcem/myszką było płynne.
+    const x = c.getContext("2d")!; let w = 0, h = 0, raf = 0, last = 0, scrolling = 0;
+    const n = innerWidth < 768 ? 36 : 70;
+    const fl = Array.from({ length: n }, () => ({ x: Math.random(), y: Math.random(), r: 1 + Math.random() * 2.6, s: .25 + Math.random() * .9, d: Math.random() * 6 }));
     const size = () => { w = c.width = innerWidth; h = c.height = innerHeight; };
     size(); addEventListener("resize", size);
+    const onScroll = () => { clearTimeout(scrolling); scrolling = window.setTimeout(() => { scrolling = 0; }, 180); };
+    addEventListener("scroll", onScroll, { passive: true });
     const tick = (t: number) => {
-      x.clearRect(0, 0, w, h);
-      for (const f of fl) {
-        f.y += f.s * .00028 * 16; f.x += Math.sin(t / 3200 + f.d) * .00025;
-        if (f.y > 1.02) { f.y = -.02; f.x = Math.random(); }
-        x.beginPath(); x.fillStyle = "rgba(255,255,255,.95)"; x.shadowColor = "rgba(120,150,190,.55)"; x.shadowBlur = 4;
-        x.arc(f.x * w, f.y * h, f.r, 0, 7); x.fill();
-      }
       raf = requestAnimationFrame(tick);
+      if (scrolling || document.hidden || t - last < 33) return;
+      const dt = Math.min(t - last, 100); last = t;
+      x.clearRect(0, 0, w, h);
+      x.fillStyle = "rgba(255,255,255,.95)";
+      x.beginPath();
+      for (const f of fl) {
+        f.y += f.s * .00028 * dt; f.x += Math.sin(t / 3200 + f.d) * .00025;
+        if (f.y > 1.02) { f.y = -.02; f.x = Math.random(); }
+        x.moveTo(f.x * w + f.r, f.y * h); x.arc(f.x * w, f.y * h, f.r, 0, 7);
+      }
+      x.fill();
     };
     raf = requestAnimationFrame(tick);
-    return () => { cancelAnimationFrame(raf); removeEventListener("resize", size); };
+    return () => { cancelAnimationFrame(raf); clearTimeout(scrolling); removeEventListener("resize", size); removeEventListener("scroll", onScroll); };
   }, []);
-  const bulbs = Array.from({ length: 40 });
+  const bulbs = Array.from({ length: 28 });
   return (
     <>
       <canvas ref={cv} aria-hidden className="pointer-events-none fixed inset-0 z-[35]" />
