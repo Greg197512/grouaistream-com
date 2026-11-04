@@ -29,7 +29,7 @@ Właściciel: **agent** (wykonuje po bramce) albo **Grzegorz** (tylko Ty możesz
 | P1-7 | Limity zapytań i uwierzytelnienie dla `api/youtube-search`, `api/media`, `api/news-feed` | Stream | S | niskie | L2 | agent |
 | P1-8 | Otwarty zapis bez logowania (`blog_newsletter_subscribers`, `reel_requests`, `dj_session_guests`): limit zapytań lub captcha | Stream | S | niskie | L3 | agent |
 | P1-9 | GrouaRock: spec dostawcy (porównanie 2–3 firm druku na żądanie: marża, czas dostawy, API, zwroty) i automatycznej realizacji zamówień | GrouaRock | M | średnie | L1 | agent |
-| P1-10 | GrouaRock: regulamin sklepu, odstąpienie 14 dni, VAT OSS, faktury, informacja o dostawcy i czasie dostawy | GrouaRock | M | wysokie | L4 | agent (projekt) → Grzegorz/prawnik |
+| P1-10 | GrouaRock: regulamin (projekt gotowy: `/shop/terms`, PL/EN/NL), VAT OSS i faktury (gotowe w panelu) — do zatwierdzenia treści i uzupełnienia `SHOP_SELLER_*`, `SHOP_VAT_MODE` w Vercel; wybór dostawcy i czasu dostawy | GrouaRock | M | wysokie | L4 | Grzegorz/prawnik |
 | P1-11 | Radio: spec silnika ramówki (bloki gatunkowe, weekend Disco/Electronic/Hip-Hop, rotacja bez powtórek w oknie X h, dżingle) | Radio | M | niskie | L1 | agent |
 | P1-12 | Radio: bramka jakości przed anteną (LUFS, cisza, długość, filtr treści) z kodem z `src/lib/releasePrep.ts` | Radio, Studio | M | niskie | L2 | agent |
 | P1-13 | Monitor zdrowia: przenieść z GitHub Actions (co 5 min) na cron Vercela albo co 15 min | infra | S | niskie | L2 | agent |

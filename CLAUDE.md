@@ -26,7 +26,9 @@ i aktualny. Jeśli fakt tu jest — nie weryfikuj go od nowa dziesiątkami wywo�
 
 - **Sklep GrouaRock** (`/shop`): Vercel `api/shop-checkout` → zamówienia w istniejącej tabeli `aurora_business_orders`
   (`service_type="shop"`, pozycje i adres w `payload`, token usera + RLS). Ceny z `src/data/shopCatalog.ts`.
-  Płatność Stripe Checkout, gdy w Vercel jest `STRIPE_SECRET_KEY`; bez niego zamówienie „do opłacenia”. Paddle nie (zakaz towarów fizycznych).
+  Płatność: Stripe (`STRIPE_SECRET_KEY`) i/lub przelew Revolut (`SHOP_BANK_HOLDER`, `SHOP_BANK_IBAN`). Paddle nie (zakaz towarów fizycznych).
+  Sklep i regulamin (`/shop/terms`) w PL/EN/NL (`src/i18n/shop.ts`, `src/data/shopCatalogI18n.ts`). Faktury → `aurora_invoices`
+  (admin, `src/lib/shopInvoice.ts`), VAT OSS → `src/lib/vatOss.ts` + raport kwartalny w panelu. Dane sprzedawcy: `SHOP_SELLER_*`, `SHOP_VAT_MODE`.
   Stara funkcja `shop-checkout` i tabele `shop_orders`/`gift_codes` nie są używane (brak w bazie prod).
 
 ## Vercel

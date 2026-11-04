@@ -2,6 +2,7 @@
 // więc ceny zawsze pochodzą z katalogu, a nie od przeglądarki.
 // Import względny (nie "@/"), bo plik jest też pakowany do funkcji Vercela w api/.
 import { SHOP_PRODUCTS, type ShopProduct } from "../data/shopCatalog";
+import { isEuCountry } from "./vatOss";
 
 export const SHOP_SERVICE_TYPE = "shop";
 export const SHOP_SOURCE = "grouarock-shop";
@@ -10,7 +11,12 @@ export const SHOP_MAX_QTY = 20;
 
 export type CartItem = { id: string; qty: number; size?: string };
 export type PricedLine = { id: string; name: string; size: string | null; qty: number; unitCents: number };
-export type Shipping = { name: string; street: string; city: string; zip: string; country: string; phone?: string };
+/** `country` to kod ISO kraju UE (np. "NL"); `company`/`taxId` opcjonalnie do faktury. */
+export type Shipping = { name: string; street: string; city: string; zip: string; country: string; phone?: string; company?: string; taxId?: string };
+export type PayMethod = "card" | "transfer";
+
+/** Tytuł przelewu / numer zamówienia widoczny dla klienta. */
+export const orderRef = (id: string) => `GR-${id.replace(/-/g, "").slice(0, 8).toUpperCase()}`;
 
 const byId = new Map<string, ShopProduct>(SHOP_PRODUCTS.map((p) => [p.id, p]));
 
@@ -38,13 +44,16 @@ export function priceCart(items: unknown): { lines: PricedLine[]; totalCents: nu
   return { lines, totalCents: lines.reduce((a, l) => a + l.unitCents * l.qty, 0) };
 }
 
-/** Czyści adres wysyłki; telefon jest opcjonalny, pozostałe pola wymagane. */
+/** Czyści adres wysyłki. Kraj musi być krajem UE (kod ISO); telefon, firma i NIP są opcjonalne. */
 export function cleanShipping(s: unknown): Shipping | null {
   const o = (s ?? {}) as Record<string, unknown>;
   const f = (k: string, max = 120) => String(o[k] ?? "").replace(/\s+/g, " ").trim().slice(0, max);
-  const out: Shipping = { name: f("name"), street: f("street", 160), city: f("city"), zip: f("zip", 16), country: f("country", 60), phone: f("phone", 32) };
-  if ([out.name, out.street, out.city, out.zip, out.country].some((v) => v.length < 2)) return null;
-  if (!out.phone) delete out.phone;
+  const out: Shipping = {
+    name: f("name"), street: f("street", 160), city: f("city"), zip: f("zip", 16), country: f("country", 2).toUpperCase(),
+    phone: f("phone", 32), company: f("company", 160), taxId: f("taxId", 32),
+  };
+  if ([out.name, out.street, out.city, out.zip].some((v) => v.length < 2) || !isEuCountry(out.country)) return null;
+  for (const k of ["phone", "company", "taxId"] as const) if (!out[k]) delete out[k];
   return out;
 }
 
@@ -58,9 +67,10 @@ export function orderBrief(lines: PricedLine[], totalCents: number): string {
 export type ShopOrderView = {
   id: string; user_id: string | null; email: string | null; items: PricedLine[]; total_cents: number;
   status: string; payment_status: string; shipping: Shipping | null; stripe_session_id: string | null; created_at: string;
+  paid_at: string | null; method: PayMethod | null; lang: string | null;
 };
 export function toShopOrder(row: Record<string, unknown>): ShopOrderView {
-  const p = (row.payload ?? {}) as { items?: unknown; total_cents?: unknown; shipping?: Shipping; stripe_session_id?: string };
+  const p = (row.payload ?? {}) as { items?: unknown; total_cents?: unknown; shipping?: Shipping; stripe_session_id?: string; method?: PayMethod; lang?: string };
   const str = (v: unknown) => (v == null ? null : String(v));
   return {
     id: String(row.id), user_id: str(row.user_id), email: str(row.client_email),
@@ -68,5 +78,6 @@ export function toShopOrder(row: Record<string, unknown>): ShopOrderView {
     total_cents: typeof p.total_cents === "number" && Number.isFinite(p.total_cents) ? p.total_cents : Math.round(Number(row.price_eur ?? 0) * 100),
     status: String(row.status ?? "new"), payment_status: String(row.payment_status ?? "pending"),
     shipping: p.shipping ?? null, stripe_session_id: p.stripe_session_id ?? null, created_at: String(row.created_at),
+    paid_at: str(row.paid_at), method: p.method ?? null, lang: p.lang ?? null,
   };
 }
