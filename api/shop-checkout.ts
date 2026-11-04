@@ -101,9 +101,12 @@ function siteOrigin(req: Request): string {
 
 const shipCentsEnv = () => Math.max(0, Math.round(Number(env("SHOP_SHIPPING_EUR_CENTS") ?? 0)) || 0);
 const hasStripe = () => !!env("STRIPE_SECRET_KEY");
+// Płatność „Revolut QR”: wystarczy SHOP_REVOLUT_LINK (klient płaci w aplikacji albo kartą); IBAN jest zapasowy.
 const bank = () => {
-  const iban = env("SHOP_BANK_IBAN"), holder = env("SHOP_BANK_HOLDER");
-  return iban && holder && isValidIban(iban) ? { holder, iban: iban.replace(/\s+/g, "").replace(/(.{4})/g, "$1 ").trim(), bic: env("SHOP_BANK_BIC") ?? null, revolut: env("SHOP_REVOLUT_LINK") ?? null } : null;
+  const iban = env("SHOP_BANK_IBAN"), holder = env("SHOP_BANK_HOLDER"), revolut = env("SHOP_REVOLUT_LINK") ?? null;
+  const ibanOk = !!(iban && holder && isValidIban(iban));
+  if (!revolut && !ibanOk) return null;
+  return { holder: holder ?? "", iban: ibanOk ? iban!.replace(/\s+/g, "").replace(/(.{4})/g, "$1 ").trim() : "", bic: env("SHOP_BANK_BIC") ?? null, revolut };
 };
 
 function mailCfg(): MailCfg | null {

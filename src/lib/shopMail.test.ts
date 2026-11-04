@@ -16,9 +16,11 @@ describe("e-maile sklepu", () => {
     expect(m.html).toContain("3–7 werkdagen");
     expect(m.html).toContain("Okulary &lt;AI&gt;");
   });
-  it("przelew: IBAN i tytuł", () => {
-    const m = customerTransferMail({ ...o, lang: "pl" }, { holder: "Grzegorz Karon", iban: "LT39 3250 0225 7672 5699", bic: "REVOLT21" });
-    expect(m.html).toContain("LT39 3250 0225 7672 5699");
+  it("płatność QR: link Revolut, kwota i numer zamówienia", () => {
+    const m = customerTransferMail({ ...o, lang: "pl" }, { holder: "Grzegorz Karon", iban: "LT39 3250 0225 7672 5699", bic: "REVOLT21", revolut: "https://revolut.me/grouaaistream" });
+    expect(m.html).toContain("revolut.me/grouaaistream");
+    expect(m.html).not.toContain("LT39");
+    expect(customerTransferMail(o, { holder: "G", iban: "LT39 3250", bic: null }).html).toContain("LT39 3250");
     expect(m.html).toContain("GR-3F2A9C1E");
   });
   it("admin i dostawca", () => {

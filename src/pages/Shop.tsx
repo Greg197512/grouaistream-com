@@ -82,27 +82,22 @@ function CopyRow({ label, value, copyValue, t }: { label: string; value: string;
 }
 
 function TransferBox({ bank, t, eur, onClose }: { bank: Bank; t: ShopDict; eur: (c: number) => string; onClose?: () => void }) {
+  const tag = bank.revolut?.replace(/^https?:\/\/revolut\.me\//i, "").replace(/[/?#].*$/, "");
   return (
     <div className="rounded-2xl border border-orange-200 bg-orange-50 p-4 text-neutral-900">
       <div className="flex items-start justify-between gap-2"><h3 className="text-lg font-black">{t.transferTitle}</h3>{onClose && <button type="button" onClick={onClose} aria-label={t.close} className="h-8 w-8 rounded-full border border-neutral-300 bg-white">✕</button>}</div>
       <p className="mt-1 text-sm text-neutral-700">{t.transferText}</p>
-      <div className="mt-2 divide-y divide-orange-200">
-        <CopyRow label={t.holder} value={bank.holder} t={t} />
-        <CopyRow label="IBAN" value={bank.iban} copyValue={bank.iban.replace(/\s+/g, "")} t={t} />
-        {bank.bic && <CopyRow label="BIC" value={bank.bic} t={t} />}
+      {bank.revolut && (
+        <div className="mt-4 flex flex-col items-center gap-3 rounded-2xl bg-white p-4">
+          <QRCodeSVG value={bank.revolut} size={208} level="M" marginSize={1} aria-label={`Revolut @${tag}`} />
+          <p className="font-mono text-sm font-semibold text-neutral-700">@{tag}</p>
+          <a href={bank.revolut} target="_blank" rel="noopener noreferrer" className="inline-flex h-11 items-center rounded-full bg-neutral-900 px-6 text-sm font-bold text-white">{t.openRevolut}</a>
+        </div>
+      )}
+      <div className="mt-3 divide-y divide-orange-200">
         <CopyRow label={t.amount} value={eur(bank.amountCents)} copyValue={(bank.amountCents / 100).toFixed(2)} t={t} />
         <CopyRow label={t.reference} value={bank.reference} t={t} />
       </div>
-      {bank.revolut && (
-        <div className="mt-4 flex flex-wrap items-center gap-4 rounded-xl bg-white p-3">
-          <QRCodeSVG value={bank.revolut} size={112} level="M" aria-label="Revolut QR" />
-          <div className="min-w-0 flex-1 space-y-2">
-            <p className="text-sm font-semibold">{t.revolutQr}</p>
-            <p className="font-mono text-sm text-neutral-600">@{bank.revolut.replace(/^https?:\/\/revolut\.me\//i, "").replace(/\/.*$/, "")}</p>
-            <a href={bank.revolut} target="_blank" rel="noopener noreferrer" className="inline-flex h-11 items-center rounded-full bg-neutral-900 px-5 text-sm font-bold text-white">{t.openRevolut}</a>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
