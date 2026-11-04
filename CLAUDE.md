@@ -10,14 +10,14 @@ i aktualny. Jeśli fakt tu jest — nie weryfikuj go od nowa dziesiątkami wywo�
 
 ## Backend
 - Supabase (Lovable-managed) ref: `bvstvawnigyczvofzhps` (klient: `src/integrations/supabase/client.ts`).
-  Do zapytań SQL: Lovable MCP `query_database`, project_id `462bddcb-d545-4f42-bc51-5f437cb12bbe`
-  (workspace `YE3AfpUp6rhkrR1T4L8Y`). MCP bywa niestabilny (timeout 60 s) — batchuj, licz na retry.
+  **Lovable omijać całkowicie** (żadnych narzędzi Lovable, także `query_database`). Odczyt danych: `api/diag-tracks`
+  przez `mcp__Vercel__web_fetch_vercel_url`. Pełny SQL dopiero na własnym Supabase `sbmfliylgpqyteezrrtn` (MCP Supabase).
 - **R2 media (publiczne):** `https://pub-46ecdc3a5ae341fcb16454d732eb9bcd.r2.dev`.
   R2 zwraca `206 audio/mpeg` z zakresami, ale **BEZ nagłówka CORS** → nie używać Web Audio
   z `crossOrigin="anonymous"` na tych plikach. Zwykłe `<audio>` (crossOrigin=null) gra wprost.
 - Uploady userów → **Vercel `api/r2-upload`** (token Supabase → podpisany PUT SigV4 → przeglądarka wysyła prosto na R2;
   `{"action":"setup-cors"}` ustawia CORS zasobnika). Wymaga w Vercel: `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`.
-  Zapas: edge `r2-signed-url`/`r2-upload-proxy`. NIE używać Lovable (zjada kredyty).
+  Zapas: edge `r2-signed-url`/`r2-upload-proxy`.
 - Asystent `api/assistant`: klucze AI w Vercel (brak) → Pollinations (bywa 402) → edge `ai-assistant` (ma klucze). Test: `GET /api/assistant?ping=1[&skip=pollinations]`.
 - Zapis na R2 z edge: `_shared/r2.ts` = fetch + SigV4 (NIE @aws-sdk — zawieszał się). Test: `suno-generate` `{"action":"r2test"}`.
 - Studio → Spotify: po każdej generacji `certifyWithToasts` (`src/lib/releasePipeline.ts`, `releasePrep.ts`):
