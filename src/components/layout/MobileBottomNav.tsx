@@ -9,6 +9,7 @@ import { toast } from "sonner";
 const navItems = [
   { icon: "home", labelKey: "nav.home", href: "/" },
   { icon: "search", labelKey: "nav.search", href: "/search" },
+  { icon: "local_mall", labelKey: "nav.shop", href: "/shop", shop: true },
   { icon: "auto_awesome", labelKey: "nav.sunoAI", href: "/studio" },
   { icon: "smart_toy", labelKey: "nav.aiDj", href: "/ai-dj" },
   { icon: "library_music", labelKey: "nav.library", href: "/library" },
@@ -99,18 +100,20 @@ export const MobileBottomNav = () => {
         {navItems.map((item) => {
           const isActive = location.pathname === item.href;
           const isNeon = (item as any).neon;
+          const isShop = (item as any).shop;
           return (
             <button
               key={item.href}
               onClick={() => navigate(item.href)}
               className={cn(
                 "flex flex-col items-center gap-0.5 py-1 px-3 my-1 rounded-2xl transition-all flex-shrink-0",
-                isActive ? "text-primary bg-primary/10 ring-1 ring-primary/30" : isNeon ? "text-accent" : "text-muted-foreground"
+                isActive ? "text-primary bg-primary/10 ring-1 ring-primary/30" : isShop ? "text-orange-400" : isNeon ? "text-accent" : "text-muted-foreground"
               )}
               style={{
                 scrollSnapAlign: "center",
                 minWidth: "4rem",
                 ...(isActive ? { boxShadow: "0 0 18px hsl(268 100% 66% / 0.35)" } : {}),
+                ...(isShop && !isActive ? { filter: "drop-shadow(0 0 6px rgb(249 115 22 / 0.55))" } : {}),
                 ...(isNeon ? {
                   filter: isActive
                     ? "drop-shadow(0 0 8px hsl(331 100% 62% / 0.85))"

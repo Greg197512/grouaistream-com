@@ -31,6 +31,7 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
     { icon: "home", labelKey: "nav.home", href: "/" },
     { icon: "search", labelKey: "nav.search", href: "/search" },
     { icon: "schedule", labelKey: "nav.era", href: "/era", badge: "NEW" },
+    { icon: "local_mall", labelKey: "nav.shop", href: "/shop", badge: "MERCH" },
     { icon: "library_music", labelKey: "nav.library", href: "/library" },
   ];
 
@@ -41,7 +42,6 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
     { icon: "dns", labelKey: "nav.mediaServer", href: "/server" },
     { icon: "movie", labelKey: "nav.movies", href: "/movies" },
     { icon: "radio", labelKey: "nav.radioLive", href: "/radio-live", badge: "LIVE" },
-    { icon: "storefront", labelKey: "Sklep Grouarock", href: "/shop", badge: "NEW" },
     { icon: "download", labelKey: "nav.importYoutube", href: "/import-youtube" },
     { icon: "auto_awesome", labelKey: "nav.sunoAI", href: "/studio", badge: "🎵" },
     { icon: "movie_creation", labelKey: "nav.videoStudio", href: "/video", badge: "🎬" },
@@ -115,7 +115,7 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
       <nav className="flex-1 overflow-y-auto groove-scrollbar px-3 py-4">
         <div className="space-y-1">
           {navItems.map((item) => (
-            <NavItem key={item.href} icon={item.icon} label={t(item.labelKey)} active={activeItem === item.href} collapsed={collapsed} onClick={() => handleNavClick(item.href)} />
+            <NavItem key={item.href} icon={item.icon} label={t(item.labelKey)} active={activeItem === item.href} collapsed={collapsed} onClick={() => handleNavClick(item.href)} badge={item.href === "/shop" ? item.badge : undefined} />
           ))}
         </div>
 
