@@ -19,7 +19,7 @@
  *   POST { action:"payinfo", orderId }          → dane do przelewu dla własnego zamówienia
  *   POST { action:"confirm", orderId }          → { orderId, paid } (sprawdza sesję w Stripe; klient albo admin)
  */
-import { cleanShipping, orderBrief, orderRef, priceCart, SHOP_SERVICE_TYPE, SHOP_SOURCE } from "../src/lib/shopOrder";
+import { cleanShipping, isValidIban, orderBrief, orderRef, priceCart, SHOP_SERVICE_TYPE, SHOP_SOURCE } from "../src/lib/shopOrder";
 import { parseVatMode } from "../src/lib/vatOss";
 import { localizeProduct } from "../src/data/shopCatalogI18n";
 import { SHOP_PRODUCTS } from "../src/data/shopCatalog";
@@ -92,13 +92,13 @@ const shipCentsEnv = () => Math.max(0, Math.round(Number(env("SHOP_SHIPPING_EUR_
 const hasStripe = () => !!env("STRIPE_SECRET_KEY");
 const bank = () => {
   const iban = env("SHOP_BANK_IBAN"), holder = env("SHOP_BANK_HOLDER");
-  return iban && holder ? { holder, iban: iban.replace(/\s+/g, "").replace(/(.{4})/g, "$1 ").trim(), bic: env("SHOP_BANK_BIC") ?? null, revolut: env("SHOP_REVOLUT_LINK") ?? null } : null;
+  return iban && holder && isValidIban(iban) ? { holder, iban: iban.replace(/\s+/g, "").replace(/(.{4})/g, "$1 ").trim(), bic: env("SHOP_BANK_BIC") ?? null, revolut: env("SHOP_REVOLUT_LINK") ?? null } : null;
 };
 
 function publicConfig() {
   const name = env("SHOP_SELLER_NAME"), address = env("SHOP_SELLER_ADDRESS");
   return {
-    stripe: hasStripe(), transfer: !!bank(), shippingCents: shipCentsEnv(), deliveryDays: env("SHOP_DELIVERY_DAYS") ?? "5–14",
+    stripe: hasStripe(), transfer: !!bank(), ibanInvalid: !!env("SHOP_BANK_IBAN") && !isValidIban(env("SHOP_BANK_IBAN")!), shippingCents: shipCentsEnv(), deliveryDays: env("SHOP_DELIVERY_DAYS") ?? "5–14",
     seller: name && address ? {
       name, address, country: env("SHOP_SELLER_COUNTRY")?.toUpperCase() ?? null, taxId: env("SHOP_SELLER_TAX_ID") ?? null,
       vatId: env("SHOP_SELLER_VAT_ID") ?? null, email: env("SHOP_SELLER_EMAIL") ?? null,

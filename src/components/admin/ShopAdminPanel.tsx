@@ -117,7 +117,7 @@ export function ShopAdminPanel() {
         <h3 className="font-semibold mb-2">Konfiguracja sklepu (zmienne Vercel)</h3>
         <ul className="grid gap-1 sm:grid-cols-2">
           <li>Karta (Stripe): <b>{cfg?.stripe ? "włączona" : "brak STRIPE_SECRET_KEY"}</b></li>
-          <li>Przelew (Revolut): <b>{cfg?.transfer ? "włączony" : "brak SHOP_BANK_HOLDER / SHOP_BANK_IBAN"}</b></li>
+          <li>Przelew (Revolut): <b>{cfg?.transfer ? "włączony" : cfg?.ibanInvalid ? "SHOP_BANK_IBAN jest nieprawidłowy" : "brak SHOP_BANK_HOLDER / SHOP_BANK_IBAN"}</b></li>
           <li>Sprzedawca: <b>{cfg?.seller ? `${cfg.seller.name} (${cfg.seller.country ?? "kraj?"})` : "brak SHOP_SELLER_NAME / SHOP_SELLER_ADDRESS"}</b></li>
           <li>VAT: <b>{cfg?.vatMode === "oss" ? "OSS (stawka kraju nabywcy)" : cfg?.vatMode === "domestic" ? "krajowy (stawka sprzedawcy)" : cfg?.vatMode === "exempt" ? "zwolnienie z VAT" : "brak SHOP_VAT_MODE"}</b></li>
         </ul>

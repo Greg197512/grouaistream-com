@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cleanShipping, orderBrief, orderRef, priceCart, toShopOrder } from "./shopOrder";
+import { cleanShipping, isValidIban, orderBrief, orderRef, priceCart, toShopOrder } from "./shopOrder";
 
 describe("priceCart", () => {
   it("liczy ceny z katalogu i scala te same pozycje", () => {
@@ -44,4 +44,13 @@ describe("toShopOrder", () => {
 
 describe("orderRef", () => {
   it("krótki tytuł przelewu", () => expect(orderRef("3f2a9c1e-0000-4000-8000-000000000000")).toBe("GR-3F2A9C1E"));
+});
+
+describe("isValidIban", () => {
+  it("sprawdza długość i sumę kontrolną", () => {
+    expect(isValidIban("LT12 1000 0111 0100 1000")).toBe(true);
+    expect(isValidIban("GB82 WEST 1234 5698 7654 32")).toBe(true);
+    expect(isValidIban("LT39325002257672")).toBe(false);
+    expect(isValidIban("LT13 1000 0111 0100 1000")).toBe(false);
+  });
 });

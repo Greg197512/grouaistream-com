@@ -81,3 +81,18 @@ export function toShopOrder(row: Record<string, unknown>): ShopOrderView {
     paid_at: str(row.paid_at), method: p.method ?? null, lang: p.lang ?? null,
   };
 }
+
+const IBAN_LEN: Record<string, number> = { LT: 20, PL: 28, NL: 18, DE: 22, BE: 16, GB: 22, IE: 22, FR: 27, ES: 24, IT: 27, AT: 20, LV: 21, EE: 20 };
+/** Sprawdza IBAN (długość dla znanych krajów + suma kontrolna mod 97). */
+export function isValidIban(raw: string): boolean {
+  const s = raw.replace(/\s+/g, "").toUpperCase();
+  if (!/^[A-Z]{2}\d{2}[A-Z0-9]{10,30}$/.test(s)) return false;
+  const len = IBAN_LEN[s.slice(0, 2)];
+  if (len && s.length !== len) return false;
+  let rem = 0;
+  for (const ch of s.slice(4) + s.slice(0, 4)) {
+    const v = ch >= "A" ? String(ch.charCodeAt(0) - 55) : ch;
+    for (const d of v) rem = (rem * 10 + Number(d)) % 97;
+  }
+  return rem === 1;
+}

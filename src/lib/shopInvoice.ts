@@ -5,7 +5,7 @@ import { splitGross, vatRateFor, type VatMode } from "./vatOss";
 export type Seller = { name: string; address: string; country: string | null; taxId: string | null; vatId: string | null; email: string | null };
 /** Publiczna konfiguracja sklepu (GET /api/shop-checkout), ustawiana w zmiennych Vercela. */
 export type ShopConfig = {
-  stripe: boolean; transfer: boolean; shippingCents: number; deliveryDays: string;
+  stripe: boolean; transfer: boolean; ibanInvalid?: boolean; shippingCents: number; deliveryDays: string;
   seller: Seller | null; vatMode: VatMode | null; exemptNote: string | null;
 };
 export type InvoiceLang = "pl" | "en" | "nl";
