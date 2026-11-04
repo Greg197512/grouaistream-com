@@ -35,7 +35,7 @@ describe("faktury", () => {
     id: "3f2a9c1e-0000-4000-8000-000000000000", user_id: "u1", email: "a@b.nl", total_cents: 3980,
     items: [{ id: "dropbass", name: "Koszulka", size: "M", qty: 1, unitCents: 2990 }],
     status: "paid", payment_status: "paid", shipping: { name: "An <b>", street: "Dam 1", city: "Amsterdam", zip: "1012", country: "NL" },
-    stripe_session_id: null, created_at: "2026-11-01T00:00:00Z", paid_at: "2026-11-02T00:00:00Z", method: "transfer", lang: "nl",
+    stripe_session_id: null, created_at: "2026-11-01T00:00:00Z", paid_at: "2026-11-02T00:00:00Z", method: "transfer", lang: "nl", fulfillment: null,
   };
   const seller = { name: "Grouarock", address: "Ulica 1, Gdańsk", country: "PL", taxId: "123", vatId: "PL123", email: null };
   it("numeracja w miesiącu", () => {

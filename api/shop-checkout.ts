@@ -17,12 +17,23 @@
  *   GET                                         → konfiguracja publiczna (ShopConfig)
  *   POST { action:"create", items, shipping, method, lang } → { orderId, ref, payment:"stripe", url } | { orderId, ref, payment:"transfer", bank } | { orderId, ref, payment:"pending" }
  *   POST { action:"payinfo", orderId }          → dane do przelewu dla własnego zamówienia
- *   POST { action:"confirm", orderId }          → { orderId, paid } (sprawdza sesję w Stripe; klient albo admin)
+ *   POST { action:"confirm", orderId }          → { orderId, paid } (sprawdza sesję w Stripe; klient albo admin) + realizacja
+ *   POST { action:"fulfill", orderId, force? }  → (admin) wysyła opłacone zamówienie do realizacji
+ *   POST { action:"printful-check" }            → (admin) które produkty nie są jeszcze podpięte w Printful
+ *
+ * Realizacja (my jesteśmy pośrednikiem): po opłaceniu odzież/dodatki idą do Printful (`PRINTFUL_API_KEY`,
+ * opcjonalnie `PRINTFUL_STORE_ID`, `PRINTFUL_AUTO_CONFIRM=true` = od razu do produkcji, inaczej szkic do zatwierdzenia),
+ * gadżety e-mailem do dostawcy (`SHOP_SUPPLIER_EMAIL`). E-maile: `RESEND_API_KEY` albo `BREVO_API_KEY`
+ * + `SHOP_MAIL_FROM` (+ `SHOP_MAIL_FROM_NAME`); powiadomienia dla Ciebie na `SHOP_NOTIFY_EMAIL`.
  */
 import { cleanShipping, isValidIban, orderBrief, orderRef, priceCart, SHOP_SERVICE_TYPE, SHOP_SOURCE } from "../src/lib/shopOrder";
 import { parseVatMode } from "../src/lib/vatOss";
 import { localizeProduct } from "../src/data/shopCatalogI18n";
 import { SHOP_PRODUCTS } from "../src/data/shopCatalog";
+import { supplierFor, printfulExternalId } from "../src/data/shopSuppliers";
+import { createPrintfulOrder, printfulExternalIds, type PrintfulCfg } from "../src/lib/printful";
+import { adminMail, customerPaidMail, customerTransferMail, sendMail, supplierMail, type MailCfg, type MailOrder } from "../src/lib/shopMail";
+import type { PricedLine, Shipping } from "../src/lib/shopOrder";
 
 export const config = { runtime: "edge" };
 
@@ -95,6 +106,19 @@ const bank = () => {
   return iban && holder && isValidIban(iban) ? { holder, iban: iban.replace(/\s+/g, "").replace(/(.{4})/g, "$1 ").trim(), bic: env("SHOP_BANK_BIC") ?? null, revolut: env("SHOP_REVOLUT_LINK") ?? null } : null;
 };
 
+function mailCfg(): MailCfg | null {
+  const from = env("SHOP_MAIL_FROM");
+  const fromName = env("SHOP_MAIL_FROM_NAME") ?? "GrouaDrop";
+  if (!from) return null;
+  if (env("RESEND_API_KEY")) return { provider: "resend", key: env("RESEND_API_KEY")!, from, fromName };
+  if (env("BREVO_API_KEY")) return { provider: "brevo", key: env("BREVO_API_KEY")!, from, fromName };
+  return null;
+}
+function printfulCfg(): PrintfulCfg | null {
+  const token = env("PRINTFUL_API_KEY");
+  return token ? { token, storeId: env("PRINTFUL_STORE_ID") ?? null, confirm: env("PRINTFUL_AUTO_CONFIRM") === "true" } : null;
+}
+
 function publicConfig() {
   const name = env("SHOP_SELLER_NAME"), address = env("SHOP_SELLER_ADDRESS");
   return {
@@ -104,6 +128,7 @@ function publicConfig() {
       vatId: env("SHOP_SELLER_VAT_ID") ?? null, email: env("SHOP_SELLER_EMAIL") ?? null,
     } : null,
     vatMode: parseVatMode(env("SHOP_VAT_MODE")), exemptNote: env("SHOP_VAT_EXEMPT_NOTE") ?? null,
+    fulfillment: { printful: !!printfulCfg(), printfulAuto: !!printfulCfg()?.confirm, mail: !!mailCfg(), supplierEmail: !!env("SHOP_SUPPLIER_EMAIL"), notify: !!env("SHOP_NOTIFY_EMAIL") },
   };
 }
 
@@ -138,7 +163,19 @@ async function create(req: Request, auth: string, user: User, body: Record<strin
   const orderId = row.id;
   const ref = orderRef(orderId);
 
-  if (method === "transfer") return json({ orderId, ref, payment: "transfer", bank: { ...bank(), amountCents: totalCents, reference: ref } });
+  if (method === "transfer") {
+    const b = bank()!;
+    const mo: MailOrder = { id: orderId, lines: priced.lines, totalCents, shipping, email: user.email, lang };
+    const m = mailCfg();
+    if (m) {
+      const replyTo = env("SHOP_SELLER_EMAIL") ?? env("SHOP_NOTIFY_EMAIL");
+      await Promise.all([
+        user.email ? sendMail(m, { to: user.email, replyTo, ...customerTransferMail(mo, b) }) : null,
+        env("SHOP_NOTIFY_EMAIL") ? sendMail(m, { to: env("SHOP_NOTIFY_EMAIL")!, ...adminMail(mo, "awaiting_transfer", [`Sprawdź w Revolut wpłatę z tytułem ${ref}, potem ustaw „Opłacone” w panelu — realizacja ruszy sama.`]) }) : null,
+      ]);
+    }
+    return json({ orderId, ref, payment: "transfer", bank: { ...b, amountCents: totalCents, reference: ref } });
+  }
   if (method !== "card") return json({ orderId, ref, payment: "pending" });
 
   const origin = siteOrigin(req);
@@ -189,8 +226,8 @@ async function confirm(auth: string, body: Record<string, unknown>) {
   if (!/^[0-9a-f-]{36}$/i.test(orderId)) return json({ error: "bad_order" }, 400);
   if (!env("STRIPE_SECRET_KEY")) return json({ orderId, paid: false, error: "stripe_not_configured" });
   // RLS: właściciel widzi swoje zamówienie, admin wszystkie.
-  const got = await rest(auth, `aurora_business_orders?id=eq.${orderId}&service_type=eq.${SHOP_SERVICE_TYPE}&select=id,payload,payment_status`);
-  const row = Array.isArray(got.data) ? (got.data[0] as { payload?: Record<string, unknown>; payment_status?: string }) : null;
+  const got = await rest(auth, `aurora_business_orders?id=eq.${orderId}&service_type=eq.${SHOP_SERVICE_TYPE}&select=id,client_email,payload,payment_status`);
+  const row = Array.isArray(got.data) ? (got.data[0] as { payload?: Record<string, unknown>; payment_status?: string; client_email?: string }) : null;
   if (!row) return json({ error: "not_found" }, 404);
   if (row.payment_status === "paid") return json({ orderId, paid: true });
   const sid = row.payload?.stripe_session_id;
@@ -198,14 +235,97 @@ async function confirm(auth: string, body: Record<string, unknown>) {
   const s = await stripe(`checkout/sessions/${encodeURIComponent(String(sid))}`);
   const paid = s.ok && s.data.payment_status === "paid" && s.data.metadata?.order_id === orderId;
   if (!paid) return json({ orderId, paid: false });
+  const payload = { ...row.payload, stripe_payment_intent: s.data.payment_intent ?? null, amount_total: s.data.amount_total ?? null };
   const upd = await rest(auth, `aurora_business_orders?id=eq.${orderId}`, {
     method: "PATCH",
-    body: JSON.stringify({
-      status: "paid", payment_status: "paid", paid_at: new Date().toISOString(),
-      payload: { ...row.payload, stripe_payment_intent: s.data.payment_intent ?? null, amount_total: s.data.amount_total ?? null },
-    }),
+    body: JSON.stringify({ status: "paid", payment_status: "paid", paid_at: new Date().toISOString(), payload }),
   });
-  return json({ orderId, paid: upd.ok });
+  // Płatność potwierdzona w Stripe (nie przez klienta) → można bezpiecznie zlecić realizację.
+  const f = upd.ok ? await fulfill(auth, { id: orderId, client_email: (row as { client_email?: string }).client_email ?? null, payload }, false) : null;
+  return json({ orderId, paid: upd.ok, fulfillment: f?.state ?? null });
+}
+
+type OrderRow = { id: string; client_email: string | null; payment_status?: string; payload: Record<string, unknown> | undefined };
+type Fulfillment = { state: "sending" | "sent" | "manual" | "error"; at: string; notes?: string[]; printful?: unknown; supplier_email?: boolean; mails?: { customer?: boolean; admin?: boolean } };
+
+/** Zleca realizację opłaconego zamówienia: Printful + dostawca e-mailowy + e-maile. Jednorazowo (blokada w payload). */
+async function fulfill(auth: string, row: OrderRow, force: boolean): Promise<Fulfillment | { state: "skipped" }> {
+  const p = (row.payload ?? {}) as Record<string, unknown> & { items?: PricedLine[]; shipping?: Shipping; total_cents?: number; lang?: string; fulfillment?: Fulfillment };
+  if (!p.shipping || !Array.isArray(p.items)) return { state: "error", at: new Date().toISOString(), notes: ["Brak pozycji lub adresu"] };
+  const prev = p.fulfillment;
+  if (prev && !(force && (prev.state === "error" || prev.state === "manual"))) return { state: "skipped" };
+
+  // Blokada: tylko jedno wywołanie przejmuje realizację (warunkowy PATCH).
+  const cond = prev ? `&payload->fulfillment->>state=eq.${prev.state}` : "&payload->fulfillment=is.null";
+  const claim = await rest(auth, `aurora_business_orders?id=eq.${row.id}${cond}`, {
+    method: "PATCH", body: JSON.stringify({ payload: { ...p, fulfillment: { state: "sending", at: new Date().toISOString(), mails: prev?.mails } } }),
+  });
+  if (!claim.ok || !Array.isArray(claim.data) || claim.data.length === 0) return { state: "skipped" };
+
+  const lang = p.lang === "en" || p.lang === "nl" ? p.lang : "pl";
+  const mo: MailOrder = { id: row.id, lines: p.items, totalCents: p.total_cents ?? 0, shipping: p.shipping, email: row.client_email, lang };
+  const notes: string[] = [];
+  let failed = false, manual = false;
+  const out: Fulfillment = { state: "sent", at: new Date().toISOString(), mails: { ...(prev?.mails ?? {}) } };
+
+  const pfLines = p.items.filter((l) => supplierFor(l.id) === "printful");
+  const mailLines = p.items.filter((l) => supplierFor(l.id) === "email");
+  const pf = printfulCfg();
+  if (pfLines.length) {
+    if (!pf) { manual = true; notes.push(`Printful niepodłączony — zamów ręcznie: ${pfLines.map((l) => `${l.qty}× ${printfulExternalId(l.id, l.size)}`).join(", ")}`); }
+    else {
+      const r = await createPrintfulOrder(pf, row.id, pfLines, p.shipping, row.client_email);
+      out.printful = r;
+      if (r.ok) notes.push(`Printful: zamówienie #${r.id} (${r.status === "draft" ? "szkic — zatwierdź w Printful" : r.status})`);
+      else { failed = true; notes.push(`Printful BŁĄD: ${r.error}`); }
+    }
+  }
+  const m = mailCfg();
+  const supplier = env("SHOP_SUPPLIER_EMAIL");
+  if (mailLines.length) {
+    if (supplier && m) {
+      out.supplier_email = await sendMail(m, { to: supplier, replyTo: env("SHOP_NOTIFY_EMAIL"), ...supplierMail(mo, mailLines, env("SHOP_SELLER_NAME") ?? "GrouaDrop") });
+      notes.push(out.supplier_email ? `Dostawca (${supplier}) dostał zlecenie: ${mailLines.map((l) => l.name).join(", ")}` : `Nie udało się wysłać e-maila do dostawcy ${supplier}`);
+      if (!out.supplier_email) failed = true;
+    } else { manual = true; notes.push(`Brak dostawcy e-mailowego — zamów ręcznie: ${mailLines.map((l) => `${l.qty}× ${l.name}`).join(", ")}`); }
+  }
+  if (m) {
+    if (row.client_email && !out.mails?.customer) out.mails!.customer = await sendMail(m, { to: row.client_email, replyTo: env("SHOP_SELLER_EMAIL") ?? env("SHOP_NOTIFY_EMAIL"), ...customerPaidMail(mo, env("SHOP_DELIVERY_DAYS") ?? "5–14") });
+    if (env("SHOP_NOTIFY_EMAIL")) out.mails!.admin = await sendMail(m, { to: env("SHOP_NOTIFY_EMAIL")!, ...adminMail(mo, "paid", notes) });
+  } else notes.push("E-maile wyłączone (brak RESEND_API_KEY/BREVO_API_KEY i SHOP_MAIL_FROM)");
+
+  out.state = failed ? "error" : manual ? "manual" : "sent";
+  out.notes = notes;
+  await rest(auth, `aurora_business_orders?id=eq.${row.id}`, { method: "PATCH", body: JSON.stringify({ payload: { ...p, fulfillment: out } }) });
+  return out;
+}
+
+async function isAdmin(auth: string, userId: string): Promise<boolean> {
+  const r = await rest(auth, "rpc/has_role", { method: "POST", body: JSON.stringify({ _user_id: userId, _role: "admin" }) });
+  return r.ok && r.data === true;
+}
+
+async function fulfillAction(auth: string, user: User, body: Record<string, unknown>) {
+  if (!(await isAdmin(auth, user.id))) return json({ error: "forbidden" }, 403);
+  const orderId = String(body.orderId ?? "");
+  if (!/^[0-9a-f-]{36}$/i.test(orderId)) return json({ error: "bad_order" }, 400);
+  const got = await rest(auth, `aurora_business_orders?id=eq.${orderId}&service_type=eq.${SHOP_SERVICE_TYPE}&select=id,client_email,payment_status,payload`);
+  const row = Array.isArray(got.data) ? (got.data[0] as OrderRow) : null;
+  if (!row) return json({ error: "not_found" }, 404);
+  if (row.payment_status !== "paid") return json({ error: "not_paid" }, 409);
+  return json({ orderId, fulfillment: await fulfill(auth, row, body.force === true) });
+}
+
+async function printfulCheck(auth: string, user: User) {
+  if (!(await isAdmin(auth, user.id))) return json({ error: "forbidden" }, 403);
+  const pf = printfulCfg();
+  if (!pf) return json({ error: "printful_not_configured" }, 404);
+  const r = await printfulExternalIds(pf);
+  if (r.ok === false) return json({ error: "printful_error", message: r.error }, 502);
+  const have = new Set(r.ids);
+  const need = SHOP_PRODUCTS.filter((p) => supplierFor(p.id) === "printful")
+    .flatMap((p) => (p.sizes ? ["S", "M", "L", "XL", "XXL", "3XL"].map((s) => printfulExternalId(p.id, s)) : [printfulExternalId(p.id, null)]));
+  return json({ linked: need.filter((x) => have.has(x)).length, total: need.length, missing: need.filter((x) => !have.has(x)) });
 }
 
 export default async function handler(req: Request): Promise<Response> {
@@ -221,6 +341,8 @@ export default async function handler(req: Request): Promise<Response> {
     if (body.action === "create") return await create(req, auth, user, body);
     if (body.action === "confirm") return await confirm(auth, body);
     if (body.action === "payinfo") return await payinfo(auth, body);
+    if (body.action === "fulfill") return await fulfillAction(auth, user, body);
+    if (body.action === "printful-check") return await printfulCheck(auth, user);
     return json({ error: "unknown_action" }, 400);
   } catch {
     return json({ error: "server_error" }, 500);

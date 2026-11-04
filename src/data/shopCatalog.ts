@@ -188,7 +188,7 @@ export const SHOP_PRODUCTS: ShopProduct[] = [
   "pln": 149,
   "eurCents": 3490,
   "preorder": false,
-  "sizes": true,
+  "sizes": false,
   "video": true
  },
  {

@@ -11,6 +11,7 @@ const STATUSES = ["new", "paid", "shipped", "cancelled", "refunded"] as const;
 const LABEL: Record<string, string> = { new: "Nowe", paid: "Opłacone", shipped: "Wysłane", cancelled: "Anulowane", refunded: "Zwrot" };
 const eur = (c: number) => (c / 100).toLocaleString("pl-PL", { style: "currency", currency: "EUR" });
 type Inv = Record<string, unknown> & { order_id: string; invoice_number: string };
+const FSTATE: Record<string, string> = { sending: "wysyłanie…", sent: "przekazane do realizacji", manual: "do zamówienia ręcznie", error: "błąd realizacji" };
 const MISSING_ENV = "Uzupełnij w Vercel: SHOP_SELLER_NAME, SHOP_SELLER_ADDRESS, SHOP_SELLER_COUNTRY i SHOP_VAT_MODE";
 
 const lastQuarters = (n: number) => {
@@ -50,6 +51,30 @@ export function ShopAdminPanel() {
     if (error) return toast.error(error.message);
     setOrders((o) => o.map((x) => (x.id === id ? { ...x, status, payment_status: (patch.payment_status as string) ?? x.payment_status, paid_at: (patch.paid_at as string) ?? x.paid_at } : x)));
     toast.success("Status zmieniony");
+    // Opłacone (np. przelew sprawdzony w Revolut) → realizacja rusza automatycznie.
+    if (status === "paid") fulfillNow(id);
+  };
+
+  const callApi = async (body: Record<string, unknown>) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const r = await fetch("/api/shop-checkout", { method: "POST", headers: { "content-type": "application/json", authorization: `Bearer ${session?.access_token ?? ""}` }, body: JSON.stringify(body) });
+    return { ok: r.ok, j: await r.json().catch(() => ({})) };
+  };
+  // Zlecenie realizacji: Printful / dostawca e-mailowy + e-maile do klienta i do Ciebie.
+  const fulfillNow = async (id: string, force = false) => {
+    const { ok, j } = await callApi({ action: "fulfill", orderId: id, force });
+    if (!ok) return toast.error(j.error === "forbidden" ? "Tylko admin" : j.error === "not_paid" ? "Zamówienie nieopłacone" : "Nie udało się zlecić realizacji");
+    const st = j.fulfillment?.state;
+    if (st === "skipped") toast.info("Zamówienie już przekazane do realizacji");
+    else if (st === "sent") toast.success("Przekazane do realizacji");
+    else toast.warning((j.fulfillment?.notes ?? []).join(" · ") || "Sprawdź realizację");
+    load();
+  };
+  const [pfCheck, setPfCheck] = useState<{ linked: number; total: number; missing: string[] } | null>(null);
+  const checkPrintful = async () => {
+    const { ok, j } = await callApi({ action: "printful-check" });
+    if (!ok) return toast.error(j.error === "printful_not_configured" ? "Brak PRINTFUL_API_KEY w Vercel" : j.message || "Błąd Printful");
+    setPfCheck(j);
   };
 
   // Sprawdza w Stripe, czy zamówienie zostało opłacone (gdy klient zamknął kartę przed powrotem).
@@ -119,8 +144,20 @@ export function ShopAdminPanel() {
           <li>Karta (Stripe): <b>{cfg?.stripe ? "włączona" : "brak STRIPE_SECRET_KEY"}</b></li>
           <li>Przelew (Revolut): <b>{cfg?.transfer ? "włączony" : cfg?.ibanInvalid ? "SHOP_BANK_IBAN jest nieprawidłowy" : "brak SHOP_BANK_HOLDER / SHOP_BANK_IBAN"}</b></li>
           <li>Sprzedawca: <b>{cfg?.seller ? `${cfg.seller.name} (${cfg.seller.country ?? "kraj?"})` : "brak SHOP_SELLER_NAME / SHOP_SELLER_ADDRESS"}</b></li>
+          <li>Printful (druk i wysyłka): <b>{cfg?.fulfillment?.printful ? (cfg.fulfillment.printfulAuto ? "włączony, od razu do produkcji" : "włączony, szkice do zatwierdzenia") : "brak PRINTFUL_API_KEY"}</b></li>
+          <li>Dostawca gadżetów: <b>{cfg?.fulfillment?.supplierEmail ? "e-mail ustawiony" : "brak SHOP_SUPPLIER_EMAIL"}</b></li>
+          <li>E-maile: <b>{cfg?.fulfillment?.mail ? "włączone" : "brak RESEND_API_KEY / BREVO_API_KEY + SHOP_MAIL_FROM"}</b></li>
+          <li>Powiadomienia: <b>{cfg?.fulfillment?.notify ? "na SHOP_NOTIFY_EMAIL" : "brak SHOP_NOTIFY_EMAIL"}</b></li>
           <li>VAT: <b>{cfg?.vatMode === "oss" ? "OSS (stawka kraju nabywcy)" : cfg?.vatMode === "domestic" ? "krajowy (stawka sprzedawcy)" : cfg?.vatMode === "exempt" ? "zwolnienie z VAT" : "brak SHOP_VAT_MODE"}</b></li>
         </ul>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <Button size="sm" variant="outline" onClick={checkPrintful}>Sprawdź podpięcie produktów w Printful</Button>
+          {pfCheck && <span>Podpięte warianty: <b>{pfCheck.linked}/{pfCheck.total}</b></span>}
+        </div>
+        <p className="mt-2 text-xs text-muted-foreground">Printful: utwórz sklep typu „Manual order platform / API”, dodaj produkty z grafikami i przy każdym wariancie wpisz External ID: <code>produkt-ROZMIAR</code> (np. <code>dropbass-M</code>, <code>3am-XXL</code>), a bez rozmiaru samo <code>torba</code>, <code>plakat</code>. Okulary i asystent AI idą e-mailem do dostawcy.</p>
+        {pfCheck && pfCheck.missing.length > 0 && (
+          <p className="mt-2 text-xs text-muted-foreground break-words">Brakuje „External ID” w Printful: {pfCheck.missing.join(", ")}</p>
+        )}
       </div>
 
       <div className="rounded-xl border border-border bg-card p-4">
@@ -170,6 +207,7 @@ export function ShopAdminPanel() {
                   {STATUSES.map((s) => <option key={s} value={s}>{LABEL[s]}</option>)}
                 </select>
               </div>
+              {o.fulfillment?.notes && o.fulfillment.notes.length > 0 && <ul className="text-xs text-muted-foreground list-disc pl-4">{o.fulfillment.notes.map((n, k) => <li key={k}>{n}</li>)}</ul>}
               <ul className="text-sm">{o.items.map((i, k) => <li key={k}>{i.qty} × {i.name}{i.size ? ` (${i.size})` : ""} · {eur(i.unitCents * i.qty)}</li>)}</ul>
               {o.shipping && <div className="text-sm text-muted-foreground">Wysyłka: {o.shipping.name}{o.shipping.company ? ` (${o.shipping.company}${o.shipping.taxId ? `, ${o.shipping.taxId}` : ""})` : ""}, {o.shipping.street}, {o.shipping.zip} {o.shipping.city}, {o.shipping.country}{o.shipping.phone ? `, tel. ${o.shipping.phone}` : ""}</div>}
               <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
@@ -177,6 +215,10 @@ export function ShopAdminPanel() {
                 {o.method === "transfer" && o.payment_status !== "paid" && <span>· sprawdź w Revolut wpłatę z tytułem {orderRef(o.id)}</span>}
                 {o.stripe_session_id && <span>· Stripe {o.stripe_session_id.slice(0, 18)}…</span>}
                 {o.stripe_session_id && o.payment_status !== "paid" && <Button size="sm" variant="outline" onClick={() => verify(o.id)}>Sprawdź płatność</Button>}
+                {o.fulfillment && <span className={o.fulfillment.state === "sent" ? "text-emerald-500" : o.fulfillment.state === "sending" ? "" : "text-amber-500"}>· realizacja: {FSTATE[o.fulfillment.state] ?? o.fulfillment.state}</span>}
+                {o.payment_status === "paid" && (!o.fulfillment || o.fulfillment.state === "error" || o.fulfillment.state === "manual") && (
+                  <Button size="sm" variant="outline" onClick={() => fulfillNow(o.id, !!o.fulfillment)}>{o.fulfillment ? "Ponów realizację" : "Wyślij do realizacji"}</Button>
+                )}
                 {invoices[o.id]
                   ? <Button size="sm" variant="outline" onClick={() => showInvoice(o)}>Faktura {invoices[o.id].invoice_number}</Button>
                   : o.payment_status === "paid" && <Button size="sm" onClick={() => issue(o)}>Wystaw fakturę</Button>}

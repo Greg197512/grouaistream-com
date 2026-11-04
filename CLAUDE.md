@@ -29,6 +29,9 @@ i aktualny. Jeśli fakt tu jest — nie weryfikuj go od nowa dziesiątkami wywo�
   Płatność: Stripe (`STRIPE_SECRET_KEY`) i/lub przelew Revolut (`SHOP_BANK_HOLDER`, `SHOP_BANK_IBAN`). Paddle nie (zakaz towarów fizycznych).
   Sklep i regulamin (`/shop/terms`) w PL/EN/NL (`src/i18n/shop.ts`, `src/data/shopCatalogI18n.ts`). Faktury → `aurora_invoices`
   (admin, `src/lib/shopInvoice.ts`), VAT OSS → `src/lib/vatOss.ts` + raport kwartalny w panelu. Dane sprzedawcy: `SHOP_SELLER_*`, `SHOP_VAT_MODE`.
+  Realizacja (pośrednik): po opłaceniu Printful (`PRINTFUL_API_KEY`, External ID wariantu `produkt-ROZMIAR`) + gadżety e-mailem
+  (`SHOP_SUPPLIER_EMAIL`, `src/data/shopSuppliers.ts`); e-maile Resend/Brevo (`SHOP_MAIL_FROM`), powiadomienia `SHOP_NOTIFY_EMAIL`=grouarock@gmail.com.
+  W Vercel ustawione: `SHOP_BANK_IBAN/HOLDER/BIC`, `SHOP_REVOLUT_LINK` (revolut.me/grouaaistream), `SHOP_NOTIFY_EMAIL`. Menu: „GrouaDrop”.
   Stara funkcja `shop-checkout` i tabele `shop_orders`/`gift_codes` nie są używane (brak w bazie prod).
 
 ## Vercel

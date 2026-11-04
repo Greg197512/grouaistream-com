@@ -11,6 +11,7 @@ import { invoiceHtml, openInvoice, type ShopConfig } from "@/lib/shopInvoice";
 import { EU_COUNTRIES } from "@/lib/vatOss";
 import { LOCALE, SHOP_LANGS, SHOP_TEXT, countryName, shopLang, type ShopDict, type ShopLang } from "@/i18n/shop";
 import { toast } from "sonner";
+import { QRCodeSVG } from "qrcode.react";
 import { XmasDecor } from "@/components/shop/XmasDecor";
 import { GiftCelebration } from "@/components/shop/GiftCelebration";
 
@@ -92,7 +93,16 @@ function TransferBox({ bank, t, eur, onClose }: { bank: Bank; t: ShopDict; eur: 
         <CopyRow label={t.amount} value={eur(bank.amountCents)} copyValue={(bank.amountCents / 100).toFixed(2)} t={t} />
         <CopyRow label={t.reference} value={bank.reference} t={t} />
       </div>
-      {bank.revolut && <a href={bank.revolut} target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex h-11 items-center rounded-full bg-neutral-900 px-5 text-sm font-bold text-white">{t.openRevolut}</a>}
+      {bank.revolut && (
+        <div className="mt-4 flex flex-wrap items-center gap-4 rounded-xl bg-white p-3">
+          <QRCodeSVG value={bank.revolut} size={112} level="M" aria-label="Revolut QR" />
+          <div className="min-w-0 flex-1 space-y-2">
+            <p className="text-sm font-semibold">{t.revolutQr}</p>
+            <p className="font-mono text-sm text-neutral-600">@{bank.revolut.replace(/^https?:\/\/revolut\.me\//i, "").replace(/\/.*$/, "")}</p>
+            <a href={bank.revolut} target="_blank" rel="noopener noreferrer" className="inline-flex h-11 items-center rounded-full bg-neutral-900 px-5 text-sm font-bold text-white">{t.openRevolut}</a>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

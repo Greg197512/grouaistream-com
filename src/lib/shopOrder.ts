@@ -68,9 +68,10 @@ export type ShopOrderView = {
   id: string; user_id: string | null; email: string | null; items: PricedLine[]; total_cents: number;
   status: string; payment_status: string; shipping: Shipping | null; stripe_session_id: string | null; created_at: string;
   paid_at: string | null; method: PayMethod | null; lang: string | null;
+  fulfillment: { state: string; at: string; notes?: string[] } | null;
 };
 export function toShopOrder(row: Record<string, unknown>): ShopOrderView {
-  const p = (row.payload ?? {}) as { items?: unknown; total_cents?: unknown; shipping?: Shipping; stripe_session_id?: string; method?: PayMethod; lang?: string };
+  const p = (row.payload ?? {}) as { items?: unknown; total_cents?: unknown; shipping?: Shipping; stripe_session_id?: string; method?: PayMethod; lang?: string; fulfillment?: ShopOrderView["fulfillment"] };
   const str = (v: unknown) => (v == null ? null : String(v));
   return {
     id: String(row.id), user_id: str(row.user_id), email: str(row.client_email),
@@ -78,7 +79,7 @@ export function toShopOrder(row: Record<string, unknown>): ShopOrderView {
     total_cents: typeof p.total_cents === "number" && Number.isFinite(p.total_cents) ? p.total_cents : Math.round(Number(row.price_eur ?? 0) * 100),
     status: String(row.status ?? "new"), payment_status: String(row.payment_status ?? "pending"),
     shipping: p.shipping ?? null, stripe_session_id: p.stripe_session_id ?? null, created_at: String(row.created_at),
-    paid_at: str(row.paid_at), method: p.method ?? null, lang: p.lang ?? null,
+    paid_at: str(row.paid_at), method: p.method ?? null, lang: p.lang ?? null, fulfillment: p.fulfillment ?? null,
   };
 }
 
