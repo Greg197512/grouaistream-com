@@ -21,8 +21,8 @@ const CART_KEY = "gr_cart_v2";
 const byId = Object.fromEntries(SHOP_PRODUCTS.map((p) => [p.id, p])) as Record<string, ShopProduct>;
 
 function Card({ p, onAdd, t }: { p: ShopProduct; onAdd: (p: ShopProduct, size: string) => void; t: ShopDict & { eur: (c: number) => string } }) {
-  // Produkty z filmem zaczynają od filmu; gra tylko, gdy karta jest na ekranie.
-  const [view, setView] = useState(p.video ? 2 : 0);
+  // Film w karcie gra tylko po wybraniu miniatury ▶ i tylko, gdy karta jest na ekranie.
+  const [view, setView] = useState(0);
   const [size, setSize] = useState("M");
   const [tilt, setTilt] = useState("");
   const vid = useRef<HTMLVideoElement>(null);
@@ -43,7 +43,7 @@ function Card({ p, onAdd, t }: { p: ShopProduct; onAdd: (p: ShopProduct, size: s
           onPointerMove={(e) => { if (e.pointerType === "touch") return; const r = e.currentTarget.getBoundingClientRect(); const x = (e.clientX - r.left) / r.width - .5, y = (e.clientY - r.top) / r.height - .5; setTilt(`rotateY(${x * 22}deg) rotateX(${-y * 16}deg) scale(1.05)`); }}
           onPointerLeave={() => setTilt("")} onClick={() => setZoom(true)}>
           <div className="absolute inset-0 transition-transform duration-200" style={{ transform: tilt }}>
-            <img src={imgs[0]} alt={p.name} loading="lazy" className="absolute inset-0 w-full h-full object-cover" />
+            <img src={imgs[0]} alt={p.name} loading="lazy" decoding="async" className="absolute inset-0 w-full h-full object-cover" />
             <img src={imgs[1]} alt={`${p.name} · 2`} loading="lazy" className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${view === 1 ? "opacity-100" : "opacity-0"}`} />
             {p.video && <video ref={vid} src={`/shop/${p.id}.mp4`} poster={imgs[0]} muted loop playsInline preload={inView ? "auto" : "none"} className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${view === 2 ? "opacity-100" : "opacity-0"}`} />}
           </div>
@@ -77,6 +77,25 @@ function Card({ p, onAdd, t }: { p: ShopProduct; onAdd: (p: ShopProduct, size: s
         </div>
       </div>
     </article>
+  );
+}
+
+/** Film produktu w pasku na górze: gra (wyciszony) tylko, gdy jest widoczny. */
+function VideoTile({ p, onOpen, price, see }: { p: ShopProduct; onOpen: () => void; price: string; see: string }) {
+  const ref = useRef<HTMLVideoElement>(null);
+  useEffect(() => {
+    const v = ref.current; if (!v || typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver(([e]) => { if (e.isIntersecting) { v.preload = "auto"; v.play().catch(() => {}); } else v.pause(); }, { threshold: 0.5 });
+    io.observe(v); return () => io.disconnect();
+  }, []);
+  return (
+    <button type="button" onClick={onOpen} className="group relative w-[72%] shrink-0 snap-start overflow-hidden rounded-2xl bg-neutral-900 text-left sm:w-[44%] lg:w-[31%]">
+      <video ref={ref} src={`/shop/${p.id}.mp4`} poster={`/shop/${p.id}-1.jpg`} muted loop playsInline preload="none" className="aspect-square w-full object-cover" />
+      <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-3 pt-10 text-white">
+        <span className="block text-sm font-bold leading-snug">{p.name}</span>
+        <span className="mt-1 flex items-center justify-between text-sm"><b className="text-orange-300">{price}</b><span className="rounded-full bg-white/90 px-3 py-1 text-xs font-bold text-neutral-900">{see} →</span></span>
+      </span>
+    </button>
   );
 }
 
@@ -252,7 +271,7 @@ export default function Shop() {
     <div className="min-h-screen bg-gradient-to-b from-sky-50 via-white to-white text-neutral-900" style={{ colorScheme: "light" }}>
       <XmasDecor />
       {gift && <GiftCelebration lang={lang} code={gift} onClose={() => setGift(null)} onGo={() => { setGift(null); navigate("/"); }} />}
-      <header className="sticky top-0 z-40 flex flex-wrap items-center justify-between gap-3 border-b border-neutral-200 bg-white/85 px-4 py-3 backdrop-blur">
+      <header className="sticky top-0 z-40 flex flex-wrap items-center justify-between gap-3 border-b border-neutral-200 bg-white/95 px-4 py-3">
         <div className="flex items-center gap-4"><span className="text-2xl font-black">GROUA<span className="text-orange-500">ROCK</span></span><Link to="/" className="text-sm text-neutral-600 hover:text-neutral-900">{T.back}</Link></div>
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex h-11 items-center rounded-full border border-neutral-300 p-1" role="group" aria-label="Language">
@@ -265,7 +284,16 @@ export default function Shop() {
         </div>
       </header>
 
-      <section className="mx-auto max-w-5xl px-4 pb-6 pt-14">
+      <section className="mx-auto max-w-5xl pb-2 pt-6" aria-label={T.inMotion}>
+        <h2 className="mb-3 px-4 text-2xl font-black">{T.inMotion}</h2>
+        <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:thin]">
+          {products.filter((p) => p.video).map((p) => (
+            <VideoTile key={p.id} p={p} price={eur(p.eurCents)} see={T.see} onOpen={() => { setCat(""); setTimeout(() => document.getElementById(`p-${p.id}`)?.scrollIntoView({ behavior: "smooth", block: "start" }), 50); }} />
+          ))}
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-5xl px-4 pb-6 pt-8">
         <p className="mb-2 text-sm font-bold uppercase tracking-[.25em] text-red-600">{T.xmas}</p>
         <h1 className="text-5xl font-black leading-none sm:text-7xl">{T.heroA} <span className="bg-gradient-to-r from-red-600 via-orange-500 to-pink-500 bg-clip-text text-transparent">{T.heroB}</span></h1>
         <p className="mt-4 max-w-xl text-lg text-neutral-600">{T.heroText}</p>
