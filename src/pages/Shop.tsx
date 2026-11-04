@@ -21,15 +21,23 @@ const CART_KEY = "gr_cart_v2";
 const byId = Object.fromEntries(SHOP_PRODUCTS.map((p) => [p.id, p])) as Record<string, ShopProduct>;
 
 function Card({ p, onAdd, t }: { p: ShopProduct; onAdd: (p: ShopProduct, size: string) => void; t: ShopDict & { eur: (c: number) => string } }) {
-  const [view, setView] = useState(0);
+  // Produkty z filmem zaczynają od filmu; gra tylko, gdy karta jest na ekranie.
+  const [view, setView] = useState(p.video ? 2 : 0);
   const [size, setSize] = useState("M");
   const [tilt, setTilt] = useState("");
   const vid = useRef<HTMLVideoElement>(null);
+  const box = useRef<HTMLElement>(null);
+  const [inView, setInView] = useState(false);
   const [zoom, setZoom] = useState(false);
-  useEffect(() => { const v = vid.current; if (!v) return; if (view === 2) v.play().catch(() => {}); else v.pause(); }, [view]);
+  useEffect(() => {
+    const el = box.current; if (!el || !p.video || typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver(([e]) => setInView(e.isIntersecting), { threshold: 0.35 });
+    io.observe(el); return () => io.disconnect();
+  }, [p.video]);
+  useEffect(() => { const v = vid.current; if (!v) return; if (view === 2 && inView) v.play().catch(() => {}); else v.pause(); }, [view, inView]);
   const imgs = [`/shop/${p.id}-1.jpg`, `/shop/${p.id}-2.jpg`];
   return (
-    <article className="grid md:grid-cols-2 gap-8 items-center">
+    <article ref={box} id={`p-${p.id}`} className="grid scroll-mt-24 md:grid-cols-2 gap-8 items-center">
       <div>
         <div className="relative aspect-square rounded-2xl overflow-hidden bg-neutral-100 cursor-zoom-in" style={{ perspective: 900 }}
           onPointerMove={(e) => { if (e.pointerType === "touch") return; const r = e.currentTarget.getBoundingClientRect(); const x = (e.clientX - r.left) / r.width - .5, y = (e.clientY - r.top) / r.height - .5; setTilt(`rotateY(${x * 22}deg) rotateX(${-y * 16}deg) scale(1.05)`); }}
@@ -37,7 +45,7 @@ function Card({ p, onAdd, t }: { p: ShopProduct; onAdd: (p: ShopProduct, size: s
           <div className="absolute inset-0 transition-transform duration-200" style={{ transform: tilt }}>
             <img src={imgs[0]} alt={p.name} loading="lazy" className="absolute inset-0 w-full h-full object-cover" />
             <img src={imgs[1]} alt={`${p.name} · 2`} loading="lazy" className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${view === 1 ? "opacity-100" : "opacity-0"}`} />
-            {p.video && <video ref={vid} src={`/shop/${p.id}.mp4`} muted loop playsInline preload="none" className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${view === 2 ? "opacity-100" : "opacity-0"}`} />}
+            {p.video && <video ref={vid} src={`/shop/${p.id}.mp4`} poster={imgs[0]} muted loop playsInline preload={inView ? "auto" : "none"} className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${view === 2 ? "opacity-100" : "opacity-0"}`} />}
           </div>
           {p.tag && <span className="absolute top-3 left-3 rounded-full bg-gradient-to-r from-orange-500 to-pink-500 px-3 py-1 text-xs font-bold uppercase tracking-wide text-white">{p.tag}</span>}
         </div>
@@ -111,6 +119,9 @@ export default function Shop() {
   const eur = useCallback((c: number) => (c / 100).toLocaleString(LOCALE[lang], { style: "currency", currency: "EUR" }), [lang]);
   const tc = useMemo(() => ({ ...T, eur }), [T, eur]);
   const products = useMemo(() => SHOP_PRODUCTS.map((p) => localizeProduct(p, lang)), [lang]);
+  const cats = useMemo(() => [...new Set(SHOP_PRODUCTS.map((p) => p.cat))], []);
+  const [cat, setCat] = useState("");
+  const shown = useMemo(() => products.filter((p) => !cat || SHOP_PRODUCTS.find((x) => x.id === p.id)?.cat === cat), [products, cat]);
   const navigate = useNavigate();
   const [cart, setCart] = useState<Line[]>(() => { try { const c = JSON.parse(localStorage.getItem(CART_KEY) || "[]"); return Array.isArray(c) ? c.filter((l: Line) => byId[l?.id] && l.qty > 0) : []; } catch { return []; } });
   const [open, setOpen] = useState(false);
@@ -266,8 +277,38 @@ export default function Shop() {
         )}
       </section>
 
+      <section className="mx-auto max-w-5xl px-4 pb-12" aria-label={T.collection}>
+        <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+          <h2 className="text-3xl font-black">{T.collection} <span className="text-neutral-400">({shown.length})</span></h2>
+          <div className="flex flex-wrap gap-2" role="group" aria-label={T.collection}>
+            {["", ...cats].map((c) => (
+              <button key={c || "all"} type="button" onClick={() => setCat(c)} aria-pressed={cat === c}
+                className={`h-9 rounded-full border px-4 text-sm font-semibold ${cat === c ? "border-neutral-900 bg-neutral-900 text-white" : "border-neutral-300 bg-white text-neutral-700"}`}>
+                {c ? localizeProduct(SHOP_PRODUCTS.find((x) => x.cat === c)!, lang).cat : T.all}
+              </button>))}
+          </div>
+        </div>
+        <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+          {shown.map((p) => (
+            <li key={p.id}>
+              <a href={`#p-${p.id}`} onClick={(e) => { e.preventDefault(); document.getElementById(`p-${p.id}`)?.scrollIntoView({ behavior: "smooth", block: "start" }); }}
+                className="group block overflow-hidden rounded-2xl border border-neutral-200 bg-white transition hover:-translate-y-0.5 hover:shadow-lg">
+                <div className="relative aspect-square bg-neutral-100">
+                  <img src={`/shop/${p.id}-1.jpg`} alt={p.name} loading="lazy" className="h-full w-full object-cover transition duration-300 group-hover:scale-105" />
+                  {p.video && <span className="absolute bottom-2 left-2 rounded-full bg-black/70 px-2 py-0.5 text-[11px] font-bold text-white">▶ {T.video}</span>}
+                  {p.tag && <span className="absolute left-2 top-2 rounded-full bg-gradient-to-r from-orange-500 to-pink-500 px-2 py-0.5 text-[10px] font-bold uppercase text-white">{p.tag}</span>}
+                </div>
+                <div className="p-3">
+                  <p className="line-clamp-2 text-sm font-bold leading-snug">{p.name}</p>
+                  <p className="mt-1 text-sm font-extrabold text-orange-600">{eur(p.eurCents)}</p>
+                </div>
+              </a>
+            </li>))}
+        </ul>
+      </section>
+
       <main className="mx-auto max-w-5xl space-y-20 px-4 pb-16">
-        {products.map((p) => <Card key={p.id} p={p} onAdd={add} t={tc} />)}
+        {shown.map((p) => <Card key={p.id} p={p} onAdd={add} t={tc} />)}
         {user && orders && orders.length > 0 && (
           <section><h2 className="mb-4 text-3xl font-black">{T.myOrders}</h2>
             {payFor && <div className="mb-4"><TransferBox bank={payFor} t={T} eur={eur} onClose={() => setPayFor(null)} /></div>}

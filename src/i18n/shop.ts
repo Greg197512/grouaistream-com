@@ -9,6 +9,8 @@ export const LOCALE: Record<ShopLang, string> = { pl: "pl-PL", en: "en-GB", nl: 
 const pl = {
   title: "Sklep Grouarock | Grouaistream",
   back: "← Grouaistream",
+  collection: "Kolekcja",
+  all: "Wszystko",
   admin: "Panel admina",
   login: "Zaloguj się",
   logout: "Wyloguj",
@@ -95,6 +97,8 @@ export type ShopDict = typeof pl;
 const en: ShopDict = {
   title: "Grouarock Shop | Grouaistream",
   back: "← Grouaistream",
+  collection: "Collection",
+  all: "All",
   admin: "Admin panel",
   login: "Log in",
   logout: "Log out",
@@ -180,6 +184,8 @@ const en: ShopDict = {
 const nl: ShopDict = {
   title: "Grouarock Shop | Grouaistream",
   back: "← Grouaistream",
+  collection: "Collectie",
+  all: "Alles",
   admin: "Beheerpaneel",
   login: "Inloggen",
   logout: "Uitloggen",
