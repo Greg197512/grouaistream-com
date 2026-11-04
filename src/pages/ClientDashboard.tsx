@@ -49,6 +49,7 @@ const ClientDashboard = () => {
     const { data } = await supabase.from("aurora_business_orders")
       .select("id, service_type, brief, status, payment_status, price_eur, created_at, workflow_map, progress_pct")
       .eq("user_id", user.id)
+      .neq("service_type", "shop")
       .order("created_at", { ascending: false });
     setOrders((data ?? []) as Order[]);
     if (!activeOrderId && data && data.length > 0) setActiveOrderId(data[0].id);

@@ -63,6 +63,7 @@ const BlogPost = lazy(() => import("./pages/BlogPost"));
 const AdSubmission = lazy(() => import("./pages/AdSubmission"));
 const Orders = lazy(() => import("./pages/Orders"));
 const Shop = lazy(() => import("./pages/Shop"));
+const ShopTerms = lazy(() => import("./pages/ShopTerms"));
 const NicheLandingPage = lazy(() => import("./pages/NicheLandingPage"));
 const Sponsor = lazy(() => import("./pages/Sponsor"));
 const Business = lazy(() => import("./pages/Business"));
@@ -181,6 +182,7 @@ const AppShell = () => {
           <Route path="/reklama/:token" element={<AdSubmission />} />
           <Route path="/orders" element={<Orders />} />
           <Route path="/shop" element={<Shop />} />
+          <Route path="/shop/terms" element={<ShopTerms />} />
           <Route path="/n/:slug" element={<NicheLandingPage />} />
           <Route path="/sponsor" element={<Sponsor />} />
           <Route path="/business" element={<Business />} />

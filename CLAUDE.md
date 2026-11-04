@@ -10,19 +10,29 @@ i aktualny. Jeśli fakt tu jest — nie weryfikuj go od nowa dziesiątkami wywo�
 
 ## Backend
 - Supabase (Lovable-managed) ref: `bvstvawnigyczvofzhps` (klient: `src/integrations/supabase/client.ts`).
-  Do zapytań SQL: Lovable MCP `query_database`, project_id `462bddcb-d545-4f42-bc51-5f437cb12bbe`
-  (workspace `YE3AfpUp6rhkrR1T4L8Y`). MCP bywa niestabilny (timeout 60 s) — batchuj, licz na retry.
+  **Lovable omijać całkowicie** (żadnych narzędzi Lovable, także `query_database`). Odczyt danych: `api/diag-tracks`
+  przez `mcp__Vercel__web_fetch_vercel_url`. Pełny SQL dopiero na własnym Supabase `sbmfliylgpqyteezrrtn` (MCP Supabase).
 - **R2 media (publiczne):** `https://pub-46ecdc3a5ae341fcb16454d732eb9bcd.r2.dev`.
   R2 zwraca `206 audio/mpeg` z zakresami, ale **BEZ nagłówka CORS** → nie używać Web Audio
   z `crossOrigin="anonymous"` na tych plikach. Zwykłe `<audio>` (crossOrigin=null) gra wprost.
 - Uploady userów → **Vercel `api/r2-upload`** (token Supabase → podpisany PUT SigV4 → przeglądarka wysyła prosto na R2;
   `{"action":"setup-cors"}` ustawia CORS zasobnika). Wymaga w Vercel: `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`.
-  Zapas: edge `r2-signed-url`/`r2-upload-proxy`. NIE używać Lovable (zjada kredyty).
+  Zapas: edge `r2-signed-url`/`r2-upload-proxy`.
 - Asystent `api/assistant`: klucze AI w Vercel (brak) → Pollinations (bywa 402) → edge `ai-assistant` (ma klucze). Test: `GET /api/assistant?ping=1[&skip=pollinations]`.
 - Zapis na R2 z edge: `_shared/r2.ts` = fetch + SigV4 (NIE @aws-sdk — zawieszał się). Test: `suno-generate` `{"action":"r2test"}`.
 - Studio → Spotify: po każdej generacji `certifyWithToasts` (`src/lib/releasePipeline.ts`, `releasePrep.ts`):
   mastering −14 LUFS/−1 dBTP, WAV 44,1k/16, okładka 3000, czysty tekst → `generations.release`,
   `tracks.release` + `tracks.studio_certified` (znaczek „✓ GrouAI Studio”). Migracja z Lovable: `docs/MIGRACJA-Z-LOVABLE.md`.
+
+- **Sklep GrouaRock** (`/shop`): Vercel `api/shop-checkout` → zamówienia w istniejącej tabeli `aurora_business_orders`
+  (`service_type="shop"`, pozycje i adres w `payload`, token usera + RLS). Ceny z `src/data/shopCatalog.ts`.
+  Płatność: **sam kod QR Revolut** (`SHOP_REVOLUT_LINK`; klient płaci w aplikacji albo kartą, IBAN tylko zapasowo) + opcjonalnie Stripe. Paddle nie (zakaz towarów fizycznych).
+  Sklep i regulamin (`/shop/terms`) w PL/EN/NL (`src/i18n/shop.ts`, `src/data/shopCatalogI18n.ts`). Faktury → `aurora_invoices`
+  (admin, `src/lib/shopInvoice.ts`), VAT OSS → `src/lib/vatOss.ts` + raport kwartalny w panelu. Dane sprzedawcy: `SHOP_SELLER_*`, `SHOP_VAT_MODE`.
+  Realizacja (pośrednik): po opłaceniu Printful (`PRINTFUL_API_KEY`, External ID wariantu `produkt-ROZMIAR`) + gadżety e-mailem
+  (`SHOP_SUPPLIER_EMAIL`, `src/data/shopSuppliers.ts`); e-maile Resend/Brevo (`SHOP_MAIL_FROM`), powiadomienia `SHOP_NOTIFY_EMAIL`=grouarock@gmail.com.
+  W Vercel ustawione: `SHOP_BANK_IBAN/HOLDER/BIC`, `SHOP_REVOLUT_LINK` (revolut.me/grouaaistream), `SHOP_NOTIFY_EMAIL`. Menu: „GrouaDrop”.
+  Stara funkcja `shop-checkout` i tabele `shop_orders`/`gift_codes` nie są używane (brak w bazie prod).
 
 ## Vercel
 - Team `team_dcuxbMKuCaW05SplN8IdrSIq`. Produkcja `grouaistream.com` = projekt **`grouaistream-com`**
@@ -45,6 +55,8 @@ i aktualny. Jeśli fakt tu jest — nie weryfikuj go od nowa dziesiątkami wywo�
 - Martwe: ~46 na `cdn1.suno.ai` (403 — skasowane po stronie Suno, nieodzyskiwalne bez oryginałów).
 
 ## Deploy (obowiązkowy flow)
+**Od 4.11.2026 (ADLC, `docs/decisions.md`):** zmiany przez PR do `main`; scalenie = produkcja (L3) tylko po zgodzie Grzegorza.
+Zadania i audyt: `docs/agent-todo.md`, `docs/audit/2026-11-audit.md`.
 Gałąź robocza: `claude/grouaistream-analysis-optimization-ivi8w5`.
 `push -u origin <branch>` → `checkout main` → `pull --no-rebase` → `merge --no-ff <branch>` → `push origin main` → wróć na branch.
 Stopka commita: `Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>` + `Claude-Session: <url>`.

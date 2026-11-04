@@ -12,6 +12,7 @@ const en: TranslationKeys = {
   "nav.mediaServer": "Media Server",
   "nav.movies": "Movies",
   "nav.radioLive": "GrouaRadio Live",
+  "nav.shop": "GrouaDrop",
   "nav.importYoutube": "Import YouTube",
   "nav.sunoAI": "GrouAI Studio",
   "nav.videoStudio": "Video Studio",

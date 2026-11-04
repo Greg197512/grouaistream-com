@@ -125,7 +125,7 @@ export default function AdminAurora() {
   const loadAll = useCallback(async () => {
     const [n, o, w, r, ns, sp, ss, sf, sov] = await Promise.all([
       supabase.from("aurora_niches" as any).select("id,niche_name,status,opportunity_score,search_volume_estimate,competition_level,estimated_monthly_revenue_eur,launched_url,launched_at").order("opportunity_score", { ascending: false }).limit(100),
-      supabase.from("aurora_business_orders" as any).select("*").order("created_at", { ascending: false }).limit(100),
+      supabase.from("aurora_business_orders" as any).select("*").neq("service_type", "shop").order("created_at", { ascending: false }).limit(100),
       supabase.from("aurora_n8n_workflows" as any).select("*").order("created_at", { ascending: false }),
       supabase.from("aurora_n8n_runs" as any).select("*").order("started_at", { ascending: false }).limit(60),
       supabase.from("aurora_niche_n8n_summary" as any).select("*").order("runs_30d", { ascending: false }).limit(50),

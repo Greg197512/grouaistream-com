@@ -12,6 +12,7 @@ const nl: TranslationKeys = {
   "nav.mediaServer": "Mediaserver",
   "nav.movies": "Films",
   "nav.radioLive": "GrouaRadio Live",
+  "nav.shop": "GrouaDrop",
   "nav.importYoutube": "YouTube Importeren",
   "nav.sunoAI": "GrouAI Studio",
   "nav.videoStudio": "Video Studio",

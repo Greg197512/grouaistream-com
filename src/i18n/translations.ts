@@ -26,6 +26,7 @@ export type TranslationKeys = {
   "nav.mediaServer": string;
   "nav.movies": string;
   "nav.radioLive": string;
+  "nav.shop": string;
   "nav.importYoutube": string;
   "nav.sunoAI": string;
   "nav.videoStudio": string;

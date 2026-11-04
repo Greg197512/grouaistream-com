@@ -76,7 +76,7 @@ export function B2BOrdersPanel() {
     setLoading(true);
     try {
       const [{ data: ord, error: e1 }, { data: dr, error: e2 }] = await Promise.all([
-        supabase.from("aurora_business_orders").select("*").order("created_at", { ascending: false }).limit(200),
+        supabase.from("aurora_business_orders").select("*").neq("service_type", "shop").order("created_at", { ascending: false }).limit(200),
         supabase.from("aurora_intake_drafts").select("id,service_type,brief,budget_eur,status,confidence,created_at,resulting_order_id").order("created_at", { ascending: false }).limit(50),
       ]);
       if (e1) throw e1;
