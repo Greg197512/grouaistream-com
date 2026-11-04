@@ -24,6 +24,11 @@ i aktualny. Jeśli fakt tu jest — nie weryfikuj go od nowa dziesiątkami wywo�
   mastering −14 LUFS/−1 dBTP, WAV 44,1k/16, okładka 3000, czysty tekst → `generations.release`,
   `tracks.release` + `tracks.studio_certified` (znaczek „✓ GrouAI Studio”). Migracja z Lovable: `docs/MIGRACJA-Z-LOVABLE.md`.
 
+- **Sklep GrouaRock** (`/shop`): Vercel `api/shop-checkout` → zamówienia w istniejącej tabeli `aurora_business_orders`
+  (`service_type="shop"`, pozycje i adres w `payload`, token usera + RLS). Ceny z `src/data/shopCatalog.ts`.
+  Płatność Stripe Checkout, gdy w Vercel jest `STRIPE_SECRET_KEY`; bez niego zamówienie „do opłacenia”. Paddle nie (zakaz towarów fizycznych).
+  Stara funkcja `shop-checkout` i tabele `shop_orders`/`gift_codes` nie są używane (brak w bazie prod).
+
 ## Vercel
 - Team `team_dcuxbMKuCaW05SplN8IdrSIq`. Produkcja `grouaistream.com` = projekt **`grouaistream-com`**
   (`prj_nDY7frLwg4nyMZpywRDLSzclamTZ`). Projekty `grouaistream` i `dist` to duplikaty na tym samym

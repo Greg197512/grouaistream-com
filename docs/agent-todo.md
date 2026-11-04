@@ -14,7 +14,7 @@ Właściciel: **agent** (wykonuje po bramce) albo **Grzegorz** (tylko Ty możesz
 | P0-3 | Wykrywanie nastroju a RODO: wyłączyć wysyłanie zdjęć twarzy do darmowych modeli, dodać osobną zgodę, analiza lokalna albo u dostawcy z umową powierzenia, DPIA | Stream | M | wysokie | L4 | agent (spec) → Grzegorz |
 | P0-4 | Usunąć duplikaty projektów Vercel (`grouaistream`, `dist`) i wyłączyć `deploy.yml` (drugie wdrożenie `--prod`) | infra | S | niskie | L3 | Grzegorz (usunięcie) / agent (workflow) |
 | P0-5 | CI dla PR: build + testy + lint (tylko nowe błędy); ochrona gałęzi `main` (scalanie po zielonym CI) | infra | S | niskie | L2 | agent |
-| P0-6 | Nie włączać `SHOP_PADDLE_LIVE` przed P0-1 i testem całej ścieżki zamówienia w sandboxie | GrouaRock | S | wysokie | L4 | Grzegorz |
+| P0-6 | Sklep: dodać w Vercel `STRIPE_SECRET_KEY` (najpierw `sk_test_…`, test zamówienia, potem klucz live) i opcjonalnie `SHOP_SHIPPING_EUR_CENTS`; `SHOP_PADDLE_LIVE` nie włączać | GrouaRock | S | wysokie | L4 | Grzegorz |
 
 ## P1 — ważne
 

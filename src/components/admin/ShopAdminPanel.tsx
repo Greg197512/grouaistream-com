@@ -3,11 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { SHOP_PRODUCTS } from "@/data/shopCatalog";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { SHOP_SERVICE_TYPE, toShopOrder, type ShopOrderView as Order } from "@/lib/shopOrder";
 
-type Order = {
-  id: string; user_id: string; email: string | null; items: { id: string; name: string; size: string | null; qty: number; unitCents: number }[];
-  total_cents: number; currency: string; status: string; shipping: Record<string, string> | null; paddle_transaction_id: string | null; note: string | null; created_at: string;
-};
 const STATUSES = ["new", "paid", "shipped", "cancelled", "refunded"] as const;
 const LABEL: Record<string, string> = { new: "Nowe", paid: "Opłacone", shipped: "Wysłane", cancelled: "Anulowane", refunded: "Zwrot" };
 const eur = (c: number) => (c / 100).toLocaleString("pl-PL", { style: "currency", currency: "EUR" });
@@ -19,18 +16,28 @@ export function ShopAdminPanel() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const { data, error } = await (supabase as any).from("shop_orders").select("*").order("created_at", { ascending: false }).limit(500);
+    const { data, error } = await supabase.from("aurora_business_orders").select("*").eq("service_type", SHOP_SERVICE_TYPE).order("created_at", { ascending: false }).limit(500);
     if (error) toast.error("Nie udało się pobrać zamówień: " + error.message);
-    setOrders((data as Order[]) ?? []);
+    setOrders((data ?? []).map((r) => toShopOrder(r as Record<string, unknown>)));
     setLoading(false);
   }, []);
   useEffect(() => { load(); }, [load]);
 
   const setStatus = async (id: string, status: string) => {
-    const { error } = await (supabase as any).from("shop_orders").update({ status, updated_at: new Date().toISOString() }).eq("id", id);
+    const patch: Record<string, unknown> = { status };
+    if (status === "paid") { patch.payment_status = "paid"; patch.paid_at = new Date().toISOString(); }
+    if (status === "refunded") patch.payment_status = "refunded";
+    const { error } = await supabase.from("aurora_business_orders").update(patch as never).eq("id", id);
     if (error) return toast.error(error.message);
-    setOrders((o) => o.map((x) => (x.id === id ? { ...x, status } : x)));
+    setOrders((o) => o.map((x) => (x.id === id ? { ...x, status, payment_status: (patch.payment_status as string) ?? x.payment_status } : x)));
     toast.success("Status zmieniony");
+  };
+  // Sprawdza w Stripe, czy zamówienie zostało opłacone (gdy klient zamknął kartę przed powrotem).
+  const verify = async (id: string) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const r = await fetch("/api/shop-checkout", { method: "POST", headers: { "content-type": "application/json", authorization: `Bearer ${session?.access_token ?? ""}` }, body: JSON.stringify({ action: "confirm", orderId: id }) });
+    const j = await r.json().catch(() => ({}));
+    if (j.paid) { toast.success("Opłacone w Stripe"); load(); } else toast.info(j.error === "stripe_not_configured" ? "Brak klucza Stripe w Vercel" : "Stripe: jeszcze nieopłacone");
   };
   const stats = useMemo(() => {
     const paid = orders.filter((o) => o.status === "paid" || o.status === "shipped");
@@ -55,7 +62,7 @@ export function ShopAdminPanel() {
           <tbody>{SHOP_PRODUCTS.map((p) => (
             <tr key={p.id} className="border-t border-border"><td className="py-1.5">{p.name}</td><td>{eur(p.eurCents)} · {p.pln} zł</td><td>{p.preorder ? "przedsprzedaż" : "standard"}</td><td className="text-right tabular-nums">{stats.byProd[p.id] || 0}</td></tr>
           ))}</tbody></table></div>
-        <p className="text-xs text-muted-foreground mt-2">Ceny zmienisz w src/data/shopCatalog.ts oraz w supabase/functions/shop-checkout (serwer jest źródłem prawdy).</p>
+        <p className="text-xs text-muted-foreground mt-2">Ceny zmienisz w src/data/shopCatalog.ts (serwer api/shop-checkout czyta ten sam plik). Zamówienia są w tabeli aurora_business_orders (typ „shop”).</p>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -77,7 +84,11 @@ export function ShopAdminPanel() {
               </div>
               <ul className="text-sm">{o.items.map((i, k) => <li key={k}>{i.qty} × {i.name}{i.size ? ` (${i.size})` : ""} · {eur(i.unitCents * i.qty)}</li>)}</ul>
               {o.shipping && <div className="text-sm text-muted-foreground">Wysyłka: {o.shipping.name}, {o.shipping.street}, {o.shipping.zip} {o.shipping.city}, {o.shipping.country}{o.shipping.phone ? `, tel. ${o.shipping.phone}` : ""}</div>}
-              {o.paddle_transaction_id && <div className="text-xs text-muted-foreground">Paddle: {o.paddle_transaction_id}</div>}
+              <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                <span>Płatność: {o.payment_status === "paid" ? "opłacone" : o.payment_status === "refunded" ? "zwrot" : "oczekuje"}</span>
+                {o.stripe_session_id && <span>· Stripe {o.stripe_session_id.slice(0, 18)}…</span>}
+                {o.stripe_session_id && o.payment_status !== "paid" && <Button size="sm" variant="outline" onClick={() => verify(o.id)}>Sprawdź płatność</Button>}
+              </div>
             </div>
           ))}
         </div>
