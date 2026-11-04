@@ -1,45 +1,10 @@
-import { useEffect, useRef } from "react";
-
 const SLOGANS = ["🎄 Święta z muzyką — kup coś, dostaj miesiąc VIP gratis", "🎁 Każde zamówienie = bilet z kodem VIP na 30 dni", "❄️ Noś swój dźwięk także zimą", "🎅 Prezent, który gra: Grouarock × Grouaistream", "🔔 Wesołych Świąt od ekipy Grouarock", "⭐ Grouaistream: start free"];
 
-/** Świąteczna oprawa: śnieg (canvas), lampki, Mikołaj z saniami, pasek haseł. */
+/** Świąteczna oprawa: lampki, Mikołaj, pasek haseł (bez śniegu — na życzenie). */
 export function XmasDecor() {
-  const cv = useRef<HTMLCanvasElement>(null);
-  useEffect(() => {
-    const c = cv.current; if (!c) return;
-    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reduce) return;
-    if (document.documentElement.getAttribute("data-lowpower") === "on") return;
-    // Lekki śnieg: bez rozmycia (shadowBlur był bardzo drogi), ~30 kl./s, pauza w trakcie przewijania
-    // i gdy karta jest w tle — żeby przewijanie palcem/myszką było płynne.
-    const x = c.getContext("2d")!; let w = 0, h = 0, raf = 0, last = 0, scrolling = 0;
-    const n = innerWidth < 768 ? 36 : 70;
-    const fl = Array.from({ length: n }, () => ({ x: Math.random(), y: Math.random(), r: 1 + Math.random() * 2.6, s: .25 + Math.random() * .9, d: Math.random() * 6 }));
-    const size = () => { w = c.width = innerWidth; h = c.height = innerHeight; };
-    size(); addEventListener("resize", size);
-    const onScroll = () => { clearTimeout(scrolling); scrolling = window.setTimeout(() => { scrolling = 0; }, 180); };
-    addEventListener("scroll", onScroll, { passive: true });
-    const tick = (t: number) => {
-      raf = requestAnimationFrame(tick);
-      if (scrolling || document.hidden || t - last < 33) return;
-      const dt = Math.min(t - last, 100); last = t;
-      x.clearRect(0, 0, w, h);
-      x.fillStyle = "rgba(255,255,255,.95)";
-      x.beginPath();
-      for (const f of fl) {
-        f.y += f.s * .00028 * dt; f.x += Math.sin(t / 3200 + f.d) * .00025;
-        if (f.y > 1.02) { f.y = -.02; f.x = Math.random(); }
-        x.moveTo(f.x * w + f.r, f.y * h); x.arc(f.x * w, f.y * h, f.r, 0, 7);
-      }
-      x.fill();
-    };
-    raf = requestAnimationFrame(tick);
-    return () => { cancelAnimationFrame(raf); clearTimeout(scrolling); removeEventListener("resize", size); removeEventListener("scroll", onScroll); };
-  }, []);
   const bulbs = Array.from({ length: 28 });
   return (
     <>
-      <canvas ref={cv} aria-hidden className="pointer-events-none fixed inset-0 z-[35]" />
       <style>{`
         @keyframes xm-tw{0%,100%{opacity:.35;transform:scale(.8)}50%{opacity:1;transform:scale(1.15)}}
         @keyframes xm-fly{0%{transform:translateX(-30vw) translateY(0) rotate(-4deg)}50%{transform:translateX(50vw) translateY(-26px) rotate(3deg)}100%{transform:translateX(130vw) translateY(10px) rotate(-3deg)}}
