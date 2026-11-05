@@ -31,7 +31,8 @@ import { parseVatMode } from "../src/lib/vatOss";
 import { localizeProduct } from "../src/data/shopCatalogI18n";
 import { SHOP_PRODUCTS } from "../src/data/shopCatalog";
 import { supplierFor, printfulExternalId } from "../src/data/shopSuppliers";
-import { createPrintfulOrder, printfulAssets, printfulExternalIds, printfulStores, type PrintfulCfg } from "../src/lib/printful";
+import { createPrintfulOrder, printfulAssets, printfulExternalIds, printfulStores, printfulVariants, setPrintfulExternalId, withApiStore, type PrintfulCfg } from "../src/lib/printful";
+import { expectedExternalIds, suggestExternalId } from "../src/lib/printfulMatch";
 import { CARRIERS, carrierById, isPointCode, trackingUrl } from "../src/data/shopCarriers";
 import { adminMail, customerPaidMail, customerShippedMail, customerTransferMail, mailConfigFromEnv, sendMail, supplierMail, type MailCfg, type MailOrder } from "../src/lib/shopMail";
 import type { PricedLine, Shipping } from "../src/lib/shopOrder";
@@ -288,7 +289,8 @@ async function fulfill(auth: string, row: OrderRow, force: boolean): Promise<Ful
 
   const pfLines = p.items.filter((l) => supplierFor(l.id) === "printful");
   const mailLines = p.items.filter((l) => supplierFor(l.id) === "email");
-  const pf = printfulCfg();
+  const pfBase = printfulCfg();
+  const pf = pfBase && (await withApiStore(pfBase));
   if (pfLines.length) {
     if (!pf) { manual = true; notes.push(`Printful niepodłączony — zamów ręcznie: ${pfLines.map((l) => `${l.qty}× ${printfulExternalId(l.id, l.size)}`).join(", ")}`); }
     else {
@@ -361,10 +363,40 @@ async function shipAction(auth: string, user: User, body: Record<string, unknown
   return json({ orderId, tracking, url: trackingUrl(carrier.id, number), mailed });
 }
 
+// Łączenie produktów: lista wariantów z Printful + propozycje „External ID” (admin), potem zapis wybranych.
+async function printfulVariantsAction(auth: string, user: User) {
+  if (!(await isAdmin(auth, user.id))) return json({ error: "forbidden" }, 403);
+  const base = printfulCfg();
+  if (!base) return json({ error: "printful_not_configured" }, 404);
+  const pf = await withApiStore(base);
+  if (!pf.storeId) return json({ error: "no_api_store", stores: await printfulStores(base) }, 409);
+  const r = await printfulVariants(pf);
+  if (r.ok === false) return json({ error: "printful_error", message: r.error }, 502);
+  return json({ storeId: pf.storeId, expected: expectedExternalIds(), variants: r.variants.map((v) => ({ ...v, suggestion: v.externalId || suggestExternalId(v) })) });
+}
+async function printfulMapAction(auth: string, user: User, body: Record<string, unknown>) {
+  if (!(await isAdmin(auth, user.id))) return json({ error: "forbidden" }, 403);
+  const base = printfulCfg();
+  if (!base) return json({ error: "printful_not_configured" }, 404);
+  const pf = await withApiStore(base);
+  if (!pf.storeId) return json({ error: "no_api_store" }, 409);
+  const allowed = new Set(expectedExternalIds());
+  const map = (Array.isArray(body.map) ? body.map : []).slice(0, 300) as { variantId?: unknown; externalId?: unknown }[];
+  const results: { variantId: number; externalId: string; ok: boolean; error?: string }[] = [];
+  for (const m of map) {
+    const id = Number(m.variantId), ext = String(m.externalId ?? "");
+    if (!Number.isInteger(id) || !allowed.has(ext)) { results.push({ variantId: id, externalId: ext, ok: false, error: "bad_mapping" }); continue; }
+    const r = await setPrintfulExternalId(pf, id, ext);
+    results.push({ variantId: id, externalId: ext, ok: r.ok, ...(r.ok ? {} : { error: r.error }) });
+  }
+  return json({ saved: results.filter((x) => x.ok).length, failed: results.filter((x) => !x.ok) });
+}
+
 async function printfulCheck(auth: string, user: User) {
   if (!(await isAdmin(auth, user.id))) return json({ error: "forbidden" }, 403);
-  const pf = printfulCfg();
-  if (!pf) return json({ error: "printful_not_configured" }, 404);
+  const base = printfulCfg();
+  if (!base) return json({ error: "printful_not_configured" }, 404);
+  const pf = await withApiStore(base);
   const r = await printfulExternalIds(pf);
   if (r.ok === false) return json({ error: "printful_error", message: r.error }, 502);
   const have = new Set(r.ids);
@@ -378,14 +410,15 @@ export default async function handler(req: Request): Promise<Response> {
   if (req.method === "GET") {
     // Diagnostyka Printful bez sekretów (same liczby), cache 5 min: GET ?diag=printful
     if (new URL(req.url).searchParams.get("diag") === "printful") {
-      const pf = printfulCfg();
-      if (!pf) return json({ configured: false });
+      const base = printfulCfg();
+      if (!base) return json({ configured: false });
+      const pf = await withApiStore(base);
       const r = await printfulExternalIds(pf);
       if (r.ok === false) return json({ configured: true, ok: false, error: r.error, storeIdSet: !!pf.storeId, stores: await printfulStores(pf), ...(await printfulAssets({ ...pf, storeId: null })) });
       const have = new Set(r.ids);
       const need = SHOP_PRODUCTS.filter((p) => supplierFor(p.id) === "printful")
         .flatMap((p) => (p.sizes ? ["S", "M", "L", "XL", "XXL", "3XL"].map((s) => printfulExternalId(p.id, s)) : [printfulExternalId(p.id, null)]));
-      return new Response(JSON.stringify({ configured: true, ok: true, storeVariants: r.ids.length, linked: need.filter((x) => have.has(x)).length, total: need.length, autoConfirm: pf.confirm }), {
+      return new Response(JSON.stringify({ configured: true, ok: true, storeVariants: r.ids.length, linked: need.filter((x) => have.has(x)).length, total: need.length, autoConfirm: pf.confirm, apiStore: pf.storeId }), {
         headers: { "content-type": "application/json", "cache-control": "public, s-maxage=300" },
       });
     }
@@ -404,6 +437,8 @@ export default async function handler(req: Request): Promise<Response> {
     if (body.action === "payinfo") return await payinfo(auth, body);
     if (body.action === "fulfill") return await fulfillAction(auth, user, body);
     if (body.action === "ship") return await shipAction(auth, user, body);
+    if (body.action === "printful-variants") return await printfulVariantsAction(auth, user);
+    if (body.action === "printful-map") return await printfulMapAction(auth, user, body);
     if (body.action === "printful-check") return await printfulCheck(auth, user);
     return json({ error: "unknown_action" }, 400);
   } catch {

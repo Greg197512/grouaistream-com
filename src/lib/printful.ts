@@ -77,3 +77,39 @@ export async function printfulExternalIds(cfg: PrintfulCfg): Promise<{ ok: true;
   }
   return { ok: true, ids };
 }
+
+// Sklep typu „Manual order platform / API” (w API Printful: type "native"). Gdy PRINTFUL_STORE_ID nie ustawiono,
+// znajdujemy go sami (pamięć 10 min) — wystarczy założyć taki sklep w Printful.
+let apiStore: { id: string | null; at: number } | null = null;
+export async function withApiStore(cfg: PrintfulCfg): Promise<PrintfulCfg> {
+  if (cfg.storeId) return cfg;
+  if (!apiStore || Date.now() - apiStore.at > 10 * 60_000) {
+    const s = await printfulStores(cfg);
+    const api = Array.isArray(s) ? s.find((x) => x.type === "native" || /api|manual/i.test(x.type)) : undefined;
+    apiStore = { id: api ? String(api.id) : null, at: Date.now() };
+  }
+  return apiStore.id ? { ...cfg, storeId: apiStore.id } : cfg;
+}
+
+export type PfVariant = { id: number; product: string; name: string; size: string | null; color: string | null; externalId: string | null };
+/** Wszystkie warianty produktów w sklepie API (do łączenia z naszym katalogiem). */
+export async function printfulVariants(cfg: PrintfulCfg): Promise<{ ok: true; variants: PfVariant[] } | { ok: false; error: string }> {
+  const list = await pf(cfg, "/store/products?limit=100");
+  if (!list.ok) return { ok: false, error: list.error ?? `HTTP ${list.status}` };
+  const out: PfVariant[] = [];
+  for (const p of ((list.result ?? []) as { id: number }[]).slice(0, 60)) {
+    const one = await pf(cfg, `/store/products/${p.id}`);
+    const r = (one.result ?? {}) as { sync_product?: { name?: string }; sync_variants?: { id: number; name?: string; size?: string; color?: string; external_id?: string }[] };
+    for (const v of r.sync_variants ?? []) {
+      out.push({ id: v.id, product: r.sync_product?.name ?? "", name: v.name ?? "", size: v.size ?? null, color: v.color ?? null, externalId: v.external_id ?? null });
+    }
+  }
+  return { ok: true, variants: out };
+}
+
+/** Ustawia „External ID” wariantu (np. "dropbass-M"), po którym zamówienia trafiają do właściwego produktu. */
+export async function setPrintfulExternalId(cfg: PrintfulCfg, variantId: number, externalId: string) {
+  const r = await pf(cfg, `/store/variants/${variantId}`, { method: "PUT", body: JSON.stringify({ external_id: externalId }) });
+  return r.ok ? { ok: true as const } : { ok: false as const, error: r.error ?? `HTTP ${r.status}` };
+}
+
