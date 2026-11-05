@@ -22,7 +22,8 @@ i aktualny. Jeśli fakt tu jest — nie weryfikuj go od nowa dziesiątkami wywo�
 - **Stary hub `bmwtydwpevzhbdplilbr` NIE ISTNIEJE (DNS, 11.2026)** — nie dodawać do niego wywołań. Przepięte: asystent (`hubAI` →
   `/api/assistant`), czat promptów Studia (`mode:"studio"`), Aurora B2B (`mode:"aurora"`, blok `[[ORDER]]` → `aurora_business_orders`),
   silniki Studia (`invokeStudioEngine` → główny projekt), szept nastroju (asystent), Nocne czytanie (`/api/radio-story`), prezent (`/prezent/:id` = SPA).
-  Wyłączone: geo/obecność, nauka silnika. Bez zastępstwa (pokazują błąd): cennik B2B, raport Paddle, profil neuro.
+  Wyłączone: geo/obecność, nauka silnika. Bez zastępstwa (pokazują błąd): cennik B2B, raport Paddle.
+  **Profil Neuro** (`src/lib/neuroProfile.ts`, 5.11): liczony w przeglądarce z `listening_history`/`liked_songs`/`mood_sessions` + cechy `tracks`, bez AI, cache 6 h w localStorage.
 - **Maile (5.11):** `api/admin-email` (Vercel edge; masowa strumieniuje spacje, do 300 s): admin single/mass (`all_users` = rpc `get_all_users_for_admin`,
   `blog_subscribers`), `action:"b2b-order"` (zlecenie Aurory → `SHOP_NOTIFY_EMAIL` + klient). Transport `mailConfigFromEnv` (`src/lib/shopMail.ts`):
   Resend/Brevo gdy klucz + `SHOP_MAIL_FROM`, inaczej **bez kluczy** `send-transactional-email` głównego projektu (szablon `admin-notification`
