@@ -21,7 +21,8 @@ import { speak, stopSpeaking as stopVoice } from "@/utils/tts";
 import { YouTubePlayer } from "@/components/player/YouTubePlayer";
 import { buildPersonalQueue, type Mood } from "@/lib/personalRadio";
 import { buildDailyRadio } from "@/lib/radioDaily";
-import { BLOCKS } from "@/lib/radioClock";
+import { BLOCKS, blockAt, type BlockId } from "@/lib/radioClock";
+import { AI_DISCLOSURE, decideHost, hostLang, hostLine, initialHostState } from "@/lib/radioHost";
 import { useRadioStoryOverride } from "@/lib/radioStories";
 import { fetchUpcomingRequests, type UpcomingRequest } from "@/lib/radioRequest";
 import { withTimeout } from "@/lib/withTimeout";
@@ -109,6 +110,11 @@ const RadioLive = () => {
   // Autopilot (ramówka automatyczna): starty utworów i bloki na dziś + bieżący blok do wyświetlenia.
   const autoPlanRef = useRef<{ startedAtMs: number; starts: number[]; blocks: string[]; djs?: boolean[] } | null>(null);
   const [autoBlock, setAutoBlock] = useState<string | null>(null);
+  // Prezenterka AI (Nova): włącznik słuchacza, bieżąca kwestia, stan „kiedy mówić” i wyciszenie muzyki pod głosem.
+  const [hostOn, setHostOn] = useState<boolean>(() => { try { return localStorage.getItem("grouai-radio-host") !== "off"; } catch { return true; } });
+  const [hostText, setHostText] = useState<string | null>(null);
+  const hostStateRef = useRef(initialHostState());
+  const duckRef = useRef(false);
   const [configVersion, setConfigVersion] = useState(0); // bump = przeładuj grafik (np. po zmianie trybu)
   // Tryb osobisty: kolejka zbudowana z danych zalogowanego (słyszy tylko on).
   const [personalTracks, setPersonalTracks] = useState<ScheduleTrack[]>([]);
@@ -676,6 +682,7 @@ const RadioLive = () => {
       let seeked = false;
       on("timeupdate", () => {
         if (playbackTokenRef.current !== token || !audio.duration || !Number.isFinite(audio.duration)) return;
+        if (duckRef.current) return; // prezenterka mówi — głośność trzyma jej efekt
         const ct = audio.currentTime, left = audio.duration - ct;
         const inWin = (offset < 1 && ct < FADE_IN) || left < FADE_OUT;
         if (!inWin) { if (lastSet !== null && lastSet < levelRef.current) { audio.volume = levelRef.current; lastSet = null; } return; }
@@ -1137,6 +1144,48 @@ const RadioLive = () => {
     return () => { window.removeEventListener("message", onMsg); window.clearTimeout(safety); };
   }, [requestVideo, closeRequestVideo]);
 
+  // Prezenterka AI przy starcie utworu: powitanie, zmiana bloku, pełna godzina (z ujawnieniem AI),
+  // co 4 utwory zapowiedź. Mówi na wstępie utworu, muzyka ściszona do 25%.
+  useEffect(() => {
+    if (!isPlaying || personalMood || !hostOn || muted || newsVideo || storyId) return;
+    if (talkActiveRef.current || typeof document !== "undefined" && document.hidden) return;
+    const item = schedule[currentIndex];
+    if (!item?.track) return;
+    const parts = Object.fromEntries(new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Warsaw", hour: "2-digit", minute: "2-digit", weekday: "short", hour12: false })
+      .formatToParts(new Date()).map((x) => [x.type, x.value])) as Record<string, string>;
+    const hour = (+parts.hour || 0) % 24, minute = +parts.minute || 0;
+    const dow = ({ Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 } as Record<string, number>)[parts.weekday] ?? new Date().getDay();
+    const plan = autoPlanRef.current;
+    const block = ((plan?.blocks?.[currentIndex]) || blockAt(dow, hour)) as BlockId;
+    const dj = !!plan?.djs?.[currentIndex];
+    const { kind, next } = decideHost(hostStateRef.current, { block, hour, ms: Date.now() });
+    hostStateRef.current = next;
+    if (!kind) return;
+    const lang = hostLang(typeof localStorage !== "undefined" ? localStorage.getItem("grooveai-language") : "pl");
+    const prevItem = schedule[(currentIndex - 1 + schedule.length) % schedule.length];
+    const line = hostLine({ kind, lang, hour, minute, block, dj, seed: currentIndex, prev: prevItem?.track ?? null, next: item.track });
+    if (!line) return;
+    let cancelled = false;
+    const level = muted ? 0 : volume / 100;
+    const t0 = window.setTimeout(async () => {
+      if (cancelled || talkActiveRef.current) return;
+      duckRef.current = true;
+      if (audioRef.current) audioRef.current.volume = Math.max(level * 0.25, 0.02);
+      setHostText(line);
+      try {
+        await Promise.race([speak(line, { lang, mode: "dj" }), new Promise((r) => window.setTimeout(r, 20000))]);
+      } catch { /* głos niedostępny — muzyka gra dalej */ }
+      finally {
+        duckRef.current = false;
+        if (audioRef.current && !talkActiveRef.current) audioRef.current.volume = muted ? 0 : volume / 100;
+        setHostText(null);
+      }
+    }, 1200); // chwila wstępu utworu, potem głos
+    return () => { cancelled = true; window.clearTimeout(t0); };
+    // Tylko przy zmianie utworu / starcie odtwarzania.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentIndex, isPlaying, hostOn]);
+
   // Auto co 3 h (gdy radio gra i nic nie leci na antenie) — świeże opowiadanie z bloga.
   useEffect(() => {
     if (!isPlaying || talkActive || newsVideo || storyId) return;
@@ -1418,6 +1467,20 @@ const RadioLive = () => {
           <h1 className="text-xl font-bold">{personalMood ? `Twoje radio · ${personalMood}` : config?.station_name}</h1>
           {!personalMood && autoBlock && (
             <p className="mt-1 text-xs text-foreground/70"><span className="rounded-full bg-primary/15 px-2 py-0.5 font-semibold text-primary">Autopilot</span> Teraz: {autoBlock}</p>
+          )}
+          {!personalMood && (
+            <div className="mt-2 flex flex-col items-center gap-1">
+              <button
+                type="button"
+                onClick={() => { const v = !hostOn; setHostOn(v); try { localStorage.setItem("grouai-radio-host", v ? "on" : "off"); } catch { /* */ } if (!v) { stopVoice(); duckRef.current = false; if (audioRef.current) audioRef.current.volume = muted ? 0 : volume / 100; setHostText(null); } }}
+                aria-pressed={hostOn}
+                className={`rounded-full border px-3 py-1 text-xs font-semibold ${hostOn ? "border-primary/50 bg-primary/15 text-primary" : "border-white/15 text-foreground/60"}`}
+              >
+                🎙️ Prezenterka Nova (AI): {hostOn ? "wł." : "wył."}
+              </button>
+              {hostText && <p className="max-w-md text-xs text-foreground/80"><b className="text-primary">Nova:</b> {hostText}</p>}
+              <p className="text-[11px] text-foreground/50">{AI_DISCLOSURE[hostLang(typeof localStorage !== "undefined" ? localStorage.getItem("grooveai-language") : "pl")]}</p>
+            </div>
           )}
           {personalMood && (
             <div className="mt-1 flex items-center justify-center gap-2 text-xs">

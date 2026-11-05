@@ -55,6 +55,9 @@ i aktualny. Jeśli fakt tu jest — nie weryfikuj go od nowa dziesiątkami wywo�
   bez `cdn1.suno.ai` i audycji). Admin: tryb `24h` = autopilot (podgląd ramówki), `manual` = grafik `radio_schedule`, `scheduled` = godziny. VIP gra grafik.
   Brak utworów w bloku klubowym (weekend, popołudnie, wieczór) → **DJ-miks electronic/hip-hop/disco** (`dj: true`, znaczek „DJ mix”).
   Przejścia DJ-skie: fade-in 2,5 s / fade-out 4 s samą głośnością jednego `<audio>` (bez Web Audio, bez drugiego elementu).
+- **Prezenterka AI „Nova”** (`src/lib/radioHost.ts`): persona, szablony PL/EN/NL/UA, filtr treści; mówi przy starcie utworu
+  (powitanie, zmiana bloku, pełna godzina z ujawnieniem AI, co 4 utwory zapowiedź; min. 6 min odstępu), muzyka ściszona do 25% (`duckRef`).
+  Głos: `speak(…, {mode:"dj"})`. Słuchacz wyłącza przyciskiem (localStorage `grouai-radio-host`). Ujawnienie AI widoczne na stronie radia.
 
 ## Baza `tracks` (stan po sprzątaniu)
 - ~406 realnych utworów. Usunięto 66 600 pustych „widm" (5 CC-artystów: Bensound, Kevin MacLeod,
