@@ -53,6 +53,7 @@ function playUrl(url: string, timeoutMs: number): Promise<boolean> {
 
 let current: HTMLAudioElement | null = null;
 
+const MALE_NAME = /\bmale\b|krzysztof|adam|jacek|marek|darkman|david|mark|guy|ryan|daniel|maxim|dmitr/i;
 const FEMALE = /female|zofia|paulina|ewa|agnieszka|jenny|aria|ava|samantha|zira|fenna|colette|polina|lesya|google (polski|nederlands|українська)|google us english/i;
 
 function browserVoice(text: string, lang: string): Promise<boolean> {
@@ -61,10 +62,11 @@ function browserVoice(text: string, lang: string): Promise<boolean> {
     const code = lang === "ua" ? "uk" : lang;
     const u = new SpeechSynthesisUtterance(text);
     const voices = window.speechSynthesis.getVoices().filter((v) => v.lang.toLowerCase().startsWith(code));
-    u.voice = voices.find((v) => FEMALE.test(v.name)) ?? voices[0] ?? null;
+    // Nova to kobieta: najpierw głos z listy kobiecych, potem każdy, który nie jest wyraźnie męski.
+    u.voice = voices.find((v) => FEMALE.test(v.name)) ?? voices.find((v) => !MALE_NAME.test(v.name)) ?? voices[0] ?? null;
     u.lang = u.voice?.lang ?? code;
-    u.rate = 1.05;
-    u.pitch = 1.08;
+    u.rate = 1.08;
+    u.pitch = u.voice && MALE_NAME.test(u.voice.name) ? 1.35 : 1.12; // radośniej, „z uśmiechem”
     // Zabezpieczenie: niektóre przeglądarki nie zgłaszają końca mowy — nie wolno zawiesić radia.
     const guard = window.setTimeout(() => { try { window.speechSynthesis.cancel(); } catch { /* */ } resolve(false); }, Math.max(8000, text.length * 110));
     u.onend = () => { clearTimeout(guard); resolve(true); };
@@ -101,7 +103,7 @@ const PIPER_MALE: Record<string, string> = {
   nl: "nl_BE-rdh-medium",
   ua: "uk_UA-ukrainian_tts-medium",
 };
-const MALE = /male|marek|krzysztof|adam|jacek|guy|david|daniel|andrew|christopher|ryan|maarten|xander|ostap|google uk english male/i;
+const MALE = /\bmale\b|marek|krzysztof|adam|jacek|guy|david|daniel|andrew|christopher|ryan|maarten|xander|ostap|google uk english male/i;
 const maleReady: Record<string, boolean> = {};
 const maleLoading: Record<string, boolean> = {};
 

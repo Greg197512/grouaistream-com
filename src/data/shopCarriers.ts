@@ -9,19 +9,21 @@ export type Carrier = {
   /** wymaga kodu punktu odbioru (Paczkomat) */
   point?: boolean;
   track: (n: string) => string;
+  /** Strona nadania paczki online u przewoźnika (admin: „Zamów kuriera”). */
+  send: string;
 };
 
 const q = encodeURIComponent;
 const inpostTrack = (n: string) => `https://inpost.pl/sledzenie-przesylek?number=${q(n)}`;
 
 export const CARRIERS: Carrier[] = [
-  { id: "inpost", name: "InPost Paczkomat®", logo: "📦", countries: ["PL"], point: true, track: inpostTrack },
-  { id: "inpost_courier", name: "Kurier InPost", logo: "🚚", countries: ["PL"], track: inpostTrack },
-  { id: "dhl", name: "DHL", logo: "🟨", countries: null, track: (n) => `https://www.dhl.com/pl-pl/home/sledzenie-przesylek.html?tracking-id=${q(n)}` },
-  { id: "poczta", name: "Poczta Polska", logo: "📮", countries: null, track: (n) => `https://emonitoring.poczta-polska.pl/?numer=${q(n)}` },
-  { id: "dpd", name: "DPD", logo: "🟥", countries: null, track: (n) => `https://tracktrace.dpd.com.pl/parcelDetails?p1=${q(n)}` },
-  { id: "gls", name: "GLS", logo: "🟦", countries: null, track: (n) => `https://gls-group.com/PL/pl/sledzenie-paczek?match=${q(n)}` },
-  { id: "ups", name: "UPS", logo: "🟫", countries: null, track: (n) => `https://www.ups.com/track?tracknum=${q(n)}` },
+  { id: "inpost", name: "InPost Paczkomat®", logo: "📦", countries: ["PL"], point: true, track: inpostTrack, send: "https://inpost.pl/nadaj-paczke" },
+  { id: "inpost_courier", name: "Kurier InPost", logo: "🚚", countries: ["PL"], track: inpostTrack, send: "https://inpost.pl/nadaj-paczke" },
+  { id: "dhl", name: "DHL", logo: "🟨", countries: null, track: (n) => `https://www.dhl.com/pl-pl/home/sledzenie-przesylek.html?tracking-id=${q(n)}`, send: "https://www.dhlparcel.pl/pl/nadaj-paczke.html" },
+  { id: "poczta", name: "Poczta Polska", logo: "📮", countries: null, track: (n) => `https://emonitoring.poczta-polska.pl/?numer=${q(n)}`, send: "https://www.envelo.pl/" },
+  { id: "dpd", name: "DPD", logo: "🟥", countries: null, track: (n) => `https://tracktrace.dpd.com.pl/parcelDetails?p1=${q(n)}`, send: "https://www.dpd.com/pl/pl/wyslij-paczke/" },
+  { id: "gls", name: "GLS", logo: "🟦", countries: null, track: (n) => `https://gls-group.com/PL/pl/sledzenie-paczek?match=${q(n)}`, send: "https://gls-group.com/PL/pl/wyslij-paczke/" },
+  { id: "ups", name: "UPS", logo: "🟫", countries: null, track: (n) => `https://www.ups.com/track?tracknum=${q(n)}`, send: "https://www.ups.com/ship/guided/origin?loc=pl_PL" },
 ];
 
 export const INPOST_MAP_URL = "https://inpost.pl/znajdz-paczkomat";

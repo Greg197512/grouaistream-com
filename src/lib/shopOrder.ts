@@ -73,9 +73,10 @@ export type ShopOrderView = {
   paid_at: string | null; method: PayMethod | null; lang: string | null;
   fulfillment: { state: string; at: string; notes?: string[] } | null;
   tracking: Tracking | null;
+  cancelRequested: boolean;
 };
 export function toShopOrder(row: Record<string, unknown>): ShopOrderView {
-  const p = (row.payload ?? {}) as { items?: unknown; total_cents?: unknown; shipping?: Shipping; stripe_session_id?: string; method?: PayMethod; lang?: string; fulfillment?: ShopOrderView["fulfillment"]; tracking?: Tracking };
+  const p = (row.payload ?? {}) as { items?: unknown; total_cents?: unknown; shipping?: Shipping; stripe_session_id?: string; method?: PayMethod; lang?: string; fulfillment?: ShopOrderView["fulfillment"]; tracking?: Tracking; cancel_requested_at?: string };
   const str = (v: unknown) => (v == null ? null : String(v));
   return {
     id: String(row.id), user_id: str(row.user_id), email: str(row.client_email),
@@ -85,6 +86,7 @@ export function toShopOrder(row: Record<string, unknown>): ShopOrderView {
     shipping: p.shipping ?? null, stripe_session_id: p.stripe_session_id ?? null, created_at: String(row.created_at),
     paid_at: str(row.paid_at), method: p.method ?? null, lang: p.lang ?? null, fulfillment: p.fulfillment ?? null,
     tracking: p.tracking && p.tracking.number ? p.tracking : null,
+    cancelRequested: !!p.cancel_requested_at,
   };
 }
 

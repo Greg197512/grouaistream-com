@@ -392,6 +392,31 @@ async function printfulMapAction(auth: string, user: User, body: Record<string, 
   return json({ saved: results.filter((x) => x.ok).length, failed: results.filter((x) => !x.ok) });
 }
 
+// Klient rezygnuje: nieopłacone → od razu „anulowane”; opłacone, a jeszcze nie nadane → prośba (zwrot robi admin).
+async function cancelAction(auth: string, user: User, body: Record<string, unknown>) {
+  const orderId = String(body.orderId ?? "");
+  if (!/^[0-9a-f-]{36}$/i.test(orderId)) return json({ error: "bad_order" }, 400);
+  const got = await rest(auth, `aurora_business_orders?id=eq.${orderId}&service_type=eq.${SHOP_SERVICE_TYPE}&user_id=eq.${user.id}&select=id,client_email,status,payment_status,payload`);
+  const row = Array.isArray(got.data) ? (got.data[0] as OrderRow & { status?: string }) : null;
+  if (!row) return json({ error: "not_found" }, 404);
+  const p = (row.payload ?? {}) as Record<string, unknown> & { tracking?: unknown; fulfillment?: { state?: string } };
+  if (row.status === "cancelled" || row.status === "refunded") return json({ orderId, state: "cancelled" });
+  if (row.status === "shipped" || p.tracking) return json({ error: "already_shipped" }, 409);
+  const paid = row.payment_status === "paid";
+  const patch = paid
+    ? { payload: { ...p, cancel_requested_at: new Date().toISOString() } }
+    : { status: "cancelled", payload: { ...p, cancelled_by: "customer", cancelled_at: new Date().toISOString() } };
+  const upd = await rest(auth, `aurora_business_orders?id=eq.${orderId}`, { method: "PATCH", body: JSON.stringify(patch) });
+  if (!upd.ok) return json({ error: "save_failed", status: upd.status }, 502);
+  const m = mailCfg(), to = env("SHOP_NOTIFY_EMAIL");
+  if (m && to) {
+    const ref = orderRef(orderId);
+    await sendMail(m, { to, subject: paid ? `Klient prosi o anulowanie opłaconego zamówienia ${ref}` : `Klient anulował zamówienie ${ref}`,
+      html: `<p>${paid ? `Zamówienie <b>${ref}</b> jest opłacone — klient chce zrezygnować. ${p.fulfillment?.state === "sent" ? "Uwaga: przekazane już do realizacji (Printful/dostawca) — anuluj tam, jeśli się da." : "Nie zostało jeszcze przekazane do realizacji."} Oddaj pieniądze i ustaw status „Zwrot” w panelu.` : `Klient anulował nieopłacone zamówienie <b>${ref}</b>. Nic nie trzeba robić.`}</p><p>Klient: ${row.client_email ?? "—"}</p>` });
+  }
+  return json({ orderId, state: paid ? "requested" : "cancelled" });
+}
+
 async function printfulCheck(auth: string, user: User) {
   if (!(await isAdmin(auth, user.id))) return json({ error: "forbidden" }, 403);
   const base = printfulCfg();
@@ -437,6 +462,7 @@ export default async function handler(req: Request): Promise<Response> {
     if (body.action === "payinfo") return await payinfo(auth, body);
     if (body.action === "fulfill") return await fulfillAction(auth, user, body);
     if (body.action === "ship") return await shipAction(auth, user, body);
+    if (body.action === "cancel") return await cancelAction(auth, user, body);
     if (body.action === "printful-variants") return await printfulVariantsAction(auth, user);
     if (body.action === "printful-map") return await printfulMapAction(auth, user, body);
     if (body.action === "printful-check") return await printfulCheck(auth, user);

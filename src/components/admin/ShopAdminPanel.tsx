@@ -279,7 +279,20 @@ export function ShopAdminPanel() {
               </div>
               {o.fulfillment?.notes && o.fulfillment.notes.length > 0 && <ul className="text-xs text-muted-foreground list-disc pl-4">{o.fulfillment.notes.map((n, k) => <li key={k}>{n}</li>)}</ul>}
               <ul className="text-sm">{o.items.map((i, k) => <li key={k}>{i.qty} × {i.name}{i.size ? ` (${i.size})` : ""} · {eur(i.unitCents * i.qty)}</li>)}</ul>
-              {o.shipping?.carrier && <div className="text-sm">🚚 Klient wybrał: <b>{carrierById(o.shipping.carrier)?.name ?? o.shipping.carrier}</b>{o.shipping.point ? <> · Paczkomat <b>{o.shipping.point}</b></> : null}</div>}
+              {o.shipping?.carrier && (
+                <div className="flex flex-wrap items-center gap-2 text-sm">
+                  <span>🚚 Klient wybrał: <b>{carrierById(o.shipping.carrier)?.name ?? o.shipping.carrier}</b>{o.shipping.point ? <> · Paczkomat <b>{o.shipping.point}</b></> : null}</span>
+                  {!o.tracking && o.payment_status === "paid" && carrierById(o.shipping.carrier) && <>
+                    <Button size="sm" variant="outline" onClick={() => {
+                      const s = o.shipping!;
+                      const txt = [s.name, s.company, s.street, `${s.zip} ${s.city}`, s.country, s.phone ? `tel. ${s.phone}` : "", o.email ?? "", s.point ? `Paczkomat: ${s.point}` : "", `Zamówienie: ${orderRef(o.id)}`].filter(Boolean).join("\n");
+                      navigator.clipboard?.writeText(txt).then(() => toast.success("Dane odbiorcy skopiowane — wklej u przewoźnika")).catch(() => toast.error("Nie udało się skopiować"));
+                    }}>Kopiuj dane odbiorcy</Button>
+                    <Button size="sm" asChild><a href={carrierById(o.shipping.carrier)!.send} target="_blank" rel="noopener noreferrer">Zamów kuriera: {carrierById(o.shipping.carrier)!.name} ↗</a></Button>
+                  </>}
+                </div>
+              )}
+              {o.cancelRequested && o.status !== "cancelled" && o.status !== "refunded" && <div className="rounded-md bg-red-500/10 px-2 py-1 text-sm text-red-500">⚠ Klient prosi o anulowanie — oddaj pieniądze i ustaw status „Zwrot”.</div>}
               {o.tracking ? (
                 <div className="text-sm">📦 Nadane: {carrierById(o.tracking.carrier)?.name} · <a className="text-primary underline" href={trackingUrl(o.tracking.carrier, o.tracking.number) ?? "#"} target="_blank" rel="noopener noreferrer">{o.tracking.number}</a> · {new Date(o.tracking.at).toLocaleString("pl-PL")}</div>
               ) : o.payment_status === "paid" && o.status !== "cancelled" && o.status !== "refunded" && (

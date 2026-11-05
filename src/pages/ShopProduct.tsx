@@ -9,6 +9,8 @@ import { localizeProduct } from "@/data/shopCatalogI18n";
 import { SHOP_SIZES } from "@/lib/shopOrder";
 import { useShopCart } from "@/lib/shopCart";
 import { LOCALE, SHOP_LANGS, SHOP_TEXT, shopLang } from "@/i18n/shop";
+import { STORE_TXT } from "@/components/shop/Storefront";
+import { Gift, RotateCcw, ShieldCheck, ShoppingBag, Truck } from "lucide-react";
 
 export default function ShopProduct() {
   const { id } = useParams();
@@ -16,6 +18,7 @@ export default function ShopProduct() {
   const { language, setLanguage } = useLanguage();
   const lang = shopLang(language);
   const T = SHOP_TEXT[lang];
+  const S = STORE_TXT[lang];
   const base = SHOP_PRODUCTS.find((p) => p.id === id);
   const p = useMemo(() => (base ? localizeProduct(base, lang) : null), [base, lang]);
   const { add, count } = useShopCart();
@@ -86,8 +89,22 @@ export default function ShopProduct() {
           {p.use && <p className="mt-2 text-neutral-600"><b>{T.use}</b> {p.use}</p>}
           <ul className="mt-4 divide-y divide-neutral-200 border-y border-neutral-200 text-sm">{p.spec.map((s) => <li key={s} className="py-2">{s}</li>)}</ul>
           <div className="mt-5 flex flex-wrap items-center gap-3">
-            {base.sizes && <select value={size} onChange={(e) => setSize(e.target.value)} aria-label={T.size} className="h-12 rounded-full border border-neutral-300 bg-white px-4">{SHOP_SIZES.map((s) => <option key={s}>{s}</option>)}</select>}
-            <button type="button" onClick={onAdd} className="h-12 rounded-full bg-neutral-900 px-7 font-semibold text-white transition hover:bg-orange-500">{base.preorder ? T.preorder : T.addToCart}</button>
+            {base.sizes && (
+              <div className="w-full">
+                <p className="mb-2 text-sm font-semibold">{T.size}: <span className="text-neutral-500">{size}</span></p>
+                <div className="grid grid-cols-6 gap-2" role="radiogroup" aria-label={T.size}>
+                  {SHOP_SIZES.map((s) => (
+                    <button key={s} type="button" role="radio" aria-checked={size === s} onClick={() => setSize(s)}
+                      className={`h-11 rounded-xl border text-sm font-bold transition ${size === s ? "border-neutral-900 bg-neutral-900 text-white" : "border-neutral-300 bg-white hover:border-neutral-900"}`}>{s}</button>
+                  ))}
+                </div>
+              </div>
+            )}
+            <button type="button" onClick={onAdd} className="inline-flex h-14 w-full items-center justify-center gap-2 rounded-full bg-neutral-900 px-7 text-base font-semibold text-white shadow-lg shadow-neutral-900/20 transition hover:bg-orange-500 hover:shadow-orange-500/30"><ShoppingBag className="h-5 w-5" aria-hidden="true" />{base.preorder ? T.preorder : T.addToCart} · {eur(p.eurCents)}</button>
+            <ul className="grid w-full grid-cols-2 gap-2 text-xs text-neutral-600">
+              {S.trust.map(([h, d], i) => { const Icon = [Truck, RotateCcw, ShieldCheck, Gift][i]; return (
+                <li key={h} className="flex items-start gap-2 rounded-xl bg-neutral-50 p-2.5"><Icon className="mt-0.5 h-4 w-4 shrink-0 text-orange-600" aria-hidden="true" /><span><b className="block text-neutral-900">{h.replace("{ship}", S.freeShip)}</b>{d}</span></li>); })}
+            </ul>
           </div>
           <Link to="/shop/terms" className="mt-4 inline-block text-xs text-neutral-500 underline underline-offset-4">{T.terms}</Link>
         </div>

@@ -64,7 +64,9 @@ i aktualny. Jeśli fakt tu jest — nie weryfikuj go od nowa dziesiątkami wywo�
   **Przewoźnicy (5.11):** `src/data/shopCarriers.ts` (InPost Paczkomat [kod punktu] / Kurier InPost — tylko PL; DHL, Poczta Polska, DPD, GLS, UPS — UE),
   wybór w koszyku → `payload.shipping.carrier/point`; ceny `SHOP_CARRIER_PRICES` (JSON eurocenty, brak = `SHOP_SHIPPING_EUR_CENTS`=0 → darmowa).
   Admin „Nadaj paczkę” (`action:"ship"`) → `payload.tracking`, status shipped, mail z linkiem śledzenia. Bez API przewoźników (etykiety ręcznie / Printful wysyła sam).
-  „Moje zamówienia” = okno z przycisku w nagłówku sklepu.
+  „Moje zamówienia” = okno z przycisku w nagłówku sklepu; klient może **anulować** (`action:"cancel"`: nieopłacone → cancelled, opłacone → `cancel_requested_at` + mail do admina, zwrot ręcznie;
+  po nadaniu nie). Admin: „Kopiuj dane odbiorcy” + „Zamów kuriera ↗” (strona nadania przewoźnika, `send` w shopCarriers). Mikołaj (`XmasDecor`) znika po 60 s.
+  RLS: klient może UPDATE własnych zamówień (polityka „clients update own orders”) — także payment_status (do uszczelnienia).
   **Printful (5.11):** edge Vercela blokuje zapora Cloudflare Printful → wywołania przez Node `api/printful-proxy` (tylko z kluczem = `PRINTFUL_API_KEY`).
   Konto ma tylko sklep **Etsy** „Grouadrop” (19013575) — Orders/Products API działa tylko dla sklepu „Manual order platform / API” (type `native`);
   `withApiStore` sam go znajdzie, gdy powstanie. Klucz nie ma scope `product_templates/read`. Admin: „Połącz produkty z Printful” (dopasowanie `src/lib/printfulMatch.ts`
