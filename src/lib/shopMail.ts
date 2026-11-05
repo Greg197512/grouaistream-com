@@ -1,8 +1,11 @@
 // E-maile sklepu GrouaDrop: szablony (PL/EN/NL) i wysyłka przez HTTP (Resend albo Brevo), działa na edge.
 import { orderRef, type PricedLine, type Shipping } from "./shopOrder";
 
-export type MailCfg = { provider: "resend" | "brevo"; key: string; from: string; fromName: string };
-export type Mail = { to: string; subject: string; html: string; replyTo?: string };
+// provider "grouai" = wysyłka przez funkcję send-transactional-email głównego projektu Supabase
+// (szablon admin-notification z gotowym HTML; nadawca noreply@grouaistream.com, lista wypisów, dziennik email_send_log).
+// Wtedy key = klucz publiczny (anon), from = adres projektu Supabase. Działa bez kluczy Resend/Brevo.
+export type MailCfg = { provider: "resend" | "brevo" | "grouai"; key: string; from: string; fromName: string };
+export type Mail = { to: string; subject: string; html: string; replyTo?: string; key?: string };
 type Lang = "pl" | "en" | "nl";
 
 const esc = (v: unknown) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
@@ -71,6 +74,15 @@ export function supplierMail(o: MailOrder, lines: PricedLine[], sellerName: stri
 
 export async function sendMail(cfg: MailCfg, m: Mail): Promise<boolean> {
   try {
+    if (cfg.provider === "grouai") {
+      const r = await fetch(`${cfg.from}/functions/v1/send-transactional-email`, {
+        method: "POST",
+        headers: { apikey: cfg.key, authorization: `Bearer ${cfg.key}`, "content-type": "application/json" },
+        body: JSON.stringify({ templateName: "admin-notification", recipientEmail: m.to, ...(m.key ? { idempotencyKey: m.key } : {}), templateData: { title: m.subject, fullHtml: m.html } }),
+        signal: AbortSignal.timeout(15000),
+      });
+      return r.ok;
+    }
     const r = cfg.provider === "resend"
       ? await fetch("https://api.resend.com/emails", {
         method: "POST", headers: { authorization: `Bearer ${cfg.key}`, "content-type": "application/json" },
@@ -86,4 +98,15 @@ export async function sendMail(cfg: MailCfg, m: Mail): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+/** Konfiguracja wysyłki z env serwera: Resend/Brevo (gdy jest klucz i nadawca), inaczej wysyłka GrouAI (bez kluczy). */
+export function mailConfigFromEnv(env: (k: string) => string | undefined, fromName = "GrouAI Stream"): MailCfg | null {
+  const from = env("SHOP_MAIL_FROM");
+  const name = env("SHOP_MAIL_FROM_NAME") ?? fromName;
+  if (from && env("RESEND_API_KEY")) return { provider: "resend", key: env("RESEND_API_KEY")!, from, fromName: name };
+  if (from && env("BREVO_API_KEY")) return { provider: "brevo", key: env("BREVO_API_KEY")!, from, fromName: name };
+  const url = env("VITE_SUPABASE_URL") || env("SUPABASE_URL");
+  const anon = env("VITE_SUPABASE_PUBLISHABLE_KEY") || env("SUPABASE_ANON_KEY");
+  return url && anon ? { provider: "grouai", key: anon, from: url.replace(/\/$/, ""), fromName: name } : null;
 }

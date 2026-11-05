@@ -19,6 +19,7 @@ import { AuroraBackground } from "@/components/effects/AuroraBackground";
 import { BrainVisualization } from "@/components/effects/BrainVisualization";
 import { ServicesScroller } from "@/components/business/ServicesScroller";
 import { askAuroraB2B } from "@/lib/hubAurora";
+import { notifyB2BOrder } from "@/lib/hubEmail";
 import { supabase } from "@/integrations/supabase/client";
 
 type ChatMessage = { role: "user" | "assistant"; content: string; ts: number };
@@ -152,7 +153,7 @@ export default function BusinessPage() {
       if (orderHit) {
         setOrderPlaced(true);
         setDraftSaved(true);
-        toast.success(`🚀 Zlecenie #${orderHit.short_id} przyjęte — zespół odezwie się z wyceną`, { duration: 6000 });
+        toast.success(`🚀 Zlecenie #${orderHit.short_id} przyjęte — potwierdzenie wyślemy e-mailem`, { duration: 6000 });
         // Zalogowany klient: zapisz zlecenie do dashboardu (aurora_business_orders) i otwórz panel.
         if (user) {
           // Użyj świeżych danych z tej odpowiedzi (briefState w state jest jeszcze sprzed setState).
@@ -174,6 +175,7 @@ export default function BusinessPage() {
                 } as any)
                 .select("id")
                 .single();
+              if (inserted?.id) void notifyB2BOrder(inserted.id); // mail do zespołu + potwierdzenie dla klienta
               const target = inserted?.id ? `/client-dashboard?order=${inserted.id}` : "/client-dashboard";
               setTimeout(() => navigate(target), 2500);
             } catch {
