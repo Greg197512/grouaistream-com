@@ -4,6 +4,7 @@ import { HeroSection } from "@/components/sections/HeroSection";
 import { AIDJSection } from "@/components/sections/AIDJSection";
 import { RecentlyPlayed } from "@/components/sections/RecentlyPlayed";
 import { PlaylistGrid } from "@/components/sections/PlaylistGrid";
+import { WorldCharts } from "@/components/sections/WorldCharts";
 import { LiveRadioCard } from "@/components/sections/LiveRadioCard";
 import { TopArtists } from "@/components/sections/TopArtists";
 import { GenreSection } from "@/components/sections/GenreSection";
@@ -92,7 +93,7 @@ const Index = () => {
       <Section name="ai-dj"><AIDJSection /></Section>
       <Section name="made-for-you"><PlaylistGrid title={t("section.madeForYou")} subtitle={t("section.madeForYouDesc")} /></Section>
       <Section name="top-artists"><TopArtists /></Section>
-      <Section name="trending"><PlaylistGrid title={t("section.trendingNow")} subtitle={t("section.trendingNowDesc")} /></Section>
+      <Section name="trending"><WorldCharts title={t("section.trendingNow")} subtitle={t("section.trendingNowDesc")} /></Section>
       <Section name="seo"><SEOContentSection /></Section>
       <Section name="support"><SupportSection /></Section>
     </MainLayout>
