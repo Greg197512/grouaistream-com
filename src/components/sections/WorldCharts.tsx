@@ -11,16 +11,37 @@ type Item = { rank: number; id: string; title: string; artist: string; cover: st
 const FLAG: Record<string, string> = { pl: "🇵🇱", us: "🇺🇸", gb: "🇬🇧", de: "🇩🇪", fr: "🇫🇷", es: "🇪🇸", it: "🇮🇹", nl: "🇳🇱", ua: "🇺🇦", br: "🇧🇷", jp: "🇯🇵" };
 const key = (i: Item) => `${i.country ?? ""}-${i.id}`;
 
+type Move = { kind: "new" | "up" | "down"; by?: number };
+/** Pamięć pozycji: gdy lista się zmieni, bieżąca staje się „poprzednią”, a strzałki pokazują zmianę do niej. */
+function trackMoves(country: string, list: Item[]): Record<string, Move> {
+  const k = `grouai-charts-${country}`;
+  const now: Record<string, number> = Object.fromEntries(list.map((i) => [key(i), i.rank]));
+  let st: { cur?: Record<string, number>; prev?: Record<string, number> } = {};
+  try { st = JSON.parse(localStorage.getItem(k) || "{}"); } catch { /* */ }
+  const changed = JSON.stringify(st.cur ?? {}) !== JSON.stringify(now);
+  if (changed) { st = { prev: st.cur, cur: now }; try { localStorage.setItem(k, JSON.stringify(st)); } catch { /* */ } }
+  const prev = st.prev;
+  if (!prev) return {};
+  const out: Record<string, Move> = {};
+  for (const i of list) {
+    const p = prev[key(i)];
+    if (p === undefined) out[key(i)] = { kind: "new" };
+    else if (p > i.rank) out[key(i)] = { kind: "up", by: p - i.rank };
+    else if (p < i.rank) out[key(i)] = { kind: "down", by: i.rank - p };
+  }
+  return out;
+}
+
 const COUNTRIES = [
   { c: "world", flag: "🌍" }, { c: "pl", flag: "🇵🇱" }, { c: "us", flag: "🇺🇸" },
   { c: "gb", flag: "🇬🇧" }, { c: "nl", flag: "🇳🇱" }, { c: "ua", flag: "🇺🇦" },
 ] as const;
 
 const TXT = {
-  pl: { top5: "top 5 z każdego kraju", names: { world: "Świat", pl: "Polska", us: "USA", gb: "UK", nl: "Holandia", ua: "Ukraina" }, play: "Graj listę", clip: "30 s", full: "Całość", empty: "Lista chwilowo niedostępna", src: "Listy przebojów: Apple Music" },
-  en: { top5: "top 5 from every country", names: { world: "World", pl: "Poland", us: "USA", gb: "UK", nl: "Netherlands", ua: "Ukraine" }, play: "Play chart", clip: "30 s", full: "Full", empty: "Chart temporarily unavailable", src: "Charts: Apple Music" },
-  nl: { top5: "top 5 uit elk land", names: { world: "Wereld", pl: "Polen", us: "VS", gb: "VK", nl: "Nederland", ua: "Oekraïne" }, play: "Speel lijst", clip: "30 s", full: "Volledig", empty: "Lijst tijdelijk niet beschikbaar", src: "Hitlijsten: Apple Music" },
-  ua: { top5: "топ-5 кожної країни", names: { world: "Світ", pl: "Польща", us: "США", gb: "Британія", nl: "Нідерланди", ua: "Україна" }, play: "Грати чарт", clip: "30 с", full: "Повністю", empty: "Чарт тимчасово недоступний", src: "Чарти: Apple Music" },
+  pl: { isNew: "NOWY", updated: "aktualizacja", top5: "top 5 z każdego kraju", names: { world: "Świat", pl: "Polska", us: "USA", gb: "UK", nl: "Holandia", ua: "Ukraina" }, play: "Graj listę", clip: "30 s", full: "Całość", empty: "Lista chwilowo niedostępna", src: "Listy przebojów: Apple Music" },
+  en: { isNew: "NEW", updated: "updated", top5: "top 5 from every country", names: { world: "World", pl: "Poland", us: "USA", gb: "UK", nl: "Netherlands", ua: "Ukraine" }, play: "Play chart", clip: "30 s", full: "Full", empty: "Chart temporarily unavailable", src: "Charts: Apple Music" },
+  nl: { isNew: "NIEUW", updated: "bijgewerkt", top5: "top 5 uit elk land", names: { world: "Wereld", pl: "Polen", us: "VS", gb: "VK", nl: "Nederland", ua: "Oekraïne" }, play: "Speel lijst", clip: "30 s", full: "Volledig", empty: "Lijst tijdelijk niet beschikbaar", src: "Hitlijsten: Apple Music" },
+  ua: { isNew: "НОВЕ", updated: "оновлено", top5: "топ-5 кожної країни", names: { world: "Світ", pl: "Польща", us: "США", gb: "Британія", nl: "Нідерланди", ua: "Україна" }, play: "Грати чарт", clip: "30 с", full: "Повністю", empty: "Чарт тимчасово недоступний", src: "Чарти: Apple Music" },
 } as const;
 
 export function WorldCharts({ title, subtitle }: { title: string; subtitle?: string }) {
@@ -33,15 +54,31 @@ export function WorldCharts({ title, subtitle }: { title: string; subtitle?: str
   const railRef = useRef<HTMLDivElement>(null);
   const [edges, setEdges] = useState({ start: true, end: false });
 
+  const [moves, setMoves] = useState<Record<string, Move>>({});
+  const [updated, setUpdated] = useState<string | null>(null);
+
+  // Pobranie listy + porównanie z poprzednią wersją (▲ ▼ NOWY). Odświeżanie co 30 min, gdy strona widoczna.
   useEffect(() => {
     let off = false;
-    setLoading(true);
-    fetch(`/api/world-charts?c=${country}`)
-      .then((r) => (r.ok ? r.json() : { items: [] }))
-      .then((j) => { if (!off) { setItems(j.items ?? []); railRef.current?.scrollTo({ left: 0 }); } })
-      .catch(() => { if (!off) setItems([]); })
-      .finally(() => { if (!off) setLoading(false); });
-    return () => { off = true; };
+    const load = (initial: boolean) => {
+      if (initial) setLoading(true);
+      fetch(`/api/world-charts?c=${country}&v=3`)
+        .then((r) => (r.ok ? r.json() : { items: [] }))
+        .then((j) => {
+          if (off) return;
+          const list: Item[] = j.items ?? [];
+          if (!list.length) { if (initial) setItems([]); return; }
+          setItems(list);
+          setMoves(trackMoves(country, list));
+          setUpdated(j.updated ?? null);
+          if (initial) railRef.current?.scrollTo({ left: 0 });
+        })
+        .catch(() => { if (!off && initial) setItems([]); })
+        .finally(() => { if (!off && initial) setLoading(false); });
+    };
+    load(true);
+    const t = window.setInterval(() => { if (!document.hidden) load(false); }, 30 * 60 * 1000);
+    return () => { off = true; clearInterval(t); };
   }, [country]);
 
   const updateEdges = useCallback(() => {
@@ -106,6 +143,12 @@ export function WorldCharts({ title, subtitle }: { title: string; subtitle?: str
                 aria-label={`${it.rank}. ${it.title} — ${it.artist}`}>
                 {it.cover && <img src={it.cover} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover transition group-hover:scale-105" />}
                 <span className="absolute left-2 top-2 rounded-full bg-black/70 px-2 py-0.5 text-xs font-black text-white">{it.country ? `${FLAG[it.country] ?? it.country.toUpperCase()} ` : ""}#{it.rank}</span>
+                {moves[key(it)] && (
+                  <span className={cn("absolute right-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-black text-white",
+                    moves[key(it)].kind === "new" ? "bg-fuchsia-600" : moves[key(it)].kind === "up" ? "bg-emerald-600" : "bg-red-600/90")}>
+                    {moves[key(it)].kind === "new" ? t.isNew : moves[key(it)].kind === "up" ? `▲${moves[key(it)].by}` : `▼${moves[key(it)].by}`}
+                  </span>
+                )}
                 {it.preview && (
                   <span className="absolute bottom-2 right-2 grid h-10 w-10 place-items-center rounded-full bg-primary text-primary-foreground shadow-lg">
                     <Play className="ml-0.5 h-5 w-5" />
@@ -126,7 +169,7 @@ export function WorldCharts({ title, subtitle }: { title: string; subtitle?: str
           ))}
         </div>
       )}
-      <p className="mt-2 text-[10px] text-muted-foreground">{t.src}</p>
+      <p className="mt-2 text-[10px] text-muted-foreground">{t.src}{updated ? ` · ${t.updated} ${new Date(updated).toLocaleTimeString(language === "en" ? "en-GB" : language === "nl" ? "nl-NL" : language === "ua" ? "uk-UA" : "pl-PL", { hour: "2-digit", minute: "2-digit" })}` : ""}</p>
     </section>
   );
 }

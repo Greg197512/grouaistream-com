@@ -7,6 +7,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { usePlayer, Track } from "@/contexts/PlayerContext";
 import { useLazyLoad } from "@/hooks/useLazyLoad";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { homeTxt, tracksLabel } from "@/lib/homeI18n";
 import { DraggableTrackCard } from "@/components/dnd/DraggableTrackCard";
 import { AnimatedGenreIcon } from "@/components/effects/AnimatedGenreIcon";
 import { withTimeout } from "@/lib/withTimeout";
@@ -24,6 +26,7 @@ interface GenreSectionProps {
 }
 
 export const GenreSection = ({ genre, title, icon, color, limit = 8 }: GenreSectionProps) => {
+  const { language } = useLanguage();
   const [tracks, setTracks] = useState<Track[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
@@ -126,7 +129,7 @@ export const GenreSection = ({ genre, title, icon, color, limit = 8 }: GenreSect
           <AnimatedGenreIcon icon={icon} className={cn("text-2xl", color)} />
           <h2 className="font-display text-xl font-bold">{title}</h2>
           <span className="text-xs text-muted-foreground bg-secondary px-2 py-1 rounded-full">
-            {visibleTracks.length} tracks
+            {tracksLabel(visibleTracks.length, language)}
           </span>
         </div>
         <motion.button
@@ -139,7 +142,7 @@ export const GenreSection = ({ genre, title, icon, color, limit = 8 }: GenreSect
           )}
         >
           <Play className="h-4 w-4 fill-current" />
-          Play All
+          {homeTxt(language).playAll}
         </motion.button>
       </div>
 

@@ -1,11 +1,12 @@
+// „Stworzone dla Ciebie” — playlisty nastroju dobierane ŻYWYM ALGORYTMEM z katalogu (bez płatnego AI):
+// gatunek + nastrój + pora dnia → utwory z grającym plikiem, z rozdzielaniem artystów i świeżym losowaniem.
 import { useState } from "react";
-import { motion } from "framer-motion";
 import { PlaylistCard } from "@/components/cards/PlaylistCard";
-import { usePlayer } from "@/contexts/PlayerContext";
-import { useAI } from "@/contexts/AIContext";
-
+import { usePlayer, type Track } from "@/contexts/PlayerContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { omitRadioOnlyTracks } from "@/lib/catalogTracks";
+import { asHomeLang, homeTxt } from "@/lib/homeI18n";
 import { toast } from "sonner";
 import { Loader2, Sparkles } from "lucide-react";
 
@@ -15,220 +16,98 @@ interface PlaylistGridProps {
   showAll?: boolean;
 }
 
-interface AIPlaylist {
-  id: string;
-  title: string;
-  description: string;
-  isAI: boolean;
-  gradient: string;
-  mood: string;
-  genre: string;
+type Mix = { id: string; gradient: string; genres: string[]; moods: string[] };
+
+const MIXES: Mix[] = [
+  { id: "morning", gradient: "from-yellow-400 via-orange-500 to-red-500", genres: ["pop", "dance", "funk", "disco"], moods: ["happy", "energetic", "upbeat"] },
+  { id: "focus", gradient: "from-blue-400 via-indigo-500 to-purple-500", genres: ["electronic", "ambient", "lo-fi", "lofi", "piano"], moods: ["calm", "focused", "chill"] },
+  { id: "evening", gradient: "from-purple-400 via-pink-500 to-rose-500", genres: ["r&b", "soul", "jazz", "acoustic", "folk"], moods: ["relaxed", "romantic", "calm", "sad"] },
+  { id: "workout", gradient: "from-green-400 via-cyan-500 to-blue-500", genres: ["rock", "hip-hop", "rap", "trap", "edm", "techno", "house"], moods: ["energetic", "angry", "powerful"] },
+];
+
+const NAMES: Record<string, Record<string, [string, string]>> = {
+  pl: { morning: ["Poranna energia", "Pop i taneczne rytmy na dobry start"], focus: ["Skupienie", "Elektronika i spokojne tła do pracy"], evening: ["Wieczorny relaks", "R&B, soul i akustyka na wyciszenie"], workout: ["Trening", "Rock, hip-hop i klubowe bity"] },
+  en: { morning: ["Morning energy", "Pop and dance rhythms to start the day"], focus: ["Focus", "Electronic and calm backgrounds for work"], evening: ["Evening unwind", "R&B, soul and acoustic to slow down"], workout: ["Workout", "Rock, hip-hop and club beats"] },
+  nl: { morning: ["Ochtendenergie", "Pop en dansritmes voor een goede start"], focus: ["Focus", "Elektronisch en rustig om te werken"], evening: ["Avondrust", "R&B, soul en akoestisch om te ontspannen"], workout: ["Workout", "Rock, hiphop en clubbeats"] },
+  ua: { morning: ["Ранкова енергія", "Поп і танцювальні ритми для доброго старту"], focus: ["Фокус", "Електроніка та спокійний фон для роботи"], evening: ["Вечірній релакс", "R&B, соул і акустика"], workout: ["Тренування", "Рок, хіп-хоп і клубні біти"] },
+};
+
+const matches = (v: string | null | undefined, kws: string[]) => !!v && kws.some((k) => v.toLowerCase().includes(k));
+
+/** Żywy algorytm: pasujące gatunkiem/nastrojem → losowo, bez dwóch utworów tego samego artysty pod rząd. */
+function pick(pool: Track[], mix: Mix, n = 20): Track[] {
+  const scored = pool
+    .map((t) => ({ t, s: (matches(t.genre, mix.genres) ? 2 : 0) + (matches(t.mood, mix.moods) ? 1 : 0) + Math.random() }))
+    .sort((a, b) => b.s - a.s);
+  const good = scored.filter((x) => x.s >= 1).map((x) => x.t);
+  const base = good.length >= 8 ? good : scored.map((x) => x.t);
+  const out: Track[] = [];
+  const rest = [...base];
+  while (out.length < n && rest.length) {
+    const i = rest.findIndex((t) => t.artist !== out[out.length - 1]?.artist);
+    out.push(rest.splice(i >= 0 ? i : 0, 1)[0]);
+  }
+  return out;
 }
 
-const aiPlaylists: AIPlaylist[] = [
-  { 
-    id: "1", 
-    title: "Morning Energy", 
-    description: "AI curated based on your wake-up patterns",
-    isAI: true,
-    gradient: "from-yellow-400 via-orange-500 to-red-500",
-    mood: "energetic",
-    genre: "Pop"
-  },
-  { 
-    id: "2", 
-    title: "Focus Flow", 
-    description: "Deep work music adapted to your productivity peaks",
-    isAI: true,
-    gradient: "from-blue-400 via-indigo-500 to-purple-500",
-    mood: "focused",
-    genre: "Electronic"
-  },
-  { 
-    id: "3", 
-    title: "Evening Unwind", 
-    description: "Relaxing vibes learned from your wind-down sessions",
-    isAI: true,
-    gradient: "from-purple-400 via-pink-500 to-rose-500",
-    mood: "relaxed",
-    genre: "Ambient"
-  },
-  { 
-    id: "4", 
-    title: "Workout Beats", 
-    description: "High-energy tracks synced to your exercise routine",
-    isAI: true,
-    gradient: "from-green-400 via-cyan-500 to-blue-500",
-    mood: "energetic",
-    genre: "Rock"
-  },
-];
-
-const trendingPlaylists = [
-  { 
-    id: "5", 
-    title: "Global Top 50", 
-    description: "The most played tracks worldwide",
-    gradient: "from-groove-green to-groove-cyan"
-  },
-  { 
-    id: "6", 
-    title: "Viral Hits", 
-    description: "Trending songs from across the internet",
-    gradient: "from-groove-cyan to-groove-purple"
-  },
-  { 
-    id: "7", 
-    title: "New Releases Radar", 
-    description: "Fresh drops from your favorite artists",
-    gradient: "from-groove-purple to-pink-500"
-  },
-  { 
-    id: "8", 
-    title: "Indie Discoveries", 
-    description: "Underground gems you'll love",
-    gradient: "from-orange-400 to-red-500"
-  },
-  { 
-    id: "9", 
-    title: "Chill Vibes", 
-    description: "Laid-back beats for any moment",
-    gradient: "from-teal-400 to-blue-500"
-  },
-  { 
-    id: "10", 
-    title: "Late Night Sessions", 
-    description: "Music for the after hours",
-    gradient: "from-slate-500 to-slate-700"
-  },
-];
-
-export const PlaylistGrid = ({ title, subtitle, showAll = true }: PlaylistGridProps) => {
-  const isAISection = title.toLowerCase().includes("ai");
-  const playlists = isAISection ? aiPlaylists : trendingPlaylists;
+export const PlaylistGrid = ({ title, subtitle }: PlaylistGridProps) => {
   const { playPlaylist } = usePlayer();
-  
-  const { generateAIPlaylist, isProcessing, lastRecommendation } = useAI();
-  const [generatingId, setGeneratingId] = useState<string | null>(null);
+  const { language } = useLanguage();
+  const L = asHomeLang(language);
+  const [busy, setBusy] = useState<string | null>(null);
 
-  const handleAIPlaylistClick = async (playlist: AIPlaylist) => {
-    if (generatingId || isProcessing) return;
-    
-    setGeneratingId(playlist.id);
-    toast.loading(`🤖 AI DJ generating "${playlist.title}"...`, { id: "ai-playlist" });
-
+  const play = async (mix: Mix) => {
+    if (busy) return;
+    setBusy(mix.id);
     try {
-      const tracks = await generateAIPlaylist(
-        playlist.mood,
-        playlist.genre,
-        `User clicked on "${playlist.title}" playlist card`
-      );
-
-      const music = omitRadioOnlyTracks(tracks || []);
-      if (music.length > 0) {
-        playPlaylist(music);
-        
-        const aiInsight = lastRecommendation?.explanation || "Personalized for your listening style";
-        toast.success(
-          `🎵 "${playlist.title}" ready! ${music.length} tracks • ${aiInsight}`,
-          { id: "ai-playlist", duration: 4000 }
-        );
-      } else {
-        toast.error("No tracks found for this mood", { id: "ai-playlist" });
-      }
-    } catch (error) {
-      console.error("AI playlist generation error:", error);
-      toast.error("Failed to generate playlist", { id: "ai-playlist" });
-    } finally {
-      setGeneratingId(null);
-    }
-  };
-
-  const handleTrendingClick = async () => {
-    toast.loading("Loading playlist...", { id: "trending-playlist" });
-    
-    try {
-      const query = supabase
+      const { data } = await supabase
         .from("tracks")
-        .select("*");
-      
-      const { data: tracks } = await query.limit(40);
-      const music = omitRadioOnlyTracks(tracks || []);
-      if (music.length > 0) {
-        const shuffled = [...music].sort(() => Math.random() - 0.5).slice(0, 20);
-        playPlaylist(shuffled);
-        toast.success(`Playing ${shuffled.length} tracks`, { id: "trending-playlist" });
-      } else {
-        toast.error("No tracks available", { id: "trending-playlist" });
-      }
+        .select("id,title,artist,album,duration,audio_url,video_url,cover_url,genre,mood")
+        .not("audio_url", "is", null)
+        .order("created_at", { ascending: false })
+        .limit(400);
+      const music = omitRadioOnlyTracks((data ?? []) as Track[]);
+      const list = pick(music, mix);
+      if (!list.length) { toast.error("Brak utworów w katalogu"); return; }
+      playPlaylist(list, 0, `mix-${mix.id}`);
+      toast.success(`🎵 ${NAMES[L][mix.id][0]} · ${list.length}`);
     } catch {
-      toast.error("Failed to load playlist", { id: "trending-playlist" });
+      toast.error("Nie udało się ułożyć playlisty");
+    } finally {
+      setBusy(null);
     }
   };
 
   return (
     <section className="px-6 py-8">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          {isAISection && (
-            <div className="groove-gradient-bg h-8 w-8 rounded-lg flex items-center justify-center">
-              <Sparkles className="h-4 w-4 text-primary-foreground" />
-            </div>
-          )}
-          <div>
-            <h2 className="font-display text-2xl font-bold">{title}</h2>
-            {subtitle && <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>}
-          </div>
+      <div className="mb-6 flex items-center gap-3">
+        <div className="groove-gradient-bg flex h-8 w-8 items-center justify-center rounded-lg">
+          <Sparkles className="h-4 w-4 text-primary-foreground" />
         </div>
-        {showAll && (
-          <button className="text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors">
-            Show all
-          </button>
-        )}
+        <div>
+          <h2 className="font-display text-2xl font-bold">{title}</h2>
+          <p className="mt-1 text-sm text-muted-foreground">{subtitle ?? homeTxt(language).forYouHint}</p>
+        </div>
       </div>
 
-      <motion.div 
-        initial="hidden"
-        animate="visible"
-        variants={{
-          hidden: { opacity: 0 },
-          visible: {
-            opacity: 1,
-            transition: { staggerChildren: 0.1 }
-          }
-        }}
-        className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4"
-      >
-        {playlists.map((playlist) => (
-          <motion.div
-            key={playlist.id}
-            variants={{
-              hidden: { opacity: 0, y: 20 },
-              visible: { opacity: 1, y: 0 }
-            }}
-            className="relative"
-          >
-            {/* Loading overlay for AI generation */}
-            {generatingId === playlist.id && (
-              <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/80 rounded-lg">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
+        {MIXES.map((mix) => (
+          <div key={mix.id} className="relative">
+            {busy === mix.id && (
+              <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-background/80">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
               </div>
             )}
-            
             <PlaylistCard
-              title={playlist.title}
-              description={playlist.description}
-              isAI={(playlist as AIPlaylist).isAI}
-              gradient={playlist.gradient}
-              onClick={() => 
-                isAISection 
-                  ? handleAIPlaylistClick(playlist as AIPlaylist)
-                  : handleTrendingClick()
-              }
+              title={NAMES[L][mix.id][0]}
+              description={NAMES[L][mix.id][1]}
+              isAI
+              gradient={mix.gradient}
+              onClick={() => void play(mix)}
             />
-          </motion.div>
+          </div>
         ))}
-      </motion.div>
+      </div>
     </section>
   );
 };
