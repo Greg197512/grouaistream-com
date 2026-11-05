@@ -7,6 +7,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Loader2, TrendingUp, Zap, ChevronLeft, ChevronRight } from "lucide-react";
 import { ArtistCard } from "@/components/cards/ArtistCard";
 import { withTimeout } from "@/lib/withTimeout";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { tracksLabel } from "@/lib/homeI18n";
 import { isRadioOnlyTrack, omitRadioOnlyTracks } from "@/lib/catalogTracks";
 
 interface ArtistData {
@@ -48,6 +50,7 @@ const RANK_CONFIG = [
 
 export const TopArtists = () => {
   const { user } = useAuth();
+  const { language } = useLanguage();
   const navigate = useNavigate();
   const { playPlaylist } = usePlayer();
   const [artists, setArtists] = useState<ArtistData[]>([]);
@@ -316,7 +319,7 @@ export const TopArtists = () => {
 
               <ArtistCard
                 name={artist.name}
-                followers={artist.trackCount === 1 ? "1 utwór" : `${artist.trackCount} utworów`}
+                followers={tracksLabel(artist.trackCount, language)}
                 gradient={artist.gradient}
                 imageUrl={artist.imageUrl}
                 isTrending={true}

@@ -298,8 +298,8 @@ const nl: TranslationKeys = {
   "common.yes": "Ja",
   "common.no": "Nee",
 
-  "section.madeForYou": "Gemaakt Voor Jou door AI",
-  "section.madeForYouDesc": "Afspeellijsten samengesteld op basis van je stemming en luisterpatronen",
+  "section.madeForYou": "Gemaakt voor jou",
+  "section.madeForYouDesc": "Stemmingsmixen met nummers van onze artiesten — tik en luister",
   "section.trendingNow": "Nu Trending",
   "section.trendingNowDesc": "Waar de wereld naar luistert",
   "section.recentlyPlayed": "Recent Afgespeeld",

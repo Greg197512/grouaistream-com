@@ -298,8 +298,8 @@ const ua: TranslationKeys = {
   "common.yes": "Так",
   "common.no": "Ні",
 
-  "section.madeForYou": "Створено Для Вас за допомогою AI",
-  "section.madeForYouDesc": "Плейлисти підібрані на основі вашого настрою та патернів прослуховування",
+  "section.madeForYou": "Створено для тебе",
+  "section.madeForYouDesc": "Мікси настрою з треків наших артистів — натисни й слухай",
   "section.trendingNow": "Зараз у Тренді",
   "section.trendingNowDesc": "Що слухає світ",
   "section.recentlyPlayed": "Нещодавно Відтворене",

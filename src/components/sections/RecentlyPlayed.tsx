@@ -9,6 +9,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { formatDistanceToNow } from "date-fns";
 import { TrackOptionsMenu, LikeButton } from "@/components/menus/TrackOptionsMenu";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { homeTxt } from "@/lib/homeI18n";
 import { HQCover } from "@/components/ui/HQCover";
 import { withTimeout } from "@/lib/withTimeout";
 
@@ -33,6 +35,7 @@ export const RecentlyPlayed = () => {
   const [recentTracks, setRecentTracks] = useState<RecentTrack[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
+  const { language } = useLanguage();
   const { playPlaylist, currentTrack, isPlaying } = usePlayer();
 
   useEffect(() => {
@@ -165,7 +168,7 @@ export const RecentlyPlayed = () => {
       <section className="px-6 py-8">
         <div className="flex items-center gap-3 mb-6">
           <Clock className="h-5 w-5 text-muted-foreground" />
-          <h2 className="font-display text-xl font-bold">Jump Back In</h2>
+          <h2 className="font-display text-xl font-bold">{homeTxt(language).jumpBack}</h2>
         </div>
         <div className="flex items-center justify-center py-8">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -179,7 +182,7 @@ export const RecentlyPlayed = () => {
       <section className="px-6 py-8">
         <div className="flex items-center gap-3 mb-6">
           <Clock className="h-5 w-5 text-muted-foreground" />
-          <h2 className="font-display text-xl font-bold">Jump Back In</h2>
+          <h2 className="font-display text-xl font-bold">{homeTxt(language).jumpBack}</h2>
         </div>
         <p className="text-muted-foreground">Start listening to see your recent tracks here!</p>
       </section>
@@ -190,7 +193,7 @@ export const RecentlyPlayed = () => {
     <section className="px-6 py-8">
       <div className="flex items-center gap-3 mb-6">
         <Clock className="h-5 w-5 text-muted-foreground" />
-        <h2 className="font-display text-xl font-bold">Jump Back In</h2>
+        <h2 className="font-display text-xl font-bold">{homeTxt(language).jumpBack}</h2>
       </div>
 
       <Droppable droppableId="recent-played" direction="horizontal">

@@ -72,7 +72,7 @@ export default async function handler(req: Request): Promise<Response> {
       for (const it of items) per[it.country!] = (per[it.country!] ?? 0) + 1;
       return out({ country, count: items.length, withPreview: items.filter((i) => i.preview).length, per, complete }, 0);
     }
-    return out({ country, items, complete }, items.length ? (complete ? 21600 : 3600) : 0);
+    return out({ country, items, complete }, items.length ? (complete ? 3600 : 900) : 0); // czołówki zmieniają się — odśwież co godzinę
   }
   rows = await feed(country, 25);
 
@@ -106,8 +106,8 @@ export default async function handler(req: Request): Promise<Response> {
   return new Response(JSON.stringify({ country, updated: new Date().toISOString(), items, ...(debug ? { trace } : {}) }), {
     headers: {
       "content-type": "application/json",
-      // Lista jest wspólna dla wszystkich — CDN trzyma ją 6 h (jedno pobranie z Apple na kraj).
-      "cache-control": items.length ? "public, s-maxage=21600, stale-while-revalidate=43200" : "no-store",
+      // Lista wspólna dla wszystkich — CDN 1 h (nowości na czołówkach widać szybko, Apple pytany raz na godzinę na kraj).
+      "cache-control": items.length ? "public, s-maxage=3600, stale-while-revalidate=7200" : "no-store",
     },
   });
 }

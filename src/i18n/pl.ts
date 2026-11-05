@@ -298,8 +298,8 @@ const pl: TranslationKeys = {
   "common.yes": "Tak",
   "common.no": "Nie",
 
-  "section.madeForYou": "Stworzone Dla Ciebie przez AI",
-  "section.madeForYouDesc": "Playlisty dopasowane na podstawie Twojego nastroju i wzorców słuchania",
+  "section.madeForYou": "Stworzone dla Ciebie",
+  "section.madeForYouDesc": "Miksy nastroju ułożone z utworów naszych twórców — kliknij i słuchaj",
   "section.trendingNow": "Popularne Teraz",
   "section.trendingNowDesc": "Czego słucha świat",
   "section.recentlyPlayed": "Ostatnio Odtwarzane",

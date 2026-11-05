@@ -3,6 +3,8 @@ import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
 import { Play, Disc3, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEffects3D } from "@/contexts/Effects3DContext";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { tracksLabel } from "@/lib/homeI18n";
 
 interface ArtistCardProps {
   name: string;
@@ -23,6 +25,7 @@ export const ArtistCard = ({
   trackCount = 0,
   onClick,
 }: ArtistCardProps) => {
+  const { language } = useLanguage();
   const cardRef = useRef<HTMLDivElement>(null);
   const { is3D } = useEffects3D();
 
@@ -70,7 +73,7 @@ export const ArtistCard = ({
         <div className="absolute top-2 left-2 z-30 flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-primary to-accent shadow-[0_0_12px_hsl(var(--primary)/0.5)]">
           <TrendingUp className="h-3 w-3 text-primary-foreground" />
           <span className="text-[9px] font-bold uppercase tracking-wider text-primary-foreground">
-            {trackCount > 1 ? `${trackCount} tracks` : "Artist"}
+            {tracksLabel(trackCount || 0, language)}
           </span>
         </div>
       )}
