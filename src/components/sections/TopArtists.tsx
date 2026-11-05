@@ -1,10 +1,10 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { usePlayer, Track } from "@/contexts/PlayerContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { Loader2, TrendingUp, Zap } from "lucide-react";
+import { Loader2, TrendingUp, Zap, ChevronLeft, ChevronRight } from "lucide-react";
 import { ArtistCard } from "@/components/cards/ArtistCard";
 import { withTimeout } from "@/lib/withTimeout";
 import { isRadioOnlyTrack, omitRadioOnlyTracks } from "@/lib/catalogTracks";
@@ -163,6 +163,35 @@ export const TopArtists = () => {
 
   const maxTracks = artists[0]?.trackCount || 1;
 
+  // ── Poziomy pasek: palec / kółko / strzałki + delikatne samoczynne przesuwanie ──
+  const railRef = useRef<HTMLDivElement>(null);
+  const [edges, setEdges] = useState({ start: true, end: false });
+  const pausedUntil = useRef(0);
+  const updateEdges = useCallback(() => {
+    const el = railRef.current; if (!el) return;
+    setEdges({ start: el.scrollLeft <= 4, end: el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 });
+  }, []);
+  const slide = useCallback((dir: 1 | -1, user = true) => {
+    const el = railRef.current; if (!el) return;
+    if (user) pausedUntil.current = Date.now() + 12000; // po ręcznym ruchu nie przeszkadzamy
+    const atEnd = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4;
+    if (!user && atEnd) { el.scrollTo({ left: 0, behavior: "smooth" }); return; }
+    el.scrollBy({ left: dir * Math.max(160, el.clientWidth * 0.8), behavior: "smooth" });
+  }, []);
+  useEffect(() => {
+    updateEdges();
+    if (typeof window === "undefined" || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    let visible = true;
+    const io = new IntersectionObserver(([e]) => { visible = e.isIntersecting; });
+    if (railRef.current) io.observe(railRef.current);
+    const t = window.setInterval(() => {
+      if (!visible || document.hidden || Date.now() < pausedUntil.current) return;
+      slide(1, false);
+    }, 4500);
+    return () => { clearInterval(t); io.disconnect(); };
+  }, [artists.length, slide, updateEdges]);
+  const pause = () => { pausedUntil.current = Date.now() + 12000; };
+
   // Spinner tylko przy pierwszym ładowaniu — gdy twórcy są już pokazani,
   // odświeżanie w tle ich nie chowa (sekcja nie "miga" i nie znika).
   if (isLoading && artists.length === 0) return (
@@ -186,28 +215,12 @@ export const TopArtists = () => {
       >
         <div>
           <div className="flex items-center gap-3 mb-1">
-            {/* Animated LIVE dot */}
-            <div className="relative flex items-center gap-2">
-              <motion.span
-                className="inline-block h-2.5 w-2.5 rounded-full bg-primary"
-                animate={{ scale: [1, 1.6, 1], opacity: [1, 0.4, 1] }}
-                transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
-              />
-              <motion.span
-                className="absolute h-2.5 w-2.5 rounded-full bg-primary/40"
-                animate={{ scale: [1, 2.8, 1], opacity: [0.5, 0, 0.5] }}
-                transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
-              />
-            </div>
-            <h2 className="font-display text-2xl font-bold bg-gradient-to-r from-foreground via-primary to-foreground bg-[length:200%_auto] animate-[shimmer_3s_linear_infinite] bg-clip-text">
+            {/* Kropka LIVE (statyczna — bez wiecznej animacji na stronie głównej) */}
+            <span className="inline-block h-2.5 w-2.5 rounded-full bg-primary shadow-[0_0_10px_hsl(var(--primary))]" aria-hidden="true" />
+            <h2 className="font-display text-2xl font-bold">
               Trending Artists
             </h2>
-            <motion.div
-              animate={{ rotate: [0, 15, -10, 0] }}
-              transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut", repeatDelay: 3 }}
-            >
-              <Zap className="h-5 w-5 text-primary fill-primary/30" />
-            </motion.div>
+            <Zap className="h-5 w-5 text-primary fill-primary/30" aria-hidden="true" />
           </div>
           <p className="text-sm text-muted-foreground flex items-center gap-1.5">
             <TrendingUp className="h-3.5 w-3.5 text-primary" />
@@ -215,23 +228,29 @@ export const TopArtists = () => {
           </p>
         </div>
 
-        {/* Top-3 mini legend */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={isInView ? { opacity: 1, scale: 1 } : {}}
-          transition={{ delay: 0.3, duration: 0.4 }}
-          className="hidden sm:flex gap-2 text-xs text-muted-foreground"
-        >
-          {RANK_CONFIG.map((r, i) => (
-            <span key={i} className="flex items-center gap-1">
-              {r.emoji} #{i + 1}
-            </span>
-          ))}
-        </motion.div>
+        {/* Strzałki ‹ › (na telefonie przesuwasz palcem) */}
+        <div className="flex items-center gap-2">
+          <button type="button" onClick={() => slide(-1)} disabled={edges.start} aria-label="Poprzedni artyści"
+            className="grid h-9 w-9 place-items-center rounded-full border border-border bg-secondary/60 text-foreground transition hover:bg-secondary disabled:opacity-30">
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+          <button type="button" onClick={() => slide(1)} disabled={edges.end} aria-label="Następni artyści"
+            className="grid h-9 w-9 place-items-center rounded-full border border-border bg-secondary/60 text-foreground transition hover:bg-secondary disabled:opacity-30">
+            <ChevronRight className="h-5 w-5" />
+          </button>
+        </div>
       </motion.div>
 
-      {/* ── Grid ───────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-3 sm:gap-4">
+      {/* ── Poziomy pasek (przewijanie w lewo/prawo, przyciąganie do kart) ── */}
+      <div
+        ref={railRef}
+        onScroll={updateEdges}
+        onPointerDown={pause}
+        onWheel={pause}
+        onMouseEnter={pause}
+        role="list"
+        aria-label="Trending Artists"
+        className="-mx-4 flex snap-x snap-mandatory scroll-px-4 sm:scroll-px-6 gap-3 overflow-x-auto overscroll-x-contain scroll-smooth px-4 pb-3 pt-3 sm:-mx-6 sm:gap-4 sm:px-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {artists.map((artist, index) => {
           const rank = index + 1;
           const rankCfg = rank <= 3 ? RANK_CONFIG[index] : null;
@@ -259,15 +278,12 @@ export const TopArtists = () => {
                 stiffness: rank <= 3 ? 220 : 280,
                 damping: rank <= 3 ? 18 : 22,
               }}
-              className="relative"
+              role="listitem"
+              className="relative w-36 shrink-0 snap-start sm:w-44"
             >
-              {/* Top-3 outer glow ring */}
+              {/* Top-3: statyczna poświata (bez wiecznej, rozmytej animacji) */}
               {rankCfg && (
-                <motion.div
-                  className={`absolute -inset-1 rounded-3xl bg-gradient-to-br ${rankCfg.bg} blur-sm`}
-                  animate={{ opacity: [0.6, 1, 0.6] }}
-                  transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut", delay: index * 0.4 }}
-                />
+                <div className={`absolute -inset-1 rounded-3xl bg-gradient-to-br ${rankCfg.bg}`} aria-hidden="true" />
               )}
 
               {/* Rank badge */}
