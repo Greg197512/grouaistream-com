@@ -3,7 +3,6 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useShopCart } from "@/lib/shopCart";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { SHOP_ADMIN_EMAIL, SHOP_PRODUCTS, type ShopProduct } from "@/data/shopCatalog";
 import { localizeProduct } from "@/data/shopCatalogI18n";
@@ -32,7 +31,7 @@ function VideoTile({ p, onOpen, price, see }: { p: ShopProduct; onOpen: () => vo
       <video ref={ref} src={`/shop/${p.id}.mp4`} poster={`/shop/${p.id}-1.jpg`} muted loop playsInline preload="none" className="aspect-square w-full object-cover" />
       <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-3 pt-10 text-white">
         <span className="block text-sm font-bold leading-snug">{p.name}</span>
-        <span className="mt-1 flex items-center justify-between text-sm"><b className="text-orange-300">{price}</b><span className="rounded-full bg-white/90 px-3 py-1 text-xs font-bold text-neutral-900">{see} →</span></span>
+        <span className="mt-1 flex items-center justify-between text-sm"><b className="text-orange-300">{price}</b><span className="rounded-full border border-white/50 bg-white/25 px-3 py-1 text-xs font-bold text-white backdrop-blur-md transition group-hover:border-orange-400 group-hover:bg-orange-500 group-hover:shadow-lg group-hover:shadow-orange-500/40">{see} →</span></span>
       </span>
     </button>
   );
@@ -70,7 +69,6 @@ function TransferBox({ bank, t, eur, onClose }: { bank: Bank; t: ShopDict; eur: 
 
 export default function Shop() {
   const { user, signOut } = useAuth();
-  const { isAdmin } = useAdminAuth();
   const { language, setLanguage } = useLanguage();
   const lang: ShopLang = shopLang(language);
   const T = SHOP_TEXT[lang];
@@ -78,6 +76,7 @@ export default function Shop() {
   const products = useMemo(() => SHOP_PRODUCTS.map((p) => localizeProduct(p, lang)), [lang]);
   const cats = useMemo(() => [...new Set(SHOP_PRODUCTS.map((p) => p.cat))], []);
   const [cat, setCat] = useState("");
+  const gridRef = useRef<HTMLUListElement>(null);
   const shown = useMemo(() => products.filter((p) => !cat || SHOP_PRODUCTS.find((x) => x.id === p.id)?.cat === cat), [products, cat]);
   const navigate = useNavigate();
   const location = useLocation();
@@ -190,7 +189,8 @@ export default function Shop() {
     openInvoice(invoiceHtml(inv as never, lang, { mode: cfg?.vatMode, exemptNote: cfg?.exemptNote }));
   };
 
-  const admin = isAdmin || user?.email === SHOP_ADMIN_EMAIL;
+  // Przycisk panelu widzi wyłącznie właściciel sklepu (nie każdy admin).
+  const admin = user?.email?.toLowerCase() === SHOP_ADMIN_EMAIL;
   const inp = "h-11 rounded-xl border border-neutral-300 bg-white px-3 text-sm w-full";
   const countries = useMemo(() => EU_COUNTRIES.map((c) => ({ c, n: countryName(c, lang) })).sort((a, b) => a.n.localeCompare(b.n, LOCALE[lang])), [lang]);
   const methods: { id: PayMethod; label: string }[] = [
@@ -242,17 +242,20 @@ export default function Shop() {
           <h2 className="text-3xl font-black">{T.collection} <span className="text-neutral-400">({shown.length})</span></h2>
           <div className="flex flex-wrap gap-2" role="group" aria-label={T.collection}>
             {["", ...cats].map((c) => (
-              <button key={c || "all"} type="button" onClick={() => setCat(c)} aria-pressed={cat === c}
-                className={`h-9 rounded-full border px-4 text-sm font-semibold ${cat === c ? "border-neutral-900 bg-neutral-900 text-white" : "border-neutral-300 bg-white text-neutral-700"}`}>
+              <button key={c || "all"} type="button" aria-pressed={cat === c}
+                onClick={() => { setCat(c); requestAnimationFrame(() => gridRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })); }}
+                className={`h-11 rounded-full border px-5 text-sm font-bold shadow-sm backdrop-blur-md transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 active:scale-95 ${cat === c
+                  ? "border-orange-500 bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-orange-500/30 shadow-md"
+                  : "border-white/70 bg-white/60 text-neutral-800 ring-1 ring-neutral-900/10 hover:border-orange-400 hover:bg-orange-50/80 hover:text-orange-700 hover:shadow-md hover:shadow-orange-500/20"}`}>
                 {c ? localizeProduct(SHOP_PRODUCTS.find((x) => x.cat === c)!, lang).cat : T.all}
               </button>))}
           </div>
         </div>
-        <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+        <ul ref={gridRef} className="grid scroll-mt-40 grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
           {shown.map((p) => (
             <li key={p.id}>
               <Link to={`/shop/p/${p.id}`}
-                className="group block overflow-hidden rounded-2xl border border-neutral-200 bg-white transition hover:-translate-y-0.5 hover:shadow-lg">
+                className="group block overflow-hidden rounded-2xl border border-neutral-200 bg-white/80 backdrop-blur-md transition hover:-translate-y-0.5 hover:border-orange-400 hover:shadow-lg hover:shadow-orange-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500">
                 <div className="relative aspect-square bg-neutral-100">
                   <img src={`/shop/${p.id}-1.jpg`} alt={p.name} loading="lazy" decoding="async" width={400} height={400} className="h-full w-full object-cover transition duration-300 group-hover:scale-105" />
                   {p.video && <span className="absolute bottom-2 left-2 rounded-full bg-black/70 px-2 py-0.5 text-[11px] font-bold text-white">▶ {T.video}</span>}
