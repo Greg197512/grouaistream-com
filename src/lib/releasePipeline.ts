@@ -71,7 +71,17 @@ async function makeCover(coverUrl: string | null | undefined, seed: string): Pro
   let drawn = false;
   if (coverUrl) {
     try {
-      const bmp = await createImageBitmap(new Blob([await fetchBytes(coverUrl)]));
+      const bytes = await fetchBytes(coverUrl);
+      const isSvg = /\.svg(\?|$)/i.test(coverUrl);
+      // SVG (okładki DJ Yellow) — createImageBitmap go nie czyta, więc rysujemy przez <img>.
+      const bmp: ImageBitmap | HTMLImageElement = isSvg
+        ? await new Promise<HTMLImageElement>((res, rej) => {
+            const u = URL.createObjectURL(new Blob([bytes], { type: "image/svg+xml" }));
+            const im = new Image(); im.width = COVER_SIZE; im.height = COVER_SIZE;
+            im.onload = () => { URL.revokeObjectURL(u); res(im); }; im.onerror = () => { URL.revokeObjectURL(u); rej(new Error("svg")); };
+            im.src = u;
+          })
+        : await createImageBitmap(new Blob([bytes]));
       const scale = Math.max(COVER_SIZE / bmp.width, COVER_SIZE / bmp.height);
       const w = bmp.width * scale, h = bmp.height * scale;
       g.imageSmoothingQuality = "high";
@@ -140,14 +150,14 @@ export async function prepareRelease(opts: {
  * w powiadomieniu, a utwór i tak jest już w historii oraz w „Nowe”.
  */
 export async function certifyStudioTrack(opts: Parameters<typeof prepareRelease>[0] & {
-  generationId?: string | null; trackId?: string | null;
+  generationId?: string | null; trackId?: string | null; keepCover?: boolean;
 }): Promise<ReleasePackage | null> {
   try {
     const pkg = await prepareRelease(opts);
     if (opts.generationId) await rawDb.from("generations").update({ release: pkg }).eq("id", opts.generationId);
     if (opts.trackId) {
       await rawDb.from("tracks")
-        .update({ release: pkg, studio_certified: pkg.status === "ready", ...(pkg.cover_url ? { cover_url: pkg.cover_url } : {}) })
+        .update({ release: pkg, studio_certified: pkg.status === "ready", ...(pkg.cover_url && !opts.keepCover ? { cover_url: pkg.cover_url } : {}) })
         .eq("id", opts.trackId);
     }
     window.dispatchEvent(new CustomEvent("grouai:generations-changed"));

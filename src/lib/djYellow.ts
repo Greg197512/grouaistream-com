@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 export const DJ_OWNER = "grzegorzkaron553@gmail.com";
 export type DjTrack = { id: string; title: string; cover_url: string | null; created_at: string };
-export type DjRun = { ok: boolean; step: string; tracks?: { title: string; id?: string; error?: string }[]; error?: string; status?: string };
+export type DjRun = { ok: boolean; step: string; tracks?: { title: string; id?: string; error?: string; cover?: string | null; audio?: string }[]; error?: string; status?: string };
 
 export async function djStatus(): Promise<{ today: DjTrack[]; latest: DjTrack[]; perDay: number } | null> {
   try { const r = await fetch("/api/dj-yellow?status=1"); return r.ok ? await r.json() : null; } catch { return null; }
