@@ -12,6 +12,13 @@
 # =============================================================================
 set -u
 
+# 0) Oszczędność: budujemy TYLKO produkcję (main). Podglądy gałęzi (np. claude/…) nie zużywają
+#    Build Minutes — agent i tak scala do main, a test robi lokalnie. Ręczny podgląd: Redeploy w panelu.
+if [ "${VERCEL_ENV:-}" != "production" ]; then
+  echo "Podgląd gałęzi (${VERCEL_GIT_COMMIT_REF:-?}) → POMIŃ build (oszczędność)"
+  exit 0
+fi
+
 # 1) Zawsze buduj, gdy nie mamy historii do porównania (shallow clone itp.).
 if ! git rev-parse HEAD^ >/dev/null 2>&1; then
   echo "Brak HEAD^ (płytki klon) → BUDUJ"

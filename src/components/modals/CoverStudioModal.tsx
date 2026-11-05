@@ -8,7 +8,6 @@ import { Upload, Wand2, Image as ImageIcon, Film, Loader2, Check, Sparkles } fro
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { uploadToR2 } from "@/lib/r2Upload";
-import { triggerCoverVideo } from "@/lib/autoCoverVideo";
 
 
 interface CoverStudioModalProps {
@@ -66,8 +65,7 @@ export const CoverStudioModal = ({
     if (!data || data.length === 0) throw new Error("Tylko autor utworu może zmienić jego okładkę");
     window.dispatchEvent(new CustomEvent("track-list-changed"));
     onCoverUpdated?.(url);
-    // Auto-generate matching video clip in the background.
-    triggerCoverVideo(trackId);
+    // Bez automatycznego teledysku (płatny Replicate) — wideo tylko na wyraźne życzenie w Cover Studio.
   };
 
 

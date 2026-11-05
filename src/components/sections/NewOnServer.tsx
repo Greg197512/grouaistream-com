@@ -207,35 +207,8 @@ export const NewOnServer = () => {
         const music = omitRadioOnlyTracks(tracksData).slice(0, 8);
         setTracks(music.map(t => ({ ...t, uploader: t.user_id ? profilesMap[t.user_id] || null : null })));
 
-        // Wznów generowanie okładek dla brakujących (tylko gdy baza żyje).
-        if (!fromSnapshot) music.forEach(track => {
-          if (!track.cover_url && track.id && track.title && track.genre) {
-            supabase.functions.invoke("ai-cover-generate", {
-              body: {
-                title: track.title,
-                style: track.genre,
-                description: "",
-                mode: "auto",
-              },
-            }).then(({ data: coverData }) => {
-              if (coverData?.cover_url && track.id) {
-                supabase.from("tracks")
-                  .update({ cover_url: coverData.cover_url })
-                  .eq("id", track.id)
-                  .then(() => {
-                    window.dispatchEvent(new Event("track-list-changed"));
-                  });
-              }
-            }).catch(() => {
-              // Fallback na ai-cover jeśli ai-cover-generate zawiedzie
-              if (track.id) {
-                supabase.functions.invoke("ai-cover", {
-                  body: { trackId: track.id },
-                }).catch(() => {});
-              }
-            });
-          }
-        });
+        // Bez generowania okładek u odwiedzających: płatne (OpenRouter) i powtarzane przy każdej wizycie,
+        // bo gość nie może zapisać wyniku. Okładkę tworzy wgrywanie utworu (Upload) albo autor w menu „…”.
       }
     } catch (err) {
       console.error("[NewOnServer]", err);
