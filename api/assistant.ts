@@ -98,7 +98,9 @@ Dozwolone akcje (pole "track" = nazwa ścieżki ze STANU; pomiń, by użyć zazn
 - {"type":"drums","style":"Pop|Hip-hop|House|Trap","bars":1..32}
 - {"type":"harmony","part":"bass|chords","key":"C..B","progression":"pop|doo|ballad|minor|dark","bars":1..32}
 - {"type":"mix","track":"…","volumeDb":±dB,"pan":-1..1,"mute":bool,"solo":bool}
-- {"type":"transport","action":"play|stop|record"}, {"type":"backing","prompt":"opis podkładu"}, {"type":"save"}, {"type":"export"}
+- {"type":"transport","action":"play|stop|record"}, {"type":"backing","prompt":"opis podkładu"} (PŁATNY — tylko gdy użytkownik wprost prosi o „podkład AI”), {"type":"save"}, {"type":"export"}
+- {"type":"markers","layout":"song|ballad"} — części utworu na osi (Intro, Zwrotka, Refren, Bridge, Outro)
+Gdy ktoś prosi „zrób utwór/bit/podkład X od zera”: bpm + drums + harmony bass + harmony chords + preset wokalu + markers (bez backing).
 Gdy polecenie jest pytaniem, odpowiedz w "reply" i zostaw "actions":[]. Nie dodawaj tekstu poza JSON.`;
 
 type Payload = { message?: string; history?: { role: string; content: string }[]; userContext?: unknown; documentContext?: string; mode?: string; attachments?: unknown };

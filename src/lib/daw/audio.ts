@@ -22,7 +22,9 @@ export type Track = {
   fx: StripFx; clips: Clip[];
   source?: TrackSource;
 };
-export type Project = { bpm: number; tracks: Track[] };
+/** Znacznik części utworu na osi czasu (Intro, Zwrotka, Refren…), pozycja w taktach (od 1). */
+export type Marker = { id: string; bar: number; name: string; color: string };
+export type Project = { bpm: number; tracks: Track[]; markers?: Marker[]; key?: string };
 
 export const projectEnd = (p: Project) =>
   p.tracks.reduce((m, t) => t.clips.reduce((mm, c) => Math.max(mm, c.start + c.duration), m), 0);
