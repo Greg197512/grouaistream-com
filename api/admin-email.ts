@@ -160,7 +160,18 @@ export async function POST(req: Request): Promise<Response> {
   return json({ success: false, error: "Nieznany tryb" }, 400);
 }
 
-export function GET(): Response {
+export async function GET(req: Request): Promise<Response> {
   const cfg = mailConfigFromEnv(env);
-  return json({ ok: !!cfg, provider: cfg?.provider ?? null, notify: !!env("SHOP_NOTIFY_EMAIL") });
+  const notify = env("SHOP_NOTIFY_EMAIL");
+  // ?selftest=1 — próbny mail TYLKO na stały adres właściciela (SHOP_NOTIFY_EMAIL), najwyżej raz na godzinę (klucz idempotencji).
+  if (new URL(req.url).searchParams.get("selftest") === "1" && cfg && notify) {
+    const hour = new Date().toISOString().slice(0, 13);
+    const ok = await sendMail(cfg, {
+      to: notify, key: `selftest-${hour}`,
+      subject: "✅ Test wysyłki GrouAI Stream",
+      html: frame(`<h1 style="font-size:20px;margin:0 0 12px">Wysyłka maili działa</h1><p>To próbna wiadomość z ${esc(hour.replace("T", " "))}:00 UTC (${esc(cfg.provider)}).</p>`),
+    });
+    return json({ ok, provider: cfg.provider, to: notify.replace(/^(.).*(@.*)$/, "$1***$2") });
+  }
+  return json({ ok: !!cfg, provider: cfg?.provider ?? null, notify: !!notify });
 }
