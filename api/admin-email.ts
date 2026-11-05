@@ -13,7 +13,9 @@
  */
 import { mailConfigFromEnv, sendMail, type MailCfg } from "../src/lib/shopMail";
 
-export const maxDuration = 300;
+// Edge (jak shop-checkout — bundler rozwiązuje importy z src/). Masowa wysyłka strumieniuje spacje co kilka sekund
+// (JSON.parse je ignoruje), więc odpowiedź startuje od razu i może trwać do 300 s.
+export const config = { runtime: "edge" };
 
 const env = (k: string): string | undefined => {
   const v = (globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env?.[k];
@@ -121,7 +123,7 @@ async function b2bOrder(auth: string, user: { id: string; email: string | null }
   return json({ success: true, ...out });
 }
 
-export async function POST(req: Request): Promise<Response> {
+async function handlePost(req: Request): Promise<Response> {
   if (!supa()) return json({ success: false, error: "Brak konfiguracji Supabase w Vercel" }, 500);
   const auth = req.headers.get("authorization") ?? "";
   if (!/^Bearer\s+\S+/.test(auth)) return json({ success: false, error: "Zaloguj się" }, 401);
@@ -154,13 +156,27 @@ export async function POST(req: Request): Promise<Response> {
     const uniq = [...new Set(raw.map((e) => e.trim().toLowerCase()).filter((e) => EMAIL_RE.test(e)))];
     const skipped = raw.length - uniq.length;
     if (!uniq.length) return json({ success: false, error: "Brak odbiorców", recipientCount: 0, skipped });
-    const { sent, errors } = await sendMany(cfg, uniq, subject, full);
-    return json({ success: sent > 0, recipientCount: uniq.length, sent, errors, skipped, subject, mode: "mass", provider: cfg.provider });
+    const enc = new TextEncoder();
+    const stream = new ReadableStream({
+      async start(ctrl) {
+        const beat = setInterval(() => { try { ctrl.enqueue(enc.encode(" ")); } catch { /* */ } }, 5000);
+        try {
+          const { sent, errors } = await sendMany(cfg, uniq, subject, full);
+          ctrl.enqueue(enc.encode(JSON.stringify({ success: sent > 0, recipientCount: uniq.length, sent, errors, skipped, subject, mode: "mass", provider: cfg.provider })));
+        } catch (e) {
+          ctrl.enqueue(enc.encode(JSON.stringify({ success: false, error: String(e).slice(0, 200) })));
+        } finally {
+          clearInterval(beat);
+          ctrl.close();
+        }
+      },
+    });
+    return new Response(stream, { headers: { "content-type": "application/json", "cache-control": "no-store" } });
   }
   return json({ success: false, error: "Nieznany tryb" }, 400);
 }
 
-export async function GET(req: Request): Promise<Response> {
+async function handleGet(req: Request): Promise<Response> {
   const cfg = mailConfigFromEnv(env);
   const notify = env("SHOP_NOTIFY_EMAIL");
   // ?selftest=1 — próbny mail TYLKO na stały adres właściciela (SHOP_NOTIFY_EMAIL), najwyżej raz na godzinę (klucz idempotencji).
@@ -174,4 +190,10 @@ export async function GET(req: Request): Promise<Response> {
     return json({ ok, provider: cfg.provider, to: notify.replace(/^(.).*(@.*)$/, "$1***$2") });
   }
   return json({ ok: !!cfg, provider: cfg?.provider ?? null, notify: !!notify });
+}
+
+export default async function handler(req: Request): Promise<Response> {
+  if (req.method === "POST") return handlePost(req);
+  if (req.method === "GET") return handleGet(req);
+  return json({ error: "method" }, 405);
 }
