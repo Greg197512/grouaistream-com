@@ -3,7 +3,8 @@
 // (brain_reason_collect). Co 2 h robi executive summary; codziennie ~08:00 UTC
 // uruchamia Developer + Tester. Wszystko darmowe po stronie Vercela (poza Grok).
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { runGuardian } from "./site-guardian";
+// Rozszerzenie .js wymagane w Node ESM na Vercelu (bez niego cron padał co godzinę: ERR_MODULE_NOT_FOUND).
+import { runGuardian } from "./site-guardian.js";
 
 export default async function handler(req: any, res: any) {
   const URL = process.env.VITE_SUPABASE_URL;
@@ -36,6 +37,11 @@ export default async function handler(req: any, res: any) {
   if (!guard.checks.find((c) => c.name === "baza_utwory")?.ok) {
     res.setHeader("Cache-Control", "no-store");
     return res.status(200).json({ ok: false, at: now.toISOString(), paused: "baza niedostępna", ran });
+  }
+  // Agenci AI (Grok — PŁATNY) tylko po świadomym włączeniu AGENTS_AI=1 w Vercel (Grzegorz: „uważaj, aby nie naliczało”).
+  if (process.env.AGENTS_AI !== "1") {
+    res.setHeader("Cache-Control", "no-store");
+    return res.status(200).json({ ok: guard.ok, at: now.toISOString(), ran, agents: "wyłączone (AGENTS_AI≠1)" });
   }
   // Zawsze: pozbieraj gotowe odpowiedzi AI (Grok) do pamięci.
   ran.push(await rpc("brain_reason_collect"));

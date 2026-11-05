@@ -58,7 +58,9 @@ i aktualny. Jeśli fakt tu jest — nie weryfikuj go od nowa dziesiątkami wywo�
   podglądy gałęzi i zmiany samych `.md`/docs pomijane.
 - **Koszty (Grzegorz: „uważaj, aby nie naliczało”):** nic płatnego nie może startować samo ani u gości.
   Płatne: Replicate (teledyski Kling/Hailuo — tylko na klik, z potwierdzeniem), OpenRouter (okładki AI `ai-cover-generate`),
-  ElevenLabs/Azure (tylko gdy klucz). Usunięte automaty: teledysk po zmianie okładki, okładki AI z `NewOnServer` u każdego gościa.
+  ElevenLabs/Azure (tylko gdy klucz). Usunięte automaty: teledysk po zmianie okładki, okładki AI z `NewOnServer` u każdego gościa,
+  przycisk „dosyp 20k” w Bibliotece. Cron `api/agents-run` (co godz.): tylko strażnik strony; agenci AI (Grok, płatni) tylko gdy `AGENTS_AI=1`.
+  Node-owe funkcje `api/*` importują lokalne pliki z rozszerzeniem `.js` (inaczej ERR_MODULE_NOT_FOUND); edge bundluje sam.
 - Z piaskownicy agenta EGRESS blokuje `*.supabase.co`, `*.r2.dev`, `grouaistream.com` (curl/WebFetch/Playwright).
   Do sprawdzenia żywej strony/R2 używaj `mcp__Vercel__web_fetch_vercel_url` (idzie siecią Vercela).
 
