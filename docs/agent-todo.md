@@ -24,7 +24,7 @@ Właściciel: **agent** (wykonuje po bramce) albo **Grzegorz** (tylko Ty możesz
 | P1-2 | Dokończyć migrację z Lovable (`docs/MIGRACJA-Z-LOVABLE.md`): sekrety funkcji, Google OAuth, przełączenie | infra | L | wysokie | L3 | Grzegorz + agent |
 | P1-3 | Hub `bmwtydwpevzhbdplilbr`: przenieść albo wyłączyć `voice-intent`, `studio-chat`, `acestep-generate`, `hub-pricing`, `paddle-report`, `hub-email-send`, `neuro-profile`, geolokalizację | Stream, Studio | M | średnie | L2 | agent |
 | P1-4 | Budżety API per moduł (LLM, ElevenLabs, Suno, Replicate): licznik dzienny/miesięczny, alert 80%, stop 100%; przegląd 45 cronów i wyłączenie zbędnych | wszystkie | M | średnie | L3 | agent (spec) → Grzegorz |
-| P1-5 | Ujawnienie AI: prezenter i głosy TTS w radiu, utwory z Studia (znaczek + metadane strumienia), zgodnie z AI Act | Radio, Studio | S | średnie | L3 | agent |
+| P1-5 | ✅ częściowo 5.11 (radio: tekst na stronie + identyfikacja głosem). Ujawnienie AI: prezenter i głosy TTS w radiu, utwory z Studia (znaczek + metadane strumienia), zgodnie z AI Act | Radio, Studio | S | średnie | L3 | agent |
 | P1-6 | Baner zgód na cookies + aktualizacja polityki prywatności (kamera, mikrofon, analityka) | Stream | M | średnie | L4 | agent (projekt) → Grzegorz |
 | P1-7 | Limity zapytań i uwierzytelnienie dla `api/youtube-search`, `api/media`, `api/news-feed` | Stream | S | niskie | L2 | agent |
 | P1-8 | Otwarty zapis bez logowania (`blog_newsletter_subscribers`, `reel_requests`, `dj_session_guests`): limit zapytań lub captcha | Stream | S | niskie | L3 | agent |
@@ -39,7 +39,7 @@ Właściciel: **agent** (wykonuje po bramce) albo **Grzegorz** (tylko Ty możesz
 | ID | Zadanie | Moduł | Nakład | Ryzyko | Poziom | Właściciel |
 | --- | --- | --- | --- | --- | --- | --- |
 | P2-1 | Wersjonowane API Studio dla Radia: kolejka zadań, ponawianie, koszt na utwór, gatunki priorytetowe Disco/Electronic/Hip-Hop | Studio | L | średnie | L2 | agent |
-| P2-2 | Persona prezentera AI (styl, wartości, zakazy) + generowanie wstawek „w locie” z filtrami treści; TTS ElevenLabs z otwartym zapasem i cache'em | Radio | L | średnie | L3 | agent |
+| P2-2 | ✅ 5.11 wersja 1 (szablony, bez LLM; `radioHost.ts`). Persona prezentera AI (styl, wartości, zakazy) + generowanie wstawek „w locie” z filtrami treści; TTS ElevenLabs z otwartym zapasem i cache'em | Radio | L | średnie | L3 | agent |
 | P2-3 | Monitoring strumienia radia (cisza, błędy) z alertami | Radio | M | niskie | L2 | agent |
 | P2-4 | GrouaRock B2B: cenniki hurtowe, konta firmowe, wyceny, faktury VAT | GrouaRock | L | średnie | L4 | agent → Grzegorz |
 | P2-5 | Katalog sklepu z bazy zamiast z kodu (`src/data/shopCatalog.ts`), zdjęcia produktów | GrouaRock | M | niskie | L2 | agent |
