@@ -125,7 +125,7 @@ async function putR2(jwt: string, body: Uint8Array | string, fileName: string, c
 }
 
 // Postać DJ Yellow (fikcyjny artysta AI) — ten sam opis na każdej grafice, zmienia się tylko miejsce.
-export const PERSONA = "DJ Yellow, a fictional virtual AI DJ character: young man with golden-yellow tinted round sunglasses, short bleached platinum hair, yellow bomber jacket, gold headphones around the neck, warm confident smile";
+export const PERSONA = "DJ Yellow, a fictional virtual AI DJ character, an adult man in his late twenties: messy dark brown textured hair with short faded sides, white bomber jacket over a black hoodie, dark blue jeans, gold headphones around the neck, small golden-yellow accents, confident cool expression";
 const SCENES = [
   "behind the decks in a packed underground techno club with lasers and haze",
   "in a cozy crowded pub with warm string lights, raising a glass with friends",
