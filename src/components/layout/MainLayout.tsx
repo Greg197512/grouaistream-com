@@ -36,7 +36,6 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
   const { isVideoMode, currentTrack } = usePlayer();
   const { upgradePromptFeature, dismissUpgradePrompt } = useSubscription();
   const location = useLocation();
-  const showFace = location.pathname.startsWith("/admin");
   const hideAurora = location.pathname.startsWith("/business");
 
   // Auto-show video player when a video track starts playing
@@ -56,7 +55,7 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
     <DragDropProvider>
       <div className="flex h-screen flex-col overflow-hidden bg-background relative">
         {/* Aurora animated background (na słabym sprzęcie: wersja lite = statyczna) */}
-        {!hideAurora && <AuroraBackground showFace={showFace} lite={isLowPowerDevice() || isTouchDevice()} />}
+        {!hideAurora && <AuroraBackground lite={isLowPowerDevice() || isTouchDevice()} />}
         
         {/* Main Content Area */}
         <div className="flex flex-1 overflow-hidden relative z-10">

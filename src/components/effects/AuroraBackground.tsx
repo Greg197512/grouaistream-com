@@ -1,8 +1,7 @@
 import { motion } from "framer-motion";
 import { isTouchDevice } from "@/lib/perf";
 
-// showFace zostaje w API dla zgodności, twarz nie jest już rysowana.
-export const AuroraBackground = ({ lite = false }: { showFace?: boolean; lite?: boolean }) => {
+export const AuroraBackground = ({ lite = false }: { lite?: boolean }) => {
 
   // Tryb oszczędny (stare/słabe urządzenia): tylko tanie, STATYCZNE tło — bez
   // animowanych, mocno rozmytych plam (blur 120px), wstęg i cząstek, które
