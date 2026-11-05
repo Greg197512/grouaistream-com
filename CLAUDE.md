@@ -59,9 +59,10 @@ i aktualny. Jeśli fakt tu jest — nie weryfikuj go od nowa dziesiątkami wywo�
   (powitanie, zmiana bloku, pełna godzina z ujawnieniem AI, co 4 utwory zapowiedź; min. 6 min odstępu), muzyka ściszona do 25% (`duckRef`).
   Humor: `FUN` (ogólne/poranek/noc/weekend/DJ) w 4 językach, ~co trzecia kwestia (`wantsJoke`), żarty o muzyce i o sobie jako AI, nigdy z ludzi.
   **Głos Novy:** `GET /api/voice?l=&t=` (Vercel edge, cache CDN 30 dni): ElevenLabs (`ELEVENLABS_API_KEY`, `NOVA_ELEVEN_VOICE_ID`) →
-  Azure kobiece (`AZURE_SPEECH_KEY/REGION`: Zofia/Ava/Fenna/Polina) → Google TTS (bez klucza). Klient: `src/lib/novaVoice.ts` (zapas: kobiecy głos przeglądarki).
+  Azure kobiece (`AZURE_SPEECH_KEY/REGION`: Zofia/Ava/Fenna/Polina) → Google TTS (bez klucza). Klient: `src/lib/novaVoice.ts`: **najpierw Piper w przeglądarce (bez kluczy)** — Gosia/Amy/Nathalie/Lada,
+  model 20–63 MB pobierany w tle raz (komputer albo telefon na Wi-Fi), potem `/api/voice`, na końcu kobiecy głos systemu.
   Uwaga: edge `elevenlabs-tts` (asystent) ma głosy MĘSKIE — dla Novy nie używać.
-  Głos: `speak(…, {mode:"dj"})`. Słuchacz wyłącza przyciskiem (localStorage `grouai-radio-host`). Ujawnienie AI widoczne na stronie radia.
+  Słuchacz wyłącza Novę przyciskiem (localStorage `grouai-radio-host`). Ujawnienie AI widoczne na stronie radia.
 - **Język = wybór użytkownika:** `LanguageContext` zapisuje wybór zalogowanego w `user_metadata.language` i przywraca go po zalogowaniu
   (każde urządzenie). Radio (Nova, Talk, newsy, opowiadania) bierze język z kontekstu, nie z domyślnego „pl”.
 
