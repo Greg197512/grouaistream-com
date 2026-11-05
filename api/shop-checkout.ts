@@ -372,7 +372,22 @@ async function printfulCheck(auth: string, user: User) {
 }
 
 export default async function handler(req: Request): Promise<Response> {
-  if (req.method === "GET") return json(publicConfig());
+  if (req.method === "GET") {
+    // Diagnostyka Printful bez sekretów (same liczby), cache 5 min: GET ?diag=printful
+    if (new URL(req.url).searchParams.get("diag") === "printful") {
+      const pf = printfulCfg();
+      if (!pf) return json({ configured: false });
+      const r = await printfulExternalIds(pf);
+      if (r.ok === false) return json({ configured: true, ok: false, error: r.error });
+      const have = new Set(r.ids);
+      const need = SHOP_PRODUCTS.filter((p) => supplierFor(p.id) === "printful")
+        .flatMap((p) => (p.sizes ? ["S", "M", "L", "XL", "XXL", "3XL"].map((s) => printfulExternalId(p.id, s)) : [printfulExternalId(p.id, null)]));
+      return new Response(JSON.stringify({ configured: true, ok: true, storeVariants: r.ids.length, linked: need.filter((x) => have.has(x)).length, total: need.length, autoConfirm: pf.confirm }), {
+        headers: { "content-type": "application/json", "cache-control": "public, s-maxage=300" },
+      });
+    }
+    return json(publicConfig());
+  }
   if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
   if (!supa()) return json({ error: "not_configured" }, 503);
   const auth = req.headers.get("authorization") ?? "";
