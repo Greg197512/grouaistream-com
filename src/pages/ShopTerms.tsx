@@ -90,9 +90,9 @@ export default function ShopTerms() {
   const s = cfg?.seller;
   const ids = s ? [s.taxId, s.vatId && s.vatId !== s.taxId ? s.vatId : null].filter(Boolean).join(", ") : "";
   const fill = (x: string) => x
-    .replace("{SELLER_FULL}", s ? `${s.name}, ${s.address}${ids ? ` (${ids})` : ""}` : "—")
-    .replace("{SELLER}", s ? `${s.name}, ${s.address}` : "—")
-    .replace(/\{EMAIL\}/g, s?.email ?? "—")
+    .replace("{SELLER_FULL}", s ? `${s.name}, ${s.address}${ids ? ` (${ids})` : ""}` : cfg?.contact?.name ?? "—")
+    .replace("{SELLER}", s ? `${s.name}, ${s.address}` : cfg?.contact?.name ?? "—")
+    .replace(/\{EMAIL\}/g, s?.email ?? cfg?.contact?.email ?? "—")
     .replace("{DAYS}", cfg?.deliveryDays ?? "5–14");
 
   return (

@@ -297,8 +297,8 @@ export default function Shop() {
         <div className="mx-auto flex max-w-5xl flex-wrap gap-x-6 gap-y-2">
           <Link to="/shop/terms" className="underline underline-offset-4 hover:text-neutral-900">{T.terms}</Link>
           <Link to="/legal" className="underline underline-offset-4 hover:text-neutral-900">Privacy</Link>
-          {cfg?.seller?.email && <a href={`mailto:${cfg.seller.email}`} className="underline underline-offset-4 hover:text-neutral-900">{T.contact}: {cfg.seller.email}</a>}
-          {cfg?.seller && <span>{cfg.seller.name}, {cfg.seller.address}</span>}
+          {(cfg?.seller?.email || cfg?.contact?.email) && <a href={`mailto:${cfg.seller?.email || cfg.contact?.email}`} className="underline underline-offset-4 hover:text-neutral-900">{T.contact}: {cfg.seller?.email || cfg.contact?.email}</a>}
+          {cfg?.seller ? <span>{cfg.seller.name}, {cfg.seller.address}</span> : cfg?.contact?.name ? <span>{cfg.contact.name}</span> : null}
         </div>
       </footer>
 

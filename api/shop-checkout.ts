@@ -126,6 +126,8 @@ function publicConfig() {
       name, address, country: env("SHOP_SELLER_COUNTRY")?.toUpperCase() ?? null, taxId: env("SHOP_SELLER_TAX_ID") ?? null,
       vatId: env("SHOP_SELLER_VAT_ID") ?? null, email: env("SHOP_SELLER_EMAIL") ?? null,
     } : null,
+    // Kontakt widoczny w sklepie nawet bez pełnych danych firmy (adres potrzebny dopiero do faktur).
+    contact: { name: name ?? null, email: env("SHOP_SELLER_EMAIL") ?? null },
     vatMode: parseVatMode(env("SHOP_VAT_MODE")), exemptNote: env("SHOP_VAT_EXEMPT_NOTE") ?? null,
     fulfillment: { printful: !!printfulCfg(), printfulAuto: !!printfulCfg()?.confirm, mail: !!mailCfg(), supplierEmail: !!env("SHOP_SUPPLIER_EMAIL"), notify: !!env("SHOP_NOTIFY_EMAIL") },
   };
