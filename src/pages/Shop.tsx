@@ -224,7 +224,7 @@ export default function Shop() {
         </div>
       </header>
 
-      <GraffitiWall label="GROUAROCK" tagline={lang === "pl" ? "street sklep · GrouAI Stream" : lang === "nl" ? "streetshop · GrouAI Stream" : "street shop · GrouAI Stream"} />
+      <GraffitiWall label="GROUAROCK" />
 
       <section className="mx-auto max-w-5xl pb-2 pt-6" aria-label={T.inMotion}>
         <h2 className="mb-3 px-4 text-2xl font-black">{T.inMotion}</h2>
