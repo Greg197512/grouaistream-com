@@ -96,8 +96,8 @@ apki na Androidzie trzymały stary kod — reinstalacja apki leczy.
 
 ## Perf / low-power
 `src/lib/perf.ts` → `<html data-lowpower>` (słaby sprzęt) i `<html data-touch>` (telefon/tablet): lite Aurora (statyczna),
-brak MatrixNotes, `backdrop-filter: none` i stoi `.animate-gradient` (`index.css`). Aurora na komputerze: plamy = radial-gradient
-(bez `filter: blur` na animowanych warstwach). Wizualizer home nie rysuje poza ekranem. Nie dokładać wiecznych animacji na home.
+brak MatrixNotes, `backdrop-filter: none` i stoi `.animate-gradient` (`index.css`). Aurora: **bez plam, wstęg i twarzy** (decyzja Grzegorza 5.11) —
+statyczne tło + drobne cząstki na komputerze. Wizualizer home nie rysuje poza ekranem. Nie dokładać wiecznych animacji na home.
 
 ## Reguły oszczędzania tokenów (dla agenta)
 - Odpowiadaj zwięźle i po polsku; bez powtarzania kontekstu z tego pliku.
