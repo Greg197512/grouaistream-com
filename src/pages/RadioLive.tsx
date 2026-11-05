@@ -22,7 +22,7 @@ import { YouTubePlayer } from "@/components/player/YouTubePlayer";
 import { buildPersonalQueue, type Mood } from "@/lib/personalRadio";
 import { buildDailyRadio } from "@/lib/radioDaily";
 import { BLOCKS, blockAt, type BlockId } from "@/lib/radioClock";
-import { speakNova, stopNova } from "@/lib/novaVoice";
+import { prefetchNova, speakNova, stopNova } from "@/lib/novaVoice";
 import { AI_DISCLOSURE, BLOCK_NAMES, HOST_UI, decideHost, hostLang, hostLine, initialHostState } from "@/lib/radioHost";
 import { useRadioStoryOverride } from "@/lib/radioStories";
 import { fetchUpcomingRequests, type UpcomingRequest } from "@/lib/radioRequest";
@@ -1149,6 +1149,9 @@ const RadioLive = () => {
     const safety = window.setTimeout(closeRequestVideo, 15 * 60_000);
     return () => { window.removeEventListener("message", onMsg); window.clearTimeout(safety); };
   }, [requestVideo, closeRequestVideo]);
+
+  // Model głosu Novy (Piper) pobiera się w tle, gdy radio gra — kolejne kwestie mówi już neuronowo.
+  useEffect(() => { if (isPlaying && hostOn && !personalMood) prefetchNova(hostLang(language)); }, [isPlaying, hostOn, personalMood, language]);
 
   // Prezenterka AI przy starcie utworu: powitanie, zmiana bloku, pełna godzina (z ujawnieniem AI),
   // co 4 utwory zapowiedź. Mówi na wstępie utworu, muzyka ściszona do 25%.
