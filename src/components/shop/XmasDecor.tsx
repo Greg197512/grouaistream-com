@@ -1,4 +1,4 @@
-const SLOGANS = ["🎄 Święta z muzyką — kup coś, dostaj miesiąc VIP gratis", "🎁 Każde zamówienie = bilet z kodem VIP na 30 dni", "❄️ Noś swój dźwięk także zimą", "🎅 Prezent, który gra: Grouarock × Grouaistream", "🔔 Wesołych Świąt od ekipy Grouarock", "⭐ Grouaistream: start free"];
+const SLOGANS = ["🎄 Święta z muzyką — kup coś, dostaj miesiąc VIP gratis", "🎁 Każde zamówienie = bilet z kodem VIP na 30 dni", "❄️ Noś swój dźwięk także zimą", "🎅 Prezent, który gra: Grouarock", "🔔 Wesołych Świąt od ekipy Grouarock", "⭐ Grouarock: noś swój dźwięk"];
 
 /** Świąteczna oprawa: lampki, Mikołaj, pasek haseł (bez śniegu — na życzenie). */
 export function XmasDecor() {
