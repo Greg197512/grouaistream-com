@@ -65,6 +65,7 @@ const Orders = lazy(() => import("./pages/Orders"));
 const Shop = lazy(() => import("./pages/Shop"));
 const ShopTerms = lazy(() => import("./pages/ShopTerms"));
 const ShopProduct = lazy(() => import("./pages/ShopProduct"));
+const Prezent = lazy(() => import("./pages/Prezent"));
 const NicheLandingPage = lazy(() => import("./pages/NicheLandingPage"));
 const Sponsor = lazy(() => import("./pages/Sponsor"));
 const Business = lazy(() => import("./pages/Business"));
@@ -185,6 +186,7 @@ const AppShell = () => {
           <Route path="/shop" element={<Shop />} />
           <Route path="/shop/terms" element={<ShopTerms />} />
           <Route path="/shop/p/:id" element={<ShopProduct />} />
+          <Route path="/prezent/:id" element={<Prezent />} />
           <Route path="/n/:slug" element={<NicheLandingPage />} />
           <Route path="/sponsor" element={<Sponsor />} />
           <Route path="/business" element={<Business />} />

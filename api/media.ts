@@ -127,6 +127,14 @@ export default async function handler(req: Request): Promise<Response> {
   }
   if (!headers.has("accept-ranges")) headers.set("Accept-Ranges", "bytes");
   headers.set("Cache-Control", "public, max-age=86400");
+  // ?dl=1&name=… → przeglądarka zapisuje plik zamiast go otwierać („Pobierz utwór” w menu).
+  if (reqUrl.searchParams.get("dl") === "1") {
+    const ext = (target.pathname.match(/\.([a-z0-9]{2,4})$/i)?.[1] || "mp3").toLowerCase();
+    const base = (reqUrl.searchParams.get("name") || "utwor").replace(/[\\/:*?"<>|\r\n]+/g, " ").trim().slice(0, 120) || "utwor";
+    const file = `${base}.${ext}`;
+    const ascii = file.replace(/[^\x20-\x7e]/g, "_").replace(/"/g, "'");
+    headers.set("Content-Disposition", `attachment; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(file)}`);
+  }
 
   return new Response(req.method === "HEAD" ? null : upstream.body, {
     status: upstream.status,
