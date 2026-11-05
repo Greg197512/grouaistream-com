@@ -295,7 +295,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
           title: currentTrack.title || "GrouAI Stream",
           artist: currentTrack.artist || "GrouAI",
           album: currentTrack.album || "GrouaRadio",
-          artwork: art ? [96, 128, 192, 256, 384, 512].map((s) => ({ src: art, sizes: `${s}x${s}`, type: "image/jpeg" })) : [],
+          artwork: art ? [96, 128, 192, 256, 384, 512].map((s) => ({ src: art, sizes: `${s}x${s}`, type: /\.svg(\?|$)/i.test(art) ? "image/svg+xml" : /\.png(\?|$)/i.test(art) ? "image/png" : "image/jpeg" })) : [],
         });
       } catch { /* */ }
     }

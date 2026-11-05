@@ -170,7 +170,7 @@ async function personaImage(seed: number, scene?: string): Promise<{ data: Uint8
 
 async function makeCover(jwt: string, _idea: Idea, title: string, seed: number): Promise<string | null> {
   const img = await personaImage(seed);
-  return putR2(jwt, personaSvg(img, title, seed), `${seed}.svg`, "image/svg+xml");
+  return putR2(jwt, personaSvg(img, title, seed), `p-${Math.abs(seed)}.svg`, "image/svg+xml");
 }
 
 async function archiveAudio(jwt: string, src: string, name: string): Promise<string | null> {
@@ -193,6 +193,7 @@ async function ownerFromToken(authHeader: string): Promise<{ jwt: string; uid: s
   return { jwt: authHeader.slice(7), uid: r.data.id };
 }
 
+const hash = (s: string) => { let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return h; };
 const MAX_PER_DAY = 6; // z dodatkowymi („Zrób jeszcze 2”) — twardy sufit kosztów
 
 async function run(deadline: number, who?: { jwt: string; uid: string }) {
@@ -203,8 +204,16 @@ async function run(deadline: number, who?: { jwt: string; uid: string }) {
   // Limit liczony po artyście (niezależnie od konta, z którego ruszyło studio).
   const done = await rest(jwt, `tracks?select=id,title,cover_url&artist=eq.${encodeURIComponent(ARTIST)}&created_at=gte.${encodeURIComponent(since)}`);
   const doneList = Array.isArray(done.data) ? done.data : [];
+  // Naprawa: starsze utwory DJ Yellow bez okładki z postacią (i znaczkiem AI) dostają nową — maks. 2 na raz.
+  const old = await rest(jwt, `tracks?select=id,title,cover_url&artist=eq.${encodeURIComponent(ARTIST)}&order=created_at.desc&limit=20`);
+  const fixed: string[] = [];
+  for (const t of (Array.isArray(old.data) ? old.data : []).filter((x: any) => !/\/dj-yellow\/\d+-p-/.test(String(x.cover_url || ""))).slice(0, 2)) {
+    if (Date.now() > deadline - 200000) break;
+    const cover = await makeCover(jwt, algorithmIdea(0), String(t.title), Math.abs(hash(String(t.id))));
+    if (cover && (await rest(jwt, `tracks?id=eq.${t.id}`, { method: "PATCH", body: JSON.stringify({ cover_url: cover }) })).ok) fixed.push(String(t.title));
+  }
   const target = Math.min(MAX_PER_DAY, dayTarget());
-  if (doneList.length >= target) return { ok: true, step: "done-today", tracks: doneList };
+  if (doneList.length >= target) return { ok: true, step: "done-today", tracks: doneList, fixedCovers: fixed };
   const need = target - doneList.length;
 
   // Rozpoczęte dziś zadania — dokańczamy je zamiast płacić za nowe.
