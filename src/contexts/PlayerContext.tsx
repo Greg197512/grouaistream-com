@@ -9,6 +9,8 @@ import { getOfflineObjectUrl } from "@/lib/offlineLibrary";
 import { proxiedMediaUrl } from "@/lib/mediaProxy";
 import { LiveDJEngine, type DJEngineTrack } from "@/utils/liveDJEngine";
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export interface Track {
   id: string;
   title: string;
@@ -425,7 +427,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     // playPlaylist) — nie dotykamy głównego audioRef, tylko logujemy historię.
     if (externalPlaybackRef.current) {
       const uid = userIdRef.current;
-      if (uid) {
+      if (uid && UUID_RE.test(currentTrack.id)) {
         supabase.from('listening_history').insert({
           user_id: uid,
           track_id: currentTrack.id,
@@ -542,7 +544,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
 
     // Log listening history using ref (no re-trigger on auth change)
     const uid = userIdRef.current;
-    if (uid) {
+    if (uid && UUID_RE.test(currentTrack.id)) { // utwory spoza bazy (np. listy przebojów) nie trafiają do historii
       supabase.from('listening_history').insert({
         user_id: uid,
         track_id: currentTrack.id,
