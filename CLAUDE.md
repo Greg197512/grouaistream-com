@@ -39,7 +39,7 @@ i aktualny. Jeśli fakt tu jest — nie weryfikuj go od nowa dziesiątkami wywo�
   zapis wprost w bazie RLS admina + mail do klienta `api/b2b` `notify`) → klient (`ClientDashboard` + `B2BOrderStatus`: oś czasu, oferta,
   QR Revolut z tytułem `B2B-XXXXXXXX`, „Akceptuję”/„Zapłaciłem” → mail do zespołu, „Pobierz wynik”; Realtime). Linki z maili: `/client-dashboard/:id`.
 - **„Czego słucha świat”** (home, `WorldCharts.tsx`): `api/world-charts?c=world|pl|us|gb|nl|ua` (edge, CDN 6 h) — publiczny RSS Apple Music
-  (most-played) + iTunes lookup → fragmenty 30 s w naszym playerze (id `chart-…`, bez zapisu do historii — `UUID_RE` w PlayerContext) + link „Całość”.
+  (most-played; „Świat” = top 5 z PL/US/GB/DE/FR/ES/IT/NL/UA/BR/JP z flagą) + iTunes lookup w sklepie danego kraju → fragmenty 30 s w naszym playerze (id `chart-…`, bez zapisu do historii — `UUID_RE` w PlayerContext) + link „Całość”.
 - Menu utworu (`TrackOptionsMenu`): pobieranie/offline przez `src/lib/trackFile.ts` (`/api/media?dl=1`), linki `?play=`, dane po otwarciu menu.
 - Zapis na R2 z edge: `_shared/r2.ts` = fetch + SigV4 (NIE @aws-sdk — zawieszał się). Test: `suno-generate` `{"action":"r2test"}`.
 - Studio → Spotify: po każdej generacji `certifyWithToasts` (`src/lib/releasePipeline.ts`, `releasePrep.ts`):
