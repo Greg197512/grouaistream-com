@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { BurningFrame } from "@/components/effects/BurningFrame";
-import { BurningButton } from "@/components/effects/BurningButton";
+import { ChevronRight, Sparkles } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -64,32 +63,38 @@ export const SEOContentSection = () => {
 
   return (
     <section className="px-6 py-12 max-w-4xl mx-auto">
-      {/* Hero w płonącej ramce */}
-      <BurningFrame className="mb-10">
-        <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-4 leading-tight">
+      {/* Statyczna karta (bez animacji — lekko i czytelnie na telefonie) */}
+      <div className="rounded-2xl border border-primary/25 bg-gradient-to-br from-primary/10 via-card/60 to-accent/10 p-6 shadow-lg md:p-8">
+        <div className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-primary/15 px-3 py-1 text-xs font-semibold text-primary">
+          <Sparkles className="h-3.5 w-3.5" aria-hidden="true" /> GrouAI Stream
+        </div>
+        <h2 className="mb-3 text-2xl font-bold leading-tight text-foreground [text-wrap:balance] md:text-3xl">
           {t("seo.hero.title")}
         </h2>
-        <p className="text-base text-muted-foreground leading-relaxed m-0">
+        <p className="m-0 text-base leading-relaxed text-muted-foreground">
           {renderRich(t("seo.hero.lead"))}
         </p>
-      </BurningFrame>
-
-      {/* Płonący przycisk — otwiera modal z pełną treścią */}
-      <BurningButton onClick={() => setOpen(true)} ariaLabel={buttonLabel}>
-        🔥 {buttonLabel}
-      </BurningButton>
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="mt-6 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 text-center text-sm font-bold text-primary-foreground shadow-md transition hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:w-auto md:text-base"
+        >
+          {buttonLabel}
+          <ChevronRight className="h-4 w-4 shrink-0" aria-hidden="true" />
+        </button>
+      </div>
 
       {/* Modal z pełną treścią — także w płonącej ramce */}
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden p-0 bg-transparent border-0 shadow-none">
-          <BurningFrame className="max-h-[90vh] overflow-hidden">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden p-6">
+          <div className="max-h-[85vh] overflow-hidden">
             <DialogHeader className="mb-4">
               <DialogTitle className="text-2xl md:text-3xl font-bold text-foreground leading-tight">
-                {buttonLabel}
+                GrouAI Stream
               </DialogTitle>
             </DialogHeader>
 
-            <div className="overflow-y-auto pr-2 max-h-[70vh] groove-scrollbar">
+            <div className="overflow-y-auto pr-2 max-h-[72vh] groove-scrollbar">
               <div className="prose prose-invert max-w-none text-muted-foreground text-sm leading-relaxed space-y-6">
                 <h3 className="text-xl md:text-2xl font-bold text-foreground">
                   {t("seo.features.title")}
@@ -176,7 +181,7 @@ export const SEOContentSection = () => {
                 </p>
               </div>
             </div>
-          </BurningFrame>
+          </div>
         </DialogContent>
       </Dialog>
     </section>
