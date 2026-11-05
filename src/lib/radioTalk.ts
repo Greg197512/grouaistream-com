@@ -288,3 +288,34 @@ export async function speakTalk(
   }
   opts?.onLine?.(null);
 }
+
+/** Codzienny serwis ze świata (radio, o stałej porze): dział „Świat” z Google News, przerobiony na krótki
+ *  serwis radiowy (fallback: nagłówki). Czyta męski głos „Max” (AI — mówi to na wstępie). */
+export async function fetchWorldNewsFlash(lang = "pl", hhmm = ""): Promise<string[] | null> {
+  const l = lang.slice(0, 2);
+  try {
+    const r = await fetch(`/api/news-feed?lang=${encodeURIComponent(l)}`);
+    if (!r.ok) return null;
+    const data = await r.json();
+    const sections = (data?.sections || []) as { name: string; items: string[] }[];
+    const world = sections.find((s) => /^(świat|world)$/i.test(s.name)) ?? sections[0];
+    if (!world?.items?.length) return null;
+    const intro: Record<string, string> = {
+      pl: `GrouaRadio News! Godzina ${hhmm}. Najważniejsze wiadomości ze świata. Czyta Max, głos AI.`,
+      en: `GrouaRadio News! It's ${hhmm}. The biggest stories from around the world. I'm Max, an AI voice.`,
+      nl: `GrouaRadio Nieuws! Het is ${hhmm}. Het belangrijkste nieuws uit de wereld. Ik ben Max, een AI-stem.`,
+      ua: `GrouaRadio News! ${hhmm}. Головні новини світу. Читає Макс, голос ШІ.`,
+    };
+    const outro: Record<string, string> = {
+      pl: "To był serwis GrouaRadio. Wracamy do muzyki, zostańcie z nami!",
+      en: "That was GrouaRadio News. Back to the music, stay with us!",
+      nl: "Dat was GrouaRadio Nieuws. Terug naar de muziek, blijf erbij!",
+      ua: "Це були новини GrouaRadio. Повертаємось до музики, залишайтеся з нами!",
+    };
+    const body = await composeSection(world.name, world.items, l);
+    const k = (l in intro ? l : "en");
+    return [intro[k], body, outro[k]].filter((x) => x && x.trim());
+  } catch {
+    return null;
+  }
+}
