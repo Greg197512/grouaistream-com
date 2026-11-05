@@ -82,7 +82,7 @@ export const TopArtists = () => {
       const { data: tracksData } = await withTimeout(
         supabase
           .from("tracks")
-          .select("user_id, artist, title, audio_url, video_url, cover_url, created_at")
+          .select("user_id, artist, title, audio_url, video_url")
           .not("artist", "is", null)
           .limit(3000),
         15_000,
@@ -100,10 +100,7 @@ export const TopArtists = () => {
       // dzięki temu widać WSZYSTKICH wykonawców, także tych wgranych ze wspólnego/
       // masowego konta (wcześniej grupowanie po user_id zwijało ich do kilku kont).
       const artistMap: Record<string, { count: number; name: string; userId: string | null }> = {};
-      let djCover: { url: string; at: string } | null = null;
       tracksData.forEach((t: { user_id: string | null; artist: string | null; title?: string | null; audio_url: string | null; video_url: string | null; cover_url?: string | null; created_at?: string }) => {
-        // DJ Yellow (artysta AI): portret = jego najnowsza okładka z postacią.
-        if ((t.artist || "").trim().toLowerCase() === AI_STAR && t.cover_url && (!djCover || (t.created_at ?? "") > djCover.at)) djCover = { url: t.cover_url, at: t.created_at ?? "" };
         if (!t.audio_url && !t.video_url) return;
         if (isRadioOnlyTrack(t)) return;
         const name = (t.artist || "").trim();
@@ -146,7 +143,7 @@ export const TopArtists = () => {
           };
         })
         .sort((a, b) => (a.id === AI_STAR ? -1 : b.id === AI_STAR ? 1 : b.trackCount - a.trackCount))
-        .map((a) => (a.id === AI_STAR && djCover ? { ...a, imageUrl: (djCover as { url: string }).url } : a))
+        .map((a) => (a.id === AI_STAR ? { ...a, imageUrl: "/artists/dj-yellow.webp" } : a))
         .slice(0, 16)
         .map((a, index) => ({ ...a, gradient: gradients[index % gradients.length] }));
 
