@@ -104,44 +104,6 @@ const Library = () => {
   const [genreLoading, setGenreLoading] = useState(false);
   
 
-  const runBulkPopulate = useCallback(async () => {
-    if (populating) return;
-    setPopulating(true);
-    setPopulateProgress(0);
-    setPopulateMsg(t("library.startingPopulate"));
-
-    try {
-      for (let batch = 0; batch < 40; batch++) {
-        setPopulateMsg(`Batch ${batch + 1}/40 — ${t("library.batchFetching")}`);
-        
-        const { data, error } = await supabase.functions.invoke('bulk-populate', {
-          body: { batch, batchSize: 500, source: 'all' },
-        });
-
-        if (error) { console.error('Batch error:', error); continue; }
-
-        const progress = data?.progress || Math.round(((batch + 1) / 40) * 100);
-        setPopulateProgress(Math.min(progress, 100));
-        setPopulateMsg(`Batch ${batch + 1}/40 — ${t("library.batchAdded")} ${data?.added || 0} (${data?.totalLibrary || '?'})`);
-
-        if ((data?.totalLibrary || 0) >= 20000) {
-          setPopulateMsg(`${t("library.goalReached")} ${data.totalLibrary}`);
-          break;
-        }
-        await new Promise(r => setTimeout(r, 500));
-      }
-
-      setPopulateProgress(100);
-      setPopulateMsg(t("library.donePopulated"));
-      toast.success(t("library.populatedSuccess"));
-      loadLibrary();
-    } catch (err: any) {
-      console.error('Populate error:', err);
-      toast.error(t("library.populateError") + ": " + (err.message || "Unknown"));
-    } finally {
-      setTimeout(() => setPopulating(false), 3000);
-    }
-  }, [populating]);
 
 
   const loadGenreCounts = async () => {
@@ -270,10 +232,7 @@ const Library = () => {
             <h1 className="font-display text-3xl font-bold">{t("library.title")}</h1>
           </div>
           <div className="flex gap-2 flex-wrap">
-            <Button onClick={runBulkPopulate} variant="outline" className="gap-2" disabled={populating}>
-              {populating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Database className="h-4 w-4" />}
-              {populating ? t("library.populating") : t("library.populate20k")}
-            </Button>
+            {/* „Dosyp 20k” usunięty (5.11): masowo wlewał puste utwory-widma (66 600 sprzątniętych). */}
             <Button onClick={() => navigate("/studio")} variant="outline" className="gap-2 border-purple-500/50 text-purple-400 hover:bg-purple-500/10">
               <Wand2 className="h-4 w-4" /> GrouAI Studio
             </Button>
