@@ -1,0 +1,37 @@
+// DJ Yellow w studiu GrouAI: gdy właściciel jest zalogowany, studio samo robi dzisiejsze 2 utwory
+// (serwer /api/dj-yellow pilnuje limitu 2/dzień i dokańcza rozpoczęte zadanie — kilka kart naraz nic nie zepsuje).
+import { supabase } from "@/integrations/supabase/client";
+
+export const DJ_OWNER = "grzegorzkaron553@gmail.com";
+export type DjTrack = { id: string; title: string; cover_url: string | null; created_at: string };
+export type DjRun = { ok: boolean; step: string; tracks?: { title: string; id?: string; error?: string }[]; error?: string; status?: string };
+
+export async function djStatus(): Promise<{ today: DjTrack[]; latest: DjTrack[]; perDay: number } | null> {
+  try { const r = await fetch("/api/dj-yellow?status=1"); return r.ok ? await r.json() : null; } catch { return null; }
+}
+
+export async function djRunNow(): Promise<DjRun> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) return { ok: false, step: "auth", error: "zaloguj się" };
+  const r = await fetch("/api/dj-yellow?run=1", { method: "POST", headers: { authorization: `Bearer ${session.access_token}` }, keepalive: false });
+  return (await r.json().catch(() => ({ ok: false, step: "http", error: `HTTP ${r.status}` }))) as DjRun;
+}
+
+const dayKey = () => new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Warsaw" });
+const LS = "grouai-djyellow-day";
+/** Raz dziennie (na urządzeniu) — w tle, z ponowieniem, gdy Suno jeszcze komponuje. */
+export async function djDailyTick(onDone: (r: DjRun) => void) {
+  try { if (localStorage.getItem(LS) === dayKey()) return; } catch { /* */ }
+  const st = await djStatus();
+  if (st && st.today.length >= st.perDay) { try { localStorage.setItem(LS, dayKey()); } catch { /* */ } return; }
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const r = await djRunNow();
+    if (r.step === "published" || r.step === "done-today" || r.step === "partial-today") {
+      try { localStorage.setItem(LS, dayKey()); } catch { /* */ }
+      onDone(r);
+      return;
+    }
+    if (!r.ok && r.step !== "waiting") { onDone(r); return; }
+    await new Promise((res) => setTimeout(res, 90_000)); // Suno komponuje — sprawdzimy za chwilę
+  }
+}

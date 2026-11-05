@@ -147,12 +147,22 @@ async function archiveAudio(jwt: string, src: string, name: string): Promise<str
 }
 
 // ── Główna praca ────────────────────────────────────────────────────────────
-async function run(deadline: number) {
-  const auth = await login();
+const OWNER = "grzegorzkaron553@gmail.com";
+/** Właściciel zalogowany w studiu GrouAI — wtedy praca idzie na jego koncie (bez osobnego hasła). */
+async function ownerFromToken(authHeader: string): Promise<{ jwt: string; uid: string } | null> {
+  if (!authHeader.startsWith("Bearer ")) return null;
+  const r = await http(`${SUPA()}/auth/v1/user`, { headers: { apikey: ANON(), authorization: authHeader } });
+  if (!r.ok || String(r.data?.email || "").toLowerCase() !== OWNER) return null;
+  return { jwt: authHeader.slice(7), uid: r.data.id };
+}
+
+async function run(deadline: number, who?: { jwt: string; uid: string }) {
+  const auth = who ?? (await login());
   if ("error" in auth) return { ok: false, step: "login", error: auth.error };
   const { jwt, uid } = auth;
   const since = todayStartPl();
-  const done = await rest(jwt, `tracks?select=id,title&user_id=eq.${uid}&created_at=gte.${encodeURIComponent(since)}`);
+  // Limit liczony po artyście (niezależnie od konta, z którego ruszyło studio).
+  const done = await rest(jwt, `tracks?select=id,title,cover_url&artist=eq.${encodeURIComponent(ARTIST)}&created_at=gte.${encodeURIComponent(since)}`);
   const doneList = Array.isArray(done.data) ? done.data : [];
   if (doneList.length >= PER_DAY) return { ok: true, step: "done-today", tracks: doneList };
 
@@ -230,8 +240,17 @@ export default async function handler(req: any, res: any) {
     const r = await http(`${SUPA()}/auth/v1/signup`, { method: "POST", headers: { apikey: ANON(), "content-type": "application/json" }, body: JSON.stringify({ email, password, data: { display_name: ARTIST, full_name: ARTIST } }) });
     return res.status(200).json({ status: r.status, confirmed: !!r.data?.session || !!r.data?.user?.email_confirmed_at, error: r.ok ? null : r.data?.msg || r.data?.error_description || null });
   }
+  if (q.status) {
+    // Stan na dziś dla karty w studiu (bez kosztów).
+    const r = await http(`${SUPA()}/rest/v1/tracks?select=id,title,cover_url,created_at&artist=eq.${encodeURIComponent(ARTIST)}&order=created_at.desc&limit=6`, { headers: { apikey: ANON() } });
+    const since = todayStartPl();
+    const list = Array.isArray(r.data) ? r.data : [];
+    return res.status(200).json({ today: list.filter((t: any) => t.created_at >= since), latest: list, perDay: PER_DAY });
+  }
+  const who = await ownerFromToken(String(req.headers.authorization || ""));
+  if (req.method === "POST" && !who) return res.status(403).json({ ok: false, error: "tylko właściciel studia" });
   try {
-    const result = await run(Date.now() + 280000);
+    const result = await run(Date.now() + 280000, who ?? undefined);
     return res.status(200).json(result);
   } catch (e) {
     return res.status(500).json({ ok: false, error: String((e as Error)?.message || e).slice(0, 300) });

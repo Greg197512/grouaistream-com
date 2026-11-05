@@ -16,6 +16,7 @@ import { Effects3DProvider } from "@/contexts/Effects3DContext";
 import { IntroSplash } from "@/components/effects/IntroSplash";
 import { AutoVoiceListener } from "@/components/player/AutoVoiceListener";
 import { GlobalLiveVoiceOverlay } from "@/components/radio/GlobalLiveVoiceOverlay";
+import { DjYellowAutopilot } from "@/components/studio/DjYellowAutopilot";
 import { StemsModal } from "@/components/studio/StemsModal";
 import { PWAInstallPrompt } from "@/components/pwa/PWAInstallPrompt";
 import { TipWelcomeModal } from "@/components/modals/TipWelcomeModal";
@@ -138,6 +139,7 @@ const AppShell = () => {
         <PostLoginRedirect />
         <AutoVoiceListener />
         <GlobalLiveVoiceOverlay />
+        <DjYellowAutopilot />
         <StemsModal />
         <Suspense fallback={<RouteFallback />}>
         <Routes>
