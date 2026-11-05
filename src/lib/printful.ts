@@ -45,6 +45,13 @@ export async function createPrintfulOrder(cfg: PrintfulCfg, orderId: string, lin
   return res.ok && o.id ? { ok: true as const, id: o.id, status: o.status ?? "draft", url: o.dashboard_url ?? null } : { ok: false as const, error: res.error ?? `HTTP ${res.status}` };
 }
 
+/** Sklepy na koncie Printful (id, nazwa, typ) — do wyboru PRINTFUL_STORE_ID sklepu typu API. */
+export async function printfulStores(cfg: PrintfulCfg): Promise<{ id: number; name: string; type: string }[] | { error: string }> {
+  const r = await pf({ ...cfg, storeId: null }, "/stores");
+  if (!r.ok) return { error: r.error ?? `HTTP ${r.status}` };
+  return ((r.result ?? []) as { id: number; name: string; type: string }[]).map((s) => ({ id: s.id, name: s.name, type: s.type }));
+}
+
 /** Lista „External ID” wariantów w sklepie Printful (do sprawdzenia podpięcia produktów). */
 export async function printfulExternalIds(cfg: PrintfulCfg): Promise<{ ok: true; ids: string[] } | { ok: false; error: string }> {
   const list = await pf(cfg, "/store/products?limit=100");

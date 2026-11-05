@@ -31,7 +31,7 @@ import { parseVatMode } from "../src/lib/vatOss";
 import { localizeProduct } from "../src/data/shopCatalogI18n";
 import { SHOP_PRODUCTS } from "../src/data/shopCatalog";
 import { supplierFor, printfulExternalId } from "../src/data/shopSuppliers";
-import { createPrintfulOrder, printfulExternalIds, type PrintfulCfg } from "../src/lib/printful";
+import { createPrintfulOrder, printfulExternalIds, printfulStores, type PrintfulCfg } from "../src/lib/printful";
 import { CARRIERS, carrierById, isPointCode, trackingUrl } from "../src/data/shopCarriers";
 import { adminMail, customerPaidMail, customerShippedMail, customerTransferMail, mailConfigFromEnv, sendMail, supplierMail, type MailCfg, type MailOrder } from "../src/lib/shopMail";
 import type { PricedLine, Shipping } from "../src/lib/shopOrder";
@@ -381,7 +381,7 @@ export default async function handler(req: Request): Promise<Response> {
       const pf = printfulCfg();
       if (!pf) return json({ configured: false });
       const r = await printfulExternalIds(pf);
-      if (r.ok === false) return json({ configured: true, ok: false, error: r.error });
+      if (r.ok === false) return json({ configured: true, ok: false, error: r.error, storeIdSet: !!pf.storeId, stores: await printfulStores(pf) });
       const have = new Set(r.ids);
       const need = SHOP_PRODUCTS.filter((p) => supplierFor(p.id) === "printful")
         .flatMap((p) => (p.sizes ? ["S", "M", "L", "XL", "XXL", "3XL"].map((s) => printfulExternalId(p.id, s)) : [printfulExternalId(p.id, null)]));
