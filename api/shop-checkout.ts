@@ -123,9 +123,11 @@ function mailCfg(): MailCfg | null {
   // Resend/Brevo, gdy ustawione; inaczej wysyłka GrouAI przez główny projekt Supabase (bez kluczy).
   return mailConfigFromEnv(env, "GrouaDrop");
 }
+// Adres naszej strony dla pośrednika Printful (ustawiany na starcie każdego zapytania).
+let pfOrigin: string | null = null;
 function printfulCfg(): PrintfulCfg | null {
   const token = env("PRINTFUL_API_KEY");
-  return token ? { token, storeId: env("PRINTFUL_STORE_ID") ?? null, confirm: env("PRINTFUL_AUTO_CONFIRM") === "true" } : null;
+  return token ? { token, storeId: env("PRINTFUL_STORE_ID") ?? null, confirm: env("PRINTFUL_AUTO_CONFIRM") === "true", proxy: pfOrigin } : null;
 }
 
 function publicConfig() {
@@ -372,6 +374,7 @@ async function printfulCheck(auth: string, user: User) {
 }
 
 export default async function handler(req: Request): Promise<Response> {
+  pfOrigin = env("SITE_URL")?.replace(/\/+$/, "") ?? new URL(req.url).origin;
   if (req.method === "GET") {
     // Diagnostyka Printful bez sekretów (same liczby), cache 5 min: GET ?diag=printful
     if (new URL(req.url).searchParams.get("diag") === "printful") {
