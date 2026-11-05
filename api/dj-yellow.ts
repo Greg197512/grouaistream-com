@@ -290,6 +290,20 @@ export default async function handler(req: any, res: any) {
     const r = await http(`${SUPA()}/auth/v1/signup`, { method: "POST", headers: { apikey: ANON(), "content-type": "application/json" }, body: JSON.stringify({ email, password, data: { display_name: ARTIST, full_name: ARTIST } }) });
     return res.status(200).json({ status: r.status, confirmed: !!r.data?.session || !!r.data?.user?.email_confirmed_at, error: r.ok ? null : r.data?.msg || r.data?.error_description || null });
   }
+  if (q.check) {
+    // Diagnostyka plików dzisiejszych utworów: pierwsze bajty dźwięku i okładki (bez kosztów).
+    const r = await http(`${SUPA()}/rest/v1/tracks?select=title,audio_url,cover_url,created_at&artist=eq.${encodeURIComponent(ARTIST)}&order=created_at.desc&limit=6`, { headers: { apikey: ANON() } });
+    const head = async (u: string | null) => {
+      if (!u) return null;
+      try {
+        const x = await fetch(u, { headers: { range: "bytes=0-23" }, signal: AbortSignal.timeout(15000) });
+        const b = new Uint8Array(await x.arrayBuffer());
+        return { status: x.status, type: x.headers.get("content-type"), len: x.headers.get("content-range"), hex: Buffer.from(b).toString("hex").slice(0, 48), ascii: Buffer.from(b).toString("latin1").replace(/[^\x20-\x7e]/g, ".") };
+      } catch (e) { return { error: String(e) }; }
+    };
+    const rows = Array.isArray(r.data) ? r.data : [];
+    return res.status(200).json(await Promise.all(rows.map(async (t: any) => ({ title: t.title, audio: await head(t.audio_url), cover: await head(t.cover_url), cover_url: t.cover_url }))));
+  }
   if (q.status) {
     // Stan na dziś dla karty w studiu (bez kosztów).
     const r = await http(`${SUPA()}/rest/v1/tracks?select=id,title,cover_url,created_at&artist=eq.${encodeURIComponent(ARTIST)}&order=created_at.desc&limit=6`, { headers: { apikey: ANON() } });
