@@ -35,6 +35,10 @@ export const BLOCKS: Record<BlockId, { label: string; kws: string[] | null }> = 
   sunday: { label: "Niedziela: spokój", kws: CALM },
 };
 
+/** Klubowa rodzina: gdy w bloku brakuje utworów, DJ miksuje electronic + hip-hop + disco. */
+export const CLUB_KWS = [...new Set([...ELECTRONIC, ...HIPHOP, ...DISCO])];
+const CLUB_BLOCKS = new Set<BlockId>(["weekend-disco", "weekend-electronic", "weekend-hiphop", "afternoon", "evening"]);
+
 const WEEKEND_ROTATION: BlockId[] = ["weekend-disco", "weekend-electronic", "weekend-hiphop"];
 
 /** Blok ramówki dla dnia tygodnia (0 = niedziela) i godziny (czas polski). */
@@ -76,7 +80,8 @@ export function mulberry32(seed: number): () => number {
   };
 }
 
-export interface PlanItem { track: ClockTrack; start: number; block: BlockId }
+/** `dj` = utwór dobrany z miksu klubowego (electronic/hip-hop/disco), bo w bloku zabrakło świeżych. */
+export interface PlanItem { track: ClockTrack; start: number; block: BlockId; dj?: boolean }
 export interface DayPlan { items: PlanItem[]; windowSec: number; poolSize: number; rejected: number }
 
 const DAY = 86400;
@@ -103,12 +108,19 @@ export function planDay(rawPool: ClockTrack[], dow: number, seedKey: string): Da
   const candidatesFor = (b: BlockId) => {
     if (!order.has(b)) {
       const m = pool.filter((t) => matchesBlock(t, BLOCKS[b].kws));
-      order.set(b, shuffle(m.length >= 8 ? m : pool));
+      // Za mało utworów gatunku: bloki klubowe biorą DJ-miks electronic/hip-hop/disco, reszta całą pulę.
+      const clubM = CLUB_BLOCKS.has(b) ? pool.filter((t) => matchesBlock(t, CLUB_KWS)) : [];
+      order.set(b, shuffle(m.length >= 8 ? m : clubM.length >= 8 ? clubM : pool));
       cursor.set(b, 0);
     }
     return order.get(b)!;
   };
 
+  let clubCache: ClockTrack[] | null = null;
+  const clubList = () => {
+    if (!clubCache) { clubCache = shuffle(pool.filter((t) => matchesBlock(t, CLUB_KWS))); cursor.set("club" as BlockId, 0); }
+    return clubCache.length ? clubCache : null;
+  };
   const lastPlayed = new Map<string, number>();
   const recentArtists: string[] = [];
   const items: PlanItem[] = [];
@@ -118,9 +130,10 @@ export function planDay(rawPool: ClockTrack[], dow: number, seedKey: string): Da
     const list = candidatesFor(block);
     const fresh = (x: ClockTrack) => { const lp = lastPlayed.get(x.id); return lp === undefined || t - lp >= windowSec; };
     const artistOk = (x: ClockTrack) => !recentArtists.includes((x.artist || "").trim().toLowerCase());
-    // Kolejność prób: blok (świeży + inny artysta) → cała pula (świeży + inny artysta)
-    // → blok (świeży) → cała pula (świeży). Lepiej lekko poza gatunkiem niż powtórka.
+    // Kolejność prób: blok → (bloki klubowe) DJ-miks electronic/hip-hop/disco → cała pula;
+    // najpierw świeży utwór innego artysty, potem sam świeży. Lepiej miks niż powtórka.
     const all = candidatesFor("day");
+    const club = CLUB_BLOCKS.has(block) ? clubList() : null;
     const tryPick = (from: ClockTrack[], key: BlockId, rule: (x: ClockTrack) => boolean): ClockTrack | null => {
       const s0 = cursor.get(key)!;
       for (let k = 0; k < from.length; k++) {
@@ -130,14 +143,22 @@ export function planDay(rawPool: ClockTrack[], dow: number, seedKey: string): Da
       return null;
     };
     const strict = (x: ClockTrack) => fresh(x) && artistOk(x);
-    let pick = tryPick(list, block, strict) ?? tryPick(all, "day", strict) ?? tryPick(list, block, fresh) ?? tryPick(all, "day", fresh);
+    let pick = tryPick(list, block, strict);
+    if (!pick && club) {
+      pick = tryPick(club, "club" as BlockId, strict) ?? tryPick(club, "club" as BlockId, fresh);
+      // W bloku klubowym zostajemy przy electronic/hip-hop/disco: najdawniej grany z miksu, a nie inny gatunek.
+      if (!pick) pick = club.reduce((best, x) => ((lastPlayed.get(x.id) ?? -1) < (lastPlayed.get(best.id) ?? -1) ? x : best), club[0]);
+    }
+    pick = pick ?? tryPick(all, "day", strict) ?? tryPick(list, block, fresh) ?? tryPick(all, "day", fresh);
     if (!pick) {
       // Cała pula grała w oknie (bardzo mały katalog) — najdawniej grany z bloku.
       const at = list.reduce((best, x, i) => ((lastPlayed.get(x.id) ?? -1) < (lastPlayed.get(list[best].id) ?? -1) ? i : best), 0);
       pick = list[at];
       cursor.set(block, (at + 1) % list.length);
     }
-    items.push({ track: pick, start: t, block });
+    const kws = BLOCKS[block].kws;
+    const dj = CLUB_BLOCKS.has(block) && !!kws && !matchesBlock(pick, kws) && matchesBlock(pick, CLUB_KWS);
+    items.push({ track: pick, start: t, block, ...(dj ? { dj: true } : {}) });
     lastPlayed.set(pick.id, t);
     if (artistGap) {
       recentArtists.push((pick.artist || "").trim().toLowerCase());

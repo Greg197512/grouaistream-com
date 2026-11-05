@@ -30,6 +30,7 @@ export interface DailyRadio {
   /** Autopilot: blok ramówki każdego utworu (ta sama kolejność co `tracks`). */
   blocks?: BlockId[];
   starts?: number[];     // sekundy od północy
+  djs?: boolean[];       // utwór z DJ-miksu klubowego (electronic/hip-hop/disco)
   windowSec?: number;    // okno bez powtórek
   rejected?: number;     // odrzucone przez bramkę jakości
 }
@@ -135,6 +136,7 @@ export async function buildDailyRadio(station: "public" | "vip", max = 140): Pro
     tracks: plan.items.map((x) => ({ ...x.track, duration: x.track.duration || 180 })),
     blocks: plan.items.map((x) => x.block),
     starts: plan.items.map((x) => x.start),
+    djs: plan.items.map((x) => !!x.dj),
     windowSec: plan.windowSec,
     rejected: plan.rejected,
     startedAtISO: midnightISO,

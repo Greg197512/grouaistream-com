@@ -107,7 +107,7 @@ const RadioLive = () => {
   const [config, setConfig] = useState<RadioConfig | null>(null);
   const [rawSchedule, setRawSchedule] = useState<ScheduleTrack[]>([]);
   // Autopilot (ramówka automatyczna): starty utworów i bloki na dziś + bieżący blok do wyświetlenia.
-  const autoPlanRef = useRef<{ startedAtMs: number; starts: number[]; blocks: string[] } | null>(null);
+  const autoPlanRef = useRef<{ startedAtMs: number; starts: number[]; blocks: string[]; djs?: boolean[] } | null>(null);
   const [autoBlock, setAutoBlock] = useState<string | null>(null);
   const [configVersion, setConfigVersion] = useState(0); // bump = przeładuj grafik (np. po zmianie trybu)
   // Tryb osobisty: kolejka zbudowana z danych zalogowanego (słyszy tylko on).
@@ -231,7 +231,8 @@ const RadioLive = () => {
       const sec = (Date.now() - plan.startedAtMs) / 1000;
       let i = 0; while (i + 1 < plan.starts.length && plan.starts[i + 1] <= sec) i++;
       const b = plan.blocks[i] as keyof typeof BLOCKS;
-      setAutoBlock(BLOCKS[b]?.label ?? null);
+      const label = BLOCKS[b]?.label ?? null;
+      setAutoBlock(label && plan.djs?.[i] ? `${label} · DJ mix (electronic / hip-hop / disco)` : label);
     };
     tick();
     const t = window.setInterval(tick, 60000);
@@ -274,7 +275,7 @@ const RadioLive = () => {
         autopilot: !!daily.blocks,
         track: { id: t.id, title: t.title, artist: t.artist, duration: t.duration, audio_url: t.audio_url, cover_url: t.cover_url },
       }));
-      autoPlanRef.current = daily.blocks && daily.starts ? { startedAtMs: new Date(daily.startedAtISO).getTime(), starts: daily.starts, blocks: daily.blocks } : null;
+      autoPlanRef.current = daily.blocks && daily.starts ? { startedAtMs: new Date(daily.startedAtISO).getTime(), starts: daily.starts, blocks: daily.blocks, djs: daily.djs } : null;
       setRawSchedule(synthetic as any);
       setConfig({ is_active: true, mode: "24h", start_time: null, end_time: null, started_at: daily.startedAtISO, station_name: daily.stationName } as any);
       return true;
@@ -637,6 +638,10 @@ const RadioLive = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storyId, personalMood, stopCurrentAudio, radioEl, bindRadio]);
 
+  // Głośność docelowa (dla płynnych przejść DJ-skich bez restartu utworu).
+  const levelRef = useRef(1);
+  useEffect(() => { levelRef.current = muted ? 0 : volume / 100; }, [muted, volume]);
+
   const startPlayback = useCallback(
     (index: number, offset = 0) => {
       const item = schedule[index];
@@ -661,9 +666,25 @@ const RadioLive = () => {
       // crossOrigin="anonymous" powodował błąd wczytania i ciszę (patrz CLAUDE.md).
       const audio = radioEl();
       const on = bindRadio(audio);
-      audio.volume = muted ? 0 : volume / 100;
+      // Przejście DJ-skie: utwór wchodzi z podgłośnieniem (gdy startuje od początku)
+      // i schodzi wyciszeniem w ostatnich sekundach. Tylko głośność jednego elementu —
+      // bez Web Audio (R2 nie ma CORS) i bez drugiego <audio> (granie przy zgaszonym ekranie).
+      const FADE_IN = 2.5, FADE_OUT = 4;
+      audio.volume = offset < 1 ? levelRef.current * 0.15 : levelRef.current;
+      let lastSet: number | null = audio.volume;
       audioRef.current = audio;
       let seeked = false;
+      on("timeupdate", () => {
+        if (playbackTokenRef.current !== token || !audio.duration || !Number.isFinite(audio.duration)) return;
+        const ct = audio.currentTime, left = audio.duration - ct;
+        const inWin = (offset < 1 && ct < FADE_IN) || left < FADE_OUT;
+        if (!inWin) { if (lastSet !== null && lastSet < levelRef.current) { audio.volume = levelRef.current; lastSet = null; } return; }
+        // Ktoś inny ściszył (lektor/prośba) — nie przeszkadzaj.
+        if (lastSet !== null && Math.abs(audio.volume - lastSet) > 0.03 && audio.volume < levelRef.current * 0.5) return;
+        const g = Math.min(offset < 1 ? Math.min(1, 0.15 + ct / FADE_IN) : 1, Math.max(0.05, left / FADE_OUT));
+        const v = Math.max(0, Math.min(1, levelRef.current * g));
+        audio.volume = v; lastSet = v;
+      });
       on("loadedmetadata", () => {
         if (playbackTokenRef.current !== token || seeked) return;
         seeked = true;

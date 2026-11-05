@@ -78,3 +78,18 @@ describe("planDay", () => {
     expect(small.items.length).toBeGreaterThan(100);
   });
 });
+
+describe("DJ-miks klubowy", () => {
+  it("gdy brakuje disco, blok Disco miksuje electronic/hip-hop (nie pop)", () => {
+    const few = [
+      ...pool.slice(0, 4).map((t) => ({ ...t, genre: "Disco" })),
+      ...pool.slice(4, 120).map((t, i) => ({ ...t, genre: i % 2 ? "House" : "Hip-Hop" })),
+      ...pool.slice(120).map((t) => ({ ...t, genre: "Pop" })),
+    ];
+    const plan = planDay(few, 6, "dj");
+    const disco = plan.items.filter((x) => x.block === "weekend-disco");
+    expect(disco.some((x) => x.dj)).toBe(true);
+    expect(disco.filter((x) => x.dj).every((x) => /house|hip-hop|disco/i.test(x.track.genre ?? ""))).toBe(true);
+    expect(disco.filter((x) => /pop/i.test(x.track.genre ?? "")).length).toBe(0);
+  });
+});

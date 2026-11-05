@@ -53,6 +53,8 @@ i aktualny. Jeśli fakt tu jest — nie weryfikuj go od nowa dziesiątkami wywo�
   bloki: noc chill / poranek pop / dzień mix / popołudnie electronic / wieczór hip-hop; pt 18:00–nd 6:00 Disco/Electronic/Hip-Hop
   (rotacja co godzinę); niedziela spokój. Bez powtórek w oknie 2–8 h, artyści rozdzieleni, bramka jakości (audio, 45 s–15 min,
   bez `cdn1.suno.ai` i audycji). Admin: tryb `24h` = autopilot (podgląd ramówki), `manual` = grafik `radio_schedule`, `scheduled` = godziny. VIP gra grafik.
+  Brak utworów w bloku klubowym (weekend, popołudnie, wieczór) → **DJ-miks electronic/hip-hop/disco** (`dj: true`, znaczek „DJ mix”).
+  Przejścia DJ-skie: fade-in 2,5 s / fade-out 4 s samą głośnością jednego `<audio>` (bez Web Audio, bez drugiego elementu).
 
 ## Baza `tracks` (stan po sprzątaniu)
 - ~406 realnych utworów. Usunięto 66 600 pustych „widm" (5 CC-artystów: Bensound, Kevin MacLeod,
