@@ -5,7 +5,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Play, Square, Circle, Repeat, Timer, Plus, Trash2, Copy, Scissors, Mic, Headphones, Volume2, VolumeX, Speaker,
-  Sparkles, Drum, Piano, Upload, Download, Save, Loader2, SlidersHorizontal, Wand2, ZoomIn, ZoomOut, Search, FolderOpen, Undo2, FilePlus2,
+  Sparkles, Drum, Piano, Upload, Download, Save, Loader2, SlidersHorizontal, Wand2, ZoomIn, ZoomOut, Search, FolderOpen, Undo2, FilePlus2, Flag,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,7 @@ import { autotune, SCALE_LABELS, type Scale } from "@/lib/daw/autotune";
 import { listProjects, loadProject, saveProject, type ProjectListItem } from "@/lib/daw/projectStore";
 import { applyFxChange, askDawAssistant, parseKey, type DawAction, type DawState } from "@/lib/daw/assistant";
 import { DawAssistant } from "./DawAssistant";
+import { DawTiles, NEXT_SECTION, TILE_DEFS, TransportLcd, markerLayout, sectionColor, trackIcon, type Tile } from "./DawVisuals";
 import { DAW_INSERT_EVENT, getCtx, getCtxIfReady, publishBpm, studioBus, type DawInsert } from "@/lib/daw/context";
 
 const COLORS = ["#FF6B00", "#a78bfa", "#22d3ee", "#34d399", "#f472b6", "#FFD400", "#60a5fa", "#f87171"];
@@ -80,7 +81,7 @@ export function StudioDAW({ active = true }: { active?: boolean } = {}) {
   const [project, setProject] = useState<Project>(() => ({ bpm: 100, tracks: [newTrack("Wokal", "vocal", 0, VOCAL_PRESETS[1].fx)] }));
   const [selTrack, setSelTrack] = useState<string>("");
   const [selClip, setSelClip] = useState<string | null>(null);
-  const [panel, setPanel] = useState<Panel>("sound");
+  const [panel, setPanel] = useState<Panel>("mixer");
   const [pps, setPps] = useState(40); // pikseli na sekundę
   const [position, setPosition] = useState(0);
   const [playing, setPlaying] = useState(false);
@@ -693,7 +694,11 @@ export function StudioDAW({ active = true }: { active?: boolean } = {}) {
         if (a.action === "stop") { if (recRef.current) await stopRecording(); else stopPlayback(); }
         if (a.action === "record") await startRecording();
         return null;
-      case "backing": await aiBacking(a.prompt); return null;
+      case "backing":
+        // Płatne (kredyty Suno) — tylko po wyraźnym potwierdzeniu.
+        if (!window.confirm("Podkład AI zużywa kredyty Suno. Wygenerować teraz?")) return "Pominąłem płatny podkład AI.";
+        await aiBacking(a.prompt); return null;
+      case "markers": edit((p) => ({ ...p, markers: markerLayout(a.layout) })); return "Dodałem części utworu na osi (Intro, Zwrotka, Refren…).";
       case "save": await doSaveProject(); return null;
       case "export": setPanel("export"); return "Otworzyłem „Eksport” — wybierz tytuł i zapisz utwór.";
     }
@@ -707,6 +712,30 @@ export function StudioDAW({ active = true }: { active?: boolean } = {}) {
       try { const m = await execute(a); if (m) extra.push(m); } catch (e) { extra.push(`Nie udało się: ${e instanceof Error ? e.message : "błąd"}`); }
     }
     return [r.reply, ...extra].join(" ");
+  };
+
+  // Kostki: proste akcje — część od razu (nagraj, wgraj, eksport), reszta jako polecenie dla asystenta.
+  const [tileBusy, setTileBusy] = useState(false);
+  const tiles = TILE_DEFS({
+    record: () => {
+      const cur = projectRef.current;
+      let v = cur.tracks.find((x) => x.kind === "vocal");
+      if (!v) { v = newTrack("Wokal", "vocal", cur.tracks.length, VOCAL_PRESETS[1].fx); const nv = v; edit((p) => ({ ...p, tracks: [...p.tracks, nv] })); }
+      const id = v.id;
+      edit((p) => ({ ...p, tracks: p.tracks.map((x) => ({ ...x, armed: x.id === id })) }));
+      setSelTrack(id); setPanel("sound");
+      window.setTimeout(() => void startRecording(), 80);
+    },
+    upload: () => fileRef.current?.click(),
+    exportMix: () => setPanel("export"),
+  });
+  const onTile = async (t: Tile) => {
+    if (t.action) { t.action(); return; }
+    if (!t.command) return;
+    setTileBusy(true);
+    try { const msg = await onAssistant(t.command); toast.success(msg.length > 220 ? `${msg.slice(0, 220)}…` : msg); }
+    catch (e) { toast.error(e instanceof Error ? e.message : "Nie udało się"); }
+    finally { setTileBusy(false); }
   };
 
   // ── Widok ─────────────────────────────────────────────────────────────────
@@ -771,15 +800,17 @@ export function StudioDAW({ active = true }: { active?: boolean } = {}) {
           <Circle className={`h-4 w-4 ${recording ? "animate-pulse fill-white" : "fill-red-500 text-red-500"}`} />
         </Button>
         <button type="button" onClick={() => { stopPlayback(); setPosition(0); }} className={btn}>⏮ Początek</button>
-        <span className={`rounded-md px-2 py-1 font-mono text-sm tabular-nums ${clipping ? "bg-red-600/40 text-white" : "bg-black/50 text-[#FFD400]"}`} title={clipping ? "Przester na wyjściu!" : undefined}>
-          {Math.floor(position / bar) + 1}.{Math.floor((position % bar) / beat) + 1} · {fmtTime(position)}
-        </span>
-        <label className="flex items-center gap-1 text-xs text-gray-400">BPM
-          <input type="number" min={50} max={220} value={project.bpm} onChange={(e) => edit((p) => ({ ...p, bpm: Math.max(50, Math.min(220, +e.target.value || 100)) }))} className="w-14 rounded-md border border-white/10 bg-black/40 px-1 py-1 text-white" />
-        </label>
+        <TransportLcd barBeat={`${Math.floor(position / bar) + 1}.${Math.floor((position % bar) / beat) + 1}`} time={fmtTime(position)} bpm={project.bpm}
+          keyName={project.key ?? NOTE_NAMES[keyRoot]} clipping={clipping} onBpm={(v) => edit((p) => ({ ...p, bpm: v }))} />
         <button type="button" onClick={() => setMetronome((v) => !v)} className={`${btn} ${metronome ? "border-[#FF6B00] text-white" : ""}`}><Timer className="h-3.5 w-3.5" /> Metronom</button>
         <button type="button" onClick={() => setLoop((v) => !v)} className={`${btn} ${loop ? "border-[#FF6B00] text-white" : ""}`}><Repeat className="h-3.5 w-3.5" /> Pętla</button>
         <div className="ml-auto flex items-center gap-1">
+          <button type="button" onClick={() => {
+            const at = Math.floor(position / bar) + 1;
+            const used = new Set((project.markers ?? []).map((m) => m.name));
+            const name = NEXT_SECTION.find((n) => !used.has(n)) ?? "Refren";
+            edit((p) => ({ ...p, markers: [...(p.markers ?? []).filter((m) => m.bar !== at), { id: uid(), bar: at, name, color: sectionColor(name) }].sort((a, b) => a.bar - b.bar) }));
+          }} className={btn} title="Znacznik części utworu w miejscu wskaźnika"><Flag className="h-3.5 w-3.5" /> Znacznik</button>
           <button type="button" onClick={() => setPps((v) => Math.max(10, v / 1.4))} className={btn} aria-label="Oddal"><ZoomOut className="h-3.5 w-3.5" /></button>
           <button type="button" onClick={() => setPps((v) => Math.min(200, v * 1.4))} className={btn} aria-label="Przybliż"><ZoomIn className="h-3.5 w-3.5" /></button>
           <button type="button" onClick={() => { const t = newTrack(`Ścieżka ${project.tracks.length + 1}`, "audio", project.tracks.length); edit((p) => ({ ...p, tracks: [...p.tracks, t] })); setSelTrack(t.id); }} className={btn}><Plus className="h-3.5 w-3.5" /> Ścieżka</button>
@@ -788,21 +819,37 @@ export function StudioDAW({ active = true }: { active?: boolean } = {}) {
 
       {busy && <p className="flex items-center gap-2 bg-amber-500/10 px-3 py-1 text-xs text-amber-300"><Loader2 className="h-3.5 w-3.5 animate-spin" /> {busy}</p>}
 
+      {/* Kostki — jedno kliknięcie, AI ustawia resztę */}
+      <DawTiles tiles={tiles} busy={!!busy || tileBusy} onTile={(t) => void onTile(t)} />
+
       {/* Oś czasu */}
-      <div className="relative max-h-[360px] overflow-auto" onPointerMove={onClipMove} onPointerUp={onClipUp}>
+      <div className="relative max-h-[56vh] min-h-[240px] overflow-auto bg-[#0c0c14]" onPointerMove={onClipMove} onPointerUp={onClipUp}>
         <div className="relative" style={{ width: HEADER_W + totalSec * pps }}>
-          <div className="sticky top-0 z-20 flex h-6 border-b border-white/10 bg-[#15151f]">
-            <div className="sticky left-0 z-30 shrink-0 bg-[#15151f]" style={{ width: HEADER_W }} />
+          <div className="sticky top-0 z-20 flex h-11 border-b border-white/10 bg-[#15151f]">
+            <div className="sticky left-0 z-30 flex shrink-0 items-end bg-[#15151f] px-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-gray-500" style={{ width: HEADER_W }}>Ścieżki · {project.tracks.length}</div>
             <div className="relative flex-1 cursor-pointer" onClick={(e) => { const x = e.clientX - e.currentTarget.getBoundingClientRect().left; if (!playing) setPosition(snap(x / pps, beat)); }}>
+              {(project.markers ?? []).map((m) => (
+                <button key={m.id} type="button" title={`${m.name} — takt ${m.bar} (kliknij: skocz, prawy: usuń)`}
+                  onClick={(e) => { e.stopPropagation(); if (!playing) setPosition((m.bar - 1) * bar); }}
+                  onContextMenu={(e) => { e.preventDefault(); edit((p) => ({ ...p, markers: (p.markers ?? []).filter((x) => x.id !== m.id) })); }}
+                  className="absolute top-0.5 z-10 flex h-[18px] items-center gap-1 rounded-r-md px-1.5 text-[10px] font-bold text-black shadow"
+                  style={{ left: (m.bar - 1) * bar * pps, background: m.color }}>
+                  <Flag className="h-2.5 w-2.5" aria-hidden="true" />{m.name}
+                </button>
+              ))}
               {Array.from({ length: bars }, (_, i) => (
-                <span key={i} className="absolute top-0 h-full border-l border-white/15 pl-1 text-[10px] tabular-nums text-gray-500" style={{ left: i * bar * pps }}>{i + 1}</span>
+                <span key={i} className="absolute bottom-0 h-5 border-l border-white/20 pl-1 text-[10px] tabular-nums text-gray-400" style={{ left: i * bar * pps }}>{i + 1}</span>
               ))}
             </div>
           </div>
           {project.tracks.map((t) => (
             <div key={t.id} className={`flex border-b border-white/5 ${t.id === track?.id ? "bg-white/[0.03]" : ""}`} style={{ height: ROW_H }}>
-              <div className="sticky left-0 z-10 flex shrink-0 flex-col justify-center gap-1 border-r border-white/10 bg-[#13131c] px-2" style={{ width: HEADER_W, borderLeft: `4px solid ${t.color}` }} onClick={() => setSelTrack(t.id)}>
+              <div className="sticky left-0 z-10 flex shrink-0 flex-col justify-center gap-1 border-r border-white/10 bg-gradient-to-r from-[#191926] to-[#13131c] px-2" style={{ width: HEADER_W, borderLeft: `6px solid ${t.color}` }} onClick={() => setSelTrack(t.id)}>
+                <div className="flex items-center gap-1.5">
+                <span className="text-[10px] font-bold tabular-nums text-gray-500">{project.tracks.indexOf(t) + 1}</span>
+                {(() => { const I = trackIcon(t.name, t.kind); return <I className="h-3.5 w-3.5 shrink-0" style={{ color: t.color }} aria-hidden="true" />; })()}
                 <input value={t.name} onChange={(e) => updateTrack(t.id, { name: e.target.value })} className="w-full truncate bg-transparent text-xs font-semibold text-white outline-none" aria-label="Nazwa ścieżki" title={t.source ? `Z katalogu: ${t.source.title} – ${t.source.artist}` : undefined} />
+                </div>
                 <div className="flex items-center gap-1">
                   <button type="button" onClick={() => updateTrack(t.id, { mute: !t.mute })} className={`h-5 w-5 rounded text-[10px] font-bold ${t.mute ? "bg-amber-500 text-black" : "bg-white/10"}`} title="Wycisz">M</button>
                   <button type="button" onClick={() => updateTrack(t.id, { solo: !t.solo })} className={`h-5 w-5 rounded text-[10px] font-bold ${t.solo ? "bg-[#FFD400] text-black" : "bg-white/10"}`} title="Solo">S</button>
@@ -818,11 +865,11 @@ export function StudioDAW({ active = true }: { active?: boolean } = {}) {
                     key={c.id}
                     onPointerDown={(e) => onClipDown(e, t, c)}
                     onClick={(e) => e.stopPropagation()}
-                    className={`absolute top-1 bottom-1 cursor-grab overflow-hidden rounded-md border ${c.id === selClip ? "border-white" : "border-black/40"}`}
-                    style={{ left: c.start * pps, width: Math.max(6, c.duration * pps), background: `${t.color}33` }}
+                    className={`absolute top-1 bottom-1 cursor-grab overflow-hidden rounded-md border shadow-md ${c.id === selClip ? "border-white ring-1 ring-white" : "border-black/50"}`}
+                    style={{ left: c.start * pps, width: Math.max(6, c.duration * pps), background: `linear-gradient(180deg, ${t.color}55, ${t.color}22)` }}
                     title={`${c.name} — przeciągnij, aby przesunąć`}
                   >
-                    <span className="absolute left-1 top-0 z-10 truncate text-[10px] font-semibold" style={{ color: t.color }}>{c.name}{c.original ? " · autotune" : ""}</span>
+                    <span className="absolute inset-x-0 top-0 z-10 block truncate px-1.5 text-[10px] font-bold leading-[14px] text-black" style={{ background: t.color }}>{c.name}{c.original ? " · autotune" : ""}</span>
                     <ClipWave clip={c} color={t.color} />
                   </div>
                 ))}
@@ -932,10 +979,11 @@ export function StudioDAW({ active = true }: { active?: boolean } = {}) {
         )}
 
         {panel === "mixer" && (
-          <div className="flex gap-2 overflow-x-auto pb-1">
+          <div className="flex gap-1.5 overflow-x-auto rounded-xl bg-[#0a0a10] p-2 pb-1">
             {[...project.tracks, null].map((t) => (
-              <div key={t?.id ?? "master"} className="flex w-20 shrink-0 flex-col items-center gap-1 rounded-lg border border-white/10 bg-[#15151f] p-1.5" style={{ borderTop: `3px solid ${t?.color ?? "#fff"}` }}>
-                <span className="w-full truncate text-center text-[10px] font-semibold">{t?.name ?? "MASTER"}</span>
+              <div key={t?.id ?? "master"} className={`flex w-24 shrink-0 flex-col items-center gap-1.5 overflow-hidden rounded-lg border bg-gradient-to-b from-[#1c1c28] to-[#121219] pt-1.5 ${t && t.id === track?.id ? "border-white/40" : "border-white/10"} ${t ? "" : "ml-2 border-[#FFD400]/40"}`}
+                onClick={() => t && setSelTrack(t.id)}>
+                <span className="text-[10px] font-bold tabular-nums text-gray-500">{t ? project.tracks.indexOf(t) + 1 : "M"}</span>
                 {t && <input type="range" min={-1} max={1} step={0.05} value={t.pan} onChange={(e) => updateTrack(t.id, { pan: +e.target.value })} className="w-16 accent-[#22d3ee]" aria-label={`Panorama ${t.name}`} title="Panorama L–P" />}
                 <div className="flex h-32 items-end gap-1">
                   <input type="range" min={0} max={1.2} step={0.01} value={t ? t.volume : masterVol}
@@ -946,6 +994,7 @@ export function StudioDAW({ active = true }: { active?: boolean } = {}) {
                   </div>
                 </div>
                 <span className="text-[10px] tabular-nums text-gray-400">{Math.round(20 * Math.log10(Math.max(0.001, t ? t.volume : masterVol)))} dB</span>
+                {(() => { const I = t ? trackIcon(t.name, t.kind) : SlidersHorizontal; return <span className="grid h-9 w-full place-items-center bg-black/30"><I className="h-5 w-5" style={{ color: t?.color ?? "#FFD400" }} aria-hidden="true" /></span>; })()}
                 {t && (
                   <div className="flex gap-0.5">
                     <button type="button" onClick={() => updateTrack(t.id, { mute: !t.mute })} className={`rounded px-1 text-[10px] ${t.mute ? "bg-amber-500 text-black" : "bg-white/10"}`}>{t.mute ? <VolumeX className="h-3 w-3" /> : <Volume2 className="h-3 w-3" />}</button>
@@ -953,6 +1002,7 @@ export function StudioDAW({ active = true }: { active?: boolean } = {}) {
                     <button type="button" onClick={() => { setSelTrack(t.id); setPanel("sound"); }} className="rounded bg-white/10 px-1 text-[10px]">FX</button>
                   </div>
                 )}
+                <span className="mt-auto w-full truncate px-1 py-1 text-center text-[10px] font-bold text-black" style={{ background: t?.color ?? "#FFD400" }}>{t?.name ?? "MASTER"}</span>
               </div>
             ))}
           </div>

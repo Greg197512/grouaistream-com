@@ -46,6 +46,9 @@ i aktualny. Jeśli fakt tu jest — nie weryfikuj go od nowa dziesiątkami wywo�
 - **Studio (5.11, `GET /api/diag-studio` — bez kosztów):** Suno OK (klucz + kredyty, np. 1474), zapis R2 OK, funkcje silników istnieją.
   ACE-Step (`acestep-generate`) woła `/models/lucataco/ace-step/predictions` — model społecznościowy wymaga wersji, prawdopodobnie nie działa
   (nie da się poprawić bez wdrożenia funkcji na bvstv). `fireCoverGeneration` wyłączone (było płatne, wynik nieużywany).
+- **Studio Pro = DAW** (`GrouaiStudioShell` → `StudioDAW`, VIP): wygląd jak Mixcraft (5.11, `daw/DawVisuals.tsx`): kostki akcji (AI), LCD transportu, znaczniki części
+  (`project.markers`), kolorowe klipy, paski miksera z ikonami; pełna szerokość w zakładce. Asystent: `askDawAssistant` (AI → lokalny parser);
+  „zrób utwór/bit X” = tempo+perkusja+bas+akordy+preset+znaczniki (bez płatnego podkładu). Podkład AI (Suno) tylko po `confirm`.
 - Zapis na R2 z edge: `_shared/r2.ts` = fetch + SigV4 (NIE @aws-sdk — zawieszał się). Test: `suno-generate` `{"action":"r2test"}`.
 - Studio → Spotify: po każdej generacji `certifyWithToasts` (`src/lib/releasePipeline.ts`, `releasePrep.ts`):
   mastering −14 LUFS/−1 dBTP, WAV 44,1k/16, okładka 3000, czysty tekst → `generations.release`,

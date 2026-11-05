@@ -16,7 +16,8 @@ export type DawAction =
   | { type: "transport"; action: "play" | "stop" | "record" }
   | { type: "backing"; prompt: string }
   | { type: "save" }
-  | { type: "export" };
+  | { type: "export" }
+  | { type: "markers"; layout?: string };
 
 export type DawState = {
   bpm: number;
@@ -114,7 +115,31 @@ export function parseCommandLocally(text: string, state: DawState): AssistantRes
   if (/ciszej|ścisz|quieter/.test(t)) { actions.push({ type: "mix", track: target, volumeDb: -(db ? Math.abs(+db[1]) : 3) }); said.push("ciszej"); }
   if (/wycisz|mute/.test(t)) { actions.push({ type: "mix", track: target, mute: true }); said.push("wyciszona ścieżka"); }
 
-  const backing = text.match(/podkład\w*\s*(?:ai)?[:,-]?\s*(.{3,})/i);
+  // „Zrób cały utwór / bit / podkład hip-hop” → komplet: tempo, perkusja, bas, akordy, brzmienie wokalu, znaczniki części.
+  // (Bez płatnego podkładu AI — ten tylko na wyraźne „podkład AI”.)
+  const songAsk = /(zrób|zrob|stwórz|stworz|zbuduj|przygotuj|ułóż|uloz|zacznij)\b.*\b(utw[oó]r|piosenk|numer|kawał|kawal|bit|beat|aranż|aranz|track|od zera|szkic)/.test(t)
+    || /(zrób|stwórz|zbuduj)\b.*\bpodkład(?!\w*\s*ai)/.test(t);
+  if (songAsk) {
+    const g = /trap/.test(t) ? "Trap" : /house|klub|dance/.test(t) ? "House" : /hip.?hop|rap/.test(t) ? "Hip-hop" : /ballad|spokojn|wolny/.test(t) ? "Ballada" : "Pop";
+    const G: Record<string, { bpm: number; drums: string; key: string; minor: boolean; preset: string; prog: string }> = {
+      "Hip-hop": { bpm: 90, drums: "Hip-hop", key: "A", minor: true, preset: "rap", prog: "minor" },
+      Trap: { bpm: 140, drums: "Trap", key: "F", minor: true, preset: "rap", prog: "dark" },
+      House: { bpm: 124, drums: "House", key: "A", minor: true, preset: "pop", prog: "minor" },
+      Ballada: { bpm: 72, drums: "Pop", key: "C", minor: false, preset: "ballad", prog: "ballad" },
+      Pop: { bpm: 110, drums: "Pop", key: "C", minor: false, preset: "pop", prog: "pop" },
+    };
+    const c = G[g];
+    const k = key ?? c.key, mn = key ? minor : c.minor, b = bars ?? 16;
+    if (!actions.some((a) => a.type === "bpm")) actions.push({ type: "bpm", value: c.bpm });
+    if (!actions.some((a) => a.type === "drums")) actions.push({ type: "drums", style: c.drums, bars: b });
+    if (!actions.some((a) => a.type === "harmony" && a.part === "bass")) actions.push({ type: "harmony", part: "bass", key: k, progression: mn ? c.prog : (c.prog === "minor" || c.prog === "dark" ? "pop" : c.prog), bars: b });
+    if (!actions.some((a) => a.type === "harmony" && a.part === "chords")) actions.push({ type: "harmony", part: "chords", key: k, progression: mn ? c.prog : (c.prog === "minor" || c.prog === "dark" ? "pop" : c.prog), bars: b });
+    if (vocal && !actions.some((a) => a.type === "preset")) actions.push({ type: "preset", track: vocal, preset: c.preset });
+    actions.push({ type: "markers", layout: g === "Ballada" ? "ballad" : "song" });
+    said.push(`szkic utworu ${g}: ${c.bpm} BPM, ${k}${mn ? "-moll" : "-dur"}, perkusja, bas, akordy, części utworu`);
+  }
+
+  const backing = text.match(/podkład\w*\s*ai[:,-]?\s*(.{3,})/i);
   if (backing && /zrób|stwórz|wygeneruj|dodaj/.test(t)) { actions.push({ type: "backing", prompt: backing[1].trim() }); said.push("podkład AI"); }
 
   if (/^(graj|odtwórz|play|start)\b/.test(t)) actions.push({ type: "transport", action: "play" });

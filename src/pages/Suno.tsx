@@ -1002,8 +1002,9 @@ const Suno = () => {
   return (
     <MainLayout>
       <div className="studio-premium min-h-screen bg-background">
-        <div className="max-w-7xl mx-auto px-4 py-8 xl:grid xl:grid-cols-[minmax(0,1fr)_380px] xl:gap-8 xl:items-start">
-          <div className="space-y-6 w-full max-w-3xl mx-auto xl:mx-0 xl:max-w-none min-w-0">
+        {/* Studio Pro (DAW) = pełna szerokość, bez bocznej kolumny — jak w profesjonalnym programie. */}
+        <div className={activeTab === "record" ? "mx-auto max-w-[1800px] px-2 py-6 sm:px-4" : "max-w-7xl mx-auto px-4 py-8 xl:grid xl:grid-cols-[minmax(0,1fr)_380px] xl:gap-8 xl:items-start"}>
+          <div className={activeTab === "record" ? "space-y-6 w-full min-w-0" : "space-y-6 w-full max-w-3xl mx-auto xl:mx-0 xl:max-w-none min-w-0"}>
           {/* Branding GrouAI Studio + Verified Human Streams */}
           <StudioBrandHeader
             L={L}
@@ -1627,7 +1628,7 @@ const Suno = () => {
           </div>
 
           {/* Twoje utwory — biblioteka jak w Suno (zawsze widoczna, te same funkcje dla wszystkich) */}
-          <aside className="mt-10 xl:mt-0 xl:sticky xl:top-24 w-full max-w-2xl mx-auto xl:mx-0 min-w-0">
+          <aside className={`mt-10 xl:mt-0 xl:sticky xl:top-24 w-full max-w-2xl mx-auto xl:mx-0 min-w-0 ${activeTab === "record" ? "hidden" : ""}`}>
             {activeTab === "generate" && <div className="mb-6 hidden xl:block">{moodCard}</div>}
             <GenerationHistory />
           </aside>
