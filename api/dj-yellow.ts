@@ -294,7 +294,7 @@ async function run(deadline: number, who?: { jwt: string; uid: string }) {
     // Wsparcie sieci: wyróżnienie na 7 dni (gdy baza pozwala); inaczej zwykły wpis.
     let ins = await rest(jwt, "tracks", { method: "POST", body: JSON.stringify({ ...base, is_boosted: true, boost_expires_at: new Date(Date.now() + 7 * 86400000).toISOString() }) });
     if (!ins.ok) ins = await rest(jwt, "tracks", { method: "POST", body: JSON.stringify(base) });
-    out.push(ins.ok ? { title, id: ins.data?.[0]?.id, cover } : { title, error: `tracks: ${JSON.stringify(ins.data).slice(0, 200)}` });
+    out.push(ins.ok ? { title, id: ins.data?.[0]?.id, cover, audio } : { title, error: `tracks: ${JSON.stringify(ins.data).slice(0, 200)}` });
     if (ins.ok && j.gen.id) await rest(jwt, `generations?id=eq.${j.gen.id}`, { method: "PATCH", body: JSON.stringify({ status: "completed", audio_url: audio }) });
   }
   const published = out.filter((o) => o.id);
