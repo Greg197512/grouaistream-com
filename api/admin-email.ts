@@ -117,7 +117,7 @@ async function b2bOrder(auth: string, user: { id: string; email: string | null }
       html: frame(`<h1 style="font-size:20px;margin:0 0 12px">Dziękujemy — zlecenie przyjęte</h1>
 <p>Zespół GrouAI przygotuje wycenę i odezwie się na ten adres. Status zobaczysz w panelu klienta.</p>
 <div style="background:#f4f4f5;border-radius:12px;padding:14px">${brief}</div>
-<p><a href="https://grouaistream.com/client-dashboard" style="color:#f97316;font-weight:700">Panel klienta</a></p>`),
+<p><a href="https://grouaistream.com/client-dashboard/${o.id}" style="color:#f97316;font-weight:700">Panel klienta</a></p>`),
     });
   }
   return json({ success: true, ...out });
