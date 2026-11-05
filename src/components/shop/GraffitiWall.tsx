@@ -1,19 +1,9 @@
-// Graffiti z nazwą GROUAROCK na pierwszy ekran sklepu: ściana z cegły, napis „wymalowany” sprayem
-// (wypełnienie gradientem, czarny kontur, biała obwódka, cień 3D), zacieki farby i mgiełka sprayu.
+// Graffiti z nazwą GROUAROCK na pierwszy ekran sklepu (bez ściany — wprost na tle strony): napis „wymalowany” sprayem
+// (wypełnienie gradientem, czarny kontur, biała obwódka, cień 3D) i zacieki farby.
 // Jednorazowa animacja „malowania” (bez wiecznych animacji), wyłączona przy prefers-reduced-motion.
 // Czcionka Sedgwick Ave Display (SIL OFL) — self-hosted, ładowana tylko na stronie sklepu.
 const CSS = `
 @font-face{font-family:"Sedgwick Ave Display";src:url("/fonts/sedgwick-ave-display-latin.woff2") format("woff2");font-display:swap;font-weight:400}
-.gw-wall{
-  background-color:#2a2420;
-  background-image:
-    radial-gradient(ellipse 55% 60% at 22% 45%, rgba(249,115,22,.38), transparent 70%),
-    radial-gradient(ellipse 45% 55% at 78% 55%, rgba(236,72,153,.34), transparent 70%),
-    radial-gradient(ellipse 30% 40% at 55% 15%, rgba(34,211,238,.18), transparent 70%),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='60'%3E%3Cg stroke='%23000' stroke-opacity='.55' stroke-width='2.5' fill='none'%3E%3Cpath d='M0 1H64M0 31H64M1 1V31M33 31V60'/%3E%3C/g%3E%3C/svg%3E"),
-    linear-gradient(180deg,#3a302a,#241e1a);
-  background-size:100% 100%,100% 100%,100% 100%,64px 60px,100% 100%;
-}
 .gw-word{position:relative;isolation:isolate;display:inline-block;font-family:"Sedgwick Ave Display","Permanent Marker","Comic Sans MS",cursive;
   font-size:clamp(3.4rem,17vw,9.5rem);line-height:.95;letter-spacing:.01em;transform:rotate(-4deg)}
 .gw-word span{display:block;white-space:nowrap}
@@ -49,7 +39,7 @@ export function GraffitiWall({ tagline, label }: { tagline: string; label: strin
   return (
     <section aria-label={label} className="mx-auto max-w-5xl px-4 pt-5">
       <style>{CSS}</style>
-      <div className="gw-wall relative overflow-hidden rounded-3xl px-3 pb-10 pt-8 text-center shadow-xl ring-1 ring-black/20 sm:pb-14 sm:pt-12">
+      <div className="relative px-2 pb-6 pt-4 text-center sm:pb-8 sm:pt-6">
         <p className="sr-only">{WORD}</p>
         <div className="gw-paint" aria-hidden="true">
           <div className="gw-word">
@@ -60,7 +50,7 @@ export function GraffitiWall({ tagline, label }: { tagline: string; label: strin
             {DRIPS.map((d) => <i key={d.left} className="gw-drip" style={{ left: d.left, height: d.h }} />)}
           </div>
         </div>
-        <p className="gw-tag mt-6 inline-block rounded-md bg-black/60 px-3 py-1 text-lg text-cyan-300 sm:text-2xl" aria-hidden="true">
+        <p className="gw-tag mt-8 inline-block rounded-md bg-neutral-900 px-3 py-1 text-lg text-cyan-300 shadow-md sm:mt-14 sm:text-2xl" aria-hidden="true">
           {tagline}
         </p>
         <p className="sr-only">{tagline}</p>
