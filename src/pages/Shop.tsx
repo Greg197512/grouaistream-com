@@ -13,6 +13,7 @@ import { LOCALE, SHOP_LANGS, SHOP_TEXT, countryName, shopLang, type ShopDict, ty
 import { toast } from "sonner";
 import { QRCodeSVG } from "qrcode.react";
 import { XmasDecor } from "@/components/shop/XmasDecor";
+import { GraffitiWall } from "@/components/shop/GraffitiWall";
 import { GiftCelebration } from "@/components/shop/GiftCelebration";
 
 type Bank = { holder: string; iban: string; bic: string | null; revolut: string | null; amountCents: number; reference: string };
@@ -222,6 +223,8 @@ export default function Shop() {
           <button type="button" onClick={() => setOpen(true)} className="h-11 rounded-full bg-neutral-900 px-5 text-sm font-semibold text-white">{T.cart} ({count})</button>
         </div>
       </header>
+
+      <GraffitiWall label="GROUAROCK" tagline={lang === "pl" ? "street sklep · GrouAI Stream" : lang === "nl" ? "streetshop · GrouAI Stream" : "street shop · GrouAI Stream"} />
 
       <section className="mx-auto max-w-5xl pb-2 pt-6" aria-label={T.inMotion}>
         <h2 className="mb-3 px-4 text-2xl font-black">{T.inMotion}</h2>
