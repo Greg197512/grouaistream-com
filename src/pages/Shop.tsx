@@ -13,7 +13,9 @@ import { LOCALE, SHOP_LANGS, SHOP_TEXT, countryName, shopLang, type ShopDict, ty
 import { toast } from "sonner";
 import { QRCodeSVG } from "qrcode.react";
 import { XmasDecor } from "@/components/shop/XmasDecor";
-import { GraffitiWall } from "@/components/shop/GraffitiWall";
+import { CategoryTiles, ProductCard, STORE_TXT, StoreFaq, StoreHero, TrustBar } from "@/components/shop/Storefront";
+import { MotionConfig, motion } from "framer-motion";
+import { LogOut, Package, ShoppingBag, User } from "lucide-react";
 import { INPOST_MAP_URL, carrierById, carriersFor, isPointCode, trackingUrl } from "@/data/shopCarriers";
 import { GiftCelebration } from "@/components/shop/GiftCelebration";
 
@@ -78,11 +80,21 @@ export default function Shop() {
   const products = useMemo(() => SHOP_PRODUCTS.map((p) => localizeProduct(p, lang)), [lang]);
   const cats = useMemo(() => [...new Set(SHOP_PRODUCTS.map((p) => p.cat))], []);
   const [cat, setCat] = useState("");
-  const gridRef = useRef<HTMLUListElement>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
   const shown = useMemo(() => products.filter((p) => !cat || SHOP_PRODUCTS.find((x) => x.id === p.id)?.cat === cat), [products, cat]);
   const navigate = useNavigate();
   const location = useLocation();
-  const { cart, setCart, bump, count, subtotal } = useShopCart();
+  const { cart, setCart, bump, add, count, subtotal } = useShopCart();
+  const S = STORE_TXT[lang];
+  const [sort, setSort] = useState<"featured" | "asc" | "desc">("featured");
+  const sorted = useMemo(() => (sort === "featured" ? shown : [...shown].sort((a, b) => (sort === "asc" ? a.eurCents - b.eurCents : b.eurCents - a.eurCents))), [shown, sort]);
+  const hero = useMemo(() => products.find((p) => p.id === "bluza") ?? products.find((p) => p.video) ?? products[0], [products]);
+  const tiles = useMemo(() => cats.map((c) => {
+    const items = products.filter((p) => SHOP_PRODUCTS.find((x) => x.id === p.id)?.cat === c);
+    const n = items.length;
+    const word = lang === "pl" ? (n === 1 ? "produkt" : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? "produkty" : "produktów") : lang === "nl" ? (n === 1 ? "product" : "producten") : n === 1 ? "product" : "products";
+    return { cat: c, label: localizeProduct(SHOP_PRODUCTS.find((x) => x.cat === c)!, lang).cat, img: `/shop/${items[0]?.id}-1.jpg`, count: `${n} ${word}` };
+  }), [cats, products, lang]);
   // /shop?cart=1 (ze strony produktu) — od razu otwórz koszyk.
   const [open, setOpen] = useState(() => new URLSearchParams(location.search).get("cart") === "1");
   const [busy, setBusy] = useState(false);
@@ -118,6 +130,18 @@ export default function Shop() {
     }).catch(() => setCfg(null));
   }, []);
 
+  // Najtańsza dostawa do paska zaufania (0 = gratis).
+  const shipLabel = useMemo(() => {
+    const prices = (cfg?.carriers ?? []).map((c) => c.cents);
+    const min = prices.length ? Math.min(...prices) : (cfg?.shippingCents ?? 0);
+    return min > 0 ? S.shipFrom.replace("{price}", eur(min)) : S.freeShip;
+  }, [cfg, S, eur]);
+  const quickAdd = useCallback((p: ShopProduct, size: string) => {
+    const base = SHOP_PRODUCTS.find((x) => x.id === p.id);
+    if (!base) return;
+    add(base, size);
+    toast.success(`${S.added}: ${p.name}${size ? ` (${size})` : ""}`, { action: { label: T.cart, onClick: () => setOpen(true) } });
+  }, [add, S, T]);
   const shipCents = ship.carrier ? carrierPrice(ship.carrier) : (cfg?.shippingCents ?? 0);
   const total = subtotal + (cart.length ? shipCents : 0);
 
@@ -222,24 +246,44 @@ export default function Shop() {
     <div className="min-h-screen bg-gradient-to-b from-sky-50 via-white to-white text-neutral-900" style={{ colorScheme: "light" }}>
       <XmasDecor />
       {gift && <GiftCelebration lang={lang} code={gift} onClose={() => setGift(null)} onGo={() => { setGift(null); navigate("/"); }} />}
-      <header className="sticky top-0 z-40 flex flex-wrap items-center justify-between gap-3 border-b border-neutral-200 bg-white/95 px-4 py-3">
-        <div className="flex items-center gap-4"><span className="text-2xl font-black">GROUA<span className="text-orange-500">ROCK</span></span><Link to="/" className="text-sm text-neutral-600 hover:text-neutral-900">{T.back}</Link></div>
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex h-11 items-center rounded-full border border-neutral-300 p-1" role="group" aria-label="Language">
-            {SHOP_LANGS.map((l) => <button key={l} type="button" onClick={() => setLanguage(l)} aria-pressed={lang === l} className={`h-9 rounded-full px-3 text-xs font-bold uppercase ${lang === l ? "bg-neutral-900 text-white" : "text-neutral-600"}`}>{l}</button>)}
+      <header className="sticky top-0 z-40 border-b border-neutral-200/80 bg-white/90 backdrop-blur-md">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-3">
+          <div className="flex items-center gap-4">
+            <Link to="/shop" className="text-xl font-black tracking-tight sm:text-2xl">GROUA<span className="text-orange-500">ROCK</span></Link>
+            <Link to="/" className="hidden text-sm text-neutral-500 transition hover:text-neutral-900 sm:inline">{T.back}</Link>
           </div>
-          {admin && <button type="button" onClick={() => navigate("/admin?tab=shop")} className="h-11 rounded-full bg-orange-500 px-5 text-sm font-bold text-white">{T.admin}</button>}
-          {user && <button type="button" onClick={() => { setOrdersOpen(true); loadOrders(); }} className="h-11 rounded-full border border-neutral-300 bg-white/70 px-4 text-sm font-semibold backdrop-blur transition hover:border-orange-400 hover:bg-orange-50 hover:text-orange-700">📦 {T.myOrders}{orders && orders.length ? ` (${orders.length})` : ""}</button>}
-          {user ? (<><span className="hidden text-sm text-neutral-600 sm:inline">{user.email}</span><button type="button" onClick={() => signOut()} className="h-11 rounded-full border border-neutral-300 px-4 text-sm">{T.logout}</button></>)
-            : <button type="button" onClick={() => navigate("/auth?next=/shop")} className="h-11 rounded-full border border-neutral-900 px-5 text-sm font-semibold">{T.login}</button>}
-          <button type="button" onClick={() => setOpen(true)} className="h-11 rounded-full bg-neutral-900 px-5 text-sm font-semibold text-white">{T.cart} ({count})</button>
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <div className="flex h-10 items-center rounded-full border border-neutral-200 bg-white p-1" role="group" aria-label="Language">
+              {SHOP_LANGS.map((l) => <button key={l} type="button" onClick={() => setLanguage(l)} aria-pressed={lang === l} className={`h-8 rounded-full px-2.5 text-xs font-bold uppercase transition ${lang === l ? "bg-neutral-900 text-white" : "text-neutral-500 hover:text-neutral-900"}`}>{l}</button>)}
+            </div>
+            {admin && <button type="button" onClick={() => navigate("/admin?tab=shop")} className="h-10 rounded-full bg-orange-500 px-4 text-sm font-bold text-white transition hover:bg-orange-600">{T.admin}</button>}
+            {user && <button type="button" onClick={() => { setOrdersOpen(true); loadOrders(); }} aria-label={T.myOrders} title={T.myOrders} className="inline-flex h-10 items-center gap-1.5 rounded-full border border-neutral-200 bg-white px-3 text-sm font-semibold transition hover:border-orange-400 hover:text-orange-700"><Package className="h-4 w-4" aria-hidden="true" /><span className="hidden md:inline">{T.myOrders}</span>{orders && orders.length ? <span className="text-xs text-neutral-500">({orders.length})</span> : null}</button>}
+            {user
+              ? <button type="button" onClick={() => signOut()} aria-label={T.logout} title={user.email ?? T.logout} className="inline-flex h-10 items-center gap-1.5 rounded-full border border-neutral-200 bg-white px-3 text-sm transition hover:border-neutral-400"><LogOut className="h-4 w-4" aria-hidden="true" /><span className="hidden md:inline">{T.logout}</span></button>
+              : <button type="button" onClick={() => navigate("/auth?next=/shop")} className="inline-flex h-10 items-center gap-1.5 rounded-full border border-neutral-900 px-3 text-sm font-semibold transition hover:bg-neutral-900 hover:text-white sm:px-4"><User className="h-4 w-4" aria-hidden="true" /><span className="hidden sm:inline">{T.login}</span></button>}
+            <button type="button" onClick={() => setOpen(true)} aria-label={`${T.cart} (${count})`} className="relative inline-flex h-10 items-center gap-2 rounded-full bg-neutral-900 px-4 text-sm font-semibold text-white transition hover:bg-orange-500">
+              <ShoppingBag className="h-4 w-4" aria-hidden="true" /><span className="hidden sm:inline">{T.cart}</span>
+              <motion.span key={count} initial={{ scale: 1.6 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 500, damping: 15 }}
+                className="grid h-5 min-w-5 place-items-center rounded-full bg-orange-500 px-1 text-[11px] font-bold">{count}</motion.span>
+            </button>
+          </div>
         </div>
       </header>
 
-      <GraffitiWall label="GROUAROCK" />
+      <MotionConfig reducedMotion="user">
+      <StoreHero t={S} onShop={() => gridRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })} heroId={hero.id} heroName={hero.name} heroPrice={eur(hero.eurCents)} />
+      {done && (
+        <div className="mx-auto max-w-6xl space-y-3 px-4 pb-8">
+          <p className="rounded-xl bg-orange-50 p-4 text-orange-900"><b>{T.orderAccepted.replace("{id}", done.ref)}</b>{!done.bank && <> {T.linkSoon.replace("{email}", user?.email ? ` (${user.email})` : "")}</>}</p>
+          {done.bank && <TransferBox bank={done.bank} t={T} eur={eur} />}
+        </div>
+      )}
+      <TrustBar t={S} ship={shipLabel} />
 
-      <section className="mx-auto max-w-5xl pb-2 pt-6" aria-label={T.inMotion}>
-        <h2 className="mb-3 px-4 text-2xl font-black">{T.inMotion}</h2>
+      <CategoryTiles t={S} tiles={tiles} onPick={(c) => { setCat(c); requestAnimationFrame(() => gridRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })); }} />
+
+      <section className="mx-auto max-w-6xl pt-14" aria-label={T.inMotion}>
+        <h2 className="mb-4 px-4 text-2xl font-black tracking-tight sm:text-3xl">{T.inMotion}</h2>
         <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:thin]">
           {products.filter((p) => p.video).map((p) => (
             <VideoTile key={p.id} p={p} price={eur(p.eurCents)} see={T.see} onOpen={() => navigate(`/shop/p/${p.id}`)} />
@@ -247,59 +291,54 @@ export default function Shop() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-5xl px-4 pb-6 pt-8">
-        <p className="mb-2 text-sm font-bold uppercase tracking-[.25em] text-red-600">{T.xmas}</p>
-        <h1 className="text-5xl font-black leading-none sm:text-7xl">{T.heroA} <span className="bg-gradient-to-r from-red-600 via-orange-500 to-pink-500 bg-clip-text text-transparent">{T.heroB}</span></h1>
-        <p className="mt-4 max-w-xl text-lg text-neutral-600">{T.heroText}</p>
-        {done && (
-          <div className="mt-4 space-y-3">
-            <p className="rounded-xl bg-orange-50 p-4 text-orange-900"><b>{T.orderAccepted.replace("{id}", done.ref)}</b>{!done.bank && <> {T.linkSoon.replace("{email}", user?.email ? ` (${user.email})` : "")}</>}</p>
-            {done.bank && <TransferBox bank={done.bank} t={T} eur={eur} />}
+      <section className="mx-auto max-w-6xl px-4 pt-14" aria-label={T.collection}>
+        <div ref={gridRef} className="scroll-mt-20" />
+        <div className="z-30 -mx-4 mb-6 md:sticky md:top-[64px] border-b border-neutral-200/80 bg-white/90 px-4 py-3 backdrop-blur-md">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-2xl font-black tracking-tight sm:text-3xl">{T.collection} <span className="text-base font-semibold text-neutral-400">({shown.length})</span></h2>
+            <label className="flex items-center gap-2 text-sm text-neutral-500">{S.sort}
+              <select value={sort} onChange={(e) => setSort(e.target.value as typeof sort)} className="h-10 rounded-full border border-neutral-200 bg-white px-3 text-sm font-semibold text-neutral-900">
+                <option value="featured">{S.sortFeatured}</option><option value="asc">{S.sortAsc}</option><option value="desc">{S.sortDesc}</option>
+              </select>
+            </label>
           </div>
-        )}
-      </section>
-
-      <section className="mx-auto max-w-5xl px-4 pb-12" aria-label={T.collection}>
-        <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-          <h2 className="text-3xl font-black">{T.collection} <span className="text-neutral-400">({shown.length})</span></h2>
-          <div className="flex flex-wrap gap-2" role="group" aria-label={T.collection}>
+          <div className="-mx-4 mt-3 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" role="group" aria-label={T.collection}>
             {["", ...cats].map((c) => (
-              <button key={c || "all"} type="button" aria-pressed={cat === c}
-                onClick={() => { setCat(c); requestAnimationFrame(() => gridRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })); }}
-                className={`h-11 rounded-full border px-5 text-sm font-bold shadow-sm backdrop-blur-md transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 active:scale-95 ${cat === c
-                  ? "border-orange-500 bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-orange-500/30 shadow-md"
-                  : "border-white/70 bg-white/60 text-neutral-800 ring-1 ring-neutral-900/10 hover:border-orange-400 hover:bg-orange-50/80 hover:text-orange-700 hover:shadow-md hover:shadow-orange-500/20"}`}>
+              <button key={c || "all"} type="button" aria-pressed={cat === c} onClick={() => setCat(c)}
+                className={`h-10 shrink-0 rounded-full border px-4 text-sm font-semibold transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 active:scale-95 ${cat === c
+                  ? "border-neutral-900 bg-neutral-900 text-white"
+                  : "border-neutral-200 bg-white text-neutral-700 hover:border-orange-400 hover:text-orange-700"}`}>
                 {c ? localizeProduct(SHOP_PRODUCTS.find((x) => x.cat === c)!, lang).cat : T.all}
               </button>))}
           </div>
         </div>
-        <ul ref={gridRef} className="grid scroll-mt-40 grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-          {shown.map((p) => (
-            <li key={p.id}>
-              <Link to={`/shop/p/${p.id}`}
-                className="group block overflow-hidden rounded-2xl border border-neutral-200 bg-white/80 backdrop-blur-md transition hover:-translate-y-0.5 hover:border-orange-400 hover:shadow-lg hover:shadow-orange-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500">
-                <div className="relative aspect-square bg-neutral-100">
-                  <img src={`/shop/${p.id}-1.jpg`} alt={p.name} loading="lazy" decoding="async" width={400} height={400} className="h-full w-full object-cover transition duration-300 group-hover:scale-105" />
-                  {p.video && <span className="absolute bottom-2 left-2 rounded-full bg-black/70 px-2 py-0.5 text-[11px] font-bold text-white">▶ {T.video}</span>}
-                  {p.tag && <span className="absolute left-2 top-2 rounded-full bg-gradient-to-r from-orange-500 to-pink-500 px-2 py-0.5 text-[10px] font-bold uppercase text-white">{p.tag}</span>}
-                </div>
-                <div className="p-3">
-                  <p className="line-clamp-2 text-sm font-bold leading-snug">{p.name}</p>
-                  <p className="mt-1 text-sm font-extrabold text-orange-600">{eur(p.eurCents)}</p>
-                </div>
-              </Link>
-            </li>))}
+        <ul className="grid grid-cols-2 gap-x-3 gap-y-8 sm:grid-cols-3 lg:grid-cols-4 lg:gap-x-5">
+          {sorted.map((p, i) => (
+            <ProductCard key={`${cat}-${sort}-${p.id}`} p={p} index={i} price={eur(p.eurCents)} t={S} videoLabel={T.video} onAdd={quickAdd} />
+          ))}
         </ul>
       </section>
 
+      <StoreFaq t={S} days={cfg?.deliveryDays ?? "5–14"} />
+      </MotionConfig>
+
       <div className="pb-16" />
 
-      <footer className="border-t border-neutral-200 px-4 py-8 text-sm text-neutral-600">
-        <div className="mx-auto flex max-w-5xl flex-wrap gap-x-6 gap-y-2">
-          <Link to="/shop/terms" className="underline underline-offset-4 hover:text-neutral-900">{T.terms}</Link>
-          <Link to="/legal" className="underline underline-offset-4 hover:text-neutral-900">Privacy</Link>
-          {(cfg?.seller?.email || cfg?.contact?.email) && <a href={`mailto:${cfg.seller?.email || cfg.contact?.email}`} className="underline underline-offset-4 hover:text-neutral-900">{T.contact}: {cfg.seller?.email || cfg.contact?.email}</a>}
-          {cfg?.seller ? <span>{cfg.seller.name}, {cfg.seller.address}</span> : cfg?.contact?.name ? <span>{cfg.contact.name}</span> : null}
+      <footer className="border-t border-neutral-200 bg-white px-4 py-10 text-sm text-neutral-600">
+        <div className="mx-auto grid max-w-6xl gap-6 sm:grid-cols-3">
+          <div>
+            <p className="text-lg font-black text-neutral-900">GROUA<span className="text-orange-500">ROCK</span></p>
+            {cfg?.seller ? <p className="mt-2">{cfg.seller.name}<br />{cfg.seller.address}</p> : cfg?.contact?.name ? <p className="mt-2">{cfg.contact.name}</p> : null}
+          </div>
+          <nav className="flex flex-col gap-2" aria-label={T.terms}>
+            <Link to="/shop/terms" className="hover:text-neutral-900">{T.terms}</Link>
+            <Link to="/legal" className="hover:text-neutral-900">Privacy</Link>
+            <Link to="/" className="hover:text-neutral-900">{T.back}</Link>
+          </nav>
+          <div>
+            {(cfg?.seller?.email || cfg?.contact?.email) && <a href={`mailto:${cfg.seller?.email || cfg.contact?.email}`} className="font-semibold text-neutral-900 underline-offset-4 hover:underline">{T.contact}: {cfg.seller?.email || cfg.contact?.email}</a>}
+            <p className="mt-2 text-xs text-neutral-500">{T.vatIncl}</p>
+          </div>
         </div>
       </footer>
 
