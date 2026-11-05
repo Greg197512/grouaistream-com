@@ -32,7 +32,7 @@ import { localizeProduct } from "../src/data/shopCatalogI18n";
 import { SHOP_PRODUCTS } from "../src/data/shopCatalog";
 import { supplierFor, printfulExternalId } from "../src/data/shopSuppliers";
 import { createPrintfulOrder, printfulExternalIds, type PrintfulCfg } from "../src/lib/printful";
-import { adminMail, customerPaidMail, customerTransferMail, sendMail, supplierMail, type MailCfg, type MailOrder } from "../src/lib/shopMail";
+import { adminMail, customerPaidMail, customerTransferMail, mailConfigFromEnv, sendMail, supplierMail, type MailCfg, type MailOrder } from "../src/lib/shopMail";
 import type { PricedLine, Shipping } from "../src/lib/shopOrder";
 
 export const config = { runtime: "edge" };
@@ -110,12 +110,8 @@ const bank = () => {
 };
 
 function mailCfg(): MailCfg | null {
-  const from = env("SHOP_MAIL_FROM");
-  const fromName = env("SHOP_MAIL_FROM_NAME") ?? "GrouaDrop";
-  if (!from) return null;
-  if (env("RESEND_API_KEY")) return { provider: "resend", key: env("RESEND_API_KEY")!, from, fromName };
-  if (env("BREVO_API_KEY")) return { provider: "brevo", key: env("BREVO_API_KEY")!, from, fromName };
-  return null;
+  // Resend/Brevo, gdy ustawione; inaczej wysyłka GrouAI przez główny projekt Supabase (bez kluczy).
+  return mailConfigFromEnv(env, "GrouaDrop");
 }
 function printfulCfg(): PrintfulCfg | null {
   const token = env("PRINTFUL_API_KEY");
@@ -295,7 +291,7 @@ async function fulfill(auth: string, row: OrderRow, force: boolean): Promise<Ful
   if (m) {
     if (row.client_email && !out.mails?.customer) out.mails!.customer = await sendMail(m, { to: row.client_email, replyTo: env("SHOP_SELLER_EMAIL") ?? env("SHOP_NOTIFY_EMAIL"), ...customerPaidMail(mo, env("SHOP_DELIVERY_DAYS") ?? "5–14") });
     if (env("SHOP_NOTIFY_EMAIL")) out.mails!.admin = await sendMail(m, { to: env("SHOP_NOTIFY_EMAIL")!, ...adminMail(mo, "paid", notes) });
-  } else notes.push("E-maile wyłączone (brak RESEND_API_KEY/BREVO_API_KEY i SHOP_MAIL_FROM)");
+  } else notes.push("E-maile wyłączone (brak konfiguracji Supabase w env)");
 
   out.state = failed ? "error" : manual ? "manual" : "sent";
   out.notes = notes;

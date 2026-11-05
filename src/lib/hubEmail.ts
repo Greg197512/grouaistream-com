@@ -1,8 +1,8 @@
 import { supabase } from "@/integrations/supabase/client";
 
-// Wysyłka maili działa na HUBIE (Resend) — funkcje na LIVE (bvstv) były martwe.
-// Admin-only (hub sprawdza has_role). Nadawca: hub_config.lead_from_email.
-const HUB_EMAIL_URL = "https://bmwtydwpevzhbdplilbr.supabase.co/functions/v1/hub-email-send";
+// Wysyłka maili: Vercel /api/admin-email (stary hub nie istnieje). Admin-only (serwer sprawdza has_role).
+// Transport: send-transactional-email głównego projektu (noreply@grouaistream.com) albo Resend/Brevo, gdy ustawione.
+const HUB_EMAIL_URL = "/api/admin-email";
 
 export interface HubEmailResult {
   success: boolean;
@@ -35,4 +35,18 @@ export async function sendHubEmail(body: {
   } catch (e) {
     return { success: false, error: e instanceof Error ? e.message : String(e) };
   }
+}
+
+/** Po złożeniu zlecenia B2B: powiadomienie dla zespołu + potwierdzenie dla klienta. Nigdy nie rzuca. */
+export async function notifyB2BOrder(orderId: string): Promise<void> {
+  try {
+    const { data: s } = await supabase.auth.getSession();
+    const token = s?.session?.access_token;
+    if (!token) return;
+    await fetch(HUB_EMAIL_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ action: "b2b-order", orderId }),
+    });
+  } catch { /* powiadomienie opcjonalne */ }
 }
