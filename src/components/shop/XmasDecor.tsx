@@ -2,7 +2,7 @@ const SLOGANS = ["🎄 Święta z muzyką — kup coś, dostaj miesiąc VIP grat
 
 /** Świąteczna oprawa: lampki, Mikołaj, pasek haseł (bez śniegu — na życzenie). */
 export function XmasDecor() {
-  const bulbs = Array.from({ length: 28 });
+  const bulbs = Array.from({ length: 18 });
   return (
     <>
       <style>{`
@@ -13,10 +13,11 @@ export function XmasDecor() {
         @keyframes xm-wave{0%,100%{transform:rotate(-8deg)}50%{transform:rotate(12deg)}}
         .xm-b{display:inline-block;width:9px;height:12px;border-radius:50% 50% 50% 50%/60% 60% 40% 40%;margin:0 11px;animation:xm-tw 1.6s ease-in-out infinite}
         @media (prefers-reduced-motion: reduce){.xm-b,.xm-mq{animation:none!important}}
+        html[data-lowpower="on"] .xm-b,html[data-lowpower="on"] .xm-mq{animation:none!important}
       `}</style>
-      <div aria-hidden className="pointer-events-none fixed bottom-0 right-2 z-[36]" style={{ animation: "xm-sway 5s ease-in-out infinite", transformOrigin: "50% 100%" }}>
+      <div aria-hidden className="pointer-events-none fixed bottom-0 right-2 z-[36]">
         <span className="absolute -top-1 right-[58%] whitespace-nowrap rounded-2xl bg-white px-3 py-1.5 text-sm font-black text-red-700 shadow-lg">Ho ho ho! 🎁</span>
-        <img src="/shop/santa.png" alt="" className="block h-[22vh] w-auto drop-shadow-xl sm:h-[34vh] sm:max-h-[300px]" />
+        <img src="/shop/santa.png" alt="" decoding="async" className="block h-[18vh] w-auto sm:h-[30vh] sm:max-h-[260px]" />
       </div>
       <div aria-hidden className="pointer-events-none fixed inset-x-0 top-0 z-[45] flex justify-center overflow-hidden leading-none" style={{ height: 14 }}>
         {bulbs.map((_, i) => <i key={i} className="xm-b" style={{ background: ["#e11d2e", "#16a34a", "#f59e0b", "#2563eb", "#ec4899"][i % 5], animationDelay: `${(i % 7) * .22}s`, boxShadow: "0 0 10px currentColor", color: ["#e11d2e", "#16a34a", "#f59e0b", "#2563eb", "#ec4899"][i % 5], marginTop: i % 2 ? 2 : 0 }} />)}

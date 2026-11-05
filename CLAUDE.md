@@ -32,6 +32,7 @@ i aktualny. Jeśli fakt tu jest — nie weryfikuj go od nowa dziesiątkami wywo�
   Realizacja (pośrednik): po opłaceniu Printful (`PRINTFUL_API_KEY`, External ID wariantu `produkt-ROZMIAR`) + gadżety e-mailem
   (`SHOP_SUPPLIER_EMAIL`, `src/data/shopSuppliers.ts`); e-maile Resend/Brevo (`SHOP_MAIL_FROM`), powiadomienia `SHOP_NOTIFY_EMAIL`=grouarock@gmail.com.
   W Vercel ustawione: `SHOP_BANK_IBAN/HOLDER/BIC`, `SHOP_REVOLUT_LINK` (revolut.me/grouaaistream), `SHOP_NOTIFY_EMAIL`. Menu: „GrouaDrop”.
+  Katalog `/shop` = filmy + kafelki (lekki); **każdy produkt osobno: `/shop/p/:id`** (`ShopProduct.tsx`); koszyk wspólny `src/lib/shopCart.ts` (`/shop?cart=1` otwiera koszyk).
   Stara funkcja `shop-checkout` i tabele `shop_orders`/`gift_codes` nie są używane (brak w bazie prod).
 
 ## Vercel
