@@ -15,8 +15,11 @@ async function pf(cfg: PrintfulCfg, path: string, init: RequestInit = {}) {
     },
     signal: AbortSignal.timeout(20000),
   });
-  const j = (await r.json().catch(() => ({}))) as { code?: number; result?: unknown; error?: { message?: string } };
-  return { ok: r.ok, status: r.status, result: j.result, error: j.error?.message ?? (typeof j.result === "string" ? j.result : null) };
+  const raw = await r.text().catch(() => "");
+  let j: { code?: number; result?: unknown; error?: { message?: string; reason?: string } } = {};
+  try { j = JSON.parse(raw); } catch { /* np. strona HTML z zapory */ }
+  const msg = j.error?.message ?? (typeof j.result === "string" ? j.result : null) ?? (r.ok ? null : `HTTP ${r.status}${raw ? `: ${raw.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 160)}` : ""}`);
+  return { ok: r.ok, status: r.status, result: j.result, error: msg };
 }
 
 /** Treść zamówienia Printful. `external_id` = id zamówienia bez myślników (32 znaki) — Printful odrzuci duplikat. */
