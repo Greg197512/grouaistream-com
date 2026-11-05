@@ -1,58 +1,57 @@
-// Harmonogram agentów GrouAI OS BEZ Lovable i BEZ pg_cron — przez Vercel Cron.
-// Woła funkcje SQL przez Supabase RPC (anon). Zawsze zbiera odpowiedzi AI
-// (brain_reason_collect). Co 2 h robi executive summary; codziennie ~08:00 UTC
-// uruchamia Developer + Tester. Wszystko darmowe po stronie Vercela (poza Grok).
-/* eslint-disable @typescript-eslint/no-explicit-any */
-// Rozszerzenie .js wymagane w Node ESM na Vercelu (bez niego cron padał co godzinę: ERR_MODULE_NOT_FOUND).
-import { runGuardian } from "./site-guardian.js";
+/**
+ * Cron Vercel co godzinę — „żywe algorytmy” zamiast agentów AI (Grok usunięty 5.11, zero kosztów).
+ *  1) Strażnik strony (runGuardian): strona, baza, plik audio na R2; budzi uśpioną bazę.
+ *  2) Puls serwisu: nowe utwory (24 h), łączna liczba utworów, wpisy bloga — liczone z bazy (anon, RLS).
+ *  3) Alarm: gdy strażnik widzi awarię → e-mail do właściciela (SHOP_NOTIFY_EMAIL), najwyżej raz na 6 h.
+ */
+import { runGuardian } from "./site-guardian";
+import { env, json, supa } from "../src/lib/serverSupa";
+import { mailConfigFromEnv, sendMail } from "../src/lib/shopMail";
 
-export default async function handler(req: any, res: any) {
-  const URL = process.env.VITE_SUPABASE_URL;
-  const ANON = process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-  if (!URL || !ANON) return res.status(200).json({ ok: false, error: "no_supabase_env" });
+export const config = { runtime: "edge" };
 
-  const rpc = async (name: string) => {
-    try {
-      const r = await fetch(`${URL}/rest/v1/rpc/${name}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", apikey: ANON, Authorization: `Bearer ${ANON}` },
-        body: "{}",
-      });
-      const txt = await r.text();
-      return { name, status: r.status, body: txt.slice(0, 300) };
-    } catch (e) {
-      return { name, status: 0, body: String(e) };
-    }
-  };
+async function count(path: string): Promise<number | null> {
+  const s = supa();
+  if (!s) return null;
+  try {
+    const r = await fetch(`${s.url}/rest/v1/${path}`, {
+      method: "HEAD",
+      headers: { apikey: s.key, authorization: `Bearer ${s.key}`, prefer: "count=exact", range: "0-0" },
+      signal: AbortSignal.timeout(8000),
+    });
+    const m = (r.headers.get("content-range") || "").match(/\/(\d+)$/);
+    return m ? Number(m[1]) : null;
+  } catch { return null; }
+}
 
+export default async function handler(): Promise<Response> {
   const now = new Date();
-  const h = now.getUTCHours();
-  const m = now.getUTCMinutes();
-  const full = String(req.query?.full || "") === "1";
-
-  const ran: any[] = [];
-  // Strażnik strony — zawsze pierwszy; gdy baza leży, reszta botów czeka.
   const guard = await runGuardian();
-  ran.push({ name: "site_guardian", ok: guard.ok, healed: guard.healed, bad: guard.checks.filter((c) => !c.ok) });
-  if (!guard.checks.find((c) => c.name === "baza_utwory")?.ok) {
-    res.setHeader("Cache-Control", "no-store");
-    return res.status(200).json({ ok: false, at: now.toISOString(), paused: "baza niedostępna", ran });
-  }
-  // Agenci AI (Grok — PŁATNY) tylko po świadomym włączeniu AGENTS_AI=1 w Vercel (Grzegorz: „uważaj, aby nie naliczało”).
-  if (process.env.AGENTS_AI !== "1") {
-    res.setHeader("Cache-Control", "no-store");
-    return res.status(200).json({ ok: guard.ok, at: now.toISOString(), ran, agents: "wyłączone (AGENTS_AI≠1)" });
-  }
-  // Zawsze: pozbieraj gotowe odpowiedzi AI (Grok) do pamięci.
-  ran.push(await rpc("brain_reason_collect"));
-  // Co 2 h: executive summary managera.
-  if (full || (h % 2 === 0)) ran.push(await rpc("brain_reason"));
-  // Codziennie ~08:00 UTC: Developer + Tester.
-  if (full || (h === 8)) {
-    ran.push(await rpc("developer_agent"));
-    ran.push(await rpc("tester_agent"));
+  const bad = guard.checks.filter((c) => !c.ok);
+
+  const since = new Date(now.getTime() - 24 * 3600 * 1000).toISOString();
+  const [tracksTotal, tracks24h, blogPosts] = await Promise.all([
+    count("tracks?select=id&audio_url=not.is.null"),
+    count(`tracks?select=id&created_at=gte.${since}`),
+    count("seo_blog_posts?select=id&is_published=eq.true"),
+  ]);
+  const pulse = { tracksTotal, tracks24h, blogPosts };
+
+  let alerted = false;
+  const notify = env("SHOP_NOTIFY_EMAIL");
+  const cfg = mailConfigFromEnv(env, "Strażnik GrouAI");
+  if (bad.length && notify && cfg) {
+    const slot = `${now.toISOString().slice(0, 10)}-${Math.floor(now.getUTCHours() / 6)}`; // raz na 6 h
+    alerted = await sendMail(cfg, {
+      to: notify, key: `guardian-${slot}`,
+      subject: `🚨 GrouAI Stream: problem (${bad.map((c) => c.name).join(", ")})`,
+      html: `<div style="font:15px/1.6 Arial,sans-serif;max-width:560px;margin:auto;padding:20px">
+<h2 style="margin:0 0 8px">Strażnik wykrył problem</h2>
+<ul>${bad.map((c) => `<li><b>${c.name}</b>: ${String(c.detail ?? "").replace(/</g, "&lt;").slice(0, 200)}</li>`).join("")}</ul>
+<p>Naprawione automatycznie: ${guard.healed.length ? guard.healed.join(", ") : "nic"}.</p>
+<p style="color:#71717a;font-size:12px">${now.toISOString()} · kolejny alarm najwcześniej za 6 h</p></div>`,
+    });
   }
 
-  res.setHeader("Cache-Control", "no-store");
-  return res.status(200).json({ ok: true, at: now.toISOString(), ran });
+  return json({ ok: guard.ok, at: now.toISOString(), guardian: { bad, healed: guard.healed }, pulse, alerted, agents: "usunięte (żywe algorytmy, bez AI)" });
 }

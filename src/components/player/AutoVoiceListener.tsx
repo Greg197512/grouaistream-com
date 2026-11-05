@@ -1001,7 +1001,7 @@ export const AutoVoiceListener = () => {
     }
 
     // ==========================================
-    // GENERAL QUESTION DETECTION → route to Grok AI voice answer
+    // GENERAL QUESTION DETECTION → route to the assistant (/api/assistant)
     // Must be BEFORE play commands to avoid false matches (e.g. "daj" inside "Amster*daj*")
     // ==========================================
     const isGeneralQuestion = (
@@ -1202,7 +1202,7 @@ export const AutoVoiceListener = () => {
       }
     } catch { /* resolver padł → normalna odpowiedź niżej */ }
 
-    // AI fallback — answer ANY question via Grok/AI voice endpoint
+    // AI fallback — answer ANY question via the assistant (/api/assistant)
     try {
       toast.loading(`🧠 Myślę...`, { id: "voice-cmd" });
       
@@ -1223,7 +1223,7 @@ export const AutoVoiceListener = () => {
         }
       }
 
-      // Universal voice answer — calls Grok for ANY question (weather, facts, general knowledge, etc.)
+      // Universal voice answer — calls the assistant for ANY question (weather, facts, general knowledge, etc.)
       const lang = getAppLanguage();
       const { data: voiceData, error: voiceError } = await invokeHubAI({ question: command, language: lang });
 

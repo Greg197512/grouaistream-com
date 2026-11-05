@@ -18,7 +18,12 @@ i aktualny. Jeśli fakt tu jest — nie weryfikuj go od nowa dziesiątkami wywo�
 - Uploady userów → **Vercel `api/r2-upload`** (token Supabase → podpisany PUT SigV4 → przeglądarka wysyła prosto na R2;
   `{"action":"setup-cors"}` ustawia CORS zasobnika). Wymaga w Vercel: `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`.
   Zapas: edge `r2-signed-url`/`r2-upload-proxy`.
-- Asystent `api/assistant`: klucze AI w Vercel (brak) → Pollinations (bywa 402) → edge `ai-assistant` (ma klucze). Test: `GET /api/assistant?ping=1[&skip=pollinations]`.
+- Asystent `api/assistant`: klucze AI w Vercel (brak) → Pollinations (darmowe, bywa 402) → **żywy algorytm** (`localAnswer`: katalog utworów,
+  skróty funkcji, szablon promptu Studia; bez AI). Tryby: `studio`, `aurora`, `translate`, `daw`. Test: `GET /api/assistant?ping=1[&skip=pollinations]`.
+- **Grok usunięty z całej aplikacji (5.11, decyzja Grzegorza):** brak xAI w asystencie, brak wywołań edge `ai-assistant`/`blog-translate`/
+  `generate-weekend-challenge` (miały Groka); cron `agents-run` (edge) = strażnik + puls + mail-alarm (raz/6 h), bez agentów `brain_*`.
+  Zamienniki: wyzwanie weekendowe `src/lib/weekendChallenge.ts` (trend 7 dni vs 7 dni), tłumaczenie bloga `src/lib/blogTranslate.ts`,
+  okienko Studia `StudioPromptDock` (dawniej StudioGrokDock). Nie dodawać Groka z powrotem.
 - **Stary hub `bmwtydwpevzhbdplilbr` NIE ISTNIEJE (DNS, 11.2026)** — nie dodawać do niego wywołań. Przepięte: asystent (`hubAI` →
   `/api/assistant`), czat promptów Studia (`mode:"studio"`), Aurora B2B (`mode:"aurora"`, blok `[[ORDER]]` → `aurora_business_orders`),
   silniki Studia (`invokeStudioEngine` → główny projekt), szept nastroju (asystent), Nocne czytanie (`/api/radio-story`), prezent (`/prezent/:id` = SPA).
@@ -59,7 +64,7 @@ i aktualny. Jeśli fakt tu jest — nie weryfikuj go od nowa dziesiątkami wywo�
 - **Koszty (Grzegorz: „uważaj, aby nie naliczało”):** nic płatnego nie może startować samo ani u gości.
   Płatne: Replicate (teledyski Kling/Hailuo — tylko na klik, z potwierdzeniem), OpenRouter (okładki AI `ai-cover-generate`),
   ElevenLabs/Azure (tylko gdy klucz). Usunięte automaty: teledysk po zmianie okładki, okładki AI z `NewOnServer` u każdego gościa,
-  przycisk „dosyp 20k” w Bibliotece. Cron `api/agents-run` (co godz.): tylko strażnik strony; agenci AI (Grok, płatni) tylko gdy `AGENTS_AI=1`.
+  przycisk „dosyp 20k” w Bibliotece. Cron `api/agents-run` (co godz.): strażnik + puls + alarm mailem; agentów AI brak.
   Node-owe funkcje `api/*` importują lokalne pliki z rozszerzeniem `.js` (inaczej ERR_MODULE_NOT_FOUND); edge bundluje sam.
 - Z piaskownicy agenta EGRESS blokuje `*.supabase.co`, `*.r2.dev`, `grouaistream.com` (curl/WebFetch/Playwright).
   Do sprawdzenia żywej strony/R2 używaj `mcp__Vercel__web_fetch_vercel_url` (idzie siecią Vercela).

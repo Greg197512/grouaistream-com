@@ -78,6 +78,11 @@ const AURORA_SYSTEM =
   "zlecenie, dopisz na samym końcu odpowiedzi DOKŁADNIE jeden blok: [[ORDER]]{\"service_type\":\"jingle|ad_music|podcast|radio_spot|event|video|license|other\"," +
   "\"brief\":\"pełny opis zlecenia\",\"email\":\"adres\"}[[/ORDER]]. Bez potwierdzenia klienta nie dodawaj bloku.";
 
+// Tłumacz bloga (zamiast funkcji blog-translate z Grokiem).
+const TRANSLATE_SYSTEM = (lang: string) =>
+  `You are a professional translator for a music website. Translate the user's text into ${lang}. ` +
+  "Keep Markdown/HTML formatting, links and names unchanged. Return ONLY the translation, no comments.";
+
 const DAW_SYSTEM = `Jesteś realizatorem dźwięku w GrouAI Studio DAW. Użytkownik opisuje zwykłymi słowami, co chce zrobić
 (często nie zna się na korektorach). Zamień polecenie na akcje i odpowiedz WYŁĄCZNIE obiektem JSON:
 {"reply":"<1–2 zdania po polsku: co robisz i dlaczego, prostym językiem>","actions":[...]}
@@ -101,10 +106,10 @@ type Attempt = { provider: string; status: number | string };
 
 /**
  * Łańcuch dostawców — próbujemy po kolei, aż któryś odpowie:
- * 1) klucze w Vercel (Gemini/Groq/OpenRouter za darmo, xAI/OpenAI płatne),
+ * 1) klucze w Vercel (Gemini/Groq/OpenRouter za darmo, OpenAI płatne; Grok/xAI usunięty 5.11),
  * 2) Pollinations bez klucza (bywa wyłączony — HTTP 402),
- * 3) funkcja ai-assistant w Supabase (ma własne klucze OpenRouter/Gemini; ten sam format SSE,
- *    klient był pod nią pisany). Dla trybu DAW pomijamy ją — tam klient ma lokalny parser poleceń.
+ * 3) żywy algorytm bez AI (katalog utworów + wiedza o stronie + szablony promptów) — zamiast funkcji
+ *    ai-assistant z Grokiem (usunięta z łańcucha 5.11). Dla trybu DAW pomijamy — klient ma lokalny parser.
  */
 async function answer(payload: Payload, attempts: Attempt[], skip: string[] = []): Promise<Response | null> {
   const message = (payload.message || "").toString();
@@ -115,7 +120,7 @@ async function answer(payload: Payload, attempts: Attempt[], skip: string[] = []
     ? payload.documentContext.slice(0, 40000)
     : "";
   // Jedna wiadomość systemowa (część dostawców nie łyka kilku naraz).
-  const system = payload.mode === "daw" ? DAW_SYSTEM : payload.mode === "studio" ? STUDIO_SYSTEM : payload.mode === "aurora" ? AURORA_SYSTEM : [
+  const system = payload.mode === "daw" ? DAW_SYSTEM : payload.mode === "studio" ? STUDIO_SYSTEM : payload.mode === "aurora" ? AURORA_SYSTEM : payload.mode === "translate" ? TRANSLATE_SYSTEM(String((payload.userContext as { target?: string } | undefined)?.target || "English")) : [
     buildSystem(payload.userContext),
     ...(docCtx ? ["Dokument z tej rozmowy (kontekst, odwołuj się do niego w razie potrzeby):" + docCtx] : []),
   ].join("\n\n");
@@ -129,7 +134,6 @@ async function answer(payload: Payload, attempts: Attempt[], skip: string[] = []
     { name: "gemini", key: process.env.GEMINI_API_KEY, url: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", model: "gemini-2.5-flash" },
     { name: "groq", key: process.env.GROQ_API_KEY, url: "https://api.groq.com/openai/v1/chat/completions", model: "llama-3.3-70b-versatile" },
     { name: "openrouter", key: process.env.OPENROUTER_API_KEY, url: "https://openrouter.ai/api/v1/chat/completions", model: "google/gemma-4-31b-it:free" },
-    { name: "xai", key: process.env.XAI_API_KEY, url: "https://api.x.ai/v1/chat/completions", model: "grok-4.3" },
     { name: "openai", key: process.env.OPENAI_API_KEY, url: "https://api.openai.com/v1/chat/completions", model: "gpt-4o-mini" },
   ].filter((p) => !!p.key);
 
@@ -170,23 +174,14 @@ async function answer(payload: Payload, attempts: Attempt[], skip: string[] = []
     attempts.push({ provider: "pollinations", status: String(e).slice(0, 80) });
   }
 
-  if (payload.mode === "daw") return null;
-  const sbUrl = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "").replace(/\/+$/, "");
-  const sbKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-  if (sbUrl && sbKey) {
-    try {
-      const r = await fetch(`${sbUrl}/functions/v1/ai-assistant`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", apikey: sbKey, Authorization: `Bearer ${sbKey}` },
-        body: JSON.stringify({ message, history, userContext: payload.userContext, attachments: payload.attachments }),
-        signal: AbortSignal.timeout(45_000),
-      });
-      attempts.push({ provider: "supabase-ai-assistant", status: r.status });
-      if (r.ok && r.body) return new Response(r.body, { headers: SSE_HEADERS });
-      console.error("[assistant] supabase ai-assistant: HTTP", r.status, (await r.text().catch(() => "")).slice(0, 300));
-    } catch (e) {
-      attempts.push({ provider: "supabase-ai-assistant", status: String(e).slice(0, 80) });
-    }
+  if (payload.mode === "daw" || payload.mode === "translate") return null;
+  // Zamiast funkcji ai-assistant (Grok/OpenRouter — płatne) — żywy algorytm: katalog + wiedza o stronie, bez AI i kosztów.
+  try {
+    const local = await localAnswer(payload);
+    attempts.push({ provider: "local-algorithm", status: local ? 200 : 204 });
+    if (local) return sseText(local);
+  } catch (e) {
+    attempts.push({ provider: "local-algorithm", status: String(e).slice(0, 80) });
   }
   return null;
 }
@@ -237,4 +232,75 @@ export default async function handler(req: Request): Promise<Response> {
   console.error("[assistant] żaden dostawca nie odpowiedział:", JSON.stringify(attempts), "— dodaj w Vercel GEMINI_API_KEY lub GROQ_API_KEY (darmowe)");
   const en = (payload.userContext as { language?: string } | undefined)?.language === "en";
   return sseText(en ? "The assistant is temporarily unavailable. Please try again in a few minutes 🙏" : "Asystent jest chwilowo niedostępny. Spróbuj ponownie za kilka minut 🙏");
+}
+
+// ─── Żywy algorytm (zapas bez AI) ────────────────────────────────────────────
+// Rozpoznaje intencję po słowach kluczowych, sięga do katalogu utworów (anon, RLS) i odpowiada
+// konkretnie: utwory z linkami, skróty do funkcji strony, gotowy prompt Studia. Darmowe i natychmiastowe.
+const GENRES: Record<string, string[]> = {
+  "Hip-Hop": ["hip-hop", "hip hop", "hiphop", "rap", "trap"], Pop: ["pop"], Rock: ["rock", "metal", "punk"],
+  Electronic: ["electronic", "elektron", "house", "techno", "edm", "trance", "dance"], Disco: ["disco", "funk"],
+  "Lo-Fi": ["lo-fi", "lofi", "chill", "relaks"], Jazz: ["jazz", "soul", "blues"], Folk: ["folk", "akust", "acoustic"],
+  Ambient: ["ambient", "medytac", "sen ", "spać", "sleep"], Classical: ["klasycz", "classical", "piano", "fortepian"],
+};
+const SITE = "https://grouaistream.com";
+const FEATURES: { kw: string[]; pl: string; en: string }[] = [
+  { kw: ["radio", "antena", "nova"], pl: `📻 Radio na żywo z prezenterką Novą: ${SITE}/radio-live`, en: `📻 Live radio with host Nova: ${SITE}/radio-live` },
+  { kw: ["studio", "stwórz", "wygeneruj", "generate", "create song", "piosenk"], pl: `🎛️ GrouAI Studio — stwórz własny utwór: ${SITE}/studio`, en: `🎛️ GrouAI Studio — create your own track: ${SITE}/studio` },
+  { kw: ["sklep", "shop", "merch", "koszulk", "bluz", "groua"], pl: `🛍️ Sklep GrouaDrop: ${SITE}/shop`, en: `🛍️ GrouaDrop shop: ${SITE}/shop` },
+  { kw: ["firma", "b2b", "jingle", "reklam", "aurora", "business"], pl: `💼 Usługi dla firm z Aurorą: ${SITE}/business`, en: `💼 Business services with Aurora: ${SITE}/business` },
+  { kw: ["wgraj", "upload", "dodaj utw", "opublikuj"], pl: `⬆️ Wgraj swój utwór: ${SITE}/upload`, en: `⬆️ Upload your track: ${SITE}/upload` },
+  { kw: ["playlist"], pl: `📂 Twoje playlisty: ${SITE}/library`, en: `📂 Your playlists: ${SITE}/library` },
+  { kw: ["nastr", "mood", "neuro", "mózg"], pl: `🧠 Nastroje i Twój Muzyczny Mózg: ${SITE}/mood-history`, en: `🧠 Moods and your Music Brain: ${SITE}/mood-history` },
+  { kw: ["zarab", "earn", "pieniądz", "wypłat"], pl: `💰 Zarabiaj na muzyce: ${SITE}/earn`, en: `💰 Earn with your music: ${SITE}/earn` },
+  { kw: ["dj", "miks", "mix"], pl: `🎧 AI DJ dobierze muzykę do Ciebie: ${SITE}/ai-dj`, en: `🎧 AI DJ picks music for you: ${SITE}/ai-dj` },
+];
+
+async function catalog(genre: string | null): Promise<{ id: string; title: string; artist: string }[]> {
+  const url = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "").replace(/\/+$/, "");
+  const key = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+  if (!url || !key) return [];
+  const g = genre ? `&genre=ilike.*${encodeURIComponent(genre.split("-")[0])}*` : "";
+  const r = await fetch(`${url}/rest/v1/tracks?select=id,title,artist&audio_url=not.is.null${g}&order=play_count.desc.nullslast&limit=6`, {
+    headers: { apikey: key, Authorization: `Bearer ${key}` }, signal: AbortSignal.timeout(6000),
+  });
+  return r.ok ? ((await r.json()) as { id: string; title: string; artist: string }[]) : [];
+}
+
+async function localAnswer(payload: Payload): Promise<string | null> {
+  const msg = String(payload.message || "");
+  const low = msg.toLowerCase();
+  const en = (payload.userContext as { language?: string } | undefined)?.language === "en";
+  const genre = Object.entries(GENRES).find(([, kws]) => kws.some((k) => low.includes(k)))?.[0] ?? null;
+
+  if (payload.mode === "studio") {
+    const mood = /smut|sad|melanch/.test(low) ? "melancholic" : /energ|imprez|party|szyb/.test(low) ? "energetic" : /spok|calm|chill|relaks/.test(low) ? "calm" : "uplifting";
+    const bpm = mood === "energetic" ? 124 : mood === "calm" ? 82 : mood === "melancholic" ? 76 : 104;
+    const prompt = `${genre ?? "Pop"}, ${mood}, ${bpm} BPM, polished modern production, catchy hook, clear vocals, wide stereo mix — ${msg.replace(/\s+/g, " ").slice(0, 160)}`;
+    return `Ułożyłam prompt z Twojego pomysłu (tryb bez AI — szablon gatunku, nastroju i tempa):\n\n[[PROMPT]]${prompt}[[/PROMPT]]`;
+  }
+  if (payload.mode === "aurora") {
+    return en
+      ? "I'll gladly help! Tell me: 1) what you need (jingle, ad music, podcast, radio spot…), 2) style and length, 3) deadline, 4) budget, 5) your e-mail. The team will send you a quote."
+      : "Chętnie pomogę! Napisz proszę: 1) czego potrzebujesz (jingle, muzyka do reklamy, podcast, spot radiowy…), 2) styl i długość, 3) termin, 4) budżet, 5) e-mail. Zespół przygotuje wycenę.";
+  }
+
+  const parts: string[] = [];
+  const wantsMusic = !!genre || /(zagraj|graj|włącz|posłuch|polec|puść|top|hit|muzyk|utw[oó]r|play|recommend|song|music)/.test(low);
+  if (wantsMusic) {
+    const list = await catalog(genre);
+    if (list.length) {
+      parts.push(en ? `🎵 ${genre ? `Top ${genre}` : "Popular now"} on GrouAI:` : `🎵 ${genre ? `Najlepsze ${genre}` : "Teraz popularne"} na GrouAI:`);
+      parts.push(...list.map((t, i) => `${i + 1}. ${t.title} — ${t.artist} → ${SITE}/?play=${t.id}`));
+    }
+  }
+  const feats = FEATURES.filter((f) => f.kw.some((k) => low.includes(k))).slice(0, 3).map((f) => (en ? f.en : f.pl));
+  parts.push(...feats);
+  if (!parts.length) {
+    parts.push(en
+      ? "I can help you find music and features. Try: “play hip-hop”, “recommend something calm”, “radio”, “studio”, “shop”."
+      : "Pomogę znaleźć muzykę i funkcje. Napisz np.: „zagraj hip-hop”, „poleć coś spokojnego”, „radio”, „studio”, „sklep”.");
+    parts.push(...FEATURES.slice(0, 3).map((f) => (en ? f.en : f.pl)));
+  }
+  return parts.join("\n");
 }

@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { generateWeekendChallenge } from "@/lib/weekendChallenge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -74,12 +75,13 @@ export const FinancialOverview = () => {
 
   const handleGenerate = async () => {
     setGenerating(true);
-    const { error } = await supabase.functions.invoke("generate-weekend-challenge");
-    if (error) {
-      toast.error("Nie udało się wygenerować: " + error.message);
-    } else {
-      toast.success("✨ Nowe wyzwanie weekendowe wygenerowane!");
+    // Żywy algorytm (trend aktywności społeczności) zamiast AI — bez kosztów.
+    try {
+      const plan = await generateWeekendChallenge();
+      toast.success(`✨ ${plan.title} — cel ${plan.target_count}, nagroda ${plan.reward_amount} €`, { description: plan.reason });
       load();
+    } catch (e) {
+      toast.error("Nie udało się wygenerować: " + (e instanceof Error ? e.message : "błąd"));
     }
     setGenerating(false);
   };
