@@ -3,6 +3,7 @@ import { loadTrackSnapshot, type SnapshotTrack } from "@/lib/trackSnapshot";
 import { omitRadioOnlyTracks } from "@/lib/catalogTracks";
 import { withTimeout } from "@/lib/withTimeout";
 import { BLOCKS, blockAt, planDay, type BlockId } from "@/lib/radioClock";
+import { excludedIds, loadLoudness } from "@/lib/radioLoudness";
 
 // Dzienne radio = AUTOPILOT: co dzień inna, deterministyczna playlista na całą dobę
 // (ten sam porządek dla wszystkich słuchaczy — czas liczony od polskiej północy),
@@ -128,7 +129,8 @@ export async function buildDailyRadio(station: "public" | "vip", max = 140): Pro
   // Autopilot: pełna doba według ramówki godzinowej (radioClock.ts) — bloki gatunkowe,
   // weekend Disco/Electronic/Hip-Hop, bez powtórek w oknie kilku godzin, bramka jakości.
   void max;
-  const plan = planDay(pool, dow, `${dayKey}:${station}`);
+  const loud = await loadLoudness();
+  const plan = planDay(pool, dow, `${dayKey}:${station}`, excludedIds(loud));
   if (!plan.items.length) return null;
   const hourNow = Math.floor((now.getTime() - new Date(midnightISO).getTime()) / 3600000);
   const current = blockAt(dow, Math.min(23, Math.max(0, hourNow)));
