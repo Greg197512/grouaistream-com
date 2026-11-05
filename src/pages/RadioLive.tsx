@@ -22,7 +22,7 @@ import { YouTubePlayer } from "@/components/player/YouTubePlayer";
 import { buildPersonalQueue, type Mood } from "@/lib/personalRadio";
 import { buildDailyRadio } from "@/lib/radioDaily";
 import { BLOCKS, blockAt, type BlockId } from "@/lib/radioClock";
-import { AI_DISCLOSURE, decideHost, hostLang, hostLine, initialHostState } from "@/lib/radioHost";
+import { AI_DISCLOSURE, BLOCK_NAMES, HOST_UI, decideHost, hostLang, hostLine, initialHostState } from "@/lib/radioHost";
 import { useRadioStoryOverride } from "@/lib/radioStories";
 import { fetchUpcomingRequests, type UpcomingRequest } from "@/lib/radioRequest";
 import { withTimeout } from "@/lib/withTimeout";
@@ -101,6 +101,9 @@ const RadioLive = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { t, language } = useLanguage();
+  // Język wybrany przez słuchacza (konto / przełącznik języka) — dla Novy, GrouAI Talk, newsów i opowiadań.
+  const langRef = useRef(language);
+  langRef.current = language;
   const { pausePlayback } = usePlayer();
   const { plan } = useSubscription();
   const isSubscriber = plan === "pro" || plan === "ultimate";
@@ -237,13 +240,15 @@ const RadioLive = () => {
       const sec = (Date.now() - plan.startedAtMs) / 1000;
       let i = 0; while (i + 1 < plan.starts.length && plan.starts[i + 1] <= sec) i++;
       const b = plan.blocks[i] as keyof typeof BLOCKS;
-      const label = BLOCKS[b]?.label ?? null;
-      setAutoBlock(label && plan.djs?.[i] ? `${label} · DJ mix (electronic / hip-hop / disco)` : label);
+      const hl = hostLang(langRef.current);
+      const name = BLOCK_NAMES[hl][b];
+      const label = name ? name.charAt(0).toUpperCase() + name.slice(1) : null;
+      setAutoBlock(label && plan.djs?.[i] ? `${label} · ${HOST_UI[hl].djMix}` : label);
     };
     tick();
     const t = window.setInterval(tick, 60000);
     return () => window.clearInterval(t);
-  }, [rawSchedule, personalMood]);
+  }, [rawSchedule, personalMood, language]);
 
   // Auth
   useEffect(() => {
@@ -877,7 +882,7 @@ const RadioLive = () => {
   // i React crashuje stronę ("Rendered more hooks than during the previous render").
   const startTalk = useCallback(async (kind: TalkKind) => {
     if (talkActiveRef.current || talkLoading) return;
-    const lang = (typeof localStorage !== "undefined" && localStorage.getItem("grooveai-language")) || "pl";
+    const lang = langRef.current;
     setTalkLoading(true);
     let lines: TalkLine[] = [];
     try { lines = await generateTalkScript(kind, lang); } catch { /* */ }
@@ -930,7 +935,7 @@ const RadioLive = () => {
   // Głośność muzyki przywracamy ZAWSZE do suwaka (żeby radio nie „gubiło głosu").
   const startStory = useCallback(async () => {
     if (talkActiveRef.current || talkLoading || newsVideo) return;
-    const lang = (typeof localStorage !== "undefined" && localStorage.getItem("grooveai-language")) || "pl";
+    const lang = langRef.current;
     setTalkLoading(true);
     let story: Awaited<ReturnType<typeof fetchBlogStory>> = null;
     try { story = await fetchBlogStory(lang); } catch { /* */ }
@@ -974,7 +979,7 @@ const RadioLive = () => {
   // muzykę i puszczamy wiadomości; gdy brak filmu — awaryjnie serwis dwoma głosami.
   const startNews = useCallback(async () => {
     if (newsLoading || newsVideo || talkActiveRef.current) return;
-    const lang = (typeof localStorage !== "undefined" && localStorage.getItem("grooveai-language")) || "pl";
+    const lang = langRef.current;
     setNewsLoading(true);
     let hit: NewsVideo | null = null;
     try { hit = await fetchWorldNews(lang); } catch { /* */ }
@@ -1161,7 +1166,7 @@ const RadioLive = () => {
     const { kind, next } = decideHost(hostStateRef.current, { block, hour, ms: Date.now() });
     hostStateRef.current = next;
     if (!kind) return;
-    const lang = hostLang(typeof localStorage !== "undefined" ? localStorage.getItem("grooveai-language") : "pl");
+    const lang = hostLang(langRef.current);
     const prevItem = schedule[(currentIndex - 1 + schedule.length) % schedule.length];
     const line = hostLine({ kind, lang, hour, minute, block, dj, seed: currentIndex, prev: prevItem?.track ?? null, next: item.track });
     if (!line) return;
@@ -1466,7 +1471,7 @@ const RadioLive = () => {
           </motion.div>
           <h1 className="text-xl font-bold">{personalMood ? `Twoje radio · ${personalMood}` : config?.station_name}</h1>
           {!personalMood && autoBlock && (
-            <p className="mt-1 text-xs text-foreground/70"><span className="rounded-full bg-primary/15 px-2 py-0.5 font-semibold text-primary">Autopilot</span> Teraz: {autoBlock}</p>
+            <p className="mt-1 text-xs text-foreground/70"><span className="rounded-full bg-primary/15 px-2 py-0.5 font-semibold text-primary">Autopilot</span> {HOST_UI[hostLang(language)].now}: {autoBlock}</p>
           )}
           {!personalMood && (
             <div className="mt-2 flex flex-col items-center gap-1">
@@ -1476,10 +1481,10 @@ const RadioLive = () => {
                 aria-pressed={hostOn}
                 className={`rounded-full border px-3 py-1 text-xs font-semibold ${hostOn ? "border-primary/50 bg-primary/15 text-primary" : "border-white/15 text-foreground/60"}`}
               >
-                🎙️ Prezenterka Nova (AI): {hostOn ? "wł." : "wył."}
+                🎙️ {HOST_UI[hostLang(language)].host}: {hostOn ? HOST_UI[hostLang(language)].on : HOST_UI[hostLang(language)].off}
               </button>
               {hostText && <p className="max-w-md text-xs text-foreground/80"><b className="text-primary">Nova:</b> {hostText}</p>}
-              <p className="text-[11px] text-foreground/50">{AI_DISCLOSURE[hostLang(typeof localStorage !== "undefined" ? localStorage.getItem("grooveai-language") : "pl")]}</p>
+              <p className="text-[11px] text-foreground/50">{AI_DISCLOSURE[hostLang(language)]}</p>
             </div>
           )}
           {personalMood && (

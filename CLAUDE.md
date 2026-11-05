@@ -58,6 +58,8 @@ i aktualny. Jeśli fakt tu jest — nie weryfikuj go od nowa dziesiątkami wywo�
 - **Prezenterka AI „Nova”** (`src/lib/radioHost.ts`): persona, szablony PL/EN/NL/UA, filtr treści; mówi przy starcie utworu
   (powitanie, zmiana bloku, pełna godzina z ujawnieniem AI, co 4 utwory zapowiedź; min. 6 min odstępu), muzyka ściszona do 25% (`duckRef`).
   Głos: `speak(…, {mode:"dj"})`. Słuchacz wyłącza przyciskiem (localStorage `grouai-radio-host`). Ujawnienie AI widoczne na stronie radia.
+- **Język = wybór użytkownika:** `LanguageContext` zapisuje wybór zalogowanego w `user_metadata.language` i przywraca go po zalogowaniu
+  (każde urządzenie). Radio (Nova, Talk, newsy, opowiadania) bierze język z kontekstu, nie z domyślnego „pl”.
 
 ## Baza `tracks` (stan po sprzątaniu)
 - ~406 realnych utworów. Usunięto 66 600 pustych „widm" (5 CC-artystów: Bensound, Kevin MacLeod,

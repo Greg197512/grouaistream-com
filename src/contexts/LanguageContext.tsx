@@ -1,5 +1,6 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useRef, type ReactNode } from "react";
 import { Language, languageNames, languageFlags, pl, type TranslationKeys } from "@/i18n/translations";
+import { supabase } from "@/integrations/supabase/client";
 
 // Polski jest w głównym bundlu (domyślny + fallback). Pozostałe języki
 // ładują się dynamicznie jako osobne chunki dopiero, gdy są potrzebne —
@@ -66,10 +67,17 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
     };
   }, [language]);
 
-  const setLanguage = (lang: Language) => {
+  const setLanguage = (lang: Language, fromAccount = false) => {
     const prevLang = language;
     setLanguageState(lang);
     localStorage.setItem("grooveai-language", lang);
+    // Zalogowany: zapisz wybór na koncie (metadane użytkownika), żeby działał na każdym urządzeniu.
+    if (!fromAccount) {
+      supabase.auth.getSession().then(({ data }) => {
+        const u = data.session?.user;
+        if (u && u.user_metadata?.language !== lang) supabase.auth.updateUser({ data: { language: lang } }).catch(() => {});
+      }).catch(() => {});
+    }
     document.documentElement.lang = lang === "ua" ? "uk" : lang;
     // Dispatch custom event so PlayerContext can react
     if (prevLang !== lang) {
@@ -80,6 +88,24 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     document.documentElement.lang = language === "ua" ? "uk" : language;
   }, []);
+
+  // Po zalogowaniu weź język zapisany na koncie (wybrany wcześniej przez tę osobę).
+  useEffect(() => {
+    const apply = (meta: Record<string, unknown> | undefined) => {
+      const l = meta?.language;
+      if (typeof l === "string" && ["pl", "en", "nl", "ua"].includes(l)) {
+        setLanguageRef.current(l as Language, true);
+      }
+    };
+    supabase.auth.getSession().then(({ data }) => apply(data.session?.user?.user_metadata)).catch(() => {});
+    const { data } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_IN" || event === "INITIAL_SESSION") apply(session?.user?.user_metadata);
+    });
+    return () => data.subscription.unsubscribe();
+  }, []);
+
+  const setLanguageRef = useRef(setLanguage);
+  setLanguageRef.current = setLanguage;
 
   const t = (key: string): string => {
     return (dict as any)[key] || (pl as any)[key] || key;
