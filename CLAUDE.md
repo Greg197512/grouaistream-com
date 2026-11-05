@@ -49,6 +49,9 @@ i aktualny. Jeśli fakt tu jest — nie weryfikuj go od nowa dziesiątkami wywo�
 - **Studio Pro = DAW** (`GrouaiStudioShell` → `StudioDAW`, VIP): wygląd jak Mixcraft (5.11, `daw/DawVisuals.tsx`): kostki akcji (AI), LCD transportu, znaczniki części
   (`project.markers`), kolorowe klipy, paski miksera z ikonami; pełna szerokość w zakładce. Asystent: `askDawAssistant` (AI → lokalny parser);
   „zrób utwór/bit X” = tempo+perkusja+bas+akordy+preset+znaczniki (bez płatnego podkładu). Podkład AI (Suno) tylko po `confirm`.
+- **DJ Yellow (5.11):** `api/dj-yellow.ts` (Node, cron 09:07 i 15:07 UTC): 2 utwory/dzień (1 zadanie Suno = 2 klipy, ~12 kredytów), pomysł AI (Pollinations) → zapas algorytm,
+  okładki Pollinations → zapas SVG, R2 przez `r2-signed-url`, wpis `tracks` (Electronic, artysta DJ Yellow) → „Nowe” + radio. Limit 2/dzień, dokańcza
+  rozpoczęte zadanie (`generations` status queued). Konto grouarock+djyellow@gmail.com; hasło `DJ_YELLOW_PASSWORD` wpisuje Grzegorz. `?diag=1`, `?signup=1`, `?run=1`.
 - Zapis na R2 z edge: `_shared/r2.ts` = fetch + SigV4 (NIE @aws-sdk — zawieszał się). Test: `suno-generate` `{"action":"r2test"}`.
 - Studio → Spotify: po każdej generacji `certifyWithToasts` (`src/lib/releasePipeline.ts`, `releasePrep.ts`):
   mastering −14 LUFS/−1 dBTP, WAV 44,1k/16, okładka 3000, czysty tekst → `generations.release`,

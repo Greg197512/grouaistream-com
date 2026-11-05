@@ -3,6 +3,14 @@
     {
       "path": "/api/agents-run",
       "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/dj-yellow",
+      "schedule": "7 9 * * *"
+    },
+    {
+      "path": "/api/dj-yellow",
+      "schedule": "7 15 * * *"
     }
   ],
   "rewrites": [
@@ -91,6 +99,9 @@
   "functions": {
     "api/migrate-media.ts": {
       "maxDuration": 60
+    },
+    "api/dj-yellow.ts": {
+      "maxDuration": 300
     }
   }
 }
