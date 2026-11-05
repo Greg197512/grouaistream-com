@@ -85,7 +85,7 @@ export default function ShopTerms() {
   const t = TXT[lang];
   const [cfg, setCfg] = useState<ShopConfig | null>(null);
   useEffect(() => { fetch("/api/shop-checkout").then((r) => (r.ok ? r.json() : null)).then(setCfg).catch(() => setCfg(null)); }, []);
-  useEffect(() => { document.title = `${t.title} | Grouaistream`; document.documentElement.lang = lang; }, [t, lang]);
+  useEffect(() => { document.title = t.title; document.documentElement.lang = lang; }, [t, lang]);
 
   const s = cfg?.seller;
   const ids = s ? [s.taxId, s.vatId && s.vatId !== s.taxId ? s.vatId : null].filter(Boolean).join(", ") : "";

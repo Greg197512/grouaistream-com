@@ -278,7 +278,7 @@ export const SHOP_PRODUCTS: ShopProduct[] = [
    "Rozmowa głosowa i tłumaczenie w kilku językach",
    "Okrągły ekran z animowaną twarzą",
    "Głośnik 360° z logo GROUAROCK",
-   "Połączenie z Grouaradio i Grouaistream"
+   "Połączenie z Grouaradio i aplikacją"
   ],
   "pln": 429,
   "eurCents": 9900,

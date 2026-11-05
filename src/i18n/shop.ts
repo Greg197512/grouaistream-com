@@ -7,8 +7,8 @@ export const shopLang = (l: Language | string | undefined): ShopLang => (l === "
 export const LOCALE: Record<ShopLang, string> = { pl: "pl-PL", en: "en-GB", nl: "nl-NL" };
 
 const pl = {
-  title: "Sklep Grouarock | Grouaistream",
-  back: "← Grouaistream",
+  title: "Sklep Grouarock",
+  back: "← Strona główna",
   collection: "Kolekcja",
   inMotion: "Zobacz w ruchu",
   see: "Zobacz",
@@ -21,7 +21,7 @@ const pl = {
   xmas: "🎄 Świąteczna edycja",
   heroA: "Noś swój",
   heroB: "dźwięk.",
-  heroText: "Odzież, dodatki i gadżety AI od Grouarock. Jedno konto z Grouaistream. Każdy zakup daje bilet z kodem: VIP w Grouaistream na 30 dni za darmo.",
+  heroText: "Odzież, dodatki i gadżety AI od Grouarock. Każdy zakup daje bilet z kodem: 30 dni VIP za darmo.",
   use: "Do czego:",
   size: "Rozmiar",
   addToCart: "Dodaj do koszyka",
@@ -57,7 +57,7 @@ const pl = {
   loginToBuy: "Zaloguj się, aby kupić",
   orderPay: "Zamawiam i płacę",
   orderOblig: "Zamawiam z obowiązkiem zapłaty",
-  sameAccount: "Używasz tego samego konta co w Grouaistream.",
+  sameAccount: "Logujesz się swoim zwykłym kontem.",
   linkByEmail: "Po złożeniu zamówienia wyślemy Ci link do płatności na e-mail.",
   fillAddress: "Uzupełnij adres wysyłki",
   acceptTerms: "Zaakceptuj regulamin sklepu",
@@ -98,8 +98,8 @@ const pl = {
 export type ShopDict = typeof pl;
 
 const en: ShopDict = {
-  title: "Grouarock Shop | Grouaistream",
-  back: "← Grouaistream",
+  title: "Grouarock Shop",
+  back: "← Home",
   collection: "Collection",
   inMotion: "See it in motion",
   see: "View",
@@ -112,7 +112,7 @@ const en: ShopDict = {
   xmas: "🎄 Christmas edition",
   heroA: "Wear your",
   heroB: "sound.",
-  heroText: "Clothing, accessories and AI gadgets by Grouarock. One account with Grouaistream. Every purchase comes with a ticket code: 30 days of Grouaistream VIP for free.",
+  heroText: "Clothing, accessories and AI gadgets by Grouarock. Every purchase comes with a ticket code: 30 days of VIP for free.",
   use: "Made for:",
   size: "Size",
   addToCart: "Add to cart",
@@ -148,7 +148,7 @@ const en: ShopDict = {
   loginToBuy: "Log in to buy",
   orderPay: "Order and pay",
   orderOblig: "Order with obligation to pay",
-  sameAccount: "Use the same account as on Grouaistream.",
+  sameAccount: "Log in with your usual account.",
   linkByEmail: "After you order, we will email you a payment link.",
   fillAddress: "Complete your shipping address",
   acceptTerms: "Please accept the shop terms",
@@ -188,8 +188,8 @@ const en: ShopDict = {
 };
 
 const nl: ShopDict = {
-  title: "Grouarock Shop | Grouaistream",
-  back: "← Grouaistream",
+  title: "Grouarock Shop",
+  back: "← Home",
   collection: "Collectie",
   inMotion: "Bekijk in beweging",
   see: "Bekijk",
@@ -202,7 +202,7 @@ const nl: ShopDict = {
   xmas: "🎄 Kersteditie",
   heroA: "Draag je",
   heroB: "geluid.",
-  heroText: "Kleding, accessoires en AI-gadgets van Grouarock. Eén account met Grouaistream. Bij elke aankoop krijg je een ticketcode: 30 dagen gratis VIP op Grouaistream.",
+  heroText: "Kleding, accessoires en AI-gadgets van Grouarock. Bij elke aankoop krijg je een ticketcode: 30 dagen gratis VIP.",
   use: "Waarvoor:",
   size: "Maat",
   addToCart: "In winkelwagen",
@@ -238,7 +238,7 @@ const nl: ShopDict = {
   loginToBuy: "Log in om te kopen",
   orderPay: "Bestellen en betalen",
   orderOblig: "Bestelling met betalingsverplichting",
-  sameAccount: "Gebruik hetzelfde account als op Grouaistream.",
+  sameAccount: "Log in met je gewone account.",
   linkByEmail: "Na je bestelling mailen we je een betaallink.",
   fillAddress: "Vul je verzendadres in",
   acceptTerms: "Ga akkoord met de algemene voorwaarden",
