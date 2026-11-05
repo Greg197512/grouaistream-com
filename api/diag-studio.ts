@@ -3,6 +3,7 @@
  *  - Suno (suno-generate action=health): czy klucz ustawiony i ile kredytów zostało,
  *  - zapis na R2 (suno-generate action=r2test: mały plik tekstowy),
  *  - obecność funkcji silników (OPTIONS): acestep-generate, groua-music-engine, studio-prompt-engine, studio-stems, studio-video.
+ *  - ceny „kawy” w Paddle (get-paddle-price, tylko odczyt).
  * GET /api/diag-studio
  */
 import { json, supa } from "../src/lib/serverSupa";
@@ -26,6 +27,16 @@ export default async function handler(): Promise<Response> {
     } catch { return null; }
   };
   const engines = ["acestep-generate", "groua-music-engine", "studio-prompt-engine", "studio-stems", "studio-video", "ai-cover-generate"];
-  const [suno, r2, ...ex] = await Promise.all([post("suno-generate", { action: "health" }), post("suno-generate", { action: "r2test" }), ...engines.map(exists)]);
-  return json({ suno, r2, functions: Object.fromEntries(engines.map((e, i) => [e, ex[i]])) });
+  const coffees = ["grouai_coffee_black", "grouai_coffee_latte", "grouai_coffee_irish"];
+  const [suno, r2, ...rest] = await Promise.all([
+    post("suno-generate", { action: "health" }), post("suno-generate", { action: "r2test" }),
+    ...engines.map(exists),
+    ...coffees.map((id) => post("get-paddle-price", { priceId: id, environment: "live" })),
+  ]);
+  const ex = rest.slice(0, engines.length);
+  const paddle = Object.fromEntries(coffees.map((id, i) => {
+    const r = rest[engines.length + i] as { http?: number; paddleId?: string; error?: string };
+    return [id, r?.error ? `brak: ${r.error}` : r?.http === 200 ? "OK" : `HTTP ${r?.http}`];
+  }));
+  return json({ suno, r2, functions: Object.fromEntries(engines.map((e, i) => [e, ex[i]])), paddleCoffee: paddle });
 }
