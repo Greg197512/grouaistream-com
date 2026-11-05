@@ -44,7 +44,8 @@ i aktualny. Jeśli fakt tu jest — nie weryfikuj go od nowa dziesiątkami wywo�
 - Team `team_dcuxbMKuCaW05SplN8IdrSIq`. Produkcja `grouaistream.com` = projekt **`grouaistream-com`**
   (`prj_nDY7frLwg4nyMZpywRDLSzclamTZ`). Projekty `grouaistream` i `dist` to duplikaty na tym samym
   repo (do usunięcia — mnożą Build Minutes); **od 5.11 mają Ignored Build Step `exit 0` (nie budują)**.
-  Ignored Build Step: `bash scripts/vercel-ignore-build.sh` — **buduje tylko produkcję (main)**, podglądy gałęzi pomijane.
+  Ignored Build Step (ustawiony w panelu projektu 5.11): `bash scripts/vercel-ignore-build.sh` — **buduje tylko produkcję (main)**,
+  podglądy gałęzi i zmiany samych `.md`/docs pomijane.
 - **Koszty (Grzegorz: „uważaj, aby nie naliczało”):** nic płatnego nie może startować samo ani u gości.
   Płatne: Replicate (teledyski Kling/Hailuo — tylko na klik, z potwierdzeniem), OpenRouter (okładki AI `ai-cover-generate`),
   ElevenLabs/Azure (tylko gdy klucz). Usunięte automaty: teledysk po zmianie okładki, okładki AI z `NewOnServer` u każdego gościa.
