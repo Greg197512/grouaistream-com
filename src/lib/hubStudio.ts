@@ -217,13 +217,9 @@ export function isDailyLimitError(err: unknown): boolean {
  * Odpal generowanie okładki w tle (Pollinations — darmowe). Okładka trafia pod
  * deterministyczny adres {taskId}-cover.jpg, więc nie trzeba czekać na wynik.
  */
-export function fireCoverGeneration(taskId: string, title: string, style: string, description?: string) {
-  void invokeStudioEngine("studio-cover", {
-    id: taskId,
-    title,
-    style,
-    ...(description ? { description } : {}),
-  }).catch(() => {});
+export function fireCoverGeneration(_taskId: string, _title: string, _style: string, _description?: string) {
+  // Wyłączone (5.11): darmowa okładka była na nieistniejącym hubie; zastępstwo ai-cover-generate jest PŁATNE
+  // (OpenRouter), a jego wyniku nikt nie odczytuje. Okładkę daje silnik albo użytkownik (Cover Studio / upload).
 }
 
 /**

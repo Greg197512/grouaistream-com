@@ -43,6 +43,9 @@ i aktualny. Jeśli fakt tu jest — nie weryfikuj go od nowa dziesiątkami wywo�
 - Home bez angielskich resztek i fałszywych danych: teksty `src/lib/homeI18n.ts` (odmiana `tracksLabel`), „Stworzone dla Ciebie” = `PlaylistGrid`
   żywy algorytm (gatunek/nastrój z katalogu, bez płatnego `ai-playlist`), karta radia bez zmyślonych słuchaczy.
 - Menu utworu (`TrackOptionsMenu`): pobieranie/offline przez `src/lib/trackFile.ts` (`/api/media?dl=1`), linki `?play=`, dane po otwarciu menu.
+- **Studio (5.11, `GET /api/diag-studio` — bez kosztów):** Suno OK (klucz + kredyty, np. 1474), zapis R2 OK, funkcje silników istnieją.
+  ACE-Step (`acestep-generate`) woła `/models/lucataco/ace-step/predictions` — model społecznościowy wymaga wersji, prawdopodobnie nie działa
+  (nie da się poprawić bez wdrożenia funkcji na bvstv). `fireCoverGeneration` wyłączone (było płatne, wynik nieużywany).
 - Zapis na R2 z edge: `_shared/r2.ts` = fetch + SigV4 (NIE @aws-sdk — zawieszał się). Test: `suno-generate` `{"action":"r2test"}`.
 - Studio → Spotify: po każdej generacji `certifyWithToasts` (`src/lib/releasePipeline.ts`, `releasePrep.ts`):
   mastering −14 LUFS/−1 dBTP, WAV 44,1k/16, okładka 3000, czysty tekst → `generations.release`,
