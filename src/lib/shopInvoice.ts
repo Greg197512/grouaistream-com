@@ -6,7 +6,7 @@ export type Seller = { name: string; address: string; country: string | null; ta
 /** Publiczna konfiguracja sklepu (GET /api/shop-checkout), ustawiana w zmiennych Vercela. */
 export type ShopConfig = {
   stripe: boolean; transfer: boolean; ibanInvalid?: boolean; shippingCents: number; deliveryDays: string;
-  seller: Seller | null; vatMode: VatMode | null; exemptNote: string | null;
+  seller: Seller | null; contact?: { name: string | null; email: string | null }; vatMode: VatMode | null; exemptNote: string | null;
   fulfillment?: { printful: boolean; printfulAuto: boolean; mail: boolean; supplierEmail: boolean; notify: boolean };
 };
 export type InvoiceLang = "pl" | "en" | "nl";
