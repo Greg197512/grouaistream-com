@@ -40,9 +40,9 @@ export function NeuroBrainPanel() {
   return (
     <div className="space-y-5">
       <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-[#12101c]/80 p-5">
-        <motion.div aria-hidden className="absolute -inset-10 -z-0 opacity-40 blur-2xl"
-          style={{ background: "conic-gradient(from 0deg,#FF6B00,#9333EA,#FF9500,#FF6B00)" }}
-          animate={{ rotate: 360 }} transition={{ duration: 24, repeat: Infinity, ease: "linear" }} />
+        {/* Statyczna poświata (bez wiecznej, rozmytej animacji — płynność na telefonach). */}
+        <div aria-hidden className="absolute inset-0 -z-0 opacity-30"
+          style={{ background: "radial-gradient(120% 80% at 0% 0%,#FF6B0055,transparent 60%),radial-gradient(120% 80% at 100% 100%,#9333EA55,transparent 60%)" }} />
         <div className="relative z-10">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2.5">
@@ -52,7 +52,7 @@ export function NeuroBrainPanel() {
               </motion.div>
               <div>
                 <h2 className="font-bold text-white leading-none">Twój Muzyczny Mózg</h2>
-                <p className="text-[11px] text-white/50 mt-0.5">Aurora uczy się z Twoich zachowań</p>
+                <p className="text-[11px] text-white/50 mt-0.5">Z Twoich odsłuchów, polubień i nastrojów</p>
               </div>
             </div>
             <button onClick={() => load(true)} disabled={refreshing || loading}
