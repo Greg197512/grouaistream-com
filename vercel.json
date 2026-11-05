@@ -8,7 +8,14 @@
   "rewrites": [
     {
       "source": "/prezent/:id",
-      "destination": "https://bmwtydwpevzhbdplilbr.supabase.co/functions/v1/prezent?t=:id"
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(WhatsApp|facebookexternalhit|Twitterbot|TelegramBot|LinkedInBot|Slackbot|Discordbot|Pinterest|redditbot|SkypeUriPreview).*"
+        }
+      ],
+      "destination": "https://bvstvawnigyczvofzhps.supabase.co/functions/v1/og-proxy?id=:id"
     },
     {
       "source": "/sitemap.xml",

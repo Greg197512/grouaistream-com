@@ -6,6 +6,7 @@
 // ten kill-switch nietknięty — więc to jedyne bezpieczne, trwałe miejsce na
 // pobrane utwory. Player (PlayerContext) sprawdza tu kopię przed odtwarzaniem.
 
+import { sameOriginMediaUrl } from "@/lib/trackFile";
 const DB_NAME = "grouai-offline";
 const STORE = "tracks";
 const DB_VERSION = 1;
@@ -56,7 +57,8 @@ export async function saveOfflineTrack(
   url: string,
   meta: { title: string; artist: string },
 ): Promise<void> {
-  const res = await fetch(url);
+  // R2 bez CORS → pobieramy przez /api/media (ta sama domena).
+  const res = await fetch(sameOriginMediaUrl(url));
   if (!res.ok) throw new Error(`fetch ${res.status}`);
   const blob = await res.blob();
   const db = await openDb();

@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef, forwardRef } from "react";
-import { motion } from "framer-motion";
 import { useFloatingHearts, FloatingHeartsOverlay } from "@/components/effects/FloatingHearts";
 import { RatingLikeModal } from "@/components/modals/RatingLikeModal";
 import { usePlayerOptional } from "@/contexts/PlayerContext";
@@ -9,14 +8,12 @@ import {
   Heart,
   Share2,
   Copy,
-  Link,
   Download,
   ListPlus,
   ExternalLink,
   Twitter,
   MessageCircle,
   Trash2,
-  Scissors,
   Coffee,
   DownloadCloud,
   Check,
@@ -46,6 +43,8 @@ import { toast } from "sonner";
 import { isOffline, saveOfflineTrack, removeOfflineTrack } from "@/lib/offlineLibrary";
 import { CoverStudioModal } from "@/components/modals/CoverStudioModal";
 import { triggerCoverVideo } from "@/lib/autoCoverVideo";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { downloadTrackFile, trackGiftUrl, trackShareUrl } from "@/lib/trackFile";
 
 
 
@@ -61,6 +60,92 @@ interface TrackOptionsMenuProps {
   onDelete?: () => void;
   showDelete?: boolean;
   playlistId?: string;
+}
+
+// Teksty menu w 4 językach (wybór użytkownika z LanguageContext).
+const TXT = {
+  pl: {
+    like: "Daj ❤️", unlike: "Usuń ❤️", signIn: "Zaloguj się", liked: "Dodano do ulubionych ❤️", unliked: "Usunięto z ulubionych",
+    fail: "Nie udało się — spróbuj ponownie", addPl: "Dodaj do playlisty", newPl: "+ Nowa playlista", loading: "Ładowanie…",
+    noPl: "Brak playlist — utwórz nową powyżej", plName: "Nazwa nowej playlisty:", inPl: "Ten utwór już jest w", added: "Dodano do",
+    created: "Utworzono playlistę i dodano utwór 🎶", photo: "Wgraj zdjęcie 📷", uploading: "Wgrywam…", aiCover: "AI okładka ⚡", painting: "Maluję…",
+    aiClip: "AI teledysk 🎬 (max)", shooting: "Kręcę teledysk…", studio: "Cover Studio 🎨🎬", coffee: "Postaw kawę twórcy ☕",
+    stems: "Rozdziel na ścieżki 🎚️", gift: "Wyślij prezent 🎁", sendTo: "Wyślij do", x: "Udostępnij na X", qr: "Kod QR / NFC",
+    copy: "Kopiuj link", copied: "Link skopiowany ✅", copyFail: "Nie udało się skopiować", download: "Pobierz utwór", downloading: "Pobieram…",
+    dlConsent: "Pobierasz utwór do użytku osobistego. Kontynuować?", dlStarted: "⬇️ Pobieranie rozpoczęte", dlTab: "Plik otwarty w nowej karcie — zapisz go stamtąd",
+    noFile: "Ten utwór nie ma pliku", offline: "Pobierz offline", offlineOn: "Dostępne offline", offlineRm: "usuń", saving: "Zapisuję…",
+    offlineSaved: "✅ Dostępne offline — zagra bez internetu", offlineRemoved: "Usunięto z trybu offline", offlineFail: "Nie udało się zapisać offline",
+    openFile: "Otwórz plik", rmPl: "Usuń z playlisty", rmPlDone: "Usunięto z playlisty", del: "Usuń utwór", delMine: "Usuń z mojej biblioteki",
+    delConfirm: "Usunąć utwór na stałe? Zniknie dla wszystkich słuchaczy.", delMineConfirm: "Usunąć z Twoich ulubionych, historii i playlist?",
+    deleted: "Utwór usunięty", removedMine: "Usunięto z Twojej biblioteki", onlyOwner: "Tylko autor utworu może to zmienić",
+    coverWrong: "To nie jest grafika — wybierz JPG, PNG lub WebP", coverBig: "Okładka może ważyć maksymalnie 5 MB", coverTry: "🎨 Przymierzam nową okładkę…",
+    coverDone: "✨ Nowa okładka gotowa", aiCoverStart: "🎨 Maluję okładkę AI…", aiClipStart: "🎬 Kręcę teledysk AI (może potrwać kilka minut)…", clipDone: "🎬 Teledysk AI gotowy!",
+    giftText: "🎁 Mam dla Ciebie prezent", giftCopied: "Link do prezentu skopiowany — wklej go, komu chcesz 🎁", listen: "Posłuchaj",
+  },
+  en: {
+    like: "Like ❤️", unlike: "Unlike", signIn: "Sign in first", liked: "Added to Liked Songs ❤️", unliked: "Removed from Liked Songs",
+    fail: "Something went wrong — try again", addPl: "Add to playlist", newPl: "+ New playlist", loading: "Loading…",
+    noPl: "No playlists — create one above", plName: "New playlist name:", inPl: "Already in", added: "Added to",
+    created: "Playlist created and track added 🎶", photo: "Upload photo 📷", uploading: "Uploading…", aiCover: "AI cover ⚡", painting: "Painting…",
+    aiClip: "AI music video 🎬 (max)", shooting: "Shooting video…", studio: "Cover Studio 🎨🎬", coffee: "Buy the artist a coffee ☕",
+    stems: "Split into stems 🎚️", gift: "Send as a gift 🎁", sendTo: "Send to", x: "Share on X", qr: "QR code / NFC",
+    copy: "Copy link", copied: "Link copied ✅", copyFail: "Couldn't copy", download: "Download track", downloading: "Downloading…",
+    dlConsent: "You are downloading this track for personal use. Continue?", dlStarted: "⬇️ Download started", dlTab: "File opened in a new tab — save it from there",
+    noFile: "This track has no file", offline: "Save offline", offlineOn: "Available offline", offlineRm: "remove", saving: "Saving…",
+    offlineSaved: "✅ Available offline — plays without internet", offlineRemoved: "Removed from offline", offlineFail: "Couldn't save offline",
+    openFile: "Open file", rmPl: "Remove from playlist", rmPlDone: "Removed from playlist", del: "Delete track", delMine: "Remove from my library",
+    delConfirm: "Delete this track permanently? It disappears for all listeners.", delMineConfirm: "Remove from your likes, history and playlists?",
+    deleted: "Track deleted", removedMine: "Removed from your library", onlyOwner: "Only the track's author can change this",
+    coverWrong: "Not an image — choose JPG, PNG or WebP", coverBig: "Cover can be at most 5 MB", coverTry: "🎨 Trying on the new cover…",
+    coverDone: "✨ New cover ready", aiCoverStart: "🎨 Painting an AI cover…", aiClipStart: "🎬 Shooting an AI video (may take a few minutes)…", clipDone: "🎬 AI video ready!",
+    giftText: "🎁 I have a gift for you", giftCopied: "Gift link copied — paste it to anyone 🎁", listen: "Listen",
+  },
+  nl: {
+    like: "Vind ik leuk ❤️", unlike: "Niet meer leuk", signIn: "Log eerst in", liked: "Toegevoegd aan favorieten ❤️", unliked: "Verwijderd uit favorieten",
+    fail: "Mislukt — probeer opnieuw", addPl: "Aan playlist toevoegen", newPl: "+ Nieuwe playlist", loading: "Laden…",
+    noPl: "Geen playlists — maak er hierboven een", plName: "Naam nieuwe playlist:", inPl: "Staat al in", added: "Toegevoegd aan",
+    created: "Playlist gemaakt en nummer toegevoegd 🎶", photo: "Foto uploaden 📷", uploading: "Uploaden…", aiCover: "AI-cover ⚡", painting: "Schilderen…",
+    aiClip: "AI-videoclip 🎬 (max)", shooting: "Clip maken…", studio: "Cover Studio 🎨🎬", coffee: "Trakteer de artiest op koffie ☕",
+    stems: "Splitsen in sporen 🎚️", gift: "Als cadeau sturen 🎁", sendTo: "Sturen naar", x: "Delen op X", qr: "QR-code / NFC",
+    copy: "Link kopiëren", copied: "Link gekopieerd ✅", copyFail: "Kopiëren mislukt", download: "Nummer downloaden", downloading: "Downloaden…",
+    dlConsent: "Je downloadt dit nummer voor persoonlijk gebruik. Doorgaan?", dlStarted: "⬇️ Download gestart", dlTab: "Bestand geopend in nieuw tabblad — sla het daar op",
+    noFile: "Dit nummer heeft geen bestand", offline: "Offline opslaan", offlineOn: "Offline beschikbaar", offlineRm: "verwijder", saving: "Opslaan…",
+    offlineSaved: "✅ Offline beschikbaar — speelt zonder internet", offlineRemoved: "Uit offline verwijderd", offlineFail: "Offline opslaan mislukt",
+    openFile: "Bestand openen", rmPl: "Uit playlist verwijderen", rmPlDone: "Uit playlist verwijderd", del: "Nummer verwijderen", delMine: "Uit mijn bibliotheek",
+    delConfirm: "Nummer definitief verwijderen? Het verdwijnt voor alle luisteraars.", delMineConfirm: "Verwijderen uit je favorieten, geschiedenis en playlists?",
+    deleted: "Nummer verwijderd", removedMine: "Uit je bibliotheek verwijderd", onlyOwner: "Alleen de maker kan dit wijzigen",
+    coverWrong: "Geen afbeelding — kies JPG, PNG of WebP", coverBig: "Cover mag maximaal 5 MB zijn", coverTry: "🎨 Nieuwe cover passen…",
+    coverDone: "✨ Nieuwe cover klaar", aiCoverStart: "🎨 AI-cover schilderen…", aiClipStart: "🎬 AI-clip maken (kan enkele minuten duren)…", clipDone: "🎬 AI-clip klaar!",
+    giftText: "🎁 Ik heb een cadeau voor je", giftCopied: "Cadeaulink gekopieerd — plak hem waar je wilt 🎁", listen: "Luister",
+  },
+  ua: {
+    like: "Подобається ❤️", unlike: "Прибрати ❤️", signIn: "Спершу увійдіть", liked: "Додано до улюблених ❤️", unliked: "Прибрано з улюблених",
+    fail: "Не вдалося — спробуйте ще", addPl: "Додати до плейлиста", newPl: "+ Новий плейлист", loading: "Завантаження…",
+    noPl: "Немає плейлистів — створіть вище", plName: "Назва нового плейлиста:", inPl: "Вже є в", added: "Додано до",
+    created: "Плейлист створено, трек додано 🎶", photo: "Завантажити фото 📷", uploading: "Завантажую…", aiCover: "AI-обкладинка ⚡", painting: "Малюю…",
+    aiClip: "AI-кліп 🎬 (max)", shooting: "Знімаю кліп…", studio: "Cover Studio 🎨🎬", coffee: "Пригостити автора кавою ☕",
+    stems: "Розділити на доріжки 🎚️", gift: "Надіслати подарунок 🎁", sendTo: "Надіслати в", x: "Поділитися в X", qr: "QR-код / NFC",
+    copy: "Копіювати посилання", copied: "Посилання скопійовано ✅", copyFail: "Не вдалося скопіювати", download: "Завантажити трек", downloading: "Завантажую…",
+    dlConsent: "Ви завантажуєте трек для особистого використання. Продовжити?", dlStarted: "⬇️ Завантаження почалося", dlTab: "Файл відкрито в новій вкладці — збережіть його звідти",
+    noFile: "У треку немає файлу", offline: "Зберегти офлайн", offlineOn: "Доступно офлайн", offlineRm: "прибрати", saving: "Зберігаю…",
+    offlineSaved: "✅ Доступно офлайн — грає без інтернету", offlineRemoved: "Прибрано з офлайну", offlineFail: "Не вдалося зберегти офлайн",
+    openFile: "Відкрити файл", rmPl: "Прибрати з плейлиста", rmPlDone: "Прибрано з плейлиста", del: "Видалити трек", delMine: "Прибрати з моєї бібліотеки",
+    delConfirm: "Видалити трек назавжди? Він зникне для всіх слухачів.", delMineConfirm: "Прибрати з улюблених, історії та плейлистів?",
+    deleted: "Трек видалено", removedMine: "Прибрано з вашої бібліотеки", onlyOwner: "Змінити може лише автор треку",
+    coverWrong: "Це не зображення — оберіть JPG, PNG або WebP", coverBig: "Обкладинка — максимум 5 МБ", coverTry: "🎨 Приміряю нову обкладинку…",
+    coverDone: "✨ Нова обкладинка готова", aiCoverStart: "🎨 Малюю AI-обкладинку…", aiClipStart: "🎬 Знімаю AI-кліп (кілька хвилин)…", clipDone: "🎬 AI-кліп готовий!",
+    giftText: "🎁 У мене для тебе подарунок", giftCopied: "Посилання на подарунок скопійовано 🎁", listen: "Слухай",
+  },
+} as const;
+
+// Rola admina sprawdzana raz na sesję (a nie przy każdej karcie utworu).
+const adminCache = new Map<string, Promise<boolean>>();
+function isAdminUser(userId: string): Promise<boolean> {
+  if (!adminCache.has(userId)) {
+    adminCache.set(userId, Promise.resolve(supabase.rpc("has_role", { _user_id: userId, _role: "admin" }))
+      .then(({ data }) => data === true).catch(() => false));
+  }
+  return adminCache.get(userId)!;
 }
 
 const TrackOptionsMenuComponent = (
@@ -80,6 +165,8 @@ const TrackOptionsMenuComponent = (
   ref: React.ForwardedRef<HTMLDivElement>
 ) => {
   const { user } = useAuth();
+  const { language } = useLanguage();
+  const t = TXT[(language as keyof typeof TXT)] ?? TXT.pl;
   const [isLiked, setIsLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -88,232 +175,146 @@ const TrackOptionsMenuComponent = (
   const [showCoverStudio, setShowCoverStudio] = useState(false);
   const [showQR, setShowQR] = useState(false);
   const [trackOwnerId, setTrackOwnerId] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [metaLoaded, setMetaLoaded] = useState(false);
   const [myPlaylists, setMyPlaylists] = useState<{ id: string; title: string }[]>([]);
   const [playlistsLoaded, setPlaylistsLoaded] = useState(false);
   const [addingTo, setAddingTo] = useState<string | null>(null);
+  const [offlineSaved, setOfflineSaved] = useState(false);
+  const [savingOffline, setSavingOffline] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
-  // Fetch właściciela utworu — żeby wiedzieć czy pokazać "Postaw kawę twórcy"
-  // (ukrywamy dla własnych utworów; nie ma sensu fundować kawy samemu sobie)
+  const isOwner = !!user && !!trackOwnerId && trackOwnerId === user.id;
+  const canEdit = isOwner || isAdmin;
+  const shareUrl = trackShareUrl(trackId);
+  const giftUrl = trackGiftUrl(trackId);
+  const fileName = `${trackArtist} - ${trackTitle}`;
+
+  // Dane menu (autor, serduszko, offline, admin) pobieramy dopiero przy otwarciu menu —
+  // wcześniej każda karta utworu robiła 3–4 zapytania już przy wejściu na stronę.
+  const loadMeta = async () => {
+    const [{ data: tr }, liked, count, off, admin] = await Promise.all([
+      supabase.from("tracks").select("user_id").eq("id", trackId).maybeSingle(),
+      user?.id
+        ? supabase.from("liked_songs").select("id").eq("user_id", user.id).eq("track_id", trackId).maybeSingle().then((r) => !!r.data)
+        : Promise.resolve(false),
+      showLikeCount
+        ? supabase.from("liked_songs").select("*", { count: "exact", head: true }).eq("track_id", trackId).then((r) => r.count || 0)
+        : Promise.resolve(0),
+      isOffline(trackId).catch(() => false),
+      user?.id ? isAdminUser(user.id) : Promise.resolve(false),
+    ]);
+    setTrackOwnerId(tr?.user_id ?? null);
+    setIsLiked(liked);
+    setLikeCount(count);
+    setOfflineSaved(off);
+    setIsAdmin(admin);
+    setMetaLoaded(true);
+  };
+  const onOpenChange = (open: boolean) => { if (open) loadMeta().catch(() => setMetaLoaded(true)); };
+
+  useEffect(() => { setMetaLoaded(false); }, [trackId, user?.id]);
+
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const { data } = await supabase
-        .from("tracks")
-        .select("user_id")
-        .eq("id", trackId)
-        .maybeSingle();
-      if (!cancelled) setTrackOwnerId(data?.user_id ?? null);
-    })();
-    return () => { cancelled = true; };
-  }, [trackId]);
-
-  useEffect(() => {
-    const fetchLikeData = async () => {
-      if (showLikeCount) {
-        const { count } = await supabase
-          .from("liked_songs")
-          .select("*", { count: "exact", head: true })
-          .eq("track_id", trackId);
-        setLikeCount(count || 0);
-      }
-
-      if (user?.id) {
-        const { data } = await supabase
-          .from("liked_songs")
-          .select("id")
-          .eq("user_id", user.id)
-          .eq("track_id", trackId)
-          .maybeSingle();
-
-        setIsLiked(!!data);
-      } else {
-        setIsLiked(false);
-      }
-    };
-
-    fetchLikeData();
-
     const handler = (e: Event) => {
       const detail = (e as CustomEvent).detail as { trackId: string; liked: boolean };
       if (detail?.trackId === trackId) {
         setIsLiked(detail.liked);
-        if (showLikeCount) {
-          setLikeCount((prev) => Math.max(0, prev + (detail.liked ? 1 : -1)));
-        }
+        if (showLikeCount) setLikeCount((prev) => Math.max(0, prev + (detail.liked ? 1 : -1)));
       }
     };
     window.addEventListener("track-like-changed", handler);
     return () => window.removeEventListener("track-like-changed", handler);
-  }, [trackId, user?.id, showLikeCount]);
+  }, [trackId, showLikeCount]);
 
   const handleLike = async () => {
-    if (!user) {
-      toast.error("Sign in to like songs");
-      return;
-    }
-
+    if (!user) { toast.error(t.signIn); return; }
     setLoading(true);
     try {
-      if (isLiked) {
-        await supabase
-          .from("liked_songs")
-          .delete()
-          .eq("user_id", user.id)
-          .eq("track_id", trackId);
-        
-        setIsLiked(false);
-        setLikeCount(prev => Math.max(0, prev - 1));
-        window.dispatchEvent(new CustomEvent("track-like-changed", { detail: { trackId, liked: false } }));
-        toast.success("Removed from Liked Songs");
-        onLikeChange?.(false);
-      } else {
-        await supabase
-          .from("liked_songs")
-          .insert({ user_id: user.id, track_id: trackId });
-        
-        setIsLiked(true);
-        setLikeCount(prev => prev + 1);
-        window.dispatchEvent(new CustomEvent("track-like-changed", { detail: { trackId, liked: true } }));
-        toast.success("Added to Liked Songs");
-        onLikeChange?.(true);
-      }
+      const next = !isLiked;
+      const { error } = next
+        ? await supabase.from("liked_songs").insert({ user_id: user.id, track_id: trackId })
+        : await supabase.from("liked_songs").delete().eq("user_id", user.id).eq("track_id", trackId);
+      if (error && !(next && error.code === "23505")) throw error; // 23505 = już polubiony
+      setIsLiked(next);
+      setLikeCount((prev) => Math.max(0, prev + (next ? 1 : -1)));
+      window.dispatchEvent(new CustomEvent("track-like-changed", { detail: { trackId, liked: next } }));
+      toast.success(next ? t.liked : t.unliked);
+      onLikeChange?.(next);
     } catch (error) {
       console.error("Error toggling like:", error);
-      toast.error("Failed to update");
+      toast.error(t.fail);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCopyLink = async () => {
-    const url = trackUrl || `${window.location.origin}/track/${trackId}`;
+  const copyText = async (text: string, okMsg: string) => {
     try {
-      await navigator.clipboard.writeText(url);
-      toast.success("Link copied to clipboard");
-    } catch (error) {
-      toast.error("Failed to copy link");
+      await navigator.clipboard.writeText(text);
+      toast.success(okMsg);
+    } catch {
+      // Starsze przeglądarki / brak uprawnień — ręczne kopiowanie.
+      window.prompt(t.copy, text);
     }
   };
+  const handleCopyLink = () => copyText(shareUrl, t.copied);
 
-  const handleShareTwitter = () => {
-    const text = `🎵 Listening to "${trackTitle}" by ${trackArtist} on GrouAI Stream!`;
-    const url = trackUrl || window.location.origin;
-    window.open(
-      `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`,
-      "_blank"
-    );
-  };
-
-  const handleShareWhatsApp = () => {
-    const text = `🎵 Posłuchaj "${trackTitle}" by ${trackArtist} na GrouAI Stream! ${trackUrl || window.location.origin}`;
-    const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
-    // Use link click instead of window.open to avoid popup blockers
+  const openExternal = (href: string) => {
     const a = document.createElement("a");
-    a.href = whatsappUrl;
-    a.target = "_blank";
-    a.rel = "noopener noreferrer";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    a.href = href; a.target = "_blank"; a.rel = "noopener noreferrer";
+    document.body.appendChild(a); a.click(); a.remove();
   };
+  const handleShareTwitter = () =>
+    openExternal(`https://twitter.com/intent/tweet?text=${encodeURIComponent(`🎵 ${trackTitle} — ${trackArtist} | GrouAI Stream`)}&url=${encodeURIComponent(shareUrl)}`);
+  const handleShareWhatsApp = () =>
+    openExternal(`https://api.whatsapp.com/send?text=${encodeURIComponent(`🎵 ${t.listen}: „${trackTitle}” — ${trackArtist} ${shareUrl}`)}`);
 
-  const [downloading, setDownloading] = useState(false);
-
-  // Prezent 🎁 — link do animowanej strony-prezentu (paczka → wir → piosenka+grafika).
-  const giftUrl = `https://grouaistream.com/prezent/${trackId}`;
+  // Prezent 🎁 — strona /prezent/:id (paczka → otwarcie → piosenka z okładką).
   const handleSendGift = async () => {
-    const text = `🎁 Mam dla Ciebie prezent — „${trackTitle}" od ${trackArtist} w GrouAI Studio`;
-    const nav = navigator as any;
-    try {
-      if (nav.share) {
-        await nav.share({ title: "🎁 Prezent GrouAI Studio", text, url: giftUrl });
-        return;
-      }
-    } catch { return; }
-    const a = document.createElement("a");
-    a.href = `https://api.whatsapp.com/send?text=${encodeURIComponent(text + " " + giftUrl)}`;
-    a.target = "_blank"; a.rel = "noopener noreferrer";
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    const text = `${t.giftText} — „${trackTitle}” (${trackArtist})`;
+    const nav = navigator as Navigator & { share?: (d: ShareData) => Promise<void> };
+    if (nav.share) {
+      try { await nav.share({ title: "🎁 GrouAI Stream", text, url: giftUrl }); return; }
+      catch (e) { if ((e as Error)?.name === "AbortError") return; }
+    }
+    await copyText(`${text} ${giftUrl}`, t.giftCopied);
   };
-
-  // Tryb offline — utwór zapisany w IndexedDB gra bez internetu.
-  const [offlineSaved, setOfflineSaved] = useState(false);
-  const [savingOffline, setSavingOffline] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    isOffline(trackId).then((v) => { if (!cancelled) setOfflineSaved(v); });
-    return () => { cancelled = true; };
-  }, [trackId]);
 
   const handleOffline = async () => {
     if (offlineSaved) {
       await removeOfflineTrack(trackId);
       setOfflineSaved(false);
-      toast.success("Usunięto z trybu offline");
+      toast.success(t.offlineRemoved);
       return;
     }
-    if (!trackUrl) {
-      toast.error("Ten utwór nie ma pliku do pobrania offline");
-      return;
-    }
+    if (!trackUrl) { toast.error(t.noFile); return; }
     setSavingOffline(true);
-    toast.info("⬇️ Zapisuję do trybu offline…");
     try {
       await saveOfflineTrack(trackId, trackUrl, { title: trackTitle, artist: trackArtist });
       setOfflineSaved(true);
-      toast.success("✅ Dostępne offline — zagra bez internetu");
-    } catch {
-      toast.error("Nie udało się zapisać offline (plik może blokować pobieranie)");
+      toast.success(t.offlineSaved);
+    } catch (e) {
+      console.error("Offline save failed:", e);
+      toast.error(t.offlineFail);
     } finally {
       setSavingOffline(false);
     }
   };
 
   const handleDownload = async () => {
-    if (!trackUrl) {
-      toast.error("Download not available for this track");
-      return;
-    }
-
-    const confirmed = window.confirm(
-      "Download consent: By downloading, you confirm you have the right to download this content for personal use. Continue?"
-    );
-
-    if (!confirmed) return;
-
+    if (!trackUrl) { toast.error(t.noFile); return; }
+    if (!window.confirm(t.dlConsent)) return;
     setDownloading(true);
-    toast.info("💿 Wypalanie...", { duration: 3000 });
-
     try {
-      const response = await fetch(trackUrl);
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      const ext = trackUrl.includes(".mp4") ? "mp4" : "mp3";
-      a.download = `${trackArtist} - ${trackTitle}.${ext}`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      toast.success("✅ Pobrano na dysk!");
-    } catch {
-      // Fallback: direct link download
-      const a = document.createElement("a");
-      a.href = trackUrl;
-      a.download = `${trackArtist} - ${trackTitle}.mp3`;
-      a.target = "_self";
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      toast.success("Download started");
+      const saved = await downloadTrackFile(trackUrl, fileName);
+      toast.success(saved ? t.dlStarted : t.dlTab);
     } finally {
       setDownloading(false);
     }
   };
 
-  // Pobierz playlisty użytkownika (leniwie — dopiero gdy otwiera menu playlist).
+  // Playlisty użytkownika — leniwie, dopiero gdy otwiera podmenu.
   const loadMyPlaylists = async () => {
     if (playlistsLoaded || !user) return;
     const { data } = await supabase
@@ -326,79 +327,62 @@ const TrackOptionsMenuComponent = (
   };
 
   const handleAddToPlaylist = async (targetPlaylistId: string, targetTitle: string) => {
-    if (!user) {
-      toast.error("Zaloguj się, aby dodać do playlisty");
-      return;
-    }
+    if (!user) { toast.error(t.signIn); return; }
     setAddingTo(targetPlaylistId);
     try {
-      // Nie dubluj — sprawdź czy utwór już jest w tej playliście.
       const { data: existing } = await supabase
-        .from("playlist_tracks")
-        .select("id")
-        .eq("playlist_id", targetPlaylistId)
-        .eq("track_id", trackId)
-        .maybeSingle();
-      if (existing) {
-        toast.info(`Ten utwór już jest w „${targetTitle}"`);
-        return;
-      }
-      // Dołóż na koniec (kolejna pozycja).
+        .from("playlist_tracks").select("id")
+        .eq("playlist_id", targetPlaylistId).eq("track_id", trackId).maybeSingle();
+      if (existing) { toast.info(`${t.inPl} „${targetTitle}”`); return; }
       const { data: last } = await supabase
-        .from("playlist_tracks")
-        .select("position")
+        .from("playlist_tracks").select("position")
         .eq("playlist_id", targetPlaylistId)
-        .order("position", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      const nextPos = (last?.position ?? -1) + 1;
+        .order("position", { ascending: false }).limit(1).maybeSingle();
       const { error } = await supabase
         .from("playlist_tracks")
-        .insert({ playlist_id: targetPlaylistId, track_id: trackId, position: nextPos });
+        .insert({ playlist_id: targetPlaylistId, track_id: trackId, position: (last?.position ?? -1) + 1 });
       if (error) throw error;
-      toast.success(`Dodano „${trackTitle}" do „${targetTitle}" 🎶`);
+      toast.success(`${t.added} „${targetTitle}” 🎶`);
       window.dispatchEvent(new CustomEvent("track-list-changed"));
     } catch (e) {
       console.error("Add to playlist failed:", e);
-      toast.error("Nie udało się dodać do playlisty");
+      toast.error(t.fail);
     } finally {
       setAddingTo(null);
     }
   };
 
   const handleCreatePlaylistAndAdd = async () => {
-    if (!user) {
-      toast.error("Zaloguj się, aby utworzyć playlistę");
-      return;
-    }
-    const name = window.prompt("Nazwa nowej playlisty:", trackTitle);
+    if (!user) { toast.error(t.signIn); return; }
+    const name = window.prompt(t.plName, trackTitle);
     if (!name || !name.trim()) return;
     setAddingTo("__new__");
     try {
       const { data: created, error: createErr } = await supabase
-        .from("playlists")
-        .insert({ title: name.trim(), user_id: user.id })
-        .select("id, title")
-        .single();
+        .from("playlists").insert({ title: name.trim(), user_id: user.id }).select("id, title").single();
       if (createErr || !created) throw createErr;
       const { error: addErr } = await supabase
-        .from("playlist_tracks")
-        .insert({ playlist_id: created.id, track_id: trackId, position: 0 });
+        .from("playlist_tracks").insert({ playlist_id: created.id, track_id: trackId, position: 0 });
       if (addErr) throw addErr;
       setMyPlaylists((prev) => [{ id: created.id, title: created.title }, ...prev]);
-      toast.success(`Utworzono „${created.title}" i dodano utwór 🎶`);
+      toast.success(t.created);
       window.dispatchEvent(new CustomEvent("track-list-changed"));
     } catch (e) {
       console.error("Create playlist failed:", e);
-      toast.error("Nie udało się utworzyć playlisty");
+      toast.error(t.fail);
     } finally {
       setAddingTo(null);
     }
   };
 
-  // Nowa okładka 🎨 — właściciel utworu może podmienić grafikę.
-  // Plik idzie do publicznego bucketa "music" (covers/...), a tracks.cover_url
-  // dostaje nowy adres. RLS przepuszcza UPDATE tylko dla właściciela utworu.
+  /** Zapis pola utworu z kontrolą RLS (0 zmienionych wierszy = brak uprawnień, a nie „sukces”). */
+  const updateTrack = async (patch: Record<string, string>) => {
+    const { data, error } = await supabase.from("tracks").update(patch).eq("id", trackId).select("id");
+    if (error) throw error;
+    if (!data || data.length === 0) throw new Error(t.onlyOwner);
+  };
+
+  // Nowa okładka 🎨 — plik do publicznego bucketa "music" (covers/...), tracks.cover_url dostaje nowy adres.
   const coverInputRef = useRef<HTMLInputElement | null>(null);
   const [coverUploading, setCoverUploading] = useState(false);
 
@@ -406,223 +390,136 @@ const TrackOptionsMenuComponent = (
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
-    if (!file.type.startsWith("image/")) {
-      toast.error("To nie jest grafika — wybierz obrazek (JPG, PNG lub WebP)");
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("Okładka może ważyć maksymalnie 5 MB");
-      return;
-    }
+    if (!file.type.startsWith("image/")) { toast.error(t.coverWrong); return; }
+    if (file.size > 5 * 1024 * 1024) { toast.error(t.coverBig); return; }
     setCoverUploading(true);
-    toast.info("🎨 Przymierzam nową okładkę…");
+    toast.info(t.coverTry);
     try {
       const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
       const path = `covers/${trackId}-${Date.now()}.${ext}`;
-      const up = await supabase.storage
-        .from("music")
-        .upload(path, file, { contentType: file.type, upsert: true });
+      const up = await supabase.storage.from("music").upload(path, file, { contentType: file.type, upsert: true });
       if (up.error) throw up.error;
       const { data: pub } = supabase.storage.from("music").getPublicUrl(path);
-      const { data: updated, error: updErr } = await supabase
-        .from("tracks")
-        .update({ cover_url: pub.publicUrl })
-        .eq("id", trackId)
-        .select("id");
-      if (updErr) throw updErr;
-      if (!updated || updated.length === 0) {
-        throw new Error("Tylko autor utworu może zmienić jego okładkę");
-      }
-      toast.success(`✨ Gotowe! „${trackTitle}" ma nową okładkę`);
+      await updateTrack({ cover_url: pub.publicUrl });
+      toast.success(t.coverDone);
       window.dispatchEvent(new CustomEvent("track-list-changed"));
       triggerCoverVideo(trackId);
-
     } catch (err) {
       console.error("Cover update failed:", err);
-      const msg = err instanceof Error ? err.message : "";
-      toast.error(msg.includes("autor") ? msg : "Nie udało się założyć nowej okładki — spróbuj ponownie");
+      toast.error(err instanceof Error && err.message ? err.message : t.fail);
     } finally {
       setCoverUploading(false);
     }
   };
 
-  // Szybka okładka AI z 3-kropek — bez otwierania Cover Studio.
+  // Szybka okładka AI — bez otwierania Cover Studio.
   const [aiCoverBusy, setAiCoverBusy] = useState(false);
   const handleQuickAICover = async () => {
     if (aiCoverBusy) return;
     setAiCoverBusy(true);
-    toast.info("🎨 Maluję okładkę AI…");
+    toast.info(t.aiCoverStart);
     try {
       const { data, error } = await supabase.functions.invoke("ai-cover-generate", {
-        body: {
-          title: trackTitle,
-          style: "",
-          description: `${trackTitle} — ${trackArtist}`,
-          mode: "auto",
-        },
+        body: { title: trackTitle, style: "", description: `${trackTitle} — ${trackArtist}`, mode: "auto" },
       });
       if (error) throw error;
       const coverUrl = data?.cover_url;
-      if (!coverUrl) throw new Error("AI nie zwróciło obrazu");
-      const { error: updErr } = await supabase
-        .from("tracks")
-        .update({ cover_url: coverUrl })
-        .eq("id", trackId);
-      if (updErr) throw updErr;
-      toast.success("✨ Nowa okładka AI założona!");
+      if (!coverUrl) throw new Error(data?.error || t.fail);
+      await updateTrack({ cover_url: coverUrl });
+      toast.success(t.coverDone);
       window.dispatchEvent(new CustomEvent("track-list-changed"));
       triggerCoverVideo(trackId);
     } catch (err) {
-
       console.error("Quick AI cover failed:", err);
-      const msg = err instanceof Error ? err.message : "Nie udało się wygenerować okładki";
-      toast.error(msg);
+      toast.error(err instanceof Error && err.message ? err.message : t.fail);
     } finally {
       setAiCoverBusy(false);
     }
   };
 
-  // Szybki teledysk AI — najwyższa jakość (Kling v2.1 Master → Hailuo-02 fallback).
-  // Bierze aktualną okładkę utworu jako klatkę startową (image-to-video).
+  // Szybki teledysk AI (max jakość) — aktualna okładka jako klatka startowa.
   const [aiClipBusy, setAiClipBusy] = useState(false);
   const handleQuickAIClip = async () => {
     if (aiClipBusy) return;
     setAiClipBusy(true);
-    toast.info("🎬 Kręcę teledysk AI (max jakość, może potrwać kilka minut)…", { duration: 8000 });
+    toast.info(t.aiClipStart, { duration: 8000 });
     try {
-      const { data: trackRow } = await supabase
-        .from("tracks")
-        .select("cover_url")
-        .eq("id", trackId)
-        .maybeSingle();
-      const coverUrl = trackRow?.cover_url || null;
-
+      const { data: trackRow } = await supabase.from("tracks").select("cover_url").eq("id", trackId).maybeSingle();
       const { data, error } = await supabase.functions.invoke("cover-video-generate", {
         body: {
           prompt: `Music video for "${trackTitle}" by ${trackArtist} — cinematic, atmospheric, dynamic camera movement, professional color grading`,
-          image_url: coverUrl,
+          image_url: trackRow?.cover_url || null,
           quality: "max",
         },
       });
       if (error) throw error;
       const videoUrl = data?.video_url;
-      if (!videoUrl) throw new Error("Nie udało się wygenerować teledysku");
-      const { error: updErr } = await supabase
-        .from("tracks")
-        .update({ video_url: videoUrl })
-        .eq("id", trackId);
-      if (updErr) throw updErr;
-      toast.success("🎬 Teledysk AI gotowy!");
+      if (!videoUrl) throw new Error(data?.error || t.fail);
+      await updateTrack({ video_url: videoUrl });
+      toast.success(t.clipDone);
       window.dispatchEvent(new CustomEvent("track-list-changed"));
     } catch (err) {
       console.error("Quick AI clip failed:", err);
-      const msg = err instanceof Error ? err.message : "Nie udało się wygenerować teledysku";
-      toast.error(msg);
+      toast.error(err instanceof Error && err.message ? err.message : t.fail);
     } finally {
       setAiClipBusy(false);
     }
   };
 
-  const handleCutTrack = async () => {
-    // Store track data in clipboard for cut/paste functionality
-    const trackData = JSON.stringify({ trackId, trackTitle, trackArtist, playlistId });
-    try {
-      await navigator.clipboard.writeText(`GROOVEAI_TRACK:${trackData}`);
-      toast.success(`"${trackTitle}" skopiowany - wklej do innej playlisty`);
-    } catch (error) {
-      toast.error("Failed to cut track");
-    }
-  };
-
   const handleRemoveFromPlaylist = async () => {
     if (!user || !playlistId) return;
-
     setDeleteLoading(true);
     const { data: removedRows, error } = await supabase
-      .from("playlist_tracks")
-      .delete()
-      .eq("playlist_id", playlistId)
-      .eq("track_id", trackId)
-      .select("id");
-
+      .from("playlist_tracks").delete()
+      .eq("playlist_id", playlistId).eq("track_id", trackId).select("id");
     if (error || !removedRows || removedRows.length === 0) {
       console.error("Error removing track:", error);
-      toast.error(error?.message || "Nie udało się usunąć");
+      toast.error(error?.message || t.fail);
     } else {
-      toast.success(`"${trackTitle}" usunięty z playlisty`);
+      toast.success(t.rmPlDone);
       onDelete?.();
       window.dispatchEvent(new CustomEvent("track-list-changed"));
     }
     setDeleteLoading(false);
   };
 
+  // Autor/admin: usuwa utwór na stałe. Słuchacz: czyści tylko swoją bibliotekę (ulubione, historia, playlisty).
   const handleDeleteTrack = async () => {
-    if (!user) {
-      toast.error("Zaloguj się, aby usunąć utwór");
-      return;
-    }
-
-    const confirmed = window.confirm(
-      `Usunąć "${trackTitle}" z biblioteki? Zostanie usunięty ze wszystkich playlist i ulubionych.`
-    );
-
-    if (!confirmed) return;
-
+    if (!user) { toast.error(t.signIn); return; }
+    if (!window.confirm(canEdit ? t.delConfirm : t.delMineConfirm)) return;
     setDeleteLoading(true);
-
-    // Remove from liked songs (user's own)
-    await supabase.from("liked_songs").delete().eq("track_id", trackId).eq("user_id", user.id);
-
-    // Remove from listening history (user's own)
-    await supabase.from("listening_history").delete().eq("track_id", trackId).eq("user_id", user.id);
-
-    // Remove from user's playlists
-    const { data: userPlaylists } = await supabase
-      .from("playlists")
-      .select("id")
-      .eq("user_id", user.id);
-    
-    if (userPlaylists && userPlaylists.length > 0) {
-      const playlistIds = userPlaylists.map(p => p.id);
-      await supabase
-        .from("playlist_tracks")
-        .delete()
-        .eq("track_id", trackId)
-        .in("playlist_id", playlistIds);
-    }
-
-    // Usuń rekord utworu — RLS przepuszcza tylko autora/admina. `.select("id")`
-    // jest konieczne: bez niego DELETE zawsze zwraca data:null (nawet gdy 0 wierszy
-    // faktycznie skasowano), więc nie dało się odróżnić sukcesu od cichej odmowy RLS.
-    const { data: deletedRows, error: delError } = await supabase
-      .from("tracks")
-      .delete()
-      .eq("id", trackId)
-      .select("id");
-
-    if (delError || !deletedRows || deletedRows.length === 0) {
-      toast.error(delError?.message || "Nie możesz usunąć tego utworu — nie jesteś jego autorem");
+    try {
+      await supabase.from("liked_songs").delete().eq("track_id", trackId).eq("user_id", user.id);
+      await supabase.from("listening_history").delete().eq("track_id", trackId).eq("user_id", user.id);
+      const { data: userPlaylists } = await supabase.from("playlists").select("id").eq("user_id", user.id);
+      if (userPlaylists && userPlaylists.length > 0) {
+        await supabase.from("playlist_tracks").delete().eq("track_id", trackId).in("playlist_id", userPlaylists.map((p) => p.id));
+      }
+      if (canEdit) {
+        // `.select("id")` — bez niego DELETE nie odróżnia sukcesu od cichej odmowy RLS.
+        const { data: deletedRows, error: delError } = await supabase.from("tracks").delete().eq("id", trackId).select("id");
+        if (delError || !deletedRows || deletedRows.length === 0) throw new Error(delError?.message || t.onlyOwner);
+      }
+      toast.success(canEdit ? t.deleted : t.removedMine);
+      setIsLiked(false);
+      onDelete?.();
+      window.dispatchEvent(new CustomEvent("track-list-changed"));
+    } catch (err) {
+      toast.error(err instanceof Error && err.message ? err.message : t.fail);
+    } finally {
       setDeleteLoading(false);
-      return;
     }
-
-    toast.success(`"${trackTitle}" usunięty`);
-    onDelete?.();
-    window.dispatchEvent(new CustomEvent("track-list-changed"));
-    setDeleteLoading(false);
   };
 
-  const iconSize = {
-    sm: "h-4 w-4",
-    md: "h-5 w-5",
-    lg: "h-6 w-6"
-  }[size];
+  const iconSize = { sm: "h-4 w-4", md: "h-5 w-5", lg: "h-6 w-6" }[size];
 
   return (
     <div ref={ref}>
-      <DropdownMenu>
+      <DropdownMenu onOpenChange={onOpenChange}>
         <DropdownMenuTrigger asChild>
           <button
+            type="button"
+            aria-label={trackTitle}
             className={cn(
               "p-1.5 rounded-full hover:bg-secondary/80 transition-colors",
               "focus:outline-none focus-visible:ring-2 focus-visible:ring-primary",
@@ -632,7 +529,7 @@ const TrackOptionsMenuComponent = (
             <MoreHorizontal className={cn(iconSize, "text-muted-foreground hover:text-foreground")} />
           </button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuContent align="end" className="w-60 max-h-[80vh] overflow-y-auto">
           <DropdownMenuLabel className="font-normal">
             <div className="flex flex-col space-y-1">
               <p className="text-sm font-medium leading-none truncate">{trackTitle}</p>
@@ -640,21 +537,17 @@ const TrackOptionsMenuComponent = (
             </div>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
-          
-          {/* Like button */}
+
           <DropdownMenuItem onClick={handleLike} disabled={loading} className="cursor-pointer">
             <Heart className={cn("mr-2 h-4 w-4", isLiked && "fill-primary text-primary")} />
-            <span className="flex-1">{isLiked ? "Unlike" : "Daj ❤️"}</span>
-            {showLikeCount && likeCount > 0 && (
-              <span className="text-xs text-muted-foreground">{likeCount}</span>
-            )}
+            <span className="flex-1">{isLiked ? t.unlike : t.like}</span>
+            {showLikeCount && likeCount > 0 && <span className="text-xs text-muted-foreground">{likeCount}</span>}
           </DropdownMenuItem>
 
-          {/* Add to playlist — submenu z playlistami użytkownika */}
           <DropdownMenuSub>
-            <DropdownMenuSubTrigger onPointerEnter={loadMyPlaylists} onClick={loadMyPlaylists}>
+            <DropdownMenuSubTrigger onPointerEnter={loadMyPlaylists} onClick={loadMyPlaylists} onFocus={loadMyPlaylists}>
               <ListPlus className="mr-2 h-4 w-4" />
-              Dodaj do playlisty
+              {t.addPl}
             </DropdownMenuSubTrigger>
             <DropdownMenuSubContent className="max-h-72 overflow-y-auto w-56">
               <DropdownMenuItem
@@ -663,15 +556,15 @@ const TrackOptionsMenuComponent = (
                 className="cursor-pointer text-primary focus:text-primary"
               >
                 <ListPlus className="mr-2 h-4 w-4" />
-                + Nowa playlista
+                {t.newPl}
               </DropdownMenuItem>
               {myPlaylists.length > 0 && <DropdownMenuSeparator />}
               {!user ? (
-                <div className="px-2 py-2 text-xs text-muted-foreground">Zaloguj się, aby dodawać</div>
+                <div className="px-2 py-2 text-xs text-muted-foreground">{t.signIn}</div>
               ) : !playlistsLoaded ? (
-                <div className="px-2 py-2 text-xs text-muted-foreground">Ładowanie…</div>
+                <div className="px-2 py-2 text-xs text-muted-foreground">{t.loading}</div>
               ) : myPlaylists.length === 0 ? (
-                <div className="px-2 py-2 text-xs text-muted-foreground">Brak playlist — utwórz nową powyżej</div>
+                <div className="px-2 py-2 text-xs text-muted-foreground">{t.noPl}</div>
               ) : (
                 myPlaylists.map((pl) => (
                   <DropdownMenuItem
@@ -688,54 +581,44 @@ const TrackOptionsMenuComponent = (
             </DropdownMenuSubContent>
           </DropdownMenuSub>
 
-          {/* Szybkie: wgraj własne zdjęcie jako okładkę */}
-          <DropdownMenuItem
-            onClick={() => coverInputRef.current?.click()}
-            disabled={coverUploading}
-            className="cursor-pointer text-sky-300 focus:text-sky-200 focus:bg-sky-500/10"
-          >
-            <ImagePlus className="mr-2 h-4 w-4" />
-            <span className="flex-1">{coverUploading ? "Wgrywam…" : "Wgraj zdjęcie 📷"}</span>
-          </DropdownMenuItem>
+          {/* Okładka i teledysk — tylko autor utworu (albo admin); innym i tak odmówiłaby baza. */}
+          {canEdit && (
+            <>
+              <DropdownMenuItem
+                onClick={() => coverInputRef.current?.click()}
+                disabled={coverUploading}
+                className="cursor-pointer text-sky-300 focus:text-sky-200 focus:bg-sky-500/10"
+              >
+                <ImagePlus className="mr-2 h-4 w-4" />
+                <span className="flex-1">{coverUploading ? t.uploading : t.photo}</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={handleQuickAICover}
+                disabled={aiCoverBusy}
+                className="cursor-pointer text-amber-300 focus:text-amber-200 focus:bg-amber-500/10"
+              >
+                <ImagePlus className="mr-2 h-4 w-4" />
+                <span className="flex-1">{aiCoverBusy ? t.painting : t.aiCover}</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={handleQuickAIClip}
+                disabled={aiClipBusy}
+                className="cursor-pointer text-rose-300 focus:text-rose-200 focus:bg-rose-500/10"
+              >
+                <Film className="mr-2 h-4 w-4" />
+                <span className="flex-1">{aiClipBusy ? t.shooting : t.aiClip}</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => setShowCoverStudio(true)}
+                className="cursor-pointer text-fuchsia-300 focus:text-fuchsia-200 focus:bg-fuchsia-500/10"
+              >
+                <ImagePlus className="mr-2 h-4 w-4" />
+                <span className="flex-1">{t.studio}</span>
+              </DropdownMenuItem>
+            </>
+          )}
 
-          {/* Szybkie: wygeneruj okładkę AI od razu (bez otwierania Studia) */}
-          <DropdownMenuItem
-            onClick={handleQuickAICover}
-            disabled={aiCoverBusy}
-            className="cursor-pointer text-amber-300 focus:text-amber-200 focus:bg-amber-500/10"
-          >
-            <ImagePlus className="mr-2 h-4 w-4" />
-            <span className="flex-1">{aiCoverBusy ? "Maluję…" : "AI okładka ⚡"}</span>
-          </DropdownMenuItem>
-
-          {/* Szybki teledysk AI — najwyższa jakość (Kling v2.1 Master) */}
-          <DropdownMenuItem
-            onClick={handleQuickAIClip}
-            disabled={aiClipBusy}
-            className="cursor-pointer text-rose-300 focus:text-rose-200 focus:bg-rose-500/10"
-          >
-            <Film className="mr-2 h-4 w-4" />
-            <span className="flex-1">{aiClipBusy ? "Kręcę teledysk…" : "AI teledysk 🎬 (max)"}</span>
-          </DropdownMenuItem>
-
-
-          {/* Cover Studio — okładki i teledyski AI (tekst→obraz, zdj→obraz, tekst→wideo, zdj→wideo) */}
-          <DropdownMenuItem
-            onClick={() => setShowCoverStudio(true)}
-            className="cursor-pointer text-fuchsia-300 focus:text-fuchsia-200 focus:bg-fuchsia-500/10"
-          >
-            <ImagePlus className="mr-2 h-4 w-4" />
-            <span className="flex-1">Cover Studio 🎨🎬</span>
-          </DropdownMenuItem>
-
-          {/* Cut/Copy for moving */}
-          <DropdownMenuItem onClick={handleCutTrack} className="cursor-pointer">
-            <Scissors className="mr-2 h-4 w-4" />
-            Cut (to paste elsewhere)
-          </DropdownMenuItem>
-
-          {/* Postaw kawę twórcy (real money via Paddle, 90% → twórca) */}
-          {trackOwnerId && trackOwnerId !== user?.id && (
+          {metaLoaded && trackOwnerId && !isOwner && (
             <>
               <DropdownMenuSeparator />
               <DropdownMenuItem
@@ -743,7 +626,7 @@ const TrackOptionsMenuComponent = (
                 className="cursor-pointer text-amber-400 focus:text-amber-300 focus:bg-amber-500/10"
               >
                 <Coffee className="mr-2 h-4 w-4" />
-                <span className="flex-1">Postaw kawę twórcy ☕</span>
+                <span className="flex-1">{t.coffee}</span>
                 <span className="text-[10px] text-muted-foreground">1$ / 3$ / 5$</span>
               </DropdownMenuItem>
             </>
@@ -751,127 +634,102 @@ const TrackOptionsMenuComponent = (
 
           <DropdownMenuSeparator />
 
-          {/* Rozdziel na ścieżki (stemy) — otwiera odtwarzacz solo/mute */}
           {trackUrl && (
             <DropdownMenuItem
               onClick={() => window.dispatchEvent(new CustomEvent("grouai:open-stems", { detail: { audioUrl: trackUrl, title: trackTitle } }))}
               className="cursor-pointer text-cyan-300 focus:text-cyan-200 focus:bg-cyan-500/10"
             >
               <Headphones className="mr-2 h-4 w-4" />
-              <span className="flex-1">Rozdziel na ścieżki 🎚️</span>
+              <span className="flex-1">{t.stems}</span>
             </DropdownMenuItem>
           )}
 
-          {/* Prezent 🎁 — animowana strona-prezent (paczka → wir → piosenka) */}
           <DropdownMenuItem
             onClick={handleSendGift}
             className="cursor-pointer text-amber-300 focus:text-amber-200 focus:bg-amber-500/10"
           >
             <Gift className="mr-2 h-4 w-4" />
-            <span className="flex-1">Wyślij prezent 🎁</span>
+            <span className="flex-1">{t.gift}</span>
           </DropdownMenuItem>
 
-          {/* Share submenu */}
           <DropdownMenuSub>
             <DropdownMenuSubTrigger>
               <Share2 className="mr-2 h-4 w-4" />
-              Wyślij do
+              {t.sendTo}
             </DropdownMenuSubTrigger>
             <DropdownMenuSubContent>
-              <DropdownMenuItem onClick={handleShareTwitter} className="cursor-pointer">
-                <Twitter className="mr-2 h-4 w-4" />
-                Share on X
-              </DropdownMenuItem>
               <DropdownMenuItem onClick={handleShareWhatsApp} className="cursor-pointer">
                 <MessageCircle className="mr-2 h-4 w-4" />
                 WhatsApp
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleCopyLink} className="cursor-pointer">
-                <Link className="mr-2 h-4 w-4" />
-                Copy Link
+              <DropdownMenuItem onClick={handleShareTwitter} className="cursor-pointer">
+                <Twitter className="mr-2 h-4 w-4" />
+                {t.x}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setShowQR(true)} className="cursor-pointer">
                 <QrCode className="mr-2 h-4 w-4" />
-                Kod QR / NFC
+                {t.qr}
               </DropdownMenuItem>
             </DropdownMenuSubContent>
           </DropdownMenuSub>
 
-          {/* Copy link */}
           <DropdownMenuItem onClick={handleCopyLink} className="cursor-pointer">
             <Copy className="mr-2 h-4 w-4" />
-            Kopiuj
+            {t.copy}
           </DropdownMenuItem>
 
-          {/* Download */}
-          <DropdownMenuItem onClick={handleDownload} disabled={downloading} className="cursor-pointer">
-            {downloading ? (
-              <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }} className="mr-2">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
-              </motion.div>
-            ) : (
-              <Download className="mr-2 h-4 w-4" />
-            )}
-            {downloading ? "Wypalanie..." : "Pobierz Utwór"}
-          </DropdownMenuItem>
-
-          {/* Offline — zapisz w telefonie/przeglądarce, gra bez internetu */}
-          <DropdownMenuItem onClick={handleOffline} disabled={savingOffline} className="cursor-pointer">
-            {offlineSaved ? (
-              <Check className="mr-2 h-4 w-4 text-emerald-400" />
-            ) : (
-              <DownloadCloud className="mr-2 h-4 w-4" />
-            )}
-            <span className="flex-1">
-              {savingOffline ? "Zapisuję…" : offlineSaved ? "Dostępne offline" : "Pobierz offline"}
-            </span>
-            {offlineSaved && <span className="text-[10px] text-emerald-400">usuń</span>}
-          </DropdownMenuItem>
-
-          {/* Open original */}
           {trackUrl && (
-            <DropdownMenuItem 
-              onClick={() => window.open(trackUrl, "_blank")} 
-              className="cursor-pointer"
-            >
-              <ExternalLink className="mr-2 h-4 w-4" />
-              Open Original
+            <DropdownMenuItem onClick={handleDownload} disabled={downloading} className="cursor-pointer">
+              <Download className={cn("mr-2 h-4 w-4", downloading && "animate-bounce")} />
+              {downloading ? t.downloading : t.download}
             </DropdownMenuItem>
           )}
 
-          {/* Remove from playlist */}
+          {trackUrl && (
+            <DropdownMenuItem onClick={handleOffline} disabled={savingOffline} className="cursor-pointer">
+              {offlineSaved ? <Check className="mr-2 h-4 w-4 text-emerald-400" /> : <DownloadCloud className="mr-2 h-4 w-4" />}
+              <span className="flex-1">{savingOffline ? t.saving : offlineSaved ? t.offlineOn : t.offline}</span>
+              {offlineSaved && <span className="text-[10px] text-emerald-400">{t.offlineRm}</span>}
+            </DropdownMenuItem>
+          )}
+
+          {trackUrl && (
+            <DropdownMenuItem onClick={() => openExternal(trackUrl)} className="cursor-pointer">
+              <ExternalLink className="mr-2 h-4 w-4" />
+              {t.openFile}
+            </DropdownMenuItem>
+          )}
+
           {playlistId && (
             <>
               <DropdownMenuSeparator />
-              <DropdownMenuItem 
-                onClick={handleRemoveFromPlaylist} 
+              <DropdownMenuItem
+                onClick={handleRemoveFromPlaylist}
                 disabled={deleteLoading}
                 className="cursor-pointer text-destructive focus:text-destructive"
               >
                 <Trash2 className="mr-2 h-4 w-4" />
-                Usuń z playlisty
+                {t.rmPl}
               </DropdownMenuItem>
             </>
           )}
 
-          {/* Delete track from library */}
-          {showDelete && (
+          {showDelete && user && (
             <>
               <DropdownMenuSeparator />
-              <DropdownMenuItem 
-                onClick={handleDeleteTrack} 
-                disabled={deleteLoading}
+              <DropdownMenuItem
+                onClick={handleDeleteTrack}
+                disabled={deleteLoading || !metaLoaded}
                 className="cursor-pointer text-destructive focus:text-destructive"
               >
                 <Trash2 className="mr-2 h-4 w-4" />
-                Usuń z biblioteki
+                {canEdit ? t.del : t.delMine}
               </DropdownMenuItem>
             </>
           )}
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {/* Ukryty picker pliku dla nowej okładki (otwierany z menu) */}
       <input
         ref={coverInputRef}
         type="file"
@@ -880,30 +738,32 @@ const TrackOptionsMenuComponent = (
         onChange={handleCoverPicked}
       />
 
-      {/* Coffee Dialog (real-money tip via Paddle, 90% → twórca utworu) */}
-      <CoffeeDialog
-        open={showCoffeeDialog}
-        onOpenChange={setShowCoffeeDialog}
-        recipientUserId={trackOwnerId ?? undefined}
-        recipientTrackId={trackId}
-        recipientName={trackArtist}
-      />
+      {showCoffeeDialog && (
+        <CoffeeDialog
+          open={showCoffeeDialog}
+          onOpenChange={setShowCoffeeDialog}
+          recipientUserId={trackOwnerId ?? undefined}
+          recipientTrackId={trackId}
+          recipientName={trackArtist}
+        />
+      )}
 
-      <CoverStudioModal
-        open={showCoverStudio}
-        onOpenChange={setShowCoverStudio}
-        trackId={trackId}
-        trackTitle={trackTitle}
-        trackArtist={trackArtist}
-      />
+      {showCoverStudio && (
+        <CoverStudioModal
+          open={showCoverStudio}
+          onOpenChange={setShowCoverStudio}
+          trackId={trackId}
+          trackTitle={trackTitle}
+          trackArtist={trackArtist}
+        />
+      )}
 
-      {/* Kod QR (skanuje każdy telefon) + zapis linku na karcie NFC (Android/Chrome) */}
       <Dialog open={showQR} onOpenChange={setShowQR}>
         <DialogContent className="max-w-xs">
           <DialogHeader>
             <DialogTitle className="truncate">{trackTitle}</DialogTitle>
           </DialogHeader>
-          <ShareQR url={giftUrl} title={`${trackTitle} — ${trackArtist}`} compact />
+          {showQR && <ShareQR url={shareUrl} title={`${trackTitle} — ${trackArtist}`} compact />}
         </DialogContent>
       </Dialog>
     </div>
