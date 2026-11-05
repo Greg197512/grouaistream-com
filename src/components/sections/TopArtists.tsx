@@ -23,6 +23,8 @@ interface ArtistData {
 // Konta „na kłódkę" (admin / treści dostępne tylko z kluczem) — NIE pokazujemy ich
 // jako publicznych trending artist. Nazwy porównywane po lowercase.
 const HIDDEN_ARTISTS = new Set(["mr.gregorius", "mr gregorius", "grouaistream"]);
+// Gwiazda sieci: wirtualny artysta AI — zawsze pierwszy w Trending Artists (decyzja Grzegorza).
+const AI_STAR = "dj yellow";
 
 const generateUniqueAvatar = (name: string): string => {
   const styles = ["bottts-neutral", "shapes", "thumbs", "rings", "glass", "identicon"];
@@ -80,7 +82,7 @@ export const TopArtists = () => {
       const { data: tracksData } = await withTimeout(
         supabase
           .from("tracks")
-          .select("user_id, artist, title, audio_url, video_url")
+          .select("user_id, artist, title, audio_url, video_url, cover_url, created_at")
           .not("artist", "is", null)
           .limit(3000),
         15_000,
@@ -98,7 +100,10 @@ export const TopArtists = () => {
       // dzięki temu widać WSZYSTKICH wykonawców, także tych wgranych ze wspólnego/
       // masowego konta (wcześniej grupowanie po user_id zwijało ich do kilku kont).
       const artistMap: Record<string, { count: number; name: string; userId: string | null }> = {};
-      tracksData.forEach((t: { user_id: string | null; artist: string | null; title?: string | null; audio_url: string | null; video_url: string | null }) => {
+      let djCover: { url: string; at: string } | null = null;
+      tracksData.forEach((t: { user_id: string | null; artist: string | null; title?: string | null; audio_url: string | null; video_url: string | null; cover_url?: string | null; created_at?: string }) => {
+        // DJ Yellow (artysta AI): portret = jego najnowsza okładka z postacią.
+        if ((t.artist || "").trim().toLowerCase() === AI_STAR && t.cover_url && (!djCover || (t.created_at ?? "") > djCover.at)) djCover = { url: t.cover_url, at: t.created_at ?? "" };
         if (!t.audio_url && !t.video_url) return;
         if (isRadioOnlyTrack(t)) return;
         const name = (t.artist || "").trim();
@@ -140,7 +145,8 @@ export const TopArtists = () => {
             imageUrl: profile?.avatar || generateUniqueAvatar(a.name),
           };
         })
-        .sort((a, b) => b.trackCount - a.trackCount)
+        .sort((a, b) => (a.id === AI_STAR ? -1 : b.id === AI_STAR ? 1 : b.trackCount - a.trackCount))
+        .map((a) => (a.id === AI_STAR && djCover ? { ...a, imageUrl: (djCover as { url: string }).url } : a))
         .slice(0, 16)
         .map((a, index) => ({ ...a, gradient: gradients[index % gradients.length] }));
 
@@ -318,7 +324,7 @@ export const TopArtists = () => {
               </motion.div>
 
               <ArtistCard
-                name={artist.name}
+                name={artist.id === AI_STAR ? `${artist.name} · AI` : artist.name}
                 followers={tracksLabel(artist.trackCount, language)}
                 gradient={artist.gradient}
                 imageUrl={artist.imageUrl}

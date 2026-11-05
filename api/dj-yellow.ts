@@ -22,6 +22,10 @@ const ARTIST = "DJ Yellow";
 // Konto artysty: e-mail stały (potwierdzenie trafia na grouarock@gmail.com), hasło tylko w Vercel (DJ_YELLOW_PASSWORD).
 const DJ_EMAIL = () => env("DJ_YELLOW_EMAIL") ?? "grouarock+djyellow@gmail.com";
 const PER_DAY = 2;
+// Dodatkowe utwory w wybrane dni (decyzja Grzegorza) — automat sam dorobi brakujące, bez przycisków.
+const EXTRA_DAYS: Record<string, number> = { "2026-11-05": 4 };
+const plDay = () => new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Warsaw" });
+const dayTarget = () => Math.min(6, EXTRA_DAYS[plDay()] ?? PER_DAY);
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 async function http(url: string, init: RequestInit & { timeout?: number } = {}) {
@@ -120,20 +124,53 @@ async function putR2(jwt: string, body: Uint8Array | string, fileName: string, c
   return r.ok ? pub : null;
 }
 
-async function makeCover(jwt: string, idea: Idea, title: string, seed: number): Promise<string | null> {
+// Postać DJ Yellow (fikcyjny artysta AI) — ten sam opis na każdej grafice, zmienia się tylko miejsce.
+export const PERSONA = "DJ Yellow, a fictional virtual AI DJ character: young man with golden-yellow tinted round sunglasses, short bleached platinum hair, yellow bomber jacket, gold headphones around the neck, warm confident smile";
+const SCENES = [
+  "behind the decks in a packed underground techno club with lasers and haze",
+  "in a cozy crowded pub with warm string lights, raising a glass with friends",
+  "on a huge festival main stage at night with fireworks and a sea of hands",
+  "at a rooftop party at golden sunset over a city skyline",
+  "at a beach party at sunset in Ibiza, crowd dancing on the sand",
+  "in a neon-lit recording studio surrounded by synthesizers",
+  "sharing the club booth with other famous-looking DJs, crowd cheering",
+  "in a Berlin warehouse rave with strobes and smoke",
+  "at a glamorous yacht party at night with city lights",
+  "digging vinyl crates in a cozy record store",
+  "playing an open-air sunrise set in the mountains",
+  "in a retro 80s arcade bar with neon signs",
+];
+
+const b64 = (u: Uint8Array) => Buffer.from(u).toString("base64");
+/** Okładka = zdjęcie postaci (AI) + podpis DJ YELLOW, tytuł i zawsze znaczek „AI” (jawne oznaczenie). */
+function personaSvg(img: { data: Uint8Array; type: string } | null, title: string, seed: number): string {
+  const esc = (x: string) => x.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
+  const photo = img ? `<image href="data:${img.type};base64,${b64(img.data)}" x="0" y="0" width="1024" height="1024" preserveAspectRatio="xMidYMid slice"/>` : svgCover(title, seed).replace(/^<svg[^>]*>|<\/svg>$/g, "");
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+<defs><linearGradient id="fade" x1="0" y1="0" x2="0" y2="1"><stop offset="0.55" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity="0.85"/></linearGradient>
+<linearGradient id="gy" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff59d"/><stop offset="0.5" stop-color="#FFD400"/><stop offset="1" stop-color="#FF8A00"/></linearGradient></defs>
+${photo}<rect width="1024" height="1024" fill="url(#fade)"/>
+<rect x="852" y="36" width="136" height="72" rx="18" fill="#000" fill-opacity="0.7" stroke="url(#gy)" stroke-width="4"/>
+<text x="920" y="88" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-size="46" font-weight="900" fill="url(#gy)">AI</text>
+<text x="56" y="900" font-family="Arial Black,Arial,sans-serif" font-size="84" font-weight="900" fill="url(#gy)" letter-spacing="6">DJ YELLOW</text>
+<text x="58" y="960" font-family="Arial,sans-serif" font-size="40" fill="#fff8d0">${esc(title.slice(0, 44))}</text></svg>`;
+}
+
+async function personaImage(seed: number, scene?: string): Promise<{ data: Uint8Array; type: string } | null> {
   try {
-    const prompt = `${idea.cover}, no text, no letters, square album artwork`;
-    const r = await fetch(`https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1024&height=1024&nologo=true&seed=${seed}`, { signal: AbortSignal.timeout(60000) });
+    const where = scene ?? SCENES[Math.abs(seed) % SCENES.length];
+    const prompt = `${PERSONA}, ${where}, cinematic photo, dramatic lighting, shallow depth of field, ultra detailed, vibrant yellow and gold accents, no text, no letters`;
+    const r = await fetch(`https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1024&height=1024&nologo=true&seed=${Math.abs(seed)}`, { signal: AbortSignal.timeout(70000) });
     const type = r.headers.get("content-type") ?? "";
-    if (r.ok && type.startsWith("image/")) {
-      const buf = new Uint8Array(await r.arrayBuffer());
-      if (buf.length > 20000) {
-        const url = await putR2(jwt, buf, `${seed}.jpg`, type.includes("png") ? "image/png" : "image/jpeg");
-        if (url) return url;
-      }
-    }
-  } catch { /* zapas niżej */ }
-  return putR2(jwt, svgCover(title, seed), `${seed}.svg`, "image/svg+xml");
+    if (!r.ok || !type.startsWith("image/")) return null;
+    const data = new Uint8Array(await r.arrayBuffer());
+    return data.length > 20000 ? { data, type: type.includes("png") ? "image/png" : "image/jpeg" } : null;
+  } catch { return null; }
+}
+
+async function makeCover(jwt: string, _idea: Idea, title: string, seed: number): Promise<string | null> {
+  const img = await personaImage(seed);
+  return putR2(jwt, personaSvg(img, title, seed), `${seed}.svg`, "image/svg+xml");
 }
 
 async function archiveAudio(jwt: string, src: string, name: string): Promise<string | null> {
@@ -156,6 +193,8 @@ async function ownerFromToken(authHeader: string): Promise<{ jwt: string; uid: s
   return { jwt: authHeader.slice(7), uid: r.data.id };
 }
 
+const MAX_PER_DAY = 6; // z dodatkowymi („Zrób jeszcze 2”) — twardy sufit kosztów
+
 async function run(deadline: number, who?: { jwt: string; uid: string }) {
   const auth = who ?? (await login());
   if ("error" in auth) return { ok: false, step: "login", error: auth.error };
@@ -164,61 +203,72 @@ async function run(deadline: number, who?: { jwt: string; uid: string }) {
   // Limit liczony po artyście (niezależnie od konta, z którego ruszyło studio).
   const done = await rest(jwt, `tracks?select=id,title,cover_url&artist=eq.${encodeURIComponent(ARTIST)}&created_at=gte.${encodeURIComponent(since)}`);
   const doneList = Array.isArray(done.data) ? done.data : [];
-  if (doneList.length >= PER_DAY) return { ok: true, step: "done-today", tracks: doneList };
+  const target = Math.min(MAX_PER_DAY, dayTarget());
+  if (doneList.length >= target) return { ok: true, step: "done-today", tracks: doneList };
+  const need = target - doneList.length;
 
-  // Rozpoczęte dziś zadanie? Dokończ je zamiast płacić za nowe.
-  const pend = await rest(jwt, `generations?select=id,replicate_id,prompt,title,lyrics,created_at&user_id=eq.${uid}&status=eq.queued&created_at=gte.${encodeURIComponent(since)}&order=created_at.desc&limit=1`);
-  let gen = Array.isArray(pend.data) && pend.data[0] ? pend.data[0] : null;
-  let idea: Idea;
-  const seed = Math.floor(Date.now() / 86400000) * 7919 + doneList.length;
+  // Rozpoczęte dziś zadania — dokańczamy je zamiast płacić za nowe.
+  const pend = await rest(jwt, `generations?select=id,replicate_id,lyrics,created_at&user_id=eq.${uid}&status=eq.queued&genre=eq.Electronic&created_at=gte.${encodeURIComponent(since)}&order=created_at.asc&limit=${need}`);
+  const jobs: { gen: any; idea: Idea; seed: number }[] = (Array.isArray(pend.data) ? pend.data : []).map((g: any, i: number) => {
+    let idea: Idea | undefined; try { idea = JSON.parse(g.lyrics || "{}").idea; } catch { /* */ }
+    const seed = Math.floor(Date.now() / 86400000) * 7919 + doneList.length * 31 + i;
+    return { gen: g, idea: idea?.titles ? idea : algorithmIdea(seed), seed };
+  });
 
-  if (gen) {
-    try { idea = JSON.parse(gen.lyrics || "{}").idea; } catch { idea = algorithmIdea(seed); }
-    if (!idea?.titles) idea = algorithmIdea(seed);
-  } else {
-    if (doneList.length > 0) return { ok: true, step: "partial-today", note: "dziś wydano już część — nowe zadanie jutro", tracks: doneList };
+  // Nowe zadania: każde = osobny pomysł (inny podgatunek, tytuł, scena okładki) → 2 RÓŻNE utwory.
+  if (jobs.length < need) {
     const cat = await rest(jwt, `tracks?select=title,mood&genre=ilike.*electr*&order=created_at.desc&limit=40`);
     const catalog = (Array.isArray(cat.data) ? cat.data : []).map((t: any) => `${t.title}${t.mood ? ` (${t.mood})` : ""}`);
-    idea = (await aiIdea(catalog, seed)) ?? algorithmIdea(seed);
-    const g = await fn(jwt, "suno-generate", { prompt: `${idea.mood} electronic instrumental by DJ Yellow`, style: idea.style, title: idea.titles[0], instrumental: true, enhance: false }, 90000);
-    const taskId = g.data?.taskId || g.data?.task_id || g.data?.id;
-    if (!taskId) return { ok: false, step: "suno-generate", error: g.data?.error || g.data?.detail || `HTTP ${g.status}`, idea };
-    const ins = await rest(jwt, "generations", { method: "POST", body: JSON.stringify({ user_id: uid, prompt: idea.style, title: idea.titles[0], genre: "Electronic", instrumental: true, engine: "suno", status: "queued", replicate_id: String(taskId), lyrics: JSON.stringify({ idea }) }) });
-    gen = Array.isArray(ins.data) ? ins.data[0] : { id: null, replicate_id: String(taskId) };
+    const used = new Set<string>([...doneList.map((d: any) => d.title), ...jobs.map((j) => j.idea.titles[0])]);
+    for (let k = jobs.length; k < need; k++) {
+      const seed = Math.floor(Date.now() / 1000) + k * 977 + doneList.length * 31;
+      let idea = (await aiIdea([...catalog, ...[...used].map((t) => `${t} (już wydane — zrób coś innego)`)], seed)) ?? algorithmIdea(seed);
+      if (used.has(idea.titles[0])) idea = algorithmIdea(seed + 13);
+      used.add(idea.titles[0]);
+      const g = await fn(jwt, "suno-generate", { prompt: `${idea.mood} electronic instrumental by DJ Yellow`, style: idea.style, title: idea.titles[0], instrumental: true, enhance: false }, 90000);
+      const taskId = g.data?.taskId || g.data?.task_id || g.data?.id;
+      if (!taskId) { if (!jobs.length) return { ok: false, step: "suno-generate", error: g.data?.error || g.data?.detail || `HTTP ${g.status}` }; break; }
+      const ins = await rest(jwt, "generations", { method: "POST", body: JSON.stringify({ user_id: uid, prompt: idea.style, title: idea.titles[0], genre: "Electronic", instrumental: true, engine: "suno", status: "queued", replicate_id: String(taskId), lyrics: JSON.stringify({ idea }) }) });
+      jobs.push({ gen: Array.isArray(ins.data) ? ins.data[0] : { id: null, replicate_id: String(taskId) }, idea, seed });
+    }
   }
 
-  // Czekamy na Suno (zwykle 1–3 min). Gdy zabraknie czasu — następne uruchomienie dokończy.
-  let st: any = null;
-  while (Date.now() < deadline - 60000) {
-    st = (await fn(jwt, "suno-generate", { action: "status", taskId: gen.replicate_id }, 60000)).data;
-    if (st?.status === "succeeded" || st?.status === "failed") break;
-    await sleep(12000);
-  }
-  if (!st || st.status !== "succeeded") {
-    if (st?.status === "failed" && gen.id) await rest(jwt, `generations?id=eq.${gen.id}`, { method: "PATCH", body: JSON.stringify({ status: "failed" }) });
-    return { ok: st?.status !== "failed", step: "waiting", status: st?.status ?? "processing", idea };
+  // Czekamy na Suno równolegle (zwykle 1–3 min). Gdy zabraknie czasu — następne uruchomienie dokończy.
+  const state = new Map<number, any>();
+  while (Date.now() < deadline - 70000 && state.size < jobs.length) {
+    await Promise.all(jobs.map(async (j, i) => {
+      if (state.has(i)) return;
+      const st = (await fn(jwt, "suno-generate", { action: "status", taskId: j.gen.replicate_id }, 60000)).data;
+      if (st?.status === "succeeded" || st?.status === "failed") state.set(i, st);
+    }));
+    if (state.size < jobs.length) await sleep(12000);
   }
 
-  const items: any[] = Array.isArray(st.all) ? st.all : [];
   const out: any[] = [];
-  for (let i = 0; i < Math.min(PER_DAY, Math.max(1, items.length)); i++) {
-    if (Date.now() > deadline - 15000) break;
-    const it = items[i] ?? {};
-    const title = idea.titles[i] ?? `${idea.titles[0]} II`;
-    if (doneList.some((d: any) => d.title === title)) continue;
-    let audio: string | null = i === 0 && st.audio_archived ? st.audio_url : null;
-    if (!audio) audio = await archiveAudio(jwt, it.audioUrl || it.sourceAudioUrl || it.streamAudioUrl || st.audio_url, `${it.id || gen.replicate_id}-${i}`);
+  for (let i = 0; i < jobs.length; i++) {
+    const st = state.get(i), j = jobs[i];
+    if (!st) { out.push({ title: j.idea.titles[0], pending: true }); continue; }
+    if (st.status === "failed") { if (j.gen.id) await rest(jwt, `generations?id=eq.${j.gen.id}`, { method: "PATCH", body: JSON.stringify({ status: "failed" }) }); out.push({ title: j.idea.titles[0], error: st.error || "Suno: nieudane" }); continue; }
+    if (Date.now() > deadline - 20000) { out.push({ title: j.idea.titles[0], pending: true }); continue; }
+    const it = (Array.isArray(st.all) ? st.all : [])[0] ?? {};
+    const title = j.idea.titles[0];
+    let audio: string | null = st.audio_archived ? st.audio_url : null;
+    if (!audio) audio = await archiveAudio(jwt, it.audioUrl || it.sourceAudioUrl || it.streamAudioUrl || st.audio_url, `${it.id || j.gen.replicate_id}`);
     if (!audio) { out.push({ title, error: "nie udało się zapisać audio na R2" }); continue; }
-    const cover = await makeCover(jwt, idea, title, seed + i * 101);
-    const row = {
-      user_id: uid, title, artist: ARTIST, album: "DJ Yellow · Daily", genre: "Electronic", mood: idea.mood,
+    const cover = await makeCover(jwt, j.idea, title, j.seed);
+    const base = {
+      user_id: uid, title, artist: ARTIST, album: "DJ Yellow · AI", genre: "Electronic", mood: j.idea.mood,
       duration: Math.round(Number(it.duration || st.duration || 180)), audio_url: audio, cover_url: cover ?? st.cover_url ?? null,
     };
-    const ins = await rest(jwt, "tracks", { method: "POST", body: JSON.stringify(row) });
+    // Wsparcie sieci: wyróżnienie na 7 dni (gdy baza pozwala); inaczej zwykły wpis.
+    let ins = await rest(jwt, "tracks", { method: "POST", body: JSON.stringify({ ...base, is_boosted: true, boost_expires_at: new Date(Date.now() + 7 * 86400000).toISOString() }) });
+    if (!ins.ok) ins = await rest(jwt, "tracks", { method: "POST", body: JSON.stringify(base) });
     out.push(ins.ok ? { title, id: ins.data?.[0]?.id, cover } : { title, error: `tracks: ${JSON.stringify(ins.data).slice(0, 200)}` });
+    if (ins.ok && j.gen.id) await rest(jwt, `generations?id=eq.${j.gen.id}`, { method: "PATCH", body: JSON.stringify({ status: "completed", audio_url: audio }) });
   }
-  if (gen.id && out.some((o) => o.id)) await rest(jwt, `generations?id=eq.${gen.id}`, { method: "PATCH", body: JSON.stringify({ status: "completed", audio_url: out.find((o) => o.id) ? st.audio_url : null }) });
-  return { ok: out.some((o) => o.id), step: "published", idea: { ...idea, cover: undefined }, tracks: out };
+  const published = out.filter((o) => o.id);
+  if (!published.length && out.some((o) => o.pending)) return { ok: true, step: "waiting", tracks: out };
+  return { ok: published.length > 0, step: out.some((o) => o.pending) ? "waiting" : "published", tracks: out };
 }
 
 export default async function handler(req: any, res: any) {
@@ -245,7 +295,7 @@ export default async function handler(req: any, res: any) {
     const r = await http(`${SUPA()}/rest/v1/tracks?select=id,title,cover_url,created_at&artist=eq.${encodeURIComponent(ARTIST)}&order=created_at.desc&limit=6`, { headers: { apikey: ANON() } });
     const since = todayStartPl();
     const list = Array.isArray(r.data) ? r.data : [];
-    return res.status(200).json({ today: list.filter((t: any) => t.created_at >= since), latest: list, perDay: PER_DAY });
+    return res.status(200).json({ today: list.filter((t: any) => t.created_at >= since), latest: list, perDay: dayTarget() });
   }
   const who = await ownerFromToken(String(req.headers.authorization || ""));
   if (req.method === "POST" && !who) return res.status(403).json({ ok: false, error: "tylko właściciel studia" });

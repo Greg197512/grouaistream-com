@@ -52,8 +52,10 @@ i aktualny. Jeśli fakt tu jest — nie weryfikuj go od nowa dziesiątkami wywo�
 - **DJ Yellow (5.11):** `api/dj-yellow.ts` (Node, cron 09:07 i 15:07 UTC): 2 utwory/dzień (1 zadanie Suno = 2 klipy, ~12 kredytów), pomysł AI (Pollinations) → zapas algorytm,
   okładki Pollinations → zapas SVG, R2 przez `r2-signed-url`, wpis `tracks` (Electronic, artysta DJ Yellow) → „Nowe” + radio. Limit 2/dzień, dokańcza
   rozpoczęte zadanie (`generations` status queued). **Działa przez studio GrouAI (decyzja Grzegorza):** gdy właściciel (grzegorzkaron553@gmail.com) jest zalogowany, `DjYellowAutopilot` (App) raz/dzień
-  woła POST `/api/dj-yellow` z jego tokenem (utwory na jego koncie, artysta DJ Yellow); karta `DjYellowCard` w Studio Pro („Zrób teraz”). Limit liczony po artyście.
-  Cron/hasło (`DJ_YELLOW_PASSWORD`) — tylko opcja zapasowa. `?status=1`, `?diag=1`, `?run=1`.
+  woła POST `/api/dj-yellow` z jego tokenem (utwory na jego koncie, artysta DJ Yellow); Limit liczony po artyście.
+  Bez przycisków (decyzja Grzegorza). **2 RÓŻNE utwory** = 2 zadania Suno (1. klip z każdego, ~24 kredyty/dzień); dodatkowe dni: `EXTRA_DAYS` w api (5.11 = 4).
+  Okładki = postać DJ Yellow (stały opis `PERSONA`, różne `SCENES`: kluby, puby, festiwale) + znaczek „AI” (SVG z osadzonym zdjęciem). Wyróżnienie 7 dni (is_boosted).
+  Trending Artists: „DJ Yellow · AI” zawsze 1., portret = najnowsza okładka. Cron/hasło (`DJ_YELLOW_PASSWORD`) — opcja zapasowa. `?status=1`, `?diag=1`, `?run=1`.
 - Zapis na R2 z edge: `_shared/r2.ts` = fetch + SigV4 (NIE @aws-sdk — zawieszał się). Test: `suno-generate` `{"action":"r2test"}`.
 - Studio → Spotify: po każdej generacji `certifyWithToasts` (`src/lib/releasePipeline.ts`, `releasePrep.ts`):
   mastering −14 LUFS/−1 dBTP, WAV 44,1k/16, okładka 3000, czysty tekst → `generations.release`,
