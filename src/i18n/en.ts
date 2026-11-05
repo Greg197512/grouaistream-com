@@ -826,7 +826,7 @@ const en: TranslationKeys = {
 
   "seo.hero.title": "GrouAI Stream — music matched to how you feel right now",
   "seo.hero.lead": "Listen to **original tracks by independent artists**, picked by GrouAI to fit your mood — type how you feel, or let the camera read your mood (always with your consent). **Live radio plays 24/7** with host Nova, **GrouAI Studio** lets you create your own track, and “What the world listens to” shows what tops the charts. Artists upload music and **earn from real listens**.",
-  "seo.hero.button": "What GrouAI Stream can do — all features",
+  "seo.hero.button": "See everything it can do",
   "seo.features.title": "🎯 What GrouAI Stream can do — full platform capabilities",
   "seo.features.list": "AI Mood Detection|the camera analyzes your emotions in real time and picks music before you can name the feeling||Voice Control|say \"give me something dark for the highway at 3 AM\" — the DJ understands||GrouAI Studio (Suno + ElevenLabs)|generate original tracks in 15+ genres: EDM, House, Trance, Rock, Pop, Hip-Hop, Lo-Fi, Jazz, Ambient and more||AI DJ Mixer|mix two tracks in seconds: crossfade, overlay, mashup with AI suggestions||GrouaRadio Live 24/7|autopilot with a daily schedule, AI host Nova, listener call-ins on air, world news at noon, chat and likes||Party Mode + DJ Sessions|QR code for guests, crowd camera, audience emotion detection, real-time voting||AI Psychologist|mood charts spanning months + a moving PDF report from AI about your emotions||Import from YouTube and Spotify|your music, your playlists, one place||Zero Bots — Verified Human Streams|anti-fraud protects honest creator earnings||4 languages|Polish, English, Dutch, Ukrainian",
   "seo.earn.title": "💰 All ways to earn on GrouAI Stream",
