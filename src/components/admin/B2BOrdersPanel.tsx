@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { B2BOrderActions } from "@/components/admin/B2BOrderActions";
 
 // Panel admina: WSZYSTKIE zlecenia B2B z lokalnej bazy (aurora_business_orders)
 // + wersje robocze (aurora_intake_drafts). Podgląd pełnych danych i skok do Dashboardu klienta.
@@ -101,6 +102,11 @@ export function B2BOrdersPanel() {
     return () => { supabase.removeChannel(ch); };
   }, [load]);
 
+  // Po zapisie (albo zmianie z Realtime) podgląd pokazuje świeże dane zlecenia.
+  useEffect(() => {
+    setActive((cur) => (cur ? orders.find((o) => o.id === cur.id) ?? cur : cur));
+  }, [orders]);
+
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase();
     if (!s) return orders;
@@ -110,7 +116,7 @@ export function B2BOrdersPanel() {
   }, [orders, q]);
 
   const openDashboard = (id: string) => {
-    window.open(`/client-dashboard/${id}`, "_blank", "noopener,noreferrer");
+    window.open(`/client-dashboard/${id}`, "_blank", "noopener,noreferrer"); // panel klienta otwiera to zlecenie (admin widzi każde)
   };
 
   return (
@@ -233,6 +239,8 @@ export function B2BOrdersPanel() {
                 <div><span className="text-muted-foreground">Przypisane:</span> {active.assigned_to || "—"}</div>
                 <div><span className="text-muted-foreground">User ID:</span> <span className="font-mono">{active.user_id?.slice(0, 8) || "—"}</span></div>
               </div>
+
+              <B2BOrderActions order={active} onChanged={() => void load()} />
 
               {active.brief && (
                 <div><div className="text-xs text-muted-foreground mb-1">Brief:</div><div className="p-2 rounded bg-secondary/40 text-xs whitespace-pre-wrap">{active.brief}</div></div>

@@ -1,6 +1,6 @@
 // Pełnoekranowy dashboard zleceniodawcy — mapa działań, Aurora-negocjator, dokumenty, kalendarz, notatki, kalkulator, CRM firm
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { MainLayout } from "@/components/layout/MainLayout";
@@ -22,10 +22,12 @@ import { BotsLiveCharts } from "@/components/dashboard/BotsLiveCharts";
 import { WorkflowTreePanel } from "@/components/dashboard/WorkflowTreePanel";
 import auroraAvatar from "@/assets/aurora-avatar.jpg";
 import { toast } from "sonner";
+import { B2BOrderStatus } from "@/components/dashboard/B2BOrderStatus";
 
 interface Order {
   id: string; service_type: string; brief: string; status: string;
   payment_status: string; price_eur: number; created_at: string;
+  deadline?: string | null; result_url?: string | null; notes?: string | null;
   workflow_map: any; progress_pct: number;
 }
 
@@ -34,7 +36,10 @@ const ClientDashboard = () => {
   const { user, loading: authLoading } = useAuth();
   const [params] = useSearchParams();
   const [orders, setOrders] = useState<Order[]>([]);
-  const [activeOrderId, setActiveOrderId] = useState<string | null>(params.get("order"));
+  const { orderId: routeOrderId } = useParams();
+  // Zlecenie wskazane w adresie (/client-dashboard/:id albo ?order=) — z maila, z Business albo z panelu admina.
+  const wantedId = routeOrderId || params.get("order");
+  const [activeOrderId, setActiveOrderId] = useState<string | null>(wantedId);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<string>("workflow");
   const [generatingPlan, setGeneratingPlan] = useState(false);
@@ -46,17 +51,35 @@ const ClientDashboard = () => {
   const loadOrders = async () => {
     if (!user) return;
     setLoading(true);
+    const cols = "id, service_type, brief, status, payment_status, price_eur, created_at, workflow_map, progress_pct, deadline, result_url, notes";
     const { data } = await supabase.from("aurora_business_orders")
-      .select("id, service_type, brief, status, payment_status, price_eur, created_at, workflow_map, progress_pct")
+      .select(cols)
       .eq("user_id", user.id)
       .neq("service_type", "shop")
       .order("created_at", { ascending: false });
-    setOrders((data ?? []) as Order[]);
-    if (!activeOrderId && data && data.length > 0) setActiveOrderId(data[0].id);
+    let list = (data ?? []) as Order[];
+    // Admin otwiera cudze zlecenie z panelu — RLS admina pozwala je odczytać.
+    if (wantedId && !list.some((o) => o.id === wantedId)) {
+      const { data: one } = await supabase.from("aurora_business_orders").select(cols).eq("id", wantedId).maybeSingle();
+      if (one) list = [one as Order, ...list];
+    }
+    setOrders(list);
+    if (!activeOrderId && list.length > 0) setActiveOrderId(list[0].id);
     setLoading(false);
   };
 
   useEffect(() => { loadOrders(); }, [user]);
+
+  // Na żywo: gdy zespół zmieni status/cenę/postęp, panel odświeża się sam.
+  useEffect(() => {
+    if (!user) return;
+    const ch = supabase
+      .channel(`client-b2b-${user.id}`)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "aurora_business_orders", filter: `user_id=eq.${user.id}` }, () => void loadOrders())
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
   const activeOrder = useMemo(() => orders.find(o => o.id === activeOrderId), [orders, activeOrderId]);
 
@@ -154,6 +177,8 @@ const ClientDashboard = () => {
             </div>
           </CardContent>
         </Card>
+
+        {activeOrder && <B2BOrderStatus order={activeOrder} onChanged={loadOrders} />}
 
         {/* Tabs */}
         <Tabs value={tab} onValueChange={setTab} className="space-y-4">

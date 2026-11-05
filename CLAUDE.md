@@ -29,6 +29,10 @@ i aktualny. Jeśli fakt tu jest — nie weryfikuj go od nowa dziesiątkami wywo�
   Resend/Brevo gdy klucz + `SHOP_MAIL_FROM`, inaczej **bez kluczy** `send-transactional-email` głównego projektu (szablon `admin-notification`
   z `fullHtml`, noreply@grouaistream.com, suppressed_emails + tokeny wypisu, dziennik `email_send_log`). Sklep używa tego samego.
   **Doręczanie potwierdzone 5.11** (test `GET /api/admin-email?selftest=1` → tylko `SHOP_NOTIFY_EMAIL`, raz/h).
+- **Obieg B2B (5.11):** Aurora (`/business`) → zlecenie `aurora_business_orders` + mail (`admin-email` b2b-order) → admin (`B2BOrdersPanel` →
+  `B2BOrderActions`: Wyślij ofertę [cena, termin, notatka → `offer_sent`] / Opłacone / Rozpocznij / Postęp % / Gotowe [result_url] / Anuluj;
+  zapis wprost w bazie RLS admina + mail do klienta `api/b2b` `notify`) → klient (`ClientDashboard` + `B2BOrderStatus`: oś czasu, oferta,
+  QR Revolut z tytułem `B2B-XXXXXXXX`, „Akceptuję”/„Zapłaciłem” → mail do zespołu, „Pobierz wynik”; Realtime). Linki z maili: `/client-dashboard/:id`.
 - Menu utworu (`TrackOptionsMenu`): pobieranie/offline przez `src/lib/trackFile.ts` (`/api/media?dl=1`), linki `?play=`, dane po otwarciu menu.
 - Zapis na R2 z edge: `_shared/r2.ts` = fetch + SigV4 (NIE @aws-sdk — zawieszał się). Test: `suno-generate` `{"action":"r2test"}`.
 - Studio → Spotify: po każdej generacji `certifyWithToasts` (`src/lib/releasePipeline.ts`, `releasePrep.ts`):
