@@ -9,38 +9,72 @@ export const config = { runtime: "edge" };
 type Rss = { feed?: { results?: { id: string; name: string; artistName: string; artworkUrl100?: string; url?: string }[] } };
 type Look = { results?: { trackId: number; previewUrl?: string; trackViewUrl?: string; artworkUrl100?: string }[] };
 
-const COUNTRIES = ["world", "pl", "us", "gb", "nl", "ua"] as const;
+const COUNTRIES = ["world", "pl", "us", "gb", "de", "fr", "es", "it", "nl", "ua", "br", "jp"] as const;
 // „Świat” = czołowa piątka z każdego z tych krajów (kolejność = kolejność wyświetlania).
 const WORLD_TOP5 = ["pl", "us", "gb", "de", "fr", "es", "it", "nl", "ua", "br", "jp"];
 
 const trace: string[] = [];
+async function hostFeed(host: string, cc: string, n: number) {
+  const r = await fetch(`https://${host}/api/v2/${cc}/music/most-played/${n}/songs.json`, {
+    signal: AbortSignal.timeout(12000), headers: { accept: "application/json", "user-agent": "Mozilla/5.0 (compatible; GrouAIStream/1.0)" },
+  });
+  trace.push(`${host}/${cc}: ${r.status}`);
+  if (!r.ok) throw new Error(String(r.status));
+  const list = ((await r.json()) as Rss).feed?.results ?? [];
+  if (!list.length) throw new Error("empty");
+  return list;
+}
+/** Oba adresy Apple naraz (wygrywa szybszy), przy porażce jedna ponowna próba. */
 async function feed(cc: string, n: number) {
-  for (const host of ["rss.applemarketingtools.com", "rss.marketingtools.apple.com"]) {
+  for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      const r = await fetch(`https://${host}/api/v2/${cc}/music/most-played/${n}/songs.json`, { signal: AbortSignal.timeout(8000), headers: { accept: "application/json", "user-agent": "Mozilla/5.0 (compatible; GrouAIStream/1.0)" } });
-      trace.push(`${host}/${cc}: ${r.status}`);
-      if (!r.ok) continue;
-      const j = (await r.json()) as Rss;
-      const list = j.feed?.results ?? [];
-      if (list.length) return list;
-    } catch (e) { trace.push(`${host}/${cc}: ${String(e).slice(0, 80)}`); }
+      return await Promise.any(["rss.applemarketingtools.com", "rss.marketingtools.apple.com"].map((h) => hostFeed(h, cc, n)));
+    } catch (e) { trace.push(`${cc} próba ${attempt + 1}: ${String(e).slice(0, 60)}`); }
   }
   return [];
 }
 
+type Item = { rank: number; id: string; title: string; artist: string; cover: string | null; preview: string | null; url: string | null; country?: string };
+
+function out(body: Record<string, unknown>, cacheSec: number): Response {
+  return new Response(JSON.stringify({ ...body, updated: new Date().toISOString(), ...(debugOn ? { trace } : {}) }), {
+    headers: {
+      "content-type": "application/json",
+      "cache-control": cacheSec ? `public, s-maxage=${cacheSec}, stale-while-revalidate=${cacheSec * 2}` : "no-store",
+    },
+  });
+}
+let debugOn = false;
+
 export default async function handler(req: Request): Promise<Response> {
   trace.length = 0;
+  debugOn = new URL(req.url).searchParams.get("debug") === "1";
   const c = (new URL(req.url).searchParams.get("c") || "world").toLowerCase();
   const country = (COUNTRIES as readonly string[]).includes(c) ? c : "world";
 
   type Row = { id: string; name: string; artistName: string; artworkUrl100?: string; url?: string; cc?: string; ccRank?: number };
   let rows: Row[] = [];
   if (country === "world") {
-    const lists = await Promise.all(WORLD_TOP5.map((cc) => feed(cc, 5)));
-    WORLD_TOP5.forEach((cc, k) => lists[k].slice(0, 5).forEach((t, i) => rows.push({ ...t, cc, ccRank: i + 1 })));
-  } else {
-    rows = await feed(country, 25);
+    // Świat składamy z list krajów z pamięci CDN (/api/world-charts?c=XX, 6 h) — zamiast 11 zapytań do Apple naraz.
+    const origin = new URL(req.url).origin;
+    const lists = await Promise.all(WORLD_TOP5.map(async (cc) => {
+      try {
+        const r = await fetch(`${origin}/api/world-charts?c=${cc}`, { signal: AbortSignal.timeout(20000) });
+        const j = (await r.json()) as { items?: Item[] };
+        trace.push(`kraj ${cc}: ${j.items?.length ?? 0}`);
+        return (j.items ?? []).slice(0, 5).map((it) => ({ ...it, country: cc }));
+      } catch (e) { trace.push(`kraj ${cc}: ${String(e).slice(0, 60)}`); return [] as Item[]; }
+    }));
+    const items = lists.flat();
+    const complete = lists.every((l) => l.length === 5);
+    if (new URL(req.url).searchParams.get("summary") === "1") {
+      const per: Record<string, number> = {};
+      for (const it of items) per[it.country!] = (per[it.country!] ?? 0) + 1;
+      return out({ country, count: items.length, withPreview: items.filter((i) => i.preview).length, per, complete }, 0);
+    }
+    return out({ country, items, complete }, items.length ? (complete ? 21600 : 3600) : 0);
   }
+  rows = await feed(country, 25);
 
   // Fragmenty 30 s: lookup w sklepie właściwego kraju (lokalne hity bywają tylko tam), jeden na kraj.
   const previews = new Map<string, { preview?: string; url?: string; art?: string }>();
