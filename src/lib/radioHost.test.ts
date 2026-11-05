@@ -1,12 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { AI_DISCLOSURE, cleanForAir, decideHost, hostLine, initialHostState, safeForAir } from "./radioHost";
+import type { BlockId } from "./radioClock";
+import { AI_DISCLOSURE, FUN, cleanForAir, decideHost, hostLine, initialHostState, pickJoke, safeForAir, wantsJoke } from "./radioHost";
 
 const t = (title: string, artist = "GrouAI") => ({ title, artist });
 
 describe("prezenterka: kiedy mówi", () => {
   it("powitanie, potem co 4 utwory, zmiana bloku i pełna godzina", () => {
     let s = initialHostState();
-    const step = (block: any, hour: number, min: number) => { const r = decideHost(s, { block, hour, ms: min * 60_000 }); s = r.next; return r.kind; };
+    const step = (block: BlockId, hour: number, min: number) => { const r = decideHost(s, { block, hour, ms: min * 60_000 }); s = r.next; return r.kind; };
     expect(step("day", 12, 0)).toBe("welcome");
     expect(step("day", 12, 3)).toBeNull();
     expect(step("day", 12, 6)).toBeNull();
@@ -20,8 +21,8 @@ describe("prezenterka: kiedy mówi", () => {
 
 describe("prezenterka: teksty", () => {
   it("zapowiedź z tytułami, czas i ujawnienie AI w 4 językach", () => {
-    const back = hostLine({ kind: "back", lang: "pl", hour: 21, minute: 5, block: "evening", dj: false, seed: 0, prev: t("Bass Night (Official Video)", "DJ Groua"), next: t("Neon Rain") });
-    expect(back).toBe("To było „Bass Night, DJ Groua”. A teraz „Neon Rain, GrouAI”.");
+    const back = hostLine({ kind: "back", lang: "pl", hour: 21, minute: 5, block: "evening", dj: false, seed: 1, prev: t("Bass Night (Official Video)", "DJ Groua"), next: t("Neon Rain") });
+    expect(back).toBe("Przed chwilą „Bass Night, DJ Groua”. Lecimy dalej: „Neon Rain, GrouAI”.");
     const hour = hostLine({ kind: "hour", lang: "en", hour: 9, minute: 0, block: "morning", dj: false, seed: 0, next: null });
     expect(hour).toContain("09:00");
     expect(hour).toMatch(/AI voice/);
@@ -39,5 +40,23 @@ describe("prezenterka: teksty", () => {
     expect(line).not.toMatch(/kurw/i);
     expect(line).toContain("Spokój");
     expect(hostLine({ kind: "back", lang: "pl", hour: 1, minute: 0, block: "night", dj: false, seed: 0, prev: null, next: null })).toBeNull();
+  });
+});
+
+describe("prezenterka: humor", () => {
+  it("żartuje czasami (ok. co trzecią kwestię), nie zawsze", () => {
+    const n = Array.from({ length: 60 }, (_, i) => wantsJoke(i, 12)).filter(Boolean).length;
+    expect(n).toBeGreaterThan(10);
+    expect(n).toBeLessThan(30);
+  });
+  it("żart pasuje do pory i bloku, wszystkie przechodzą filtr treści", () => {
+    expect([...FUN.pl.morning, ...FUN.pl.general]).toContain(pickJoke("pl", "morning", 7, false, 0));
+    expect(FUN.pl.general).not.toContain(FUN.pl.morning[0]);
+    expect([...FUN.en.weekend, ...FUN.en.general]).toContain(pickJoke("en", "weekend-disco", 20, false, 1));
+    expect([...FUN.nl.dj, ...FUN.nl.general]).toContain(pickJoke("nl", "weekend-hiphop", 21, true, 2));
+    for (const l of ["pl", "en", "nl", "ua"] as const) for (const arr of Object.values(FUN[l])) for (const j of arr) expect(safeForAir(j)).toBe(true);
+    const line = hostLine({ kind: "hour", lang: "pl", hour: 0, minute: 0, block: "night", dj: false, seed: 0, next: null });
+    expect(line).toMatch(/głos AI/);
+    expect(FUN.pl.night.concat(FUN.pl.general).some((j) => line!.includes(j))).toBe(true);
   });
 });
