@@ -14,7 +14,7 @@ const WORLD_MIX = ["us", "gb", "de", "br", "mx", "jp", "fr"];
 
 const trace: string[] = [];
 async function feed(cc: string, n: number) {
-  for (const host of ["rss.marketingtools.apple.com", "rss.applemarketingtools.com"]) {
+  for (const host of ["rss.applemarketingtools.com", "rss.marketingtools.apple.com"]) {
     try {
       const r = await fetch(`https://${host}/api/v2/${cc}/music/most-played/${n}/songs.json`, { signal: AbortSignal.timeout(8000), headers: { accept: "application/json", "user-agent": "Mozilla/5.0 (compatible; GrouAIStream/1.0)" } });
       trace.push(`${host}/${cc}: ${r.status}`);
