@@ -289,7 +289,7 @@ export default function BusinessPage() {
         />
         {/* Animowana Aurora — wtopiona (screen) nad studiem, żeby oba były widoczne */}
         <div className="absolute inset-0 opacity-50 mix-blend-screen">
-          <AuroraBackground showFace />
+          <AuroraBackground />
         </div>
       </div>
 
