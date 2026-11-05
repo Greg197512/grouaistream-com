@@ -240,3 +240,25 @@ export const HOST_UI: Record<HostLang, { host: string; on: string; off: string; 
   nl: { host: "Presentator Nova (AI)", on: "aan", off: "uit", now: "Nu", djMix: "DJ-mix (electronic / hiphop / disco)" },
   ua: { host: "Ведуча Nova (ШІ)", on: "увімк.", off: "вимк.", now: "Зараз", djMix: "DJ-мікс (електронік / хіп-хоп / диско)" },
 };
+
+/** Telefon od słuchacza: zapowiedź wejścia na antenę i podziękowanie (czyta Nova u każdego słuchacza). */
+const CALL_TPL: Record<HostLang, { on: string; off: string; who: string; whoNoCity: string }> = {
+  pl: { on: "Mamy telefon! Na linii {who}. Cześć, jesteś na antenie GrouaRadio!", off: "Dzięki za telefon, {name}! Wracamy do muzyki.", who: "{name}, {city}", whoNoCity: "{name}" },
+  en: { on: "We've got a caller! On the line, {who}. Hi, you're live on GrouaRadio!", off: "Thanks for calling, {name}! Back to the music.", who: "{name} from {city}", whoNoCity: "{name}" },
+  nl: { on: "We hebben een beller! Aan de lijn: {who}. Hoi, je bent live op GrouaRadio!", off: "Bedankt voor het bellen, {name}! Terug naar de muziek.", who: "{name} uit {city}", whoNoCity: "{name}" },
+  ua: { on: "У нас дзвінок! На лінії {who}. Привіт, ти в ефірі GrouaRadio!", off: "Дякуємо за дзвінок, {name}! Повертаємося до музики.", who: "{name}, {city}", whoNoCity: "{name}" },
+};
+
+/** Bezpieczne imię/miasto do anteny (krótkie, bez wulgaryzmów i linków); puste, gdy nie przejdzie filtra. */
+export function callerLabel(v: string | null | undefined, max = 24): string {
+  const c = cleanForAir(v, max);
+  return c && safeForAir(c) ? c : "";
+}
+
+export function callLine(kind: "on" | "off", lang: HostLang, name: string, city?: string | null): string {
+  const t = CALL_TPL[lang];
+  const n = callerLabel(name) || (lang === "pl" ? "słuchacz" : lang === "nl" ? "een luisteraar" : lang === "ua" ? "слухач" : "a listener");
+  const c = callerLabel(city);
+  if (kind === "off") return t.off.replace("{name}", n);
+  return t.on.replace("{who}", (c ? t.who : t.whoNoCity).replace("{name}", n).replace("{city}", c));
+}
