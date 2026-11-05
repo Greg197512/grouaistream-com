@@ -27,6 +27,7 @@ i aktualny. Jeśli fakt tu jest — nie weryfikuj go od nowa dziesiątkami wywo�
   `blog_subscribers`), `action:"b2b-order"` (zlecenie Aurory → `SHOP_NOTIFY_EMAIL` + klient). Transport `mailConfigFromEnv` (`src/lib/shopMail.ts`):
   Resend/Brevo gdy klucz + `SHOP_MAIL_FROM`, inaczej **bez kluczy** `send-transactional-email` głównego projektu (szablon `admin-notification`
   z `fullHtml`, noreply@grouaistream.com, suppressed_emails + tokeny wypisu, dziennik `email_send_log`). Sklep używa tego samego.
+  **Doręczanie potwierdzone 5.11** (test `GET /api/admin-email?selftest=1` → tylko `SHOP_NOTIFY_EMAIL`, raz/h).
 - Menu utworu (`TrackOptionsMenu`): pobieranie/offline przez `src/lib/trackFile.ts` (`/api/media?dl=1`), linki `?play=`, dane po otwarciu menu.
 - Zapis na R2 z edge: `_shared/r2.ts` = fetch + SigV4 (NIE @aws-sdk — zawieszał się). Test: `suno-generate` `{"action":"r2test"}`.
 - Studio → Spotify: po każdej generacji `certifyWithToasts` (`src/lib/releasePipeline.ts`, `releasePrep.ts`):
