@@ -98,7 +98,7 @@ export default function Shop() {
   // /shop?cart=1 (ze strony produktu) — od razu otwórz koszyk.
   const [open, setOpen] = useState(() => new URLSearchParams(location.search).get("cart") === "1");
   const [busy, setBusy] = useState(false);
-  const [done, setDone] = useState<{ ref: string; bank: Bank | null } | null>(null);
+  const [done, setDone] = useState<{ ref: string; bank: Bank | null; carrier?: string; point?: string | null } | null>(null);
   const [orders, setOrders] = useState<ShopOrderView[] | null>(null);
   const [invoices, setInvoices] = useState<Record<string, Record<string, unknown>>>({});
   const [payFor, setPayFor] = useState<Bank | null>(null);
@@ -216,13 +216,21 @@ export default function Shop() {
       const data = await api({ action: "create", items: cart.map((l) => ({ id: l.id, qty: l.qty, size: l.size })), shipping: ship, method, lang });
       if (data.payment === "stripe" && data.url) { window.location.href = data.url; return; }
       setCart([]); setOpen(false);
-      setDone({ ref: data.ref ?? orderRef(String(data.orderId)), bank: data.payment === "transfer" ? data.bank : null });
+      setDone({ ref: data.ref ?? orderRef(String(data.orderId)), bank: data.payment === "transfer" ? data.bank : null, carrier: car.name, point: car.point ? ship.point : null });
       window.scrollTo({ top: 0, behavior: "smooth" });
       loadOrders();
     } catch (e) { toast.error((e as Error)?.message || T.errors.generic); }
     finally { setBusy(false); }
   };
 
+  const cancelOrder = async (orderId: string) => {
+    if (!window.confirm(T.cancelAsk)) return;
+    try {
+      const j = await api({ action: "cancel", orderId });
+      toast.success(j.state === "requested" ? T.cancelRequested : T.cancelDone);
+      loadOrders();
+    } catch (e) { toast.error((e as Error).message); }
+  };
   const showPayInfo = async (orderId: string) => {
     try { const j = await api({ action: "payinfo", orderId }); setPayFor(j.bank); } catch (e) { toast.error((e as Error).message); }
   };
@@ -274,7 +282,7 @@ export default function Shop() {
       <StoreHero t={S} onShop={() => gridRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })} heroId={hero.id} heroName={hero.name} heroPrice={eur(hero.eurCents)} />
       {done && (
         <div className="mx-auto max-w-6xl space-y-3 px-4 pb-8">
-          <p className="rounded-xl bg-orange-50 p-4 text-orange-900"><b>{T.orderAccepted.replace("{id}", done.ref)}</b>{!done.bank && <> {T.linkSoon.replace("{email}", user?.email ? ` (${user.email})` : "")}</>}</p>
+          <p className="rounded-xl bg-orange-50 p-4 text-orange-900"><b>{T.orderAccepted.replace("{id}", done.ref)}</b>{!done.bank && <> {T.linkSoon.replace("{email}", user?.email ? ` (${user.email})` : "")}</>}{done.carrier && <span className="mt-1 block">🚚 {T.deliveryBy}: <b>{done.carrier}</b>{done.point ? ` · ${done.point}` : ""}</span>}</p>
           {done.bank && <TransferBox bank={done.bank} t={T} eur={eur} />}
         </div>
       )}
@@ -363,6 +371,9 @@ export default function Shop() {
                     {car && <p className="mt-2 text-neutral-600">🚚 {car.name}{o.shipping?.point ? ` · ${o.shipping.point}` : ""}{tr ? ` · ${T.parcel}: ${tr.number}` : ""}</p>}
                     <div className="mt-3 flex flex-wrap gap-2">
                       {url && <a href={url} target="_blank" rel="noopener noreferrer" className="inline-flex h-9 items-center rounded-full bg-orange-500 px-4 text-xs font-bold text-white transition hover:bg-orange-600">{T.track} ↗</a>}
+                      {(o.status === "new" || o.status === "paid") && !o.tracking && !o.cancelRequested && (
+                        <button type="button" onClick={() => cancelOrder(o.id)} className="h-9 rounded-full border border-red-200 px-3 text-xs font-semibold text-red-700 transition hover:border-red-400 hover:bg-red-50">{T.cancelOrder}</button>)}
+                      {o.cancelRequested && o.status !== "cancelled" && <span className="inline-flex h-9 items-center rounded-full bg-red-50 px-3 text-xs font-semibold text-red-700">{T.cancelPending}</span>}
                       {o.payment_status !== "paid" && o.status === "new" && cfg?.transfer && <button type="button" onClick={() => showPayInfo(o.id)} className="h-9 rounded-full border border-neutral-300 px-3 text-xs transition hover:border-orange-400 hover:bg-orange-50">{T.howToPay}</button>}
                       {invoices[o.id] && <button type="button" onClick={() => showInvoice(o.id)} className="h-9 rounded-full border border-neutral-300 px-3 text-xs transition hover:border-orange-400 hover:bg-orange-50">{T.invoice}</button>}
                     </div>

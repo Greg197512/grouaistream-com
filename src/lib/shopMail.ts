@@ -48,7 +48,7 @@ export function customerTransferMail(o: MailOrder, bank: { holder: string; iban:
   const rows = bank.revolut ? "" : `${row(t.holder, bank.holder)}${row("IBAN", bank.iban)}${bank.bic ? row("BIC", bank.bic) : ""}`;
   return {
     subject: t.newS.replace("{ref}", ref),
-    html: wrap(t.newT, `<p>${esc(t.newB)}</p>${pay}<table style="margin:12px 0;background:#fff7ed;border-radius:12px;padding:12px">${rows}${row(t.amount, money(o.totalCents, o.lang))}${row(t.ref, ref)}</table>${itemsTable(o.lines, o.lang)}<p style="color:#71717a">${t.help}</p>`),
+    html: wrap(t.newT, `<p>${esc(t.newB)}</p>${pay}<table style="margin:12px 0;background:#fff7ed;border-radius:12px;padding:12px">${rows}${row(t.amount, money(o.totalCents, o.lang))}${row(t.ref, ref)}</table>${itemsTable(o.lines, o.lang)}<p style="color:#52525b"><b>${t.ship}</b><br>${address(o.shipping)}</p><p style="color:#71717a">${t.help}</p>`),
   };
 }
 

@@ -45,7 +45,7 @@ export interface HostCtx {
 
 const TPL: Record<HostLang, Record<HostKind, string[]> & { dj: string; next: string[] }> = {
   pl: {
-    welcome: ["Cześć, tu Nova, głos AI GrouaRadio. Gramy dla ciebie {block}.", "Witaj w GrouaRadio! Jestem Nova, prezenterka AI. Na antenie {block}."],
+    welcome: ["Heeej! Cudownie, że jesteś! Tu Nova, głos AI GrouaRadio, i mówię to z ogromnym uśmiechem: dziś gramy na sto procent! Startujemy z {block}!", "Witaj w GrouaRadio! Jestem Nova, twoja prezenterka AI, i mam dziś energii za trzech! Podkręć głośność, bo na antenie {block}!", "Dzień dobry, dzień świetny! Nova, głos AI GrouaRadio, melduje się z uśmiechem od ucha do ucha. Lecimy z {block}, będzie pięknie!"],
     block: ["Jest {time}, wchodzimy w {block}.", "{time} na zegarze, czas na {block}.", "Zmieniamy klimat: teraz {block}."],
     hour: ["Jest {time}. Słuchasz GrouaRadio, prowadzi Nova, głos AI.", "Godzina {time}, GrouaRadio. Ja jestem Nova, prezenterka AI, i gramy dalej."],
     back: ["To było {prev}.", "Przed chwilą {prev}.", "Właśnie wybrzmiało {prev}.", "Za nami {prev}. Piękna sprawa.", "Tak brzmiało {prev}."],

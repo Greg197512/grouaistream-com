@@ -1,8 +1,12 @@
+import { useEffect, useState } from "react";
 const SLOGANS = ["🎄 Święta z muzyką — kup coś, dostaj miesiąc VIP gratis", "🎁 Każde zamówienie = bilet z kodem VIP na 30 dni", "❄️ Noś swój dźwięk także zimą", "🎅 Prezent, który gra: Grouarock × Grouaistream", "🔔 Wesołych Świąt od ekipy Grouarock", "⭐ Grouaistream: start free"];
 
 /** Świąteczna oprawa: lampki, Mikołaj, pasek haseł (bez śniegu — na życzenie). */
 export function XmasDecor() {
   const bulbs = Array.from({ length: 18 });
+  // Mikołaj wita na początku, a po minucie znika (nie zasłania sklepu).
+  const [santa, setSanta] = useState(true);
+  useEffect(() => { const t = window.setTimeout(() => setSanta(false), 60_000); return () => clearTimeout(t); }, []);
   return (
     <>
       <style>{`
@@ -15,7 +19,7 @@ export function XmasDecor() {
         @media (prefers-reduced-motion: reduce){.xm-b,.xm-mq{animation:none!important}}
         html[data-lowpower="on"] .xm-b,html[data-lowpower="on"] .xm-mq{animation:none!important}
       `}</style>
-      <div aria-hidden className="pointer-events-none fixed bottom-0 right-2 z-[36]">
+      <div aria-hidden className="pointer-events-none fixed bottom-0 right-2 z-[36] transition-all duration-1000 ease-in" style={{ opacity: santa ? 1 : 0, transform: santa ? "none" : "translateY(40%)", visibility: santa ? "visible" : "hidden", transitionProperty: "opacity, transform, visibility" }}>
         <span className="absolute -top-1 right-[58%] whitespace-nowrap rounded-2xl bg-white px-3 py-1.5 text-sm font-black text-red-700 shadow-lg">Ho ho ho! 🎁</span>
         <img src="/shop/santa.png" alt="" decoding="async" className="block h-[18vh] w-auto sm:h-[30vh] sm:max-h-[260px]" />
       </div>
