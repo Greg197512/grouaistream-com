@@ -69,7 +69,7 @@ i aktualny. Jeśli fakt tu jest — nie weryfikuj go od nowa dziesiątkami wywo�
   RLS: klient może UPDATE własnych zamówień (polityka „clients update own orders”) — także payment_status (do uszczelnienia).
   **Printful (5.11):** edge Vercela blokuje zapora Cloudflare Printful → wywołania przez Node `api/printful-proxy` (tylko z kluczem = `PRINTFUL_API_KEY`).
   Konto ma tylko sklep **Etsy** „Grouadrop” (19013575) — Orders/Products API działa tylko dla sklepu „Manual order platform / API” (type `native`);
-  `withApiStore` sam go znajdzie, gdy powstanie. Klucz nie ma scope `product_templates/read`. Admin: „Połącz produkty z Printful” (dopasowanie `src/lib/printfulMatch.ts`
+  `withApiStore` sam go znajdzie, gdy powstanie. Nowy klucz (wszystkie sklepy) wpisany 5.11 wieczorem. Admin: „Połącz produkty z Printful” (dopasowanie `src/lib/printfulMatch.ts`
   → PUT External ID). Diagnostyka: `GET /api/shop-checkout?diag=printful`. Menu: „GrouaDrop”.
   **Wygląd (5.11):** `src/components/shop/Storefront.tsx` — baner z filmem bluzy, pasek zaufania, kafelki kategorii, karta produktu (2. zdjęcie po najechaniu,
   szybkie dodanie z rozmiarem), sortowanie, FAQ; framer-motion jednorazowo + `MotionConfig reducedMotion="user"`. Graffiti usunięte (decyzja Grzegorza).
