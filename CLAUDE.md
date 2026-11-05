@@ -71,6 +71,9 @@ i aktualny. Jeśli fakt tu jest — nie weryfikuj go od nowa dziesiątkami wywo�
 - **Serwis ze świata:** raz dziennie o 12:00 (czas PL, okno 5 min, raz na dzień — localStorage `grouai-news-day`), `fetchWorldNewsFlash`
   (dział „Świat” z `/api/news-feed`), męski lektor „Max” (`speakAnchor`: Piper darkman/ryan/rdh, tempo 1,1×; zapas: męski głos systemu,
   `/api/voice?v=m`). Przyciski „News o świecie” i „Opowiadanie” usunięte (auto-opowiadanie co 3 h zostało).
+- **Głośność i zdrowie anteny:** GitHub Actions „Radio — głośność i zdrowie anteny” (co pon. + ręcznie; `scripts/measure-loudness.mjs`,
+  ffmpeg EBU R128 + silencedetect) → `public/radio-loudness.json` (commit na `main`). Radio: `trackGain` wyrównuje do −14 LUFS (0,3–1,4×),
+  `excludedIds` (martwe / < −40 LUFS / >40% ciszy) wypadają z planu autopilota. Podgląd w adminie (RadioAutopilotPreview).
 - **Język = wybór użytkownika:** `LanguageContext` zapisuje wybór zalogowanego w `user_metadata.language` i przywraca go po zalogowaniu
   (każde urządzenie). Radio (Nova, Talk, newsy, opowiadania) bierze język z kontekstu, nie z domyślnego „pl”.
 

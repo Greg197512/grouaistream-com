@@ -31,7 +31,7 @@ Właściciel: **agent** (wykonuje po bramce) albo **Grzegorz** (tylko Ty możesz
 | P1-9 | GrouaRock: spec dostawcy (porównanie 2–3 firm druku na żądanie: marża, czas dostawy, API, zwroty) i automatycznej realizacji zamówień | GrouaRock | M | średnie | L1 | agent |
 | P1-10 | GrouaRock: regulamin (projekt gotowy: `/shop/terms`, PL/EN/NL), VAT OSS i faktury (gotowe w panelu) — do zatwierdzenia treści i uzupełnienia `SHOP_SELLER_*`, `SHOP_VAT_MODE` w Vercel; wybór dostawcy i czasu dostawy | GrouaRock | M | wysokie | L4 | Grzegorz/prawnik |
 | P1-11 | ✅ 5.11 autopilot (`radioClock.ts`). Radio: spec silnika ramówki (bloki gatunkowe, weekend Disco/Electronic/Hip-Hop, rotacja bez powtórek w oknie X h, dżingle) | Radio | M | niskie | L1 | agent |
-| P1-12 | ✅ częściowo 5.11 (audio, długość, martwe hosty, audycje; LUFS jeszcze nie). Radio: bramka jakości przed anteną (LUFS, cisza, długość, filtr treści) z kodem z `src/lib/releasePrep.ts` | Radio, Studio | M | niskie | L2 | agent |
+| P1-12 | ✅ 5.11 (audio, długość, martwe hosty, audycje + pomiar LUFS/ciszy co tydzień w GitHub Actions, wyrównanie do −14 LUFS). Radio: bramka jakości przed anteną (LUFS, cisza, długość, filtr treści) z kodem z `src/lib/releasePrep.ts` | Radio, Studio | M | niskie | L2 | agent |
 | P1-13 | Monitor zdrowia: przenieść z GitHub Actions (co 5 min) na cron Vercela albo co 15 min | infra | S | niskie | L2 | agent |
 
 ## P2 — rozwój
@@ -40,7 +40,7 @@ Właściciel: **agent** (wykonuje po bramce) albo **Grzegorz** (tylko Ty możesz
 | --- | --- | --- | --- | --- | --- | --- |
 | P2-1 | Wersjonowane API Studio dla Radia: kolejka zadań, ponawianie, koszt na utwór, gatunki priorytetowe Disco/Electronic/Hip-Hop | Studio | L | średnie | L2 | agent |
 | P2-2 | ✅ 5.11 wersja 1 (szablony, bez LLM; `radioHost.ts`). Persona prezentera AI (styl, wartości, zakazy) + generowanie wstawek „w locie” z filtrami treści; TTS ElevenLabs z otwartym zapasem i cache'em | Radio | L | średnie | L3 | agent |
-| P2-3 | Monitoring strumienia radia (cisza, błędy) z alertami | Radio | M | niskie | L2 | agent |
+| P2-3 | ✅ częściowo 5.11 (cotygodniowy raport martwych/cichych plików w Actions + w adminie; bez alertów push). Monitoring strumienia radia (cisza, błędy) z alertami | Radio | M | niskie | L2 | agent |
 | P2-4 | GrouaRock B2B: cenniki hurtowe, konta firmowe, wyceny, faktury VAT | GrouaRock | L | średnie | L4 | agent → Grzegorz |
 | P2-5 | Katalog sklepu z bazy zamiast z kodu (`src/data/shopCatalog.ts`), zdjęcia produktów | GrouaRock | M | niskie | L2 | agent |
 | P2-6 | Verified Human Streams: definicja, mierzenie skuteczności i fałszywych blokad | Stream | M | średnie | L2 | agent |

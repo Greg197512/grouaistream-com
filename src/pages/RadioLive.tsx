@@ -24,6 +24,7 @@ import { buildDailyRadio } from "@/lib/radioDaily";
 import { BLOCKS, blockAt, type BlockId } from "@/lib/radioClock";
 import { prefetchAnchor, prefetchNova, speakAnchor, speakNova, stopNova } from "@/lib/novaVoice";
 import { callin } from "@/lib/radioCallin";
+import { trackGain } from "@/lib/radioLoudness";
 import { CallIn } from "@/components/radio/CallIn";
 import { CallInDesk } from "@/components/radio/CallInDesk";
 import { AI_DISCLOSURE, BLOCK_NAMES, HOST_UI, callLine, decideHost, hostLang, hostLine, initialHostState } from "@/lib/radioHost";
@@ -655,6 +656,7 @@ const RadioLive = () => {
 
   // Głośność docelowa (dla płynnych przejść DJ-skich bez restartu utworu).
   const levelRef = useRef(1);
+  const trackGainRef = useRef(1);
   useEffect(() => { levelRef.current = muted ? 0 : volume / 100; }, [muted, volume]);
 
   const startPlayback = useCallback(
@@ -685,7 +687,10 @@ const RadioLive = () => {
       // i schodzi wyciszeniem w ostatnich sekundach. Tylko głośność jednego elementu —
       // bez Web Audio (R2 nie ma CORS) i bez drugiego <audio> (granie przy zgaszonym ekranie).
       const FADE_IN = 2.5, FADE_OUT = 4;
-      audio.volume = offset < 1 ? levelRef.current * 0.15 : levelRef.current;
+      // Wyrównanie głośności utworu do −14 LUFS (pomiar z radio-loudness.json).
+      trackGainRef.current = trackGain(item.track?.id);
+      const lvl = () => Math.min(1, levelRef.current * trackGainRef.current);
+      audio.volume = offset < 1 ? lvl() * 0.15 : lvl();
       let lastSet: number | null = audio.volume;
       audioRef.current = audio;
       let seeked = false;
@@ -694,11 +699,11 @@ const RadioLive = () => {
         if (duckRef.current) return; // prezenterka mówi — głośność trzyma jej efekt
         const ct = audio.currentTime, left = audio.duration - ct;
         const inWin = (offset < 1 && ct < FADE_IN) || left < FADE_OUT;
-        if (!inWin) { if (lastSet !== null && lastSet < levelRef.current) { audio.volume = levelRef.current; lastSet = null; } return; }
+        if (!inWin) { if (lastSet !== null && lastSet < lvl()) { audio.volume = lvl(); lastSet = null; } return; }
         // Ktoś inny ściszył (lektor/prośba) — nie przeszkadzaj.
-        if (lastSet !== null && Math.abs(audio.volume - lastSet) > 0.03 && audio.volume < levelRef.current * 0.5) return;
+        if (lastSet !== null && Math.abs(audio.volume - lastSet) > 0.03 && audio.volume < lvl() * 0.5) return;
         const g = Math.min(offset < 1 ? Math.min(1, 0.15 + ct / FADE_IN) : 1, Math.max(0.05, left / FADE_OUT));
-        const v = Math.max(0, Math.min(1, levelRef.current * g));
+        const v = Math.max(0, Math.min(1, lvl() * g));
         audio.volume = v; lastSet = v;
       });
       on("loadedmetadata", () => {
@@ -751,7 +756,7 @@ const RadioLive = () => {
   );
 
   useEffect(() => {
-    if (audioRef.current) audioRef.current.volume = muted ? 0 : volume / 100;
+    if (audioRef.current) audioRef.current.volume = muted ? 0 : Math.min(1, (volume / 100) * trackGainRef.current);
   }, [volume, muted]);
 
   // MediaSession — radio gra w tle po wygaszeniu ekranu + info na ekranie blokady.
@@ -827,7 +832,7 @@ const RadioLive = () => {
           if (audioRef.current) audioRef.current.volume = Math.min(audioRef.current.volume, 0.18);
           if (liveVoiceTimeoutRef.current) window.clearTimeout(liveVoiceTimeoutRef.current);
           liveVoiceTimeoutRef.current = window.setTimeout(() => {
-            if (audioRef.current) audioRef.current.volume = muted ? 0 : volume / 100;
+            if (audioRef.current) audioRef.current.volume = muted ? 0 : Math.min(1, (volume / 100) * trackGainRef.current);
           }, 1600);
           if (!liveVoicePlayingRef.current) playNextLiveVoiceChunk();
         } catch (err) {
@@ -901,7 +906,7 @@ const RadioLive = () => {
       talkActiveRef.current = false;
       setTalkActive(false);
       setTalkLine(null);
-      if (audioRef.current) audioRef.current.volume = muted ? 0 : volume / 100;
+      if (audioRef.current) audioRef.current.volume = muted ? 0 : Math.min(1, (volume / 100) * trackGainRef.current);
     }
   }, [talkLoading, muted, volume, toast]);
 
@@ -958,7 +963,7 @@ const RadioLive = () => {
       talkActiveRef.current = false;
       setTalkActive(false);
       setTalkLine(null);
-      if (audioRef.current) audioRef.current.volume = muted ? 0 : volume / 100;
+      if (audioRef.current) audioRef.current.volume = muted ? 0 : Math.min(1, (volume / 100) * trackGainRef.current);
     }
   }, [talkLoading, newsVideo, muted, volume, toast, playCachedStory]);
 
@@ -1017,7 +1022,7 @@ const RadioLive = () => {
       talkActiveRef.current = false;
       setTalkActive(false);
       setTalkLine(null);
-      if (audioRef.current) audioRef.current.volume = muted ? 0 : volume / 100;
+      if (audioRef.current) audioRef.current.volume = muted ? 0 : Math.min(1, (volume / 100) * trackGainRef.current);
     }
   }, [newsLoading, newsVideo, stopCurrentAudio, muted, volume, toast]);
 
@@ -1172,7 +1177,7 @@ const RadioLive = () => {
       try { await speakNova(callLine(event === "onair" ? "on" : "off", lang, name, city), lang); } catch { /* */ }
       finally {
         duckRef.current = false;
-        if (audioRef.current) audioRef.current.volume = v / 100;
+        if (audioRef.current) audioRef.current.volume = Math.min(1, (v / 100) * trackGainRef.current);
         setHostText(null);
       }
     });
@@ -1223,7 +1228,7 @@ const RadioLive = () => {
         setTalkActive(false);
         setTalkLine(null);
         duckRef.current = false;
-        if (audioRef.current) audioRef.current.volume = liveRef.current.muted ? 0 : liveRef.current.volume / 100;
+        if (audioRef.current) audioRef.current.volume = liveRef.current.muted ? 0 : Math.min(1, (liveRef.current.volume / 100) * trackGainRef.current);
         newsRunningRef.current = false;
       }
     };
@@ -1269,7 +1274,7 @@ const RadioLive = () => {
       } catch { /* głos niedostępny — muzyka gra dalej */ }
       finally {
         duckRef.current = false;
-        if (audioRef.current && !talkActiveRef.current) audioRef.current.volume = muted ? 0 : volume / 100;
+        if (audioRef.current && !talkActiveRef.current) audioRef.current.volume = muted ? 0 : Math.min(1, (volume / 100) * trackGainRef.current);
         setHostText(null);
       }
     }, 1200); // chwila wstępu utworu, potem głos
@@ -1564,7 +1569,7 @@ const RadioLive = () => {
             <div className="mt-2 flex flex-col items-center gap-1">
               <button
                 type="button"
-                onClick={() => { const v = !hostOn; setHostOn(v); try { localStorage.setItem("grouai-radio-host", v ? "on" : "off"); } catch { /* */ } if (!v) { stopNova(); duckRef.current = false; if (audioRef.current) audioRef.current.volume = muted ? 0 : volume / 100; setHostText(null); } }}
+                onClick={() => { const v = !hostOn; setHostOn(v); try { localStorage.setItem("grouai-radio-host", v ? "on" : "off"); } catch { /* */ } if (!v) { stopNova(); duckRef.current = false; if (audioRef.current) audioRef.current.volume = muted ? 0 : Math.min(1, (volume / 100) * trackGainRef.current); setHostText(null); } }}
                 aria-pressed={hostOn}
                 className={`rounded-full border px-3 py-1 text-xs font-semibold ${hostOn ? "border-primary/50 bg-primary/15 text-primary" : "border-white/15 text-foreground/60"}`}
               >

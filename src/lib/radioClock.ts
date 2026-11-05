@@ -91,8 +91,9 @@ const durOf = (t: ClockTrack) => Math.min(900, Math.max(45, t.duration || 180));
  * Plan na całą dobę od północy. Okno bez powtórek = połowa długości puli (2–8 h).
  * Gdy blok ma za mało pasujących utworów (< 8), gra z całej puli, żeby nie było ciszy.
  */
-export function planDay(rawPool: ClockTrack[], dow: number, seedKey: string): DayPlan {
-  const pool = rawPool.filter(passesQualityGate).sort((a, b) => a.id.localeCompare(b.id));
+export function planDay(rawPool: ClockTrack[], dow: number, seedKey: string, exclude?: Set<string>): DayPlan {
+  // Bramka jakości + pomiar głośności (martwe / ciche pliki z radio-loudness.json wypadają).
+  const pool = rawPool.filter((t) => passesQualityGate(t) && !exclude?.has(t.id)).sort((a, b) => a.id.localeCompare(b.id));
   const rejected = rawPool.length - pool.length;
   if (!pool.length) return { items: [], windowSec: 0, poolSize: 0, rejected };
   const rand = mulberry32(seedFromString(seedKey));

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { buildDailyRadio, type DailyRadio } from "@/lib/radioDaily";
 import { BLOCKS, type BlockId } from "@/lib/radioClock";
+import { loadLoudness, type LoudReport } from "@/lib/radioLoudness";
 
 const hhmm = (sec: number) => `${String(Math.floor(sec / 3600)).padStart(2, "0")}:${String(Math.floor((sec % 3600) / 60)).padStart(2, "0")}`;
 
@@ -8,7 +9,8 @@ const hhmm = (sec: number) => `${String(Math.floor(sec / 3600)).padStart(2, "0")
 export function RadioAutopilotPreview() {
   const [plan, setPlan] = useState<DailyRadio | null>(null);
   const [err, setErr] = useState(false);
-  useEffect(() => { buildDailyRadio("public").then(setPlan).catch(() => setErr(true)); }, []);
+  const [loud, setLoud] = useState<LoudReport | null>(null);
+  useEffect(() => { buildDailyRadio("public").then(setPlan).catch(() => setErr(true)); loadLoudness().then(setLoud); }, []);
 
   const segments = useMemo(() => {
     if (!plan?.blocks || !plan.starts) return [];
@@ -46,6 +48,12 @@ export function RadioAutopilotPreview() {
           );
         })}
       </ol>
+      <div className="rounded-lg bg-background/50 p-2 text-xs">
+        <b>Zdrowie anteny</b>{" "}
+        {loud?.updatedAt
+          ? <>· pomiar {new Date(loud.updatedAt).toLocaleDateString("pl-PL")}: {loud.checked} utworów, głośność wyrównana do −14 LUFS, <span className={loud.dead ? "text-destructive" : ""}>martwe pliki: {loud.dead}</span>, ciche/puste: {loud.silent} (pomijane na antenie)</>
+          : <>· brak pomiaru — uruchom w GitHub: Actions → „Radio — głośność i zdrowie anteny” → Run workflow (potem co tydzień samo)</>}
+      </div>
       <p className="text-xs text-muted-foreground">Zasady w src/lib/radioClock.ts: noc chill, poranek pop, dzień mix, popołudnie electronic, wieczór hip-hop; od piątku 18:00 do niedzieli 6:00 bloki Disco/Electronic/Hip-Hop; niedziela spokój. Bramka: audio, 45 s–15 min, bez martwych plików i audycji.</p>
     </div>
   );
