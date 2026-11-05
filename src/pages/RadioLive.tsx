@@ -22,6 +22,7 @@ import { YouTubePlayer } from "@/components/player/YouTubePlayer";
 import { buildPersonalQueue, type Mood } from "@/lib/personalRadio";
 import { buildDailyRadio } from "@/lib/radioDaily";
 import { BLOCKS, blockAt, type BlockId } from "@/lib/radioClock";
+import { speakNova, stopNova } from "@/lib/novaVoice";
 import { AI_DISCLOSURE, BLOCK_NAMES, HOST_UI, decideHost, hostLang, hostLine, initialHostState } from "@/lib/radioHost";
 import { useRadioStoryOverride } from "@/lib/radioStories";
 import { fetchUpcomingRequests, type UpcomingRequest } from "@/lib/radioRequest";
@@ -1178,7 +1179,7 @@ const RadioLive = () => {
       if (audioRef.current) audioRef.current.volume = Math.max(level * 0.25, 0.02);
       setHostText(line);
       try {
-        await Promise.race([speak(line, { lang, mode: "dj" }), new Promise((r) => window.setTimeout(r, 20000))]);
+        await speakNova(line, lang); // własny kobiecy głos Novy (/api/voice), zapas: głos przeglądarki
       } catch { /* głos niedostępny — muzyka gra dalej */ }
       finally {
         duckRef.current = false;
@@ -1477,7 +1478,7 @@ const RadioLive = () => {
             <div className="mt-2 flex flex-col items-center gap-1">
               <button
                 type="button"
-                onClick={() => { const v = !hostOn; setHostOn(v); try { localStorage.setItem("grouai-radio-host", v ? "on" : "off"); } catch { /* */ } if (!v) { stopVoice(); duckRef.current = false; if (audioRef.current) audioRef.current.volume = muted ? 0 : volume / 100; setHostText(null); } }}
+                onClick={() => { const v = !hostOn; setHostOn(v); try { localStorage.setItem("grouai-radio-host", v ? "on" : "off"); } catch { /* */ } if (!v) { stopNova(); duckRef.current = false; if (audioRef.current) audioRef.current.volume = muted ? 0 : volume / 100; setHostText(null); } }}
                 aria-pressed={hostOn}
                 className={`rounded-full border px-3 py-1 text-xs font-semibold ${hostOn ? "border-primary/50 bg-primary/15 text-primary" : "border-white/15 text-foreground/60"}`}
               >
