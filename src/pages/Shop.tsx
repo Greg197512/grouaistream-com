@@ -93,6 +93,13 @@ export default function Shop() {
   const [agree, setAgree] = useState(false);
   const [method, setMethod] = useState<PayMethod | null>(null);
   const [ship, setShip] = useState({ name: "", street: "", city: "", zip: "", country: lang === "nl" ? "NL" : lang === "pl" ? "PL" : "", phone: "", company: "", taxId: "" });
+  // Esc zamyka koszyk.
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
   useEffect(() => { document.title = T.title; document.documentElement.lang = lang; }, [T, lang]);
 
   useEffect(() => {
@@ -296,7 +303,7 @@ export default function Shop() {
       </footer>
 
       {open && <div className="fixed inset-0 z-50 bg-black/40" onClick={() => setOpen(false)} />}
-      <aside className={`fixed bottom-0 right-0 top-0 z-[60] flex w-full max-w-md flex-col bg-white p-5 shadow-2xl transition-transform duration-300 ${open ? "translate-x-0" : "translate-x-full"}`} aria-label={T.cart}>
+      <aside className={`fixed bottom-0 right-0 top-0 z-[60] flex w-full max-w-md flex-col bg-white p-5 shadow-2xl transition-transform duration-300 ${open ? "translate-x-0" : "translate-x-full"}`} aria-label={T.cart} aria-hidden={!open} {...(!open ? { inert: "" } : {})}>
         <div className="flex items-center justify-between"><h2 className="text-2xl font-black">{T.cart}</h2><button type="button" onClick={() => setOpen(false)} aria-label={T.close} className="h-10 w-10 rounded-full border border-neutral-300">✕</button></div>
         <div className="mt-3 flex-1 space-y-3 overflow-auto">
           {cart.length === 0 && <p className="text-neutral-500">{T.emptyCart}</p>}
