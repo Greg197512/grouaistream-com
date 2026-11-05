@@ -10,7 +10,8 @@ type Rss = { feed?: { results?: { id: string; name: string; artistName: string; 
 type Look = { results?: { trackId: number; previewUrl?: string; trackViewUrl?: string; artworkUrl100?: string }[] };
 
 const COUNTRIES = ["world", "pl", "us", "gb", "nl", "ua"] as const;
-const WORLD_MIX = ["us", "gb", "de", "br", "mx", "jp", "fr"];
+// „Świat” = czołowa piątka z każdego z tych krajów (kolejność = kolejność wyświetlania).
+const WORLD_TOP5 = ["pl", "us", "gb", "de", "fr", "es", "it", "nl", "ua", "br", "jp"];
 
 const trace: string[] = [];
 async function feed(cc: string, n: number) {
@@ -32,42 +33,41 @@ export default async function handler(req: Request): Promise<Response> {
   const c = (new URL(req.url).searchParams.get("c") || "world").toLowerCase();
   const country = (COUNTRIES as readonly string[]).includes(c) ? c : "world";
 
-  let rows: { id: string; name: string; artistName: string; artworkUrl100?: string; url?: string }[] = [];
+  type Row = { id: string; name: string; artistName: string; artworkUrl100?: string; url?: string; cc?: string; ccRank?: number };
+  let rows: Row[] = [];
   if (country === "world") {
-    // Świat = przeplot topów z kilku dużych rynków, bez duplikatów (ten sam utwór liczy się raz, wyżej).
-    const lists = await Promise.all(WORLD_MIX.map((cc) => feed(cc, 15)));
-    const seen = new Set<string>();
-    for (let i = 0; i < 15 && rows.length < 25; i++) {
-      for (const l of lists) {
-        const t = l[i];
-        if (!t) continue;
-        const key = `${t.name}|${t.artistName}`.toLowerCase();
-        if (seen.has(key)) continue;
-        seen.add(key); rows.push(t);
-        if (rows.length >= 25) break;
-      }
-    }
+    const lists = await Promise.all(WORLD_TOP5.map((cc) => feed(cc, 5)));
+    WORLD_TOP5.forEach((cc, k) => lists[k].slice(0, 5).forEach((t, i) => rows.push({ ...t, cc, ccRank: i + 1 })));
   } else {
     rows = await feed(country, 25);
   }
 
-  // Fragmenty 30 s: jeden lookup na wszystkie id.
+  // Fragmenty 30 s: lookup w sklepie właściwego kraju (lokalne hity bywają tylko tam), jeden na kraj.
   const previews = new Map<string, { preview?: string; url?: string; art?: string }>();
-  if (rows.length) {
+  const groups = new Map<string, string[]>();
+  for (const r of rows) { const cc = r.cc ?? (country === "world" ? "us" : country); groups.set(cc, [...(groups.get(cc) ?? []), r.id]); }
+  await Promise.all([...groups.entries()].map(async ([cc, ids]) => {
     try {
-      const lc = country === "world" ? "us" : country;
-      const r = await fetch(`https://itunes.apple.com/lookup?id=${rows.map((x) => x.id).join(",")}&entity=song&country=${lc}`, { signal: AbortSignal.timeout(8000) });
+      const r = await fetch(`https://itunes.apple.com/lookup?id=${[...new Set(ids)].join(",")}&entity=song&country=${cc}`, { signal: AbortSignal.timeout(8000) });
       const j = (await r.json()) as Look;
-      for (const t of j.results ?? []) previews.set(String(t.trackId), { preview: t.previewUrl, url: t.trackViewUrl, art: t.artworkUrl100 });
+      for (const t of j.results ?? []) if (t.previewUrl) previews.set(String(t.trackId), { preview: t.previewUrl, url: t.trackViewUrl, art: t.artworkUrl100 });
     } catch { /* bez fragmentów — zostaje link do Apple Music */ }
-  }
+  }));
 
   const big = (u?: string) => (u ? u.replace(/\/\d+x\d+(bb)?\.(jpg|png|webp)$/i, "/600x600bb.jpg") : null);
-  const items = rows.slice(0, 25).map((t, i) => {
+  const items = rows.slice(0, country === "world" ? 80 : 25).map((t, i) => {
     const p = previews.get(t.id);
-    return { rank: i + 1, id: t.id, title: t.name, artist: t.artistName, cover: big(t.artworkUrl100 || p?.art), preview: p?.preview ?? null, url: p?.url || t.url || null };
+    return {
+      rank: t.ccRank ?? i + 1, id: t.id, title: t.name, artist: t.artistName, cover: big(t.artworkUrl100 || p?.art),
+      preview: p?.preview ?? null, url: p?.url || t.url || null, ...(t.cc ? { country: t.cc } : {}),
+    };
   });
 
+  if (new URL(req.url).searchParams.get("summary") === "1") {
+    const per: Record<string, number> = {};
+    for (const it of items) { const k = (it as { country?: string }).country ?? country; per[k] = (per[k] ?? 0) + 1; }
+    return new Response(JSON.stringify({ country, count: items.length, withPreview: items.filter((i) => i.preview).length, per, trace }), { headers: { "content-type": "application/json", "cache-control": "no-store" } });
+  }
   const debug = new URL(req.url).searchParams.get("debug") === "1";
   return new Response(JSON.stringify({ country, updated: new Date().toISOString(), items, ...(debug ? { trace } : {}) }), {
     headers: {
