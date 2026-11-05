@@ -3,11 +3,13 @@
 import type { PricedLine, Shipping } from "./shopOrder";
 import { printfulExternalId } from "../data/shopSuppliers";
 
-export type PrintfulCfg = { token: string; storeId?: string | null; confirm: boolean };
+/** `proxy` = adres naszej strony: zapytania idą przez /api/printful-proxy (funkcja Node), bo edge blokuje zapora Printful. */
+export type PrintfulCfg = { token: string; storeId?: string | null; confirm: boolean; proxy?: string | null };
 const BASE = "https://api.printful.com";
 
 async function pf(cfg: PrintfulCfg, path: string, init: RequestInit = {}) {
-  const r = await fetch(BASE + path, {
+  const url = cfg.proxy ? `${cfg.proxy}/api/printful-proxy?path=${encodeURIComponent(path)}` : BASE + path;
+  const r = await fetch(url, {
     ...init,
     headers: {
       authorization: `Bearer ${cfg.token}`, "content-type": "application/json", accept: "application/json",
