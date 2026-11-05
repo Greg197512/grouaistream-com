@@ -23,7 +23,10 @@ import { buildPersonalQueue, type Mood } from "@/lib/personalRadio";
 import { buildDailyRadio } from "@/lib/radioDaily";
 import { BLOCKS, blockAt, type BlockId } from "@/lib/radioClock";
 import { prefetchNova, speakNova, stopNova } from "@/lib/novaVoice";
-import { AI_DISCLOSURE, BLOCK_NAMES, HOST_UI, decideHost, hostLang, hostLine, initialHostState } from "@/lib/radioHost";
+import { callin } from "@/lib/radioCallin";
+import { CallIn } from "@/components/radio/CallIn";
+import { CallInDesk } from "@/components/radio/CallInDesk";
+import { AI_DISCLOSURE, BLOCK_NAMES, HOST_UI, callLine, decideHost, hostLang, hostLine, initialHostState } from "@/lib/radioHost";
 import { useRadioStoryOverride } from "@/lib/radioStories";
 import { fetchUpcomingRequests, type UpcomingRequest } from "@/lib/radioRequest";
 import { withTimeout } from "@/lib/withTimeout";
@@ -1150,6 +1153,42 @@ const RadioLive = () => {
     return () => { window.removeEventListener("message", onMsg); window.clearTimeout(safety); };
   }, [requestVideo, closeRequestVideo]);
 
+  // Telefon od słuchacza na antenie: pasek „Na antenie” + zapowiedź/podziękowanie Novy u każdego słuchacza.
+  const [callOnAir, setCallOnAir] = useState<{ name: string; city: string } | null>(null);
+  const liveRef = useRef({ hostOn, isPlaying, muted, volume });
+  liveRef.current = { hostOn, isPlaying, muted, volume };
+  useEffect(() => {
+    const ch = callin(radioClientIdRef.current);
+    const off = ch.listen(async (event, payload) => {
+      if (event !== "onair" && event !== "offair") return;
+      const name = String(payload.name ?? ""), city = String(payload.city ?? "");
+      setCallOnAir(event === "onair" ? { name, city } : null);
+      const { hostOn: on, isPlaying: playing, muted: m, volume: v } = liveRef.current;
+      if (!on || !playing || m || talkActiveRef.current) return;
+      const lang = hostLang(langRef.current);
+      duckRef.current = true;
+      if (audioRef.current) audioRef.current.volume = Math.max((v / 100) * 0.25, 0.02);
+      setHostText(callLine(event === "onair" ? "on" : "off", lang, name, city));
+      try { await speakNova(callLine(event === "onair" ? "on" : "off", lang, name, city), lang); } catch { /* */ }
+      finally {
+        duckRef.current = false;
+        if (audioRef.current) audioRef.current.volume = v / 100;
+        setHostText(null);
+      }
+    });
+    return off;
+  }, []);
+  // U dzwoniącego: wycisz muzykę na czas rozmowy (mniej echa w mikrofonie), potem przywróć.
+  useEffect(() => {
+    const onCall = (e: Event) => {
+      const on = (e as CustomEvent<boolean>).detail;
+      duckRef.current = on;
+      if (audioRef.current) audioRef.current.volume = on ? 0 : (liveRef.current.muted ? 0 : liveRef.current.volume / 100);
+    };
+    window.addEventListener("grouai:callin-onair", onCall);
+    return () => window.removeEventListener("grouai:callin-onair", onCall);
+  }, []);
+
   // Model głosu Novy (Piper) pobiera się w tle, gdy radio gra — kolejne kwestie mówi już neuronowo.
   useEffect(() => { if (isPlaying && hostOn && !personalMood) prefetchNova(hostLang(language)); }, [isPlaying, hostOn, personalMood, language]);
 
@@ -1488,6 +1527,7 @@ const RadioLive = () => {
                 🎙️ {HOST_UI[hostLang(language)].host}: {hostOn ? HOST_UI[hostLang(language)].on : HOST_UI[hostLang(language)].off}
               </button>
               {hostText && <p className="max-w-md text-xs text-foreground/80"><b className="text-primary">Nova:</b> {hostText}</p>}
+              {callOnAir && <p className="rounded-full bg-red-500/15 px-3 py-1 text-xs font-semibold text-red-300">📞 {callOnAir.name}{callOnAir.city ? `, ${callOnAir.city}` : ""}</p>}
               <p className="text-[11px] text-foreground/50">{AI_DISCLOSURE[hostLang(language)]}</p>
             </div>
           )}
@@ -1643,6 +1683,10 @@ const RadioLive = () => {
                   </Button>
                 </div>
               )}
+
+              {/* Telefon do radia (słuchacze) + kolejka telefonów (studio) */}
+              {!personalMood && <CallIn language={language} sourceId={radioClientIdRef.current} />}
+              {isAdmin && <CallInDesk sourceId={radioClientIdRef.current} />}
 
               {/* Admin: Live Mic Booth */}
               {isAdmin && (

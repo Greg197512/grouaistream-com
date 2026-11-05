@@ -111,6 +111,7 @@ export const LiveMicBooth = ({ open, onClose, radioAudio, baseVolume, sourceId }
   const broadcastChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const broadcastReadyRef = useRef(false);
   const broadcastActiveRef = useRef(false);
+  const sharedChannelRef = useRef(false); // kanał należy do strony radia — nie usuwać
   const rafRef = useRef<number | null>(null);
   const countdownRef = useRef<number | null>(null);
   const jingleAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -140,7 +141,7 @@ export const LiveMicBooth = ({ open, onClose, radioAudio, baseVolume, sourceId }
     mediaRecorderRef.current = null;
     broadcastChunksRef.current = [];
     if (broadcastChannelRef.current) {
-      supabase.removeChannel(broadcastChannelRef.current);
+      if (!sharedChannelRef.current) supabase.removeChannel(broadcastChannelRef.current);
       broadcastChannelRef.current = null;
     }
     broadcastReadyRef.current = false;
@@ -404,18 +405,23 @@ export const LiveMicBooth = ({ open, onClose, radioAudio, baseVolume, sourceId }
       return false;
     }
 
-    const channel = supabase.channel("radio-live-voice", {
+    // realtime-js zwraca ISTNIEJĄCY kanał o tej nazwie — strona radia już go słucha. Wtedy nadajemy przez niego
+    // bez drugiego subscribe() (rzucało błąd) i bez usuwania go przy stopie (radio przestałoby odbierać głos).
+    const existing = supabase.getChannels().find((c) => c.topic === "realtime:radio-live-voice");
+    const channel = existing ?? supabase.channel("radio-live-voice", {
       config: { broadcast: { self: false }, presence: { key: sourceId } },
     });
+    sharedChannelRef.current = !!existing;
     broadcastChannelRef.current = channel;
 
     // Liczba słuchaczy na żywo (obecność na kanale) — potwierdza, że ktoś odbiera.
-    channel.on("presence", { event: "sync" }, () => {
+    const countListeners = () => {
       try {
         const st = channel.presenceState() as Record<string, unknown[]>;
         setListenerCount(Object.keys(st).length);
       } catch { /* */ }
-    });
+    };
+    if (!existing) channel.on("presence", { event: "sync" }, countListeners);
 
     const startSegment = () => {
       if (!broadcastActiveRef.current) return;
@@ -457,8 +463,8 @@ export const LiveMicBooth = ({ open, onClose, radioAudio, baseVolume, sourceId }
       }, 900);
     };
 
-    channel.subscribe((status) => {
-      if (status === "SUBSCRIBED") {
+    const onSubscribed = () => {
+        countListeners();
         broadcastReadyRef.current = true;
         broadcastActiveRef.current = true;
         setBroadcastConnected(true);
@@ -469,6 +475,11 @@ export const LiveMicBooth = ({ open, onClose, radioAudio, baseVolume, sourceId }
           payload: { sourceId, mimeType, sentAt: Date.now() },
         });
         startSegment();
+    };
+    if (existing) { onSubscribed(); return true; } // kanał strony radia — już (albo zaraz) połączony
+    channel.subscribe((status) => {
+      if (status === "SUBSCRIBED") {
+        onSubscribed();
       } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
         // KLUCZOWE: bez tego studio mówiło „jesteś na antenie", choć nic nie leciało.
         broadcastReadyRef.current = false;

@@ -63,6 +63,10 @@ i aktualny. Jeśli fakt tu jest — nie weryfikuj go od nowa dziesiątkami wywo�
   model 20–63 MB pobierany w tle raz (komputer albo telefon na Wi-Fi), potem `/api/voice`, na końcu kobiecy głos systemu.
   Uwaga: edge `elevenlabs-tts` (asystent) ma głosy MĘSKIE — dla Novy nie używać.
   Słuchacz wyłącza Novę przyciskiem (localStorage `grouai-radio-host`). Ujawnienie AI widoczne na stronie radia.
+- **Telefony od słuchaczy** (`src/lib/radioCallin.ts`, `components/radio/CallIn.tsx`, `CallInDesk.tsx`): kanał Realtime `radio-callin`
+  (jeden wspólny „hub” na kartę!), obecność caller/studio, zdarzenia accept/reject/end/onair/offair. Słuchacz (zalogowany) → kolejka →
+  admin „Odbierz” → Nova zapowiada u wszystkich → głos dzwoniącego na `radio-live-voice` (`radioLiveSend.ts`, kawałki 0,9 s). Limit 3 min.
+  **realtime-js zwraca istniejący kanał o tej samej nazwie** — nie wolno drugi raz `subscribe()` ani `removeChannel()` cudzego kanału (naprawione też w LiveMicBooth).
 - **Język = wybór użytkownika:** `LanguageContext` zapisuje wybór zalogowanego w `user_metadata.language` i przywraca go po zalogowaniu
   (każde urządzenie). Radio (Nova, Talk, newsy, opowiadania) bierze język z kontekstu, nie z domyślnego „pl”.
 
