@@ -21,6 +21,7 @@ import { speak, stopSpeaking as stopVoice } from "@/utils/tts";
 import { YouTubePlayer } from "@/components/player/YouTubePlayer";
 import { buildPersonalQueue, type Mood } from "@/lib/personalRadio";
 import { buildDailyRadio } from "@/lib/radioDaily";
+import { BLOCKS } from "@/lib/radioClock";
 import { useRadioStoryOverride } from "@/lib/radioStories";
 import { fetchUpcomingRequests, type UpcomingRequest } from "@/lib/radioRequest";
 import { withTimeout } from "@/lib/withTimeout";
@@ -105,6 +106,9 @@ const RadioLive = () => {
   const [station, setStation] = useState<"public" | "vip">("public");
   const [config, setConfig] = useState<RadioConfig | null>(null);
   const [rawSchedule, setRawSchedule] = useState<ScheduleTrack[]>([]);
+  // Autopilot (ramówka automatyczna): starty utworów i bloki na dziś + bieżący blok do wyświetlenia.
+  const autoPlanRef = useRef<{ startedAtMs: number; starts: number[]; blocks: string[] } | null>(null);
+  const [autoBlock, setAutoBlock] = useState<string | null>(null);
   const [configVersion, setConfigVersion] = useState(0); // bump = przeładuj grafik (np. po zmianie trybu)
   // Tryb osobisty: kolejka zbudowana z danych zalogowanego (słyszy tylko on).
   const [personalTracks, setPersonalTracks] = useState<ScheduleTrack[]>([]);
@@ -188,6 +192,9 @@ const RadioLive = () => {
     // W trybie osobistym gramy kolejkę użytkownika (bez dedup po artyście).
     const source = personalMood ? personalTracks : rawSchedule;
     const filtered = source.filter((item) => (item.item_type === "track" || !item.item_type) && !!item.track?.audio_url);
+    // Plan autopilota jest już ułożony (bez powtórek, rozdzieleni artyści) i zsynchronizowany
+    // co do sekundy — dodatkowe filtrowanie przesunęłoby czasy bloków.
+    if (!personalMood && filtered.length && (filtered[0] as any).autopilot) return filtered;
 
     // Stacja jednoartystowa (np. VIP = cały katalog jednego twórcy) — dedup po
     // artyście zjadłby wszystko poza jednym utworem. Wykryj to i wtedy pomiń.
@@ -215,6 +222,21 @@ const RadioLive = () => {
       return true;
     });
   }, [rawSchedule, personalMood, personalTracks]);
+
+  // Bieżący blok ramówki autopilota (odświeżany co minutę, bez restartu odtwarzania).
+  useEffect(() => {
+    const tick = () => {
+      const plan = autoPlanRef.current;
+      if (!plan || personalMood) return setAutoBlock(null);
+      const sec = (Date.now() - plan.startedAtMs) / 1000;
+      let i = 0; while (i + 1 < plan.starts.length && plan.starts[i + 1] <= sec) i++;
+      const b = plan.blocks[i] as keyof typeof BLOCKS;
+      setAutoBlock(BLOCKS[b]?.label ?? null);
+    };
+    tick();
+    const t = window.setInterval(tick, 60000);
+    return () => window.clearInterval(t);
+  }, [rawSchedule, personalMood]);
 
   // Auth
   useEffect(() => {
@@ -249,8 +271,10 @@ const RadioLive = () => {
       if (!daily || daily.tracks.length === 0) return false;
       const synthetic: ScheduleTrack[] = daily.tracks.map((t, i) => ({
         position: i, item_type: "track", custom_title: null, custom_duration: 0, custom_audio_url: null, lang: null,
+        autopilot: !!daily.blocks,
         track: { id: t.id, title: t.title, artist: t.artist, duration: t.duration, audio_url: t.audio_url, cover_url: t.cover_url },
       }));
+      autoPlanRef.current = daily.blocks && daily.starts ? { startedAtMs: new Date(daily.startedAtISO).getTime(), starts: daily.starts, blocks: daily.blocks } : null;
       setRawSchedule(synthetic as any);
       setConfig({ is_active: true, mode: "24h", start_time: null, end_time: null, started_at: daily.startedAtISO, station_name: daily.stationName } as any);
       return true;
@@ -274,6 +298,11 @@ const RadioLive = () => {
         const rows = Array.isArray(scheduleRes.data) ? (scheduleRes.data as any[]) : [];
         const playable = rows.filter((r) => r?.track?.audio_url);
         const offAir = !cfg?.is_active || playable.length === 0;
+        // Autopilot jest domyślny dla stacji publicznej. Admin może wybrać grafik ręczny
+        // (tryb „manual”) albo godziny nadawania („scheduled”) — wtedy gra radio_schedule.
+        const autopilot = station === "public" && cfg?.mode !== "manual" && cfg?.mode !== "scheduled";
+        if (autopilot && (await applyDaily())) return;
+        autoPlanRef.current = null;
 
         if (!offAir) {
           // Admin ma aktywny grafik — szanujemy go.
@@ -1366,6 +1395,9 @@ const RadioLive = () => {
             <Radio className="h-8 w-8 text-primary-foreground" />
           </motion.div>
           <h1 className="text-xl font-bold">{personalMood ? `Twoje radio · ${personalMood}` : config?.station_name}</h1>
+          {!personalMood && autoBlock && (
+            <p className="mt-1 text-xs text-foreground/70"><span className="rounded-full bg-primary/15 px-2 py-0.5 font-semibold text-primary">Autopilot</span> Teraz: {autoBlock}</p>
+          )}
           {personalMood && (
             <div className="mt-1 flex items-center justify-center gap-2 text-xs">
               <span className="px-2 py-0.5 rounded-full bg-primary/20 text-primary font-semibold">🎧 Tryb osobisty — słyszysz tylko Ty</span>

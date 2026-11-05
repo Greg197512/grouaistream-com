@@ -48,6 +48,12 @@ i aktualny. Jeśli fakt tu jest — nie weryfikuj go od nowa dziesiątkami wywo�
 - Granie przy zgaszonym ekranie: radio (`RadioLive.tsx`) i player mają **jeden stały `<audio>`** (podmiana `src` + `play()` od razu w `ended`).
   NIE tworzyć `new Audio()` na kolejny utwór — telefon w tle blokuje start nowego elementu. `main.tsx` nie przeładowuje, gdy `mediaSession.playbackState === "playing"`.
 
+## Radio — autopilot (od 5.11.2026)
+- Stacja publiczna gra **autopilota** (`src/lib/radioClock.ts` → `radioDaily.ts`): plan na całą dobę od polskiej północy,
+  bloki: noc chill / poranek pop / dzień mix / popołudnie electronic / wieczór hip-hop; pt 18:00–nd 6:00 Disco/Electronic/Hip-Hop
+  (rotacja co godzinę); niedziela spokój. Bez powtórek w oknie 2–8 h, artyści rozdzieleni, bramka jakości (audio, 45 s–15 min,
+  bez `cdn1.suno.ai` i audycji). Admin: tryb `24h` = autopilot (podgląd ramówki), `manual` = grafik `radio_schedule`, `scheduled` = godziny. VIP gra grafik.
+
 ## Baza `tracks` (stan po sprzątaniu)
 - ~406 realnych utworów. Usunięto 66 600 pustych „widm" (5 CC-artystów: Bensound, Kevin MacLeod,
   Scott Buckley, Audionautix, Purple Planet) dosypywanych przez cron. Trigger
