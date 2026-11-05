@@ -21,13 +21,14 @@ const dayKey = () => new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/
 const LS = "grouai-djyellow-day";
 /** Raz dziennie (na urządzeniu) — w tle, z ponowieniem, gdy Suno jeszcze komponuje. */
 export async function djDailyTick(onDone: (r: DjRun) => void) {
-  try { if (localStorage.getItem(LS) === dayKey()) return; } catch { /* */ }
   const st = await djStatus();
-  if (st && st.today.length >= st.perDay) { try { localStorage.setItem(LS, dayKey()); } catch { /* */ } return; }
+  const mark = `${dayKey()}:${st?.perDay ?? 2}`; // cel dnia może wzrosnąć (dodatkowe utwory) — wtedy ruszamy ponownie
+  try { if (localStorage.getItem(LS) === mark) return; } catch { /* */ }
+  if (st && st.today.length >= st.perDay) { try { localStorage.setItem(LS, mark); } catch { /* */ } return; }
   for (let attempt = 0; attempt < 4; attempt++) {
     const r = await djRunNow();
-    if (r.step === "published" || r.step === "done-today" || r.step === "partial-today") {
-      try { localStorage.setItem(LS, dayKey()); } catch { /* */ }
+    if (r.step === "published" || r.step === "done-today") {
+      try { localStorage.setItem(LS, mark); } catch { /* */ }
       onDone(r);
       return;
     }
