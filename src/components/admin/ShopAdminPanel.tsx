@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { SHOP_SERVICE_TYPE, orderRef, toShopOrder, type ShopOrderView as Order } from "@/lib/shopOrder";
 import { buildInvoice, invoiceHtml, invoicePrefix, nextInvoiceNumber, openInvoice, type ShopConfig } from "@/lib/shopInvoice";
 import { ossQuarter, ossReport } from "@/lib/vatOss";
+import { CARRIERS, carrierById, trackingUrl } from "@/data/shopCarriers";
 
 const STATUSES = ["new", "paid", "shipped", "cancelled", "refunded"] as const;
 const LABEL: Record<string, string> = { new: "Nowe", paid: "Opłacone", shipped: "Wysłane", cancelled: "Anulowane", refunded: "Zwrot" };
@@ -68,6 +69,20 @@ export function ShopAdminPanel() {
     if (st === "skipped") toast.info("Zamówienie już przekazane do realizacji");
     else if (st === "sent") toast.success("Przekazane do realizacji");
     else toast.warning((j.fulfillment?.notes ?? []).join(" · ") || "Sprawdź realizację");
+    load();
+  };
+  // Nadanie paczki: przewoźnik + numer → status „Wysłane” + e-mail do klienta z linkiem śledzenia.
+  const [shipForm, setShipForm] = useState<Record<string, { carrier: string; number: string }>>({});
+  const [shipping, setShipping] = useState<string | null>(null);
+  const shipNow = async (o: Order) => {
+    const f = shipForm[o.id] ?? { carrier: o.shipping?.carrier ?? "", number: "" };
+    if (!carrierById(f.carrier)) return toast.error("Wybierz przewoźnika");
+    if (!/^[A-Z0-9-]{4,40}$/i.test(f.number.replace(/\s+/g, ""))) return toast.error("Wpisz numer przesyłki");
+    setShipping(o.id);
+    const { ok, j } = await callApi({ action: "ship", orderId: o.id, carrier: f.carrier, number: f.number });
+    setShipping(null);
+    if (!ok) return toast.error(j.error === "forbidden" ? "Tylko admin" : j.error === "bad_number" ? "Zły numer przesyłki" : "Nie udało się zapisać nadania");
+    toast.success(j.mailed ? "Nadane — klient dostał e-mail z linkiem śledzenia" : "Nadane (e-mail do klienta nie wyszedł)");
     load();
   };
   const [pfCheck, setPfCheck] = useState<{ linked: number; total: number; missing: string[] } | null>(null);
@@ -209,6 +224,23 @@ export function ShopAdminPanel() {
               </div>
               {o.fulfillment?.notes && o.fulfillment.notes.length > 0 && <ul className="text-xs text-muted-foreground list-disc pl-4">{o.fulfillment.notes.map((n, k) => <li key={k}>{n}</li>)}</ul>}
               <ul className="text-sm">{o.items.map((i, k) => <li key={k}>{i.qty} × {i.name}{i.size ? ` (${i.size})` : ""} · {eur(i.unitCents * i.qty)}</li>)}</ul>
+              {o.shipping?.carrier && <div className="text-sm">🚚 Klient wybrał: <b>{carrierById(o.shipping.carrier)?.name ?? o.shipping.carrier}</b>{o.shipping.point ? <> · Paczkomat <b>{o.shipping.point}</b></> : null}</div>}
+              {o.tracking ? (
+                <div className="text-sm">📦 Nadane: {carrierById(o.tracking.carrier)?.name} · <a className="text-primary underline" href={trackingUrl(o.tracking.carrier, o.tracking.number) ?? "#"} target="_blank" rel="noopener noreferrer">{o.tracking.number}</a> · {new Date(o.tracking.at).toLocaleString("pl-PL")}</div>
+              ) : o.payment_status === "paid" && o.status !== "cancelled" && o.status !== "refunded" && (
+                <div className="flex flex-wrap items-center gap-2 rounded-lg border border-dashed border-border p-2">
+                  <select className="rounded-md border border-border bg-background px-2 py-1 text-sm" aria-label="Przewoźnik"
+                    value={(shipForm[o.id] ?? { carrier: o.shipping?.carrier ?? "" }).carrier}
+                    onChange={(e) => setShipForm((m) => ({ ...m, [o.id]: { number: m[o.id]?.number ?? "", carrier: e.target.value } }))}>
+                    <option value="">Przewoźnik…</option>
+                    {CARRIERS.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                  <input className="min-w-0 flex-1 rounded-md border border-border bg-background px-2 py-1 text-sm" placeholder="Numer przesyłki" aria-label="Numer przesyłki"
+                    value={shipForm[o.id]?.number ?? ""}
+                    onChange={(e) => setShipForm((m) => ({ ...m, [o.id]: { carrier: m[o.id]?.carrier ?? o.shipping?.carrier ?? "", number: e.target.value } }))} />
+                  <Button size="sm" disabled={shipping === o.id} onClick={() => shipNow(o)}>{shipping === o.id ? "Zapisuję…" : "Nadaj paczkę"}</Button>
+                </div>
+              )}
               {o.shipping && <div className="text-sm text-muted-foreground">Wysyłka: {o.shipping.name}{o.shipping.company ? ` (${o.shipping.company}${o.shipping.taxId ? `, ${o.shipping.taxId}` : ""})` : ""}, {o.shipping.street}, {o.shipping.zip} {o.shipping.city}, {o.shipping.country}{o.shipping.phone ? `, tel. ${o.shipping.phone}` : ""}</div>}
               <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                 <span>Płatność: {o.payment_status === "paid" ? "opłacone" : o.payment_status === "refunded" ? "zwrot" : "oczekuje"}</span>

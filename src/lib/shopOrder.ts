@@ -12,7 +12,9 @@ export const SHOP_MAX_QTY = 20;
 export type CartItem = { id: string; qty: number; size?: string };
 export type PricedLine = { id: string; name: string; size: string | null; qty: number; unitCents: number };
 /** `country` to kod ISO kraju UE (np. "NL"); `company`/`taxId` opcjonalnie do faktury. */
-export type Shipping = { name: string; street: string; city: string; zip: string; country: string; phone?: string; company?: string; taxId?: string };
+export type Shipping = { name: string; street: string; city: string; zip: string; country: string; phone?: string; company?: string; taxId?: string; carrier?: string; point?: string };
+/** Nadana przesyłka (wpisuje admin): przewoźnik + numer do śledzenia. */
+export type Tracking = { carrier: string; number: string; at: string };
 export type PayMethod = "card" | "transfer";
 
 /** Tytuł przelewu / numer zamówienia widoczny dla klienta. */
@@ -51,9 +53,10 @@ export function cleanShipping(s: unknown): Shipping | null {
   const out: Shipping = {
     name: f("name"), street: f("street", 160), city: f("city"), zip: f("zip", 16), country: f("country", 2).toUpperCase(),
     phone: f("phone", 32), company: f("company", 160), taxId: f("taxId", 32),
+    carrier: f("carrier", 24), point: f("point", 24).toUpperCase(),
   };
   if ([out.name, out.street, out.city, out.zip].some((v) => v.length < 2) || !isEuCountry(out.country)) return null;
-  for (const k of ["phone", "company", "taxId"] as const) if (!out[k]) delete out[k];
+  for (const k of ["phone", "company", "taxId", "carrier", "point"] as const) if (!out[k]) delete out[k];
   return out;
 }
 
@@ -69,9 +72,10 @@ export type ShopOrderView = {
   status: string; payment_status: string; shipping: Shipping | null; stripe_session_id: string | null; created_at: string;
   paid_at: string | null; method: PayMethod | null; lang: string | null;
   fulfillment: { state: string; at: string; notes?: string[] } | null;
+  tracking: Tracking | null;
 };
 export function toShopOrder(row: Record<string, unknown>): ShopOrderView {
-  const p = (row.payload ?? {}) as { items?: unknown; total_cents?: unknown; shipping?: Shipping; stripe_session_id?: string; method?: PayMethod; lang?: string; fulfillment?: ShopOrderView["fulfillment"] };
+  const p = (row.payload ?? {}) as { items?: unknown; total_cents?: unknown; shipping?: Shipping; stripe_session_id?: string; method?: PayMethod; lang?: string; fulfillment?: ShopOrderView["fulfillment"]; tracking?: Tracking };
   const str = (v: unknown) => (v == null ? null : String(v));
   return {
     id: String(row.id), user_id: str(row.user_id), email: str(row.client_email),
@@ -80,6 +84,7 @@ export function toShopOrder(row: Record<string, unknown>): ShopOrderView {
     status: String(row.status ?? "new"), payment_status: String(row.payment_status ?? "pending"),
     shipping: p.shipping ?? null, stripe_session_id: p.stripe_session_id ?? null, created_at: String(row.created_at),
     paid_at: str(row.paid_at), method: p.method ?? null, lang: p.lang ?? null, fulfillment: p.fulfillment ?? null,
+    tracking: p.tracking && p.tracking.number ? p.tracking : null,
   };
 }
 

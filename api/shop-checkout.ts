@@ -32,7 +32,8 @@ import { localizeProduct } from "../src/data/shopCatalogI18n";
 import { SHOP_PRODUCTS } from "../src/data/shopCatalog";
 import { supplierFor, printfulExternalId } from "../src/data/shopSuppliers";
 import { createPrintfulOrder, printfulExternalIds, type PrintfulCfg } from "../src/lib/printful";
-import { adminMail, customerPaidMail, customerTransferMail, mailConfigFromEnv, sendMail, supplierMail, type MailCfg, type MailOrder } from "../src/lib/shopMail";
+import { CARRIERS, carrierById, isPointCode, trackingUrl } from "../src/data/shopCarriers";
+import { adminMail, customerPaidMail, customerShippedMail, customerTransferMail, mailConfigFromEnv, sendMail, supplierMail, type MailCfg, type MailOrder } from "../src/lib/shopMail";
 import type { PricedLine, Shipping } from "../src/lib/shopOrder";
 
 export const config = { runtime: "edge" };
@@ -100,6 +101,15 @@ function siteOrigin(req: Request): string {
 }
 
 const shipCentsEnv = () => Math.max(0, Math.round(Number(env("SHOP_SHIPPING_EUR_CENTS") ?? 0)) || 0);
+/** Cena dostawy u danego przewoźnika: SHOP_CARRIER_PRICES (JSON, eurocenty) albo cena ogólna. */
+const carrierCents = (id: string | undefined) => {
+  try {
+    const m = JSON.parse(env("SHOP_CARRIER_PRICES") ?? "{}") as Record<string, unknown>;
+    const v = id ? Number(m[id]) : NaN;
+    if (Number.isFinite(v) && v >= 0) return Math.round(v);
+  } catch { /* zły JSON → cena ogólna */ }
+  return shipCentsEnv();
+};
 const hasStripe = () => !!env("STRIPE_SECRET_KEY");
 // Płatność „Revolut QR”: wystarczy SHOP_REVOLUT_LINK (klient płaci w aplikacji albo kartą); IBAN jest zapasowy.
 const bank = () => {
@@ -128,6 +138,7 @@ function publicConfig() {
     } : null,
     // Kontakt widoczny w sklepie nawet bez pełnych danych firmy (adres potrzebny dopiero do faktur).
     contact: { name: name ?? null, email: env("SHOP_SELLER_EMAIL") ?? null },
+    carriers: CARRIERS.map((c) => ({ id: c.id, cents: carrierCents(c.id) })),
     vatMode: parseVatMode(env("SHOP_VAT_MODE")), exemptNote: env("SHOP_VAT_EXEMPT_NOTE") ?? null,
     fulfillment: { printful: !!printfulCfg(), printfulAuto: !!printfulCfg()?.confirm, mail: !!mailCfg(), supplierEmail: !!env("SHOP_SUPPLIER_EMAIL"), notify: !!env("SHOP_NOTIFY_EMAIL") },
   };
@@ -143,11 +154,15 @@ async function create(req: Request, auth: string, user: User, body: Record<strin
   if ("error" in priced) return json({ error: priced.error }, 400);
   const shipping = cleanShipping(body.shipping);
   if (!shipping) return json({ error: "bad_shipping" }, 400);
+  const carrier = carrierById(shipping.carrier);
+  if (!carrier || (carrier.countries && !carrier.countries.includes(shipping.country))) return json({ error: "bad_carrier" }, 400);
+  if (carrier.point && !isPointCode(shipping.point ?? "")) return json({ error: "bad_point" }, 400);
+  if (!carrier.point) delete shipping.point;
   const lang: Lang = (LANGS as readonly string[]).includes(String(body.lang)) ? (body.lang as Lang) : "en";
   const method = body.method === "card" ? "card" : body.method === "transfer" ? "transfer" : null;
   if (method === "card" && !hasStripe()) return json({ error: "bad_method" }, 400);
   if (method === "transfer" && !bank()) return json({ error: "bad_method" }, 400);
-  const shipCents = shipCentsEnv();
+  const shipCents = carrierCents(carrier.id);
   const totalCents = priced.totalCents + shipCents;
   const payload = { items: priced.lines, shipping, shipping_cents: shipCents, total_cents: totalCents, currency: "EUR", method, lang };
 
@@ -156,7 +171,7 @@ async function create(req: Request, auth: string, user: User, body: Record<strin
     body: JSON.stringify({
       user_id: user.id, client_email: user.email, client_name: shipping.name || user.name,
       service_type: SHOP_SERVICE_TYPE, source: SHOP_SOURCE, status: "new", payment_status: "pending",
-      price_eur: totalCents / 100, brief: orderBrief(priced.lines, totalCents), payload,
+      price_eur: totalCents / 100, brief: `${orderBrief(priced.lines, totalCents)} · dostawa: ${carrier.name}${shipping.point ? ` ${shipping.point}` : ""}`.slice(0, 4000), payload,
     }),
   });
   const row = Array.isArray(ins.data) ? (ins.data[0] as { id?: string }) : null;
@@ -193,7 +208,7 @@ async function create(req: Request, auth: string, user: User, body: Record<strin
     const p = productById.get(l.id);
     return { ...l, name: p ? localizeProduct(p, lang).name : l.name };
   });
-  const all = [...named, ...(shipCents ? [{ name: SHIP_NAME[lang], size: null, qty: 1, unitCents: shipCents }] : [])];
+  const all = [...named, ...(shipCents ? [{ name: `${SHIP_NAME[lang]} · ${carrier.name}`, size: null, qty: 1, unitCents: shipCents }] : [])];
   all.forEach((l, i) => {
     f.set(`line_items[${i}][quantity]`, String(l.qty));
     f.set(`line_items[${i}][price_data][currency]`, "eur");
@@ -317,6 +332,33 @@ async function fulfillAction(auth: string, user: User, body: Record<string, unkn
   return json({ orderId, fulfillment: await fulfill(auth, row, body.force === true) });
 }
 
+// Nadanie paczki (admin): przewoźnik + numer → status „Wysłane”, link śledzenia w zamówieniu i e-mail do klienta.
+async function shipAction(auth: string, user: User, body: Record<string, unknown>) {
+  if (!(await isAdmin(auth, user.id))) return json({ error: "forbidden" }, 403);
+  const orderId = String(body.orderId ?? "");
+  if (!/^[0-9a-f-]{36}$/i.test(orderId)) return json({ error: "bad_order" }, 400);
+  const carrier = carrierById(body.carrier);
+  const number = String(body.number ?? "").replace(/\s+/g, "").toUpperCase();
+  if (!carrier) return json({ error: "bad_carrier" }, 400);
+  if (!/^[A-Z0-9-]{4,40}$/.test(number)) return json({ error: "bad_number" }, 400);
+  const got = await rest(auth, `aurora_business_orders?id=eq.${orderId}&service_type=eq.${SHOP_SERVICE_TYPE}&select=id,client_email,payment_status,payload`);
+  const row = Array.isArray(got.data) ? (got.data[0] as OrderRow) : null;
+  if (!row) return json({ error: "not_found" }, 404);
+  const tracking = { carrier: carrier.id, number, at: new Date().toISOString() };
+  const payload = { ...(row.payload ?? {}), tracking };
+  const upd = await rest(auth, `aurora_business_orders?id=eq.${orderId}`, { method: "PATCH", body: JSON.stringify({ status: "shipped", payload }) });
+  if (!upd.ok) return json({ error: "save_failed", status: upd.status }, 502);
+  const p = payload as { items?: PricedLine[]; shipping?: Shipping; total_cents?: number; lang?: string };
+  const m = mailCfg();
+  let mailed = false;
+  if (m && row.client_email && p.shipping && Array.isArray(p.items)) {
+    const lang: Lang = (LANGS as readonly string[]).includes(String(p.lang)) ? (p.lang as Lang) : "pl";
+    const mo: MailOrder = { id: row.id, lines: p.items, totalCents: p.total_cents ?? 0, shipping: p.shipping, email: row.client_email, lang };
+    mailed = !!(await sendMail(m, { to: row.client_email, replyTo: env("SHOP_SELLER_EMAIL") ?? env("SHOP_NOTIFY_EMAIL"), ...customerShippedMail(mo, carrier.name, number, trackingUrl(carrier.id, number)) }));
+  }
+  return json({ orderId, tracking, url: trackingUrl(carrier.id, number), mailed });
+}
+
 async function printfulCheck(auth: string, user: User) {
   if (!(await isAdmin(auth, user.id))) return json({ error: "forbidden" }, 403);
   const pf = printfulCfg();
@@ -343,6 +385,7 @@ export default async function handler(req: Request): Promise<Response> {
     if (body.action === "confirm") return await confirm(auth, body);
     if (body.action === "payinfo") return await payinfo(auth, body);
     if (body.action === "fulfill") return await fulfillAction(auth, user, body);
+    if (body.action === "ship") return await shipAction(auth, user, body);
     if (body.action === "printful-check") return await printfulCheck(auth, user);
     return json({ error: "unknown_action" }, 400);
   } catch {

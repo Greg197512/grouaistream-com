@@ -1,5 +1,6 @@
 // E-maile sklepu GrouaDrop: szablony (PL/EN/NL) i wysyłka przez HTTP (Resend albo Brevo), działa na edge.
 import { orderRef, type PricedLine, type Shipping } from "./shopOrder";
+import { carrierById } from "../data/shopCarriers";
 
 // provider "grouai" = wysyłka przez funkcję send-transactional-email głównego projektu Supabase
 // (szablon admin-notification z gotowym HTML; nadawca noreply@grouaistream.com, lista wypisów, dziennik email_send_log).
@@ -20,7 +21,7 @@ const wrap = (title: string, body: string) => `<!doctype html><html><body style=
 
 const itemsTable = (lines: PricedLine[], lang: Lang) => `<table style="width:100%;border-collapse:collapse;margin:12px 0">${lines.map((l) =>
   `<tr><td style="padding:6px 0;border-bottom:1px solid #eee">${l.qty} × ${esc(l.name)}${l.size ? ` (${esc(l.size)})` : ""}</td><td style="padding:6px 0;border-bottom:1px solid #eee;text-align:right">${money(l.unitCents * l.qty, lang)}</td></tr>`).join("")}</table>`;
-const address = (s: Shipping) => `${esc(s.name)}${s.company ? `, ${esc(s.company)}` : ""}<br>${esc(s.street)}<br>${esc(s.zip)} ${esc(s.city)}, ${esc(s.country)}${s.phone ? `<br>tel. ${esc(s.phone)}` : ""}`;
+const address = (s: Shipping) => `${esc(s.name)}${s.company ? `, ${esc(s.company)}` : ""}<br>${esc(s.street)}<br>${esc(s.zip)} ${esc(s.city)}, ${esc(s.country)}${s.phone ? `<br>tel. ${esc(s.phone)}` : ""}${s.carrier ? `<br>🚚 ${esc(carrierById(s.carrier)?.name ?? s.carrier)}${s.point ? ` · ${esc(s.point)}` : ""}` : ""}`;
 
 const C = {
   pl: { paidS: "Płatność przyjęta: zamówienie {ref}", paidT: "Dziękujemy! Zamówienie przyjęte do realizacji", paidB: "Twoje zamówienie trafiło do produkcji. Wysyłka zwykle w ciągu {days} dni roboczych. Gdy paczka wyruszy, dostaniesz e-mail.", newS: "Zamówienie {ref}: dane do przelewu", newT: "Zamówienie przyjęte. Czekamy na przelew", newB: "Zapłać przez Revolut (aplikacja albo karta): kliknij przycisk, wpisz dokładną kwotę, a w notatce numer zamówienia. Zaczniemy realizację po otrzymaniu wpłaty.", total: "Razem", ship: "Adres dostawy", holder: "Odbiorca", amount: "Kwota", ref: "Notatka", help: "Pytania? Odpowiedz na tego e-maila." },
@@ -48,6 +49,23 @@ export function customerTransferMail(o: MailOrder, bank: { holder: string; iban:
   return {
     subject: t.newS.replace("{ref}", ref),
     html: wrap(t.newT, `<p>${esc(t.newB)}</p>${pay}<table style="margin:12px 0;background:#fff7ed;border-radius:12px;padding:12px">${rows}${row(t.amount, money(o.totalCents, o.lang))}${row(t.ref, ref)}</table>${itemsTable(o.lines, o.lang)}<p style="color:#71717a">${t.help}</p>`),
+  };
+}
+
+const SHIP_TXT = {
+  pl: { s: "Paczka w drodze: zamówienie {ref}", t: "Twoja paczka wyruszyła 🚚", b: "Zamówienie {ref} zostało nadane. Przewoźnik: {carrier}, numer przesyłki: {number}.", btn: "Śledź przesyłkę", point: "Odbiór w Paczkomacie" },
+  en: { s: "On its way: order {ref}", t: "Your parcel is on its way 🚚", b: "Order {ref} has been shipped. Carrier: {carrier}, tracking number: {number}.", btn: "Track parcel", point: "Pickup point" },
+  nl: { s: "Onderweg: bestelling {ref}", t: "Je pakket is onderweg 🚚", b: "Bestelling {ref} is verzonden. Vervoerder: {carrier}, trackingnummer: {number}.", btn: "Volg pakket", point: "Afhaalpunt" },
+} as const;
+
+/** E-mail do klienta po nadaniu paczki: przewoźnik, numer i przycisk śledzenia. */
+export function customerShippedMail(o: MailOrder, carrierName: string, number: string, url: string | null): Omit<Mail, "to"> {
+  const t = SHIP_TXT[o.lang]; const ref = orderRef(o.id);
+  const btn = url ? `<p><a href="${esc(url)}" style="display:inline-block;background:#f97316;color:#fff;padding:12px 22px;border-radius:999px;text-decoration:none;font-weight:bold">${esc(t.btn)}</a></p>` : "";
+  const point = o.shipping.point ? `<p style="color:#52525b"><b>${esc(t.point)}:</b> ${esc(o.shipping.point)}</p>` : "";
+  return {
+    subject: t.s.replace("{ref}", ref),
+    html: wrap(t.t, `<p>${esc(t.b.replace("{ref}", ref).replace("{carrier}", carrierName).replace("{number}", number))}</p>${btn}${point}${itemsTable(o.lines, o.lang)}<p style="color:#52525b">${address(o.shipping)}</p><p style="color:#71717a">${C[o.lang].help}</p>`),
   };
 }
 
