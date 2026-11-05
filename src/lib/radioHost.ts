@@ -29,7 +29,7 @@ export const AI_DISCLOSURE: Record<HostLang, string> = {
   ua: "Ведуча Nova — це голос ШІ. Частина музики створена за допомогою ШІ.",
 };
 
-const BLOCK_NAMES: Record<HostLang, Record<BlockId, string>> = {
+export const BLOCK_NAMES: Record<HostLang, Record<BlockId, string>> = {
   pl: { night: "nocne chill i lo-fi", morning: "poranny pop i energię", day: "mix dnia", afternoon: "popołudniowy electronic i house", evening: "wieczorny hip-hop i R&B", "weekend-disco": "weekendowe disco", "weekend-electronic": "weekendowy electronic", "weekend-hiphop": "weekendowy hip-hop", sunday: "niedzielny spokój" },
   en: { night: "late-night chill and lo-fi", morning: "morning pop and energy", day: "the daytime mix", afternoon: "afternoon electronic and house", evening: "evening hip-hop and R&B", "weekend-disco": "weekend disco", "weekend-electronic": "weekend electronic", "weekend-hiphop": "weekend hip-hop", sunday: "Sunday chill" },
   nl: { night: "nachtelijke chill en lo-fi", morning: "ochtendpop en energie", day: "de dagmix", afternoon: "middag-electronic en house", evening: "avond-hiphop en R&B", "weekend-disco": "weekenddisco", "weekend-electronic": "weekend-electronic", "weekend-hiphop": "weekend-hiphop", sunday: "zondagse rust" },
@@ -146,3 +146,11 @@ export function decideHost(s: HostState, now: { block: BlockId; hour: number; ms
   if (kind) { next.welcomed = true; next.tracksSince = 0; next.lastSpokeAt = now.ms; }
   return { kind, next };
 }
+
+/** Napisy interfejsu radia związane z autopilotem i prezenterką (w języku słuchacza). */
+export const HOST_UI: Record<HostLang, { host: string; on: string; off: string; now: string; djMix: string }> = {
+  pl: { host: "Prezenterka Nova (AI)", on: "wł.", off: "wył.", now: "Teraz", djMix: "DJ mix (electronic / hip-hop / disco)" },
+  en: { host: "Host Nova (AI)", on: "on", off: "off", now: "Now", djMix: "DJ mix (electronic / hip-hop / disco)" },
+  nl: { host: "Presentator Nova (AI)", on: "aan", off: "uit", now: "Nu", djMix: "DJ-mix (electronic / hiphop / disco)" },
+  ua: { host: "Ведуча Nova (ШІ)", on: "увімк.", off: "вимк.", now: "Зараз", djMix: "DJ-мікс (електронік / хіп-хоп / диско)" },
+};
