@@ -206,7 +206,7 @@ const PlaylistDropZone = ({
 };
 
 const CreatePlaylist = () => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { t } = useLanguage();
 
@@ -227,6 +227,7 @@ const CreatePlaylist = () => {
   );
 
   useEffect(() => {
+    if (authLoading) return; // poczekaj na sesję, inaczej zalogowany wylatuje do logowania przy odświeżeniu
     if (!user) {
       navigate("/auth");
       return;
@@ -240,7 +241,7 @@ const CreatePlaylist = () => {
       setAllTracks((data || []) as Track[]);
     };
     loadTracks();
-  }, [user, navigate]);
+  }, [user, authLoading, navigate]);
 
   const filteredTracks = useMemo(() => {
     const q = search.trim().toLowerCase();

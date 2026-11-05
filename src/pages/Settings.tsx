@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import {
   Settings as SettingsIcon, User, Bell, Shield, LogOut, Camera,
   Brain, Eye, Mic, Heart, Trash2, Loader2, Box, Smartphone
@@ -19,10 +19,12 @@ import { ShareQR } from "@/components/share/ShareQR";
 import { QrCode } from "lucide-react";
 
 const Settings = () => {
-  const { user, signOut } = useAuth();
+  const { user, signOut, loading: authLoading } = useAuth();
   const { t } = useLanguage();
   const { is3D, setIs3D } = useEffects3D();
   const navigate = useNavigate();
+  // Do logowania dopiero, gdy sesja się wczytała i naprawdę jej nie ma (nie w trakcie rysowania).
+  useEffect(() => { if (!authLoading && !user) navigate("/auth", { replace: true }); }, [authLoading, user, navigate]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [displayName, setDisplayName] = useState(user?.user_metadata?.display_name || "");
   const [avatarUrl, setAvatarUrl] = useState(user?.user_metadata?.avatar_url || "");
@@ -147,8 +149,11 @@ const Settings = () => {
   };
 
   if (!user) {
-    navigate("/auth");
-    return null;
+    return (
+      <MainLayout>
+        <div className="grid min-h-[50vh] place-items-center text-muted-foreground">{authLoading ? "…" : t("settings.title")}</div>
+      </MainLayout>
+    );
   }
 
   return (

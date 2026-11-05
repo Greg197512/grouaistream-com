@@ -236,7 +236,7 @@ const PlaylistDropCard = ({
 
 /* ─────── Main page ─────── */
 const PlaylistManager = () => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { t } = useLanguage();
   const { playTrack, currentTrack, isPlaying } = usePlayer();
@@ -250,12 +250,13 @@ const PlaylistManager = () => {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   useEffect(() => {
+    if (authLoading) return; // poczekaj na sesję, inaczej zalogowany wylatuje do logowania przy odświeżeniu
     if (!user) {
       navigate("/auth");
       return;
     }
     loadData();
-  }, [user, navigate]);
+  }, [user, authLoading, navigate]);
 
   const loadData = async () => {
     if (!user) return;

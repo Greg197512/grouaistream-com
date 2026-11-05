@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeHubAI } from "@/lib/hubAI";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -158,18 +159,36 @@ export const BlogDistributionPanel = () => {
     }
   };
 
+  // Hooki do udostępnień (X, Telegram, e-mail) — przez /api/assistant (funkcja seo-blog-generate-hooks nie istnieje).
   const generateHooks = async (post: Post) => {
     setSending("gen-" + post.id);
     try {
-      const { error } = await supabase.functions.invoke("seo-blog-generate-hooks", {
-        body: { post_id: post.id },
-      });
+      const prompt =
+        `Wpis bloga GrouAI Stream: „${post.title}”. Opis: ${post.description || "—"}. Kategoria: ${post.category || "—"}.\n` +
+        `Napisz po polsku chwytliwe zajawki do udostępnienia. Odpowiedz WYŁĄCZNIE jednym obiektem JSON: ` +
+        `{"x_hook": "do 220 znaków, 1-2 emoji, bez linku", "telegram_hook": "2-3 zdania z emoji", ` +
+        `"email_subject": "temat maila do 60 znaków", "email_hook": "2-4 zdania zachęty do przeczytania"}`;
+      const { data } = await invokeHubAI({ message: prompt, userContext: { language: "pl" } }, 45000);
+      const m = (data?.response || "").match(/\{[\s\S]*\}/);
+      if (!m) throw new Error("AI nie zwróciło hooków");
+      const j = JSON.parse(m[0]);
+      const row = {
+        post_id: post.id,
+        x_hook: String(j.x_hook || "").slice(0, 280) || null,
+        telegram_hook: String(j.telegram_hook || "").slice(0, 1000) || null,
+        email_subject: String(j.email_subject || "").slice(0, 120) || null,
+        email_hook: String(j.email_hook || "").slice(0, 2000) || null,
+      };
+      // Bez założenia o unikalnym indeksie: aktualizuj istniejący wiersz albo wstaw nowy.
+      const { data: ex } = await supabase.from("blog_post_hooks").select("id").eq("post_id", post.id).limit(1).maybeSingle();
+      const { error } = ex
+        ? await supabase.from("blog_post_hooks").update(row as never).eq("id", (ex as { id: string }).id)
+        : await supabase.from("blog_post_hooks").insert(row as never);
       if (error) throw error;
       toast.success("Hooki wygenerowane");
       await load();
-    } catch {
-      // Fallback: AI generation only happens for new posts via seo-blog-generate
-      toast.info("Hooki generowane są automatycznie przy nowych postach AI");
+    } catch (e) {
+      toast.error("Nie udało się wygenerować hooków: " + (e instanceof Error ? e.message : "błąd"));
     } finally {
       setSending(null);
     }

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { useNavigate } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "sonner";
@@ -38,6 +39,8 @@ interface TrackClip {
 
 const Movies = () => {
   const { user } = useAuth();
+  // Masowe wyszukiwanie/dosypywanie (wiele wywołań serwera naraz) — tylko admin.
+  const { isAdmin } = useAdminAuth();
   const navigate = useNavigate();
   const { t } = useLanguage();
   const [movies, setMovies] = useState<Movie[]>([]);
@@ -268,7 +271,7 @@ const Movies = () => {
               <p className="text-sm text-muted-foreground">{totalCount} {t("movies.moviesInDb")}</p>
             </div>
           </div>
-          <div className="flex gap-2 flex-wrap">
+          {isAdmin && <div className="flex gap-2 flex-wrap">
             {activeTab === "clips" ? (
               <Button
                 onClick={runClipBatch}
@@ -301,7 +304,7 @@ const Movies = () => {
                 </Button>
               </>
             )}
-          </div>
+          </div>}
         </div>
 
         {/* Progress */}
