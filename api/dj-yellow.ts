@@ -321,6 +321,12 @@ export default async function handler(req: any, res: any) {
     const r = await http(`${SUPA()}/auth/v1/signup`, { method: "POST", headers: { apikey: ANON(), "content-type": "application/json" }, body: JSON.stringify({ email, password, data: { display_name: ARTIST, full_name: ARTIST } }) });
     return res.status(200).json({ status: r.status, confirmed: !!r.data?.session || !!r.data?.user?.email_confirmed_at, error: r.ok ? null : r.data?.msg || r.data?.error_description || null });
   }
+  if (q.lookup) {
+    // Wyszukanie konta po nazwie wyświetlanej (publiczne pola profilu: user_id, display_name, avatar_url).
+    const name = String(q.lookup).replace(/[^\p{L}\p{N} ._-]/gu, "").slice(0, 40);
+    const r = await http(`${SUPA()}/rest/v1/profiles?select=user_id,display_name,avatar_url&display_name=ilike.*${encodeURIComponent(name)}*&limit=10`, { headers: { apikey: ANON() } });
+    return res.status(200).json(r.data);
+  }
   if (q.check) {
     // Diagnostyka plików dzisiejszych utworów: pierwsze bajty dźwięku i okładki (bez kosztów).
     const r = await http(`${SUPA()}/rest/v1/tracks?select=title,audio_url,cover_url,created_at&artist=eq.${encodeURIComponent(ARTIST)}&order=created_at.desc&limit=6`, { headers: { apikey: ANON() } });
