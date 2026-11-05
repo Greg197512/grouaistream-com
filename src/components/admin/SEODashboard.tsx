@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
+import { translateBlogBatch } from "@/lib/blogTranslate";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -307,9 +308,9 @@ export const SEODashboard = () => {
             onClick={async () => {
               setRunning("translate");
               try {
-                const { data: r, error } = await supabase.functions.invoke("blog-translate", { body: { batch: true } });
-                if (error) throw error;
-                toast.success(`Przetłumaczono: ${r?.translated || 0} postów`, { description: "EN / NL / UA" });
+                // Darmowy tłumacz (/api/assistant) zamiast funkcji z Grokiem.
+                const n = await translateBlogBatch(5);
+                toast.success(`Przetłumaczono: ${n} postów`, { description: n ? "EN / NL / UA" : "Wszystkie wpisy mają już tłumaczenia" });
               } catch (e) {
                 toast.error("Błąd tłumaczenia: " + (e instanceof Error ? e.message : "unknown"));
               } finally {

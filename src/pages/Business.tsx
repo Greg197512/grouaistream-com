@@ -98,7 +98,7 @@ export default function BusinessPage() {
   const [briefState, setBriefState] = useState<BriefState | null>(null);
   const [voiceEnabled, setVoiceEnabled] = useState(false);
   const [listening, setListening] = useState(false);
-  // Tryb ciągłej rozmowy (jak w GPT/Grok): po odpowiedzi Aurora sama znów słucha.
+  // Tryb ciągłej rozmowy (głosem, bez rąk): po odpowiedzi Aurora sama znów słucha.
   const [convoMode, setConvoMode] = useState(false);
   const convoModeRef = useRef(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -258,7 +258,7 @@ export default function BusinessPage() {
     else toast.success("Rozmowa głosowa Aurory włączona");
   };
 
-  // Ciągła rozmowa głosowa (jak w GPT/Grok): mikrofon + mowa w pętli, hands-free.
+  // Ciągła rozmowa głosowa (głosem, bez rąk): mikrofon + mowa w pętli, hands-free.
   const toggleConvo = () => {
     const next = !convoMode;
     setConvoMode(next);
@@ -572,7 +572,7 @@ export default function BusinessPage() {
               </Button>
             </motion.div>
 
-            {/* Ciągła rozmowa głosowa jak w GPT/Grok */}
+            {/* Ciągła rozmowa głosowa */}
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
               <Button
                 type="button"
@@ -584,7 +584,7 @@ export default function BusinessPage() {
                     ? "bg-gradient-to-r from-cyan-500 to-blue-600 text-white animate-pulse shadow-lg"
                     : "border-cyan-400/30 hover:bg-cyan-400/10"
                 )}
-                title={convoMode ? "Zakończ rozmowę głosową" : "Rozmawiaj z Aurorą głosem (jak w GPT/Grok)"}
+                title={convoMode ? "Zakończ rozmowę głosową" : "Rozmawiaj z Aurorą głosem (głosem, bez rąk)"}
               >
                 {convoMode ? <PhoneOff className="h-4 w-4" /> : <PhoneCall className="h-4 w-4" />}
               </Button>

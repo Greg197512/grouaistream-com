@@ -805,7 +805,7 @@ export const AIAssistant = () => {
           userContext,
         });
         let reply = hub?.response || hub?.answer;
-        // Ostatnia, darmowa warstwa rozmowy — płynnie na każdy temat (jak GPT/Grok).
+        // Ostatnia, darmowa warstwa rozmowy — płynnie na każdy temat .
         if (!reply) {
           reply = await freeChat(userMessage, messages.slice(-8).map(m => ({ role: m.role, content: m.content })), getSpeechLang()) || "";
         }

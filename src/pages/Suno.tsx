@@ -20,7 +20,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { MusicPromptBox } from "@/components/studio/MusicPromptBox";
 import { VoiceRecorder } from "@/components/studio/VoiceRecorder";
 import { VoiceLibrary } from "@/components/studio/VoiceLibrary";
-import { StudioGrokDock } from "@/components/studio/StudioGrokDock";
+import { StudioPromptDock } from "@/components/studio/StudioPromptDock";
 import { StudioHifi } from "@/components/studio/StudioHifi";
 import { StudioSparksBackdrop } from "@/components/studio/StudioSparksBackdrop";
 import { useSubscription } from "@/contexts/SubscriptionContext";
@@ -1711,8 +1711,8 @@ const Suno = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Wąskie, przeciągalne okno chat-Grok — wszystko w jednym */}
-      <StudioGrokDock />
+      {/* Wąskie, przeciągalne okno asystenta promptów — wszystko w jednym */}
+      <StudioPromptDock />
 
     </MainLayout>
   );

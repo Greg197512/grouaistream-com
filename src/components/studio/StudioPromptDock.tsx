@@ -17,7 +17,6 @@ import { toast } from "sonner";
 import { TrackMixer } from "./TrackMixer";
 import { VoiceRecorder } from "./VoiceRecorder";
 import { uploadToR2 } from "@/lib/r2Upload";
-import grokAvatar from "@/assets/grok-avatar.jpg";
 
 type AIEngine = "our_ai" | "musicgen";
 
@@ -63,7 +62,7 @@ const pushToMainEditor = (text: string, mode: "replace" | "append") => {
   toast.success(mode === "replace" ? "Wstawiono do pola Studia ✍️" : "Dodano do pola Studia ➕");
 };
 
-export const StudioGrokDock = () => {
+export const StudioPromptDock = () => {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
 
@@ -295,13 +294,7 @@ export const StudioGrokDock = () => {
             <div className="flex items-center justify-between border-b border-border/50 bg-gradient-to-r from-primary/15 via-purple-500/10 to-transparent px-3 py-1.5 select-none">
               <div className="flex items-center gap-2">
                 <div className="relative">
-                  <img
-                    src={grokAvatar}
-                    alt="GrAIstudio AI assistant avatar"
-                    width={28}
-                    height={28}
-                    className="h-7 w-7 rounded-full object-cover ring-2 ring-primary/60 shadow-[0_0_15px_hsl(var(--primary)/0.6)]"
-                  />
+                  <span aria-hidden="true" className="grid h-7 w-7 place-items-center rounded-full bg-gradient-to-br from-primary to-purple-600 text-[13px] ring-2 ring-primary/60">✦</span>
                   <span className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full bg-emerald-400 ring-2 ring-background animate-pulse" />
                 </div>
                 <span className="text-xs font-semibold tracking-tight bg-gradient-to-r from-primary to-purple-400 bg-clip-text text-transparent">GrAIstudio</span>

@@ -35,7 +35,7 @@ export async function invokeHubAI(body: Record<string, unknown>, timeoutMs = 600
     const res = await fetch("/api/assistant", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message, history: body.history, userContext }),
+      body: JSON.stringify({ message, history: body.history, userContext, ...(body.mode ? { mode: body.mode } : {}) }),
       signal: AbortSignal.timeout(timeoutMs),
     });
     if (!res.ok) return { data: null, error: new Error(`assistant ${res.status}`) };

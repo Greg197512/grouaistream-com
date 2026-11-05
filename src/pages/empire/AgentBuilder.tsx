@@ -326,7 +326,7 @@ export default function AgentBuilder() {
                       <select className="w-full bg-white/5 border border-white/15 rounded-lg px-3 py-2 text-sm text-white/80 outline-none">
                         <option value="claude">Claude 3.5 Sonnet</option>
                         <option value="gpt4o">GPT-4o</option>
-                        <option value="grok">Grok 3</option>
+                        <option value="living">Żywy algorytm (bez AI, bez kosztów)</option>
                         <option value="gemini">Gemini 2.0</option>
                       </select>
                     </div>
