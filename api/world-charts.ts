@@ -12,20 +12,23 @@ type Look = { results?: { trackId: number; previewUrl?: string; trackViewUrl?: s
 const COUNTRIES = ["world", "pl", "us", "gb", "nl", "ua"] as const;
 const WORLD_MIX = ["us", "gb", "de", "br", "mx", "jp", "fr"];
 
+const trace: string[] = [];
 async function feed(cc: string, n: number) {
   for (const host of ["rss.marketingtools.apple.com", "rss.applemarketingtools.com"]) {
     try {
-      const r = await fetch(`https://${host}/api/v2/${cc}/music/most-played/${n}/songs.json`, { signal: AbortSignal.timeout(8000) });
+      const r = await fetch(`https://${host}/api/v2/${cc}/music/most-played/${n}/songs.json`, { signal: AbortSignal.timeout(8000), headers: { accept: "application/json", "user-agent": "Mozilla/5.0 (compatible; GrouAIStream/1.0)" } });
+      trace.push(`${host}/${cc}: ${r.status}`);
       if (!r.ok) continue;
       const j = (await r.json()) as Rss;
       const list = j.feed?.results ?? [];
       if (list.length) return list;
-    } catch { /* następny host */ }
+    } catch (e) { trace.push(`${host}/${cc}: ${String(e).slice(0, 80)}`); }
   }
   return [];
 }
 
 export default async function handler(req: Request): Promise<Response> {
+  trace.length = 0;
   const c = (new URL(req.url).searchParams.get("c") || "world").toLowerCase();
   const country = (COUNTRIES as readonly string[]).includes(c) ? c : "world";
 
@@ -65,7 +68,8 @@ export default async function handler(req: Request): Promise<Response> {
     return { rank: i + 1, id: t.id, title: t.name, artist: t.artistName, cover: big(t.artworkUrl100 || p?.art), preview: p?.preview ?? null, url: p?.url || t.url || null };
   });
 
-  return new Response(JSON.stringify({ country, updated: new Date().toISOString(), items }), {
+  const debug = new URL(req.url).searchParams.get("debug") === "1";
+  return new Response(JSON.stringify({ country, updated: new Date().toISOString(), items, ...(debug ? { trace } : {}) }), {
     headers: {
       "content-type": "application/json",
       // Lista jest wspólna dla wszystkich — CDN trzyma ją 6 h (jedno pobranie z Apple na kraj).
