@@ -127,18 +127,18 @@ async function putR2(jwt: string, body: Uint8Array | string, fileName: string, c
 const b64 = (u: Uint8Array) => Buffer.from(u).toString("base64");
 // Tła okładek (bez ludzi, bez tekstu) — zmienia się tylko grafika z tyłu, zdjęcie DJ Yellow zostaje.
 const BACKDROPS = [
-  "neon-lit city street at night in the rain, reflections, bokeh",
-  "huge concert stage with golden light beams and haze, empty stage",
-  "city skyline at golden sunset seen from a rooftop",
-  "abstract flowing golden and yellow light waves, glowing particles",
-  "retro synthwave grid horizon with a giant yellow sun",
-  "modern recording studio with synthesizers and warm lights, empty",
-  "giant wall of speakers and turntables with laser lights, empty",
-  "tropical beach at sunset with palm trees and lanterns",
-  "futuristic tunnel of yellow LED lights",
-  "snowy city at night with golden street lights and fireworks",
-  "vinyl records and headphones flat lay on a yellow background",
-  "aurora borealis over mountains in gold and violet",
+  "huge open-air music festival at night, crowd with hands up, confetti and golden light beams",
+  "concert main stage with lasers, smoke and fireworks over a cheering crowd",
+  "summer beach party at sunset with dancing crowd, lanterns and lights",
+  "rooftop dance party at night over a city skyline, string lights and lasers",
+  "DJ booth view of a packed dance floor with yellow lasers and haze",
+  "neon-lit city street party at night with colorful lights and confetti",
+  "giant LED stage show at a festival, golden pyrotechnics",
+  "outdoor daytime festival with colorful smoke flares and flags",
+  "warehouse rave with strobes and yellow lasers through smoke",
+  "new year's eve party with fireworks over the city",
+  "silent disco in a park at dusk with glowing headphones",
+  "carnival parade at night with dancers, lights and confetti",
 ];
 
 /** Okładka: tło (AI) + zdjęcie DJ Yellow w złotej ramce + DJ YELLOW, tytuł i zawsze znaczek „AI”. */
@@ -229,8 +229,8 @@ async function run(deadline: number, who?: { jwt: string; uid: string }) {
   // Naprawa: starsze utwory DJ Yellow bez okładki z postacią (i znaczkiem AI) dostają nową — maks. 2 na raz.
   const old = await rest(jwt, `tracks?select=id,title,cover_url&artist=eq.${encodeURIComponent(ARTIST)}&order=created_at.desc&limit=20`);
   const fixed: string[] = [];
-  for (const t of (Array.isArray(old.data) ? old.data : []).filter((x: any) => !/\/dj-yellow\/\d+-y-/.test(String(x.cover_url || ""))).slice(0, 2)) {
-    if (Date.now() > deadline - 200000) break;
+  for (const t of (Array.isArray(old.data) ? old.data : []).filter((x: any) => !/\/dj-yellow\/\d+-y-/.test(String(x.cover_url || ""))).slice(0, 6)) {
+    if (Date.now() > deadline - 60000) break;
     const cover = await makeCover(jwt, algorithmIdea(0), String(t.title), Math.abs(hash(String(t.id))));
     if (cover && (await rest(jwt, `tracks?id=eq.${t.id}`, { method: "PATCH", body: JSON.stringify({ cover_url: cover }) })).ok) fixed.push(String(t.title));
   }
@@ -340,7 +340,9 @@ export default async function handler(req: any, res: any) {
     const r = await http(`${SUPA()}/rest/v1/tracks?select=id,title,cover_url,created_at&artist=eq.${encodeURIComponent(ARTIST)}&order=created_at.desc&limit=6`, { headers: { apikey: ANON() } });
     const since = todayStartPl();
     const list = Array.isArray(r.data) ? r.data : [];
-    return res.status(200).json({ today: list.filter((t: any) => t.created_at >= since), latest: list, perDay: dayTarget() });
+    const all = await http(`${SUPA()}/rest/v1/tracks?select=cover_url&artist=eq.${encodeURIComponent(ARTIST)}&order=created_at.desc&limit=20`, { headers: { apikey: ANON() } });
+    const needsCovers = (Array.isArray(all.data) ? all.data : []).filter((t: any) => !/\/dj-yellow\/\d+-y-/.test(String(t.cover_url || ""))).length;
+    return res.status(200).json({ today: list.filter((t: any) => t.created_at >= since), latest: list, perDay: dayTarget(), needsCovers });
   }
   const who = await ownerFromToken(String(req.headers.authorization || ""));
   if (req.method === "POST" && !who) return res.status(403).json({ ok: false, error: "tylko właściciel studia" });

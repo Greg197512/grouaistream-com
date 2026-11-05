@@ -6,7 +6,7 @@ export const DJ_OWNER = "grzegorzkaron553@gmail.com";
 export type DjTrack = { id: string; title: string; cover_url: string | null; created_at: string };
 export type DjRun = { ok: boolean; step: string; tracks?: { title: string; id?: string; error?: string; cover?: string | null; audio?: string }[]; error?: string; status?: string };
 
-export async function djStatus(): Promise<{ today: DjTrack[]; latest: DjTrack[]; perDay: number } | null> {
+export async function djStatus(): Promise<{ today: DjTrack[]; latest: DjTrack[]; perDay: number; needsCovers?: number } | null> {
   try { const r = await fetch("/api/dj-yellow?status=1"); return r.ok ? await r.json() : null; } catch { return null; }
 }
 
@@ -23,8 +23,8 @@ const LS = "grouai-djyellow-day";
 export async function djDailyTick(onDone: (r: DjRun) => void) {
   const st = await djStatus();
   const mark = `${dayKey()}:${st?.perDay ?? 2}`; // cel dnia może wzrosnąć (dodatkowe utwory) — wtedy ruszamy ponownie
-  try { if (localStorage.getItem(LS) === mark) return; } catch { /* */ }
-  if (st && st.today.length >= st.perDay) { try { localStorage.setItem(LS, mark); } catch { /* */ } return; }
+  try { if (localStorage.getItem(LS) === mark && !st?.needsCovers) return; } catch { /* */ }
+  if (st && st.today.length >= st.perDay && !st.needsCovers) { try { localStorage.setItem(LS, mark); } catch { /* */ } return; }
   for (let attempt = 0; attempt < 4; attempt++) {
     const r = await djRunNow();
     if (r.step === "published" || r.step === "done-today") {
