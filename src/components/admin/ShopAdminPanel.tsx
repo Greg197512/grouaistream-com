@@ -85,6 +85,34 @@ export function ShopAdminPanel() {
     toast.success(j.mailed ? "Nadane — klient dostał e-mail z linkiem śledzenia" : "Nadane (e-mail do klienta nie wyszedł)");
     load();
   };
+  // Łączenie produktów Printful z katalogiem: propozycje „External ID” → zatwierdzenie → zapis w Printful.
+  type PfV = { id: number; product: string; name: string; size: string | null; externalId: string | null; suggestion: string | null };
+  const [pfLink, setPfLink] = useState<{ variants: PfV[]; expected: string[]; choice: Record<number, string> } | null>(null);
+  const [pfBusy, setPfBusy] = useState(false);
+  const loadPfVariants = async () => {
+    setPfBusy(true);
+    const { ok, j } = await callApi({ action: "printful-variants" });
+    setPfBusy(false);
+    if (!ok) {
+      if (j.error === "no_api_store") return toast.error("W Printful nie ma sklepu typu „Manual order platform / API”. Załóż go: Stores → Add store → Manual order platform / API.", { duration: 12000 });
+      return toast.error(j.error === "printful_not_configured" ? "Brak PRINTFUL_API_KEY w Vercel" : `Printful: ${j.message || j.error}`);
+    }
+    const choice: Record<number, string> = {};
+    for (const v of j.variants as PfV[]) if (v.suggestion) choice[v.id] = v.suggestion;
+    setPfLink({ variants: j.variants, expected: j.expected, choice });
+    if (!(j.variants as PfV[]).length) toast.info("Sklep API w Printful nie ma jeszcze produktów — dodaj je (Product templates → Add to store)");
+  };
+  const savePfMap = async () => {
+    if (!pfLink) return;
+    const map = pfLink.variants.filter((v) => pfLink.choice[v.id] && pfLink.choice[v.id] !== v.externalId).map((v) => ({ variantId: v.id, externalId: pfLink.choice[v.id] }));
+    if (!map.length) return toast.info("Nic do zapisania");
+    setPfBusy(true);
+    const { ok, j } = await callApi({ action: "printful-map", map });
+    setPfBusy(false);
+    if (!ok) return toast.error("Nie udało się zapisać połączeń");
+    toast.success(`Połączono ${j.saved} wariantów${j.failed?.length ? `, błędy: ${j.failed.length}` : ""}`);
+    loadPfVariants(); checkPrintful();
+  };
   const [pfCheck, setPfCheck] = useState<{ linked: number; total: number; missing: string[] } | null>(null);
   const checkPrintful = async () => {
     const { ok, j } = await callApi({ action: "printful-check" });
@@ -167,9 +195,36 @@ export function ShopAdminPanel() {
         </ul>
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <Button size="sm" variant="outline" onClick={checkPrintful}>Sprawdź podpięcie produktów w Printful</Button>
+          <Button size="sm" onClick={loadPfVariants} disabled={pfBusy}>{pfBusy ? "Łączę…" : "Połącz produkty z Printful"}</Button>
           {pfCheck && <span>Podpięte warianty: <b>{pfCheck.linked}/{pfCheck.total}</b></span>}
         </div>
         <p className="mt-2 text-xs text-muted-foreground">Printful: utwórz sklep typu „Manual order platform / API”, dodaj produkty z grafikami i przy każdym wariancie wpisz External ID: <code>produkt-ROZMIAR</code> (np. <code>dropbass-M</code>, <code>3am-XXL</code>), a bez rozmiaru samo <code>torba</code>, <code>plakat</code>. Okulary i asystent AI idą e-mailem do dostawcy.</p>
+        {pfLink && pfLink.variants.length > 0 && (
+          <div className="mt-3 space-y-2">
+            <div className="max-h-96 overflow-auto rounded-lg border border-border">
+              <table className="w-full text-xs">
+                <thead className="sticky top-0 bg-card"><tr className="text-left text-muted-foreground"><th className="p-2">Printful</th><th className="p-2">Rozmiar</th><th className="p-2">Nasz produkt</th></tr></thead>
+                <tbody>{pfLink.variants.map((v) => (
+                  <tr key={v.id} className="border-t border-border">
+                    <td className="p-2">{v.product}<div className="text-muted-foreground">{v.name}</div></td>
+                    <td className="p-2">{v.size ?? "—"}</td>
+                    <td className="p-2">
+                      <select className={`w-full rounded-md border bg-background px-2 py-1 ${pfLink.choice[v.id] ? (pfLink.choice[v.id] === v.externalId ? "border-emerald-500" : "border-primary") : "border-border"}`}
+                        value={pfLink.choice[v.id] ?? ""} aria-label={`Produkt dla ${v.name}`}
+                        onChange={(e) => setPfLink((s) => s && ({ ...s, choice: { ...s.choice, [v.id]: e.target.value } }))}>
+                        <option value="">— nie łącz —</option>
+                        {pfLink.expected.map((x) => <option key={x} value={x}>{x}</option>)}
+                      </select>
+                    </td>
+                  </tr>))}</tbody>
+              </table>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button size="sm" onClick={savePfMap} disabled={pfBusy}>Zapisz połączenia w Printful</Button>
+              <span className="text-xs text-muted-foreground">Zielona ramka = już połączone, pomarańczowa = propozycja do zapisania. Sprawdź i popraw przed zapisem.</span>
+            </div>
+          </div>
+        )}
         {pfCheck && pfCheck.missing.length > 0 && (
           <p className="mt-2 text-xs text-muted-foreground break-words">Brakuje „External ID” w Printful: {pfCheck.missing.join(", ")}</p>
         )}

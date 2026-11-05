@@ -64,7 +64,11 @@ i aktualny. Jeśli fakt tu jest — nie weryfikuj go od nowa dziesiątkami wywo�
   **Przewoźnicy (5.11):** `src/data/shopCarriers.ts` (InPost Paczkomat [kod punktu] / Kurier InPost — tylko PL; DHL, Poczta Polska, DPD, GLS, UPS — UE),
   wybór w koszyku → `payload.shipping.carrier/point`; ceny `SHOP_CARRIER_PRICES` (JSON eurocenty, brak = `SHOP_SHIPPING_EUR_CENTS`=0 → darmowa).
   Admin „Nadaj paczkę” (`action:"ship"`) → `payload.tracking`, status shipped, mail z linkiem śledzenia. Bez API przewoźników (etykiety ręcznie / Printful wysyła sam).
-  „Moje zamówienia” = okno z przycisku w nagłówku sklepu. Menu: „GrouaDrop”.
+  „Moje zamówienia” = okno z przycisku w nagłówku sklepu.
+  **Printful (5.11):** edge Vercela blokuje zapora Cloudflare Printful → wywołania przez Node `api/printful-proxy` (tylko z kluczem = `PRINTFUL_API_KEY`).
+  Konto ma tylko sklep **Etsy** „Grouadrop” (19013575) — Orders/Products API działa tylko dla sklepu „Manual order platform / API” (type `native`);
+  `withApiStore` sam go znajdzie, gdy powstanie. Klucz nie ma scope `product_templates/read`. Admin: „Połącz produkty z Printful” (dopasowanie `src/lib/printfulMatch.ts`
+  → PUT External ID). Diagnostyka: `GET /api/shop-checkout?diag=printful`. Menu: „GrouaDrop”.
   Katalog `/shop` = filmy + kafelki (lekki); **każdy produkt osobno: `/shop/p/:id`** (`ShopProduct.tsx`); koszyk wspólny `src/lib/shopCart.ts` (`/shop?cart=1` otwiera koszyk).
   Stara funkcja `shop-checkout` i tabele `shop_orders`/`gift_codes` nie są używane (brak w bazie prod).
 
