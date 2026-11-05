@@ -57,6 +57,7 @@ i aktualny. Jeśli fakt tu jest — nie weryfikuj go od nowa dziesiątkami wywo�
   Przejścia DJ-skie: fade-in 2,5 s / fade-out 4 s samą głośnością jednego `<audio>` (bez Web Audio, bez drugiego elementu).
 - **Prezenterka AI „Nova”** (`src/lib/radioHost.ts`): persona, szablony PL/EN/NL/UA, filtr treści; mówi przy starcie utworu
   (powitanie, zmiana bloku, pełna godzina z ujawnieniem AI, co 4 utwory zapowiedź; min. 6 min odstępu), muzyka ściszona do 25% (`duckRef`).
+  Humor: `FUN` (ogólne/poranek/noc/weekend/DJ) w 4 językach, ~co trzecia kwestia (`wantsJoke`), żarty o muzyce i o sobie jako AI, nigdy z ludzi.
   Głos: `speak(…, {mode:"dj"})`. Słuchacz wyłącza przyciskiem (localStorage `grouai-radio-host`). Ujawnienie AI widoczne na stronie radia.
 - **Język = wybór użytkownika:** `LanguageContext` zapisuje wybór zalogowanego w `user_metadata.language` i przywraca go po zalogowaniu
   (każde urządzenie). Radio (Nova, Talk, newsy, opowiadania) bierze język z kontekstu, nie z domyślnego „pl”.

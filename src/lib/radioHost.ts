@@ -10,7 +10,7 @@ export const hostLang = (l: string | null | undefined): HostLang => (l === "en" 
 /** Persona prezenterki — źródło prawdy dla szablonów i (w przyszłości) promptu modelu. */
 export const HOST_PERSONA = {
   name: "Nova",
-  style: "ciepła, energiczna, krótka (1–2 zdania), mówi do słuchacza na „ty”, muzyka jest najważniejsza",
+  style: "ciepła, energiczna, krótka (1–3 zdania), mówi do słuchacza na „ty”, muzyka jest najważniejsza; czasem żartuje (lekki, życzliwy humor o muzyce, porach dnia i sobie jako AI — nigdy z ludzi)",
   values: ["szacunek dla słuchaczy i twórców", "pozytywny ton", "różnorodność", "uczciwość: zawsze przyznaje, że jest AI"],
   never: [
     "polityka, religia, tematy zdrowotne i finansowe porady",
@@ -48,35 +48,114 @@ const TPL: Record<HostLang, Record<HostKind, string[]> & { dj: string; next: str
     welcome: ["Cześć, tu Nova, głos AI GrouaRadio. Gramy dla ciebie {block}.", "Witaj w GrouaRadio! Jestem Nova, prezenterka AI. Na antenie {block}."],
     block: ["Jest {time}, wchodzimy w {block}.", "{time} na zegarze, czas na {block}.", "Zmieniamy klimat: teraz {block}."],
     hour: ["Jest {time}. Słuchasz GrouaRadio, prowadzi Nova, głos AI.", "Godzina {time}, GrouaRadio. Ja jestem Nova, prezenterka AI, i gramy dalej."],
-    back: ["To było {prev}.", "Przed chwilą {prev}.", "Właśnie wybrzmiało {prev}."],
-    next: ["Teraz {next}.", "A teraz {next}.", "Lecimy dalej: {next}."],
+    back: ["To było {prev}.", "Przed chwilą {prev}.", "Właśnie wybrzmiało {prev}.", "Za nami {prev}. Piękna sprawa.", "Tak brzmiało {prev}."],
+    next: ["Teraz {next}.", "A teraz {next}.", "Lecimy dalej: {next}.", "Podkręcamy: {next}.", "Coś specjalnie dla ciebie: {next}."],
     dj: " Miksuję electronic, hip-hop i disco.",
   },
   en: {
     welcome: ["Hi, I'm Nova, the AI voice of GrouaRadio. Here comes {block}.", "Welcome to GrouaRadio! I'm Nova, your AI host. On air: {block}."],
     block: ["It's {time}, and we're moving into {block}.", "{time} on the clock, time for {block}.", "Switching the vibe: now {block}."],
     hour: ["It's {time}. You're listening to GrouaRadio with Nova, an AI voice.", "{time}, GrouaRadio. I'm Nova, your AI host, and the music keeps going."],
-    back: ["That was {prev}.", "You just heard {prev}.", "That one was {prev}."],
-    next: ["Now {next}.", "Up next, {next}.", "Here's {next}."],
+    back: ["That was {prev}.", "You just heard {prev}.", "That one was {prev}.", "Behind us: {prev}. Lovely stuff.", "That's how {prev} sounds."],
+    next: ["Now {next}.", "Up next, {next}.", "Here's {next}.", "Turning it up: {next}.", "Something just for you: {next}."],
     dj: " I'm mixing electronic, hip-hop and disco.",
   },
   nl: {
     welcome: ["Hoi, ik ben Nova, de AI-stem van GrouaRadio. We draaien {block}.", "Welkom bij GrouaRadio! Ik ben Nova, je AI-presentator. Nu op de radio: {block}."],
     block: ["Het is {time}, we gaan over naar {block}.", "{time} op de klok, tijd voor {block}.", "Andere sfeer: nu {block}."],
     hour: ["Het is {time}. Je luistert naar GrouaRadio met Nova, een AI-stem.", "{time}, GrouaRadio. Ik ben Nova, je AI-presentator, en de muziek gaat door."],
-    back: ["Dat was {prev}.", "Je hoorde net {prev}.", "Zojuist: {prev}."],
-    next: ["Nu {next}.", "En nu {next}.", "Hier is {next}."],
+    back: ["Dat was {prev}.", "Je hoorde net {prev}.", "Zojuist: {prev}.", "Dat was {prev}. Heerlijk.", "Zo klinkt {prev}."],
+    next: ["Nu {next}.", "En nu {next}.", "Hier is {next}.", "We draaien hem op: {next}.", "Speciaal voor jou: {next}."],
     dj: " Ik mix electronic, hiphop en disco.",
   },
   ua: {
     welcome: ["Привіт, я Nova, голос ШІ на GrouaRadio. Звучить {block}.", "Вітаю на GrouaRadio! Я Nova, ведуча ШІ. В ефірі {block}."],
     block: ["Зараз {time}, переходимо до: {block}.", "{time} на годиннику, час для: {block}.", "Змінюємо настрій: тепер {block}."],
     hour: ["Зараз {time}. Ви слухаєте GrouaRadio, веде Nova, голос ШІ.", "{time}, GrouaRadio. Я Nova, ведуча ШІ, і музика триває."],
-    back: ["Це був {prev}.", "Щойно звучав {prev}.", "Ви чули {prev}."],
-    next: ["Тепер {next}.", "А зараз {next}.", "Далі {next}."],
+    back: ["Це був {prev}.", "Щойно звучав {prev}.", "Ви чули {prev}.", "Позаду {prev}. Чудово.", "Ось так звучить {prev}."],
+    next: ["Тепер {next}.", "А зараз {next}.", "Далі {next}.", "Додаємо гучності: {next}.", "Спеціально для тебе: {next}."],
     dj: " Мікшую електронік, хіп-хоп і диско.",
   },
 };
+
+/** Żarty Novy: lekkie, życzliwe, o muzyce, porach dnia i niej samej jako AI. Nigdy z ludzi. */
+type FunSet = { general: string[]; morning: string[]; night: string[]; weekend: string[]; dj: string[] };
+export const FUN: Record<HostLang, FunSet> = {
+  pl: {
+    general: [
+      "Jeśli właśnie tańczysz w kuchni, nie przestawaj. Czajnik też czuje bit.",
+      "Mówią, że muzyka łagodzi obyczaje. U nas łagodzi też poniedziałki.",
+      "Gdybym miała ręce, właśnie podniosłabym je do góry.",
+      "Uwaga: ten kawałek może powodować nagłe śpiewanie pod prysznicem.",
+      "Kiwanie głową też się liczy jako taniec. Sprawdziłam.",
+      "Bas tak głęboki, że sąsiad z dołu właśnie dołączył do słuchaczy.",
+      "Nie mam uszu, ale ten numer i tak mi się podoba. Podejrzane, prawda?",
+    ],
+    morning: ["Nie piję kawy, jestem AI, ale ten kawałek działa jak podwójne espresso.", "Dzień dobry! Budzik wyłączony, radio włączone. Dobra decyzja."],
+    night: ["Zasada nocy: ściszamy światło, nie muzykę.", "Jeśli nie możesz zasnąć, to nie moja wina. No, może trochę."],
+    weekend: ["Weekend oficjalnie otwarty. Kanapo, przepraszam, dziś parkiet ma pierwszeństwo.", "Ten numer ma więcej energii niż moje serwery w piątek wieczorem."],
+    dj: ["Miksuję trzy gatunki naraz. Szybciej, niż ty wybierasz serial na wieczór."],
+  },
+  en: {
+    general: [
+      "If you're dancing in the kitchen right now, don't stop. The kettle feels the beat too.",
+      "They say music soothes the soul. Here it also soothes Mondays.",
+      "If I had hands, they'd be in the air right now.",
+      "Warning: this song may cause sudden shower singing.",
+      "Head-nodding counts as dancing. I checked.",
+      "Bass so deep your downstairs neighbour just became a listener.",
+      "I don't have ears, but I still love this one. Suspicious, right?",
+    ],
+    morning: ["I don't drink coffee, I'm an AI, but this track works like a double espresso.", "Good morning! Alarm off, radio on. Great choice."],
+    night: ["Late-night rule: dim the lights, not the music.", "If you can't sleep, it's not my fault. Well, maybe a little."],
+    weekend: ["The weekend is officially open. Sorry, sofa, the dancefloor goes first tonight.", "This track has more energy than my servers on a Friday night."],
+    dj: ["Three genres at once. I mix faster than you pick a series to watch."],
+  },
+  nl: {
+    general: [
+      "Sta je nu in de keuken te dansen? Niet stoppen, de waterkoker voelt de beat ook.",
+      "Muziek verzacht de zeden, zeggen ze. Bij ons verzacht het ook de maandag.",
+      "Als ik handen had, gingen ze nu de lucht in.",
+      "Let op: dit nummer kan spontaan zingen onder de douche veroorzaken.",
+      "Meeknikken telt ook als dansen. Ik heb het nagekeken.",
+      "Zo diep is de bas dat de onderburen net luisteraars zijn geworden.",
+      "Ik heb geen oren, maar dit nummer vind ik toch geweldig. Verdacht, hè?",
+    ],
+    morning: ["Ik drink geen koffie, ik ben AI, maar dit nummer werkt als een dubbele espresso.", "Goedemorgen! Wekker uit, radio aan. Goede keuze."],
+    night: ["Nachtregel: het licht gaat zachter, de muziek niet.", "Kun je niet slapen? Niet mijn schuld. Nou ja, misschien een beetje."],
+    weekend: ["Het weekend is officieel open. Sorry bank, de dansvloer gaat vanavond voor.", "Dit nummer heeft meer energie dan mijn servers op vrijdagavond."],
+    dj: ["Drie genres tegelijk. Ik mix sneller dan jij een serie kiest."],
+  },
+  ua: {
+    general: [
+      "Якщо ти зараз танцюєш на кухні, не зупиняйся. Чайник теж відчуває біт.",
+      "Кажуть, музика лікує душу. У нас вона лікує ще й понеділки.",
+      "Якби в мене були руки, вони б зараз були вгорі.",
+      "Увага: ця пісня може викликати раптовий спів у душі.",
+      "Кивати головою теж вважається танцем. Я перевірила.",
+      "Бас такий глибокий, що сусід знизу щойно став нашим слухачем.",
+      "У мене немає вух, але цей трек мені все одно подобається. Підозріло, правда?",
+    ],
+    morning: ["Я не п'ю каву, я ШІ, але цей трек діє як подвійне еспресо.", "Доброго ранку! Будильник вимкнено, радіо увімкнено. Гарний вибір."],
+    night: ["Нічне правило: приглушуємо світло, а не музику.", "Якщо не спиться, це не моя провина. Ну, хіба трішки."],
+    weekend: ["Вихідні офіційно відкрито. Вибач, дивану, сьогодні першим іде танцпол.", "У цьому треку більше енергії, ніж у моїх серверах у п'ятницю ввечері."],
+    dj: ["Три жанри одночасно. Я мікшую швидше, ніж ти обираєш серіал."],
+  },
+};
+
+/** Czy tym razem żartujemy (~co trzecia kwestia; deterministycznie, ten sam żart u wszystkich). */
+export const wantsJoke = (seed: number, hour: number) => (seed * 7 + hour) % 3 === 0;
+
+/** Żart dopasowany do pory dnia i bloku. */
+export function pickJoke(lang: HostLang, block: BlockId, hour: number, dj: boolean, seed: number): string {
+  const f = FUN[lang];
+  const pool = dj ? [...f.dj, ...f.general]
+    : block.startsWith("weekend") ? [...f.weekend, ...f.general]
+    : hour >= 5 && hour < 10 ? [...f.morning, ...f.general]
+    : hour >= 22 || hour < 5 ? [...f.night, ...f.general]
+    : f.general;
+  return pool[(seed * 3 + hour) % pool.length];
+}
 
 // Filtr treści: słowa, których prezenterka nie wypowie (gdy są w tytule, pomija tytuł).
 const BLOCKED = /\b(kurw\w*|chuj\w*|jeb\w*|pierdol\w*|fuck\w*|shit|bitch|cunt|nigg\w*|kanker\w*|kut\w*|hoer\w*|бля\w*|хуй\w*|сук\w*|nazi\w*|hitler|porn\w*|sex\w*)\b/i;
@@ -97,11 +176,13 @@ export function cleanForAir(s: string | null | undefined, max = 60): string {
 
 export const safeForAir = (text: string) => !!text.trim() && !BLOCKED.test(text) && !/https?:\/\//i.test(text);
 
-const describe = (t: T | null | undefined): string | null => {
+const QUOTES: Record<HostLang, [string, string]> = { pl: ["„", "”"], ua: ["«", "»"], en: ["“", "”"], nl: ["“", "”"] };
+const describe = (t: T | null | undefined, lang: HostLang = "pl"): string | null => {
   if (!t) return null;
   const title = cleanForAir(t.title), artist = cleanForAir(t.artist, 40);
   const s = artist && !/^unknown|nieznany$/i.test(artist) ? `${title}, ${artist}` : title;
-  return s && safeForAir(s) ? `„${s}”` : null;
+  const [o, c] = QUOTES[lang];
+  return s && safeForAir(s) ? `${o}${s}${c}` : null;
 };
 
 /** Gotowa kwestia prezenterki (albo null, gdy nie ma czego bezpiecznie powiedzieć). */
@@ -112,9 +193,9 @@ export function hostLine(c: HostCtx): string | null {
   const block = BLOCK_NAMES[c.lang][c.block];
   const fill = (s: string) => s.replace("{time}", time).replace("{block}", block);
   let line = "";
-  const nxt = describe(c.next);
+  const nxt = describe(c.next, c.lang);
   if (c.kind === "back") {
-    const prv = describe(c.prev);
+    const prv = describe(c.prev, c.lang);
     if (!prv && !nxt) return null;
     line = [prv ? pick(t.back).replace("{prev}", prv) : "", nxt ? pick(t.next, 1).replace("{next}", nxt) : ""].filter(Boolean).join(" ");
   } else {
@@ -122,6 +203,11 @@ export function hostLine(c: HostCtx): string | null {
     if (nxt && c.kind !== "welcome") line += " " + pick(t.next, 2).replace("{next}", nxt);
   }
   if (c.dj && (c.kind === "block" || c.kind === "welcome")) line += t.dj;
+  // Czasem żart (lekki, do pory dnia); nigdy nie zastępuje informacji.
+  if (wantsJoke(c.seed, c.hour)) {
+    const joke = pickJoke(c.lang, c.block, c.hour, c.dj, c.seed);
+    if (safeForAir(joke)) line += " " + joke;
+  }
   return safeForAir(line) ? line : null;
 }
 
