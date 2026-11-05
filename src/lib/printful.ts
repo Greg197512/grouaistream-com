@@ -52,6 +52,18 @@ export async function printfulStores(cfg: PrintfulCfg): Promise<{ id: number; na
   return ((r.result ?? []) as { id: number; name: string; type: string }[]).map((s) => ({ id: s.id, name: s.name, type: s.type }));
 }
 
+/** Szablony produktów i pliki do druku na koncie (do zakładania produktów w sklepie API). */
+export async function printfulAssets(cfg: PrintfulCfg) {
+  const t = await pf(cfg, "/product-templates?limit=100");
+  const f = await pf(cfg, "/files?limit=100");
+  const tpl = ((t.result ?? {}) as { items?: { id: number; title: string; product_id: number; available_variant_ids?: number[] }[] }).items ?? [];
+  const files = (Array.isArray(f.result) ? f.result : []) as { id: number; filename: string; width?: number; height?: number; type?: string }[];
+  return {
+    templates: t.ok ? tpl.map((x) => ({ id: x.id, title: x.title, product: x.product_id, variants: x.available_variant_ids?.length ?? 0 })) : { error: t.error },
+    files: f.ok ? files.map((x) => ({ id: x.id, name: x.filename, w: x.width, h: x.height, type: x.type })) : { error: f.error },
+  };
+}
+
 /** Lista „External ID” wariantów w sklepie Printful (do sprawdzenia podpięcia produktów). */
 export async function printfulExternalIds(cfg: PrintfulCfg): Promise<{ ok: true; ids: string[] } | { ok: false; error: string }> {
   const list = await pf(cfg, "/store/products?limit=100");

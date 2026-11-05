@@ -2,12 +2,12 @@
 // Powód: zapytania z funkcji edge Vercela zatrzymuje zapora Cloudflare przed Printful (403 „Attention Required”),
 // a z funkcji Node przechodzą. Wywołuje go api/shop-checkout (edge).
 // Bezpieczeństwo: działa tylko z kluczem równym PRINTFUL_API_KEY (Authorization: Bearer …) i tylko dla
-// ścieżek sklepu Printful: /store/products, /orders, /stores. Klucza nie zwraca ani nie zapisuje.
+// ścieżek sklepu Printful: /store/products, /orders, /stores, /product-templates, /files. Klucza nie zwraca ani nie zapisuje.
 import { timingSafeEqual } from "node:crypto";
 
 export const config = { maxDuration: 30 };
 
-const ALLOWED = /^\/(store\/products|orders|stores)(\/[\w-]+)*(\?[\w=&%.-]*)?$/;
+const ALLOWED = /^\/(store\/products|orders|stores|product-templates|files)(\/[\w-]+)*(\?[\w=&%.-]*)?$/;
 const same = (a: string, b: string) => {
   const x = Buffer.from(a), y = Buffer.from(b);
   return x.length === y.length && timingSafeEqual(x, y);
