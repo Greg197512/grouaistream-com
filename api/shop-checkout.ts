@@ -10,7 +10,7 @@
  *  - przelew na konto (Revolut): `SHOP_BANK_HOLDER`, `SHOP_BANK_IBAN`, opcjonalnie `SHOP_BANK_BIC`, `SHOP_REVOLUT_LINK`.
  *  Bez żadnej z nich zamówienie zostaje „do opłacenia”, a admin wysyła link ręcznie.
  *  Paddle nie jest tu używany, bo zabrania sprzedaży towarów fizycznych.
- * Sprzedawca (regulamin, faktury): `SHOP_SELLER_NAME`, `SHOP_SELLER_ADDRESS`, `SHOP_SELLER_COUNTRY` (ISO),
+ * Sprzedawca (regulamin, faktury; w prod ustawione nazwa/adres/kraj/e-mail): `SHOP_SELLER_NAME`, `SHOP_SELLER_ADDRESS`, `SHOP_SELLER_COUNTRY` (ISO),
  *  `SHOP_SELLER_TAX_ID`, `SHOP_SELLER_VAT_ID`, `SHOP_SELLER_EMAIL`, `SHOP_VAT_MODE` (oss|domestic|exempt),
  *  `SHOP_VAT_EXEMPT_NOTE`, `SHOP_DELIVERY_DAYS`, `SHOP_SHIPPING_EUR_CENTS`.
  *
