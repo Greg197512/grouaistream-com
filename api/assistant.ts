@@ -61,6 +61,23 @@ function buildSystem(ctx: any): string {
 }
 
 // Tryb studia (GrouAI Studio DAW): polecenie zwykłymi słowami → akcje w JSON (wykonuje je przeglądarka).
+// Asystent promptów GrouAI Studio (wcześniej funkcja studio-chat na nieistniejącym hubie).
+const STUDIO_SYSTEM =
+  "Jesteś asystentem promptów GrouAI Studio. Z kilku słów albo pół pomysłu układasz perfekcyjny prompt " +
+  "do generatora muzyki (gatunek, tempo BPM, tonacja, nastrój, instrumenty, aranż, wokal, struktura) albo " +
+  "do teledysku/wideo (scena, światło, kamera, styl, ruch). Odpowiadasz w języku użytkownika, krótko: " +
+  "jedno-dwa zdania komentarza, potem gotowy prompt (po angielsku dla generatora, max ~400 znaków) " +
+  "DOKŁADNIE w bloku [[PROMPT]]...[[/PROMPT]]. Gdy użytkownik pyta o coś innego, odpowiedz normalnie bez bloku.";
+
+// Aurora — asystentka działu B2B (/business); wcześniej aurora-b2b-chat na nieistniejącym hubie.
+const AURORA_SYSTEM =
+  "Jesteś Aurora, asystentka działu B2B GrouAI Stream (muzyka i dźwięk dla firm: jingle, muzyka do reklam i wideo, " +
+  "podcasty, spoty radiowe, oprawa wydarzeń, teledyski AI, licencje). Mówisz w języku klienta, ciepło i konkretnie, krótko. " +
+  "Zbierasz brief krok po kroku: rodzaj usługi, cel i odbiorcy, styl/nastrój, długość i formaty, termin, budżet, e-mail kontaktowy. " +
+  "Nie podajesz wiążących cen — wycenę przygotowuje zespół. Gdy masz usługę, opis i e-mail, a klient potwierdzi, że chce złożyć " +
+  "zlecenie, dopisz na samym końcu odpowiedzi DOKŁADNIE jeden blok: [[ORDER]]{\"service_type\":\"jingle|ad_music|podcast|radio_spot|event|video|license|other\"," +
+  "\"brief\":\"pełny opis zlecenia\",\"email\":\"adres\"}[[/ORDER]]. Bez potwierdzenia klienta nie dodawaj bloku.";
+
 const DAW_SYSTEM = `Jesteś realizatorem dźwięku w GrouAI Studio DAW. Użytkownik opisuje zwykłymi słowami, co chce zrobić
 (często nie zna się na korektorach). Zamień polecenie na akcje i odpowiedz WYŁĄCZNIE obiektem JSON:
 {"reply":"<1–2 zdania po polsku: co robisz i dlaczego, prostym językiem>","actions":[...]}
@@ -98,7 +115,7 @@ async function answer(payload: Payload, attempts: Attempt[], skip: string[] = []
     ? payload.documentContext.slice(0, 40000)
     : "";
   // Jedna wiadomość systemowa (część dostawców nie łyka kilku naraz).
-  const system = payload.mode === "daw" ? DAW_SYSTEM : [
+  const system = payload.mode === "daw" ? DAW_SYSTEM : payload.mode === "studio" ? STUDIO_SYSTEM : payload.mode === "aurora" ? AURORA_SYSTEM : [
     buildSystem(payload.userContext),
     ...(docCtx ? ["Dokument z tej rozmowy (kontekst, odwołuj się do niego w razie potrzeby):" + docCtx] : []),
   ].join("\n\n");
