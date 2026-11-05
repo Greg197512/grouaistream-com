@@ -42,7 +42,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { isOffline, saveOfflineTrack, removeOfflineTrack } from "@/lib/offlineLibrary";
 import { CoverStudioModal } from "@/components/modals/CoverStudioModal";
-import { triggerCoverVideo } from "@/lib/autoCoverVideo";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { downloadTrackFile, trackGiftUrl, trackShareUrl } from "@/lib/trackFile";
 
@@ -80,7 +79,7 @@ const TXT = {
     deleted: "Utwór usunięty", removedMine: "Usunięto z Twojej biblioteki", onlyOwner: "Tylko autor utworu może to zmienić",
     coverWrong: "To nie jest grafika — wybierz JPG, PNG lub WebP", coverBig: "Okładka może ważyć maksymalnie 5 MB", coverTry: "🎨 Przymierzam nową okładkę…",
     coverDone: "✨ Nowa okładka gotowa", aiCoverStart: "🎨 Maluję okładkę AI…", aiClipStart: "🎬 Kręcę teledysk AI (może potrwać kilka minut)…", clipDone: "🎬 Teledysk AI gotowy!",
-    giftText: "🎁 Mam dla Ciebie prezent", giftCopied: "Link do prezentu skopiowany — wklej go, komu chcesz 🎁", listen: "Posłuchaj",
+    clipPaid: "Teledysk AI to płatna generacja (Replicate, kilka zł za klip). Kontynuować?", giftText: "🎁 Mam dla Ciebie prezent", giftCopied: "Link do prezentu skopiowany — wklej go, komu chcesz 🎁", listen: "Posłuchaj",
   },
   en: {
     like: "Like ❤️", unlike: "Unlike", signIn: "Sign in first", liked: "Added to Liked Songs ❤️", unliked: "Removed from Liked Songs",
@@ -98,7 +97,7 @@ const TXT = {
     deleted: "Track deleted", removedMine: "Removed from your library", onlyOwner: "Only the track's author can change this",
     coverWrong: "Not an image — choose JPG, PNG or WebP", coverBig: "Cover can be at most 5 MB", coverTry: "🎨 Trying on the new cover…",
     coverDone: "✨ New cover ready", aiCoverStart: "🎨 Painting an AI cover…", aiClipStart: "🎬 Shooting an AI video (may take a few minutes)…", clipDone: "🎬 AI video ready!",
-    giftText: "🎁 I have a gift for you", giftCopied: "Gift link copied — paste it to anyone 🎁", listen: "Listen",
+    clipPaid: "The AI music video is a paid generation (Replicate, about $1 per clip). Continue?", giftText: "🎁 I have a gift for you", giftCopied: "Gift link copied — paste it to anyone 🎁", listen: "Listen",
   },
   nl: {
     like: "Vind ik leuk ❤️", unlike: "Niet meer leuk", signIn: "Log eerst in", liked: "Toegevoegd aan favorieten ❤️", unliked: "Verwijderd uit favorieten",
@@ -116,7 +115,7 @@ const TXT = {
     deleted: "Nummer verwijderd", removedMine: "Uit je bibliotheek verwijderd", onlyOwner: "Alleen de maker kan dit wijzigen",
     coverWrong: "Geen afbeelding — kies JPG, PNG of WebP", coverBig: "Cover mag maximaal 5 MB zijn", coverTry: "🎨 Nieuwe cover passen…",
     coverDone: "✨ Nieuwe cover klaar", aiCoverStart: "🎨 AI-cover schilderen…", aiClipStart: "🎬 AI-clip maken (kan enkele minuten duren)…", clipDone: "🎬 AI-clip klaar!",
-    giftText: "🎁 Ik heb een cadeau voor je", giftCopied: "Cadeaulink gekopieerd — plak hem waar je wilt 🎁", listen: "Luister",
+    clipPaid: "De AI-videoclip is een betaalde generatie (Replicate, ca. €1 per clip). Doorgaan?", giftText: "🎁 Ik heb een cadeau voor je", giftCopied: "Cadeaulink gekopieerd — plak hem waar je wilt 🎁", listen: "Luister",
   },
   ua: {
     like: "Подобається ❤️", unlike: "Прибрати ❤️", signIn: "Спершу увійдіть", liked: "Додано до улюблених ❤️", unliked: "Прибрано з улюблених",
@@ -134,7 +133,7 @@ const TXT = {
     deleted: "Трек видалено", removedMine: "Прибрано з вашої бібліотеки", onlyOwner: "Змінити може лише автор треку",
     coverWrong: "Це не зображення — оберіть JPG, PNG або WebP", coverBig: "Обкладинка — максимум 5 МБ", coverTry: "🎨 Приміряю нову обкладинку…",
     coverDone: "✨ Нова обкладинка готова", aiCoverStart: "🎨 Малюю AI-обкладинку…", aiClipStart: "🎬 Знімаю AI-кліп (кілька хвилин)…", clipDone: "🎬 AI-кліп готовий!",
-    giftText: "🎁 У мене для тебе подарунок", giftCopied: "Посилання на подарунок скопійовано 🎁", listen: "Слухай",
+    clipPaid: "AI-кліп — платна генерація (Replicate, близько $1 за кліп). Продовжити?", giftText: "🎁 У мене для тебе подарунок", giftCopied: "Посилання на подарунок скопійовано 🎁", listen: "Слухай",
   },
 } as const;
 
@@ -403,7 +402,6 @@ const TrackOptionsMenuComponent = (
       await updateTrack({ cover_url: pub.publicUrl });
       toast.success(t.coverDone);
       window.dispatchEvent(new CustomEvent("track-list-changed"));
-      triggerCoverVideo(trackId);
     } catch (err) {
       console.error("Cover update failed:", err);
       toast.error(err instanceof Error && err.message ? err.message : t.fail);
@@ -428,7 +426,6 @@ const TrackOptionsMenuComponent = (
       await updateTrack({ cover_url: coverUrl });
       toast.success(t.coverDone);
       window.dispatchEvent(new CustomEvent("track-list-changed"));
-      triggerCoverVideo(trackId);
     } catch (err) {
       console.error("Quick AI cover failed:", err);
       toast.error(err instanceof Error && err.message ? err.message : t.fail);
@@ -441,6 +438,7 @@ const TrackOptionsMenuComponent = (
   const [aiClipBusy, setAiClipBusy] = useState(false);
   const handleQuickAIClip = async () => {
     if (aiClipBusy) return;
+    if (!window.confirm(t.clipPaid)) return; // płatna generacja (Replicate) — tylko świadomie
     setAiClipBusy(true);
     toast.info(t.aiClipStart, { duration: 8000 });
     try {

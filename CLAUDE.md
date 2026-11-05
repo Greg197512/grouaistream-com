@@ -43,7 +43,11 @@ i aktualny. Jeśli fakt tu jest — nie weryfikuj go od nowa dziesiątkami wywo�
 ## Vercel
 - Team `team_dcuxbMKuCaW05SplN8IdrSIq`. Produkcja `grouaistream.com` = projekt **`grouaistream-com`**
   (`prj_nDY7frLwg4nyMZpywRDLSzclamTZ`). Projekty `grouaistream` i `dist` to duplikaty na tym samym
-  repo (do usunięcia — mnożą Build Minutes). Ignored Build Step: `bash scripts/vercel-ignore-build.sh`.
+  repo (do usunięcia — mnożą Build Minutes); **od 5.11 mają Ignored Build Step `exit 0` (nie budują)**.
+  Ignored Build Step: `bash scripts/vercel-ignore-build.sh` — **buduje tylko produkcję (main)**, podglądy gałęzi pomijane.
+- **Koszty (Grzegorz: „uważaj, aby nie naliczało”):** nic płatnego nie może startować samo ani u gości.
+  Płatne: Replicate (teledyski Kling/Hailuo — tylko na klik, z potwierdzeniem), OpenRouter (okładki AI `ai-cover-generate`),
+  ElevenLabs/Azure (tylko gdy klucz). Usunięte automaty: teledysk po zmianie okładki, okładki AI z `NewOnServer` u każdego gościa.
 - Z piaskownicy agenta EGRESS blokuje `*.supabase.co`, `*.r2.dev`, `grouaistream.com` (curl/WebFetch/Playwright).
   Do sprawdzenia żywej strony/R2 używaj `mcp__Vercel__web_fetch_vercel_url` (idzie siecią Vercela).
 
