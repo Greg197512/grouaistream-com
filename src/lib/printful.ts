@@ -10,7 +10,9 @@ async function pf(cfg: PrintfulCfg, path: string, init: RequestInit = {}) {
   const r = await fetch(BASE + path, {
     ...init,
     headers: {
-      authorization: `Bearer ${cfg.token}`, "content-type": "application/json",
+      authorization: `Bearer ${cfg.token}`, "content-type": "application/json", accept: "application/json",
+      // Bez User-Agent zapora Cloudflare przed api.printful.com odrzuca zapytania z serwera (403 „Attention Required”).
+      "user-agent": "GrouaDrop/1.0 (+https://grouaistream.com/shop)",
       ...(cfg.storeId ? { "x-pf-store-id": cfg.storeId } : {}), ...(init.headers ?? {}),
     },
     signal: AbortSignal.timeout(20000),
