@@ -152,13 +152,7 @@ export default function BusinessPage() {
       if (orderHit) {
         setOrderPlaced(true);
         setDraftSaved(true);
-        toast.success(`🚀 Zlecenie #${orderHit.short_id} przyjęte — sprawdź e-mail`, { duration: 6000 });
-        // Wystartuj przyciskowy przepływ B2B: mail do admina "Potwierdź zlecenie i wyceń".
-        if (orderHit.short_id) {
-          fetch(
-            `https://bmwtydwpevzhbdplilbr.supabase.co/functions/v1/aurora-b2b-flow?stage=kick&order=${encodeURIComponent(orderHit.short_id)}`,
-          ).catch(() => {});
-        }
+        toast.success(`🚀 Zlecenie #${orderHit.short_id} przyjęte — zespół odezwie się z wyceną`, { duration: 6000 });
         // Zalogowany klient: zapisz zlecenie do dashboardu (aurora_business_orders) i otwórz panel.
         if (user) {
           // Użyj świeżych danych z tej odpowiedzi (briefState w state jest jeszcze sprzed setState).

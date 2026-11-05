@@ -1,23 +1,8 @@
-import { supabase } from "@/integrations/supabase/client";
 
-// Geo-capture działa na hubie GrouAI (Supabase udostępnia IP tylko w logach auth,
-// niedostępnych z klienta). Hub weryfikuje JWT usera LIVE i geolokalizuje IP.
-const HUB = "https://bmwtydwpevzhbdplilbr.supabase.co/functions/v1";
-
-async function hubPost(path: string, body: Record<string, unknown> = {}): Promise<any> {
-  const { data: s } = await supabase.auth.getSession();
-  const token = s?.session?.access_token;
-  if (!token) return { ok: false, error: "no-session" };
-  try {
-    const r = await fetch(`${HUB}/${path}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify(body),
-    });
-    return await r.json().catch(() => ({ ok: false }));
-  } catch (e) {
-    return { ok: false, error: String(e) };
-  }
+// Geo i obecność działały na hubie GrouAI (bmwtydwpevzhbdplilbr), który już nie istnieje.
+// Bez zapytań w eter (wcześniej każdy zalogowany co 60 s wysyłał nieudany ping) — panele admina pokazują pusto.
+async function hubPost(_path: string, _body: Record<string, unknown> = {}): Promise<any> {
+  return { ok: false, error: "hub-offline" };
 }
 
 // Zapisz lokalizację usera (IP + miasto). Fire-and-forget, raz na sesję.
@@ -59,9 +44,8 @@ export async function fetchGeoList(): Promise<UserGeo[]> {
 let presenceTimer: number | null = null;
 export function startPresenceHeartbeat() {
   if (presenceTimer !== null) return;
-  const beat = () => { hubPost("presence-ping").catch(() => {}); };
-  beat();
-  presenceTimer = setInterval(beat, 60_000) as unknown as number;
+  // Hub nie istnieje — brak bicia serca (nie budzimy telefonu co minutę na darmo).
+  presenceTimer = 0;
 }
 export function stopPresenceHeartbeat() {
   if (presenceTimer !== null) { clearInterval(presenceTimer); presenceTimer = null; }

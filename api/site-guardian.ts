@@ -11,7 +11,7 @@ async function probe(name: string, url: string, init: RequestInit = {}, okFn?: (
   const t = Date.now();
   try {
     const r = await fetch(url, { ...init, signal: AbortSignal.timeout(15000) });
-    const body = init.method === "HEAD" ? "" : (await r.text()).slice(0, 2000);
+    const body = init.method === "HEAD" ? "" : await r.text(); // całość: <div id="root"> bywa za nagłówkiem > 2 KB
     const ok = okFn ? okFn(r, body) : r.ok;
     return { name, ok, ms: Date.now() - t, detail: ok ? undefined : `HTTP ${r.status} ${body.slice(0, 120)}` };
   } catch (e) {
@@ -32,9 +32,8 @@ export async function runGuardian(): Promise<{ ok: boolean; checks: Check[]; hea
     }, (r, b) => r.ok && b.startsWith("["));
 
   const checks: Check[] = await Promise.all([
-    probe("strona", SITE, {}, (r, b) => r.ok && b.includes("<div id=\"root\"")),
+    probe("strona", SITE, {}, (r, b) => r.ok && b.includes("id=\"root\"")),
     SB && ANON ? dbCheck() : Promise.resolve({ name: "baza_utwory", ok: false, ms: 0, detail: "brak env" }),
-    probe("hub", "https://bmwtydwpevzhbdplilbr.supabase.co/functions/v1/hub-status"),
   ]);
 
   // Auto-naprawa bazy: uśpiona baza budzi się po kilku zapytaniach.

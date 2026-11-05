@@ -1,18 +1,8 @@
 import { supabase } from "@/integrations/supabase/client";
+import { sameOriginMediaUrl } from "@/lib/trackFile";
 
-// Silnik ACE-Step działa na hubie GrouAI (funkcja na bvstv woła zły endpoint
-// Replicate i nie da się jej podmienić bez Lovable). Hub weryfikuje JWT
-// użytkownika przez auth LIVE, więc kontrakt jest identyczny.
-const HUB_ACESTEP_URL =
-  "https://bmwtydwpevzhbdplilbr.supabase.co/functions/v1/acestep-generate";
-const HUB_PROMPT_ENGINE_URL =
-  "https://bmwtydwpevzhbdplilbr.supabase.co/functions/v1/studio-prompt-engine";
-const HUB_COVER_URL =
-  "https://bmwtydwpevzhbdplilbr.supabase.co/functions/v1/studio-cover";
-const HUB_ENGINE_LEARN_URL =
-  "https://bmwtydwpevzhbdplilbr.supabase.co/functions/v1/engine-learn";
-const HUB_WHISPER_URL =
-  "https://bmwtydwpevzhbdplilbr.supabase.co/functions/v1/whisper-dj";
+// Silniki Studia działają na głównym projekcie Supabase (stary hub bmwtydwpevzhbdplilbr nie istnieje).
+import { invokeHubAI } from "@/lib/hubAI";
 
 type InvokeResult = { data: any; error: Error | null };
 
@@ -22,18 +12,9 @@ type InvokeResult = { data: any; error: Error | null };
  * planera, więc silnik komponuje wzorując się na własnych najlepszych. Ciche
  * niepowodzenie → "" (generacja i tak rusza).
  */
-export async function fetchEngineLessons(language: string): Promise<string> {
-  try {
-    const { data: sessionData } = await supabase.auth.getSession();
-    const token = sessionData?.session?.access_token;
-    const r = await fetch(HUB_ENGINE_LEARN_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-      body: JSON.stringify({ action: "lessons", language }),
-    });
-    const d = await r.json().catch(() => null);
-    return d?.ok && typeof d.lessons === "string" ? d.lessons : "";
-  } catch { return ""; }
+export async function fetchEngineLessons(_language: string): Promise<string> {
+  // Usługa „nauki silnika” była na nieistniejącym hubie — generacja rusza bez lekcji.
+  return "";
 }
 
 export interface WhisperReading {
@@ -52,76 +33,50 @@ export interface WhisperReading {
  * zwraca gatunki/nastroje + jedno empatyczne zdanie. Frontend dobiera JEDEN utwór.
  */
 export async function whisperFeeling(text: string, language: string): Promise<WhisperReading | null> {
+  // Odczyt nastroju przez asystenta (Vercel /api/assistant) — odpowiedź w ścisłym JSON.
+  const prompt =
+    `Słuchacz napisał, jak się czuje: "${text.slice(0, 400)}". Odpowiedz WYŁĄCZNIE jednym obiektem JSON (bez komentarzy) ` +
+    `w języku "${language}": {"mood_label": krótka nazwa nastroju, "emoji": jedno emoji, ` +
+    `"genres": 2-3 gatunki muzyczne po angielsku, "moods": 2-3 nastroje po angielsku, "energy": "low"|"mid"|"high", ` +
+    `"reply": jedno ciepłe, empatyczne zdanie do słuchacza}.`;
+  const { data } = await invokeHubAI({ message: prompt, userContext: { language } }, 30000);
+  const raw = data?.response || "";
+  const m = raw.match(/\{[\s\S]*\}/);
+  if (!m) return null;
   try {
-    const r = await fetch(HUB_WHISPER_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text, language }),
-    });
-    return (await r.json().catch(() => null)) as WhisperReading | null;
+    const j = JSON.parse(m[0]);
+    const energy = ["low", "mid", "high"].includes(j.energy) ? j.energy : "mid";
+    return {
+      ok: true,
+      mood_label: String(j.mood_label || ""),
+      emoji: String(j.emoji || "🎧"),
+      genres: Array.isArray(j.genres) ? j.genres.map(String).slice(0, 3) : [],
+      moods: Array.isArray(j.moods) ? j.moods.map(String).slice(0, 3) : [],
+      energy,
+      reply: String(j.reply || ""),
+    };
   } catch { return null; }
 }
 
-/** Pulpit „Nauka silnika" (admin, PIN wspólny z panelami). */
-export async function fetchEngineLearningStats(pin: string): Promise<any> {
-  const { data: sessionData } = await supabase.auth.getSession();
-  const token = sessionData?.session?.access_token;
-  const r = await fetch(HUB_ENGINE_LEARN_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-    body: JSON.stringify({ action: "stats", pin }),
-  });
-  return r.json().catch(() => null);
-}
+const LEARN_OFF = { ok: false, error: "Nauka silnika była na starym hubie, który już nie istnieje — panel wyłączony." };
+/** Pulpit „Nauka silnika" (admin) — usługa wyłączona. */
+export async function fetchEngineLearningStats(_pin: string): Promise<any> { return LEARN_OFF; }
+/** Odświeżenie cache katalogu — usługa wyłączona. */
+export async function refreshEngineCatalog(_pin: string): Promise<any> { return LEARN_OFF; }
 
-/** Wymusza odświeżenie cache katalogu (20k+ utworów) z bvstv. */
-export async function refreshEngineCatalog(pin: string): Promise<any> {
-  const { data: sessionData } = await supabase.auth.getSession();
-  const token = sessionData?.session?.access_token;
-  const r = await fetch(HUB_ENGINE_LEARN_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-    body: JSON.stringify({ action: "refresh_catalog", pin }),
-  });
-  return r.json().catch(() => null);
-}
-
-/**
- * Zamiennik supabase.functions.invoke dla silników Studia.
- * "acestep-generate" → hub; pozostałe funkcje → normalnie na LIVE.
- */
-async function hubFetch(url: string, body: Record<string, unknown>): Promise<InvokeResult> {
-  try {
-    const { data: sessionData } = await supabase.auth.getSession();
-    const token = sessionData?.session?.access_token;
-    if (!token) return { data: null, error: new Error("Zaloguj się, aby generować muzykę") };
-
-    const r = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(body),
-    });
-    const data = await r.json().catch(() => null);
-    if (!r.ok) {
-      return { data, error: new Error(data?.error || `Silnik zwrócił błąd ${r.status}`) };
-    }
-    return { data, error: null };
-  } catch (e: any) {
-    return { data: null, error: e instanceof Error ? e : new Error(String(e)) };
-  }
-}
-
+/** Wywołanie silnika Studia na głównym projekcie; błąd niesie treść odpowiedzi funkcji. */
 export async function invokeStudioEngine(
   fnName: string,
   body: Record<string, unknown>
 ): Promise<InvokeResult> {
-  if (fnName === "acestep-generate") return hubFetch(HUB_ACESTEP_URL, body);
-  if (fnName === "studio-prompt-engine") return hubFetch(HUB_PROMPT_ENGINE_URL, body);
-  if (fnName === "ai-cover-generate" || fnName === "studio-cover") return hubFetch(HUB_COVER_URL, body);
-  return supabase.functions.invoke(fnName, { body });
+  // Hub (bmwtydwpevzhbdplilbr) nie istnieje od 11.2026 — wszystkie silniki na głównym projekcie.
+  const name = fnName === "studio-cover" ? "ai-cover-generate" : fnName;
+  const { data, error } = await supabase.functions.invoke(name, { body });
+  if (error) {
+    const ctx = await (error as any)?.context?.json?.().catch(() => null);
+    return { data: ctx, error: new Error(ctx?.error || error.message) };
+  }
+  return { data, error: null };
 }
 
 /**
@@ -134,7 +89,7 @@ export async function startVoiceCover(
   voiceUrl: string,
   opts?: { title?: string; pitch?: number }
 ): Promise<{ taskId: string; generationId: string | null }> {
-  const { data, error } = await hubFetch(HUB_ACESTEP_URL, {
+  const { data, error } = await invokeStudioEngine("acestep-generate", {
     action: "voice_cover",
     audio_url: audioUrl,
     voice_url: voiceUrl,
@@ -151,7 +106,7 @@ export async function startVoiceCover(
  * dekodowanie w przeglądarce, bez dodatkowych kosztów serwera.
  */
 export async function downloadAudioAsWav(url: string, filename: string): Promise<void> {
-  const r = await fetch(url);
+  const r = await fetch(sameOriginMediaUrl(url)); // R2 bez CORS → przez /api/media
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
   const arrayBuffer = await r.arrayBuffer();
   const ctx = new AudioContext();
@@ -263,7 +218,7 @@ export function isDailyLimitError(err: unknown): boolean {
  * deterministyczny adres {taskId}-cover.jpg, więc nie trzeba czekać na wynik.
  */
 export function fireCoverGeneration(taskId: string, title: string, style: string, description?: string) {
-  void hubFetch(HUB_COVER_URL, {
+  void invokeStudioEngine("studio-cover", {
     id: taskId,
     title,
     style,
@@ -284,7 +239,7 @@ export async function waitForAceStep(
   for (let i = 1; i <= maxAttempts; i++) {
     await new Promise((res) => setTimeout(res, 4000));
     onTick?.(i * 4);
-    const { data, error } = await hubFetch(HUB_ACESTEP_URL, {
+    const { data, error } = await invokeStudioEngine("acestep-generate", {
       action: "status",
       task_id: taskId,
       generation_id: generationId ?? undefined,

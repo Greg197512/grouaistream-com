@@ -49,7 +49,6 @@ const DOCK_H = 460;
 const DOCK_BOTTOM_OFFSET = 140; // odstęp od dołu, żeby nie zasłaniać PlayerBar
 
 // Czat asystenta działa na HUBIE (LIVE bvstv nie ma klucza AI).
-const HUB_STUDIO_CHAT = "https://bmwtydwpevzhbdplilbr.supabase.co/functions/v1/studio-chat";
 
 // Wyciąga gotowy prompt z odpowiedzi asystenta (blok [[PROMPT]]...[[/PROMPT]]).
 const extractPrompt = (c: string): string | null => {
@@ -193,13 +192,14 @@ export const StudioGrokDock = () => {
     setInput(""); setAttachments([]); setStreaming(true);
 
     try {
-      const { data: s } = await supabase.auth.getSession();
-      const r = await fetch(HUB_STUDIO_CHAT, {
+      // Vercel /api/assistant w trybie „studio” (stary hub studio-chat już nie istnieje); ten sam strumień SSE.
+      const r = await fetch("/api/assistant", {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${s?.session?.access_token}` },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          messages: [...messages, userMsg].slice(-12).map((m) => ({ role: m.role, content: m.content })),
-          ai_engine: engine,
+          mode: "studio",
+          message: userMsg.content,
+          history: messages.slice(-11).map((m) => ({ role: m.role, content: m.content })),
           attachments: userMsg.meta?.attachments || [],
         }),
       });

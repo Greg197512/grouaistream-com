@@ -11,8 +11,8 @@ import { supabase } from "@/integrations/supabase/client";
  * przepuszczamy go przez korektor (przyciemniony, chowa się pod głosem); jeśli nie
  * → gra „na wprost". Gdy katalog nic nie zwróci — awaryjny generatywny pad.
  */
-const DEFAULT_VOICE =
-  "https://bmwtydwpevzhbdplilbr.supabase.co/storage/v1/object/public/night-audio/1787099400474-nocne-czytanie.mp3";
+// Nagranie lektora było na nieistniejącym hubie — domyślnie „Opowiadanie dnia” z /api/radio-story (Vercel).
+const DEFAULT_VOICE = "/api/radio-story?lang=pl";
 
 const BED_VOLUME = 0.2;
 const BED_FADE_IN = 4000;
