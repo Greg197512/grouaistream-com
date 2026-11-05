@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { RadioAutopilotPreview } from "@/components/admin/RadioAutopilotPreview";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -679,11 +680,13 @@ export const RadioStationManager = () => {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="24h">24H non-stop</SelectItem>
-                  <SelectItem value="scheduled">Zaplanowany</SelectItem>
+                  <SelectItem value="24h">Autopilot 24H (ramówka automatyczna)</SelectItem>
+                  <SelectItem value="manual">24H z grafiku ręcznego</SelectItem>
+                  <SelectItem value="scheduled">Zaplanowany (godziny nadawania)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+            {(config?.mode || "24h") === "24h" && <div className="sm:col-span-2"><RadioAutopilotPreview /></div>}
             {config?.mode === "scheduled" && (
               <div className="flex gap-2">
                 <div className="flex-1">

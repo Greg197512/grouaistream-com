@@ -2,13 +2,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { loadTrackSnapshot, type SnapshotTrack } from "@/lib/trackSnapshot";
 import { omitRadioOnlyTracks } from "@/lib/catalogTracks";
 import { withTimeout } from "@/lib/withTimeout";
+import { BLOCKS, blockAt, planDay, type BlockId } from "@/lib/radioClock";
 
-// Dzienne „radio z harmonogramem": co dzień inna, deterministyczna playlista
-// (ten sam porządek dla wszystkich słuchaczy danego dnia — czas synchronizowany
-// od północy UTC), z nastrojem zależnym od dnia tygodnia:
-//   • czwartek/piątek/sobota → więcej hip-hop / rap / dance (weekendowa energia),
-//   • niedziela → spokój i melancholia (lo-fi, ambient, chill, soul…),
-//   • pon.–śr. → zrównoważony mix.
+// Dzienne radio = AUTOPILOT: co dzień inna, deterministyczna playlista na całą dobę
+// (ten sam porządek dla wszystkich słuchaczy — czas liczony od polskiej północy),
+// ułożona przez ramówkę godzinową z `radioClock.ts` (bloki gatunkowe, weekend
+// Disco/Electronic/Hip-Hop, bez powtórek w oknie kilku godzin, bramka jakości).
 // Źródło: Supabase `tracks`, a gdy baza nie odpowiada → snapshot (/tracks.json)
 // i granie prosto z R2. Dzięki temu radio nie milknie przy padniętej bazie.
 
@@ -28,14 +27,14 @@ export interface DailyRadio {
   stationName: string;
   dayKey: string;       // YYYY-MM-DD (UTC)
   mood: DayMood;
+  /** Autopilot: blok ramówki każdego utworu (ta sama kolejność co `tracks`). */
+  blocks?: BlockId[];
+  starts?: number[];     // sekundy od północy
+  windowSec?: number;    // okno bez powtórek
+  rejected?: number;     // odrzucone przez bramkę jakości
 }
 
 export type DayMood = "party" | "calm" | "mixed";
-
-// Weekend (energia): czw(4) / pt(5) / sob(6).
-const PARTY_KW = ["hip-hop", "hip hop", "hiphop", "rap", "trap", "dance", "edm", "house", "techno", "disco", "funk", "club", "bass", "electro", "dnb", "drum&bass", "drum and bass"];
-// Niedziela (spokój/melancholia).
-const CALM_KW = ["lo-fi", "lofi", "ambient", "chill", "chillout", "acoustic", "soul", "jazz", "classical", "piano", "melanchol", "sad", "slow", "downtempo", "soft", "ballad", "r&b", "rnb", "lounge"];
 
 export function dayMood(dow: number): DayMood {
   if (dow === 4 || dow === 5 || dow === 6) return "party"; // czw/pt/sob
@@ -71,36 +70,11 @@ export function stationNameFor(mood: DayMood): string {
   return "GrouaRadio · Mix dnia";
 }
 
-// Deterministyczny PRNG (mulberry32) + hash tekstu na ziarno.
-function seedFromString(s: string): number {
-  let h = 2166136261 >>> 0;
-  for (let i = 0; i < s.length; i++) {
-    h ^= s.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  return h >>> 0;
-}
-function mulberry32(seed: number): () => number {
-  let a = seed >>> 0;
-  return () => {
-    a |= 0;
-    a = (a + 0x6d2b79f5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
 // Filtr PostgREST: gatunki imprezowe (case-insensitive, częściowe dopasowanie).
 const PARTY_GENRE_FILTER = ["techno", "disco", "hip-hop", "hip hop", "rap", "trap", "dance", "house", "edm"]
   .map((k) => `genre.ilike.%${k}%`)
   .join(",");
 
-const matchesKw = (genre: string | null, kws: string[]): boolean => {
-  if (!genre) return false;
-  const g = genre.toLowerCase();
-  return kws.some((k) => g.includes(k));
-};
 
 /**
  * Buduje dzisiejszą playlistę radia dla stacji. Zwraca null, gdy nie ma z czego
@@ -110,7 +84,6 @@ export async function buildDailyRadio(station: "public" | "vip", max = 140): Pro
   const now = new Date();
   const { dow, dayKey, midnightISO } = warsawDay(now);
   const mood = dayMood(dow);
-  const rand = mulberry32(seedFromString(`${dayKey}:${station}:${mood}`));
 
   // Pula: Supabase → fallback snapshot (R2).
   let pool: DailyRadioTrack[] = [];
@@ -151,57 +124,21 @@ export async function buildDailyRadio(station: "public" | "vip", max = 140): Pro
   }
   if (pool.length === 0) return null;
 
-  const shuffle = <T,>(arr: T[]): T[] => {
-    const a = arr.slice();
-    for (let i = a.length - 1; i > 0; i--) {
-      const j = Math.floor(rand() * (i + 1));
-      [a[i], a[j]] = [a[j], a[i]];
-    }
-    return a;
-  };
-
-  const kws = mood === "party" ? PARTY_KW : mood === "calm" ? CALM_KW : null;
-
-  let ordered: DailyRadioTrack[];
-  if (kws) {
-    const pref = shuffle(pool.filter((t) => matchesKw(t.genre, kws)));
-    const rest = shuffle(pool.filter((t) => !matchesKw(t.genre, kws)));
-    if (pref.length < 4) {
-      // Za mało pasujących gatunków w katalogu — nie rób pustej stacji, graj mix.
-      ordered = shuffle(pool);
-    } else if (mood === "calm") {
-      // Niedziela: najpierw spokojne, energiczne dopiero na końcu (i mniej).
-      ordered = [...pref, ...rest.slice(0, Math.ceil(pref.length * 0.3))];
-    } else {
-      // Weekend: przeplot 3:1 (preferowane:reszta) — energia + różnorodność.
-      ordered = [];
-      let pi = 0, ri = 0;
-      while (pi < pref.length || ri < rest.length) {
-        for (let k = 0; k < 3 && pi < pref.length; k++) ordered.push(pref[pi++]);
-        if (ri < rest.length) ordered.push(rest[ri++]);
-      }
-    }
-  } else {
-    ordered = shuffle(pool);
-  }
-
-  // Lekki dedup kolejnych po artyście (chyba że katalog jedno/dwuartystowy — VIP).
-  const artistSet = new Set(pool.map((t) => (t.artist || "").trim().toLowerCase()).filter(Boolean));
-  const skipDedup = artistSet.size <= 2;
-  const final: DailyRadioTrack[] = [];
-  let lastArtist = "";
-  for (const t of ordered) {
-    const a = (t.artist || "").toLowerCase();
-    if (!skipDedup && a && a === lastArtist) continue;
-    final.push(t);
-    lastArtist = a;
-    if (final.length >= max) break;
-  }
-
+  // Autopilot: pełna doba według ramówki godzinowej (radioClock.ts) — bloki gatunkowe,
+  // weekend Disco/Electronic/Hip-Hop, bez powtórek w oknie kilku godzin, bramka jakości.
+  void max;
+  const plan = planDay(pool, dow, `${dayKey}:${station}`);
+  if (!plan.items.length) return null;
+  const hourNow = Math.floor((now.getTime() - new Date(midnightISO).getTime()) / 3600000);
+  const current = blockAt(dow, Math.min(23, Math.max(0, hourNow)));
   return {
-    tracks: final.length ? final : ordered.slice(0, max),
+    tracks: plan.items.map((x) => ({ ...x.track, duration: x.track.duration || 180 })),
+    blocks: plan.items.map((x) => x.block),
+    starts: plan.items.map((x) => x.start),
+    windowSec: plan.windowSec,
+    rejected: plan.rejected,
     startedAtISO: midnightISO,
-    stationName: stationNameFor(mood),
+    stationName: `GrouaRadio · ${BLOCKS[current].label}`,
     dayKey,
     mood,
   };
