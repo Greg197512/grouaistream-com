@@ -20,16 +20,19 @@ const env = (k: string): string | undefined => {
 
 type Lang = "pl" | "en" | "nl" | "ua";
 const AZURE_VOICE: Record<Lang, string> = { pl: "pl-PL-ZofiaNeural", en: "en-US-AvaMultilingualNeural", nl: "nl-NL-FennaNeural", ua: "uk-UA-PolinaNeural" };
+// Lektor serwisu „Max” (v=m): męskie głosy.
+const AZURE_MALE: Record<Lang, string> = { pl: "pl-PL-MarekNeural", en: "en-US-AndrewMultilingualNeural", nl: "nl-NL-MaartenNeural", ua: "uk-UA-OstapNeural" };
+const ELEVEN_MALE_VOICE = "pNInz6obpgDQGcFmaJgB"; // Adam
 const GOOGLE_LANG: Record<Lang, string> = { pl: "pl", en: "en", nl: "nl", ua: "uk" };
 // Rachel (ElevenLabs, ciepły kobiecy głos) — można podmienić w Vercel: NOVA_ELEVEN_VOICE_ID.
 const ELEVEN_DEFAULT_VOICE = "21m00Tcm4TlvDq8ikWAM";
 
 const xml = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
 
-async function eleven(text: string): Promise<Uint8Array> {
+async function eleven(text: string, male = false): Promise<Uint8Array> {
   const key = env("ELEVENLABS_API_KEY");
   if (!key) throw new Error("no-key");
-  const voice = env("NOVA_ELEVEN_VOICE_ID") ?? ELEVEN_DEFAULT_VOICE;
+  const voice = male ? env("NEWS_ELEVEN_VOICE_ID") ?? ELEVEN_MALE_VOICE : env("NOVA_ELEVEN_VOICE_ID") ?? ELEVEN_DEFAULT_VOICE;
   const r = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voice}?output_format=mp3_44100_64`, {
     method: "POST",
     headers: { "xi-api-key": key, "content-type": "application/json", accept: "audio/mpeg" },
@@ -40,12 +43,12 @@ async function eleven(text: string): Promise<Uint8Array> {
   return new Uint8Array(await r.arrayBuffer());
 }
 
-async function azure(text: string, lang: Lang): Promise<Uint8Array> {
+async function azure(text: string, lang: Lang, male = false): Promise<Uint8Array> {
   const key = env("AZURE_SPEECH_KEY"), region = env("AZURE_SPEECH_REGION");
   if (!key || !region) throw new Error("no-key");
-  const voice = AZURE_VOICE[lang];
+  const voice = (male ? AZURE_MALE : AZURE_VOICE)[lang];
   const ssml = `<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='${voice.slice(0, 5)}'>` +
-    `<voice name='${voice}'><prosody rate='+6%' pitch='+2%'>${xml(text)}</prosody></voice></speak>`;
+    `<voice name='${voice}'><prosody rate='${male ? "+12%" : "+6%"}' pitch='${male ? "+0%" : "+2%"}'>${xml(text)}</prosody></voice></speak>`;
   const r = await fetch(`https://${region}.tts.speech.microsoft.com/cognitiveservices/v1`, {
     method: "POST",
     headers: { "Ocp-Apim-Subscription-Key": key, "Content-Type": "application/ssml+xml", "X-Microsoft-OutputFormat": "audio-24khz-48kbitrate-mono-mp3", "User-Agent": "grouai-nova" },
@@ -89,11 +92,12 @@ export default async function handler(req: Request): Promise<Response> {
   const text = (u.searchParams.get("t") ?? "").replace(/\s+/g, " ").trim();
   const l = u.searchParams.get("l");
   const lang: Lang = l === "en" || l === "nl" || l === "ua" ? l : "pl";
+  const male = u.searchParams.get("v") === "m";
   if (!text || text.length > 400 || !safeForAir(text)) return new Response("bad_text", { status: 400 });
 
   const engines: [string, () => Promise<Uint8Array>][] = [
-    ["elevenlabs", () => eleven(text)],
-    ["azure", () => azure(text, lang)],
+    ["elevenlabs", () => eleven(text, male)],
+    ["azure", () => azure(text, lang, male)],
     ["google", () => google(text, lang)],
   ];
   for (const [name, run] of engines) {

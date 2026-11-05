@@ -67,6 +67,9 @@ i aktualny. Jeśli fakt tu jest — nie weryfikuj go od nowa dziesiątkami wywo�
   (jeden wspólny „hub” na kartę!), obecność caller/studio, zdarzenia accept/reject/end/onair/offair. Słuchacz (zalogowany) → kolejka →
   admin „Odbierz” → Nova zapowiada u wszystkich → głos dzwoniącego na `radio-live-voice` (`radioLiveSend.ts`, kawałki 0,9 s). Limit 3 min.
   **realtime-js zwraca istniejący kanał o tej samej nazwie** — nie wolno drugi raz `subscribe()` ani `removeChannel()` cudzego kanału (naprawione też w LiveMicBooth).
+- **Serwis ze świata:** raz dziennie o 12:00 (czas PL, okno 5 min, raz na dzień — localStorage `grouai-news-day`), `fetchWorldNewsFlash`
+  (dział „Świat” z `/api/news-feed`), męski lektor „Max” (`speakAnchor`: Piper darkman/ryan/rdh, tempo 1,1×; zapas: męski głos systemu,
+  `/api/voice?v=m`). Przyciski „News o świecie” i „Opowiadanie” usunięte (auto-opowiadanie co 3 h zostało).
 - **Język = wybór użytkownika:** `LanguageContext` zapisuje wybór zalogowanego w `user_metadata.language` i przywraca go po zalogowaniu
   (każde urządzenie). Radio (Nova, Talk, newsy, opowiadania) bierze język z kontekstu, nie z domyślnego „pl”.
 

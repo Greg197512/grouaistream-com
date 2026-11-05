@@ -16,13 +16,13 @@ import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { useSubscription } from "@/contexts/SubscriptionContext";
-import { generateTalkScript, speakTalk, stopSpeaking, fetchWorldNews, fetchBlogStory, fetchNewsBulletin, type TalkKind, type TalkLine, type NewsVideo } from "@/lib/radioTalk";
+import { generateTalkScript, speakTalk, stopSpeaking, fetchWorldNews, fetchBlogStory, fetchNewsBulletin, fetchWorldNewsFlash, type TalkKind, type TalkLine, type NewsVideo } from "@/lib/radioTalk";
 import { speak, stopSpeaking as stopVoice } from "@/utils/tts";
 import { YouTubePlayer } from "@/components/player/YouTubePlayer";
 import { buildPersonalQueue, type Mood } from "@/lib/personalRadio";
 import { buildDailyRadio } from "@/lib/radioDaily";
 import { BLOCKS, blockAt, type BlockId } from "@/lib/radioClock";
-import { prefetchNova, speakNova, stopNova } from "@/lib/novaVoice";
+import { prefetchAnchor, prefetchNova, speakAnchor, speakNova, stopNova } from "@/lib/novaVoice";
 import { callin } from "@/lib/radioCallin";
 import { CallIn } from "@/components/radio/CallIn";
 import { CallInDesk } from "@/components/radio/CallInDesk";
@@ -1189,6 +1189,50 @@ const RadioLive = () => {
     return () => window.removeEventListener("grouai:callin-onair", onCall);
   }, []);
 
+  // Serwis ze świata raz dziennie o stałej porze (czas polski), męski energiczny lektor „Max”.
+  const NEWS_HOUR = 12;
+  const newsRunningRef = useRef(false);
+  useEffect(() => {
+    if (!isPlaying || personalMood) return;
+    const check = async () => {
+      if (newsRunningRef.current || talkActiveRef.current || newsVideo || storyId) return;
+      const p = Object.fromEntries(new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Warsaw", hour: "2-digit", minute: "2-digit", year: "numeric", month: "2-digit", day: "2-digit", hour12: false })
+        .formatToParts(new Date()).map((x) => [x.type, x.value])) as Record<string, string>;
+      const hour = (+p.hour || 0) % 24, minute = +p.minute || 0, day = `${p.year}-${p.month}-${p.day}`;
+      const lang = hostLang(langRef.current);
+      if (hour === NEWS_HOUR - 1 && minute >= 40) prefetchAnchor(lang); // model głosu gotowy przed serwisem
+      if (hour !== NEWS_HOUR || minute > 5) return;
+      let done = ""; try { done = localStorage.getItem("grouai-news-day") || ""; } catch { /* */ }
+      if (done === day) return;
+      try { localStorage.setItem("grouai-news-day", day); } catch { /* */ }
+      newsRunningRef.current = true;
+      const segments = await fetchWorldNewsFlash(lang, `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`);
+      if (!segments?.length || talkActiveRef.current) { newsRunningRef.current = false; return; }
+      talkActiveRef.current = true;
+      setTalkActive(true);
+      setTalkLine({ speaker: "A", text: lang === "pl" ? "📰 GrouaRadio News: świat" : lang === "nl" ? "📰 GrouaRadio Nieuws: wereld" : lang === "ua" ? "📰 GrouaRadio News: світ" : "📰 GrouaRadio News: world" });
+      duckRef.current = true;
+      if (audioRef.current) audioRef.current.volume = Math.max((liveRef.current.muted ? 0 : liveRef.current.volume / 100) * 0.12, 0.02);
+      try {
+        for (const seg of segments) {
+          if (!talkActiveRef.current) break;
+          await speakAnchor(seg, lang);
+        }
+      } finally {
+        talkActiveRef.current = false;
+        setTalkActive(false);
+        setTalkLine(null);
+        duckRef.current = false;
+        if (audioRef.current) audioRef.current.volume = liveRef.current.muted ? 0 : liveRef.current.volume / 100;
+        newsRunningRef.current = false;
+      }
+    };
+    check();
+    const id = window.setInterval(check, 20000);
+    return () => window.clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isPlaying, personalMood]);
+
   // Model głosu Novy (Piper) pobiera się w tle, gdy radio gra — kolejne kwestie mówi już neuronowo.
   useEffect(() => { if (isPlaying && hostOn && !personalMood) prefetchNova(hostLang(language)); }, [isPlaying, hostOn, personalMood, language]);
 
@@ -1661,7 +1705,7 @@ const RadioLive = () => {
                 <div className="rounded-xl border border-primary/30 bg-primary/10 p-3 space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-primary flex items-center gap-1.5">
-                      <span className="h-2 w-2 rounded-full bg-primary animate-pulse" /> GrouAI Talk — na antenie
+                      <span className="h-2 w-2 rounded-full bg-primary animate-pulse" /> {talkLine?.text?.startsWith("📰") ? "GrouaRadio News — na antenie" : "GrouAI Talk — na antenie"}
                     </span>
                     <button onClick={stopTalk} className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1">
                       <X className="h-3.5 w-3.5" /> Stop
@@ -1669,20 +1713,11 @@ const RadioLive = () => {
                   </div>
                   {talkLine && (
                     <p className="text-sm text-foreground/90 leading-snug">
-                      <span className="font-semibold text-primary">📖</span> {talkLine.text}
+                      {!talkLine.text.startsWith("📰") && <span className="font-semibold text-primary">📖</span>} {talkLine.text}
                     </p>
                   )}
                 </div>
-              ) : (
-                <div className="grid grid-cols-2 gap-2">
-                  <Button onClick={startNews} disabled={newsLoading || talkLoading} variant="outline" className="gap-1.5 h-10 border-amber-400/40">
-                    {newsLoading ? <span className="h-3.5 w-3.5 rounded-full border-2 border-amber-400/30 border-t-amber-400 animate-spin" /> : "📰"} News o świecie
-                  </Button>
-                  <Button onClick={startStory} disabled={talkLoading} variant="outline" className="gap-1.5 h-10 border-primary/30">
-                    {talkLoading ? <span className="h-3.5 w-3.5 rounded-full border-2 border-primary/30 border-t-primary animate-spin" /> : "📖"} Opowiadanie
-                  </Button>
-                </div>
-              )}
+              ) : null}
 
               {/* Telefon do radia (słuchacze) + kolejka telefonów (studio) */}
               {!personalMood && <CallIn language={language} sourceId={radioClientIdRef.current} />}
