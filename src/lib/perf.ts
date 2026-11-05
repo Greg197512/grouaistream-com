@@ -34,9 +34,15 @@ export function isLowPowerDevice(): boolean {
   return low;
 }
 
+/** Ekran dotykowy (telefon / tablet): tu animowane, rozmyte tła i „szkło” najbardziej zacinają przewijanie. */
+export function isTouchDevice(): boolean {
+  try { return typeof matchMedia !== "undefined" && matchMedia("(pointer: coarse)").matches; } catch { return false; }
+}
+
 // Ustaw znacznik na <html> jak najwcześniej (przed pierwszym malowaniem).
 export function applyPerfMode(): void {
   try {
+    document.documentElement.setAttribute("data-touch", isTouchDevice() ? "on" : "off");
     document.documentElement.setAttribute("data-lowpower", isLowPowerDevice() ? "on" : "off");
   } catch {
     /* ignore */

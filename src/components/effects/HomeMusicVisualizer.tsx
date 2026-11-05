@@ -47,8 +47,14 @@ export const HomeMusicVisualizer = () => {
       reflGrad.addColorStop(1, `hsl(${HUE} ${SAT}% 55% / 0)`);
     };
     const observer = new ResizeObserver(resize); observer.observe(canvas); resize();
+    // Poza ekranem nie rysujemy; bez muzyki na telefonie wystarczy rzadkie odświeżanie (połysk), nie 25 kl./s.
+    const touch = document.documentElement.dataset.touch === "on";
+    let visible = true;
+    const io = new IntersectionObserver(([e]) => { visible = e.isIntersecting; }); io.observe(canvas);
     const draw = (now: number) => {
-      if (now - last >= (lowPower ? 100 : 40) && !document.hidden) {
+      const idle = !state.current.isPlaying;
+      const gap = lowPower ? (idle ? 1000 : 100) : touch && idle ? 250 : 40;
+      if (visible && now - last >= gap && !document.hidden) {
         const dt = Math.min((now - last) / 1000, .1); last = now;
         ctx.clearRect(0, 0, width, height);
         const { levels: l, isPlaying: playing } = state.current;
@@ -123,7 +129,7 @@ export const HomeMusicVisualizer = () => {
       frame = requestAnimationFrame(draw);
     };
     frame = requestAnimationFrame(draw);
-    return () => { cancelAnimationFrame(frame); observer.disconnect(); };
+    return () => { cancelAnimationFrame(frame); observer.disconnect(); io.disconnect(); };
   }, []);
 
   return (
