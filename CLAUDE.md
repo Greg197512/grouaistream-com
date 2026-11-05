@@ -23,7 +23,7 @@ i aktualny. Jeśli fakt tu jest — nie weryfikuj go od nowa dziesiątkami wywo�
   `/api/assistant`), czat promptów Studia (`mode:"studio"`), Aurora B2B (`mode:"aurora"`, blok `[[ORDER]]` → `aurora_business_orders`),
   silniki Studia (`invokeStudioEngine` → główny projekt), szept nastroju (asystent), Nocne czytanie (`/api/radio-story`), prezent (`/prezent/:id` = SPA).
   Wyłączone: geo/obecność, nauka silnika. Bez zastępstwa (pokazują błąd): cennik B2B, raport Paddle, profil neuro.
-- **Maile (5.11):** `api/admin-email` (Vercel, Node, maxDuration 300): admin single/mass (`all_users` = rpc `get_all_users_for_admin`,
+- **Maile (5.11):** `api/admin-email` (Vercel edge; masowa strumieniuje spacje, do 300 s): admin single/mass (`all_users` = rpc `get_all_users_for_admin`,
   `blog_subscribers`), `action:"b2b-order"` (zlecenie Aurory → `SHOP_NOTIFY_EMAIL` + klient). Transport `mailConfigFromEnv` (`src/lib/shopMail.ts`):
   Resend/Brevo gdy klucz + `SHOP_MAIL_FROM`, inaczej **bez kluczy** `send-transactional-email` głównego projektu (szablon `admin-notification`
   z `fullHtml`, noreply@grouaistream.com, suppressed_emails + tokeny wypisu, dziennik `email_send_log`). Sklep używa tego samego.
