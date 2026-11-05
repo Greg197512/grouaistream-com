@@ -60,7 +60,7 @@ export const SEOContentSection = () => {
     { to: "/legal", label: t("seo.cta.legal") },
   ];
 
-  const buttonLabel = "Co potrafi GrouAI Stream — pełne możliwości platformy";
+  const buttonLabel = t("seo.hero.button");
 
   return (
     <section className="px-6 py-12 max-w-4xl mx-auto">
