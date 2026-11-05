@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { QRCodeSVG } from "qrcode.react";
 import { XmasDecor } from "@/components/shop/XmasDecor";
 import { GraffitiWall } from "@/components/shop/GraffitiWall";
+import { INPOST_MAP_URL, carrierById, carriersFor, isPointCode, trackingUrl } from "@/data/shopCarriers";
 import { GiftCelebration } from "@/components/shop/GiftCelebration";
 
 type Bank = { holder: string; iban: string; bic: string | null; revolut: string | null; amountCents: number; reference: string };
@@ -93,14 +94,21 @@ export default function Shop() {
   const [gift, setGift] = useState<string | null>(null);
   const [agree, setAgree] = useState(false);
   const [method, setMethod] = useState<PayMethod | null>(null);
-  const [ship, setShip] = useState({ name: "", street: "", city: "", zip: "", country: lang === "nl" ? "NL" : lang === "pl" ? "PL" : "", phone: "", company: "", taxId: "" });
-  // Esc zamyka koszyk.
+  const [ship, setShip] = useState({ name: "", street: "", city: "", zip: "", country: lang === "nl" ? "NL" : lang === "pl" ? "PL" : "", phone: "", company: "", taxId: "", carrier: "", point: "" });
+  const [ordersOpen, setOrdersOpen] = useState(false);
+  // Esc zamyka koszyk i okno zamówień.
   useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    if (!open && !ordersOpen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") { setOpen(false); setOrdersOpen(false); } };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open]);
+  }, [open, ordersOpen]);
+  // Przewoźnicy dostępni w wybranym kraju; po zmianie kraju zły wybór się zeruje.
+  const carrierOptions = useMemo(() => (ship.country ? carriersFor(ship.country) : []), [ship.country]);
+  useEffect(() => {
+    if (ship.carrier && !carrierOptions.some((c) => c.id === ship.carrier)) setShip((s) => ({ ...s, carrier: "", point: "" }));
+  }, [carrierOptions, ship.carrier]);
+  const carrierPrice = useCallback((id: string) => cfg?.carriers?.find((c) => c.id === id)?.cents ?? cfg?.shippingCents ?? 0, [cfg]);
   useEffect(() => { document.title = T.title; document.documentElement.lang = lang; }, [T, lang]);
 
   useEffect(() => {
@@ -110,7 +118,7 @@ export default function Shop() {
     }).catch(() => setCfg(null));
   }, []);
 
-  const shipCents = cfg?.shippingCents ?? 0;
+  const shipCents = ship.carrier ? carrierPrice(ship.carrier) : (cfg?.shippingCents ?? 0);
   const total = subtotal + (cart.length ? shipCents : 0);
 
   const loadOrders = useCallback(async () => {
@@ -175,6 +183,9 @@ export default function Shop() {
     if (!cart.length) return;
     if (!user) { navigate("/auth?next=/shop"); return; }
     if (![ship.name, ship.street, ship.city, ship.zip, ship.country].every((v) => v.trim().length > 1)) { toast.error(T.fillAddress); return; }
+    const car = carrierById(ship.carrier);
+    if (!car) { toast.error(T.errors.bad_carrier); return; }
+    if (car.point && !isPointCode(ship.point)) { toast.error(T.errors.bad_point); return; }
     if (!agree) { toast.error(T.acceptTerms); return; }
     setBusy(true);
     try {
@@ -218,6 +229,7 @@ export default function Shop() {
             {SHOP_LANGS.map((l) => <button key={l} type="button" onClick={() => setLanguage(l)} aria-pressed={lang === l} className={`h-9 rounded-full px-3 text-xs font-bold uppercase ${lang === l ? "bg-neutral-900 text-white" : "text-neutral-600"}`}>{l}</button>)}
           </div>
           {admin && <button type="button" onClick={() => navigate("/admin?tab=shop")} className="h-11 rounded-full bg-orange-500 px-5 text-sm font-bold text-white">{T.admin}</button>}
+          {user && <button type="button" onClick={() => { setOrdersOpen(true); loadOrders(); }} className="h-11 rounded-full border border-neutral-300 bg-white/70 px-4 text-sm font-semibold backdrop-blur transition hover:border-orange-400 hover:bg-orange-50 hover:text-orange-700">📦 {T.myOrders}{orders && orders.length ? ` (${orders.length})` : ""}</button>}
           {user ? (<><span className="hidden text-sm text-neutral-600 sm:inline">{user.email}</span><button type="button" onClick={() => signOut()} className="h-11 rounded-full border border-neutral-300 px-4 text-sm">{T.logout}</button></>)
             : <button type="button" onClick={() => navigate("/auth?next=/shop")} className="h-11 rounded-full border border-neutral-900 px-5 text-sm font-semibold">{T.login}</button>}
           <button type="button" onClick={() => setOpen(true)} className="h-11 rounded-full bg-neutral-900 px-5 text-sm font-semibold text-white">{T.cart} ({count})</button>
@@ -280,21 +292,7 @@ export default function Shop() {
         </ul>
       </section>
 
-      <main className="mx-auto max-w-5xl space-y-20 px-4 pb-16">
-        {user && orders && orders.length > 0 && (
-          <section><h2 className="mb-4 text-3xl font-black">{T.myOrders}</h2>
-            {payFor && <div className="mb-4"><TransferBox bank={payFor} t={T} eur={eur} onClose={() => setPayFor(null)} /></div>}
-            <ul className="divide-y divide-neutral-200 rounded-2xl border border-neutral-200">{orders.map((o) => (
-              <li key={o.id} className="flex flex-wrap items-center justify-between gap-2 p-4 text-sm">
-                <span>#{orderRef(o.id)} · {new Date(o.created_at).toLocaleDateString(LOCALE[lang])}</span>
-                <span className="flex flex-wrap items-center gap-2">
-                  <span>{eur(o.total_cents)} · {T.status[o.status] ?? o.status}</span>
-                  {o.payment_status !== "paid" && o.status === "new" && cfg?.transfer && <button type="button" onClick={() => showPayInfo(o.id)} className="h-9 rounded-full border border-neutral-300 px-3 text-xs">{T.howToPay}</button>}
-                  {invoices[o.id] && <button type="button" onClick={() => showInvoice(o.id)} className="h-9 rounded-full border border-neutral-300 px-3 text-xs">{T.invoice}</button>}
-                </span>
-              </li>))}</ul></section>
-        )}
-      </main>
+      <div className="pb-16" />
 
       <footer className="border-t border-neutral-200 px-4 py-8 text-sm text-neutral-600">
         <div className="mx-auto flex max-w-5xl flex-wrap gap-x-6 gap-y-2">
@@ -304,6 +302,37 @@ export default function Shop() {
           {cfg?.seller ? <span>{cfg.seller.name}, {cfg.seller.address}</span> : cfg?.contact?.name ? <span>{cfg.contact.name}</span> : null}
         </div>
       </footer>
+
+      {ordersOpen && (
+        <div className="fixed inset-0 z-[70] flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4" onClick={() => setOrdersOpen(false)}>
+          <div role="dialog" aria-modal="true" aria-label={T.myOrders} onClick={(e) => e.stopPropagation()}
+            className="flex max-h-[90vh] w-full max-w-xl flex-col rounded-t-3xl bg-white p-5 shadow-2xl sm:rounded-3xl">
+            <div className="flex items-center justify-between"><h2 className="text-2xl font-black">📦 {T.myOrders}</h2><button type="button" onClick={() => setOrdersOpen(false)} aria-label={T.close} className="h-10 w-10 rounded-full border border-neutral-300 transition hover:border-orange-400 hover:bg-orange-50">✕</button></div>
+            <div className="mt-3 flex-1 space-y-3 overflow-auto">
+              {payFor && <TransferBox bank={payFor} t={T} eur={eur} onClose={() => setPayFor(null)} />}
+              {orders === null ? <p className="text-neutral-500">{T.ordersLoading}</p> : orders.length === 0 ? <p className="text-neutral-500">{T.noOrders}</p> : orders.map((o) => {
+                const tr = o.tracking; const url = tr ? trackingUrl(tr.carrier, tr.number) : null;
+                const car = carrierById(tr?.carrier ?? o.shipping?.carrier);
+                return (
+                  <div key={o.id} className="rounded-2xl border border-neutral-200 p-4 text-sm">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <b>#{orderRef(o.id)}</b>
+                      <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${o.status === "shipped" ? "bg-emerald-100 text-emerald-800" : o.status === "paid" ? "bg-sky-100 text-sky-800" : o.status === "new" ? "bg-orange-100 text-orange-800" : "bg-neutral-100 text-neutral-700"}`}>{T.status[o.status] ?? o.status}</span>
+                    </div>
+                    <p className="mt-1 text-neutral-500">{new Date(o.created_at).toLocaleDateString(LOCALE[lang])} · {eur(o.total_cents)}</p>
+                    <ul className="mt-2 space-y-0.5">{o.items.map((i, k) => <li key={k}>{i.qty} × {i.name}{i.size ? ` (${i.size})` : ""}</li>)}</ul>
+                    {car && <p className="mt-2 text-neutral-600">🚚 {car.name}{o.shipping?.point ? ` · ${o.shipping.point}` : ""}{tr ? ` · ${T.parcel}: ${tr.number}` : ""}</p>}
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {url && <a href={url} target="_blank" rel="noopener noreferrer" className="inline-flex h-9 items-center rounded-full bg-orange-500 px-4 text-xs font-bold text-white transition hover:bg-orange-600">{T.track} ↗</a>}
+                      {o.payment_status !== "paid" && o.status === "new" && cfg?.transfer && <button type="button" onClick={() => showPayInfo(o.id)} className="h-9 rounded-full border border-neutral-300 px-3 text-xs transition hover:border-orange-400 hover:bg-orange-50">{T.howToPay}</button>}
+                      {invoices[o.id] && <button type="button" onClick={() => showInvoice(o.id)} className="h-9 rounded-full border border-neutral-300 px-3 text-xs transition hover:border-orange-400 hover:bg-orange-50">{T.invoice}</button>}
+                    </div>
+                  </div>);
+              })}
+            </div>
+          </div>
+        </div>
+      )}
 
       {open && <div className="fixed inset-0 z-50 bg-black/40" onClick={() => setOpen(false)} />}
       <aside className={`fixed bottom-0 right-0 top-0 z-[60] flex w-full max-w-md flex-col bg-white p-5 shadow-2xl transition-transform duration-300 ${open ? "translate-x-0" : "translate-x-full"}`} aria-label={T.cart} aria-hidden={!open} {...(!open ? { inert: "" } : {})}>
@@ -325,6 +354,25 @@ export default function Shop() {
                 {countries.map(({ c, n }) => <option key={c} value={c}>{n}</option>)}
               </select>
               <p className="text-xs text-neutral-500">{T.euOnly}</p>
+              <fieldset className="space-y-2 pt-2"><legend className="font-bold">🚚 {T.carrierTitle}</legend>
+                {!ship.country ? <p className="text-xs text-neutral-500">{T.pickCountryFirst}</p> : (
+                  <div className="grid grid-cols-2 gap-2">
+                    {carrierOptions.map((c) => {
+                      const cents = carrierPrice(c.id);
+                      const on = ship.carrier === c.id;
+                      return (
+                        <label key={c.id} className={`flex cursor-pointer flex-col gap-0.5 rounded-xl border p-3 text-sm transition ${on ? "border-orange-500 bg-orange-50 ring-1 ring-orange-500" : "border-neutral-300 hover:border-orange-400"}`}>
+                          <span className="flex items-center gap-2"><input type="radio" name="carrier" checked={on} onChange={() => setShip({ ...ship, carrier: c.id })} className="h-4 w-4 accent-orange-500" /><span aria-hidden="true">{c.logo}</span><b className="leading-tight">{c.name}</b></span>
+                          <span className="pl-6 text-xs text-neutral-500">{cents ? eur(cents) : T.free}</span>
+                        </label>);
+                    })}
+                  </div>)}
+                {carrierById(ship.carrier)?.point && (
+                  <div className="space-y-1">
+                    <input className={inp} placeholder={T.pointLabel} aria-label={T.pointLabel} value={ship.point} maxLength={12} onChange={(e) => setShip({ ...ship, point: e.target.value.toUpperCase() })} />
+                    <a href={INPOST_MAP_URL} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-orange-600 underline underline-offset-2">{T.pointMap} ↗</a>
+                  </div>)}
+              </fieldset>
               {([["phone", T.fPhone], ["company", T.fCompany], ["taxId", T.fTaxId]] as const).map(([k, ph]) => (
                 <input key={k} className={inp} placeholder={ph} aria-label={ph} value={ship[k]} onChange={(e) => setShip({ ...ship, [k]: e.target.value })} />))}
               {methods.length > 0 && (
@@ -340,7 +388,7 @@ export default function Shop() {
               </label>
             </div>)}
         </div>
-        {cart.length > 0 && shipCents > 0 && <div className="flex justify-between pt-3 text-sm text-neutral-600"><span>{T.shipping}</span><span>{eur(shipCents)}</span></div>}
+        {cart.length > 0 && ship.carrier && <div className="flex justify-between pt-3 text-sm text-neutral-600"><span>{T.shipping} · {carrierById(ship.carrier)?.name}</span><span>{shipCents ? eur(shipCents) : T.free}</span></div>}
         <div className="flex justify-between border-t border-neutral-200 py-3 text-xl font-black"><span>{T.total}</span><span>{eur(total)}</span></div>
         <p className="-mt-2 pb-2 text-xs text-neutral-500">{T.vatIncl}</p>
         <button type="button" disabled={busy || !cart.length} onClick={checkout} className="h-12 rounded-full bg-neutral-900 font-bold text-white transition hover:bg-orange-500 disabled:opacity-50">{buttonLabel}</button>
