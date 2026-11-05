@@ -876,6 +876,7 @@ export type TranslationKeys = {
   // SEO Landing content
   "seo.hero.title": string;
   "seo.hero.lead": string;
+  "seo.hero.button": string;
   "seo.features.title": string;
   "seo.features.list": string; // pipe-separated bullets, each "Bold|description"
   "seo.earn.title": string;
