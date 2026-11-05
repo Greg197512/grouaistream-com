@@ -59,7 +59,7 @@ i aktualny. Jeśli fakt tu jest — nie weryfikuj go od nowa dziesiątkami wywo�
   Realizacja (pośrednik): po opłaceniu Printful (`PRINTFUL_API_KEY`, External ID wariantu `produkt-ROZMIAR`) + gadżety e-mailem
   (`SHOP_SUPPLIER_EMAIL`, `src/data/shopSuppliers.ts`); e-maile Resend/Brevo (`SHOP_MAIL_FROM`), powiadomienia `SHOP_NOTIFY_EMAIL`=grouarock@gmail.com.
   W Vercel ustawione: `SHOP_BANK_IBAN/HOLDER/BIC`, `SHOP_REVOLUT_LINK` (revolut.me/grouaaistream), `SHOP_NOTIFY_EMAIL`,
-  `SHOP_SELLER_NAME`=Grouarock, `SHOP_SELLER_ADDRESS` (Piastowska 71, 32-660 Chełmek), `SHOP_SELLER_COUNTRY`=PL, `SHOP_SELLER_EMAIL`=grouarock@gmail.com (5.11). Brak: NIP/VAT, `SHOP_VAT_MODE`, `SHOP_SUPPLIER_EMAIL`.
+  `SHOP_SELLER_NAME`=Grouarock, `SHOP_SELLER_ADDRESS` (Piastowska 71, 32-660 Chełmek), `SHOP_SELLER_COUNTRY`=PL, `SHOP_SELLER_EMAIL`=grouarock@gmail.com (5.11). `SHOP_VAT_MODE`=exempt (zwolnienie art. 113, start działalności; teksty sklepu/regulaminu to mówią). Brak: NIP, `SHOP_SUPPLIER_EMAIL`.
   Panel admina w sklepie widzi tylko `SHOP_ADMIN_EMAIL`. Menu: „GrouaDrop”.
   Katalog `/shop` = filmy + kafelki (lekki); **każdy produkt osobno: `/shop/p/:id`** (`ShopProduct.tsx`); koszyk wspólny `src/lib/shopCart.ts` (`/shop?cart=1` otwiera koszyk).
   Stara funkcja `shop-checkout` i tabele `shop_orders`/`gift_codes` nie są używane (brak w bazie prod).
