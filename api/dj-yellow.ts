@@ -124,42 +124,50 @@ async function putR2(jwt: string, body: Uint8Array | string, fileName: string, c
   return r.ok ? pub : null;
 }
 
-// Postać DJ Yellow (fikcyjny artysta AI) — ten sam opis na każdej grafice, zmienia się tylko miejsce.
-export const PERSONA = "DJ Yellow, a fictional virtual AI DJ character, an adult man in his late twenties: messy dark brown textured hair with short faded sides, white bomber jacket over a black hoodie, dark blue jeans, gold headphones around the neck, small golden-yellow accents, confident cool expression";
-const SCENES = [
-  "behind the decks in a packed underground techno club with lasers and haze",
-  "in a cozy crowded pub with warm string lights, raising a glass with friends",
-  "on a huge festival main stage at night with fireworks and a sea of hands",
-  "at a rooftop party at golden sunset over a city skyline",
-  "at a beach party at sunset in Ibiza, crowd dancing on the sand",
-  "in a neon-lit recording studio surrounded by synthesizers",
-  "sharing the club booth with other famous-looking DJs, crowd cheering",
-  "in a Berlin warehouse rave with strobes and smoke",
-  "at a glamorous yacht party at night with city lights",
-  "digging vinyl crates in a cozy record store",
-  "playing an open-air sunrise set in the mountains",
-  "in a retro 80s arcade bar with neon signs",
+const b64 = (u: Uint8Array) => Buffer.from(u).toString("base64");
+// Tła okładek (bez ludzi, bez tekstu) — zmienia się tylko grafika z tyłu, zdjęcie DJ Yellow zostaje.
+const BACKDROPS = [
+  "neon-lit city street at night in the rain, reflections, bokeh",
+  "huge concert stage with golden light beams and haze, empty stage",
+  "city skyline at golden sunset seen from a rooftop",
+  "abstract flowing golden and yellow light waves, glowing particles",
+  "retro synthwave grid horizon with a giant yellow sun",
+  "modern recording studio with synthesizers and warm lights, empty",
+  "giant wall of speakers and turntables with laser lights, empty",
+  "tropical beach at sunset with palm trees and lanterns",
+  "futuristic tunnel of yellow LED lights",
+  "snowy city at night with golden street lights and fireworks",
+  "vinyl records and headphones flat lay on a yellow background",
+  "aurora borealis over mountains in gold and violet",
 ];
 
-const b64 = (u: Uint8Array) => Buffer.from(u).toString("base64");
-/** Okładka = zdjęcie postaci (AI) + podpis DJ YELLOW, tytuł i zawsze znaczek „AI” (jawne oznaczenie). */
-function personaSvg(img: { data: Uint8Array; type: string } | null, title: string, seed: number): string {
+/** Okładka: tło (AI) + zdjęcie DJ Yellow w złotej ramce + DJ YELLOW, tytuł i zawsze znaczek „AI”. */
+function personaSvg(photo: { data: Uint8Array; type: string } | null, bg: { data: Uint8Array; type: string } | null, title: string, seed: number): string {
   const esc = (x: string) => x.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
-  const photo = img ? `<image href="data:${img.type};base64,${b64(img.data)}" x="0" y="0" width="1024" height="1024" preserveAspectRatio="xMidYMid slice"/>` : svgCover(title, seed).replace(/^<svg[^>]*>|<\/svg>$/g, "");
+  const back = bg
+    ? `<image href="data:${bg.type};base64,${b64(bg.data)}" x="0" y="0" width="1024" height="1024" preserveAspectRatio="xMidYMid slice"/>`
+    : svgCover(title, seed).replace(/^<svg[^>]*>|<\/svg>$/g, "");
+  const left = [96, 212, 330][Math.abs(seed) % 3];
+  const front = photo
+    ? `<g filter="url(#sh)"><rect x="${left - 10}" y="110" width="380" height="560" rx="34" fill="url(#gy)"/>
+<clipPath id="cp"><rect x="${left}" y="120" width="360" height="540" rx="26"/></clipPath>
+<image href="data:${photo.type};base64,${b64(photo.data)}" x="${left}" y="120" width="360" height="540" preserveAspectRatio="xMidYMin slice" clip-path="url(#cp)"/></g>`
+    : "";
   return `<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
-<defs><linearGradient id="fade" x1="0" y1="0" x2="0" y2="1"><stop offset="0.55" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity="0.85"/></linearGradient>
-<linearGradient id="gy" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff59d"/><stop offset="0.5" stop-color="#FFD400"/><stop offset="1" stop-color="#FF8A00"/></linearGradient></defs>
-${photo}<rect width="1024" height="1024" fill="url(#fade)"/>
+<defs><linearGradient id="fade" x1="0" y1="0" x2="0" y2="1"><stop offset="0.6" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity="0.85"/></linearGradient>
+<linearGradient id="gy" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff59d"/><stop offset="0.5" stop-color="#FFD400"/><stop offset="1" stop-color="#FF8A00"/></linearGradient>
+<filter id="sh" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="18" stdDeviation="22" flood-color="#000" flood-opacity="0.6"/></filter></defs>
+${back}<rect width="1024" height="1024" fill="url(#fade)"/>${front}
 <rect x="852" y="36" width="136" height="72" rx="18" fill="#000" fill-opacity="0.7" stroke="url(#gy)" stroke-width="4"/>
 <text x="920" y="88" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-size="46" font-weight="900" fill="url(#gy)">AI</text>
 <text x="56" y="900" font-family="Arial Black,Arial,sans-serif" font-size="84" font-weight="900" fill="url(#gy)" letter-spacing="6">DJ YELLOW</text>
 <text x="58" y="960" font-family="Arial,sans-serif" font-size="40" fill="#fff8d0">${esc(title.slice(0, 44))}</text></svg>`;
 }
 
-async function personaImage(seed: number, scene?: string): Promise<{ data: Uint8Array; type: string } | null> {
+/** Samo tło okładki z AI (bez ludzi). */
+async function backdropImage(seed: number): Promise<{ data: Uint8Array; type: string } | null> {
   try {
-    const where = scene ?? SCENES[Math.abs(seed) % SCENES.length];
-    const prompt = `${PERSONA}, ${where}, cinematic photo, dramatic lighting, shallow depth of field, ultra detailed, vibrant yellow and gold accents, no text, no letters`;
+    const prompt = `${BACKDROPS[Math.abs(seed) % BACKDROPS.length]}, cinematic, ultra detailed, vibrant yellow and gold accents, no people, no text, no letters`;
     const r = await fetch(`https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1024&height=1024&nologo=true&seed=${Math.abs(seed)}`, { signal: AbortSignal.timeout(70000) });
     const type = r.headers.get("content-type") ?? "";
     if (!r.ok || !type.startsWith("image/")) return null;
@@ -168,9 +176,23 @@ async function personaImage(seed: number, scene?: string): Promise<{ data: Uint8
   } catch { return null; }
 }
 
+// Zdjęcie DJ Yellow od Grzegorza (public/artists/dj-yellow.webp) — twarz artysty na każdej okładce.
+// Bez generowania jego twarzy w nowych scenach (puby/kluby) — tylko to zdjęcie, różne kolory i kadry.
+let photoCache: { data: Uint8Array; type: string } | null = null;
+async function artistPhoto(): Promise<{ data: Uint8Array; type: string } | null> {
+  if (photoCache) return photoCache;
+  try {
+    const base = (env("SITE_URL") ?? "https://grouaistream.com").replace(/\/+$/, "");
+    const r = await fetch(`${base}/artists/dj-yellow.webp`, { signal: AbortSignal.timeout(15000) });
+    if (!r.ok) return null;
+    photoCache = { data: new Uint8Array(await r.arrayBuffer()), type: "image/webp" };
+    return photoCache;
+  } catch { return null; }
+}
+
 async function makeCover(jwt: string, _idea: Idea, title: string, seed: number): Promise<string | null> {
-  const img = await personaImage(seed);
-  return putR2(jwt, personaSvg(img, title, seed), `p-${Math.abs(seed)}.svg`, "image/svg+xml");
+  const [photo, bg] = await Promise.all([artistPhoto(), backdropImage(seed)]);
+  return putR2(jwt, personaSvg(photo, bg, title, seed), `y-${Math.abs(seed)}.svg`, "image/svg+xml");
 }
 
 async function archiveAudio(jwt: string, src: string, name: string): Promise<string | null> {

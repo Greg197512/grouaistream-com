@@ -55,7 +55,7 @@ i aktualny. Jeśli fakt tu jest — nie weryfikuj go od nowa dziesiątkami wywo�
   woła POST `/api/dj-yellow` z jego tokenem (utwory na jego koncie, artysta DJ Yellow); Limit liczony po artyście.
   Bez przycisków (decyzja Grzegorza). **2 RÓŻNE utwory** = 2 zadania Suno (1. klip z każdego, ~24 kredyty/dzień); dodatkowe dni: `EXTRA_DAYS` w api (5.11 = 4).
   Okładki = postać DJ Yellow (stały opis `PERSONA`: dorosły ~28 l., ciemne potargane włosy, biała kurtka bomber na czarnej bluzie — styl z wzoru Grzegorza, bez jego twarzy, różne `SCENES`: kluby, puby, festiwale) + znaczek „AI” (SVG z osadzonym zdjęciem). Wyróżnienie 7 dni (is_boosted).
-  Trending Artists: „DJ Yellow · AI” zawsze 1., portret = najnowsza okładka. Cron/hasło (`DJ_YELLOW_PASSWORD`) — opcja zapasowa. `?status=1`, `?diag=1`, `?run=1`.
+  Trending Artists: „DJ Yellow · AI” zawsze 1., portret = `public/artists/dj-yellow.webp` (zdjęcie od Grzegorza); okładki = to zdjęcie w złotej ramce na różnych tłach AI (`BACKDROPS`, bez ludzi/barów) + znaczek AI; jego twarzy nie generujemy. Cron/hasło (`DJ_YELLOW_PASSWORD`) — opcja zapasowa. `?status=1`, `?diag=1`, `?run=1`.
 - Zapis na R2 z edge: `_shared/r2.ts` = fetch + SigV4 (NIE @aws-sdk — zawieszał się). Test: `suno-generate` `{"action":"r2test"}`.
 - Studio → Spotify: po każdej generacji `certifyWithToasts` (`src/lib/releasePipeline.ts`, `releasePrep.ts`):
   mastering −14 LUFS/−1 dBTP, WAV 44,1k/16, okładka 3000, czysty tekst → `generations.release`,
