@@ -349,6 +349,58 @@ export const SHOP_PRODUCTS: ShopProduct[] = [
  ]
 },
 {
+ "id": "clearbuds",
+ "name": "Przezroczyste słuchawki douszne „Clear Beat”",
+ "cat": "Gadżety",
+ "tag": "Nowość",
+ "desc": "Douszne słuchawki bezprzewodowe w całkowicie przezroczystym etui — widać elektronikę, a w środku świecą różowe i błękitne diody. Cyfrowy wyświetlacz baterii w etui, redukcja szumów i dotykowe sterowanie. Wyglądają jak gadżet z przyszłości.",
+ "use": "Na co dzień, na siłownię i do miasta — słuchawki, o które wszyscy pytają.",
+ "spec": [
+  "Przezroczyste etui z podświetleniem LED",
+  "Cyfrowy wskaźnik baterii (%) na etui",
+  "Bluetooth 5.3, niskie opóźnienie (tryb gry)",
+  "Redukcja szumów (ANC/ENC zależnie od modelu)",
+  "Do ok. 6 h + kilka ładowań z etui, USB-C",
+  "Sterowanie dotykowe, mikrofony do rozmów",
+  "Zdjęcie poglądowe — wygląd i logo mogą się nieznacznie różnić"
+ ],
+ "pln": 209,
+ "eurCents": 4990,
+ "preorder": true,
+ "sizes": false,
+ "video": false,
+ "img": [
+  "/shop/clearbuds-1.jpg",
+  "/shop/clearbuds-2.jpg"
+ ]
+},
+{
+ "id": "pixelbox",
+ "name": "Głośnik pixel-art „D100”",
+ "cat": "Gadżety",
+ "tag": "Hit TikTok",
+ "desc": "Przenośny głośnik Bluetooth z dużym kolorowym ekranem z pikseli: pokazuje animacje, zegar i korektor dźwięku tańczący w rytm muzyki. Pomarańczowe pokrętła, pasek do noszenia i retro kształt — ozdoba biurka i imprezy w jednym.",
+ "use": "Na biurko, do pokoju gracza i na domówkę — muzyka, którą widać.",
+ "spec": [
+  "Ekran LED pixel-art: animacje, zegar, wizualizer",
+  "Bluetooth 5.3, dźwięk Hi-Fi",
+  "Do ok. 10 h grania na jednym ładowaniu",
+  "Ładowanie USB-C",
+  "Własne animacje z aplikacji (zależnie od modelu)",
+  "Pasek do noszenia, kompaktowy rozmiar",
+  "Zdjęcie poglądowe — wygląd i logo mogą się nieznacznie różnić"
+ ],
+ "pln": 279,
+ "eurCents": 6490,
+ "preorder": true,
+ "sizes": false,
+ "video": false,
+ "img": [
+  "/shop/pixelbox-1.jpg",
+  "/shop/pixelbox-2.jpg"
+ ]
+},
+{
   "id": "dropbass",
   "name": "Koszulka „Drop The Bass”",
   "cat": "Odzież",

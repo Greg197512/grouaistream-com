@@ -7,7 +7,7 @@ export type Supplier = "printful" | "email";
 export const PRODUCT_SUPPLIER: Record<string, Supplier> = {
   okulary: "email",
   // Gadżety (6.11): dostawca hurtowy / dropshipping — linki w panelu admina (src/data/shopSourcing.ts).
-  sluchawkianc: "email", flipsound: "email", galaxy: "email", gamepad: "email", midi25: "email",
+  sluchawkianc: "email", flipsound: "email", galaxy: "email", gamepad: "email", midi25: "email", clearbuds: "email", pixelbox: "email",
   asystent: "email",
 };
 export const supplierFor = (productId: string): Supplier => PRODUCT_SUPPLIER[productId] ?? "printful";
