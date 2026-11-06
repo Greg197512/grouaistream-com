@@ -13,12 +13,12 @@ export function DjYellowAutopilot() {
       void djDailyTick((r) => {
         const fresh = (r.tracks ?? []).filter((x) => x.id && x.audio);
         const made = fresh.map((x) => x.title);
-        if (made.length) toast.success(`🟡 DJ Yellow: ${made.join(" · ")} — już w „Nowych” i w radiu`, { duration: 9000 });
-        else if (!r.ok) toast.error(`DJ Yellow: ${r.error ?? r.step}`);
+        if (made.length) toast.success(`🟡 DJ Aurexis: ${made.join(" · ")} — już w „Nowych” i w radiu`, { duration: 9000 });
+        else if (!r.ok) toast.error(`DJ Aurexis: ${r.error ?? r.step}`);
         // Studio GrouAI: mastering −14 LUFS, WAV, pakiet Spotify i znaczek „✓ GrouAI Studio” (okładka z jego zdjęciem zostaje).
         void (async () => {
           for (const t of fresh) {
-            const pkg = await certifyStudioTrack({ audioUrl: t.audio!, coverUrl: t.cover ?? null, title: t.title, artist: "DJ Yellow", genre: "Electronic", instrumental: true, userId: user!.id, trackId: t.id!, keepCover: true });
+            const pkg = await certifyStudioTrack({ audioUrl: t.audio!, coverUrl: t.cover ?? null, title: t.title, artist: "DJ Aurexis", genre: "Electronic", instrumental: true, userId: user!.id, trackId: t.id!, keepCover: true });
             if (pkg) toast.success(`🎛️ Studio GrouAI: „${t.title}” zmasterowany (${pkg.lufs} LUFS) ✓`, { duration: 6000 });
           }
         })();

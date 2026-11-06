@@ -24,7 +24,8 @@ interface ArtistData {
 // jako publicznych trending artist. Nazwy porównywane po lowercase.
 const HIDDEN_ARTISTS = new Set(["mr.gregorius", "mr gregorius", "grouaistream"]);
 // Gwiazda sieci: wirtualny artysta AI — zawsze pierwszy w Trending Artists (decyzja Grzegorza).
-const AI_STAR = "dj yellow";
+const AI_STAR = "dj aurexis";
+const AI_STAR_OLD = "dj yellow"; // dawna nazwa — scalamy z nową
 
 const generateUniqueAvatar = (name: string): string => {
   const styles = ["bottts-neutral", "shapes", "thumbs", "rings", "glass", "identicon"];
@@ -105,9 +106,9 @@ export const TopArtists = () => {
         if (isRadioOnlyTrack(t)) return;
         const name = (t.artist || "").trim();
         if (!name) return;
-        const key = name.toLowerCase();
+        const key = name.toLowerCase() === AI_STAR_OLD ? AI_STAR : name.toLowerCase();
         if (HIDDEN_ARTISTS.has(key)) return; // pomiń konto admina / treści na kłódkę
-        if (!artistMap[key]) artistMap[key] = { count: 0, name, userId: t.user_id ?? null };
+        if (!artistMap[key]) artistMap[key] = { count: 0, name: key === AI_STAR ? "DJ Aurexis" : name, userId: t.user_id ?? null };
         artistMap[key].count += 1;
         if (!artistMap[key].userId && t.user_id) artistMap[key].userId = t.user_id;
       });
