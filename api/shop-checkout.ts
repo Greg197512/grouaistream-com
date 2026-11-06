@@ -297,7 +297,8 @@ async function fulfill(auth: string, row: OrderRow, force: boolean): Promise<Ful
       const r = await createPrintfulOrder(pf, row.id, pfLines, p.shipping, row.client_email);
       out.printful = r;
       if (r.ok) notes.push(`Printful: zamówienie #${r.id} (${r.status === "draft" ? "szkic — zatwierdź w Printful" : r.status})`);
-      else { failed = true; notes.push(`Printful BŁĄD: ${r.error}`); }
+      // Printful nie przyjął (np. klucz bez uprawnień) → zamówienie ręczne u dostawcy, nie błąd sklepu.
+      else { manual = true; notes.push(`Printful nie przyjął (${r.error}) — zamów ręcznie: ${pfLines.map((l) => `${l.qty}× ${l.name}${l.size ? ` (${l.size})` : ""}`).join(", ")}`); }
     }
   }
   const m = mailCfg();
