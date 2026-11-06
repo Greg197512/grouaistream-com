@@ -49,7 +49,8 @@ i aktualny. Jeśli fakt tu jest — nie weryfikuj go od nowa dziesiątkami wywo�
 - **Studio Pro = DAW** (`GrouaiStudioShell` → `StudioDAW`, VIP): wygląd jak Mixcraft (5.11, `daw/DawVisuals.tsx`): kostki akcji (AI), LCD transportu, znaczniki części
   (`project.markers`), kolorowe klipy, paski miksera z ikonami; pełna szerokość w zakładce. Asystent: `askDawAssistant` (AI → lokalny parser);
   „zrób utwór/bit X” = tempo+perkusja+bas+akordy+preset+znaczniki (bez płatnego podkładu). Podkład AI (Suno) tylko po `confirm`.
-- **DJ Yellow (5.11):** `api/dj-yellow.ts` (Node, cron 09:07 i 15:07 UTC): 2 utwory/dzień (1 zadanie Suno = 2 klipy, ~12 kredytów), pomysł AI (Pollinations) → zapas algorytm,
+- **DJ Aurexis (dawniej DJ Yellow, 5–6.11):** nazwa artysty `DJ Aurexis` (stałe `ARTIST`/`OLD_ARTIST`; run przemianowuje stare utwory konta; UI scala obie nazwy).
+  Pliki/klucze nadal `dj-yellow` (api, lib, public/artists).  `api/dj-yellow.ts` (Node, cron 09:07 i 15:07 UTC): 2 utwory/dzień (1 zadanie Suno = 2 klipy, ~12 kredytów), pomysł AI (Pollinations) → zapas algorytm,
   okładki Pollinations → zapas SVG, R2 przez `r2-signed-url`, wpis `tracks` (Electronic, artysta DJ Yellow) → „Nowe” + radio. Limit 2/dzień, dokańcza
   rozpoczęte zadanie (`generations` status queued). **Działa przez studio GrouAI (decyzja Grzegorza):** gdy właściciel (grzegorzkaron553@gmail.com) jest zalogowany, `DjYellowAutopilot` (App) raz/dzień
   woła POST `/api/dj-yellow` z jego tokenem (utwory na jego koncie, artysta DJ Yellow); Limit liczony po artyście.
