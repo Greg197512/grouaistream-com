@@ -7,6 +7,10 @@ export function XmasDecor() {
   // Mikołaj wita na początku, a po minucie znika (nie zasłania sklepu).
   const [santa, setSanta] = useState(true);
   useEffect(() => { const t = window.setTimeout(() => setSanta(false), 60_000); return () => clearTimeout(t); }, []);
+  // Pasek haseł: zwykle przewija się sam; przy „ogranicz ruch” — jedno hasło naraz, zmiana co 4 s (bez uciętego tekstu).
+  const [still] = useState(() => typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches);
+  const [slide, setSlide] = useState(0);
+  useEffect(() => { if (!still) return; const t = window.setInterval(() => setSlide((n) => (n + 1) % SLOGANS.length), 4000); return () => clearInterval(t); }, [still]);
   return (
     <>
       <style>{`
@@ -16,8 +20,9 @@ export function XmasDecor() {
         @keyframes xm-mq{to{transform:translateX(-50%)}}
         @keyframes xm-wave{0%,100%{transform:rotate(-8deg)}50%{transform:rotate(12deg)}}
         .xm-b{display:inline-block;width:9px;height:12px;border-radius:50% 50% 50% 50%/60% 60% 40% 40%;margin:0 11px;animation:xm-tw 1.6s ease-in-out infinite}
-        @media (prefers-reduced-motion: reduce){.xm-b,.xm-mq{animation:none!important}}
-        html[data-lowpower="on"] .xm-b,html[data-lowpower="on"] .xm-mq{animation:none!important}
+        .xm-mq{animation:xm-mq 36s linear infinite;will-change:transform}
+        @media (prefers-reduced-motion: reduce){.xm-b{animation:none!important}}
+        html[data-lowpower="on"] .xm-b{animation:none!important}
       `}</style>
       <div aria-hidden className="pointer-events-none fixed bottom-0 right-2 z-[36] transition-all duration-1000 ease-in" style={{ opacity: santa ? 1 : 0, transform: santa ? "none" : "translateY(40%)", visibility: santa ? "visible" : "hidden", transitionProperty: "opacity, transform, visibility" }}>
         <span className="absolute -top-1 right-[58%] whitespace-nowrap rounded-2xl bg-white px-3 py-1.5 text-sm font-black text-red-700 shadow-lg">Ho ho ho! 🎁</span>
@@ -27,9 +32,11 @@ export function XmasDecor() {
         {bulbs.map((_, i) => <i key={i} className="xm-b" style={{ background: ["#e11d2e", "#16a34a", "#f59e0b", "#2563eb", "#ec4899"][i % 5], animationDelay: `${(i % 7) * .22}s`, boxShadow: "0 0 10px currentColor", color: ["#e11d2e", "#16a34a", "#f59e0b", "#2563eb", "#ec4899"][i % 5], marginTop: i % 2 ? 2 : 0 }} />)}
       </div>
       <div className="relative overflow-hidden bg-gradient-to-r from-red-700 via-red-600 to-green-700 py-2 text-white" role="marquee" aria-label="Hasła świąteczne">
-        <div className="xm-mq inline-block whitespace-nowrap text-sm font-bold tracking-wide" style={{ animation: "xm-mq 36s linear infinite" }}>
-          {[...SLOGANS, ...SLOGANS, ...SLOGANS, ...SLOGANS].map((s, i) => <span key={i} className="mx-8">{s}</span>)}
-        </div>
+        {still
+          ? <p className="truncate px-4 text-center text-sm font-bold tracking-wide">{SLOGANS[slide]}</p>
+          : <div className="xm-mq inline-block whitespace-nowrap text-sm font-bold tracking-wide">
+              {[...SLOGANS, ...SLOGANS, ...SLOGANS, ...SLOGANS].map((s, i) => <span key={i} className="mx-8">{s}</span>)}
+            </div>}
       </div>
     </>
   );
