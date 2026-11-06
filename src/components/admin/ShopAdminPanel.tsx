@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { SOURCING } from "@/data/shopSourcing";
 import { supabase } from "@/integrations/supabase/client";
 import { SHOP_PRODUCTS } from "@/data/shopCatalog";
 import { Button } from "@/components/ui/button";
@@ -278,7 +279,8 @@ export function ShopAdminPanel() {
                 </select>
               </div>
               {o.fulfillment?.notes && o.fulfillment.notes.length > 0 && <ul className="text-xs text-muted-foreground list-disc pl-4">{o.fulfillment.notes.map((n, k) => <li key={k}>{n}</li>)}</ul>}
-              <ul className="text-sm">{o.items.map((i, k) => <li key={k}>{i.qty} × {i.name}{i.size ? ` (${i.size})` : ""} · {eur(i.unitCents * i.qty)}</li>)}</ul>
+              <ul className="text-sm">{o.items.map((i, k) => <li key={k}>{i.qty} × {i.name}{i.size ? ` (${i.size})` : ""} · {eur(i.unitCents * i.qty)}
+                {SOURCING[i.id] && <span className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground" title={SOURCING[i.id].note}>Zamów u dostawcy: {SOURCING[i.id].links.map((l) => <a key={l.name} href={l.url} target="_blank" rel="noopener noreferrer" className="rounded-full border border-border px-2 py-0.5 font-semibold text-foreground hover:border-orange-500 hover:text-orange-600">{l.name} ↗</a>)}</span>}</li>)}</ul>
               {o.shipping?.carrier && (
                 <div className="flex flex-wrap items-center gap-2 text-sm">
                   <span>🚚 Klient wybrał: <b>{carrierById(o.shipping.carrier)?.name ?? o.shipping.carrier}</b>{o.shipping.point ? <> · Paczkomat <b>{o.shipping.point}</b></> : null}</span>

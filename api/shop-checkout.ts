@@ -32,6 +32,7 @@ import { localizeProduct } from "../src/data/shopCatalogI18n";
 import { SHOP_PRODUCTS } from "../src/data/shopCatalog";
 import { supplierFor, printfulExternalId } from "../src/data/shopSuppliers";
 import { pfVariantFor } from "../src/data/printfulCatalog";
+import { SOURCING } from "../src/data/shopSourcing";
 import { createPrintfulOrder, printfulAssets, printfulExport, printfulProbe, printfulScopes, printfulExternalIds, printfulStores, printfulVariants, setPrintfulExternalId, withApiStore, type PrintfulCfg } from "../src/lib/printful";
 import { expectedExternalIds, suggestExternalId } from "../src/lib/printfulMatch";
 import { CARRIERS, carrierById, isPointCode, trackingUrl } from "../src/data/shopCarriers";
@@ -309,7 +310,7 @@ async function fulfill(auth: string, row: OrderRow, force: boolean): Promise<Ful
       out.supplier_email = await sendMail(m, { to: supplier, replyTo: env("SHOP_NOTIFY_EMAIL"), ...supplierMail(mo, mailLines, env("SHOP_SELLER_NAME") ?? "GrouaDrop") });
       notes.push(out.supplier_email ? `Dostawca (${supplier}) dostał zlecenie: ${mailLines.map((l) => l.name).join(", ")}` : `Nie udało się wysłać e-maila do dostawcy ${supplier}`);
       if (!out.supplier_email) failed = true;
-    } else { manual = true; notes.push(`Brak dostawcy e-mailowego — zamów ręcznie: ${mailLines.map((l) => `${l.qty}× ${l.name}`).join(", ")}`); }
+    } else { manual = true; notes.push(`Brak dostawcy e-mailowego — zamów ręcznie: ${mailLines.map((l) => `${l.qty}× ${l.name}${SOURCING[l.id] ? ` [szukaj: ${SOURCING[l.id].links.map((x) => x.url).join(" | ")}]` : ""}`).join(", ")}`); }
   }
   if (m) {
     if (row.client_email && !out.mails?.customer) out.mails!.customer = await sendMail(m, { to: row.client_email, replyTo: env("SHOP_SELLER_EMAIL") ?? env("SHOP_NOTIFY_EMAIL"), ...customerPaidMail(mo, env("SHOP_DELIVERY_DAYS") ?? "5–14") });

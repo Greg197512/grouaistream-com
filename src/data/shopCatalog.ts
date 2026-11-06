@@ -219,6 +219,136 @@ export const SHOP_PRODUCTS: ShopProduct[] = [
  ]
 },
  {
+ "id": "sluchawkianc",
+ "name": "Słuchawki ANC „Pulse Pro”",
+ "cat": "Gadżety",
+ "tag": "Hit 2026",
+ "desc": "Bezprzewodowe słuchawki nauszne z aktywną redukcją szumów (ANC) i trybem otoczenia. Miękkie poduszki z pianki memory, składany pałąk i świecące pierścienie LED na muszlach w kolorach pomarańczu i różu. Łączą się z dwoma urządzeniami naraz (telefon + laptop) i grają do kilkudziesięciu godzin na jednym ładowaniu.",
+ "use": "Do pociągu, samolotu, nauki i nocnych sesji muzycznych — wyciszasz świat jednym przyciskiem.",
+ "spec": [
+  "Aktywna redukcja szumów (ANC) + tryb otoczenia",
+  "Bluetooth 5.3, multipoint (2 urządzenia)",
+  "Do 40–60 h odtwarzania (zależnie od trybu i ANC)",
+  "Szybkie ładowanie USB-C, kabel AUX w zestawie",
+  "Mikrofony do rozmów, sterowanie przyciskami",
+  "Podświetlenie LED na muszlach (można wyłączyć)",
+  "Zdjęcie poglądowe — wygląd i logo mogą się nieznacznie różnić"
+ ],
+ "pln": 349,
+ "eurCents": 7990,
+ "preorder": true,
+ "sizes": false,
+ "video": false,
+ "img": [
+  "/shop/sluchawkianc-1.jpg",
+  "/shop/sluchawkianc-2.jpg"
+ ]
+},
+{
+ "id": "flipsound",
+ "name": "Słuchawki-głośnik 2w1 „FlipSound”",
+ "cat": "Gadżety",
+ "tag": "Nowość",
+ "desc": "Nowość z targów CES 2026: słuchawki, które po obróceniu muszli na zewnątrz zamieniają się w przenośny głośnik Bluetooth. Słuchasz sam w drodze, a na imprezie jednym ruchem puszczasz muzykę wszystkim. Grafitowe wykończenie i błękitne pierścienie LED.",
+ "use": "Dla tych, co raz słuchają w samotności, a raz robią imprezę — jeden sprzęt zamiast dwóch.",
+ "spec": [
+  "Tryb słuchawek i tryb głośnika (obrót muszli)",
+  "Bluetooth 5.3, zasięg ok. 10 m",
+  "Do ok. 30 h w słuchawkach, krócej w trybie głośnika",
+  "Ładowanie USB-C",
+  "Wbudowany mikrofon do rozmów",
+  "Składana konstrukcja, etui w zestawie",
+  "Zdjęcie poglądowe — wygląd i logo mogą się nieznacznie różnić"
+ ],
+ "pln": 429,
+ "eurCents": 9990,
+ "preorder": true,
+ "sizes": false,
+ "video": false,
+ "img": [
+  "/shop/flipsound-1.jpg",
+  "/shop/flipsound-2.jpg"
+ ]
+},
+{
+ "id": "galaxy",
+ "name": "Projektor galaktyki z głośnikiem „Aurora Sky”",
+ "cat": "Gadżety",
+ "tag": "Hit TikTok",
+ "desc": "Zamień sufit w nocne niebo: projektor wyświetla ruchomą mgławicę w fiolecie, różu i turkusie oraz tysiące gwiazd. Ma wbudowany głośnik Bluetooth — światło może pulsować w rytm muzyki. Sterujesz pilotem: kolory, jasność, prędkość i wyłącznik czasowy.",
+ "use": "Do sypialni, pokoju gier i na domówkę — klimat klubu albo spokojne zasypianie pod gwiazdami.",
+ "spec": [
+  "Projekcja mgławicy + gwiazd (laser/LED)",
+  "Głośnik Bluetooth, tryb światła w rytm muzyki",
+  "Pilot: kolory, jasność, prędkość obrotu",
+  "Wyłącznik czasowy (np. 1–2 h)",
+  "Zasilanie USB-C (zasilacz w zestawie lub USB)",
+  "Zasięg projekcji ok. 15–30 m² sufitu",
+  "Zdjęcie poglądowe — wygląd i logo mogą się nieznacznie różnić"
+ ],
+ "pln": 169,
+ "eurCents": 3990,
+ "preorder": true,
+ "sizes": false,
+ "video": false,
+ "img": [
+  "/shop/galaxy-1.jpg",
+  "/shop/galaxy-2.jpg"
+ ]
+},
+{
+ "id": "gamepad",
+ "name": "Pad do gier „GameBeat” RGB",
+ "cat": "Gadżety",
+ "tag": "Nowość",
+ "desc": "Bezprzewodowy pad w przezroczystej, dymionej obudowie z podświetleniem RGB. Gra na PC, telefonie (Android/iOS), tablecie i telewizorze z Android TV — z rozkładanym uchwytem na telefon do gier w chmurze i mobilnych. Bez preinstalowanych gier: grasz w swoje, legalnie kupione tytuły i usługi chmurowe.",
+ "use": "Do kanapowego grania na TV, gier w chmurze na telefonie i wyścigów na PC.",
+ "spec": [
+  "Bluetooth + odbiornik 2,4 GHz w zestawie",
+  "Zgodność: PC (Windows), Android, iOS, Android TV",
+  "Uchwyt na telefon 4,7–6,9″",
+  "Wibracje, żyroskop, przyciski programowalne",
+  "Akumulator ok. 15–20 h, ładowanie USB-C",
+  "Podświetlenie RGB z kilkoma trybami",
+  "Zdjęcie poglądowe — wygląd i logo mogą się nieznacznie różnić"
+ ],
+ "pln": 189,
+ "eurCents": 4490,
+ "preorder": true,
+ "sizes": false,
+ "video": false,
+ "img": [
+  "/shop/gamepad-1.jpg",
+  "/shop/gamepad-2.jpg"
+ ]
+},
+{
+ "id": "midi25",
+ "name": "Klawiatura MIDI „BeatPad 25”",
+ "cat": "Gadżety",
+ "tag": "Dla producentów",
+ "desc": "Kompaktowa klawiatura sterująca dla producentów: 25 dynamicznych klawiszy, 8 świecących padów perkusyjnych RGB, pokrętła i suwaki do miksu. Podłączasz jednym kablem USB-C i od razu działa w Ableton, FL Studio, GarageBand i w naszym Studio GrouAI w przeglądarce.",
+ "use": "Do tworzenia bitów, nagrywania melodii i grania na żywo — mieści się w plecaku obok laptopa.",
+ "spec": [
+  "25 dynamicznych mini-klawiszy",
+  "8 padów RGB czułych na siłę uderzenia",
+  "Pokrętła i suwaki MIDI do przypisania",
+  "USB-C, plug & play (Windows, macOS, iPad)",
+  "Działa w Ableton, FL Studio, GarageBand, Studio GrouAI",
+  "Wejście na pedał sustain (zależnie od modelu)",
+  "Zdjęcie poglądowe — wygląd i logo mogą się nieznacznie różnić"
+ ],
+ "pln": 299,
+ "eurCents": 6990,
+ "preorder": true,
+ "sizes": false,
+ "video": false,
+ "img": [
+  "/shop/midi25-1.jpg",
+  "/shop/midi25-2.jpg"
+ ]
+},
+{
   "id": "dropbass",
   "name": "Koszulka „Drop The Bass”",
   "cat": "Odzież",
