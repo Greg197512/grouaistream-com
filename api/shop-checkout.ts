@@ -476,8 +476,8 @@ export default async function handler(req: Request): Promise<Response> {
       const h = Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(base.token)))).map((b) => b.toString(16).padStart(2, "0")).join("").slice(0, 16);
       if (q.get("k") !== h) return json({ error: "forbidden" }, 403);
       const u = new URL(q.get("u") ?? "");
-      if (u.protocol !== "https:" || !/(^|\.)(canva\.com|printful\.com|amazonaws\.com)$/.test(u.hostname)) return json({ error: "bad_host" }, 400);
-      const r = await fetch(u.toString(), { signal: AbortSignal.timeout(20000) });
+      if (u.protocol !== "https:" || !/(^|\.)(canva\.com|printful\.com|amazonaws\.com|pollinations\.ai)$/.test(u.hostname)) return json({ error: "bad_host" }, 400);
+      const r = await fetch(u.toString(), { signal: AbortSignal.timeout(24000) });
       const buf = new Uint8Array(await r.arrayBuffer());
       let bin = ""; for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode(...buf.subarray(i, i + 0x8000));
       return json({ status: r.status, type: r.headers.get("content-type"), size: buf.length, b64: btoa(bin) });
