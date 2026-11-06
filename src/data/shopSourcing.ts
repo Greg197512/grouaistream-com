@@ -16,5 +16,7 @@ export const SOURCING: Record<string, Sourcing> = {
   flipsound: S("headphones speaker 2 in 1 bluetooth", "Słuchawki, które po obróceniu muszli grają jak głośnik. Sprawdź opinie o głośności w trybie głośnika."),
   galaxy: S("galaxy star projector bluetooth speaker", "Projektor gwiazd/mgławicy z głośnikiem BT i pilotem. Wtyczka EU / USB-C."),
   gamepad: S("wireless controller RGB transparent phone clip", "Pad BT/2.4 GHz do PC, Android/iOS, TV (Android TV) z uchwytem na telefon. Bez preinstalowanych gier."),
+  clearbuds: S("transparent wireless earbuds LED digital display", "Przezroczyste etui, wyświetlacz baterii, BT 5.3, tryb gry."),
+  pixelbox: S("pixel art bluetooth speaker LED display", "Głośnik z ekranem pixel-art (animacje, zegar), ok. 10 h, pasek."),
   midi25: S("25 key USB MIDI keyboard controller drum pads", "25 klawiszy, 8 padów RGB, pokrętła; USB-C, plug & play (Win/Mac/iPad)."),
 };
