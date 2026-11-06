@@ -10,10 +10,10 @@ const CSS = `
 @keyframes lp-sheen{0%{background-position:160% 0}100%{background-position:-60% 0}}
 @keyframes lp-flow{0%{background-position:0 0}100%{background-position:200% 0}}
 @keyframes lp-scan{0%{background-position:0 0}100%{background-position:0 -40px}}
-@keyframes lp-pulse{0%,100%{opacity:.18}50%{opacity:.5}}
+@keyframes lp-pulse{0%,100%{opacity:.35}50%{opacity:.75}}
 .lp{position:absolute;pointer-events:none;-webkit-mask-size:100% 100%;mask-size:100% 100%;mask-mode:luminance;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat}
 .lp>i{position:absolute;inset:0}
-.lp .s{background:linear-gradient(110deg,transparent 38%,rgba(255,255,255,.95) 50%,transparent 62%);background-size:300% 100%;mix-blend-mode:screen;animation:lp-sheen 3.4s ease-in-out infinite}
+.lp .s{background:linear-gradient(110deg,transparent 34%,rgba(255,255,255,.55) 44%,#fff 50%,rgba(255,255,255,.55) 56%,transparent 66%);background-size:260% 100%;mix-blend-mode:screen;animation:lp-sheen 2.8s ease-in-out infinite}
 .lp .f{background:linear-gradient(90deg,#ff2bd6,#00e5ff,#ffd166,#ff6b00,#ff2bd6);background-size:200% 100%;mix-blend-mode:overlay;animation:lp-flow 5s linear infinite,lp-pulse 2.6s ease-in-out infinite}
 .lp .e{background:repeating-linear-gradient(0deg,transparent 0 14px,rgba(255,255,255,.35) 14px 18px,transparent 18px 40px);mix-blend-mode:screen;opacity:.6;animation:lp-scan .9s linear infinite}
 .lp.off>i{animation-play-state:paused}
@@ -25,7 +25,7 @@ let injected = false;
 /** `aspect` = szerokość/wysokość kontenera (karta 4:5 = 0.8; kwadrat = 1) — zdjęcie jest kwadratowe (object-cover). */
 export function LivePrint({ fx, aspect = 1 }: { fx: PrintFx; aspect?: number }) {
   const ref = useRef<HTMLDivElement>(null);
-  const [on, setOn] = useState(false);
+  const [on, setOn] = useState(true);
   useEffect(() => {
     if (!injected && typeof document !== "undefined") { const s = document.createElement("style"); s.textContent = CSS; document.head.appendChild(s); injected = true; }
     const el = ref.current;

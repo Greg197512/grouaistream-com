@@ -4,6 +4,7 @@ import { useShopCart } from "@/lib/shopCart";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { CollectionSets } from "@/components/shop/CollectionSets";
 import { SHOP_ADMIN_EMAIL, SHOP_PRODUCTS, productImg, type ShopProduct } from "@/data/shopCatalog";
 import { localizeProduct } from "@/data/shopCatalogI18n";
 import { SHOP_SERVICE_TYPE, orderRef, toShopOrder, type PayMethod, type ShopOrderView } from "@/lib/shopOrder";
@@ -288,6 +289,7 @@ export default function Shop() {
       )}
       <TrustBar t={S} ship={shipLabel} />
 
+      <CollectionSets lang={lang} products={products} eur={eur} onPick={(c) => { setCat(c); requestAnimationFrame(() => gridRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })); }} />
       <CategoryTiles t={S} tiles={tiles} onPick={(c) => { setCat(c); requestAnimationFrame(() => gridRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })); }} />
 
       <section className="mx-auto max-w-6xl pt-14" aria-label={T.inMotion}>

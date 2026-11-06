@@ -1,10 +1,223 @@
 // Katalog sklepu Grouarock. Ceny w EUR (grosze) muszą się zgadzać z supabase/functions/shop-checkout.
 export interface ShopProduct { id:string; name:string; cat:string; tag:string; desc:string; use:string; spec:string[]; pln:number; eurCents:number; preorder:boolean; sizes:boolean; video:boolean;
   /** Zdjęcia z Printful (produkty przeniesione); brak = /shop/{id}-1.jpg, -2.jpg. */ img?: string[];
-  /** Rozmiary dostępne w Printful (zamiast domyślnych S–3XL). */ sizeList?: string[] }
+  /** Rozmiary dostępne w Printful (zamiast domyślnych S–3XL). */ sizeList?: string[];
+  /** „Żywy” nadruk na zdjęciu: maska z pliku nadruku + pole nadruku [x, y, szer., wys.] na kwadratowym zdjęciu (0–1). */ fx?: { mask: string; box: [number, number, number, number] } }
 /** Zdjęcie produktu nr i (1, 2…): z Printful albo z /public/shop. */
 export const productImg = (p: Pick<ShopProduct, "id" | "img">, i = 1): string => (p.img?.length ? p.img[Math.min(i, p.img.length) - 1] : `/shop/${p.id}-${i}.jpg`);
 export const SHOP_PRODUCTS: ShopProduct[] = [
+{
+ "id": "afterhours",
+ "name": "Bluza z kapturem „After Hours”",
+ "cat": "Nocna zmiana",
+ "tag": "Neon",
+ "desc": "Czarna bluza z kapturem z neonowym napisem AFTER HOURS, kasetą „Night Shift” i zegarem wskazującym 03:00 w laserowych promieniach. Różowo-błękitny neon jak szyld klubu po północy.",
+ "use": "Na afterparty, nocne powroty i chłodne poranki po festiwalu.",
+ "spec": [
+  "Gildan 18500, 50% bawełna / 50% poliester",
+  "Krój unisex, rozmiary S–3XL",
+  "Kieszeń kangurka, nadruk DTG z przodu",
+  "Drukowane na zamówienie w UE"
+ ],
+ "pln": 239,
+ "eurCents": 5490,
+ "preorder": false,
+ "sizes": true,
+ "fx": {"mask": "/shop/designs/web/after-hours.jpg", "box": [0.355, 0.218, 0.285, 0.377]},
+  "video": false,
+ "img": [
+  "/shop/afterhours-1.jpg",
+  "/shop/designs/web/after-hours.jpg"
+ ]
+},
+{
+ "id": "plakatnight",
+ "name": "Plakat „Night Shift 23:00–06:00”",
+ "cat": "Nocna zmiana",
+ "tag": "Limitowany",
+ "desc": "Plakat z neonowym miastem nocą: uśmiechnięty księżyc, lasery nad dachami i tłum tańczący na wieżowcach. Głęboki fiolet, róż i błękit — jak kadr z rave’u w przyszłości.",
+ "use": "Do pokoju, studia i wszędzie tam, gdzie noc trwa dłużej.",
+ "spec": [
+  "45 × 60 cm (18″ × 24″)",
+  "Gruby papier matowy 189 g/m²",
+  "Druk cyfrowy, żywe kolory",
+  "Bez ramy · drukowane na zamówienie w UE"
+ ],
+ "pln": 129,
+ "eurCents": 2990,
+ "preorder": false,
+ "sizes": false,
+ "fx": {"mask": "/shop/designs/web/night-poster.jpg", "box": [0.2, 0.101, 0.599, 0.698]},
+  "video": false,
+ "img": [
+  "/shop/plakatnight-1.jpg",
+  "/shop/designs/web/night-poster.jpg"
+ ]
+},
+{
+ "id": "bassdept",
+ "name": "Bluza „Bass Dept.”",
+ "cat": "Kolekcja Studio",
+ "tag": "Nowość",
+ "desc": "Czarna bluza bez kaptura z chromowanym napisem BASS DEPT., potężnym głośnikiem i różowymi falami dźwięku. Grafika w stylu plakatu z lat 90. — wyraźna, kolorowa, robi wrażenie z daleka.",
+ "use": "Do studia, na koncert i na zimowe wieczory przy konsolecie.",
+ "spec": [
+  "Gildan 18000, 50% bawełna / 50% poliester",
+  "Krój unisex, rozmiary S–3XL",
+  "Nadruk DTG z przodu",
+  "Drukowane na zamówienie w UE"
+ ],
+ "pln": 215,
+ "eurCents": 4990,
+ "preorder": false,
+ "sizes": true,
+ "fx": {"mask": "/shop/designs/web/bass-department.jpg", "box": [0.345, 0.16, 0.321, 0.445]},
+  "video": false,
+ "img": [
+  "/shop/bassdept-1.jpg",
+  "/shop/designs/web/bass-department.jpg"
+ ]
+},
+{
+ "id": "louder",
+ "name": "Koszulka „Louder Than Words”",
+ "cat": "Kolekcja Studio",
+ "tag": "Nowość",
+ "desc": "Czarna koszulka z pękającym od basu napisem LOUDER, kolumną głośnikową i pomarańczowymi falami uderzeniowymi. Rastrowa faktura jak z sitodruku.",
+ "use": "Na co dzień i na każdy koncert, na którym muzyka mówi głośniej niż słowa.",
+ "spec": [
+  "Bella + Canvas 3001, 100% bawełna czesana",
+  "Krój unisex, rozmiary S–3XL",
+  "Nadruk DTG z przodu",
+  "Drukowane na zamówienie w UE"
+ ],
+ "pln": 129,
+ "eurCents": 2990,
+ "preorder": false,
+ "sizes": true,
+ "fx": {"mask": "/shop/designs/web/louder.jpg", "box": [0.337, 0.168, 0.336, 0.451]},
+  "video": false,
+ "img": [
+  "/shop/louder-1.jpg",
+  "/shop/designs/web/louder.jpg"
+ ]
+},
+{
+ "id": "nightshift",
+ "name": "Tank top „Night Shift Raver”",
+ "cat": "Nocna zmiana",
+ "tag": "Neon",
+ "desc": "Czarny tank top z neonowym napisem NIGHT SHIFT, sylwetką DJ-a za konsolą i laserami w różu i błękicie. „Clocking in at 23:00” — dla tych, co zaczynają, gdy inni kończą.",
+ "use": "Na rave, festiwale i letnie noce na parkiecie.",
+ "spec": [
+  "Bella + Canvas 3480, 100% bawełna",
+  "Krój unisex, rozmiary S–XXL",
+  "Nadruk DTG z przodu",
+  "Drukowane na zamówienie w UE"
+ ],
+ "pln": 119,
+ "eurCents": 2790,
+ "preorder": false,
+ "sizes": true,
+ "fx": {"mask": "/shop/designs/web/night-shift.jpg", "box": [0.201, 0.108, 0.585, 0.716]},
+  "video": false,
+ "img": [
+  "/shop/nightshift-1.jpg",
+  "/shop/designs/web/night-shift.jpg"
+ ],
+ "sizeList": [
+  "S",
+  "M",
+  "L",
+  "XL",
+  "XXL"
+ ]
+},
+{
+ "id": "kubekbeats",
+ "name": "Kubek „Coffee. Beats. Repeat.”",
+ "cat": "Kolekcja Studio",
+ "tag": "Nowość",
+ "desc": "Biały błyszczący kubek z hasłem COFFEE. BEATS. REPEAT. i filiżanką, z której para zamienia się w korektor dźwięku i płyty winylowe. Nadruk dookoła.",
+ "use": "Na poranną kawę w studiu i długie sesje przy bitach.",
+ "spec": [
+  "Ceramika, 330 ml (11 oz)",
+  "Można myć w zmywarce i używać w mikrofalówce",
+  "Nadruk sublimacyjny, nie ściera się",
+  "Drukowane na zamówienie w UE"
+ ],
+ "pln": 79,
+ "eurCents": 1790,
+ "preorder": false,
+ "sizes": false,
+ "video": false,
+ "img": [
+  "/shop/kubekbeats-3.jpg",
+  "/shop/kubekbeats-1.jpg",
+  "/shop/designs/web/mug-beats.jpg"
+ ]
+},
+{
+ "id": "etuieq",
+ "name": "Etui na iPhone „Equalizer”",
+ "cat": "Nocna zmiana",
+ "tag": "Neon",
+ "desc": "Wytrzymałe etui z neonowym korektorem dźwięku w kolorach od złota po fiolet — jak miasto nocą zbudowane z dźwięku. Błyszczące wykończenie.",
+ "use": "Ochrona telefonu i mała scena w kieszeni.",
+ "spec": [
+  "Podwójna warstwa: poliwęglan + TPU",
+  "Modele iPhone 11–17",
+  "Ładowanie bezprzewodowe działa",
+  "Drukowane na zamówienie w UE"
+ ],
+ "pln": 109,
+ "eurCents": 2490,
+ "preorder": false,
+ "sizes": true,
+ "fx": {"mask": "/shop/designs/web/phone-eq.jpg", "box": [0.31, 0.148, 0.375, 0.752]},
+  "video": false,
+ "img": [
+  "/shop/etuieq-1.jpg",
+  "/shop/designs/web/phone-eq.jpg"
+ ],
+ "sizeList": [
+  "iPhone 13",
+  "iPhone 14",
+  "iPhone 15",
+  "iPhone 15 Pro",
+  "iPhone 15 Pro Max",
+  "iPhone 16",
+  "iPhone 16 Pro",
+  "iPhone 16 Pro Max",
+  "iPhone 17",
+  "iPhone 17 Pro",
+  "iPhone 17 Pro Max"
+ ]
+},
+{
+ "id": "padstudio",
+ "name": "Podkładka „Studio Mode: On”",
+ "cat": "Kolekcja Studio",
+ "tag": "Nowość",
+ "desc": "Podkładka pod mysz dla producentów: STUDIO MODE: ON, czerwona kropka REC, 128 BPM i świecąca fala dźwięku nad suwakami miksera.",
+ "use": "Na biurko w studiu i przy komputerze do grania.",
+ "spec": [
+  "22 × 18 cm, grubość 3 mm",
+  "Gumowy, antypoślizgowy spód",
+  "Nadruk sublimacyjny",
+  "Drukowane na zamówienie w UE"
+ ],
+ "pln": 75,
+ "eurCents": 1690,
+ "preorder": false,
+ "sizes": false,
+ "fx": {"mask": "/shop/designs/web/mat-studio-pad.jpg", "box": [0.045, 0.13, 0.905, 0.74]},
+  "video": false,
+ "img": [
+  "/shop/padstudio-1.jpg",
+  "/shop/designs/web/mat-studio-pad.jpg"
+ ]
+},
  {
   "id": "dropbass",
   "name": "Koszulka „Drop The Bass”",

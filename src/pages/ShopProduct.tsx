@@ -5,6 +5,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { SHOP_PRODUCTS, productImg } from "@/data/shopCatalog";
+import { LivePrint } from "@/components/shop/LivePrint";
 import { localizeProduct } from "@/data/shopCatalogI18n";
 import { SHOP_SIZES } from "@/lib/shopOrder";
 import { useShopCart } from "@/lib/shopCart";
@@ -68,6 +69,7 @@ export default function ShopProduct() {
             {view === 2 && base.video
               ? <video ref={vid} src={`/shop/${p.id}.mp4`} poster={imgs[0]} muted loop playsInline autoPlay className="h-full w-full object-cover" />
               : <img src={imgs[view]} alt={p.name} decoding="async" className="h-full w-full object-cover" />}
+            {view === 0 && p.fx && <LivePrint fx={p.fx} aspect={1} />}
             {p.tag && <span className="absolute left-3 top-3 rounded-full bg-gradient-to-r from-orange-500 to-pink-500 px-3 py-1 text-xs font-bold uppercase tracking-wide text-white">{p.tag}</span>}
           </div>
           <div className="mt-2 flex gap-2">

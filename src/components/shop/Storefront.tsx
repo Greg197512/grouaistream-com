@@ -6,6 +6,7 @@ import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowRight, Gift, Plus, RotateCcw, ShieldCheck, Truck, ChevronDown } from "lucide-react";
 import { productImg, type ShopProduct } from "@/data/shopCatalog";
+import { LivePrint } from "./LivePrint";
 import { SHOP_SIZES } from "@/lib/shopOrder";
 import type { ShopLang } from "@/i18n/shop";
 
@@ -151,6 +152,7 @@ export function ProductCard({ p, index, price, t, videoLabel, onAdd }: {
       <div className="relative aspect-[4/5] overflow-hidden rounded-2xl bg-neutral-100">
         <Link to={`/shop/p/${p.id}`} className="absolute inset-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-orange-500" aria-label={p.name}>
           <img src={productImg(p, 1)} alt={p.name} loading="lazy" decoding="async" width={480} height={600} className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-105" />
+          {p.fx && <span className="absolute inset-0 transition duration-700 group-hover:scale-105 group-hover:opacity-0"><LivePrint fx={p.fx} aspect={0.8} /></span>}
           <img src={productImg(p, 2)} alt="" loading="lazy" decoding="async" width={480} height={600} className="absolute inset-0 h-full w-full object-cover opacity-0 transition duration-500 group-hover:opacity-100" />
         </Link>
         <div className="pointer-events-none absolute left-2.5 top-2.5 flex flex-col items-start gap-1">

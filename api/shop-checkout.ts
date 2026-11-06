@@ -31,6 +31,7 @@ import { parseVatMode } from "../src/lib/vatOss";
 import { localizeProduct } from "../src/data/shopCatalogI18n";
 import { SHOP_PRODUCTS } from "../src/data/shopCatalog";
 import { supplierFor, printfulExternalId } from "../src/data/shopSuppliers";
+import { pfVariantFor } from "../src/data/printfulCatalog";
 import { createPrintfulOrder, printfulAssets, printfulExport, printfulProbe, printfulScopes, printfulExternalIds, printfulStores, printfulVariants, setPrintfulExternalId, withApiStore, type PrintfulCfg } from "../src/lib/printful";
 import { expectedExternalIds, suggestExternalId } from "../src/lib/printfulMatch";
 import { CARRIERS, carrierById, isPointCode, trackingUrl } from "../src/data/shopCarriers";
@@ -298,7 +299,7 @@ async function fulfill(auth: string, row: OrderRow, force: boolean): Promise<Ful
       out.printful = r;
       if (r.ok) notes.push(`Printful: zamówienie #${r.id} (${r.status === "draft" ? "szkic — zatwierdź w Printful" : r.status})`);
       // Printful nie przyjął (np. klucz bez uprawnień) → zamówienie ręczne u dostawcy, nie błąd sklepu.
-      else { manual = true; notes.push(`Printful nie przyjął (${r.error}) — zamów ręcznie: ${pfLines.map((l) => `${l.qty}× ${l.name}${l.size ? ` (${l.size})` : ""}`).join(", ")}`); }
+      else { manual = true; notes.push(`Printful nie przyjął (${r.error}) — zamów ręcznie: ${pfLines.map((l) => { const v = pfVariantFor(l.id, l.size); return `${l.qty}× ${l.name}${l.size ? ` (${l.size})` : ""}${v ? ` [Printful wariant ${v.variant_id}, nadruk: ${v.files[0]?.url}]` : ""}`; }).join(", ")}`); }
     }
   }
   const m = mailCfg();
