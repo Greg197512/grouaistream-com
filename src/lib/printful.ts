@@ -161,3 +161,10 @@ export async function printfulExport(cfg: PrintfulCfg, max = 80): Promise<{ ok: 
   }
   return { ok: true, products, errors };
 }
+
+/** Uprawnienia (scopes) obecnego klucza — do diagnozy, czego brakuje. */
+export async function printfulScopes(cfg: PrintfulCfg): Promise<string[] | { error: string }> {
+  const r = await pf({ ...cfg, storeId: null }, "/oauth/scopes");
+  if (!r.ok) return { error: r.error ?? `HTTP ${r.status}` };
+  return (((r.result ?? {}) as { scopes?: { value?: string }[] }).scopes ?? []).map((x) => x.value ?? "").filter(Boolean);
+}

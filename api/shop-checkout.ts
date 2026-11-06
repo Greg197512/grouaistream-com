@@ -31,7 +31,7 @@ import { parseVatMode } from "../src/lib/vatOss";
 import { localizeProduct } from "../src/data/shopCatalogI18n";
 import { SHOP_PRODUCTS } from "../src/data/shopCatalog";
 import { supplierFor, printfulExternalId } from "../src/data/shopSuppliers";
-import { createPrintfulOrder, printfulAssets, printfulExport, printfulExternalIds, printfulStores, printfulVariants, setPrintfulExternalId, withApiStore, type PrintfulCfg } from "../src/lib/printful";
+import { createPrintfulOrder, printfulAssets, printfulExport, printfulScopes, printfulExternalIds, printfulStores, printfulVariants, setPrintfulExternalId, withApiStore, type PrintfulCfg } from "../src/lib/printful";
 import { expectedExternalIds, suggestExternalId } from "../src/lib/printfulMatch";
 import { CARRIERS, carrierById, isPointCode, trackingUrl } from "../src/data/shopCarriers";
 import { adminMail, customerPaidMail, customerShippedMail, customerTransferMail, mailConfigFromEnv, sendMail, supplierMail, type MailCfg, type MailOrder } from "../src/lib/shopMail";
@@ -446,7 +446,7 @@ export default async function handler(req: Request): Promise<Response> {
       if (!base) return json({ configured: false });
       const pf = await withApiStore(base);
       const r = await printfulExternalIds(pf);
-      if (r.ok === false) return json({ configured: true, ok: false, error: r.error, storeIdSet: !!pf.storeId, stores: await printfulStores(pf), ...(await printfulAssets({ ...pf, storeId: null })) });
+      if (r.ok === false) return json({ configured: true, ok: false, error: r.error, storeIdSet: !!pf.storeId, scopes: await printfulScopes(pf), stores: await printfulStores(pf), ...(await printfulAssets({ ...pf, storeId: null })) });
       const have = new Set(r.ids);
       const need = SHOP_PRODUCTS.filter((p) => supplierFor(p.id) === "printful")
         .flatMap((p) => (p.sizes ? ["S", "M", "L", "XL", "XXL", "3XL"].map((s) => printfulExternalId(p.id, s)) : [printfulExternalId(p.id, null)]));
