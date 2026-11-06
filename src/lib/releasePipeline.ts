@@ -73,7 +73,7 @@ async function makeCover(coverUrl: string | null | undefined, seed: string): Pro
     try {
       const bytes = await fetchBytes(coverUrl);
       const isSvg = /\.svg(\?|$)/i.test(coverUrl);
-      // SVG (okładki DJ Yellow) — createImageBitmap go nie czyta, więc rysujemy przez <img>.
+      // SVG (okładki DJ Aurexis) — createImageBitmap go nie czyta, więc rysujemy przez <img>.
       const bmp: ImageBitmap | HTMLImageElement = isSvg
         ? await new Promise<HTMLImageElement>((res, rej) => {
             const u = URL.createObjectURL(new Blob([bytes], { type: "image/svg+xml" }));

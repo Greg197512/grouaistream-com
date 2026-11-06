@@ -206,8 +206,8 @@ export const NewOnServer = () => {
       if (mountedRef.current) {
         const music = omitRadioOnlyTracks(tracksData).slice(0, 8);
         // DJ Aurexis (artysta AI, dawniej DJ Yellow) publikuje z konta właściciela — pokazujemy jego, nie nazwę konta.
-        const DJ_YELLOW: UploaderProfile = { display_name: "DJ Aurexis", avatar_url: "/artists/dj-yellow.webp" };
-        setTracks(music.map(t => ({ ...t, artist: (t.artist || "").trim().toLowerCase() === "dj yellow" ? "DJ Aurexis" : t.artist, uploader: ["dj yellow", "dj aurexis"].includes((t.artist || "").trim().toLowerCase()) ? DJ_YELLOW : t.user_id ? profilesMap[t.user_id] || null : null })));
+        const DJ_AUREXIS: UploaderProfile = { display_name: "DJ Aurexis", avatar_url: "/artists/dj-aurexis.webp" };
+        setTracks(music.map(t => ({ ...t, artist: (t.artist || "").trim().toLowerCase() === "dj yellow" ? "DJ Aurexis" : t.artist, uploader: ["dj yellow", "dj aurexis"].includes((t.artist || "").trim().toLowerCase()) ? DJ_AUREXIS : t.user_id ? profilesMap[t.user_id] || null : null })));
 
         // Bez generowania okładek u odwiedzających: płatne (OpenRouter) i powtarzane przy każdej wizycie,
         // bo gość nie może zapisać wyniku. Okładkę tworzy wgrywanie utworu (Upload) albo autor w menu „…”.
