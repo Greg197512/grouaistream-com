@@ -34,8 +34,11 @@ export function priceCart(items: unknown): { lines: PricedLine[]; totalCents: nu
     if (!Number.isInteger(qty) || qty < 1 || qty > SHOP_MAX_QTY) return { error: "bad_quantity" };
     let size: string | null = null;
     if (p.sizes) {
-      size = String(raw.size ?? "").toUpperCase();
-      if (!((p as { sizeList?: string[] }).sizeList ?? (SHOP_SIZES as readonly string[])).map((x) => x.toUpperCase()).includes(size)) return { error: "bad_size" };
+      // Rozmiar z listy produktu (np. „iPhone 15”) albo domyślnej S–3XL — zapisujemy dokładną pisownię z listy.
+      const want = String(raw.size ?? "").trim().toUpperCase();
+      const hit = ((p as { sizeList?: string[] }).sizeList ?? (SHOP_SIZES as readonly string[])).find((x) => x.toUpperCase() === want);
+      if (!hit) return { error: "bad_size" };
+      size = hit;
     }
     const same = lines.find((l) => l.id === p.id && l.size === size);
     if (same) {
