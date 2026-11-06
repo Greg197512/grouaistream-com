@@ -83,7 +83,7 @@ i aktualny. Jeśli fakt tu jest — nie weryfikuj go od nowa dziesiątkami wywo�
   **Printful (5.11):** edge Vercela blokuje zapora Cloudflare Printful → wywołania przez Node `api/printful-proxy` (tylko z kluczem = `PRINTFUL_API_KEY`).
   Konto ma tylko sklep **Etsy** „Grouadrop” (19013575) — Orders/Products API działa tylko dla sklepu „Manual order platform / API” (type `native`);
   `withApiStore` sam go znajdzie, gdy powstanie. Nowy klucz (wszystkie sklepy) wpisany 5.11 wieczorem. Admin: „Połącz produkty z Printful” (dopasowanie `src/lib/printfulMatch.ts`
-  → PUT External ID). Diagnostyka: `GET /api/shop-checkout?diag=printful`. Menu: „GrouaDrop”.
+  → PUT External ID). Diagnostyka: `GET /api/shop-checkout?diag=printful`. **Import kompletów (6.11):** `?diag=printful-export` (wszystkie sklepy, też Etsy: nazwa, zdjęcia, rozmiary, ceny, variant_id, pliki nadruku) → `src/data/printfulCatalog.ts` (`PF_ITEMS`); zamówienie takiego produktu = `variant_id + files` do GruadropWeb (19023745, native). Po opłaceniu zamówienie idzie **od razu zatwierdzone** (`PRINTFUL_AUTO_CONFIRM` ≠ false) — Printful drukuje, wysyła, pobiera opłatę z karty w Printful. Obecny token nie ma scope `sync_products` — potrzebny nowy (All stores, wszystkie uprawnienia). Menu: „GrouaDrop”.
   **Wygląd (5.11):** `src/components/shop/Storefront.tsx` — baner z filmem bluzy, pasek zaufania, kafelki kategorii, karta produktu (2. zdjęcie po najechaniu,
   szybkie dodanie z rozmiarem), sortowanie, FAQ; framer-motion jednorazowo + `MotionConfig reducedMotion="user"`. Graffiti usunięte (decyzja Grzegorza).
   Katalog `/shop` = filmy + kafelki (lekki); **każdy produkt osobno: `/shop/p/:id`** (`ShopProduct.tsx`); koszyk wspólny `src/lib/shopCart.ts` (`/shop?cart=1` otwiera koszyk).

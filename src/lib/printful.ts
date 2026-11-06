@@ -2,6 +2,7 @@
 // Działa w funkcji edge (sam fetch). Dokumentacja: https://developers.printful.com/docs/
 import type { PricedLine, Shipping } from "./shopOrder";
 import { printfulExternalId } from "../data/shopSuppliers";
+import { pfVariantFor } from "../data/printfulCatalog";
 
 /** `proxy` = adres naszej strony: zapytania idą przez /api/printful-proxy (funkcja Node), bo edge blokuje zapora Printful. */
 export type PrintfulCfg = { token: string; storeId?: string | null; confirm: boolean; proxy?: string | null };
@@ -35,7 +36,13 @@ export function printfulOrderBody(orderId: string, lines: PricedLine[], ship: Sh
       name: ship.name, company: ship.company || undefined, address1: ship.street, city: ship.city, zip: ship.zip,
       country_code: ship.country, phone: ship.phone || undefined, email: email || undefined,
     },
-    items: lines.map((l) => ({ external_variant_id: printfulExternalId(l.id, l.size), quantity: l.qty, name: l.name })),
+    // Produkt przeniesiony z Printful → wariant katalogowy + pliki nadruku; inaczej po External ID wariantu w sklepie API.
+    items: lines.map((l) => {
+      const v = pfVariantFor(l.id, l.size);
+      return v
+        ? { variant_id: v.variant_id, files: v.files.map((f) => ({ type: f.type, url: f.url })), quantity: l.qty, name: l.name, retail_price: (l.unitCents / 100).toFixed(2) }
+        : { external_variant_id: printfulExternalId(l.id, l.size), quantity: l.qty, name: l.name };
+    }),
   };
 }
 
