@@ -128,43 +128,110 @@ async function putR2(jwt: string, body: Uint8Array | string, fileName: string, c
 }
 
 const b64 = (u: Uint8Array) => Buffer.from(u).toString("base64");
-// Tła okładek (bez ludzi, bez tekstu) — zmienia się tylko grafika z tyłu, zdjęcie DJ Aurexis zostaje.
+// Tła okładek (bez ludzi, bez tekstu) — zmienia się grafika z tyłu, wycięta postać DJ Aurexis zostaje.
 const BACKDROPS = [
-  "huge open-air music festival at night, crowd with hands up, confetti and golden light beams",
-  "concert main stage with lasers, smoke and fireworks over a cheering crowd",
-  "summer beach party at sunset with dancing crowd, lanterns and lights",
-  "rooftop dance party at night over a city skyline, string lights and lasers",
-  "DJ booth view of a packed dance floor with golden lasers and haze",
-  "neon-lit city street party at night with colorful lights and confetti",
-  "giant LED stage show at a festival, golden pyrotechnics",
+  "huge open-air music festival main stage at night, golden light beams and confetti",
+  "concert main stage with lasers, smoke and fireworks",
+  "summer beach festival at sunset, palm trees, lanterns and stage lights",
+  "rooftop party at night over a glittering city skyline, string lights and lasers",
+  "giant LED stage show at a festival, pyrotechnics and sparks",
   "outdoor daytime festival with colorful smoke flares and flags",
-  "warehouse rave with strobes and golden lasers through smoke",
-  "new year's eve party with fireworks over the city",
-  "silent disco in a park at dusk with glowing headphones",
-  "carnival parade at night with dancers, lights and confetti",
+  "warehouse rave with strobes and laser grid through thick haze",
+  "new year's eve fireworks over a city river",
+  "futuristic cyberpunk city street with neon signs and rain reflections",
+  "northern lights over a mountain-top open-air stage at night",
+  "desert festival at sunrise with giant art installations and dust glowing in light",
+  "infinite neon light tunnel with glowing rings, synthwave style",
+  "holographic stage with floating LED cubes and volumetric light",
+  "tropical island stage at night with fire torches and lasers over the ocean",
+  "huge disco ball reflecting thousands of light spots in a dark arena",
+  "galaxy and nebula sky above a glowing festival stage",
 ];
 
-/** Okładka: tło z imprezy (AI) + wycięta postać DJ Aurexis z jego zdjęcia (bez ramki) + DJ AUREXIS, tytuł i zawsze „AI”. */
-export function personaSvg(figure: { data: Uint8Array; type: string } | null, bg: { data: Uint8Array; type: string } | null, title: string, seed: number): string {
+// Palety: a = główny kolor świecenia, b = drugi, c = jasny akcent, dark/light = duotone tła.
+const PALETTES = [
+  { a: "#FFD400", b: "#FF8A00", c: "#fff59d", dark: "#1a0f00", light: "#ffd36b" },
+  { a: "#ff2bd6", b: "#00e5ff", c: "#ffe1fb", dark: "#12002a", light: "#ff9be9" },
+  { a: "#8b5cf6", b: "#a3e635", c: "#efe5ff", dark: "#0b0420", light: "#c4b5fd" },
+  { a: "#ff3b30", b: "#ffb300", c: "#ffe0c2", dark: "#200000", light: "#ff9f80" },
+  { a: "#38bdf8", b: "#e0f2fe", c: "#ffffff", dark: "#001425", light: "#9be3ff" },
+  { a: "#10b981", b: "#22d3ee", c: "#d1fae5", dark: "#00140d", light: "#7cf2c8" },
+];
+
+const hex = (h: string) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255);
+function rng(seed: number) { let t = (Math.abs(seed) || 1) >>> 0; return () => { t = (t + 0x6d2b79f5) >>> 0; let r = Math.imul(t ^ (t >>> 15), 1 | t); r ^= r + Math.imul(r ^ (r >>> 7), 61 | r); return ((r ^ (r >>> 14)) >>> 0) / 4294967296; }; }
+
+/**
+ * Okładka DJ Aurexis: tło z imprezy (AI) + wycięta postać z jego zdjęcia + DJ AUREXIS, tytuł, „EXTENDED MIX” i zawsze „AI”.
+ * 6 układów × 6 palet (zależnie od utworu): pierścień-portal, wielki napis za postacią, duotone z rastrem,
+ * snopy światła z equalizerem, plakat festiwalowy, echo sylwetki. Twarzy nie generujemy — tylko to zdjęcie.
+ */
+export function personaSvg(figure: { data: Uint8Array; type: string } | null, bg: { data: Uint8Array; type: string } | null, rawTitle: string, seed: number): string {
   const esc = (x: string) => x.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
-  const back = bg
-    ? `<image href="data:${bg.type};base64,${b64(bg.data)}" x="0" y="0" width="1024" height="1024" preserveAspectRatio="xMidYMid slice"/>`
-    : svgCover(title, seed).replace(/^<svg[^>]*>|<\/svg>$/g, "");
-  // Postać 398×900 → na okładce wys. 820, przy dolnej krawędzi; pozycja i odbicie zmieniają się między utworami.
-  const h = 820, w = Math.round(820 * 398 / 900), x = [600, 560, 640, 80][Math.abs(seed) % 4], flip = Math.abs(seed) % 4 === 3;
-  const fig = figure
-    ? `<g filter="url(#glow)"><image href="data:${figure.type};base64,${b64(figure.data)}" x="${x}" y="${1024 - h}" width="${w}" height="${h}" preserveAspectRatio="xMidYMax meet"${flip ? ` transform="translate(${2 * x + w} 0) scale(-1 1)"` : ""}/></g>`
-    : "";
-  const tx = flip ? 1000 - 32 : 56, anchor = flip ? "end" : "start";
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
-<defs><linearGradient id="fade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#000" stop-opacity="0.55"/><stop offset="0.35" stop-color="#000" stop-opacity="0"/><stop offset="0.8" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity="0.55"/></linearGradient>
-<linearGradient id="gy" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff59d"/><stop offset="0.5" stop-color="#FFD400"/><stop offset="1" stop-color="#FF8A00"/></linearGradient>
-<filter id="glow" x="-20%" y="-10%" width="140%" height="120%"><feDropShadow dx="0" dy="0" stdDeviation="14" flood-color="#FFD400" flood-opacity="0.55"/><feDropShadow dx="0" dy="24" stdDeviation="24" flood-color="#000" flood-opacity="0.65"/></filter></defs>
-${back}<rect width="1024" height="1024" fill="url(#fade)"/>${fig}
-<rect x="${flip ? 40 : 852}" y="36" width="136" height="72" rx="18" fill="#000" fill-opacity="0.7" stroke="url(#gy)" stroke-width="4"/>
-<text x="${flip ? 108 : 920}" y="88" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-size="46" font-weight="900" fill="url(#gy)">AI</text>
-<text x="${tx}" y="${flip ? 200 : 120}" text-anchor="${anchor}" font-family="Arial Black,Arial,sans-serif" font-size="72" font-weight="900" fill="url(#gy)" letter-spacing="4" stroke="#000" stroke-opacity="0.35" stroke-width="2">DJ AUREXIS</text>
-<text x="${tx}" y="${flip ? 252 : 172}" text-anchor="${anchor}" font-family="Arial,sans-serif" font-size="38" font-weight="700" fill="#fff8d0" stroke="#000" stroke-opacity="0.4" stroke-width="1">${esc(title.slice(0, 40))}</text></svg>`;
+  const S = Math.abs(seed), style = S % 6, P = PALETTES[Math.floor(S / 6) % PALETTES.length], R = rng(seed);
+  const title = esc(rawTitle.replace(/\s*\((extended|club|radio)[^)]*\)\s*/i, "").slice(0, 34).toUpperCase());
+  const h = 820, w = Math.round(820 * 398 / 900);
+  // Duotone tła (feColorMatrix): jasność → przejście dark→light z palety.
+  const d = hex(P.dark), l = hex(P.light);
+  const duo = [0, 1, 2].map((k) => `${((l[k] - d[k]) * 0.3).toFixed(3)} ${((l[k] - d[k]) * 0.59).toFixed(3)} ${((l[k] - d[k]) * 0.11).toFixed(3)} 0 ${d[k].toFixed(3)}`).join(" ") + " 0 0 0 1 0";
+  const fallback = `<rect width="1024" height="1024" fill="url(#rad)"/>` + Array.from({ length: 10 }, (_, i) => `<circle cx="512" cy="520" r="${80 + i * 52}" fill="none" stroke="url(#g)" stroke-opacity="${(0.7 - i * 0.06).toFixed(2)}" stroke-width="${2 + (i % 3)}"/>`).join("");
+  const backImg = bg ? `<image href="data:${bg.type};base64,${b64(bg.data)}" width="1024" height="1024" preserveAspectRatio="xMidYMid slice"/>` : fallback;
+  const back = style === 2
+    ? `<g filter="url(#duo)">${backImg}</g><rect width="1024" height="1024" fill="url(#dots)" opacity="0.35"/>`
+    : `${backImg}<rect width="1024" height="1024" fill="${P.a}" opacity="0.16" style="mix-blend-mode:color"/>`;
+
+  // Pozycja postaci per układ (x lewej krawędzi), lustro co drugi utwór w układach bocznych.
+  const fx = [512 - w / 2, 560, 70, 512 - w / 2, 590, 120][style], flip = (style === 1 || style === 4) && S % 2 === 1;
+  const X = flip ? 1024 - fx - w : fx, cx = X + w / 2;
+  const use = (extra = "", tr = "") => `<use href="#fig"${extra} transform="translate(${X} ${1024 - h})${tr}"/>`;
+  const figMain = figure ? `<g filter="url(#glow)">${use()}</g>` : "";
+
+  let deco = "", front = "";
+  if (style === 0) { // pierścień-portal
+    deco = `<circle cx="512" cy="500" r="300" fill="url(#halo)"/><circle cx="512" cy="500" r="330" fill="none" stroke="url(#g)" stroke-width="16" filter="url(#soft)"/><circle cx="512" cy="500" r="372" fill="none" stroke="${P.c}" stroke-opacity="0.5" stroke-width="3" stroke-dasharray="4 18"/>`;
+  } else if (style === 1) { // wielki napis za postacią
+    deco = `<text x="512" y="700" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-size="300" font-weight="900" fill="none" stroke="url(#g)" stroke-width="5" textLength="990" lengthAdjust="spacingAndGlyphs" opacity="0.95">AUREXIS</text><text x="512" y="430" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-size="300" font-weight="900" fill="${P.a}" opacity="0.14" textLength="990" lengthAdjust="spacingAndGlyphs">AUREXIS</text>`;
+  } else if (style === 2) { // duotone + raster: barwny pas za postacią
+    deco = `<rect x="${cx - 230}" y="140" width="460" height="884" fill="url(#g)" opacity="0.85" style="mix-blend-mode:screen"/>`;
+  } else if (style === 3) { // snopy światła + equalizer
+    deco = Array.from({ length: 11 }, (_, i) => { const a = -80 + i * 16 + (R() - 0.5) * 6, r = 1400, x1 = cx + Math.sin((a - 3) * Math.PI / 180) * r, y1 = 430 - Math.cos((a - 3) * Math.PI / 180) * r, x2 = cx + Math.sin((a + 3) * Math.PI / 180) * r, y2 = 430 - Math.cos((a + 3) * Math.PI / 180) * r; return `<polygon points="${cx},430 ${x1.toFixed(0)},${y1.toFixed(0)} ${x2.toFixed(0)},${y2.toFixed(0)}" fill="url(#ray)" opacity="${(0.25 + R() * 0.35).toFixed(2)}" style="mix-blend-mode:screen"/>`; }).join("");
+    front = Array.from({ length: 40 }, (_, i) => { const bh = 20 + Math.pow(R(), 1.6) * 150; return `<rect x="${12 + i * 25}" y="${1000 - bh}" width="15" height="${bh.toFixed(0)}" rx="4" fill="url(#g)" opacity="0.55"/>`; }).join("");
+  } else if (style === 4) { // plakat festiwalowy
+    front = `<rect x="22" y="22" width="980" height="980" fill="none" stroke="${P.a}" stroke-width="6"/><rect x="36" y="36" width="952" height="952" fill="none" stroke="${P.c}" stroke-opacity="0.45" stroke-width="2"/>
+<g transform="rotate(-6 512 860)"><rect x="-40" y="808" width="1104" height="104" fill="${P.b}" opacity="0.92"/><text x="512" y="878" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-size="56" font-weight="900" fill="#0a0a0a" letter-spacing="3">${title}</text></g>`;
+  } else { // echo sylwetki
+    deco = figure ? [1.28, 1.14].map((k, i) => `<g opacity="${i ? 0.45 : 0.25}" filter="url(#tint)">${use("", ` translate(${w / 2} ${h}) scale(${k}) translate(${-w / 2 + (i ? 40 : 90)} ${-h})`)}</g>`).join("") : "";
+    deco += Array.from({ length: 70 }, () => `<circle cx="${(R() * 1024).toFixed(0)}" cy="${(R() * 760).toFixed(0)}" r="${(1 + R() * 3).toFixed(1)}" fill="${P.c}" opacity="${(0.3 + R() * 0.6).toFixed(2)}"/>`).join("");
+  }
+
+  // Napisy: nazwa + tytuł (w plakacie tytuł jest na pasie), tag EXTENDED MIX, znaczek AI.
+  const right = style === 5 || (flip && style !== 1);
+  const tx = style === 0 || style === 3 || style === 1 ? 512 : right ? 968 : 56, anchor = tx === 512 ? "middle" : right ? "end" : "start";
+  const nameY = style === 4 ? 150 : 118, nameSize = style === 0 || style === 3 ? 86 : 80;
+  const name = `<text x="${tx}" y="${nameY}" text-anchor="${anchor}" font-family="Arial Black,Arial,sans-serif" font-size="${nameSize}" font-weight="900" fill="url(#g)" letter-spacing="${style === 0 ? 8 : 4}" stroke="#000" stroke-opacity="0.35" stroke-width="2">DJ AUREXIS</text>`;
+  const titleTxt = style === 4 ? "" : style === 0 || style === 3
+    ? `<text x="512" y="${style === 3 ? 820 : 960}" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-size="46" font-weight="900" fill="#fff" stroke="#000" stroke-opacity="0.55" stroke-width="2" letter-spacing="3">${title}</text>`
+    : `<text x="${tx}" y="${nameY + 58}" text-anchor="${anchor}" font-family="Arial,sans-serif" font-size="40" font-weight="700" fill="${P.c}" stroke="#000" stroke-opacity="0.45" stroke-width="1" letter-spacing="2">${title}</text>`;
+  const tagY = style === 4 ? 96 : style === 0 || style === 3 ? 176 : nameY + 100;
+  const tag = `<text x="${tx}" y="${tagY}" text-anchor="${anchor}" font-family="Arial,sans-serif" font-size="24" font-weight="700" fill="#fff" fill-opacity="0.85" letter-spacing="9">EXTENDED MIX</text>`;
+  const aiLeft = right && style !== 0 && style !== 3;
+  const centered = style === 0 || style === 3;
+  const ai = `<g transform="translate(${aiLeft ? 40 : 848} ${centered ? 908 : 60})"><rect width="136" height="72" rx="18" fill="#000" fill-opacity="0.72" stroke="url(#g)" stroke-width="4"/><text x="68" y="52" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-size="46" font-weight="900" fill="url(#g)">AI</text></g>`;
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1024" height="1024" viewBox="0 0 1024 1024">
+<defs>${figure ? `<image id="fig" href="data:${figure.type};base64,${b64(figure.data)}" width="${w}" height="${h}" preserveAspectRatio="xMidYMax meet"${flip ? ` transform="translate(${w} 0) scale(-1 1)"` : ""}/>` : ""}
+<linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${P.c}"/><stop offset="0.5" stop-color="${P.a}"/><stop offset="1" stop-color="${P.b}"/></linearGradient>
+<linearGradient id="fade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#000" stop-opacity="0.6"/><stop offset="0.3" stop-color="#000" stop-opacity="0"/><stop offset="0.75" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity="0.7"/></linearGradient>
+<linearGradient id="ray" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="${P.c}" stop-opacity="0.9"/><stop offset="1" stop-color="${P.a}" stop-opacity="0"/></linearGradient>
+<radialGradient id="halo"><stop offset="0" stop-color="${P.a}" stop-opacity="0.55"/><stop offset="0.7" stop-color="${P.b}" stop-opacity="0.18"/><stop offset="1" stop-color="${P.b}" stop-opacity="0"/></radialGradient>
+<radialGradient id="rad" cx="50%" cy="45%" r="75%"><stop offset="0" stop-color="${P.light}" stop-opacity="0.55"/><stop offset="0.55" stop-color="${P.dark}"/><stop offset="1" stop-color="#000"/></radialGradient>
+<pattern id="dots" width="12" height="12" patternUnits="userSpaceOnUse"><circle cx="6" cy="6" r="2.2" fill="#000"/></pattern>
+<filter id="duo" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="${duo}"/></filter>
+<filter id="soft" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+<filter id="tint" color-interpolation-filters="sRGB"><feFlood flood-color="${P.a}"/><feComposite in2="SourceAlpha" operator="in"/><feGaussianBlur stdDeviation="2"/></filter>
+<filter id="glow" x="-25%" y="-10%" width="150%" height="120%"><feDropShadow dx="0" dy="0" stdDeviation="16" flood-color="${P.a}" flood-opacity="0.7"/><feDropShadow dx="0" dy="26" stdDeviation="26" flood-color="#000" flood-opacity="0.7"/></filter></defs>
+${back}${deco}<rect width="1024" height="1024" fill="url(#fade)"/>${figMain}${front}
+${name}${titleTxt}${tag}${ai}</svg>`;
 }
 
 /** Samo tło okładki z AI (bez ludzi). */
@@ -204,8 +271,8 @@ async function artistPhoto(): Promise<{ data: Uint8Array; type: string } | null>
 
 async function makeCover(jwt: string, _idea: Idea, title: string, seed: number): Promise<string | null> {
   const [photo, bg] = await Promise.all([artistPhoto(), backdropImage(seed)]);
-  // „c-” = pełna okładka (postać + tło z imprezy); „b-” = bez tła AI → naprawa spróbuje ponownie przy następnym uruchomieniu.
-  return putR2(jwt, personaSvg(photo, bg, title, seed), `${bg ? "c" : "b"}-${Math.abs(seed)}.svg`, "image/svg+xml");
+  // „d-” = pełna okładka (nowe wzory 6.11) (postać + tło z imprezy); „b-” = bez tła AI → naprawa spróbuje ponownie przy następnym uruchomieniu.
+  return putR2(jwt, personaSvg(photo, bg, title, seed), `${bg ? "d" : "b"}-${Math.abs(seed)}.svg`, "image/svg+xml");
 }
 
 async function archiveAudio(jwt: string, src: string, name: string): Promise<string | null> {
@@ -246,7 +313,7 @@ async function run(deadline: number, who?: { jwt: string; uid: string }) {
   // Naprawa: starsze utwory DJ Aurexis bez okładki z postacią (i znaczkiem AI) dostają nową — maks. 2 na raz.
   const old = await rest(jwt, `tracks?select=id,title,cover_url&artist=eq.${encodeURIComponent(ARTIST)}&order=created_at.desc&limit=20`);
   const fixed: string[] = [];
-  for (const t of (Array.isArray(old.data) ? old.data : []).filter((x: any) => !/\/dj-(?:yellow|aurexis)\/\d+-c-/.test(String(x.cover_url || ""))).slice(0, 6)) {
+  for (const t of (Array.isArray(old.data) ? old.data : []).filter((x: any) => !/\/dj-(?:yellow|aurexis)\/\d+-d-/.test(String(x.cover_url || ""))).slice(0, 6)) {
     if (Date.now() > deadline - 60000) break;
     const cover = await makeCover(jwt, algorithmIdea(0), String(t.title), Math.abs(hash(String(t.id))));
     if (cover && (await rest(jwt, `tracks?id=eq.${t.id}`, { method: "PATCH", body: JSON.stringify({ cover_url: cover }) })).ok) fixed.push(String(t.title));
@@ -364,7 +431,7 @@ export default async function handler(req: any, res: any) {
     const since = todayStartPl();
     const list = Array.isArray(r.data) ? r.data : [];
     const all = await http(`${SUPA()}/rest/v1/tracks?select=cover_url&artist=in.(${encodeURIComponent(`"${ARTIST}","${OLD_ARTIST}"`)})&order=created_at.desc&limit=20`, { headers: { apikey: ANON() } });
-    const needsCovers = (Array.isArray(all.data) ? all.data : []).filter((t: any) => !/\/dj-(?:yellow|aurexis)\/\d+-c-/.test(String(t.cover_url || ""))).length;
+    const needsCovers = (Array.isArray(all.data) ? all.data : []).filter((t: any) => !/\/dj-(?:yellow|aurexis)\/\d+-d-/.test(String(t.cover_url || ""))).length;
     return res.status(200).json({ today: list.filter((t: any) => t.created_at >= since), latest: list, perDay: dayTarget(), needsCovers });
   }
   const who = await ownerFromToken(String(req.headers.authorization || ""));
