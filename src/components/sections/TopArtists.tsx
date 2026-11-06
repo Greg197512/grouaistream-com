@@ -143,7 +143,7 @@ export const TopArtists = () => {
           };
         })
         .sort((a, b) => (a.id === AI_STAR ? -1 : b.id === AI_STAR ? 1 : b.trackCount - a.trackCount))
-        .map((a) => (a.id === AI_STAR ? { ...a, imageUrl: "/artists/dj-yellow.webp" } : a))
+        .map((a) => (a.id === AI_STAR ? { ...a, imageUrl: "/artists/dj-yellow.webp", userId: "38461bf5-1ba0-4ef9-985a-ae5e9d2b7f72" } : a))
         .slice(0, 16)
         .map((a, index) => ({ ...a, gradient: gradients[index % gradients.length] }));
 

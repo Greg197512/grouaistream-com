@@ -3,6 +3,8 @@
 import { supabase } from "@/integrations/supabase/client";
 
 export const DJ_OWNER = "grzegorzkaron553@gmail.com";
+/** Przemek = DJ Yellow — u niego automat też działa (utwory na jego koncie). */
+export const DJ_YELLOW_USER_ID = "38461bf5-1ba0-4ef9-985a-ae5e9d2b7f72";
 export type DjTrack = { id: string; title: string; cover_url: string | null; created_at: string };
 export type DjRun = { ok: boolean; step: string; tracks?: { title: string; id?: string; error?: string; cover?: string | null; audio?: string }[]; error?: string; status?: string };
 
