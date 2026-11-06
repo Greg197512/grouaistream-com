@@ -3,12 +3,12 @@
 // Powód: zapytania z funkcji edge Vercela zatrzymuje zapora Cloudflare przed Printful (403 „Attention Required”),
 // a z funkcji Node przechodzą. Wywołuje go api/shop-checkout (edge).
 // Bezpieczeństwo: działa tylko z kluczem równym PRINTFUL_API_KEY (Authorization: Bearer …) i tylko dla
-// ścieżek sklepu Printful: /store/products, /orders, /stores, /store/variants (PUT: External ID), /product-templates, /files, /sync/* (sklepy Etsy — import kompletów), /oauth/scopes (jakie uprawnienia ma klucz). Klucza nie zwraca ani nie zapisuje.
+// ścieżek sklepu Printful: /store/products, /orders, /stores, /store/variants (PUT: External ID), /product-templates, /files, /sync/* (sklepy Etsy — import kompletów), /oauth/scopes (jakie uprawnienia ma klucz), katalog (/products, /categories) i generator zdjęć (/mockup-generator). Klucza nie zwraca ani nie zapisuje.
 import { timingSafeEqual } from "node:crypto";
 
 export const config = { maxDuration: 30 };
 
-const ALLOWED = /^\/(store\/products|store\/variants|sync\/products|sync\/variants|orders|stores|product-templates|files|oauth\/scopes)(\/[\w-]+)*(\?[\w=&%.-]*)?$/;
+const ALLOWED = /^\/(store\/products|store\/variants|sync\/products|sync\/variants|orders|stores|product-templates|files|oauth\/scopes|products|categories|mockup-generator)(\/[\w-]+)*(\?[\w=&%.,-]*)?$/;
 const same = (a: string, b: string) => {
   const x = Buffer.from(a), y = Buffer.from(b);
   return x.length === y.length && timingSafeEqual(x, y);

@@ -434,6 +434,25 @@ async function printfulCheck(auth: string, user: User) {
 export default async function handler(req: Request): Promise<Response> {
   pfOrigin = env("SITE_URL")?.replace(/\/+$/, "") ?? new URL(req.url).origin;
   if (req.method === "GET") {
+    // Narzędzie właściciela: katalog Printful + generator zdjęć (mockupy) do zakładania nowych kolekcji.
+    // Wymaga ?k= (16 znaków SHA-256 klucza Printful) — klucza nie zdradza, tylko potwierdza, że pyta ktoś, kto go zna.
+    if (new URL(req.url).searchParams.get("diag") === "pf") {
+      const base = printfulCfg();
+      const q = new URL(req.url).searchParams;
+      if (!base) return json({ configured: false });
+      const h = Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(base.token)))).map((b) => b.toString(16).padStart(2, "0")).join("").slice(0, 16);
+      if (q.get("k") !== h) return json({ error: "forbidden" }, 403);
+      const path = q.get("path") ?? "";
+      if (!/^\/(products|categories|mockup-generator)(\/[\w-]+)*(\?[\w=&%.,-]*)?$/.test(path)) return json({ error: "bad_path" }, 400);
+      const body = q.get("b");
+      const store = await withApiStore(base);
+      const r = await fetch(`${pfOrigin}/api/printful-proxy?path=${encodeURIComponent(path)}`, {
+        method: body ? "POST" : "GET",
+        headers: { authorization: `Bearer ${base.token}`, "content-type": "application/json", ...(store.storeId ? { "x-pf-store-id": store.storeId } : {}) },
+        body: body ? atob(body) : undefined,
+      });
+      return new Response(await r.text(), { status: r.status, headers: { "content-type": "application/json", "cache-control": "no-store" } });
+    }
     if (new URL(req.url).searchParams.get("diag") === "printful-probe") {
       const base = printfulCfg();
       return json(base ? await printfulProbe(base) : { configured: false });
