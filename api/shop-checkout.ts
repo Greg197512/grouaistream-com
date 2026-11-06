@@ -22,7 +22,7 @@
  *   POST { action:"printful-check" }            → (admin) które produkty nie są jeszcze podpięte w Printful
  *
  * Realizacja (my jesteśmy pośrednikiem): po opłaceniu odzież/dodatki idą do Printful (`PRINTFUL_API_KEY`,
- * opcjonalnie `PRINTFUL_STORE_ID`, `PRINTFUL_AUTO_CONFIRM=true` = od razu do produkcji, inaczej szkic do zatwierdzenia),
+ * opcjonalnie `PRINTFUL_STORE_ID`, domyślnie zamówienie od razu do produkcji (Printful drukuje i wysyła), `PRINTFUL_AUTO_CONFIRM=false` = szkic do zatwierdzenia),
  * gadżety e-mailem do dostawcy (`SHOP_SUPPLIER_EMAIL`). E-maile: `RESEND_API_KEY` albo `BREVO_API_KEY`
  * + `SHOP_MAIL_FROM` (+ `SHOP_MAIL_FROM_NAME`); powiadomienia dla Ciebie na `SHOP_NOTIFY_EMAIL`.
  */
@@ -128,7 +128,7 @@ function mailCfg(): MailCfg | null {
 let pfOrigin: string | null = null;
 function printfulCfg(): PrintfulCfg | null {
   const token = env("PRINTFUL_API_KEY");
-  return token ? { token, storeId: env("PRINTFUL_STORE_ID") ?? null, confirm: env("PRINTFUL_AUTO_CONFIRM") === "true", proxy: pfOrigin } : null;
+  return token ? { token, storeId: env("PRINTFUL_STORE_ID") ?? null, confirm: env("PRINTFUL_AUTO_CONFIRM") !== "false", proxy: pfOrigin } : null;
 }
 
 function publicConfig() {
