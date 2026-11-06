@@ -5,7 +5,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowRight, Gift, Plus, RotateCcw, ShieldCheck, Truck, ChevronDown } from "lucide-react";
-import type { ShopProduct } from "@/data/shopCatalog";
+import { productImg, type ShopProduct } from "@/data/shopCatalog";
 import { SHOP_SIZES } from "@/lib/shopOrder";
 import type { ShopLang } from "@/i18n/shop";
 
@@ -150,8 +150,8 @@ export function ProductCard({ p, index, price, t, videoLabel, onAdd }: {
       className="group relative">
       <div className="relative aspect-[4/5] overflow-hidden rounded-2xl bg-neutral-100">
         <Link to={`/shop/p/${p.id}`} className="absolute inset-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-orange-500" aria-label={p.name}>
-          <img src={`/shop/${p.id}-1.jpg`} alt={p.name} loading="lazy" decoding="async" width={480} height={600} className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-105" />
-          <img src={`/shop/${p.id}-2.jpg`} alt="" loading="lazy" decoding="async" width={480} height={600} className="absolute inset-0 h-full w-full object-cover opacity-0 transition duration-500 group-hover:opacity-100" />
+          <img src={productImg(p, 1)} alt={p.name} loading="lazy" decoding="async" width={480} height={600} className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-105" />
+          <img src={productImg(p, 2)} alt="" loading="lazy" decoding="async" width={480} height={600} className="absolute inset-0 h-full w-full object-cover opacity-0 transition duration-500 group-hover:opacity-100" />
         </Link>
         <div className="pointer-events-none absolute left-2.5 top-2.5 flex flex-col items-start gap-1">
           {p.tag && <span className="rounded-full bg-white/95 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-neutral-900 shadow-sm">{p.tag}</span>}
@@ -161,7 +161,7 @@ export function ProductCard({ p, index, price, t, videoLabel, onAdd }: {
           <div className="absolute inset-x-2 bottom-2 rounded-xl bg-white/95 p-2 shadow-xl backdrop-blur">
             <p className="mb-1.5 text-center text-[11px] font-semibold text-neutral-600">{t.pickSize}</p>
             <div className="grid grid-cols-6 gap-1">
-              {SHOP_SIZES.map((s) => (
+              {(p.sizeList ?? SHOP_SIZES).map((s) => (
                 <button key={s} type="button" onClick={() => { onAdd(p, s); setPicking(false); }}
                   className="h-8 rounded-md border border-neutral-200 text-[11px] font-bold transition hover:border-neutral-900 hover:bg-neutral-900 hover:text-white">{s}</button>
               ))}

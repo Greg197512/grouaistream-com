@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { SHOP_PRODUCTS } from "@/data/shopCatalog";
+import { SHOP_PRODUCTS, productImg } from "@/data/shopCatalog";
 import { localizeProduct } from "@/data/shopCatalogI18n";
 import { SHOP_SIZES } from "@/lib/shopOrder";
 import { useShopCart } from "@/lib/shopCart";
@@ -40,7 +40,7 @@ export default function ShopProduct() {
     );
   }
 
-  const imgs = [`/shop/${p.id}-1.jpg`, `/shop/${p.id}-2.jpg`];
+  const imgs = p.img?.length ? p.img : [productImg(p, 1), productImg(p, 2)];
   const related = SHOP_PRODUCTS.filter((x) => x.id !== p.id && x.cat === base.cat).concat(SHOP_PRODUCTS.filter((x) => x.cat !== base.cat)).slice(0, 4).map((x) => localizeProduct(x, lang));
   const onAdd = () => {
     add(base, size);
@@ -93,7 +93,7 @@ export default function ShopProduct() {
               <div className="w-full">
                 <p className="mb-2 text-sm font-semibold">{T.size}: <span className="text-neutral-500">{size}</span></p>
                 <div className="grid grid-cols-6 gap-2" role="radiogroup" aria-label={T.size}>
-                  {SHOP_SIZES.map((s) => (
+                  {(p.sizeList ?? SHOP_SIZES).map((s) => (
                     <button key={s} type="button" role="radio" aria-checked={size === s} onClick={() => setSize(s)}
                       className={`h-11 rounded-xl border text-sm font-bold transition ${size === s ? "border-neutral-900 bg-neutral-900 text-white" : "border-neutral-300 bg-white hover:border-neutral-900"}`}>{s}</button>
                   ))}
@@ -116,7 +116,7 @@ export default function ShopProduct() {
           {related.map((r) => (
             <li key={r.id}>
               <Link to={`/shop/p/${r.id}`} className="group block overflow-hidden rounded-2xl border border-neutral-200 bg-white transition hover:shadow-lg">
-                <img src={`/shop/${r.id}-1.jpg`} alt={r.name} loading="lazy" decoding="async" width={400} height={400} className="aspect-square w-full object-cover" />
+                <img src={productImg(r, 1)} alt={r.name} loading="lazy" decoding="async" width={400} height={400} className="aspect-square w-full object-cover" />
                 <div className="p-3"><p className="line-clamp-2 text-sm font-bold leading-snug">{r.name}</p><p className="mt-1 text-sm font-extrabold text-orange-600">{eur(r.eurCents)}</p></div>
               </Link>
             </li>))}

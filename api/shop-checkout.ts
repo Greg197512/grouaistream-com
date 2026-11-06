@@ -31,7 +31,7 @@ import { parseVatMode } from "../src/lib/vatOss";
 import { localizeProduct } from "../src/data/shopCatalogI18n";
 import { SHOP_PRODUCTS } from "../src/data/shopCatalog";
 import { supplierFor, printfulExternalId } from "../src/data/shopSuppliers";
-import { createPrintfulOrder, printfulAssets, printfulExport, printfulScopes, printfulExternalIds, printfulStores, printfulVariants, setPrintfulExternalId, withApiStore, type PrintfulCfg } from "../src/lib/printful";
+import { createPrintfulOrder, printfulAssets, printfulExport, printfulProbe, printfulScopes, printfulExternalIds, printfulStores, printfulVariants, setPrintfulExternalId, withApiStore, type PrintfulCfg } from "../src/lib/printful";
 import { expectedExternalIds, suggestExternalId } from "../src/lib/printfulMatch";
 import { CARRIERS, carrierById, isPointCode, trackingUrl } from "../src/data/shopCarriers";
 import { adminMail, customerPaidMail, customerShippedMail, customerTransferMail, mailConfigFromEnv, sendMail, supplierMail, type MailCfg, type MailOrder } from "../src/lib/shopMail";
@@ -433,6 +433,10 @@ async function printfulCheck(auth: string, user: User) {
 export default async function handler(req: Request): Promise<Response> {
   pfOrigin = env("SITE_URL")?.replace(/\/+$/, "") ?? new URL(req.url).origin;
   if (req.method === "GET") {
+    if (new URL(req.url).searchParams.get("diag") === "printful-probe") {
+      const base = printfulCfg();
+      return json(base ? await printfulProbe(base) : { configured: false });
+    }
     // Eksport kompletów z Printful (wszystkie sklepy, też Etsy) do przeniesienia do naszego katalogu: GET ?diag=printful-export
     if (new URL(req.url).searchParams.get("diag") === "printful-export") {
       const base = printfulCfg();

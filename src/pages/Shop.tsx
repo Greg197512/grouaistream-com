@@ -4,7 +4,7 @@ import { useShopCart } from "@/lib/shopCart";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { SHOP_ADMIN_EMAIL, SHOP_PRODUCTS, type ShopProduct } from "@/data/shopCatalog";
+import { SHOP_ADMIN_EMAIL, SHOP_PRODUCTS, productImg, type ShopProduct } from "@/data/shopCatalog";
 import { localizeProduct } from "@/data/shopCatalogI18n";
 import { SHOP_SERVICE_TYPE, orderRef, toShopOrder, type PayMethod, type ShopOrderView } from "@/lib/shopOrder";
 import { invoiceHtml, openInvoice, type ShopConfig } from "@/lib/shopInvoice";
@@ -93,7 +93,7 @@ export default function Shop() {
     const items = products.filter((p) => SHOP_PRODUCTS.find((x) => x.id === p.id)?.cat === c);
     const n = items.length;
     const word = lang === "pl" ? (n === 1 ? "produkt" : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? "produkty" : "produktów") : lang === "nl" ? (n === 1 ? "product" : "producten") : n === 1 ? "product" : "products";
-    return { cat: c, label: localizeProduct(SHOP_PRODUCTS.find((x) => x.cat === c)!, lang).cat, img: `/shop/${items[0]?.id}-1.jpg`, count: `${n} ${word}` };
+    return { cat: c, label: localizeProduct(SHOP_PRODUCTS.find((x) => x.cat === c)!, lang).cat, img: items[0] ? productImg(items[0], 1) : "", count: `${n} ${word}` };
   }), [cats, products, lang]);
   // /shop?cart=1 (ze strony produktu) — od razu otwórz koszyk.
   const [open, setOpen] = useState(() => new URLSearchParams(location.search).get("cart") === "1");
@@ -391,7 +391,7 @@ export default function Shop() {
           {cart.length === 0 && <p className="text-neutral-500">{T.emptyCart}</p>}
           {cart.map((l, i) => { const p = localizeProduct(byId[l.id], lang); return (
             <div key={l.id + l.size} className="grid grid-cols-[56px_1fr_auto] items-center gap-3 border-b border-neutral-200 pb-3">
-              <img src={`/shop/${p.id}-1.jpg`} alt="" className="h-14 w-14 rounded-lg object-cover" />
+              <img src={productImg(p, 1)} alt="" className="h-14 w-14 rounded-lg object-cover" />
               <div className="text-sm"><b>{p.name}</b><br /><span className="text-neutral-500">{l.size ? `${T.size} ${l.size} · ` : ""}{eur(p.eurCents)}</span></div>
               <div className="flex items-center gap-1"><button type="button" onClick={() => bump(i, -1)} aria-label={T.less} className="h-8 w-8 rounded-lg border border-neutral-300">−</button><span className="w-5 text-center">{l.qty}</span><button type="button" onClick={() => bump(i, 1)} aria-label={T.more} className="h-8 w-8 rounded-lg border border-neutral-300">+</button></div>
             </div>); })}
