@@ -235,7 +235,19 @@ ${name}${titleTxt}${tag}${ai}</svg>`;
 }
 
 /** Samo tło okładki z AI (bez ludzi). */
-async function backdropImage(seed: number): Promise<{ data: Uint8Array; type: string } | null> {
+// Kolejka: Pollinations (bez klucza) przyjmuje 1 zapytanie naraz — tła robimy po kolei, z odstępem 6 s.
+let bgQueue: Promise<unknown> = Promise.resolve();
+let bgLast = 0;
+function backdropImage(seed: number): Promise<{ data: Uint8Array; type: string } | null> {
+  const job = bgQueue.then(async () => {
+    const wait = bgLast + 6000 - Date.now();
+    if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+    try { return await backdropTries(seed); } finally { bgLast = Date.now(); }
+  });
+  bgQueue = job.catch(() => null);
+  return job;
+}
+async function backdropTries(seed: number): Promise<{ data: Uint8Array; type: string } | null> {
   // Pollinations odrzuca szybkie zapytania pod rząd → do 3 prób z odstępem (5 s, 12 s).
   for (let i = 0; i < 3; i++) {
     if (i) await new Promise((r) => setTimeout(r, i === 1 ? 5000 : 12000));
