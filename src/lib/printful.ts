@@ -113,3 +113,44 @@ export async function setPrintfulExternalId(cfg: PrintfulCfg, variantId: number,
   return r.ok ? { ok: true as const } : { ok: false as const, error: r.error ?? `HTTP ${r.status}` };
 }
 
+
+export type PfExport = {
+  store: string; storeId: number; id: number; name: string; thumb: string | null;
+  variants: { size: string | null; color: string | null; price: string | null; currency: string | null; catalogVariantId: number | null; preview: string | null; files: { type: string; url: string | null; preview: string | null }[] }[];
+};
+/**
+ * Pełne komplety produktów ze WSZYSTKICH sklepów Printful (też Etsy „Grouadrop”): nazwa, zdjęcia, rozmiary, kolory, ceny,
+ * wariant katalogowy i pliki do druku — do przeniesienia do naszego sklepu. Etsy: /sync/products, sklep API: /store/products.
+ */
+export async function printfulExport(cfg: PrintfulCfg, max = 80): Promise<{ ok: true; products: PfExport[]; errors: string[] } | { ok: false; error: string }> {
+  const stores = await printfulStores(cfg);
+  if (!Array.isArray(stores)) return { ok: false, error: stores.error };
+  const products: PfExport[] = [], errors: string[] = [];
+  for (const st of stores) {
+    const c = { ...cfg, storeId: String(st.id) };
+    const base = st.type === "native" ? "/store/products" : "/sync/products";
+    const list = await pf(c, `${base}?limit=100`);
+    if (!list.ok) { errors.push(`${st.name}: ${list.error}`); continue; }
+    const ids = ((list.result ?? []) as { id: number }[]).map((x) => x.id).slice(0, Math.max(0, max - products.length));
+    // Szczegóły po 8 naraz (funkcja edge ma ~25 s na odpowiedź).
+    const details: { id: number; one: Awaited<ReturnType<typeof pf>> }[] = [];
+    for (let i = 0; i < ids.length; i += 8) details.push(...(await Promise.all(ids.slice(i, i + 8).map(async (id) => ({ id, one: await pf(c, `${base}/${id}`) })))));
+    for (const { id: pid, one } of details) {
+      if (!one.ok) { errors.push(`${st.name}/${pid}: ${one.error}`); continue; }
+      const r = (one.result ?? {}) as {
+        sync_product?: { id: number; name?: string; thumbnail_url?: string };
+        sync_variants?: { size?: string; color?: string; retail_price?: string; currency?: string; variant_id?: number; product?: { variant_id?: number; image?: string }; files?: { type?: string; url?: string; preview_url?: string; thumbnail_url?: string }[] }[];
+      };
+      products.push({
+        store: st.name, storeId: st.id, id: r.sync_product?.id ?? pid, name: r.sync_product?.name ?? "", thumb: r.sync_product?.thumbnail_url ?? null,
+        variants: (r.sync_variants ?? []).map((v) => ({
+          size: v.size ?? null, color: v.color ?? null, price: v.retail_price ?? null, currency: v.currency ?? null,
+          catalogVariantId: v.variant_id ?? v.product?.variant_id ?? null,
+          preview: (v.files ?? []).find((f) => f.type === "preview")?.preview_url ?? v.product?.image ?? null,
+          files: (v.files ?? []).map((f) => ({ type: f.type ?? "default", url: f.url ?? null, preview: f.preview_url ?? f.thumbnail_url ?? null })),
+        })),
+      });
+    }
+  }
+  return { ok: true, products, errors };
+}
