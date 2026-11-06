@@ -451,7 +451,21 @@ export default async function handler(req: Request): Promise<Response> {
         headers: { authorization: `Bearer ${base.token}`, "content-type": "application/json", ...(store.storeId ? { "x-pf-store-id": store.storeId } : {}) },
         body: body ? atob(body) : undefined,
       });
-      return new Response(await r.text(), { status: r.status, headers: { "content-type": "application/json", "cache-control": "no-store" } });
+      let text = await r.text();
+      // ?brief=1&color=Black — skrót produktu z katalogu: tytuł, techniki, pliki, warianty (id, rozmiar, kolor, cena).
+      if (q.get("brief")) {
+        try {
+          const j = JSON.parse(text).result as { product?: Record<string, unknown>; variants?: { id: number; size: string; color: string; price: string; in_stock: boolean; availability_regions?: Record<string, string> }[] };
+          const col = q.get("color")?.toLowerCase();
+          const pr = j.product ?? {};
+          text = JSON.stringify({
+            id: pr.id, title: pr.title, type: pr.type, techniques: (pr.techniques as { key: string }[] | undefined)?.map((t) => t.key), files: (pr.files as { id: string }[] | undefined)?.map((f) => f.id), image: pr.image,
+            colors: [...new Set((j.variants ?? []).map((v) => v.color))].slice(0, 40),
+            variants: (j.variants ?? []).filter((v) => (!col || v.color?.toLowerCase() === col) && v.availability_regions?.EU).map((v) => ({ id: v.id, size: v.size, color: v.color, price: v.price })),
+          });
+        } catch { /* zostaw surową odpowiedź */ }
+      }
+      return new Response(text, { status: r.status, headers: { "content-type": "application/json", "cache-control": "no-store" } });
     }
     if (new URL(req.url).searchParams.get("diag") === "printful-probe") {
       const base = printfulCfg();
