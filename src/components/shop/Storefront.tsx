@@ -62,6 +62,16 @@ export const STORE_TXT = {
 } as const;
 export type StoreDict = (typeof STORE_TXT)[ShopLang];
 
+// Neonowy błysk: jeden cykl 3,6 s, przyciski startują po kolei (--d), więc światło „przechodzi” przez cały rząd.
+const HERO_NEON_CSS = `
+@keyframes hn-sweep{0%{transform:translateX(-140%) skewX(-20deg)}28%,100%{transform:translateX(260%) skewX(-20deg)}}
+@keyframes hn-glow{0%,100%{box-shadow:0 6px 16px -6px rgba(255,122,26,.25)}14%{box-shadow:0 0 0 1px rgba(255,138,40,.9),0 0 22px 3px rgba(255,122,26,.75),0 0 44px 6px rgba(255,90,0,.35)}30%{box-shadow:0 6px 16px -6px rgba(255,122,26,.25)}}
+.hn{animation:hn-glow 3.6s ease-in-out infinite;animation-delay:var(--d)}
+.hn-beam{position:absolute;top:0;bottom:0;left:0;width:45%;pointer-events:none;background:linear-gradient(90deg,transparent,rgba(255,170,80,.0) 10%,rgba(255,150,50,.85) 50%,rgba(255,220,160,.0) 90%,transparent);filter:blur(1px);transform:translateX(-140%) skewX(-20deg);animation:hn-sweep 3.6s cubic-bezier(.45,.05,.55,.95) infinite;animation-delay:var(--d)}
+@media (prefers-reduced-motion:reduce){.hn,.hn-beam{animation:none}.hn-beam{display:none}.hn{box-shadow:0 0 0 1px rgba(255,138,40,.6),0 0 18px 2px rgba(255,122,26,.45)}}
+html[data-lowpower="on"] .hn-beam{display:none}
+`;
+
 const rise = { initial: { opacity: 0, y: 18 }, animate: { opacity: 1, y: 0 } };
 
 /** Baner: tekst + film produktu (wyciszony, w pętli) z „pływającą” ceną. */
@@ -76,16 +86,22 @@ export function StoreHero({ t, onShop, heroId, heroName, heroPrice }: { t: Store
           {t.h1a} <span className="bg-gradient-to-r from-orange-500 via-rose-500 to-fuchsia-600 bg-clip-text text-transparent">{t.h1b}</span>
         </h1>
         <p className="mt-5 max-w-md text-lg leading-relaxed text-neutral-600">{t.lead}</p>
-        <div className="mt-8 flex flex-wrap gap-2">
-          <button type="button" onClick={onShop} className="group inline-flex h-12 items-center gap-2 rounded-full bg-neutral-900 px-[18px] font-semibold text-white shadow-lg shadow-neutral-900/20 transition hover:bg-orange-500 hover:shadow-orange-500/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2">
-            {t.shop}<ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" aria-hidden="true" />
+        {/* Trzy przyciski w jednym rzędzie; przez wszystkie po kolei przechodzi pomarańczowy neonowy błysk z poświatą. */}
+        <style>{HERO_NEON_CSS}</style>
+        <div className="hn-row mt-8 flex flex-nowrap gap-1 min-[400px]:gap-1.5 sm:gap-2">
+          <button type="button" onClick={onShop} className="hn group relative inline-flex h-11 shrink-0 items-center gap-1.5 overflow-hidden whitespace-nowrap rounded-full bg-neutral-900 px-2.5 text-[13px] font-semibold text-white transition hover:bg-orange-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 sm:h-12 sm:gap-2 sm:px-[18px] sm:text-base" style={{ ["--d" as string]: "0s" }}>
+            <i aria-hidden="true" className="hn-beam" />
+            <span className="relative">{t.shop}</span><ArrowRight className="relative hidden h-4 w-4 transition group-hover:translate-x-1 sm:block" aria-hidden="true" />
           </button>
-          <Link to={`/shop/p/${heroId}`} className="inline-flex h-12 items-center rounded-full border border-neutral-300 bg-white px-[18px] font-semibold transition hover:border-orange-400 hover:text-orange-700">{t.best}</Link>
-          {/* Gadżety: ciemna pigułka z obracającą się neonową obwódką (stoi przy „ogranicz ruch”). */}
-          <Link to="/shop/gadzety" className="group relative inline-flex h-12 items-center overflow-hidden rounded-full p-[2px] font-semibold text-white shadow-lg shadow-fuchsia-500/25 transition hover:shadow-orange-500/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2">
-            <span aria-hidden="true" className="absolute inset-[-150%] animate-[spin_4s_linear_infinite] bg-[conic-gradient(from_0deg,#ff7a1a,#ff2bd6,#22d3ee,#ff7a1a)] motion-reduce:animate-none" />
-            <span className="relative inline-flex h-full items-center gap-2 rounded-full bg-neutral-950 px-[18px] transition group-hover:bg-neutral-900">
-              <span aria-hidden="true">✨</span>{t.gadgets}<ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" aria-hidden="true" />
+          <Link to={`/shop/p/${heroId}`} className="hn relative inline-flex h-11 shrink-0 items-center overflow-hidden whitespace-nowrap rounded-full border border-neutral-300 bg-white px-2.5 text-[13px] font-semibold transition hover:border-orange-400 hover:text-orange-700 sm:h-12 sm:px-[18px] sm:text-base" style={{ ["--d" as string]: ".45s" }}>
+            <i aria-hidden="true" className="hn-beam" />
+            <span className="relative">{t.best}</span>
+          </Link>
+          <Link to="/shop/gadzety" className="hn group relative inline-flex h-11 shrink-0 items-center overflow-hidden whitespace-nowrap rounded-full p-[2px] text-[13px] font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 sm:h-12 sm:text-base" style={{ ["--d" as string]: ".9s" }}>
+            <span aria-hidden="true" className="absolute inset-[-150%] animate-[spin_4s_linear_infinite] bg-[conic-gradient(from_0deg,#ff7a1a,#ff2bd6,#ffb347,#ff7a1a)] motion-reduce:animate-none" />
+            <span className="relative inline-flex h-full items-center gap-1.5 overflow-hidden rounded-full bg-neutral-950 px-2.5 transition group-hover:bg-neutral-900 sm:gap-2 sm:px-[16px]">
+              <i aria-hidden="true" className="hn-beam" />
+              <span aria-hidden="true" className="relative">✨</span><span className="relative">{t.gadgets}</span><ArrowRight className="relative hidden h-4 w-4 transition group-hover:translate-x-1 sm:block" aria-hidden="true" />
             </span>
           </Link>
         </div>

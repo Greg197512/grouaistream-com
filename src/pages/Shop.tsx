@@ -79,7 +79,8 @@ export default function Shop() {
   const T = SHOP_TEXT[lang];
   const eur = useCallback((c: number) => (c / 100).toLocaleString(LOCALE[lang], { style: "currency", currency: "EUR" }), [lang]);
   // Gadżety mają własną kartę (/shop/gadzety) — w głównym katalogu ich nie ma.
-  const products = useMemo(() => SHOP_PRODUCTS.filter((p) => p.cat !== "Gadżety").map((p) => localizeProduct(p, lang)), [lang]);
+  const allProducts = useMemo(() => SHOP_PRODUCTS.map((p) => localizeProduct(p, lang)), [lang]);
+  const products = useMemo(() => allProducts.filter((p) => SHOP_PRODUCTS.find((x) => x.id === p.id)?.cat !== "Gadżety"), [allProducts]);
   const cats = useMemo(() => [...new Set(SHOP_PRODUCTS.filter((p) => p.cat !== "Gadżety").map((p) => p.cat))], []);
   const [cat, setCat] = useState("");
   const gridRef = useRef<HTMLDivElement>(null);
@@ -261,7 +262,6 @@ export default function Shop() {
           <div className="flex items-center gap-4">
             <Link to="/shop" className="text-xl font-black tracking-tight sm:text-2xl">GROUA<span className="text-orange-500">ROCK</span></Link>
             <Link to="/" className="hidden text-sm text-neutral-500 transition hover:text-neutral-900 sm:inline">{T.back}</Link>
-            <Link to="/shop/gadzety" className="inline-flex h-9 items-center rounded-full bg-neutral-950 px-3.5 text-sm font-bold text-white shadow-[0_0_0_1px_#ff7a1a,0_0_18px_-4px_#ff2bd6] transition hover:shadow-[0_0_0_1px_#ff2bd6,0_0_24px_-2px_#ff2bd6]">✨ {lang === "pl" ? "Gadżety" : "Gadgets"}</Link>
           </div>
           <div className="flex items-center gap-1.5 sm:gap-2">
             <div className="flex h-10 items-center rounded-full border border-neutral-200 bg-white p-1" role="group" aria-label="Language">
@@ -303,7 +303,7 @@ export default function Shop() {
           </span>
         </Link>
       </section>
-      <CollectionSets lang={lang} products={products} eur={eur} onPick={(c) => { setCat(c); requestAnimationFrame(() => gridRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })); }} />
+      <CollectionSets lang={lang} products={allProducts} eur={eur} onPick={(c) => { setCat(c); requestAnimationFrame(() => gridRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })); }} />
       <CategoryTiles t={S} tiles={tiles} onPick={(c) => { setCat(c); requestAnimationFrame(() => gridRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })); }} />
 
       <section className="mx-auto max-w-6xl pt-14" aria-label={T.inMotion}>
