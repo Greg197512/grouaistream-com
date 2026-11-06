@@ -18,7 +18,7 @@ const TXT = {
   nl: { title: "Gadgets", lead: "Nieuwe gadgets die iedereen wil — scroll, tik en bekijk ze van dichtbij.", feat: "Wat hij kan", full: "Volledige productpagina", tap: "Tik op een kaart", back: "Winkel" },
 };
 // Kolor neonu każdej karty (pasuje do zdjęcia produktu).
-const GLOW: Record<string, string> = { sluchawkianc: "#ff7a1a", flipsound: "#22d3ee", galaxy: "#c026d3", gamepad: "#ff2bd6", midi25: "#fb923c", clearbuds: "#38bdf8", pixelbox: "#f59e0b" };
+const GLOW: Record<string, string> = { sluchawkianc: "#ff7a1a", flipsound: "#22d3ee", galaxy: "#c026d3", gamepad: "#ff2bd6", midi25: "#fb923c", clearbuds: "#38bdf8", pixelbox: "#f59e0b", okulary: "#22d3ee", asystent: "#f472b6" };
 const glowOf = (id: string) => GLOW[id] ?? "#ff7a1a";
 
 const CSS = `
@@ -60,7 +60,9 @@ export default function ShopGadgets() {
   const { add, count } = useShopCart();
   const reduce = useReducedMotion();
   const eur = (c: number) => (c / 100).toLocaleString(LOCALE[lang], { style: "currency", currency: "EUR" });
-  const items = useMemo(() => SHOP_PRODUCTS.filter((p) => p.cat === "Gadżety").map((p) => localizeProduct(p, lang)), [lang]);
+  // Nasze: okulary AI i asystent na początku karuzeli.
+  const FIRST = ["okulary", "asystent"];
+  const items = useMemo(() => SHOP_PRODUCTS.filter((p) => p.cat === "Gadżety").sort((a, b) => (FIRST.indexOf(b.id) + 1 ? 1 : 0) - (FIRST.indexOf(a.id) + 1 ? 1 : 0) || FIRST.indexOf(a.id) - FIRST.indexOf(b.id)).map((p) => localizeProduct(p, lang)), [lang]);
   const [open, setOpen] = useState<string | null>(null);
   const [phase, setPhase] = useState<"spin" | "glow">("spin");
   const rail = useRef<HTMLDivElement>(null);
