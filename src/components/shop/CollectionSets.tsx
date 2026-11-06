@@ -2,10 +2,11 @@
 // Karta kompletu = kolaż produktów + cena całości + „Zobacz komplet” (filtr katalogu na tę kolekcję).
 import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { productImg, type ShopProduct } from "@/data/shopCatalog";
 
 type L = "pl" | "en" | "nl";
-export type ShopSet = { cat: string; title: Record<L, string>; line: Record<L, string>; bg: string; glow: string; ids: string[] };
+export type ShopSet = { cat: string; title: Record<L, string>; line: Record<L, string>; bg: string; glow: string; ids: string[]; /** zamiast filtra katalogu — przejście na osobną stronę */ href?: string };
 
 export const SHOP_SETS: ShopSet[] = [
   {
@@ -22,6 +23,13 @@ export const SHOP_SETS: ShopSet[] = [
     bg: "linear-gradient(135deg,#14021f 0%,#1d0640 50%,#020b1a 100%)", glow: "#ff2bd6",
     ids: ["afterhours", "nightshift", "etuieq", "plakatnight"],
   },
+  {
+    cat: "Gadżety", href: "/shop/gadzety",
+    title: { pl: "Komplet Gadżety", en: "Gadget Set", nl: "Gadget-set" },
+    line: { pl: "Okulary AI, asystent z ekranem, słuchawki ANC i pixel-art — technologia, która gra.", en: "AI glasses, a screen assistant, ANC headphones and pixel art — tech that plays.", nl: "AI-bril, assistent met scherm, ANC-koptelefoon en pixel-art — tech die speelt." },
+    bg: "linear-gradient(135deg,#031a22 0%,#0b1440 50%,#12051f 100%)", glow: "#22d3ee",
+    ids: ["okulary", "asystent", "sluchawkianc", "pixelbox"],
+  },
 ];
 
 const TXT = {
@@ -32,6 +40,7 @@ const TXT = {
 
 export function CollectionSets({ lang, products, eur, onPick }: { lang: L; products: ShopProduct[]; eur: (c: number) => string; onPick: (cat: string) => void }) {
   const t = TXT[lang];
+  const navigate = useNavigate();
   const byId = new Map(products.map((p) => [p.id, p]));
   const sets = SHOP_SETS.map((s) => ({ ...s, items: s.ids.map((id) => byId.get(id)).filter(Boolean) as ShopProduct[] })).filter((s) => s.items.length);
   if (!sets.length) return null;
@@ -39,11 +48,11 @@ export function CollectionSets({ lang, products, eur, onPick }: { lang: L; produ
     <section className="mx-auto max-w-6xl px-4 pt-14" aria-label={t.h}>
       <h2 className="text-2xl font-black tracking-tight sm:text-3xl">{t.h}</h2>
       <p className="mt-1 max-w-xl text-sm text-neutral-500">{t.sub}</p>
-      <div className="mt-5 grid gap-4 md:grid-cols-2">
+      <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {sets.map((s, i) => {
           const total = s.items.reduce((a, p) => a + p.eurCents, 0);
           return (
-            <motion.button key={s.cat} type="button" onClick={() => onPick(s.cat)}
+            <motion.button key={s.cat} type="button" onClick={() => (s.href ? navigate(s.href) : onPick(s.cat))}
               initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-40px" }} transition={{ duration: 0.5, delay: i * 0.08 }}
               className="group relative overflow-hidden rounded-3xl p-5 text-left text-white shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 sm:p-6"
               style={{ background: s.bg }}>
