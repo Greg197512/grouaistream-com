@@ -130,22 +130,22 @@ async function putR2(jwt: string, body: Uint8Array | string, fileName: string, c
 const b64 = (u: Uint8Array) => Buffer.from(u).toString("base64");
 // Tła okładek (bez ludzi, bez tekstu) — zmienia się grafika z tyłu, wycięta postać DJ Aurexis zostaje.
 const BACKDROPS = [
-  "huge open-air music festival main stage at night, golden light beams and confetti",
-  "concert main stage with lasers, smoke and fireworks",
-  "summer beach festival at sunset, palm trees, lanterns and stage lights",
-  "rooftop party at night over a glittering city skyline, string lights and lasers",
-  "giant LED stage show at a festival, pyrotechnics and sparks",
-  "outdoor daytime festival with colorful smoke flares and flags",
-  "warehouse rave with strobes and laser grid through thick haze",
-  "new year's eve fireworks over a city river",
-  "futuristic cyberpunk city street with neon signs and rain reflections",
-  "northern lights over a mountain-top open-air stage at night",
-  "desert festival at sunrise with giant art installations and dust glowing in light",
-  "infinite neon light tunnel with glowing rings, synthwave style",
-  "holographic stage with floating LED cubes and volumetric light",
-  "tropical island stage at night with fire torches and lasers over the ocean",
-  "huge disco ball reflecting thousands of light spots in a dark arena",
-  "galaxy and nebula sky above a glowing festival stage",
+  "inside a packed nightclub, view from the DJ booth over the dance floor, golden lasers and haze",
+  "underground techno club with red strobes and concrete walls, smoke and light beams",
+  "luxury nightclub with LED ceiling panels and neon lines, dance floor glowing",
+  "club main room with a giant disco ball, thousands of light spots on the walls",
+  "warehouse club with laser grid through thick haze and moving head lights",
+  "nightclub DJ stage with CDJ decks and mixer in the foreground, colorful spotlights",
+  "neon-lit club tunnel entrance with pink and blue light strips",
+  "club dance floor with illuminated LED floor tiles and confetti falling",
+  "big club arena with pyrotechnic sparks and CO2 jets above the DJ stage",
+  "dark techno club with a wall of white strobe lights and fog",
+  "rooftop club at night with city lights, lasers and a glowing DJ booth",
+  "retro disco club with colorful light-up floor and mirror walls",
+  "club with UV blacklight, glowing neon paint on walls and fog",
+  "modern club with a huge LED screen behind the DJ booth showing abstract visuals",
+  "beach club at night with laser show over the sea and a DJ stage",
+  "intimate basement club with warm amber lights, haze and a vinyl DJ setup",
 ];
 
 // Palety: a = główny kolor świecenia, b = drugi, c = jasny akcent, dark/light = duotone tła.
@@ -258,7 +258,7 @@ async function backdropTries(seed: number): Promise<{ data: Uint8Array; type: st
 }
 async function backdropOnce(seed: number): Promise<{ data: Uint8Array; type: string } | null> {
   try {
-    const prompt = `${BACKDROPS[Math.abs(seed) % BACKDROPS.length]}, cinematic, ultra detailed, vibrant gold accents, no people, no text, no letters`;
+    const prompt = `${BACKDROPS[Math.abs(seed) % BACKDROPS.length]}, cinematic, ultra detailed, vibrant colors, no people in focus, no bar, no drinks, no bottles, no text, no letters`;
     const r = await fetch(`https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1024&height=1024&nologo=true&seed=${Math.abs(seed)}`, { signal: AbortSignal.timeout(45000) });
     const type = r.headers.get("content-type") ?? "";
     if (!r.ok || !type.startsWith("image/")) return null;
@@ -283,8 +283,8 @@ async function artistPhoto(): Promise<{ data: Uint8Array; type: string } | null>
 
 async function makeCover(jwt: string, _idea: Idea, title: string, seed: number): Promise<string | null> {
   const [photo, bg] = await Promise.all([artistPhoto(), backdropImage(seed)]);
-  // „d-” = pełna okładka (nowe wzory 6.11) (postać + tło z imprezy); „b-” = bez tła AI → naprawa spróbuje ponownie przy następnym uruchomieniu.
-  return putR2(jwt, personaSvg(photo, bg, title, seed), `${bg ? "d" : "b"}-${Math.abs(seed)}.svg`, "image/svg+xml");
+  // „e-” = pełna okładka (tła z klubów, 6.11) (postać + tło z imprezy); „b-” = bez tła AI → naprawa spróbuje ponownie przy następnym uruchomieniu.
+  return putR2(jwt, personaSvg(photo, bg, title, seed), `${bg ? "e" : "b"}-${Math.abs(seed)}.svg`, "image/svg+xml");
 }
 
 async function archiveAudio(jwt: string, src: string, name: string): Promise<string | null> {
@@ -325,7 +325,7 @@ async function run(deadline: number, who?: { jwt: string; uid: string }) {
   // Naprawa: starsze utwory DJ Aurexis bez okładki z postacią (i znaczkiem AI) dostają nową — maks. 2 na raz.
   const old = await rest(jwt, `tracks?select=id,title,cover_url&artist=eq.${encodeURIComponent(ARTIST)}&order=created_at.desc&limit=20`);
   const fixed: string[] = [];
-  for (const t of (Array.isArray(old.data) ? old.data : []).filter((x: any) => !/\/dj-(?:yellow|aurexis)\/\d+-d-/.test(String(x.cover_url || ""))).slice(0, 6)) {
+  for (const t of (Array.isArray(old.data) ? old.data : []).filter((x: any) => !/\/dj-(?:yellow|aurexis)\/\d+-e-/.test(String(x.cover_url || ""))).slice(0, 6)) {
     if (Date.now() > deadline - 60000) break;
     const cover = await makeCover(jwt, algorithmIdea(0), String(t.title), Math.abs(hash(String(t.id))));
     if (cover && (await rest(jwt, `tracks?id=eq.${t.id}`, { method: "PATCH", body: JSON.stringify({ cover_url: cover }) })).ok) fixed.push(String(t.title));
@@ -443,7 +443,7 @@ export default async function handler(req: any, res: any) {
     const since = todayStartPl();
     const list = Array.isArray(r.data) ? r.data : [];
     const all = await http(`${SUPA()}/rest/v1/tracks?select=cover_url&artist=in.(${encodeURIComponent(`"${ARTIST}","${OLD_ARTIST}"`)})&order=created_at.desc&limit=20`, { headers: { apikey: ANON() } });
-    const needsCovers = (Array.isArray(all.data) ? all.data : []).filter((t: any) => !/\/dj-(?:yellow|aurexis)\/\d+-d-/.test(String(t.cover_url || ""))).length;
+    const needsCovers = (Array.isArray(all.data) ? all.data : []).filter((t: any) => !/\/dj-(?:yellow|aurexis)\/\d+-e-/.test(String(t.cover_url || ""))).length;
     return res.status(200).json({ today: list.filter((t: any) => t.created_at >= since), latest: list, perDay: dayTarget(), needsCovers });
   }
   const who = await ownerFromToken(String(req.headers.authorization || ""));
