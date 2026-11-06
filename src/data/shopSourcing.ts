@@ -18,5 +18,7 @@ export const SOURCING: Record<string, Sourcing> = {
   gamepad: S("wireless controller RGB transparent phone clip", "Pad BT/2.4 GHz do PC, Android/iOS, TV (Android TV) z uchwytem na telefon. Bez preinstalowanych gier."),
   clearbuds: S("transparent wireless earbuds LED digital display", "Przezroczyste etui, wyświetlacz baterii, BT 5.3, tryb gry."),
   pixelbox: S("pixel art bluetooth speaker LED display", "Głośnik z ekranem pixel-art (animacje, zegar), ok. 10 h, pasek."),
+  okulary: S("AI smart glasses camera translation open ear speakers", "Okulary AI: kamera, głośniki open-ear, tłumaczenie, aplikacja; sprawdź zgodność z RODO (kamera) i certyfikat CE."),
+  asystent: S("desktop AI assistant robot round screen speaker", "Asystent biurkowy z okrągłym ekranem (twarz), głośnik, Wi-Fi; aplikacja i język PL."),
   midi25: S("25 key USB MIDI keyboard controller drum pads", "25 klawiszy, 8 padów RGB, pokrętła; USB-C, plug & play (Win/Mac/iPad)."),
 };

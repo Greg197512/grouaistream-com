@@ -13,7 +13,7 @@ import type { ShopLang } from "@/i18n/shop";
 export const STORE_TXT = {
   pl: {
     eyebrow: "Nowa kolekcja · Zima 2026", h1a: "Noś swój", h1b: "dźwięk.", lead: "Streetwear dla ludzi, którzy żyją muzyką. Drukowane na zamówienie, wysyłane prosto do Ciebie.",
-    shop: "Kup kolekcję", best: "Zobacz bluzę", from: "od",
+    shop: "Kup kolekcję", best: "Zobacz bluzę", gadgets: "Gadżety", from: "od",
     trust: [["Dostawa {ship}", "InPost, DHL, Poczta i inni"], ["14 dni na zwrot", "Bez podawania przyczyny"], ["Bezpieczna płatność", "Revolut — aplikacja lub karta"], ["Bilet VIP gratis", "30 dni VIP do każdego zamówienia"]],
     freeShip: "gratis", shipFrom: "od {price}",
     cats: "Kategorie", sort: "Sortuj", sortFeatured: "Polecane", sortAsc: "Cena: od najniższej", sortDesc: "Cena: od najwyższej",
@@ -29,7 +29,7 @@ export const STORE_TXT = {
   },
   en: {
     eyebrow: "New collection · Winter 2026", h1a: "Wear your", h1b: "sound.", lead: "Streetwear for people who live music. Printed on demand, shipped straight to you.",
-    shop: "Shop the collection", best: "See the hoodie", from: "from",
+    shop: "Shop the collection", best: "See the hoodie", gadgets: "Gadgets", from: "from",
     trust: [["Shipping {ship}", "InPost, DHL, postal and more"], ["14-day returns", "No questions asked"], ["Secure payment", "Revolut — app or card"], ["Free VIP ticket", "30 days of VIP with every order"]],
     freeShip: "free", shipFrom: "from {price}",
     cats: "Categories", sort: "Sort", sortFeatured: "Featured", sortAsc: "Price: low to high", sortDesc: "Price: high to low",
@@ -45,7 +45,7 @@ export const STORE_TXT = {
   },
   nl: {
     eyebrow: "Nieuwe collectie · Winter 2026", h1a: "Draag je", h1b: "sound.", lead: "Streetwear voor mensen die muziek leven. Op bestelling bedrukt en rechtstreeks naar je verzonden.",
-    shop: "Shop de collectie", best: "Bekijk de hoodie", from: "vanaf",
+    shop: "Shop de collectie", best: "Bekijk de hoodie", gadgets: "Gadgets", from: "vanaf",
     trust: [["Verzending {ship}", "InPost, DHL, post en meer"], ["14 dagen retour", "Zonder opgaaf van reden"], ["Veilig betalen", "Revolut — app of kaart"], ["Gratis VIP-ticket", "30 dagen VIP bij elke bestelling"]],
     freeShip: "gratis", shipFrom: "vanaf {price}",
     cats: "Categorieën", sort: "Sorteer", sortFeatured: "Aanbevolen", sortAsc: "Prijs: laag naar hoog", sortDesc: "Prijs: hoog naar laag",
@@ -76,11 +76,18 @@ export function StoreHero({ t, onShop, heroId, heroName, heroPrice }: { t: Store
           {t.h1a} <span className="bg-gradient-to-r from-orange-500 via-rose-500 to-fuchsia-600 bg-clip-text text-transparent">{t.h1b}</span>
         </h1>
         <p className="mt-5 max-w-md text-lg leading-relaxed text-neutral-600">{t.lead}</p>
-        <div className="mt-8 flex flex-wrap gap-3">
-          <button type="button" onClick={onShop} className="group inline-flex h-12 items-center gap-2 rounded-full bg-neutral-900 px-7 font-semibold text-white shadow-lg shadow-neutral-900/20 transition hover:bg-orange-500 hover:shadow-orange-500/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2">
+        <div className="mt-8 flex flex-wrap gap-2">
+          <button type="button" onClick={onShop} className="group inline-flex h-12 items-center gap-2 rounded-full bg-neutral-900 px-[18px] font-semibold text-white shadow-lg shadow-neutral-900/20 transition hover:bg-orange-500 hover:shadow-orange-500/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2">
             {t.shop}<ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" aria-hidden="true" />
           </button>
-          <Link to={`/shop/p/${heroId}`} className="inline-flex h-12 items-center rounded-full border border-neutral-300 bg-white px-7 font-semibold transition hover:border-orange-400 hover:text-orange-700">{t.best}</Link>
+          <Link to={`/shop/p/${heroId}`} className="inline-flex h-12 items-center rounded-full border border-neutral-300 bg-white px-[18px] font-semibold transition hover:border-orange-400 hover:text-orange-700">{t.best}</Link>
+          {/* Gadżety: ciemna pigułka z obracającą się neonową obwódką (stoi przy „ogranicz ruch”). */}
+          <Link to="/shop/gadzety" className="group relative inline-flex h-12 items-center overflow-hidden rounded-full p-[2px] font-semibold text-white shadow-lg shadow-fuchsia-500/25 transition hover:shadow-orange-500/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2">
+            <span aria-hidden="true" className="absolute inset-[-150%] animate-[spin_4s_linear_infinite] bg-[conic-gradient(from_0deg,#ff7a1a,#ff2bd6,#22d3ee,#ff7a1a)] motion-reduce:animate-none" />
+            <span className="relative inline-flex h-full items-center gap-2 rounded-full bg-neutral-950 px-[18px] transition group-hover:bg-neutral-900">
+              <span aria-hidden="true">✨</span>{t.gadgets}<ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" aria-hidden="true" />
+            </span>
+          </Link>
         </div>
       </motion.div>
       <motion.div className="relative" initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.7, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}>

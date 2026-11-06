@@ -648,42 +648,58 @@ export const SHOP_PRODUCTS: ShopProduct[] = [
   "video": false
  },
  {
-  "id": "okulary",
-  "name": "Okulary AI GROUAROCK",
-  "cat": "Gadżety AI",
-  "tag": "",
-  "desc": "Okulary z wbudowanym mikrofonem, głośnikami przy uszach i kamerą. Zadajesz pytanie głosem, dostajesz odpowiedź w uchu. Tłumaczą rozmowę na bieżąco i czytają napisy z otoczenia.",
-  "use": "",
-  "spec": [
-   "Asystent głosowy i tłumaczenie na żywo",
-   "Głośniki kierunkowe przy uszach",
-   "Opcja szkieł przezroczystych i przeciwsłonecznych",
-   "Ładowanie w etui, kilka godzin pracy"
-  ],
-  "pln": 649,
-  "eurCents": 14900,
-  "preorder": true,
-  "sizes": false,
-  "video": true
- },
+ "id": "okulary",
+ "name": "Okulary AI GROUAROCK",
+ "cat": "Gadżety",
+ "tag": "Hit 2026",
+ "desc": "Okulary, które słuchają, widzą i podpowiadają. W zausznikach są głośniki otwarte, mikrofony i mały przycisk, a w ramce dyskretna kamera. Pytasz na głos — odpowiedź słyszysz w uchu. Patrzysz na menu za granicą — okulary czytają tekst i tłumaczą go na polski. Rozmawiasz z obcokrajowcem — tłumaczą na żywo w obie strony. Do tego muzyka i rozmowy bez słuchawek w uszach.",
+ "use": "Do podróży, miasta, pracy i koncertów — asystent AI, który zawsze jest pod ręką, a ręce masz wolne.",
+ "spec": [
+  "Asystent głosowy AI: pytania, przypomnienia, wskazówki",
+  "Tłumaczenie rozmów na żywo w kilkudziesięciu językach",
+  "Kamera w ramce: zdjęcia, krótkie filmy, czytanie tekstu z otoczenia",
+  "Głośniki otwarte przy uszach + mikrofony do rozmów",
+  "Bateria na kilka–kilkanaście godzin, ładowanie w etui",
+  "Szkła przezroczyste lub przeciwsłoneczne, możliwość wymiany na korekcyjne",
+  "Zdjęcie poglądowe — wygląd i logo mogą się nieznacznie różnić"
+ ],
+ "pln": 649,
+ "eurCents": 14900,
+ "preorder": true,
+ "sizes": false,
+ "video": true,
+ "img": [
+  "/shop/okulary-ai.jpg",
+  "/shop/okulary-1.jpg",
+  "/shop/okulary-2.jpg"
+ ]
+},
  {
-  "id": "asystent",
-  "name": "Asystent AI z ekranem",
-  "cat": "Gadżety AI",
-  "tag": "",
-  "desc": "Stołowy asystent z okrągłym ekranem, który słucha, rozmawia, tłumaczy i pomaga. Stawiasz go na biurku albo w studiu. Wyświetla twarz i falę dźwięku, gdy słucha.",
-  "use": "",
-  "spec": [
-   "Rozmowa głosowa i tłumaczenie w kilku językach",
-   "Okrągły ekran z animowaną twarzą",
-   "Głośnik 360° z logo GROUAROCK",
-   "Połączenie z Grouaradio i aplikacją"
-  ],
-  "pln": 429,
-  "eurCents": 9900,
-  "preorder": true,
-  "sizes": false,
-  "video": true
- }
+ "id": "asystent",
+ "name": "Asystent AI z ekranem GROUAROCK",
+ "cat": "Gadżety",
+ "tag": "Nowość",
+ "desc": "Mały domowy pomocnik na biurko: okrągły ekran z animowanymi oczami pokazuje emocje i falę dźwięku, gdy słucha. Rozmawia z Tobą głosem, odpowiada na pytania, tłumaczy, ustawia minutniki i przypomnienia, a podstawka to głośnik 360° do muzyki i radia. Świetnie wygląda w studiu, pokoju i biurze — i reaguje, gdy do niego mówisz.",
+ "use": "Do studia, nauki i domu — rozmowa z AI bez telefonu w ręce, muzyka i Grouaradio na zawołanie.",
+ "spec": [
+  "Rozmowa głosowa z AI, odpowiedzi i tłumaczenie w kilku językach",
+  "Okrągły ekran z animowaną twarzą i wizualizacją dźwięku",
+  "Głośnik 360° w podstawie: muzyka, podcasty, radio",
+  "Minutniki, przypomnienia, pogoda, zegar",
+  "Wi-Fi + Bluetooth, zasilanie USB-C",
+  "Mikrofony z wybudzaniem głosem i przyciskiem wyciszenia",
+  "Zdjęcie poglądowe — wygląd i logo mogą się nieznacznie różnić"
+ ],
+ "pln": 429,
+ "eurCents": 9900,
+ "preorder": true,
+ "sizes": false,
+ "video": true,
+ "img": [
+  "/shop/asystent-ai.jpg",
+  "/shop/asystent-1.jpg",
+  "/shop/asystent-2.jpg"
+ ]
+}
 ];
 export const SHOP_ADMIN_EMAIL = "grzegorzkaron553@gmail.com";
