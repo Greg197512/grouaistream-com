@@ -1,5 +1,9 @@
 // Katalog sklepu Grouarock. Ceny w EUR (grosze) muszą się zgadzać z supabase/functions/shop-checkout.
-export interface ShopProduct { id:string; name:string; cat:string; tag:string; desc:string; use:string; spec:string[]; pln:number; eurCents:number; preorder:boolean; sizes:boolean; video:boolean }
+export interface ShopProduct { id:string; name:string; cat:string; tag:string; desc:string; use:string; spec:string[]; pln:number; eurCents:number; preorder:boolean; sizes:boolean; video:boolean;
+  /** Zdjęcia z Printful (produkty przeniesione); brak = /shop/{id}-1.jpg, -2.jpg. */ img?: string[];
+  /** Rozmiary dostępne w Printful (zamiast domyślnych S–3XL). */ sizeList?: string[] }
+/** Zdjęcie produktu nr i (1, 2…): z Printful albo z /public/shop. */
+export const productImg = (p: Pick<ShopProduct, "id" | "img">, i = 1): string => (p.img?.length ? p.img[Math.min(i, p.img.length) - 1] : `/shop/${p.id}-${i}.jpg`);
 export const SHOP_PRODUCTS: ShopProduct[] = [
  {
   "id": "dropbass",

@@ -35,7 +35,7 @@ export function priceCart(items: unknown): { lines: PricedLine[]; totalCents: nu
     let size: string | null = null;
     if (p.sizes) {
       size = String(raw.size ?? "").toUpperCase();
-      if (!(SHOP_SIZES as readonly string[]).includes(size)) return { error: "bad_size" };
+      if (!((p as { sizeList?: string[] }).sizeList ?? (SHOP_SIZES as readonly string[])).map((x) => x.toUpperCase()).includes(size)) return { error: "bad_size" };
     }
     const same = lines.find((l) => l.id === p.id && l.size === size);
     if (same) {

@@ -168,3 +168,17 @@ export async function printfulScopes(cfg: PrintfulCfg): Promise<string[] | { err
   if (!r.ok) return { error: r.error ?? `HTTP ${r.status}` };
   return (((r.result ?? {}) as { scopes?: { value?: string }[] }).scopes ?? []).map((x) => x.value ?? "").filter(Boolean);
 }
+
+/** Sprawdza, które części API Printful działają z obecnym kluczem (dla każdego sklepu). */
+export async function printfulProbe(cfg: PrintfulCfg) {
+  const stores = await printfulStores(cfg);
+  const out: Record<string, string> = {};
+  for (const st of Array.isArray(stores) ? stores : []) {
+    const c = { ...cfg, storeId: String(st.id) };
+    for (const path of ["/store/products?limit=1", "/sync/products?limit=1", "/orders?limit=1", "/files?limit=1"]) {
+      const r = await pf(c, path);
+      out[`${st.name} ${path.split("?")[0]}`] = r.ok ? `OK (${Array.isArray(r.result) ? r.result.length : "?"})` : `${r.status}: ${(r.error ?? "").slice(0, 90)}`;
+    }
+  }
+  return out;
+}
