@@ -2,13 +2,13 @@
 import { useEffect } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
-import { DJ_OWNER, djDailyTick } from "@/lib/djYellow";
+import { DJ_OWNER, DJ_YELLOW_USER_ID, djDailyTick } from "@/lib/djYellow";
 import { certifyStudioTrack } from "@/lib/releasePipeline";
 
 export function DjYellowAutopilot() {
   const { user } = useAuth();
   useEffect(() => {
-    if (user?.email?.toLowerCase() !== DJ_OWNER) return;
+    if (user?.email?.toLowerCase() !== DJ_OWNER && user?.id !== DJ_YELLOW_USER_ID) return;
     const t = window.setTimeout(() => {
       void djDailyTick((r) => {
         const fresh = (r.tracks ?? []).filter((x) => x.id && x.audio);
@@ -25,6 +25,6 @@ export function DjYellowAutopilot() {
       });
     }, 8000); // po starcie strony, żeby nie spowalniać
     return () => clearTimeout(t);
-  }, [user?.email]);
+  }, [user?.email, user?.id]);
   return null;
 }

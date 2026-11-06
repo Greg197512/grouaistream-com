@@ -141,27 +141,27 @@ const BACKDROPS = [
   "carnival parade at night with dancers, lights and confetti",
 ];
 
-/** Okładka: tło (AI) + zdjęcie DJ Yellow w złotej ramce + DJ YELLOW, tytuł i zawsze znaczek „AI”. */
-function personaSvg(photo: { data: Uint8Array; type: string } | null, bg: { data: Uint8Array; type: string } | null, title: string, seed: number): string {
+/** Okładka: tło z imprezy (AI) + wycięta postać DJ Yellow z jego zdjęcia (bez ramki) + DJ YELLOW, tytuł i zawsze „AI”. */
+export function personaSvg(figure: { data: Uint8Array; type: string } | null, bg: { data: Uint8Array; type: string } | null, title: string, seed: number): string {
   const esc = (x: string) => x.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
   const back = bg
     ? `<image href="data:${bg.type};base64,${b64(bg.data)}" x="0" y="0" width="1024" height="1024" preserveAspectRatio="xMidYMid slice"/>`
     : svgCover(title, seed).replace(/^<svg[^>]*>|<\/svg>$/g, "");
-  const left = [96, 212, 330][Math.abs(seed) % 3];
-  const front = photo
-    ? `<g filter="url(#sh)"><rect x="${left - 10}" y="110" width="380" height="560" rx="34" fill="url(#gy)"/>
-<clipPath id="cp"><rect x="${left}" y="120" width="360" height="540" rx="26"/></clipPath>
-<image href="data:${photo.type};base64,${b64(photo.data)}" x="${left}" y="120" width="360" height="540" preserveAspectRatio="xMidYMin slice" clip-path="url(#cp)"/></g>`
+  // Postać 398×900 → na okładce wys. 820, przy dolnej krawędzi; pozycja i odbicie zmieniają się między utworami.
+  const h = 820, w = Math.round(820 * 398 / 900), x = [600, 560, 640, 80][Math.abs(seed) % 4], flip = Math.abs(seed) % 4 === 3;
+  const fig = figure
+    ? `<g filter="url(#glow)"><image href="data:${figure.type};base64,${b64(figure.data)}" x="${x}" y="${1024 - h}" width="${w}" height="${h}" preserveAspectRatio="xMidYMax meet"${flip ? ` transform="translate(${2 * x + w} 0) scale(-1 1)"` : ""}/></g>`
     : "";
+  const tx = flip ? 1000 - 32 : 56, anchor = flip ? "end" : "start";
   return `<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
-<defs><linearGradient id="fade" x1="0" y1="0" x2="0" y2="1"><stop offset="0.6" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity="0.85"/></linearGradient>
+<defs><linearGradient id="fade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#000" stop-opacity="0.55"/><stop offset="0.35" stop-color="#000" stop-opacity="0"/><stop offset="0.8" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity="0.55"/></linearGradient>
 <linearGradient id="gy" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff59d"/><stop offset="0.5" stop-color="#FFD400"/><stop offset="1" stop-color="#FF8A00"/></linearGradient>
-<filter id="sh" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="18" stdDeviation="22" flood-color="#000" flood-opacity="0.6"/></filter></defs>
-${back}<rect width="1024" height="1024" fill="url(#fade)"/>${front}
-<rect x="852" y="36" width="136" height="72" rx="18" fill="#000" fill-opacity="0.7" stroke="url(#gy)" stroke-width="4"/>
-<text x="920" y="88" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-size="46" font-weight="900" fill="url(#gy)">AI</text>
-<text x="56" y="900" font-family="Arial Black,Arial,sans-serif" font-size="84" font-weight="900" fill="url(#gy)" letter-spacing="6">DJ YELLOW</text>
-<text x="58" y="960" font-family="Arial,sans-serif" font-size="40" fill="#fff8d0">${esc(title.slice(0, 44))}</text></svg>`;
+<filter id="glow" x="-20%" y="-10%" width="140%" height="120%"><feDropShadow dx="0" dy="0" stdDeviation="14" flood-color="#FFD400" flood-opacity="0.55"/><feDropShadow dx="0" dy="24" stdDeviation="24" flood-color="#000" flood-opacity="0.65"/></filter></defs>
+${back}<rect width="1024" height="1024" fill="url(#fade)"/>${fig}
+<rect x="${flip ? 40 : 852}" y="36" width="136" height="72" rx="18" fill="#000" fill-opacity="0.7" stroke="url(#gy)" stroke-width="4"/>
+<text x="${flip ? 108 : 920}" y="88" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-size="46" font-weight="900" fill="url(#gy)">AI</text>
+<text x="${tx}" y="${flip ? 200 : 120}" text-anchor="${anchor}" font-family="Arial Black,Arial,sans-serif" font-size="80" font-weight="900" fill="url(#gy)" letter-spacing="5" stroke="#000" stroke-opacity="0.35" stroke-width="2">DJ YELLOW</text>
+<text x="${tx}" y="${flip ? 252 : 172}" text-anchor="${anchor}" font-family="Arial,sans-serif" font-size="38" font-weight="700" fill="#fff8d0" stroke="#000" stroke-opacity="0.4" stroke-width="1">${esc(title.slice(0, 40))}</text></svg>`;
 }
 
 /** Samo tło okładki z AI (bez ludzi). */
@@ -183,7 +183,7 @@ async function artistPhoto(): Promise<{ data: Uint8Array; type: string } | null>
   if (photoCache) return photoCache;
   try {
     const base = (env("SITE_URL") ?? "https://grouaistream.com").replace(/\/+$/, "");
-    const r = await fetch(`${base}/artists/dj-yellow.webp`, { signal: AbortSignal.timeout(15000) });
+    const r = await fetch(`${base}/artists/dj-yellow-cutout.webp`, { signal: AbortSignal.timeout(15000) });
     if (!r.ok) return null;
     photoCache = { data: new Uint8Array(await r.arrayBuffer()), type: "image/webp" };
     return photoCache;
@@ -192,7 +192,7 @@ async function artistPhoto(): Promise<{ data: Uint8Array; type: string } | null>
 
 async function makeCover(jwt: string, _idea: Idea, title: string, seed: number): Promise<string | null> {
   const [photo, bg] = await Promise.all([artistPhoto(), backdropImage(seed)]);
-  return putR2(jwt, personaSvg(photo, bg, title, seed), `y-${Math.abs(seed)}.svg`, "image/svg+xml");
+  return putR2(jwt, personaSvg(photo, bg, title, seed), `z-${Math.abs(seed)}.svg`, "image/svg+xml");
 }
 
 async function archiveAudio(jwt: string, src: string, name: string): Promise<string | null> {
@@ -207,11 +207,13 @@ async function archiveAudio(jwt: string, src: string, name: string): Promise<str
 
 // ── Główna praca ────────────────────────────────────────────────────────────
 const OWNER = "grzegorzkaron553@gmail.com";
+// Przemek = DJ Yellow (konto w użytkownikach) — gdy on jest zalogowany, utwory idą na jego konto.
+const DJ_YELLOW_USER_ID = "38461bf5-1ba0-4ef9-985a-ae5e9d2b7f72";
 /** Właściciel zalogowany w studiu GrouAI — wtedy praca idzie na jego koncie (bez osobnego hasła). */
 async function ownerFromToken(authHeader: string): Promise<{ jwt: string; uid: string } | null> {
   if (!authHeader.startsWith("Bearer ")) return null;
   const r = await http(`${SUPA()}/auth/v1/user`, { headers: { apikey: ANON(), authorization: authHeader } });
-  if (!r.ok || String(r.data?.email || "").toLowerCase() !== OWNER) return null;
+  if (!r.ok || (String(r.data?.email || "").toLowerCase() !== OWNER && r.data?.id !== DJ_YELLOW_USER_ID)) return null;
   return { jwt: authHeader.slice(7), uid: r.data.id };
 }
 
@@ -229,7 +231,7 @@ async function run(deadline: number, who?: { jwt: string; uid: string }) {
   // Naprawa: starsze utwory DJ Yellow bez okładki z postacią (i znaczkiem AI) dostają nową — maks. 2 na raz.
   const old = await rest(jwt, `tracks?select=id,title,cover_url&artist=eq.${encodeURIComponent(ARTIST)}&order=created_at.desc&limit=20`);
   const fixed: string[] = [];
-  for (const t of (Array.isArray(old.data) ? old.data : []).filter((x: any) => !/\/dj-yellow\/\d+-y-/.test(String(x.cover_url || ""))).slice(0, 6)) {
+  for (const t of (Array.isArray(old.data) ? old.data : []).filter((x: any) => !/\/dj-yellow\/\d+-z-/.test(String(x.cover_url || ""))).slice(0, 6)) {
     if (Date.now() > deadline - 60000) break;
     const cover = await makeCover(jwt, algorithmIdea(0), String(t.title), Math.abs(hash(String(t.id))));
     if (cover && (await rest(jwt, `tracks?id=eq.${t.id}`, { method: "PATCH", body: JSON.stringify({ cover_url: cover }) })).ok) fixed.push(String(t.title));
@@ -347,7 +349,7 @@ export default async function handler(req: any, res: any) {
     const since = todayStartPl();
     const list = Array.isArray(r.data) ? r.data : [];
     const all = await http(`${SUPA()}/rest/v1/tracks?select=cover_url&artist=eq.${encodeURIComponent(ARTIST)}&order=created_at.desc&limit=20`, { headers: { apikey: ANON() } });
-    const needsCovers = (Array.isArray(all.data) ? all.data : []).filter((t: any) => !/\/dj-yellow\/\d+-y-/.test(String(t.cover_url || ""))).length;
+    const needsCovers = (Array.isArray(all.data) ? all.data : []).filter((t: any) => !/\/dj-yellow\/\d+-z-/.test(String(t.cover_url || ""))).length;
     return res.status(200).json({ today: list.filter((t: any) => t.created_at >= since), latest: list, perDay: dayTarget(), needsCovers });
   }
   const who = await ownerFromToken(String(req.headers.authorization || ""));
