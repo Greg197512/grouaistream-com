@@ -169,9 +169,18 @@ ${back}<rect width="1024" height="1024" fill="url(#fade)"/>${fig}
 
 /** Samo tło okładki z AI (bez ludzi). */
 async function backdropImage(seed: number): Promise<{ data: Uint8Array; type: string } | null> {
+  // Pollinations odrzuca szybkie zapytania pod rząd → do 3 prób z odstępem (5 s, 12 s).
+  for (let i = 0; i < 3; i++) {
+    if (i) await new Promise((r) => setTimeout(r, i === 1 ? 5000 : 12000));
+    const img = await backdropOnce(seed + i * 7919);
+    if (img) return img;
+  }
+  return null;
+}
+async function backdropOnce(seed: number): Promise<{ data: Uint8Array; type: string } | null> {
   try {
     const prompt = `${BACKDROPS[Math.abs(seed) % BACKDROPS.length]}, cinematic, ultra detailed, vibrant gold accents, no people, no text, no letters`;
-    const r = await fetch(`https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1024&height=1024&nologo=true&seed=${Math.abs(seed)}`, { signal: AbortSignal.timeout(70000) });
+    const r = await fetch(`https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1024&height=1024&nologo=true&seed=${Math.abs(seed)}`, { signal: AbortSignal.timeout(45000) });
     const type = r.headers.get("content-type") ?? "";
     if (!r.ok || !type.startsWith("image/")) return null;
     const data = new Uint8Array(await r.arrayBuffer());
@@ -195,7 +204,8 @@ async function artistPhoto(): Promise<{ data: Uint8Array; type: string } | null>
 
 async function makeCover(jwt: string, _idea: Idea, title: string, seed: number): Promise<string | null> {
   const [photo, bg] = await Promise.all([artistPhoto(), backdropImage(seed)]);
-  return putR2(jwt, personaSvg(photo, bg, title, seed), `a-${Math.abs(seed)}.svg`, "image/svg+xml");
+  // „c-” = pełna okładka (postać + tło z imprezy); „b-” = bez tła AI → naprawa spróbuje ponownie przy następnym uruchomieniu.
+  return putR2(jwt, personaSvg(photo, bg, title, seed), `${bg ? "c" : "b"}-${Math.abs(seed)}.svg`, "image/svg+xml");
 }
 
 async function archiveAudio(jwt: string, src: string, name: string): Promise<string | null> {
@@ -236,7 +246,7 @@ async function run(deadline: number, who?: { jwt: string; uid: string }) {
   // Naprawa: starsze utwory DJ Aurexis bez okładki z postacią (i znaczkiem AI) dostają nową — maks. 2 na raz.
   const old = await rest(jwt, `tracks?select=id,title,cover_url&artist=eq.${encodeURIComponent(ARTIST)}&order=created_at.desc&limit=20`);
   const fixed: string[] = [];
-  for (const t of (Array.isArray(old.data) ? old.data : []).filter((x: any) => !/\/dj-(?:yellow|aurexis)\/\d+-a-/.test(String(x.cover_url || ""))).slice(0, 6)) {
+  for (const t of (Array.isArray(old.data) ? old.data : []).filter((x: any) => !/\/dj-(?:yellow|aurexis)\/\d+-c-/.test(String(x.cover_url || ""))).slice(0, 6)) {
     if (Date.now() > deadline - 60000) break;
     const cover = await makeCover(jwt, algorithmIdea(0), String(t.title), Math.abs(hash(String(t.id))));
     if (cover && (await rest(jwt, `tracks?id=eq.${t.id}`, { method: "PATCH", body: JSON.stringify({ cover_url: cover }) })).ok) fixed.push(String(t.title));
@@ -354,7 +364,7 @@ export default async function handler(req: any, res: any) {
     const since = todayStartPl();
     const list = Array.isArray(r.data) ? r.data : [];
     const all = await http(`${SUPA()}/rest/v1/tracks?select=cover_url&artist=in.(${encodeURIComponent(`"${ARTIST}","${OLD_ARTIST}"`)})&order=created_at.desc&limit=20`, { headers: { apikey: ANON() } });
-    const needsCovers = (Array.isArray(all.data) ? all.data : []).filter((t: any) => !/\/dj-(?:yellow|aurexis)\/\d+-a-/.test(String(t.cover_url || ""))).length;
+    const needsCovers = (Array.isArray(all.data) ? all.data : []).filter((t: any) => !/\/dj-(?:yellow|aurexis)\/\d+-c-/.test(String(t.cover_url || ""))).length;
     return res.status(200).json({ today: list.filter((t: any) => t.created_at >= since), latest: list, perDay: dayTarget(), needsCovers });
   }
   const who = await ownerFromToken(String(req.headers.authorization || ""));
