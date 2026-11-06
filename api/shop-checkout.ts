@@ -467,6 +467,20 @@ export default async function handler(req: Request): Promise<Response> {
       }
       return new Response(text, { status: r.status, headers: { "content-type": "application/json", "cache-control": "no-store" } });
     }
+    // Narzędzie właściciela: pobiera plik z Canvy/Printful (których sieć agenta nie widzi) i oddaje go jako base64.
+    if (new URL(req.url).searchParams.get("diag") === "fetch64") {
+      const base = printfulCfg();
+      const q = new URL(req.url).searchParams;
+      if (!base) return json({ configured: false });
+      const h = Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(base.token)))).map((b) => b.toString(16).padStart(2, "0")).join("").slice(0, 16);
+      if (q.get("k") !== h) return json({ error: "forbidden" }, 403);
+      const u = new URL(q.get("u") ?? "");
+      if (u.protocol !== "https:" || !/(^|\.)(canva\.com|printful\.com|amazonaws\.com)$/.test(u.hostname)) return json({ error: "bad_host" }, 400);
+      const r = await fetch(u.toString(), { signal: AbortSignal.timeout(20000) });
+      const buf = new Uint8Array(await r.arrayBuffer());
+      let bin = ""; for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode(...buf.subarray(i, i + 0x8000));
+      return json({ status: r.status, type: r.headers.get("content-type"), size: buf.length, b64: btoa(bin) });
+    }
     if (new URL(req.url).searchParams.get("diag") === "printful-probe") {
       const base = printfulCfg();
       return json(base ? await printfulProbe(base) : { configured: false });
