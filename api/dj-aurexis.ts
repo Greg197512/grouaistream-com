@@ -1,17 +1,17 @@
 // DJ Aurexis (dawniej DJ Yellow) — codziennie 2 nowe utwory elektroniczne (extended mix) z okładkami, do „Nowości” i radia.
 //
 // Jak działa (cron Vercel 2× dziennie; zapas, gdy pierwsza próba się nie uda):
-//  1. Logowanie na konto „DJ Yellow” (grouarock+djyellow@gmail.com, hasło DJ_YELLOW_PASSWORD w Vercel) — utwory są jego.
-//     Pierwszy raz: GET /api/dj-yellow?signup=1 zakłada konto (potwierdź mail na grouarock@gmail.com).
-//  2. Strażnik: gdy dziś są już 2 utwory DJ Yellow → koniec (nigdy więcej niż 2 dziennie = koszt pod kontrolą).
+//  1. Logowanie na konto „DJ Aurexis” (grouarock+djyellow@gmail.com, hasło DJ_AUREXIS_PASSWORD (zapas DJ_YELLOW_PASSWORD) w Vercel) — utwory są jego.
+//     Pierwszy raz: GET /api/dj-aurexis?signup=1 zakłada konto (potwierdź mail na grouarock@gmail.com).
+//  2. Strażnik: gdy dziś są już 2 utwory DJ Aurexis → koniec (nigdy więcej niż 2 dziennie = koszt pod kontrolą).
 //     Gdy dziś jest rozpoczęte zadanie (tabela generations, status queued) → tylko dokańczamy, bez nowego zadania.
 //  3. Pomysł: asystent tekstowy AI (Pollinations, darmowy) dostaje listę naszych utworów elektronicznych i wymyśla
 //     styl, nastrój i 2 tytuły; gdy AI milczy — żywy algorytm (podgatunki, nastroje, tytuły z list).
 //  4. Suno (funkcja suno-generate, 1 zadanie = 2 utwory, instrumental, bez płatnego „ulepszacza” GPT).
-//  5. Okładki: obraz AI (Pollinations, darmowy) w motywie DJ Yellow, zapas: generatywna okładka SVG. Zapis na R2.
-//  6. Wpis do tracks (genre Electronic, artysta DJ Yellow) → sekcja „Nowe” i autopilot radia (blok electronic/klubowy).
+//  5. Okładki: obraz AI (Pollinations, darmowy) w motywie DJ Aurexis, zapas: generatywna okładka SVG. Zapis na R2.
+//  6. Wpis do tracks (genre Electronic, artysta DJ Aurexis) → sekcja „Nowe” i autopilot radia (blok electronic/klubowy).
 //
-// GET /api/dj-yellow?diag=1  — stan (bez kosztów).  GET /api/dj-yellow?run=1 — uruchom teraz (ten sam limit 2/dzień).
+// GET /api/dj-aurexis?diag=1  — stan (bez kosztów).  GET /api/dj-aurexis?run=1 — uruchom teraz (ten sam limit 2/dzień).
 export const config = { maxDuration: 300 };
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -20,8 +20,10 @@ const SUPA = () => (env("SUPABASE_URL") ?? env("VITE_SUPABASE_URL") ?? "https://
 const ANON = () => env("SUPABASE_ANON_KEY") ?? env("VITE_SUPABASE_PUBLISHABLE_KEY") ?? "";
 const ARTIST = "DJ Aurexis";
 const OLD_ARTIST = "DJ Yellow"; // dawna nazwa — utwory przemianowujemy przy uruchomieniu
-// Konto artysty: e-mail stały (potwierdzenie trafia na grouarock@gmail.com), hasło tylko w Vercel (DJ_YELLOW_PASSWORD).
-const DJ_EMAIL = () => env("DJ_YELLOW_EMAIL") ?? "grouarock+djyellow@gmail.com";
+// Konto artysty: e-mail stały (potwierdzenie trafia na grouarock@gmail.com), hasło tylko w Vercel (DJ_AUREXIS_PASSWORD, zapas DJ_YELLOW_PASSWORD).
+// Adres konta zostaje (istniejące konto w bazie) — zmiana zepsułaby logowanie zapasowe.
+const DJ_EMAIL = () => env("DJ_AUREXIS_EMAIL") ?? env("DJ_YELLOW_EMAIL") ?? "grouarock+djyellow@gmail.com";
+const DJ_PASSWORD = () => env("DJ_AUREXIS_PASSWORD") ?? env("DJ_YELLOW_PASSWORD");
 const PER_DAY = 2;
 // Dodatkowe utwory w wybrane dni (decyzja Grzegorza) — automat sam dorobi brakujące, bez przycisków.
 const EXTRA_DAYS: Record<string, number> = { "2026-11-05": 4 };
@@ -52,8 +54,8 @@ function todayStartPl(): string {
 }
 
 async function login(): Promise<{ jwt: string; uid: string } | { error: string }> {
-  const email = DJ_EMAIL(), password = env("DJ_YELLOW_PASSWORD");
-  if (!password) return { error: "brak DJ_YELLOW_PASSWORD w Vercel" };
+  const email = DJ_EMAIL(), password = DJ_PASSWORD();
+  if (!password) return { error: "brak DJ_AUREXIS_PASSWORD w Vercel" };
   const r = await http(`${SUPA()}/auth/v1/token?grant_type=password`, {
     method: "POST", headers: { apikey: ANON(), "content-type": "application/json" }, body: JSON.stringify({ email, password }),
   });
@@ -64,7 +66,7 @@ async function login(): Promise<{ jwt: string; uid: string } | { error: string }
 // ── Pomysł na utwór: AI → zapas algorytm ─────────────────────────────────────
 const SUB = ["melodic techno", "progressive house", "deep house", "synthwave", "uplifting trance", "future garage", "liquid drum and bass", "afro house", "electro house", "nu disco", "big room", "minimal techno"];
 const MOODS = ["euphoric", "hypnotic", "sunrise", "night drive", "golden hour", "neon", "cosmic", "warm", "dark and driving", "dreamy"];
-const WORDS_A = ["Golden", "Neon", "Solar", "Yellow", "Amber", "Electric", "Midnight", "Sunburst", "Lemon", "Honey", "Citrine", "Bright"];
+const WORDS_A = ["Golden", "Neon", "Solar", "Aurum", "Amber", "Electric", "Midnight", "Sunburst", "Lemon", "Honey", "Citrine", "Bright"];
 const WORDS_B = ["Pulse", "Horizon", "Skyline", "Frequency", "Motion", "Signal", "Rush", "Dreams", "Waves", "Lights", "Orbit", "Fever"];
 const pick = <T,>(a: T[], seed: number) => a[Math.abs(seed) % a.length];
 
@@ -76,7 +78,7 @@ function algorithmIdea(seed: number): Idea {
   return {
     style: `${sub}, ${mood}, extended club mix, long intro and outro, big build-ups, euphoric drop, lush analog synths, crisp punchy drums, deep sub bass, wide stereo, pristine high fidelity, professional mastering`,
     mood, titles: [`${t1} (Extended Mix)`, `${t2 === t1 ? `${t1} II` : t2} (Extended Mix)`],
-    cover: `${mood} ${sub} album cover, golden yellow neon light, abstract sound waves, DJ silhouette, cinematic, ultra detailed, vibrant`,
+    cover: `${mood} ${sub} album cover, golden neon light, abstract sound waves, DJ silhouette, cinematic, ultra detailed, vibrant`,
     source: "algorithm",
   };
 }
@@ -117,7 +119,7 @@ function svgCover(title: string, seed: number): string {
 }
 
 async function putR2(jwt: string, body: Uint8Array | string, fileName: string, contentType: string): Promise<string | null> {
-  const s = await fn(jwt, "r2-signed-url", { fileName, contentType, folder: "dj-yellow" }, 20000);
+  const s = await fn(jwt, "r2-signed-url", { fileName, contentType, folder: "dj-aurexis" }, 20000);
   const up = s.data?.uploadUrl ?? s.data?.signedUrl ?? s.data?.url;
   const pub = s.data?.publicUrl;
   if (!s.ok || !up || !pub) return null;
@@ -126,23 +128,23 @@ async function putR2(jwt: string, body: Uint8Array | string, fileName: string, c
 }
 
 const b64 = (u: Uint8Array) => Buffer.from(u).toString("base64");
-// Tła okładek (bez ludzi, bez tekstu) — zmienia się tylko grafika z tyłu, zdjęcie DJ Yellow zostaje.
+// Tła okładek (bez ludzi, bez tekstu) — zmienia się tylko grafika z tyłu, zdjęcie DJ Aurexis zostaje.
 const BACKDROPS = [
   "huge open-air music festival at night, crowd with hands up, confetti and golden light beams",
   "concert main stage with lasers, smoke and fireworks over a cheering crowd",
   "summer beach party at sunset with dancing crowd, lanterns and lights",
   "rooftop dance party at night over a city skyline, string lights and lasers",
-  "DJ booth view of a packed dance floor with yellow lasers and haze",
+  "DJ booth view of a packed dance floor with golden lasers and haze",
   "neon-lit city street party at night with colorful lights and confetti",
   "giant LED stage show at a festival, golden pyrotechnics",
   "outdoor daytime festival with colorful smoke flares and flags",
-  "warehouse rave with strobes and yellow lasers through smoke",
+  "warehouse rave with strobes and golden lasers through smoke",
   "new year's eve party with fireworks over the city",
   "silent disco in a park at dusk with glowing headphones",
   "carnival parade at night with dancers, lights and confetti",
 ];
 
-/** Okładka: tło z imprezy (AI) + wycięta postać DJ Yellow z jego zdjęcia (bez ramki) + DJ YELLOW, tytuł i zawsze „AI”. */
+/** Okładka: tło z imprezy (AI) + wycięta postać DJ Aurexis z jego zdjęcia (bez ramki) + DJ AUREXIS, tytuł i zawsze „AI”. */
 export function personaSvg(figure: { data: Uint8Array; type: string } | null, bg: { data: Uint8Array; type: string } | null, title: string, seed: number): string {
   const esc = (x: string) => x.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
   const back = bg
@@ -168,7 +170,7 @@ ${back}<rect width="1024" height="1024" fill="url(#fade)"/>${fig}
 /** Samo tło okładki z AI (bez ludzi). */
 async function backdropImage(seed: number): Promise<{ data: Uint8Array; type: string } | null> {
   try {
-    const prompt = `${BACKDROPS[Math.abs(seed) % BACKDROPS.length]}, cinematic, ultra detailed, vibrant yellow and gold accents, no people, no text, no letters`;
+    const prompt = `${BACKDROPS[Math.abs(seed) % BACKDROPS.length]}, cinematic, ultra detailed, vibrant gold accents, no people, no text, no letters`;
     const r = await fetch(`https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1024&height=1024&nologo=true&seed=${Math.abs(seed)}`, { signal: AbortSignal.timeout(70000) });
     const type = r.headers.get("content-type") ?? "";
     if (!r.ok || !type.startsWith("image/")) return null;
@@ -177,14 +179,14 @@ async function backdropImage(seed: number): Promise<{ data: Uint8Array; type: st
   } catch { return null; }
 }
 
-// Zdjęcie DJ Yellow od Grzegorza (public/artists/dj-yellow.webp) — twarz artysty na każdej okładce.
+// Zdjęcie DJ Aurexis od Grzegorza (public/artists/dj-aurexis.webp) — twarz artysty na każdej okładce.
 // Bez generowania jego twarzy w nowych scenach (puby/kluby) — tylko to zdjęcie, różne kolory i kadry.
 let photoCache: { data: Uint8Array; type: string } | null = null;
 async function artistPhoto(): Promise<{ data: Uint8Array; type: string } | null> {
   if (photoCache) return photoCache;
   try {
     const base = (env("SITE_URL") ?? "https://grouaistream.com").replace(/\/+$/, "");
-    const r = await fetch(`${base}/artists/dj-yellow-cutout.webp`, { signal: AbortSignal.timeout(15000) });
+    const r = await fetch(`${base}/artists/dj-aurexis-cutout.webp`, { signal: AbortSignal.timeout(15000) });
     if (!r.ok) return null;
     photoCache = { data: new Uint8Array(await r.arrayBuffer()), type: "image/webp" };
     return photoCache;
@@ -209,12 +211,12 @@ async function archiveAudio(jwt: string, src: string, name: string): Promise<str
 // ── Główna praca ────────────────────────────────────────────────────────────
 const OWNER = "grzegorzkaron553@gmail.com";
 // Przemek = DJ Aurexis (konto w użytkownikach) — gdy on jest zalogowany, utwory idą na jego konto.
-const DJ_YELLOW_USER_ID = "38461bf5-1ba0-4ef9-985a-ae5e9d2b7f72";
+const DJ_AUREXIS_USER_ID = "38461bf5-1ba0-4ef9-985a-ae5e9d2b7f72";
 /** Właściciel zalogowany w studiu GrouAI — wtedy praca idzie na jego koncie (bez osobnego hasła). */
 async function ownerFromToken(authHeader: string): Promise<{ jwt: string; uid: string } | null> {
   if (!authHeader.startsWith("Bearer ")) return null;
   const r = await http(`${SUPA()}/auth/v1/user`, { headers: { apikey: ANON(), authorization: authHeader } });
-  if (!r.ok || (String(r.data?.email || "").toLowerCase() !== OWNER && r.data?.id !== DJ_YELLOW_USER_ID)) return null;
+  if (!r.ok || (String(r.data?.email || "").toLowerCase() !== OWNER && r.data?.id !== DJ_AUREXIS_USER_ID)) return null;
   return { jwt: authHeader.slice(7), uid: r.data.id };
 }
 
@@ -231,10 +233,10 @@ async function run(deadline: number, who?: { jwt: string; uid: string }) {
   // Limit liczony po artyście (niezależnie od konta, z którego ruszyło studio).
   const done = await rest(jwt, `tracks?select=id,title,cover_url&artist=eq.${encodeURIComponent(ARTIST)}&created_at=gte.${encodeURIComponent(since)}`);
   const doneList = Array.isArray(done.data) ? done.data : [];
-  // Naprawa: starsze utwory DJ Yellow bez okładki z postacią (i znaczkiem AI) dostają nową — maks. 2 na raz.
+  // Naprawa: starsze utwory DJ Aurexis bez okładki z postacią (i znaczkiem AI) dostają nową — maks. 2 na raz.
   const old = await rest(jwt, `tracks?select=id,title,cover_url&artist=eq.${encodeURIComponent(ARTIST)}&order=created_at.desc&limit=20`);
   const fixed: string[] = [];
-  for (const t of (Array.isArray(old.data) ? old.data : []).filter((x: any) => !/\/dj-yellow\/\d+-a-/.test(String(x.cover_url || ""))).slice(0, 6)) {
+  for (const t of (Array.isArray(old.data) ? old.data : []).filter((x: any) => !/\/dj-(?:yellow|aurexis)\/\d+-a-/.test(String(x.cover_url || ""))).slice(0, 6)) {
     if (Date.now() > deadline - 60000) break;
     const cover = await makeCover(jwt, algorithmIdea(0), String(t.title), Math.abs(hash(String(t.id))));
     if (cover && (await rest(jwt, `tracks?id=eq.${t.id}`, { method: "PATCH", body: JSON.stringify({ cover_url: cover }) })).ok) fixed.push(String(t.title));
@@ -318,11 +320,11 @@ export default async function handler(req: any, res: any) {
       const t = await rest(auth.jwt, `tracks?select=title,cover_url,created_at&user_id=eq.${auth.uid}&order=created_at.desc&limit=6`);
       today = t.data;
     }
-    return res.status(200).json({ autoconfirm: s.data?.mailer_autoconfirm ?? null, signupDisabled: s.data?.disable_signup ?? null, email: DJ_EMAIL(), configured: !!env("DJ_YELLOW_PASSWORD"), login: "error" in auth ? auth.error : "ok", latest: today });
+    return res.status(200).json({ autoconfirm: s.data?.mailer_autoconfirm ?? null, signupDisabled: s.data?.disable_signup ?? null, email: DJ_EMAIL(), configured: !!DJ_PASSWORD(), login: "error" in auth ? auth.error : "ok", latest: today });
   }
   if (q.signup) {
-    const email = DJ_EMAIL(), password = env("DJ_YELLOW_PASSWORD");
-    if (!password) return res.status(400).json({ error: "brak DJ_YELLOW_PASSWORD w Vercel" });
+    const email = DJ_EMAIL(), password = DJ_PASSWORD();
+    if (!password) return res.status(400).json({ error: "brak DJ_AUREXIS_PASSWORD w Vercel" });
     const r = await http(`${SUPA()}/auth/v1/signup`, { method: "POST", headers: { apikey: ANON(), "content-type": "application/json" }, body: JSON.stringify({ email, password, data: { display_name: ARTIST, full_name: ARTIST } }) });
     return res.status(200).json({ status: r.status, confirmed: !!r.data?.session || !!r.data?.user?.email_confirmed_at, error: r.ok ? null : r.data?.msg || r.data?.error_description || null });
   }
@@ -352,7 +354,7 @@ export default async function handler(req: any, res: any) {
     const since = todayStartPl();
     const list = Array.isArray(r.data) ? r.data : [];
     const all = await http(`${SUPA()}/rest/v1/tracks?select=cover_url&artist=in.(${encodeURIComponent(`"${ARTIST}","${OLD_ARTIST}"`)})&order=created_at.desc&limit=20`, { headers: { apikey: ANON() } });
-    const needsCovers = (Array.isArray(all.data) ? all.data : []).filter((t: any) => !/\/dj-yellow\/\d+-a-/.test(String(t.cover_url || ""))).length;
+    const needsCovers = (Array.isArray(all.data) ? all.data : []).filter((t: any) => !/\/dj-(?:yellow|aurexis)\/\d+-a-/.test(String(t.cover_url || ""))).length;
     return res.status(200).json({ today: list.filter((t: any) => t.created_at >= since), latest: list, perDay: dayTarget(), needsCovers });
   }
   const who = await ownerFromToken(String(req.headers.authorization || ""));

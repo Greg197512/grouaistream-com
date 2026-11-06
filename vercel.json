@@ -5,15 +5,18 @@
       "schedule": "0 * * * *"
     },
     {
-      "path": "/api/dj-yellow",
+      "path": "/api/dj-aurexis",
       "schedule": "7 9 * * *"
     },
     {
-      "path": "/api/dj-yellow",
+      "path": "/api/dj-aurexis",
       "schedule": "7 15 * * *"
     }
   ],
   "rewrites": [
+    { "source": "/api/dj-yellow", "destination": "/api/dj-aurexis" },
+    { "source": "/artists/dj-yellow.webp", "destination": "/artists/dj-aurexis.webp" },
+    { "source": "/artists/dj-yellow-cutout.webp", "destination": "/artists/dj-aurexis-cutout.webp" },
     {
       "source": "/prezent/:id",
       "has": [
@@ -100,7 +103,7 @@
     "api/migrate-media.ts": {
       "maxDuration": 60
     },
-    "api/dj-yellow.ts": {
+    "api/dj-aurexis.ts": {
       "maxDuration": 300
     }
   }

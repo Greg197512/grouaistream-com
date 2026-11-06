@@ -1,14 +1,14 @@
-// Niewidoczny strażnik: gdy właściciel jest zalogowany, raz dziennie zleca 2 utwory DJ Yellow (Nowe + radio).
+// Niewidoczny strażnik: gdy właściciel jest zalogowany, raz dziennie zleca 2 utwory DJ Aurexis (Nowe + radio).
 import { useEffect } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
-import { DJ_OWNER, DJ_YELLOW_USER_ID, djDailyTick } from "@/lib/djYellow";
+import { DJ_OWNER, DJ_AUREXIS_USER_ID, djDailyTick } from "@/lib/djAurexis";
 import { certifyStudioTrack } from "@/lib/releasePipeline";
 
-export function DjYellowAutopilot() {
+export function DjAurexisAutopilot() {
   const { user } = useAuth();
   useEffect(() => {
-    if (user?.email?.toLowerCase() !== DJ_OWNER && user?.id !== DJ_YELLOW_USER_ID) return;
+    if (user?.email?.toLowerCase() !== DJ_OWNER && user?.id !== DJ_AUREXIS_USER_ID) return;
     const t = window.setTimeout(() => {
       void djDailyTick((r) => {
         const fresh = (r.tracks ?? []).filter((x) => x.id && x.audio);
