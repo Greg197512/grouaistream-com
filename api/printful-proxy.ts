@@ -1,4 +1,4 @@
-// Klucz Printful zmieniony 5.11 (2) — wdrożenie wczytuje nowy PRINTFUL_API_KEY.
+// Klucz Printful zmieniony 6.11 (wszystkie uprawnienia) — wdrożenie wczytuje nowy PRINTFUL_API_KEY.
 // Pośrednik do api.printful.com w zwykłej funkcji Node.
 // Powód: zapytania z funkcji edge Vercela zatrzymuje zapora Cloudflare przed Printful (403 „Attention Required”),
 // a z funkcji Node przechodzą. Wywołuje go api/shop-checkout (edge).
