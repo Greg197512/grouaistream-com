@@ -28,14 +28,15 @@ window.addEventListener("unhandledrejection", (event) => {
  * Tutaj BEZWARUNKOWO:
  *  1. wyrejestrowujemy WSZYSTKIE service workery,
  *  2. czyścimy WSZYSTKIE cache Workboxa,
- *  3. NIE rejestrujemy nowego SW (PWA wyłączone do odwołania).
+ *  3. NIE rejestrujemy SW z cache (PWA wyłączone). Jedyny dozwolony: /push-sw.js (tylko powiadomienia czatu).
  *
  * Aktywowane jest na każdej domenie — preview, prod i custom domain.
  */
 if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
   navigator.serviceWorker
     .getRegistrations()
-    .then((regs) => Promise.all(regs.map((r) => r.unregister())))
+    // Wyjątek: /push-sw.js — worker tylko do powiadomień czatu (bez cache i bez fetch), patrz src/lib/chatPush.ts.
+    .then((regs) => Promise.all(regs.filter((r) => !(r.active || r.installing || r.waiting)?.scriptURL.endsWith("/push-sw.js")).map((r) => r.unregister())))
     .catch(() => {});
 
   if (typeof caches !== "undefined") {

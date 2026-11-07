@@ -156,6 +156,12 @@ Stopka commita: `Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>` + `Cla
 ## PWA / cache
 Service Worker usunięty; `public/sw.js` to self-destruct (czyści cache, wyrejestrowuje). Zainstalowane
 apki na Androidzie trzymały stary kod — reinstalacja apki leczy.
+**Wyjątek (7.11): `public/push-sw.js`** — worker TYLKO do powiadomień czatu (bez `fetch`, bez cache); `main.tsx` go nie wyrejestrowuje.
+Czat GrouAI (`ChatWidget`): nowa wiadomość → dzwonek + głośne „Hej, jesteś?! X pisze do Ciebie!” (`src/lib/chatPush.ts`, głos przeglądarki → `/api/voice`;
+przełącznik 🔊, localStorage `grouai-chat-voice`). Push przy zamkniętej apce: przycisk „Włącz” w czacie → `api/chat-push` (Node, `web-push`, VAPID w env)
+→ urządzenia w **własnym Supabase sbmf** (`chat_push_subs`, RPC `chat_push_*` z sekretem `PUSH_DB_SECRET`; anon bez dostępu do tabel).
+Po wysłaniu wiadomości klient woła `notify` (serwer sprawdza nadawcę); „Do wszystkich” = push do wszystkich max raz/10 min na nadawcę.
+iPhone: push tylko w apce z ekranu głównego. Cron `agents-run` pinguje bazę sbmf (`pushDb`), by nie usnęła. Diag: `GET /api/chat-push?diag=1`.
 
 ## Perf / low-power
 `src/lib/perf.ts` → `<html data-lowpower>` (słaby sprzęt) i `<html data-touch>` (telefon/tablet): lite Aurora (statyczna),
