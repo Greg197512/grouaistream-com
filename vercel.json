@@ -11,6 +11,14 @@
     {
       "path": "/api/dj-aurexis",
       "schedule": "7 15 * * *"
+    },
+    {
+      "path": "/api/blog-auto",
+      "schedule": "17 6 * * *"
+    },
+    {
+      "path": "/api/blog-auto?kind=research",
+      "schedule": "47 15 * * *"
     }
   ],
   "rewrites": [

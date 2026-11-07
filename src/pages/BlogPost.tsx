@@ -21,6 +21,7 @@ import { getCategoryLabel } from "@/lib/blogCategories";
 import { getCoverUrl } from "@/lib/blogCovers";
 import { ListenArticle } from "@/components/blog/ListenArticle";
 import { ReadingSoundtrack } from "@/components/blog/ReadingSoundtrack";
+import { countAutoView, fetchAutoPost } from "@/lib/blogAuto";
 
 const POST_CSS = `
 .blog-prose > p:first-of-type::first-letter{float:left;font-size:4.2em;line-height:.82;font-weight:900;margin:.06em .12em 0 0;background:linear-gradient(135deg,#ff7a1a,#ff2bd6 55%,#22d3ee);-webkit-background-clip:text;background-clip:text;color:transparent}
@@ -117,6 +118,14 @@ export default function BlogPost() {
         .maybeSingle();
 
       if (error || !data) {
+        // Artykuł automatycznej redakcji (własna baza)
+        const auto = await fetchAutoPost(slug);
+        if (auto) {
+          setPost(auto as unknown as BlogPost);
+          setLoading(false);
+          countAutoView(slug);
+          return;
+        }
         setNotFound(true);
         setLoading(false);
         return;
@@ -197,6 +206,8 @@ export default function BlogPost() {
   const url = `https://grouaistream.com/blog/${post.slug}`;
   const displayContent = localized?.content || post.content;
   const displayTitle = localized?.title || post.title;
+  // Wpisy automatycznej redakcji żyją we własnej bazie — polubienia/komentarze są powiązane z tabelą głównego bloga.
+  const isAuto = !!(post as unknown as { auto?: boolean }).auto;
   const displayDescription = localized?.description || post.description;
   const minutes = readingMinutes(displayContent);
   const dateLocale = language === "ua" ? "uk-UA" : language === "nl" ? "nl-NL" : language === "en" ? "en-US" : "pl-PL";
@@ -264,7 +275,7 @@ export default function BlogPost() {
               <ReadingSoundtrack category={post.category} lang={language} compact />
             </div>
             <div className="mb-8">
-              <BlogPostActions postId={post.id} postUrl={url} postTitle={displayTitle} onScrollToComments={scrollToComments} />
+              {!isAuto && <BlogPostActions postId={post.id} postUrl={url} postTitle={displayTitle} onScrollToComments={scrollToComments} />}
             </div>
 
             <div ref={proseRef} className="blog-prose prose prose-invert max-w-none prose-lg prose-headings:text-foreground prose-headings:font-bold prose-h2:text-2xl prose-h2:mt-10 prose-h2:mb-4 prose-h2:scroll-mt-24 prose-h3:text-xl prose-h3:mt-8 prose-h3:scroll-mt-24 prose-p:text-foreground/85 prose-p:leading-relaxed prose-strong:text-foreground prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-li:text-foreground/85 prose-blockquote:border-l-primary prose-blockquote:bg-primary/5 prose-blockquote:py-1 prose-blockquote:px-4 prose-blockquote:rounded-r prose-code:text-primary prose-code:bg-muted/50 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:before:content-[''] prose-code:after:content-['']">
@@ -284,7 +295,7 @@ export default function BlogPost() {
             )}
 
             <div className="mt-8">
-              <BlogPostActions postId={post.id} postUrl={url} postTitle={displayTitle} onScrollToComments={scrollToComments} />
+              {!isAuto && <BlogPostActions postId={post.id} postUrl={url} postTitle={displayTitle} onScrollToComments={scrollToComments} />}
             </div>
 
             {/* Newsletter Capture */}
@@ -312,7 +323,7 @@ export default function BlogPost() {
             <RelatedPosts currentPostId={post.id} category={post.category} tags={post.tags} />
 
             <div ref={commentsRef}>
-              <BlogComments postId={post.id} />
+              {!isAuto && <BlogComments postId={post.id} />}
             </div>
           </div>
 
