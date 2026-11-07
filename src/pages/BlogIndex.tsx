@@ -10,6 +10,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { BLOG_CATEGORIES as CATEGORIES, getCategoryLabel as catLabel } from "@/lib/blogCategories";
 import { getCoverUrl } from "@/lib/blogCovers";
 import { ReadingSoundtrack } from "@/components/blog/ReadingSoundtrack";
+import { fetchAutoList } from "@/lib/blogAuto";
 
 interface BlogPost {
   id: string;
@@ -91,13 +92,18 @@ export default function BlogIndex() {
   useEffect(() => {
     (async () => {
       // (Stary hub bmwtyd nie istnieje — tylko wpisy z głównej bazy.)
-      const { data } = await supabase
-        .from("seo_blog_posts")
-        .select("id, slug, title, description, category, tags, cover_url, created_at, view_count, title_en, title_nl, title_ua, description_en, description_nl, description_ua")
-        .eq("is_published", true)
-        .order("created_at", { ascending: false })
-        .limit(240);
-      setPosts((data as BlogPost[]) || []);
+      const [{ data }, auto] = await Promise.all([
+        supabase
+          .from("seo_blog_posts")
+          .select("id, slug, title, description, category, tags, cover_url, created_at, view_count, title_en, title_nl, title_ua, description_en, description_nl, description_ua")
+          .eq("is_published", true)
+          .order("created_at", { ascending: false })
+          .limit(240),
+        fetchAutoList(60), // automatyczna redakcja (api/blog-auto): wiadomości + nauka i książki
+      ]);
+      const seen = new Set(((data as BlogPost[]) || []).map((p) => p.slug));
+      setPosts([...((data as BlogPost[]) || []), ...(auto as unknown as BlogPost[]).filter((p) => !seen.has(p.slug))]
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
       setLoading(false);
     })();
   }, []);
