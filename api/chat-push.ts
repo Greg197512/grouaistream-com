@@ -5,6 +5,9 @@
 //   {action:"notify", messageId}     → nadawca po wysłaniu wiadomości: push do odbiorcy (albo do wszystkich przy „Do wszystkich”,
 //                                      najwyżej raz na 10 min na nadawcę)
 //   {action:"test"}                   → próbne powiadomienie na własne urządzenia
+//   {action:"hello", lang}           → po zalogowaniu: zapis e-maila i języka (zapasowy e-mail, gdy brak push)
+//   {action:"sync-users"}             → admin: wszyscy zarejestrowani (rpc get_all_users_for_admin) → e-maile do zapasu
+// Odbiorca bez urządzenia push dostaje e-mail „Hej, jesteś?!” (najwyżej raz na 30 min od tej samej osoby).
 // GET ?diag=1 → stan konfiguracji (bez sekretów).
 // Env: VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, PUSH_DB_URL, PUSH_DB_KEY (publishable), PUSH_DB_SECRET.
 import webpush from "web-push";
@@ -35,12 +38,38 @@ async function rpc<T>(fn: string, args: Record<string, unknown>): Promise<T> {
   return (t ? JSON.parse(t) : null) as T;
 }
 
-async function userFrom(auth: string | null): Promise<string | null> {
+async function userFrom(auth: string | null): Promise<{ id: string; email: string | null } | null> {
   if (!auth?.startsWith("Bearer ")) return null;
   const r = await fetch(`${SUPA()}/auth/v1/user`, { headers: { apikey: ANON(), authorization: auth }, signal: AbortSignal.timeout(8000) }).catch(() => null);
   if (!r?.ok) return null;
-  const u = (await r.json().catch(() => null)) as { id?: string } | null;
-  return u?.id ?? null;
+  const u = (await r.json().catch(() => null)) as { id?: string; email?: string } | null;
+  return u?.id ? { id: u.id, email: u.email ?? null } : null;
+}
+
+const esc = (t: string) => t.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
+const MAIL: Record<string, { subj: (n: string) => string; lead: (n: string) => string; btn: string; foot: string }> = {
+  pl: { subj: (n) => `Hej, jesteś?! ${n} pisze do Ciebie na GrouAI`, lead: (n) => `<b>${n}</b> napisał(a) do Ciebie na czacie GrouAI:`, btn: "Odpisz w GrouAI", foot: "Chcesz powiadomień na telefon zamiast maili? Otwórz czat w GrouAI i kliknij „Włącz”." },
+  en: { subj: (n) => `Hey, you there?! ${n} is messaging you on GrouAI`, lead: (n) => `<b>${n}</b> sent you a message in GrouAI chat:`, btn: "Reply in GrouAI", foot: "Prefer phone notifications? Open the chat in GrouAI and tap “Włącz” (Enable)." },
+  nl: { subj: (n) => `Hé, ben je er?! ${n} stuurt je een bericht op GrouAI`, lead: (n) => `<b>${n}</b> stuurde je een bericht in de GrouAI-chat:`, btn: "Antwoord in GrouAI", foot: "Liever meldingen op je telefoon? Open de chat in GrouAI en tik op „Włącz”." },
+};
+
+/** Zapasowy e-mail (transport GrouAI: send-transactional-email głównego projektu — lista wypisów, dziennik). */
+async function mailFallback(to: string, lang: string | null, name: string, text: string, senderId: string, msgId: string) {
+  const t = MAIL[(lang || "pl").slice(0, 2)] ?? MAIL.pl;
+  const url = `https://grouaistream.com/?chat=${senderId}`;
+  const html = `<div style="font:16px/1.6 Arial,sans-serif;max-width:560px;margin:auto;padding:24px;background:#0b0b0f;color:#f5f5f5;border-radius:16px">
+<h1 style="margin:0 0 6px;font-size:26px;color:#ff7a1a">${esc(t.subj(name).split("!")[0])}!! 👋</h1>
+<p style="margin:0 0 12px">${t.lead(esc(name))}</p>
+<blockquote style="margin:0 0 18px;padding:12px 16px;border-left:4px solid #ff2bd6;background:#17171f;border-radius:8px">${esc(text)}</blockquote>
+<a href="${url}" style="display:inline-block;padding:12px 22px;border-radius:999px;background:#ff7a1a;color:#111;font-weight:bold;text-decoration:none">${t.btn}</a>
+<p style="margin:18px 0 0;font-size:12px;color:#a1a1aa">${t.foot}</p></div>`;
+  const r = await fetch(`${SUPA()}/functions/v1/send-transactional-email`, {
+    method: "POST",
+    headers: { apikey: ANON(), authorization: `Bearer ${ANON()}`, "content-type": "application/json" },
+    body: JSON.stringify({ templateName: "admin-notification", recipientEmail: to, idempotencyKey: `chat-${msgId}`, templateData: { title: t.subj(name), fullHtml: html } }),
+    signal: AbortSignal.timeout(15000),
+  }).catch(() => null);
+  return !!r?.ok;
 }
 
 async function rest<T>(path: string, auth: string): Promise<T | null> {
@@ -89,7 +118,7 @@ async function run(req: In): Promise<Out> {
     const u = new URL(req.url);
     if (u.searchParams.get("diag")) {
       let db: unknown = "?";
-      try { db = await rpc("chat_push_count", {}); } catch (e) { db = String((e as Error).message).slice(0, 120); }
+      try { db = await rpc("chat_push_stats", {}); } catch (e) { db = String((e as Error).message).slice(0, 120); }
       return json({ vapid: !!(pub && priv), publicKey: pub ?? null, db });
     }
     return json({ publicKey: pub ?? null });
@@ -99,8 +128,9 @@ async function run(req: In): Promise<Out> {
   webpush.setVapidDetails("mailto:grouarock@gmail.com", pub, priv);
 
   const auth = req.auth;
-  const uid = await userFrom(auth);
-  if (!uid) return json({ error: "unauthorized" }, 401);
+  const me = await userFrom(auth);
+  if (!me) return json({ error: "unauthorized" }, 401);
+  const uid = me.id;
   const body = (req.body || {}) as { action?: string; sub?: Sub; lang?: string; endpoint?: string; messageId?: string };
 
   try {
@@ -109,6 +139,20 @@ async function run(req: In): Promise<Out> {
       if (!s?.endpoint || !/^https:\/\//.test(s.endpoint) || !s.keys?.p256dh || !s.keys?.auth) return json({ error: "bad subscription" }, 400);
       await rpc("chat_push_save", { p_user: uid, p_endpoint: s.endpoint, p_sub: { endpoint: s.endpoint, keys: s.keys }, p_lang: (body.lang || "pl").slice(0, 5) });
       return json({ ok: true });
+    }
+    if (body.action === "hello") {
+      await rpc("chat_push_user_upsert", { p_rows: [{ user_id: uid, email: me.email, lang: (body.lang || "pl").slice(0, 5) }] });
+      return json({ ok: true });
+    }
+    if (body.action === "sync-users") {
+      const all = await fetch(`${SUPA()}/rest/v1/rpc/get_all_users_for_admin`, {
+        method: "POST", headers: { apikey: ANON(), authorization: auth!, "content-type": "application/json" }, body: "{}", signal: AbortSignal.timeout(15000),
+      }).then((r) => (r.ok ? r.json() : null)).catch(() => null) as Array<{ id?: string; email?: string }> | null;
+      if (!Array.isArray(all)) return json({ error: "admin only" }, 403);
+      const rows = all.filter((u) => u.id).map((u) => ({ user_id: u.id, email: u.email ?? null }));
+      let saved = 0;
+      for (let i = 0; i < rows.length; i += 500) saved += (await rpc<number>("chat_push_user_upsert", { p_rows: rows.slice(i, i + 500) })) ?? 0;
+      return json({ ok: true, users: rows.length, saved });
     }
     if (body.action === "unsubscribe") {
       if (body.endpoint) await rpc("chat_push_delete", { p_endpoint: body.endpoint });
@@ -138,7 +182,7 @@ async function run(req: In): Promise<Out> {
         rows = (await rpc<Row[]>("chat_push_list", { p_users: [m.recipient_id] })) ?? [];
       }
       const text = m.content.slice(0, 140);
-      const r = await sendTo(rows, (row) => {
+      const r: Record<string, unknown> = await sendTo(rows, (row) => {
         const t = tx(row.lang);
         return {
           title: t.hey,
@@ -147,6 +191,13 @@ async function run(req: In): Promise<Out> {
           tag: m.is_broadcast ? "grouai-chat-all" : `grouai-chat-${uid}`,
         };
       });
+      // Brak urządzenia (albo żadne nie przyjęło) → zapasowy e-mail, tylko wiadomości prywatne, max raz/30 min od tej osoby.
+      if (!m.is_broadcast && m.recipient_id && r.sent === 0) {
+        const info = (await rpc<Array<{ email: string | null; lang: string | null }>>("chat_push_user_get", { p_user: m.recipient_id }))?.[0];
+        if (info?.email && (await rpc<boolean>("chat_push_mail_ok", { p_sender: uid, p_recipient: m.recipient_id }))) {
+          r.mailed = await mailFallback(info.email, info.lang, name, text, uid, m.id);
+        } else r.mailed = false;
+      }
       return json({ ok: true, ...r });
     }
     return json({ error: "unknown action" }, 400);

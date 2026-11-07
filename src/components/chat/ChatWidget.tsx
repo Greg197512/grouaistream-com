@@ -7,7 +7,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { announceChat, chatPushEnabled, chatVoiceOn, enableChatPush, notifyChatPush, refreshChatPush, setChatVoice, testChatPush } from "@/lib/chatPush";
+import { announceChat, chatHello, chatPushEnabled, chatVoiceOn, enableChatPush, needsInstallForPush, notifyChatPush, refreshChatPush, setChatVoice, shouldAskPush, snoozePushAsk, syncAllChatUsers, testChatPush } from "@/lib/chatPush";
+import { DJ_OWNER } from "@/lib/djAurexis";
 
 type UserRow = {
   user_id: string;
@@ -35,6 +36,7 @@ export const ChatWidget = () => {
   const [open, setOpen] = useState(false);
   const [voiceOn, setVoiceOn] = useState(chatVoiceOn);
   const [pushOn, setPushOn] = useState(false);
+  const [askPush, setAskPush] = useState(false);
   const [users, setUsers] = useState<UserRow[]>([]);
   const [online, setOnline] = useState<Set<string>>(new Set());
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -199,7 +201,12 @@ export const ChatWidget = () => {
   // Push na telefon: odnów zapis po zalogowaniu (bez pytania), stan przycisku.
   useEffect(() => {
     if (!user) return;
-    void refreshChatPush(language).then(() => chatPushEnabled()).then(setPushOn);
+    void chatHello(language);
+    if (user.email?.toLowerCase() === DJ_OWNER) void syncAllChatUsers();
+    void refreshChatPush(language).then(() => chatPushEnabled()).then((on) => {
+      setPushOn(on);
+      if (!on && shouldAskPush()) window.setTimeout(() => setAskPush(true), 4000);
+    });
   }, [user, language]);
 
   // Klik w powiadomienie (apka otwarta w tle) albo link ?chat=… — otwórz właściwą rozmowę.
@@ -226,6 +233,8 @@ export const ChatWidget = () => {
 
   const turnOnPush = async () => {
     const r = await enableChatPush(language);
+    setAskPush(false);
+    if (r !== "install") snoozePushAsk();
     if (r === "on") {
       setPushOn(true);
       toast.success("Powiadomienia włączone — zawołamy Cię nawet przy zamkniętej apce.");
@@ -393,6 +402,29 @@ export const ChatWidget = () => {
 
       {createPortal(
         <AnimatePresence>
+          {askPush && !pushOn && (
+            <motion.div key="ask-push" role="dialog" aria-label="Powiadomienia czatu"
+              initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 30 }}
+              className="fixed z-[9998] bottom-24 left-1/2 w-[min(400px,calc(100vw-1.5rem))] -translate-x-1/2 rounded-2xl border border-orange-400/50 bg-black/95 p-4 text-white shadow-[0_0_32px_rgba(255,122,26,.35)]">
+              <div className="flex items-start gap-3">
+                <BellRing className="mt-0.5 h-6 w-6 shrink-0 text-orange-400" />
+                <div className="min-w-0 flex-1">
+                  <b className="block text-sm">Hej! Włączyć powiadomienia czatu?</b>
+                  <p className="mt-1 text-xs text-white/70">
+                    {needsInstallForPush()
+                      ? "Na iPhonie: Udostępnij → „Do ekranu początkowego”, otwórz GrouAI z ikony i włącz powiadomienia — zawołamy Cię nawet przy wyłączonej apce."
+                      : "Zawołamy Cię „Hej, jesteś?!”, gdy ktoś do Ciebie napisze — nawet gdy apka jest wyłączona."}
+                  </p>
+                  <div className="mt-3 flex gap-2">
+                    {!needsInstallForPush() && (
+                      <button onClick={() => void turnOnPush()} className="rounded-full bg-orange-500 px-4 py-1.5 text-xs font-bold text-black hover:bg-orange-400">Włącz</button>
+                    )}
+                    <button onClick={() => { snoozePushAsk(); setAskPush(false); }} className="rounded-full border border-white/20 px-4 py-1.5 text-xs text-white/80 hover:bg-white/10">Później</button>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
           {open && (
             <motion.div
               initial={{ opacity: 0, y: 20, scale: 0.97 }}

@@ -162,6 +162,9 @@ przełącznik 🔊, localStorage `grouai-chat-voice`). Push przy zamkniętej apc
 → urządzenia w **własnym Supabase sbmf** (`chat_push_subs`, RPC `chat_push_*` z sekretem `PUSH_DB_SECRET`; anon bez dostępu do tabel).
 Po wysłaniu wiadomości klient woła `notify` (serwer sprawdza nadawcę); „Do wszystkich” = push do wszystkich max raz/10 min na nadawcę.
 iPhone: push tylko w apce z ekranu głównego. Cron `agents-run` pinguje bazę sbmf (`pushDb`), by nie usnęła. Diag: `GET /api/chat-push?diag=1`.
+Zasięg „wszyscy”: zalogowany bez zgody dostaje baner (co 3 dni); po zalogowaniu `hello` zapisuje e-mail+język (`chat_push_users`), właściciel raz/dobę
+`sync-users` (rpc `get_all_users_for_admin`) → wszyscy zarejestrowani. Odbiorca bez urządzenia push → **e-mail** „Hej, jesteś?!” (send-transactional-email
+głównego projektu, max raz/30 min od tej samej osoby; „Do wszystkich” bez maili). Bez zgody urządzenia push się nie da (wymóg przeglądarek).
 
 ## Perf / low-power
 `src/lib/perf.ts` → `<html data-lowpower>` (słaby sprzęt) i `<html data-touch>` (telefon/tablet): lite Aurora (statyczna),
