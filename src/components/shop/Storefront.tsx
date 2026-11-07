@@ -7,6 +7,7 @@ import { motion } from "framer-motion";
 import { ArrowRight, Gift, Plus, RotateCcw, ShieldCheck, Truck, ChevronDown } from "lucide-react";
 import { productImg, type ShopProduct } from "@/data/shopCatalog";
 import { LivePrint } from "./LivePrint";
+import { HeroHeadline } from "./HeroHeadline";
 import { SHOP_SIZES } from "@/lib/shopOrder";
 import type { ShopLang } from "@/i18n/shop";
 
@@ -75,16 +76,14 @@ html[data-lowpower="on"] .hn-beam{display:none}
 const rise = { initial: { opacity: 0, y: 18 }, animate: { opacity: 1, y: 0 } };
 
 /** Baner: tekst + film produktu (wyciszony, w pętli) z „pływającą” ceną. */
-export function StoreHero({ t, onShop, heroId, heroName, heroPrice }: { t: StoreDict; onShop: () => void; heroId: string; heroName: string; heroPrice: string }) {
+export function StoreHero({ t, lang, onShop, heroId, heroName, heroPrice }: { t: StoreDict; lang: ShopLang; onShop: () => void; heroId: string; heroName: string; heroPrice: string }) {
   return (
     <section className="mx-auto grid max-w-6xl items-center gap-8 px-4 pb-10 pt-8 md:grid-cols-2 md:gap-12 md:pt-14">
       <motion.div {...rise} transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}>
         <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-neutral-600">
           <span className="h-1.5 w-1.5 rounded-full bg-orange-500" aria-hidden="true" />{t.eyebrow}
         </p>
-        <h1 className="text-5xl font-black leading-[0.95] tracking-tight [text-wrap:balance] sm:text-6xl lg:text-7xl">
-          {t.h1a} <span className="bg-gradient-to-r from-orange-500 via-rose-500 to-fuchsia-600 bg-clip-text text-transparent">{t.h1b}</span>
-        </h1>
+        <HeroHeadline lang={lang} lead={t.h1a} accent={t.h1b} />
         <p className="mt-5 max-w-md text-lg leading-relaxed text-neutral-600">{t.lead}</p>
         {/* Trzy przyciski w jednym rzędzie; przez wszystkie po kolei przechodzi pomarańczowy neonowy błysk z poświatą. */}
         <style>{HERO_NEON_CSS}</style>

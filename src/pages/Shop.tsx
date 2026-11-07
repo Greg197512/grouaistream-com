@@ -282,7 +282,7 @@ export default function Shop() {
       </header>
 
       <MotionConfig reducedMotion="user">
-      <StoreHero t={S} onShop={() => gridRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })} heroId={hero.id} heroName={hero.name} heroPrice={eur(hero.eurCents)} />
+      <StoreHero t={S} lang={lang} onShop={() => gridRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })} heroId={hero.id} heroName={hero.name} heroPrice={eur(hero.eurCents)} />
       {done && (
         <div className="mx-auto max-w-6xl space-y-3 px-4 pb-8">
           <p className="rounded-xl bg-orange-50 p-4 text-orange-900"><b>{T.orderAccepted.replace("{id}", done.ref)}</b>{!done.bank && <> {T.linkSoon.replace("{email}", user?.email ? ` (${user.email})` : "")}</>}{done.carrier && <span className="mt-1 block">🚚 {T.deliveryBy}: <b>{done.carrier}</b>{done.point ? ` · ${done.point}` : ""}</span>}</p>
