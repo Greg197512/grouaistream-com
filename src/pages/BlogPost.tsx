@@ -19,7 +19,13 @@ import { headingComponents } from "@/lib/markdownHeadingId";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { getCategoryLabel } from "@/lib/blogCategories";
 import { getCoverUrl } from "@/lib/blogCovers";
-import { fetchHubBlogPost } from "@/lib/hubBlog";
+import { ListenArticle } from "@/components/blog/ListenArticle";
+import { ReadingSoundtrack } from "@/components/blog/ReadingSoundtrack";
+
+const POST_CSS = `
+.blog-prose > p:first-of-type::first-letter{float:left;font-size:4.2em;line-height:.82;font-weight:900;margin:.06em .12em 0 0;background:linear-gradient(135deg,#ff7a1a,#ff2bd6 55%,#22d3ee);-webkit-background-clip:text;background-clip:text;color:transparent}
+.blog-prose .blog-reading{background:linear-gradient(90deg,hsl(var(--primary)/.16),transparent);box-shadow:-4px 0 0 hsl(var(--primary));border-radius:6px;transition:background .3s}
+`;
 
 interface BlogPost {
   id: string;
@@ -96,6 +102,7 @@ export default function BlogPost() {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const commentsRef = useRef<HTMLDivElement>(null);
+  const proseRef = useRef<HTMLDivElement>(null);
   const localized = post ? pickLocalized(post, language) : null;
 
   useEffect(() => {
@@ -110,13 +117,6 @@ export default function BlogPost() {
         .maybeSingle();
 
       if (error || !data) {
-        // Fallback: świeże wpisy generowane na hubie (bvstv nie ma już generatora).
-        const hubPost = await fetchHubBlogPost(slug);
-        if (hubPost) {
-          setPost(hubPost as unknown as BlogPost);
-          setLoading(false);
-          return;
-        }
         setNotFound(true);
         setLoading(false);
         return;
@@ -258,11 +258,16 @@ export default function BlogPost() {
               </div>
             </div>
 
+            <style>{POST_CSS}</style>
+            <div className="mb-6 grid gap-3">
+              <ListenArticle target={proseRef} lang={language} title={displayTitle} />
+              <ReadingSoundtrack category={post.category} lang={language} compact />
+            </div>
             <div className="mb-8">
               <BlogPostActions postId={post.id} postUrl={url} postTitle={displayTitle} onScrollToComments={scrollToComments} />
             </div>
 
-            <div className="prose prose-invert max-w-none prose-lg prose-headings:text-foreground prose-headings:font-bold prose-h2:text-2xl prose-h2:mt-10 prose-h2:mb-4 prose-h2:scroll-mt-24 prose-h3:text-xl prose-h3:mt-8 prose-h3:scroll-mt-24 prose-p:text-foreground/85 prose-p:leading-relaxed prose-strong:text-foreground prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-li:text-foreground/85 prose-blockquote:border-l-primary prose-blockquote:bg-primary/5 prose-blockquote:py-1 prose-blockquote:px-4 prose-blockquote:rounded-r prose-code:text-primary prose-code:bg-muted/50 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:before:content-[''] prose-code:after:content-['']">
+            <div ref={proseRef} className="blog-prose prose prose-invert max-w-none prose-lg prose-headings:text-foreground prose-headings:font-bold prose-h2:text-2xl prose-h2:mt-10 prose-h2:mb-4 prose-h2:scroll-mt-24 prose-h3:text-xl prose-h3:mt-8 prose-h3:scroll-mt-24 prose-p:text-foreground/85 prose-p:leading-relaxed prose-strong:text-foreground prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-li:text-foreground/85 prose-blockquote:border-l-primary prose-blockquote:bg-primary/5 prose-blockquote:py-1 prose-blockquote:px-4 prose-blockquote:rounded-r prose-code:text-primary prose-code:bg-muted/50 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:before:content-[''] prose-code:after:content-['']">
               <ReactMarkdown remarkPlugins={[remarkGfm]} components={headingComponents}>
                 {displayContent}
               </ReactMarkdown>
