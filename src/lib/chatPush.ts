@@ -112,3 +112,24 @@ export function announceChat(name: string, lang: string) {
     void a.play().catch(() => {});
   } catch { /* */ }
 }
+
+// ── Zapasowy e-mail ──────────────────────────────────────────────────────────
+/** Po zalogowaniu: zapis e-maila/języka — odbiorca bez powiadomień push dostanie „Hej, jesteś?!” mailem. */
+export const chatHello = (lang: string) => call({ action: "hello", lang });
+
+/** Admin, raz na dobę: wszyscy zarejestrowani trafiają do zapasu e-mail (też ci, co dawno się nie logowali). */
+export async function syncAllChatUsers() {
+  const k = "grouai-chat-sync";
+  try { if (localStorage.getItem(k) === new Date().toISOString().slice(0, 10)) return; } catch { /* */ }
+  const r = await call({ action: "sync-users" });
+  if (r?.ok) try { localStorage.setItem(k, new Date().toISOString().slice(0, 10)); } catch { /* */ }
+}
+
+/** Baner z prośbą o zgodę: pokazujemy, gdy zgoda nieustalona (albo iPhone bez apki na ekranie), nie częściej niż co 3 dni. */
+const ASK_KEY = "grouai-push-ask";
+export function shouldAskPush(): boolean {
+  try { if (Date.now() - Number(localStorage.getItem(ASK_KEY) || 0) < 3 * 864e5) return false; } catch { /* */ }
+  if (needsInstallForPush()) return true;
+  return pushSupported() && Notification.permission === "default";
+}
+export const snoozePushAsk = () => { try { localStorage.setItem(ASK_KEY, String(Date.now())); } catch { /* */ } };
