@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { AnnouncementMail } from "./AnnouncementMail";
 import { supabase } from "@/integrations/supabase/client";
 import { invokeHubAI } from "@/lib/hubAI";
 import { sendHubEmail } from "@/lib/hubEmail";
@@ -385,6 +386,7 @@ Zwróć WYŁĄCZNIE czysty JSON (bez markdown, bez komentarzy) w formacie:
 
   return (
     <div className="space-y-6">
+      <AnnouncementMail />
       {/* Reklama GrouAI Studio (tydzień free) — gotowiec do masowej wysyłki */}
       <Card className="border-primary/30 bg-gradient-to-br from-primary/10 to-purple-500/5 backdrop-blur">
         <CardHeader className="pb-3">
