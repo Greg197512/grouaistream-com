@@ -3,6 +3,7 @@
  *  1) Strażnik strony (runGuardian): strona, baza, plik audio na R2; budzi uśpioną bazę.
  *  2) Puls serwisu: nowe utwory (24 h), łączna liczba utworów, wpisy bloga — liczone z bazy (anon, RLS).
  *  3) Alarm: gdy strażnik widzi awarię → e-mail do właściciela (SHOP_NOTIFY_EMAIL), najwyżej raz na 6 h.
+ *  4) Puls bazy powiadomień czatu (PUSH_DB_URL, darmowy Supabase usypia po tygodniu bez ruchu).
  */
 import { runGuardian } from "./site-guardian";
 import { env, json, supa } from "../src/lib/serverSupa";
@@ -35,7 +36,18 @@ export default async function handler(): Promise<Response> {
     count(`tracks?select=id&created_at=gte.${since}`),
     count("seo_blog_posts?select=id&is_published=eq.true"),
   ]);
-  const pulse = { tracksTotal, tracks24h, blogPosts };
+  let pushDb: number | string | null = null;
+  const pu = env("PUSH_DB_URL"), pk = env("PUSH_DB_KEY");
+  if (pu && pk) {
+    try {
+      const r = await fetch(`${pu.replace(/\/+$/, "")}/rest/v1/rpc/chat_push_count`, {
+        method: "POST", headers: { apikey: pk, authorization: `Bearer ${pk}`, "content-type": "application/json" },
+        body: JSON.stringify({ p_secret: env("PUSH_DB_SECRET") ?? "" }), signal: AbortSignal.timeout(8000),
+      });
+      pushDb = r.ok ? Number(await r.text()) : `http ${r.status}`;
+    } catch (e) { pushDb = String((e as Error).message).slice(0, 80); }
+  }
+  const pulse = { tracksTotal, tracks24h, blogPosts, pushDb };
 
   let alerted = false;
   const notify = env("SHOP_NOTIFY_EMAIL");

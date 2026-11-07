@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { MessageCircle, Send, X, ArrowLeft, Users } from "lucide-react";
+import { MessageCircle, Send, X, ArrowLeft, Users, Volume2, VolumeX, BellRing } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { announceChat, chatPushEnabled, chatVoiceOn, enableChatPush, notifyChatPush, refreshChatPush, setChatVoice, testChatPush } from "@/lib/chatPush";
 
 type UserRow = {
   user_id: string;
@@ -29,7 +31,10 @@ const BROADCAST_ID = "__broadcast__";
 
 export const ChatWidget = () => {
   const { user } = useAuth();
+  const { language } = useLanguage();
   const [open, setOpen] = useState(false);
+  const [voiceOn, setVoiceOn] = useState(chatVoiceOn);
+  const [pushOn, setPushOn] = useState(false);
   const [users, setUsers] = useState<UserRow[]>([]);
   const [online, setOnline] = useState<Set<string>>(new Set());
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -176,6 +181,7 @@ export const ChatWidget = () => {
             setActiveId(m.is_broadcast ? BROADCAST_ID : m.sender_id);
             setOpen(true);
           };
+          announceChat(senderName, language);
           toast(`🔔 Masz wiadomość od ${senderName}`, {
             description: m.content.slice(0, 80) + (m.content.length > 80 ? "…" : ""),
             duration: 8000,
@@ -188,7 +194,47 @@ export const ChatWidget = () => {
     return () => {
       supabase.removeChannel(ch);
     };
-  }, [user, open, activeId, users]);
+  }, [user, open, activeId, users, language]);
+
+  // Push na telefon: odnów zapis po zalogowaniu (bez pytania), stan przycisku.
+  useEffect(() => {
+    if (!user) return;
+    void refreshChatPush(language).then(() => chatPushEnabled()).then(setPushOn);
+  }, [user, language]);
+
+  // Klik w powiadomienie (apka otwarta w tle) albo link ?chat=… — otwórz właściwą rozmowę.
+  useEffect(() => {
+    if (!user) return;
+    const go = (raw: string | null) => {
+      if (!raw) return;
+      setOpen(true);
+      if (raw === "all") setActiveId(BROADCAST_ID);
+      else if (/^[0-9a-f-]{36}$/i.test(raw)) setActiveId(raw);
+    };
+    try {
+      const u = new URL(window.location.href);
+      const c = u.searchParams.get("chat");
+      if (c) { go(c); u.searchParams.delete("chat"); window.history.replaceState(null, "", u.pathname + u.search + u.hash); }
+    } catch { /* */ }
+    const onMsg = (e: MessageEvent) => {
+      const d = e.data as { type?: string; url?: string } | null;
+      if (d?.type === "grouai-chat-open" && d.url) { try { go(new URL(d.url).searchParams.get("chat")); } catch { /* */ } }
+    };
+    navigator.serviceWorker?.addEventListener("message", onMsg);
+    return () => navigator.serviceWorker?.removeEventListener("message", onMsg);
+  }, [user]);
+
+  const turnOnPush = async () => {
+    const r = await enableChatPush(language);
+    if (r === "on") {
+      setPushOn(true);
+      toast.success("Powiadomienia włączone — zawołamy Cię nawet przy zamkniętej apce.");
+      void testChatPush();
+    } else if (r === "install") toast("Na iPhonie: Udostępnij → „Do ekranu początkowego”, otwórz GrouAI z ikony i włącz tu powiadomienia.");
+    else if (r === "denied") toast.error("Powiadomienia zablokowane — włącz je w ustawieniach przeglądarki/telefonu dla grouaistream.com.");
+    else if (r === "unsupported") toast.error("Ta przeglądarka nie obsługuje powiadomień push.");
+    else toast.error("Nie udało się włączyć powiadomień. Spróbuj ponownie.");
+  };
 
   // Load conversation on active change
   useEffect(() => {
@@ -270,6 +316,7 @@ export const ChatWidget = () => {
       toast.error("Nie wysłano: " + error.message);
       return;
     }
+    if (data?.id) notifyChatPush(data.id);
     if (broadcast) setActiveId(BROADCAST_ID);
     if (data && (activeId === (broadcast ? BROADCAST_ID : target))) {
       setMessages((p) => [...p, data as ChatMsg]);
@@ -304,11 +351,9 @@ export const ChatWidget = () => {
           onClick={() => {
             setShowBubble(false);
             setOpen((o) => !o);
-            // Prośba o zgodę na powiadomienia — tylko w geście użytkownika.
+            // Prośba o zgodę na powiadomienia (także przy zamkniętej apce) — tylko w geście użytkownika.
             try {
-              if (typeof Notification !== "undefined" && Notification.permission === "default") {
-                Notification.requestPermission().catch(() => {});
-              }
+              if (typeof Notification !== "undefined" && Notification.permission === "default") void turnOnPush();
             } catch { /* */ }
           }}
           title="Czat GrouAI"
@@ -384,6 +429,20 @@ export const ChatWidget = () => {
                     : `${online.size} online · ${users.length} użytkowników`}
                 </div>
               </div>
+              {!pushOn && (
+                <button onClick={() => void turnOnPush()} title="Powiadomienia na telefon (też gdy apka zamknięta)"
+                  className="flex items-center gap-1 rounded-full border border-orange-400/60 px-2 py-1 text-[10px] font-bold text-orange-300 shadow-[0_0_12px_rgba(255,122,26,.35)] hover:bg-orange-500/15">
+                  <BellRing className="h-3.5 w-3.5" /> Włącz
+                </button>
+              )}
+              <button
+                onClick={() => { const v = !voiceOn; setVoiceOn(v); setChatVoice(v); if (v) announceChat("GrouAI", language); }}
+                title={voiceOn ? "Głos włączony — wyłącz" : "Głos wyłączony — włącz"}
+                aria-pressed={voiceOn}
+                className="p-1.5 rounded hover:bg-white/10"
+              >
+                {voiceOn ? <Volume2 className="h-4 w-4 text-orange-300" /> : <VolumeX className="h-4 w-4 text-muted-foreground" />}
+              </button>
               <button
                 onClick={() => setActiveId(BROADCAST_ID)}
                 title="Do wszystkich"
