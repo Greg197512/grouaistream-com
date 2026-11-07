@@ -5,11 +5,11 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
-import { Search, Sparkles, TrendingUp, Eye, Clock, ArrowRight } from "lucide-react";
+import { Search, Sparkles, TrendingUp, Eye, Clock, ArrowRight, Headphones, Radio } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { BLOG_CATEGORIES as CATEGORIES, getCategoryLabel as catLabel } from "@/lib/blogCategories";
 import { getCoverUrl } from "@/lib/blogCovers";
-import { fetchHubBlogList } from "@/lib/hubBlog";
+import { ReadingSoundtrack } from "@/components/blog/ReadingSoundtrack";
 
 interface BlogPost {
   id: string;
@@ -34,6 +34,17 @@ const localizedField = (post: BlogPost, field: "title" | "description", lang: st
   const v = (post as any)[`${field}_${lang}`] as string | null | undefined;
   return v || post[field];
 };
+
+const BLOG_CSS = `
+.blog-x{background:linear-gradient(100deg,#ff7a1a 0%,#ff2bd6 45%,#22d3ee 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.blog-rank{color:transparent;-webkit-text-stroke:1.5px hsl(var(--primary));transition:color .3s}
+.group:hover .blog-rank{color:hsl(var(--primary))}
+@keyframes blog-marquee{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+.blog-ticker-track{animation:blog-marquee 60s linear infinite}
+.blog-ticker:hover .blog-ticker-track,.blog-ticker:focus-within .blog-ticker-track{animation-play-state:paused}
+@media (prefers-reduced-motion:reduce){.blog-ticker-track{animation:none}}
+html[data-lowpower="on"] .blog-ticker-track{animation:none}
+`;
 
 const readMins = (desc: string) => Math.max(1, Math.round(desc.split(/\s+/).length / 4));
 
@@ -79,21 +90,14 @@ export default function BlogIndex() {
 
   useEffect(() => {
     (async () => {
-      const [{ data }, hub] = await Promise.all([
-        supabase
-          .from("seo_blog_posts")
-          .select("id, slug, title, description, category, tags, cover_url, created_at, view_count, title_en, title_nl, title_ua, description_en, description_nl, description_ua")
-          .eq("is_published", true)
-          .order("created_at", { ascending: false })
-          .limit(60),
-        fetchHubBlogList(30),
-      ]);
-      // Świeże wpisy huba dokładamy do listy z bvstv i sortujemy po dacie (najnowsze u góry).
-      const bvstv = (data as BlogPost[]) || [];
-      const seen = new Set(bvstv.map((p) => p.slug));
-      const merged = [...bvstv, ...hub.filter((h) => !seen.has(h.slug)) as unknown as BlogPost[]]
-        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-      setPosts(merged);
+      // (Stary hub bmwtyd nie istnieje — tylko wpisy z głównej bazy.)
+      const { data } = await supabase
+        .from("seo_blog_posts")
+        .select("id, slug, title, description, category, tags, cover_url, created_at, view_count, title_en, title_nl, title_ua, description_en, description_nl, description_ua")
+        .eq("is_published", true)
+        .order("created_at", { ascending: false })
+        .limit(240);
+      setPosts((data as BlogPost[]) || []);
       setLoading(false);
     })();
   }, []);
@@ -109,6 +113,9 @@ export default function BlogIndex() {
     });
   }, [posts, search, activeCat, language]);
 
+  const topRead = useMemo(() => [...posts].sort((a, b) => (b.view_count || 0) - (a.view_count || 0)).slice(0, 5), [posts]);
+  const ticker = posts.slice(0, 10);
+  const L = (pl: string, en: string, nl: string, ua: string) => (language === "en" ? en : language === "nl" ? nl : language === "ua" ? ua : pl);
   const featured = filtered[0];
   const secondary = filtered.slice(1, 3);
   const rest = filtered.slice(3);
@@ -117,31 +124,77 @@ export default function BlogIndex() {
     <MainLayout>
       <section className="px-4 sm:px-6 py-8 max-w-7xl mx-auto">
 
-        {/* HERO — editorial masthead */}
-        <header className="mb-12 sm:mb-16 pt-4">
-          <div className="flex items-center gap-3 mb-5 text-[11px] uppercase tracking-[0.3em] text-primary font-semibold">
-            <span className="h-px w-8 bg-primary/50" />
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>
-              {language === "en" ? "New articles daily" : language === "nl" ? "Dagelijks nieuwe artikelen" : language === "ua" ? "Нові статті щодня" : "Codziennie nowe artykuły"}
-            </span>
+        <style>{BLOG_CSS}</style>
+        {/* HERO — „Dźwięk × Technologia”: grafika z Canvy, typografia jak okładka magazynu */}
+        <header className="relative mb-6 overflow-hidden rounded-[2rem] border border-border/50 bg-black">
+          <img src="/blog/hero-sound-tech.jpg" srcSet="/blog/hero-sound-tech-800.jpg 800w, /blog/hero-sound-tech.jpg 1600w" sizes="(max-width: 768px) 100vw, 1280px"
+            alt="" aria-hidden className="absolute inset-0 h-full w-full object-cover object-right opacity-90" fetchPriority="high" />
+          <div aria-hidden className="absolute inset-0 bg-gradient-to-r from-black via-black/75 to-black/10" />
+          <div aria-hidden className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black to-transparent" />
+          <div className="relative grid gap-8 p-6 sm:p-10 lg:grid-cols-[minmax(0,1fr)_300px] lg:items-end lg:p-14">
+            <div>
+              <div className="mb-5 flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.3em] text-primary">
+                <span className="h-px w-8 bg-primary/60" /><Sparkles className="h-3.5 w-3.5" />
+                <span>{L("Muzyka · AI · Technologia", "Music · AI · Technology", "Muziek · AI · Technologie", "Музика · AI · Технології")}</span>
+              </div>
+              <h1 className="font-black leading-[0.86] tracking-[-0.04em] text-white [text-wrap:balance]">
+                <span className="block text-[clamp(2.9rem,6.4vw,6rem)]">{L("Dźwięk", "Sound", "Geluid", "Звук")}</span>
+                <span className="blog-x block whitespace-nowrap pb-[0.08em] text-[clamp(2.9rem,6.4vw,6rem)]">× {L("Technologia", "Technology", "Technologie", "Технології")}</span>
+              </h1>
+              <p className="mt-6 max-w-xl text-base leading-relaxed text-white/75 sm:text-lg">
+                {L("Blog GrouAI Stream: jak AI zmienia muzykę, studio, streaming i to, czego słuchasz. Każdy artykuł możesz też posłuchać.",
+                   "The GrouAI Stream blog: how AI is changing music, the studio, streaming and what you hear. Every article can be listened to.",
+                   "De GrouAI Stream-blog: hoe AI muziek, de studio, streaming en wat je hoort verandert. Elk artikel kun je ook beluisteren.",
+                   "Блог GrouAI Stream: як AI змінює музику, студію, стрімінг і те, що ти слухаєш. Кожну статтю можна прослухати.")}
+              </p>
+              <div className="mt-6 flex flex-wrap gap-2 text-xs font-semibold text-white/85">
+                {posts.length > 0 && <span className="rounded-full border border-white/20 bg-white/5 px-3 py-1.5 tabular-nums">{posts.length} {L("artykułów", "articles", "artikelen", "статей")}</span>}
+                <span className="flex items-center gap-1.5 rounded-full border border-white/20 bg-white/5 px-3 py-1.5"><Headphones className="h-3.5 w-3.5 text-primary" />{L("AI czyta na głos", "AI reads aloud", "AI leest voor", "AI читає вголос")}</span>
+                <span className="flex items-center gap-1.5 rounded-full border border-white/20 bg-white/5 px-3 py-1.5"><Radio className="h-3.5 w-3.5 text-accent" />{L("Soundtrack do czytania", "Reading soundtrack", "Leessoundtrack", "Саундтрек для читання")}</span>
+              </div>
+            </div>
+            <div className="lg:pb-1"><ReadingSoundtrack lang={language} compact /></div>
           </div>
-          <h1 className="text-5xl sm:text-7xl lg:text-[5.5rem] font-black text-foreground tracking-[-0.03em] leading-[0.92]">
-            Blog{" "}
-            <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">GrouAI</span>{" "}
-            Stream
-          </h1>
-          <p className="mt-6 text-lg sm:text-xl text-muted-foreground max-w-2xl leading-relaxed">
-            {language === "en"
-              ? "AI, music, sound and the future of streaming — deep dives for people who care how it actually works."
-              : language === "nl"
-              ? "AI, muziek, geluid en de toekomst van streaming — verdiepende artikelen voor wie wil weten hoe het echt werkt."
-              : language === "ua"
-              ? "AI, музика, звук і майбутнє стрімінгу — глибокі матеріали для тих, кому цікаво, як це справді працює."
-              : "AI, muzyka, dźwięk i przyszłość streamingu — pogłębione teksty dla tych, których interesuje, jak to naprawdę działa."}
-          </p>
-          <div className="mt-8 h-px w-full bg-gradient-to-r from-border via-border/50 to-transparent" />
         </header>
+
+        {/* NA ANTENIE — najnowsze tytuły przewijają się jak pasek radia (stoi przy „ogranicz ruch”) */}
+        {ticker.length > 0 && (
+          <div className="blog-ticker mb-10 flex items-center overflow-hidden rounded-full border border-border/50 bg-card/50">
+            <span className="z-10 flex shrink-0 items-center gap-2 bg-primary px-4 py-2 text-[11px] font-black uppercase tracking-[0.2em] text-primary-foreground">
+              <span className="h-2 w-2 animate-pulse rounded-full bg-primary-foreground motion-reduce:animate-none" />{L("Na antenie", "On air", "On air", "В ефірі")}
+            </span>
+            <div className="relative min-w-0 flex-1 overflow-hidden">
+              <div className="blog-ticker-track flex w-max gap-8 py-2 pl-6">
+                {[...ticker, ...ticker].map((p, k) => (
+                  <Link key={`${p.id}-${k}`} to={`/blog/${p.slug}`} tabIndex={k >= ticker.length ? -1 : 0} aria-hidden={k >= ticker.length || undefined}
+                    className="whitespace-nowrap text-sm text-muted-foreground transition hover:text-foreground">
+                    <span className="mr-2 text-primary">◆</span>{localizedField(p, "title", language)}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* NAJCZĘŚCIEJ CZYTANE — numer = miejsce w rankingu wyświetleń */}
+        {!loading && topRead.length >= 3 && !search && activeCat === "all" && (
+          <section className="mb-12" aria-label={L("Najczęściej czytane", "Most read", "Meest gelezen", "Найпопулярніше")}>
+            <h2 className="mb-4 flex items-center gap-2 text-xs font-black uppercase tracking-[0.25em] text-muted-foreground"><TrendingUp className="h-4 w-4 text-primary" />{L("Najczęściej czytane", "Most read", "Meest gelezen", "Найпопулярніше")}</h2>
+            <ol className="grid gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-5">
+              {topRead.map((p, k) => (
+                <li key={p.id}>
+                  <Link to={`/blog/${p.slug}`} className="group flex gap-3">
+                    <span aria-hidden className="blog-rank text-5xl font-black leading-none tabular-nums">{k + 1}</span>
+                    <span className="min-w-0">
+                      <span className="line-clamp-3 text-sm font-semibold leading-snug text-foreground transition group-hover:text-primary">{localizedField(p, "title", language)}</span>
+                      <span className="mt-1 flex items-center gap-1 text-[11px] text-muted-foreground"><Eye className="h-3 w-3" />{p.view_count}</span>
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ol>
+          </section>
+        )}
 
         {/* SEARCH */}
         <div className="mb-6 relative max-w-xl mx-auto">

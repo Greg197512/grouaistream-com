@@ -42,6 +42,10 @@ i aktualny. Jeśli fakt tu jest — nie weryfikuj go od nowa dziesiątkami wywo�
   (most-played; „Świat” = top 5 z PL/US/GB/DE/FR/ES/IT/NL/UA/BR/JP z flagą) + iTunes lookup w sklepie danego kraju (CDN 1 h; klient odświeża co 30 min, ▲▼ NOWY względem poprzedniej wersji w localStorage `grouai-charts-*`) → fragmenty 30 s w naszym playerze (id `chart-…`, bez zapisu do historii — `UUID_RE` w PlayerContext) + link „Całość”.
 - Home bez angielskich resztek i fałszywych danych: teksty `src/lib/homeI18n.ts` (odmiana `tracksLabel`), „Stworzone dla Ciebie” = `PlaylistGrid`
   żywy algorytm (gatunek/nastrój z katalogu, bez płatnego `ai-playlist`), karta radia bez zmyślonych słuchaczy.
+- **Blog (7.11):** `/blog` = nagłówek „Dźwięk × Technologia” (grafika Canva `public/blog/hero-sound-tech*.jpg`), pasek „Na antenie” (najnowsze tytuły),
+  „Najczęściej czytane” (top 5 wg `view_count`), `ReadingSoundtrack` (utwór z katalogu wg kategorii → główny player). Wpis: `ListenArticle`
+  („Posłuchaj artykułu” — speechSynthesis zdanie po zdaniu, podświetlenie akapitu, 1–1,5×), soundtrack, inicjał. Hub bloga usunięty (`hubBlog.ts`).
+  Generator nowych wpisów stoi od ~15.06 (brak klucza AI) — ~190 starych wpisów.
 - Menu utworu (`TrackOptionsMenu`): pobieranie/offline przez `src/lib/trackFile.ts` (`/api/media?dl=1`), linki `?play=`, dane po otwarciu menu.
 - **Studio (5.11, `GET /api/diag-studio` — bez kosztów):** Suno OK (klucz + kredyty, np. 1474), zapis R2 OK, funkcje silników istnieją.
   ACE-Step (`acestep-generate`) woła `/models/lucataco/ace-step/predictions` — model społecznościowy wymaga wersji, prawdopodobnie nie działa
